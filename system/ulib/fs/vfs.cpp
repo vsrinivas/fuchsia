@@ -32,23 +32,11 @@ uint32_t __trace_bits;
 namespace fs {
 namespace {
 
-bool is_dot(const char* name, size_t len) {
-    return len == 1 && strncmp(name, ".", len) == 0;
-}
-
-bool is_dot_dot(const char* name, size_t len) {
-    return len == 2 && strncmp(name, "..", len) == 0;
-}
-
-#ifdef __Fuchsia__ // Only to prevent "unused function" warning
-bool is_dot_or_dot_dot(const char* name, size_t len) {
-    return is_dot(name, len) || is_dot_dot(name, len);
-}
-#endif
-
 // Trim a name before sending it to internal filesystem functions.
 // Trailing '/' characters imply that the name must refer to a directory.
-zx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* dir_out) {
+zx_status_t vfs_name_trim(fbl::StringPiece name, fbl::StringPiece* name_out,
+                          bool* dir_out) {
+    size_t len = name.length();
     bool is_dir = false;
     while ((len > 0) && name[len - 1] == '/') {
         len--;
@@ -62,20 +50,20 @@ zx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* d
         return ZX_ERR_BAD_PATH;
     }
 
-    *len_out = len;
+    name_out->set(name.data(), len);
     *dir_out = is_dir;
     return ZX_OK;
 }
 
 zx_status_t vfs_lookup(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
-                       const char* name, size_t len) {
-    if (is_dot_dot(name, len)) {
+                       fbl::StringPiece name) {
+    if (name == "..") {
         return ZX_ERR_INVALID_ARGS;
-    } else if (is_dot(name, len)) {
+    } else if (name == ".") {
         *out = fbl::move(vn);
         return ZX_OK;
     }
-    return vn->Lookup(out, name, len);
+    return vn->Lookup(out, name);
 }
 
 // Validate open flags as much as they can be validated
@@ -126,7 +114,7 @@ Vfs::Vfs(async_t* async)
 #endif
 
 zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
-                      const char* path, const char** pathout, uint32_t flags,
+                      fbl::StringPiece path, fbl::StringPiece* pathout, uint32_t flags,
                       uint32_t mode) {
 #ifdef __Fuchsia__
     fbl::AutoLock lock(&vfs_lock_);
@@ -135,9 +123,9 @@ zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 }
 
 zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
-                            const char* path, const char** pathout, uint32_t flags,
-                            uint32_t mode) {
-    FS_TRACE(VFS, "VfsOpen: path='%s' flags=%d\n", path, flags);
+                            fbl::StringPiece path, fbl::StringPiece* pathout,
+                            uint32_t flags, uint32_t mode) {
+    FS_TRACE(VFS, "VfsOpen: path='%s' flags=%d\n", path.begin(), flags);
     zx_status_t r;
     if ((r = vfs_validate_flags(flags)) != ZX_OK) {
         return r;
@@ -151,24 +139,23 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         return r;
     }
 
-    size_t len = strlen(path);
     fbl::RefPtr<Vnode> vn;
 
     bool must_be_dir = false;
-    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != ZX_OK) {
+    if ((r = vfs_name_trim(path, &path, &must_be_dir)) != ZX_OK) {
         return r;
-    } else if (is_dot_dot(path, len)) {
+    } else if (path == "..") {
         return ZX_ERR_INVALID_ARGS;
     }
 
     if (flags & O_CREAT) {
         if (must_be_dir && !S_ISDIR(mode)) {
             return ZX_ERR_INVALID_ARGS;
-        } else if (is_dot(path, len)) {
+        } else if (path == ".") {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if ((r = vndir->Create(&vn, path, len, mode)) < 0) {
+        if ((r = vndir->Create(&vn, path, mode)) < 0) {
             if ((r == ZX_ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
             }
@@ -179,10 +166,10 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             }
             return r;
         }
-        vndir->Notify(path, len, VFS_WATCH_EVT_ADDED);
+        vndir->Notify(path, VFS_WATCH_EVT_ADDED);
     } else {
     try_open:
-        r = vfs_lookup(fbl::move(vndir), &vn, path, len);
+        r = vfs_lookup(fbl::move(vndir), &vn, path);
         if (r < 0) {
             return r;
         }
@@ -212,14 +199,14 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
     return ZX_OK;
 }
 
-zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, const char* path, size_t len) {
+zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
     bool must_be_dir;
     zx_status_t r;
-    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != ZX_OK) {
+    if ((r = vfs_name_trim(path, &path, &must_be_dir)) != ZX_OK) {
         return r;
-    } else if (is_dot(path, len)) {
+    } else if (path == ".") {
         return ZX_ERR_UNAVAILABLE;
-    } else if (is_dot_dot(path, len)) {
+    } else if (path == "..") {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -227,12 +214,12 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, const char* path, size_t len) 
 #ifdef __Fuchsia__
         fbl::AutoLock lock(&vfs_lock_);
 #endif
-        r = vndir->Unlink(path, len, must_be_dir);
+        r = vndir->Unlink(path, must_be_dir);
     }
     if (r != ZX_OK) {
         return r;
     }
-    vndir->Notify(path, len, VFS_WATCH_EVT_REMOVED);
+    vndir->Notify(path, VFS_WATCH_EVT_REMOVED);
     return ZX_OK;
 }
 
@@ -302,24 +289,22 @@ zx_status_t Vfs::TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) {
 }
 
 zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
-                        const char* oldname, const char* newname) {
+                        fbl::StringPiece oldStr, fbl::StringPiece newStr) {
     // Local filesystem
-    size_t oldlen = strlen(oldname);
-    size_t newlen = strlen(newname);
     bool old_must_be_dir;
     bool new_must_be_dir;
     zx_status_t r;
-    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != ZX_OK) {
+    if ((r = vfs_name_trim(oldStr, &oldStr, &old_must_be_dir)) != ZX_OK) {
         return r;
-    } else if (is_dot(oldname, oldlen)) {
+    } else if (oldStr == ".") {
         return ZX_ERR_UNAVAILABLE;
-    } else if (is_dot_dot(oldname, oldlen)) {
+    } else if (oldStr == "..") {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != ZX_OK) {
+    if ((r = vfs_name_trim(newStr, &newStr, &new_must_be_dir)) != ZX_OK) {
         return r;
-    } else if (is_dot_or_dot_dot(newname, newlen)) {
+    } else if (newStr == "." || newStr == "..") {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -330,14 +315,14 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
             return r;
         }
 
-        r = oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
-                              old_must_be_dir, new_must_be_dir);
+        r = oldparent->Rename(newparent, oldStr, newStr, old_must_be_dir,
+                              new_must_be_dir);
     }
     if (r != ZX_OK) {
         return r;
     }
-    oldparent->Notify(oldname, oldlen, VFS_WATCH_EVT_REMOVED);
-    newparent->Notify(newname, newlen, VFS_WATCH_EVT_ADDED);
+    oldparent->Notify(oldStr, VFS_WATCH_EVT_REMOVED);
+    newparent->Notify(newStr, VFS_WATCH_EVT_ADDED);
     return ZX_OK;
 }
 
@@ -348,7 +333,7 @@ zx_status_t Vfs::Readdir(Vnode* vn, vdircookie_t* cookie,
 }
 
 zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
-                      const char* oldname, const char* newname) {
+                      fbl::StringPiece oldStr, fbl::StringPiece newStr) {
     fbl::AutoLock lock(&vfs_lock_);
     fbl::RefPtr<fs::Vnode> newparent;
     zx_status_t r;
@@ -356,38 +341,36 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
         return r;
     }
     // Local filesystem
-    size_t oldlen = strlen(oldname);
-    size_t newlen = strlen(newname);
     bool old_must_be_dir;
     bool new_must_be_dir;
-    if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != ZX_OK) {
+    if ((r = vfs_name_trim(oldStr, &oldStr, &old_must_be_dir)) != ZX_OK) {
         return r;
     } else if (old_must_be_dir) {
         return ZX_ERR_NOT_DIR;
-    } else if (is_dot(oldname, oldlen)) {
+    } else if (oldStr == ".") {
         return ZX_ERR_UNAVAILABLE;
-    } else if (is_dot_dot(oldname, oldlen)) {
+    } else if (oldStr == "..") {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != ZX_OK) {
+    if ((r = vfs_name_trim(newStr, &newStr, &new_must_be_dir)) != ZX_OK) {
         return r;
     } else if (new_must_be_dir) {
         return ZX_ERR_NOT_DIR;
-    } else if (is_dot_or_dot_dot(newname, newlen)) {
+    } else if (newStr == "." || newStr == "..") {
         return ZX_ERR_INVALID_ARGS;
     }
 
     // Look up the target vnode
     fbl::RefPtr<Vnode> target;
-    if ((r = oldparent->Lookup(&target, oldname, oldlen)) < 0) {
+    if ((r = oldparent->Lookup(&target, oldStr)) < 0) {
         return r;
     }
-    r = newparent->Link(newname, newlen, target);
+    r = newparent->Link(newStr, target);
     if (r != ZX_OK) {
         return r;
     }
-    newparent->Notify(newname, newlen, VFS_WATCH_EVT_ADDED);
+    newparent->Notify(newStr, VFS_WATCH_EVT_ADDED);
     return ZX_OK;
 }
 
@@ -456,7 +439,7 @@ zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, s
     case IOCTL_VFS_MOUNT_MKDIR_FS: {
         size_t namelen = in_len - sizeof(mount_mkdir_config_t);
         const mount_mkdir_config_t* config = reinterpret_cast<const mount_mkdir_config_t*>(in_buf);
-        const char* name = config->name;
+        fbl::StringPiece name(config->name, namelen - 1);
         if ((in_len < sizeof(mount_mkdir_config_t)) ||
             (namelen < 1) || (namelen > PATH_MAX) || (name[namelen - 1] != 0) ||
             (out_len != 0)) {
@@ -464,7 +447,8 @@ zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, s
         }
 
         *out_actual = 0;
-        return Vfs::MountMkdir(fbl::move(vn), config);
+        return Vfs::MountMkdir(fbl::move(vn), fbl::move(name),
+                               MountChannel(config->fs_root), config->flags);
     }
     case IOCTL_VFS_UNMOUNT_NODE: {
         if ((in_len != 0) || (out_len != sizeof(zx_handle_t))) {
@@ -496,8 +480,9 @@ zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, s
 // If a non-negative status is returned, the vnode at 'out' has been acquired.
 // Otherwise, no net deltas in acquires/releases occur.
 zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
-                      const char* path, const char** pathout) {
+                      fbl::StringPiece pathStr, fbl::StringPiece* pathout) {
     zx_status_t r;
+    const char* path = pathStr.data();
 
     for (;;) {
         while (path[0] == '/') {
@@ -513,7 +498,7 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
             // remote filesystem mount, caller must resolve
             if ((r = vn->GetRemote()) > 0) {
                 *out = fbl::move(vn);
-                *pathout = path;
+                pathout->set(path, pathStr.length() - (path - pathStr.data()));
                 return r;
             }
             return ZX_ERR_NOT_FOUND;
@@ -537,14 +522,14 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
             // traverse to the next segment
             size_t len = nextpath - path;
             nextpath++;
-            if ((r = vfs_lookup(fbl::move(vn), &vn, path, len)) < 0) {
+            if ((r = vfs_lookup(fbl::move(vn), &vn, fbl::StringPiece(path, len))) < 0) {
                 return r;
             }
             path = nextpath;
         } else {
             // final path segment, we're done here
             *out = vn;
-            *pathout = path;
+            pathout->set(path, pathStr.length() - (path - pathStr.data()));
             return ZX_OK;
         }
     }

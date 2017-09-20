@@ -91,10 +91,9 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
     return ZX_OK;
 }
 
-zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, const mount_mkdir_config_t* config) {
+zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountChannel h,
+                            uint32_t flags) {
     fbl::AutoLock lock(&vfs_lock_);
-    const char* name = config->name;
-    MountChannel h = MountChannel(config->fs_root);
     zx_status_t r = OpenLocked(vn, &vn, name, &name,
                                O_CREAT | O_RDONLY | O_DIRECTORY | O_NOREMOTE, S_IFDIR);
     ZX_DEBUG_ASSERT(r <= ZX_OK); // Should not be accessing remote nodes
@@ -102,7 +101,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, const mount_mkdir_config_t* c
         return r;
     }
     if (vn->IsRemote()) {
-        if (config->flags & MOUNT_MKDIR_FLAG_REPLACE) {
+        if (flags & MOUNT_MKDIR_FLAG_REPLACE) {
             // There is an old remote handle on this vnode; shut it down and
             // replace it with our own.
             zx::channel old_remote;

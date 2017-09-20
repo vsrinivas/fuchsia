@@ -44,7 +44,7 @@ public:
     using DeviceList = fbl::DoublyLinkedList<fbl::RefPtr<Dnode>, Dnode::TypeDeviceTraits>;
 
     // Allocates a dnode, attached to a vnode
-    static fbl::RefPtr<Dnode> Create(const char* name, size_t len, fbl::RefPtr<VnodeMemfs> vn);
+    static fbl::RefPtr<Dnode> Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn);
 
     // Takes a parent-less node and makes it a child of the parent node.
     //
@@ -69,7 +69,7 @@ public:
     // ZX_OK is still returned.
     // If "out" is provided as "nullptr", the returned status appears the
     // same, but the "out" argument is not touched.
-    zx_status_t Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const;
+    zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<Dnode>* out) const;
 
     // Acquire a pointer to the vnode underneath this dnode.
     // Acquires a reference to the underlying vnode.
@@ -101,7 +101,7 @@ private:
     Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags);
 
     size_t NameLen() const;
-    bool NameMatch(const char* name, size_t len) const;
+    bool NameMatch(fbl::StringPiece name) const;
 
     NodeState type_child_state_;
     NodeState type_device_state_;

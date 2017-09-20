@@ -17,7 +17,7 @@ namespace svcfs {
 
 class ServiceProvider {
 public:
-    virtual void Connect(const char* name, size_t len, zx::channel channel) = 0;
+    virtual void Connect(fbl::StringPiece name, zx::channel channel) = 0;
 
 protected:
     virtual ~ServiceProvider();
@@ -47,7 +47,7 @@ public:
     uint64_t node_id() const { return node_id_; }
     const fbl::String& name() const { return name_; }
 
-    bool NameMatch(const char* name, size_t len) const;
+    bool NameMatch(fbl::StringPiece name) const;
     void ClearProvider();
 
 private:
@@ -68,16 +68,16 @@ public:
     ~VnodeDir() override;
 
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
 
-    void Notify(const char* name, size_t len, unsigned event) final;
+    void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
 
-    bool AddService(const char* name, size_t len, ServiceProvider* provider);
-    bool RemoveService(const char* name, size_t len);
+    bool AddService(fbl::StringPiece name, ServiceProvider* provider);
+    bool RemoveService(fbl::StringPiece name);
 
     void RemoveAllServices();
 
@@ -97,7 +97,7 @@ public:
     ~VnodeProviderDir() override;
 
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
 
     // Set the service provider to null to prevent further requests.

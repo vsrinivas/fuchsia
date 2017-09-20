@@ -557,7 +557,8 @@ zx_status_t Blobstore::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
             if (r < 0) {
                 return r;
             }
-            if ((r = df.Next(name, strlen(name), VTYPE_TO_DTYPE(V_TYPE_FILE))) != ZX_OK) {
+            if ((r = df.Next(fbl::StringPiece(name, Digest::kLength * 2),
+                             VTYPE_TO_DTYPE(V_TYPE_FILE))) != ZX_OK) {
                 break;
             }
             c->index = i + 1;

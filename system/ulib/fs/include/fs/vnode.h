@@ -27,11 +27,10 @@
 
 namespace fs {
 
-inline bool vfs_valid_name(const char* name, size_t len) {
-    return (len <= NAME_MAX &&
-            memchr(name, '/', len) == nullptr &&
-            (len != 1 || strncmp(name, ".", 1)) &&
-            (len != 2 || strncmp(name, "..", 2)));
+inline bool vfs_valid_name(fbl::StringPiece name) {
+    return name.length() <= NAME_MAX &&
+           memchr(name.data(), '/', name.length()) == nullptr &&
+           name != "." && name != "..";
 }
 
 // The VFS interface declares a default abtract Vnode class with
@@ -78,7 +77,7 @@ public:
     virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd);
 #endif
 
-    virtual void Notify(const char* name, size_t len, unsigned event);
+    virtual void Notify(fbl::StringPiece name, unsigned event);
 
     // Ensures that it is valid to open the vnode with given flags and provides
     // an opportunity to redirect subsequent I/O operations to a different vnode.
@@ -115,7 +114,7 @@ public:
 
     // Attempt to find child of vn, child returned on success.
     // Name is len bytes long, and does not include a null terminator.
-    virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, const char* name, size_t len);
+    virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name);
 
     // Read attributes of vn.
     virtual zx_status_t Getattr(vnattr_t* a);
@@ -133,7 +132,7 @@ public:
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.
     // Mode specifies the type of entity to create.
-    virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode);
+    virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, fbl::StringPiece name, uint32_t mode);
 
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
@@ -141,7 +140,7 @@ public:
                               void* out_buf, size_t out_len, size_t* out_actual);
 
     // Removes name from directory vn
-    virtual zx_status_t Unlink(const char* name, size_t len, bool must_be_dir);
+    virtual zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir);
 
     // Change the size of vn
     virtual zx_status_t Truncate(size_t len);
@@ -150,12 +149,11 @@ public:
     // Called on the "olddir" vnode.
     // Unlinks any prior newname if it already exists.
     virtual zx_status_t Rename(fbl::RefPtr<Vnode> newdir,
-                               const char* oldname, size_t oldlen,
-                               const char* newname, size_t newlen,
+                               fbl::StringPiece oldname, fbl::StringPiece newname,
                                bool src_must_be_dir, bool dst_must_be_dir);
 
     // Creates a hard link to the 'target' vnode with a provided name in vndir
-    virtual zx_status_t Link(const char* name, size_t len, fbl::RefPtr<Vnode> target);
+    virtual zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<Vnode> target);
 
     // Acquire a vmo from a vnode.
     //
@@ -210,7 +208,7 @@ public:
 
     // Attempts to add the name to the end of the dirent buffer
     // which is returned by readdir.
-    zx_status_t Next(const char* name, size_t len, uint32_t type);
+    zx_status_t Next(fbl::StringPiece name, uint32_t type);
 
     zx_status_t BytesFilled() const {
         return static_cast<zx_status_t>(pos_);

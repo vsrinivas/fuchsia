@@ -38,7 +38,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(WatchBuffer);
     WatchBuffer() = default;
 
-    zx_status_t AddMsg(const zx::channel& c, unsigned event, const char* name);
+    zx_status_t AddMsg(const zx::channel& c, unsigned event, fbl::StringPiece name);
     zx_status_t Send(const zx::channel& c);
 
 private:
@@ -46,8 +46,8 @@ private:
     char watch_buf_[VFS_WATCH_MSG_MAX]{};
 };
 
-zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, const char* name) {
-    size_t slen = strlen(name);
+zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, fbl::StringPiece name) {
+    size_t slen = name.length();
     size_t mlen = sizeof(vfs_watch_msg_t) + slen;
     if (mlen + watch_buf_size_ > sizeof(watch_buf_)) {
         // This message won't fit in the watch_buf; transmit first.
@@ -59,7 +59,7 @@ zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, const char
     vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>((uintptr_t)watch_buf_ + watch_buf_size_);
     vmsg->event = static_cast<uint8_t>(event);
     vmsg->len = static_cast<uint8_t>(slen);
-    memcpy(vmsg->name,name, slen);
+    memcpy(vmsg->name, name.data(), slen);
     watch_buf_size_ += mlen;
     return ZX_OK;
 }
@@ -106,7 +106,8 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_
                 while (status > 0) {
                     auto dirent = reinterpret_cast<vdirent_t*>(ptr);
                     if (dirent->name[0]) {
-                        wb.AddMsg(watcher->h, VFS_WATCH_EVT_EXISTING, dirent->name);
+                        wb.AddMsg(watcher->h, VFS_WATCH_EVT_EXISTING,
+                                  fbl::StringPiece(dirent->name));
                     }
                     status -= dirent->size;
                     ptr = reinterpret_cast<void*>(
@@ -129,8 +130,8 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_
     return ZX_OK;
 }
 
-void WatcherContainer::Notify(const char* name, size_t len, unsigned event) {
-    if (len > VFS_WATCH_NAME_MAX) {
+void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
+    if (name.length() > VFS_WATCH_NAME_MAX) {
         return;
     }
 
@@ -140,11 +141,11 @@ void WatcherContainer::Notify(const char* name, size_t len, unsigned event) {
         return;
     }
 
-    uint8_t msg[sizeof(vfs_watch_msg_t) + len];
+    uint8_t msg[sizeof(vfs_watch_msg_t) + name.length()];
     vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>(msg);
     vmsg->event = static_cast<uint8_t>(event);
-    vmsg->len = static_cast<uint8_t>(len);
-    memcpy(vmsg->name, name, len);
+    vmsg->len = static_cast<uint8_t>(name.length());
+    memcpy(vmsg->name, name.data(), name.length());
 
     for (auto it = watch_list_.begin(); it != watch_list_.end();) {
         if (!(it->mask & VFS_WATCH_EVT_MASK(event))) {

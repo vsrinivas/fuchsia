@@ -87,9 +87,9 @@ zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end,
     return status;
 }
 
-zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    assert(memchr(name, '/', len) == nullptr);
-    if ((len == 1) && (name[0] == '.') && IsDirectory()) {
+zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+    assert(memchr(name.data(), '/', name.length()) == nullptr);
+    if (name == "." && IsDirectory()) {
         // Special case: Accessing root directory via '.'
         *out = fbl::RefPtr<VnodeBlob>(this);
         return ZX_OK;
@@ -101,7 +101,7 @@ zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, siz
 
     zx_status_t status;
     Digest digest;
-    if ((status = digest.Parse(name, len)) != ZX_OK) {
+    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
         return status;
     }
     fbl::RefPtr<VnodeBlob> vn;
@@ -125,15 +125,15 @@ zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
-    assert(memchr(name, '/', len) == nullptr);
+zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+    assert(memchr(name.data(), '/', name.length()) == nullptr);
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     Digest digest;
     zx_status_t status;
-    if ((status = digest.Parse(name, len)) != ZX_OK) {
+    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
         return status;
     }
     fbl::RefPtr<VnodeBlob> vn;
@@ -198,8 +198,8 @@ zx_status_t VnodeBlob::Truncate(size_t len) {
     return SpaceAllocate(len);
 }
 
-zx_status_t VnodeBlob::Unlink(const char* name, size_t len, bool must_be_dir) {
-    assert(memchr(name, '/', len) == nullptr);
+zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
+    assert(memchr(name.data(), '/', name.length()) == nullptr);
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -207,7 +207,7 @@ zx_status_t VnodeBlob::Unlink(const char* name, size_t len, bool must_be_dir) {
     zx_status_t status;
     Digest digest;
     fbl::RefPtr<VnodeBlob> out;
-    if ((status = digest.Parse(name, len)) != ZX_OK) {
+    if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
         return status;
     } else if ((status = blobstore_->LookupBlob(digest, &out)) < 0) {
         return status;

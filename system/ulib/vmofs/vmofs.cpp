@@ -139,10 +139,9 @@ zx_status_t VnodeDir::Open(uint32_t flags, fbl::RefPtr<fs::Vnode>* vnode) {
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    fbl::StringPiece value(name, len);
-    auto* it = fbl::lower_bound(names_.begin(), names_.end(), value);
-    if (it == names_.end() || *it != value) {
+zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+    auto* it = fbl::lower_bound(names_.begin(), names_.end(), name);
+    if (it == names_.end() || *it != name) {
         return ZX_ERR_NOT_FOUND;
     }
     *out = children_[it - names_.begin()];
@@ -163,7 +162,7 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
     fs::DirentFiller df(data, len);
     zx_status_t r = 0;
     if (c->last_id < 1) {
-        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
+        if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
             return df.BytesFilled();
         }
         c->last_id = 1;
@@ -173,7 +172,7 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
         fbl::StringPiece name = names_[i];
         const auto& child = children_[i];
         uint32_t vtype = child->GetVType();
-        if ((r = df.Next(name.data(), name.length(), VTYPE_TO_DTYPE(vtype))) != ZX_OK) {
+        if ((r = df.Next(name, VTYPE_TO_DTYPE(vtype))) != ZX_OK) {
             break;
         }
         c->last_id = i + 2;

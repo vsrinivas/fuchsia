@@ -114,9 +114,9 @@ int emu_open(const char* path, int flags, mode_t mode) {
     }
     for (fd = 0; fd < MAXFD; fd++) {
         if (fdtab[fd].vn == nullptr) {
-            const char* pathout = nullptr;
             fbl::RefPtr<fs::Vnode> vn_fs;
-            zx_status_t status = minfs::vfs.Open(fake_root, &vn_fs, path + PREFIX_SIZE, &pathout, flags, mode);
+            fbl::StringPiece str(path + PREFIX_SIZE);
+            zx_status_t status = minfs::vfs.Open(fake_root, &vn_fs, str, &str, flags, mode);
             if (status < 0) {
                 STATUS(status);
             }
@@ -245,7 +245,7 @@ int emu_stat(const char* fn, struct stat* s) {
             nextpath++;
         }
         fbl::RefPtr<fs::Vnode> vn_fs;
-        status = cur->Lookup(&vn_fs, fn, len);
+        status = cur->Lookup(&vn_fs, fbl::StringPiece(fn, len));
         if (status != ZX_OK) {
             return -ENOENT;
         }
@@ -279,7 +279,8 @@ typedef struct MINDIR {
 DIR* emu_opendir(const char* name) {
     PATH_WRAP(name, opendir, name);
     fbl::RefPtr<fs::Vnode> vn;
-    zx_status_t status = minfs::vfs.Open(fake_root, &vn, name + PREFIX_SIZE, &name, O_RDONLY, 0);
+    fbl::StringPiece path(name + PREFIX_SIZE);
+    zx_status_t status = minfs::vfs.Open(fake_root, &vn, path, &path, O_RDONLY, 0);
     if (status != ZX_OK) {
         return nullptr;
     }

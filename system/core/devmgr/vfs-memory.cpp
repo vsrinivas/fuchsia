@@ -33,11 +33,11 @@ namespace {
 
 class MemVfs : public fs::Vfs {
  public:
-    zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, const char* name,
-                              size_t namelen, zx_handle_t vmo, zx_off_t off,
+    zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
+                              zx_handle_t vmo, zx_off_t off,
                               zx_off_t len) {
         fbl::AutoLock lock(&vfs_lock_);
-        return parent->CreateFromVmo(vmofile, name, namelen, vmo, off, len);
+        return parent->CreateFromVmo(vmofile, name, vmo, off, len);
     }
 
     void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
@@ -253,12 +253,12 @@ zx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(); }
 zx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
 void VnodeDir::SetRemote(zx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
 
-zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
     if (!IsDirectory()) {
         return ZX_ERR_NOT_FOUND;
     }
     fbl::RefPtr<Dnode> dn;
-    zx_status_t r = dnode_->Lookup(name, len, &dn);
+    zx_status_t r = dnode_->Lookup(name, &dn);
     ZX_DEBUG_ASSERT(r <= 0);
     if (r == ZX_OK) {
         if (dn == nullptr) {
@@ -336,9 +336,9 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
 }
 
 // postcondition: reference taken on vn returned through "out"
-zx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
+zx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
     zx_status_t status;
-    if ((status = CanCreate(name, len)) != ZX_OK) {
+    if ((status = CanCreate(name)) != ZX_OK) {
         return status;
     }
 
@@ -354,22 +354,21 @@ zx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((status = AttachVnode(vn, name, len, S_ISDIR(mode))) != ZX_OK) {
+    if ((status = AttachVnode(vn, name, S_ISDIR(mode))) != ZX_OK) {
         return status;
     }
     *out = fbl::move(vn);
     return status;
 }
 
-zx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
-    xprintf("memfs_unlink(%p,'%.*s')\n", this, (int)len, name);
+zx_status_t VnodeDir::Unlink(fbl::StringPiece name, bool must_be_dir) {
     if (!IsDirectory()) {
         // Calling unlink from unlinked, empty directory
         return ZX_ERR_BAD_STATE;
     }
     fbl::RefPtr<Dnode> dn;
     zx_status_t r;
-    if ((r = dnode_->Lookup(name, len, &dn)) != ZX_OK) {
+    if ((r = dnode_->Lookup(name, &dn)) != ZX_OK) {
         return r;
     } else if (dn == nullptr) {
         // Cannot unlink directory 'foo' using the argument 'foo/.'
@@ -423,8 +422,8 @@ zx_status_t VnodeFile::Truncate(size_t len) {
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname, size_t oldlen,
-                             const char* newname, size_t newlen, bool src_must_be_dir,
+zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece oldname,
+                             fbl::StringPiece newname, bool src_must_be_dir,
                              bool dst_must_be_dir) {
     auto newdir = fbl::RefPtr<VnodeMemfs>::Downcast(fbl::move(_newdir));
 
@@ -434,7 +433,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname
     fbl::RefPtr<Dnode> olddn;
     zx_status_t r;
     // The source must exist
-    if ((r = dnode_->Lookup(oldname, oldlen, &olddn)) != ZX_OK) {
+    if ((r = dnode_->Lookup(oldname, &olddn)) != ZX_OK) {
         return r;
     }
     ZX_DEBUG_ASSERT(olddn != nullptr);
@@ -451,7 +450,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname
 
     // The destination may or may not exist
     fbl::RefPtr<Dnode> targetdn;
-    r = newdir->dnode_->Lookup(newname, newlen, &targetdn);
+    r = newdir->dnode_->Lookup(newname, &targetdn);
     bool target_exists = (r == ZX_OK);
     if (target_exists) {
         ZX_DEBUG_ASSERT(targetdn != nullptr);
@@ -479,12 +478,12 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname
         namebuffer = fbl::move(targetdn->TakeName());
     } else {
         fbl::AllocChecker ac;
-        namebuffer.reset(new (&ac) char[newlen + 1]);
+        namebuffer.reset(new (&ac) char[newname.length() + 1]);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        memcpy(namebuffer.get(), newname, newlen);
-        namebuffer[newlen] = '\0';
+        memcpy(namebuffer.get(), newname.data(), newname.length());
+        namebuffer[newname.length()] = '\0';
     }
 
     // NOTE:
@@ -493,12 +492,12 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname
     // beyond this point.
 
     olddn->RemoveFromParent();
-    olddn->PutName(fbl::move(namebuffer), newlen);
+    olddn->PutName(fbl::move(namebuffer), newname.length());
     Dnode::AddChild(newdir->dnode_, fbl::move(olddn));
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) {
+zx_status_t VnodeDir::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) {
     auto vn = fbl::RefPtr<VnodeMemfs>::Downcast(fbl::move(target));
 
     if (!IsDirectory()) {
@@ -511,14 +510,14 @@ zx_status_t VnodeDir::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> 
         return ZX_ERR_NOT_FILE;
     }
 
-    if (dnode_->Lookup(name, len, nullptr) == ZX_OK) {
+    if (dnode_->Lookup(name, nullptr) == ZX_OK) {
         // The destination should not exist
         return ZX_ERR_ALREADY_EXISTS;
     }
 
     // Make a new dnode for the new name, attach the target vnode to it
     fbl::RefPtr<Dnode> targetdn;
-    if ((targetdn = Dnode::Create(name, len, vn)) == nullptr) {
+    if ((targetdn = Dnode::Create(name, vn)) == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -577,7 +576,7 @@ zx_status_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
     case IOCTL_VFS_VMO_CREATE: {
         const auto* config = reinterpret_cast<const vmo_create_config_t*>(in_buf);
         size_t namelen = in_len - sizeof(vmo_create_config_t) - 1;
-        const char* name = config->name;
+        fbl::StringPiece name(config->name, namelen);
         if (in_len <= sizeof(vmo_create_config_t) || (namelen > NAME_MAX) ||
             (name[namelen] != 0)) {
             zx_handle_close(config->vmo);
@@ -601,7 +600,7 @@ zx_status_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
 
         bool vmofile = false;
         *out_actual = 0;
-        return vfs.CreateFromVmo(this, vmofile, name, namelen, config->vmo, 0, size);
+        return vfs.CreateFromVmo(this, vmofile, name, config->vmo, 0, size);
     }
     default:
         return VnodeMemfs::Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
@@ -625,7 +624,7 @@ static zx_status_t memfs_create_fs(const char* name, fbl::RefPtr<VnodeDir>* out)
         return ZX_ERR_NO_MEMORY;
     }
 
-    fbl::RefPtr<Dnode> dn = Dnode::Create(name, strlen(name), fs);
+    fbl::RefPtr<Dnode> dn = Dnode::Create(name, fs);
     if (dn == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -639,10 +638,10 @@ void VnodeDir::MountSubtree(fbl::RefPtr<VnodeDir> subtree) {
     Dnode::AddChild(dnode_, subtree->dnode_);
 }
 
-zx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namelen,
+zx_status_t VnodeDir::CreateFromVmo(bool vmofile, fbl::StringPiece name,
                                     zx_handle_t vmo, zx_off_t off, zx_off_t len) {
     zx_status_t status;
-    if ((status = CanCreate(name, namelen)) != ZX_OK) {
+    if ((status = CanCreate(name)) != ZX_OK) {
         return status;
     }
 
@@ -656,19 +655,19 @@ zx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namel
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    if ((status = AttachVnode(fbl::move(vn), name, namelen, false)) != ZX_OK) {
+    if ((status = AttachVnode(fbl::move(vn), name, false)) != ZX_OK) {
         return status;
     }
 
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::CanCreate(const char* name, size_t namelen) const {
+zx_status_t VnodeDir::CanCreate(fbl::StringPiece name) const {
     if (!IsDirectory()) {
         return ZX_ERR_INVALID_ARGS;
     }
     zx_status_t status;
-    if ((status = dnode_->Lookup(name, namelen, nullptr)) == ZX_ERR_NOT_FOUND) {
+    if ((status = dnode_->Lookup(name, nullptr)) == ZX_ERR_NOT_FOUND) {
         return ZX_OK;
     } else if (status == ZX_OK) {
         return ZX_ERR_ALREADY_EXISTS;
@@ -676,11 +675,11 @@ zx_status_t VnodeDir::CanCreate(const char* name, size_t namelen) const {
     return status;
 }
 
-zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, const char* name, size_t namelen,
+zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, fbl::StringPiece name,
                                   bool isdir) {
     // dnode takes a reference to the vnode
     fbl::RefPtr<Dnode> dn;
-    if ((dn = Dnode::Create(name, namelen, vn)) == nullptr) {
+    if ((dn = Dnode::Create(name, vn)) == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -765,17 +764,17 @@ static zx_status_t add_vmofile(fbl::RefPtr<VnodeDir> vnb, const char* path, zx_h
                 return ZX_ERR_INVALID_ARGS;
             }
             bool vmofile = true;
-            return memfs::vfs.CreateFromVmo(vnb.get(), vmofile, path,
-                                            strlen(path), vmo, off, len);
+            return memfs::vfs.CreateFromVmo(vnb.get(), vmofile,
+                                            fbl::StringPiece(path, strlen(path)), vmo, off, len);
         } else {
             if (nextpath == path) {
                 return ZX_ERR_INVALID_ARGS;
             }
 
             fbl::RefPtr<fs::Vnode> out;
-            r = vnb->Lookup(&out, path, nextpath - path);
+            r = vnb->Lookup(&out, fbl::StringPiece(path, nextpath - path));
             if (r == ZX_ERR_NOT_FOUND) {
-                r = vnb->Create(&out, path, nextpath - path, S_IFDIR);
+                r = vnb->Create(&out, fbl::StringPiece(path, nextpath - path), S_IFDIR);
             }
 
             if (r < 0) {
@@ -809,10 +808,10 @@ VnodeDir* vfs_create_global_root() {
         memfs::vfs.MountSubtree(memfs::vfs_root.get(), MemfsRoot());
 
         fbl::RefPtr<fs::Vnode> vn;
-        const char* pathout;
-        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, "/data", &pathout,
+        fbl::StringPiece pathout;
+        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, fbl::StringPiece("/data"), &pathout,
                                   O_CREAT, S_IFDIR) == ZX_OK);
-        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, "/volume", &pathout,
+        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, fbl::StringPiece("/volume"), &pathout,
                                   O_CREAT, S_IFDIR) == ZX_OK);
 
         memfs::global_loop.reset(new async::Loop());

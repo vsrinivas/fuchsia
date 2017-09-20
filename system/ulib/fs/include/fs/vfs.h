@@ -31,6 +31,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 
 namespace fs {
@@ -111,9 +112,9 @@ public:
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
     zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
-                     const char* path, const char** pathout,
+                     fbl::StringPiece path, fbl::StringPiece* pathout,
                      uint32_t flags, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
-    zx_status_t Unlink(fbl::RefPtr<Vnode> vn, const char* path, size_t len) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t Unlink(fbl::RefPtr<Vnode> vn, fbl::StringPiece path) __TA_EXCLUDES(vfs_lock_);
     zx_status_t Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                       void* out_buf, size_t out_len, size_t* out_actual) __TA_EXCLUDES(vfs_lock_);
 
@@ -122,9 +123,9 @@ public:
     zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
                              zx::event* out) __TA_EXCLUDES(vfs_lock_);
     zx_status_t Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
-                     const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
+                     fbl::StringPiece oldStr, fbl::StringPiece newStr) __TA_EXCLUDES(vfs_lock_);
     zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
-                       const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
+                       fbl::StringPiece oldStr, fbl::StringPiece newStr) __TA_EXCLUDES(vfs_lock_);
     // Calls readdir on the Vnode while holding the vfs_lock, preventing path
     // modification operations for the duration of the operation.
     zx_status_t Readdir(Vnode* vn, vdircookie_t* cookie,
@@ -149,8 +150,8 @@ public:
     zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
 
     // Create and mount a directory with a provided name
-    zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn,
-                           const mount_mkdir_config_t* config) __TA_EXCLUDES(vfs_lock_);
+    zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name,
+                           MountChannel h, uint32_t flags) __TA_EXCLUDES(vfs_lock_);
 
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
     zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) __TA_EXCLUDES(vfs_lock_);
@@ -164,9 +165,9 @@ private:
     // Walk from vn --> out until either only one path segment remains or we
     // encounter a remote filesystem.
     zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
-                     const char* path, const char** pathout) __TA_REQUIRES(vfs_lock_);
+                     fbl::StringPiece path, fbl::StringPiece* pathout) __TA_REQUIRES(vfs_lock_);
     zx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
-                           const char* path, const char** pathout,
+                           fbl::StringPiece path, fbl::StringPiece* pathout,
                            uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);
 #ifdef __Fuchsia__
     zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);

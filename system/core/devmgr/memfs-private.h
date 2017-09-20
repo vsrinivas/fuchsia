@@ -87,20 +87,20 @@ public:
     virtual ~VnodeDir();
 
     virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
-    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
+    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
 
     // Create a vnode from a VMO.
     // Fails if the vnode already exists.
     // Passes the vmo to the Vnode; does not duplicate it.
-    zx_status_t CreateFromVmo(bool vmofile, const char* name, size_t namelen, zx_handle_t vmo,
+    zx_status_t CreateFromVmo(bool vmofile, fbl::StringPiece name, zx_handle_t vmo,
                               zx_off_t off, zx_off_t len);
 
     // Mount a subtree as a child of this directory.
     void MountSubtree(fbl::RefPtr<VnodeDir> subtree);
 
     // Use the watcher container to implement a directory watcher
-    void Notify(const char* name, size_t len, unsigned event) final;
+    void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
@@ -114,19 +114,18 @@ private:
 
     // Resolves the question, "Can this directory create a child node with the name?"
     // Returns "ZX_OK" on success; otherwise explains failure with error message.
-    zx_status_t CanCreate(const char* name, size_t namelen) const;
+    zx_status_t CanCreate(fbl::StringPiece name) const;
 
     // Creates a dnode for the Vnode, attaches vnode to dnode, (if directory) attaches
     // dnode to vnode, and adds dnode to parent directory.
-    zx_status_t AttachVnode(fbl::RefPtr<memfs::VnodeMemfs> vn, const char* name, size_t namelen,
+    zx_status_t AttachVnode(fbl::RefPtr<memfs::VnodeMemfs> vn, fbl::StringPiece name,
                             bool isdir);
 
-    zx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
-    zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir,
-                       const char* oldname, size_t oldlen,
-                       const char* newname, size_t newlen,
-                       bool src_must_be_dir, bool dst_must_be_dir) final;
-    zx_status_t Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) final;
+    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
+    zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, fbl::StringPiece oldname,
+                       fbl::StringPiece newname, bool src_must_be_dir,
+                       bool dst_must_be_dir) final;
+    zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,

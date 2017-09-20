@@ -126,8 +126,7 @@ private:
 };
 
 struct DirArgs {
-    const char* name;
-    size_t len;
+    fbl::StringPiece name;
     ino_t ino;
     uint32_t type;
     uint32_t reclen;
@@ -173,9 +172,9 @@ public:
     zx_status_t TruncateInternal(WriteTxn* txn, size_t len);
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                       size_t out_len, size_t* out_actual) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     // Lookup which can traverse '..'
-    zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len);
+    zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
 
     Minfs* fs_{};
     ino_t ino_{};
@@ -200,14 +199,13 @@ private:
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Setattr(const vnattr_t* a) final;
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
-    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len,
+    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
                        uint32_t mode) final;
-    zx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
+    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir,
-                       const char* oldname, size_t oldlen,
-                       const char* newname, size_t newlen,
+                       fbl::StringPiece oldname, fbl::StringPiece newname,
                        bool src_must_be_dir, bool dst_must_be_dir) final;
-    zx_status_t Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) final;
+    zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t Sync() final;
 
@@ -336,7 +334,7 @@ private:
     vmoid_t vmoid_indirect_{};
 
     // Use the watcher container to implement a directory watcher
-    void Notify(const char* name, size_t len, unsigned event) final;
+    void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.

@@ -28,7 +28,7 @@ public:
 
     // Notifies all VnodeWatchers in the watch list, if their mask
     // indicates they are interested in the incoming event.
-    void Notify(const char* name, size_t len, unsigned event);
+    void Notify(fbl::StringPiece name, unsigned event);
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(WatcherContainer);
 

@@ -718,8 +718,7 @@ static zx_status_t do_next_dirent(minfs_dirent_t* de, DirectoryOffset* offs) {
 
 static zx_status_t cb_dir_find(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
                                DirArgs* args, DirectoryOffset* offs) {
-    if ((de->ino != 0) && (de->namelen == args->len) &&
-        (!memcmp(de->name, args->name, args->len))) {
+    if ((de->ino != 0) && fbl::StringPiece(de->name, de->namelen) == args->name) {
         args->ino = de->ino;
         args->type = de->type;
         return DIR_CB_DONE;
@@ -837,8 +836,7 @@ void VnodeMinfs::RemoveInodeLink(WriteTxn* txn) {
 // caller is expected to prevent unlink of "." or ".."
 static zx_status_t cb_dir_unlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
                                  DirArgs* args, DirectoryOffset* offs) {
-    if ((de->ino == 0) || (args->len != de->namelen) ||
-        memcmp(args->name, de->name, args->len)) {
+    if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
         return do_next_dirent(de, offs);
     }
 
@@ -861,8 +859,7 @@ static zx_status_t cb_dir_unlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* 
 // same as unlink, but do not validate vnode
 static zx_status_t cb_dir_force_unlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
                                        DirArgs* args, DirectoryOffset* offs) {
-    if ((de->ino == 0) || (args->len != de->namelen) ||
-        memcmp(args->name, de->name, args->len)) {
+    if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
         return do_next_dirent(de, offs);
     }
 
@@ -885,8 +882,7 @@ static zx_status_t cb_dir_force_unlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dire
 //      - Replace the old vnode's position in the directory with the new inode
 static zx_status_t cb_dir_attempt_rename(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
                                          DirArgs* args, DirectoryOffset* offs) {
-    if ((de->ino == 0) || (args->len != de->namelen) ||
-        memcmp(args->name, de->name, args->len)) {
+    if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
         return do_next_dirent(de, offs);
     }
 
@@ -922,8 +918,7 @@ static zx_status_t cb_dir_attempt_rename(fbl::RefPtr<VnodeMinfs> vndir, minfs_di
 
 static zx_status_t cb_dir_update_inode(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
                                        DirArgs* args, DirectoryOffset* offs) {
-    if ((de->ino == 0) || (args->len != de->namelen) ||
-        memcmp(args->name, de->name, args->len)) {
+    if ((de->ino == 0) || fbl::StringPiece(de->name, de->namelen) != args->name) {
         return do_next_dirent(de, offs);
     }
 
@@ -941,8 +936,8 @@ static zx_status_t add_dirent(fbl::RefPtr<VnodeMinfs> vndir,
                               minfs_dirent_t* de, DirArgs* args, size_t off) {
     de->ino = args->ino;
     de->type = static_cast<uint8_t>(args->type);
-    de->namelen = static_cast<uint8_t>(args->len);
-    memcpy(de->name, args->name, args->len);
+    de->namelen = static_cast<uint8_t>(args->name.length());
+    memcpy(de->name, args->name.data(), de->namelen);
     zx_status_t status = vndir->WriteExactInternal(args->txn, de,
                                                    DirentSize(de->namelen),
                                                    off);
@@ -1270,23 +1265,20 @@ done:
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    FS_TRACE(MINFS, "minfs_lookup() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
-    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
+zx_status_t VnodeMinfs::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
         FS_TRACE_ERROR("not directory\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    return LookupInternal(out, name, len);
+    return LookupInternal(out, name);
 }
 
-zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out,
-                                       const char* name, size_t len) {
+zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
     DirArgs args = DirArgs();
     args.name = name;
-    args.len = len;
     zx_status_t status;
     if ((status = ForEachDirent(&args, cb_dir_find)) < 0) {
         return status;
@@ -1385,9 +1377,11 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
             goto fail;
         }
 
-        if (de->ino && (de->namelen != 2 || strncmp("..", de->name, de->namelen))) {
+        fbl::StringPiece name(de->name, de->namelen);
+
+        if (de->ino && name != "..") {
             zx_status_t status;
-            if ((status = df.Next(de->name, de->namelen, de->type)) != ZX_OK) {
+            if ((status = df.Next(name, de->type)) != ZX_OK) {
                 // no more space
                 goto done;
             }
@@ -1413,7 +1407,7 @@ fail:
 VnodeMinfs::VnodeMinfs(Minfs* fs) :
     fs_(fs), vmo_(ZX_HANDLE_INVALID), vmo_indirect_(nullptr) {}
 
-void VnodeMinfs::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
+void VnodeMinfs::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
 zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDir(vfs, this, cmd);
 }
@@ -1448,10 +1442,8 @@ zx_status_t VnodeMinfs::AllocateHollow(Minfs* fs, fbl::RefPtr<VnodeMinfs>* out) 
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
-    FS_TRACE(MINFS, "minfs_create() vn=%p(#%u) name='%.*s' mode=%#x\n",
-          this, ino_, (int)len, name, mode);
-    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
+zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
+    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -1462,7 +1454,6 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, si
 
     DirArgs args = DirArgs();
     args.name = name;
-    args.len = len;
     // ensure file does not exist
     zx_status_t status;
     if ((status = ForEachDirent(&args, cb_dir_find)) != ZX_ERR_NOT_FOUND) {
@@ -1494,7 +1485,7 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, si
     // add directory entry for the new child node
     args.ino = vn->ino_;
     args.type = type;
-    args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(len)));
+    args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
     args.txn = &txn;
     if ((status = ForEachDirent(&args, cb_dir_append)) < 0) {
         return status;
@@ -1551,9 +1542,8 @@ zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, vo
     }
 }
 
-zx_status_t VnodeMinfs::Unlink(const char* name, size_t len, bool must_be_dir) {
-    FS_TRACE(MINFS, "minfs_unlink() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
-    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
+zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
+    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -1561,7 +1551,6 @@ zx_status_t VnodeMinfs::Unlink(const char* name, size_t len, bool must_be_dir) {
     WriteTxn txn(fs_->bc_.get());
     DirArgs args = DirArgs();
     args.name = name;
-    args.len = len;
     args.type = must_be_dir ? kMinfsTypeDir : 0;
     args.txn = &txn;
     return ForEachDirent(&args, cb_dir_unlink);
@@ -1667,7 +1656,7 @@ static zx_status_t check_not_subdirectory(fbl::RefPtr<VnodeMinfs> src, fbl::RefP
         }
 
         fbl::RefPtr<fs::Vnode> out = nullptr;
-        if ((status = vn->LookupInternal(&out, "..", 2)) < 0) {
+        if ((status = vn->LookupInternal(&out, "..")) < 0) {
             break;
         }
         vn = fbl::RefPtr<VnodeMinfs>::Downcast(out);
@@ -1675,14 +1664,12 @@ static zx_status_t check_not_subdirectory(fbl::RefPtr<VnodeMinfs> src, fbl::RefP
     return status;
 }
 
-zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname, size_t oldlen,
-                               const char* newname, size_t newlen, bool src_must_be_dir,
+zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece oldname,
+                               fbl::StringPiece newname, bool src_must_be_dir,
                                bool dst_must_be_dir) {
     auto newdir = fbl::RefPtr<VnodeMinfs>::Downcast(_newdir);
-    FS_TRACE(MINFS, "minfs_rename() olddir=%p(#%u) newdir=%p(#%u) oldname='%.*s' newname='%.*s'\n",
-          this, ino_, newdir.get(), newdir->ino_, (int)oldlen, oldname, (int)newlen, newname);
-    ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname, oldlen));
-    ZX_DEBUG_ASSERT(fs::vfs_valid_name(newname, newlen));
+    ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname));
+    ZX_DEBUG_ASSERT(fs::vfs_valid_name(newname));
 
     // ensure that the vnodes containing oldname and newname are directories
     if (!(IsDirectory() && newdir->IsDirectory()))
@@ -1693,7 +1680,6 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldna
     // acquire the 'oldname' node (it must exist)
     DirArgs args = DirArgs();
     args.name = oldname;
-    args.len = oldlen;
     if ((status = ForEachDirent(&args, cb_dir_find)) < 0) {
         return status;
     } else if ((status = fs_->VnodeGet(&oldvn, args.ino)) < 0) {
@@ -1712,13 +1698,12 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldna
     WriteTxn txn(fs_->bc_.get());
     args.txn = &txn;
     args.name = newname;
-    args.len = newlen;
     args.ino = oldvn->ino_;
     args.type = oldvn->IsDirectory() ? kMinfsTypeDir : kMinfsTypeFile;
     status = newdir->ForEachDirent(&args, cb_dir_attempt_rename);
     if (status == ZX_ERR_NOT_FOUND) {
         // if 'newname' does not exist, create it
-        args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(newlen)));
+        args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(newname.length())));
         if ((status = newdir->ForEachDirent(&args, cb_dir_append)) < 0) {
             return status;
         }
@@ -1730,12 +1715,11 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldna
     // moved to a new directory
     if ((args.type == kMinfsTypeDir) && (ino_ != newdir->ino_)) {
         fbl::RefPtr<fs::Vnode> vn_fs;
-        if ((status = newdir->Lookup(&vn_fs, newname, newlen)) < 0) {
+        if ((status = newdir->Lookup(&vn_fs, newname)) < 0) {
             return status;
         }
         auto vn = fbl::RefPtr<VnodeMinfs>::Downcast(vn_fs);
         args.name = "..";
-        args.len = 2;
         args.ino = newdir->ino_;
         if ((status = vn->ForEachDirent(&args, cb_dir_update_inode)) < 0) {
             return status;
@@ -1748,13 +1732,11 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldna
 
     // finally, remove oldname from its original position
     args.name = oldname;
-    args.len = oldlen;
     return ForEachDirent(&args, cb_dir_force_unlink);
 }
 
-zx_status_t VnodeMinfs::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> _target) {
-    FS_TRACE(MINFS, "minfs_link() vndir=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
-    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
+zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _target) {
+    ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -1771,7 +1753,6 @@ zx_status_t VnodeMinfs::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode
     // The destination should not exist
     DirArgs args = DirArgs();
     args.name = name;
-    args.len = len;
     zx_status_t status;
     if ((status = ForEachDirent(&args, cb_dir_find)) != ZX_ERR_NOT_FOUND) {
         return (status == ZX_OK) ? ZX_ERR_ALREADY_EXISTS : status;
@@ -1780,7 +1761,7 @@ zx_status_t VnodeMinfs::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode
     WriteTxn txn(fs_->bc_.get());
     args.ino = target->ino_;
     args.type = kMinfsTypeFile; // We can't hard link directories
-    args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(len)));
+    args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
     args.txn = &txn;
     if ((status = ForEachDirent(&args, cb_dir_append)) < 0) {
         return status;

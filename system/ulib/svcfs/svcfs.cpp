@@ -12,17 +12,10 @@
 
 namespace svcfs {
 
-static bool IsDot(const char* name, size_t len) {
-    return (len == 1) && (name[0] == '.');
-}
-
-static bool IsDotDot(const char* name, size_t len) {
-    return (len == 2) && (name[0] == '.') && (name[1] == '.');
-}
-
-static bool IsValidServiceName(const char* name, size_t len) {
-    return name && len >= 1 && !IsDot(name, len) && !IsDotDot(name, len) &&
-        !memchr(name, '/', len) && !memchr(name, 0, len);
+static bool IsValidServiceName(fbl::StringPiece name) {
+    return name.length() >= 1 && name != "." && name != ".." &&
+            !memchr(name.data(), '/', name.length()) &&
+            !memchr(name.data(), 0, name.length());
 }
 
 struct dircookie_t {
@@ -58,7 +51,7 @@ zx_status_t VnodeSvc::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
         return ZX_ERR_UNAVAILABLE;
     }
 
-    provider_->Connect(name_.c_str(), name_.size(), fbl::move(channel));
+    provider_->Connect(name_.ToStringPiece(), fbl::move(channel));
 
     // If node_id_ is zero, this vnode was created during |Lookup| and doesn't
     // have a parent. Without a parent, there isn't anyone to clean up the raw
@@ -69,8 +62,8 @@ zx_status_t VnodeSvc::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return ZX_OK;
 }
 
-bool VnodeSvc::NameMatch(const char* name, size_t len) const {
-    return (name_.size() == len) && (memcmp(name_.c_str(), name, len) == 0);
+bool VnodeSvc::NameMatch(fbl::StringPiece name) const {
+    return name_.ToStringPiece() == name;
 }
 
 void VnodeSvc::ClearProvider() {
@@ -88,10 +81,10 @@ zx_status_t VnodeDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
     fbl::RefPtr<VnodeSvc> vn = nullptr;
     for (auto& child : services_) {
-        if (child.NameMatch(name, len)) {
+        if (child.NameMatch(name)) {
             *out = fbl::RefPtr<VnodeSvc>(&child);
             return ZX_OK;
         }
@@ -107,7 +100,7 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
-void VnodeDir::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
+void VnodeDir::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
 zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDir(vfs, this, cmd);
 }
@@ -118,7 +111,7 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
 
     zx_status_t r = 0;
     if (c->last_id < 1) {
-        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
+        if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
             return df.BytesFilled();
         }
         c->last_id = 1;
@@ -128,7 +121,7 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
         if (c->last_id >= vn.node_id()) {
             continue;
         }
-        if ((r = df.Next(vn.name().c_str(), vn.name().size(),
+        if ((r = df.Next(vn.name().ToStringPiece(),
                          VTYPE_TO_DTYPE(V_TYPE_FILE))) != ZX_OK) {
             return df.BytesFilled();
         }
@@ -138,22 +131,22 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
     return df.BytesFilled();
 }
 
-bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provider) {
-    if (!IsValidServiceName(name, len)) {
+bool VnodeDir::AddService(fbl::StringPiece name, ServiceProvider* provider) {
+    if (!IsValidServiceName(name)) {
         return false;
     }
 
     fbl::RefPtr<VnodeSvc> vn = fbl::AdoptRef(new VnodeSvc(
-        next_node_id_++, fbl::String(name, len), provider));
+        next_node_id_++, fbl::String(name), provider));
 
     services_.push_back(fbl::move(vn));
-    Notify(name, len, VFS_WATCH_EVT_ADDED);
+    Notify(name, VFS_WATCH_EVT_ADDED);
     return true;
 }
 
-bool VnodeDir::RemoveService(const char* name, size_t len) {
+bool VnodeDir::RemoveService(fbl::StringPiece name) {
     for (auto& child : services_) {
-        if (child.NameMatch(name, len)) {
+        if (child.NameMatch(name)) {
             child.ClearProvider();
             services_.erase(child);
             return true;
@@ -180,12 +173,12 @@ zx_status_t VnodeProviderDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redir
     return ZX_OK;
 }
 
-zx_status_t VnodeProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    if (!IsValidServiceName(name, len)) {
+zx_status_t VnodeProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
+    if (!IsValidServiceName(name)) {
         return ZX_ERR_NOT_FOUND;
     }
 
-    *out = fbl::AdoptRef(new VnodeSvc(0, fbl::String(name, len), provider_));
+    *out = fbl::AdoptRef(new VnodeSvc(0, fbl::String(name), provider_));
     return ZX_OK;
 }
 

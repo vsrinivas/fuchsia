@@ -146,12 +146,12 @@ private:
                       size_t* out_actual) final;
     zx_status_t Append(const void* data, size_t len, size_t* out_end,
                        size_t* out_actual) final;
-    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len,
+    zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
                        uint32_t mode) final;
     zx_status_t Truncate(size_t len) final;
-    zx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
+    zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
     zx_status_t Sync() final;
 

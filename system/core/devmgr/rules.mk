@@ -14,8 +14,8 @@ LOCAL_FSHOST_SRCS := \
     $(LOCAL_DIR)/vfs-rpc.cpp
 
 LOCAL_FSHOST_STATIC_LIBS := \
-    system/ulib/fbl \
     system/ulib/fs \
+    system/ulib/fbl \
     system/ulib/async \
     system/ulib/async.loop \
     system/ulib/zx \

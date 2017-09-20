@@ -32,22 +32,21 @@ void WriteErrorReply(zx::channel channel, zx_status_t status) {
 }
 
 zx_status_t HandoffOpenTransaction(zx_handle_t srv, zx::channel channel,
-                                   const char* path, uint32_t flags, uint32_t mode) {
+                                   fbl::StringPiece path, uint32_t flags, uint32_t mode) {
     zxrio_msg_t msg;
     memset(&msg, 0, ZXRIO_HDR_SZ);
-    size_t len = strlen(path);
     msg.op = ZXRIO_OPEN;
     msg.arg = flags;
     msg.arg2.mode = mode;
-    msg.datalen = static_cast<uint32_t>(len) + 1;
-    memcpy(msg.data, path, len + 1);
+    msg.datalen = static_cast<uint32_t>(path.length());
+    memcpy(msg.data, path.begin(), path.length());
     return zxrio_txn_handoff(srv, channel.release(), &msg);
 }
 
 // Performs a path walk and opens a connection to another node.
 void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
             zxrio_msg_t* msg, zx::channel channel,
-            const char* path, uint32_t flags, uint32_t mode) {
+            fbl::StringPiece path, uint32_t flags, uint32_t mode) {
     // The pipeline directive instructs the VFS layer to open the vnode
     // immediately, rather than describing the VFS object to the caller.
     // We check it early so we can throw away the protocol part of flags.
@@ -211,7 +210,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-            OpenAt(vfs_, vnode_, msg, fbl::move(channel), path, arg, msg->arg2.mode);
+            OpenAt(vfs_, vnode_, msg, fbl::move(channel),
+                   fbl::StringPiece(path, len), arg, msg->arg2.mode);
         }
         return ERR_DISPATCHER_INDIRECT;
     }
@@ -508,8 +508,9 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         char* data_end = (char*)(msg->data + len - 1);
         *data_end = '\0';
         const char* oldname = (const char*)msg->data;
-        size_t oldlen = strlen(oldname);
-        const char* newname = (const char*)msg->data + (oldlen + 1);
+        fbl::StringPiece oldStr(oldname, strlen(oldname));
+        const char* newname = (const char*)msg->data + (oldStr.length() + 1);
+        fbl::StringPiece newStr(newname, len - (oldStr.length() + 2));
 
         if (data_end <= newname) {
             return ZX_ERR_INVALID_ARGS;
@@ -517,9 +518,11 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
 
         switch (ZXRIO_OP(msg->op)) {
         case ZXRIO_RENAME:
-            return vfs_->Rename(fbl::move(token), vnode_, oldname, newname);
+            return vfs_->Rename(fbl::move(token), vnode_,
+                                fbl::move(oldStr), fbl::move(newStr));
         case ZXRIO_LINK:
-            return vfs_->Link(fbl::move(token), vnode_, oldname, newname);
+            return vfs_->Link(fbl::move(token), vnode_,
+                              fbl::move(oldStr), fbl::move(newStr));
         }
         assert(false);
     }
@@ -547,7 +550,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return vnode_->Sync();
     }
     case ZXRIO_UNLINK:
-        return vfs_->Unlink(vnode_, (const char*)msg->data, len);
+        return vfs_->Unlink(vnode_, fbl::StringPiece((const char*)msg->data, len));
     default:
         // close inbound handles so they do not leak
         for (unsigned i = 0; i < ZXRIO_HC(msg->op); i++) {

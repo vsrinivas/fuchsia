@@ -17,20 +17,20 @@
 namespace memfs {
 
 // Create a new dnode and attach it to a vnode
-fbl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, fbl::RefPtr<VnodeMemfs> vn) {
-    if ((len > kDnodeNameMax) || (len < 1)) {
+fbl::RefPtr<Dnode> Dnode::Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn) {
+    if ((name.length() > kDnodeNameMax) || (name.length() < 1)) {
         return nullptr;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<char[]> namebuffer (new (&ac) char[len + 1]);
+    fbl::unique_ptr<char[]> namebuffer (new (&ac) char[name.length() + 1]);
     if (!ac.check()) {
         return nullptr;
     }
-    memcpy(namebuffer.get(), name, len);
-    namebuffer[len] = '\0';
+    memcpy(namebuffer.get(), name.data(), name.length());
+    namebuffer[name.length()] = '\0';
     fbl::RefPtr<Dnode> dn = fbl::AdoptRef(new (&ac) Dnode(vn, fbl::move(namebuffer),
-                                                            static_cast<uint32_t>(len)));
+                                                          static_cast<uint32_t>(name.length())));
     if (!ac.check()) {
         return nullptr;
     }
@@ -89,9 +89,9 @@ void Dnode::AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child) {
     parent->vnode_->UpdateModified();
 }
 
-zx_status_t Dnode::Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const {
-    auto dn = children_.find_if([&name, &len](const Dnode& elem) -> bool {
-        return elem.NameMatch(name, len);
+zx_status_t Dnode::Lookup(fbl::StringPiece name, fbl::RefPtr<Dnode>* out) const {
+    auto dn = children_.find_if([&name](const Dnode& elem) -> bool {
+        return elem.NameMatch(name);
     });
     if (dn == children_.end()) {
         return ZX_ERR_NOT_FOUND;
@@ -132,7 +132,7 @@ zx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
     zx_status_t r;
 
     if (c->order == 0) {
-        if ((r = df->Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
+        if ((r = df->Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
             return r;
         }
         c->order++;
@@ -155,7 +155,8 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
             continue;
         }
         uint32_t vtype = dn.IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
-        if ((r = df->Next(dn.name_.get(), dn.NameLen(), VTYPE_TO_DTYPE(vtype))) != ZX_OK) {
+        if ((r = df->Next(fbl::StringPiece(dn.name_.get(), dn.NameLen()),
+                          VTYPE_TO_DTYPE(vtype))) != ZX_OK) {
             return;
         }
         c->order = dn.ordering_token_ + 1;
@@ -195,8 +196,8 @@ size_t Dnode::NameLen() const {
     return flags_ & kDnodeNameMax;
 }
 
-bool Dnode::NameMatch(const char* name, size_t len) const {
-    return (NameLen() == len) && (memcmp(name_.get(), name, len) == 0);
+bool Dnode::NameMatch(fbl::StringPiece name) const {
+    return name == fbl::StringPiece(name_.get(), NameLen());
 }
 
 } // namespace memfs
