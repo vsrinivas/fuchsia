@@ -46,7 +46,7 @@ zx::channel CloneChannel(int fd) {
 AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
                              AppConfigPtr config,
                              std::string data_origin)
-    : url_(config->url) {
+    : AsyncHolderBase(config->url) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->services = services_.NewRequest();
   launch_info->url = config->url;
@@ -82,36 +82,18 @@ AppClientBase::~AppClientBase() = default;
 
 void AppClientBase::AppTerminate(const std::function<void()>& done,
                                  fxl::TimeDelta timeout) {
-  auto called = std::make_shared<bool>(false);
-  auto cont = [this, called, done](const bool from_timeout) {
-    if (*called) {
-      return;
-    }
+  // TODO(mesch): We should just call Teardown() directly.
+  AsyncHolderBase::Teardown(timeout, done);
+}
 
-    *called = true;
+void AppClientBase::ImplTeardown(std::function<void()> done) {
+  ServiceTerminate(std::move(done));
+}
 
-    if (from_timeout) {
-      FXL_LOG(WARNING) << "AppTerminate() timed out for " << url_;
-    }
-
-    app_.reset();
-    services_.reset();
-
-    ServiceReset();
-
-    done();
-  };
-
-  auto cont_timeout = [cont] {
-    cont(true);
-  };
-
-  auto cont_normal = [cont] {
-    cont(false);
-  };
-
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont_timeout, timeout);
-  ServiceTerminate(cont_normal);
+void AppClientBase::ImplReset() {
+  app_.reset();
+  services_.reset();
+  ServiceReset();
 }
 
 void AppClientBase::SetAppErrorHandler(

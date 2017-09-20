@@ -10,6 +10,7 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
+#include "apps/modular/lib/common/async_holder.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -36,7 +37,7 @@ constexpr int kAppClientTimeoutSeconds = 1;
 //
 // AppClientBase are the non-template parts factored out so they don't need to
 // be inline. It can be used on its own too.
-class AppClientBase {
+class AppClientBase : public AsyncHolderBase {
  public:
   AppClientBase(app::ApplicationLauncher* launcher,
                 AppConfigPtr config,
@@ -68,11 +69,14 @@ class AppClientBase {
   void SetAppErrorHandler(const std::function<void()>& error_handler);
 
  private:
+  // The termination sequence as prescribed by AsyncHolderBase.
+  void ImplTeardown(std::function<void()> done) override;
+  void ImplReset() override;
+
   // Service specific parts of the termination sequence.
   virtual void ServiceTerminate(const std::function<void()>& done);
   virtual void ServiceReset();
 
-  const std::string url_;  // For logging only.
   app::ApplicationControllerPtr app_;
   app::ServiceProviderPtr services_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);

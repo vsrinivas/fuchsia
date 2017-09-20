@@ -9,8 +9,8 @@
 
 namespace modular {
 
-AsyncHolderBase::AsyncHolderBase(const char* const name)
-    : name_(name) {}
+AsyncHolderBase::AsyncHolderBase(std::string name)
+    : name_(std::move(name)) {}
 
 AsyncHolderBase::~AsyncHolderBase() = default;
 

@@ -15,6 +15,7 @@ source_set("app_client") {
   ]
 
   deps = [
+    "//apps/modular/lib/common:async_holder",
     "//apps/modular/services/config",
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/fidl/cpp/bindings",

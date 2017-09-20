@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
@@ -22,7 +23,7 @@ constexpr int kAsyncHolderTimeoutSeconds = 1;
 // and should align with that, but it owns impl and isn't a client of it.
 class AsyncHolderBase {
  public:
-  AsyncHolderBase(const char* name);
+  AsyncHolderBase(std::string name);
   virtual ~AsyncHolderBase();
 
   // Timeout is the first argument because: (1) the second argument can be very
@@ -42,7 +43,7 @@ class AsyncHolderBase {
   // ImplTeardown().
   virtual void ImplReset() = 0;
 
-  const char* const name_;  // For log messages only.
+  const std::string name_;  // For log messages only.
   FXL_DISALLOW_COPY_AND_ASSIGN(AsyncHolderBase);
 };
 
