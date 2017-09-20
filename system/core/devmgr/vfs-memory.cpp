@@ -810,8 +810,6 @@ VnodeDir* vfs_create_global_root() {
                                   O_CREAT, S_IFDIR) == ZX_OK);
         ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, "/volume", &pathout,
                                   O_CREAT, S_IFDIR) == ZX_OK);
-        ZX_ASSERT(memfs::vfs.Open(memfs::vfs_root, &vn, "/dev/socket", &pathout,
-                                  O_CREAT, S_IFDIR) == ZX_OK);
 
         memfs::global_loop.reset(new async::Loop());
         memfs::global_dispatcher.reset(new fs::AsyncDispatcher(memfs::global_loop->async()));
