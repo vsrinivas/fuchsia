@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdarg.h>
+#include <stdint.h>
+#include <string.h>
 #include "example_edid.h"
+#include "gtest/gtest.h"
+#include "magma_util/register_io.h"
 #include "mock/mock_mmio.h"
 #include "modeset/displayport.h"
 #include "modeset/edid.h"
-#include "register_io.h"
 #include "registers.h"
 #include "registers_ddi.h"
 #include "registers_dpll.h"
 #include "registers_pipe.h"
 #include "registers_transcoder.h"
-#include "gtest/gtest.h"
-#include <stdarg.h>
-#include <stdint.h>
-#include <string.h>
 
 namespace {
 

@@ -5,7 +5,7 @@
 #ifndef REGISTERS_DDI_H
 #define REGISTERS_DDI_H
 
-#include "register_bitfields.h"
+#include "magma_util/register_bitfields.h"
 
 // Registers for controlling the DDIs (Digital Display Interfaces).
 

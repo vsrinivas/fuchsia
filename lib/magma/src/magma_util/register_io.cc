@@ -5,3 +5,5 @@
 #include "register_io.h"
 
 RegisterIo::RegisterIo(std::unique_ptr<magma::PlatformMmio> mmio) : mmio_(std::move(mmio)) {}
+
+RegisterIo::Hook::~Hook() {}

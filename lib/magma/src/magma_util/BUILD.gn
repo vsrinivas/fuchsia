@@ -101,3 +101,20 @@ source_set("semaphore_port") {
     "platform:port",
   ]
 }
+
+source_set("registers") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "register_bitfields.h",
+    "register_io.h",
+    "register_io.cc",
+  ]
+
+  public_deps = [
+    "platform:mmio"
+  ]
+}

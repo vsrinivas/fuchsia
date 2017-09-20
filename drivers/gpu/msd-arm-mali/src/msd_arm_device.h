@@ -11,12 +11,13 @@
 #include <ddk/protocol/platform-device.h>
 
 #include "magma_util/macros.h"
+#include "magma_util/register_io.h"
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_arm_connection.h"
 #include "platform_device.h"
+#include "platform_interrupt.h"
 #include "platform_semaphore.h"
-#include "register_io.h"
 #include <deque>
 #include <list>
 #include <mutex>
@@ -61,6 +62,12 @@ private:
     void Destroy();
     void StartDeviceThread();
     int DeviceThreadLoop();
+    int GpuInterruptThreadLoop();
+    int JobInterruptThreadLoop();
+    int MmuInterruptThreadLoop();
+    bool InitializeInterrupts();
+    void EnableInterrupts();
+    void DisableInterrupts();
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
@@ -68,11 +75,19 @@ private:
     std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
     std::atomic_bool device_thread_quit_flag_{false};
 
+    std::atomic_bool interrupt_thread_quit_flag_{false};
+    std::thread gpu_interrupt_thread_;
+    std::thread job_interrupt_thread_;
+    std::thread mmu_interrupt_thread_;
+
     std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
     std::mutex device_request_mutex_;
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
+    std::unique_ptr<magma::PlatformInterrupt> gpu_interrupt_;
+    std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
+    std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
 };
 
 #endif // MSD_ARM_DEVICE_H

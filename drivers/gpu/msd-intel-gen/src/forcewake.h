@@ -6,8 +6,8 @@
 #define FORCEWAKE_H
 
 #include "magma_util/macros.h"
+#include "magma_util/register_io.h"
 #include "magma_util/sleep.h"
-#include "register_io.h"
 #include "registers.h"
 
 class ForceWake {

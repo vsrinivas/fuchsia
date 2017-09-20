@@ -5,7 +5,7 @@
 #ifndef REGISTERS_TRANSCODER_H
 #define REGISTERS_TRANSCODER_H
 
-#include "register_bitfields.h"
+#include "magma_util/register_bitfields.h"
 
 namespace registers {
 

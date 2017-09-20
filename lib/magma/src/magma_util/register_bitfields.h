@@ -11,8 +11,6 @@
 #include <type_traits>
 
 // This file provides some helpers for accessing bitfields in registers.
-// Many of the Intel graphic hardware's registers contain multiple fields,
-// so this makes accessing those fields more convenient and robust.
 //
 // Example usage:
 //
@@ -59,7 +57,7 @@
 // Note that this produces efficient code with GCC and Clang, which are
 // capable of optimizing away the intermediate objects.
 //
-// The arguments to DEF_FIELD() are organized to match up with Intel's
+// The arguments to DEF_FIELD() are organized to match up with the
 // documentation.  For example, if the docs specify a field as:
 //   23:0  Data M value
 // then that translates to:

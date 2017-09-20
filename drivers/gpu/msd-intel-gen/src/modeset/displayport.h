@@ -7,8 +7,8 @@
 
 #include "edid.h"
 #include "magma_util/macros.h"
-#include "register_bitfields.h"
-#include "register_io.h"
+#include "magma_util/register_bitfields.h"
+#include "magma_util/register_io.h"
 
 // This represents a message sent over DisplayPort's Aux channel, including
 // reply messages.

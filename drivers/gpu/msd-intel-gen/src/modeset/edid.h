@@ -5,7 +5,7 @@
 #ifndef MODESET_EDID_H
 #define MODESET_EDID_H
 
-#include "register_bitfields.h"
+#include "magma_util/register_bitfields.h"
 
 // Definitions for parsing EDID data.
 

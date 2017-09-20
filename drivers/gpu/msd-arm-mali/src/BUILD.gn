@@ -13,13 +13,13 @@ source_set("src") {
     "msd_arm_device.h",
     "msd_arm_driver.cc",
     "msd_arm_driver.h",
-    "register_io.cc",
-    "register_io.h",
+    "registers.h",
   ]
 
   deps = [
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util:registers",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
   ]

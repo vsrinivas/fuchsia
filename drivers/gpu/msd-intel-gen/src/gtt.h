@@ -5,12 +5,12 @@
 #ifndef GTT_H
 #define GTT_H
 
+#include <memory>
 #include "address_space.h"
 #include "magma_util/address_space_allocator.h"
+#include "magma_util/register_io.h"
 #include "platform_buffer.h"
 #include "platform_pci_device.h"
-#include "register_io.h"
-#include <memory>
 
 class Gtt : public AddressSpace {
 public:

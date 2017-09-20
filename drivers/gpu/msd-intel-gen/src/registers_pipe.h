@@ -5,7 +5,7 @@
 #ifndef REGISTERS_PIPE_H
 #define REGISTERS_PIPE_H
 
-#include "register_bitfields.h"
+#include "magma_util/register_bitfields.h"
 
 // Registers for controlling the pipes, including planes (which are part of
 // pipes).

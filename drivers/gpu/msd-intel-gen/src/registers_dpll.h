@@ -5,7 +5,7 @@
 #ifndef REGISTERS_DPLL_H
 #define REGISTERS_DPLL_H
 
-#include "register_bitfields.h"
+#include "magma_util/register_bitfields.h"
 
 // Registers for configuring the DPLLs (Display PLLs).
 //

@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 
 #include "modeset/displayport.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <chrono>
+#include <thread>
 #include "magma_util/macros.h"
+#include "magma_util/register_io.h"
 #include "modeset/edid.h"
-#include "register_io.h"
 #include "registers.h"
 #include "registers_ddi.h"
 #include "registers_dpll.h"
 #include "registers_pipe.h"
 #include "registers_transcoder.h"
-#include <algorithm>
-#include <chrono>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <thread>
 
 namespace {
 

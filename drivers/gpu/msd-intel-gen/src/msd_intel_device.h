@@ -5,6 +5,10 @@
 #ifndef MSD_DEVICE_H
 #define MSD_DEVICE_H
 
+#include <deque>
+#include <list>
+#include <mutex>
+#include <thread>
 #include "device_request.h"
 #include "engine_command_streamer.h"
 #include "global_context.h"
@@ -12,18 +16,14 @@
 #include "gtt.h"
 #include "magma_util/fps_printer.h"
 #include "magma_util/macros.h"
+#include "magma_util/register_io.h"
 #include "magma_util/semaphore_port.h"
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
 #include "platform_pci_device.h"
 #include "platform_semaphore.h"
-#include "register_io.h"
 #include "sequencer.h"
-#include <deque>
-#include <list>
-#include <mutex>
-#include <thread>
 
 class MsdIntelDevice : public msd_device_t,
                        public EngineCommandStreamer::Owner,

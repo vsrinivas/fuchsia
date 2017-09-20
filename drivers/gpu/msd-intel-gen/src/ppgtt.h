@@ -5,12 +5,12 @@
 #ifndef PPGTT_H
 #define PPGTT_H
 
-#include "address_space.h"
-#include "magma_util/address_space_allocator.h"
-#include "platform_buffer.h"
-#include "register_io.h"
 #include <memory>
 #include <vector>
+#include "address_space.h"
+#include "magma_util/address_space_allocator.h"
+#include "magma_util/register_io.h"
+#include "platform_buffer.h"
 
 using gen_pde_t = uint64_t;
 
