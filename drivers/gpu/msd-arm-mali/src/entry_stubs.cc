@@ -4,7 +4,7 @@
 
 #include "garnet/lib/magma/include/msd_abi/msd.h"
 
-msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id) { return nullptr; }
+msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id) { return nullptr; }
 
 uint32_t msd_device_get_id(msd_device_t* dev) { return 0; }
 
