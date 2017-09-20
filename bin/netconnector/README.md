@@ -18,7 +18,7 @@ talks to a client over an zx::channel. It's normal practice to bind such a
 channel to a FIDL proxy. This isn't done over NetConnector, because FIDL isn't
 an suited to RPC.
 
-Here’s the [NetConnector interface](../services/netconnector.fidl).
+Here’s the [NetConnector interface](../../public/lib/netconnector/fidl/netconnector.fidl).
 
 `RegisterServiceProvider` allows a running service to register its availability.
 The method specifies a service name and a `ServiceProvider`.
@@ -49,7 +49,8 @@ established for each `ConnectToService` call made to a `ServiceProvider` returne
 by `GetDeviceServiceProvider`. A session lasts until either the client or
 service closes its end of the virtual channel or until the TCP connection fails.
 
-The mDNS implementation is also exposed separately using [this interface](../services/mdns.fidl).
+The mDNS implementation is also exposed separately using
+[this interface](../../public/lib/netconnector/fidl/mdns.fidl).
 
 ## Operation
 
