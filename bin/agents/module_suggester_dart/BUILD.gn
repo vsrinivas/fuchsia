@@ -15,6 +15,6 @@ dart_app("module_suggester_dart") {
     "//garnet/public/lib/app/dart",
     "//apps/maxwell/lib/dart",
     "//apps/maxwell/services/suggestion:suggestion_dart",
-    "//apps/web_runner/lib/dart:web_view",
+    "//topaz/runtime/web_runner/lib/dart:web_view",
   ]
 }
