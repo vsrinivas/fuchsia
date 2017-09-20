@@ -19,5 +19,5 @@ flutter_app("media_player_flutter") {
     "//lib/flutter/packages/flutter",
   ]
 
-  analysis_options = "//apps/modules/common/analysis_options.yaml"
+  analysis_options = "//topaz/tools/analysis_options.yaml"
 }
