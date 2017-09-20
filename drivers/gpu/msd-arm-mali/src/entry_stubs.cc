@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma/include/msd_abi/msd.h"
+#include "garnet/lib/magma/include/msd_abi/msd.h"
 
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id) { return nullptr; }
 

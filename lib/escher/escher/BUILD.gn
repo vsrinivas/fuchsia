@@ -223,7 +223,7 @@ static_library("escher") {
   ]
 
   if (is_fuchsia) {
-    public_deps += [ "//magma:vulkan" ]
+    public_deps += [ "//garnet/lib/magma:vulkan" ]
     deps += [ "//zircon/system/ulib/trace" ]
   }
 

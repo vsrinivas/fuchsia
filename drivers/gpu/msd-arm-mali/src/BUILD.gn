@@ -2,17 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//magma/gnbuild/magma.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 
 source_set("src") {
   sources = [ "main.cc", "entry_stubs.cc"]
 
   deps = [
     "//zircon/system/ulib/zx",
-    "//magma/src/magma_util",
-    "//magma/src/magma_util/platform:trace",
-    "//magma/src/magma_util:command_buffer",
-    "//magma/src/sys_driver",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/sys_driver",
   ]
 
   libs = [

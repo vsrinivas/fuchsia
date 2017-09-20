@@ -9,8 +9,8 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "zircon/status.h"
-#include "magma/src/display_pipe/client/buffer.h"
-#include "magma/src/display_pipe/services/display_provider.fidl.h"
+#include "garnet/lib/magma/src/display_pipe/client/buffer.h"
+#include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 
 display_pipe::DisplayProviderPtr display;
 scenic::ImagePipePtr image_pipe;

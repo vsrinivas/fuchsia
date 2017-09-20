@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//packages/package.gni")
-import("//magma/gnbuild/magma.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("vulkan") {
   public_deps = [
@@ -21,8 +21,8 @@ package("magma-common") {
       "$mesa_build_root:tests",
       "$msd_intel_gen_build_root:test",
       "$msd_intel_gen_build_root:tests",
-      "//magma/tests:tests",
-      "//magma/tests/vkcube",
+      "//garnet/lib/magma/tests:tests",
+      "//garnet/lib/magma/tests/vkcube",
     ]
 
     binaries = [

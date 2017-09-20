@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include "lib/fxl/logging.h"
-#include "magma/src/display_pipe/magma_connection.h"
+#include "garnet/lib/magma/src/display_pipe/magma_connection.h"
 
 const char* kDeviceName = "/dev/class/display/000";
 

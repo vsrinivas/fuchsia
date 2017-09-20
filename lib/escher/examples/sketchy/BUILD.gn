@@ -30,7 +30,7 @@ executable("sketchy_demo") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//magma:vulkan" ]
+    deps += [ "//garnet/lib/magma:vulkan" ]
   }
 
   if (is_linux) {

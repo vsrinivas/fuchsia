@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//packages/package.gni")
-import("//magma/gnbuild/magma.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("magma-fidl") {
   if (target_cpu == "x64") {

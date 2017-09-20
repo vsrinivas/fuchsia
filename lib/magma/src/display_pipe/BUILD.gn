@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//magma/gnbuild/magma.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("display_pipe") {
   deps = [
@@ -34,7 +34,7 @@ executable("display_pipe_service") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//zircon/system/ulib/zx",
-    "//magma/src/display_pipe/services",
+    "//garnet/lib/magma/src/display_pipe/services",
   ]
 
   libs = [

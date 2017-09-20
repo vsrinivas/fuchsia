@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma/src/display_pipe/image.h"
+#include "garnet/lib/magma/src/display_pipe/image.h"
 
 #include "lib/fxl/logging.h"
 

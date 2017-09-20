@@ -8,9 +8,9 @@
 #include <unordered_map>
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "magma/src/display_pipe/services/display_provider.fidl.h"
-#include "magma/src/display_pipe/image_pipe_impl.h"
-#include "magma/src/display_pipe/magma_connection.h"
+#include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
+#include "garnet/lib/magma/src/display_pipe/image_pipe_impl.h"
+#include "garnet/lib/magma/src/display_pipe/magma_connection.h"
 
 namespace display_pipe {
 

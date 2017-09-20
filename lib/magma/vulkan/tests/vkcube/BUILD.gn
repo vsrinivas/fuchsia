@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//magma/gnbuild/magma.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 
 executable("vkcube_image_pipe_swapchain") {
   sources = [
@@ -38,7 +38,7 @@ source_set("vkcube_common") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magma/src/display_pipe",
-    "//magma/src/display_pipe/services",
+    "//garnet/lib/magma/src/display_pipe",
+    "//garnet/lib/magma/src/display_pipe/services",
   ]
 }

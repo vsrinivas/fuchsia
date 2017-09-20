@@ -16,6 +16,6 @@ executable("display_pipe_client") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//magma/src/display_pipe/services",
+    "//garnet/lib/magma/src/display_pipe/services",
   ]
 }

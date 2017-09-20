@@ -6,7 +6,7 @@
 #define MAGMA_IMAGE_H_
 
 #include "lib/images/fidl/image_info.fidl.h"
-#include "magma/src/display_pipe/magma_connection.h"
+#include "garnet/lib/magma/src/display_pipe/magma_connection.h"
 
 namespace display_pipe {
 class Image {
