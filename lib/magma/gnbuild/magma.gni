@@ -21,6 +21,7 @@ declare_args() {
   magma_enable_tracing = false
 
   build_libvulkan_arm_mali = false
+  build_msd_arm_mali = (target_cpu == "arm64")
   build_intel_gen = target_cpu == "x64"
 }
 

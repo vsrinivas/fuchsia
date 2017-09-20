@@ -12,8 +12,9 @@ group("vulkan") {
 }
 
 package("magma") {
+  deps = []
   if (build_libvulkan_arm_mali || build_intel_gen) {
-    deps = [
+    deps += [
       ":libmagma",
       ":libvulkan",
     ]
@@ -50,12 +51,21 @@ package("magma") {
           } ]
     }
   }
+
+  if (build_msd_arm_mali) {
+    deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
+    drivers = [ {
+          name = "libmsd_arm.so"
+        } ]
+  }
 }
 
 package("magma-dev") {
+  testonly = true
+  deps = []
+
   if (build_libvulkan_arm_mali || build_intel_gen) {
-    testonly = true
-    deps = [
+    deps += [
       ":libmagma",
       ":libvulkan",
     ]
@@ -91,6 +101,13 @@ package("magma-dev") {
             dest = "vulkan/icd.d/arm_icd.json"
           } ]
     }
+  }
+
+  if (build_msd_arm_mali) {
+    deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
+    drivers = [ {
+          name = "libmsd_arm.so"
+        } ]
   }
 }
 
