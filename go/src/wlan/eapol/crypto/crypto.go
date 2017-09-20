@@ -13,6 +13,8 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+var nonceReader *NonceReader
+
 type PTK struct {
 	KCK []byte
 	KEK []byte
@@ -70,7 +72,7 @@ func DeriveKeys(pmk, sAddr, aAddr, aNonce, sNonce []byte) PTK {
 	ptk := PRF(pmk, "Pairwise key expansion", data.Bytes(), (kckLen+kekLen+tkLen)*8)
 	return PTK{
 		KCK: ptk[:kckLen],
-		KEK: ptk[kckLen : kckLen+kekLen],
+		KEK: ptk[kckLen: kckLen+kekLen],
 		TK:  ptk[kckLen+kekLen:],
 	}
 }
@@ -103,4 +105,12 @@ func cmpBytes(a, b []byte) int {
 		return bytes.Compare(a, b)
 	}
 	return lenDiff
+}
+
+func GetNonce(macAddr [6]byte) [32]byte {
+	// Ensure, initialization.
+	if nonceReader == nil {
+		nonceReader = NewNonceReader(macAddr)
+	}
+	return nonceReader.Read()
 }

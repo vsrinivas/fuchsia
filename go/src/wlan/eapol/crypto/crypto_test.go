@@ -9,6 +9,7 @@ import (
 	"testing"
 	"encoding/hex"
 	"bytes"
+	"math/big"
 )
 
 // IEEE Std 802.11-2016, J.4.2, Test case 1
@@ -317,5 +318,21 @@ func TestMinMaxEmptyNumbers(t *testing.T) {
 	}
 	if len(Min(b, a)) != 0 {
 		t.Fatal("Expected empty result")
+	}
+}
+
+func TestKeyCounterNextWithWrapping(t *testing.T) {
+	macAddr := [6]byte{1, 2, 3, 4, 5, 6}
+	reader := NewNonceReader(macAddr)
+
+	nonce := reader.Read()
+	previous := new(big.Int).SetBytes(nonce[:])
+	for i := 0; i < 300; i++ {
+		nonce = reader.Read()
+		current := new(big.Int).SetBytes(nonce[:])
+		if new(big.Int).Add(previous, big.NewInt(1)).Cmp(current) != 0 {
+			t.Fatal("Nonce is not larger.")
+		}
+		previous = current
 	}
 }
