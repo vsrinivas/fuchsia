@@ -10,42 +10,10 @@
 #include "magma_util/macros.h"
 #include "platform_mmio.h"
 #include "zircon_platform_interrupt.h"
+#include "zircon_platform_mmio.h"
 #include "zircon_platform_pci_device.h"
 
 namespace magma {
-
-static_assert(ZX_CACHE_POLICY_CACHED == static_cast<int>(PlatformMmio::CACHE_POLICY_CACHED),
-              "enum mismatch");
-static_assert(ZX_CACHE_POLICY_UNCACHED == static_cast<int>(PlatformMmio::CACHE_POLICY_UNCACHED),
-              "enum mismatch");
-static_assert(ZX_CACHE_POLICY_UNCACHED_DEVICE ==
-                  static_cast<int>(PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE),
-              "enum mismatch");
-static_assert(ZX_CACHE_POLICY_WRITE_COMBINING ==
-                  static_cast<int>(PlatformMmio::CACHE_POLICY_WRITE_COMBINING),
-              "enum mismatch");
-
-class ZirconPlatformMmio : public PlatformMmio {
-public:
-    ZirconPlatformMmio(void* addr, uint64_t size, zx_handle_t handle)
-        : PlatformMmio(addr, size), handle_(handle)
-    {
-    }
-
-    ~ZirconPlatformMmio()
-    {
-        // Clean up the MMIO mapping that was made in the ctor.
-        DLOG("ZirconPlatformMmio dtor");
-        zx_status_t status =
-            zx_vmar_unmap(zx_vmar_root_self(), reinterpret_cast<uintptr_t>(addr()), size());
-        if (status != ZX_OK)
-            DLOG("error unmapping %p (len %zu): %d\n", addr(), size(), status);
-        zx_handle_close(handle_);
-    }
-
-private:
-    zx_handle_t handle_;
-};
 
 std::unique_ptr<PlatformMmio>
 ZirconPlatformPciDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePolicy cache_policy)

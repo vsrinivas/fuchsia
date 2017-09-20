@@ -38,6 +38,7 @@ source_set("device") {
   ]
 
   sources = [
+    "platform_device.h",
     "platform_pci_device.h",
     "platform_mmio.h",
   ]

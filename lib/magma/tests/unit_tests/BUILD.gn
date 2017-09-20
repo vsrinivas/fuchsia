@@ -77,7 +77,6 @@ source_set("magma_platform_tests") {
     "test_mmio.cc",
     "test_platform_buffer.cc",
     "test_platform_connection.cc",
-    "test_platform_pci_device.cc",
     "test_platform_event.cc",
     "test_platform_futex.cc",
     "test_platform_interrupt.cc",
@@ -85,6 +84,12 @@ source_set("magma_platform_tests") {
     "test_platform_semaphore.cc",
     "test_platform_thread.cc",
   ]
+
+  if (target_cpu == "arm64") {
+    sources += [ "test_platform_device.cc" ]
+  } else if (target_cpu == "x64") {
+    sources += [ "test_platform_pci_device.cc" ]
+  }
 
   deps = [
     "$magma_build_root/include:magma_abi",

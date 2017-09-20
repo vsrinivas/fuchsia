@@ -5,6 +5,7 @@
 #ifndef TEST_PLATFORM_DEVICE_H
 #define TEST_PLATFORM_DEVICE_H
 
+#include "platform_device.h"
 #include "platform_pci_device.h"
 #include <memory>
 
@@ -33,6 +34,18 @@ public:
     }
 
     static std::unique_ptr<magma::PlatformPciDevice> g_instance;
+};
+
+class TestPlatformDevice {
+public:
+    static magma::PlatformDevice* GetInstance() { return g_instance.get(); }
+
+    static void SetInstance(std::unique_ptr<magma::PlatformDevice> platform_device)
+    {
+        g_instance = std::move(platform_device);
+    }
+
+    static std::unique_ptr<magma::PlatformDevice> g_instance;
 };
 
 #endif // TEST_PLATFORM_DEVICE_H
