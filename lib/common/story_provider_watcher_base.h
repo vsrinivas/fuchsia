@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef APPS_MODULAR_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_
+#define APPS_MODULAR_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_
+
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
@@ -43,3 +46,5 @@ class StoryProviderWatcherBase : modular::StoryProviderWatcher {
 };
 
 }  // namespace modular
+
+#endif  // APPS_MODULAR_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_

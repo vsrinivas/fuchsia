@@ -9,14 +9,13 @@
 
 namespace modular {
 
-StoryProviderWatcherBase::StoryProviderWatcherBase() : binding_(this) {
-  Continue([] {});
-}
+StoryProviderWatcherBase::StoryProviderWatcherBase()
+    : continue_([]{}), binding_(this) {}
 
 StoryProviderWatcherBase::~StoryProviderWatcherBase() = default;
 
 void StoryProviderWatcherBase::Continue(std::function<void()> at) {
-  continue_ = at;
+  continue_ = std::move(at);
 }
 
 void StoryProviderWatcherBase::Watch(
