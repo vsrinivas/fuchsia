@@ -87,7 +87,6 @@ typedef struct {
     io_buffer_t event_buffer;
     zx_handle_t irq_handle;
     thrd_t irq_thread;
-    bool shutting_down;     // set to terminate event thread
 
     dwc3_endpoint_t eps[DWC3_MAX_EPS];
 
