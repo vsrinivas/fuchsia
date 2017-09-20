@@ -1,0 +1,16 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+group("gtest") {
+  testonly = true
+
+  public_configs = [ "$msd_intel_gen_build_root:msd_tests_include_config" ]
+
+  public_deps = [
+    "unit_tests:tests_not_requiring_hardware",
+    "unit_tests:tests_requiring_hardware",
+  ]
+}

@@ -1,0 +1,101 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+declare_args() {
+  msd_intel_enable_mapping_cache = !is_debug
+  msd_intel_enable_modesetting = false
+  msd_intel_wait_for_flip = true
+  msd_intel_print_fps = false
+}
+
+source_set("src") {
+  public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
+
+  sources = [
+    "address_space.cc",
+    "address_space.h",
+    "cache_config.cc",
+    "cache_config.h",
+    "command_buffer.cc",
+    "command_buffer.h",
+    "engine_command_streamer.cc",
+    "engine_command_streamer.h",
+    "global_context.cc",
+    "global_context.h",
+    "gpu_mapping.cc",
+    "gpu_mapping.h",
+    "gpu_mapping_cache.cc",
+    "gpu_mapping_cache.h",
+    "gtt.cc",
+    "gtt.h",
+    "modeset/displayport.cc",
+    "modeset/displayport.h",
+    "modeset/edid.cc",
+    "modeset/edid.h",
+    "msd_intel_buffer.cc",
+    "msd_intel_buffer.h",
+    "msd_intel_connection.cc",
+    "msd_intel_connection.h",
+    "msd_intel_context.cc",
+    "msd_intel_context.h",
+    "msd_intel_device.cc",
+    "msd_intel_device.h",
+    "msd_intel_device_dump.cc",
+    "msd_intel_driver.cc",
+    "msd_intel_driver.h",
+    "msd_intel_semaphore.cc",
+    "pagetable.h",
+    "ppgtt.cc",
+    "ppgtt.h",
+    "register_io.cc",
+    "register_io.h",
+    "registers.h",
+    "render_init_batch.cc",
+    "render_init_batch.h",
+    "render_init_batch_gen8.cc",
+    "render_init_batch_gen9.cc",
+    "ringbuffer.cc",
+    "ringbuffer.h",
+    "scheduler.cc",
+    "scheduler.h",
+    "types.h",
+  ]
+
+  deps = [
+    "$magma_build_root:libmsd",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:command_buffer",
+    "$magma_build_root/src/magma_util:semaphore_port",
+    "$magma_build_root/src/magma_util:thread",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:event",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:trace",
+  ]
+
+  defines = []
+  if (msd_intel_enable_mapping_cache) {
+    defines += [ "MSD_INTEL_ENABLE_MAPPING_CACHE" ]
+  }
+
+  if (msd_intel_enable_modesetting) {
+    defines += [ "MSD_INTEL_ENABLE_MODESETTING=1" ]
+  } else {
+    defines += [ "MSD_INTEL_ENABLE_MODESETTING=0" ]
+  }
+
+  if (msd_intel_wait_for_flip) {
+    defines += [ "MSD_INTEL_WAIT_FOR_FLIP=1" ]
+  } else {
+    defines += [ "MSD_INTEL_WAIT_FOR_FLIP=0" ]
+  }
+
+  if (msd_intel_print_fps) {
+    defines += [ "MSD_INTEL_PRINT_FPS=1" ]
+  } else {
+    defines += [ "MSD_INTEL_PRINT_FPS=0" ]
+  }
+}
