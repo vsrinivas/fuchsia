@@ -6,7 +6,7 @@ declare_args() {
   magma_build_root = "//garnet/lib/magma"
   mesa_build_root = "//third_party/mesa"
   expat_build_root = "//third_party/expat"
-  msd_intel_gen_build_root = "//drivers/gpu/msd-intel-gen"
+  msd_intel_gen_build_root = "//garnet/drivers/gpu/msd-intel-gen"
   glm_build_root = "//third_party/glm"
   zircon_build_root = "//zircon"
   lib_vulkan_root = "$magma_build_root/vulkan"
