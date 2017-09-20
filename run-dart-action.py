@@ -63,7 +63,7 @@ Extra flags will be passed to the supporting Dart tool if applicable.
         required=True)
     parser.add_argument(
         '--tree',
-        help='Restrict analysis to a source subtree, e.g. //apps/sysui/*',
+        help='Restrict analysis to a source subtree, e.g. //topaz/shell/*',
         default='*')
     parser.add_argument(
         '--jobs', '-j',
