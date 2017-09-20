@@ -122,16 +122,18 @@ accessed.
 Sets the "memory loops" parameter for jitterentropy (the default is 32). When
 jitterentropy is performing memory operations (to increase variation in CPU
 timing), this controls how many times the memory access routine is repeated.
-This parameter is only used when `kernel.jitterentropy.raw` is true (otherwise,
-jitterentropy chooses the number of loops is a random-ish way).
+This parameter is only used when `kernel.jitterentropy.raw` is true. If the
+value of this parameter is `0` or if `kernel.jitterentropy.raw` is `false`,
+then jitterentropy chooses the number of loops is a random-ish way.
 
 ## kernel.jitterentropy.ll=\<num>
 
 Sets the "LFSR loops" parameter for jitterentropy (the default is 1). When
 jitterentropy is performing CPU-intensive LFSR operations (to increase variation
 in CPU timing), this controls how many times the LFSR routine is repeated.  This
-parameter is only used when `kernel.jitterentropy.raw` is true (otherwise,
-jitterentropy chooses the number of loops is a random-ish way).
+parameter is only used when `kernel.jitterentropy.raw` is true. If the value of
+this parameter is `0` or if `kernel.jitterentropy.raw` is `false`, then
+jitterentropy chooses the number of loops is a random-ish way.
 
 ## kernel.jitterentropy.raw=\<bool>
 
