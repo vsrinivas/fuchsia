@@ -20,8 +20,8 @@ the final image (`binaries`):
 ```
 {
     "imports": [
-        "foo_framework”,
-        “some_extra_data”
+        "packages/gn/foo_framework”,
+        “packages/gn/some_extra_data”
     ],
     "labels": [
         "//my/stuff/depends_on_foo",
