@@ -12,7 +12,7 @@
         "packages/gn/video"
     ],
     "packages": {
-        "modules_tests": "//apps/modules/common:modules_tests",
-        "modules": "//apps/modules/common:modules"
+        "modules_tests": "//topaz/tools:modules_tests",
+        "modules": "//topaz/tools:modules"
     }
 }

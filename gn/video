@@ -3,6 +3,6 @@
         "dart"
     ],
     "packages": {
-        "video": "//apps/modules/video"
+        "video": "//topaz/app/video"
     }
 }

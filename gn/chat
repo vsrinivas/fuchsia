@@ -4,7 +4,7 @@
         "dart"
     ],
     "packages": {
-        "chat_tests": "//apps/modules/chat:chat_tests",
-        "chat": "//apps/modules/chat"
+        "chat_tests": "//topaz/app/chat:chat_tests",
+        "chat": "//topaz/app/chat"
     }
 }

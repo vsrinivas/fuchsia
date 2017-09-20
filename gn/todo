@@ -4,11 +4,11 @@
         "dart"
     ],
     "labels": [
-        "//apps/modules/todo"
+        "//topaz/app/todo"
     ],
     "binaries": [
         {
-            "binary": "gen/apps/modules/todo/modules/story/todo_story.flx",
+            "binary": "gen/topaz/app/todo/modules/story/todo_story.flx",
             "bootfs_path": "apps/todo_story"
         },
         {

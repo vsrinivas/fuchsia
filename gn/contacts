@@ -3,6 +3,6 @@
         "dart"
     ],
     "packages": {
-        "contacts": "//apps/modules/contacts"
+        "contacts": "//topaz/app/contacts"
     }
 }

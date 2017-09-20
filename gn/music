@@ -3,8 +3,8 @@
         "dart"
     ],
     "labels": [
-        "//apps/modules/music",
-        "//apps/modules/music:test"
+        "//topaz/app/music",
+        "//topaz/app/music:test"
     ],
     "binaries": [
         {
@@ -12,15 +12,15 @@
             "bootfs_path": "apps/concert_agent"
         },
         {
-            "binary": "gen/apps/modules/music/modules/concert_event/concert_event.flx",
+            "binary": "gen/topaz/app/music/modules/concert_event/concert_event.flx",
             "bootfs_path": "apps/concert_event"
         },
         {
-            "binary": "gen/apps/modules/music/modules/concert_event_list/concert_event_list.flx",
+            "binary": "gen/topaz/app/music/modules/concert_event_list/concert_event_list.flx",
             "bootfs_path": "apps/concert_event_list"
         },
         {
-            "binary": "gen/apps/modules/music/modules/concert_event_page/concert_event_page.flx",
+            "binary": "gen/topaz/app/music/modules/concert_event_page/concert_event_page.flx",
             "bootfs_path": "apps/concert_event_page"
         },
         {
@@ -28,15 +28,15 @@
             "bootfs_path": "apps/last_fm_agent"
         },
         {
-            "binary": "gen/apps/modules/music/modules/last_fm_artist_bio/last_fm_artist_bio.flx",
+            "binary": "gen/topaz/app/music/modules/last_fm_artist_bio/last_fm_artist_bio.flx",
             "bootfs_path": "apps/last_fm_artist_bio"
         },
         {
-            "binary": "gen/apps/modules/music/modules/music_album/music_album.flx",
+            "binary": "gen/topaz/app/music/modules/music_album/music_album.flx",
             "bootfs_path": "apps/music_album"
         },
         {
-            "binary": "gen/apps/modules/music/modules/music_artist/music_artist.flx",
+            "binary": "gen/topaz/app/music/modules/music_artist/music_artist.flx",
             "bootfs_path": "apps/music_artist"
         },
         {
@@ -44,7 +44,7 @@
             "bootfs_path": "apps/music_artist_agent"
         },
         {
-            "binary": "gen/apps/modules/music/modules/music_playback/music_playback.flx",
+            "binary": "gen/topaz/app/music/modules/music_playback/music_playback.flx",
             "bootfs_path": "apps/music_playback"
         },
         {
@@ -53,7 +53,7 @@
         }
     ],
     "components": [
-        "apps/modules/music/modules/music_album/music_album_component.json",
-        "apps/modules/music/modules/music_artist/music_artist_component.json"
+        "topaz/app/music/modules/music_album/music_album_component.json",
+        "topaz/app/music/modules/music_artist/music_artist_component.json"
     ]
 }
