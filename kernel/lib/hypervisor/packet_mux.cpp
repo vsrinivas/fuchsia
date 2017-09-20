@@ -42,8 +42,9 @@ void BlockingPortAllocator::Free(PortPacket* port_packet) {
         thread_reschedule();
 }
 
-PortRange::PortRange(zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port, uint64_t key)
-    : addr_(addr), len_(len), port_(fbl::move(port)), key_(key) {
+PortRange::PortRange(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
+                     uint64_t key)
+    : kind_(kind), addr_(addr), len_(len), port_(fbl::move(port)), key_(key) {
     (void) key_;
 }
 
@@ -64,10 +65,13 @@ zx_status_t PortRange::Queue(const zx_port_packet_t& packet, StateReloader* relo
     return status;
 }
 
-zx_status_t PacketMux::AddPortRange(zx_vaddr_t addr, size_t len,
+zx_status_t PacketMux::AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
                                     fbl::RefPtr<PortDispatcher> port, uint64_t key) {
+    PortTree* ports = TreeOf(kind);
+    if (ports == nullptr)
+        return ZX_ERR_INVALID_ARGS;
     fbl::AllocChecker ac;
-    fbl::unique_ptr<PortRange> range(new (&ac) PortRange(addr, len, fbl::move(port), key));
+    fbl::unique_ptr<PortRange> range(new (&ac) PortRange(kind, addr, len, fbl::move(port), key));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
     zx_status_t status = range->Init();
@@ -75,16 +79,19 @@ zx_status_t PacketMux::AddPortRange(zx_vaddr_t addr, size_t len,
         return status;
     {
         fbl::AutoLock lock(&mutex_);
-        ports_.insert(fbl::move(range));
+        ports->insert(fbl::move(range));
     }
     return ZX_OK;
 }
 
-zx_status_t PacketMux::FindPortRange(zx_vaddr_t addr, PortRange** port_range) {
+zx_status_t PacketMux::FindPortRange(uint32_t kind, zx_vaddr_t addr, PortRange** port_range) {
+    PortTree* ports = TreeOf(kind);
+    if (ports == nullptr)
+        return ZX_ERR_INVALID_ARGS;
     PortTree::iterator iter;
     {
         fbl::AutoLock lock(&mutex_);
-        iter = ports_.upper_bound(addr);
+        iter = ports->upper_bound(addr);
     }
     --iter;
     if (!iter.IsValid() || !iter->InRange(addr))
@@ -93,11 +100,23 @@ zx_status_t PacketMux::FindPortRange(zx_vaddr_t addr, PortRange** port_range) {
     return ZX_OK;
 }
 
-zx_status_t PacketMux::Queue(zx_vaddr_t addr, const zx_port_packet_t& packet,
+zx_status_t PacketMux::Queue(uint32_t kind, zx_vaddr_t addr, const zx_port_packet_t& packet,
                              StateReloader* reloader) {
     PortRange* port_range;
-    zx_status_t status = FindPortRange(addr, &port_range);
+    zx_status_t status = FindPortRange(kind, addr, &port_range);
     if (status != ZX_OK)
         return status;
     return port_range->Queue(packet, reloader);
+}
+
+PacketMux::PortTree* PacketMux::TreeOf(uint32_t kind) {
+    switch (kind) {
+    case ZX_GUEST_TRAP_BELL:
+    case ZX_GUEST_TRAP_MEM:
+        return &mem_ports_;
+    case ZX_GUEST_TRAP_IO:
+        return &io_ports_;
+    default:
+        return nullptr;
+    }
 }

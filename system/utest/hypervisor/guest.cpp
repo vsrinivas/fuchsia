@@ -218,18 +218,19 @@ static bool guest_set_trap(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    ASSERT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
 
 #if __x86_64__
     zx_vcpu_state_t vcpu_state;
     instruction_t inst;
-    ASSERT_EQ(inst_decode(packet.guest_mem.inst_buf, packet.guest_mem.inst_len, &vcpu_state, &inst),
+    EXPECT_EQ(inst_decode(packet.guest_mem.inst_buf, packet.guest_mem.inst_len, &vcpu_state, &inst),
               ZX_OK);
-    ASSERT_EQ(packet.guest_mem.addr, VMO_SIZE - PAGE_SIZE);
-    ASSERT_EQ(inst.type, INST_MOV_READ);
-    ASSERT_EQ(inst.mem, 8u);
-    ASSERT_EQ(inst.imm, 0u);
-    ASSERT_EQ(inst.reg, &vcpu_state.rax);
-    ASSERT_NULL(inst.flags);
+    EXPECT_EQ(packet.guest_mem.addr, VMO_SIZE - PAGE_SIZE);
+    EXPECT_EQ(inst.type, INST_MOV_READ);
+    EXPECT_EQ(inst.mem, 8u);
+    EXPECT_EQ(inst.imm, 0u);
+    EXPECT_EQ(inst.reg, &vcpu_state.rax);
+    EXPECT_NULL(inst.flags);
 #endif
 
     ASSERT_TRUE(teardown(&test));
@@ -255,12 +256,47 @@ static bool guest_set_trap_with_port(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
     EXPECT_EQ(packet.guest_io.port, EXIT_TEST_PORT);
 
     ASSERT_EQ(zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
     EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
 
-    zx_handle_close(port);
+    EXPECT_EQ(zx_handle_close(port), ZX_OK);
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool guest_set_trap_with_bell(void) {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_handle_t port;
+    ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
+
+    // Trap on access to the last page.
+    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_BELL, VMO_SIZE - PAGE_SIZE, PAGE_SIZE,
+                                port, 0),
+              ZX_OK);
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
+    EXPECT_EQ(packet.guest_io.port, EXIT_TEST_PORT);
+
+    ASSERT_EQ(zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.guest_bell.addr, VMO_SIZE - PAGE_SIZE);
+
+    EXPECT_EQ(zx_handle_close(port), ZX_OK);
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -271,6 +307,7 @@ RUN_TEST(vcpu_resume)
 RUN_TEST(vcpu_read_write_state)
 RUN_TEST(guest_set_trap)
 RUN_TEST(guest_set_trap_with_port)
+RUN_TEST(guest_set_trap_with_bell)
 END_TEST_CASE(guest)
 
 #ifndef BUILD_COMBINED_TESTS

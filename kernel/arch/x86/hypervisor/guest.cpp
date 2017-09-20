@@ -92,18 +92,25 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
         return ZX_ERR_OUT_OF_RANGE;
     switch (kind) {
     case ZX_GUEST_TRAP_MEM:
-        if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
-            return ZX_ERR_INVALID_ARGS;
         if (port)
             return ZX_ERR_INVALID_ARGS;
-        return gpas_->UnmapRange(addr, len);
+        /* fall-through */
+    case ZX_GUEST_TRAP_BELL: {
+        if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
+            return ZX_ERR_INVALID_ARGS;
+        zx_status_t status = gpas_->UnmapRange(addr, len);
+        if (status != ZX_OK)
+            return status;
+        break;
+    }
     case ZX_GUEST_TRAP_IO:
         if (addr + len > UINT16_MAX)
             return ZX_ERR_OUT_OF_RANGE;
-        return mux_.AddPortRange(addr, len, fbl::move(port), key);
+        break;
     default:
         return ZX_ERR_INVALID_ARGS;
     }
+    return mux_.AddPortRange(kind, addr, len, fbl::move(port), key);
 }
 
 zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {

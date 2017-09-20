@@ -12,8 +12,9 @@
 __BEGIN_CDECLS
 
 enum {
-    ZX_GUEST_TRAP_MEM = 0,
-    ZX_GUEST_TRAP_IO  = 1,
+    ZX_GUEST_TRAP_BELL  = 0,
+    ZX_GUEST_TRAP_MEM   = 1,
+    ZX_GUEST_TRAP_IO    = 2,
 };
 
 // Structure to create a VCPU for a guest.

@@ -6,7 +6,6 @@
 
 #include <arch/hypervisor.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <object/port_dispatcher.h>
 #include <zircon/syscalls/hypervisor.h>
 
 #include "el2_cpu_state_priv.h"
@@ -39,22 +38,26 @@ Guest::~Guest() {
 
 zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                            fbl::RefPtr<PortDispatcher> port, uint64_t key) {
-    if (len == 0)
-        return ZX_ERR_INVALID_ARGS;
-    if (SIZE_MAX - len < addr)
-        return ZX_ERR_OUT_OF_RANGE;
     switch (kind) {
     case ZX_GUEST_TRAP_MEM:
-        if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
-            return ZX_ERR_INVALID_ARGS;
         if (port)
             return ZX_ERR_INVALID_ARGS;
-        return gpas_->UnmapRange(addr, len);
+        /* fall-through */
+    case ZX_GUEST_TRAP_BELL:
+        break;
     case ZX_GUEST_TRAP_IO:
         return ZX_ERR_NOT_SUPPORTED;
     default:
         return ZX_ERR_INVALID_ARGS;
     }
+    if (SIZE_MAX - len < addr)
+        return ZX_ERR_OUT_OF_RANGE;
+    if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len) || len == 0)
+        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = gpas_->UnmapRange(addr, len);
+    if (status != ZX_OK)
+        return status;
+    return mux_.AddPortRange(kind, addr, len, fbl::move(port), key);
 }
 
 zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {

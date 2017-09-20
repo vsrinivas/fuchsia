@@ -36,16 +36,20 @@ private:
 /* Specifies an address range to associate with a port. */
 class PortRange : public fbl::WAVLTreeContainable<fbl::unique_ptr<PortRange>> {
 public:
-    PortRange(zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port, uint64_t key);
+    PortRange(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
+              uint64_t key);
     virtual ~PortRange(){};
 
     zx_status_t Init();
     zx_status_t Queue(const zx_port_packet_t& packet, StateReloader* reloader);
 
+    uint32_t Kind() const { return kind_; }
     zx_vaddr_t GetKey() const { return addr_; }
     bool InRange(zx_vaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
+    bool HasPort() const { return !!port_; }
 
 private:
+    const uint32_t kind_;
     const zx_vaddr_t addr_;
     const size_t len_;
     const fbl::RefPtr<PortDispatcher> port_;
@@ -56,15 +60,18 @@ private:
 /* Demultiplexes packets onto ports. */
 class PacketMux {
 public:
-    zx_status_t AddPortRange(zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
-                             uint64_t key);
-    zx_status_t Queue(zx_vaddr_t addr, const zx_port_packet_t& packet, StateReloader* reloader);
+    zx_status_t AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
+                             fbl::RefPtr<PortDispatcher> port, uint64_t key);
+    zx_status_t FindPortRange(uint32_t kind, zx_vaddr_t addr, PortRange** port_range);
+    zx_status_t Queue(uint32_t kind, zx_vaddr_t addr, const zx_port_packet_t& packet,
+                      StateReloader* reloader);
 
 private:
     using PortTree = fbl::WAVLTree<zx_vaddr_t, fbl::unique_ptr<PortRange>>;
 
     fbl::Mutex mutex_;
-    PortTree ports_ TA_GUARDED(mutex_);
+    PortTree mem_ports_ TA_GUARDED(mutex_);
+    PortTree io_ports_ TA_GUARDED(mutex_);
 
-    zx_status_t FindPortRange(zx_vaddr_t addr, PortRange** port_range);
+    PortTree* TreeOf(uint32_t kind);
 };

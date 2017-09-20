@@ -34,9 +34,15 @@ resume. To dequeue a packet from *port*, use *port_wait*(). Multiple threads may
 use *port_wait*() to dequeue packets, enabling the use of a thread pool to
 handle traps.
 
-*kind* may be either *ZX_GUEST_TRAP_MEM* or *ZX_GUEST_TRAP_IO*. If
-*ZX_GUEST_TRAP_MEM* is specified, then *addr* and *len* must both be
-page-aligned.
+*kind* may be either *ZX_GUEST_TRAP_BELL*, *ZX_GUEST_TRAP_MEM*, or
+*ZX_GUEST_TRAP_IO*. If *ZX_GUEST_TRAP_BELL* or *ZX_GUEST_TRAP_MEM* is specified,
+then *addr* and *len* must both be page-aligned. If *ZX_GUEST_TRAP_MEM* is
+specified, then *port* must be *ZX_HANDLE_INVALID*.
+
+*ZX_GUEST_TRAP_BELL* is a type of trap that defines a door-bell. If there is an
+access to the memory region specified by the trap, then a packet is generated
+that does not fetch the instruction associated with the access, and the packet
+may be delivered via *port*.
 
 To identify what *kind* of trap generated a packet, use *ZX_PKT_TYPE_GUEST_MEM*
 and *ZX_PKT_TYPE_GUEST_IO*.
@@ -64,6 +70,10 @@ of the valid bounds of the address space *kind*.
 
 **ZX_ERR_WRONG_TYPE** *guest* is not a handle to a guest, or *port* is not a
 handle to a port.
+
+## NOTES
+
+*ZX_GUEST_TRAP_BELL* shares the same address space as *ZX_GUEST_TRAP_MEM*.
 
 ## SEE ALSO
 

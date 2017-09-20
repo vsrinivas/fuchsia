@@ -279,7 +279,7 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
             guest_state->rax = 0;
     } else {
         memcpy(packet->guest_io.data, &guest_state->rax, io_info.access_size);
-        zx_status_t status = mux.Queue(packet->guest_io.port, *packet, vmcs);
+        zx_status_t status = mux.Queue(ZX_GUEST_TRAP_IO, packet->guest_io.port, *packet, vmcs);
         // If there was no FIFO to handle the trap, then we should return to
         // user-space. Otherwise, return the status of the FIFO write.
         if (status != ZX_ERR_NOT_FOUND)
@@ -471,18 +471,43 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
 }
 
 static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vaddr_t guest_paddr,
-                                 GuestPhysicalAddressSpace* gpas, zx_port_packet_t* packet) {
+                                 GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                                 zx_port_packet_t* packet) {
     if (exit_info.instruction_length > X86_MAX_INST_LEN)
         return ZX_ERR_INTERNAL;
 
-    memset(packet, 0, sizeof(*packet));
-    packet->type = ZX_PKT_TYPE_GUEST_MEM;
-    packet->guest_mem.addr = guest_paddr;
-    packet->guest_mem.inst_len = exit_info.instruction_length & UINT8_MAX;
-    zx_status_t status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
-                                    packet->guest_mem.inst_len);
-    if (status != ZX_OK)
+    PortRange* port_range;
+    zx_status_t status = mux.FindPortRange(ZX_GUEST_TRAP_BELL, guest_paddr, &port_range);
+    switch (status) {
+    case ZX_OK:
+        if (port_range->Kind() == ZX_GUEST_TRAP_BELL) {
+            memset(packet, 0, sizeof(*packet));
+            packet->type = ZX_PKT_TYPE_GUEST_BELL;
+            packet->guest_bell.addr = guest_paddr;
+            if (port_range->HasPort()) {
+                next_rip(exit_info, vmcs);
+                return port_range->Queue(*packet, vmcs);
+            }
+            // If there is no port associated with the bell, we should break out
+            // of the switch statement and process this trap synchronously.
+            break;
+        } else if (port_range->Kind() != ZX_GUEST_TRAP_MEM) {
+            return ZX_ERR_BAD_STATE;
+        }
+        /* fall-through */
+    case ZX_ERR_NOT_FOUND:
+        memset(packet, 0, sizeof(*packet));
+        packet->type = ZX_PKT_TYPE_GUEST_MEM;
+        packet->guest_mem.addr = guest_paddr;
+        packet->guest_mem.inst_len = exit_info.instruction_length & UINT8_MAX;
+        status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
+                            packet->guest_mem.inst_len);
+        if (status != ZX_OK)
+            return status;
+        break;
+    default:
         return status;
+    }
 
     next_rip(exit_info, vmcs);
     return ZX_ERR_NEXT;
@@ -490,7 +515,8 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
 
 static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                       LocalApicState* local_apic_state,
-                                      GuestPhysicalAddressSpace* gpas, zx_port_packet_t* packet) {
+                                      GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                                      zx_port_packet_t* packet) {
     ApicAccessInfo apic_access_info(exit_info.exit_qualification);
     switch (apic_access_info.access_type) {
     default:
@@ -506,12 +532,13 @@ static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
     /* fallthrough */
     case ApicAccessType::LINEAR_ACCESS_READ:
         vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
-        return handle_memory(exit_info, vmcs, guest_paddr, gpas, packet);
+        return handle_memory(exit_info, vmcs, guest_paddr, gpas, mux, packet);
     }
 }
 
 static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                        GuestPhysicalAddressSpace* gpas, zx_port_packet_t* packet) {
+                                        GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                                        zx_port_packet_t* packet) {
     vaddr_t guest_paddr = exit_info.guest_physical_address;
     EptViolationInfo ept_violation_info(exit_info.exit_qualification);
 
@@ -523,14 +550,13 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
     if (!ept_violation_info.present)
         pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
 
-    // TODO(tjdetwiler): We'll always call the page fault handler for addresses
-    // that userspace wants to handle (ex: MMIO). We should be able to optimize
-    // for this use case.
+    // TODO(abdulla): Define all traps for an architecture explicitly, then
+    // re-order these statements.
     zx_status_t result = vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
     if (result != ZX_ERR_NOT_FOUND)
         return result;
 
-    return handle_memory(exit_info, vmcs, guest_paddr, gpas, packet);
+    return handle_memory(exit_info, vmcs, guest_paddr, gpas, mux, packet);
 }
 
 static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
@@ -593,10 +619,10 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         return ZX_ERR_BAD_STATE;
     case ExitReason::APIC_ACCESS:
         LTRACEF("handling APIC access\n\n");
-        return handle_apic_access(exit_info, vmcs, local_apic_state, gpas, packet);
+        return handle_apic_access(exit_info, vmcs, local_apic_state, gpas, mux, packet);
     case ExitReason::EPT_VIOLATION:
         LTRACEF("handling EPT violation\n\n");
-        return handle_ept_violation(exit_info, vmcs, gpas, packet);
+        return handle_ept_violation(exit_info, vmcs, gpas, mux, packet);
     case ExitReason::XSETBV:
         LTRACEF("handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, vmcs, guest_state);

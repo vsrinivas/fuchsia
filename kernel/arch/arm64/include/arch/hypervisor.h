@@ -6,12 +6,12 @@
 
 #pragma once
 
-#include <zircon/types.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <hypervisor/packet_mux.h>
+#include <zircon/types.h>
 
 class GuestPhysicalAddressSpace;
-class PacketMux;
 class PortDispatcher;
 class VmObject;
 
@@ -30,6 +30,7 @@ public:
 
 private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
+    PacketMux mux_;
     uint8_t vmid_ = 0;
 
     Guest() = default;

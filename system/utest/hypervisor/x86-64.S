@@ -59,6 +59,7 @@ FUNCTION(vcpu_read_write_state_end)
 FUNCTION(guest_set_trap_start)
     mov $VMO_SIZE, %rdx
     mov -0x1000(%rdx), %rax
+    out %al, $EXIT_TEST_PORT
 FUNCTION(guest_set_trap_end)
 
 FUNCTION(guest_set_trap_with_port_start)
