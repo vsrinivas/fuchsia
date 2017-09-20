@@ -116,7 +116,6 @@ struct xhci {
     zx_handle_t irq_handles[INTERRUPTER_COUNT];
     // actual number of interrupts we are using
     uint32_t num_interrupts;
-    bool shutting_down;   // set to terminate completer threads
 
     zx_handle_t mmio_handle;
     void* mmio;

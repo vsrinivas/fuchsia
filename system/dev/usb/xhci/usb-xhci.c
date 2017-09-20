@@ -162,14 +162,11 @@ static void xhci_unbind(void* ctx) {
     xhci_stop(xhci);
 
     // stop our interrupt threads
-    xhci->shutting_down = true;
-    hw_wmb();
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         zx_interrupt_signal(xhci->irq_handles[i]);
         thrd_join(xhci->completer_threads[i], NULL);
         zx_handle_close(xhci->irq_handles[i]);
     }
-    xhci->shutting_down = false;
 
     device_remove(xhci->zxdev);
 }
@@ -216,9 +213,6 @@ static int completer_thread(void *arg) {
             break;
         }
         zx_interrupt_complete(irq_handle);
-        if (completer->xhci->shutting_down) {
-            break;
-        }
         xhci_handle_interrupt(completer->xhci, completer->interrupter);
     }
     dprintf(TRACE, "xhci completer %u thread done\n", completer->interrupter);
