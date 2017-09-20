@@ -62,7 +62,7 @@ TARGET=
 while getopts "b:hl:n:o:rs:t:" FLAG; do
     case "$FLAG" in
         b) BUILDDIR="$OPTARG";;
-        h) (( HELPFLAG++ ));;
+        h) HELPFLAG=$((HELPFLAG + 1));;
         l)
             LEN="$OPTARG"
             if [[ $LEN -gt $BUILD_LEN ]]; then BUILD_LEN="$LEN"; fi
