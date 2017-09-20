@@ -9,6 +9,6 @@
         "packages/gn/zlib"
     ],
     "packages": {
-        "libwebkit": "//apps/web_view:libwebkit"
+        "libwebkit": "//topaz/runtime/web_view:libwebkit"
     }
 }

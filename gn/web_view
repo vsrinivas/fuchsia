@@ -13,8 +13,8 @@
         "packages/gn/zlib"
     ],
     "packages": {
-        "libwebkit": "//apps/web_view:libwebkit",
-        "web_view": "//apps/web_view",
-        "web_view_test_package": "//apps/web_view:web_view_test_package"
+        "libwebkit": "//topaz/runtime/web_view:libwebkit",
+        "web_view": "//topaz/runtime/web_view",
+        "web_view_test_package": "//topaz/runtime/web_view:web_view_test_package"
     }
 }
