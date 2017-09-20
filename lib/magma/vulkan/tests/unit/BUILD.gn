@@ -1,0 +1,17 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+executable("test_vkcube_image_pipe_swapchain") {
+  testonly = true
+  sources = [
+    "test_main.cc",
+    "test_vk_cube.cc",
+  ]
+  deps = [
+    "$lib_vulkan_root/tests/vkcube:vkcube_common",
+    "//third_party/gtest",
+  ]
+}

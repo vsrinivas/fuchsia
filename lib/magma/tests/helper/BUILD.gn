@@ -1,0 +1,32 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+source_set("platform_device_helper") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:device",
+  ]
+
+  sources = [
+    "platform_device_helper.cc",
+    "platform_device_helper.h",
+  ]
+}
+
+source_set("command_buffer_helper") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  sources = [
+    "command_buffer_helper.h",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util:command_buffer",
+    "$magma_build_root/src/sys_driver",
+  ]
+}

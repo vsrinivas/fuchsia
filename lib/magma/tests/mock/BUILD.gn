@@ -1,0 +1,47 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+source_set("msd") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:command_buffer",
+    "$magma_build_root/src/magma_util/platform:buffer",
+  ]
+
+  sources = [
+    "mock_msd.cc",
+    "mock_msd.h",
+  ]
+}
+
+source_set("mmio") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:mmio",
+  ]
+
+  sources = [
+    "mock_mmio.cc",
+    "mock_mmio.h",
+  ]
+}
+
+source_set("magma_system") {
+  sources = [
+    "mock_magma_system.cc",
+  ]
+  deps = [
+    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+  ]
+}

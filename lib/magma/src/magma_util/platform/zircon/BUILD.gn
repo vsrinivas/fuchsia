@@ -1,0 +1,191 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+source_set("buffer") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_buffer.cc",
+  ]
+
+  deps = [
+    ":object",
+    "$zircon_build_root/system/ulib/zx",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "zircon",
+  ]
+}
+
+source_set("interrupt") {
+  sources = [
+    "zircon_platform_interrupt.h",
+  ]
+
+  public_deps = [
+    "$zircon_build_root/system/ulib/zx",
+  ]
+}
+
+source_set("device") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_pci_device.cc",
+    "zircon_platform_pci_device.h",
+    "zircon_platform_interrupt.h",
+  ]
+
+  deps = [
+    ":interrupt",
+    "$magma_build_root/src/magma_util",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "zircon",
+  ]
+}
+
+source_set("futex") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_futex.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "zircon",
+  ]
+}
+
+source_set("connection") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_connection.cc",
+  ]
+
+  deps = [
+    ":event",
+    "$zircon_build_root/system/ulib/zx",
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "zircon",
+  ]
+}
+
+source_set("thread") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_thread.cc",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+source_set("event") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_event.cc",
+  ]
+
+  deps = [
+    "$zircon_build_root/system/ulib/zx",
+    "$magma_build_root/src/magma_util",
+  ]
+}
+
+source_set("object") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_object.cc",
+  ]
+
+  deps = [
+    "$zircon_build_root/system/ulib/zx",
+    "$magma_build_root/src/magma_util",
+  ]
+}
+
+source_set("semaphore") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_semaphore.cc",
+  ]
+
+  deps = [
+    ":object",
+    "$zircon_build_root/system/ulib/zx",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
+  ]
+}
+
+source_set("port") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_port.cc",
+  ]
+
+  deps = [
+    "$zircon_build_root/system/ulib/zx",
+    "$magma_build_root/src/magma_util",
+  ]
+}
+
+source_set("trace") {
+  configs += [
+    "..:platform_include_config",
+    "..:tracing",
+  ]
+
+  sources = [
+    "zircon_platform_trace.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  if (magma_enable_tracing) {
+    public_deps = [
+      "//garnet/public/lib/fsl",
+      "$zircon_build_root/system/ulib/async:loop",
+      "$zircon_build_root/system/ulib/trace",
+      "$zircon_build_root/system/ulib/trace-provider",
+    ]
+  }
+
+  libs = [
+    "fdio",
+    "driver",
+    "ddk",
+    "zircon",
+  ]
+}

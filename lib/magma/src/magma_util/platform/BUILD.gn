@@ -1,0 +1,158 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+config("platform_include_config") {
+  include_dirs = [ "." ]
+}
+
+config("tracing") {
+  if (magma_enable_tracing) {
+    defines = [ "MAGMA_ENABLE_TRACING" ]
+  }
+}
+
+source_set("buffer") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_buffer.h",
+  ]
+
+  deps = [
+    "zircon:buffer",
+  ]
+}
+
+source_set("device") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_pci_device.h",
+    "platform_mmio.h",
+  ]
+
+  deps = [
+    "zircon:device",
+  ]
+}
+
+source_set("mmio") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_mmio.h",
+  ]
+}
+
+source_set("futex") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_futex.h",
+  ]
+
+  deps = [
+    "zircon:futex",
+  ]
+}
+
+source_set("connection") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "platform_connection.h",
+  ]
+
+  deps = [
+    ":thread",
+    "zircon:connection",
+  ]
+}
+
+source_set("thread") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_thread.h",
+  ]
+
+  deps = [
+    "zircon:thread",
+  ]
+}
+
+source_set("event") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_event.h",
+  ]
+
+  deps = [
+    "zircon:event",
+  ]
+}
+
+source_set("object") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_object.h",
+  ]
+}
+
+source_set("semaphore") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_semaphore.h",
+  ]
+
+  deps = [
+    ":object",
+    "zircon:semaphore",
+  ]
+}
+
+source_set("port") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_port.h",
+  ]
+
+  deps = [
+    ":object",
+    "zircon:port",
+  ]
+}
+
+source_set("trace") {
+  public_configs = [
+    ":platform_include_config",
+    ":tracing",
+  ]
+
+  sources = [
+    "platform_trace.h",
+  ]
+
+  public_deps = [
+    "zircon:trace",
+  ]
+}

@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  magma_build_root = "//magma"
+  mesa_build_root = "//third_party/mesa"
+  expat_build_root = "//third_party/expat"
+  msd_intel_gen_build_root = "//drivers/gpu/msd-intel-gen"
+  glm_build_root = "//third_party/glm"
+  zircon_build_root = "//zircon"
+  lib_vulkan_root = "$magma_build_root/vulkan"
+
+  magma_python_path = rebase_path("//third_party/mako")
+
+  # A service driver can supply a testing target here.
+  # These tests are run when the test driver is configured to
+  # build and run unit tests.
+  msd_gtest_target = "$msd_intel_gen_build_root:indriver_gtest"
+
+  # Enable this to include fuchsia tracing capability
+  magma_enable_tracing = false
+}

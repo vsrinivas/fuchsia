@@ -1,0 +1,23 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+config("vulkan_shim_config") {
+  include_dirs = [ "." ]
+  defines = [ "MAGMA_USE_SHIM" ]
+}
+
+source_set("vulkan_shim") {
+  public_configs = [ ":vulkan_shim_config" ]
+
+  sources = [
+    "vulkan_shim.cc",
+    "vulkan_shim.h",
+  ]
+
+  deps = [
+    "$mesa_build_root:magma_vulkan",
+  ]
+}

@@ -1,0 +1,103 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+config("magma_util_config") {
+  if (is_debug) {
+    defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=1" ]
+  } else {
+    defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=0" ]
+  }
+}
+
+group("magma_util") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  public_deps = [
+    ":common",
+    ":system",
+    "$magma_build_root/include:magma_abi_common",
+  ]
+}
+
+source_set("common") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "dlog.h",
+    "macros.h",
+  ]
+}
+
+source_set("command_buffer") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "command_buffer.cc",
+    "command_buffer.h",
+  ]
+
+  public_deps = [
+    "$magma_build_root/include:msd_abi",
+    "platform:buffer",
+  ]
+}
+
+source_set("thread") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "thread.h",
+  ]
+
+  deps = [
+    "platform:thread",
+  ]
+}
+
+source_set("system") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "address_space_allocator.h",
+    "simple_allocator.cc",
+    "simple_allocator.h",
+  ]
+
+  public_deps = [
+    ":common",
+  ]
+}
+
+source_set("semaphore_port") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "semaphore_port.h",
+  ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util/platform:trace",
+    "platform:port",
+  ]
+}

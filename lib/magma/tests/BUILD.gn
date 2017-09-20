@@ -1,0 +1,105 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+import("//packages/package.gni")
+
+package("magma-dev") {
+  if (current_cpu == "x64") {
+    testonly = true
+
+    deps = [
+      ":autorun",
+      ":tests",
+      "$mesa_build_root:tests",
+      "$msd_intel_gen_build_root:test",
+      "$msd_intel_gen_build_root:tests",
+    ]
+
+    tests = [
+      {
+        name = "msd_intel_gen_nonhardware_tests"
+      },
+
+      {
+        name = "magma_sys_unit_tests"
+      },
+
+      {
+        name = "magma_integration_tests"
+      },
+
+      {
+        name = "magma_abi_conformance_tests"
+      },
+
+      {
+        name = "mesa_unit_tests"
+      },
+
+      {
+        name = "vkcube"
+      },
+
+      {
+        name = "vkreadback"
+      },
+
+      {
+        name = "vkext"
+      },
+
+      {
+        name = "test_wsi_magma"
+      },
+
+      {
+        name = "state_pool"
+      },
+
+      {
+        name = "state_pool_free_list_only"
+      },
+
+      {
+        name = "state_pool_no_free"
+      },
+    ]
+
+    binaries = [ {
+          name = "autorun"
+          dest = "magma_autorun"
+        } ]
+
+    drivers = [ {
+          name = "libmsd-intel-gen-test.so"
+        } ]
+  }
+}
+
+if (current_cpu == "x64") {
+  copy("autorun") {
+    sources = [
+      "$magma_build_root/scripts/autorun",
+    ]
+    outputs = [
+      "$root_out_dir/autorun",
+    ]
+  }
+
+  group("tests") {
+    testonly = true
+
+    public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+    public_deps = [
+      "integration",
+      "unit_tests:magma_abi_conformance_tests",
+      "unit_tests:magma_sys_unit_tests",
+      "vkcube",
+      "vkext",
+      "vkreadback",
+    ]
+  }
+}
