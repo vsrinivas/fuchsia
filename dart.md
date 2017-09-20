@@ -94,7 +94,7 @@ dart_package("foo") {
 The `//scripts/run-dart-action.py` script makes it easy to run the analysis over
 multiple targets:
 ```sh
-scripts/run-dart-action.py analyze --out out/<build-type> --tree //apps/sysui/*
+scripts/run-dart-action.py analyze --out out/<build-type> --tree //topaz/shell/*
 ```
 
 Regular analyzer flags may also be passed:
@@ -119,11 +119,11 @@ This script simply runs the given tests in the Flutter shell *on the host*.
 The `//scripts/run-dart-action.py` script may be used to run multiple test
 suites at once:
 ```sh
-scripts/run-dart-action.py test --out out/<build-type> --tree //apps/sysui/*
+scripts/run-dart-action.py test --out out/<build-type> --tree //topaz/shell/*
 ```
 It also works with a single suite:
 ```sh
-scripts/run-dart-action.py test --out out/<build-type> --tree //apps/sysui/armadillo:test
+scripts/run-dart-action.py test --out out/<build-type> --tree //topaz/shell/armadillo:test
 ```
 
 
