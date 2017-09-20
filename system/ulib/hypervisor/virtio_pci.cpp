@@ -87,10 +87,6 @@ static const size_t kVirtioPciDeviceCfgBase = 0x3c;
 static_assert(is_aligned(kVirtioPciDeviceCfgBase, 4),
               "Virtio PCI notify config has illegal alignment.");
 
-static VirtioPci* pci_device_to_virtio(const pci_device_t* device) {
-    return static_cast<VirtioPci*>(device->impl);
-}
-
 /* Handle reads to the common configuration structure as defined in
  * Virtio 1.0 Section 4.1.4.3.
  */
@@ -196,7 +192,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint16_t port, uint8_t access_size, zx_vcpu
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::PciRead(uint8_t bar, uint16_t port, uint8_t access_size,
+zx_status_t VirtioPci::ReadBar(uint8_t bar, uint16_t port, uint8_t access_size,
                                zx_vcpu_io_t* vcpu_io) {
     if (bar != kVirtioPciBar)
         return ZX_ERR_NOT_SUPPORTED;
@@ -322,7 +318,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint16_t port, const zx_vcpu_io_t* io) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::PciWrite(uint8_t bar, uint16_t port, const zx_vcpu_io_t* io) {
+zx_status_t VirtioPci::WriteBar(uint8_t bar, uint16_t port, const zx_vcpu_io_t* io) {
     if (bar != kVirtioPciBar)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -346,21 +342,6 @@ zx_status_t VirtioPci::PciWrite(uint8_t bar, uint16_t port, const zx_vcpu_io_t* 
     fprintf(stderr, "Unhandled write %#x\n", port);
     return ZX_ERR_NOT_SUPPORTED;
 }
-
-static zx_status_t virtio_pci_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                    const zx_vcpu_io_t* io) {
-    return pci_device_to_virtio(pci_device)->PciWrite(bar, port, io);
-}
-
-static zx_status_t virtio_pci_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                   uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
-    return pci_device_to_virtio(pci_device)->PciRead(bar, port, access_size, vcpu_io);
-}
-
-static const pci_device_ops_t kVirtioPciDeviceOps = {
-    .read_bar = &virtio_pci_read,
-    .write_bar = &virtio_pci_write,
-};
 
 void VirtioPci::SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
                          size_t cap_len, size_t data_length, size_t bar_offset) {
@@ -401,21 +382,16 @@ void VirtioPci::SetupCaps() {
     // used by Linux or Zircon.
 
     static_assert(kVirtioPciNumCapabilities == 4, "Incorrect number of capabilities.");
-    pci_device_.capabilities = capabilities_;
-    pci_device_.num_capabilities = kVirtioPciNumCapabilities;
+    set_capabilities(capabilities_, kVirtioPciNumCapabilities);
 
     static_assert(kVirtioPciBar < PCI_MAX_BARS, "Not enough BAR registers available.");
-    pci_device_.bar[kVirtioPciBar].size = static_cast<uint32_t>(
+    bar_[kVirtioPciBar].size = static_cast<uint32_t>(
         kVirtioPciDeviceCfgBase + device_->device_config_size_);
-    pci_device_.bar[kVirtioPciBar].io_type = PCI_BAR_IO_TYPE_MMIO;
+    bar_[kVirtioPciBar].io_type = PCI_BAR_IO_TYPE_MMIO;
 }
 
 static constexpr uint16_t virtio_pci_id(uint16_t virtio_id) {
     return static_cast<uint16_t>(virtio_id + 0x1040u);
-}
-
-zx_status_t VirtioPci::Interrupt() {
-    return pci_interrupt(&pci_device_);
 }
 
 virtio_queue_t* VirtioPci::selected_queue() {
@@ -426,17 +402,17 @@ virtio_queue_t* VirtioPci::selected_queue() {
 }
 
 VirtioPci::VirtioPci(VirtioDevice* device)
-    : device_(device) {
-    pci_device_.vendor_id = kPciVendorIdVirtio;
-    pci_device_.device_id = virtio_pci_id(device_->device_id_);
-    pci_device_.subsystem_vendor_id = 0;
-    pci_device_.subsystem_id = device_->device_id_;
-    pci_device_.class_code = 0;
+    : PciDevice({
+          .device_id = virtio_pci_id(device->device_id_),
+          .vendor_id = kPciVendorIdVirtio,
+          .subsystem_id = device->device_id_,
+          .subsystem_vendor_id = 0,
+          .class_code = 0,
+          // Virtio 1.0 Section 4.1.2.1: Non-transitional devices SHOULD have a
+          // PCI Revision ID of 1 or higher.
+          .revision_id = 1,
+      }),
+      device_(device) {
 
-    // Virtio 1.0 Section 4.1.2.1: Non-transitional devices SHOULD have a
-    // PCI Revision ID of 1 or higher.
-    pci_device_.revision_id = 1;
-    pci_device_.impl = this;
-    pci_device_.ops = &kVirtioPciDeviceOps;
     SetupCaps();
 }

@@ -276,9 +276,9 @@ int main(int argc, char** argv) {
     guest_ctx.io_port = &io_port;
     io_port_init(&io_port);
     // Setup PCI.
-    pci_bus_t bus;
-    guest_ctx.bus = &bus;
-    status = pci_bus_init(&bus, &io_apic);
+    PciBus bus(&io_apic);
+    guest_ctx.pci_bus = &bus;
+    status = bus.Init();
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create PCI bus.\n");
         return status;
@@ -293,28 +293,27 @@ int main(int argc, char** argv) {
 
     // Setup block device.
     VirtioBlock block(addr, kVmoSize);
-    pci_device_t& virtio_block = block.pci_device();
+    PciDevice& virtio_block = block.pci_device();
     if (block_path != NULL) {
         status = block.Init(block_path);
         if (status != ZX_OK)
             return status;
 
-        status = pci_bus_connect(&bus, &virtio_block, PCI_DEVICE_VIRTIO_BLOCK);
+        status = bus.Connect(&virtio_block, PCI_DEVICE_VIRTIO_BLOCK);
         if (status != ZX_OK)
             return status;
 
-        status = pci_device_async(&virtio_block, guest);
+        status = virtio_block.StartAsync(guest);
         if (status != ZX_OK)
             return status;
     }
     // Setup memory balloon.
     VirtioBalloon balloon(addr, kVmoSize, physmem_vmo);
     balloon.set_deflate_on_demand(balloon_deflate_on_demand);
-    status = pci_bus_connect(&bus, &balloon.pci_device(),
-                             PCI_DEVICE_VIRTIO_BALLOON);
+    status = bus.Connect(&balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
     if (status != ZX_OK)
         return status;
-    status = pci_device_async(&balloon.pci_device(), guest);
+    status = balloon.pci_device().StartAsync(guest);
     if (status != ZX_OK)
         return status;
     if (balloon_poll_interval > 0)

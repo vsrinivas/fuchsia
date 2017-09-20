@@ -29,20 +29,15 @@ typedef struct virtio_queue virtio_queue_t;
 static const size_t kVirtioPciNumCapabilities = 4;
 
 /* Virtio PCI transport implementation. */
-class VirtioPci {
+class VirtioPci : public PciDevice {
 public:
     VirtioPci(VirtioDevice* device);
 
     // Read a value at |bar| and |offset| from this device.
-    zx_status_t PciRead(uint8_t bar, uint16_t offset, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
+    zx_status_t ReadBar(uint8_t bar, uint16_t offset, uint8_t access_size,
+                        zx_vcpu_io_t* vcpu_io) override;
     // Write a value at |bar| and |offset| to this device.
-    zx_status_t PciWrite(uint8_t bar, uint16_t offset, const zx_vcpu_io_t* io);
-
-    // Trigger a PCI interrupt for this device.
-    zx_status_t Interrupt();
-
-    // The PCI device used for the transport.
-    pci_device_t& pci_device() { return pci_device_; }
+    zx_status_t WriteBar(uint8_t bar, uint16_t offset, const zx_vcpu_io_t* io) override;
 
 private:
     zx_status_t CommonCfgRead(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
@@ -53,9 +48,6 @@ private:
                   size_t cap_len, size_t data_length, size_t bar_offset);
 
     virtio_queue_t* selected_queue();
-
-    // PCI device for the virtio-pci transport.
-    pci_device_t pci_device_;
 
     // We need one of these for every virtio_pci_cap_t structure we expose.
     pci_cap_t capabilities_[kVirtioPciNumCapabilities];
@@ -122,7 +114,7 @@ public:
         return (features_ & features) == features;
     }
 
-    pci_device_t& pci_device() { return pci_.pci_device(); }
+    PciDevice& pci_device() { return pci_; }
 
 protected:
     VirtioDevice(uint8_t device_id, void* config, size_t config_size, virtio_queue_t* queues,

@@ -11,12 +11,12 @@
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
+#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <unittest/unittest.h>
 
-#define PCI_TYPE1_ADDR(bus, device, function, reg)                                                 \
-    (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) |                           \
+#define PCI_TYPE1_ADDR(bus, device, function, reg)                       \
+    (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) | \
      ((reg)&PCI_TYPE1_REGISTER_MASK))
 
 typedef struct test {
@@ -24,8 +24,11 @@ typedef struct test {
     guest_ctx_t guest_ctx;
     io_apic_t io_apic;
     io_port_t io_port;
-    pci_bus_t bus;
+    PciBus pci_bus;
     zx_vcpu_io_t vcpu_io;
+
+    test()
+        : pci_bus(&io_apic) {}
 } test_t;
 
 static zx_status_t vcpu_read_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
@@ -44,22 +47,21 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
 }
 
 static zx_status_t setup(test_t* test) {
-    memset(test, 0, sizeof(*test));
     vcpu_init(&test->vcpu_ctx);
     io_apic_init(&test->io_apic);
     io_port_init(&test->io_port);
-    pci_bus_init(&test->bus, &test->io_apic);
 
     test->guest_ctx.io_apic = &test->io_apic;
     test->guest_ctx.io_port = &test->io_port;
-    test->guest_ctx.bus = &test->bus;
+    test->guest_ctx.pci_bus = &test->pci_bus;
     test->vcpu_ctx.guest_ctx = &test->guest_ctx;
 
     // Redirect read/writes to the VCPU state to just access a field in the
     // test structure.
     test->vcpu_ctx.read_state = vcpu_read_test_state;
     test->vcpu_ctx.write_state = vcpu_write_test_state;
-    return ZX_OK;
+
+    return test->pci_bus.Init();
 }
 
 /* Test handling of an IO packet for an input instruction.
@@ -150,8 +152,8 @@ static bool write_pci_config_addr_port(void) {
     packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
     packet.guest_io.access_size = 4;
     packet.guest_io.u32 = 0x12345678;
-    EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK, "Failed to handle guest packet");
-    EXPECT_EQ(test.bus.config_addr, 0x12345678u, "Incorrect address read from PCI address port");
+    EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK);
+    EXPECT_EQ(test.pci_bus.config_addr(), 0x12345678u);
 
     // 16 bit write to bits 31..16. Other bits remain unchanged.
     packet.type = ZX_PKT_TYPE_GUEST_IO;
@@ -159,8 +161,8 @@ static bool write_pci_config_addr_port(void) {
     packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
     packet.guest_io.access_size = 2;
     packet.guest_io.u16 = 0xFACE;
-    EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK, "Failed to handle guest packet");
-    EXPECT_EQ(test.bus.config_addr, 0xFACE5678u, "Incorrect address read from PCI address port");
+    EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK);
+    EXPECT_EQ(test.pci_bus.config_addr(), 0xFACE5678u);
 
     // 8 bit write to bits (15..8). Other bits remain unchanged.
     packet.type = ZX_PKT_TYPE_GUEST_IO;
@@ -168,8 +170,8 @@ static bool write_pci_config_addr_port(void) {
     packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
     packet.guest_io.access_size = 1;
     packet.guest_io.u8 = 0x99;
-    EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK, "Failed to handle guest packet");
-    EXPECT_EQ(test.bus.config_addr, 0xFACE9978u, "Incorrect address read from PCI address port");
+    EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK);
+    EXPECT_EQ(test.pci_bus.config_addr(), 0xFACE9978u);
 
     END_TEST;
 }
@@ -184,7 +186,7 @@ static bool read_pci_config_addr_port(void) {
     test_t test;
     zx_port_packet_t packet = {};
     ASSERT_EQ(setup(&test), ZX_OK, "Failed to setup test");
-    test.bus.config_addr = 0x12345678;
+    test.pci_bus.set_config_addr(0x12345678);
 
     // 32 bit read (bits 31..0).
     packet.type = ZX_PKT_TYPE_GUEST_IO;
@@ -230,7 +232,7 @@ static bool read_pci_config_data_port(void) {
     ASSERT_EQ(setup(&test), ZX_OK, "Failed to setup test");
 
     // 16-bit read.
-    test.bus.config_addr = PCI_TYPE1_ADDR(0, 0, 0, 0);
+    test.pci_bus.set_config_addr(PCI_TYPE1_ADDR(0, 0, 0, 0));
     packet.type = ZX_PKT_TYPE_GUEST_IO;
     packet.guest_io.input = true;
     packet.guest_io.port = PCI_CONFIG_DATA_PORT_BASE;
@@ -254,9 +256,9 @@ static bool read_pci_config_data_port(void) {
     // address port is added to the data port address.
     test.vcpu_io.u32 = 0;
     packet.guest_io.access_size = 2;
-    test.bus.config_addr = PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_DEVICE_ID);
+    test.pci_bus.set_config_addr(PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_DEVICE_ID));
     // Verify we're using a 4b aligned register address.
-    EXPECT_EQ(test.bus.config_addr & bit_mask<uint32_t>(2), 0u);
+    EXPECT_EQ(test.pci_bus.config_addr() & bit_mask<uint32_t>(2), 0u);
     // Add the register offset to the data port base address.
     packet.guest_io.port =
         PCI_CONFIG_DATA_PORT_BASE + (PCI_CONFIG_DEVICE_ID & bit_mask<uint32_t>(2));

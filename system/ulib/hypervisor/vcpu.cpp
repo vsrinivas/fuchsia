@@ -24,7 +24,6 @@
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT                    13u
 
-
 static zx_status_t unhandled_mem(const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
     fprintf(stderr, "Unhandled address %#lx\n", mem->addr);
     if (inst->type == INST_MOV_READ)
@@ -36,36 +35,38 @@ static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, uint8
                                     zx_vcpu_io_t* io) {
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
-        return pci_ecam_read(vcpu_ctx->guest_ctx->bus, addr, access_size, io);
+        return vcpu_ctx->guest_ctx->pci_bus->ReadEcam(addr, access_size, io);
     }
 
     uint8_t bar;
     uint16_t device_offset;
-    pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
-    pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_MMIO, addr, &bar,
+    PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
+    PciDevice* pci_device;
+    zx_status_t status = bus->MappedDevice(PCI_BAR_IO_TYPE_MMIO, addr, &pci_device, &bar,
                                                  &device_offset);
-    if (pci_device) {
-        return pci_device->ops->read_bar(pci_device, bar, device_offset, io->access_size, io);
+    if (status != ZX_ERR_NOT_FOUND) {
+        return pci_device->ReadBar(bar, device_offset, io->access_size, io);
     }
-    return ZX_ERR_NOT_FOUND;
+    return status;
 }
 
 static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, zx_vcpu_io_t* io) {
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
-        return pci_ecam_write(vcpu_ctx->guest_ctx->bus, addr, io);
+        return vcpu_ctx->guest_ctx->pci_bus->WriteEcam(addr, io);
     }
 
     uint8_t bar;
     uint16_t device_offset;
-    pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
-    pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_MMIO, addr, &bar,
+    PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
+    PciDevice* pci_device;
+    zx_status_t status = bus->MappedDevice(PCI_BAR_IO_TYPE_MMIO, addr, &pci_device, &bar,
                                                  &device_offset);
-    if (pci_device) {
-        return pci_device->ops->write_bar(pci_device, bar, device_offset, io);
+    if (status != ZX_ERR_NOT_FOUND) {
+        return pci_device->WriteBar(bar, device_offset, io);
     }
 
-    return ZX_ERR_NOT_FOUND;
+    return status;
 }
 
 static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
@@ -192,17 +193,17 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
         break;
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
-        status = pci_bus_read(vcpu_ctx->guest_ctx->bus, io->port, io->access_size, &vcpu_io);
+        status = vcpu_ctx->guest_ctx->pci_bus->ReadIoPort(io->port, io->access_size, &vcpu_io);
         break;
     default: {
         uint8_t bar;
         uint16_t port_off;
-        pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
-        pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_PIO, io->port, &bar,
+        PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
+        PciDevice* pci_device;
+        zx_status_t status = bus->MappedDevice(PCI_BAR_IO_TYPE_MMIO, io->port, &pci_device, &bar,
                                                      &port_off);
-        if (pci_device) {
-            status = pci_device->ops->read_bar(pci_device, bar, port_off, io->access_size,
-                                               &vcpu_io);
+        if (status != ZX_ERR_NOT_FOUND) {
+            status = pci_device->ReadBar(bar, port_off, io->access_size, &vcpu_io);
             break;
         }
         status = ZX_ERR_NOT_SUPPORTED;
@@ -238,7 +239,7 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
         return io_port_write(vcpu_ctx->guest_ctx->io_port, io);
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
-        return pci_bus_write(vcpu_ctx->guest_ctx->bus, io);
+        return vcpu_ctx->guest_ctx->pci_bus->WriteIoPort(io);
     case UART_INTERRUPT_ENABLE_PORT ... UART_SCR_SCRATCH_PORT:
         return uart_write(vcpu_ctx->guest_ctx->uart, io);
     }

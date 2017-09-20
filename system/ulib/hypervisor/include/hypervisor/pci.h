@@ -6,8 +6,11 @@
 
 #include <threads.h>
 
-#include <zircon/types.h>
+#include <fbl/mutex.h>
 #include <sys/types.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/thread_annotations.h>
+#include <zircon/types.h>
 
 // clang-format off
 
@@ -42,24 +45,13 @@
 
 // clang-format on
 
+class PciBus;
+
 typedef struct instruction instruction_t;
 typedef struct io_apic io_apic_t;
 typedef struct zx_packet_guest_io zx_packet_guest_io_t;
 typedef struct zx_packet_guest_mem zx_packet_guest_mem_t;
 typedef struct zx_vcpu_io zx_vcpu_io_t;
-typedef struct pci_bus pci_bus_t;
-typedef struct pci_device pci_device_t;
-
-/* Device specific callbacks. */
-typedef struct pci_device_ops {
-    // Read from a region mapped by a BAR register.
-    zx_status_t (*read_bar)(const pci_device_t* device, uint8_t bar, uint16_t port,
-                            uint8_t access_size, zx_vcpu_io_t* vcpu_io);
-
-    // Write to a region mapped by a BAR register.
-    zx_status_t (*write_bar)(pci_device_t* device, uint8_t bar, uint16_t port,
-                             const zx_vcpu_io_t* io);
-} pci_device_ops_t;
 
 /* PCI capability structure.
  *
@@ -90,97 +82,160 @@ typedef struct pci_bar {
 } pci_bar_t;
 
 /* Stores the state of PCI devices. */
-typedef struct pci_device {
-    mtx_t mutex;
-    // Device attributes.
-    uint16_t device_id;
-    uint16_t vendor_id;
-    uint16_t subsystem_id;
-    uint16_t subsystem_vendor_id;
-    // Both class & subclass fields combined.
-    uint16_t class_code;
+class PciDevice {
+public:
+    // Static attributes associated with a device.
+    struct Attributes {
+        // Device attributes.
+        uint16_t device_id;
+        uint16_t vendor_id;
+        uint16_t subsystem_id;
+        uint16_t subsystem_vendor_id;
+        // Both class & subclass fields combined.
+        uint16_t class_code;
+        // Revision ID register.
+        uint8_t revision_id;
+    };
 
-    // Command register.
-    uint16_t command;
-    // Revision ID register.
-    uint8_t revision_id;
+    // Read from a region mapped by a BAR register.
+    virtual zx_status_t ReadBar(uint8_t bar, uint16_t port, uint8_t access_size,
+                                zx_vcpu_io_t* vcpu_io) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Write to a region mapped by a BAR register.
+    virtual zx_status_t WriteBar(uint8_t bar, uint16_t port, const zx_vcpu_io_t* io) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Handle accesses to this devics config space.
+    zx_status_t ReadConfig(uint16_t reg, uint8_t len, uint32_t* value);
+    zx_status_t WriteConfig(uint16_t reg, uint8_t len, uint32_t value);
+
+    // Send the configured interrupt for this device.
+    zx_status_t Interrupt() const;
+
+    // Begin async handling of writes to BAR registers for this device.
+    zx_status_t StartAsync(zx_handle_t guest);
+
+    // Determines if the given base address register is implemented for this
+    // device.
+    bool is_bar_implemented(size_t bar) const {
+        return bar < PCI_MAX_BARS && bar_[bar].size > 0;
+    }
+
+    // Returns a pointer to a base address register for this device.
+    //
+    // Returns nullptr if the register is not implmeneted.
+    const pci_bar_t* bar(size_t n) const { return is_bar_implemented(n) ? &bar_[n] : nullptr; }
+
+    // Install a capability list.
+    void set_capabilities(const pci_cap_t* caps, size_t num_caps) {
+        capabilities_ = caps;
+        num_capabilities_ = num_caps;
+    }
+
+protected:
+    PciDevice(const Attributes attrs);
+
     // Base address registers.
-    pci_bar_t bar[PCI_MAX_BARS];
+    pci_bar_t bar_[PCI_MAX_BARS] = {};
 
+private:
+    friend class PciBus;
+    static zx_status_t Handler(zx_port_packet_t* packet, void* ctx);
+
+    zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value);
+
+    zx_status_t ReadCapability(uint8_t addr, uint32_t* out) const;
+
+    const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index, uint32_t* cap_base) const;
+
+    fbl::Mutex mutex_;
+
+    // Static attributes for this device.
+    const Attributes attrs_;
+    // Command register.
+    uint16_t command_ TA_GUARDED(mutex_) = 0;
     // Array of capabilities for this device.
-    const pci_cap_t* capabilities;
+    const pci_cap_t* capabilities_ = nullptr;
     // Size of |capabilities|.
-    size_t num_capabilities;
-
-    // Private pointer for use by the device implementation.
-    void* impl;
-    // Device specific operations.
-    const pci_device_ops_t* ops;
+    size_t num_capabilities_ = 0;
     // PCI bus this device is connected to.
-    pci_bus_t* bus;
+    PciBus* bus_ = nullptr;
     // IRQ vector assigned by the bus.
-    uint32_t global_irq;
-} pci_device_t;
+    uint32_t global_irq_ = 0;
+};
 
-typedef struct pci_bus {
-    mtx_t mutex;
+class PciBus {
+public:
+    // Base address in PIO space to map device BAR registers.
+    static const uint32_t kPioBarBase = 0x8000;
+
+    // Base address in MMIO space to map device BAR registers.
+    static const uint32_t kMmioBarBase = 0xf0000000;
+
+    PciBus(const io_apic_t* io_apic);
+
+    zx_status_t Init();
+
+    // Search for any devices that have a BAR mapped to the provided |io_type|
+    // and |addr|.
+    //
+    // If found, |bar_out| and |bar_off_out| are populated with the BAR &
+    // offset, the device is returned in |device_out|, and ZX_OK is returned.
+    //
+    // If no mapping exists ZX_ERR_NOT_FOUND is returned.
+    zx_status_t MappedDevice(uint8_t io_type, uintptr_t addr, PciDevice** device_out,
+                             uint8_t* bar_out, uint16_t* bar_off_out);
+
+    // Connect a PCI device to the bus.
+    //
+    // |slot| must be between 1 and PCI_MAX_DEVICES (slot 0 is reserved for
+    // the root complex).
+    //
+    // This method is *not* thread-safe and must only be called during
+    // initialization.
+    zx_status_t Connect(PciDevice* device, uint8_t slot) TA_NO_THREAD_SAFETY_ANALYSIS;
+
+    // Access devices via the ECAM region.
+    //
+    // |addr| is the offset from the start of the ECAM region for this bus.
+    zx_status_t ReadEcam(zx_vaddr_t addr, uint8_t access_size, zx_vcpu_io_t* io);
+    zx_status_t WriteEcam(zx_vaddr_t addr, const zx_vcpu_io_t* io);
+
+    // Handle access to the PC IO ports (0xcf8 - 0xcff).
+    zx_status_t ReadIoPort(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
+    zx_status_t WriteIoPort(const zx_packet_guest_io_t* io);
+
+    // Raise an interrupt for the given device.
+    zx_status_t Interrupt(const PciDevice& device) const;
+
+    // Returns true if |bus|, |device|, |function| corresponds to a valid
+    // device address.
+    bool is_addr_valid(uint8_t bus, uint8_t device, uint8_t function) const {
+        return bus == 0 && device < PCI_MAX_DEVICES && function == 0 && device_[device];
+    }
+
+    // Current config address seleceted by the 0xcf8 IO port.
+    uint32_t config_addr();
+    void set_config_addr(uint32_t addr);
+
+    PciDevice& root_complex() { return root_complex_; }
+
+private:
+    fbl::Mutex mutex_;
     // Selected address in PCI config space.
-    uint32_t config_addr;
+    uint32_t config_addr_ TA_GUARDED(mutex_) = 0;
+
     // Devices on the virtual PCI bus.
-    pci_device_t* device[PCI_MAX_DEVICES];
+    PciDevice* device_[PCI_MAX_DEVICES] = {};
     // IO APIC for use with interrupt redirects.
-    const io_apic_t* io_apic;
+    const io_apic_t* io_apic_ = nullptr;
     // Embedded root complex device.
-    pci_device_t root_complex;
+    PciDevice root_complex_;
     // Next pio window to be allocated to connected devices.
-    uint32_t pio_base;
+    uint32_t pio_base_ = kPioBarBase;
     // Next mmio window to be allocated to connected devices.
-    uint32_t mmio_base;
-} pci_bus_t;
-
-zx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic);
-
-/* Connect a PCI device to the bus.
- *
- * slot must be between 1 and PCI_MAX_DEVICES (slot 0 is reserved for
- * the root complex).
- */
-zx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot);
-
-/* Handle reads from the PCI ECAM region. */
-zx_status_t pci_ecam_read(pci_bus_t* bus, zx_vaddr_t addr, uint8_t access_size, zx_vcpu_io_t* io);
-
-/* Handle writes to the PCI ECAM region. */
-zx_status_t pci_ecam_write(pci_bus_t* bus, zx_vaddr_t addr, const zx_vcpu_io_t* io);
-
-/* Handle PIO reads to the PCI config space. */
-zx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_size,
-                         zx_vcpu_io_t* vcpu_io);
-
-/* Handle PIO writes to the PCI config space. */
-zx_status_t pci_bus_write(pci_bus_t* bus, const zx_packet_guest_io_t* io);
-
-zx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t len, uint32_t* value);
-zx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value);
-
-/* Return the device that has a BAR mapped to the given address with the
- * specified IO type. Returns NULL if no mapping exists or IO is disabled for
- * the mapping.
- *
- * If a mapping is found, the bar number is written to |bar| and the offset
- * into that bar is written to |off|.
- */
-pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uintptr_t addr, uint8_t* bar,
-                                uint16_t* off);
-
-/* Returns the base address for the BAR. */
-uint32_t pci_bar_base(pci_bar_t* bar);
-
-/* Returns the size of the BAR. */
-uint16_t pci_bar_size(pci_bar_t* bar);
-
-/* Start asynchronous handling of writes to the pci device. */
-zx_status_t pci_device_async(pci_device_t* device, zx_handle_t guest);
-
-/* Raise the configured interrupt for the given PCI device. */
-zx_status_t pci_interrupt(pci_device_t* device);
+    uint32_t mmio_base_ = kMmioBarBase;
+};

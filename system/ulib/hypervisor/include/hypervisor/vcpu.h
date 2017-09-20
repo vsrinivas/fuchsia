@@ -9,17 +9,18 @@
 #include <hypervisor/local_apic.h>
 #include <zircon/syscalls/hypervisor.h>
 
+class PciBus;
+
 typedef struct io_apic io_apic_t;
 typedef struct io_port io_port_t;
 typedef struct zx_port_packet zx_port_packet_t;
-typedef struct pci_bus pci_bus_t;
 typedef struct uart uart_t;
 
 /* Stores the state associated with the guest. */
 typedef struct guest_ctx {
     io_apic_t* io_apic;
     io_port_t* io_port;
-    pci_bus_t* bus;
+    PciBus* pci_bus;
 
     uart_t* uart;
 } guest_ctx_t;
