@@ -8,16 +8,19 @@
 #include <utility>
 
 #include "lib/app/cpp/connect.h"
+#include "apps/modular/lib/common/async_holder.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
 
 // This timeout needs to be 5x larger than the default, because UserRunner
-// termination involves 5 sequential steps, all with the default timeout.
+// termination involves 3 sequential steps with the default timeout and 2
+// sequential steps with double the default timeout.
 //
 // TODO(mesch): Obviously, this should adjust, be negotiated, or be set
 // automatically as needed rather than hardcoded.
-constexpr int kUserRunnerTimeoutSeconds = kAppClientTimeoutSeconds * 5;
+constexpr int kUserRunnerTimeoutSeconds = kAppClientTimeoutSeconds * 3
+    + kAsyncHolderTimeoutSeconds * 2 * 2;
 
 UserControllerImpl::UserControllerImpl(
     app::ApplicationLauncher* const application_launcher,

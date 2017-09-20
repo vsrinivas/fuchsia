@@ -56,6 +56,7 @@ source_set("lib") {
     ":users",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
+    "//apps/modular/lib/common:async_holder",
     "//apps/modular/lib/fidl:app_client",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",

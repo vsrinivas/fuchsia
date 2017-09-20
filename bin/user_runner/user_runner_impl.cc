@@ -62,6 +62,11 @@ constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellLinkName[] = "user-shell-link";
 
+// TODO(mesch): Timeouts should be negotiated, not hardcoded, or at least
+// hardcoded in one place, not scattered.
+constexpr auto kTeardownTimeout =
+    fxl::TimeDelta::FromSeconds(kAsyncHolderTimeoutSeconds * 2);
+
 ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
   auto firebase_config = ledger::FirebaseConfig::New();
   firebase_config->server_id = kFirebaseServerId;
@@ -81,7 +86,9 @@ UserRunnerImpl::UserRunnerImpl(
     : binding_(new fidl::Binding<UserRunner>(this)),
       application_context_(application_context),
       test_(test),
-      user_shell_context_binding_(this) {
+      user_shell_context_binding_(this),
+      story_provider_impl_("StoryProviderImpl"),
+      agent_runner_("AgentRunner") {
   binding_->set_connection_error_handler([this] { Terminate(); });
 }
 
@@ -198,11 +205,11 @@ void UserRunnerImpl::Initialize(
       std::make_unique<AgentRunnerStorageImpl>(
           ledger_client_.get(), to_array(kAgentRunnerPageId));
 
-  agent_runner_ = std::make_unique<AgentRunner>(
+  agent_runner_.reset(new AgentRunner(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
       token_provider_factory_.get(), user_intelligence_provider_.get(),
-      entity_repository_.get());
+      entity_repository_.get()));
 
   ComponentContextInfo component_context_info{message_queue_manager_.get(),
                                               agent_runner_.get(),
@@ -250,12 +257,12 @@ void UserRunnerImpl::Initialize(
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
 
-  story_provider_impl_ = std::make_unique<StoryProviderImpl>(
+  story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_id, ledger_client_.get(),
       fidl::Array<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
-      user_intelligence_provider_.get());
+      user_intelligence_provider_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   focus_handler_ = std::make_unique<FocusHandler>(
@@ -311,20 +318,19 @@ void UserRunnerImpl::Terminate() {
       // modules running in a story might freak out if agents they are connected
       // to go away while they are still running. On the other hand agents are
       // meant to outlive story lifetimes.
-      story_provider_impl_->Teardown([this] {
+      story_provider_impl_.Teardown(kTeardownTimeout, [this] {
           FXL_DLOG(INFO) << "- StoryProvider down";
-          story_provider_impl_.reset();
 
           user_intelligence_provider_.reset();
           maxwell_->AppTerminate([this] {
               FXL_DLOG(INFO) << "- Maxwell down";
               maxwell_.reset();
+
               maxwell_component_context_binding_.reset();
               maxwell_component_context_impl_.reset();
 
-              agent_runner_->Teardown([this] {
+              agent_runner_.Teardown(kTeardownTimeout, [this] {
                   FXL_DLOG(INFO) << "- AgentRunner down";
-                  agent_runner_.reset();
                   agent_runner_storage_.reset();
 
                   entity_repository_.reset();
@@ -335,10 +341,10 @@ void UserRunnerImpl::Terminate() {
                   ledger_client_.reset();
                   ledger_repository_.reset();
                   ledger_repository_factory_.reset();
-
                   ledger_app_client_->AppTerminate([this] {
                       FXL_DLOG(INFO) << "- Ledger down";
                       ledger_app_client_.reset();
+
                       user_shell_.reset();
                       user_scope_.reset();
                       account_.reset();

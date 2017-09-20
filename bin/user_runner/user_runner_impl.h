@@ -15,6 +15,7 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "apps/modular/lib/common/async_holder.h"
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
@@ -116,10 +117,10 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<AppClient<UserShell>> user_shell_;
 
   std::unique_ptr<EntityRepository> entity_repository_;
-  std::unique_ptr<StoryProviderImpl> story_provider_impl_;
+  AsyncHolder<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;
-  std::unique_ptr<AgentRunner> agent_runner_;
+  AsyncHolder<AgentRunner> agent_runner_;
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
   std::unique_ptr<RemoteInvokerImpl> remote_invoker_impl_;
   std::string device_name_;
