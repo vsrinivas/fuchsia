@@ -73,7 +73,6 @@ public:
     zx_status_t Getattr(vnattr_t* a) final;
 
     void Notify(const char* name, size_t len, unsigned event) final;
-    zx_status_t WatchDir(zx::channel* out) final;
     zx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;

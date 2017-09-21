@@ -347,7 +347,6 @@ private:
 
     // Use the watcher container to implement a directory watcher
     void Notify(const char* name, size_t len, unsigned event) final;
-    zx_status_t WatchDir(zx::channel* out) final;
     zx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.

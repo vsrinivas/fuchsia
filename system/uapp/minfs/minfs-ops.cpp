@@ -1391,7 +1391,6 @@ VnodeMinfs::VnodeMinfs(Minfs* fs) :
     fs_(fs), vmo_(ZX_HANDLE_INVALID), vmo_indirect_(nullptr) {}
 
 void VnodeMinfs::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
-zx_status_t VnodeMinfs::WatchDir(zx::channel* out) { return watcher_.WatchDir(out); }
 zx_status_t VnodeMinfs::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDirV2(vfs, this, cmd);
 }

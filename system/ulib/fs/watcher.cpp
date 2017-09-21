@@ -76,23 +76,6 @@ zx_status_t WatchBuffer::Send(const zx::channel& c) {
     return ZX_OK;
 }
 
-zx_status_t WatcherContainer::WatchDir(zx::channel* out) {
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(zx::channel(),
-                                                                  VFS_WATCH_MASK_ADDED));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    zx::channel out_channel;
-    if (zx::channel::create(0, &out_channel, &watcher->h) != ZX_OK) {
-        return ZX_ERR_NO_RESOURCES;
-    }
-    fbl::AutoLock lock(&lock_);
-    watch_list_.push_back(fbl::move(watcher));
-    *out = fbl::move(out_channel);
-    return ZX_OK;
-}
-
 zx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd) {
     zx::channel c = zx::channel(cmd->channel);
     if ((cmd->mask & VFS_WATCH_MASK_ALL) == 0) {
