@@ -344,7 +344,7 @@ void PageSyncImpl::UploadUnsyncedCommits() {
   // TODO(ppi): either switch to a paginating API or (better?) ensure that long
   // backlogs of local commits are squashed in storage, as otherwise the list of
   // commits can be possibly very big.
-  storage_->GetUnsyncedCommits(
+  storage_->GetUnsyncedCommits(task_runner_.MakeScoped(
       [this](storage::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
         if (status != storage::Status::OK) {
@@ -359,7 +359,7 @@ void PageSyncImpl::UploadUnsyncedCommits() {
           storage_->AddCommitWatcher(this);
           local_watch_set_ = true;
         }
-      });
+      }));
 }
 
 void PageSyncImpl::VerifyUnsyncedCommits(
@@ -380,7 +380,7 @@ void PageSyncImpl::VerifyUnsyncedCommits(
   }
 
   SetUploadState(UPLOAD_PENDING);
-  storage_->GetHeadCommitIds(fxl::MakeCopyable([
+  storage_->GetHeadCommitIds(task_runner_.MakeScoped(fxl::MakeCopyable([
     this, commits = std::move(commits)
   ](storage::Status status, std::vector<storage::CommitId> heads) mutable {
     if (status != storage::Status::OK) {
@@ -404,7 +404,7 @@ void PageSyncImpl::VerifyUnsyncedCommits(
 
     SetUploadState(UPLOAD_IN_PROGRESS);
     HandleUnsyncedCommits(std::move(commits));
-  }));
+  })));
 }
 
 void PageSyncImpl::HandleUnsyncedCommits(
