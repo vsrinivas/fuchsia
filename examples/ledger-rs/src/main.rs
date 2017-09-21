@@ -9,8 +9,8 @@ extern crate fidl;
 extern crate futures;
 extern crate garnet_public_lib_app_fidl;
 extern crate garnet_public_lib_app_fidl_service_provider;
-extern crate zircon;
-extern crate zircon_sys;
+extern crate fuchsia_zircon as zircon;
+extern crate fuchsia_zircon_sys as zircon_sys;
 extern crate mxruntime;
 extern crate tokio_core;
 
