@@ -14,10 +14,10 @@ namespace bluetooth {
 namespace common {
 
 // Base class-template for generic packets that contain a header and a payload.
-// A PacketView is a light-weight object that operates over a previously allocated
-// ByteBuffer without taking ownership of it. The PacketView class-template provides a read-only
-// view over the underlying buffer while MutablePacketView allows modification of the underlying
-// buffer.
+// A PacketView is a light-weight object that operates over a previously
+// allocated ByteBuffer without taking ownership of it. The PacketView
+// class-template provides a read-only view over the underlying buffer while
+// MutablePacketView allows modification of the underlying buffer.
 //
 // Example usage:
 //
@@ -49,8 +49,9 @@ namespace common {
 //   packet.mutable_payload<MyPayloadType>().array_field[0] = 0x00;
 //   packet.mutable_payload<MyPayloadType>().array_field[1] = 0x01;
 //
-// MutablePacketView allows itself to be resized at any time. This is useful when the complete
-// packet payload is unknown prior to reading the header contents. For example:
+// MutablePacketView allows itself to be resized at any time. This is useful
+// when the complete packet payload is unknown prior to reading the header
+// contents. For example:
 //
 //   MutablePacketView<MyHeaderType view(&buffer, my_max_payload_length);
 //   view.mutable_data().Write(data);
@@ -58,8 +59,8 @@ namespace common {
 template <typename HeaderType>
 class PacketView {
  public:
-  // The default constructor initializes an empty packet view. This is to enable PacketView to be
-  // used by value in structures and stl containers.
+  // The default constructor initializes an empty packet view. This is to enable
+  // PacketView to be used by value in structures and stl containers.
   PacketView() : buffer_(nullptr), size_(0u) {}
 
   // Initializes this Packet to operate over |buffer|. |payload_size| is the
@@ -83,7 +84,9 @@ class PacketView {
     return payload_size() ? buffer_->data() + sizeof(HeaderType) : nullptr;
   }
 
-  const HeaderType& header() const { return *reinterpret_cast<const HeaderType*>(buffer_->data()); }
+  const HeaderType& header() const {
+    return *reinterpret_cast<const HeaderType*>(buffer_->data());
+  }
 
   template <typename PayloadType>
   const PayloadType& payload() const {
@@ -114,17 +117,23 @@ class MutablePacketView : public PacketView<HeaderType> {
  public:
   MutablePacketView() = default;
 
-  explicit MutablePacketView(MutableByteBuffer* buffer, size_t payload_size = 0u)
+  explicit MutablePacketView(MutableByteBuffer* buffer,
+                             size_t payload_size = 0u)
       : PacketView<HeaderType>(buffer, payload_size) {}
 
-  MutableBufferView mutable_data() { return mutable_buffer()->mutable_view(0, this->size()); }
+  MutableBufferView mutable_data() {
+    return mutable_buffer()->mutable_view(0, this->size());
+  }
 
   MutableBufferView mutable_payload_data() const {
-    return mutable_buffer()->mutable_view(sizeof(HeaderType), this->size() - sizeof(HeaderType));
+    return mutable_buffer()->mutable_view(sizeof(HeaderType),
+                                          this->size() - sizeof(HeaderType));
   }
 
   uint8_t* mutable_payload_bytes() {
-    return this->payload_size() ? mutable_buffer()->mutable_data() + sizeof(HeaderType) : nullptr;
+    return this->payload_size()
+               ? mutable_buffer()->mutable_data() + sizeof(HeaderType)
+               : nullptr;
   }
 
   HeaderType* mutable_header() {
@@ -137,13 +146,17 @@ class MutablePacketView : public PacketView<HeaderType> {
     return reinterpret_cast<PayloadType*>(mutable_payload_bytes());
   }
 
-  void Resize(size_t payload_size) { this->set_size(sizeof(HeaderType) + payload_size); }
+  void Resize(size_t payload_size) {
+    this->set_size(sizeof(HeaderType) + payload_size);
+  }
 
  private:
   MutableByteBuffer* mutable_buffer() const {
-    // Cast-away the const. This is OK in this case since we're storing our buffer in the parent
-    // class instead of duplicating a non-const version in this class.
-    return const_cast<MutableByteBuffer*>(static_cast<const MutableByteBuffer*>(this->buffer()));
+    // Cast-away the const. This is OK in this case since we're storing our
+    // buffer in the parent class instead of duplicating a non-const version in
+    // this class.
+    return const_cast<MutableByteBuffer*>(
+        static_cast<const MutableByteBuffer*>(this->buffer()));
   }
 };
 

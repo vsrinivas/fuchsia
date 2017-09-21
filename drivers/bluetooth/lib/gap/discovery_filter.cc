@@ -14,7 +14,8 @@ namespace bluetooth {
 namespace gap {
 namespace {
 
-bool MatchUuids(const std::vector<common::UUID>& uuids, const common::BufferView& data,
+bool MatchUuids(const std::vector<common::UUID>& uuids,
+                const common::BufferView& data,
                 size_t uuid_size) {
   if (data.size() % uuid_size) {
     FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed service UUIDs list";
@@ -25,7 +26,8 @@ bool MatchUuids(const std::vector<common::UUID>& uuids, const common::BufferView
   for (size_t i = 0; i < uuid_count; i++) {
     const common::BufferView uuid_bytes(data.data() + i * uuid_size, uuid_size);
     for (const auto& uuid : uuids) {
-      if (uuid.CompareBytes(uuid_bytes)) return true;
+      if (uuid.CompareBytes(uuid_bytes))
+        return true;
     }
   }
 
@@ -34,16 +36,20 @@ bool MatchUuids(const std::vector<common::UUID>& uuids, const common::BufferView
 
 }  // namespace
 
-bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising_data,
-                                           bool connectable, int8_t rssi) const {
+bool DiscoveryFilter::MatchLowEnergyResult(
+    const common::ByteBuffer& advertising_data,
+    bool connectable,
+    int8_t rssi) const {
   // No need to iterate over |advertising_data| for the |connectable_| filter.
-  if (connectable_ && *connectable_ != connectable) return false;
+  if (connectable_ && *connectable_ != connectable)
+    return false;
 
-  // If a pathloss filter is not set then apply the RSSI filter before iterating over
-  // |advertising_data|. (An RSSI value of kRSSIInvalid means that RSSI is not available, which we
-  // check for here).
+  // If a pathloss filter is not set then apply the RSSI filter before iterating
+  // over |advertising_data|. (An RSSI value of kRSSIInvalid means that RSSI is
+  // not available, which we check for here).
   bool rssi_ok = !rssi_ || (rssi != hci::kRSSIInvalid && rssi >= *rssi_);
-  if (!pathloss_ && !rssi_ok) return false;
+  if (!pathloss_ && !rssi_ok)
+    return false;
 
   // Filters that require iterating over advertising data.
   bool flags_ok = !flags_;
@@ -54,44 +60,52 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
   bool tx_power_found = false;
 
   AdvertisingDataReader reader(advertising_data);
-  if (advertising_data.size() && !reader.is_valid()) return false;
+  if (advertising_data.size() && !reader.is_valid())
+    return false;
 
   DataType type;
   common::BufferView data;
   while (reader.GetNextField(&type, &data)) {
     switch (type) {
       case DataType::kFlags: {
-        if (flags_ok) break;
+        if (flags_ok)
+          break;
 
-        // The Flags field may be zero or more octets long for potential future extension. We only
-        // care about the first octet.
+        // The Flags field may be zero or more octets long for potential future
+        // extension. We only care about the first octet.
         if (data.size() < kFlagsSizeMin) {
-          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Flags field received";
+          FXL_LOG(WARNING)
+              << "gap: DiscoveryFilter: Malformed Flags field received";
           break;
         }
 
         // We check if all bits in |flags_| are present in the data.
         uint8_t masked_flags = data[0] & *flags_;
-        flags_ok = all_flags_required_ ? (masked_flags == *flags_) : !!masked_flags;
+        flags_ok =
+            all_flags_required_ ? (masked_flags == *flags_) : !!masked_flags;
 
         break;
       }
       case DataType::kTxPowerLevel: {
-        if (pathloss_ok) break;
+        if (pathloss_ok)
+          break;
 
         if (data.size() != kTxPowerLevelSize) {
-          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed Tx Power Level received";
+          FXL_LOG(WARNING)
+              << "gap: DiscoveryFilter: Malformed Tx Power Level received";
           break;
         }
 
         tx_power_found = true;
 
         // An RSSI value of kRSSIInvalid means that RSSI is not available.
-        if (rssi == hci::kRSSIInvalid) break;
+        if (rssi == hci::kRSSIInvalid)
+          break;
 
         int8_t tx_power_lvl = static_cast<int8_t>(*data.data());
         if (tx_power_lvl < rssi) {
-          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Reported Tx Power Level is less than the RSSI";
+          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Reported Tx Power Level "
+                              "is less than the RSSI";
           break;
         }
 
@@ -101,39 +115,49 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
       }
       case DataType::kCompleteLocalName:
       case DataType::kShortenedLocalName: {
-        if (name_ok) break;
+        if (name_ok)
+          break;
 
         auto name = data.AsString();
         name_ok = (name.find(name_substring_) != fxl::StringView::npos);
         break;
       }
       case DataType::kManufacturerSpecificData:
-        if (manufacturer_ok) break;
+        if (manufacturer_ok)
+          break;
 
-        // The first two octets of the manufacturer specific data field contains the Company
-        // Identifier Code.
+        // The first two octets of the manufacturer specific data field contains
+        // the Company Identifier Code.
         if (data.size() < kManufacturerSpecificDataSizeMin) {
-          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed manufacturer-specific data received";
+          FXL_LOG(WARNING) << "gap: DiscoveryFilter: Malformed "
+                              "manufacturer-specific data received";
           break;
         }
 
         manufacturer_ok =
-            (le16toh(*reinterpret_cast<const uint16_t*>(data.data())) == *manufacturer_code_);
+            (le16toh(*reinterpret_cast<const uint16_t*>(data.data())) ==
+             *manufacturer_code_);
         break;
       case DataType::kIncomplete16BitServiceUuids:
       case DataType::kComplete16BitServiceUuids:
-        if (service_uuids_ok) break;
-        service_uuids_ok = MatchUuids(service_uuids_, data, k16BitUuidElemSize);
+        if (!service_uuids_ok) {
+          service_uuids_ok =
+              MatchUuids(service_uuids_, data, k16BitUuidElemSize);
+        }
         break;
       case DataType::kIncomplete32BitServiceUuids:
       case DataType::kComplete32BitServiceUuids:
-        if (service_uuids_ok) break;
-        service_uuids_ok = MatchUuids(service_uuids_, data, k32BitUuidElemSize);
+        if (!service_uuids_ok) {
+          service_uuids_ok =
+              MatchUuids(service_uuids_, data, k32BitUuidElemSize);
+        }
         break;
       case DataType::kIncomplete128BitServiceUuids:
       case DataType::kComplete128BitServiceUuids:
-        if (service_uuids_ok) break;
-        service_uuids_ok = MatchUuids(service_uuids_, data, k128BitUuidElemSize);
+        if (!service_uuids_ok) {
+          service_uuids_ok =
+              MatchUuids(service_uuids_, data, k128BitUuidElemSize);
+        }
         break;
       default:
         break;
@@ -142,12 +166,15 @@ bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising
 
   // If the pathloss filter failed, then fall back to RSSI if requested.
   if (!pathloss_ok) {
-    // No match if the Tx Power Level was provided and the computed pathloss value was not within
-    // the threshold.
-    if (tx_power_found) return false;
+    // No match if the Tx Power Level was provided and the computed pathloss
+    // value was not within the threshold.
+    if (tx_power_found)
+      return false;
 
-    // If no RSSI filter was set OR if one was set but it didn't match the scan result, we fail.
-    if (!rssi_ || !rssi_ok) return false;
+    // If no RSSI filter was set OR if one was set but it didn't match the scan
+    // result, we fail.
+    if (!rssi_ || !rssi_ok)
+      return false;
   }
 
   return flags_ok && service_uuids_ok && name_ok && manufacturer_ok;

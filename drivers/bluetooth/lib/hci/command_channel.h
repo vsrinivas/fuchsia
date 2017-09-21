@@ -35,8 +35,9 @@ class Transport;
 // Represents the HCI Bluetooth command channel. Manages HCI command and event
 // packet control flow.
 //
-// TODO(armansito): I don't imagine many cases in which we will want to queue up HCI commands from
-// the data thread. Consider making this class fully single threaded and removing the locks.
+// TODO(armansito): I don't imagine many cases in which we will want to queue up
+// HCI commands from the data thread. Consider making this class fully single
+// threaded and removing the locks.
 class CommandChannel final {
  public:
   // |hci_command_channel| is a Zircon channel construct that can receive
@@ -47,12 +48,13 @@ class CommandChannel final {
   CommandChannel(Transport* transport, zx::channel hci_command_channel);
   ~CommandChannel();
 
-  // Starts listening on the HCI command channel and starts handling commands and events.
+  // Starts listening on the HCI command channel and starts handling commands
+  // and events.
   void Initialize();
 
   // Unregisters event handlers and cleans up.
-  // NOTE: Initialize() and ShutDown() MUST be called on the same thread. These methods are not
-  // thread-safe.
+  // NOTE: Initialize() and ShutDown() MUST be called on the same thread. These
+  // methods are not thread-safe.
   void ShutDown();
 
   // Used to identify an individual HCI command<->event transaction.
@@ -62,16 +64,18 @@ class CommandChannel final {
   using CommandCompleteCallback =
       std::function<void(TransactionId id, const EventPacket& event_packet)>;
 
-  // Callback invoked to report the status of a pending HCI command. This can be following the
-  // receipt of a HCI_Command_Status event from the controller OR due to a command timeout.
-  using CommandStatusCallback = std::function<void(TransactionId id, Status status)>;
+  // Callback invoked to report the status of a pending HCI command. This can be
+  // following the receipt of a HCI_Command_Status event from the controller OR
+  // due to a command timeout.
+  using CommandStatusCallback =
+      std::function<void(TransactionId id, Status status)>;
 
   // Queues the given |command_packet| to be sent to the controller and returns
   // a transaction ID. The given callbacks will be posted on |task_runner| to be
   // processed on the appropriate thread requested by the caller.
   //
-  // This call will take ownership of the contents of |command_packet|. |command_packet| MUST
-  // represent a valid HCI command packet.
+  // This call will take ownership of the contents of |command_packet|.
+  // |command_packet| MUST represent a valid HCI command packet.
   //
   // |status_callback| will be called if the controller responds to the command
   // with a CommandStatus HCI event.
@@ -82,30 +86,33 @@ class CommandChannel final {
   // however some command sequences use different events, as specified in the
   // Bluetooth Core Specification.
   //
-  // When a caller provides a value for |complete_event_code| the caller can also
-  // optionally provide a filter |complete_event_matcher| which will be used to determine whether
-  // the event should match this command sequence. If a filter rejects the event (by returning
-  // false), the event will be passed to the handler registered via AddEventHander(). This callback
-  // will be run on the I/O thread and must complete synchronously.
+  // When a caller provides a value for |complete_event_code| the caller can
+  // also optionally provide a filter |complete_event_matcher| which will be
+  // used to determine whether the event should match this command sequence. If
+  // a filter rejects the event (by returning false), the event will be passed
+  // to the handler registered via AddEventHander(). This callback will be run
+  // on the I/O thread and must complete synchronously.
   //
   // Returns a transaction ID that is unique to the initiated command sequence.
   // This can be used to identify the command sequence by comparing it to the
   // |id| parameter in a CommandCompleteCallback.
   //
-  // If the controller does not respond to with the expected |complete_event_code| within a certain
-  // amount of time (see kCommandTimeoutMs in hci_constants.h) the command will time out. This will
-  // be signalled to the caller by invoking |status_callback| with the |status| parameter set to
-  // the special status code Status::kCommandTimeout.
+  // If the controller does not respond to with the expected
+  // |complete_event_code| within a certain amount of time (see
+  // kCommandTimeoutMs in hci_constants.h) the command will time out. This will
+  // be signalled to the caller by invoking |status_callback| with the |status|
+  // parameter set to the special status code Status::kCommandTimeout.
   //
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
   using EventMatcher = std::function<bool(const EventPacket& event)>;
-  TransactionId SendCommand(std::unique_ptr<CommandPacket> command_packet,
-                            fxl::RefPtr<fxl::TaskRunner> task_runner,
-                            const CommandCompleteCallback& complete_callback,
-                            const CommandStatusCallback& status_callback = {},
-                            const EventCode complete_event_code = kCommandCompleteEventCode,
-                            const EventMatcher& complete_event_matcher = {});
+  TransactionId SendCommand(
+      std::unique_ptr<CommandPacket> command_packet,
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      const CommandCompleteCallback& complete_callback,
+      const CommandStatusCallback& status_callback = {},
+      const EventCode complete_event_code = kCommandCompleteEventCode,
+      const EventMatcher& complete_event_matcher = {});
 
   // Used to identify an individual HCI event handler that was registered with
   // this CommandChannel.
@@ -134,24 +141,28 @@ class CommandChannel final {
   // handler was previously registered for the given |event_code|, this method
   // returns zero.
   //
-  // If |task_runner| corresponds to the I/O thread's task runner, then the callback will be
-  // executed as soon as the event is received from the command channel. No delayed task posting
-  // will occur.
+  // If |task_runner| corresponds to the I/O thread's task runner, then the
+  // callback will be executed as soon as the event is received from the command
+  // channel. No delayed task posting will occur.
   //
   // The following values for |event_code| cannot be passed to this method:
   //    - HCI_Command_Complete event code
   //    - HCI_Command_Status event code
   //    - HCI_LE_Meta event code (use AddLEMetaEventHandler instead).
-  EventHandlerId AddEventHandler(EventCode event_code, const EventCallback& event_callback,
+  EventHandlerId AddEventHandler(EventCode event_code,
+                                 const EventCallback& event_callback,
                                  fxl::RefPtr<fxl::TaskRunner> task_runner);
 
-  // Works just like AddEventHandler but the passed in event code is only valid within the LE Meta
-  // Event sub-event code namespace. |event_callback| will get invoked whenever the controller sends
-  // a LE Meta Event with a matching subevent code.
+  // Works just like AddEventHandler but the passed in event code is only valid
+  // within the LE Meta Event sub-event code namespace. |event_callback| will
+  // get invoked whenever the controller sends a LE Meta Event with a matching
+  // subevent code.
   //
   // |subevent_code| cannot be 0.
-  EventHandlerId AddLEMetaEventHandler(EventCode subevent_code, const EventCallback& event_callback,
-                                       fxl::RefPtr<fxl::TaskRunner> task_runner);
+  EventHandlerId AddLEMetaEventHandler(
+      EventCode subevent_code,
+      const EventCallback& event_callback,
+      fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Removes a previously registered event handler. Does nothing if an event
   // handler with the given |id| could not be found.
@@ -174,10 +185,12 @@ class CommandChannel final {
 
   // Represents a queued command packet.
   struct QueuedCommand {
-    QueuedCommand(TransactionId id, std::unique_ptr<CommandPacket> command_packet,
+    QueuedCommand(TransactionId id,
+                  std::unique_ptr<CommandPacket> command_packet,
                   const CommandStatusCallback& status_callback,
                   const CommandCompleteCallback& complete_callback,
-                  fxl::RefPtr<fxl::TaskRunner> task_runner, EventCode complete_event_code,
+                  fxl::RefPtr<fxl::TaskRunner> task_runner,
+                  EventCode complete_event_code,
                   const EventMatcher& complete_event_matcher);
     QueuedCommand() = default;
 
@@ -203,8 +216,8 @@ class CommandChannel final {
 
   // If the given event packet corresponds to the currently pending command,
   // this method completes the transaction and sends the next queued command, if
-  // any. Returns false if the event needs to be handled by an event handler and does not take
-  // ownership of it.
+  // any. Returns false if the event needs to be handled by an event handler and
+  // does not take ownership of it.
   bool HandlePendingCommandComplete(std::unique_ptr<EventPacket>&& event);
 
   // If the given CommandStatus event packet corresponds to the currently
@@ -216,12 +229,14 @@ class CommandChannel final {
   PendingTransactionData* GetPendingCommand();
 
   // Sets the currently pending command. If |command| is nullptr, this will
-  // clear the currently pending command. This also cancels the HCI command timeout callback for the
-  // current pending command.
+  // clear the currently pending command. This also cancels the HCI command
+  // timeout callback for the current pending command.
   void SetPendingCommand(PendingTransactionData* command);
 
-  // Creates a new event handler entry in the event handler map and returns its ID.
-  EventHandlerId NewEventHandler(EventCode event_code, bool is_le_meta,
+  // Creates a new event handler entry in the event handler map and returns its
+  // ID.
+  EventHandlerId NewEventHandler(EventCode event_code,
+                                 bool is_le_meta,
                                  const EventCallback& event_callback,
                                  fxl::RefPtr<fxl::TaskRunner> task_runner)
       __TA_REQUIRES(event_handler_mutex_);
@@ -230,7 +245,8 @@ class CommandChannel final {
   void NotifyEventHandler(std::unique_ptr<EventPacket> event);
 
   // Read ready handler for |channel_|
-  async_wait_result_t OnChannelReady(async_t* async, zx_status_t status,
+  async_wait_result_t OnChannelReady(async_t* async,
+                                     zx_status_t status,
                                      const zx_packet_signal_t* signal);
 
   // TransactionId counter.
@@ -239,7 +255,8 @@ class CommandChannel final {
   // EventHandlerId counter.
   std::atomic_size_t next_event_handler_id_ __TA_GUARDED(event_handler_mutex_);
 
-  // Used to assert that certain public functions are only called on the creation thread.
+  // Used to assert that certain public functions are only called on the
+  // creation thread.
   fxl::ThreadChecker thread_checker_;
 
   // The Transport object that owns this CommandChannel.
@@ -251,7 +268,8 @@ class CommandChannel final {
   // Wait object for |channel_|
   async::Wait channel_wait_;
 
-  // True if this CommandChannel has been initialized through a call to Initialize().
+  // True if this CommandChannel has been initialized through a call to
+  // Initialize().
   std::atomic_bool is_initialized_;
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
@@ -289,8 +307,8 @@ class CommandChannel final {
   std::unordered_map<EventCode, EventHandlerId> event_code_handlers_
       __TA_GUARDED(event_handler_mutex_);
 
-  // Mapping from LE Meta Event Subevent code to the event handler that was registered to handle
-  // that event code.
+  // Mapping from LE Meta Event Subevent code to the event handler that was
+  // registered to handle that event code.
   std::unordered_map<EventCode, EventHandlerId> subevent_code_handlers_
       __TA_GUARDED(event_handler_mutex_);
 

@@ -12,8 +12,8 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/macros.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -24,7 +24,8 @@ constexpr hci::ConnectionHandle kTestHandle2 = 0x0002;
 
 template <typename... T>
 std::unique_ptr<common::MutableByteBuffer> NewBuffer(T... bytes) {
-  return std::make_unique<common::StaticByteBuffer<sizeof...(T)>>(std::forward<T>(bytes)...);
+  return std::make_unique<common::StaticByteBuffer<sizeof...(T)>>(
+      std::forward<T>(bytes)...);
 }
 
 using ::bluetooth::testing::TestController;
@@ -37,17 +38,20 @@ class L2CAP_ChannelManagerTest : public TestingBase {
   ~L2CAP_ChannelManagerTest() override = default;
 
   void SetUp() override {
-    SetUp(hci::DataBufferInfo(hci::kMaxACLPayloadSize, 10), hci::DataBufferInfo());
+    SetUp(hci::DataBufferInfo(hci::kMaxACLPayloadSize, 10),
+          hci::DataBufferInfo());
   }
 
-  void SetUp(const hci::DataBufferInfo& acl_info, const hci::DataBufferInfo& le_info) {
+  void SetUp(const hci::DataBufferInfo& acl_info,
+             const hci::DataBufferInfo& le_info) {
     TestingBase::SetUp();
     TestingBase::InitializeACLDataChannel(acl_info, le_info);
 
-    // TransportTest's ACL data callbacks will no longer work after this call, as it overwrites
-    // ACLDataChannel's data rx handler. This is intended as the L2CAP layer takes ownership of ACL
-    // data traffic.
-    chanmgr_ = std::make_unique<ChannelManager>(transport(), message_loop()->task_runner());
+    // TransportTest's ACL data callbacks will no longer work after this call,
+    // as it overwrites ACLDataChannel's data rx handler. This is intended as
+    // the L2CAP layer takes ownership of ACL data traffic.
+    chanmgr_ = std::make_unique<ChannelManager>(transport(),
+                                                message_loop()->task_runner());
 
     test_device()->Start();
   }
@@ -57,14 +61,16 @@ class L2CAP_ChannelManagerTest : public TestingBase {
     TestingBase::TearDown();
   }
 
-  std::unique_ptr<Channel> OpenFixedChannel(ChannelId id,
-                                            hci::ConnectionHandle conn_handle = kTestHandle1,
-                                            const Channel::ClosedCallback& closed_cb = {},
-                                            const Channel::RxCallback& rx_cb = {}) {
+  std::unique_ptr<Channel> OpenFixedChannel(
+      ChannelId id,
+      hci::ConnectionHandle conn_handle = kTestHandle1,
+      const Channel::ClosedCallback& closed_cb = {},
+      const Channel::RxCallback& rx_cb = {}) {
     auto chan = chanmgr()->OpenFixedChannel(conn_handle, id);
     if (chan) {
       chan->set_channel_closed_callback(closed_cb);
-      chan->SetRxHandler(rx_cb, rx_cb ? message_loop()->task_runner() : nullptr);
+      chan->SetRxHandler(rx_cb,
+                         rx_cb ? message_loop()->task_runner() : nullptr);
     }
 
     return chan;
@@ -83,13 +89,15 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorNoConn) {
   EXPECT_EQ(nullptr, OpenFixedChannel(kATTChannelId));
 
   // This should fail as the ChannelManager has no entry for |kTestHandle2|.
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
   EXPECT_EQ(nullptr, OpenFixedChannel(kATTChannelId, kTestHandle2));
 }
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorDisallowedId) {
   // LE-U link
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
 
   // ACL-U link
   chanmgr()->Register(kTestHandle2, hci::Connection::LinkType::kACL,
@@ -104,7 +112,8 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorDisallowedId) {
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
   // LE-U link
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
 
   bool closed_called = false;
   auto closed_cb = [&closed_called] { closed_called = true; };
@@ -115,14 +124,15 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
   // This should notify the channel.
   chanmgr()->Unregister(kTestHandle1);
 
-  // |closed_cb| will be called synchronously since it was registered using the current thread's
-  // task runner.
+  // |closed_cb| will be called synchronously since it was registered using the
+  // current thread's task runner.
   EXPECT_TRUE(closed_called);
 }
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
   // LE-U link
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
 
   bool closed_called = false;
   auto closed_cb = [&closed_called] { closed_called = true; };
@@ -130,7 +140,8 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
   auto chan = OpenFixedChannel(kATTChannelId, kTestHandle1, closed_cb);
   ASSERT_TRUE(chan);
 
-  // Close the channel before unregistering the link. |closed_cb| should not get called.
+  // Close the channel before unregistering the link. |closed_cb| should not get
+  // called.
   chan = nullptr;
   chanmgr()->Unregister(kTestHandle1);
   EXPECT_FALSE(closed_called);
@@ -138,7 +149,8 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
 
 TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
   // LE-U link
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
 
   bool att_closed = false;
   auto att_closed_cb = [&att_closed] { att_closed = true; };
@@ -155,7 +167,8 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
   auto smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, smp_closed_cb);
   ASSERT_TRUE(smp_chan);
 
-  auto sig_chan = OpenFixedChannel(kLESignalingChannelId, kTestHandle1, sig_closed_cb);
+  auto sig_chan =
+      OpenFixedChannel(kLESignalingChannelId, kTestHandle1, sig_closed_cb);
   ASSERT_TRUE(smp_chan);
 
   smp_chan = nullptr;
@@ -168,12 +181,13 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
 
 TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   // LE-U link
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
 
   common::StaticByteBuffer<255> buffer;
 
-  // We use the ATT channel to control incoming packets and the SMP channel to quit the message
-  // loop.
+  // We use the ATT channel to control incoming packets and the SMP channel to
+  // quit the message loop.
   std::vector<std::string> sdus;
   auto att_rx_cb = [&sdus, &buffer](const SDU& sdu) {
     size_t size = sdu.Copy(&buffer);
@@ -187,8 +201,10 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
     message_loop()->QuitNow();
   };
 
-  auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-  auto smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+  auto att_chan =
+      OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+  auto smp_chan =
+      OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(smp_chan);
 
@@ -233,8 +249,8 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 
   common::StaticByteBuffer<255> buffer;
 
-  // We use the ATT channel to control incoming packets and the SMP channel to quit the message
-  // loop.
+  // We use the ATT channel to control incoming packets and the SMP channel to
+  // quit the message loop.
   size_t packet_count = 0;
   auto att_rx_cb = [&packet_count](const SDU& sdu) { packet_count++; };
 
@@ -265,16 +281,19 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 
   std::unique_ptr<Channel> att_chan, smp_chan;
 
-  // Allow enough time for all packets to be received before creating the channels.
+  // Allow enough time for all packets to be received before creating the
+  // channels.
   message_loop()->task_runner()->PostDelayedTask(
       [&att_chan, &smp_chan, att_rx_cb, smp_rx_cb, this] {
         chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
                             hci::Connection::Role::kMaster);
 
-        att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+        att_chan =
+            OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
         FXL_DCHECK(att_chan);
 
-        smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+        smp_chan =
+            OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
         FXL_DCHECK(smp_chan);
       },
       fxl::TimeDelta::FromMilliseconds(100));
@@ -289,12 +308,13 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   constexpr size_t kPacketCount = 10;
 
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
 
   common::StaticByteBuffer<255> buffer;
 
-  // We use the ATT channel to control incoming packets and the SMP channel to quit the message
-  // loop.
+  // We use the ATT channel to control incoming packets and the SMP channel to
+  // quit the message loop.
   size_t packet_count = 0;
   auto att_rx_cb = [&packet_count](const SDU& sdu) { packet_count++; };
 
@@ -325,13 +345,16 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
 
   std::unique_ptr<Channel> att_chan, smp_chan;
 
-  // Allow enough time for all packets to be received before creating the channels.
+  // Allow enough time for all packets to be received before creating the
+  // channels.
   message_loop()->task_runner()->PostDelayedTask(
       [&att_chan, &smp_chan, att_rx_cb, smp_rx_cb, this] {
-        att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+        att_chan =
+            OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
         FXL_DCHECK(att_chan);
 
-        smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+        smp_chan =
+            OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
         FXL_DCHECK(smp_chan);
       },
       fxl::TimeDelta::FromMilliseconds(100));
@@ -342,12 +365,13 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   EXPECT_EQ(kPacketCount, packet_count);
 }
 
-// Receive data after registering the link and creating the channel but before setting the rx
-// handler.
+// Receive data after registering the link and creating the channel but before
+// setting the rx handler.
 TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   constexpr size_t kPacketCount = 10;
 
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
   auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
   FXL_DCHECK(att_chan);
 
@@ -356,8 +380,8 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 
   common::StaticByteBuffer<255> buffer;
 
-  // We use the ATT channel to control incoming packets and the SMP channel to quit the message
-  // loop.
+  // We use the ATT channel to control incoming packets and the SMP channel to
+  // quit the message loop.
   size_t packet_count = 0;
   auto att_rx_cb = [&packet_count](const SDU& sdu) { packet_count++; };
 
@@ -386,7 +410,8 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
       // L2CAP B-frame (empty)
       0x00, 0x00, 0x06, 0x00));
 
-  // Allow enough time for all packets to be received before creating the channels.
+  // Allow enough time for all packets to be received before creating the
+  // channels.
   message_loop()->task_runner()->PostDelayedTask(
       [&att_chan, &smp_chan, att_rx_cb, smp_rx_cb, this] {
         att_chan->SetRxHandler(att_rx_cb, message_loop()->task_runner());
@@ -401,7 +426,8 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
   auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
   FXL_DCHECK(att_chan);
 
@@ -411,7 +437,8 @@ TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
 }
 
 TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
   auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1);
   FXL_DCHECK(att_chan);
 
@@ -437,35 +464,43 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   EXPECT_TRUE(common::ContainersEqual(expected, *received));
 }
 
-// Tests that fragmentation of LE vs BR/EDR packets is based on the same fragment size.
+// Tests that fragmentation of LE vs BR/EDR packets is based on the same
+// fragment size.
 TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
-  constexpr size_t kMaxNumPackets = 100;  // Make this large to avoid simulating flow-control.
+  constexpr size_t kMaxNumPackets =
+      100;  // Make this large to avoid simulating flow-control.
   constexpr size_t kMaxDataSize = 5;
   constexpr size_t kExpectedNumFragments = 5;
 
   // No LE buffers.
   TearDown();
-  SetUp(hci::DataBufferInfo(kMaxDataSize, kMaxNumPackets), hci::DataBufferInfo());
+  SetUp(hci::DataBufferInfo(kMaxDataSize, kMaxNumPackets),
+        hci::DataBufferInfo());
 
   std::vector<std::unique_ptr<common::ByteBuffer>> le_fragments, acl_fragments;
-  auto data_cb = [&le_fragments, &acl_fragments](const common::ByteBuffer& bytes) {
+  auto data_cb = [&le_fragments,
+                  &acl_fragments](const common::ByteBuffer& bytes) {
     FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
 
-    common::PacketView<hci::ACLDataHeader> packet(&bytes,
-                                                  bytes.size() - sizeof(hci::ACLDataHeader));
-    hci::ConnectionHandle handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
+    common::PacketView<hci::ACLDataHeader> packet(
+        &bytes, bytes.size() - sizeof(hci::ACLDataHeader));
+    hci::ConnectionHandle handle =
+        le16toh(packet.header().handle_and_flags) & 0xFFF;
 
     if (handle == kTestHandle1)
-      le_fragments.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
+      le_fragments.push_back(
+          std::make_unique<common::DynamicByteBuffer>(bytes));
     else if (handle == kTestHandle2)
-      acl_fragments.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
+      acl_fragments.push_back(
+          std::make_unique<common::DynamicByteBuffer>(bytes));
 
     if (le_fragments.size() + acl_fragments.size() == kExpectedNumFragments)
       fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
   chanmgr()->Register(kTestHandle2, hci::Connection::LinkType::kACL,
                       hci::Connection::Role::kMaster);
 
@@ -475,10 +510,12 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(sm_chan);
 
-  // SDU of length 5 corresponds to a 9-octet B-frame which should be sent over 2 fragments.
+  // SDU of length 5 corresponds to a 9-octet B-frame which should be sent over
+  // 2 fragments.
   EXPECT_TRUE(att_chan->Send(NewBuffer('H', 'e', 'l', 'l', 'o')));
 
-  // SDU of length 7 corresponds to a 11-octet B-frame which should be sent over 3 fragments.
+  // SDU of length 7 corresponds to a 11-octet B-frame which should be sent over
+  // 3 fragments.
   EXPECT_TRUE(sm_chan->Send(NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
 
   RunMessageLoop();
@@ -529,9 +566,11 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
   EXPECT_TRUE(common::ContainersEqual(expected_acl_2, *acl_fragments[2]));
 }
 
-// Tests that fragmentation of LE and BR/EDR packets use the corresponding buffer size.
+// Tests that fragmentation of LE and BR/EDR packets use the corresponding
+// buffer size.
 TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
-  constexpr size_t kMaxNumPackets = 100;  // This is large to avoid having to simulate flow-control
+  constexpr size_t kMaxNumPackets =
+      100;  // This is large to avoid having to simulate flow-control
   constexpr size_t kMaxACLDataSize = 6;
   constexpr size_t kMaxLEDataSize = 10;
   constexpr size_t kExpectedNumFragments = 3;
@@ -541,24 +580,29 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
         hci::DataBufferInfo(kMaxLEDataSize, kMaxNumPackets));
 
   std::vector<std::unique_ptr<common::ByteBuffer>> le_fragments, acl_fragments;
-  auto data_cb = [&le_fragments, &acl_fragments](const common::ByteBuffer& bytes) {
+  auto data_cb = [&le_fragments,
+                  &acl_fragments](const common::ByteBuffer& bytes) {
     FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
 
-    common::PacketView<hci::ACLDataHeader> packet(&bytes,
-                                                  bytes.size() - sizeof(hci::ACLDataHeader));
-    hci::ConnectionHandle handle = le16toh(packet.header().handle_and_flags) & 0xFFF;
+    common::PacketView<hci::ACLDataHeader> packet(
+        &bytes, bytes.size() - sizeof(hci::ACLDataHeader));
+    hci::ConnectionHandle handle =
+        le16toh(packet.header().handle_and_flags) & 0xFFF;
 
     if (handle == kTestHandle1)
-      le_fragments.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
+      le_fragments.push_back(
+          std::make_unique<common::DynamicByteBuffer>(bytes));
     else if (handle == kTestHandle2)
-      acl_fragments.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
+      acl_fragments.push_back(
+          std::make_unique<common::DynamicByteBuffer>(bytes));
 
     if (le_fragments.size() + acl_fragments.size() == kExpectedNumFragments)
       fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
-  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE, hci::Connection::Role::kMaster);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
   chanmgr()->Register(kTestHandle2, hci::Connection::LinkType::kACL,
                       hci::Connection::Role::kMaster);
 
@@ -568,12 +612,12 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(sm_chan);
 
-  // SDU of length 5 corresponds to a 9-octet B-frame. The LE buffer size is large enough for this
-  // to be sent over a single fragment.
+  // SDU of length 5 corresponds to a 9-octet B-frame. The LE buffer size is
+  // large enough for this to be sent over a single fragment.
   EXPECT_TRUE(att_chan->Send(NewBuffer('H', 'e', 'l', 'l', 'o')));
 
-  // SDU of length 7 corresponds to a 11-octet B-frame. Due to the BR/EDR buffer size, this should
-  // be sent over 2 fragments.
+  // SDU of length 7 corresponds to a 11-octet B-frame. Due to the BR/EDR buffer
+  // size, this should be sent over 2 fragments.
   EXPECT_TRUE(sm_chan->Send(NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
 
   RunMessageLoop();

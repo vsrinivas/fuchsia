@@ -16,8 +16,12 @@ namespace common {
 // equality. If the contents are not equal, this logs a GTEST-style error
 // message to stdout. Meant to be used from unit tests.
 template <class InputIt1, class InputIt2>
-bool ContainersEqual(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2) {
-  if (std::equal(first1, last1, first2, last2)) return true;
+bool ContainersEqual(InputIt1 first1,
+                     InputIt1 last1,
+                     InputIt2 first2,
+                     InputIt2 last2) {
+  if (std::equal(first1, last1, first2, last2))
+    return true;
   std::cout << "Expected: { ";
   for (InputIt1 iter = first1; iter != last1; ++iter) {
     std::cout << fxl::StringPrintf("0x%02x ", *iter);
@@ -36,7 +40,9 @@ bool ContainersEqual(const Container1& c1, const Container2& c2) {
 }
 
 template <class Container1>
-bool ContainersEqual(const Container1& c1, const uint8_t* bytes, size_t num_bytes) {
+bool ContainersEqual(const Container1& c1,
+                     const uint8_t* bytes,
+                     size_t num_bytes) {
   return ContainersEqual(c1.begin(), c1.end(), bytes, bytes + num_bytes);
 }
 

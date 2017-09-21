@@ -22,7 +22,8 @@ const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
 
 using ::bluetooth::testing::CommandTransaction;
 
-using TestingBase = ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
+using TestingBase =
+    ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
 
 class ConnectionTest : public TestingBase {
  public:
@@ -31,7 +32,8 @@ class ConnectionTest : public TestingBase {
 };
 
 TEST_F(ConnectionTest, TestGetters) {
-  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams, transport());
+  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams,
+                        transport());
 
   EXPECT_EQ(Connection::LinkType::kLE, connection.ll_type());
   EXPECT_EQ(kTestHandle, connection.handle());
@@ -70,7 +72,8 @@ TEST_F(ConnectionTest, Close) {
       },
       message_loop()->task_runner());
 
-  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams, transport());
+  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams,
+                        transport());
   EXPECT_TRUE(connection.is_open());
 
   connection.Close(Status::kRemoteUserTerminatedConnection);
@@ -110,7 +113,8 @@ TEST_F(ConnectionTest, CloseError) {
       },
       message_loop()->task_runner());
 
-  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams, transport());
+  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams,
+                        transport());
   EXPECT_TRUE(connection.is_open());
 
   connection.Close(Status::kRemoteUserTerminatedConnection);

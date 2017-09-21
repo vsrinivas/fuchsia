@@ -8,17 +8,17 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 #include "commands.h"
 
@@ -64,13 +64,15 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto hci_dev = std::make_unique<hci::ZirconDeviceWrapper>(std::move(hci_dev_fd));
+  auto hci_dev =
+      std::make_unique<hci::ZirconDeviceWrapper>(std::move(hci_dev_fd));
   auto hci = hci::Transport::Create(std::move(hci_dev));
   hci->Initialize();
   fsl::MessageLoop message_loop;
 
   tools::CommandDispatcher dispatcher;
-  hcitool::CommandData cmd_data(hci->command_channel(), message_loop.task_runner());
+  hcitool::CommandData cmd_data(hci->command_channel(),
+                                message_loop.task_runner());
   RegisterCommands(&cmd_data, &dispatcher);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {
@@ -81,8 +83,10 @@ int main(int argc, char* argv[]) {
   auto complete_cb = [&message_loop] { message_loop.PostQuitTask(); };
 
   bool cmd_found;
-  if (!dispatcher.ExecuteCommand(cl.positional_args(), complete_cb, &cmd_found)) {
-    if (!cmd_found) std::cout << "Unknown command: " << cl.positional_args()[0] << std::endl;
+  if (!dispatcher.ExecuteCommand(cl.positional_args(), complete_cb,
+                                 &cmd_found)) {
+    if (!cmd_found)
+      std::cout << "Unknown command: " << cl.positional_args()[0] << std::endl;
     return EXIT_FAILURE;
   }
 

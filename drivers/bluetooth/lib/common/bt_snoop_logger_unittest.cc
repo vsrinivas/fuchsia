@@ -54,7 +54,7 @@ TEST_F(BTSnoopLoggerTest, SimpleInitialize) {
       'b', 't', 's', 'n', 'o', 'o', 'p', '\0', 0x00, 0x00, 0x00,
       0x01,                   // version number
       0x00, 0x00, 0x03, 0xE9  // data link type (H1: 1001)
-      );
+  );
   std::vector<uint8_t> file_contents;
   ASSERT_TRUE(files::ReadFileToVector(kTestLogFilePath, &file_contents));
   EXPECT_TRUE(ContainersEqual(expected, file_contents));
@@ -71,7 +71,8 @@ TEST_F(BTSnoopLoggerTest, WritePacketAndReset) {
 
   // Write a packet consisting of 4 bytes.
   auto buffer = CreateStaticByteBuffer('T', 'e', 's', 't');
-  EXPECT_TRUE(logger->WritePacket(buffer, false /* is_received */, false /* is_data */));
+  EXPECT_TRUE(logger->WritePacket(buffer, false /* is_received */,
+                                  false /* is_data */));
 
   // The record should contain 28 bytes = header (24) + packet (4). With the
   // file header there should be 28 + 16 = 44 bytes.
@@ -90,16 +91,18 @@ TEST_F(BTSnoopLoggerTest, WritePacketAndReset) {
       0x00, 0x00, 0x00, 0x04,  // included length ("Test")
       0x00, 0x00, 0x00, 0x02,  // packet flags: sent (0x00) | cmd (0x02)
       0x00, 0x00, 0x00, 0x00   // cumulative drops
-      );
+  );
   std::vector<uint8_t> file_contents;
   ASSERT_TRUE(files::ReadFileToVector(kTestLogFilePath, &file_contents));
-  EXPECT_TRUE(ContainersEqual(expected.begin(), expected.end(), file_contents.begin(),
+  EXPECT_TRUE(ContainersEqual(expected.begin(), expected.end(),
+                              file_contents.begin(),
                               file_contents.begin() + expected.size()));
 
   // Skip the timestamp and read the packet contents. The timestamp is a 64-bit
   // signed integer and thus 8 bytes long.
   EXPECT_TRUE(ContainersEqual(buffer.begin(), buffer.end(),
-                              file_contents.begin() + expected.size() + 8, file_contents.end()));
+                              file_contents.begin() + expected.size() + 8,
+                              file_contents.end()));
 
   // Close the file and re-initialize the logger without truncating. The
   // file contents should be preserved.

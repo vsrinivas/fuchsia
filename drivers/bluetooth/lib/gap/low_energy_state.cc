@@ -7,7 +7,8 @@
 namespace bluetooth {
 namespace gap {
 
-LowEnergyState::LowEnergyState() : supported_features_(0u), supported_states_(0u) {}
+LowEnergyState::LowEnergyState()
+    : supported_features_(0u), supported_states_(0u) {}
 
 }  // namespace gap
 }  // namespace bluetooth

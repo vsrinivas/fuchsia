@@ -5,8 +5,8 @@
 #pragma once
 
 #include <cstddef>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
@@ -40,16 +40,18 @@ class AdvertisingData {
   // Create a new empty advertising data.
   explicit AdvertisingData();
 
-  // Fill the AdvertisingData |out_ad| from the raw Bluetooth field block |data|.
-  // Returns false if |data| is not formatted correctly or on a parsing error,
-  // and true otherwise.
-  // |out_ad| is not guaranteed to be in any state unless we return true.
-  // Does not clear |out_ad| so this function can be used to merge multiple field blocks.
-  static bool FromBytes(const common::ByteBuffer& data, AdvertisingData* out_ad);
+  // Fill the AdvertisingData |out_ad| from the raw Bluetooth field block
+  // |data|. Returns false if |data| is not formatted correctly or on a parsing
+  // error, and true otherwise. |out_ad| is not guaranteed to be in any state
+  // unless we return true. Does not clear |out_ad| so this function can be used
+  // to merge multiple field blocks.
+  static bool FromBytes(const common::ByteBuffer& data,
+                        AdvertisingData* out_ad);
 
   // Fill the AdvertisingData |out_ad| from the corresponding FIDL object |obj|
   // Does not clear |out_ad| first.
-  static void FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad, AdvertisingData* out_ad);
+  static void FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad,
+                       AdvertisingData* out_ad);
 
   // Add a UUID to the set of services advertised.
   // These service UUIDs will automatically be compressed to be represented in
@@ -72,7 +74,8 @@ class AdvertisingData {
 
   // Set some Manufacturer specific data for the company identified by
   // |company_id|
-  void SetManufacturerData(const uint16_t company_id, const common::BufferView& data);
+  void SetManufacturerData(const uint16_t company_id,
+                           const common::BufferView& data);
 
   // Get a set of which IDs have manufacturer data in this advertisement.
   const std::unordered_set<uint16_t> manufacturer_data_ids() const;
@@ -130,8 +133,10 @@ class AdvertisingData {
 
   std::unordered_set<common::UUID> service_uuids_;
 
-  std::unordered_map<uint16_t, std::unique_ptr<common::ByteBuffer>> manufacturer_data_;
-  std::unordered_map<common::UUID, std::unique_ptr<common::ByteBuffer>> service_data_;
+  std::unordered_map<uint16_t, std::unique_ptr<common::ByteBuffer>>
+      manufacturer_data_;
+  std::unordered_map<common::UUID, std::unique_ptr<common::ByteBuffer>>
+      service_data_;
 
   std::vector<std::string> uris_;
 };
@@ -170,16 +175,18 @@ class AdvertisingDataReader {
   common::BufferView remaining_;
 };
 
-// Used for writing data in TLV-format as described at the beginning of the file above.
+// Used for writing data in TLV-format as described at the beginning of the file
+// above.
 class AdvertisingDataWriter {
  public:
-  // |buffer| is the piece of memory on which this AdvertisingDataWriter should operate. The buffer
-  // must out-live this instance and must point to a valid piece of memory.
+  // |buffer| is the piece of memory on which this AdvertisingDataWriter should
+  // operate. The buffer must out-live this instance and must point to a valid
+  // piece of memory.
   explicit AdvertisingDataWriter(common::MutableByteBuffer* buffer);
 
-  // Writes the given piece of type/tag and data into the next available segment in the underlying
-  // buffer. Returns false if there isn't enough space left in the buffer for writing. Returns true
-  // on success.
+  // Writes the given piece of type/tag and data into the next available segment
+  // in the underlying buffer. Returns false if there isn't enough space left in
+  // the buffer for writing. Returns true on success.
   bool WriteField(DataType type, const common::ByteBuffer& data);
 
   // The total number of bytes that have been written into the buffer.

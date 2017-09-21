@@ -110,7 +110,8 @@ std::string AppearanceToString(bluetooth::control::Appearance appearance) {
       return "Sports Activity Device";
     case bluetooth::control::Appearance::SPORTS_ACTIVITY_LOCATION_DISPLAY:
       return "Sports Activity: Location Display";
-    case bluetooth::control::Appearance::SPORTS_ACTIVITY_LOCATION_AND_NAV_DISPLAY:
+    case bluetooth::control::Appearance::
+        SPORTS_ACTIVITY_LOCATION_AND_NAV_DISPLAY:
       return "Sports Activity: Location and Navigation Display";
     case bluetooth::control::Appearance::SPORTS_ACTIVITY_LOCATION_POD:
       return "Sports Activity: Location Pod";
@@ -161,18 +162,24 @@ std::string ErrorCodeToString(bluetooth::ErrorCode error_code) {
   return "(unknown)";
 }
 
-void PrintAdapterInfo(const bluetooth::control::AdapterInfoPtr& adapter_info, size_t indent) {
+void PrintAdapterInfo(const bluetooth::control::AdapterInfoPtr& adapter_info,
+                      size_t indent) {
   CLI_LOG_INDENT(indent) << "id: " << adapter_info->identifier;
   CLI_LOG_INDENT(indent) << "address: " << adapter_info->address;
-  CLI_LOG_INDENT(indent) << "powered: " << BoolToString(adapter_info->state->powered->value);
+  CLI_LOG_INDENT(indent) << "powered: "
+                         << BoolToString(adapter_info->state->powered->value);
 }
 
-void PrintRemoteDevice(const bluetooth::control::RemoteDevicePtr& remote_device, size_t indent) {
+void PrintRemoteDevice(const bluetooth::control::RemoteDevicePtr& remote_device,
+                       size_t indent) {
   CLI_LOG_INDENT(indent) << "id: " << remote_device->identifier;
   CLI_LOG_INDENT(indent) << "address: " << remote_device->address;
-  CLI_LOG_INDENT(indent) << "type: " << TechnologyTypeToString(remote_device->technology);
-  if (!remote_device->name.get().empty()) CLI_LOG_INDENT(indent) << "name: " << remote_device->name;
-  CLI_LOG_INDENT(indent) << "appearance: " << AppearanceToString(remote_device->appearance);
+  CLI_LOG_INDENT(indent) << "type: "
+                         << TechnologyTypeToString(remote_device->technology);
+  if (!remote_device->name.get().empty())
+    CLI_LOG_INDENT(indent) << "name: " << remote_device->name;
+  CLI_LOG_INDENT(indent) << "appearance: "
+                         << AppearanceToString(remote_device->appearance);
 
   if (!remote_device->service_uuids.empty()) {
     CLI_LOG_INDENT(indent) << "services: ";

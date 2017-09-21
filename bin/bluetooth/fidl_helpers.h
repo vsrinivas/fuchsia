@@ -25,8 +25,10 @@ namespace fidl_helpers {
 
 ::bluetooth::StatusPtr NewErrorStatus(::bluetooth::ErrorCode error_code,
                                       const std::string& description);
-::bluetooth::control::AdapterInfoPtr NewAdapterInfo(const ::bluetooth::gap::Adapter& adapter);
-::bluetooth::control::RemoteDevicePtr NewRemoteDevice(const ::bluetooth::gap::RemoteDevice& device);
+::bluetooth::control::AdapterInfoPtr NewAdapterInfo(
+    const ::bluetooth::gap::Adapter& adapter);
+::bluetooth::control::RemoteDevicePtr NewRemoteDevice(
+    const ::bluetooth::gap::RemoteDevice& device);
 
 ::bluetooth::low_energy::AdvertisingDataPtr NewAdvertisingData(
     const ::bluetooth::common::ByteBuffer& advertising_data);
@@ -36,10 +38,12 @@ namespace fidl_helpers {
 // Validates the contents of a ScanFilter.
 bool IsScanFilterValid(const ::bluetooth::low_energy::ScanFilter& fidl_filter);
 
-// Populates a library DiscoveryFilter based on a FIDL ScanFilter. Returns false if |fidl_filter|
-// contains any malformed data and leaves |out_filter| unmodified.
-bool PopulateDiscoveryFilter(const ::bluetooth::low_energy::ScanFilter& fidl_filter,
-                             ::bluetooth::gap::DiscoveryFilter* out_filter);
+// Populates a library DiscoveryFilter based on a FIDL ScanFilter. Returns false
+// if |fidl_filter| contains any malformed data and leaves |out_filter|
+// unmodified.
+bool PopulateDiscoveryFilter(
+    const ::bluetooth::low_energy::ScanFilter& fidl_filter,
+    ::bluetooth::gap::DiscoveryFilter* out_filter);
 
 }  // namespace fidl_helpers
 }  // namespace bluetooth_service

@@ -156,7 +156,9 @@ const char* kManufacturers[] = {
     /* 0x0089 */ "GN ReSound A/S",
     /* 0x008A */ "Jawbone",
     /* 0x008B */ "Topcon Positioning Systems, LLC",
-    /* 0x008C */ "Gimbal Inc. (formerly Qualcomm Labs, Inc. and Qualcomm Retail Solutions, Inc.)",
+    /* 0x008C */
+    "Gimbal Inc. (formerly Qualcomm Labs, Inc. and Qualcomm Retail Solutions, "
+    "Inc.)",
     /* 0x008D */ "Zscan Software",
     /* 0x008E */ "Quintic Corp",
     /* 0x008F */ "Telit Wireless Solutions GmbH (formerly Stollmann E+V GmbH)",
@@ -1174,7 +1176,9 @@ const char* kManufacturers[] = {
     /* 0x0483 */ "Multi Care Systems B.V.",
     /* 0x0484 */ "Revol Technologies Inc",
     /* 0x0485 */ "SKIDATA AG",
-    /* 0x0486 */ "DEV TECNOLOGIA INDUSTRIA, COMERCIO E MANUTENCAO DE EQUIPAMENTOS LTDA. - ME",
+    /* 0x0486 */
+    "DEV TECNOLOGIA INDUSTRIA, COMERCIO E MANUTENCAO DE EQUIPAMENTOS LTDA. - "
+    "ME",
     /* 0x0487 */ "Centrica Connected Home",
     /* 0x0488 */ "Automotive Data Solutions Inc",
     /* 0x0489 */ "Igarashi Engineering",
@@ -1203,7 +1207,8 @@ const char* kManufacturers[] = {
 }  // namespace
 
 std::string GetManufacturerName(uint16_t manufacturer_id) {
-  if (manufacturer_id >= arraysize(kManufacturers)) return "";
+  if (manufacturer_id >= arraysize(kManufacturers))
+    return "";
   return kManufacturers[manufacturer_id];
 }
 

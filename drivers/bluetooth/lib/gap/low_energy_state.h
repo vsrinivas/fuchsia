@@ -17,18 +17,22 @@ class LowEnergyState final {
  public:
   LowEnergyState();
 
-  // Returns true if |feature_bit| is set as supported in the local LE features list.
+  // Returns true if |feature_bit| is set as supported in the local LE features
+  // list.
   inline bool IsFeatureSupported(hci::LESupportedFeature feature_bit) const {
     return supported_features_ & static_cast<uint64_t>(feature_bit);
   }
 
   // Returns the LE ACL data buffer capacity.
-  const hci::DataBufferInfo& data_buffer_info() const { return data_buffer_info_; }
+  const hci::DataBufferInfo& data_buffer_info() const {
+    return data_buffer_info_;
+  }
 
  private:
   friend class Adapter;
 
-  // Storage capacity information about the controller's internal ACL data buffers.
+  // Storage capacity information about the controller's internal ACL data
+  // buffers.
   hci::DataBufferInfo data_buffer_info_;
 
   // Local supported LE Features reported by the controller.

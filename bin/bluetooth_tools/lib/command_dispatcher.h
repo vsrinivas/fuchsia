@@ -14,47 +14,55 @@
 namespace bluetooth {
 namespace tools {
 
-// CommandDispatcher is a mapping between commands (identified by a string and arguments) and
-// handler functions that should be executed.
+// CommandDispatcher is a mapping between commands (identified by a string and
+// arguments) and handler functions that should be executed.
 class CommandDispatcher final {
  public:
   CommandDispatcher() = default;
 
-  // Invokes the handler for the command described by |argv|. Returns true if the command was
-  // successfully handled, in which case |complete_cb| will be executed asynchronously to signal
-  // command completion.
+  // Invokes the handler for the command described by |argv|. Returns true if
+  // the command was successfully handled, in which case |complete_cb| will be
+  // executed asynchronously to signal command completion.
   //
   // Returns false if the command could not be handled, either because |argv|
-  // contained invalid arguments or if no handler for the command had been previously registered.
-  // |out_cmd_found| will be set to false if no comand handler for this command was registered, true
-  // otherwise.
-  bool ExecuteCommand(const std::vector<std::string>& argv, const fxl::Closure& complete_cb,
+  // contained invalid arguments or if no handler for the command had been
+  // previously registered. |out_cmd_found| will be set to false if no comand
+  // handler for this command was registered, true otherwise.
+  bool ExecuteCommand(const std::vector<std::string>& argv,
+                      const fxl::Closure& complete_cb,
                       bool* out_cmd_found);
 
   // Prints the names of all commands and their descriptions.
   void DescribeAllCommands();
 
-  // Each handler is provided with a |command_line| that can be used to obtain positional arguments
-  // and options that were passed to the command. If |command_line| returns malformed or invalid
-  // arguments, the handler MUST return false. Otherwise if the command can is expressed properly
-  // and it is accepted by the handler, the handler MUST return true.
+  // Each handler is provided with a |command_line| that can be used to obtain
+  // positional arguments and options that were passed to the command. If
+  // |command_line| returns malformed or invalid arguments, the handler MUST
+  // return false. Otherwise if the command can is expressed properly and it is
+  // accepted by the handler, the handler MUST return true.
   //
-  // Once a command has been executed, |complete_cb| should be called to mark completion the of the
-  // command.
+  // Once a command has been executed, |complete_cb| should be called to mark
+  // completion the of the command.
   using CommandHandler =
-      std::function<bool(const fxl::CommandLine& command_line, const fxl::Closure& complete_cb)>;
+      std::function<bool(const fxl::CommandLine& command_line,
+                         const fxl::Closure& complete_cb)>;
 
-  // Registers a handler to be executed for the command |command_name|. |description| is the string
-  // that describes the command (to be displayed by DescribedAllCommands()).
-  void RegisterHandler(const std::string& command_name, const std::string& description,
+  // Registers a handler to be executed for the command |command_name|.
+  // |description| is the string that describes the command (to be displayed by
+  // DescribedAllCommands()).
+  void RegisterHandler(const std::string& command_name,
+                       const std::string& description,
                        const CommandHandler& handler);
 
-  // Returns a list of currently registered command names that start with |prefix|.
-  std::vector<std::string> GetCommandsThatMatch(const std::string& prefix) const;
+  // Returns a list of currently registered command names that start with
+  // |prefix|.
+  std::vector<std::string> GetCommandsThatMatch(
+      const std::string& prefix) const;
 
  private:
   struct CommandHandlerData {
-    CommandHandlerData(const std::string& description, const CommandHandler& handler);
+    CommandHandlerData(const std::string& description,
+                       const CommandHandler& handler);
     CommandHandlerData() = default;
 
     std::string description;

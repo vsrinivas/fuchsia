@@ -23,9 +23,10 @@ using EventPacket = Packet<EventHeader>;
 template <>
 class Packet<CommandHeader> : public PacketBase<CommandHeader, CommandPacket> {
  public:
-  // Slab-allocates a new CommandPacket with the given payload size and initializes the packet's
-  // header field.
-  static std::unique_ptr<CommandPacket> New(OpCode opcode, size_t payload_size = 0u);
+  // Slab-allocates a new CommandPacket with the given payload size and
+  // initializes the packet's header field.
+  static std::unique_ptr<CommandPacket> New(OpCode opcode,
+                                            size_t payload_size = 0u);
 
   // Returns the HCI command opcode currently in this packet.
   OpCode opcode() const { return le16toh(view().header().opcode); }
@@ -42,7 +43,8 @@ class Packet<CommandHeader> : public PacketBase<CommandHeader, CommandPacket> {
 template <>
 class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
  public:
-  // Slab-allocates a new EventPacket with the given payload size without initializing its contents.
+  // Slab-allocates a new EventPacket with the given payload size without
+  // initializing its contents.
   static std::unique_ptr<EventPacket> New(size_t payload_size);
 
   // Returns the HCI event code currently in this packet.
@@ -55,25 +57,29 @@ class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
   template <typename ReturnParams>
   const ReturnParams* return_params() const {
     if (event_code() != kCommandCompleteEventCode ||
-        sizeof(ReturnParams) > view().payload_size() - sizeof(CommandCompleteEventParams))
+        sizeof(ReturnParams) >
+            view().payload_size() - sizeof(CommandCompleteEventParams))
       return nullptr;
     return reinterpret_cast<const ReturnParams*>(
         view().payload<CommandCompleteEventParams>().return_parameters);
   }
 
-  // If this is a LE Meta Event packet, this method returns a pointer to the beginning of the
-  // subevent parameter structure. If the given template type would exceed the bounds of the packet
-  // or if this packet does not represent a LE Meta Event, this method returns nullptr.
+  // If this is a LE Meta Event packet, this method returns a pointer to the
+  // beginning of the subevent parameter structure. If the given template type
+  // would exceed the bounds of the packet or if this packet does not represent
+  // a LE Meta Event, this method returns nullptr.
   template <typename SubeventParams>
   const SubeventParams* le_event_params() const {
     if (event_code() != kLEMetaEventCode ||
-        sizeof(SubeventParams) > view().payload_size() - sizeof(LEMetaEventParams))
+        sizeof(SubeventParams) >
+            view().payload_size() - sizeof(LEMetaEventParams))
       return nullptr;
     return reinterpret_cast<const SubeventParams*>(
         view().payload<LEMetaEventParams>().subevent_parameters);
   }
 
-  // Initializes the internal PacketView by reading the header portion of the underlying buffer.
+  // Initializes the internal PacketView by reading the header portion of the
+  // underlying buffer.
   void InitializeFromBuffer();
 
  protected:

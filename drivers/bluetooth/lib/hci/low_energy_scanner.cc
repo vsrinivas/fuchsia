@@ -13,23 +13,31 @@ namespace hci {
 
 // Default implementations do nothing.
 
-void LowEnergyScanner::Delegate::OnDeviceFound(const LowEnergyScanResult& result,
-                                               const common::ByteBuffer& data) {}
+void LowEnergyScanner::Delegate::OnDeviceFound(
+    const LowEnergyScanResult& result,
+    const common::ByteBuffer& data) {}
 
-LowEnergyScanResult::LowEnergyScanResult() : connectable(false), rssi(hci::kRSSIInvalid) {}
+LowEnergyScanResult::LowEnergyScanResult()
+    : connectable(false), rssi(hci::kRSSIInvalid) {}
 
-LowEnergyScanResult::LowEnergyScanResult(const common::DeviceAddress& address, bool connectable,
+LowEnergyScanResult::LowEnergyScanResult(const common::DeviceAddress& address,
+                                         bool connectable,
                                          int8_t rssi)
     : address(address), connectable(connectable), rssi(rssi) {}
 
-LowEnergyScanner::LowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
+LowEnergyScanner::LowEnergyScanner(Delegate* delegate,
+                                   fxl::RefPtr<Transport> hci,
                                    fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : state_(State::kIdle), delegate_(delegate), task_runner_(task_runner), transport_(hci) {
+    : state_(State::kIdle),
+      delegate_(delegate),
+      task_runner_(task_runner),
+      transport_(hci) {
   FXL_DCHECK(delegate_);
   FXL_DCHECK(transport_);
   FXL_DCHECK(task_runner_);
 
-  hci_cmd_runner_ = std::make_unique<SequentialCommandRunner>(task_runner_, transport_);
+  hci_cmd_runner_ =
+      std::make_unique<SequentialCommandRunner>(task_runner_, transport_);
 }
 
 }  // namespace hci

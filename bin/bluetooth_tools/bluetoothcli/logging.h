@@ -10,10 +10,11 @@
 
 namespace bluetoothcli {
 
-// Convenience wrapper class around std::cout. This doesn't do anything other than:
+// Convenience wrapper class around std::cout. This doesn't do anything other
+// than:
 //   - insert automatic indentation in the beginning of a message;
-//   - provide stream-line syntax around logging without requiring std::endl, which is input into
-//     the stream automatically.
+//   - provide stream-line syntax around logging without requiring std::endl,
+//     which is input into the stream automatically.
 //
 // Also see lib/fxl/logging.h for a similar but more involved implementation.
 class LogMessage {

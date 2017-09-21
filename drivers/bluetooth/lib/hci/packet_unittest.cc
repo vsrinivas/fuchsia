@@ -106,7 +106,8 @@ TEST(HCIPacketTest, EventPacketReturnParams) {
   // Allocate a large enough packet which we'll reuse for the 3 payloads.
   auto packet = EventPacket::New(valid.size());
 
-  // If the event code or the payload size don't match, then return_params() should return nullptr.
+  // If the event code or the payload size don't match, then return_params()
+  // should return nullptr.
   packet->mutable_view()->mutable_data().Write(correct_size_bad_event_code);
   packet->InitializeFromBuffer();
   EXPECT_EQ(nullptr, packet->return_params<TestPayload>());
@@ -156,7 +157,8 @@ TEST(HCIPacketTest, LEEventParams) {
 
   auto packet = EventPacket::New(valid.size());
 
-  // If the event code or the payload size don't match, then return_params() should return nullptr.
+  // If the event code or the payload size don't match, then return_params()
+  // should return nullptr.
   packet->mutable_view()->mutable_data().Write(correct_size_bad_event_code);
   packet->InitializeFromBuffer();
   EXPECT_EQ(nullptr, packet->le_event_params<TestPayload>());
@@ -178,40 +180,47 @@ TEST(HCIPacketTest, ACLDataPacketFromFields) {
   constexpr size_t kLargeDataLength = 10;
   constexpr size_t kSmallDataLength = 1;
 
-  auto packet = ACLDataPacket::New(0x007F, ACLPacketBoundaryFlag::kContinuingFragment,
-                                   ACLBroadcastFlag::kActiveSlaveBroadcast, kSmallDataLength);
+  auto packet = ACLDataPacket::New(
+      0x007F, ACLPacketBoundaryFlag::kContinuingFragment,
+      ACLBroadcastFlag::kActiveSlaveBroadcast, kSmallDataLength);
   packet->mutable_view()->mutable_payload_data().Fill(0);
 
   // First 12-bits: 0x07F
   // Upper 4-bits: 0b0101
-  EXPECT_TRUE(ContainersEqual(packet->view().data(),
-                              std::array<uint8_t, 5>{{0x7F, 0x50, 0x01, 0x00, 0x00}}));
+  EXPECT_TRUE(
+      ContainersEqual(packet->view().data(),
+                      std::array<uint8_t, 5>{{0x7F, 0x50, 0x01, 0x00, 0x00}}));
 
   packet = ACLDataPacket::New(0x0FFF, ACLPacketBoundaryFlag::kCompletePDU,
-                              ACLBroadcastFlag::kActiveSlaveBroadcast, kSmallDataLength);
+                              ACLBroadcastFlag::kActiveSlaveBroadcast,
+                              kSmallDataLength);
   packet->mutable_view()->mutable_payload_data().Fill(0);
 
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0111
-  EXPECT_TRUE(ContainersEqual(packet->view().data(),
-                              std::array<uint8_t, 5>{{0xFF, 0x7F, 0x01, 0x00, 0x00}}));
+  EXPECT_TRUE(
+      ContainersEqual(packet->view().data(),
+                      std::array<uint8_t, 5>{{0xFF, 0x7F, 0x01, 0x00, 0x00}}));
 
-  packet = ACLDataPacket::New(0x0FFF, ACLPacketBoundaryFlag::kFirstNonFlushable,
-                              ACLBroadcastFlag::kPointToPoint, kLargeDataLength);
+  packet =
+      ACLDataPacket::New(0x0FFF, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                         ACLBroadcastFlag::kPointToPoint, kLargeDataLength);
   packet->mutable_view()->mutable_payload_data().Fill(0);
 
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0000
-  EXPECT_TRUE(ContainersEqual(packet->view().data(),
-                              std::array<uint8_t, 14>{{0xFF, 0x0F, 0x0A, 0x00, 0x00, 0x00, 0x00,
-                                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}));
+  EXPECT_TRUE(ContainersEqual(
+      packet->view().data(),
+      std::array<uint8_t, 14>{{0xFF, 0x0F, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00,
+                               0x00, 0x00, 0x00, 0x00, 0x00}}));
 }
 
 TEST(HCIPacketTest, ACLDataPacketFromBuffer) {
   constexpr size_t kLargeDataLength = 256;
   constexpr size_t kSmallDataLength = 1;
 
-  // The same test cases as ACLDataPacketFromFields test above but in the opposite direction.
+  // The same test cases as ACLDataPacketFromFields test above but in the
+  // opposite direction.
 
   // First 12-bits: 0x07F
   // Upper 4-bits: 0b0101
@@ -221,7 +230,8 @@ TEST(HCIPacketTest, ACLDataPacketFromBuffer) {
   packet->InitializeFromBuffer();
 
   EXPECT_EQ(0x007F, packet->connection_handle());
-  EXPECT_EQ(ACLPacketBoundaryFlag::kContinuingFragment, packet->packet_boundary_flag());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kContinuingFragment,
+            packet->packet_boundary_flag());
   EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet->broadcast_flag());
   EXPECT_EQ(kSmallDataLength, packet->view().payload_size());
 
@@ -232,7 +242,8 @@ TEST(HCIPacketTest, ACLDataPacketFromBuffer) {
   packet->InitializeFromBuffer();
 
   EXPECT_EQ(0x0FFF, packet->connection_handle());
-  EXPECT_EQ(ACLPacketBoundaryFlag::kCompletePDU, packet->packet_boundary_flag());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kCompletePDU,
+            packet->packet_boundary_flag());
   EXPECT_EQ(ACLBroadcastFlag::kActiveSlaveBroadcast, packet->broadcast_flag());
   EXPECT_EQ(kSmallDataLength, packet->view().payload_size());
 
@@ -242,7 +253,8 @@ TEST(HCIPacketTest, ACLDataPacketFromBuffer) {
   packet->InitializeFromBuffer();
 
   EXPECT_EQ(0x0FFF, packet->connection_handle());
-  EXPECT_EQ(ACLPacketBoundaryFlag::kFirstNonFlushable, packet->packet_boundary_flag());
+  EXPECT_EQ(ACLPacketBoundaryFlag::kFirstNonFlushable,
+            packet->packet_boundary_flag());
   EXPECT_EQ(ACLBroadcastFlag::kPointToPoint, packet->broadcast_flag());
   EXPECT_EQ(kLargeDataLength, packet->view().payload_size());
 }

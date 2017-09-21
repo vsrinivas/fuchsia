@@ -34,7 +34,8 @@ class AdapterTest : public TestingBase {
   }
 
   void TearDown() override {
-    if (adapter_->IsInitialized()) adapter_->ShutDown();
+    if (adapter_->IsInitialized())
+      adapter_->ShutDown();
     adapter_ = nullptr;
     TestingBase::TearDown();
   }
@@ -86,7 +87,8 @@ TEST_F(AdapterTest, InitializeFailureNoBufferInfo) {
 
   // Enable LE support.
   FakeController::Settings settings;
-  settings.lmp_features_page0 |= static_cast<uint64_t>(hci::LMPFeature::kLESupported);
+  settings.lmp_features_page0 |=
+      static_cast<uint64_t>(hci::LMPFeature::kLESupported);
   test_device()->set_settings(settings);
 
   InitializeAdapter(init_cb);
@@ -105,9 +107,11 @@ TEST_F(AdapterTest, InitializeSuccess) {
     message_loop()->QuitNow();
   };
 
-  // Return valid buffer information and enable LE support. (This should succeed).
+  // Return valid buffer information and enable LE support. (This should
+  // succeed).
   FakeController::Settings settings;
-  settings.lmp_features_page0 |= static_cast<uint64_t>(hci::LMPFeature::kLESupported);
+  settings.lmp_features_page0 |=
+      static_cast<uint64_t>(hci::LMPFeature::kLESupported);
   settings.le_acl_data_packet_length = 5;
   settings.le_total_num_acl_data_packets = 1;
   test_device()->set_settings(settings);
@@ -164,7 +168,8 @@ TEST_F(AdapterTest, TransportClosedCallback) {
   EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
   EXPECT_FALSE(transport_closed_called());
 
-  // Deleting the FakeController should cause the transport closed callback to get called.
+  // Deleting the FakeController should cause the transport closed callback to
+  // get called.
   message_loop()->task_runner()->PostTask([this] { DeleteTestDevice(); });
   RunMessageLoop();
   EXPECT_TRUE(transport_closed_called());

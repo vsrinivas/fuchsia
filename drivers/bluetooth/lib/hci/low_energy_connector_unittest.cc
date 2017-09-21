@@ -42,11 +42,13 @@ class LowEnergyConnectorTest : public TestingBase {
 
     connector_ = std::make_unique<LowEnergyConnector>(
         transport(), message_loop()->task_runner(),
-        std::bind(&LowEnergyConnectorTest::OnConnectionCreated, this, std::placeholders::_1));
+        std::bind(&LowEnergyConnectorTest::OnConnectionCreated, this,
+                  std::placeholders::_1));
 
     test_device()->SetConnectionStateCallback(
-        std::bind(&LowEnergyConnectorTest::OnConnectionStateChanged, this, std::placeholders::_1,
-                  std::placeholders::_2, std::placeholders::_3),
+        std::bind(&LowEnergyConnectorTest::OnConnectionStateChanged, this,
+                  std::placeholders::_1, std::placeholders::_2,
+                  std::placeholders::_3),
         message_loop()->task_runner());
 
     test_device()->Start();
@@ -64,20 +66,25 @@ class LowEnergyConnectorTest : public TestingBase {
   bool quit_loop_on_new_connection = false;
   bool quit_loop_on_cancel = false;
 
-  const std::vector<std::unique_ptr<Connection>>& connections() const { return connections_; }
+  const std::vector<std::unique_ptr<Connection>>& connections() const {
+    return connections_;
+  }
   LowEnergyConnector* connector() const { return connector_.get(); }
 
  private:
   void OnConnectionCreated(std::unique_ptr<Connection> connection) {
     connections_.push_back(std::move(connection));
 
-    if (quit_loop_on_new_connection) message_loop()->QuitNow();
+    if (quit_loop_on_new_connection)
+      message_loop()->QuitNow();
   }
 
-  void OnConnectionStateChanged(const common::DeviceAddress& address, bool connected,
+  void OnConnectionStateChanged(const common::DeviceAddress& address,
+                                bool connected,
                                 bool canceled) {
     request_canceled = canceled;
-    if (request_canceled && quit_loop_on_cancel) message_loop()->QuitNow();
+    if (request_canceled && quit_loop_on_cancel)
+      message_loop()->QuitNow();
   }
 
   std::unique_ptr<LowEnergyConnector> connector_;
@@ -105,15 +112,17 @@ TEST_F(LowEnergyConnectorTest, CreateConnection) {
   };
 
   hci::Connection::LowEnergyParameters params;
-  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
-                                           params, callback, kTestTimeoutMs);
+  bool ret = connector()->CreateConnection(
+      hci::LEOwnAddressType::kPublic, false, kTestAddress,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
-  ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                      defaults::kLEScanInterval, defaults::kLEScanWindow, params,
-                                      callback, kTestTimeoutMs);
+  ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false,
+                                      kTestAddress, defaults::kLEScanInterval,
+                                      defaults::kLEScanWindow, params, callback,
+                                      kTestTimeoutMs);
   EXPECT_FALSE(ret);
 
   RunMessageLoop();
@@ -152,9 +161,10 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionStatusError) {
   };
 
   hci::Connection::LowEnergyParameters params;
-  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
-                                           params, callback, kTestTimeoutMs);
+  bool ret = connector()->CreateConnection(
+      hci::LEOwnAddressType::kPublic, false, kTestAddress,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -188,9 +198,10 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionEventError) {
   };
 
   hci::Connection::LowEnergyParameters params;
-  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
-                                           params, callback, kTestTimeoutMs);
+  bool ret = connector()->CreateConnection(
+      hci::LEOwnAddressType::kPublic, false, kTestAddress,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -221,9 +232,10 @@ TEST_F(LowEnergyConnectorTest, Cancel) {
   };
 
   hci::Connection::LowEnergyParameters params;
-  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
-                                           params, callback, kTestTimeoutMs);
+  bool ret = connector()->CreateConnection(
+      hci::LEOwnAddressType::kPublic, false, kTestAddress,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -254,7 +266,8 @@ TEST_F(LowEnergyConnectorTest, IncomingConnect) {
   event.conn_interval = defaults::kLEConnectionIntervalMin;
   event.connection_handle = 1;
 
-  test_device()->SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &event, sizeof(event));
+  test_device()->SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &event,
+                                 sizeof(event));
 
   quit_loop_on_new_connection = true;
   RunMessageLoop();
@@ -269,8 +282,8 @@ TEST_F(LowEnergyConnectorTest, IncomingConnect) {
 }
 
 TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
-  const common::DeviceAddress kIncomingAddress(common::DeviceAddress::Type::kLEPublic,
-                                               "00:00:00:00:00:02");
+  const common::DeviceAddress kIncomingAddress(
+      common::DeviceAddress::Type::kLEPublic, "00:00:00:00:00:02");
 
   EXPECT_TRUE(connections().empty());
   EXPECT_FALSE(connector()->request_pending());
@@ -291,9 +304,10 @@ TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
   };
 
   hci::Connection::LowEnergyParameters params;
-  connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                defaults::kLEScanInterval, defaults::kLEScanWindow, params,
-                                callback, kTestTimeoutMs);
+  connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false,
+                                kTestAddress, defaults::kLEScanInterval,
+                                defaults::kLEScanWindow, params, callback,
+                                kTestTimeoutMs);
 
   message_loop()->task_runner()->PostTask([kIncomingAddress, this] {
     LEConnectionCompleteSubeventParams event;
@@ -305,7 +319,8 @@ TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
     event.conn_interval = defaults::kLEConnectionIntervalMin;
     event.connection_handle = 2;
 
-    test_device()->SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &event, sizeof(event));
+    test_device()->SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode,
+                                   &event, sizeof(event));
   });
 
   RunMessageLoop();
@@ -317,7 +332,8 @@ TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
 
   for (const auto& conn : connections()) {
     EXPECT_TRUE(conn->handle() == 1u || conn->handle() == 2u);
-    EXPECT_TRUE(conn->peer_address() == kTestAddress || conn->peer_address() == kIncomingAddress);
+    EXPECT_TRUE(conn->peer_address() == kTestAddress ||
+                conn->peer_address() == kIncomingAddress);
     EXPECT_TRUE(conn->is_open());
     conn->set_closed();
   }
@@ -342,9 +358,10 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionTimeout) {
   };
 
   hci::Connection::LowEnergyParameters params;
-  connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                defaults::kLEScanInterval, defaults::kLEScanWindow, params,
-                                callback, kShortTimeoutMs);
+  connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false,
+                                kTestAddress, defaults::kLEScanInterval,
+                                defaults::kLEScanWindow, params, callback,
+                                kShortTimeoutMs);
   EXPECT_TRUE(connector()->request_pending());
 
   EXPECT_FALSE(request_canceled);
@@ -364,9 +381,10 @@ TEST_F(LowEnergyConnectorTest, SendRequestAndDelete) {
   test_device()->AddLEDevice(std::move(fake_device));
 
   hci::Connection::LowEnergyParameters params;
-  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
-                                           params, [](auto, auto) {}, kTestTimeoutMs);
+  bool ret = connector()->CreateConnection(
+      hci::LEOwnAddressType::kPublic, false, kTestAddress,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, params,
+      [](auto, auto) {}, kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -379,24 +397,26 @@ TEST_F(LowEnergyConnectorTest, SendRequestAndDelete) {
   EXPECT_TRUE(connections().empty());
 }
 
-// This test is identical to SendRequestAndDelete except that this waits for the connection request
-// timeout to finish.
+// This test is identical to SendRequestAndDelete except that this waits for the
+// connection request timeout to finish.
 TEST_F(LowEnergyConnectorTest, SendRequestDeleteAndWaitForTimeout) {
   constexpr int64_t kShortTimeoutMs = 100;
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));
 
   hci::Connection::LowEnergyParameters params;
-  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
-                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
-                                           params, [](auto, auto) {}, kShortTimeoutMs);
+  bool ret = connector()->CreateConnection(
+      hci::LEOwnAddressType::kPublic, false, kTestAddress,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, params,
+      [](auto, auto) {}, kShortTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
   DeleteConnector();
 
-  // Run the message loop long enough for the connection creation timeout to expire. The timeout
-  // handler should be canceled during destruction and no assertions should be hit.
+  // Run the message loop long enough for the connection creation timeout to
+  // expire. The timeout handler should be canceled during destruction and no
+  // assertions should be hit.
   RunMessageLoop(fxl::TimeDelta::FromMilliseconds(2 * kShortTimeoutMs));
 
   EXPECT_TRUE(request_canceled);

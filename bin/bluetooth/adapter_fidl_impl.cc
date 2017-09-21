@@ -11,15 +11,17 @@
 
 #include "fidl_helpers.h"
 
-// The internal library components and the generated FIDL bindings are both declared under the
-// "bluetooth" namespace. We define an alias here to disambiguate.
+// The internal library components and the generated FIDL bindings are both
+// declared under the "bluetooth" namespace. We define an alias here to
+// disambiguate.
 namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
 
-AdapterFidlImpl::AdapterFidlImpl(const fxl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
-                                 ::fidl::InterfaceRequest<::btfidl::control::Adapter> request,
-                                 const ConnectionErrorHandler& connection_error_handler)
+AdapterFidlImpl::AdapterFidlImpl(
+    const fxl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
+    ::fidl::InterfaceRequest<::btfidl::control::Adapter> request,
+    const ConnectionErrorHandler& connection_error_handler)
     : adapter_(adapter),
       requesting_discovery_(false),
       binding_(this, std::move(request)),
@@ -37,7 +39,8 @@ void AdapterFidlImpl::GetInfo(const GetInfoCallback& callback) {
 void AdapterFidlImpl::SetDelegate(
     ::fidl::InterfaceHandle<::btfidl::control::AdapterDelegate> delegate) {
   if (delegate) {
-    delegate_ = ::btfidl::control::AdapterDelegatePtr::Create(std::move(delegate));
+    delegate_ =
+        ::btfidl::control::AdapterDelegatePtr::Create(std::move(delegate));
   } else {
     delegate_ = nullptr;
   }
@@ -46,8 +49,9 @@ void AdapterFidlImpl::SetDelegate(
       FXL_LOG(INFO) << "Adapter delegate disconnected";
       delegate_ = nullptr;
 
-      // TODO(armansito): Define a function for terminating all procedures that rely on a delegate.
-      // For now we only support discovery, so we end it directly.
+      // TODO(armansito): Define a function for terminating all procedures that
+      // rely on a delegate. For now we only support discovery, so we end it
+      // directly.
       if (le_discovery_session_) {
         le_discovery_session_ = nullptr;
         NotifyDiscoveringChanged();
@@ -55,8 +59,8 @@ void AdapterFidlImpl::SetDelegate(
     });
   }
 
-  // Setting a new delegate will terminate all on-going procedures associated with this
-  // AdapterFidlImpl.
+  // Setting a new delegate will terminate all on-going procedures associated
+  // with this AdapterFidlImpl.
   if (le_discovery_session_) {
     le_discovery_session_ = nullptr;
     NotifyDiscoveringChanged();
@@ -69,7 +73,8 @@ void AdapterFidlImpl::SetLocalName(const ::fidl::String& local_name,
   FXL_NOTIMPLEMENTED();
 }
 
-void AdapterFidlImpl::SetPowered(bool powered, const SetPoweredCallback& callback) {
+void AdapterFidlImpl::SetPowered(bool powered,
+                                 const SetPoweredCallback& callback) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -78,7 +83,8 @@ void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
 
   if (!adapter_) {
     FXL_LOG(WARNING) << "Adapter not available";
-    callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND, "Adapter not available"));
+    callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::NOT_FOUND,
+                                          "Adapter not available"));
     return;
   }
 
@@ -91,24 +97,27 @@ void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
 
   requesting_discovery_ = true;
   auto manager = adapter_->le_discovery_manager();
-  manager->StartDiscovery([ self = weak_ptr_factory_.GetWeakPtr(), callback ](auto session) {
-    // End the new session if this AdapterFidlImpl got destroyed in the mean time (e.g. because the
-    // client disconnected).
-    if (!self) return;
+  manager->StartDiscovery([ self = weak_ptr_factory_.GetWeakPtr(),
+                            callback ](auto session) {
+    // End the new session if this AdapterFidlImpl got destroyed in the mean
+    // time (e.g. because the client disconnected).
+    if (!self)
+      return;
 
     self->requesting_discovery_ = false;
 
     if (!session) {
       FXL_LOG(ERROR) << "Failed to start discovery session";
-      callback(fidl_helpers::NewErrorStatus(::btfidl::ErrorCode::FAILED,
-                                            "Failed to start discovery session"));
+      callback(fidl_helpers::NewErrorStatus(
+          ::btfidl::ErrorCode::FAILED, "Failed to start discovery session"));
       return;
     }
 
     // Set up a general-discovery filter for connectable devices.
     session->filter()->set_connectable(true);
     session->SetResultCallback([self](const auto& device) {
-      if (self) self->OnDiscoveryResult(device);
+      if (self)
+        self->OnDiscoveryResult(device);
     });
 
     self->le_discovery_session_ = std::move(session);
@@ -131,8 +140,10 @@ void AdapterFidlImpl::StopDiscovery(const StopDiscoveryCallback& callback) {
   callback(::btfidl::Status::New());
 }
 
-void AdapterFidlImpl::OnDiscoveryResult(const ::bluetooth::gap::RemoteDevice& remote_device) {
-  if (!delegate_) return;
+void AdapterFidlImpl::OnDiscoveryResult(
+    const ::bluetooth::gap::RemoteDevice& remote_device) {
+  if (!delegate_)
+    return;
 
   auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
   if (!fidl_device) {
@@ -144,7 +155,8 @@ void AdapterFidlImpl::OnDiscoveryResult(const ::bluetooth::gap::RemoteDevice& re
 }
 
 void AdapterFidlImpl::NotifyDiscoveringChanged() {
-  if (!delegate_) return;
+  if (!delegate_)
+    return;
 
   auto adapter_state = ::btfidl::control::AdapterState::New();
   adapter_state->discovering = ::btfidl::Bool::New();

@@ -20,7 +20,8 @@ ZirconDeviceWrapper::ZirconDeviceWrapper(fxl::UniqueFD device_fd)
 
 zx::channel ZirconDeviceWrapper::GetCommandChannel() {
   zx::channel channel;
-  ssize_t status = ioctl_bt_hci_get_command_channel(device_fd_.get(), channel.reset_and_get_address());
+  ssize_t status = ioctl_bt_hci_get_command_channel(
+      device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
     FXL_LOG(ERROR) << "hci: Failed to obtain command channel handle: "
                    << zx_status_get_string(status);
@@ -32,7 +33,8 @@ zx::channel ZirconDeviceWrapper::GetCommandChannel() {
 
 zx::channel ZirconDeviceWrapper::GetACLDataChannel() {
   zx::channel channel;
-  ssize_t status = ioctl_bt_hci_get_acl_data_channel(device_fd_.get(), channel.reset_and_get_address());
+  ssize_t status = ioctl_bt_hci_get_acl_data_channel(
+      device_fd_.get(), channel.reset_and_get_address());
   if (status < 0) {
     FXL_LOG(ERROR) << "hci: Failed to obtain ACL data channel handle: "
                    << zx_status_get_string(status);
@@ -44,8 +46,10 @@ zx::channel ZirconDeviceWrapper::GetACLDataChannel() {
 
 // ================= DummyDeviceWrappper =================
 
-DummyDeviceWrapper::DummyDeviceWrapper(zx::channel cmd_channel, zx::channel acl_data_channel)
-    : cmd_channel_(std::move(cmd_channel)), acl_data_channel_(std::move(acl_data_channel)) {}
+DummyDeviceWrapper::DummyDeviceWrapper(zx::channel cmd_channel,
+                                       zx::channel acl_data_channel)
+    : cmd_channel_(std::move(cmd_channel)),
+      acl_data_channel_(std::move(acl_data_channel)) {}
 
 zx::channel DummyDeviceWrapper::GetCommandChannel() {
   return std::move(cmd_channel_);

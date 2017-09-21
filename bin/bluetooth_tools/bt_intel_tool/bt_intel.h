@@ -9,7 +9,8 @@
 
 namespace bt_intel {
 
-constexpr bluetooth::hci::OpCode kReadVersion = bluetooth::hci::VendorOpCode(0x0005);
+constexpr bluetooth::hci::OpCode kReadVersion =
+    bluetooth::hci::VendorOpCode(0x0005);
 
 struct IntelVersionReturnParams {
   bluetooth::hci::Status status;
@@ -24,7 +25,8 @@ struct IntelVersionReturnParams {
   uint8_t fw_patch_num;
 } __PACKED;
 
-constexpr bluetooth::hci::OpCode kReadBootParams = bluetooth::hci::VendorOpCode(0x000D);
+constexpr bluetooth::hci::OpCode kReadBootParams =
+    bluetooth::hci::VendorOpCode(0x000D);
 
 struct IntelReadBootParamsReturnParams {
   bluetooth::hci::Status status;

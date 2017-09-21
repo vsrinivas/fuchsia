@@ -40,14 +40,18 @@ class Disrupter : public Foo {
  public:
   Disrupter(ObserverList<Foo>* list, Foo* doomed, bool remove_self)
       : list_(list), doomed_(doomed), remove_self_(remove_self) {}
-  Disrupter(ObserverList<Foo>* list, Foo* doomed) : Disrupter(list, doomed, false) {}
-  Disrupter(ObserverList<Foo>* list, bool remove_self) : Disrupter(list, nullptr, remove_self) {}
+  Disrupter(ObserverList<Foo>* list, Foo* doomed)
+      : Disrupter(list, doomed, false) {}
+  Disrupter(ObserverList<Foo>* list, bool remove_self)
+      : Disrupter(list, nullptr, remove_self) {}
 
   ~Disrupter() override {}
 
   void Observe(int x) override {
-    if (remove_self_) list_->RemoveObserver(this);
-    if (doomed_) list_->RemoveObserver(doomed_);
+    if (remove_self_)
+      list_->RemoveObserver(this);
+    if (doomed_)
+      list_->RemoveObserver(doomed_);
   }
 
   void SetDoomed(Foo* doomed) { doomed_ = doomed; }
@@ -79,7 +83,8 @@ class AddInObserve : public Foo {
 
 class AddInClearObserve : public Foo {
  public:
-  explicit AddInClearObserve(ObserverList<Foo>* list) : list_(list), added_(false), adder_(1) {}
+  explicit AddInClearObserve(ObserverList<Foo>* list)
+      : list_(list), added_(false), adder_(1) {}
 
   void Observe(int /* x */) override {
     list_->Clear();
@@ -119,7 +124,8 @@ TEST(ObserverListTest, BasicTest) {
   EXPECT_TRUE(observer_list.HasObserver(&a));
   EXPECT_FALSE(observer_list.HasObserver(&c));
 
-  for (auto& observer : observer_list) observer.Observe(10);
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   observer_list.AddObserver(&evil);
   observer_list.AddObserver(&c);
@@ -128,7 +134,8 @@ TEST(ObserverListTest, BasicTest) {
   // Removing an observer not in the list should do nothing.
   observer_list.RemoveObserver(&e);
 
-  for (auto& observer : observer_list) observer.Observe(10);
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   EXPECT_EQ(20, a.total);
   EXPECT_EQ(-20, b.total);
@@ -145,13 +152,15 @@ TEST(ObserverListTest, DisruptSelf) {
   observer_list.AddObserver(&a);
   observer_list.AddObserver(&b);
 
-  for (auto& observer : observer_list) observer.Observe(10);
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   observer_list.AddObserver(&evil);
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  for (auto& observer : observer_list) observer.Observe(10);
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   EXPECT_EQ(20, a.total);
   EXPECT_EQ(-20, b.total);
@@ -170,8 +179,10 @@ TEST(ObserverListTest, DisruptBefore) {
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  for (auto& observer : observer_list) observer.Observe(10);
-  for (auto& observer : observer_list) observer.Observe(10);
+  for (auto& observer : observer_list)
+    observer.Observe(10);
+  for (auto& observer : observer_list)
+    observer.Observe(10);
 
   EXPECT_EQ(20, a.total);
   EXPECT_EQ(-10, b.total);
@@ -189,7 +200,8 @@ TEST(ObserverListTest, Existing) {
   observer_list.AddObserver(&a);
   observer_list.AddObserver(&b);
 
-  for (auto& observer : observer_list) observer.Observe(1);
+  for (auto& observer : observer_list)
+    observer.Observe(1);
 
   EXPECT_FALSE(b.to_add_);
   // B's adder should not have been notified because it was added during
@@ -197,7 +209,8 @@ TEST(ObserverListTest, Existing) {
   EXPECT_EQ(0, c.total);
 
   // Notify again to make sure b's adder is notified.
-  for (auto& observer : observer_list) observer.Observe(1);
+  for (auto& observer : observer_list)
+    observer.Observe(1);
   EXPECT_EQ(1, c.total);
 }
 
@@ -207,9 +220,11 @@ TEST(ObserverListTest, ClearNotifyAll) {
 
   observer_list.AddObserver(&a);
 
-  for (auto& observer : observer_list) observer.Observe(1);
+  for (auto& observer : observer_list)
+    observer.Observe(1);
   EXPECT_TRUE(a.added());
-  EXPECT_EQ(1, a.adder().total) << "Adder should observe once and have sum of 1.";
+  EXPECT_EQ(1, a.adder().total)
+      << "Adder should observe once and have sum of 1.";
 }
 
 TEST(ObserverListTest, ClearNotifyExistingOnly) {
@@ -218,9 +233,11 @@ TEST(ObserverListTest, ClearNotifyExistingOnly) {
 
   observer_list.AddObserver(&a);
 
-  for (auto& observer : observer_list) observer.Observe(1);
+  for (auto& observer : observer_list)
+    observer.Observe(1);
   EXPECT_TRUE(a.added());
-  EXPECT_EQ(0, a.adder().total) << "Adder should not observe, so sum should still be 0.";
+  EXPECT_EQ(0, a.adder().total)
+      << "Adder should not observe, so sum should still be 0.";
 }
 
 TEST(ObserverListTest, IteratorOutlivesList) {
@@ -228,7 +245,8 @@ TEST(ObserverListTest, IteratorOutlivesList) {
   ListDestructor a(observer_list);
   observer_list->AddObserver(&a);
 
-  for (auto& observer : *observer_list) observer.Observe(0);
+  for (auto& observer : *observer_list)
+    observer.Observe(0);
   // If this test fails, there'll be Valgrind errors when this function goes out
   // of scope.
 }
@@ -243,7 +261,8 @@ TEST(ObserverListTest, BasicStdIterator) {
   EXPECT_FALSE(observer_list.end().GetContainer());
 
   // Iterate over empty list: no effect, no crash.
-  for (auto& i : observer_list) i.Observe(10);
+  for (auto& i : observer_list)
+    i.Observe(10);
 
   Adder a(1), b(-1), c(1), d(-1);
 
@@ -252,7 +271,8 @@ TEST(ObserverListTest, BasicStdIterator) {
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  for (FooList::iterator i = observer_list.begin(), e = observer_list.end(); i != e; ++i)
+  for (FooList::iterator i = observer_list.begin(), e = observer_list.end();
+       i != e; ++i)
     i->Observe(1);
 
   EXPECT_EQ(1, a.total);
@@ -262,11 +282,13 @@ TEST(ObserverListTest, BasicStdIterator) {
 
   // Check an iteration over a 'const view' for a given container.
   const FooList& const_list = observer_list;
-  for (FooList::const_iterator i = const_list.begin(), e = const_list.end(); i != e; ++i) {
+  for (FooList::const_iterator i = const_list.begin(), e = const_list.end();
+       i != e; ++i) {
     EXPECT_EQ(1, std::abs(i->GetValue()));
   }
 
-  for (const auto& o : const_list) EXPECT_EQ(1, std::abs(o.GetValue()));
+  for (const auto& o : const_list)
+    EXPECT_EQ(1, std::abs(o.GetValue()));
 }
 
 TEST(ObserverListTest, StdIteratorRemoveItself) {
@@ -280,9 +302,11 @@ TEST(ObserverListTest, StdIteratorRemoveItself) {
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  for (auto& o : observer_list) o.Observe(1);
+  for (auto& o : observer_list)
+    o.Observe(1);
 
-  for (auto& o : observer_list) o.Observe(10);
+  for (auto& o : observer_list)
+    o.Observe(10);
 
   EXPECT_EQ(11, a.total);
   EXPECT_EQ(-11, b.total);
@@ -301,9 +325,11 @@ TEST(ObserverListTest, StdIteratorRemoveBefore) {
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  for (auto& o : observer_list) o.Observe(1);
+  for (auto& o : observer_list)
+    o.Observe(1);
 
-  for (auto& o : observer_list) o.Observe(10);
+  for (auto& o : observer_list)
+    o.Observe(10);
 
   EXPECT_EQ(11, a.total);
   EXPECT_EQ(-1, b.total);
@@ -322,9 +348,11 @@ TEST(ObserverListTest, StdIteratorRemoveAfter) {
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  for (auto& o : observer_list) o.Observe(1);
+  for (auto& o : observer_list)
+    o.Observe(1);
 
-  for (auto& o : observer_list) o.Observe(10);
+  for (auto& o : observer_list)
+    o.Observe(10);
 
   EXPECT_EQ(11, a.total);
   EXPECT_EQ(-11, b.total);
@@ -343,9 +371,11 @@ TEST(ObserverListTest, StdIteratorRemoveAfterFront) {
   observer_list.AddObserver(&c);
   observer_list.AddObserver(&d);
 
-  for (auto& o : observer_list) o.Observe(1);
+  for (auto& o : observer_list)
+    o.Observe(1);
 
-  for (auto& o : observer_list) o.Observe(10);
+  for (auto& o : observer_list)
+    o.Observe(10);
 
   EXPECT_EQ(1, a.total);
   EXPECT_EQ(-11, b.total);
@@ -364,9 +394,11 @@ TEST(ObserverListTest, StdIteratorRemoveBeforeBack) {
   observer_list.AddObserver(&disrupter);
   observer_list.AddObserver(&d);
 
-  for (auto& o : observer_list) o.Observe(1);
+  for (auto& o : observer_list)
+    o.Observe(1);
 
-  for (auto& o : observer_list) o.Observe(10);
+  for (auto& o : observer_list)
+    o.Observe(10);
 
   EXPECT_EQ(11, a.total);
   EXPECT_EQ(-11, b.total);
@@ -387,7 +419,8 @@ TEST(ObserverListTest, StdIteratorRemoveFront) {
   observer_list.AddObserver(&d);
 
   bool test_disruptor = true;
-  for (FooList::iterator i = observer_list.begin(), e = observer_list.end(); i != e; ++i) {
+  for (FooList::iterator i = observer_list.begin(), e = observer_list.end();
+       i != e; ++i) {
     i->Observe(1);
     // Check that second call to i->Observe() would crash here.
     if (test_disruptor) {
@@ -396,7 +429,8 @@ TEST(ObserverListTest, StdIteratorRemoveFront) {
     }
   }
 
-  for (auto& o : observer_list) o.Observe(10);
+  for (auto& o : observer_list)
+    o.Observe(10);
 
   EXPECT_EQ(11, a.total);
   EXPECT_EQ(-11, b.total);
@@ -415,9 +449,11 @@ TEST(ObserverListTest, StdIteratorRemoveBack) {
   observer_list.AddObserver(&d);
   observer_list.AddObserver(&disrupter);
 
-  for (auto& o : observer_list) o.Observe(1);
+  for (auto& o : observer_list)
+    o.Observe(1);
 
-  for (auto& o : observer_list) o.Observe(10);
+  for (auto& o : observer_list)
+    o.Observe(10);
 
   EXPECT_EQ(11, a.total);
   EXPECT_EQ(-11, b.total);
@@ -439,7 +475,8 @@ TEST(ObserverListTest, NestedLoop) {
   for (auto& o : observer_list) {
     o.Observe(10);
 
-    for (auto& o : observer_list) o.Observe(1);
+    for (auto& o : observer_list)
+      o.Observe(1);
   }
 
   EXPECT_EQ(15, a.total);
@@ -468,7 +505,8 @@ TEST(ObserverListTest, NonCompactList) {
     // on the first inner pass.
     o.Observe(10);
 
-    for (auto& o : observer_list) o.Observe(1);
+    for (auto& o : observer_list)
+      o.Observe(1);
   }
 
   EXPECT_EQ(13, a.total);
@@ -493,7 +531,8 @@ TEST(ObserverListTest, BecomesEmptyThanNonEmpty) {
     // Get the { nullptr, nullptr } empty list on the first inner pass.
     o.Observe(10);
 
-    for (auto& o : observer_list) o.Observe(1);
+    for (auto& o : observer_list)
+      o.Observe(1);
 
     if (add_observers) {
       observer_list.AddObserver(&a);

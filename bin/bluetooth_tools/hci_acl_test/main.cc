@@ -81,12 +81,10 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  bool cancel_right_away = false;
-  if (cl.HasOption("cancel", nullptr)) cancel_right_away = true;
-
   hci_acl_test::LEConnectionTest le_conn_test;
-  if (!le_conn_test.Run(std::move(hci_dev), bluetooth::common::DeviceAddress(addr_type, addr_bytes),
-                        cancel_right_away)) {
+  if (!le_conn_test.Run(std::move(hci_dev),
+                        bluetooth::common::DeviceAddress(addr_type, addr_bytes),
+                        cl.HasOption("cancel", nullptr))) {
     std::cout << "LE Connection Test failed" << std::endl;
     return EXIT_FAILURE;
   }

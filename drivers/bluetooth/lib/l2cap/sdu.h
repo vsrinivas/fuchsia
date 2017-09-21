@@ -9,8 +9,8 @@
 namespace bluetooth {
 namespace l2cap {
 
-// TODO(armansito): For now we only support basic mode in which 1 SDU = 1 PDU. Revisit once we
-// support other modes.
+// TODO(armansito): For now we only support basic mode in which 1 SDU = 1 PDU.
+// Revisit once we support other modes.
 using SDU = PDU;
 
 }  // namespace l2cap

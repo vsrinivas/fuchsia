@@ -10,8 +10,8 @@
 namespace bluetooth {
 namespace common {
 
-// Represents a 128-bit (16-octet) unsigned integer. This is commonly used for encryption keys and
-// UUID values.
+// Represents a 128-bit (16-octet) unsigned integer. This is commonly used for
+// encryption keys and UUID values.
 using UInt128 = std::array<uint8_t, 16>;
 
 static_assert(sizeof(UInt128) == 16, "UInt128 must take up exactly 16 bytes");

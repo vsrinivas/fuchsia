@@ -9,8 +9,9 @@
 namespace fbl {
 namespace internal {
 
-// ContainerPtrTraits specialization for std::unique_ptr. This allows fbl intrusive containers
-// (fbl::DoublyLinkedList and fbl::SinglyLinkedList) to be used with std::unique_ptr.
+// ContainerPtrTraits specialization for std::unique_ptr. This allows fbl
+// intrusive containers (fbl::DoublyLinkedList and fbl::SinglyLinkedList) to be
+// used with std::unique_ptr.
 //
 // See:
 // https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fbl/include/fbl/intrusive_pointer_traits.h
@@ -29,11 +30,13 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
   static inline T* GetRaw(const PtrType& ptr) { return ptr.get(); }
   static inline const T* GetRaw(const ConstPtrType& ptr) { return ptr.get(); }
   static inline PtrType Take(PtrType& ptr) { return PtrType(fbl::move(ptr)); }
-  static inline void Swap(PtrType& first, PtrType& second) { first.swap(second); }
+  static inline void Swap(PtrType& first, PtrType& second) {
+    first.swap(second);
+  }
 
   static constexpr PtrType MakeSentinel(void* sentinel) {
-    return PtrType(reinterpret_cast<RawPtrType>(reinterpret_cast<uintptr_t>(sentinel) |
-                                                kContainerSentinelBit));
+    return PtrType(reinterpret_cast<RawPtrType>(
+        reinterpret_cast<uintptr_t>(sentinel) | kContainerSentinelBit));
   }
 
   static inline void DetachSentinel(PtrType& ptr) {
@@ -41,13 +44,19 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
     FXL_DCHECK((detached == nullptr) || IsSentinel(detached));
   }
 
-  static constexpr bool IsSentinel(const PtrType& ptr) { return IsSentinel(ptr.get()); }
+  static constexpr bool IsSentinel(const PtrType& ptr) {
+    return IsSentinel(ptr.get());
+  }
   static constexpr bool IsSentinel(RawPtrType ptr) {
     return (reinterpret_cast<uintptr_t>(ptr) & kContainerSentinelBit) != 0;
   }
 
-  static constexpr bool IsValid(const PtrType& ptr) { return IsValid(ptr.get()); }
-  static constexpr bool IsValid(RawPtrType ptr) { return ptr && !IsSentinel(ptr); }
+  static constexpr bool IsValid(const PtrType& ptr) {
+    return IsValid(ptr.get());
+  }
+  static constexpr bool IsValid(RawPtrType ptr) {
+    return ptr && !IsSentinel(ptr);
+  }
 };
 
 }  // namespace internal

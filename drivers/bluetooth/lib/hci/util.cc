@@ -52,9 +52,9 @@ bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
       type = common::DeviceAddress::Type::kLERandom;
       break;
     default:
-      FXL_LOG(WARNING)
-          << "gap: LegacyLowEnergyScanManager: Invalid address type in advertising report: "
-          << static_cast<int>(report.address_type);
+      FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanManager: Invalid address "
+                          "type in advertising report: "
+                       << static_cast<int>(report.address_type);
       return false;
   }
 
@@ -98,4 +98,4 @@ common::DeviceAddress::Type AddressTypeFromHCI(LEPeerAddressType type) {
 }
 
 }  // namespace hci
-}  // namespace adapter
+}  // namespace bluetooth

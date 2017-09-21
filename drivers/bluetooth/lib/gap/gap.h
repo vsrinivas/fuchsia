@@ -53,13 +53,14 @@ enum class DataType : uint8_t {
 };
 // clang-format on
 
-// Constants for the expected size (in octets) of an advertising/EIR/scan-response data field.
+// Constants for the expected size (in octets) of an
+// advertising/EIR/scan-response data field.
 //
-//  * If a constant contains the word "Min", then it specifies a minimum expected length rather than
-//    an exact length.
+//  * If a constant contains the word "Min", then it specifies a minimum
+//    expected length rather than an exact length.
 //
-//  * If a constants contains the word "ElemSize", then the data field is expected to contain a
-//    contiguous array of elements of the specified size.
+//  * If a constants contains the word "ElemSize", then the data field is
+//    expected to contain a contiguous array of elements of the specified size.
 constexpr size_t kAppearanceSize = 2;
 constexpr size_t kManufacturerIdSize = 2;
 constexpr size_t kTxPowerLevelSize = 1;
@@ -73,6 +74,7 @@ constexpr size_t k128BitUuidElemSize = 16;
 
 // Potential values that can be provided in the "Flags" advertising data
 // bitfield.
+// clang-format off
 enum AdvFlag : uint8_t {
   // Octet 0
   kLELimitedDiscoverableMode        = (1 << 0),
@@ -81,17 +83,20 @@ enum AdvFlag : uint8_t {
   kSimultaneousLEAndBREDRController = (1 << 3),
   kSimultaneousLEAndBREDRHost       = (1 << 4),
 };
+// clang-format on
 
-// Constants used in Low Energy Discovery (see Core Spec v5.0, Vol 3, Part C, Appendix A).
+// Constants used in Low Energy Discovery (see Core Spec v5.0, Vol 3, Part C,
+// Appendix A).
 constexpr int64_t kLEGeneralDiscoveryScanMinMs = 10240;       // 10.24 seconds
 constexpr int64_t kLEGeneralDiscoveryScanMinCodedMs = 30720;  // 30.72 seconds
 constexpr int64_t kLEScanFastPeriodMs = 30720;                // 30.72 seconds
 
-// Recommended scan parameters that can be passed directly to the HCI commands. The HCI spec defines
-// the time conversion as follows: Time =  N * 0.625 ms, where N is the value of the constant.
+// Recommended scan parameters that can be passed directly to the HCI commands.
+// The HCI spec defines the time conversion as follows: Time =  N * 0.625 ms,
+// where N is the value of the constant.
 //
-// A constant that contans the word "Coded" is recommended when using the LE Coded PHY. Otherwise
-// the constant is recommended when using the LE 1M PHY.
+// A constant that contans the word "Coded" is recommended when using the LE
+// Coded PHY. Otherwise the constant is recommended when using the LE 1M PHY.
 
 // For user-initiated scanning
 constexpr uint16_t kLEScanFastInterval = 0x0060;       // 60 ms
@@ -112,7 +117,8 @@ constexpr uint16_t kLEScanSlowWindow2Coded = 0x006C;    // 67.5 ms
 // Timeout used for the LE Create Connection command.
 constexpr int64_t kLECreateConnectionTimeoutMs = 20000;  // 20 s
 
-// Connection Interval Timing Parameters (see v5.0, Vol 3, Part C, Section 9.3.12 and Appendix A)
+// Connection Interval Timing Parameters (see v5.0, Vol 3, Part C,
+// Section 9.3.12 and Appendix A)
 constexpr int64_t kLEConnectionParameterTimeoutMs = 30000;  // 30 s
 constexpr int64_t kLEConnectionPauseCentralMs = 1000;       // 1 s
 constexpr int64_t kLEConnectionPausePeripheralMs = 5000;    // 5 s

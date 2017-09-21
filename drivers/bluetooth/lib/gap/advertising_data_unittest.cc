@@ -36,8 +36,8 @@ TEST(AdvertisingDataTest, EncodeKnownURI) {
   AdvertisingData data;
   data.AddURI("https://abc.xyz");
 
-  auto bytes =
-      common::CreateStaticByteBuffer(0x0B, 0x24, 0x17, '/', '/', 'a', 'b', 'c', '.', 'x', 'y', 'z');
+  auto bytes = common::CreateStaticByteBuffer(0x0B, 0x24, 0x17, '/', '/', 'a',
+                                              'b', 'c', '.', 'x', 'y', 'z');
 
   EXPECT_EQ(bytes.size(), data.block_size());
   common::DynamicByteBuffer block(data.block_size());
@@ -49,8 +49,8 @@ TEST(AdvertisingDataTest, EncodeUnknownURI) {
   AdvertisingData data;
   data.AddURI("flubs:xyz");
 
-  auto bytes =
-      common::CreateStaticByteBuffer(0x0B, 0x24, 0x01, 'f', 'l', 'u', 'b', 's', ':', 'x', 'y', 'z');
+  auto bytes = common::CreateStaticByteBuffer(0x0B, 0x24, 0x01, 'f', 'l', 'u',
+                                              'b', 's', ':', 'x', 'y', 'z');
 
   EXPECT_EQ(bytes.size(), data.block_size());
   common::DynamicByteBuffer block(data.block_size());
@@ -65,7 +65,8 @@ TEST(AdvertisingDataTest, CompressServiceUUIDs) {
 
   EXPECT_EQ(1 + 1 + (sizeof(uint16_t) * 2), data.block_size());
 
-  auto bytes = common::CreateStaticByteBuffer(0x05, 0x02, 0x12, 0x02, 0x22, 0x11);
+  auto bytes =
+      common::CreateStaticByteBuffer(0x05, 0x02, 0x12, 0x02, 0x22, 0x11);
 
   EXPECT_EQ(bytes.size(), data.block_size());
   common::DynamicByteBuffer block(data.block_size());
@@ -150,9 +151,9 @@ TEST(AdvertisingDataTest, ServiceData) {
       0x03, 0x03, 0xAA, 0xFE,
       // Eddystone Service (0xFEAA) Data:
       0x10, 0x16, 0xAA, 0xFE,
-      0x10, // Eddystone-Uri type
-      0xEE, // TX Power level -18dBm
-      0x03, // "https://"
+      0x10,  // Eddystone-Uri type
+      0xEE,  // TX Power level -18dBm
+      0x03,  // "https://"
       'f', 'u', 'c', 'h', 's', 'i', 'a', '.', 'c', 'l');
 
   AdvertisingData data;
@@ -180,7 +181,8 @@ TEST(AdvertisingDataTest, Uris) {
 
   auto uris = data.uris();
   EXPECT_EQ(2u, uris.size());
-  EXPECT_TRUE(std::find(uris.begin(), uris.end(), "https://abc.xyz") != uris.end());
+  EXPECT_TRUE(std::find(uris.begin(), uris.end(), "https://abc.xyz") !=
+              uris.end());
   EXPECT_TRUE(std::find(uris.begin(), uris.end(), "flubs:abc") != uris.end());
 }
 
@@ -235,7 +237,8 @@ TEST(AdvertisingDataTest, ReaderParseFields) {
   EXPECT_TRUE(reader.GetNextField(&type, &data));
   EXPECT_EQ(DataType::kFlags, type);
   EXPECT_EQ(1u, data.size());
-  EXPECT_TRUE(common::ContainersEqual(common::CreateStaticByteBuffer(0x00), data));
+  EXPECT_TRUE(
+      common::ContainersEqual(common::CreateStaticByteBuffer(0x00), data));
 
   EXPECT_TRUE(reader.HasMoreData());
   EXPECT_TRUE(reader.GetNextField(&type, &data));
@@ -247,8 +250,8 @@ TEST(AdvertisingDataTest, ReaderParseFields) {
   EXPECT_FALSE(reader.GetNextField(&type, &data));
 }
 
-// Helper for computing the size of a string literal at compile time. sizeof() would have worked
-// too but that counts the null character.
+// Helper for computing the size of a string literal at compile time. sizeof()
+// would have worked too but that counts the null character.
 template <std::size_t N>
 constexpr size_t StringSize(char const (&str)[N]) {
   return N - 1;
@@ -260,8 +263,10 @@ TEST(AdvertisingDataTest, WriteField) {
   constexpr char kValue2[] = "value two";
   constexpr char kValue3[] = "value three";
 
-  // Have just enough space for the first three values (+ 6 for 2 extra octets for each TLV field).
-  constexpr char kBufferSize = StringSize(kValue0) + StringSize(kValue1) + StringSize(kValue2) + 6;
+  // Have just enough space for the first three values (+ 6 for 2 extra octets
+  // for each TLV field).
+  constexpr char kBufferSize =
+      StringSize(kValue0) + StringSize(kValue1) + StringSize(kValue2) + 6;
   common::StaticByteBuffer<kBufferSize> buffer;
 
   AdvertisingDataWriter writer(&buffer);
@@ -271,15 +276,21 @@ TEST(AdvertisingDataTest, WriteField) {
   EXPECT_TRUE(writer.WriteField(DataType::kFlags, common::BufferView(kValue0)));
   EXPECT_EQ(StringSize(kValue0) + 2, writer.bytes_written());
 
-  EXPECT_TRUE(writer.WriteField(DataType::kShortenedLocalName, common::BufferView(kValue1)));
-  EXPECT_EQ(StringSize(kValue0) + 2 + StringSize(kValue1) + 2, writer.bytes_written());
+  EXPECT_TRUE(writer.WriteField(DataType::kShortenedLocalName,
+                                common::BufferView(kValue1)));
+  EXPECT_EQ(StringSize(kValue0) + 2 + StringSize(kValue1) + 2,
+            writer.bytes_written());
 
-  // Trying to write kValue3 should fail because there isn't enough room left in the buffer.
-  EXPECT_FALSE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue3)));
+  // Trying to write kValue3 should fail because there isn't enough room left in
+  // the buffer.
+  EXPECT_FALSE(writer.WriteField(DataType::kCompleteLocalName,
+                                 common::BufferView(kValue3)));
 
   // Writing kValue2 should fill up the buffer.
-  EXPECT_TRUE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue2)));
-  EXPECT_FALSE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue3)));
+  EXPECT_TRUE(writer.WriteField(DataType::kCompleteLocalName,
+                                common::BufferView(kValue2)));
+  EXPECT_FALSE(writer.WriteField(DataType::kCompleteLocalName,
+                                 common::BufferView(kValue3)));
   EXPECT_EQ(buffer.size(), writer.bytes_written());
 
   // Verify the contents.

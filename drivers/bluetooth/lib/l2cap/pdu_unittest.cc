@@ -20,7 +20,8 @@ hci::ACLDataPacketPtr PacketFromBytes(T... data) {
   auto bytes = common::CreateStaticByteBuffer(std::forward<T>(data)...);
   FXL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
 
-  auto packet = hci::ACLDataPacket::New(bytes.size() - sizeof(hci::ACLDataHeader));
+  auto packet =
+      hci::ACLDataPacket::New(bytes.size() - sizeof(hci::ACLDataHeader));
   packet->mutable_view()->mutable_data().Write(bytes);
   packet->InitializeFromBuffer();
 
@@ -104,22 +105,22 @@ TEST(L2CAP_PduTest, ReleaseFragments) {
   ASSERT_FALSE(fragments.is_empty());
   EXPECT_EQ(0u, pdu.fragment_count());
 
-  // Directly count the elements in |fragments| to make sure the count is correct.
+  // Directly count the elements in |fragments| to make sure the count is
+  // correct.
   size_t count = 0;
-  for (__UNUSED const auto& f : fragments) count++;
+  for (__UNUSED const auto& f : fragments)
+    count++;
   EXPECT_EQ(1u, count);
 
   // Check that the fragment we got out is identical to the one we fed in.
-  EXPECT_TRUE(common::ContainersEqual(
-    common::CreateStaticByteBuffer(
-      // ACL data header
-      0x01, 0x00, 0x08, 0x00,
+  EXPECT_TRUE(
+      common::ContainersEqual(common::CreateStaticByteBuffer(
+                                  // ACL data header
+                                  0x01, 0x00, 0x08, 0x00,
 
-      // Basic L2CAP header
-      0x04, 0x00, 0xFF, 0xFF, 'T', 'e', 's', 't'
-    ),
-    fragments.begin()->view().data()
-  ));
+                                  // Basic L2CAP header
+                                  0x04, 0x00, 0xFF, 0xFF, 'T', 'e', 's', 't'),
+                              fragments.begin()->view().data()));
 }
 
 TEST(L2CAP_PduTest, ReadSingleFragment) {
@@ -288,7 +289,8 @@ TEST(L2CAP_PduTest, ViewFirstFragment) {
   auto view = pdu.ViewFirstFragment(1);
   EXPECT_EQ("T", view.AsString());
 
-  // Passing a large number for size. |view| should not exceed the size of the first fragment.
+  // Passing a large number for size. |view| should not exceed the size of the
+  // first fragment.
   view = pdu.ViewFirstFragment(100);
   EXPECT_EQ("Te", view.AsString());
 }

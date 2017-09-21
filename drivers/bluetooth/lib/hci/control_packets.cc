@@ -13,16 +13,20 @@ namespace hci {
 namespace slab_allocators {
 
 // Slab-allocator traits for command packets.
-using LargeCommandTraits =
-    PacketTraits<CommandHeader, kLargeControlPacketSize, kNumLargeControlPackets>;
-using SmallCommandTraits =
-    PacketTraits<CommandHeader, kSmallControlPacketSize, kNumSmallControlPackets>;
+using LargeCommandTraits = PacketTraits<CommandHeader,
+                                        kLargeControlPacketSize,
+                                        kNumLargeControlPackets>;
+using SmallCommandTraits = PacketTraits<CommandHeader,
+                                        kSmallControlPacketSize,
+                                        kNumSmallControlPackets>;
 
-// Slab-allocator traits for event packets. Since event packets are only received (and not sent) and
-// because the packet size cannot be determined before the contents are read from the underlying
-// channel, CommandChannel always allocates the largest possible buffer for events. Thus, a small
-// buffer allocator is not needed.
-using EventTraits = PacketTraits<EventHeader, kLargeControlPacketSize, kNumLargeControlPackets>;
+// Slab-allocator traits for event packets. Since event packets are only
+// received (and not sent) and because the packet size cannot be determined
+// before the contents are read from the underlying channel, CommandChannel
+// always allocates the largest possible buffer for events. Thus, a small buffer
+// allocator is not needed.
+using EventTraits =
+    PacketTraits<EventHeader, kLargeControlPacketSize, kNumLargeControlPackets>;
 
 using LargeCommandAllocator = fbl::SlabAllocator<LargeCommandTraits>;
 using SmallCommandAllocator = fbl::SlabAllocator<SmallCommandTraits>;
@@ -37,7 +41,8 @@ std::unique_ptr<CommandPacket> NewCommandPacket(size_t payload_size) {
 
   if (payload_size <= slab_allocators::kSmallControlPayloadSize) {
     auto buffer = slab_allocators::SmallCommandAllocator::New(payload_size);
-    if (buffer) return buffer;
+    if (buffer)
+      return buffer;
 
     // We failed to allocate a small buffer; fall back to the large allocator.
   }
@@ -48,9 +53,11 @@ std::unique_ptr<CommandPacket> NewCommandPacket(size_t payload_size) {
 }  // namespace
 
 // static
-std::unique_ptr<CommandPacket> CommandPacket::New(OpCode opcode, size_t payload_size) {
+std::unique_ptr<CommandPacket> CommandPacket::New(OpCode opcode,
+                                                  size_t payload_size) {
   auto packet = NewCommandPacket(payload_size);
-  if (!packet) return nullptr;
+  if (!packet)
+    return nullptr;
 
   packet->WriteHeader(opcode);
   return packet;
@@ -58,7 +65,8 @@ std::unique_ptr<CommandPacket> CommandPacket::New(OpCode opcode, size_t payload_
 
 void CommandPacket::WriteHeader(OpCode opcode) {
   mutable_view()->mutable_header()->opcode = htole16(opcode);
-  mutable_view()->mutable_header()->parameter_total_size = view().payload_size();
+  mutable_view()->mutable_header()->parameter_total_size =
+      view().payload_size();
 }
 
 // static
@@ -73,9 +81,15 @@ void EventPacket::InitializeFromBuffer() {
 }  // namespace hci
 }  // namespace bluetooth
 
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::bluetooth::hci::slab_allocators::LargeCommandTraits,
-                                      ::bluetooth::hci::slab_allocators::kMaxNumSlabs, true);
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::bluetooth::hci::slab_allocators::SmallCommandTraits,
-                                      ::bluetooth::hci::slab_allocators::kMaxNumSlabs, true);
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::bluetooth::hci::slab_allocators::EventTraits,
-                                      ::bluetooth::hci::slab_allocators::kMaxNumSlabs, true);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
+    ::bluetooth::hci::slab_allocators::LargeCommandTraits,
+    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    true);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
+    ::bluetooth::hci::slab_allocators::SmallCommandTraits,
+    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    true);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
+    ::bluetooth::hci::slab_allocators::EventTraits,
+    ::bluetooth::hci::slab_allocators::kMaxNumSlabs,
+    true);

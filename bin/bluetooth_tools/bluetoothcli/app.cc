@@ -8,10 +8,10 @@
 
 #include <linenoise.h>
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 #include "commands.h"
 #include "helpers.h"
@@ -25,7 +25,9 @@ App::App()
       adapter_delegate_(this) {
   FXL_DCHECK(context_);
 
-  adapter_manager_ = context_->ConnectToEnvironmentService<bluetooth::control::AdapterManager>();
+  adapter_manager_ =
+      context_
+          ->ConnectToEnvironmentService<bluetooth::control::AdapterManager>();
   FXL_DCHECK(adapter_manager_);
 
   adapter_manager_.set_connection_error_handler([] {
@@ -37,14 +39,15 @@ App::App()
 
   // Register with the AdapterManager as its delegate.
   bluetooth::control::AdapterManagerDelegatePtr delegate;
-  fidl::InterfaceRequest<bluetooth::control::AdapterManagerDelegate> delegate_request =
-      fidl::GetProxy(&delegate);
+  fidl::InterfaceRequest<bluetooth::control::AdapterManagerDelegate>
+      delegate_request = fidl::GetProxy(&delegate);
   manager_delegate_.Bind(std::move(delegate_request));
 
   adapter_manager_->SetDelegate(std::move(delegate));
 
   adapter_manager_->IsBluetoothAvailable([this](bool available) {
-    if (!available) return;
+    if (!available)
+      return;
 
     adapter_manager_->GetActiveAdapter(fidl::GetProxy(&active_adapter_));
     bluetooth::control::AdapterDelegatePtr delegate;
@@ -57,7 +60,8 @@ App::App()
 void App::ReadNextInput() {
   bool call_complete_cb = true;
   auto complete_cb = [this] {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { ReadNextInput(); });
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+        [this] { ReadNextInput(); });
   };
 
   char* line = linenoise("bluetooth> ");
@@ -67,12 +71,14 @@ void App::ReadNextInput() {
   }
 
   auto ac = fxl::MakeAutoCall([&call_complete_cb, line, complete_cb] {
-    if (call_complete_cb) complete_cb();
+    if (call_complete_cb)
+      complete_cb();
     free(line);
   });
 
-  auto split = fxl::SplitStringCopy(fxl::StringView(line, std::strlen(line)), " ",
-                                    fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  auto split =
+      fxl::SplitStringCopy(fxl::StringView(line, std::strlen(line)), " ",
+                           fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (split.empty() || split[0] == "help") {
     linenoiseHistoryAdd(line);
     command_dispatcher_.DescribeAllCommands();
@@ -81,7 +87,8 @@ void App::ReadNextInput() {
 
   bool cmd_found;
   if (!command_dispatcher_.ExecuteCommand(split, complete_cb, &cmd_found)) {
-    if (!cmd_found) CLI_LOG() << "Unknown command: " << line;
+    if (!cmd_found)
+      CLI_LOG() << "Unknown command: " << line;
     return;
   }
 
@@ -89,18 +96,21 @@ void App::ReadNextInput() {
   linenoiseHistoryAdd(line);
 }
 
-void App::OnActiveAdapterChanged(bluetooth::control::AdapterInfoPtr active_adapter) {
+void App::OnActiveAdapterChanged(
+    bluetooth::control::AdapterInfoPtr active_adapter) {
   if (!active_adapter) {
     CLI_LOG() << "\n>>>> Active adapter is (null)";
     active_adapter_ = nullptr;
     return;
   }
 
-  CLI_LOG() << "\n>>>> Active adapter: (id=" << active_adapter->identifier << ")\n";
+  CLI_LOG() << "\n>>>> Active adapter: (id=" << active_adapter->identifier
+            << ")\n";
 
   adapter_manager_->GetActiveAdapter(fidl::GetProxy(&active_adapter_));
   bluetooth::control::AdapterDelegatePtr delegate;
-  fidl::InterfaceRequest<bluetooth::control::AdapterDelegate> request = fidl::GetProxy(&delegate);
+  fidl::InterfaceRequest<bluetooth::control::AdapterDelegate> request =
+      fidl::GetProxy(&delegate);
   adapter_delegate_.Bind(std::move(request));
   active_adapter_->SetDelegate(std::move(delegate));
 }

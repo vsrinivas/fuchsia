@@ -6,9 +6,9 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/fxl/synchronization/sleep.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/synchronization/sleep.h"
 
 namespace bluetooth {
 namespace common {
@@ -33,7 +33,8 @@ TEST(RunTaskSyncTest, RunTaskSync) {
   }
 
   task_runner->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-  if (thrd.joinable()) thrd.join();
+  if (thrd.joinable())
+    thrd.join();
 }
 
 }  // namespace

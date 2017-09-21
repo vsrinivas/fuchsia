@@ -9,7 +9,6 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
-
 namespace bluetooth {
 namespace common {
 namespace {
@@ -17,8 +16,9 @@ namespace {
 // Variants of 16-bit ID 180d
 constexpr uint16_t kId1As16 = 0x180d;
 constexpr uint32_t kId1As32 = 0x0000180d;
-constexpr UInt128 kId1As128 = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00,
-                                0x00, 0x0d, 0x18, 0x00, 0x00}};
+constexpr UInt128 kId1As128 = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80,
+                                0x00, 0x10, 0x00, 0x00, 0x0d, 0x18, 0x00,
+                                0x00}};
 constexpr char kId1AsString[] = "0000180d-0000-1000-8000-00805f9b34fb";
 
 // 16-bit ID for comparison
@@ -26,22 +26,23 @@ constexpr uint16_t kOther16BitId = 0x1800;
 
 // Variants of 32-bit ID 0x12341234
 constexpr uint32_t kId2As32 = 0x12341234;
-constexpr UInt128 kId2As128 = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00,
-                                0x00, 0x34, 0x12, 0x34, 0x12}};
+constexpr UInt128 kId2As128 = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80,
+                                0x00, 0x10, 0x00, 0x00, 0x34, 0x12, 0x34,
+                                0x12}};
 constexpr char kId2AsString[] = "12341234-0000-1000-8000-00805f9b34fb";
 
-constexpr UInt128 kId3As128 = {{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
-                                0x0B,
+constexpr UInt128 kId3As128 = {
+    {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
 
-                                // Make this part be the same as kId1* for the sake of testing.
-                                0x0d, 0x18, 0x00, 0x00}};
+     // Make this part be the same as kId1* for the sake of testing.
+     0x0d, 0x18, 0x00, 0x00}};
 constexpr char kId3AsString[] = "0000180d-0b0a-0908-0706-050403020100";
 
 TEST(UUIDTest, 16Bit) {
   UUID uuid(kId1As16);
 
-  // We perform each comparison twice, swapping the lhs and rhs, to test the top-level equality
-  // operators.
+  // We perform each comparison twice, swapping the lhs and rhs, to test the
+  // top-level equality operators.
 
   // Direct comparison with uint16_t.
   EXPECT_EQ(uuid, kId1As16);
@@ -95,7 +96,8 @@ TEST(UUIDTest, 128Bit) {
 
   EXPECT_EQ(kId3As128, uuid);
 
-  // 16-bit and 32-bit comparison should fail as the base-UUID portions do not match.
+  // 16-bit and 32-bit comparison should fail as the base-UUID portions do not
+  // match.
   EXPECT_NE(kId1As16, uuid);
   EXPECT_NE(kId1As32, uuid);
 
@@ -106,9 +108,9 @@ TEST(UUIDTest, 128Bit) {
 TEST(UUIDTest, CompareBytes) {
   auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
   auto kUuid32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
-  auto kUuid128Bytes =
-      common::CreateStaticByteBuffer(0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10,
-                                     0x00, 0x00, 0x0d, 0x18, 0x00, 0x00);
+  auto kUuid128Bytes = common::CreateStaticByteBuffer(
+      0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00,
+      0x0d, 0x18, 0x00, 0x00);
 
   UUID uuid(kId1As16);
   EXPECT_TRUE(uuid.CompareBytes(kUuid16Bytes));
@@ -176,9 +178,9 @@ TEST(UUIDTest, StringToUuid) {
 TEST(UUIDTest, FromBytes) {
   auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
   auto kUuid32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
-  auto kUuid128Bytes =
-      common::CreateStaticByteBuffer(0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10,
-                                     0x00, 0x00, 0x0d, 0x18, 0x00, 0x00);
+  auto kUuid128Bytes = common::CreateStaticByteBuffer(
+      0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00,
+      0x0d, 0x18, 0x00, 0x00);
 
   auto kInvalid0 = common::CreateStaticByteBuffer(0x0d);
   auto kInvalid1 = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00);

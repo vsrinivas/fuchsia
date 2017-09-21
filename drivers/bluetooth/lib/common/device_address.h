@@ -11,8 +11,8 @@
 namespace bluetooth {
 namespace common {
 
-// Represents a 48-bit BD_ADDR. This data structure can be directly serialized into HCI command
-// payloads.
+// Represents a 48-bit BD_ADDR. This data structure can be directly serialized
+// into HCI command payloads.
 class DeviceAddressBytes {
  public:
   // The default constructor initializes the address to 00:00:00:00:00:00.
@@ -21,13 +21,13 @@ class DeviceAddressBytes {
   // Initializes the contents from |bytes|.
   explicit DeviceAddressBytes(std::initializer_list<uint8_t> bytes);
 
-  // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
-  // ASCII encoded two-digit hexadecimal integer.
+  // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where
+  // each "XX" is an ASCII encoded two-digit hexadecimal integer.
   explicit DeviceAddressBytes(const std::string& bdaddr_string);
 
-  // Resets the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
-  // ASCII encoded two-digit hexadecimal integer. Returns false if |bdaddr_string| is badly
-  // formatted.
+  // Resets the contents from a string of the form XX:XX:XX:XX:XX:XX where each
+  // "XX" is an ASCII encoded two-digit hexadecimal integer. Returns false if
+  // |bdaddr_string| is badly formatted.
   bool SetFromString(const std::string& bdaddr_string);
 
   // Returns a string representation of the device address. The bytes in
@@ -42,9 +42,15 @@ class DeviceAddressBytes {
   void SetToZero();
 
   // Comparison operators.
-  inline bool operator==(const DeviceAddressBytes& other) const { return bytes_ == other.bytes_; }
-  inline bool operator!=(const DeviceAddressBytes& other) const { return !(*this == other); }
-  inline bool operator<(const DeviceAddressBytes& other) const { return bytes_ < other.bytes_; }
+  inline bool operator==(const DeviceAddressBytes& other) const {
+    return bytes_ == other.bytes_;
+  }
+  inline bool operator!=(const DeviceAddressBytes& other) const {
+    return !(*this == other);
+  }
+  inline bool operator<(const DeviceAddressBytes& other) const {
+    return bytes_ < other.bytes_;
+  }
 
   // Returns a hash of the contents of this address.
   std::size_t Hash() const;
@@ -54,11 +60,12 @@ class DeviceAddressBytes {
   std::array<uint8_t, 6> bytes_;
 };
 
-static_assert(sizeof(DeviceAddressBytes) == 6, "DeviceAddressBytes must take up exactly 6 bytes");
+static_assert(sizeof(DeviceAddressBytes) == 6,
+              "DeviceAddressBytes must take up exactly 6 bytes");
 
-// DeviceAddress represents a Bluetooth device address, encapsulating the 48-bit device address and
-// the address type. A DeviceAddress is comparable and can be used as a key in ordered and unordered
-// associative STL containers.
+// DeviceAddress represents a Bluetooth device address, encapsulating the 48-bit
+// device address and the address type. A DeviceAddress is comparable and can be
+// used as a key in ordered and unordered associative STL containers.
 class DeviceAddress {
  public:
   // Bluetooth device address types.
@@ -72,12 +79,12 @@ class DeviceAddress {
     kLEAnonymous,
   };
 
-  // The default constructor initializes the address to 00:00:00:00:00:00 and the type to
-  // Type::kBREDR.
+  // The default constructor initializes the address to 00:00:00:00:00:00 and
+  // the type to Type::kBREDR.
   DeviceAddress();
 
-  // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
-  // ASCII encoded two-digit hexadecimal integer.
+  // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where
+  // each "XX" is an ASCII encoded two-digit hexadecimal integer.
   DeviceAddress(Type type, const std::string& bdaddr_string);
 
   // Initializes the contents from raw data.
@@ -86,15 +93,18 @@ class DeviceAddress {
   Type type() const { return type_; }
   const DeviceAddressBytes& value() const { return value_; }
 
-  // Comparison operators. The equality and less-than operators are needed to support unordered and
-  // ordered containers, respectively.
+  // Comparison operators. The equality and less-than operators are needed to
+  // support unordered and ordered containers, respectively.
   inline bool operator==(const DeviceAddress& other) const {
     return type_ == other.type_ && value_ == other.value_;
   }
-  inline bool operator!=(const DeviceAddress& other) const { return !(*this == other); }
+  inline bool operator!=(const DeviceAddress& other) const {
+    return !(*this == other);
+  }
   inline bool operator<(const DeviceAddress& other) const {
     // Treat |type_| as the higher-order bits
-    return type_ < other.type_ || (type_ == other.type_ && value_ < other.value_);
+    return type_ < other.type_ ||
+           (type_ == other.type_ && value_ < other.value_);
   }
 
   // Returns a hash of the contents of this address.
@@ -111,7 +121,8 @@ class DeviceAddress {
 }  // namespace common
 }  // namespace bluetooth
 
-// Custom specialization of std::hash to support unordered associative containers.
+// Custom specialization of std::hash to support unordered associative
+// containers.
 namespace std {
 
 template <>
@@ -123,7 +134,8 @@ struct hash<::bluetooth::common::DeviceAddress> {
 };
 
 // Stream operators for easy logging
-ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddressBytes& db);
+ostream& operator<<(ostream& os,
+                    const ::bluetooth::common::DeviceAddressBytes& db);
 ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddress& d);
 
 }  // namespace std

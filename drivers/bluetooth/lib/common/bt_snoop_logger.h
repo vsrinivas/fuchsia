@@ -45,7 +45,9 @@ class BTSnoopLogger final {
   //
   // Returns false if there is an error while writing or if Initialize has not
   // been called successfully before, otherwise returns true.
-  bool WritePacket(const ByteBuffer& packet_data, bool is_received, bool is_data);
+  bool WritePacket(const ByteBuffer& packet_data,
+                   bool is_received,
+                   bool is_data);
 
  private:
   // FD to the log file.

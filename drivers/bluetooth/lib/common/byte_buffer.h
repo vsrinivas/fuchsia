@@ -28,35 +28,38 @@ class ByteBuffer {
 
   virtual ~ByteBuffer() = default;
 
-  // Returns a pointer to the beginning of this buffer. The return value is undefined if
-  // the buffer has size 0.
+  // Returns a pointer to the beginning of this buffer. The return value is
+  // undefined if the buffer has size 0.
   virtual const uint8_t* data() const = 0;
 
   // Returns the number of bytes contained in this packet.
   virtual size_t size() const = 0;
 
-  // Returns a BufferView that points to the region of this buffer starting at |pos|
-  // of |size| bytes. If |size| is larger than the size of this BufferView then the returned region
-  // will contain all bytes in this buffer starting at |pos|.
+  // Returns a BufferView that points to the region of this buffer starting at
+  // |pos| of |size| bytes. If |size| is larger than the size of this BufferView
+  // then the returned region will contain all bytes in this buffer starting at
+  // |pos|.
   //
   // For example:
   //
   //  // Get a view of all of |my_buffer|.
   //  const BufferView view = my_buffer.view();
   //
-  //  // Get a view of the first 5 bytes in |my_buffer| (assuming |my_buffer| is large enough).
-  //  view = my_buffer.view(0, 5);
+  //  // Get a view of the first 5 bytes in |my_buffer| (assuming |my_buffer| is
+  //  large enough). view = my_buffer.view(0, 5);
   //
   //  // Get a view of |my_buffer| starting at the second byte.
   //  view = my_buffer.view(2);
   //
-  const BufferView view(size_t pos = 0,
-                        size_t size = std::numeric_limits<std::size_t>::max()) const;
+  const BufferView view(
+      size_t pos = 0,
+      size_t size = std::numeric_limits<std::size_t>::max()) const;
 
-  // Copies |size| bytes of this buffer into |out_buffer| starting at offset |pos| and returns the
-  // number of bytes that were copied. |out_buffer| must be large enough to accomodate the result of
-  // this operation.
-  size_t Copy(MutableByteBuffer* out_buffer, size_t pos = 0,
+  // Copies |size| bytes of this buffer into |out_buffer| starting at offset
+  // |pos| and returns the number of bytes that were copied. |out_buffer| must
+  // be large enough to accomodate the result of this operation.
+  size_t Copy(MutableByteBuffer* out_buffer,
+              size_t pos = 0,
               size_t size = std::numeric_limits<std::size_t>::max()) const;
 
   // Iterator functions.
@@ -71,10 +74,12 @@ class ByteBuffer {
     return data()[pos];
   }
 
-  // Returns the contents of this buffer as a C++ string-like object without copying its contents.
+  // Returns the contents of this buffer as a C++ string-like object without
+  // copying its contents.
   fxl::StringView AsString() const;
 
-  // Returns the contents of this buffer as a C++ string after copying its contents.
+  // Returns the contents of this buffer as a C++ string after copying its
+  // contents.
   std::string ToString() const;
 };
 
@@ -84,8 +89,8 @@ class MutableByteBuffer : public ByteBuffer {
  public:
   ~MutableByteBuffer() override = default;
 
-  // Returns a pointer to the beginning of this buffer. The return value is undefined if
-  // the buffer has size 0.
+  // Returns a pointer to the beginning of this buffer. The return value is
+  // undefined if the buffer has size 0.
   virtual uint8_t* mutable_data() = 0;
 
   // Random access operator that allows mutations.
@@ -99,14 +104,16 @@ class MutableByteBuffer : public ByteBuffer {
     Write(data.data(), data.size(), pos);
   }
 
-  // Writes |size| octets of data starting from |data| into this buffer starting at |pos|. |data|
-  // must point to a valid piece of memory if |size| is non-zero. If |size| is zero, then this
-  // operation is a NOP.
+  // Writes |size| octets of data starting from |data| into this buffer starting
+  // at |pos|. |data| must point to a valid piece of memory if |size| is
+  // non-zero. If |size| is zero, then this operation is a NOP.
   void Write(const uint8_t* data, size_t size, size_t pos = 0);
 
-  // Behaves exactly like ByteBuffer::View but returns the result in a MutableBufferView instead.
-  MutableBufferView mutable_view(size_t pos = 0,
-                                 size_t size = std::numeric_limits<std::size_t>::max());
+  // Behaves exactly like ByteBuffer::View but returns the result in a
+  // MutableBufferView instead.
+  MutableBufferView mutable_view(
+      size_t pos = 0,
+      size_t size = std::numeric_limits<std::size_t>::max());
 
   // Sets the contents of the buffer to 0s.
   void SetToZeros() { Fill(0); }
@@ -122,7 +129,9 @@ class MutableByteBuffer : public ByteBuffer {
 template <size_t BufferSize>
 class StaticByteBuffer : public MutableByteBuffer {
  public:
-  StaticByteBuffer() { static_assert(BufferSize, "|BufferSize| must be non-zero"); }
+  StaticByteBuffer() {
+    static_assert(BufferSize, "|BufferSize| must be non-zero");
+  }
   ~StaticByteBuffer() override = default;
 
   // Variadic template constructor to initialize a StaticByteBuffer using an
@@ -134,7 +143,8 @@ class StaticByteBuffer : public MutableByteBuffer {
   template <typename... T>
   StaticByteBuffer(T... bytes) : buffer_{{static_cast<uint8_t>(bytes)...}} {
     static_assert(BufferSize, "|BufferSize| must be non-zero");
-    static_assert(BufferSize == sizeof...(T), "|BufferSize| must match initializer list count");
+    static_assert(BufferSize == sizeof...(T),
+                  "|BufferSize| must match initializer list count");
   }
 
   // ByteBuffer overrides

@@ -15,7 +15,8 @@ const char kUsageString[] =
     "Options:\n"
     "    --help            Show this help message\n"
     "    --path=<path>     The path to the snoop log file\n"
-    "    --dev=<hci-dev>   Path to the HCI device (default: /dev/class/bt-hci/000)\n";
+    "    --dev=<hci-dev>   Path to the HCI device (default: "
+    "/dev/class/bt-hci/000)\n";
 
 const char kDefaultHCIDev[] = "/dev/class/bt-hci/000";
 

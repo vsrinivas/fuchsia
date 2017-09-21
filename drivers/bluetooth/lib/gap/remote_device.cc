@@ -11,8 +11,11 @@
 namespace bluetooth {
 namespace gap {
 
-RemoteDevice::RemoteDevice(const std::string& identifier, TechnologyType technology,
-                           const common::DeviceAddress& address, bool connectable, bool temporary)
+RemoteDevice::RemoteDevice(const std::string& identifier,
+                           TechnologyType technology,
+                           const common::DeviceAddress& address,
+                           bool connectable,
+                           bool temporary)
     : identifier_(identifier),
       technology_(technology),
       address_(address),
@@ -23,7 +26,9 @@ RemoteDevice::RemoteDevice(const std::string& identifier, TechnologyType technol
              (technology_ == TechnologyType::kClassic));
 }
 
-void RemoteDevice::SetLowEnergyData(int8_t rssi, const common::ByteBuffer& advertising_data) {
+void RemoteDevice::SetLowEnergyData(
+    int8_t rssi,
+    const common::ByteBuffer& advertising_data) {
   FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
   FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
 
@@ -32,13 +37,15 @@ void RemoteDevice::SetLowEnergyData(int8_t rssi, const common::ByteBuffer& adver
 
   // Reallocate the advertising data buffer only if we need more space.
   if (advertising_data_buffer_.size() < advertising_data.size()) {
-    advertising_data_buffer_ = common::DynamicByteBuffer(advertising_data.size());
+    advertising_data_buffer_ =
+        common::DynamicByteBuffer(advertising_data.size());
   }
 
   advertising_data.Copy(&advertising_data_buffer_);
 }
 
-void RemoteDevice::SetLowEnergyConnectionData(const hci::Connection::LowEnergyParameters& params) {
+void RemoteDevice::SetLowEnergyConnectionData(
+    const hci::Connection::LowEnergyParameters& params) {
   FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
   FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
   FXL_DCHECK(connectable());
@@ -47,8 +54,8 @@ void RemoteDevice::SetLowEnergyConnectionData(const hci::Connection::LowEnergyPa
 }
 
 std::string RemoteDevice::ToString() const {
-  return fxl::StringPrintf("{remote-device id: %s, address: %s}", identifier_.c_str(),
-                           address_.ToString().c_str());
+  return fxl::StringPrintf("{remote-device id: %s, address: %s}",
+                           identifier_.c_str(), address_.ToString().c_str());
 }
 
 }  // namespace gap

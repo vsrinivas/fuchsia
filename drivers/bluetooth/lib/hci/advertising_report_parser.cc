@@ -17,7 +17,8 @@ AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
   const auto& params = event.view().payload<LEMetaEventParams>();
   FXL_DCHECK(params.subevent_code == kLEAdvertisingReportSubeventCode);
 
-  auto subevent_params = event.le_event_params<LEAdvertisingReportSubeventParams>();
+  auto subevent_params =
+      event.le_event_params<LEAdvertisingReportSubeventParams>();
 
   remaining_reports_ = subevent_params->num_reports;
   remaining_bytes_ = event.view().payload_size() - sizeof(LEMetaEventParams) -
@@ -25,14 +26,17 @@ AdvertisingReportParser::AdvertisingReportParser(const EventPacket& event)
   ptr_ = subevent_params->reports;
 }
 
-bool AdvertisingReportParser::GetNextReport(const LEAdvertisingReportData** out_data,
-                                            int8_t* out_rssi) {
+bool AdvertisingReportParser::GetNextReport(
+    const LEAdvertisingReportData** out_data,
+    int8_t* out_rssi) {
   FXL_DCHECK(out_data);
   FXL_DCHECK(out_rssi);
 
-  if (encountered_error_ || !HasMoreReports()) return false;
+  if (encountered_error_ || !HasMoreReports())
+    return false;
 
-  const LEAdvertisingReportData* data = reinterpret_cast<const LEAdvertisingReportData*>(ptr_);
+  const LEAdvertisingReportData* data =
+      reinterpret_cast<const LEAdvertisingReportData*>(ptr_);
 
   // Each report contains the all the report data, followed by the advertising
   // payload, followed by a single octet for the RSSI.
@@ -54,7 +58,8 @@ bool AdvertisingReportParser::GetNextReport(const LEAdvertisingReportData** out_
 }
 
 bool AdvertisingReportParser::HasMoreReports() {
-  if (encountered_error_) return false;
+  if (encountered_error_)
+    return false;
 
   if (!!remaining_reports_ != !!remaining_bytes_) {
     // There should be no bytes remaining if there are no reports left to parse.

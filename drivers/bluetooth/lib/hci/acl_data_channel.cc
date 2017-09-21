@@ -24,10 +24,12 @@ DataBufferInfo::DataBufferInfo(size_t max_data_length, size_t max_num_packets)
 DataBufferInfo::DataBufferInfo() : max_data_length_(0u), max_num_packets_(0u) {}
 
 bool DataBufferInfo::operator==(const DataBufferInfo& other) const {
-  return max_data_length_ == other.max_data_length_ && max_num_packets_ == other.max_num_packets_;
+  return max_data_length_ == other.max_data_length_ &&
+         max_num_packets_ == other.max_num_packets_;
 }
 
-ACLDataChannel::ACLDataChannel(Transport* transport, zx::channel hci_acl_channel)
+ACLDataChannel::ACLDataChannel(Transport* transport,
+                               zx::channel hci_acl_channel)
     : transport_(transport),
       channel_(std::move(hci_acl_channel)),
       channel_wait_(channel_.get(), ZX_CHANNEL_READABLE),
@@ -35,7 +37,8 @@ ACLDataChannel::ACLDataChannel(Transport* transport, zx::channel hci_acl_channel
       event_handler_id_(0u),
       num_sent_packets_(0u),
       le_num_sent_packets_(0u) {
-  // TODO(armansito): We'll need to pay attention to ZX_CHANNEL_WRITABLE as well.
+  // TODO(armansito): We'll need to pay attention to ZX_CHANNEL_WRITABLE as
+  // well.
   FXL_DCHECK(transport_);
   FXL_DCHECK(channel_.is_valid());
 }
@@ -54,8 +57,10 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   le_buffer_info_ = le_buffer_info;
 
   auto setup_handler_task = [this] {
-    channel_wait_.set_handler(fbl::BindMember(this, &ACLDataChannel::OnChannelReady));
-    zx_status_t status = channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+    channel_wait_.set_handler(
+        fbl::BindMember(this, &ACLDataChannel::OnChannelReady));
+    zx_status_t status =
+        channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: ACLDataChannel: failed channel setup: "
                      << zx_status_get_string(status);
@@ -69,11 +74,13 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   common::RunTaskSync(setup_handler_task, io_task_runner_);
 
   // TODO(jamuraa): return whether we successfully initialized?
-  if (channel_wait_.object() == ZX_HANDLE_INVALID) return;
+  if (channel_wait_.object() == ZX_HANDLE_INVALID)
+    return;
 
   event_handler_id_ = transport_->command_channel()->AddEventHandler(
       kNumberOfCompletedPacketsEventCode,
-      std::bind(&ACLDataChannel::NumberOfCompletedPacketsCallback, this, std::placeholders::_1),
+      std::bind(&ACLDataChannel::NumberOfCompletedPacketsCallback, this,
+                std::placeholders::_1),
       io_task_runner_);
   FXL_DCHECK(event_handler_id_);
 
@@ -84,16 +91,19 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
 
 void ACLDataChannel::ShutDown() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  if (!is_initialized_) return;
+  if (!is_initialized_)
+    return;
 
   FXL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
 
   auto handler_cleanup_task = [this] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: ACLDataChannel: canceling I/O handler";
-    zx_status_t status = channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+    zx_status_t status =
+        channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: " << zx_status_get_string(status);
+      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
+                       << zx_status_get_string(status);
     }
   };
 
@@ -118,9 +128,11 @@ void ACLDataChannel::SetDataRxHandler(const DataReceivedCallback& rx_callback) {
   rx_callback_ = rx_callback;
 }
 
-bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet, Connection::LinkType ll_type) {
+bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet,
+                                Connection::LinkType ll_type) {
   if (!is_initialized_) {
-    FXL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    FXL_VLOG(1)
+        << "hci: ACLDataChannel: Cannot send packets while uninitialized";
     return false;
   }
 
@@ -140,10 +152,12 @@ bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet, Connection::LinkTy
   return true;
 }
 
-bool ACLDataChannel::SendPackets(fbl::DoublyLinkedList<ACLDataPacketPtr> packets,
-                                 Connection::LinkType ll_type) {
+bool ACLDataChannel::SendPackets(
+    fbl::DoublyLinkedList<ACLDataPacketPtr> packets,
+    Connection::LinkType ll_type) {
   if (!is_initialized_) {
-    FXL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    FXL_VLOG(1)
+        << "hci: ACLDataChannel: Cannot send packets while uninitialized";
     return false;
   }
 
@@ -180,15 +194,18 @@ const DataBufferInfo& ACLDataChannel::GetLEBufferInfo() const {
 }
 
 size_t ACLDataChannel::GetBufferMTU(Connection::LinkType ll_type) const {
-  if (ll_type == Connection::LinkType::kACL) return bredr_buffer_info_.max_data_length();
+  if (ll_type == Connection::LinkType::kACL)
+    return bredr_buffer_info_.max_data_length();
   return GetLEBufferInfo().max_data_length();
 }
 
-void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) {
+void ACLDataChannel::NumberOfCompletedPacketsCallback(
+    const EventPacket& event) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
-  const auto& payload = event.view().payload<NumberOfCompletedPacketsEventParams>();
+  const auto& payload =
+      event.view().payload<NumberOfCompletedPacketsEventParams>();
   size_t total_comp_packets = 0;
   size_t le_total_comp_packets = 0;
 
@@ -199,7 +216,8 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) 
 
     auto iter = pending_links_.find(le16toh(data->connection_handle));
     if (iter == pending_links_.end()) {
-      FXL_LOG(WARNING) << "Controller reported sent packets on unknown connection handle!";
+      FXL_LOG(WARNING)
+          << "Controller reported sent packets on unknown connection handle!";
       continue;
     }
 
@@ -208,12 +226,14 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) 
     FXL_DCHECK(iter->second.count);
     if (iter->second.count < comp_packets) {
       FXL_LOG(WARNING) << fxl::StringPrintf(
-          "Packet tx count mismatch! (handle: 0x%04x, expected: %zu, actual : %u)",
+          "Packet tx count mismatch! (handle: 0x%04x, expected: %zu, actual : "
+          "%u)",
           le16toh(data->connection_handle), iter->second.count, comp_packets);
       iter->second.count = 0u;
 
-      // On debug builds it's better to assert and crash so that we can catch controller bugs. On
-      // release builds we log the warning message above and continue.
+      // On debug builds it's better to assert and crash so that we can catch
+      // controller bugs. On release builds we log the warning message above and
+      // continue.
       FXL_NOTREACHED() << "Controller reported incorrect packet count!";
     } else {
       iter->second.count -= comp_packets;
@@ -236,21 +256,26 @@ void ACLDataChannel::NumberOfCompletedPacketsCallback(const EventPacket& event) 
 }
 
 void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
-  if (!is_initialized_) return;
+  if (!is_initialized_)
+    return;
 
   size_t avail_bredr_packets = GetNumFreeBREDRPacketsLocked();
   size_t avail_le_packets = GetNumFreeLEPacketsLocked();
 
-  // Based on what we know about controller buffer availability, we process packets that are
-  // currently in |send_queue_|. The packets that can be sent are added to |to_send|. Packets that
-  // cannot be sent remain in |send_queue_|.
+  // Based on what we know about controller buffer availability, we process
+  // packets that are currently in |send_queue_|. The packets that can be sent
+  // are added to |to_send|. Packets that cannot be sent remain in
+  // |send_queue_|.
   DataPacketQueue to_send;
   for (auto iter = send_queue_.begin(); iter != send_queue_.end();) {
-    if (!avail_bredr_packets && !avail_le_packets) break;
+    if (!avail_bredr_packets && !avail_le_packets)
+      break;
 
-    if (send_queue_.front().ll_type == Connection::LinkType::kACL && avail_bredr_packets) {
+    if (send_queue_.front().ll_type == Connection::LinkType::kACL &&
+        avail_bredr_packets) {
       --avail_bredr_packets;
-    } else if (send_queue_.front().ll_type == Connection::LinkType::kLE && avail_le_packets) {
+    } else if (send_queue_.front().ll_type == Connection::LinkType::kLE &&
+               avail_le_packets) {
       --avail_le_packets;
     } else {
       // Cannot send packet yet, so skip it.
@@ -262,7 +287,8 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
     send_queue_.erase(iter++);
   }
 
-  if (to_send.empty()) return;
+  if (to_send.empty())
+    return;
 
   size_t bredr_packets_sent = 0;
   size_t le_packets_sent = 0;
@@ -270,10 +296,12 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
     const QueuedDataPacket& packet = to_send.front();
 
     auto packet_bytes = packet.packet->view().data();
-    zx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
+    zx_status_t status =
+        channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
     if (status < 0) {
-      FXL_LOG(ERROR) << "hci: ACLDataChannel: Failed to send data packet to HCI driver ("
-                     << zx_status_get_string(status) << ") - dropping packet";
+      FXL_LOG(ERROR)
+          << "hci: ACLDataChannel: Failed to send data packet to HCI driver ("
+          << zx_status_get_string(status) << ") - dropping packet";
       to_send.pop_front();
       continue;
     }
@@ -286,7 +314,8 @@ void ACLDataChannel::TrySendNextQueuedPacketsLocked() {
 
     auto iter = pending_links_.find(packet.packet->connection_handle());
     if (iter == pending_links_.end()) {
-      pending_links_[packet.packet->connection_handle()] = PendingPacketData(packet.ll_type);
+      pending_links_[packet.packet->connection_handle()] =
+          PendingPacketData(packet.ll_type);
     } else {
       iter->second.count++;
     }
@@ -304,7 +333,8 @@ size_t ACLDataChannel::GetNumFreeBREDRPacketsLocked() const {
 }
 
 size_t ACLDataChannel::GetNumFreeLEPacketsLocked() const {
-  if (!le_buffer_info_.IsAvailable()) return GetNumFreeBREDRPacketsLocked();
+  if (!le_buffer_info_.IsAvailable())
+    return GetNumFreeBREDRPacketsLocked();
 
   FXL_DCHECK(le_buffer_info_.max_num_packets() >= le_num_sent_packets_);
   return le_buffer_info_.max_num_packets() - le_num_sent_packets_;
@@ -340,14 +370,18 @@ void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
   le_num_sent_packets_ += count;
 }
 
-async_wait_result_t ACLDataChannel::OnChannelReady(async_t* async, zx_status_t status,
-                                                   const zx_packet_signal_t* signal) {
+async_wait_result_t ACLDataChannel::OnChannelReady(
+    async_t* async,
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: " << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: "
+                   << zx_status_get_string(status);
     return ASYNC_WAIT_FINISHED;
   }
 
-  if (!is_initialized_) return ASYNC_WAIT_AGAIN;
+  if (!is_initialized_)
+    return ASYNC_WAIT_AGAIN;
 
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
@@ -358,8 +392,8 @@ async_wait_result_t ACLDataChannel::OnChannelReady(async_t* async, zx_status_t s
   }
 
   for (size_t count = 0; count < signal->count; count++) {
-    // Allocate a buffer for the event. Since we don't know the size beforehand we allocate the
-    // largest possible buffer.
+    // Allocate a buffer for the event. Since we don't know the size beforehand
+    // we allocate the largest possible buffer.
     auto packet = ACLDataPacket::New(slab_allocators::kLargeACLDataPayloadSize);
     if (!packet) {
       FXL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
@@ -367,8 +401,9 @@ async_wait_result_t ACLDataChannel::OnChannelReady(async_t* async, zx_status_t s
     }
     uint32_t read_size;
     auto packet_bytes = packet->mutable_view()->mutable_data();
-    zx_status_t read_status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
-                                            &read_size, nullptr, 0, nullptr);
+    zx_status_t read_status =
+        channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
+                      &read_size, nullptr, 0, nullptr);
     if (read_status < 0) {
       FXL_VLOG(1) << "hci: ACLDataChannel: Failed to read RX bytes: "
                   << zx_status_get_string(status);
@@ -379,18 +414,21 @@ async_wait_result_t ACLDataChannel::OnChannelReady(async_t* async, zx_status_t s
 
     if (read_size < sizeof(ACLDataHeader)) {
       FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed data packet - "
-                     << "expected at least " << sizeof(ACLDataHeader) << " bytes, "
+                     << "expected at least " << sizeof(ACLDataHeader)
+                     << " bytes, "
                      << "got " << read_size;
       // TODO(jamuraa): signal stream error somehow
       continue;
     }
 
     const size_t rx_payload_size = read_size - sizeof(ACLDataHeader);
-    const size_t size_from_header = le16toh(packet->view().header().data_total_length);
+    const size_t size_from_header =
+        le16toh(packet->view().header().data_total_length);
     if (size_from_header != rx_payload_size) {
       FXL_LOG(ERROR) << "hci: ACLDataChannel: Malformed packet - "
                      << "payload size from header (" << size_from_header << ")"
-                     << " does not match received payload size: " << rx_payload_size;
+                     << " does not match received payload size: "
+                     << rx_payload_size;
       // TODO(jamuraa): signal stream error somehow
       continue;
     }

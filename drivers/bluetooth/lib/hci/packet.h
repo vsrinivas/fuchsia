@@ -17,25 +17,29 @@
 namespace bluetooth {
 namespace hci {
 
-// A Packet is a move-only object that can be used to hold sent and received HCI packets. The Packet
-// template is parameterized over the protocol packet header type.
+// A Packet is a move-only object that can be used to hold sent and received HCI
+// packets. The Packet template is parameterized over the protocol packet header
+// type.
 //
-// Instances of Packet cannot be created directly as the template does not specify the backing
-// buffer, which should be provided by a subclass.
+// Instances of Packet cannot be created directly as the template does not
+// specify the backing buffer, which should be provided by a subclass.
 //
-// Header-type-specific functionality can be provided in specializations of the Packet template.
+// Header-type-specific functionality can be provided in specializations of the
+// Packet template.
 //
 // USAGE:
 //
-//   Each Packet consists of a PacketView into a buffer that actually stores the data. A buffer
-//   should be provided in a subclass implementation. While the buffer must be sufficiently large
-//   to store the packet, the packet contents can be much smaller.
+//   Each Packet consists of a PacketView into a buffer that actually stores the
+//   data. A buffer should be provided in a subclass implementation. While the
+//   buffer must be sufficiently large to store the packet, the packet contents
+//   can be much smaller.
 //
 //     template <typename HeaderType, size_t BufferSize>
 //     class FixedBufferPacket : public Packet<HeaderType> {
 //      public:
 //       void Init(size_t payload_size) {
-//         this->init_view(common::MutablePacketView<HeaderType>(&buffer_, payload_size));
+//         this->init_view(common::MutablePacketView<HeaderType>(&buffer_,
+//         payload_size));
 //       }
 //
 //      private:
@@ -49,8 +53,8 @@ namespace hci {
 //
 //     auto foo = packet->view().header().some_header_field;
 //
-//   Use Packet::mutable_view() to obtain a mutable view into the packet, which allows the packet
-//   contents and the size of the packet to be modified:
+//   Use Packet::mutable_view() to obtain a mutable view into the packet, which
+//   allows the packet contents and the size of the packet to be modified:
 //
 //     packet->mutable_view()->mutable_header()->some_header_field = foo;
 //     packet->mutable_view()->set_payload_size(my_new_size);
@@ -61,8 +65,8 @@ namespace hci {
 //
 // SPECIALIZATIONS:
 //
-//   Additional functionality that is specific to a protocol header type can be provided in a
-//   specialization of the Packet template.
+//   Additional functionality that is specific to a protocol header type can be
+//   provided in a specialization of the Packet template.
 //
 //     using MagicPacket = Packet<MagicHeader>;
 //
@@ -78,15 +82,16 @@ namespace hci {
 //         std::make_unique<FixedBufferPacket<MagicHeader, 255>>();
 //     packet->InitPancakes();
 //
-//   This pattern is used by the CommandPacket, EventPacket, and ACLDataPacket classes (see
-//   control_packets.h and acl_data_packet.h).
+//   This pattern is used by the CommandPacket, EventPacket, and ACLDataPacket
+//   classes (see control_packets.h and acl_data_packet.h).
 //
 // THREAD-SAFETY:
 //
 //   Packet is NOT thread-safe without external locking.
 
-// PacketBase provides the basic view and fbl::DoublyLinkedList functionality of a Packet. Intended
-// to be inherited by the Packet template and all of its specializations.
+// PacketBase provides the basic view and fbl::DoublyLinkedList functionality of
+// a Packet. Intended to be inherited by the Packet template and all of its
+// specializations.
 template <typename HeaderType, typename T>
 class PacketBase : public fbl::DoublyLinkedListable<std::unique_ptr<T>> {
  public:
@@ -98,7 +103,8 @@ class PacketBase : public fbl::DoublyLinkedListable<std::unique_ptr<T>> {
  protected:
   PacketBase() = default;
 
-  // Called by derived classes to initialize |view_| after initializing the corresponding buffer.
+  // Called by derived classes to initialize |view_| after initializing the
+  // corresponding buffer.
   void init_view(const common::MutablePacketView<HeaderType>& view) {
     FXL_DCHECK(!view_.is_valid());
     FXL_DCHECK(view.is_valid());
@@ -111,8 +117,8 @@ class PacketBase : public fbl::DoublyLinkedListable<std::unique_ptr<T>> {
   FXL_DISALLOW_COPY_AND_ASSIGN(PacketBase);
 };
 
-// The basic Packet template. See control_packets.h and acl_data_packet.h for specializations that
-// add functionality beyond that of PacketBase.
+// The basic Packet template. See control_packets.h and acl_data_packet.h for
+// specializations that add functionality beyond that of PacketBase.
 template <typename HeaderType>
 class Packet : public PacketBase<HeaderType, Packet<HeaderType>> {
  protected:

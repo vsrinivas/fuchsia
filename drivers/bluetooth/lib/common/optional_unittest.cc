@@ -68,7 +68,8 @@ TEST(OptionalTest, Move) {
 
   auto obj = std::move(*optional_obj);
 
-  // |optional_obj| still contains a value even though its contents have been moved.
+  // |optional_obj| still contains a value even though its contents have been
+  // moved.
   EXPECT_TRUE(optional_obj);
   EXPECT_EQ(0, optional_obj->value);
   EXPECT_EQ(5, obj.value);

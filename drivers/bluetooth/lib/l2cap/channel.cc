@@ -32,15 +32,16 @@ ChannelImpl::~ChannelImpl() {
 
   std::lock_guard<std::mutex> lock(mtx_);
 
-  if (link_) link_->RemoveChannel(this);
+  if (link_)
+    link_->RemoveChannel(this);
 }
 
 bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   FXL_DCHECK(sdu);
 
   if (sdu->size() > tx_mtu_) {
-    FXL_VLOG(1) << fxl::StringPrintf("l2cap: SDU size exceeds channel TxMTU (channel-id: 0x%04x)",
-                                     id());
+    FXL_VLOG(1) << fxl::StringPrintf(
+        "l2cap: SDU size exceeds channel TxMTU (channel-id: 0x%04x)", id());
     return false;
   }
 
@@ -51,8 +52,8 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
     return false;
   }
 
-  link_->io_task_runner()->PostTask(
-      send_sdu_task_factory_.MakeTask(fxl::MakeCopyable([ this, sdu = std::move(sdu) ] {
+  link_->io_task_runner()->PostTask(send_sdu_task_factory_.MakeTask(
+      fxl::MakeCopyable([ this, sdu = std::move(sdu) ] {
         std::lock_guard<std::mutex> lock(mtx_);
 
         // Check if the link was closed in the mean time.
@@ -61,8 +62,9 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
           return;
         }
 
-        // TODO(armansito): Since we only support Basic Mode we send the SDU out right away. This is
-        // the point where a channel mode implementation should take over.
+        // TODO(armansito): Since we only support Basic Mode we send the SDU out
+        // right away. This is the point where a channel mode implementation
+        // should take over.
 
         link_->SendBasicFrame(id(), *sdu);
       })));
@@ -77,17 +79,19 @@ void ChannelImpl::SetRxHandler(const RxCallback& rx_cb,
 
   std::lock_guard<std::mutex> lock(mtx_);
 
-  // TODO(armansito): Consider wrapping |rx_cb| around a common::CancelableCallback to make it
-  // cancelable when a new |rx_cb| is set. This would guarantee that a previously set callback will
-  // never run after this method returns and the packet carried by the canceled |rx_cb| would be
+  // TODO(armansito): Consider wrapping |rx_cb| around a
+  // common::CancelableCallback to make it cancelable when a new |rx_cb| is set.
+  // This would guarantee that a previously set callback will never run after
+  // this method returns and the packet carried by the canceled |rx_cb| would be
   // dropped.
   rx_cb_ = rx_cb;
   rx_task_runner_ = rx_task_runner;
 
   if (link_ && rx_cb_) {
     while (!pending_rx_sdus_.empty()) {
-      auto cb = fxl::MakeCopyable(
-          [ cb = rx_cb_, sdu = std::move(pending_rx_sdus_.front()) ] { cb(sdu); });
+      auto cb = fxl::MakeCopyable([
+        cb = rx_cb_, sdu = std::move(pending_rx_sdus_.front())
+      ] { cb(sdu); });
       pending_rx_sdus_.pop();
       rx_task_runner_->PostTask(cb);
     }
@@ -111,10 +115,11 @@ void ChannelImpl::OnLinkClosed() {
     // Drop any previously buffered SDUs.
     pending_rx_sdus_ = {};
 
-    if (!closed_callback()) return;
+    if (!closed_callback())
+      return;
 
-    // We'll invoke the callback synchronously. We copy the callback here and invoke it outside of
-    // this block to prevent a potential deadlock.
+    // We'll invoke the callback synchronously. We copy the callback here and
+    // invoke it outside of this block to prevent a potential deadlock.
     cb = closed_callback();
   }
 
@@ -122,12 +127,12 @@ void ChannelImpl::OnLinkClosed() {
 }
 
 void ChannelImpl::HandleRxPdu(PDU&& pdu) {
-  // Data is always received on the HCI I/O thread which is assumed to be different from this
-  // Channel's creation thread.
+  // Data is always received on the HCI I/O thread which is assumed to be
+  // different from this Channel's creation thread.
   FXL_DCHECK(!IsCreationThreadCurrent());
 
-  // TODO(armansito): This is the point where the channel mode implementation should take over the
-  // PDU. Since we only support basic mode: SDU == PDU.
+  // TODO(armansito): This is the point where the channel mode implementation
+  // should take over the PDU. Since we only support basic mode: SDU == PDU.
 
   std::lock_guard<std::mutex> lock(mtx_);
   FXL_DCHECK(link_);
@@ -139,7 +144,8 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
   }
 
   FXL_DCHECK(rx_task_runner_);
-  rx_task_runner_->PostTask(fxl::MakeCopyable([ cb = rx_cb_, pdu = std::move(pdu) ] { cb(pdu); }));
+  rx_task_runner_->PostTask(
+      fxl::MakeCopyable([ cb = rx_cb_, pdu = std::move(pdu) ] { cb(pdu); }));
 }
 
 }  // namespace internal

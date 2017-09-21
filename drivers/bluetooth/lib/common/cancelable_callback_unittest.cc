@@ -9,10 +9,10 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/fxl/synchronization/sleep.h"
-#include "lib/fxl/time/stopwatch.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/synchronization/sleep.h"
+#include "lib/fxl/time/stopwatch.h"
 
 namespace bluetooth {
 namespace common {
@@ -54,7 +54,8 @@ TEST(CancelableCallbackTest, CancelAndRunOnDifferentThreads) {
   thrd_runner->PostTask(cb);
   thrd_runner->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
 
-  if (thrd.joinable()) thrd.join();
+  if (thrd.joinable())
+    thrd.join();
 
   EXPECT_FALSE(called);
 }
@@ -91,8 +92,8 @@ TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [&ready] { return ready; });
 
-    // This should block for at least |kBlockTimeMs| milliseconds as that is how long |callback|
-    // will sleep for.
+    // This should block for at least |kBlockTimeMs| milliseconds as that is how
+    // long |callback| will sleep for.
     factory.CancelAll();
     ASSERT_GE(sw.Elapsed().ToMilliseconds(), kBlockTimeMs);
   }

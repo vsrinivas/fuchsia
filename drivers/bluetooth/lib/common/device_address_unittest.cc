@@ -43,7 +43,8 @@ TEST(DeviceAddressBytesTest, SetFromString) {
   EXPECT_TRUE(bdaddr.SetFromString("03:7F:FF:02:0F:01"));
   EXPECT_EQ("03:7F:FF:02:0F:01", bdaddr.ToString());
 
-  // Test the constructor with a valid string (an invalid one would fail fatally).
+  // Test the constructor with a valid string (an invalid one would fail
+  // fatally).
   bdaddr = DeviceAddressBytes("03:7F:FF:02:0F:01");
   EXPECT_EQ("03:7F:FF:02:0F:01", bdaddr.ToString());
 }

@@ -10,8 +10,8 @@
 namespace bluetooth {
 namespace common {
 
-// This class provides functionality that is similar to that of C++17's std::optional but in a way
-// that is more limited.
+// This class provides functionality that is similar to that of C++17's
+// std::optional but in a way that is more limited.
 //
 // TODO(armansito): Get rid of this and use std::optional when it's available.
 template <typename T>
@@ -63,7 +63,8 @@ class Optional final {
   template <typename U = T,
             typename = typename std::enable_if<
                 std::is_same<typename std::decay<U>::type, T>::value &&
-                std::is_constructible<T, U>::value && std::is_assignable<T&, U>::value>::type>
+                std::is_constructible<T, U>::value &&
+                std::is_assignable<T&, U>::value>::type>
   Optional& operator=(U&& value) {
     value_ = std::forward<U>(value);
     ptr_ = &value_;
@@ -79,9 +80,9 @@ class Optional final {
   constexpr const T* operator->() const { return ptr_; }
   constexpr T* operator->() { return ptr_; }
 
-  // Operators for accessing the contained value. Behavior is undefined if |this| does not contain
-  // a value. These can only be called on a lvalue.
-  constexpr const T& operator*() const & { return *ptr_; }
+  // Operators for accessing the contained value. Behavior is undefined if
+  // |this| does not contain a value. These can only be called on a lvalue.
+  constexpr const T& operator*() const& { return *ptr_; }
   constexpr T& operator*() & { return *ptr_; }
 
   // Resets the contents.

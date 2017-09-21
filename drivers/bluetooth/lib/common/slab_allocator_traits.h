@@ -17,12 +17,13 @@ namespace internal {
 constexpr size_t kSlabOverhead = 16;
 }  // namespace internal
 
-// SlabAllocatorTraits is a simple alias over fbl::StaticSlabAllocatorTraits which enforces the use
-// of std::unique_ptr.
+// SlabAllocatorTraits is a simple alias over fbl::StaticSlabAllocatorTraits
+// which enforces the use of std::unique_ptr.
 template <typename T, size_t ObjectSize, size_t NumBuffers>
 using SlabAllocatorTraits =
     fbl::StaticSlabAllocatorTraits<std::unique_ptr<T>,
-                                    ObjectSize * NumBuffers + internal::kSlabOverhead>;
+                                   ObjectSize * NumBuffers +
+                                       internal::kSlabOverhead>;
 
 }  // namespace common
 }  // namespace bluetooth

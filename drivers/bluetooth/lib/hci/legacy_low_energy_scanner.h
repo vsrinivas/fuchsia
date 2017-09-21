@@ -19,21 +19,26 @@
 namespace bluetooth {
 namespace hci {
 
-// LegacyLowEnergyScanner implements the LowEnergyScanner interface for controllers that
-// do not support the 5.0 Extended Advertising feature. This uses the legacy HCI LE device scan
-// commands and events:
+// LegacyLowEnergyScanner implements the LowEnergyScanner interface for
+// controllers that do not support the 5.0 Extended Advertising feature. This
+// uses the legacy HCI LE device scan commands and events:
 //     - HCI_LE_Set_Scan_Parameters
 //     - HCI_LE_Set_Scan_Enable
 //     - HCI_LE_Advertising_Report event
 class LegacyLowEnergyScanner : public LowEnergyScanner {
  public:
-  LegacyLowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
+  LegacyLowEnergyScanner(Delegate* delegate,
+                         fxl::RefPtr<Transport> hci,
                          fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~LegacyLowEnergyScanner() override;
 
   // LowEnergyScanner overrides:
-  bool StartScan(bool active, uint16_t scan_interval, uint16_t scan_window, bool filter_duplicates,
-                 LEScanFilterPolicy filter_policy, int64_t period_ms,
+  bool StartScan(bool active,
+                 uint16_t scan_interval,
+                 uint16_t scan_window,
+                 bool filter_duplicates,
+                 LEScanFilterPolicy filter_policy,
+                 int64_t period_ms,
                  const StatusCallback& callback) override;
   bool StopScan() override;
 
@@ -43,7 +48,8 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
 
     LowEnergyScanResult result;
 
-    // Make this large enough to store both advertising and scan response data PDUs.
+    // Make this large enough to store both advertising and scan response data
+    // PDUs.
     size_t adv_data_len;
     common::StaticByteBuffer<kMaxLEAdvertisingDataLength * 2> data;
   };
@@ -58,7 +64,8 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
   void HandleScanResponse(const LEAdvertisingReportData& report, int8_t rssi);
 
   // Notifies observers of a device that was found.
-  void NotifyDeviceFound(const LowEnergyScanResult& result, const common::ByteBuffer& data);
+  void NotifyDeviceFound(const LowEnergyScanResult& result,
+                         const common::ByteBuffer& data);
 
   // True if an active scan is currenty being performed. False, if passive.
   bool active_scanning_;
@@ -72,8 +79,9 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
   // Our event handler ID for the LE Advertising Report event.
   CommandChannel::EventHandlerId event_handler_id_;
 
-  // Scannable advertising events for which a Scan Response PDU has not been received. This is
-  // accumulated during a discovery procedure and always cleared at the end of the scan period.
+  // Scannable advertising events for which a Scan Response PDU has not been
+  // received. This is accumulated during a discovery procedure and always
+  // cleared at the end of the scan period.
   std::unordered_map<common::DeviceAddress, PendingScanResult> pending_results_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyScanner);

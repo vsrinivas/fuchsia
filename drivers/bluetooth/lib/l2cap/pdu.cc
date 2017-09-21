@@ -11,20 +11,23 @@ namespace l2cap {
 
 PDU::PDU() : fragment_count_(0u) {}
 
-// NOTE: The order in which these are initialized matters, as other.ReleaseFragments() resets
-// |other.fragment_count_|.
+// NOTE: The order in which these are initialized matters, as
+// other.ReleaseFragments() resets |other.fragment_count_|.
 PDU::PDU(PDU&& other)
-    : fragment_count_(other.fragment_count_), fragments_(other.ReleaseFragments()) {}
+    : fragment_count_(other.fragment_count_),
+      fragments_(other.ReleaseFragments()) {}
 
 PDU& PDU::operator=(PDU&& other) {
-  // NOTE: The order in which these are initialized matters, as other.ReleaseFragments() resets
-  // |other.fragment_count_|.
+  // NOTE: The order in which these are initialized matters, as
+  // other.ReleaseFragments() resets |other.fragment_count_|.
   fragment_count_ = other.fragment_count_;
   fragments_ = other.ReleaseFragments();
   return *this;
 }
 
-size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos, size_t size) const {
+size_t PDU::Copy(common::MutableByteBuffer* out_buffer,
+                 size_t pos,
+                 size_t size) const {
   FXL_DCHECK(out_buffer);
   FXL_DCHECK(pos < length());
   FXL_DCHECK(is_valid());
@@ -34,7 +37,8 @@ size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos, size_t size)
 
   bool found = false;
   size_t offset = 0u;
-  for (auto iter = fragments_.begin(); iter != fragments_.end() && remaining; ++iter) {
+  for (auto iter = fragments_.begin(); iter != fragments_.end() && remaining;
+       ++iter) {
     auto payload = iter->view().payload_data();
 
     // Skip the Basic L2CAP header for the first fragment.
@@ -60,9 +64,10 @@ size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos, size_t size)
     // Read the fragment into out_buffer->mutable_data() + offset.
     out_buffer->Write(payload.data() + pos, write_size, offset);
 
-    // Clear |pos| after using it on the first fragment as all successive fragments are read from
-    // the beginning.
-    if (pos) pos = 0u;
+    // Clear |pos| after using it on the first fragment as all successive
+    // fragments are read from the beginning.
+    if (pos)
+      pos = 0u;
 
     offset += write_size;
     remaining -= write_size;
@@ -73,7 +78,8 @@ size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos, size_t size)
 
 const common::BufferView PDU::ViewFirstFragment(size_t size) const {
   FXL_DCHECK(is_valid());
-  return fragments_.begin()->view().payload_data().view(sizeof(BasicHeader), size);
+  return fragments_.begin()->view().payload_data().view(sizeof(BasicHeader),
+                                                        size);
 }
 
 PDU::FragmentList PDU::ReleaseFragments() {
@@ -88,14 +94,15 @@ const BasicHeader& PDU::basic_header() const {
   FXL_DCHECK(!fragments_.is_empty());
   const auto& fragment = *fragments_.begin();
 
-  FXL_DCHECK(fragment.packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment);
+  FXL_DCHECK(fragment.packet_boundary_flag() !=
+             hci::ACLPacketBoundaryFlag::kContinuingFragment);
   return fragment.view().payload<BasicHeader>();
 }
 
 void PDU::AppendFragment(hci::ACLDataPacketPtr fragment) {
   FXL_DCHECK(fragment);
-  FXL_DCHECK(!is_valid() ||
-             fragments_.begin()->connection_handle() == fragment->connection_handle());
+  FXL_DCHECK(!is_valid() || fragments_.begin()->connection_handle() ==
+                                fragment->connection_handle());
   fragments_.push_back(std::move(fragment));
   fragment_count_++;
 }

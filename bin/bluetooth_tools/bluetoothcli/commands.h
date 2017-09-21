@@ -20,7 +20,8 @@ class App;
 
 namespace commands {
 
-void RegisterCommands(App* app, bluetooth::tools::CommandDispatcher* dispatcher);
+void RegisterCommands(App* app,
+                      bluetooth::tools::CommandDispatcher* dispatcher);
 
 }  // namespace commands
 }  // namespace bluetoothcli

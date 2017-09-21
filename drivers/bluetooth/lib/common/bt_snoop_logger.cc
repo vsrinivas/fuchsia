@@ -49,8 +49,11 @@ struct RecordHeader {
 // fxl::WriteFileDescriptor be changed to accept "const void*" instead? It's
 // also weird that it expect "ssize_t" for its argument. When would anyone pass
 // a negative number to it? Also does our code even need to worry about EINTR?
-inline bool WriteToFile(const fxl::UniqueFD& fd, const void* data, size_t size) {
-  return fxl::WriteFileDescriptor(fd.get(), static_cast<const char*>(data), size);
+inline bool WriteToFile(const fxl::UniqueFD& fd,
+                        const void* data,
+                        size_t size) {
+  return fxl::WriteFileDescriptor(fd.get(), static_cast<const char*>(data),
+                                  size);
 }
 
 bool WriteHeader(const fxl::UniqueFD& fd) {
@@ -64,7 +67,9 @@ bool WriteHeader(const fxl::UniqueFD& fd) {
   return WriteToFile(fd, &header, sizeof(header));
 }
 
-bool WriteRecordHeader(const fxl::UniqueFD& fd, size_t packet_size, bool is_received,
+bool WriteRecordHeader(const fxl::UniqueFD& fd,
+                       size_t packet_size,
+                       bool is_received,
                        bool is_data) {
   RecordHeader header;
   memset(&header, 0, sizeof(header));
@@ -72,8 +77,10 @@ bool WriteRecordHeader(const fxl::UniqueFD& fd, size_t packet_size, bool is_rece
   header.original_length = htobe32(packet_size);
   header.included_length = htobe32(packet_size);
 
-  if (is_received) header.packet_flags |= 0x01;
-  if (!is_data) header.packet_flags |= 0x02;
+  if (is_received)
+    header.packet_flags |= 0x01;
+  if (!is_data)
+    header.packet_flags |= 0x02;
   header.packet_flags = htobe32(header.packet_flags);
 
   auto time_delta = fxl::TimePoint::Now().ToEpochDelta();
@@ -93,7 +100,8 @@ bool BTSnoopLogger::Initialize(const std::string& path, bool truncate) {
   }
 
   int oflags = O_SYNC | O_CREAT | O_WRONLY;
-  if (truncate) oflags |= O_TRUNC;
+  if (truncate)
+    oflags |= O_TRUNC;
 
   fxl::UniqueFD fd(open(path.c_str(), oflags));
   if (!fd.is_valid()) {
@@ -118,7 +126,9 @@ bool BTSnoopLogger::Initialize(const std::string& path, bool truncate) {
   return true;
 }
 
-bool BTSnoopLogger::WritePacket(const ByteBuffer& packet_data, bool is_received, bool is_data) {
+bool BTSnoopLogger::WritePacket(const ByteBuffer& packet_data,
+                                bool is_received,
+                                bool is_data) {
   if (!fd_.is_valid()) {
     FXL_LOG(ERROR) << "BTSnoop logger not initialized";
     return false;

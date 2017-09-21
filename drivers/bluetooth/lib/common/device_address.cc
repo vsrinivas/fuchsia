@@ -46,15 +46,20 @@ DeviceAddressBytes::DeviceAddressBytes(const std::string& bdaddr_string) {
 
 bool DeviceAddressBytes::SetFromString(const std::string& bdaddr_string) {
   // There are 17 characters in XX:XX:XX:XX:XX:XX
-  if (bdaddr_string.size() != 17) return false;
+  if (bdaddr_string.size() != 17)
+    return false;
 
-  auto split = fxl::SplitString(bdaddr_string, ":", fxl::kKeepWhitespace, fxl::kSplitWantAll);
-  if (split.size() != 6) return false;
+  auto split = fxl::SplitString(bdaddr_string, ":", fxl::kKeepWhitespace,
+                                fxl::kSplitWantAll);
+  if (split.size() != 6)
+    return false;
 
   size_t index = 5;
   for (const auto& octet_str : split) {
     uint8_t octet;
-    if (!fxl::StringToNumberWithError<uint8_t>(octet_str, &octet, fxl::Base::k16)) return false;
+    if (!fxl::StringToNumberWithError<uint8_t>(octet_str, &octet,
+                                               fxl::Base::k16))
+      return false;
     bytes_[index--] = octet;
   }
 
@@ -62,8 +67,9 @@ bool DeviceAddressBytes::SetFromString(const std::string& bdaddr_string) {
 }
 
 std::string DeviceAddressBytes::ToString() const {
-  return fxl::StringPrintf("%02X:%02X:%02X:%02X:%02X:%02X", bytes_[5], bytes_[4], bytes_[3],
-                           bytes_[2], bytes_[1], bytes_[0]);
+  return fxl::StringPrintf("%02X:%02X:%02X:%02X:%02X:%02X", bytes_[5],
+                           bytes_[4], bytes_[3], bytes_[2], bytes_[1],
+                           bytes_[0]);
 }
 
 void DeviceAddressBytes::SetToZero() {
@@ -106,13 +112,15 @@ std::string DeviceAddress::ToString() const {
 
 namespace std {
 
-hash<::bluetooth::common::DeviceAddress>::result_type hash<::bluetooth::common::DeviceAddress>::
-operator()(argument_type const& value) const {
+hash<::bluetooth::common::DeviceAddress>::result_type
+hash<::bluetooth::common::DeviceAddress>::operator()(
+    argument_type const& value) const {
   return value.Hash();
 }
 
 // Stream operators for easy logging
-ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddressBytes& db) {
+ostream& operator<<(ostream& os,
+                    const ::bluetooth::common::DeviceAddressBytes& db) {
   os << db.ToString();
   return os;
 };

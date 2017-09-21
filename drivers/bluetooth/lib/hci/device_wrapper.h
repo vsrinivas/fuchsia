@@ -17,10 +17,12 @@ class DeviceWrapper {
  public:
   virtual ~DeviceWrapper() = default;
 
-  // Returns the command/event channel handle for this device. Returns an invalid handle on failure.
+  // Returns the command/event channel handle for this device. Returns an
+  // invalid handle on failure.
   virtual zx::channel GetCommandChannel() = 0;
 
-  // Returns the ACL data channel handle for this device. Returns an invalid handle on failure.
+  // Returns the ACL data channel handle for this device. Returns an invalid
+  // handle on failure.
   virtual zx::channel GetACLDataChannel() = 0;
 };
 
@@ -31,8 +33,8 @@ class ZirconDeviceWrapper : public DeviceWrapper {
   explicit ZirconDeviceWrapper(fxl::UniqueFD device_fd);
   ~ZirconDeviceWrapper() override = default;
 
-  // DeviceWrapper overrides. These methods directly return the handle obtained via the
-  // corresponding ioctl.
+  // DeviceWrapper overrides. These methods directly return the handle obtained
+  // via the corresponding ioctl.
   zx::channel GetCommandChannel() override;
   zx::channel GetACLDataChannel() override;
 
@@ -42,18 +44,19 @@ class ZirconDeviceWrapper : public DeviceWrapper {
   FXL_DISALLOW_COPY_AND_ASSIGN(ZirconDeviceWrapper);
 };
 
-// A pass-through DeviceWrapper that returns the channel endpoints that it is initialized with. This
-// is useful for test scenarios.
+// A pass-through DeviceWrapper that returns the channel endpoints that it is
+// initialized with. This is useful for test scenarios.
 class DummyDeviceWrapper : public DeviceWrapper {
  public:
-  // The constructor takes ownership of the provided channels and simply returns them when asked for
-  // them.
+  // The constructor takes ownership of the provided channels and simply returns
+  // them when asked for them.
   DummyDeviceWrapper(zx::channel cmd_channel, zx::channel acl_data_channel);
   ~DummyDeviceWrapper() override = default;
 
-  // DeviceWrapper overrides. Since these methods simply forward the handles they were initialized
-  // with, the internal handles will be moved and invalidated after the first call to these methods.
-  // Subsequent calls will always return an invalid handle.
+  // DeviceWrapper overrides. Since these methods simply forward the handles
+  // they were initialized with, the internal handles will be moved and
+  // invalidated after the first call to these methods. Subsequent calls will
+  // always return an invalid handle.
   zx::channel GetCommandChannel() override;
   zx::channel GetACLDataChannel() override;
 

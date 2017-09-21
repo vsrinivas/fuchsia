@@ -11,7 +11,8 @@ namespace l2cap {
 namespace {
 
 const BasicHeader& GetBasicHeader(const hci::ACLDataPacket& fragment) {
-  FXL_DCHECK(fragment.packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment);
+  FXL_DCHECK(fragment.packet_boundary_flag() !=
+             hci::ACLPacketBoundaryFlag::kContinuingFragment);
   return fragment.view().payload<BasicHeader>();
 }
 
@@ -22,13 +23,16 @@ Recombiner::Recombiner() : ready_(false), frame_length_(0u), cur_length_(0u) {}
 bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
   FXL_DCHECK(fragment);
 
-  if (ready()) return false;
+  if (ready())
+    return false;
 
   if (empty()) {
-    if (!ProcessFirstFragment(*fragment)) return false;
+    if (!ProcessFirstFragment(*fragment))
+      return false;
     FXL_DCHECK(!empty());
   } else {
-    if (fragment->packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment) {
+    if (fragment->packet_boundary_flag() !=
+        hci::ACLPacketBoundaryFlag::kContinuingFragment) {
       FXL_VLOG(2) << "Expected continuing fragment!";
       return false;
     }
@@ -50,7 +54,8 @@ bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
 }
 
 bool Recombiner::Release(PDU* out_pdu) {
-  if (empty() || !ready()) return false;
+  if (empty() || !ready())
+    return false;
 
   FXL_DCHECK(out_pdu);
 
@@ -72,15 +77,17 @@ bool Recombiner::ProcessFirstFragment(const hci::ACLDataPacket& fragment) {
   FXL_DCHECK(!frame_length_);
   FXL_DCHECK(!cur_length_);
 
-  // The first fragment needs to at least contain the Basic L2CAP header and should not be a
-  // continuation fragment.
-  if (fragment.packet_boundary_flag() == hci::ACLPacketBoundaryFlag::kContinuingFragment ||
+  // The first fragment needs to at least contain the Basic L2CAP header and
+  // should not be a continuation fragment.
+  if (fragment.packet_boundary_flag() ==
+          hci::ACLPacketBoundaryFlag::kContinuingFragment ||
       fragment.view().payload_size() < sizeof(BasicHeader)) {
     FXL_VLOG(2) << "Bad first fragment";
     return false;
   }
 
-  uint16_t frame_length = le16toh(GetBasicHeader(fragment).length) + sizeof(BasicHeader);
+  uint16_t frame_length =
+      le16toh(GetBasicHeader(fragment).length) + sizeof(BasicHeader);
 
   if (fragment.view().payload_size() > frame_length) {
     FXL_VLOG(2) << "Fragment too long!";

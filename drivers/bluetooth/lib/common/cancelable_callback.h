@@ -19,18 +19,20 @@ namespace common {
 // CancelableCallback provides a way to run cancelable tasks on any thread.
 //
 // Each CancelableCallback is obtained from a CancelableCallbackFactory.
-// CancelableCallbackFactory::CancelAll() can be used to prevent future executions of all previously
-// vended CancelableCallbacks.
+// CancelableCallbackFactory::CancelAll() can be used to prevent future
+// executions of all previously vended CancelableCallbacks.
 //
-// CancelableCallbackFactory::CancelAll() blocks if a CancelableCallback is running concurrently.
-// This is particularly useful to guarantee the life-time of objects that are weakly referenced by a
-// CancelableCallback (and managed within the owning scope of the CancelableCallbackFactory).
+// CancelableCallbackFactory::CancelAll() blocks if a CancelableCallback is
+// running concurrently. This is particularly useful to guarantee the life-time
+// of objects that are weakly referenced by a CancelableCallback (and managed
+// within the owning scope of the CancelableCallbackFactory).
 //
-// Once pending tasks on a factory are canceled there is no way to un-cancel them. Therefore,
-// a CancelableCallbackFactory is a single-use object; new CancelableCallbacks should be obtained
-// from a new CancelableCallbackFactory.
+// Once pending tasks on a factory are canceled there is no way to un-cancel
+// them. Therefore, a CancelableCallbackFactory is a single-use object; new
+// CancelableCallbacks should be obtained from a new CancelableCallbackFactory.
 //
-// A CancelableCallbackFactory cancels all previously vended CancelableCallbacks upon destruction.
+// A CancelableCallbackFactory cancels all previously vended CancelableCallbacks
+// upon destruction.
 //
 // EXAMPLE:
 //
@@ -38,20 +40,21 @@ namespace common {
 //    public:
 //     ...
 //     ~Foo() {
-//       // If the destructor is non-trivial, then it may be better to cancel the callbacks
-//       // explicitly.
+//       // If the destructor is non-trivial, then it may be better to cancel
+//       // the callbacks explicitly.
 //       task_factory_.CancelAll();
 //
 //       ...clean up other resources...
 //     }
 //
 //     void PostBarTask() {
-//       // If |task_factory_| is destroyed before |my_other_thread_runner_| runs the callback
-//       // returned from MakeTask(), then the lambda below will never run.
+//       // If |task_factory_| is destroyed before |my_other_thread_runner_|
+//       // runs the callback returned from MakeTask(), then the lambda below
+//       // will never run.
 //       my_other_thread_runner_->PostTask(task_factory_->MakeTask([this] {
-//         // If this is run, then |*this| is guaranteed to exist until this lambda returns (since
-//         // |task_factory_| is its member). Note that there is no guarantee that DoBar() itself is
-//         // thread-safe.
+//         // If this is run, then |*this| is guaranteed to exist until this
+//         // lambda returns (since |task_factory_| is its member). Note that
+//         // there is no guarantee that DoBar() itself is thread-safe.
 //         DoBar();
 //       });
 //     }
@@ -68,8 +71,9 @@ namespace common {
 //
 // THREAD-SAFETY:
 //
-//   A CancelableCallbackFactory should always be accessed on the same thread. CancelableCallbacks
-//   can safely exist across threads but should only be modified on one thread.
+//   A CancelableCallbackFactory should always be accessed on the same thread.
+//   CancelableCallbacks can safely exist across threads but should only be
+//   modified on one thread.
 
 template <typename Sig>
 class CancelableCallback;
@@ -79,16 +83,20 @@ class CancelableCallbackFactory;
 
 namespace internal {
 
-// This stores the shared cancelation state for callbacks that are obtained from the same factory.
+// This stores the shared cancelation state for callbacks that are obtained from
+// the same factory.
 class CancelationState final {
  public:
   CancelationState() : canceled_(false) {}
 
-  // Locks the mutex and holds it until |f| has finished running unless canceled previously.
+  // Locks the mutex and holds it until |f| has finished running unless canceled
+  // previously.
   template <typename... Args>
-  void RunWhileHoldingLock(const std::function<void(Args...)>& f, Args&&... args) {
+  void RunWhileHoldingLock(const std::function<void(Args...)>& f,
+                           Args&&... args) {
     std::lock_guard<std::mutex> lock(mtx_);
-    if (!canceled_) f(std::forward<Args>(args)...);
+    if (!canceled_)
+      f(std::forward<Args>(args)...);
   }
 
   void Cancel() {
@@ -129,13 +137,15 @@ class CancelableCallback<void(Args...)> final {
 template <typename... Args>
 class CancelableCallbackFactory<void(Args...)> final {
  public:
-  CancelableCallbackFactory() : state_(std::make_shared<internal::CancelationState>()) {
+  CancelableCallbackFactory()
+      : state_(std::make_shared<internal::CancelationState>()) {
     FXL_DCHECK(state_);
   }
 
   ~CancelableCallbackFactory() { CancelAll(); }
 
-  CancelableCallback<void(Args...)> MakeTask(const std::function<void(Args...)>& f) const {
+  CancelableCallback<void(Args...)> MakeTask(
+      const std::function<void(Args...)>& f) const {
     FXL_DCHECK(state_);
     FXL_DCHECK(!canceled());
     return CancelableCallback<void(Args...)>(f, state_);

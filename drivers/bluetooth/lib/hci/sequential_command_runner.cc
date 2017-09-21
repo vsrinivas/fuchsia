@@ -11,8 +11,9 @@
 namespace bluetooth {
 namespace hci {
 
-SequentialCommandRunner::SequentialCommandRunner(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                                                 fxl::RefPtr<Transport> transport)
+SequentialCommandRunner::SequentialCommandRunner(
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    fxl::RefPtr<Transport> transport)
     : task_runner_(task_runner), transport_(transport), sequence_number_(0u) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(transport_);
@@ -23,8 +24,9 @@ SequentialCommandRunner::~SequentialCommandRunner() {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 }
 
-void SequentialCommandRunner::QueueCommand(std::unique_ptr<CommandPacket> command_packet,
-                                           const CommandCompleteCallback& callback) {
+void SequentialCommandRunner::QueueCommand(
+    std::unique_ptr<CommandPacket> command_packet,
+    const CommandCompleteCallback& callback) {
   FXL_DCHECK(!result_callback_);
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(sizeof(CommandHeader) <= command_packet->view().size());
@@ -32,7 +34,8 @@ void SequentialCommandRunner::QueueCommand(std::unique_ptr<CommandPacket> comman
   command_queue_.push(std::make_pair(std::move(command_packet), callback));
 }
 
-void SequentialCommandRunner::RunCommands(const ResultCallback& result_callback) {
+void SequentialCommandRunner::RunCommands(
+    const ResultCallback& result_callback) {
   FXL_DCHECK(!result_callback_);
   FXL_DCHECK(result_callback);
   FXL_DCHECK(!command_queue_.empty());
@@ -74,11 +77,12 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
   command_queue_.pop();
 
   status_callback_.Reset([this](CommandChannel::TransactionId, Status status) {
-    if (status != Status::kSuccess) NotifyResultAndReset(false);
+    if (status != Status::kSuccess)
+      NotifyResultAndReset(false);
   });
 
-  complete_callback_.Reset([ this, cmd_cb = next.second ](CommandChannel::TransactionId,
-                                                          const EventPacket& event_packet) {
+  complete_callback_.Reset([ this, cmd_cb = next.second ](
+      CommandChannel::TransactionId, const EventPacket& event_packet) {
     auto status = event_packet.return_params<SimpleReturnParams>()->status;
     if (status != Status::kSuccess) {
       NotifyResultAndReset(false);
@@ -86,33 +90,39 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
     }
 
     if (cmd_cb) {
-      // We allow the command completion callback (i.e. |cmd_cb|) to cancel its sequence and even
-      // immediately start up a new one. SequentialCommandRunner::Cancel() relies on
-      // CancelableCallback::Cancel() which would in effect delete this lambda and potentially
-      // corrupt its captured environment while executing itself.
+      // We allow the command completion callback (i.e. |cmd_cb|) to cancel its
+      // sequence and even immediately start up a new one.
+      // SequentialCommandRunner::Cancel() relies on
+      // CancelableCallback::Cancel() which would in effect delete this lambda
+      // and potentially corrupt its captured environment while executing
+      // itself.
       //
-      // To prevent that we push the current sequence number and |cmd_cb| itself onto the stack.
+      // To prevent that we push the current sequence number and |cmd_cb| itself
+      // onto the stack.
       uint64_t prev_seq_no = sequence_number_;
       auto cb = cmd_cb;
       cb(event_packet);
 
-      // The sequence could have been cancelled by |cmd_cb| (and a new sequence could have also
-      // started). We make sure here that we are in the correct sequence and terminate if necessary.
-      if (!result_callback_ || prev_seq_no != sequence_number_) return;
+      // The sequence could have been cancelled by |cmd_cb| (and a new sequence
+      // could have also started). We make sure here that we are in the correct
+      // sequence and terminate if necessary.
+      if (!result_callback_ || prev_seq_no != sequence_number_)
+        return;
     }
 
     RunNextQueuedCommand();
   });
 
-  if (!transport_->command_channel()->SendCommand(std::move(next.first), task_runner_,
-                                                  complete_callback_.callback(),
-                                                  status_callback_.callback())) {
+  if (!transport_->command_channel()->SendCommand(
+          std::move(next.first), task_runner_, complete_callback_.callback(),
+          status_callback_.callback())) {
     NotifyResultAndReset(false);
   }
 }
 
 void SequentialCommandRunner::Reset() {
-  if (!command_queue_.empty()) command_queue_ = {};
+  if (!command_queue_.empty())
+    command_queue_ = {};
   result_callback_ = nullptr;
   status_callback_.Cancel();
   complete_callback_.Cancel();

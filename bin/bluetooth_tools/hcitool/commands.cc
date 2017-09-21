@@ -27,29 +27,38 @@ using std::placeholders::_2;
 namespace hcitool {
 namespace {
 
-void StatusCallback(fxl::Closure complete_cb, bluetooth::hci::CommandChannel::TransactionId id,
+void StatusCallback(fxl::Closure complete_cb,
+                    bluetooth::hci::CommandChannel::TransactionId id,
                     bluetooth::hci::Status status) {
-  std::cout << "  Command Status: " << fxl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
-            << std::endl;
-  if (status != bluetooth::hci::Status::kSuccess) complete_cb();
+  std::cout << "  Command Status: " << fxl::StringPrintf("0x%02x", status)
+            << " (id=" << id << ")" << std::endl;
+  if (status != bluetooth::hci::Status::kSuccess)
+    complete_cb();
 }
 
 hci::CommandChannel::TransactionId SendCommand(
-    const CommandData* cmd_data, std::unique_ptr<hci::CommandPacket> packet,
-    const hci::CommandChannel::CommandCompleteCallback& cb, const fxl::Closure& complete_cb) {
-  return cmd_data->cmd_channel()->SendCommand(std::move(packet), cmd_data->task_runner(), cb,
-                                              std::bind(&StatusCallback, complete_cb, _1, _2));
+    const CommandData* cmd_data,
+    std::unique_ptr<hci::CommandPacket> packet,
+    const hci::CommandChannel::CommandCompleteCallback& cb,
+    const fxl::Closure& complete_cb) {
+  return cmd_data->cmd_channel()->SendCommand(
+      std::move(packet), cmd_data->task_runner(), cb,
+      std::bind(&StatusCallback, complete_cb, _1, _2));
 }
 
-void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId id) {
-  std::cout << "  Command Complete - status: " << fxl::StringPrintf("0x%02x", status)
-            << " (id=" << id << ")" << std::endl;
+void LogCommandComplete(hci::Status status,
+                        hci::CommandChannel::TransactionId id) {
+  std::cout << "  Command Complete - status: "
+            << fxl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
+            << std::endl;
 }
 
-hci::CommandChannel::TransactionId SendCompleteCommand(const CommandData* cmd_data,
-                                                       std::unique_ptr<hci::CommandPacket> packet,
-                                                       const fxl::Closure& complete_cb) {
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
+hci::CommandChannel::TransactionId SendCompleteCommand(
+    const CommandData* cmd_data,
+    std::unique_ptr<hci::CommandPacket> packet,
+    const fxl::Closure& complete_cb) {
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
     auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     complete_cb();
@@ -103,16 +112,21 @@ std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
     flags_list.push_back("limited-discoverable");
   if (flags & gap::AdvFlag::kLEGeneralDiscoverableMode)
     flags_list.push_back("general-discoverable");
-  if (flags & gap::AdvFlag::kBREDRNotSupported) flags_list.push_back("bredr-not-supported");
+  if (flags & gap::AdvFlag::kBREDRNotSupported)
+    flags_list.push_back("bredr-not-supported");
   if (flags & gap::AdvFlag::kSimultaneousLEAndBREDRController)
     flags_list.push_back("le-and-bredr-controller");
-  if (flags & gap::AdvFlag::kSimultaneousLEAndBREDRHost) flags_list.push_back("le-and-bredr-host");
+  if (flags & gap::AdvFlag::kSimultaneousLEAndBREDRHost)
+    flags_list.push_back("le-and-bredr-host");
   return flags_list;
 }
 
-void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t rssi,
-                              const std::string& name_filter, const std::string& addr_type_filter) {
-  gap::AdvertisingDataReader reader(common::BufferView(data.data, data.length_data));
+void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data,
+                              int8_t rssi,
+                              const std::string& name_filter,
+                              const std::string& addr_type_filter) {
+  gap::AdvertisingDataReader reader(
+      common::BufferView(data.data, data.length_data));
 
   // The AD fields that we'll parse out.
   uint8_t flags = 0;
@@ -151,41 +165,50 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
   // Apply the address type filter.
   if (!addr_type_filter.empty()) {
     FXL_DCHECK(addr_type_filter == "public" || addr_type_filter == "random");
-    if (addr_type_filter == "public" && data.address_type != hci::LEAddressType::kPublic &&
+    if (addr_type_filter == "public" &&
+        data.address_type != hci::LEAddressType::kPublic &&
         data.address_type != hci::LEAddressType::kPublicIdentity)
       return;
-    if (addr_type_filter == "random" && data.address_type != hci::LEAddressType::kRandom &&
+    if (addr_type_filter == "random" &&
+        data.address_type != hci::LEAddressType::kRandom &&
         data.address_type != hci::LEAddressType::kRandomIdentity)
       return;
   }
 
   std::cout << "  LE Advertising Report:" << std::endl;
   std::cout << "    RSSI: " << fxl::NumberToString(rssi) << std::endl;
-  std::cout << "    type: " << AdvEventTypeToString(data.event_type) << std::endl;
-  std::cout << "    address type: " << BdAddrTypeToString(data.address_type) << std::endl;
-  std::cout << "    BD_ADDR: " << data.address.ToString() << std::endl;
-  std::cout << "    Data Length: " << fxl::NumberToString(data.length_data) << " bytes"
+  std::cout << "    type: " << AdvEventTypeToString(data.event_type)
             << std::endl;
+  std::cout << "    address type: " << BdAddrTypeToString(data.address_type)
+            << std::endl;
+  std::cout << "    BD_ADDR: " << data.address.ToString() << std::endl;
+  std::cout << "    Data Length: " << fxl::NumberToString(data.length_data)
+            << " bytes" << std::endl;
   if (flags) {
-    std::cout << "    Flags: [" << fxl::JoinStrings(AdvFlagsToStrings(flags), ", ") << "]"
+    std::cout << "    Flags: ["
+              << fxl::JoinStrings(AdvFlagsToStrings(flags), ", ") << "]"
               << std::endl;
   }
-  if (!short_name.empty()) std::cout << "    Shortened Local Name: " << short_name << std::endl;
+  if (!short_name.empty())
+    std::cout << "    Shortened Local Name: " << short_name << std::endl;
   if (!complete_name.empty())
     std::cout << "    Complete Local Name: " << complete_name << std::endl;
   if (tx_power_present) {
-    std::cout << "    Tx Power Level: " << fxl::NumberToString(tx_power_lvl) << std::endl;
+    std::cout << "    Tx Power Level: " << fxl::NumberToString(tx_power_lvl)
+              << std::endl;
   }
 }
 
-bool HandleVersionInfo(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleVersionInfo(const CommandData* cmd_data,
+                       const fxl::CommandLine& cmd_line,
                        const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: version-info" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
     auto params = event.return_params<hci::ReadLocalVersionInfoReturnParams>();
     LogCommandComplete(params->status, id);
     if (params->status != hci::Status::kSuccess) {
@@ -194,10 +217,11 @@ bool HandleVersionInfo(const CommandData* cmd_data, const fxl::CommandLine& cmd_
     }
 
     std::cout << "  Version Info:" << std::endl;
-    std::cout << "    HCI Version: Core Spec " << hci::HCIVersionToString(params->hci_version)
-              << std::endl;
+    std::cout << "    HCI Version: Core Spec "
+              << hci::HCIVersionToString(params->hci_version) << std::endl;
     std::cout << "    Manufacturer Name: "
-              << common::GetManufacturerName(le16toh(params->manufacturer_name)) << std::endl;
+              << common::GetManufacturerName(le16toh(params->manufacturer_name))
+              << std::endl;
 
     complete_cb();
   };
@@ -205,11 +229,13 @@ bool HandleVersionInfo(const CommandData* cmd_data, const fxl::CommandLine& cmd_
   auto packet = hci::CommandPacket::New(hci::kReadLocalVersionInfo);
   auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
-  std::cout << "  Sent HCI_Read_Local_Version_Information (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_Read_Local_Version_Information (id=" << id << ")"
+            << std::endl;
   return true;
 }
 
-bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleReset(const CommandData* cmd_data,
+                 const fxl::CommandLine& cmd_line,
                  const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;
@@ -224,14 +250,16 @@ bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   return true;
 }
 
-bool HandleReadBDADDR(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleReadBDADDR(const CommandData* cmd_data,
+                      const fxl::CommandLine& cmd_line,
                       const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-bdaddr" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
     auto return_params = event.return_params<hci::ReadBDADDRReturnParams>();
     LogCommandComplete(return_params->status, id);
     if (return_params->status != hci::Status::kSuccess) {
@@ -239,7 +267,8 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
       return;
     }
 
-    std::cout << "  BD_ADDR: " << return_params->bd_addr.ToString() << std::endl;
+    std::cout << "  BD_ADDR: " << return_params->bd_addr.ToString()
+              << std::endl;
     complete_cb();
   };
 
@@ -251,14 +280,16 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
   return true;
 }
 
-bool HandleReadLocalName(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleReadLocalName(const CommandData* cmd_data,
+                         const fxl::CommandLine& cmd_line,
                          const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-local-name" << std::endl;
     return false;
   }
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
     auto return_params = event.return_params<hci::ReadLocalNameReturnParams>();
     LogCommandComplete(return_params->status, id);
     if (return_params->status != hci::Status::kSuccess) {
@@ -278,7 +309,8 @@ bool HandleReadLocalName(const CommandData* cmd_data, const fxl::CommandLine& cm
   return true;
 }
 
-bool HandleWriteLocalName(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleWriteLocalName(const CommandData* cmd_data,
+                          const fxl::CommandLine& cmd_line,
                           const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: write-local-name <name>" << std::endl;
@@ -286,7 +318,8 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const fxl::CommandLine& c
   }
 
   const std::string& name = cmd_line.positional_args()[0];
-  auto packet = hci::CommandPacket::New(hci::kWriteLocalName, name.length() + 1);
+  auto packet =
+      hci::CommandPacket::New(hci::kWriteLocalName, name.length() + 1);
   std::strcpy((char*)packet->mutable_view()
                   ->mutable_payload<hci::WriteLocalNameCommandParams>()
                   ->local_name,
@@ -298,7 +331,8 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const fxl::CommandLine& c
   return true;
 }
 
-bool HandleSetEventMask(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleSetEventMask(const CommandData* cmd_data,
+                        const fxl::CommandLine& cmd_line,
                         const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-event-mask [hex]" << std::endl;
@@ -306,28 +340,33 @@ bool HandleSetEventMask(const CommandData* cmd_data, const fxl::CommandLine& cmd
   }
 
   std::string hex = cmd_line.positional_args()[0];
-  if (hex.size() >= 2 && hex[0] == '0' && hex[1] == 'x') hex = hex.substr(2);
+  if (hex.size() >= 2 && hex[0] == '0' && hex[1] == 'x')
+    hex = hex.substr(2);
 
   uint64_t mask;
   if (!fxl::StringToNumberWithError<uint64_t>(hex, &mask, fxl::Base::k16)) {
-    std::cout << "  Unrecognized hex number: " << cmd_line.positional_args()[0] << std::endl;
+    std::cout << "  Unrecognized hex number: " << cmd_line.positional_args()[0]
+              << std::endl;
     std::cout << "  Usage: set-event-mask [hex]" << std::endl;
     return false;
   }
 
   constexpr size_t kPayloadSize = sizeof(hci::SetEventMaskCommandParams);
   auto packet = hci::CommandPacket::New(hci::kSetEventMask, kPayloadSize);
-  packet->mutable_view()->mutable_payload<hci::SetEventMaskCommandParams>()->event_mask =
-      htole64(mask);
+  packet->mutable_view()
+      ->mutable_payload<hci::SetEventMaskCommandParams>()
+      ->event_mask = htole64(mask);
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
-  std::cout << "  Sent HCI_Set_Event_Mask(" << fxl::NumberToString(mask, fxl::Base::k16)
-            << ") (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_Set_Event_Mask("
+            << fxl::NumberToString(mask, fxl::Base::k16) << ") (id=" << id
+            << ")" << std::endl;
   return true;
 }
 
-bool HandleSetAdvEnable(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleSetAdvEnable(const CommandData* cmd_data,
+                        const fxl::CommandLine& cmd_line,
                         const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
@@ -346,20 +385,24 @@ bool HandleSetAdvEnable(const CommandData* cmd_data, const fxl::CommandLine& cmd
     return false;
   }
 
-  constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingEnableCommandParams);
+  constexpr size_t kPayloadSize =
+      sizeof(hci::LESetAdvertisingEnableCommandParams);
 
-  auto packet = hci::CommandPacket::New(hci::kLESetAdvertisingEnable, kPayloadSize);
+  auto packet =
+      hci::CommandPacket::New(hci::kLESetAdvertisingEnable, kPayloadSize);
   packet->mutable_view()
       ->mutable_payload<hci::LESetAdvertisingEnableCommandParams>()
       ->advertising_enable = value;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
-  std::cout << "  Sent HCI_LE_Set_Advertising_Enable (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_LE_Set_Advertising_Enable (id=" << id << ")"
+            << std::endl;
   return true;
 }
 
-bool HandleSetAdvParams(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleSetAdvParams(const CommandData* cmd_data,
+                        const fxl::CommandLine& cmd_line,
                         const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-params [--help|--type]" << std::endl;
@@ -367,14 +410,15 @@ bool HandleSetAdvParams(const CommandData* cmd_data, const fxl::CommandLine& cmd
   }
 
   if (cmd_line.HasOption("help")) {
-    std::cout << "  Options: \n"
-                 "    --help - Display this help message\n"
-                 "    --type=<type> - The advertising type. Possible values are:\n"
-                 "          - nonconn: non-connectable undirected (default)\n"
-                 "          - adv-ind: connectable and scannable undirected\n"
-                 "          - direct-low: connectable directed low-duty\n"
-                 "          - direct-high: connectable directed high-duty\n"
-                 "          - scan: scannable undirected";
+    std::cout
+        << "  Options: \n"
+           "    --help - Display this help message\n"
+           "    --type=<type> - The advertising type. Possible values are:\n"
+           "          - nonconn: non-connectable undirected (default)\n"
+           "          - adv-ind: connectable and scannable undirected\n"
+           "          - direct-low: connectable directed low-duty\n"
+           "          - direct-high: connectable directed high-duty\n"
+           "          - scan: scannable undirected";
     std::cout << std::endl;
     return false;
   }
@@ -398,10 +442,13 @@ bool HandleSetAdvParams(const CommandData* cmd_data, const fxl::CommandLine& cmd
     }
   }
 
-  constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingParametersCommandParams);
-  auto packet = hci::CommandPacket::New(hci::kLESetAdvertisingParameters, kPayloadSize);
+  constexpr size_t kPayloadSize =
+      sizeof(hci::LESetAdvertisingParametersCommandParams);
+  auto packet =
+      hci::CommandPacket::New(hci::kLESetAdvertisingParameters, kPayloadSize);
   auto params =
-      packet->mutable_view()->mutable_payload<hci::LESetAdvertisingParametersCommandParams>();
+      packet->mutable_view()
+          ->mutable_payload<hci::LESetAdvertisingParametersCommandParams>();
   params->adv_interval_min = htole16(hci::kLEAdvertisingIntervalDefault);
   params->adv_interval_max = htole16(hci::kLEAdvertisingIntervalDefault);
   params->adv_type = adv_type;
@@ -413,12 +460,14 @@ bool HandleSetAdvParams(const CommandData* cmd_data, const fxl::CommandLine& cmd
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
-  std::cout << "  Sent HCI_LE_Set_Advertising_Parameters (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_LE_Set_Advertising_Parameters (id=" << id << ")"
+            << std::endl;
 
   return true;
 }
 
-bool HandleSetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleSetAdvData(const CommandData* cmd_data,
+                      const fxl::CommandLine& cmd_line,
                       const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-data [--help|--name]" << std::endl;
@@ -426,15 +475,18 @@ bool HandleSetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
   }
 
   if (cmd_line.HasOption("help")) {
-    std::cout << "  Options: \n"
-                 "    --help - Display this help message\n"
-                 "    --name=<local-name> - Set the \"Complete Local Name\" field";
+    std::cout
+        << "  Options: \n"
+           "    --help - Display this help message\n"
+           "    --name=<local-name> - Set the \"Complete Local Name\" field";
     std::cout << std::endl;
     return false;
   }
 
-  constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingDataCommandParams);
-  auto packet = hci::CommandPacket::New(hci::kLESetAdvertisingData, kPayloadSize);
+  constexpr size_t kPayloadSize =
+      sizeof(hci::LESetAdvertisingDataCommandParams);
+  auto packet =
+      hci::CommandPacket::New(hci::kLESetAdvertisingData, kPayloadSize);
   packet->mutable_view()->mutable_payload_data().SetToZeros();
 
   std::string name;
@@ -447,7 +499,9 @@ bool HandleSetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
       return false;
     }
 
-    auto params = packet->mutable_view()->mutable_payload<hci::LESetAdvertisingDataCommandParams>();
+    auto params =
+        packet->mutable_view()
+            ->mutable_payload<hci::LESetAdvertisingDataCommandParams>();
     params->adv_data_length = adv_data_len;
     params->adv_data[0] = adv_data_len - 1;
     params->adv_data[1] = 0x09;  // Complete Local Name
@@ -460,12 +514,14 @@ bool HandleSetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
-  std::cout << "  Sent HCI_LE_Set_Advertising_Data (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_LE_Set_Advertising_Data (id=" << id << ")"
+            << std::endl;
 
   return true;
 }
 
-bool HandleSetScanParams(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleSetScanParams(const CommandData* cmd_data,
+                         const fxl::CommandLine& cmd_line,
                          const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params [--help|--type]" << std::endl;
@@ -496,9 +552,11 @@ bool HandleSetScanParams(const CommandData* cmd_data, const fxl::CommandLine& cm
   }
 
   constexpr size_t kPayloadSize = sizeof(hci::LESetScanParametersCommandParams);
-  auto packet = hci::CommandPacket::New(hci::kLESetScanParameters, kPayloadSize);
+  auto packet =
+      hci::CommandPacket::New(hci::kLESetScanParameters, kPayloadSize);
 
-  auto params = packet->mutable_view()->mutable_payload<hci::LESetScanParametersCommandParams>();
+  auto params = packet->mutable_view()
+                    ->mutable_payload<hci::LESetScanParametersCommandParams>();
   params->scan_type = scan_type;
   params->scan_interval = htole16(hci::kLEScanIntervalDefault);
   params->scan_window = htole16(hci::kLEScanIntervalDefault);
@@ -507,12 +565,14 @@ bool HandleSetScanParams(const CommandData* cmd_data, const fxl::CommandLine& cm
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
-  std::cout << "  Sent HCI_LE_Set_Scan_Parameters (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_LE_Set_Scan_Parameters (id=" << id << ")"
+            << std::endl;
 
   return true;
 }
 
-bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
+bool HandleSetScanEnable(const CommandData* cmd_data,
+                         const fxl::CommandLine& cmd_line,
                          const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params "
@@ -522,15 +582,16 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cm
   }
 
   if (cmd_line.HasOption("help")) {
-    std::cout << "  Options: \n"
-                 "    --help - Display this help message\n"
-                 "    --timeout=<t> - Duration (in seconds) during which to scan\n"
-                 "                    (default is 10 seconds)\n"
-                 "    --no-dedup - Tell the controller not to filter duplicate\n"
-                 "                 reports\n"
-                 "    --name-filter=<prefix> - Filter advertising reports by local\n"
-                 "                             name, if present.\n"
-                 "    --addr-type-filter=[public|random]";
+    std::cout
+        << "  Options: \n"
+           "    --help - Display this help message\n"
+           "    --timeout=<t> - Duration (in seconds) during which to scan\n"
+           "                    (default is 10 seconds)\n"
+           "    --no-dedup - Tell the controller not to filter duplicate\n"
+           "                 reports\n"
+           "    --name-filter=<prefix> - Filter advertising reports by local\n"
+           "                             name, if present.\n"
+           "    --addr-type-filter=[public|random]";
     std::cout << std::endl;
     return false;
   }
@@ -552,8 +613,10 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cm
 
   std::string addr_type_filter;
   cmd_line.GetOptionValue("addr-type-filter", &addr_type_filter);
-  if (!addr_type_filter.empty() && addr_type_filter != "public" && addr_type_filter != "random") {
-    std::cout << "  Unknown address type filter: " << addr_type_filter << std::endl;
+  if (!addr_type_filter.empty() && addr_type_filter != "public" &&
+      addr_type_filter != "random") {
+    std::cout << "  Unknown address type filter: " << addr_type_filter
+              << std::endl;
     return false;
   }
 
@@ -565,12 +628,14 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cm
   constexpr size_t kPayloadSize = sizeof(hci::LESetScanEnableCommandParams);
   auto packet = hci::CommandPacket::New(hci::kLESetScanEnable, kPayloadSize);
 
-  auto params = packet->mutable_view()->mutable_payload<hci::LESetScanEnableCommandParams>();
+  auto params = packet->mutable_view()
+                    ->mutable_payload<hci::LESetScanEnableCommandParams>();
   params->scanning_enabled = hci::GenericEnableParam::kEnable;
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
-  auto le_adv_report_cb = [name_filter, addr_type_filter](const hci::EventPacket& event) {
+  auto le_adv_report_cb = [name_filter,
+                           addr_type_filter](const hci::EventPacket& event) {
     FXL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
     FXL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
                hci::kLEAdvertisingReportSubeventCode);
@@ -583,9 +648,11 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cm
     }
   };
   auto event_handler_id = cmd_data->cmd_channel()->AddLEMetaEventHandler(
-      hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb, cmd_data->task_runner());
+      hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb,
+      cmd_data->task_runner());
 
-  auto cleanup_cb = [ complete_cb, event_handler_id, cmd_channel = cmd_data->cmd_channel() ] {
+  auto cleanup_cb =
+      [ complete_cb, event_handler_id, cmd_channel = cmd_data->cmd_channel() ] {
     cmd_channel->RemoveEventHandler(event_handler_id);
     complete_cb();
   };
@@ -601,17 +668,20 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cm
   // Delayed task that stops scanning.
   auto scan_disable_cb = [cleanup_cb, final_cb, cmd_data] {
     auto packet = hci::CommandPacket::New(hci::kLESetScanEnable, kPayloadSize);
-    auto params = packet->mutable_view()->mutable_payload<hci::LESetScanEnableCommandParams>();
+    auto params = packet->mutable_view()
+                      ->mutable_payload<hci::LESetScanEnableCommandParams>();
     params->scanning_enabled = hci::GenericEnableParam::kDisable;
     params->filter_duplicates = hci::GenericEnableParam::kDisable;
 
     auto id = SendCommand(cmd_data, std::move(packet), final_cb, cleanup_cb);
 
-    std::cout << "  Sent HCI_LE_Set_Scan_Enable (disabled) (id=" << id << ")" << std::endl;
+    std::cout << "  Sent HCI_LE_Set_Scan_Enable (disabled) (id=" << id << ")"
+              << std::endl;
   };
 
-  auto cb = [ scan_disable_cb, cleanup_cb, timeout, task_runner = cmd_data->task_runner() ](
-      hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
+  auto cb = [
+    scan_disable_cb, cleanup_cb, timeout, task_runner = cmd_data->task_runner()
+  ](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
     auto return_params = event.return_params<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
     if (return_params->status != hci::Status::kSuccess) {
@@ -623,7 +693,8 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const fxl::CommandLine& cm
 
   auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
 
-  std::cout << "  Sent HCI_LE_Set_Scan_Enable (enabled) (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_LE_Set_Scan_Enable (enabled) (id=" << id << ")"
+            << std::endl;
 
   return true;
 }
@@ -634,27 +705,35 @@ void RegisterCommands(const CommandData* cmd_data,
                       bluetooth::tools::CommandDispatcher* dispatcher) {
   FXL_DCHECK(dispatcher);
 
-#define BIND(handler) std::bind(&handler, cmd_data, std::placeholders::_1, std::placeholders::_2)
+#define BIND(handler) \
+  std::bind(&handler, cmd_data, std::placeholders::_1, std::placeholders::_2)
 
-  dispatcher->RegisterHandler("version-info", "Send HCI_Read_Local_Version_Information",
+  dispatcher->RegisterHandler("version-info",
+                              "Send HCI_Read_Local_Version_Information",
                               BIND(HandleVersionInfo));
   dispatcher->RegisterHandler("reset", "Send HCI_Reset", BIND(HandleReset));
-  dispatcher->RegisterHandler("read-bdaddr", "Send HCI_Read_BDADDR", BIND(HandleReadBDADDR));
+  dispatcher->RegisterHandler("read-bdaddr", "Send HCI_Read_BDADDR",
+                              BIND(HandleReadBDADDR));
   dispatcher->RegisterHandler("read-local-name", "Send HCI_Read_Local_Name",
                               BIND(HandleReadLocalName));
   dispatcher->RegisterHandler("write-local-name", "Send HCI_Write_Local_Name",
                               BIND(HandleWriteLocalName));
   dispatcher->RegisterHandler("set-event-mask", "Send HCI_Set_Event_Mask",
                               BIND(HandleSetEventMask));
-  dispatcher->RegisterHandler("set-adv-enable", "Send HCI_LE_Set_Advertising_Enable",
+  dispatcher->RegisterHandler("set-adv-enable",
+                              "Send HCI_LE_Set_Advertising_Enable",
                               BIND(HandleSetAdvEnable));
-  dispatcher->RegisterHandler("set-adv-params", "Send HCI_LE_Set_Advertising_Parameters",
+  dispatcher->RegisterHandler("set-adv-params",
+                              "Send HCI_LE_Set_Advertising_Parameters",
                               BIND(HandleSetAdvParams));
-  dispatcher->RegisterHandler("set-adv-data", "Send HCI_LE_Set_Advertising_Data",
+  dispatcher->RegisterHandler("set-adv-data",
+                              "Send HCI_LE_Set_Advertising_Data",
                               BIND(HandleSetAdvData));
-  dispatcher->RegisterHandler("set-scan-params", "Send HCI_LE_Set_Scan_Parameters",
+  dispatcher->RegisterHandler("set-scan-params",
+                              "Send HCI_LE_Set_Scan_Parameters",
                               BIND(HandleSetScanParams));
-  dispatcher->RegisterHandler("set-scan-enable", "Perform a LE device scan for a limited duration",
+  dispatcher->RegisterHandler("set-scan-enable",
+                              "Perform a LE device scan for a limited duration",
                               BIND(HandleSetScanEnable));
 
 #undef BIND

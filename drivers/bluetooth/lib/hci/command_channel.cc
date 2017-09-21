@@ -21,13 +21,14 @@
 namespace bluetooth {
 namespace hci {
 
-CommandChannel::QueuedCommand::QueuedCommand(TransactionId id,
-                                             std::unique_ptr<CommandPacket> command_packet,
-                                             const CommandStatusCallback& status_callback,
-                                             const CommandCompleteCallback& complete_callback,
-                                             fxl::RefPtr<fxl::TaskRunner> task_runner,
-                                             const EventCode complete_event_code,
-                                             const EventMatcher& complete_event_matcher) {
+CommandChannel::QueuedCommand::QueuedCommand(
+    TransactionId id,
+    std::unique_ptr<CommandPacket> command_packet,
+    const CommandStatusCallback& status_callback,
+    const CommandCompleteCallback& complete_callback,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const EventCode complete_event_code,
+    const EventMatcher& complete_event_matcher) {
   transaction_data.id = id;
   transaction_data.opcode = command_packet->opcode();
   transaction_data.complete_event_code = complete_event_code;
@@ -39,7 +40,8 @@ CommandChannel::QueuedCommand::QueuedCommand(TransactionId id,
   packet = std::move(command_packet);
 }
 
-CommandChannel::CommandChannel(Transport* transport, zx::channel hci_command_channel)
+CommandChannel::CommandChannel(Transport* transport,
+                               zx::channel hci_command_channel)
     : next_transaction_id_(1u),
       next_event_handler_id_(1u),
       transport_(transport),
@@ -59,8 +61,10 @@ void CommandChannel::Initialize() {
   FXL_DCHECK(!is_initialized_);
 
   auto setup_handler_task = [this] {
-    channel_wait_.set_handler(fbl::BindMember(this, &CommandChannel::OnChannelReady));
-    zx_status_t status = channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+    channel_wait_.set_handler(
+        fbl::BindMember(this, &CommandChannel::OnChannelReady));
+    zx_status_t status =
+        channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: CommandChannel: failed channel setup: "
                      << zx_status_get_string(status);
@@ -73,7 +77,8 @@ void CommandChannel::Initialize() {
   io_task_runner_ = transport_->io_task_runner();
   common::RunTaskSync(setup_handler_task, io_task_runner_);
 
-  if (channel_wait_.object() == ZX_HANDLE_INVALID) return;
+  if (channel_wait_.object() == ZX_HANDLE_INVALID)
+    return;
 
   is_initialized_ = true;
 
@@ -82,7 +87,8 @@ void CommandChannel::Initialize() {
 
 void CommandChannel::ShutDown() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  if (!is_initialized_) return;
+  if (!is_initialized_)
+    return;
 
   FXL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
@@ -90,9 +96,11 @@ void CommandChannel::ShutDown() {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
     SetPendingCommand(nullptr);
-    zx_status_t status = channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+    zx_status_t status =
+        channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: " << zx_status_get_string(status);
+      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
+                       << zx_status_get_string(status);
     }
   };
 
@@ -114,11 +122,15 @@ void CommandChannel::ShutDown() {
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
-    std::unique_ptr<CommandPacket> command_packet, fxl::RefPtr<fxl::TaskRunner> task_runner,
-    const CommandCompleteCallback& complete_callback, const CommandStatusCallback& status_callback,
-    const EventCode complete_event_code, const EventMatcher& complete_event_matcher) {
+    std::unique_ptr<CommandPacket> command_packet,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const CommandCompleteCallback& complete_callback,
+    const CommandStatusCallback& status_callback,
+    const EventCode complete_event_code,
+    const EventMatcher& complete_event_matcher) {
   if (!is_initialized_) {
-    FXL_VLOG(1) << "hci: CommandChannel: Cannot send commands while uninitialized";
+    FXL_VLOG(1)
+        << "hci: CommandChannel: Cannot send commands while uninitialized";
     return 0u;
   }
 
@@ -126,17 +138,21 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
 
   std::lock_guard<std::mutex> lock(send_queue_mutex_);
 
-  if (next_transaction_id_ == 0u) next_transaction_id_++;
+  if (next_transaction_id_ == 0u)
+    next_transaction_id_++;
   TransactionId id = next_transaction_id_++;
-  send_queue_.push(QueuedCommand(id, std::move(command_packet), status_callback, complete_callback,
-                                 task_runner, complete_event_code, complete_event_matcher));
-  io_task_runner_->PostTask(std::bind(&CommandChannel::TrySendNextQueuedCommand, this));
+  send_queue_.push(QueuedCommand(id, std::move(command_packet), status_callback,
+                                 complete_callback, task_runner,
+                                 complete_event_code, complete_event_matcher));
+  io_task_runner_->PostTask(
+      std::bind(&CommandChannel::TrySendNextQueuedCommand, this));
 
   return id;
 }
 
 CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
-    EventCode event_code, const EventCallback& event_callback,
+    EventCode event_code,
+    const EventCallback& event_callback,
     fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(event_code != kCommandStatusEventCode);
   FXL_DCHECK(event_code != kCommandCompleteEventCode);
@@ -150,23 +166,28 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
     return 0u;
   }
 
-  auto id = NewEventHandler(event_code, false /* is_le_meta */, event_callback, task_runner);
+  auto id = NewEventHandler(event_code, false /* is_le_meta */, event_callback,
+                            task_runner);
   event_code_handlers_[event_code] = id;
   return id;
 }
 
 CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
-    EventCode subevent_code, const EventCallback& event_callback,
+    EventCode subevent_code,
+    const EventCallback& event_callback,
     fxl::RefPtr<fxl::TaskRunner> task_runner) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
-  if (subevent_code_handlers_.find(subevent_code) != subevent_code_handlers_.end()) {
-    FXL_LOG(ERROR) << "hci: event handler already registered for LE Meta subevent code: "
-                   << fxl::StringPrintf("0x%02x", subevent_code);
+  if (subevent_code_handlers_.find(subevent_code) !=
+      subevent_code_handlers_.end()) {
+    FXL_LOG(ERROR)
+        << "hci: event handler already registered for LE Meta subevent code: "
+        << fxl::StringPrintf("0x%02x", subevent_code);
     return 0u;
   }
 
-  auto id = NewEventHandler(subevent_code, true /* is_le_meta */, event_callback, task_runner);
+  auto id = NewEventHandler(subevent_code, true /* is_le_meta */,
+                            event_callback, task_runner);
   subevent_code_handlers_[subevent_code] = id;
   return id;
 }
@@ -175,7 +196,8 @@ void CommandChannel::RemoveEventHandler(const EventHandlerId id) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
   auto iter = event_handler_id_map_.find(id);
-  if (iter == event_handler_id_map_.end()) return;
+  if (iter == event_handler_id_map_.end())
+    return;
 
   if (iter->second.event_code != 0) {
     if (iter->second.is_le_meta_subevent) {
@@ -188,23 +210,27 @@ void CommandChannel::RemoveEventHandler(const EventHandlerId id) {
 }
 
 void CommandChannel::TrySendNextQueuedCommand() {
-  if (!is_initialized_) return;
+  if (!is_initialized_)
+    return;
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   // If a command is currently pending, then we have nothing to do.
-  if (GetPendingCommand()) return;
+  if (GetPendingCommand())
+    return;
 
   QueuedCommand cmd;
   {
     std::lock_guard<std::mutex> lock(send_queue_mutex_);
-    if (send_queue_.empty()) return;
+    if (send_queue_.empty())
+      return;
 
     cmd = std::move(send_queue_.front());
     send_queue_.pop();
   }
 
   auto packet_bytes = cmd.packet->view().data();
-  zx_status_t status = channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
+  zx_status_t status =
+      channel_.write(0, packet_bytes.data(), packet_bytes.size(), nullptr, 0);
   if (status < 0) {
     // TODO(armansito): We should notify the |status_callback| of the pending
     // command with a special error code in this case.
@@ -215,14 +241,16 @@ void CommandChannel::TrySendNextQueuedCommand() {
 
   SetPendingCommand(&cmd.transaction_data);
 
-  // Set a callback to execute if this HCI command times out (i.e the controller does not send back
-  // a response in time). Once the command is completed (due to HCI_Command_Status or the
-  // corresponding completion callback) this timeout callback will be cancelled when
-  // SetPendingCommand() is called to clear the pending command.
+  // Set a callback to execute if this HCI command times out (i.e the controller
+  // does not send back a response in time). Once the command is completed (due
+  // to HCI_Command_Status or the corresponding completion callback) this
+  // timeout callback will be cancelled when SetPendingCommand() is called to
+  // clear the pending command.
   pending_cmd_timeout_.Reset([ this, id = cmd.transaction_data.id ] {
     auto pending_cmd = GetPendingCommand();
 
-    // If this callback is ever invoked then the command that timed out should still be pending.
+    // If this callback is ever invoked then the command that timed out should
+    // still be pending.
     FXL_DCHECK(pending_cmd);
     FXL_DCHECK(pending_cmd->id == id);
 
@@ -234,11 +262,13 @@ void CommandChannel::TrySendNextQueuedCommand() {
     TrySendNextQueuedCommand();
   });
 
-  io_task_runner_->PostDelayedTask(pending_cmd_timeout_.callback(),
-                                   fxl::TimeDelta::FromMilliseconds(kCommandTimeoutMs));
+  io_task_runner_->PostDelayedTask(
+      pending_cmd_timeout_.callback(),
+      fxl::TimeDelta::FromMilliseconds(kCommandTimeoutMs));
 }
 
-bool CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket>&& event) {
+bool CommandChannel::HandlePendingCommandComplete(
+    std::unique_ptr<EventPacket>&& event) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   PendingTransactionData* pending_command = GetPendingCommand();
@@ -248,12 +278,14 @@ bool CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket>&&
   // In case that this is a CommandComplete event, make sure that the command
   // opcode actually matches the pending command.
   if (event->event_code() == kCommandCompleteEventCode &&
-      le16toh(event->view().payload<CommandCompleteEventParams>().command_opcode) !=
+      le16toh(
+          event->view().payload<CommandCompleteEventParams>().command_opcode) !=
           pending_command->opcode) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "hci: CommandChannel: Unmatched CommandComplete event - opcode: "
         "0x%04x, pending: 0x%04x",
-        le16toh(event->view().payload<CommandCompleteEventParams>().command_opcode),
+        le16toh(
+            event->view().payload<CommandCompleteEventParams>().command_opcode),
         pending_command->opcode);
     return false;
   }
@@ -261,39 +293,47 @@ bool CommandChannel::HandlePendingCommandComplete(std::unique_ptr<EventPacket>&&
   // In case that this is a CommandComplete event, make sure that the command
   // opcode actually matches the pending command.
   if (event->event_code() == kCommandStatusEventCode &&
-      le16toh(event->view().payload<CommandStatusEventParams>().command_opcode) !=
+      le16toh(
+          event->view().payload<CommandStatusEventParams>().command_opcode) !=
           pending_command->opcode) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "hci: CommandChannel: Unmatched CommandStatus event - opcode: "
         "0x%04x, pending: 0x%04x",
-        le16toh(event->view().payload<CommandStatusEventParams>().command_opcode),
+        le16toh(
+            event->view().payload<CommandStatusEventParams>().command_opcode),
         pending_command->opcode);
     return false;
   }
 
-  // Do not handle the event if it does not pass the matcher (if one was provided).
-  if (pending_command->complete_event_matcher && !pending_command->complete_event_matcher(*event)) {
+  // Do not handle the event if it does not pass the matcher (if one was
+  // provided).
+  if (pending_command->complete_event_matcher &&
+      !pending_command->complete_event_matcher(*event)) {
     return false;
   }
 
-  // Clear the pending command and process the next queued command when this goes out of scope.
+  // Clear the pending command and process the next queued command when this
+  // goes out of scope.
   auto ac = fxl::MakeAutoCall([this] {
     SetPendingCommand(nullptr);
     TrySendNextQueuedCommand();
   });
 
-  // If no command complete callback was provided, then the caller does not care about the result.
-  if (!pending_command->complete_callback) return true;
+  // If no command complete callback was provided, then the caller does not care
+  // about the result.
+  if (!pending_command->complete_callback)
+    return true;
 
-  // If the command callback needs to run on the I/O thread (i.e. the current thread), then no need
-  // for an async task; invoke the callback immediately.
+  // If the command callback needs to run on the I/O thread (i.e. the current
+  // thread), then no need for an async task; invoke the callback immediately.
   if (pending_command->task_runner->RunsTasksOnCurrentThread()) {
     pending_command->complete_callback(pending_command->id, *event);
     return true;
   }
 
   pending_command->task_runner->PostTask(fxl::MakeCopyable([
-    event = std::move(event), complete_callback = pending_command->complete_callback,
+    event = std::move(event),
+    complete_callback = pending_command->complete_callback,
     transaction_id = pending_command->id
   ]() mutable { complete_callback(transaction_id, *event); }));
 
@@ -309,7 +349,8 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
   FXL_DCHECK(pending_command->complete_event_code != kCommandStatusEventCode);
 
   // Make sure that the command opcode actually matches the pending command.
-  if (le16toh(event.view().payload<CommandStatusEventParams>().command_opcode) !=
+  if (le16toh(
+          event.view().payload<CommandStatusEventParams>().command_opcode) !=
       pending_command->opcode) {
     FXL_LOG(ERROR) << "hci: CommandChannel: Unmatched CommandStatus event";
     return;
@@ -318,9 +359,11 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
   if (pending_command->status_callback) {
     auto status_cb =
         std::bind(pending_command->status_callback, pending_command->id,
-                  static_cast<Status>(event.view().payload<CommandStatusEventParams>().status));
+                  static_cast<Status>(
+                      event.view().payload<CommandStatusEventParams>().status));
 
-    // If the command callback needs to run on the I/O thread, then invoke it immediately.
+    // If the command callback needs to run on the I/O thread, then invoke it
+    // immediately.
     if (pending_command->task_runner->RunsTasksOnCurrentThread()) {
       status_cb();
     } else {
@@ -330,7 +373,9 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
 
   // Success in this case means that the command will be completed later when we
   // receive an event that matches |pending_command->complete_event_code|.
-  if (event.view().payload<CommandStatusEventParams>().status == Status::kSuccess) return;
+  if (event.view().payload<CommandStatusEventParams>().status ==
+      Status::kSuccess)
+    return;
 
   // A CommandStatus event with an error status usually means that the command
   // that was in progress could not be executed. Complete the transaction and
@@ -347,7 +392,8 @@ CommandChannel::PendingTransactionData* CommandChannel::GetPendingCommand() {
 void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
-  // Cancel the pending command timeout handler as the pending command is being reset.
+  // Cancel the pending command timeout handler as the pending command is being
+  // reset.
   pending_cmd_timeout_.Cancel();
 
   if (!command) {
@@ -360,7 +406,9 @@ void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
 }
 
 CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
-    EventCode event_code, bool is_le_meta, const EventCallback& event_callback,
+    EventCode event_code,
+    bool is_le_meta,
+    const EventCallback& event_callback,
     fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(event_code);
   FXL_DCHECK(event_callback);
@@ -387,8 +435,9 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   if (event->event_code() == kCommandCompleteEventCode ||
       event->event_code() == kCommandStatusEventCode) {
     FXL_LOG(ERROR) << "hci: Ignoring unhandled "
-                   << (event->event_code() == kCommandCompleteEventCode ? "HCI_CommandComplete"
-                                                                        : "HCI_CommandStatus")
+                   << (event->event_code() == kCommandCompleteEventCode
+                           ? "HCI_CommandComplete"
+                           : "HCI_CommandStatus")
                    << " event";
     return;
   }
@@ -418,8 +467,8 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   auto& handler = handler_iter->second;
   FXL_DCHECK(handler.event_code == event_code);
 
-  // If the given task runner is the I/O task runner, then immediately execute the callback as there
-  // is no need to delay the execution.
+  // If the given task runner is the I/O task runner, then immediately execute
+  // the callback as there is no need to delay the execution.
   if (handler.task_runner.get() == io_task_runner_.get()) {
     handler.event_callback(*event);
     return;
@@ -431,21 +480,24 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   ]() mutable { event_callback(*event); }));
 }
 
-async_wait_result_t CommandChannel::OnChannelReady(async_t* async, zx_status_t status,
-                                                   const zx_packet_signal_t* signal) {
+async_wait_result_t CommandChannel::OnChannelReady(
+    async_t* async,
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   if (status != ZX_OK) {
-    FXL_VLOG(1) << "hci: CommandChannel: channel error: " << zx_status_get_string(status);
+    FXL_VLOG(1) << "hci: CommandChannel: channel error: "
+                << zx_status_get_string(status);
     return ASYNC_WAIT_FINISHED;
   }
 
-  // Allocate a buffer for the event. Since we don't know the size beforehand we allocate the
-  // largest possible buffer.
-  // TODO(armansito): We could first try to read into a small buffer and retry if the syscall
-  // returns ZX_ERR_BUFFER_TOO_SMALL. Not sure if the second syscall would be worth it but
-  // investigate.
+  // Allocate a buffer for the event. Since we don't know the size beforehand we
+  // allocate the largest possible buffer.
+  // TODO(armansito): We could first try to read into a small buffer and retry
+  // if the syscall returns ZX_ERR_BUFFER_TOO_SMALL. Not sure if the second
+  // syscall would be worth it but investigate.
 
   for (size_t count = 0; count < signal->count; count++) {
     uint32_t read_size;
@@ -455,8 +507,9 @@ async_wait_result_t CommandChannel::OnChannelReady(async_t* async, zx_status_t s
       return ASYNC_WAIT_FINISHED;
     }
     auto packet_bytes = packet->mutable_view()->mutable_data();
-    zx_status_t read_status = channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
-                                            &read_size, nullptr, 0, nullptr);
+    zx_status_t read_status =
+        channel_.read(0u, packet_bytes.mutable_data(), packet_bytes.size(),
+                      &read_size, nullptr, 0, nullptr);
     if (read_status < 0) {
       FXL_VLOG(1) << "hci: CommandChannel: Failed to read event bytes: "
                   << zx_status_get_string(read_status);
@@ -467,7 +520,8 @@ async_wait_result_t CommandChannel::OnChannelReady(async_t* async, zx_status_t s
 
     if (read_size < sizeof(EventHeader)) {
       FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
-                     << "expected at least " << sizeof(EventHeader) << " bytes, "
+                     << "expected at least " << sizeof(EventHeader)
+                     << " bytes, "
                      << "got " << read_size;
       // TODO(armansito): Should this be fatal? Ignore for now.
       continue;
@@ -475,23 +529,28 @@ async_wait_result_t CommandChannel::OnChannelReady(async_t* async, zx_status_t s
 
     // Compare the received payload size to what is in the header.
     const size_t rx_payload_size = read_size - sizeof(EventHeader);
-    const size_t size_from_header = packet->view().header().parameter_total_size;
+    const size_t size_from_header =
+        packet->view().header().parameter_total_size;
     if (size_from_header != rx_payload_size) {
       FXL_LOG(ERROR) << "hci: CommandChannel: Malformed event packet - "
                      << "payload size from header (" << size_from_header << ")"
-                     << " does not match received payload size: " << rx_payload_size;
+                     << " does not match received payload size: "
+                     << rx_payload_size;
       continue;
     }
 
     packet->InitializeFromBuffer();
 
-    // Check to see if this event is in response to the currently pending command.
+    // Check to see if this event is in response to the currently pending
+    // command.
     PendingTransactionData* pending_command = GetPendingCommand();
     if (pending_command) {
       if (pending_command->complete_event_code == packet->event_code()) {
-        if (HandlePendingCommandComplete(std::move(packet))) continue;
+        if (HandlePendingCommandComplete(std::move(packet)))
+          continue;
 
-        // |packet| should not have been moved in this case. It will be accessed below.
+        // |packet| should not have been moved in this case. It will be accessed
+        // below.
         FXL_DCHECK(packet);
       } else if (packet->event_code() == kCommandStatusEventCode) {
         HandlePendingCommandStatus(*packet);

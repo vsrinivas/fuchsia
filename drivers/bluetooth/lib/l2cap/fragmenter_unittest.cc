@@ -35,7 +35,8 @@ TEST(L2CAP_FragmenterTest, EmptyPayload) {
 
   auto fragments = pdu.ReleaseFragments();
 
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment, fragments.begin()->view().data()));
+  EXPECT_TRUE(common::ContainersEqual(expected_fragment,
+                                      fragments.begin()->view().data()));
 }
 
 TEST(L2CAP_FragmenterTest, SingleFragment) {
@@ -56,7 +57,8 @@ TEST(L2CAP_FragmenterTest, SingleFragment) {
 
   auto fragments = pdu.ReleaseFragments();
 
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment, fragments.begin()->view().data()));
+  EXPECT_TRUE(common::ContainersEqual(expected_fragment,
+                                      fragments.begin()->view().data()));
 }
 
 TEST(L2CAP_FragmenterTest, SingleFragmentExactFit) {
@@ -69,7 +71,8 @@ TEST(L2CAP_FragmenterTest, SingleFragmentExactFit) {
       // Basic L2CAP header
       0x04, 0x00, 0x01, 0x00, 'T', 'e', 's', 't');
 
-  // Make the fragment limit large enough to fit exactly one B-frame containing |payload|.
+  // Make the fragment limit large enough to fit exactly one B-frame containing
+  // |payload|.
   Fragmenter fragmenter(kTestHandle, payload.size() + sizeof(BasicHeader));
   PDU pdu = fragmenter.BuildBasicFrame(kTestChannelId, payload);
   ASSERT_TRUE(pdu.is_valid());
@@ -77,7 +80,8 @@ TEST(L2CAP_FragmenterTest, SingleFragmentExactFit) {
 
   auto fragments = pdu.ReleaseFragments();
 
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment, fragments.begin()->view().data()));
+  EXPECT_TRUE(common::ContainersEqual(expected_fragment,
+                                      fragments.begin()->view().data()));
 }
 
 TEST(L2CAP_FragmenterTest, TwoFragmentsOffByOne) {
@@ -97,8 +101,9 @@ TEST(L2CAP_FragmenterTest, TwoFragmentsOffByOne) {
       // Continuing payload
       '!');
 
-  // Make the fragment limit large enough to fit exactly one B-frame containing 1 octet less than
-  // |payload|. The last octet should be placed in a second fragment.
+  // Make the fragment limit large enough to fit exactly one B-frame containing
+  // 1 octet less than |payload|. The last octet should be placed in a second
+  // fragment.
   Fragmenter fragmenter(kTestHandle, payload.size() + sizeof(BasicHeader) - 1);
   PDU pdu = fragmenter.BuildBasicFrame(kTestChannelId, payload);
   ASSERT_TRUE(pdu.is_valid());
@@ -106,8 +111,10 @@ TEST(L2CAP_FragmenterTest, TwoFragmentsOffByOne) {
 
   auto fragments = pdu.ReleaseFragments();
 
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment0, fragments.begin()->view().data()));
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment1, (++fragments.begin())->view().data()));
+  EXPECT_TRUE(common::ContainersEqual(expected_fragment0,
+                                      fragments.begin()->view().data()));
+  EXPECT_TRUE(common::ContainersEqual(expected_fragment1,
+                                      (++fragments.begin())->view().data()));
 }
 
 TEST(L2CAP_FragmenterTest, TwoFragmentsExact) {
@@ -128,23 +135,28 @@ TEST(L2CAP_FragmenterTest, TwoFragmentsExact) {
       // Continuing payload
       'T', 'e', 's', 't');
 
-  // Make the fragment limit large enough to fit exactly half a B-frame containing |payload|. The
-  // frame should be evenly divided across two fragments.
-  Fragmenter fragmenter(kTestHandle, (payload.size() + sizeof(BasicHeader)) / 2);
+  // Make the fragment limit large enough to fit exactly half a B-frame
+  // containing |payload|. The frame should be evenly divided across two
+  // fragments.
+  Fragmenter fragmenter(kTestHandle,
+                        (payload.size() + sizeof(BasicHeader)) / 2);
   PDU pdu = fragmenter.BuildBasicFrame(kTestChannelId, payload);
   ASSERT_TRUE(pdu.is_valid());
   EXPECT_EQ(2u, pdu.fragment_count());
 
   auto fragments = pdu.ReleaseFragments();
 
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment0, fragments.begin()->view().data()));
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment1, (++fragments.begin())->view().data()));
+  EXPECT_TRUE(common::ContainersEqual(expected_fragment0,
+                                      fragments.begin()->view().data()));
+  EXPECT_TRUE(common::ContainersEqual(expected_fragment1,
+                                      (++fragments.begin())->view().data()));
 }
 
 TEST(L2CAP_FragmenterTest, ManyFragmentsOffByOne) {
   constexpr size_t kMaxFragmentPayloadSize = 5;
   constexpr size_t kExpectedFragmentCount = 4;
-  constexpr size_t kFrameSize = (kExpectedFragmentCount - 1) * kMaxFragmentPayloadSize + 1;
+  constexpr size_t kFrameSize =
+      (kExpectedFragmentCount - 1) * kMaxFragmentPayloadSize + 1;
 
   common::StaticByteBuffer<kFrameSize - sizeof(BasicHeader)> payload;
   payload.Fill('X');
@@ -184,9 +196,12 @@ TEST(L2CAP_FragmenterTest, ManyFragmentsOffByOne) {
 
   auto fragments = pdu.ReleaseFragments();
   auto iter = fragments.begin();
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment0, (iter++)->view().data()));
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment1, (iter++)->view().data()));
-  EXPECT_TRUE(common::ContainersEqual(expected_fragment2, (iter++)->view().data()));
+  EXPECT_TRUE(
+      common::ContainersEqual(expected_fragment0, (iter++)->view().data()));
+  EXPECT_TRUE(
+      common::ContainersEqual(expected_fragment1, (iter++)->view().data()));
+  EXPECT_TRUE(
+      common::ContainersEqual(expected_fragment2, (iter++)->view().data()));
   EXPECT_TRUE(common::ContainersEqual(expected_fragment3, iter->view().data()));
 }
 

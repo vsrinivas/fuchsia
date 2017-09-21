@@ -15,30 +15,32 @@
 namespace bluetooth {
 namespace hci {
 
-// Packet template specialization for ACL data packets. This cannot be directly instantiated.
-// Represents a HCI ACL data packet.
+// Packet template specialization for ACL data packets. This cannot be directly
+// instantiated. Represents a HCI ACL data packet.
 using ACLDataPacket = Packet<ACLDataHeader>;
 using ACLDataPacketPtr = std::unique_ptr<ACLDataPacket>;
 
 template <>
 class Packet<ACLDataHeader> : public PacketBase<ACLDataHeader, ACLDataPacket> {
  public:
-  // Slab-allocates a new ACLDataPacket with the given payload size without initializing its
-  // contents.
+  // Slab-allocates a new ACLDataPacket with the given payload size without
+  // initializing its contents.
   static ACLDataPacketPtr New(uint16_t payload_size);
 
-  // Slab-allocates a new ACLDataPacket with the given payload size and initializes the
-  // packet's header field with the given data.
+  // Slab-allocates a new ACLDataPacket with the given payload size and
+  // initializes the packet's header field with the given data.
   static ACLDataPacketPtr New(ConnectionHandle connection_handle,
                               ACLPacketBoundaryFlag packet_boundary_flag,
-                              ACLBroadcastFlag broadcast_flag, uint16_t payload_size = 0u);
+                              ACLBroadcastFlag broadcast_flag,
+                              uint16_t payload_size = 0u);
 
   // Getters for the header fields.
   ConnectionHandle connection_handle() const;
   ACLPacketBoundaryFlag packet_boundary_flag() const;
   ACLBroadcastFlag broadcast_flag() const;
 
-  // Initializes the internal PacketView by reading the header portion of the underlying buffer.
+  // Initializes the internal PacketView by reading the header portion of the
+  // underlying buffer.
   void InitializeFromBuffer();
 
  protected:
@@ -46,7 +48,8 @@ class Packet<ACLDataHeader> : public PacketBase<ACLDataHeader, ACLDataPacket> {
 
  private:
   // Writes the given header fields into the underlying buffer.
-  void WriteHeader(ConnectionHandle connection_handle, ACLPacketBoundaryFlag packet_boundary_flag,
+  void WriteHeader(ConnectionHandle connection_handle,
+                   ACLPacketBoundaryFlag packet_boundary_flag,
                    ACLBroadcastFlag broadcast_flag);
 };
 

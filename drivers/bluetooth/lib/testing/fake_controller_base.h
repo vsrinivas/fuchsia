@@ -19,16 +19,16 @@
 namespace bluetooth {
 namespace testing {
 
-// Abstract base for implementing a fake HCI controller endpoint. This can directly send
-// ACL data and event packets on request and forward outgoing ACL data packets to subclass
-// implementations.
+// Abstract base for implementing a fake HCI controller endpoint. This can
+// directly send ACL data and event packets on request and forward outgoing ACL
+// data packets to subclass implementations.
 class FakeControllerBase {
  public:
   FakeControllerBase(zx::channel cmd_channel, zx::channel acl_data_channel);
   virtual ~FakeControllerBase();
 
-  // Kicks off the FakeController thread and message loop and starts processing transactions.
-  // |debug_name| will be assigned as the name of the thread.
+  // Kicks off the FakeController thread and message loop and starts processing
+  // transactions. |debug_name| will be assigned as the name of the thread.
   void Start();
 
   // Stops the message loop and thread.
@@ -37,7 +37,8 @@ class FakeControllerBase {
   // Sends the given packet over this FakeController's command channel endpoint.
   void SendCommandChannelPacket(const common::ByteBuffer& packet);
 
-  // Sends the given packet over this FakeController's ACL data channel endpoint.
+  // Sends the given packet over this FakeController's ACL data channel
+  // endpoint.
   void SendACLDataChannelPacket(const common::ByteBuffer& packet);
 
   // Immediately closes the command channel endpoint.
@@ -61,20 +62,24 @@ class FakeControllerBase {
       const common::PacketView<hci::CommandHeader>& command_packet) = 0;
 
   // Called when there is an outgoing ACL data packet.
-  virtual void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) = 0;
+  virtual void OnACLDataPacketReceived(
+      const common::ByteBuffer& acl_data_packet) = 0;
 
  private:
   // Read and handle packets received over the channels.
-  async_wait_result_t HandleCommandPacket(async_t* async, zx_status_t wait_status,
+  async_wait_result_t HandleCommandPacket(async_t* async,
+                                          zx_status_t wait_status,
                                           const zx_packet_signal_t* signal);
-  async_wait_result_t HandleACLPacket(async_t* async, zx_status_t wait_status,
+  async_wait_result_t HandleACLPacket(async_t* async,
+                                      zx_status_t wait_status,
                                       const zx_packet_signal_t* signal);
 
   // Cleans up the channel handles. This must be run on |task_runner_|'s thread.
   void CloseCommandChannelInternal();
   void CloseACLDataChannelInternal();
 
-  // Used to assert that certain public functions are only called on the creation thread.
+  // Used to assert that certain public functions are only called on the
+  // creation thread.
   fxl::ThreadChecker thread_checker_;
 
   zx::channel cmd_channel_;

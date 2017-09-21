@@ -14,8 +14,9 @@
 namespace bluetooth {
 namespace testing {
 
-CommandTransaction::CommandTransaction(const common::ByteBuffer& expected,
-                                       const std::vector<const common::ByteBuffer*>& replies)
+CommandTransaction::CommandTransaction(
+    const common::ByteBuffer& expected,
+    const std::vector<const common::ByteBuffer*>& replies)
     : expected_(expected) {
   for (const auto* buffer : replies) {
     replies_.push(common::DynamicByteBuffer(*buffer));
@@ -33,11 +34,13 @@ common::DynamicByteBuffer CommandTransaction::PopNextReply() {
   return reply;
 }
 
-TestController::TestController(zx::channel cmd_channel, zx::channel acl_data_channel)
+TestController::TestController(zx::channel cmd_channel,
+                               zx::channel acl_data_channel)
     : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)) {}
 
 TestController::~TestController() {
-  if (IsStarted()) Stop();
+  if (IsStarted())
+    Stop();
 }
 
 void TestController::QueueCommandTransaction(CommandTransaction transaction) {
@@ -55,8 +58,9 @@ void TestController::SetDataCallback(const DataCallback& callback,
   data_task_runner_ = task_runner;
 }
 
-void TestController::SetTransactionCallback(const fxl::Closure& callback,
-                                            fxl::RefPtr<fxl::TaskRunner> task_runner) {
+void TestController::SetTransactionCallback(
+    const fxl::Closure& callback,
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(callback);
   FXL_DCHECK(task_runner);
   FXL_DCHECK(!transaction_callback_);
@@ -68,30 +72,35 @@ void TestController::SetTransactionCallback(const fxl::Closure& callback,
 
 void TestController::OnCommandPacketReceived(
     const common::PacketView<hci::CommandHeader>& command_packet) {
-  ASSERT_FALSE(cmd_transactions_.empty()) << "Received unexpected command packet";
+  ASSERT_FALSE(cmd_transactions_.empty())
+      << "Received unexpected command packet";
 
   auto& current = cmd_transactions_.front();
   ASSERT_TRUE(ContainersEqual(current.expected_, command_packet.data()));
 
   while (!current.replies_.empty()) {
     auto& reply = current.replies_.front();
-    zx_status_t status = command_channel().write(0, reply.data(), reply.size(), nullptr, 0);
-    ASSERT_EQ(ZX_OK, status) << "Failed to send reply: " << zx_status_get_string(status);
+    zx_status_t status =
+        command_channel().write(0, reply.data(), reply.size(), nullptr, 0);
+    ASSERT_EQ(ZX_OK, status)
+        << "Failed to send reply: " << zx_status_get_string(status);
     current.replies_.pop();
   }
 
   cmd_transactions_.pop();
-  if (transaction_callback_) transaction_task_runner_->PostTask(transaction_callback_);
+  if (transaction_callback_)
+    transaction_task_runner_->PostTask(transaction_callback_);
 }
 
-void TestController::OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) {
-  if (!data_callback_) return;
+void TestController::OnACLDataPacketReceived(
+    const common::ByteBuffer& acl_data_packet) {
+  if (!data_callback_)
+    return;
 
   common::DynamicByteBuffer packet_copy(acl_data_packet);
-  data_task_runner_->PostTask(
-      fxl::MakeCopyable([ packet_copy = std::move(packet_copy), cb = data_callback_ ]() mutable {
-        cb(packet_copy);
-      }));
+  data_task_runner_->PostTask(fxl::MakeCopyable([
+    packet_copy = std::move(packet_copy), cb = data_callback_
+  ]() mutable { cb(packet_copy); }));
 }
 
 }  // namespace testing

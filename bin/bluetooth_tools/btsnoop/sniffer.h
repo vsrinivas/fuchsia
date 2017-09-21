@@ -27,7 +27,8 @@ class Sniffer final {
 
  private:
   // async::AutoWait handler
-  async_wait_result_t OnHandleReady(async_t* async, zx_status_t status,
+  async_wait_result_t OnHandleReady(async_t* async,
+                                    zx_status_t status,
                                     const zx_packet_signal_t* signal);
 
   std::string hci_dev_path_;

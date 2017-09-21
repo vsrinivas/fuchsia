@@ -35,14 +35,15 @@ TEST(SlabAllocatorsTest, CommandPacketFallBack) {
   size_t num_packets = 0;
   fbl::DoublyLinkedList<std::unique_ptr<Packet<CommandHeader>>> packets;
 
-  // Allocate a lot of small packets. We should be able to allocate two allocators' worth of
-  // packets until we fail.
+  // Allocate a lot of small packets. We should be able to allocate two
+  // allocators' worth of packets until we fail.
   while (auto packet = CommandPacket::New(kTestOpCode, 5)) {
     packets.push_front(std::move(packet));
     num_packets++;
   }
 
-  EXPECT_EQ(kMaxNumSlabs * kNumSmallControlPackets + kMaxNumSlabs * kNumLargeControlPackets,
+  EXPECT_EQ(kMaxNumSlabs * kNumSmallControlPackets +
+                kMaxNumSlabs * kNumLargeControlPackets,
             num_packets);
 }
 
@@ -67,14 +68,15 @@ TEST(SlabAllocatorsTest, ACLDataPacketFallBack) {
   size_t num_packets = 0;
   fbl::DoublyLinkedList<std::unique_ptr<Packet<ACLDataHeader>>> packets;
 
-  // Allocate a lot of small packets. We should be able to allocate three allocators' worth of
-  // packets until we fail.
+  // Allocate a lot of small packets. We should be able to allocate three
+  // allocators' worth of packets until we fail.
   while (auto packet = ACLDataPacket::New(5)) {
     packets.push_front(std::move(packet));
     num_packets++;
   }
 
-  EXPECT_EQ(kMaxNumSlabs * kNumSmallACLDataPackets + kMaxNumSlabs * kNumMediumACLDataPackets +
+  EXPECT_EQ(kMaxNumSlabs * kNumSmallACLDataPackets +
+                kMaxNumSlabs * kNumMediumACLDataPackets +
                 kMaxNumSlabs * kNumLargeACLDataPackets,
             num_packets);
 }

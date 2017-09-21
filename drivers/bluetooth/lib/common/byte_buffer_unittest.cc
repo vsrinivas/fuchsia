@@ -20,7 +20,8 @@ TEST(ByteBufferTest, StaticByteBuffer) {
   buffer.SetToZeros();
   buffer[3] = 3;
 
-  constexpr std::array<uint8_t, kBufferSize> kExpected{{0x00, 0x00, 0x00, 0x03, 0x00}};
+  constexpr std::array<uint8_t, kBufferSize> kExpected{
+      {0x00, 0x00, 0x00, 0x03, 0x00}};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 
   // Moving will result in a copy.
@@ -61,7 +62,8 @@ TEST(ByteBufferTest, DynamicByteBuffer) {
   buffer.SetToZeros();
   buffer[3] = 3;
 
-  constexpr std::array<uint8_t, kBufferSize> kExpected{{0x00, 0x00, 0x00, 0x03, 0x00}};
+  constexpr std::array<uint8_t, kBufferSize> kExpected{
+      {0x00, 0x00, 0x00, 0x03, 0x00}};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 
   // Moving will invalidate the source buffer.
@@ -153,18 +155,20 @@ TEST(ByteBufferTest, Copy) {
   // Copying an empty buffer should copy 0 bytes.
   EXPECT_EQ(0u, empty_buffer.Copy(&target_buffer));
 
-  // Copy all of |buffer|. The first |buffer.size()| octets of |target_buffer| should match the
-  // contents of |buffer|.
+  // Copy all of |buffer|. The first |buffer.size()| octets of |target_buffer|
+  // should match the contents of |buffer|.
   size_t expected_write_size = buffer.size();
   ASSERT_EQ(expected_write_size, buffer.Copy(&target_buffer));
-  EXPECT_TRUE(ContainersEqual(buffer, BufferView(target_buffer, expected_write_size)));
+  EXPECT_TRUE(
+      ContainersEqual(buffer, BufferView(target_buffer, expected_write_size)));
 
   // Copy all of |buffer| starting at index 1.
   target_buffer.SetToZeros();
   expected_write_size = buffer.size() - 1;
   ASSERT_EQ(expected_write_size, buffer.Copy(&target_buffer, 1));
   BufferView sub = buffer.view(1);
-  EXPECT_TRUE(ContainersEqual(sub, BufferView(target_buffer, expected_write_size)));
+  EXPECT_TRUE(
+      ContainersEqual(sub, BufferView(target_buffer, expected_write_size)));
 
   // Copy one octet of |buffer| starting at index 2
   target_buffer.SetToZeros();
@@ -176,8 +180,8 @@ TEST(ByteBufferTest, Copy) {
   target_buffer.SetToZeros();
   auto target_buffer_copy = target_buffer;
 
-  // Copy all remaining octets starting just past the end of |buffer|. This should copy zero bytes
-  // and |target_buffer| should remain unchanged.
+  // Copy all remaining octets starting just past the end of |buffer|. This
+  // should copy zero bytes and |target_buffer| should remain unchanged.
   ASSERT_EQ(0u, buffer.Copy(&target_buffer, buffer.size()));
   EXPECT_TRUE(ContainersEqual(target_buffer_copy, target_buffer));
 }
@@ -244,14 +248,16 @@ TEST(ByteBufferTest, MutableByteBufferWrite) {
   const auto kData0 = common::CreateStaticByteBuffer('T', 'e', 's', 't');
   const auto kData1 = common::CreateStaticByteBuffer('F', 'o', 'o');
 
-  auto buffer = common::CreateStaticByteBuffer('X', 'X', 'X', 'X', 'X', 'X', 'X', 'X');
+  auto buffer =
+      common::CreateStaticByteBuffer('X', 'X', 'X', 'X', 'X', 'X', 'X', 'X');
   EXPECT_EQ("XXXXXXXX", buffer.AsString());
 
   buffer.Write(kData0);
   EXPECT_EQ("TestXXXX", buffer.AsString());
 
   // Write from raw pointer.
-  buffer = common::CreateStaticByteBuffer('X', 'X', 'X', 'X', 'X', 'X', 'X', 'X');
+  buffer =
+      common::CreateStaticByteBuffer('X', 'X', 'X', 'X', 'X', 'X', 'X', 'X');
   buffer.Write(kData0.data(), kData0.size());
   EXPECT_EQ("TestXXXX", buffer.AsString());
 
@@ -264,13 +270,14 @@ TEST(ByteBufferTest, MutableByteBufferWrite) {
   EXPECT_EQ("TFoFooXX", buffer.AsString());
 
   // Writing zero bytes should have no effect.
-  buffer = common::CreateStaticByteBuffer('X', 'X', 'X', 'X', 'X', 'X', 'X', 'X');
+  buffer =
+      common::CreateStaticByteBuffer('X', 'X', 'X', 'X', 'X', 'X', 'X', 'X');
   buffer.Write(kData1.data(), 0u);
   buffer.Write(nullptr, 0u);  // Passing nullptr is OK when size is 0
   EXPECT_EQ("XXXXXXXX", buffer.AsString());
 
-  // Writing zero bytes just past the buffer should be accepted (i.e. no assertion) and have no
-  // effect.
+  // Writing zero bytes just past the buffer should be accepted (i.e. no
+  // assertion) and have no effect.
   buffer.Write(kData1.data(), 0u, buffer.size());
   EXPECT_EQ("XXXXXXXX", buffer.AsString());
 }
