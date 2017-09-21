@@ -11,6 +11,7 @@
 
 #include <fdio/remoteio.h>
 #include <fdio/vfs.h>
+#include <fs/client.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
@@ -29,13 +30,6 @@
 #define VFS_FLAG_DEVICE_DETACHED 0x00000004
 #define VFS_FLAG_RESERVED_MASK   0x0000FFFF
 // clang-format on
-
-__BEGIN_CDECLS
-
-// Send an unmount signal on a handle to a filesystem and await a response.
-zx_status_t vfs_unmount_handle(zx_handle_t h, zx_time_t deadline);
-
-__END_CDECLS
 
 #ifdef __Fuchsia__
 #include <fs/dispatcher.h>
