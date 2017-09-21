@@ -4,7 +4,7 @@
         "garnet/packages/fsl",
         "garnet/packages/netstack",
         "garnet/packages/runtime_config",
-        "packages/gn/test_runner"
+        "garnet/packages/test_runner"
     ],
     "resources": [
         {

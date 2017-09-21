@@ -4,9 +4,9 @@
         "dart"
     ],
     "imports": [
-        "packages/gn/fonts",
+        "garnet/packages/fonts",
         "garnet/packages/icu",
-        "packages/gn/mozart",
+        "garnet/packages/mozart",
         "garnet/packages/icu_data",
         "garnet/packages/zlib"
     ],

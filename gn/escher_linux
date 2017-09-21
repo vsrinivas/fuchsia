@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "labels": [
-        "//garnet/lib/escher/build_linux:examples",
-        "//garnet/lib/escher/build_linux:tests"
-    ]
-}

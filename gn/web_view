@@ -5,10 +5,10 @@
     "imports": [
         "packages/gn/cairo",
         "packages/gn/curl",
-        "packages/gn/fonts",
+        "garnet/packages/fonts",
         "garnet/packages/icu",
         "packages/gn/libxml2",
-        "packages/gn/mozart",
+        "garnet/packages/mozart",
         "packages/gn/sqlite",
         "garnet/packages/zlib"
     ],

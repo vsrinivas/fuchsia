@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "netstack_manual_tests": "//garnet/go/src/netstack/tests:netstack_manual_tests",
-        "netstack_tests": "//garnet/go/src/netstack/tests:netstack_tests"
-    }
-}

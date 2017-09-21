@@ -1,6 +1,6 @@
 {
     "imports": [
-        "packages/gn/media_audio",
+        "garnet/packages/media_audio",
         "garnet/packages/netstack",
         "garnet/packages/openssh",
         "garnet/packages/runtime",

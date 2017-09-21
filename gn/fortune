@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "fortune": "//garnet/bin/fortune"
-    }
-}

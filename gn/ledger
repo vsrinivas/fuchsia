@@ -4,10 +4,10 @@
     ],
     "imports": [
         "packages/gn/boringssl_libssl",
-        "packages/gn/cobalt_client",
+        "garnet/packages/cobalt_client",
         "garnet/packages/fxl",
         "garnet/packages/fsl",
-        "packages/gn/url"
+        "garnet/packages/url"
     ],
     "packages": {
         "ledger": "//apps/ledger",
