@@ -6,14 +6,17 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 var archive = flag.Bool("archive", true, "Whether to archive the output")
@@ -27,15 +30,16 @@ var kernelDebugObjs = flag.Bool("kernel-dbg", true, "Include kernel objects with
 var bootdata = flag.Bool("bootdata", true, "Include bootdata")
 var qemu = flag.Bool("qemu", true, "Include QEMU binary")
 var tools = flag.Bool("tools", true, "Include additional tools")
+var media = flag.Bool("media", true, "Include C media library")
 var verbose = flag.Bool("v", false, "Verbose output")
 var dryRun = flag.Bool("n", false, "Dry run - print what would happen but don't actually do it")
 
 type compType int
 
 const (
-	dir compType = iota
-	file
-	custom
+	dirType compType = iota
+	fileType
+	customType
 )
 
 type component struct {
@@ -46,9 +50,19 @@ type component struct {
 	f         func(src, dst string) // When t is 'custom', function to run to copy
 }
 
+type dir struct {
+	flag     *bool
+	src, dst string
+}
+
+type file struct {
+	flag     *bool
+	src, dst string
+}
+
 var (
-	hostOs string
-	hostCpu string
+	hostOs     string
+	hostCpu    string
 	components []component
 )
 
@@ -62,72 +76,88 @@ func init() {
 		hostOs = "mac"
 	}
 
-	components = []component{
+	zxBuildDir := "out/build-zircon/"
+	x86ZxBuildDir := zxBuildDir + "/build-zircon-pc-x86-64/"
+	armZxBuildDir := zxBuildDir + "/build-zircon-qemu-arm64/"
+	x86Builddir := "out/release-x86-64/"
+	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
+
+	dirs := []dir{
+		{
+			sysroot,
+			x86ZxBuildDir + "sysroot",
+			"sysroot/x86_64-fuchsia",
+		},
+		{
+			sysroot,
+			armZxBuildDir + "sysroot",
+			"sysroot/aarch64-fuchsia",
+		},
+		{
+			qemu,
+			qemuDir,
+			"qemu",
+		},
+		{
+			tools,
+			"out/build-zircon/tools",
+			"tools",
+		},
 		{
 			toolchain,
 			fmt.Sprintf("buildtools/%s-%s/clang", hostOs, hostCpu),
 			"clang",
-			dir,
-			nil,
 		},
 		{
 			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
 			toolchainLibs,
 			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/6.0.0/lib/fuchsia", hostOs, hostCpu),
 			"toolchain_libs/clang/6.0.0/lib/fuchsia",
-			dir,
-			nil,
 		},
-		{
+	}
 
-			sysroot,
-			"out/build-zircon/build-zircon-qemu-arm64/sysroot",
-			"sysroot/aarch64-fuchsia",
-			dir,
-			nil,
-		},
-		{
-			sysroot,
-			"out/build-zircon/build-zircon-pc-x86-64/sysroot",
-			"sysroot/x86_64-fuchsia",
-			dir,
-			nil,
-		},
+	files := []file{
 		{
 			kernelImg,
 			"out/build-zircon/build-zircon-pc-x86-64/zircon.bin",
 			"kernel/zircon.bin",
-			file,
-			nil,
-		},
-		{
-			kernelDebugObjs,
-			"out/build-zircon/build-zircon-pc-x86-64",
-			"kernel/debug",
-			custom,
-			copyKernelDebugObjs,
 		},
 		{
 			bootdata,
-			"out/release-x86-64/user.bootfs",
+			x86Builddir + "user.bootfs",
 			"bootdata.bin",
-			file,
-			nil,
 		},
 		{
-			qemu,
-			fmt.Sprintf("buildtools/%s-%s/qemu", hostOs, hostCpu),
-			"qemu",
-			dir,
-			nil,
+			media,
+			"garnet/public/lib/media/c/audio.h",
+			"sysroot/x86_64-fuchsia/include/media/audio.h",
 		},
 		{
-			tools,
-			"out/build-zircon/tools",
-			"tools",
-			dir,
-			nil,
+			media,
+			x86Builddir + "x64-shared/libmedia_client.so",
+			"sysroot/x86_64-fuchsia/lib/libmedia_client.so",
 		},
+		{
+			media,
+			x86Builddir + "x64-shared/lib.unstripped/libmedia_client.so",
+			"sysroot/x86_64-fuchsia/debug-info/libmedia_client.so",
+		},
+	}
+
+	components = []component{
+		{
+			kernelDebugObjs,
+			x86ZxBuildDir,
+			"kernel/debug",
+			customType,
+			copyKernelDebugObjs,
+		},
+	}
+	for _, d := range dirs {
+		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
+	}
+	for _, f := range files {
+		components = append(components, component{f.flag, f.src, f.dst, fileType, nil})
 	}
 }
 
@@ -141,19 +171,39 @@ func copyKernelDebugObjs(src, dstPrefix string) {
 		}
 		return nil
 	})
-	cp(filepath.Join(src, "ids.txt"), filepath.Join(dstPrefix, "ids.txt"))
+	// The ids.txt file has absolute paths but relative paths within the SDK are
+	// more useful to users.
+	srcIds, err := os.Open(filepath.Join(src, "ids.txt"))
+	if err != nil {
+		log.Fatal("could not open ids.txt", err)
+	}
+	defer srcIds.Close()
+	dstIds, err := os.Create(filepath.Join(dstPrefix, "ids.txt"))
+	if err != nil {
+		log.Fatal("could not create ids.txt", err)
+	}
+	defer dstIds.Close()
+	scanner := bufio.NewScanner(srcIds)
+	cwd, _ := os.Getwd()
+	absSrc := path.Join(cwd, src)
+	for scanner.Scan() {
+		s := strings.Split(scanner.Text(), " ")
+		id, absPath := s[0], s[1]
+		relPath := absPath[len(absSrc):]
+		fmt.Fprintln(dstIds, id, relPath)
+	}
 }
 
-func mkdir(dir string) {
+func mkdir(d string) {
 	if *verbose || *dryRun {
-		fmt.Println("Making directory", dir)
+		fmt.Println("Making directory", d)
 	}
 	if *dryRun {
 		return
 	}
-	_, err := exec.Command("mkdir", "-p", dir).Output()
+	_, err := exec.Command("mkdir", "-p", d).Output()
 	if err != nil {
-		log.Fatal("could not create directory", dir)
+		log.Fatal("could not create directory", d)
 	}
 }
 
@@ -226,11 +276,11 @@ only module.
 			src := filepath.Join(fuchsiaRoot, c.srcPrefix)
 			dst := filepath.Join(*outDir, c.dstPrefix)
 			switch c.t {
-			case dir:
+			case dirType:
 				copyDir(src, dst)
-			case file:
+			case fileType:
 				copyFile(src, dst)
-			case custom:
+			case customType:
 				c.f(src, dst)
 			}
 		}
