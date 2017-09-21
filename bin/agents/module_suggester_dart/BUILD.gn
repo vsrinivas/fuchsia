@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//apps/dart_content_handler/dart_app.gni")
+import("//topaz/runtime/dart_runner/dart_app.gni")
 
 dart_app("module_suggester_dart") {
   output_name = "agents/module_suggester.dartx"

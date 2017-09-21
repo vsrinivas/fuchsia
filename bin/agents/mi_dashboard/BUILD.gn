@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//packages/package.gni")
-import("//apps/dart_content_handler/dart_app.gni")
+import("//topaz/runtime/dart_runner/dart_app.gni")
 
 dart_app("mi_dashboard_dart") {
   output_name = "mi_dashboard.dartx"
