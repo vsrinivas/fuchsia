@@ -861,6 +861,38 @@ bool job_children_smoke() {
     return jobch_helper_smoke(ZX_INFO_JOB_CHILDREN, kTestJobChildJobs);
 }
 
+uint32_t handle_count_or_zero(zx_handle_t handle) {
+    zx_info_handle_count_t info;
+    if (ZX_OK != zx_object_get_info(
+        handle, ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr)) {
+        return 0u;
+    }
+    return info.handle_count;
+}
+
+bool handle_count_valid() {
+    // We create an event and check that ZX_INFO_HANDLE_COUNT stats at 1 and
+    // goes up for each new handle minted from it and goes down for each handle
+    // closed.
+    zx_handle_t event[4];
+    ASSERT_EQ(zx_event_create(0u, &event[0]), ZX_OK);
+    EXPECT_EQ(handle_count_or_zero(event[0]), 1u);
+
+    for (size_t i = 1; i != countof(event); ++i) {
+        ASSERT_EQ(zx_handle_duplicate(
+            event[0], ZX_RIGHT_SIGNAL, &event[i]), ZX_OK);
+        EXPECT_EQ(handle_count_or_zero(event[0]), i + 1);
+    }
+
+    for (size_t i = countof(event) - 1; i != 0; --i) {
+        ASSERT_EQ(zx_handle_close(event[i]), ZX_OK);
+        EXPECT_EQ(handle_count_or_zero(event[0]), i);
+    }
+
+    zx_handle_close(event[0]);
+    return true;
+}
+
 } // namespace
 
 // Tests that should pass for any topic. Use the wrappers below instead of
@@ -936,6 +968,8 @@ RUN_SINGLE_ENTRY_TESTS(ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t, get_test_pr
 RUN_SINGLE_ENTRY_TESTS(ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t, zx_thread_self);
 RUN_SINGLE_ENTRY_TESTS(ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t, zx_vmar_root_self);
 
+RUN_SINGLE_ENTRY_TESTS(ZX_INFO_HANDLE_COUNT, zx_info_handle_count_t, zx_thread_self);
+
 RUN_SINGLE_ENTRY_TESTS(ZX_INFO_PROCESS, zx_info_process_t, get_test_process);
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_PROCESS, zx_info_process_t, get_test_job>));
 RUN_TEST((wrong_handle_type_fails<ZX_INFO_PROCESS, zx_info_process_t, zx_thread_self>));
@@ -974,6 +1008,8 @@ RUN_TEST((invalid_handle_fails<ZX_INFO_THREAD_EXCEPTION_REPORT, zx_exception_rep
 // RUN_MULTI_ENTRY_TESTS(ZX_INFO_RESOURCE_RECORDS, zx_rrec_t, get_root_resource);
 // RUN_MULTI_ENTRY_TESTS(ZX_INFO_CPU_STATS, zx_info_cpu_stats_t, get_root_resource);
 // RUN_SINGLE_ENTRY_TESTS(ZX_INFO_KMEM_STATS, zx_info_kmem_stats_t, get_root_resource);
+
+RUN_TEST(handle_count_valid);
 
 END_TEST_CASE(object_info_tests)
 

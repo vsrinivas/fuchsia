@@ -75,6 +75,25 @@ typedef struct zx_info_handle_basic {
 } zx_info_handle_basic_t;
 ```
 
+### ZX_INFO_HANDLE_COUNT
+
+*handle* type: **Any**
+
+*buffer* type: **zx_info_handle_count_t[1]**
+
+```
+typedef struct zx_info_handle_count {
+    // The number of outstanding handles to a kernel object.
+    uint32_t handle_count;
+} zx_info_handle_count_t;
+```
+
+The *handle_count* is only meaningful if the number is equal to the number
+of handles to the object controlled by the caller process. For example,
+if the caller has one handle and the *handle_count* is equal to 2 it
+means that another process has a reference to this object which can be
+duplicated at any time.
+
 ### ZX_INFO_PROCESS
 
 *handle* type: **Process**

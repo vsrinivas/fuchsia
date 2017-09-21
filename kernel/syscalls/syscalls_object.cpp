@@ -493,6 +493,20 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             return single_record_result(
                 _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
+        case ZX_INFO_HANDLE_COUNT: {
+            fbl::RefPtr<Dispatcher> dispatcher;
+            auto status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &dispatcher);
+            if (status != ZX_OK)
+                return status;
+
+            zx_info_handle_count_t info = {
+                .handle_count = GetHandleCount(fbl::move(dispatcher))
+            };
+
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+        }
+
         default:
             return ZX_ERR_NOT_SUPPORTED;
     }

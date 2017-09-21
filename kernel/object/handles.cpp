@@ -231,6 +231,11 @@ void DeleteHandle(Handle* handle) {
     // gets destroyed here.
 }
 
+uint32_t GetHandleCount(const fbl::RefPtr<Dispatcher>& dispatcher) {
+    AutoLock lock(&handle_mutex);
+    return *dispatcher->get_handle_count_ptr();
+}
+
 Handle* MapU32ToHandle(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     auto index = value & kHandleIndexMask;
     auto va = &reinterpret_cast<Handle*>(handle_arena.start())[index];

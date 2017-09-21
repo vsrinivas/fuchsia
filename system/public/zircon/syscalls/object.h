@@ -30,6 +30,7 @@ typedef enum {
     ZX_INFO_CPU_STATS                  = 16, // zx_info_cpu_stats_t[n]
     ZX_INFO_KMEM_STATS                 = 17, // zx_info_kmem_stats_t[1]
     ZX_INFO_RESOURCE                   = 18, // zx_info_resource_t[1]
+    ZX_INFO_HANDLE_COUNT               = 19, // zx_info_handle_count_t[1]
     ZX_INFO_LAST
 } zx_object_info_topic_t;
 
@@ -82,6 +83,11 @@ typedef struct zx_info_handle_basic {
     // handle can be waited on; zero otherwise.
     uint32_t props;               // zx_obj_props_t;
 } zx_info_handle_basic_t;
+
+typedef struct zx_info_handle_count {
+    // The number of outstanding handles to a kernel object.
+    uint32_t handle_count;
+} zx_info_handle_count_t;
 
 typedef struct zx_info_process {
     // The process's return code; only valid if |exited| is true.

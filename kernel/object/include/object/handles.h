@@ -22,6 +22,9 @@ Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights);
 // then the logic to triger ZX_SIGNAL_LAST_HANDLE is not executed.
 Handle* DupHandle(Handle* source, zx_rights_t rights, bool is_replace);
 
+// Get the number of outstanding handles for a given dispatcher.
+uint32_t GetHandleCount(const fbl::RefPtr<Dispatcher>& dispatcher);
+
 // Deletes a handle created by MakeHandle() or DupHandle(). This might
 // trigger ZX_SIGNAL_LAST_HANDLE.
 void DeleteHandle(Handle* handle);
