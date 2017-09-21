@@ -29,7 +29,7 @@ static_library("gap") {
     "//garnet/drivers/bluetooth/lib/common",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
-    "//garnet/public/lib/bluetooth/fidl:interfaces_data_only",
+    "//garnet/public/lib/bluetooth/fidl:fidl_data_only",
     "//garnet/public/lib/fxl",
   ]
 }

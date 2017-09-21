@@ -4,7 +4,7 @@
 
 import 'dart:math';
 
-import 'package:apps.bluetooth.service.interfaces/low_energy.fidl.dart' as ble;
+import 'package:lib.bluetooth.fidl/low_energy.fidl.dart' as ble;
 
 import 'package:flutter/material.dart';
 import 'package:lib.widgets/model.dart';

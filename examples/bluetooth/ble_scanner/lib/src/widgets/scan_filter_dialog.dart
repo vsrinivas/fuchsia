@@ -4,8 +4,8 @@
 
 import 'dart:async';
 
-import 'package:apps.bluetooth.service.interfaces/common.fidl.dart';
-import 'package:apps.bluetooth.service.interfaces/low_energy.fidl.dart' as ble;
+import 'package:lib.bluetooth.fidl/common.fidl.dart';
+import 'package:lib.bluetooth.fidl/low_energy.fidl.dart' as ble;
 import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 

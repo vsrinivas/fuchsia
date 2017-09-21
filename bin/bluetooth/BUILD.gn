@@ -8,19 +8,19 @@ executable("bin") {
   output_name = "bluetooth"
 
   sources = [
-    "src/adapter_fidl_impl.cc",
-    "src/adapter_fidl_impl.h",
-    "src/adapter_manager_fidl_impl.cc",
-    "src/adapter_manager_fidl_impl.h",
-    "src/adapter_manager.cc",
-    "src/adapter_manager.h",
-    "src/app.cc",
-    "src/app.h",
-    "src/fidl_helpers.cc",
-    "src/fidl_helpers.h",
-    "src/low_energy_central_fidl_impl.cc",
-    "src/low_energy_central_fidl_impl.h",
-    "src/main.cc",
+    "adapter_fidl_impl.cc",
+    "adapter_fidl_impl.h",
+    "adapter_manager_fidl_impl.cc",
+    "adapter_manager_fidl_impl.h",
+    "adapter_manager.cc",
+    "adapter_manager.h",
+    "app.cc",
+    "app.h",
+    "fidl_helpers.cc",
+    "fidl_helpers.h",
+    "low_energy_central_fidl_impl.cc",
+    "low_energy_central_fidl_impl.h",
+    "main.cc",
   ]
 
   deps = [
@@ -70,7 +70,7 @@ executable("bluetooth_unittests") {
   ]
 }
 
-package("test") {
+package("bluetooth_tests") {
   testonly = true
   package_name = "bluetooth_tests"
 

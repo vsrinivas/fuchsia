@@ -4,8 +4,8 @@
 
 import 'package:lib.app.dart/app.dart';
 import 'package:lib.app.fidl/service_provider.fidl.dart';
-import 'package:apps.bluetooth.service.interfaces/common.fidl.dart' as common;
-import 'package:apps.bluetooth.service.interfaces/control.fidl.dart'
+import 'package:lib.bluetooth.fidl/common.fidl.dart' as common;
+import 'package:lib.bluetooth.fidl/control.fidl.dart'
     as bluetooth;
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';

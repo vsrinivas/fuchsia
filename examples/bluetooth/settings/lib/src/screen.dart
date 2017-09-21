@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:apps.bluetooth.service.interfaces/control.fidl.dart'
+import 'package:lib.bluetooth.fidl/control.fidl.dart'
     as bluetooth;
 import 'package:flutter/material.dart';
 import 'package:lib.widgets/model.dart';
