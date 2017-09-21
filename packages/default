@@ -29,7 +29,6 @@
         "garnet/packages/runtime_config",
         "garnet/packages/sbase",
         "garnet/packages/test_runner",
-        "garnet/packages/test_runner_dev",
         "garnet/packages/thinfs",
         "garnet/packages/tracing",
         "garnet/packages/url",
