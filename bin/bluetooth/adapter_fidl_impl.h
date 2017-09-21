@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
-#include "apps/bluetooth/service/interfaces/control.fidl.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
+#include "lib/bluetooth/fidl/control.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

@@ -6,8 +6,8 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
 
 namespace bluetooth {

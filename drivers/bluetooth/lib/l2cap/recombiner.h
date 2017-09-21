@@ -8,10 +8,10 @@
 
 #include <cstdint>
 
-#include "apps/bluetooth/lib/common/optional.h"
-#include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/l2cap/l2cap.h"
-#include "apps/bluetooth/lib/l2cap/pdu.h"
+#include "garnet/drivers/bluetooth/lib/common/optional.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {

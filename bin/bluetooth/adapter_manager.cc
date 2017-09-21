@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 
-#include "apps/bluetooth/lib/gap/adapter.h"
-#include "apps/bluetooth/lib/hci/device_wrapper.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"

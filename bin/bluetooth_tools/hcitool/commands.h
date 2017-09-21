@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/hci/command_channel.h"
-#include "apps/bluetooth/tools/lib/command_dispatcher.h"
+#include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
+#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 

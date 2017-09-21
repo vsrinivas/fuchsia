@@ -7,9 +7,9 @@
 #include <queue>
 #include <vector>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/testing/fake_controller_base.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 

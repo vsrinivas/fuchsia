@@ -4,10 +4,10 @@
 
 #include "low_energy_connection_manager.h"
 
-#include "apps/bluetooth/lib/hci/defaults.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/transport.h"
-#include "apps/bluetooth/lib/l2cap/channel_manager.h"
+#include "garnet/drivers/bluetooth/lib/hci/defaults.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

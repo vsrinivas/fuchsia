@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/common/cancelable_callback.h"
+#include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
 
 #include <thread>
 #include <unordered_map>

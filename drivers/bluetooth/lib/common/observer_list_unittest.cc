@@ -4,7 +4,7 @@
 
 // Derived from chromium/src/base/observer_list_unittest.cc
 
-#include "apps/bluetooth/lib/common/observer_list.h"
+#include "garnet/drivers/bluetooth/lib/common/observer_list.h"
 
 #include <utility>
 #include <vector>

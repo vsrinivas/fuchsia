@@ -6,11 +6,11 @@
 
 #include <unordered_map>
 
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/hci/acl_data_channel.h"
-#include "apps/bluetooth/lib/hci/command_channel.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "apps/bluetooth/lib/common/observer_list.h"
+#include "garnet/drivers/bluetooth/lib/common/observer_list.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

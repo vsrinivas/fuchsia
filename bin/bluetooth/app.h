@@ -8,10 +8,10 @@
 #include <vector>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/bluetooth/service/interfaces/control.fidl.h"
-#include "apps/bluetooth/service/src/adapter_manager.h"
-#include "apps/bluetooth/service/src/adapter_manager_fidl_impl.h"
-#include "apps/bluetooth/service/src/low_energy_central_fidl_impl.h"
+#include "lib/bluetooth/fidl/control.fidl.h"
+#include "garnet/bin/bluetooth/adapter_manager.h"
+#include "garnet/bin/bluetooth/adapter_manager_fidl_impl.h"
+#include "garnet/bin/bluetooth/low_energy_central_fidl_impl.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

@@ -6,9 +6,9 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/gap/advertising_data.h"
-#include "apps/bluetooth/lib/hci/low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 
 namespace bluetooth {
 namespace gap {

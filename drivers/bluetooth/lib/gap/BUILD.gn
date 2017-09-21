@@ -26,10 +26,10 @@ static_library("gap") {
   ]
 
   public_deps = [
-    "//apps/bluetooth/lib/common",
-    "//apps/bluetooth/lib/hci",
-    "//apps/bluetooth/lib/l2cap",
-    "//apps/bluetooth/service/interfaces:interfaces_data_only",
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/public/lib/bluetooth/fidl:interfaces_data_only",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -48,7 +48,7 @@ source_set("tests") {
 
   deps = [
     ":gap",
-    "//apps/bluetooth/lib/testing",
+    "//garnet/drivers/bluetooth/lib/testing",
     "//third_party/gtest",
   ]
 }

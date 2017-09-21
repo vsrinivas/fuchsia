@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/l2cap/pdu.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
 
 namespace bluetooth {
 namespace l2cap {

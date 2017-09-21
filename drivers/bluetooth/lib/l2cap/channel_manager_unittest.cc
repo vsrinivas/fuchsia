@@ -8,10 +8,10 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/common/test_helpers.h"
-#include "apps/bluetooth/lib/hci/connection.h"
-#include "apps/bluetooth/lib/testing/test_base.h"
-#include "apps/bluetooth/lib/testing/test_controller.h"
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 #include "lib/fxl/macros.h"
 #include "lib/fsl/threading/create_thread.h"
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 
 #include <memory>
 
@@ -10,8 +10,8 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/testing/fake_controller.h"
-#include "apps/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tools") {
+group("bluetooth_tools") {
   public_deps = [
     "bluetoothcli",
     "bt_intel_tool",

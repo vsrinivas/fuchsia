@@ -8,9 +8,9 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/lib/common/uuid.h"
-#include "apps/bluetooth/lib/gap/advertising_data.h"
-#include "apps/bluetooth/lib/gap/discovery_filter.h"
+#include "garnet/drivers/bluetooth/lib/common/uuid.h"
+#include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
+#include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
 
 // The internal library components and the generated FIDL bindings are both declared under the
 // "bluetooth" namespace. We define an alias here to disambiguate.

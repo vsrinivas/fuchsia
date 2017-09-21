@@ -7,7 +7,7 @@
 #include <endian.h>
 #include <cinttypes>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"

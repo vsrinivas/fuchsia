@@ -6,8 +6,8 @@
 
 #include <cstdint>
 
-#include "apps/bluetooth/lib/hci/acl_data_channel.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
 namespace bluetooth {
 namespace gap {

@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("interfaces") {
+fidl("fidl") {
   sources = [
     "common.fidl",
     "control.fidl",

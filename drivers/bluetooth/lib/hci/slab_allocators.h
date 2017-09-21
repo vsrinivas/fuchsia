@@ -8,10 +8,10 @@
 
 #include <fbl/slab_allocator.h>
 
-#include "apps/bluetooth/lib/common/slab_allocator_traits.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "apps/bluetooth/lib/hci/packet.h"
+#include "garnet/drivers/bluetooth/lib/common/slab_allocator_traits.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/hci/packet.h"
 #include "lib/fxl/macros.h"
 
 // This file defines a fbl::SlabAllocator trait template that can be used to slab-allocate

@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("service") {
+import("//packages/package.gni")
+
+executable("bin") {
   output_name = "bluetooth"
 
   sources = [
@@ -23,8 +25,69 @@ executable("service") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/bluetooth/lib",
-    "//apps/bluetooth/service/interfaces",
+    "//garnet/drivers/bluetooth/lib",
+    "//garnet/public/lib/bluetooth/fidl",
     "//garnet/public/lib/fsl",
+  ]
+}
+
+package("bluetooth") {
+  deps = [
+    ":bin",
+    "//garnet/bin/bluetooth_tools",
+  ]
+
+  binaries = [
+    {
+      name = "bluetooth"
+    },
+
+    {
+      name = "bluetoothcli"
+    },
+
+    {
+      name = "btsnoop"
+    },
+
+    {
+      name = "hcitool"
+    },
+
+    {
+      name = "bt-intel-tool"
+    },
+  ]
+}
+
+executable("bluetooth_unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib:tests",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/gtest",
+  ]
+}
+
+package("test") {
+  testonly = true
+  package_name = "bluetooth_tests"
+
+  deps = [
+    ":bluetooth_unittests",
+    "//garnet/bin/bluetooth_tools/hci_acl_test",
+  ]
+
+  binaries = [
+    {
+      name = "bluetooth_hci_acl_test"
+    },
+  ]
+
+  tests = [
+    {
+      name = "bluetooth_unittests"
+    },
   ]
 }

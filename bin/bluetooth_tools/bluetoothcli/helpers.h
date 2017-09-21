@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/bluetooth/service/interfaces/common.fidl.h"
-#include "apps/bluetooth/service/interfaces/control.fidl.h"
+#include "lib/bluetooth/fidl/common.fidl.h"
+#include "lib/bluetooth/fidl/control.fidl.h"
 
 namespace bluetoothcli {
 

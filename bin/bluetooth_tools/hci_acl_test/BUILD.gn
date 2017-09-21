@@ -13,6 +13,6 @@ executable("hci_acl_test") {
   ]
 
   deps = [
-    "//apps/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/hci",
   ]
 }

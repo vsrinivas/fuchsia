@@ -36,7 +36,7 @@ static_library("hci") {
   ]
 
   public_deps = [
-    "//apps/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/common",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]
@@ -59,7 +59,7 @@ source_set("tests") {
 
   deps = [
     ":hci",
-    "//apps/bluetooth/lib/testing",
+    "//garnet/drivers/bluetooth/lib/testing",
     "//third_party/gtest",
   ]
 }

@@ -4,19 +4,19 @@
 
 group("lib") {
   public_deps = [
-    "//apps/bluetooth/lib/common",
-    "//apps/bluetooth/lib/gap",
-    "//apps/bluetooth/lib/hci",
-    "//apps/bluetooth/lib/l2cap",
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/l2cap",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "//apps/bluetooth/lib/common:tests",
-    "//apps/bluetooth/lib/gap:tests",
-    "//apps/bluetooth/lib/hci:tests",
-    "//apps/bluetooth/lib/l2cap:tests",
+    "//garnet/drivers/bluetooth/lib/common:tests",
+    "//garnet/drivers/bluetooth/lib/gap:tests",
+    "//garnet/drivers/bluetooth/lib/hci:tests",
+    "//garnet/drivers/bluetooth/lib/l2cap:tests",
   ]
 }

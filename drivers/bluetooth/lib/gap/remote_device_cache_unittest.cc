@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 
-#include "apps/bluetooth/lib/common/test_helpers.h"
-#include "apps/bluetooth/lib/gap/remote_device.h"
-#include "apps/bluetooth/lib/hci/low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "gtest/gtest.h"
 
 namespace bluetooth {

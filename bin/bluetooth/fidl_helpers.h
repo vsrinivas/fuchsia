@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/gap/adapter.h"
-#include "apps/bluetooth/lib/gap/remote_device.h"
-#include "apps/bluetooth/service/interfaces/common.fidl.h"
-#include "apps/bluetooth/service/interfaces/control.fidl.h"
-#include "apps/bluetooth/service/interfaces/low_energy.fidl.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
+#include "lib/bluetooth/fidl/common.fidl.h"
+#include "lib/bluetooth/fidl/control.fidl.h"
+#include "lib/bluetooth/fidl/low_energy.fidl.h"
 
 // Helpers for implementing the Bluetooth FIDL interfaces.
 

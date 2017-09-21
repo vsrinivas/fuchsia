@@ -10,8 +10,8 @@
 
 #include <async/auto_wait.h>
 
-#include "apps/bluetooth/lib/hci/acl_data_channel.h"
-#include "apps/bluetooth/lib/hci/command_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"

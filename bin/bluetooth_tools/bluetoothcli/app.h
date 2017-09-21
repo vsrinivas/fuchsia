@@ -8,8 +8,8 @@
 #include <unordered_map>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/bluetooth/service/interfaces/control.fidl.h"
-#include "apps/bluetooth/tools/lib//command_dispatcher.h"
+#include "lib/bluetooth/fidl/control.fidl.h"
+#include "garnet/bin/bluetooth_tools/lib//command_dispatcher.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetoothcli {

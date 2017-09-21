@@ -12,8 +12,8 @@ executable("bt_intel_tool") {
   ]
 
   deps = [
-    "//apps/bluetooth/lib/gap",
-    "//apps/bluetooth/lib/hci",
-    "//apps/bluetooth/tools/lib",
+    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/bin/bluetooth_tools/lib",
   ]
 }

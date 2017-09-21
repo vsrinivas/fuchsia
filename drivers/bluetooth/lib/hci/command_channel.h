@@ -15,11 +15,11 @@
 #include <zircon/compiler.h>
 #include <zx/channel.h>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/common/optional.h"
-#include "apps/bluetooth/lib/hci/control_packets.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/optional.h"
+#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"

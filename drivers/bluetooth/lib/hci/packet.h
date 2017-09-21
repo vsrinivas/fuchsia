@@ -8,9 +8,9 @@
 
 #include <fbl/intrusive_double_list.h>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/common/intrusive_pointer_traits.h"
-#include "apps/bluetooth/lib/common/packet_view.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/intrusive_pointer_traits.h"
+#include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 

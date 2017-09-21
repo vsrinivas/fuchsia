@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/hci/legacy_low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_scanner.h"
 
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/hci/defaults.h"
-#include "apps/bluetooth/lib/testing/fake_controller.h"
-#include "apps/bluetooth/lib/testing/fake_device.h"
-#include "apps/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/hci/defaults.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {

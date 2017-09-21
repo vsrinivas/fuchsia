@@ -7,9 +7,9 @@
 #include <memory>
 #include <vector>
 
-#include "apps/bluetooth/service/interfaces/control.fidl.h"
-#include "apps/bluetooth/service/src/adapter_fidl_impl.h"
-#include "apps/bluetooth/service/src/adapter_manager.h"
+#include "lib/bluetooth/fidl/control.fidl.h"
+#include "garnet/bin/bluetooth/adapter_fidl_impl.h"
+#include "garnet/bin/bluetooth/adapter_manager.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 

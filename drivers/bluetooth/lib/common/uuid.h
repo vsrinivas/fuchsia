@@ -7,7 +7,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "apps/bluetooth/lib/common/uint128.h"
+#include "garnet/drivers/bluetooth/lib/common/uint128.h"
 
 namespace bluetooth {
 namespace common {

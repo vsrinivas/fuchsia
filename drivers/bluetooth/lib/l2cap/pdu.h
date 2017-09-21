@@ -7,8 +7,8 @@
 #include <endian.h>
 #include <fbl/intrusive_double_list.h>
 
-#include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 

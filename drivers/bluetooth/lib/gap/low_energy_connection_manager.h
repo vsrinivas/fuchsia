@@ -10,10 +10,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "apps/bluetooth/lib/gap/gap.h"
-#include "apps/bluetooth/lib/hci/command_channel.h"
-#include "apps/bluetooth/lib/hci/control_packets.h"
-#include "apps/bluetooth/lib/hci/low_energy_connector.h"
+#include "garnet/drivers/bluetooth/lib/gap/gap.h"
+#include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

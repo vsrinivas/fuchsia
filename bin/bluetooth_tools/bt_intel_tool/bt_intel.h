@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
 
 namespace bt_intel {
 

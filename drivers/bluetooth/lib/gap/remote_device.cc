@@ -4,7 +4,7 @@
 
 #include "remote_device.h"
 
-#include "apps/bluetooth/lib/hci/low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

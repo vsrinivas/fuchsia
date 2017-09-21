@@ -6,9 +6,9 @@
 
 #include <zircon/status.h>
 
-#include "apps/bluetooth/lib/common/run_task_sync.h"
-#include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 

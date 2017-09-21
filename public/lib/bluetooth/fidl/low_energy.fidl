@@ -4,7 +4,7 @@
 
 module bluetooth.low_energy;
 
-import "apps/bluetooth/service/interfaces/common.fidl";
+import "lib/bluetooth/fidl/common.fidl";
 
 // Represents advertising and scan response data advertised by a broadcaster or peripheral.
 struct AdvertisingData {

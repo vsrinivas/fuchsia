@@ -6,11 +6,11 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/lib/hci/advertising_report_parser.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/sequential_command_runner.h"
-#include "apps/bluetooth/lib/hci/transport.h"
-#include "apps/bluetooth/lib/hci/util.h"
+#include "garnet/drivers/bluetooth/lib/hci/advertising_report_parser.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "lib/fxl/logging.h"
 
 namespace bluetooth {

@@ -7,9 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "apps/bluetooth/lib/common/optional.h"
-#include "apps/bluetooth/lib/common/uuid.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/common/optional.h"
+#include "garnet/drivers/bluetooth/lib/common/uuid.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
 namespace bluetooth {
 

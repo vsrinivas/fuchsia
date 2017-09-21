@@ -6,9 +6,9 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/lib/hci/control_packets.h"
-#include "apps/bluetooth/lib/hci/defaults.h"
-#include "apps/bluetooth/lib/hci/device_wrapper.h"
+#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
+#include "garnet/drivers/bluetooth/lib/hci/defaults.h"
+#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

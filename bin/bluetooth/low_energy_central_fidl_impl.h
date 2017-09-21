@@ -7,10 +7,10 @@
 #include <memory>
 #include <unordered_map>
 
-#include "apps/bluetooth/lib/gap/low_energy_connection_manager.h"
-#include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
-#include "apps/bluetooth/service/interfaces/low_energy.fidl.h"
-#include "apps/bluetooth/service/src/adapter_manager.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
+#include "lib/bluetooth/fidl/low_energy.fidl.h"
+#include "garnet/bin/bluetooth/adapter_manager.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 

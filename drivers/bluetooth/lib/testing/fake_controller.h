@@ -9,10 +9,10 @@
 
 #include <zx/channel.h>
 
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "apps/bluetooth/lib/testing/fake_controller_base.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

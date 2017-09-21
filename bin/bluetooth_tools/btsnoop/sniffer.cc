@@ -12,7 +12,7 @@
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fxl/logging.h"
 
 namespace btsnoop {

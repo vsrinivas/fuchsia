@@ -4,7 +4,7 @@
 
 #include "pdu.h"
 
-#include "apps/bluetooth/lib/hci/acl_data_packet.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 
 namespace bluetooth {
 namespace l2cap {

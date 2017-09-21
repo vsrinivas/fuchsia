@@ -6,13 +6,13 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/lib/gap/remote_device.h"
-#include "apps/bluetooth/lib/hci/connection.h"
-#include "apps/bluetooth/lib/hci/device_wrapper.h"
-#include "apps/bluetooth/lib/hci/sequential_command_runner.h"
-#include "apps/bluetooth/lib/hci/transport.h"
-#include "apps/bluetooth/lib/hci/util.h"
-#include "apps/bluetooth/lib/l2cap/channel_manager.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
+#include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/hci/util.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/random/uuid.h"
 

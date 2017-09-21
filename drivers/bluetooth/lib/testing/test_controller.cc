@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace bluetooth {

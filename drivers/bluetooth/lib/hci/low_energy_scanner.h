@@ -6,10 +6,10 @@
 
 #include <set>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
-#include "apps/bluetooth/lib/hci/sequential_command_runner.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"

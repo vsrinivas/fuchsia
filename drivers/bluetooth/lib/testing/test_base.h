@@ -6,10 +6,10 @@
 
 #include <memory>
 
-#include "apps/bluetooth/lib/hci/acl_data_channel.h"
-#include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/hci/device_wrapper.h"
-#include "apps/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
+#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

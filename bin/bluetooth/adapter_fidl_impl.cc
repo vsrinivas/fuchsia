@@ -4,9 +4,9 @@
 
 #include "adapter_fidl_impl.h"
 
-#include "apps/bluetooth/lib/gap/adapter.h"
-#include "apps/bluetooth/lib/gap/gap.h"
-#include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/gap/gap.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "lib/fxl/logging.h"
 
 #include "fidl_helpers.h"

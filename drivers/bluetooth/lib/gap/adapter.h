@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include "apps/bluetooth/lib/gap/adapter_state.h"
-#include "apps/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

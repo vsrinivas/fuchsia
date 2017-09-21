@@ -4,7 +4,7 @@
 
 #include "app.h"
 
-#include "apps/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 #include "lib/fxl/logging.h"
 
 using std::placeholders::_1;

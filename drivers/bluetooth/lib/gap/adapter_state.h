@@ -6,10 +6,10 @@
 
 #include <cstdint>
 
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/gap/low_energy_state.h"
-#include "apps/bluetooth/lib/hci/acl_data_channel.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_state.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fxl/logging.h"
 
 namespace bluetooth {

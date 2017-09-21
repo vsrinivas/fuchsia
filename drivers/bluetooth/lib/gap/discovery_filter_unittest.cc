@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/gap/discovery_filter.h"
+#include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/hci/low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 
 namespace bluetooth {
 namespace gap {

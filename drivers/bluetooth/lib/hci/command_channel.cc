@@ -8,7 +8,7 @@
 
 #include <zircon/status.h>
 
-#include "apps/bluetooth/lib/common/run_task_sync.h"
+#include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

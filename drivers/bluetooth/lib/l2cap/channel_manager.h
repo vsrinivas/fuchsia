@@ -10,11 +10,11 @@
 
 #include <zircon/compiler.h>
 
-#include "apps/bluetooth/lib/common/cancelable_callback.h"
-#include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/hci/connection.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/l2cap/channel.h"
+#include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

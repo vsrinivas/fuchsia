@@ -12,7 +12,7 @@ executable("btsnoop") {
   ]
 
   deps = [
-    "//apps/bluetooth/lib/common",
-    "//apps/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/hci",
   ]
 }

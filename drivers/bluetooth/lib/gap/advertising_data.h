@@ -8,12 +8,12 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/common/optional.h"
-#include "apps/bluetooth/lib/common/uuid.h"
-#include "apps/bluetooth/lib/gap/gap.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/optional.h"
+#include "garnet/drivers/bluetooth/lib/common/uuid.h"
+#include "garnet/drivers/bluetooth/lib/gap/gap.h"
 
-#include "apps/bluetooth/service/interfaces/low_energy.fidl.h"
+#include "lib/bluetooth/fidl/low_energy.fidl.h"
 
 // The internal library components and the generated FIDL bindings are both
 // declared under the "bluetooth" namespace. We define an alias here to

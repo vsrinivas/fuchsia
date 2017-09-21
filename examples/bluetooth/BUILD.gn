@@ -8,17 +8,17 @@ package("bluetooth_examples") {
   app = true
 
   deps = [
-    "//apps/bluetooth/examples/ble_scanner",
-    "//apps/bluetooth/examples/settings",
+    "//garnet/examples/bluetooth/ble_scanner",
+    "//garnet/examples/bluetooth/settings",
   ]
 
   binaries = [
     {
-        source = "gen/apps/bluetooth/examples/ble_scanner/ble_scanner.flx"
+        source = "gen/garnet/examples/bluetooth/ble_scanner/ble_scanner.flx"
         name = "bluetooth_le_scanner"
     },
     {
-        source = "gen/apps/bluetooth/examples/settings/settings.flx"
+        source = "gen/garnet/examples/bluetooth/settings/settings.flx"
         name = "bluetooth_settings_example"
     }
   ]

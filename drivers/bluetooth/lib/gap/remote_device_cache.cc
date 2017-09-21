@@ -4,8 +4,8 @@
 
 #include "remote_device_cache.h"
 
-#include "apps/bluetooth/lib/hci/connection.h"
-#include "apps/bluetooth/lib/hci/low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/fxl/random/uuid.h"
 
 #include "remote_device.h"

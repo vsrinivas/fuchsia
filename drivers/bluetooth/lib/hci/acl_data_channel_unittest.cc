@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/hci/acl_data_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 
 #include <unordered_map>
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/hci/connection.h"
-#include "apps/bluetooth/lib/hci/defaults.h"
-#include "apps/bluetooth/lib/hci/transport.h"
-#include "apps/bluetooth/lib/testing/test_base.h"
-#include "apps/bluetooth/lib/testing/test_controller.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/defaults.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
 namespace hci {

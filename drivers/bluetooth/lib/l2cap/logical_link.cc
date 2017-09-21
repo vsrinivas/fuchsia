@@ -4,7 +4,7 @@
 
 #include "logical_link.h"
 
-#include "apps/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

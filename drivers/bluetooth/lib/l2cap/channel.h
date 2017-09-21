@@ -12,8 +12,8 @@
 
 #include <zircon/compiler.h>
 
-#include "apps/bluetooth/lib/common/cancelable_callback.h"
-#include "apps/bluetooth/lib/l2cap/sdu.h"
+#include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

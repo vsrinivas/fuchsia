@@ -7,10 +7,10 @@
 #include <memory>
 #include <unordered_map>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/hci/command_channel.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"

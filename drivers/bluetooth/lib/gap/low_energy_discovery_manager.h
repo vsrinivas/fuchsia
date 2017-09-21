@@ -8,11 +8,11 @@
 #include <queue>
 #include <unordered_set>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/gap/discovery_filter.h"
-#include "apps/bluetooth/lib/gap/gap.h"
-#include "apps/bluetooth/lib/hci/low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
+#include "garnet/drivers/bluetooth/lib/gap/gap.h"
+#include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"

@@ -6,10 +6,10 @@
 
 #include <endian.h>
 
-#include "apps/bluetooth/lib/hci/defaults.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/transport.h"
-#include "apps/bluetooth/lib/hci/util.h"
+#include "garnet/drivers/bluetooth/lib/hci/defaults.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 

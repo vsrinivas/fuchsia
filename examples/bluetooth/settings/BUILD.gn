@@ -11,7 +11,7 @@ flutter_app("settings") {
 
   deps = [
     "//garnet/public/lib/app/dart",
-    "//apps/bluetooth/service/interfaces:interfaces_dart",
+    "//garnet/public/lib/bluetooth/fidl:interfaces_dart",
     "//apps/modular/services/module:module_dart",
     "//garnet/public/lib/fidl/dart",
     "//lib/flutter/packages/flutter",
@@ -19,5 +19,5 @@ flutter_app("settings") {
     "//topaz/lib/widgets/packages/widgets:lib.widgets",
   ]
 
-  analysis_options = "//apps/bluetooth/examples/.analysis_options"
+  analysis_options = "//garnet/examples/bluetooth/.analysis_options"
 }

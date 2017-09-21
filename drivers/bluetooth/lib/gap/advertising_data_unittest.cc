@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/gap/advertising_data.h"
+#include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
 namespace bluetooth {
 namespace gap {

@@ -21,7 +21,7 @@ static_library("l2cap") {
   ]
 
   deps = [
-    "//apps/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -38,8 +38,8 @@ source_set("tests") {
 
   deps = [
     ":l2cap",
-    "//apps/bluetooth/lib/hci",
-    "//apps/bluetooth/lib/testing",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/testing",
     "//third_party/gtest",
   ]
 }

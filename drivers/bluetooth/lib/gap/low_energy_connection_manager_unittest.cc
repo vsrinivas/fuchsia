@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/gap/low_energy_connection_manager.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 
 #include <memory>
 #include <vector>
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/gap/remote_device.h"
-#include "apps/bluetooth/lib/gap/remote_device_cache.h"
-#include "apps/bluetooth/lib/l2cap/channel_manager.h"
-#include "apps/bluetooth/lib/testing/fake_controller.h"
-#include "apps/bluetooth/lib/testing/fake_device.h"
-#include "apps/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 
 #include "lib/fxl/macros.h"
 

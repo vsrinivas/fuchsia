@@ -6,9 +6,9 @@
 
 #include <unordered_map>
 
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/gap/gap.h"
-#include "apps/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/gap/gap.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {

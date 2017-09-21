@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/testing/test_base.h"
-#include "apps/bluetooth/lib/testing/test_controller.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_base.h"
+#include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
 namespace hci {

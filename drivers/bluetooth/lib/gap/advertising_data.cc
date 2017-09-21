@@ -6,7 +6,7 @@
 
 #include "advertising_data.h"
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"

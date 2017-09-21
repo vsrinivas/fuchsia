@@ -4,10 +4,10 @@
 
 #include "low_energy_discovery_manager.h"
 
-#include "apps/bluetooth/lib/gap/remote_device.h"
-#include "apps/bluetooth/lib/gap/remote_device_cache.h"
-#include "apps/bluetooth/lib/hci/legacy_low_energy_scanner.h"
-#include "apps/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_scanner.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 

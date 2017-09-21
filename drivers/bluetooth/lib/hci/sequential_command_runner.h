@@ -6,8 +6,8 @@
 
 #include <queue>
 
-#include "apps/bluetooth/lib/hci/command_channel.h"
-#include "apps/bluetooth/lib/hci/control_packets.h"
+#include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

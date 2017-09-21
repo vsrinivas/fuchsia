@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/hci/acl_data_packet.h"
-#include "apps/bluetooth/lib/hci/control_packets.h"
+#include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
+#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 
 #include <array>
 #include <cstdint>
@@ -13,7 +13,7 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/common/test_helpers.h"
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
 using bluetooth::common::ContainersEqual;
 using bluetooth::common::StaticByteBuffer;

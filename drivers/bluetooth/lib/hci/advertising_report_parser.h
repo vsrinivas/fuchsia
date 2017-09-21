@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/bluetooth/lib/hci/control_packets.h"
-#include "apps/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {

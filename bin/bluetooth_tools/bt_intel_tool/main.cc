@@ -8,11 +8,11 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/hci/device_wrapper.h"
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/transport.h"
-#include "apps/bluetooth/tools/lib/command_dispatcher.h"
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/log_settings.h"

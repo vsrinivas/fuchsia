@@ -8,9 +8,9 @@
 
 #include <zircon/compiler.h>
 
-#include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/common/uint128.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/common/uint128.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
 // This file contains general opcode/number and static packet definitions for
 // the Bluetooth Host-Controller Interface. Each packet payload structure contains parameter

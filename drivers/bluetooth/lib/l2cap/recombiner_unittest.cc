@@ -7,8 +7,8 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/packet.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/hci/packet.h"
 
 namespace bluetooth {
 namespace l2cap {

@@ -4,7 +4,7 @@
 
 module bluetooth.control;
 
-import "apps/bluetooth/service/interfaces/common.fidl";
+import "lib/bluetooth/fidl/common.fidl";
 
 // Possible values for the LE Appearance property which describes the external appearance of a
 // device at a high level.
@@ -132,7 +132,7 @@ struct AdapterState {
   Bool? discoverable;
 
   // Service UUIDs of all local services that are published and available to other
-  // devices via this adapter. These services are usually registered using the GATT 
+  // devices via this adapter. These services are usually registered using the GATT
   // and the classic profile APIs.
   array<string>? local_service_uuids;
 };
