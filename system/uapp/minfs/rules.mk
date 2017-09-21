@@ -61,6 +61,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/minfs-ops.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
+    system/ulib/fs/vnode.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \

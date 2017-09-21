@@ -18,6 +18,7 @@ static_library("fs") {
     "include/fs/remote.h",
     "include/fs/trace.h",
     "include/fs/vfs.h",
+    "include/fs/vnode.h",
     "include/fs/watcher.h",
     "async-dispatcher.cpp",
     "connection.cpp",
@@ -27,6 +28,7 @@ static_library("fs") {
     "unmount.cpp",
     "watcher.cpp",
     "vfs.cpp",
+    "vnode.cpp",
   ]
 
   public_configs = [ ":fs_config" ]

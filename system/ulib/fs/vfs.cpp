@@ -495,32 +495,6 @@ zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, s
     }
 }
 
-zx_status_t Vnode::Close() {
-    return ZX_OK;
-}
-
-DirentFiller::DirentFiller(void* ptr, size_t len) :
-    ptr_(static_cast<char*>(ptr)), pos_(0), len_(len) {}
-
-zx_status_t DirentFiller::Next(const char* name, size_t len, uint32_t type) {
-    vdirent_t* de = reinterpret_cast<vdirent_t*>(ptr_ + pos_);
-    size_t sz = sizeof(vdirent_t) + len + 1;
-
-    // round up to uint32 aligned
-    if (sz & 3) {
-        sz = (sz + 3) & (~3);
-    }
-    if (sz > len_ - pos_) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    de->size = static_cast<uint32_t>(sz);
-    de->type = type;
-    memcpy(de->name, name, len);
-    de->name[len] = 0;
-    pos_ += sz;
-    return ZX_OK;
-}
-
 // Starting at vnode vn, walk the tree described by the path string,
 // until either there is only one path segment remaining in the string
 // or we encounter a vnode that represents a remote filesystem

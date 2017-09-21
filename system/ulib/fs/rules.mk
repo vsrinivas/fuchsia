@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/rpc.cpp \
     $(LOCAL_DIR)/unmount.cpp \
     $(LOCAL_DIR)/vfs.cpp \
+    $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/watcher.cpp \
 
 MODULE_STATIC_LIBS := \

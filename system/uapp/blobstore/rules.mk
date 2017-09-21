@@ -56,6 +56,7 @@ MODULE_SRCS := \
     system/ulib/digest/digest.cpp \
     system/ulib/digest/merkle-tree.cpp \
     system/ulib/fs/vfs.cpp \
+    system/ulib/fs/vnode.cpp \
     third_party/ulib/cryptolib/cryptolib.c \
 
 MODULE_HOST_LIBS := \

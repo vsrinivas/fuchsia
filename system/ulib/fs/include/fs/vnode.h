@@ -55,6 +55,8 @@ inline bool vfs_valid_name(const char* name, size_t len) {
 // be used by subclasses of Vnode.
 class Vnode : public fbl::RefCounted<Vnode> {
 public:
+    virtual ~Vnode();
+
 #ifdef __Fuchsia__
     // Allocate iostate and register the transferred handle with a dispatcher.
     // Allows Vnode to act as server.
@@ -63,16 +65,12 @@ public:
     // Extract handle(s), type, and extra info from a vnode.
     // Returns the number of handles which should be returned on the requesting handle.
     virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds,
-                                   uint32_t* type, void* extra, uint32_t* esize) {
-        *type = FDIO_PROTOCOL_REMOTE;
-        return 0;
-    }
+                                   uint32_t* type, void* extra, uint32_t* esize);
 
-    virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd);
 #endif
-    virtual void Notify(const char* name, size_t len, unsigned event) {}
+
+    virtual void Notify(const char* name, size_t len, unsigned event);
 
     // Ensure that it is valid to open vn.
     virtual zx_status_t Open(uint32_t flags) = 0;
@@ -84,66 +82,46 @@ public:
     //
     // If successful, returns the number of bytes read in |out_actual|. This must be
     // less than or equal to |len|.
-    virtual zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual);
 
     // Write data to vn at offset.
     //
     // If successful, returns the number of bytes written in |out_actual|. This must be
     // less than or equal to |len|.
-    virtual zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual);
 
     // Attempt to find child of vn, child returned on success.
     // Name is len bytes long, and does not include a null terminator.
-    virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, const char* name, size_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, const char* name, size_t len);
 
     // Read attributes of vn.
-    virtual zx_status_t Getattr(vnattr_t* a) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Getattr(vnattr_t* a);
 
     // Set attributes of vn.
-    virtual zx_status_t Setattr(const vnattr_t* a) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Setattr(const vnattr_t* a);
 
     // Read directory entries of vn, error if not a directory.
     // FS-specific Cookie must be a buffer of vdircookie_t size or smaller.
     // Cookie must be zero'd before first call and will be used by.
     // the readdir implementation to maintain state across calls.
     // To "rewind" and start from the beginning, cookie may be zero'd.
-    virtual zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len);
 
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.
     // Mode specifies the type of entity to create.
-    virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode);
 
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
     virtual zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                              void* out_buf, size_t out_len, size_t* out_actual) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+                              void* out_buf, size_t out_len, size_t* out_actual);
 
     // Removes name from directory vn
-    virtual zx_status_t Unlink(const char* name, size_t len, bool must_be_dir) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Unlink(const char* name, size_t len, bool must_be_dir);
 
     // Change the size of vn
-    virtual zx_status_t Truncate(size_t len) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Truncate(size_t len);
 
     // Renames the path at oldname in olddir to the path at newname in newdir.
     // Called on the "olddir" vnode.
@@ -151,14 +129,10 @@ public:
     virtual zx_status_t Rename(fbl::RefPtr<Vnode> newdir,
                                const char* oldname, size_t oldlen,
                                const char* newname, size_t newlen,
-                               bool src_must_be_dir, bool dst_must_be_dir) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+                               bool src_must_be_dir, bool dst_must_be_dir);
 
     // Creates a hard link to the 'target' vnode with a provided name in vndir
-    virtual zx_status_t Link(const char* name, size_t len, fbl::RefPtr<Vnode> target) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Link(const char* name, size_t len, fbl::RefPtr<Vnode> target);
 
     // Acquire a vmo from a vnode.
     //
@@ -166,20 +140,14 @@ public:
     // since (without paging) there is no mechanism to update either
     // 1) The file by writing to the mapping, or
     // 2) The mapping by writing to the underlying file.
-    virtual zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    virtual zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out);
 
     // Syncs the vnode with its underlying storage
-    virtual zx_status_t Sync() {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    virtual ~Vnode() {};
+    virtual zx_status_t Sync();
 
 #ifdef __Fuchsia__
     // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
-    virtual zx_status_t AttachRemote(MountChannel h) { return ZX_ERR_NOT_SUPPORTED; }
+    virtual zx_status_t AttachRemote(MountChannel h);
 
     // The following methods are required to mount sub-filesystems. The logic
     // (and storage) necessary to implement these functions exists within the
@@ -187,11 +155,11 @@ public:
     // to act as mount points.
 
     // The vnode is acting as a mount point for a remote filesystem or device.
-    virtual bool IsRemote() const { return false; }
-    virtual zx::channel DetachRemote() { return zx::channel(); }
-    virtual zx_handle_t WaitForRemote() { return ZX_HANDLE_INVALID; }
-    virtual zx_handle_t GetRemote() const { return ZX_HANDLE_INVALID; }
-    virtual void SetRemote(zx::channel remote) { ZX_DEBUG_ASSERT(false); }
+    virtual bool IsRemote() const;
+    virtual zx::channel DetachRemote();
+    virtual zx_handle_t WaitForRemote();
+    virtual zx_handle_t GetRemote() const;
+    virtual void SetRemote(zx::channel remote);
 
     // The vnode is a device. Devices may opt to reveal themselves as directories
     // or endpoints, depending on context. For the purposes of our VFS layer,
@@ -204,11 +172,13 @@ public:
     }
     bool IsDetachedDevice() const { return (flags_ & VFS_FLAG_DEVICE_DETACHED); }
 #endif
+
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
-    Vnode() : flags_(0) {};
 
-    uint32_t flags_;
+    Vnode();
+
+    uint32_t flags_{};
 };
 
 // Helper class used to fill direntries during calls to Readdir.
