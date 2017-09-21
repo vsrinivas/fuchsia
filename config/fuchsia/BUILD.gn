@@ -69,6 +69,7 @@ config("compiler") {
   configs = [
     ":compiler_sysroot",
     ":compiler_target",
+    ":compiler_cpu",
     ":toolchain_version_stamp",
   ]
   if (use_ccache) {
@@ -111,6 +112,15 @@ config("compiler_target") {
   } else {
     assert(false, "Unsupported architecture")
   }
+  asmflags = cflags
+}
+
+config("compiler_cpu") {
+  cflags = []
+  if (current_cpu == "x64") {
+    cflags += [ "-march=x86-64", "-mcx16" ]
+  }
+  ldflags = cflags
   asmflags = cflags
 }
 
