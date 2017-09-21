@@ -34,9 +34,6 @@ public:
     void on_zero_handles() final;
     zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
-    zx_status_t Write(const uint8_t* src, size_t len, uint32_t* actual);
-    zx_status_t Read(uint8_t* dst, size_t len, uint32_t* actual);
-
     zx_status_t WriteFromUser(const uint8_t* src, size_t len, uint32_t* actual);
     zx_status_t ReadToUser(uint8_t* dst, size_t len, uint32_t* actual);
 

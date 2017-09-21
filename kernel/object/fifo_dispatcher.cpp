@@ -121,22 +121,6 @@ void FifoDispatcher::OnPeerZeroHandles() {
     state_tracker_.UpdateState(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
 }
 
-zx_status_t FifoDispatcher::Write(const uint8_t* src, size_t len, uint32_t* actual) {
-    auto copy_from_fn = [](const uint8_t* src, uint8_t* data, size_t len) -> zx_status_t {
-        memcpy(data, src, len);
-        return ZX_OK;
-    };
-    return Write(src, len, actual, copy_from_fn);
-}
-
-zx_status_t FifoDispatcher::Read(uint8_t* dst, size_t len, uint32_t* actual) {
-    auto copy_to_fn = [](uint8_t* dst, const uint8_t* data, size_t len) -> zx_status_t {
-        memcpy(dst, data, len);
-        return ZX_OK;
-    };
-    return Read(dst, len, actual, copy_to_fn);
-}
-
 zx_status_t FifoDispatcher::WriteFromUser(const uint8_t* src, size_t len, uint32_t* actual) {
     auto copy_from_fn = [](const uint8_t* src, uint8_t* data, size_t len) -> zx_status_t {
         return make_user_ptr(src).copy_array_from_user(data, len);
