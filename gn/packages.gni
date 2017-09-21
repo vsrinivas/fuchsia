@@ -4,7 +4,7 @@
 
 declare_args() {
   # list of modules
-  modules = "default"
+  modules = "packages/gn/default"
 }
 
 _languages = exec_script("determine_languages_of_modules.py",
