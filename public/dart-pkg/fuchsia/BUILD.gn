@@ -25,12 +25,12 @@ source_set("sdk_ext") {
     "//dart/runtime:dart_api",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
-    "//lib/tonic",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//garnet/public/lib/app/fidl",
     "//garnet/public/dart-pkg/zircon",
+    "//topaz/lib/tonic",
   ]
 }
 

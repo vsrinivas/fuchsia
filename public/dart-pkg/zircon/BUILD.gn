@@ -32,13 +32,13 @@ source_set("sdk_ext") {
   deps = [
     "//dart/runtime:dart_api",
     "//garnet/public/lib/fxl",
-    "//lib/tonic",
     "//zircon/system/ulib/async:default",
     "//zircon/system/ulib/zx",
   ]
 
   public_deps = [
     "//zircon/system/ulib/async",
+    "//topaz/lib/tonic",
   ]
 }
 

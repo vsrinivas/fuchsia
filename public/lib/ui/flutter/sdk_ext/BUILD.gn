@@ -13,7 +13,7 @@ source_set("sdk_ext") {
     "//dart/runtime:dart_api",
     "//garnet/public/dart-pkg/zircon",
     "//garnet/public/lib/fxl",
-    "//lib/tonic",
+    "//topaz/lib/tonic",
     "//zircon/system/ulib/zx",
   ]
 }
