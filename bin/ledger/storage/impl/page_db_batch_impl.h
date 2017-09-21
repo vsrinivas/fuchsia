@@ -75,7 +75,8 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status Execute() override;
 
  private:
-  bool CheckHasObject(convert::ExtendedStringView key);
+  bool CheckHasObject(coroutine::CoroutineHandler* handler,
+                      convert::ExtendedStringView key);
 
   std::unique_ptr<Db::Batch> batch_;
   PageDb* db_;

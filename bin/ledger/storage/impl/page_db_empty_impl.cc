@@ -44,7 +44,8 @@ Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
                                    std::unique_ptr<const Object>* /*object*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::HasObject(ObjectIdView /*object_id*/,
+Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
+                                  ObjectIdView /*object_id*/,
                                   bool* /*has_object*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -63,6 +64,7 @@ Status PageDbEmptyImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetUnsyncedPieces(
+    CoroutineHandler* /*handler*/,
     std::vector<ObjectId>* /*object_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }

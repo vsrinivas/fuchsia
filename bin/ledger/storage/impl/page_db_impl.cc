@@ -172,7 +172,9 @@ Status PageDbImpl::ReadObject(CoroutineHandler* /*handler*/,
   return db_.GetObject(ObjectRow::GetKeyFor(object_id), object_id, object);
 }
 
-Status PageDbImpl::HasObject(ObjectIdView object_id, bool* has_object) {
+Status PageDbImpl::HasObject(CoroutineHandler* /*handler*/,
+                             ObjectIdView object_id,
+                             bool* has_object) {
   return db_.HasKey(ObjectRow::GetKeyFor(object_id), has_object);
 }
 
@@ -222,7 +224,8 @@ Status PageDbImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
   return Status::OK;
 }
 
-Status PageDbImpl::GetUnsyncedPieces(std::vector<ObjectId>* object_ids) {
+Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* /*handler*/,
+                                     std::vector<ObjectId>* object_ids) {
   return db_.GetByPrefix(convert::ToSlice(LocalObjectRow::kPrefix), object_ids);
 }
 

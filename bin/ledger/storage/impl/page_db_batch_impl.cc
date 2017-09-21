@@ -106,7 +106,7 @@ Status PageDbBatchImpl::WriteObject(
 
   auto object_key = ObjectRow::GetKeyFor(object_id);
   bool has_key;
-  Status status = db_->HasObject(object_id, &has_key);
+  Status status = db_->HasObject(handler, object_id, &has_key);
   if (status != Status::OK) {
     return status;
   }
@@ -140,11 +140,11 @@ Status PageDbBatchImpl::DeleteObject(CoroutineHandler* /*handler*/,
   return Status::OK;
 }
 
-Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
+Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
                                         ObjectIdView object_id,
                                         PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
-  FXL_DCHECK(CheckHasObject(object_id))
+  FXL_DCHECK(CheckHasObject(handler, object_id))
       << "Unknown object: " << convert::ToHex(object_id);
 
   auto transient_key = TransientObjectRow::GetKeyFor(object_id);
@@ -200,9 +200,10 @@ Status PageDbBatchImpl::Execute() {
   return batch_->Execute();
 }
 
-bool PageDbBatchImpl::CheckHasObject(convert::ExtendedStringView key) {
+bool PageDbBatchImpl::CheckHasObject(CoroutineHandler* handler,
+                                     convert::ExtendedStringView key) {
   bool result;
-  Status status = db_->HasObject(key, &result);
+  Status status = db_->HasObject(handler, key, &result);
   if (status != Status::OK) {
     return false;
   }

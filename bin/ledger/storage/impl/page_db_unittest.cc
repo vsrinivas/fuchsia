@@ -299,7 +299,7 @@ TEST_F(PageDbTest, UnsyncedPieces) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
     ObjectId object_id = RandomObjectId();
     std::vector<ObjectId> object_ids;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
     EXPECT_TRUE(object_ids.empty());
 
     EXPECT_EQ(Status::OK,
@@ -308,7 +308,7 @@ TEST_F(PageDbTest, UnsyncedPieces) {
                                    PageDbObjectStatus::LOCAL));
     EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_id,
                                                    PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
     EXPECT_EQ(1u, object_ids.size());
     EXPECT_EQ(object_id, object_ids[0]);
     PageDbObjectStatus object_status;
@@ -317,7 +317,7 @@ TEST_F(PageDbTest, UnsyncedPieces) {
 
     EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_id,
                                                    PageDbObjectStatus::SYNCED));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
     EXPECT_TRUE(object_ids.empty());
     EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
     EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
@@ -334,12 +334,12 @@ TEST_F(PageDbTest, Batch) {
                                              PageDbObjectStatus::LOCAL));
 
     std::vector<ObjectId> object_ids;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
     EXPECT_TRUE(object_ids.empty());
 
     EXPECT_EQ(Status::OK, batch->Execute());
 
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
     EXPECT_EQ(1u, object_ids.size());
     EXPECT_EQ(object_id, object_ids[0]);
   }));

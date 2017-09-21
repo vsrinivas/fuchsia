@@ -204,7 +204,9 @@ class PageDb : public PageDbMutator {
 
   // Checks whether the object with the given |object_id| is stored in the
   // database.
-  virtual Status HasObject(ObjectIdView object_id, bool* has_object) = 0;
+  virtual Status HasObject(coroutine::CoroutineHandler* handler,
+                           ObjectIdView object_id,
+                           bool* has_object) = 0;
 
   // Returns the status of the object with the given id.
   virtual Status GetObjectStatus(ObjectIdView object_id,
@@ -225,7 +227,8 @@ class PageDb : public PageDbMutator {
   // Object sync metadata.
   // Finds the set of unsynced pieces and replaces the contents of |object_ids|
   // with their ids. |object_ids| will be lexicographically sorted.
-  virtual Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) = 0;
+  virtual Status GetUnsyncedPieces(coroutine::CoroutineHandler* handler,
+                                   std::vector<ObjectId>* object_ids) = 0;
 
   // Sync metadata.
   // Retrieves the opaque sync metadata associated with this page for the given

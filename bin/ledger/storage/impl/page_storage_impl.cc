@@ -320,9 +320,16 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
 
 void PageStorageImpl::GetUnsyncedPieces(
     std::function<void(Status, std::vector<ObjectId>)> callback) {
-  std::vector<ObjectId> unsynced_object_ids;
-  Status s = db_->GetUnsyncedPieces(&unsynced_object_ids);
-  callback(s, unsynced_object_ids);
+  coroutine_service_->StartCoroutine([
+    this, final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    std::vector<ObjectId> unsynced_object_ids;
+    Status s = db_->GetUnsyncedPieces(handler, &unsynced_object_ids);
+    callback(s, unsynced_object_ids);
+  });
 }
 
 void PageStorageImpl::MarkPieceSynced(ObjectIdView object_id,
