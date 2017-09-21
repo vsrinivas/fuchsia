@@ -12,6 +12,7 @@
 #include <kernel/vm.h>
 #include <lib/memory_limit.h>
 #include <zircon/boot/multiboot.h>
+#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <platform.h>
 #include <platform/pc/bootloader.h>
@@ -82,7 +83,7 @@ static void boot_addr_range_reset(boot_addr_range_t *range)
  * array. it returns the total count of arenas which have been populated.
  */
 extern int _end;
-static status_t mem_arena_init(boot_addr_range_t *range)
+static zx_status_t mem_arena_init(boot_addr_range_t *range)
 {
     mem_limit_ctx ctx;
     ctx.kernel_base = KERNEL_BASE + KERNEL_LOAD_OFFSET;
@@ -119,7 +120,7 @@ static status_t mem_arena_init(boot_addr_range_t *range)
             size -= adjust;
         }
 
-        status_t status = ZX_OK;
+        zx_status_t status = ZX_OK;
         if (have_limit) {
             status = mem_limit_add_arenas_from_range(&ctx, base, size, base_arena);
         }
@@ -403,7 +404,7 @@ static int addr_range_cmp(const void* p1, const void* p2)
     return 1;
 }
 
-static status_t platform_mem_range_init(void)
+static zx_status_t platform_mem_range_init(void)
 {
     boot_addr_range_t range;
 
@@ -440,7 +441,7 @@ static status_t platform_mem_range_init(void)
 static size_t cached_e820_entry_count;
 static struct addr_range cached_e820_entries[64];
 
-status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
+zx_status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
     if (callback == NULL)
         return ZX_ERR_INVALID_ARGS;
 

@@ -11,6 +11,7 @@
 #include <dev/pcie_platform.h>
 #include <lib/cbuf.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 extern cbuf_t console_input_buf;
 
@@ -31,17 +32,17 @@ void platform_init_debug(void);
 void platform_init_timer_percpu(void);
 void platform_mem_init(void);
 
-status_t x86_alloc_msi_block(uint requested_irqs, bool can_target_64bit,
-                             bool is_msix, pcie_msi_block_t* out_block);
+zx_status_t x86_alloc_msi_block(uint requested_irqs, bool can_target_64bit,
+                                bool is_msix, pcie_msi_block_t* out_block);
 void x86_free_msi_block(pcie_msi_block_t* block);
 void x86_register_msi_handler(const pcie_msi_block_t* block,
                               uint msi_id,
                               int_handler handler,
                               void* ctx);
 
-status_t platform_configure_watchdog(uint32_t frequency);
+zx_status_t platform_configure_watchdog(uint32_t frequency);
 
 typedef void (*enumerate_e820_callback)(uint64_t base, uint64_t size, bool is_mem, void* ctx);
-status_t enumerate_e820(enumerate_e820_callback callback, void* ctx);
+zx_status_t enumerate_e820(enumerate_e820_callback callback, void* ctx);
 
 __END_CDECLS

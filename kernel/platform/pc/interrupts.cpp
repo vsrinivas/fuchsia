@@ -25,6 +25,7 @@
 #include <lib/pow2_range_allocator.h>
 #include <fbl/algorithm.h>
 #include <pow2.h>
+#include <zircon/types.h>
 
 #include "platform_p.h"
 
@@ -57,7 +58,7 @@ static void platform_init_apic(uint level)
 
     // Enumerate the IO APICs
     uint32_t num_io_apics;
-    status_t status = platform_enumerate_io_apics(NULL, 0, &num_io_apics);
+    zx_status_t status = platform_enumerate_io_apics(NULL, 0, &num_io_apics);
     // TODO: If we want to support x86 without IO APICs, we should do something
     // better here.
     ASSERT(status == ZX_OK);
@@ -131,7 +132,7 @@ static void platform_init_apic(uint level)
 }
 LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2);
 
-status_t mask_interrupt(unsigned int vector)
+zx_status_t mask_interrupt(unsigned int vector)
 {
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&lock, state);
@@ -143,7 +144,7 @@ status_t mask_interrupt(unsigned int vector)
     return ZX_OK;
 }
 
-status_t unmask_interrupt(unsigned int vector)
+zx_status_t unmask_interrupt(unsigned int vector)
 {
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&lock, state);
@@ -155,9 +156,9 @@ status_t unmask_interrupt(unsigned int vector)
     return ZX_OK;
 }
 
-status_t configure_interrupt(unsigned int vector,
-                             enum interrupt_trigger_mode tm,
-                             enum interrupt_polarity pol)
+zx_status_t configure_interrupt(unsigned int vector,
+                                enum interrupt_trigger_mode tm,
+                                enum interrupt_polarity pol)
 {
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&lock, state);
@@ -177,11 +178,11 @@ status_t configure_interrupt(unsigned int vector,
     return ZX_OK;
 }
 
-status_t get_interrupt_config(unsigned int vector,
-                              enum interrupt_trigger_mode* tm,
-                              enum interrupt_polarity* pol)
+zx_status_t get_interrupt_config(unsigned int vector,
+                                 enum interrupt_trigger_mode* tm,
+                                 enum interrupt_polarity* pol)
 {
-    status_t ret;
+    zx_status_t ret;
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&lock, state);
 
@@ -235,8 +236,8 @@ void register_int_handler(unsigned int vector, int_handler handler, void *arg)
     } else if (!x86_vector && handler) {
         /* If the x86 vector is invalid, and we are registering a handler,
          * attempt to get a new x86 vector from the pool. */
-        uint     range_start;
-        status_t result;
+        uint        range_start;
+        zx_status_t result;
 
         /* Right now, there is not much we can do if the allocation fails.  In
          * debug builds, we ASSERT that everything went well.  In release
@@ -289,10 +290,10 @@ void shutdown_interrupts(void) {
 }
 
 #ifdef WITH_DEV_PCIE
-status_t x86_alloc_msi_block(uint requested_irqs,
-                             bool can_target_64bit,
-                             bool is_msix,
-                             pcie_msi_block_t* out_block) {
+zx_status_t x86_alloc_msi_block(uint requested_irqs,
+                                bool can_target_64bit,
+                                bool is_msix,
+                                pcie_msi_block_t* out_block) {
     if (!out_block)
         return ZX_ERR_INVALID_ARGS;
 
@@ -302,7 +303,7 @@ status_t x86_alloc_msi_block(uint requested_irqs,
     if (!requested_irqs || (requested_irqs > PCIE_MAX_MSI_IRQS))
         return ZX_ERR_INVALID_ARGS;
 
-    status_t res;
+    zx_status_t res;
     uint alloc_start;
     uint alloc_size = 1u << log2_uint_ceil(requested_irqs);
 

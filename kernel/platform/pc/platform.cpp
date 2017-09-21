@@ -26,6 +26,7 @@
 #include <platform/keyboard.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/boot/multiboot.h>
+#include <zircon/types.h>
 #include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
@@ -295,7 +296,7 @@ void* platform_get_ramdisk(size_t *size) {
 #include <dev/display.h>
 #include <lib/gfxconsole.h>
 
-status_t display_get_info(struct display_info *info) {
+zx_status_t display_get_info(struct display_info *info) {
     return gfxconsole_display_get_info(info);
 }
 
@@ -348,7 +349,7 @@ static void platform_ensure_display_memtype(uint level)
     info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
 
     void *addr = NULL;
-    status_t status = VmAspace::kernel_aspace()->AllocPhysical(
+    zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
             "boot_fb",
             ROUNDUP(info.stride * info.height * 4, PAGE_SIZE),
             &addr,
@@ -739,7 +740,7 @@ static void platform_init_smp(void)
 {
     uint32_t num_cpus = 0;
 
-    status_t status = platform_enumerate_cpus(NULL, 0, &num_cpus);
+    zx_status_t status = platform_enumerate_cpus(NULL, 0, &num_cpus);
     if (status != ZX_OK) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         return;
@@ -836,7 +837,7 @@ static void platform_init_smp(void)
     free(apic_ids);
 }
 
-status_t platform_mp_prep_cpu_unplug(uint cpu_id)
+zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id)
 {
     // TODO: Make sure the IOAPIC and PCI have nothing for this CPU
     return arch_mp_prep_cpu_unplug(cpu_id);

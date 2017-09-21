@@ -33,6 +33,8 @@
 #include <platform/pc/hpet.h>
 #include <platform/pc/timer.h>
 #include <platform/timer.h>
+#include <zircon/types.h>
+
 #include "platform_p.h"
 
 // Current timer scheme:
@@ -314,7 +316,7 @@ outer:
                 }
 
                 // Setup APIC timer to count down with interrupt masked
-                status_t status = apic_timer_set_oneshot(
+                zx_status_t status = apic_timer_set_oneshot(
                         UINT32_MAX,
                         apic_divisor,
                         true);
@@ -522,7 +524,7 @@ static void platform_init_timer(uint level)
 }
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
-status_t platform_set_oneshot_timer(lk_time_t deadline)
+zx_status_t platform_set_oneshot_timer(lk_time_t deadline)
 {
     DEBUG_ASSERT(arch_ints_disabled());
 
@@ -592,7 +594,7 @@ void platform_stop_timer(void)
     apic_timer_stop();
 }
 
-status_t platform_configure_watchdog(uint32_t frequency) {
+zx_status_t platform_configure_watchdog(uint32_t frequency) {
     switch (wall_clock) {
         case CLOCK_TSC: {
             /* Use the PIT IRQ number since the PIT isn't running */
@@ -608,7 +610,7 @@ status_t platform_configure_watchdog(uint32_t frequency) {
 
                 uint64_t hpet_rate_ms = hpet_ticks_per_ms();
                 hpet_disable();
-                __UNUSED status_t status = hpet_set_value(0);
+                __UNUSED zx_status_t status = hpet_set_value(0);
                 DEBUG_ASSERT(status == ZX_OK);
                 status = hpet_timer_set_periodic(0, hpet_rate_ms * frequency / 1000);
                 DEBUG_ASSERT(status == ZX_OK);

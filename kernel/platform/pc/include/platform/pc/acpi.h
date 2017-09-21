@@ -23,18 +23,18 @@ struct acpi_hpet_descriptor {
 
 void platform_init_acpi_tables(uint levels);
 void platform_init_acpi(void);
-status_t platform_enumerate_cpus(
+zx_status_t platform_enumerate_cpus(
         uint32_t *apic_ids,
         uint32_t len,
         uint32_t *num_cpus);
-status_t platform_enumerate_io_apics(
+zx_status_t platform_enumerate_io_apics(
         struct io_apic_descriptor *io_apics,
         uint32_t len,
         uint32_t *num_io_apics);
-status_t platform_enumerate_interrupt_source_overrides(
+zx_status_t platform_enumerate_interrupt_source_overrides(
         struct io_apic_isa_override *isos,
         uint32_t len,
         uint32_t *num_isos);
-status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet);
+zx_status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet);
 
 __END_CDECLS

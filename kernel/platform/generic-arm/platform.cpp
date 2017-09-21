@@ -48,6 +48,7 @@
 #endif
 
 #include <zircon/boot/bootdata.h>
+#include <zircon/types.h>
 #include <mdi/mdi.h>
 #include <mdi/mdi-defs.h>
 #include <pdev/pdev.h>
@@ -301,7 +302,7 @@ static fbl::RefPtr<VmAspace> halt_aspace = nullptr;
 static bool mapped_boot_pages = false;
 
 void platform_halt_cpu(void) {
-    status_t result;
+    zx_status_t result;
     park_cpu park = (park_cpu)KERNEL_SPIN_OFFSET;
     thread_t *self = get_current_thread();
     const uint cpuid = thread_last_cpu(self);
@@ -634,7 +635,7 @@ void platform_early_init(void)
     // check if a memory limit was passed in via kernel.memory-limit-mb and
     // find memory ranges to use if one is found.
     mem_limit_ctx_t ctx;
-    status_t status = mem_limit_init(&ctx);
+    zx_status_t status = mem_limit_init(&ctx);
     if (status == ZX_OK) {
         // For these ranges we're using the base physical values
         ctx.kernel_base = MEMBASE + KERNEL_LOAD_OFFSET;
@@ -707,7 +708,7 @@ size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
 }
 
 /* no built in framebuffer */
-status_t display_get_info(struct display_info *info) {
+zx_status_t display_get_info(struct display_info *info) {
     return ZX_ERR_NOT_FOUND;
 }
 

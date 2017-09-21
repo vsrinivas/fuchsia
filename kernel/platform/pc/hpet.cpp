@@ -13,6 +13,7 @@
 #include <kernel/spinlock.h>
 #include <vm/vm_aspace.h>
 #include <fbl/algorithm.h>
+#include <zircon/types.h>
 
 struct hpet_timer_registers {
     volatile uint64_t conf_caps;
@@ -63,7 +64,7 @@ static uint64_t min_ticks_ahead;
 
 static void hpet_init(uint level)
 {
-    status_t status = platform_find_hpet(&hpet_desc);
+    zx_status_t status = platform_find_hpet(&hpet_desc);
     if (status != ZX_OK) {
         return;
     }
@@ -72,7 +73,7 @@ static void hpet_init(uint level)
         return;
     }
 
-    status_t res = VmAspace::kernel_aspace()->AllocPhysical(
+    zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
             "hpet",
             PAGE_SIZE, /* size */
             (void **)&hpet_regs, /* returned virtual address */
@@ -115,7 +116,7 @@ fail:
 /* Begin running after ACPI tables are up */
 LK_INIT_HOOK(hpet, hpet_init, LK_INIT_LEVEL_VM + 2);
 
-status_t hpet_timer_disable(uint n)
+zx_status_t hpet_timer_disable(uint n)
 {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -140,7 +141,7 @@ uint64_t hpet_get_value(void)
     return fbl::min(v, v2);
 }
 
-status_t hpet_set_value(uint64_t v)
+zx_status_t hpet_set_value(uint64_t v)
 {
     AutoSpinLock guard(&lock);
 
@@ -152,7 +153,7 @@ status_t hpet_set_value(uint64_t v)
     return ZX_OK;
 }
 
-status_t hpet_timer_configure_irq(uint n, uint irq)
+zx_status_t hpet_timer_configure_irq(uint n, uint irq)
 {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -173,7 +174,7 @@ status_t hpet_timer_configure_irq(uint n, uint irq)
     return ZX_OK;
 }
 
-status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
+zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
 {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -198,7 +199,7 @@ status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
     return ZX_OK;
 }
 
-status_t hpet_timer_set_periodic(uint n, uint64_t period)
+zx_status_t hpet_timer_set_periodic(uint n, uint64_t period)
 {
     if (unlikely(n >= num_timers)) {
         return ZX_ERR_NOT_SUPPORTED;

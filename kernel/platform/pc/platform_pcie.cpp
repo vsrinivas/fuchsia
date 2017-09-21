@@ -15,6 +15,7 @@
 #include <kernel/mutex.h>
 #include <lk/init.h>
 #include <zircon/syscalls/pci.h>
+#include <zircon/types.h>
 #include <fbl/limits.h>
 #include <string.h>
 #include <trace.h>
@@ -24,10 +25,10 @@
 class X86PciePlatformSupport : public PciePlatformInterface {
 public:
     X86PciePlatformSupport() : PciePlatformInterface(MsiSupportLevel::MSI) { }
-    status_t AllocMsiBlock(uint requested_irqs,
-                           bool can_target_64bit,
-                           bool is_msix,
-                           pcie_msi_block_t* out_block) override {
+    zx_status_t AllocMsiBlock(uint requested_irqs,
+                              bool can_target_64bit,
+                              bool is_msix,
+                              pcie_msi_block_t* out_block) override {
         return x86_alloc_msi_block(requested_irqs, can_target_64bit, is_msix, out_block);
     }
 
@@ -50,7 +51,7 @@ static void lockdown_pcie_bus_regions(PcieBusDriver& pcie) {
     // remove all possible allocatable bus addresses from the PCIe bus driver.
     // This should *never* fail.  If it does, halt and catch fire, even in a
     // release build.
-    status_t res;
+    zx_status_t res;
     res = pcie.SubtractBusRegion(0x0, 0x10000, PciAddrSpace::PIO);
     ASSERT(res == ZX_OK);
 
@@ -60,7 +61,7 @@ static void lockdown_pcie_bus_regions(PcieBusDriver& pcie) {
 
 static void x86_pcie_init_hook(uint level) {
     // Initialize the bus driver
-    status_t res = PcieBusDriver::InitializeDriver(platform_pcie_support);
+    zx_status_t res = PcieBusDriver::InitializeDriver(platform_pcie_support);
     if (res != ZX_OK) {
         TRACEF("Failed to initialize PCI bus driver (res = %d).  "
                "PCI will be non-functional.\n", res);
@@ -109,7 +110,7 @@ static void x86_pcie_init_hook(uint level) {
     {
         DEBUG_ASSERT(ctx != nullptr);
         auto pcie = reinterpret_cast<PcieBusDriver*>(ctx);
-        status_t res;
+        zx_status_t res;
 
         res = pcie->SubtractBusRegion(base, size, PciAddrSpace::MMIO);
         if (res != ZX_OK) {

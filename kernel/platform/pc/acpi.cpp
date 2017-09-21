@@ -16,6 +16,7 @@
 
 #include <arch/x86/apic.h>
 #include <platform/pc/acpi.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -56,7 +57,7 @@ void platform_init_acpi_tables(uint level)
 /* initialize ACPI tables as soon as we have a working VM */
 LK_INIT_HOOK(acpi_tables, &platform_init_acpi_tables, LK_INIT_LEVEL_VM + 1);
 
-static status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
+static zx_status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
 {
     ACPI_TABLE_HEADER *table = NULL;
     ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_MADT, 1, &table);
@@ -93,7 +94,7 @@ static status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
  * @return ZX_OK on success. Note that if len < *num_cpus, not all
  *         logical apic_ids will be returned.
  */
-status_t platform_enumerate_cpus(
+zx_status_t platform_enumerate_cpus(
         uint32_t *apic_ids,
         uint32_t len,
         uint32_t *num_cpus)
@@ -103,7 +104,7 @@ status_t platform_enumerate_cpus(
     }
 
     uintptr_t records_start, records_end;
-    status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
+    zx_status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
     if (status != AE_OK) {
         return status;
     }
@@ -147,7 +148,7 @@ status_t platform_enumerate_cpus(
  * @return ZX_OK on success. Note that if len < *num_io_apics, not all
  *         IO APICs will be returned.
  */
-status_t platform_enumerate_io_apics(
+zx_status_t platform_enumerate_io_apics(
         struct io_apic_descriptor *io_apics,
         uint32_t len,
         uint32_t *num_io_apics)
@@ -157,7 +158,7 @@ status_t platform_enumerate_io_apics(
     }
 
     uintptr_t records_start, records_end;
-    status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
+    zx_status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
     if (status != AE_OK) {
         return status;
     }
@@ -200,7 +201,7 @@ status_t platform_enumerate_io_apics(
  * @return ZX_OK on success. Note that if len < *num_isos, not all
  *         ISOs will be returned.
  */
-status_t platform_enumerate_interrupt_source_overrides(
+zx_status_t platform_enumerate_interrupt_source_overrides(
         struct io_apic_isa_override *isos,
         uint32_t len,
         uint32_t *num_isos)
@@ -210,7 +211,7 @@ status_t platform_enumerate_interrupt_source_overrides(
     }
 
     uintptr_t records_start, records_end;
-    status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
+    zx_status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
     if (status != AE_OK) {
         return status;
     }
@@ -282,7 +283,7 @@ status_t platform_enumerate_interrupt_source_overrides(
  *
  * @return ZX_OK on success.
  */
-status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
+zx_status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet)
 {
     ACPI_TABLE_HEADER *table = NULL;
     ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_HPET, 1, &table);
