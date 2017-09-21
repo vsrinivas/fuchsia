@@ -1,0 +1,128 @@
+#!/bin/bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# Test the tunable configuration parameters for jitterentropy.
+#
+# The parameters in question are LFSR loop count (kernel.jitterentropy.ll), memory access loop count
+# (kernel.jitterentropy.ml), memory block size (kernel.jitterentropy.bs), and memory block count
+# (kernel.jitterentropy.bc). See docs/jitterentropy/config-tuning.md for more information.
+
+set -e -u
+CDPATH=
+ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../.." && pwd )"
+
+# Print help message and exit
+function HELP {
+    echo "$0 [options] <output-dir>" >&2
+    echo >&2
+    echo "Jitterentropy-specific options:" >&2
+    echo "    -i <iters>  : times to repeat tests [default: ]" >&2
+    echo "    --ll-seq '<N1> <N2> ... <Nk>'" >&2
+    echo "    --ml-seq '<N1> <N2> ... <Nk>'" >&2
+    echo "    --bs-seq '<N1> <N2> ... <Nk>'" >&2
+    echo "    --bc-seq '<N1> <N2> ... <Nk>'" >&2
+    echo "                : sequence of values to use for jitterentropy parameters" >&2
+    echo "                : Default (for each one): '1'" >&2
+    echo "                : Note: the argument should be a single string, with several" >&2
+    echo "                : space-separated numbers in it. In bash, use quotes, e.g." >&2
+    echo "                :     $0 \\" >&2
+    echo "                :          --ll-seq '1 2 3 4' --ml-seq '1 4 16 256' \\" >&2
+    echo "                :          --bs-seq '64' --bc-seq '512'" >&2
+    echo "                : That command will test 16 configurations, with 'll' and" >&2
+    echo "                : 'ml' varying, and 'bs' and 'bc' help constant." >&2
+    echo >&2
+    "$ZIRCONDIR"/scripts/entropy-test/repeat-boot-test -h -h
+    exit 1
+}
+
+function VERIFY_SEQ {
+    if [[ $# -eq 0 ]]; then
+        echo "empty sequence not allowed" >&2
+        HELP
+    fi
+    for val in "$@"; do
+        if ! grep '^[0-9]\+$' >/dev/null 2>&1 <<<"$val"; then
+            echo "invalid value '$val' in sequence" >&2
+            HELP
+        fi
+    done
+}
+
+ITERS=10
+LL_SEQ=(1)
+ML_SEQ=(1)
+BS_SEQ=(1)
+BC_SEQ=(1)
+PASSTHROUGH_ARGS=()
+
+# separate out our options from the repeat-boot-test options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h)
+            HELP
+            ;;
+        -i)
+            if [[ $# -lt 2 ]]; then echo "-i missing iters" >&2; HELP; fi
+            ITERS="$2"
+            shift 2
+            ;;
+        --ll-seq)
+            if [[ $# -lt 2 ]]; then echo "--ll-seq missing seq" >&2; HELP; fi
+            read -ra LL_SEQ <<<"$2"
+            VERIFY_SEQ "${LL_SEQ[@]+"${LL_SEQ[@]}"}"
+            shift 2
+            ;;
+        --ml-seq)
+            if [[ $# -lt 2 ]]; then echo "--ml-seq missing seq" >&2; HELP; fi
+            read -ra ML_SEQ <<<"$2"
+            VERIFY_SEQ "${ML_SEQ[@]+"${ML_SEQ[@]}"}"
+            shift 2
+            ;;
+        --bs-seq)
+            if [[ $# -lt 2 ]]; then echo "--bs-seq missing seq" >&2; HELP; fi
+            read -ra BS_SEQ <<<"$2"
+            VERIFY_SEQ "${BS_SEQ[@]+"${BS_SEQ[@]}"}"
+            shift 2
+            ;;
+        --bc-seq)
+            if [[ $# -lt 2 ]]; then echo "--bc-seq missing seq" >&2; HELP; fi
+            read -ra BC_SEQ <<<"$2"
+            VERIFY_SEQ "${BC_SEQ[@]+"${BC_SEQ[@]}"}"
+            shift 2
+            ;;
+        *)
+            PASSTHROUGH_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+BASE_CMDLINE="kernel.jitterentropy.raw=true"
+
+# build the cmdlines
+readarray -t CMDLINES < <(
+    for ((i = 0; i < ITERS; i++)); do
+        for ll in "${LL_SEQ[@]}"; do for ml in "${ML_SEQ[@]}"; do
+        for bs in "${BS_SEQ[@]}"; do for bc in "${BC_SEQ[@]}"; do
+            CMDLINE="$BASE_CMDLINE"
+            CMDLINE+=" kernel.jitterentropy.ll=$ll kernel.jitterentropy.ml=$ml"
+            CMDLINE+=" kernel.jitterentropy.bs=$bs kernel.jitterentropy.bc=$bc"
+            echo "$CMDLINE"
+        done; done
+    done
+)
+
+# run the tests
+
+# The unholy incantation around PASSTHOROUGH_ARGS comes from here:
+#     https://stackoverflow.com/a/7577209
+# TL;DR: In bash, an array is only considered 'set' if it has at least one item. Without the
+# nonsense below, if PASSTHROUGH_ARGS is empty (which is legitimate!), then `set -u` will throw.
+"$ZIRCONDIR"/scripts/entropy-test/repeat-boot-test \
+    "${PASSTHROUGH_ARGS[@]+"${PASSTHROUGH_ARGS[@]}"}" \
+    -s "jitterentropy" -- "${CMDLINES[@]}"
