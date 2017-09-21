@@ -14,7 +14,6 @@ TARGET_MODDEPS += $(STAMPY)
 
 SG_ZIRCON := $(GENERATED_INCLUDES)/zircon
 
-SG_KERNEL_CODE := $(SG_ZIRCON)/syscall-invocation-cases.inc
 SG_KERNEL_HEADER := $(SG_ZIRCON)/syscall-definitions.h
 SG_KERNEL_TRACE := $(SG_ZIRCON)/syscall-ktrace-info.inc
 SG_KERNEL_CATEGORY := $(SG_ZIRCON)/syscall-category.inc
@@ -40,7 +39,6 @@ $(STAMPY): $(SYSGEN) $(SYSCALLS_SRC)
 	$(call BUILDECHO,generating syscall files from $(SYSCALLS_SRC))
 	$(NOECHO) mkdir -p $(SG_SYSCALLS)
 	$(NOECHO) $(SYSGEN) \
-		-kernel-code $(SG_KERNEL_CODE) \
 		-trace $(SG_KERNEL_TRACE) \
 		-category $(SG_KERNEL_CATEGORY) \
 		-kernel-header $(SG_KERNEL_HEADER) \
@@ -58,7 +56,7 @@ $(STAMPY): $(SYSGEN) $(SYSCALLS_SRC)
 
 run-sysgen $(SG_PUBLIC_HEADER) $(SG_PUBLIC_RUST) $(SG_SYSROOT_HEADER) $(SG_SYSROOT_RUST): $(STAMPY)
 
-GENERATED += $(SG_KERNEL_CODE) $(SG_KERNEL_HEADER) $(SG_KERNEL_TRACE) \
+GENERATED += $(SG_KERNEL_HEADER) $(SG_KERNEL_TRACE) \
 	$(SG_KERNEL_CATEGORY) $(SG_ULIB_X86) $(SG_ULIB_ARM) \
 	$(SG_KERNEL_WRAPPERS) $(SG_KERNEL_BRANCHES) \
 	$(SG_ULIB_SYSCALL_NUMBERS) \

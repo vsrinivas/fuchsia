@@ -7,7 +7,6 @@
 
 #include "generator.h"
 #include "header_generator.h"
-#include "kernel_invocation_generator.h"
 #include "vdso_wrapper_generator.h"
 
 #include "sysgen_generator.h"
@@ -41,12 +40,6 @@ static VdsoWrapperGenerator vdso_wrapper_generator(
     wrappers);
 
 static KernelBranchGenerator kernel_branch;
-
-static KernelInvocationGenerator kernel_code(
-    "sys_",     // function prefix
-    "ret",      // variable to assign invocation result to
-    "uint64_t", // type of result variable
-    "arg");     // prefix for syscall arguments);
 
 static KernelWrapperGenerator kernel_wrappers(
     "sys_",     // function prefix
@@ -115,9 +108,6 @@ const map<string, Generator&> type_to_generator = {
     // The kernel header, C++.
     {"kernel-header", kernel_header},
 
-    // The kernel C++ code. A switch statement set.
-    {"kernel-code", kernel_code},
-
     // The kernel assembly branches and jump table.
     {"kernel-branch", kernel_branch},
 
@@ -151,7 +141,6 @@ const map<string, string> type_to_default_suffix = {
     {"vdso-header", ".vdso.h"},
     {"kernel-header", ".kernel.h"},
     {"kernel-branch", ".kernel-branch.S"},
-    {"kernel-code", ".kernel.inc"},
     {"kernel-wrappers", ".kernel-wrappers.inc"},
     {"x86-asm", ".x86-64.S"},
     {"arm-asm", ".arm64.S"},

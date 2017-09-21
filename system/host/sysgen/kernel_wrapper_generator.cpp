@@ -24,17 +24,17 @@ static string invocation(ofstream& os, const string& out_type,
     return "))";
 }
 
-static void write_x86_syscall_signature_line(ofstream& os, const Syscall& sc, string name_prefix) {
+static void write_syscall_signature_line(ofstream& os, const Syscall& sc, string name_prefix) {
     auto syscall_name = name_prefix + sc.name;
 
-    os << "x86_64_syscall_result " << syscall_name << "(";
+    os << "syscall_result " << syscall_name << "(";
 
     // Writes all arguments.
     sc.for_each_kernel_arg([&](const TypeSpec& arg) {
         os << arg.as_cpp_declaration(false) << ", ";
     });
 
-    os << "uint64_t ip) {\n";
+    os << "uint64_t pc) {\n";
 }
 
 bool KernelWrapperGenerator::header(ofstream& os) {
@@ -46,26 +46,19 @@ bool KernelWrapperGenerator::header(ofstream& os) {
 }
 
 bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
-    // TODO(andymutton): Generate arm wrappers too.
-
     if (sc.is_vdso())
         return true;
 
     auto syscall_name = syscall_prefix_ + sc.name;
-    os << "#if ARCH_X86_64\n";
-
-    write_x86_syscall_signature_line(os, sc, wrapper_prefix_);
-
+    write_syscall_signature_line(os, sc, wrapper_prefix_);
     os << in << "return do_syscall("
        << define_prefix_ << sc.name << ", "
-       << "ip, "
+       << "pc, "
        << "&VDso::ValidSyscallPC::" << sc.name << ", "
        << "[&]() {\n"
        << inin;
 
     string close_invocation = invocation(os, "uint64_t", syscall_name, sc);
-
-    // Writes all arguments.
     sc.for_each_kernel_arg([&](const TypeSpec& arg) {
         if (arg.arr_spec) {
             os << "make_user_ptr(" << arg.name << "), ";
@@ -78,7 +71,6 @@ bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
         // remove the comma space.
         os.seekp(-2, std::ios_base::end);
     }
-
     os << close_invocation;
 
     if (sc.is_noreturn()) {
@@ -90,7 +82,6 @@ bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
     }
     os << in << "});\n";
     os << "}\n";
-    os << "#endif\n";
     return os.good();
 }
 

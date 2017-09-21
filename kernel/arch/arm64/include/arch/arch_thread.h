@@ -7,6 +7,8 @@
 
 #pragma once
 
+#define CURRENT_PERCPU_PTR_OFFSET 16
+
 #ifndef ASSEMBLY
 
 #include <assert.h>
@@ -64,6 +66,9 @@ static_assert(
 static_assert(
     thread_pointer_offsetof(unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET,
     "unsafe_sp field in wrong place");
+static_assert(
+    thread_pointer_offsetof(current_percpu_ptr) == CURRENT_PERCPU_PTR_OFFSET,
+    "per cpu ptr offset in wrong place");
 
 __END_CDECLS
 

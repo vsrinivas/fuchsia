@@ -439,11 +439,6 @@ void x86_exception_handler(x86_iframe_t *frame)
         frame->vector, frame->ip);
 }
 
-__WEAK x86_64_syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip)
-{
-    PANIC_UNIMPLEMENTED;
-}
-
 void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs)
 {
     thread_t *thread = get_current_thread();

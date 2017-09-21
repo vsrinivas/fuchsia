@@ -28,8 +28,6 @@
 
 #define DFSC_ALIGNMENT_FAULT 0b100001
 
-static void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe);
-
 static void dump_iframe(const struct arm64_iframe_long *iframe)
 {
     printf("iframe %p:\n", iframe);
@@ -43,11 +41,6 @@ static void dump_iframe(const struct arm64_iframe_long *iframe)
     printf("x28 %#18" PRIx64 " x29 %#18" PRIx64 " lr  %#18" PRIx64 " usp %#18" PRIx64 "\n", iframe->r[28], iframe->r[29], iframe->lr, iframe->usp);
     printf("elr  %#18" PRIx64 "\n", iframe->elr);
     printf("spsr %#18" PRIx64 "\n", iframe->spsr);
-}
-
-__WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint64_t pc)
-{
-    panic("unhandled syscall vector\n");
 }
 
 static zx_status_t try_dispatch_user_data_fault_exception(
@@ -124,19 +117,6 @@ static void arm64_fpu_handler(struct arm64_iframe_long *iframe, uint exception_f
         exception_die(iframe, esr);
     }
     arm64_fpu_exception(iframe, exception_flags);
-}
-
-static void arm64_syscall_handler(struct arm64_iframe_long *iframe, uint exception_flags,
-                                  uint32_t esr)
-{
-    uint32_t ec = BITS_SHIFT(esr, 31, 26);
-
-    if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-        /* trapped inside the kernel, this is bad */
-        printf("syscall from in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-        exception_die(iframe, esr);
-    }
-    arm64_syscall(iframe, (ec == 0x15) ? true : false, iframe->elr);
 }
 
 static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, uint exception_flags,
@@ -246,14 +226,15 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     exception_die(iframe, esr);
 }
 
-static inline void arm64_restore_percpu_pointer() {
+static inline void arm64_restore_percpu_pointer()
+{
     arm64_write_percpu_ptr(get_current_thread()->arch.current_percpu_ptr);
 }
 
 /* called from assembly */
-extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags)
+extern "C" void arm64_sync_exception(
+    struct arm64_iframe_long *iframe, uint exception_flags, uint32_t esr)
 {
-    uint32_t esr = (uint32_t)ARM64_READ_SYSREG(esr_el1);
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
 
     if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
@@ -277,7 +258,8 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
             break;
         case 0b010001: /* syscall from arm32 */
         case 0b010101: /* syscall from arm64 */
-            arm64_syscall_handler(iframe, exception_flags, esr);
+            printf("syscalls should be handled in assembly\n");
+            exception_die(iframe, esr);
             break;
         case 0b100000: /* instruction abort from lower level */
         case 0b100001: /* instruction abort from same level */
@@ -386,7 +368,8 @@ extern "C" void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsign
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-static void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe)
+/* called from assembly */
+extern "C" void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe)
 {
     thread_t *thread = get_current_thread();
     DEBUG_ASSERT(iframe != nullptr);
