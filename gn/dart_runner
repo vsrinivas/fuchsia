@@ -4,6 +4,6 @@
         "dart"
     ],
     "packages": {
-        "dart_runner": "//apps/dart_content_handler:dart_runner"
+        "dart_runner": "//topaz/runtime/dart_runner"
     }
 }
