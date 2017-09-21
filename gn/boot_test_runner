@@ -1,9 +1,9 @@
 {
     "imports": [
-        "packages/gn/fxl",
-        "packages/gn/fsl",
-        "packages/gn/netstack",
-        "packages/gn/runtime_config",
+        "garnet/packages/fxl",
+        "garnet/packages/fsl",
+        "garnet/packages/netstack",
+        "garnet/packages/runtime_config",
         "packages/gn/test_runner"
     ],
     "resources": [

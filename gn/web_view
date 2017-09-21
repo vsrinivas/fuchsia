@@ -6,11 +6,11 @@
         "packages/gn/cairo",
         "packages/gn/curl",
         "packages/gn/fonts",
-        "packages/gn/icu",
+        "garnet/packages/icu",
         "packages/gn/libxml2",
         "packages/gn/mozart",
         "packages/gn/sqlite",
-        "packages/gn/zlib"
+        "garnet/packages/zlib"
     ],
     "packages": {
         "libwebkit": "//topaz/runtime/web_view:libwebkit",

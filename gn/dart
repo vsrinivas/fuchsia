@@ -4,7 +4,7 @@
         "dart"
     ],
     "imports": [
-        "packages/gn/zlib"
+        "garnet/packages/zlib"
     ],
     "labels": [
         "//dart/runtime/bin:dart",

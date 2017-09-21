@@ -5,10 +5,10 @@
     ],
     "imports": [
         "packages/gn/fonts",
-        "packages/gn/icu",
+        "garnet/packages/icu",
         "packages/gn/mozart",
-        "packages/gn/icu_data",
-        "packages/gn/zlib"
+        "garnet/packages/icu_data",
+        "garnet/packages/zlib"
     ],
     "labels": [
         "//flutter",

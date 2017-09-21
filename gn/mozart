@@ -4,11 +4,11 @@
     ],
     "imports": [
         "packages/gn/dart",
-        "packages/gn/fxl",
-        "packages/gn/magma",
-        "packages/gn/fsl",
+        "garnet/packages/fxl",
+        "garnet/packages/magma",
+        "garnet/packages/fsl",
         "packages/gn/tracing",
-        "packages/gn/zlib"
+        "garnet/packages/zlib"
     ],
     "packages": {
         "mozart": "//garnet/bin/ui:mozart",

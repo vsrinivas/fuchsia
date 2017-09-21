@@ -1,12 +1,5 @@
 {
     "imports": [
-        "packages/gn/drivers",
-        "packages/gn/zircon_benchmarks",
-        "packages/gn/netstack",
-        "packages/gn/openssh",
-        "packages/gn/openssh-keys",
-        "packages/gn/sbase",
-        "packages/gn/thinfs",
-        "packages/gn/vim"
+        "garnet/packages/default"
     ]
 }

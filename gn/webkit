@@ -6,7 +6,7 @@
         "packages/gn/curl",
         "packages/gn/libxml2",
         "packages/gn/sqlite",
-        "packages/gn/zlib"
+        "garnet/packages/zlib"
     ],
     "packages": {
         "libwebkit": "//topaz/runtime/web_view:libwebkit"

@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "vim": "//third_party/vim"
-    }
-}

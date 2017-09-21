@@ -4,7 +4,7 @@
     ],
     "imports": [
         "packages/gn/boringssl_libcrypto",
-        "packages/gn/netstack"
+        "garnet/packages/netstack"
     ],
     "packages": {
         "libssl": "//third_party/boringssl:libssl"

@@ -1,10 +1,10 @@
 {
     "imports": [
         "packages/gn/media_audio",
-        "packages/gn/netstack",
-        "packages/gn/openssh",
-        "packages/gn/runtime",
-        "packages/gn/runtime_config",
-        "packages/gn/sbase"
+        "garnet/packages/netstack",
+        "garnet/packages/openssh",
+        "garnet/packages/runtime",
+        "garnet/packages/runtime_config",
+        "garnet/packages/sbase"
     ]
 }

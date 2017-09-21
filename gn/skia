@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "packages/gn/magma",
-        "packages/gn/zlib"
+        "garnet/packages/magma",
+        "garnet/packages/zlib"
     ],
     "labels": [
         "//third_party/skia"

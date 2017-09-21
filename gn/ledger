@@ -5,8 +5,8 @@
     "imports": [
         "packages/gn/boringssl_libssl",
         "packages/gn/cobalt_client",
-        "packages/gn/fxl",
-        "packages/gn/fsl",
+        "garnet/packages/fxl",
+        "garnet/packages/fsl",
         "packages/gn/url"
     ],
     "packages": {

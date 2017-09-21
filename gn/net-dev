@@ -1,9 +1,9 @@
 {
     "imports": [
         "packages/gn/iperf",
-        "packages/gn/netstack",
+        "garnet/packages/netstack",
         "packages/gn/network",
-        "packages/gn/wlan",
+        "garnet/packages/wlan",
         "packages/gn/wlanstack",
         "packages/gn/wlan_tests"
     ]

@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "icu_data": "//garnet/bin/icu_data"
-    }
-}

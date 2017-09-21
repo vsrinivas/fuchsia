@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "wlan": "//garnet/drivers/wlan/wlan",
-        "ralink": "//garnet/drivers/wlan/mediatek/ralink"
-    }
-}
