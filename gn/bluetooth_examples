@@ -6,6 +6,6 @@
         "packages/gn/bluetooth"
     ],
     "packages": {
-        "bluetooth_examples": "//apps/bluetooth/examples:bluetooth_examples"
+        "bluetooth_examples": "//garnet/examples/bluetooth:bluetooth_examples"
     }
 }

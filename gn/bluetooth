@@ -3,7 +3,7 @@
         "cpp"
     ],
     "packages": {
-        "bluetooth": "//apps/bluetooth",
-        "bluetooth_tests": "//apps/bluetooth/test"
+        "bluetooth": "//garnet/bin/bluetooth",
+        "bluetooth_tests": "//garnet/bin/bluetooth:bluetooth_tests"
     }
 }
