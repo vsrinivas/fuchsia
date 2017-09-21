@@ -109,6 +109,9 @@ cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`";
 # disable SSP if the compiler supports it; it will break stuff
 GLOBAL_CFLAGS += $(call cc-option,$(CC),-fno-stack-protector,)
 
+# set the default architecture
+GLOBAL_COMPILEFLAGS += -march=x86-64 -mcx16
+
 CLANG_ARCH := x86_64
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_LDFLAGS += -m elf_x86_64
