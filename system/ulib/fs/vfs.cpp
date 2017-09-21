@@ -449,7 +449,7 @@ zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, s
         }
         const vfs_watch_dir_t* request = reinterpret_cast<const vfs_watch_dir_t*>(in_buf);
         *out_actual = 0;
-        return vn->WatchDirV2(this, request);
+        return vn->WatchDir(this, request);
     }
     case IOCTL_VFS_MOUNT_FS: {
         if ((in_len != sizeof(zx_handle_t)) || (out_len != 0)) {

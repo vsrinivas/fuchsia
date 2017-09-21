@@ -68,7 +68,7 @@ public:
         return 0;
     }
 
-    virtual zx_status_t WatchDirV2(Vfs* vfs, const vfs_watch_dir_t* cmd) {
+    virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 #endif

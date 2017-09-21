@@ -76,7 +76,7 @@ zx_status_t WatchBuffer::Send(const zx::channel& c) {
     return ZX_OK;
 }
 
-zx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd) {
+zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd) {
     zx::channel c = zx::channel(cmd->channel);
     if ((cmd->mask & VFS_WATCH_MASK_ALL) == 0) {
         // No events to watch

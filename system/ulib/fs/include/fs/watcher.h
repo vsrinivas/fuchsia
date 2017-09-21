@@ -24,7 +24,7 @@ public:
     WatcherContainer();
     ~WatcherContainer();
 
-    zx_status_t WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
+    zx_status_t WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
 
     // Notifies all VnodeWatchers in the watch list, if their mask
     // indicates they are interested in the incoming event.
