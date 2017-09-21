@@ -17,7 +17,8 @@
 
 __BEGIN_CDECLS
 
-// Send an unmount signal on a handle to a filesystem and await a response.
+// Send an unmount signal on a handle to a filesystem and await a
+// response. Unconditionally consumes |h|.
 zx_status_t vfs_unmount_handle(zx_handle_t h, zx_time_t deadline);
 
 __END_CDECLS

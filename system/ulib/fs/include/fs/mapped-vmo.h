@@ -42,6 +42,8 @@ public:
     // On failure, the Mapping will be safe to use, but will remain at its original size.
     zx_status_t Grow(size_t len);
 
+    // Returns a borrowed copied of the underlying |vmo_|, i.e. this
+    // returns it directly, not a zx_handle_duplicate()d one.
     zx_handle_t GetVmo(void) const;
     size_t GetSize(void) const;
     void* GetData(void) const;
