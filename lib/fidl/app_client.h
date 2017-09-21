@@ -78,9 +78,8 @@ class AppClientBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
 
-// A generic client that does that the standard termination sequence. For a
-// service with another termination sequence, another implementation could be
-// created.
+// A generic client that does the standard termination sequence. For a service
+// with another termination sequence, another implementation could be created.
 template <class Service>
 class AppClient : public AppClientBase {
  public:
