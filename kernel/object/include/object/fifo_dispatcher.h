@@ -16,9 +16,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 
-typedef zx_status_t (*fifo_copy_from_fn_t)(const uint8_t* ptr, uint8_t* data, size_t len);
-typedef zx_status_t (*fifo_copy_to_fn_t)(uint8_t* ptr, const uint8_t* data, size_t len);
-
 class FifoDispatcher final : public Dispatcher {
 public:
     static zx_status_t Create(uint32_t elem_count, uint32_t elem_size, uint32_t options,
@@ -41,12 +38,7 @@ private:
     FifoDispatcher(uint32_t options, uint32_t elem_count, uint32_t elem_size,
                    fbl::unique_ptr<uint8_t[]> data);
     void Init(fbl::RefPtr<FifoDispatcher> other);
-    zx_status_t Write(const uint8_t* ptr, size_t len, uint32_t* actual,
-                      fifo_copy_from_fn_t copy_from_fn);
-    zx_status_t WriteSelf(const uint8_t* ptr, size_t len, uint32_t* actual,
-                          fifo_copy_from_fn_t copy_from_fn);
-    zx_status_t Read(uint8_t* ptr, size_t len, uint32_t* actual,
-                     fifo_copy_to_fn_t copy_to_fn);
+    zx_status_t WriteSelf(const uint8_t* ptr, size_t len, uint32_t* actual);
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
 
     void OnPeerZeroHandles();
