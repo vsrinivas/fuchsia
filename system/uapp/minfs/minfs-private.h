@@ -5,7 +5,6 @@
 #pragma once
 
 #ifdef __Fuchsia__
-#include <fs/dispatcher.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
 #include <zx/vmo.h>
@@ -85,11 +84,6 @@ public:
     // Does not modify inode bitmap.
     zx_status_t InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode);
 
-#ifdef __Fuchsia__
-    fs::Dispatcher* GetDispatcher() {
-        return dispatcher_.get();
-    }
-#endif
     void ValidateBno(blk_t bno) const {
         ZX_DEBUG_ASSERT(bno != 0);
         ZX_DEBUG_ASSERT(bno < info_.block_count);
@@ -112,9 +106,6 @@ private:
     zx_status_t AddInodes();
     zx_status_t AddBlocks();
 
-#ifdef __Fuchsia__
-    fbl::unique_ptr<fs::Dispatcher> dispatcher_{nullptr};
-#endif
     uint32_t abmblks_{};
     uint32_t ibmblks_{};
     RawBitmap inode_map_{};

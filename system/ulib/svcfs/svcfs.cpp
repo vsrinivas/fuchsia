@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include <fs/dispatcher.h>
 #include <fs/watcher.h>
 #include <fbl/alloc_checker.h>
 

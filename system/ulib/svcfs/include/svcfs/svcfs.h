@@ -7,7 +7,6 @@
 #include <fbl/string.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
-#include <fs/dispatcher.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fs/watcher.h>

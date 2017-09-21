@@ -716,9 +716,6 @@ zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc
 }
 
 zx_status_t Minfs::Unmount() {
-#ifdef __Fuchsia__
-    dispatcher_ = nullptr;
-#endif
     // Explicitly delete this (rather than just letting the memory release when
     // the process exits) to ensure that the block device's fifo has been
     // closed.

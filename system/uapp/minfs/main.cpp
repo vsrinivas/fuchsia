@@ -13,14 +13,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <fbl/unique_ptr.h>
 
 #ifdef __Fuchsia__
 #include <async/loop.h>
-#include <fs/async-dispatcher.h>
 #include <fs/trace.h>
 #endif
 
@@ -59,8 +58,7 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
     }
 
     async::Loop loop;
-    fs::AsyncDispatcher dispatcher(loop.async());
-    minfs::vfs.SetDispatcher(&dispatcher);
+    minfs::vfs.set_async(loop.async());
     zx_status_t status;
     if ((status = minfs::vfs.ServeDirectory(fbl::move(vn),
                                             zx::channel(h))) != ZX_OK) {
@@ -257,7 +255,7 @@ off_t get_size(int fd) {
 #endif
 }
 
-} // namespace anonymous
+} // namespace
 
 int main(int argc, char** argv) {
     off_t size = 0;
@@ -350,7 +348,7 @@ found:
     size /= minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, fd, (uint32_t) size) < 0) {
+    if (minfs::Bcache::Create(&bc, fd, (uint32_t)size) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }

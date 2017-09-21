@@ -16,7 +16,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fs/async-dispatcher.h>
 #include <fs/vfs.h>
 #include <zircon/device/vfs.h>
 #include <zircon/thread_annotations.h>
@@ -48,7 +47,6 @@ class MemVfs : public fs::Vfs {
 } vfs;
 
 fbl::unique_ptr<async::Loop> global_loop;
-fbl::unique_ptr<fs::AsyncDispatcher> global_dispatcher;
 
 }
 
@@ -811,9 +809,8 @@ VnodeDir* vfs_create_global_root() {
                                   O_CREAT, S_IFDIR) == ZX_OK);
 
         memfs::global_loop.reset(new async::Loop());
-        memfs::global_dispatcher.reset(new fs::AsyncDispatcher(memfs::global_loop->async()));
         memfs::global_loop->StartThread("root-dispatcher");
-        memfs::vfs.SetDispatcher(memfs::global_dispatcher.get());
+        memfs::vfs.set_async(memfs::global_loop->async());
     }
     return memfs::vfs_root.get();
 }

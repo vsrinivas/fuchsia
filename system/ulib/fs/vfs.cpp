@@ -14,6 +14,7 @@
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <fs/connection.h>
 #include <fs/remote.h>
 #include <threads.h>
 #include <zircon/assert.h>
@@ -80,7 +81,7 @@ zx_status_t vfs_lookup(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
 // Validate open flags as much as they can be validated
 // independently of the target node.
 zx_status_t vfs_validate_flags(uint32_t flags) {
-    switch (flags & 3) {
+    switch (flags & O_ACCMODE) {
     case O_RDONLY:
         if (flags & O_TRUNC) {
             return ZX_ERR_INVALID_ARGS;
@@ -144,8 +145,8 @@ Vfs::Vfs() = default;
 Vfs::~Vfs() = default;
 
 #ifdef __Fuchsia__
-Vfs::Vfs(Dispatcher* dispatcher)
-    : dispatcher_(dispatcher) {}
+Vfs::Vfs(async_t* async)
+    : async_(async) {}
 #endif
 
 zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
@@ -270,20 +271,19 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, const char* path, size_t len) 
 
 #define TOKEN_RIGHTS (ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER)
 
-void Vfs::TokenDiscard(zx::event* ios_token) {
+void Vfs::TokenDiscard(zx::event ios_token) {
     fbl::AutoLock lock(&vfs_lock_);
-    if (ios_token->is_valid()) {
-        // The token is nullified here to prevent the following race condition:
+    if (ios_token) {
+        // The token is cleared here to prevent the following race condition:
         // 1) Open
         // 2) GetToken
         // 3) Close + Release Vnode
         // 4) Use token handle to access defunct vnode (or a different vnode,
         //    if the memory for it is reallocated).
         //
-        // By nullifying the token cookie, any remaining handles to the event will
+        // By cleared the token cookie, any remaining handles to the event will
         // be ignored by the filesystem server.
-        ios_token->set_cookie(zx_process_self(), 0);
-        ios_token->reset();
+        ios_token.set_cookie(zx_process_self(), 0);
     }
 }
 
@@ -435,6 +435,37 @@ zx_handle_t Vfs::WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) {
     }
 
     return h;
+}
+
+zx_status_t Vfs::ServeConnection(fbl::unique_ptr<Connection> connection) {
+    ZX_DEBUG_ASSERT(connection);
+
+    zx_status_t status = connection->Serve();
+    if (status == ZX_OK) {
+        // The connection will be deleted later in |OnConnectionClosedRemotely|.
+        connection.release();
+    }
+    return status;
+}
+
+void Vfs::OnConnectionClosedRemotely(Connection* connection) {
+    ZX_DEBUG_ASSERT(connection);
+    delete connection;
+}
+
+zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) {
+    // Make sure the Vnode really is a directory.
+    zx_status_t r;
+    if ((r = vn->Open(O_DIRECTORY)) != ZX_OK) {
+        return r;
+    }
+
+    // Tell the calling process that we've mounted the directory.
+    if ((r = channel.signal_peer(0, ZX_USER_SIGNAL_0)) != ZX_OK) {
+        return r;
+    }
+
+    return vn->Serve(this, fbl::move(channel), O_ADMIN);
 }
 
 #endif // ifdef __Fuchsia__

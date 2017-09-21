@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <stdlib.h>
+#include <fcntl.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 
@@ -17,10 +18,9 @@
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
-
 #ifdef __Fuchsia__
-#include <threads.h>
 #include <fdio/io.h>
+#include <threads.h>
 #endif
 
 // VFS Helpers (vfs.c)
@@ -32,12 +32,12 @@
 // clang-format on
 
 #ifdef __Fuchsia__
-#include <fs/dispatcher.h>
+#include <async/dispatcher.h>
 #include <zx/channel.h>
 #include <zx/event.h>
 #include <zx/vmo.h>
 #include <fbl/mutex.h>
-#endif  // __Fuchsia__
+#endif // __Fuchsia__
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
@@ -47,7 +47,18 @@
 
 namespace fs {
 
+class Connection;
 class Vnode;
+
+inline constexpr bool IsWritable(uint32_t flags) {
+    uint32_t mode = flags & O_ACCMODE;
+    return mode == O_RDWR || mode == O_WRONLY;
+}
+
+inline constexpr bool IsReadable(uint32_t flags) {
+    uint32_t mode = flags & O_ACCMODE;
+    return mode == O_RDWR || mode == O_RDONLY;
+}
 
 // A storage class for a vdircookie which is passed to Readdir.
 // Common vnode implementations may use this struct as scratch
@@ -77,9 +88,12 @@ typedef struct vdircookie {
 class MountChannel {
 public:
     constexpr MountChannel() = default;
-    explicit MountChannel(zx_handle_t handle) : channel_(handle) {}
-    explicit MountChannel(zx::channel channel) : channel_(fbl::move(channel)) {}
-    MountChannel(MountChannel&& other) : channel_(fbl::move(other.channel_)) {}
+    explicit MountChannel(zx_handle_t handle)
+        : channel_(handle) {}
+    explicit MountChannel(zx::channel channel)
+        : channel_(fbl::move(channel)) {}
+    MountChannel(MountChannel&& other)
+        : channel_(fbl::move(other.channel_)) {}
 
     zx::channel TakeChannel() { return fbl::move(channel_); }
 
@@ -114,7 +128,7 @@ public:
                       void* out_buf, size_t out_len, size_t* out_actual) __TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
-    void TokenDiscard(zx::event* ios_token) __TA_EXCLUDES(vfs_lock_);
+    void TokenDiscard(zx::event ios_token) __TA_EXCLUDES(vfs_lock_);
     zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
                              zx::event* out) __TA_EXCLUDES(vfs_lock_);
     zx_status_t Link(zx::event token, fbl::RefPtr<Vnode> oldparent,
@@ -126,15 +140,20 @@ public:
     zx_status_t Readdir(Vnode* vn, vdircookie_t* cookie,
                         void* dirents, size_t len) __TA_EXCLUDES(vfs_lock_);
 
-    Vfs(Dispatcher* dispatcher);
+    Vfs(async_t* async);
 
-    void SetDispatcher(Dispatcher* dispatcher) { dispatcher_ = dispatcher; }
+    async_t* async() { return async_; }
+    void set_async(async_t* async) { async_ = async; }
 
-    // Dispatches to a Vnode over the specified handle (normal case)
-    zx_status_t Serve(zx::channel channel, void* ios);
+    // Begins serving VFS messages over the specified connection.
+    zx_status_t ServeConnection(fbl::unique_ptr<Connection> connection) __TA_EXCLUDES(vfs_lock_);
 
-    // Serves a Vnode over the specified handle (used for creating new filesystems)
-    zx_status_t ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel);
+    // Called by a VFS connection when it is closed remotely.
+    // The VFS is now responsible for destroying the connection.
+    void OnConnectionClosedRemotely(Connection* connection) __TA_EXCLUDES(vfs_lock_);
+
+    // Serves a Vnode over the specified channel (used for creating new filesystems)
+    zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel);
 
     // Pins a handle to a remote filesystem onto a vnode, if possible.
     zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
@@ -149,7 +168,6 @@ public:
     // Unpins all remote filesystems in the current filesystem, and waits for the
     // response of each one with the provided deadline.
     zx_status_t UninstallAll(zx_time_t deadline) __TA_EXCLUDES(vfs_lock_);
-
 #endif
 
 private:
@@ -181,6 +199,7 @@ private:
         void SetNode(fbl::RefPtr<Vnode> vn);
         zx::channel ReleaseRemote();
         bool VnodeMatch(fbl::RefPtr<Vnode> vn) const;
+
     private:
         fbl::RefPtr<Vnode> vn_;
     };
@@ -191,13 +210,13 @@ private:
     // empty; "remote_list" is a member of the bss section.
     MountNode::ListType remote_list_ __TA_GUARDED(vfs_lock_){};
 
-    Dispatcher* dispatcher_{};
+    async_t* async_{};
 
 protected:
     // A lock which should be used to protect lookup and walk operations
     mtx_t vfs_lock_{};
 
-#endif  // ifdef __Fuchsia__
+#endif // ifdef __Fuchsia__
 };
 
 } // namespace fs

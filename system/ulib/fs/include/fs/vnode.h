@@ -58,8 +58,14 @@ public:
     virtual ~Vnode();
 
 #ifdef __Fuchsia__
-    // Allocate iostate and register the transferred handle with a dispatcher.
-    // Allows Vnode to act as server.
+    // Serves a connection to the Vnode over the specified channel.
+    //
+    // The default implementation creates and registers an RIO |Connection| with the VFS.
+    // Subclasses may override this behavior to serve custom protocols over the channel.
+    //
+    // |vfs| is the VFS which manages the Vnode.
+    // |channel| is the channel over which the client will exchange messages with the Vnode.
+    // |flags| are the flags which were previously provided to |Open()|.
     virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
 
     // Extract handle(s), type, and extra info from a vnode.

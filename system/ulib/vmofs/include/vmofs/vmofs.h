@@ -7,7 +7,6 @@
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fs/dispatcher.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <zircon/types.h>

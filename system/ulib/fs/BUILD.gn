@@ -9,22 +9,18 @@ config("fs_config") {
 static_library("fs") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
-    "include/fs/async-dispatcher.h",
     "include/fs/block-txn.h",
     "include/fs/client.h",
     "include/fs/connection.h",
-    "include/fs/dispatcher.h",
     "include/fs/mapped-vmo.h",
     "include/fs/remote.h",
     "include/fs/trace.h",
     "include/fs/vfs.h",
     "include/fs/vnode.h",
     "include/fs/watcher.h",
-    "async-dispatcher.cpp",
     "connection.cpp",
     "mapped-vmo.cpp",
     "mount.cpp",
-    "rpc.cpp",
     "unmount.cpp",
     "vfs.cpp",
     "vnode.cpp",

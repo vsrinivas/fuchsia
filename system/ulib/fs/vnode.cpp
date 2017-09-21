@@ -4,6 +4,10 @@
 
 #include <fs/vnode.h>
 
+#ifdef __Fuchsia__
+#include <fs/connection.h>
+#endif
+
 namespace fs {
 
 Vnode::Vnode() = default;
@@ -11,6 +15,11 @@ Vnode::Vnode() = default;
 Vnode::~Vnode() = default;
 
 #ifdef __Fuchsia__
+zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
+    return vfs->ServeConnection(fbl::make_unique<Connection>(
+        vfs, fbl::WrapRefPtr(this), fbl::move(channel), flags));
+}
+
 zx_status_t Vnode::GetHandles(uint32_t flags, zx_handle_t* hnds,
                               uint32_t* type, void* extra, uint32_t* esize) {
     *type = FDIO_PROTOCOL_REMOTE;

@@ -16,6 +16,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
 
 MODULE_LIBS := \
+    system/ulib/async \
     system/ulib/c \
     system/ulib/fs \
     system/ulib/zircon \

@@ -11,16 +11,15 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/ref_ptr.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <fbl/ref_ptr.h>
 
 #include "blobstore-private.h"
 #include <fs/vfs.h>
 
 #ifdef __Fuchsia__
 #include <async/loop.h>
-#include <fs/async-dispatcher.h>
 #endif
 
 namespace {
@@ -39,8 +38,7 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
     }
 
     async::Loop loop;
-    fs::AsyncDispatcher dispatcher(loop.async());
-    fs::Vfs vfs(&dispatcher);
+    fs::Vfs vfs(loop.async());
     zx_status_t status;
     if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {
         return status;
