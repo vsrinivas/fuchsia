@@ -1243,16 +1243,22 @@ TEST_F(PageStorageTest, SyncMetadata) {
   for (auto key_and_value : keys_and_values) {
     auto key = key_and_value.first;
     auto value = key_and_value.second;
-    std::string returned_value;
-    EXPECT_EQ(Status::NOT_FOUND,
-              storage_->GetSyncMetadata(key, &returned_value));
-
     Status status;
+    std::string returned_value;
+    storage_->GetSyncMetadata(
+        key, callback::Capture(MakeQuitTask(), &status, &returned_value));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::NOT_FOUND, status);
+
     storage_->SetSyncMetadata(key, value,
                               callback::Capture(MakeQuitTask(), &status));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(Status::OK, storage_->GetSyncMetadata(key, &returned_value));
+
+    storage_->GetSyncMetadata(
+        key, callback::Capture(MakeQuitTask(), &status, &returned_value));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(value, returned_value);
   }
 }

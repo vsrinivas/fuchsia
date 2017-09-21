@@ -230,7 +230,9 @@ Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* /*handler*/,
   return db_.GetByPrefix(convert::ToSlice(LocalObjectRow::kPrefix), object_ids);
 }
 
-Status PageDbImpl::GetSyncMetadata(fxl::StringView key, std::string* value) {
+Status PageDbImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
+                                   fxl::StringView key,
+                                   std::string* value) {
   return db_.Get(SyncMetadataRow::GetKeyFor(key), value);
 }
 

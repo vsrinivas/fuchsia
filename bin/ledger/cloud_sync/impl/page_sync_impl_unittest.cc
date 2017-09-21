@@ -195,14 +195,15 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK);
   }
 
-  storage::Status GetSyncMetadata(fxl::StringView key,
-                                  std::string* value) override {
+  void GetSyncMetadata(
+      fxl::StringView key,
+      std::function<void(storage::Status, std::string)> callback) override {
     auto it = sync_metadata.find(key.ToString());
     if (it == sync_metadata.end()) {
-      return storage::Status::NOT_FOUND;
+      callback(storage::Status::NOT_FOUND, "");
+      return;
     }
-    *value = it->second;
-    return storage::Status::OK;
+    callback(storage::Status::OK, it->second);
   }
 
   storage::PageId page_id_to_return;

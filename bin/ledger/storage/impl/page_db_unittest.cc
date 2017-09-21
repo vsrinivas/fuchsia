@@ -393,10 +393,11 @@ TEST_F(PageDbTest, SyncMetadata) {
       auto value = key_and_value.second;
       std::string returned_value;
       EXPECT_EQ(Status::NOT_FOUND,
-                page_db_.GetSyncMetadata(key, &returned_value));
+                page_db_.GetSyncMetadata(handler, key, &returned_value));
 
       EXPECT_EQ(Status::OK, page_db_.SetSyncMetadata(handler, key, value));
-      EXPECT_EQ(Status::OK, page_db_.GetSyncMetadata(key, &returned_value));
+      EXPECT_EQ(Status::OK,
+                page_db_.GetSyncMetadata(handler, key, &returned_value));
       EXPECT_EQ(value, returned_value);
     }
   }));

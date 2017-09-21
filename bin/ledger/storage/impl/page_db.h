@@ -234,7 +234,9 @@ class PageDb : public PageDbMutator {
   // Sync metadata.
   // Retrieves the opaque sync metadata associated with this page for the given
   // key.
-  virtual Status GetSyncMetadata(fxl::StringView key, std::string* value) = 0;
+  virtual Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
+                                 fxl::StringView key,
+                                 std::string* value) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDb);

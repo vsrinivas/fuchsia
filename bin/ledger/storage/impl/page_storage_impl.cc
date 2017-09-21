@@ -503,9 +503,19 @@ void PageStorageImpl::SetSyncMetadata(fxl::StringView key,
   });
 }
 
-Status PageStorageImpl::GetSyncMetadata(fxl::StringView key,
-                                        std::string* value) {
-  return db_->GetSyncMetadata(key, value);
+void PageStorageImpl::GetSyncMetadata(
+    fxl::StringView key,
+    std::function<void(Status, std::string)> callback) {
+  coroutine_service_->StartCoroutine([
+    this, key = key.ToString(), final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    std::string value;
+    Status status = db_->GetSyncMetadata(handler, key, &value);
+    callback(status, std::move(value));
+  });
 }
 
 void PageStorageImpl::GetCommitContents(const Commit& commit,

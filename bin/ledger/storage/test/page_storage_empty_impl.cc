@@ -135,10 +135,11 @@ void PageStorageEmptyImpl::SetSyncMetadata(
   callback(Status::NOT_IMPLEMENTED);
 }
 
-Status PageStorageEmptyImpl::GetSyncMetadata(fxl::StringView /*key*/,
-                                             std::string* /*value*/) {
+void PageStorageEmptyImpl::GetSyncMetadata(
+    fxl::StringView /*key*/,
+    std::function<void(Status, std::string)> callback) {
   FXL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+  callback(Status::NOT_IMPLEMENTED, "");
 }
 
 void PageStorageEmptyImpl::GetCommitContents(

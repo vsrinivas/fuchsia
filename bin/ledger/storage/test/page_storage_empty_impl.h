@@ -88,7 +88,9 @@ class PageStorageEmptyImpl : public PageStorage {
                        fxl::StringView value,
                        std::function<void(Status)> callback) override;
 
-  Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
+  void GetSyncMetadata(
+      fxl::StringView key,
+      std::function<void(Status, std::string)> callback) override;
 
   void GetCommitContents(const Commit& commit,
                          std::string min_key,

@@ -94,7 +94,9 @@ class PageStorageImpl : public PageStorage {
   void SetSyncMetadata(fxl::StringView key,
                        fxl::StringView value,
                        std::function<void(Status)> callback) override;
-  Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
+  void GetSyncMetadata(
+      fxl::StringView key,
+      std::function<void(Status, std::string)> callback) override;
 
   // Methods to be used by JournalImpl.
   void GetJournalEntries(

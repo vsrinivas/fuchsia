@@ -150,7 +150,9 @@ class PageStorage {
 
   // Retrieves the opaque sync metadata associated with this page and the given
   // |key|.
-  virtual Status GetSyncMetadata(fxl::StringView key, std::string* value) = 0;
+  virtual void GetSyncMetadata(
+      fxl::StringView key,
+      std::function<void(Status, std::string)> callback) = 0;
 
   // Commit contents.
 

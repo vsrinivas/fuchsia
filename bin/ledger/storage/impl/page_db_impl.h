@@ -57,7 +57,9 @@ class PageDbImpl : public PageDb {
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                          ObjectIdView object_id,
                          PageDbObjectStatus* object_status) override;
-  Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
+  Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
+                         fxl::StringView key,
+                         std::string* value) override;
 
   Status AddHead(coroutine::CoroutineHandler* handler,
                  CommitIdView head,

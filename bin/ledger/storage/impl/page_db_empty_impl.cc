@@ -69,7 +69,8 @@ Status PageDbEmptyImpl::GetUnsyncedPieces(
     std::vector<ObjectId>* /*object_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetSyncMetadata(fxl::StringView /*key*/,
+Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
+                                        fxl::StringView /*key*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }

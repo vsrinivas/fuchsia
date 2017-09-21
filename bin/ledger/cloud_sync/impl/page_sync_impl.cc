@@ -193,72 +193,78 @@ void PageSyncImpl::OnMalformedNotification() {
 
 void PageSyncImpl::StartDownload() {
   // Retrieve the server-side timestamp of the last commit we received.
-  std::string last_commit_ts;
-  auto status = storage_->GetSyncMetadata(kTimestampKey, &last_commit_ts);
-  // NOT_FOUND means that we haven't persisted the state yet, e.g. because we
-  // haven't received any remote commits yet. In this case an empty timestamp is
-  // the right value.
-  if (status != storage::Status::OK && status != storage::Status::NOT_FOUND) {
-    SetDownloadState(DOWNLOAD_ERROR);
-    HandleError("Failed to retrieve the sync metadata.");
-    return;
-  }
-  if (last_commit_ts.empty()) {
-    FXL_VLOG(1) << log_prefix_ << "starting sync for the first time, "
-                << "retrieving all remote commits";
-  } else {
-    // TODO(ppi): print the timestamp out as human-readable wall time.
-    FXL_VLOG(1) << log_prefix_ << "starting sync again, "
-                << "retrieving commits uploaded after: " << last_commit_ts;
-  }
+  storage_->GetSyncMetadata(
+      kTimestampKey,
+      task_runner_.MakeScoped([this](storage::Status status,
+                                     std::string last_commit_ts) {
+        // NOT_FOUND means that we haven't persisted the state yet, e.g. because
+        // we haven't received any remote commits yet. In this case an empty
+        // timestamp is the right value.
+        if (status != storage::Status::OK &&
+            status != storage::Status::NOT_FOUND) {
+          SetDownloadState(DOWNLOAD_ERROR);
+          HandleError("Failed to retrieve the sync metadata.");
+          return;
+        }
+        if (last_commit_ts.empty()) {
+          FXL_VLOG(1) << log_prefix_ << "starting sync for the first time, "
+                      << "retrieving all remote commits";
+        } else {
+          // TODO(ppi): print the timestamp out as human-readable wall time.
+          FXL_VLOG(1) << log_prefix_ << "starting sync again, "
+                      << "retrieving commits uploaded after: "
+                      << last_commit_ts;
+        }
 
-  SetState(CATCH_UP_DOWNLOAD, WAIT_CATCH_UP_DOWNLOAD);
+        SetState(CATCH_UP_DOWNLOAD, WAIT_CATCH_UP_DOWNLOAD);
 
-  GetAuthToken(
-      [ this,
-        last_commit_ts = std::move(last_commit_ts) ](std::string auth_token) {
-        // TODO(ppi): handle pagination when the response is huge.
-        cloud_provider_->GetCommits(
-            auth_token, last_commit_ts,
-            [this](cloud_provider_firebase::Status cloud_status,
-                   std::vector<cloud_provider_firebase::Record> records) {
-              if (cloud_status != cloud_provider_firebase::Status::OK) {
-                // Fetching the remote commits failed, schedule a retry.
-                FXL_LOG(WARNING)
-                    << log_prefix_
-                    << "fetching the remote commits failed due to a "
-                    << "connection error, status: " << cloud_status
-                    << ", retrying.";
-                Retry([this] { StartDownload(); });
-                return;
-              }
-              backoff_->Reset();
+        GetAuthToken([ this, last_commit_ts = std::move(last_commit_ts) ](
+                         std::string auth_token) {
+          // TODO(ppi): handle pagination when the response is huge.
+          cloud_provider_->GetCommits(
+              auth_token, last_commit_ts,
+              [this](cloud_provider_firebase::Status cloud_status,
+                     std::vector<cloud_provider_firebase::Record> records) {
+                if (cloud_status != cloud_provider_firebase::Status::OK) {
+                  // Fetching the remote commits failed, schedule a retry.
+                  FXL_LOG(WARNING)
+                      << log_prefix_
+                      << "fetching the remote commits failed due to a "
+                      << "connection error, status: " << cloud_status
+                      << ", retrying.";
+                  Retry([this] { StartDownload(); });
+                  return;
+                }
+                backoff_->Reset();
 
-              if (records.empty()) {
-                // If there is no remote commits to add, announce that we're
-                // done.
-                FXL_VLOG(1) << log_prefix_
-                            << "initial sync finished, no new remote commits";
-                BacklogDownloaded();
-              } else {
-                FXL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
-                            << " (possibly) new remote commits, "
-                            << "adding them to storage.";
-                // If not, fire the backlog download callback when the remote
-                // commits are downloaded.
-                const auto record_count = records.size();
-                DownloadBatch(std::move(records), [this, record_count] {
-                  FXL_VLOG(1) << log_prefix_ << "initial sync finished, added "
-                              << record_count << " remote commits.";
+                if (records.empty()) {
+                  // If there is no remote commits to add, announce that we're
+                  // done.
+                  FXL_VLOG(1) << log_prefix_
+                              << "initial sync finished, no new remote commits";
                   BacklogDownloaded();
-                });
-              }
-            });
-      },
-      [this] {
-        HandleError(
-            "Failed to retrieve the auth token to download commit backlog.");
-      });
+                } else {
+                  FXL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
+                              << " (possibly) new remote commits, "
+                              << "adding them to storage.";
+                  // If not, fire the backlog download callback when the remote
+                  // commits are downloaded.
+                  const auto record_count = records.size();
+                  DownloadBatch(std::move(records), [this, record_count] {
+                    FXL_VLOG(1)
+                        << log_prefix_ << "initial sync finished, added "
+                        << record_count << " remote commits.";
+                    BacklogDownloaded();
+                  });
+                }
+              });
+        },
+                     [this] {
+                       HandleError(
+                           "Failed to retrieve the auth token to download "
+                           "commit backlog.");
+                     });
+      }));
 }
 
 void PageSyncImpl::StartUpload() {
@@ -304,27 +310,31 @@ void PageSyncImpl::DownloadBatch(
 void PageSyncImpl::SetRemoteWatcher(bool is_retry) {
   FXL_DCHECK(!remote_watch_set_);
   // Retrieve the server-side timestamp of the last commit we received.
-  std::string last_commit_ts;
-  auto status = storage_->GetSyncMetadata(kTimestampKey, &last_commit_ts);
-  if (status != storage::Status::OK && status != storage::Status::NOT_FOUND) {
-    download_state_ = DOWNLOAD_ERROR;
-    HandleError("Failed to retrieve the sync metadata.");
-    return;
-  }
-
-  GetAuthToken(
-      [ this, is_retry,
-        last_commit_ts = std::move(last_commit_ts) ](std::string auth_token) {
-        cloud_provider_->WatchCommits(auth_token, last_commit_ts, this);
-        remote_watch_set_ = true;
-        if (is_retry) {
-          FXL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
+  storage_->GetSyncMetadata(
+      kTimestampKey,
+      task_runner_.MakeScoped([this, is_retry](storage::Status status,
+                                               std::string last_commit_ts) {
+        if (status != storage::Status::OK &&
+            status != storage::Status::NOT_FOUND) {
+          download_state_ = DOWNLOAD_ERROR;
+          HandleError("Failed to retrieve the sync metadata.");
+          return;
         }
-      },
-      [this] {
-        HandleError(
-            "Failed to retrieve the auth token to set a cloud watcher.");
-      });
+
+        GetAuthToken(
+            [ this, is_retry, last_commit_ts = std::move(last_commit_ts) ](
+                std::string auth_token) {
+              cloud_provider_->WatchCommits(auth_token, last_commit_ts, this);
+              remote_watch_set_ = true;
+              if (is_retry) {
+                FXL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
+              }
+            },
+            [this] {
+              HandleError(
+                  "Failed to retrieve the auth token to set a cloud watcher.");
+            });
+      }));
 }
 
 void PageSyncImpl::UploadUnsyncedCommits() {
