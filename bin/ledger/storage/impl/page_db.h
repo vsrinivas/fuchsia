@@ -209,7 +209,8 @@ class PageDb : public PageDbMutator {
                            bool* has_object) = 0;
 
   // Returns the status of the object with the given id.
-  virtual Status GetObjectStatus(ObjectIdView object_id,
+  virtual Status GetObjectStatus(coroutine::CoroutineHandler* handler,
+                                 ObjectIdView object_id,
                                  PageDbObjectStatus* object_status) = 0;
 
   // Commit sync metadata.

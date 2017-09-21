@@ -254,18 +254,32 @@ void JournalImpl::GetObjectsToSync(
           }
           entries->Next();
         }
-        // Compute the set of values.
-        std::set<ObjectId> result_set;
+        auto waiter = callback::Waiter<Status, bool>::Create(Status::OK);
         for (const auto& key_value : key_values) {
-          // Only untracked objects should be synced.
-          if (page_storage_->ObjectIsUntracked(key_value.second)) {
-            result_set.insert(key_value.second);
-          }
+          page_storage_->ObjectIsUntracked(key_value.second,
+                                           waiter->NewCallback());
         }
-        std::vector<ObjectId> objects_to_sync;
-        std::copy(result_set.begin(), result_set.end(),
-                  std::back_inserter(objects_to_sync));
-        callback(Status::OK, std::move(objects_to_sync));
+        waiter->Finalize([
+          key_values = std::move(key_values), callback = std::move(callback)
+        ](Status s, std::vector<bool> is_untracked) {
+          if (s != Status::OK) {
+            callback(s, {});
+            return;
+          }
+          // Compute the set of values.
+          std::set<ObjectId> result_set;
+          size_t i = 0;
+          for (const auto& key_value : key_values) {
+            // Only untracked objects should be synced.
+            if (is_untracked[i++]) {
+              result_set.insert(key_value.second);
+            }
+          }
+          std::vector<ObjectId> objects_to_sync;
+          std::copy(result_set.begin(), result_set.end(),
+                    std::back_inserter(objects_to_sync));
+          callback(Status::OK, std::move(objects_to_sync));
+        });
       }));
 }
 

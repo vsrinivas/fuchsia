@@ -178,7 +178,8 @@ Status PageDbImpl::HasObject(CoroutineHandler* /*handler*/,
   return db_.HasKey(ObjectRow::GetKeyFor(object_id), has_object);
 }
 
-Status PageDbImpl::GetObjectStatus(ObjectIdView object_id,
+Status PageDbImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
+                                   ObjectIdView object_id,
                                    PageDbObjectStatus* object_status) {
   bool has_key;
 

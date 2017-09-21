@@ -797,16 +797,24 @@ void PageStorageImpl::GetObjectFromSync(
   });
 }
 
-bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
-  // TODO(qsr): Remove usage of this API, or makes it asynchronous.
-  if (GetObjectIdType(object_id) == ObjectIdType::INLINE) {
-    return false;
-  }
+void PageStorageImpl::ObjectIsUntracked(
+    ObjectIdView object_id,
+    std::function<void(Status, bool)> callback) {
+  coroutine_service_->StartCoroutine([
+    this, object_id = std::move(object_id), final_callback = std::move(callback)
+  ](CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-  PageDbObjectStatus object_status;
-  Status status = db_->GetObjectStatus(object_id, &object_status);
-  FXL_DCHECK(status == Status::OK);
-  return object_status == PageDbObjectStatus::TRANSIENT;
+    if (GetObjectIdType(object_id) == ObjectIdType::INLINE) {
+      callback(Status::OK, false);
+      return;
+    }
+
+    PageDbObjectStatus object_status;
+    Status status = db_->GetObjectStatus(handler, object_id, &object_status);
+    callback(status, object_status == PageDbObjectStatus::TRANSIENT);
+  });
 }
 
 void PageStorageImpl::FillBufferWithObjectContent(

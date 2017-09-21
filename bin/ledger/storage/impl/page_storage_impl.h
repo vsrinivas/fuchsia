@@ -41,10 +41,11 @@ class PageStorageImpl : public PageStorage {
                           std::vector<ObjectId> new_objects,
                           std::function<void(Status)> callback);
 
-  // Returns true if the given |object_id| is untracked, i.e. has been created
+  // Checks whether the given |object_id| is untracked, i.e. has been created
   // using |AddObjectFromLocal()|, but is not yet part of any commit. Untracked
   // objects are invalid after the PageStorageImpl object is destroyed.
-  bool ObjectIsUntracked(ObjectIdView object_id);
+  void ObjectIsUntracked(ObjectIdView object_id,
+                         std::function<void(Status, bool)> callback);
 
   // PageStorage:
   PageId GetId() override;

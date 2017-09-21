@@ -236,7 +236,7 @@ TEST_F(PageDbTest, ObjectStorage) {
               page_db_.WriteObject(handler, object_id,
                                    DataSource::DataChunk::Create(content),
                                    PageDbObjectStatus::TRANSIENT));
-    page_db_.GetObjectStatus(object_id, &object_status);
+    page_db_.GetObjectStatus(handler, object_id, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
     ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_id, &object));
     fxl::StringView object_content;
@@ -312,14 +312,16 @@ TEST_F(PageDbTest, UnsyncedPieces) {
     EXPECT_EQ(1u, object_ids.size());
     EXPECT_EQ(object_id, object_ids[0]);
     PageDbObjectStatus object_status;
-    EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
+    EXPECT_EQ(Status::OK,
+              page_db_.GetObjectStatus(handler, object_id, &object_status));
     EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
 
     EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_id,
                                                    PageDbObjectStatus::SYNCED));
     EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
     EXPECT_TRUE(object_ids.empty());
-    EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
+    EXPECT_EQ(Status::OK,
+              page_db_.GetObjectStatus(handler, object_id, &object_status));
     EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
   }));
 }
@@ -350,7 +352,8 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
     ObjectId object_id = RandomObjectId();
     PageDbObjectStatus object_status;
 
-    ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
+    ASSERT_EQ(Status::OK,
+              page_db_.GetObjectStatus(handler, object_id, &object_status));
     EXPECT_EQ(PageDbObjectStatus::UNKNOWN, object_status);
 
     PageDbObjectStatus initial_statuses[] = {PageDbObjectStatus::TRANSIENT,
@@ -366,7 +369,7 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
                                        DataSource::DataChunk::Create(""),
                                        initial_status));
         ASSERT_EQ(Status::OK,
-                  page_db_.GetObjectStatus(object_id, &object_status));
+                  page_db_.GetObjectStatus(handler, object_id, &object_status));
         EXPECT_EQ(initial_status, object_status);
         ASSERT_EQ(Status::OK,
                   page_db_.SetObjectStatus(handler, object_id, next_status));
@@ -374,7 +377,7 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
         PageDbObjectStatus expected_status =
             std::max(initial_status, next_status);
         ASSERT_EQ(Status::OK,
-                  page_db_.GetObjectStatus(object_id, &object_status));
+                  page_db_.GetObjectStatus(handler, object_id, &object_status));
         EXPECT_EQ(expected_status, object_status);
       }
     }

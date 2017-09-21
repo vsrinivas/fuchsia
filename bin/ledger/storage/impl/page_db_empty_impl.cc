@@ -49,7 +49,8 @@ Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
                                   bool* /*has_object*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetObjectStatus(ObjectIdView /*object_id*/,
+Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
+                                        ObjectIdView /*object_id*/,
                                         PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }

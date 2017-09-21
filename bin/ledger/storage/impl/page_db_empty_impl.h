@@ -46,7 +46,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                         bool* is_synced) override;
   Status GetUnsyncedPieces(coroutine::CoroutineHandler* handler,
                            std::vector<ObjectId>* object_ids) override;
-  Status GetObjectStatus(ObjectIdView object_id,
+  Status GetObjectStatus(coroutine::CoroutineHandler* handler,
+                         ObjectIdView object_id,
                          PageDbObjectStatus* object_status) override;
   Status GetSyncMetadata(fxl::StringView key, std::string* value) override;
 

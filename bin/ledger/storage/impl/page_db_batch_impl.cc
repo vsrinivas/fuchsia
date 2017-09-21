@@ -158,7 +158,8 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
     }
     case PageDbObjectStatus::LOCAL: {
       PageDbObjectStatus previous_object_status;
-      Status status = db_->GetObjectStatus(object_id, &previous_object_status);
+      Status status =
+          db_->GetObjectStatus(handler, object_id, &previous_object_status);
       if (status != Status::OK) {
         return status;
       }
