@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "developer-keys": "//third_party/openssh-portable/fuchsia/developer-keys"
+    }
+}

@@ -1,0 +1,36 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/icu",
+        "garnet/packages/fsl"
+    ],
+    "labels": [
+        "//garnet/bin/appmgr",
+        "//garnet/bin/appmgr:tests",
+        "//garnet/bin/bootstrap",
+        "//garnet/bin/far"
+    ],
+    "packages": {
+        "run": "//garnet/bin/run"
+    },
+    "binaries": [
+        {
+            "binary": "appmgr",
+            "bootfs_path": "bin/appmgr"
+        },
+        {
+            "binary": "appmgr_unittests",
+            "bootfs_path": "test/appmgr_unittests"
+        },
+        {
+            "binary": "bootstrap",
+            "bootfs_path": "apps/bootstrap"
+        },
+        {
+            "binary": "far",
+            "bootfs_path": "bin/far"
+        }
+    ]
+}

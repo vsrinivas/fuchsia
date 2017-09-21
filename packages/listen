@@ -1,0 +1,18 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/fxl",
+        "garnet/packages/fsl"
+    ],
+    "labels": [
+        "//garnet/bin/listen"
+    ],
+    "binaries": [
+        {
+            "binary": "listen",
+            "bootfs_path": "bin/listen"
+        }
+    ]
+}

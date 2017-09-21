@@ -1,0 +1,25 @@
+{
+    "imports": [
+        "garnet/packages/runtime"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/appmgr/initial.config",
+            "file": "garnet/bin/appmgr/initial.config"
+        },
+        {
+            "default": "true",
+            "bootfs_path": "data/bootstrap/services.config",
+            "file": "garnet/bin/bootstrap/services.config"
+        },
+        {
+            "bootfs_path": "data/bootstrap/loaders.config",
+            "file": "garnet/bin/bootstrap/loaders.config"
+        },
+        {
+            "default": "true",
+            "bootfs_path": "data/bootstrap/apps.config",
+            "file": "garnet/bin/bootstrap/apps.config"
+        }
+    ]
+}

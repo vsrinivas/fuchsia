@@ -1,0 +1,12 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/magma-common",
+        "garnet/packages/vulkan_loader_and_layers"
+    ],
+    "packages": {
+        "magma": "//garnet/lib/magma"
+    }
+}

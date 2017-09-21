@@ -1,0 +1,19 @@
+{
+    "imports": [
+        "garnet/packages/drivers",
+        "garnet/packages/fsl",
+        "garnet/packages/fxl",
+        "garnet/packages/icu_data",
+        "garnet/packages/listen",
+        "garnet/packages/netstack",
+        "garnet/packages/openssh-keys",
+        "garnet/packages/openssh",
+        "garnet/packages/runtime",
+        "garnet/packages/runtime_config",
+        "garnet/packages/sbase",
+        "garnet/packages/thinfs",
+        "garnet/packages/vim",
+        "garnet/packages/zircon_benchmarks",
+        "garnet/packages/zlib"
+    ]
+}

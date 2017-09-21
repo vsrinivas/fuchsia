@@ -1,0 +1,14 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//zircon/benchmarks"
+    ],
+    "binaries": [
+        {
+            "binary": "benchmarks",
+            "bootfs_path": "bin/zircon-benchmarks"
+        }
+    ]
+}

@@ -1,0 +1,16 @@
+{
+    "languages": [
+        "cpp",
+        "go"
+    ],
+    "gopaths": [
+        {
+            "netstack": "garnet/go/src/netstack",
+            "third_party/netstack": "github.com/google/netstack"
+        }
+    ],
+    "packages": {
+        "netstack": "//garnet/go/src/netstack",
+        "netstack_gotests" : "//garnet/go/src/netstack:netstack_gotests"
+    }
+}

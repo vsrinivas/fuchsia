@@ -1,0 +1,9 @@
+{
+    "languages": [
+        "cpp",
+        "go"
+    ],
+    "packages": {
+        "thinfs": "//garnet/go/src/thinfs"
+    }
+}

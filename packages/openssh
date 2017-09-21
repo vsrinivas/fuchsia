@@ -1,0 +1,13 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/boringssl",
+        "garnet/packages/listen",
+        "garnet/packages/zlib"
+    ],
+    "packages": {
+        "openssh-portable": "//third_party/openssh-portable"
+    }
+}

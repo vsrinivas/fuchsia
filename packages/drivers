@@ -1,0 +1,7 @@
+{
+    "imports": [
+        "packages/gn/audio",
+        "garnet/packages/magma",
+        "garnet/packages/wlan"
+    ]
+}
