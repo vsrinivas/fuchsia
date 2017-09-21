@@ -6,7 +6,7 @@
 //! [syscalls](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md).
 
 extern crate core;
-extern crate zircon_sys;
+extern crate fuchsia_zircon_sys as zircon_sys;
 
 use std::marker::PhantomData;
 

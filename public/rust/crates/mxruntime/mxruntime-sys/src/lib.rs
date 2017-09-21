@@ -6,7 +6,7 @@
 
 #![allow(non_camel_case_types)]
 
-extern crate zircon_sys;
+extern crate fuchsia_zircon_sys as zircon_sys;
 
 use std::os::raw::c_char;
 

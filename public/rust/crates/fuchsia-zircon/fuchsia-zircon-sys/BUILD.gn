@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_binary.gni")
+import("//build/rust/rust_library.gni")
 
-rust_binary("zx_toy") {
+rust_library("fuchsia-zircon-sys") {
   deps = [
-    "//garnet/public/rust/crates/zircon-rs:zircon",
+    "//third_party/rust-crates:bitflags-0.7.0",
   ]
 }

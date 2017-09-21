@@ -7,4 +7,4 @@ description = "Low-level Rust DDK for the Zircon kernel"
 repository = "https://fuchsia.googlesource.com/ddk-rs/"
 
 [dependencies]
-zircon-sys = { path = "../../zircon-rs/zircon-sys", version = "0.2.0" }
+zircon-sys = { path = "../../fuchsia-zircon/fuchsia-zircon-sys", version = "0.2.0" }

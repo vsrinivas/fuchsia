@@ -4,7 +4,7 @@
 
 #![allow(non_camel_case_types)]
 
-extern crate zircon_sys;
+extern crate fuchsia_zircon_sys as zircon_sys;
 
 use zircon_sys as sys;
 use sys::{zx_handle_t, zx_off_t, zx_paddr_t, zx_status_t};

@@ -7,7 +7,7 @@ import("//build/rust/rust_library.gni")
 rust_library("ddk-rs") {
   deps = [
     "//garnet/public/rust/crates/ddk-rs/ddk-sys
-    "//garnet/public/rust/crates/zircon-rs:zircon",
+    "//garnet/public/rust/crates/fuchsia-zircon",
   ]
 
   with_tests = true

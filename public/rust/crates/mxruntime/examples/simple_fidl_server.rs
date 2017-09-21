@@ -5,7 +5,7 @@
 //! A simple fidl server, written in terms of low level messages, and missing
 //! error cases.
 
-extern crate zircon;
+extern crate fuchsia_zircon as zircon;
 extern crate mxruntime;
 
 use zircon::{AsHandleRef, Channel, MessageBuf, ZX_TIME_INFINITE, ZX_CHANNEL_READABLE};

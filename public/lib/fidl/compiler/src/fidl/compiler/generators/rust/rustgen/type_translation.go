@@ -268,7 +268,7 @@ func fidlToRustType(t fidl_types.Type, context *Context) string {
 	case *fidl_types.TypeHandleType:
 		handle_type := t.Interface().(fidl_types.HandleType)
 		var type_str string
-		// Note that not all of these handle types are currently supported in zircon-rs.
+		// Note that not all of these handle types are currently supported in fuchsia-zircon
 		switch handle_type.Kind {
 		case fidl_types.HandleType_Kind_Channel:
 			type_str = "::zircon::Channel"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate zircon_sys;
+extern crate fuchsia_zircon_sys as zircon_sys;
 
 pub fn main() {
     let time = unsafe { zircon_sys::zx_time_get(zircon_sys::ZX_CLOCK_MONOTONIC) };

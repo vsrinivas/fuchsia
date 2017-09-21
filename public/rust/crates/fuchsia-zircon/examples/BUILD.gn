@@ -4,6 +4,6 @@
 
 group("examples") {
   deps = [
-    "//garnet/public/rust/crates/zircon-rs/examples/zx_toy",
+    "//garnet/public/rust/crates/fuchsia-zircon/examples/zx_toy",
   ]
 }

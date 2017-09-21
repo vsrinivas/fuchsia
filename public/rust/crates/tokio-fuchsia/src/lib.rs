@@ -9,7 +9,7 @@ extern crate futures;
 #[macro_use]
 extern crate tokio_core;
 extern crate mio;
-extern crate zircon;
+extern crate fuchsia_zircon as zircon;
 
 mod channel;
 

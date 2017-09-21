@@ -4,8 +4,8 @@
 
 //! Bindings for the Zircon fdio library
 
-extern crate zircon;
-extern crate zircon_sys;
+extern crate fuchsia_zircon as zircon;
+extern crate fuchsia_zircon_sys as zircon_sys;
 
 mod fdio_sys;
 

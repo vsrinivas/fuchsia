@@ -4,8 +4,8 @@
 
 //! Bindings for runtime services provided by Zircon
 
-extern crate zircon;
-extern crate zircon_sys;
+extern crate fuchsia_zircon as zircon;
+extern crate fuchsia_zircon_sys as zircon_sys;
 extern crate mxruntime_sys;
 
 use zircon::{AsHandleRef, Handle, Channel, ChannelOpts, Status};
