@@ -82,6 +82,7 @@ LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
 void LowEnergyDiscoveryManager::StartDiscovery(const SessionCallback& callback) {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(callback);
+  FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: StartDiscovery";
 
   // If a request to start or stop is currently pending then this one will become pending until the
   // HCI request completes (this does NOT include the state in which we are stopping and restarting
@@ -152,7 +153,7 @@ void LowEnergyDiscoveryManager::OnDeviceFound(const hci::LowEnergyScanResult& re
 void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status status) {
   switch (status) {
     case hci::LowEnergyScanner::Status::kFailed:
-      FXL_LOG(ERROR) << "gap: LowEnergyDiscoveryManager: Failed to start discovery!";
+      FXL_LOG(ERROR) << "gap: LowEnergyDiscoveryManager: Failed to initiate scan!";
       FXL_DCHECK(sessions_.empty());
 
       // Report failure on all currently pending requests. If any of the callbacks issue a retry
@@ -165,7 +166,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status statu
       }
       break;
     case hci::LowEnergyScanner::Status::kStarted:
-      FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Started scanning";
+      FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Started scanning";
 
       // Create and register all sessions before notifying the clients. We do this so that the
       // reference count is incremented for all new sessions before the callbacks execute, to
@@ -187,7 +188,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status statu
     case hci::LowEnergyScanner::Status::kStopped:
       // TODO(armansito): Revise this logic when we support pausing a scan even with active
       // sessions.
-      FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Stopped scanning";
+      FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Stopped scanning";
 
       cached_scan_results_.clear();
 
@@ -196,7 +197,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(hci::LowEnergyScanner::Status statu
       if (!pending_.empty()) StartScan();
       break;
     case hci::LowEnergyScanner::Status::kComplete:
-      FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: Continuing periodic scan";
+      FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Continuing periodic scan";
       FXL_DCHECK(!sessions_.empty());
       FXL_DCHECK(pending_.empty());
 
