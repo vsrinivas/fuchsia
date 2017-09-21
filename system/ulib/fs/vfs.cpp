@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/auto_call.h>
 #include <fcntl.h>
+#include <fdio/remoteio.h>
+#include <fdio/watcher.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <fdio/remoteio.h>
-#include <fdio/watcher.h>
-#include <fbl/auto_call.h>
 
 #ifdef __Fuchsia__
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
+#include <fs/remote.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zx/event.h>
-#include <fbl/auto_lock.h>
-#include <fbl/ref_ptr.h>
-#include <fs/remote.h>
 #endif
 
 #include <fs/trace.h>
@@ -39,7 +39,7 @@ bool is_dot_dot(const char* name, size_t len) {
     return len == 2 && strncmp(name, "..", len) == 0;
 }
 
-#ifdef __Fuchsia__  // Only to prevent "unused function" warning
+#ifdef __Fuchsia__ // Only to prevent "unused function" warning
 bool is_dot_or_dot_dot(const char* name, size_t len) {
     return is_dot(name, len) || is_dot_dot(name, len);
 }
@@ -93,7 +93,7 @@ zx_status_t vfs_validate_flags(uint32_t flags) {
     }
 }
 
-} // namespace anonymous
+} // namespace
 
 #ifdef __Fuchsia__
 
@@ -101,13 +101,13 @@ bool RemoteContainer::IsRemote() const {
     return remote_.is_valid();
 }
 
-zx::channel RemoteContainer::DetachRemote(uint32_t &flags_) {
+zx::channel RemoteContainer::DetachRemote(uint32_t& flags_) {
     flags_ &= ~VFS_FLAG_MOUNT_READY;
     return fbl::move(remote_);
 }
 
 // Access the remote handle if it's ready -- otherwise, return an error.
-zx_handle_t RemoteContainer::WaitForRemote(uint32_t &flags_) {
+zx_handle_t RemoteContainer::WaitForRemote(uint32_t& flags_) {
     if (!remote_.is_valid()) {
         // Trying to get remote on a non-remote vnode
         return ZX_ERR_UNAVAILABLE;
@@ -144,7 +144,8 @@ Vfs::Vfs() = default;
 Vfs::~Vfs() = default;
 
 #ifdef __Fuchsia__
-Vfs::Vfs(Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
+Vfs::Vfs(Dispatcher* dispatcher)
+    : dispatcher_(dispatcher) {}
 #endif
 
 zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
@@ -347,7 +348,6 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
         return ZX_ERR_INVALID_ARGS;
     }
 
-
     if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != ZX_OK) {
         return r;
     } else if (is_dot_or_dot_dot(newname, newlen)) {
@@ -437,7 +437,7 @@ zx_handle_t Vfs::WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) {
     return h;
 }
 
-#endif  // idfdef __Fuchsia__
+#endif // ifdef __Fuchsia__
 
 zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                        void* out_buf, size_t out_len, size_t* out_actual) {

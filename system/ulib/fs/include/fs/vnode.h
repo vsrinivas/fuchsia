@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 
@@ -23,7 +23,7 @@
 
 #ifdef __Fuchsia__
 #include <zx/channel.h>
-#endif  // __Fuchsia__
+#endif // __Fuchsia__
 
 // VFS Helpers (vfs.c)
 // clang-format off
@@ -202,4 +202,4 @@ private:
     const size_t len_;
 };
 
-}
+} // namespace fs
