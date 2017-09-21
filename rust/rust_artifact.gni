@@ -148,7 +148,7 @@ template("rust_artifact") {
     }
     if (is_fuchsia) {
       clang_wrapper_target =
-          "//garnet/public/rust/crates/zircon-rs/tools:clang_wrapper($host_toolchain)"
+          "//garnet/public/rust/crates/fuchsia-zircon/tools:clang_wrapper($host_toolchain)"
       deps += [ clang_wrapper_target ]
     }
 
