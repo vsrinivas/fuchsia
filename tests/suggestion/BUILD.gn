@@ -1,0 +1,46 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("suggestion") {
+  testonly = true
+
+  deps = [
+    ":suggestion_proposal_test_module",
+    ":suggestion_test_user_shell",
+  ]
+}
+
+executable("suggestion_proposal_test_module") {
+  testonly = true
+
+  sources = [
+    "suggestion_proposal_test_module.cc",
+  ]
+  deps = [
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/component",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("suggestion_test_user_shell") {
+  testonly = true
+
+  sources = [
+    "suggestion_test_user_shell.cc",
+  ]
+  deps = [
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/component",
+    "//apps/modular/services/module",
+    "//apps/modular/services/user",
+    "//garnet/public/lib/fsl",
+  ]
+}

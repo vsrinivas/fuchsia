@@ -1,0 +1,29 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("modular") {
+  testonly = true
+
+  deps = [
+    ":modular_unittests",
+    "examples",
+    "services",
+    "src",
+    "tests",
+  ]
+}
+
+executable("modular_unittests") {
+  testonly = true
+
+  deps = [
+    "//apps/modular/examples/counter_cpp:unittests",
+    "//apps/modular/lib:unittests",
+    "//apps/modular/src/agent_runner:unittests",
+    "//apps/modular/src/device_runner:unittests",
+    "//apps/modular/src/entity:unittests",
+    "//apps/modular/src/story_runner:unittests",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+  ]
+}

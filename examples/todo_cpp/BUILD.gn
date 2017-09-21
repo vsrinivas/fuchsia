@@ -1,0 +1,27 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("todo_cpp") {
+  output_name = "example_todo_headless"
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/modular/services/component",
+    "//apps/modular/services/lifecycle",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+
+  sources = [
+    "generator.cc",
+    "generator.h",
+    "todo.cc",
+    "todo.h",
+  ]
+}

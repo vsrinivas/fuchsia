@@ -1,0 +1,36 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/ledger/services/internal/internal.fidl";
+import "apps/modular/services/auth/account_provider.fidl";
+import "apps/modular/services/auth/account/account.fidl";
+import "apps/modular/services/config/config.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
+
+// The device_runner application (there is no |DeviceRunner| service) requests
+// an instance of this service in order to launch and display a |UserRunner| per
+// user.
+[ServiceName="modular.UserRunnerFactory"]  // Created by user_runner application.
+interface UserRunner {
+  // Launches a user runner instance for a user identified by |user_id|.
+  // TODO(alhaad): Fold paramters into |UserContext|.
+  Initialize(auth.Account? account,
+             AppConfig user_shell,
+             AppConfig story_shell,
+             auth.TokenProviderFactory token_provider_factory,
+             UserContext user_context,
+             mozart.ViewOwner&? view_owner);
+
+  // This signals |UserRunner| to teardown itself. Upon response, the caller may
+  // terminate the |UserRunner| process if it hasn't done so already.
+  Terminate();
+};
+
+// This interface is provided by device runner to |UserRunner|.
+interface UserContext {
+  // See detailed comments in UserShellContext.Logout().
+  Logout();
+};

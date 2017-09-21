@@ -1,0 +1,32 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+group("remote") {
+  testonly = true
+
+  deps = [
+    ":remote_invoker_test",
+  ]
+}
+
+executable("remote_invoker_test") {
+  testonly = true
+
+  sources = [
+    "remote_invoker_test_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/component",
+    "//apps/modular/services/module",
+    "//apps/modular/services/remote",
+    "//apps/modular/services/story",
+    "//apps/modular/services/user",
+    "//garnet/public/lib/fsl",
+  ]
+}

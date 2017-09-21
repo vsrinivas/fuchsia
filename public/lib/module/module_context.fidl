@@ -1,0 +1,129 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "lib/app/fidl/service_provider.fidl";
+import "apps/maxwell/services/user/intelligence_services.fidl";
+import "apps/modular/services/component/component_context.fidl";
+import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/surface/surface.fidl";
+import "apps/modular/services/module/module_controller.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
+
+// This interface is exposed to all modules in a story. It allows to
+// create Link instances and run Module instances.
+interface ModuleContext {
+  // Gets a Link instance with the given name.
+  //
+  // The link instance has a name so that it can be recognized when
+  // the story is resumed. The name is unique in the scope of the
+  // Module instance. If the method is called again by the same Module
+  // instance, a new connection to the same Link instance is obtained.
+  // It's up to the Module instance to ensure the name is unique
+  // within the scope of itself. If |name| is null, the link which this
+  // module was started with is obtained.
+  GetLink(string? name, Link& link);
+
+  // Starts a new Module instance. The Module to execute is identified
+  // by the URL of the application executable, and the Module instance
+  // is given a |name| in the scope of the starting Module instance.
+  // The |name|, together with the names of all ancestor modules, is
+  // used to identify existing component message queues and links when
+  // the Story is resumed.
+  //
+  // If |link_name| is null, then the parent module's default link is
+  // passed to the new module. Otherwise, a reference to the parent
+  // module's |link_name| is passed to the starting module as its
+  // default link.
+  //
+  // If the method is called again with the same name by the same Module
+  // instance, but with different arguments (or with non-null service exchange
+  // arguments), the existing Module instance is restarted with the changed
+  // arguments. If the other arguments don't change, just an additional module
+  // controller connection is made, and the view_owner request is closed.
+  //
+  // The calling Module instance and the new Module instance may also
+  // interact by exchanging ServiceProviders. The calling Module
+  // instance may provide its |outgoing_services|, and the new Module
+  // instance may implement |incoming_services|, if an interface
+  // request is supplied.
+  StartModule(string name, string module_url, string? link_name,
+              app.ServiceProvider? outgoing_services,
+              app.ServiceProvider&? incoming_services,
+              ModuleController& module_controller,
+              mozart.ViewOwner& view_owner);
+
+  // Like StartModule(), but the view of the newly started module is
+  // sent to the story shell for display.
+  //
+  // Providing a |surface_relation| will advise the StoryShell how to
+  // layout surfaces that the new module creates. If |surface_relation|
+  // is null then a default relation is used.
+  //
+  // If |focused| is set to true, then the surface will also get focus.
+  StartModuleInShell(string name, string module_url, string? link_name,
+                     app.ServiceProvider? outgoing_services,
+                     app.ServiceProvider&? incoming_services,
+                     ModuleController& module_controller,
+                     SurfaceRelation? surface_relation,
+                     bool focused);
+
+  // Like StartModuleInShell(), but instead accepts a Daisy structure. A Module
+  // is selected based on a process called Module Resolution (see
+  // docs/module_resolution.md). Resolution produces both a) a schema to use
+  // for communications on the Link specified by |link_name|, as well as b) a
+  // set of initial state derived from |daisy.nouns| which is written to the
+  // Link.
+  //
+  // When |daisy.verb| is not set, the calling Module will have a read-only
+  // view of the Link |link_name|.
+  //
+  // TODO(thatguy): Remove this comment:
+  // NOTE: When the resolution results are available, and a mozart.ViewOwner is
+  // made available by the shell, the Mod must be wrapped in a DaisyView.
+  // TODO(thatguy): Add a return value that indicates success or error. Example
+  // of error: no Modules could be resolved for |daisy|.
+  // StartDaisyInShell(string name, Daisy daisy, string? link_name,
+  //                   app.ServiceProvider? outgoing_services,
+  //                   app.ServiceProvider&? incoming_services,
+  //                   ModuleController& module_controller,
+  //                   SurfaceRelation? surface_relation);
+
+  // Gets the ComponentContext instance associated with this Module
+  // instance. This ComponentContext instance is unique to this
+  // particular Module instance.
+  GetComponentContext(ComponentContext& context_request);
+
+  // Gets the IntelligenceServices service vendor associated with this
+  // module.
+  GetIntelligenceServices(maxwell.IntelligenceServices& request);
+
+  // Gets the id for this story which may be used to create a
+  // suggestion proposal to resume this story.
+  GetStoryId() => (string story_id);
+
+  // Requests that the current story and module gain focus.
+  // HACK(zbowling): This is temporary and ripe for abuse by modules authors.
+  // Callers should be limited, possibly by policy, from taking user focus.
+  RequestFocus();
+
+  // The Module instance holding this handle to the ModuleContext
+  // declares it's ready to run. The module context implementation
+  // notifies all ModuleWatchers registered on the ModuleController by
+  // calling OnStateChange(). See ModuleState for all states and
+  // transitions.
+  // TODO(vardhan): Deprecate this in favour of adding a return callback to
+  // Module.Initialize().
+  Ready();
+
+  // The Module instance holding this handle to the ModuleContext
+  // declares it's done and wants to be torn down. The module context
+  // implementation notifies all ModuleWatchers registered on the
+  // ModuleController by calling OnStateChange(). The receiver is free
+  // to decide whether it's appropriate to Stop() the module. (It
+  // might be appropriate for the receiver to call Done() on its own
+  // instead.) See ModuleState for all states and transitions.
+  Done();
+};

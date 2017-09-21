@@ -1,0 +1,12 @@
+// Copyright 2017 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Interface(s) used by AppClient's unittest.
+
+module modular.test;
+
+[ServiceName="https://fuchsia.googlesource.com/modular/+/master/lib/fidl/app_client_unittest.fidl#TerminateService"]
+interface TerminateService {
+  Terminate();
+};

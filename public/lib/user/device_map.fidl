@@ -1,0 +1,36 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Gives access to the device map of the logged in user.
+[ServiceName="modular.DeviceMap"]  // Exposed in user environment.
+interface DeviceMap {
+  // HACK(mesch): Just exposes all Device/* entries in the ledger.
+  // We'll need something better, possibly with access policy.
+  Query() => (array<DeviceMapEntry> devices);
+
+  // Returns the current device from the device map.
+  GetCurrentDevice() => (DeviceMapEntry device);
+};
+
+struct DeviceMapEntry {
+  // The device's name. This name is user editable and may be the same between
+  // any of the user's devices.
+  string name;
+
+  // Semi-sticky device ID usable for syncing. Guarantees a unique device id
+  // that no another hardware will be using while this device is syncing.
+  // WARNING: This ID is persisted for an arbitrary amount of time and MAY be
+  // revoked or changed between launches of this service on this hardware.
+  string device_id;
+
+  // The device's intended usage profile (stored as JSON)
+  string profile;
+
+  // The last known hostname of this device.
+  // HACK(zbowling): this is temporary to assist with matching devices in
+  // netconnector RPC discovery.
+  string hostname;
+};

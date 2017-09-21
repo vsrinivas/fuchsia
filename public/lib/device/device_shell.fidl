@@ -1,0 +1,49 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/device/user_provider.fidl";
+
+// This interface is implemented by a device shell application.
+[ServiceName="modular.DeviceShell"]
+interface DeviceShell {
+  Initialize(DeviceShellContext device_shell_context);
+
+  // This method may be invoked by the device runner in reaction to an
+  // invocation of DeviceShellContext.Shutdown(), or because of some other
+  // condition such as the device being powered off.
+  Terminate();
+
+  // This method may be invoked by the device runner to request an
+  // AuthenticationContext associated with |username|. |request| will then be
+  // used to request the device shell to show login screen during a
+  // UserProvider.AddUser() or if a token needs to be refreshed.
+  //
+  // A |request| is tied to a |username| because the device runner allows
+  // multiple users to be logged in at the same time.
+  GetAuthenticationContext(string username,
+                           AuthenticationContext& request);
+};
+
+interface DeviceShellContext {
+  GetUserProvider(UserProvider& request);
+
+  // This requests the shutdown of the device.
+  Shutdown();
+};
+
+// This interface is implemented by device shell. It is used to notify the
+// device shell that a view for login needs to be started / stopped.
+// The device shell can close this connection if it wants to cancel the current
+// authentication flow.
+interface AuthenticationContext {
+  // Requests device shell to display |view_owner| for authentication. Note that
+  // another call to StartOverlay() will not be made until StopOverlay() has
+  // been called.
+  StartOverlay(mozart.ViewOwner view_owner);
+
+  // Requests device shell to stop displaying the auth view.
+  StopOverlay();
+};

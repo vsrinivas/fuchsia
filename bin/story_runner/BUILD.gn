@@ -1,0 +1,100 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  deps = [
+    ":dev_story_shell",
+    ":story_runner",
+  ]
+}
+
+source_set("story_runner") {
+  sources = [
+    "context_handler.cc",
+    "context_handler.h",
+    "incremental_link.cc",
+    "incremental_link.h",
+    "key_generator.cc",
+    "key_generator.h",
+    "link_impl.cc",
+    "link_impl.h",
+    "module_context_impl.cc",
+    "module_context_impl.h",
+    "module_controller_impl.cc",
+    "module_controller_impl.h",
+    "story_controller_impl.cc",
+    "story_controller_impl.h",
+    "story_provider_impl.cc",
+    "story_provider_impl.h",
+    "story_storage_impl.cc",
+    "story_storage_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user",
+    "//apps/modular/lib/common:teardown",
+    "//apps/modular/lib/fidl:app_client",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:context",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/fidl:proxy",
+    "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/ledger:operations",
+    "//apps/modular/lib/ledger:page_client",
+    "//apps/modular/lib/ledger:storage",
+    "//apps/modular/lib/ledger:types",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/lib/util",
+    "//apps/modular/lib/util:debug",
+    "//apps/modular/services/component",
+    "//apps/modular/services/config",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story:private",
+    "//apps/modular/services/surface",
+    "//apps/modular/services/user:focus",
+    "//apps/modular/src/agent_runner:public",
+    "//apps/modular/src/component",
+    "//apps/modular/src/user_runner:focus",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("dev_story_shell") {
+  sources = [
+    "dev_story_shell.cc",
+  ]
+
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/fidl:view_host",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "key_generator_unittest.cc",
+    "link_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//apps/modular/lib/testing:mock_base",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//third_party/gtest",
+  ]
+}

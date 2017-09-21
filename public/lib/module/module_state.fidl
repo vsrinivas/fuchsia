@@ -1,0 +1,67 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// State used to notify ModuleWatcher about state transitions of a
+// Module instance. This is very similar to the StoryState, however
+// it's not entirely the same and hence a separate type. The
+// ModuleState of the root module mostly drives the StoryState of the
+// whole story, but in the future we expect them to diverge more.
+// Right now, a module cannot have an INITIAL state, because it's
+// started as soon as it is created, and it gets deleted as soon as it
+// reaches the STOPPED state, whileas a story can be restarted.
+//
+// Currently possible state transitions (and the events that cause
+// them) are:
+//
+//            -> STARTING    Story.StartModule()
+//   STARTING -> UNLINKED    Module connection closed immediately
+//   STARTING -> RUNNING     Story.Ready()
+//   STARTING -> DONE        Module impl calls Story.Done()
+//   RUNNING  -> DONE        (same)
+//   STARTING -> STOPPED     ModuleController.Stop() or Story.Stop()
+//   UNLINKED -> STOPPED     (same)
+//   RUNNING  -> STOPPED     (same)
+//   DONE     -> STOPPED     (same)
+//   STARTING -> ERROR       application doesn't start
+//   UNLINKED -> ERROR       application exits
+//   RUNNING  -> ERROR       Module connection closed
+//
+enum ModuleState {
+  // Module instance was requested from the Story.
+  STARTING = 1,
+  // Module instance called Ready() on its Story handle.
+  RUNNING = 2,
+  // Module closed the connection on its Module interface request.
+  // This is fine, because any application can be run as a module,
+  // even one that does not implement the Module service. The module
+  // then does not participate in Story based data flow (through Link)
+  // and life cycle (through Story.Done() and Module.Stop()), but
+  // that's just fine. The application of an UNLINKED module should
+  // still not exit on its own, this will be notified as ERROR.
+  // TODO(mesch): Presumably there could be more general ways for
+  // arbitrary applications to benefit from Story, Link, Legder
+  // services than to implement one specific interface. That the root
+  // module of a story becomes UNLINKED doesn't affect the state of
+  // the Story; that remains RUNNING either way.
+  UNLINKED = 6,
+  // Module instance called Done() on its Story handle. The receiver
+  // is free to decide whether it's appropriate to Stop() the module.
+  // (It might be appropriate for the receiver to call Done() on its
+  // own instead.) The module, conversely, is free to continue
+  // running, but once it indicated its willingnes to participate in
+  // the Story/Module life cycle it should not close its connection;
+  // that transitions it to ERROR.
+  DONE = 3,
+  // Module instance is stopped after Module.Stop(). The module can
+  // now close its connection without transition to ERROR. No further
+  // transitions are to be expected. An UNLINKED module transitions
+  // here directly on Story.Stop() or ModuleController.Stop() without
+  // going through Module.Stop().
+  STOPPED = 4,
+  // Connection to the Module instance was closed without Stop()
+  // request. No further transitions are to be expected.
+  ERROR = 5,
+};

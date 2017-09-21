@@ -1,0 +1,32 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("link_data") {
+  testonly = true
+
+  deps = [
+    ":test_link_data",
+  ]
+}
+
+executable("test_link_data") {
+  testonly = true
+
+  sources = [
+    "test_link_data.cc",
+  ]
+  deps = [
+    "//apps/modular/examples/counter_cpp:store",
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/user",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}

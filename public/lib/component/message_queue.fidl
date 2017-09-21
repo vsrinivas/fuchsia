@@ -1,0 +1,41 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Message queue is a named, persistant FIFO data structure that can be created
+// retrieved and deleted from ComponentContext service.
+interface MessageQueue {
+  // Get a token associated with this queue. It can be used by other components
+  // to send messages to this queue.
+  GetToken() => (string queue_token);
+
+  // Registers a receiver for this MessageQueue. MessageReader.OnReceive is
+  // called when there is an unread message. There can only be one receiver
+  // registered for a message queue at any given time. Registering a new
+  // receiver replaces the previous one.
+  RegisterReceiver(MessageReader receiver);
+};
+
+// Used to send a message to a particular queue and obtained from
+// ComponentContext::GetMessageSender using queue token of the MessageQueue to
+// send |message| to.
+interface MessageSender {
+  Send(string message);
+};
+
+// A client may implement and register a MessageReader interface using
+// MessageQueue.RegisterReceiver(). When there are new unread messages, they are
+// sent to MessageReader.OnReceive().
+// TODO(vardhan): There is a conflict with C++ fidl bindings for
+// 'MessageReceiver'. After that is fixed, rename this interface to
+// MessageReceiver.
+interface MessageReader {
+  // Called when there is a new message to be received. Once an OnReceive()
+  // responds back, the message is acknowledged as having been received and the
+  // next one is sent when available. If a client's OnReceive() does not respond
+  // before the MessageReader interface is closed, then a future MessageReader
+  // for this message queue will receive the unacknowledged message again.
+  OnReceive(string message) => ();
+};

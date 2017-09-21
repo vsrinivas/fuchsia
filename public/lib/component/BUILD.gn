@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("component") {
+  sources = [
+    "component.fidl",
+    "component_context.fidl",
+    "message_queue.fidl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/fidl",
+    "//apps/ledger/services/public",
+    "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/entity",
+    "//garnet/public/lib/network/fidl",
+  ]
+}

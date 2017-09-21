@@ -1,0 +1,30 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// The types of operations that can be saved in a Link's history.
+enum LinkChangeOp {
+  SET = 0,
+  UPDATE = 1,
+  ERASE = 2
+};
+
+// Internal data that Links use to track the history of operations. The ordered
+// collection of these changes is used to arrive at the current value of a link.
+struct LinkChange {
+  // The |key| is a redundant copy of the key in the Ledger. This field exists
+  // to make it easier to reuse existing Modular classes, which only expose
+  // values from the Ledger, not keys.
+  string key;
+
+  // The function called by the user Set(), UpdateObject(), or Erase().
+  LinkChangeOp op;
+
+  // The JSON Pointer passed by the user as the pointer to the value to modify.
+  array<string> pointer;
+
+  // The new value, or null if this is an Erase operation.
+  string json;
+};

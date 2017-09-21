@@ -1,0 +1,53 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+group("triggers") {
+  testonly = true
+
+  deps = [
+    ":agent_trigger_test",
+    ":trigger_test_agent",
+  ]
+}
+
+executable("agent_trigger_test") {
+  testonly = true
+
+  sources = [
+    "root_module.cc",
+  ]
+  deps = [
+    ":trigger_test_agent_interface",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/component",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("trigger_test_agent") {
+  testonly = true
+
+  sources = [
+    "test_agent.cc",
+  ]
+  deps = [
+    ":trigger_test_agent_interface",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/agent",
+    "//apps/modular/services/lifecycle",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+fidl("trigger_test_agent_interface") {
+  sources = [
+    "trigger_test_agent_interface.fidl",
+  ]
+}

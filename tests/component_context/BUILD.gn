@@ -1,0 +1,83 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+group("component_context") {
+  testonly = true
+
+  deps = [
+    ":component_context_test",
+    ":component_context_test_agent1",
+    ":component_context_test_agent2",
+    ":component_context_unstoppable_agent",
+  ]
+}
+
+executable("component_context_test") {
+  testonly = true
+
+  sources = [
+    "root_module.cc",
+  ]
+  deps = [
+    ":test_agent1_interface",
+    "//apps/modular/lib/fidl:message_receiver_client",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/component",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("component_context_test_agent1") {
+  testonly = true
+
+  sources = [
+    "test_agent1.cc",
+  ]
+  deps = [
+    ":test_agent1_interface",
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/agent",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("component_context_test_agent2") {
+  testonly = true
+
+  sources = [
+    "test_agent2.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/agent",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("component_context_unstoppable_agent") {
+  testonly = true
+
+  sources = [
+    "unstoppable_agent.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/agent",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+fidl("test_agent1_interface") {
+  sources = [
+    "test_agent1_interface.fidl",
+  ]
+}

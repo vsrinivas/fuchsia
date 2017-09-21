@@ -1,0 +1,111 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  deps = [
+    ":dev_user_shell",
+    ":user_runner",
+  ]
+}
+
+executable("user_runner") {
+  sources = [
+    "conflict_resolver_impl.cc",
+    "conflict_resolver_impl.h",
+    "device_map_impl.cc",
+    "device_map_impl.h",
+    "remote_invoker_impl.cc",
+    "remote_invoker_impl.h",
+    "user_runner.cc",
+    "user_runner_impl.cc",
+    "user_runner_impl.h",
+  ]
+
+  deps = [
+    ":focus",
+    "//garnet/public/lib/app/cpp",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/resolver",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/user",
+    "//apps/modular/lib/device_info",
+    "//apps/modular/lib/common:async_holder",
+    "//apps/modular/lib/common:teardown",
+    "//apps/modular/lib/fidl:app_client",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/ledger:constants",
+    "//apps/modular/lib/ledger:operations",
+    "//apps/modular/lib/ledger:page_client",
+    "//apps/modular/lib/ledger:status",
+    "//apps/modular/lib/ledger:storage",
+    "//apps/modular/lib/ledger:types",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/agent",
+    "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/auth/account",
+    "//apps/modular/services/config",
+    "//apps/modular/services/module",
+    "//apps/modular/services/remote",
+    "//apps/modular/services/story",
+    "//apps/modular/services/user:private",
+    "//apps/modular/src/agent_runner",
+    "//apps/modular/src/component",
+    "//apps/modular/src/entity",
+    "//apps/modular/src/story_runner",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+
+executable("dev_user_shell") {
+  sources = [
+    "dev_user_shell.cc",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/fidl:view_host",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/user",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("focus") {
+  sources = [
+    "focus.cc",
+    "focus.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/ledger:operations",
+    "//apps/modular/lib/ledger:page_client",
+    "//apps/modular/lib/ledger:storage",
+    "//apps/modular/lib/ledger:types",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/user:focus",
+    "//apps/modular/services/user:private",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}

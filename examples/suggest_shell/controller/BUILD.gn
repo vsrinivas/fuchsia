@@ -1,0 +1,29 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+group("controller") {
+  deps = [
+    ":suggest_shell_controller",
+  ]
+}
+
+executable("suggest_shell_controller") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/fidl:view_host",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}

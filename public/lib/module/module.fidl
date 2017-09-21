@@ -1,0 +1,56 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/module/module_context.fidl";
+
+// This service is implemented by an application that is meant to be
+// run in a ModuleContext (fka Story).
+//
+// When ModuleContext.StartModule() is invoked, the Module instance is
+// requested from its application and its dependent services and
+// parameters are passed to it by Initialize().
+//
+// When a module application implements the |Lifecycle| interface, it can
+// receive a signal for when it should stop. A module may be stopped for the
+// following reasons:
+//
+// (1) StoryController.Stop() is called to stop the whole story. A
+//     plausible occasion for this to happen is that the root module
+//     has signalled that it's Done().
+//
+// (2) ModuleController.Stop() is called by the caller that started
+//     this Module. A plausible occasion for this to happen is that
+//     the module has signalled before that it's Done().
+//
+// Additionally a Module instance is stopped when Module instance
+// closes its own connection.
+//
+// Other connections the Module instance may hold, such as to Link,
+// LinkWatcher, ModuleController of other Module instances, may be
+// closed before Lifecycle.Terminate() is called. (TBD to give more
+// guarantees.)
+[ServiceName="modular.Module"]  // Created by each module app.
+interface Module {
+  // The arguments to Initialize() are the ModuleContext instance that created
+  // the Module instance and a Link instance provided by the caller of
+  // ModuleContext.StartModule().
+  //
+  // The Link instance can be used to exchange data with the calling
+  // module. Additionally, this module may provide its services to the calling
+  // module by implementing its |outgoing_services|, and consume the calling
+  // module's |incoming_services|.
+  //
+  // The ModuleContext instance can be used to start more Module instances,
+  // and to create Link instances to share data with those Module
+  // instances. It can also be used to signal that this module wants
+  // to stop.
+  // TODO(vardhan): Move incoming_services/outgoing_services as getters into
+  // ModuleContext.
+  Initialize(ModuleContext module_context,
+             app.ServiceProvider? incoming_services,
+             app.ServiceProvider&? outgoing_services);
+};

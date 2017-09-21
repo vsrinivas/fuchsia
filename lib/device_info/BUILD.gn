@@ -1,0 +1,31 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("device_info") {
+  sources = [
+    "device_info.cc",
+    "device_info.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/util:filesystem",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("device_profile") {
+  sources = [
+    "device_profile.cc",
+    "device_profile.h",
+  ]
+
+  public_deps = [
+    ":device_info",
+  ]
+
+  deps = [
+    "//apps/modular/lib/rapidjson",
+    "//garnet/public/lib/fxl",
+  ]
+}

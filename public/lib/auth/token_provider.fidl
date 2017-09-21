@@ -1,0 +1,70 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular.auth;
+
+// Specifies the success/failure status.
+enum Status {
+  OK,
+  BAD_REQUEST,
+  BAD_RESPONSE,
+  OAUTH_SERVER_ERROR,
+  USER_CANCELLED,
+  NETWORK_ERROR,
+  INTERNAL_ERROR,
+};
+
+// Authentication errors returned by Token Manager. It contains error status
+// code along with a detailed error message.
+struct AuthErr {
+  Status status;
+  string message;
+};
+
+// Stores attributes related to a firebase auth token for a given firebase api
+// key. These tokens are obtained by agents using
+// TokenProvider.GetFirebaseAuthToken().
+//
+// These tokens are minted by the Firebase Auth servers and are meant to be
+// used for authorizing users into Firebase services such as DB and storage.
+struct FirebaseToken {
+  // Use this as the auth token in firebase database and storage requests.
+  string id_token;
+
+  // Use this to uniquely identify users.
+  string local_id;
+
+  // Use this to uniquely identify user's email address provided by the
+  // Identity Provider.
+  string email;
+};
+
+// This interface provides tokens for the currently logged-in user.
+// This service can be obtained by agents via AgentContext.GetTokenProvider().
+interface TokenProvider {
+  // Gets the access token (with pre-defined scopes) for this user. Access token
+  // is returned from cache if not expired, otherwise refreshed from the server.
+  //
+  // Empty response is returned if running in incognito mode.
+  GetAccessToken() => (string? access_token, AuthErr auth_err);
+
+  // Gets the Identity token (with pre-defined scopes) for this user. Identity
+  // token is returned from cache if not expired, otherwise refreshed from the
+  // server.
+  //
+  // Empty response is returned if running in incognito mode.
+  GetIdToken() => (string? id_token, AuthErr auth_err);
+
+  // Gets the |FirebaseToken| for this user for the specified firebase api key.
+  // This api invokes firebase auth's VerifyAssertion endpoint that takes an
+  // OAuth IdToken as the input. Firebase auth token is returned from cache if
+  // not expired, otherwise refreshed from the server.
+  //
+  // Empty response is returned if running in incognito mode.
+  GetFirebaseAuthToken(string firebase_api_key) =>
+    (FirebaseToken? firebase_token, AuthErr auth_err);
+
+  // Returns the client id used to fetch the above tokens.
+  GetClientId() => (string? client_id);
+};

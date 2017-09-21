@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//flutter/build/flutter_app.gni")
+
+group("todo_story") {
+  deps = [
+    ":example_todo_story",
+  ]
+}
+
+flutter_app("example_todo_story") {
+  main_dart = "lib/main.dart"
+  deps = [
+    "//garnet/public/lib/app/dart",
+    "//apps/modular/services/lifecycle:lifecycle_dart",
+    "//apps/modular/services/module:module_dart",
+    "//apps/modular/services/story:story_dart",
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",
+    "//garnet/public/lib/fidl/dart",
+    "//lib/flutter/packages/flutter",
+  ]
+}

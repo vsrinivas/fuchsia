@@ -1,0 +1,17 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("components_query") {
+  sources = [
+    "components_query.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/modular/services/component",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/rapidjson",
+  ]
+}

@@ -1,0 +1,21 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains the definition for EntityResolver.
+//
+// STATUS: Draft / Heavy WIP: expect significant changes.
+
+module modular;
+
+import "entity.fidl";
+
+[ServiceName="modular.EntityResolver"]
+interface EntityResolver {
+  // Finds and binds |entity| to an Entity handle for the Entity referenced by
+  // |ref|. If an error occurs, |entity| will be closed.
+  //
+  // An EntityReference can be retrieved by calling Entity.GetReference() (see
+  // entity.fidl).
+  GetEntity(EntityReference ref, Entity& entity);
+};

@@ -1,0 +1,77 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module component;
+
+import "lib/app/fidl/service_provider.fidl";
+import "lib/network/fidl/network_error.fidl";
+
+// Represents the contents of the fuchsia:component facet.
+struct ComponentFacet {
+  string url;
+  string? name;
+  string? version;
+  string? other_versions;
+};
+
+// Represents the contents of the fuchsia:resources facet, resolved to this machine.
+struct ResourcesFacet {
+  map<string, string> resource_urls;
+};
+
+// Represents the contents of the fuchsia:application facet.
+struct ApplicationFacet {
+  string resource;
+  array<string>? arguments;
+  string? runner;
+  string? name;
+};
+
+struct ComponentManifest {
+  // The JSON source for the manifest.
+  string raw;
+  // The standard fuchsia:component facet.
+  ComponentFacet component;
+  // The standard fuchsia:resources facet.
+  ResourcesFacet? resources;
+  // The standard fuchsia:application facet.
+  ApplicationFacet? application;
+};
+
+interface ComponentResources {
+  GetResourceNames() => (array<string> resource_names);
+  GetResourceURLs() => (map<string, string> resource_urls);
+  GetResource(string resource_name)
+      => (handle<vmo>? data, network.NetworkError? error);
+};
+
+// Exposed by the component_manager.
+[ServiceName="component::ComponentIndex"]
+interface ComponentIndex {
+  // Gets a component's manifest and resources by |component_id|.
+  //
+  // Returns a |ComponentManifest| on success. If the component has resources
+  // then a |ComponentResources| interface will be returned that can be used to
+  // retrieve the resources for the component.  When the |component_resources|
+  // channel is closed the component manager will consider the resources as
+  // unused and may flush them from its cache. |component_resources| will
+  // always be supplied when |component_manifest->resources| is set.
+  //
+  // If an error occurs a |NetworkError| will be returned.
+  GetComponent(string component_id)
+      => (ComponentManifest? component_manifest,
+          ComponentResources? component_resources,
+          network.NetworkError? error);
+
+  // Searches all Components known by the ComponentManager for those matching
+  // the query criteria in |filter|. A ComponentManifest will match if
+  // it has a facet for each key in |filter|, and, if the value for that
+  // key is non-NULL, each property value in the corresponding |FacetInfo|
+  // must match that in the |FacetInfo| for that key in the ComponentManifest.
+  //
+  // TODO(thatguy): |filter| should become a more descriptive query
+  // representation when more than property equality is needed.
+  FindComponentManifests(map<string, string> filter)
+      => (array<ComponentManifest> results);
+};

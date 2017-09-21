@@ -1,0 +1,12 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Used to pass around configuration references to apps such as user
+// shell, device shell, story shell.
+struct AppConfig {
+  string url;
+  array<string>? args;
+};

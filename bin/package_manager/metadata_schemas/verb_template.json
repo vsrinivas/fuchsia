@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "Schema for `verb_template` metadata file",
+  "definitions": {
+    "verbTemplate": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/alphaNumString" },
+        "nouns": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/noun" },
+          "uniqueItems": true,
+          "additionalItems": false
+        },
+        "doc": {
+          "type": "string"
+        }
+      },
+      "required": [ "name", "nouns", "doc" ],
+      "additionalProperties": false
+    },
+    "noun": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/alphaNumString" },
+        "direction": { "$ref": "#/definitions/direction" },
+        "required": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [ "name", "direction" ],
+      "additionalProperties": false
+    },
+    "direction": {
+      "type": "string",
+      "enum": [ "input", "output", "input/output" ]
+    },
+    "alphaNumString": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_]+$"
+    }
+  },
+  "type": "array",
+  "minItems": 1,
+  "uniqueItems": true,
+  "additionalItems": false,
+  "items": {
+    "$ref": "#/definitions/verbTemplate"
+  }
+}

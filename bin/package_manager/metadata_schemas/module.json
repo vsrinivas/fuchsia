@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "Schema for `verb_template` metadata file",
+  "definitions": {
+    "verbImplementation": {
+      "type": "object",
+      "properties": {
+        "binary": { "type": "string" },
+        "local_name": { "type": "string" },
+        "verb": { "$ref": "#/definitions/verbId" },
+        "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" },
+      },
+      "required": [ "binary", "local_name", "verb" ],
+      "additionalProperties": false
+    },
+    "nounConstraintArray": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/nounConstraint" },
+      "additionalItems": false,
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "nounConstraint": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/alphaNumString" },
+        "types": { "$ref": "#/definitions/entityTypeIdArray" }
+      },
+      "required": [ "name", "types" ],
+      "additionalProperties": false
+    },
+    "entityOrVerbId": {
+      "type": "object",
+      "properties": {
+        "package": { "type": "string" },
+        "name": { "$ref": "#/definitions/alphaNumString" }
+      },
+      "required": [ "package", "name" ],
+      "additionalProperties": false
+    },
+    "verbId": { "$ref": "#/definitions/entityOrVerbId" },
+    "entityTypeIdArray": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/entityOrVerbId" },
+      "additionalItems": false,
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "alphaNumString": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_]+$"
+    }
+  },
+  "type": "array",
+  "minItems": 1,
+  "uniqueItems": true,
+  "additionalItems": false,
+  "items": {
+    "$ref": "#/definitions/verbImplementation"
+  }
+}

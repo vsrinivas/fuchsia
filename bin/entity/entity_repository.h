@@ -1,0 +1,61 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef APPS_MODULAR_SRC_ENTITY_ENTITY_REPOSITORY_H_
+#define APPS_MODULAR_SRC_ENTITY_ENTITY_REPOSITORY_H_
+
+#include <unordered_map>
+
+#include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/services/entity/entity.fidl.h"
+#include "apps/modular/services/entity/entity_resolver.fidl.h"
+#include "apps/modular/services/entity/entity_store.fidl.h"
+#include "apps/modular/src/entity/entity_impl.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fxl/macros.h"
+
+namespace modular {
+
+// A simple "entity provider" for creating Entities made of bags of bytes
+// with associated types. This class also provides a way to create, reference
+// and dereference |Entity|s. See |EntityImpl| for an actual implementation
+// of the |Entity| interface.
+// TODO(vardhan): Persist entity references and data on the ledger.
+class EntityRepository : EntityStore, EntityResolver {
+ public:
+  EntityRepository();
+  ~EntityRepository() override;
+
+  void ConnectEntityStore(fidl::InterfaceRequest<EntityStore> request);
+  void ConnectEntityResolver(fidl::InterfaceRequest<EntityResolver> request);
+
+ private:
+  class CreateEntityCall;
+
+  // |EntityStore|
+  void CreateEntity(fidl::Array<fidl::String> types,
+                    fidl::Array<fidl::Array<uint8_t>> contents,
+                    fidl::InterfaceRequest<Entity> request) override;
+
+  // |EntityResolver|
+  void GetEntity(EntityReferencePtr reference,
+                 fidl::InterfaceRequest<Entity> request) override;
+
+  using ReferenceMap =
+      std::unordered_map<std::string, std::unique_ptr<EntityImpl>>;
+  ReferenceMap ref_to_entity_;
+
+  fidl::BindingSet<EntityStore> entity_store_bindings_;
+  fidl::BindingSet<EntityResolver> entity_resolver_bindings_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(EntityRepository);
+};
+
+}  // namespace modular
+
+#endif  // APPS_MODULAR_SRC_ENTITY_ENTITY_REPOSITORY_H_

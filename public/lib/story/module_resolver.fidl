@@ -1,0 +1,66 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//
+// WORK IN PROGRESS, NOT YET PART OF THE BUILD
+//
+
+module modular;
+
+import "daisy.fidl";
+import "entity.fidl";
+
+[ServiceName="ModuleResolver"]
+interface ModuleResolver {
+  // Finds Modules (contained in Fuchsia packages) that satisfy the constraints
+  // specified in |daisy|. Results are returned in order according to scoring
+  // configuration and signals given in |scoring_info|.
+  //
+  // If no results could be found, |modules| will be empty.
+  // TODO(thatguy): Offer some kind of fallback instruction/option to clients
+  // in the case of no results.
+  //
+  // For detailed information on the resolution process, see
+  // docs/module_resolution.md.
+  FindModules(Daisy daisy, ResolverScoringInfo scoring_info) => (array<ModuleResolverResult> modules);
+};
+
+// TODO(thatguy): Placeholder to define the exact data (either directly contain
+// or reference) used to support scoring of returned results.  It is in support
+// of making |FindModules()| above a deterministic function.
+// The method above, as written, would not be deterministic with respect to the
+// Module Index, as that would be injected as a dependency at initialization
+// time and may change asynchronously.
+//
+// This may become a service in the future.
+struct ResolverScoringInfo {
+};
+
+struct ModuleResolverResult {
+  // The ID the package containing this Module. For now, equals the path to
+  // the package in pkgfs.
+  // TODO(thatguy): Replace with a handle to the package manager? Evaluate
+  // whether this is possible or desirable (scalable) given the calling
+  // patterns into ModuleResolver.
+  string package_id;
+
+  // The |local_name| within the Module's manifest file (see
+  // docs/manifests/module.md). The verb to be invoked and constraints on its
+  // parameters can be derived by looking at the Module's manifest.
+  string local_name;
+
+  // The initial set of noun Entities to set on the Link to this Module once it
+  // is initialized. This map is keyed by the noun's name as given in the
+  // `verb_template` file referenced by the `module` metadata file for
+  // |package_id| where |local_name| is defined.
+  map<string, Entity> initial_nouns;
+
+  // TODO(thatguy): Schema information for the Link. This can be derived by the
+  // client by looking at both |package_id| and |local_name|.
+
+  ResolutionDebugInfo debug_info;
+};
+
+struct ResolutionDebugInfo {
+};

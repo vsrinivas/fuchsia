@@ -1,0 +1,31 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("component") {
+  sources = [
+    "component_context_impl.cc",
+    "component_context_impl.h",
+    "message_queue_manager.cc",
+    "message_queue_manager.h",
+    "persistent_queue.cc",
+    "persistent_queue.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:message_receiver_client",
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/ledger:page_client",
+    "//apps/modular/lib/ledger:storage",
+    "//apps/modular/lib/ledger:types",
+    "//apps/modular/services/component",
+    "//apps/modular/src/agent_runner:public",
+    "//apps/modular/src/entity",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}

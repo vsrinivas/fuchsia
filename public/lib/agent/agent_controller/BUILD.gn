@@ -1,0 +1,16 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+# This rule is in a separate directory because dart can have only one
+# rule per directory. Unlike for Module vs. ModuleController, clients
+# that use AgentController don't also use Agent, so Agent and
+# AgentController better are separate targets.
+
+fidl("agent_controller") {
+  sources = [
+    "agent_controller.fidl",
+  ]
+}

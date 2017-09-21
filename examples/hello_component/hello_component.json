@@ -1,0 +1,16 @@
+{
+  "fuchsia:component": {
+    "name": "hello",
+    "url": "https://www.example.com/hello"
+  },
+  "fuchsia:program": {
+    "resource": "main"
+  },
+  "fuchsia:resources": {
+    "main": "hello_component",
+    "hello": "hello.txt"
+  },
+  "fuchsia:module": {
+    "contract": "https://fuchsia-contracts.google.com/hello_contract"
+  }
+}

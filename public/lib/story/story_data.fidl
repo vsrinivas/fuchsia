@@ -1,0 +1,58 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/story/story_info.fidl";
+
+// Internal data that user runner keeps about stories. Some of them
+// are exposed to the UserShell, which are kept in StoryInfo.
+struct StoryData {
+  // Metadata available to the UserShell.
+  StoryInfo story_info;
+
+  // Page id on the user's ledger which stores story information. It
+  // might be NULL until the story is being started.
+  array<uint8, 16>? story_page_id;
+};
+
+// Internal data about the context where a story was run. This information is
+// logged every time a story gets focus (including when it's created), and thus
+// creates a record over time that captures (and can be used to learn) which
+// context this story is relevant in.
+//
+// TODO(mesch): Eventually this may become too large, and needs filtering,
+// aggregation, and processing. For now it's kept in the story page. Keeping
+// log-like data in the story page has the additional advantage that it's
+// automatically expunged together with the story it is about. The disavantage
+// is that aggregating log over multiple stories requires accessing multiple
+// pages, which however is not a problem yet.
+//
+// TODO(mesch): The other reason this is not called StoryContext is that
+// StoryContext is already used for the story shell. Context is used with two
+// different meanings here and elsewhere in modular. Here it's the maxwell
+// meaning.
+struct StoryContextLog {
+  // The context as obtained from the maxwell Context service. Cf.
+  // //apps/maxwell/services/context/context_reader.fidl
+  map<string, string> context;
+
+  // Where the context was captured.
+  string device_id;
+
+  // When the context was captured. Time in seconds since epoch.
+  uint64 time;
+
+  // Why the context was captured.
+  StorySignal signal;
+};
+
+// Events that cause story context to be captured.
+enum StorySignal {
+  // Context is captured when the story is created.
+  CREATED = 1,
+
+  // Context is captured when the story is focused.
+  FOCUSED = 2,
+};

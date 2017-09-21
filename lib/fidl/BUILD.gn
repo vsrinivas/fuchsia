@@ -1,0 +1,192 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+source_set("app_client") {
+  sources = [
+    "app_client.cc",
+    "app_client.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    "//apps/modular/lib/common:async_holder",
+    "//apps/modular/services/config",
+    "//apps/modular/services/lifecycle",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("array_to_string") {
+  sources = [
+    "array_to_string.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+  ]
+}
+
+source_set("context") {
+  sources = [
+    "context.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+  ]
+}
+
+source_set("json_xdr") {
+  sources = [
+    "json_xdr.cc",
+    "json_xdr.h",
+  ]
+
+  # MUST be public so clients pick up the defines from
+  # //third_party/rapidjson:rapidjson_config
+  public_deps = [
+    "//apps/modular/lib/rapidjson",
+    "//garnet/public/lib/fidl/cpp/bindings",
+  ]
+}
+
+source_set("operation") {
+  sources = [
+    "operation.cc",
+    "operation.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/trace",
+  ]
+}
+
+source_set("proxy") {
+  sources = [
+    "proxy.cc",
+    "proxy.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("scope") {
+  sources = [
+    "scope.cc",
+    "scope.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("single_service_app") {
+  sources = [
+    "single_service_app.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//apps/modular/services/lifecycle",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("view_host") {
+  sources = [
+    "view_host.cc",
+    "view_host.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("message_receiver_client") {
+  sources = [
+    "message_receiver_client.cc",
+    "message_receiver_client.h",
+  ]
+
+  deps = [
+    "//apps/modular/services/component",
+    "//garnet/public/lib/fidl/cpp/bindings",
+  ]
+}
+
+fidl("unittest_fidl") {
+  testonly = true
+
+  sources = [
+    "app_client_unittest.fidl",
+  ]
+}
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":app_client_unittest",
+    ":json_xdr_unittest",
+  ]
+}
+
+source_set("app_client_unittest") {
+  testonly = true
+
+  sources = [
+    "app_client_unittest.cc",
+  ]
+
+  deps = [
+    ":app_client",
+    ":unittest_fidl",
+    "//garnet/public/lib/app/cpp",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("json_xdr_unittest") {
+  testonly = true
+
+  sources = [
+    "json_xdr_unittest.cc",
+  ]
+
+  deps = [
+    ":json_xdr",
+    "//third_party/gtest",
+  ]
+}

@@ -1,0 +1,17 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Here are some interfaces that are used to demonstrate a service exchange.
+
+module modular.examples;
+
+[ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Adder"]
+interface Adder {
+  Add(int32 a, int32 b) => (int32 c);
+};
+
+[ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Multiplier"]
+interface Multiplier {
+  Multiply(int32 a, int32 b) => (int32 c);
+};

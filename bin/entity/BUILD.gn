@@ -1,0 +1,44 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("entity") {
+  sources = [
+    "entity_impl.cc",
+    "entity_impl.h",
+    "entity_repository.cc",
+    "entity_repository.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/services/entity",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "entity_repository_unittest.cc",
+  ]
+
+  deps = [
+    ":entity",
+    "//apps/maxwell/services/user",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/testing:mock_base",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/trace",
+    "//third_party/gtest",
+  ]
+}

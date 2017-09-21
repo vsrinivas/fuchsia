@@ -1,0 +1,60 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+# For consumption outside modular.
+fidl("user") {
+  sources = [
+    "device_map.fidl",
+    "user_shell.fidl",
+  ]
+
+  public_deps = [
+    ":focus",
+    "//apps/modular/services/agent",
+    "//apps/modular/services/auth/account",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion:suggestion",
+    "//apps/maxwell/services/suggestion:suggestion_provider",
+    "//garnet/public/lib/ui/views/fidl",
+  ]
+}
+
+fidl("focus") {
+  sources = [
+    "focus.fidl",
+  ]
+}
+
+# Only for implementation of modular.
+fidl("private") {
+  sources = [
+    "user_runner.fidl",
+  ]
+
+  public_deps = [
+    ":user",
+  ]
+
+  deps = [
+    "//apps/ledger/services/internal",
+    "//apps/modular/services/auth",
+    "//apps/modular/services/auth/account",
+    "//apps/modular/services/config",
+    "//garnet/public/lib/ui/views/fidl",
+  ]
+
+  visibility = [
+    "//apps/modular/*",
+
+    # Exposed for experimental user_runner implementation.
+    "//apps/modules/exp/*",
+  ]
+}

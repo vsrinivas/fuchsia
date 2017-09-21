@@ -1,0 +1,20 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+# TODO(alhaad/ukode): Move token_provider.fidl into a separate rule since
+# third-party components should only depend on it.
+# TODO(alhaad/ukode): Also move these services to a separate repository.
+fidl("auth") {
+  sources = [
+    "account_provider.fidl",
+    "token_provider.fidl",
+  ]
+
+  public_deps = [
+    "//apps/modular/services/auth/account",
+    "//apps/modular/services/device",
+  ]
+}

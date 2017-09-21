@@ -1,0 +1,27 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("common") {
+  testonly = true
+
+  deps = [
+    ":null_module",
+  ]
+}
+
+executable("null_module") {
+  testonly = true
+
+  sources = [
+    "null_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fsl",
+  ]
+}

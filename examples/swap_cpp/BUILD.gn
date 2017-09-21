@@ -1,0 +1,61 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("swap_cpp") {
+  deps = [
+    ":swap_module1",
+    ":swap_module2",
+    ":swap_recipe",
+  ]
+}
+
+executable("swap_module1") {
+  sources = [
+    "swap_module1.cc",
+  ]
+  deps = [
+    ":module",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("swap_module2") {
+  sources = [
+    "swap_module2.cc",
+  ]
+  deps = [
+    ":module",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("module") {
+  sources = [
+    "module.cc",
+    "module.h",
+  ]
+
+  public_deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+  ]
+
+  deps = [
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/ui/view_framework",
+  ]
+}
+
+executable("swap_recipe") {
+  sources = [
+    "swap_recipe.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/fsl",
+  ]
+}

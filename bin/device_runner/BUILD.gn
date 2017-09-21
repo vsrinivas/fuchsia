@@ -1,0 +1,123 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+group("all") {
+  deps = [
+    ":dev_device_shell",
+    ":device_runner",
+    ":device_runner_monitor",
+  ]
+}
+
+flatbuffer("users") {
+  sources = [
+    "users.fbs",
+  ]
+}
+
+executable("device_runner") {
+  sources = [
+    "device_runner.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//apps/modular/lib/common:async_holder",
+    "//apps/modular/lib/common:teardown",
+    "//apps/modular/lib/fidl:app_client",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/ledger:constants",
+    "//apps/modular/lib/util:filesystem",
+    "//apps/modular/services/auth",
+    "//apps/modular/services/config",
+    "//apps/modular/services/device",
+    "//apps/modular/services/user:private",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "user_controller_impl.cc",
+    "user_controller_impl.h",
+    "user_provider_impl.cc",
+    "user_provider_impl.h",
+  ]
+
+  deps = [
+    ":users",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//apps/modular/lib/common:async_holder",
+    "//apps/modular/lib/common:teardown",
+    "//apps/modular/lib/fidl:app_client",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:scope",
+    "//apps/modular/lib/util:filesystem",
+    "//apps/modular/services/auth",
+    "//apps/modular/services/config",
+    "//apps/modular/services/device",
+    "//apps/modular/services/user:private",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/trace",
+  ]
+}
+
+executable("device_runner_monitor") {
+  sources = [
+    "device_runner_monitor.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//apps/modular/services/device",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("dev_device_shell") {
+  sources = [
+    "dev_device_shell.cc",
+  ]
+
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/testing",
+    "//apps/modular/services/device",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "user_controller_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/app/cpp",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+}

@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":modular_tests.json",
+    "common",
+    "component_context",
+    "context_link",
+    "last_focus_time",
+    "link_data",
+    "link_update",
+    "parent_child",
+    "queue_persistence",
+    "remote",
+    "story_importance",
+    "suggestion",
+    "triggers",
+    "user_shell",
+  ]
+}
+
+copy("modular_tests.json") {
+  sources = [
+    "modular_tests.json",
+  ]
+  outputs = [
+    "$root_out_dir/modular_tests.json",
+  ]
+}

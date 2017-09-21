@@ -1,0 +1,16 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// An interface implemented by applications that wish to terminate gracefully.
+[ServiceName="modular.Lifecycle"]
+interface Lifecycle {
+  // The client of this application has requested that this application
+  // terminate gracefully.
+  //
+  // If the application does not terminate itself in a timely manner, the client
+  // may forcibly terminate the application.
+  Terminate();
+};

@@ -1,0 +1,53 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/maxwell/services/user/intelligence_services.fidl";
+import "apps/modular/services/auth/token_provider.fidl";
+import "apps/modular/services/component/component_context.fidl";
+
+// This interface is exposed to all agents. It allows to schedule tasks to occur
+// in response to triggers which are conditions like a message arriving on a
+// MessageQueue.
+interface AgentContext {
+  // |context| is the ComponentContext which this AgentContext is a part of.
+  GetComponentContext(ComponentContext& request);
+
+  // |token_provider| is scoped to this agent.
+  GetTokenProvider(auth.TokenProvider& request);
+
+  // Returns the IntelligenceServices container specific to this Agent.
+  GetIntelligenceServices(maxwell.IntelligenceServices& request);
+
+  // Schedules a task described in |task_info|. When this task is scheduled to
+  // run, Agent::RunTask() gets called.
+  ScheduleTask(TaskInfo task_info);
+  // No new runs of this task will be scheduled.
+  DeleteTask(string task_id);
+
+  // Declares that this agent is done, and wants to be torn down. Agent::Stop()
+  // will be called as a result of this.
+  Done();
+};
+
+// Used to describe a task to the framework.
+struct TaskInfo {
+  // An agent provided task id that can be used later to refer to this task.
+  string task_id;
+  // The condition that would cause this task to get scheduled.
+  TriggerCondition trigger_condition;
+};
+
+union TriggerCondition {
+  // Receiving any message on the queue |queue_name| will satisfy this trigger
+  // condition. Note that |queue_name| is scoped to the Agent that created this
+  // queue in the first place.
+  string queue_name;
+
+  // Fires an inexact repeating alarm every |alarm_in_seconds| seconds that'll
+  // satisfy this trigger condition. The first alarm fires in
+  // |alarm_in_seconds| seconds.
+  uint32 alarm_in_seconds;
+};

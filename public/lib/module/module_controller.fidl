@@ -1,0 +1,36 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/module/module_state.fidl";
+
+// This interface is used by the caller of ModuleContext.StartModule()
+// to control the started Module instance.
+//
+// Closing this connection affects neither its ModuleWatchers nor its
+// Module instance; it just relinquishes the ability of the caller to
+// control the Module instance.
+interface ModuleController {
+  // Registers a watcher that is notified when the module is done or
+  // otherwise stops.
+  Watch(ModuleWatcher watcher);
+
+  // Requests that this module become the focused module in the story.
+  Focus();
+
+  // Requests that this module be hidden in the story.
+  Defocus();
+
+  // Requests the Module instance to stop (see Module.Stop() for how).
+  Stop() => ();
+};
+
+// This interface is implemented by the client calling
+// ModuleController::Watch().
+interface ModuleWatcher {
+  // Called with the current state right after registration, and
+  // subsequently when the state changes.
+  OnStateChange(ModuleState new_state);
+};

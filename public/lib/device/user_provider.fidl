@@ -1,0 +1,107 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/auth/account/account.fidl";
+import "apps/modular/services/config/config.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
+
+// Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
+// |DeviceShell| can get information about the users of this device from the
+// |DeviceRunner|, and act on the provided information (including extending the
+// user database).
+interface UserProvider {
+  // Adds information of a user that can be used to authenticate her/him to this
+  // device. Once successfully added, the user can login to the same device via
+  // Login().
+  //
+  // |identity_provider| is the identity provider to use for identification.
+  //
+  // |device_name| is what the user wants to name the device. If null or empty
+  // the device's current hostname will be used.
+  //
+  // |account| is NULL if there was an error during identification and
+  // |error_code| is set.
+  AddUser(auth.IdentityProvider identity_provider) =>
+      (auth.Account? account, string? error_code);
+
+  // Removes information of a user from the local user database.
+  //
+  // |account_id| is received from either AddUser() or PreviousUsers().
+  RemoveUser(string account_id) => (string? error_code);
+
+  // Uses the credentials provided in AddUser() to start a user session. This
+  // would mean syncing with the user's ledger instance and displaying a user
+  // shell with all of the user's stories.
+  // TODO(alhaad): In the future, we want to protect Login() with a password,
+  // Android lock pattern, etc.
+  Login(UserLoginParams user_login_params);
+
+  // List of all users who have authenticated to this device in the past.
+  PreviousUsers() => (array<auth.Account> accounts);
+};
+
+// Used to specify arguments to log into a user session.
+struct UserLoginParams {
+  // |account_id| is received from either AddUser() or PreviousUsers(). It
+  // can be NULL which means logging-in in an incognito mode.
+  string? account_id;
+
+  // |view_owner| is the view given to the |UserShell| started for the newly
+  // logged-in user.
+  mozart.ViewOwner& view_owner;
+
+  // If login fails, |user_controller| is closed.
+  UserController& user_controller;
+
+  // Configuration of the user shell to run. It can be NULL which means that
+  // this configuration is picked up from command-line arguments to device
+  // runner.
+  AppConfig? user_shell_config;
+};
+
+// Provided by the |DeviceRunner| to the |DeviceShell| when it authenticates a
+// new user. This interface provides control to a logged-in user's life cycle,
+// and the life of this interface is bound to a user being logged in.
+//
+// An interface similar to this one, |UserContext|, is provided to the user
+// shell. It also contains a method to request logout. The difference is of
+// level of ownership and control:
+//
+// - A controller interface to one component instance is given to a component
+//   instance which has control over the life cycle of the first component
+//   instance. As such, the controller interface can be used by the controlling
+//   component to change the life cycle of the controlled component.
+//
+// - A context interface to one component instance is given to a component
+//   instance whose life cycle is controlled by the first component instance. As
+//   such, the context interface can be used by the controlled component to
+//   request a change to its life cycle (among other functions).
+//
+// In general, the separation of a service |Foo| implemented by a component, and
+// the service |FooController| given to the client of that component (rather
+// than |Foo| directly) is a hallmark of inversion of control that pervades the
+// design of our services.
+interface UserController {
+  // Logs out a user by tearing down its user runner. Returns once the
+  // UserRunner has been torn down. This also triggers OnLogout() for
+  // |UserWatcher|s.
+  Logout() => ();
+
+  // Registers a watcher for the user's life cycle events.
+  Watch(UserWatcher watcher);
+};
+
+// Implemented by a |DeviceShell| implementation in order to receive
+// notification about life cycle changes of a logged in user.
+interface UserWatcher {
+  // Called when a user has logged out, either by UserController.Logout() or by
+  // UserContext.Logout(). By the time this event is processed by a watcher, the
+  // UserRunner may already be torn down.
+  //
+  // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
+  // possible to UserProvider.Login() the same user.
+  OnLogout();
+};

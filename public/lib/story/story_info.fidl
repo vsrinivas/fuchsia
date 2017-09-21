@@ -1,0 +1,24 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Information about a story as provided to the UserShell.
+struct StoryInfo {
+  // URL of the first module run in this story. This module is free to
+  // run more modules in the story. Used for display purposes only.
+  string url;
+
+  // The ID of the Story, used to reference it in method arguments.
+  string id;
+
+  // Wallclock time when the story was last focused. From
+  // zx_time_get(ZX_CLOCK_UTC), thus nanoseconds since UNIX epoch (1970-01-01
+  // 00:00 UTC).
+  int64 last_focus_time;
+
+  // Data the UserShell wants to keep associated with this Story, like
+  // title, a color, or a display rank.
+  map<string, string> extra;
+};

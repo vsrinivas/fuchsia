@@ -1,0 +1,44 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("parent_child") {
+  testonly = true
+
+  deps = [
+    ":child_module",
+    ":parent_module",
+  ]
+}
+
+executable("child_module") {
+  testonly = true
+
+  sources = [
+    "child_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("parent_module") {
+  testonly = true
+
+  sources = [
+    "parent_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/fsl",
+  ]
+}

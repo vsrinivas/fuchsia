@@ -1,0 +1,31 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains the definition for Entity.
+//
+// STATUS: Draft / Heavy WIP: expect significant changes.
+
+module modular;
+
+import "entity_reference.fidl";
+
+interface Entity {
+  // Returns an opaque reference token. This token can be serialized and
+  // stored, and later used to retrieve a new |Entity| handle through the
+  // |EntityResolver| (see entity_resolver.fidl).
+  GetReference() => (EntityReference reference);
+
+  // Each entry in |type| references a well-known content type.
+  //
+  // TODO(thatguy): Document where these content types are discoverable.
+  GetTypes() => (array<string> types);
+
+  // Returns the byte content for the given |type|. If |type| is not in the
+  // return value of |GetTypes()|, or if no content is available for |type|,
+  // returns a null |content|.
+  //
+  // TODO(thatguy): |content| should be a VMO or a File. See the comment in
+  // entity_store.fidl.
+  GetContent(string type) => (array<uint8>? content);
+};

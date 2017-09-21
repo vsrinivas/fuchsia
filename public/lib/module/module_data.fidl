@@ -1,0 +1,46 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/module/link_path.fidl";
+import "apps/modular/services/surface/surface.fidl";
+
+// Information about modules in a Story.
+struct ModuleData {
+  // The URL of the module application.
+  string module_url;
+
+  // The named path leading up to this module. The last name in this array is
+  // this module's name.
+  array<string> module_path;
+
+  // The name of the link the module was started with.
+  LinkPath link_path;
+
+  // The way in which this module was first started in the story.
+  ModuleSource module_source;
+
+  // The |surface_relation| that was used to start this module with. The same is
+  // used when re-inflating the module.
+  SurfaceRelation? surface_relation;
+
+  // True if an externally-started module has called ModuleContext.Done() and
+  // has been stopped by the story runner, or if an internally-started module
+  // was stopped by its parent module using ModuleController.Stop().
+  //
+  // TODO(vardhan): Does this need to be device-scoped?
+  bool module_stopped;
+};
+
+enum ModuleSource {
+  // Module that was started from within the story by another module via
+  // ModuleContext.StartModule() and ModuleContext.StartModuleInShell().
+  INTERNAL,
+
+  // Module that was started from outside the story by Maxwell / UserShell via
+  // StoryController.AddModule() or StoryController.CreateStory() as first
+  // module.
+  EXTERNAL,
+};

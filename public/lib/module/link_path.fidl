@@ -1,0 +1,14 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Addresses a Link within a story.
+struct LinkPath {
+  // The module_path of the module this link was created under.
+  array<string> module_path;
+
+  // Name of the link itself.
+  string link_name;
+};

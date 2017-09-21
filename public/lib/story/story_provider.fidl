@@ -1,0 +1,121 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/story/story_controller.fidl";
+import "apps/modular/services/story/story_state.fidl";
+
+// UserRunner creates an instance of this service and passes it to the UserShell
+// so it can operate on stories for the user. It is also passed to other
+// services that monitor or manipulate stories, specifically the maxwell
+// services.
+//
+// Closing a |StoryProvider| connection has no effect on the state of the
+// framework.
+interface StoryProvider {
+  // Creates a new story containing the module at |module_url| as the first
+  // module. The returned |story_id| can be used to obtain a StoryController
+  // connection to perform actions on the newly created story, specifically
+  // starting it.
+  CreateStory(string module_url) => (string story_id);
+
+  // Like CreateStory(), but with extra info and with values for the root link
+  // atomically set. Otherwise, if SetInfoExtra() is called separately on the
+  // story controller, separate StoryProviderWatcher notifications are
+  // generated, which is inconvenient.
+  CreateStoryWithInfo(string module_url, map<string, string>? extra_info,
+                      string? root_json) => (string story_id);
+
+  // Deletes an existing story from the list of known stories. Returns when the
+  // delete notification is received from the Ledger. If the story to be deleted
+  // is running, it is first stopped and its story controller disconnected. If
+  // the story ID doesn't exist, it silently does nothing and returns.
+  DeleteStory(string story_id) => ();
+
+  // Requests detailed information about the given story. If the story doesn't
+  // exist, returns null. GetStoryInfo() called immediately after DeleteStory()
+  // (even before DeleteStory() returns) returns null.
+  GetStoryInfo(string story_id) => (StoryInfo? story_info);
+
+  // Obtains a controller for a previously created story identified by its story
+  // ID. Obtaining the controller doesn't run it yet. If the story doesn't
+  // exist, the interface request is closed.
+  GetController(string story_id, StoryController& story_controller);
+
+  // Returns IDs of known stories. More information about the stories can be
+  // retrieved using GetStoryInfo(), or by GetController(), then
+  // StoryController.GetInfo().
+  PreviousStories() => (array<string> story_ids);
+
+  // Returns IDs of stories on the current device that are not in the INITIAL or
+  // STOPPED state. More information about the stories can be retrieved using
+  // GetStoryInfo(), or by GetController(), then StoryController.GetInfo().
+  RunningStories() => (array<string> story_ids);
+
+  // Registers a listener for changes in the story collection.
+  Watch(StoryProviderWatcher watcher);
+
+  // Gets the relative importance of stories in the current story collection in
+  // the current context. The map is from story ID to importance. Stories not in
+  // the map have zero importance. To be called initially when setting up the
+  // user shell display of the story collection, and when
+  // StoryImportanceWatcher.OnImportanceChange() is called.
+  //
+  // TODO(mesch): Importance computation is currently confined to those stories
+  // for which the user shell holds a story controller. This will change,
+  // especially as it makes sense that the user shell uses importance to decide
+  // which stories to get a controller for and start.
+  GetImportance() => (map<string, float> importance);
+
+  // Registers a listener for changes in the story collection.
+  WatchImportance(StoryImportanceWatcher watcher);
+
+  // Creates a duplicate connection to this StoryProvider.
+  Duplicate(StoryProvider& request);
+
+  // Obtains a connection to a Link that behaves for the purpose of sending
+  // updates to it as if the updates come from another device. This is available
+  // only in developer mode and is mainly useful for testing. Note right now
+  // there is only developer mode, i.e. this is always available.
+  GetLinkPeer(string story_id, array<string>? module_path, string link_name,
+              Link& request);
+};
+
+// This interface is implemented by clients of StoryProvider.
+//
+// OnChange() is called when:
+//  * a new watcher is registered; one OnChange() for each known story on the
+//    CURRENT device is sent.
+//  * a change to StoryInfo or StoryState is applied on the CURRENT device.
+//
+// The source of the change to StoryInfo could have been from ANY device,
+// although the id of the device that caused the change is not part of the
+// notification. StoryState changes are only sent for the CURRENT device.
+// Notifications are not sent for changes to StoryState on other devices.
+//
+// OnDelete() is called when a story deletion operation is applied to the
+// CURRENT device. The cause of the deletion could have been ANY device.
+interface StoryProviderWatcher {
+  // The StoryInfo changed or the StoryState changed. |story_state| is INITIAL
+  // if the story was just created. The state will always be "STOPPED" on the
+  // current device if no StoryController is present. This behavior is only
+  // surprising because the state could change to INITIAL after the
+  // StoryController is created.
+  //
+  // TODO(jimbe): The "INITIAL" value has a race condition between devices and
+  // should be removed.
+  OnChange(StoryInfo story_info, StoryState story_state);
+
+  // A Story was deleted.
+  OnDelete(string story_id);
+};
+
+// The relative importance of stories in the story collection may have changed,
+// because the context has changed. In order to obtain the changed importance,
+// the client calls StoryProvider.GetImportance().
+interface StoryImportanceWatcher {
+  OnImportanceChange();
+};

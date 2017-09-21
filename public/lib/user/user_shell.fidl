@@ -1,0 +1,58 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/maxwell/services/context/context_writer.fidl";
+import "apps/maxwell/services/context/context_reader.fidl";
+import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
+import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
+import "apps/modular/services/agent/agent_provider.fidl";
+import "apps/modular/services/auth/account/account.fidl";
+import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/story/story_provider.fidl";
+import "apps/modular/services/user/focus.fidl";
+
+// This interface is implemented by a User Shell. Dependencies are
+// passed to it in Initialize() on startup.
+[ServiceName="modular.UserShell"]  // Created by user shell applications.
+interface UserShell {
+  Initialize(UserShellContext user_shell_context);
+
+  // Signals UserShell to teardown itself. Upon response, the caller
+  // may terminate the UserShell process if it hasn't done so already.
+  Terminate();
+};
+
+// TODO(alhaad): There are some intelligence services that are individually
+// provided to user shell like ContextReader, SuggestionProvider. Consider
+// giving user shell access to raw |maxwell.IntelligenceServices|.
+interface UserShellContext {
+  // The account associated with the currently logged-in user. It's NULL if
+  // logged into GUEST mode.
+  GetAccount() => (auth.Account? account);
+  GetAgentProvider(AgentProvider& request);
+  GetContextReader(maxwell.ContextReader& request);
+  GetContextWriter(maxwell.ContextWriter& request);
+  GetDeviceName() => (string device_name);
+  GetFocusController(FocusController& request);
+  GetFocusProvider(FocusProvider& request);
+  GetLink(Link& request);
+  GetProposalPublisher(maxwell.ProposalPublisher& request);
+  GetStoryProvider(StoryProvider& request);
+  GetSuggestionProvider(maxwell.SuggestionProvider& request);
+  GetVisibleStoriesController(VisibleStoriesController& request);
+
+  // Requests logout of the user. This causes the device runner to tear down the
+  // |UserRunner| instance of the user.
+  Logout();
+
+  // For development only.
+  //
+  // Developers need a convenient way to reset the Ledger state to a clean slate
+  // without requiring reauthentication. This method clears the Ledger state
+  // both locally and in the cloud. The user is automatically logged out in the
+  // process.
+  LogoutAndResetLedgerState();
+};

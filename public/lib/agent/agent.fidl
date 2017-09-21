@@ -1,0 +1,48 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "lib/app/fidl/service_provider.fidl";
+import "apps/modular/services/agent/agent_context.fidl";
+
+// This service is implemented by an application that is meant to be run as an
+// Agent.
+//
+// When an agent application implements the |Lifecycle| interface, it can
+// receive a signal for when it should stop. An agent may be stopped for the
+// following reasons:
+// (1) ComponentContext::Done() is called by this Agent indicating that it has
+// completed its work.
+// (2) All AgentControllers associated with this agent are closed.
+// (3) The system wants to optimize for resources.
+// Once the framework delivers a |Lifecycle.Terminate()|, the agent application
+// may exit itself, or is killed by framework after a timeout.
+[ServiceName="modular.Agent"]  // Created by each agent.
+interface Agent {
+  // Called when this Agent is first instantiated i.e. a process is created and
+  // this interface is requested from the application. All requests to connect to
+  // this agent will pend until Initialize() responds back.
+  //
+  // An Agent is instantiated when it is not running and if:
+  // (1) Some component calls ComponentContext::ConnectToAgent() or
+  // (2) A trigger causes a task to be run.
+  Initialize(AgentContext agent_context) => ();
+
+  // Called when some component tries to connect to this agent.
+  // |requestor_url| is the identifier for the component which called
+  // ComponentContext::ConnectToAgent().
+  // |services| are the services that are provided to that component.
+  Connect(string requestor_url, app.ServiceProvider& services);
+
+  // Called when some task identified by |task_id| is scheduled to run. The task
+  // was first posted by this Agent using AgentContext::ScheduleTask(). The
+  // return callback is called by this Agent when all work related to this task
+  // is completed. Note that the framework may call Stop() before RunTask
+  // returns.
+  // TODO(alhaad): The current implementation allows the Agent to run a task
+  // until its callback returns. Instead, we should cap task length with
+  // strategies like budgets.
+  RunTask(string task_id) => ();
+};

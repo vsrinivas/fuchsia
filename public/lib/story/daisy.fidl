@@ -1,0 +1,68 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//
+// WORK IN PROGRESS, NOT YET PART OF THE BUILD
+//
+
+import "entity.fidl";
+
+module modular;
+
+// The Daisy struct is a runtime descriptor for an abstract action to be initiated
+// in Fuchsia. For details please see docs/daisy.md.
+struct Daisy {
+  Verb? verb;
+
+  // A list of zero or more Nouns, keyed by the noun's name in |verb|'s
+  // definition, from which Entity type constraints are derived. If no |verb|
+  // is provided, and thus no verb definition is available, the keys are
+  // ignored. The type derivation process depends on which field in each of
+  // |nouns| is set. See Noun below for details.
+  //
+  // In the cases where this Daisy is used for Module Resolution (see
+  // module_resolver.fidl) and |entity| or |text| are set on the Noun, the
+  // value is additionally used to initialize the Entity references on Link to
+  // the Module that is selected after resolution.
+  map<string, Noun> nouns;
+
+  // string json_parameters;
+  // array<string> required_services;
+}
+
+struct Verb {
+  // The ID of the package in which verb |name| is defined.
+  string package_id;
+
+  // The name of the verb published in package |package_id|.
+  string name;
+};
+
+// As stated above, this structure serves two purposes:
+//
+// 1) It directly or indirectly provides type constraints for nouns (arguments
+// passed to/from a Module instance) during the process of Module Resolution.
+//
+// 2) Provides Entity instances, or data from which Entity instances can be
+// derived, to initialize a Module after it has been selected through Module
+// Resolution.
+union Noun {
+  // Set this if you already have an Entity instance at runtime. |entity.types|
+  // will be used to set the constraints for this noun during resolution.
+  Entity entity;
+
+  // Set this if you have an unstructured blob of text. Module Resolution will
+  // perform Entity extraction (see docs/module_resolution.md), from which it will
+  // derive a set of Entity types to use as constraints during resolution.
+  string text;
+
+  // Set this if you want to explicitly define this noun's allowed types. This
+  // is also useful in the cases where the noun has a 'direction' of type
+  // 'output', and you wish to set the allowable output types from the Module
+  // (see docs/manifests/verb_template.md for a definition of 'direction').
+  //
+  // Only one entry in |entity_type| must match the constraint specified by
+  // the Module for the constraint to be considered satisfied.
+  array<EntityType> entity_type;
+}

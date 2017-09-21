@@ -1,0 +1,136 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("ledger") {
+  deps = [
+    ":constants",
+    ":types",
+    ":operations",
+    ":page_client",
+    ":storage",
+  ]
+}
+
+source_set("constants") {
+  sources = [
+    "constants.h",
+  ]
+}
+
+source_set("operations") {
+  sources = [
+    "operations.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:operation",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("page_client") {
+  sources = [
+    "ledger_client.cc",
+    "ledger_client.h",
+    "page_client.cc",
+    "page_client.h",
+  ]
+
+  deps = [
+    ":status",
+    ":types",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:operation",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("status") {
+  sources = [
+    "status.cc",
+    "status.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/public",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("storage") {
+  sources = [
+    "storage.cc",
+    "storage.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/util",
+    "//apps/modular/services/module:module_data",
+    "//apps/modular/services/story:private",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("types") {
+  sources = [
+    "types.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+  ]
+}
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":storage_unittest",
+    ":page_client_unittest",
+  ]
+}
+
+source_set("page_client_unittest") {
+  testonly = true
+
+  sources = [
+    "page_client_unittest.cc",
+  ]
+
+  deps = [
+    ":page_client",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/testing:ledger_repository_for_testing",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+}
+
+
+source_set("storage_unittest") {
+  testonly = true
+
+  sources = [
+    "storage_unittest.cc",
+  ]
+
+  deps = [
+    ":storage",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+}

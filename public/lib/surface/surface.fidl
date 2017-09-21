@@ -1,0 +1,45 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains the definition of SurfaceRelation and its properties.
+
+module modular;
+
+// Expresses arrangement type.
+enum SurfaceArrangement {
+  // No arrangement specified.
+  NONE,
+
+  // Desire to present simultaneously.
+  COPRESENT,
+
+  // The parent prefers to not be presented simultaneously with its child.
+  // (The child may still become part of a simultaneous presentation depending
+  // on the relationships between it and subsequently added surfaces).
+  SEQUENTIAL
+};
+
+// Links surface dismissal.
+enum SurfaceDependency {
+  // No dependency specified.
+  NONE,
+
+  // Child is dependent on parent.
+  // If parent is dismissed, child is dismissed as well.
+  DEPENDENT
+};
+
+// Describes the relationship between two Surfaces.
+// Provides information to the StoryShell for layout optimization.
+struct SurfaceRelation {
+  // Advice on arranging these surfaces on the screen together.
+  SurfaceArrangement arrangement = NONE;
+
+  // Advice for dismissal of surfaces to be linked.
+  SurfaceDependency dependency = NONE;
+
+  // Relative emphasis of the child surface, relative to the parent.
+  // Influences relative areas of surfaces on screen.
+  float emphasis = 1.0;
+};

@@ -1,0 +1,14 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular.testing;
+
+// An interface to "agent1" (implemented by test_agent1.cc) which the root
+// module uses.
+[ServiceName="modular.testing.Agent1Interface"]
+interface Agent1Interface {
+  // Send |message_to_send| to the message queue backed by
+  // |message_queue_token|.
+  SendToMessageQueue(string message_queue_token, string message_to_send);
+};
