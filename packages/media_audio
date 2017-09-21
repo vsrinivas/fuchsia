@@ -1,0 +1,9 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "audio_server": "//garnet/bin/media:audio_server",
+        "media_client": "//garnet/bin/media:media_client"
+    }
+}

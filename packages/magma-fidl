@@ -1,0 +1,12 @@
+{
+    "imports": [
+        "garnet/packages/magma",
+        "garnet/packages/fxl",
+        "garnet/packages/fsl",
+        "garnet/packages/runtime_config"
+    ],
+    "packages": {
+        "magma-fidl": "//garnet/lib/magma/vulkan:magma-fidl",
+        "magma-fidl-tests": "//garnet/lib/magma/vulkan:magma-fidl-tests"
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "dart"
+    ],
+    "imports": [
+        "garnet/packages/bluetooth"
+    ],
+    "packages": {
+        "bluetooth_examples": "//garnet/examples/bluetooth:bluetooth_examples"
+    }
+}

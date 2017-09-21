@@ -1,0 +1,22 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//garnet/bin/test_runner"
+    ],
+    "binaries": [
+        {
+            "binary": "report_result",
+            "bootfs_path": "bin/report_result"
+        },
+        {
+            "binary": "run_integration_tests",
+            "bootfs_path": "test/run_integration_tests"
+        },
+        {
+            "binary": "test_runner",
+            "bootfs_path": "apps/test_runner"
+        }
+    ]
+}

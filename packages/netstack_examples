@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "netstack_examples": "//garnet/go/src/netstack/examples:netstack_examples"
+    }
+}

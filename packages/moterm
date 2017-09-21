@@ -1,0 +1,14 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//garnet/bin/moterm"
+    ],
+    "binaries": [
+        {
+            "binary": "moterm",
+            "bootfs_path": "apps/moterm"
+        }
+    ]
+}

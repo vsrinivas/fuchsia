@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "fonts": "//garnet/bin/fonts"
+    }
+}

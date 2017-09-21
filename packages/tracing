@@ -1,0 +1,14 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//garnet/bin/traceutil"
+    ],
+    "packages": {
+        "trace": "//garnet/bin/trace",
+        "trace_tests": "//garnet/bin/trace:trace_tests",
+        "ktrace_provider": "//garnet/bin/ktrace_provider",
+        "trace_manager": "//garnet/bin/trace_manager"
+    }
+}

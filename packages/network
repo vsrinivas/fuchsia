@@ -1,0 +1,10 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "network": "//garnet/bin/network:network_pkg",
+        "postfile": "//garnet/examples/postfile",
+        "wget": "//garnet/examples/wget"
+    }
+}

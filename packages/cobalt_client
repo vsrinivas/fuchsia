@@ -1,0 +1,19 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "packages/gn/boringssl_libssl",
+        "garnet/packages/fxl",
+        "packages/gn/installer-system",
+        "garnet/packages/fsl",
+        "garnet/packages/netconnector",
+        "garnet/packages/netstack",
+        "garnet/packages/network",
+        "garnet/packages/runtime",
+        "garnet/packages/runtime_config"
+    ],
+    "packages": {
+        "cobalt": "//garnet/bin/cobalt"
+    }
+}
