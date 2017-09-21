@@ -2334,6 +2334,23 @@ void Device::WlanmacStop() {
 }
 
 void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
+    // Our USB packet looks like:
+    //   TxInfo (4 bytes)
+    //   TXWI fields (16 bytes)
+    //   packet (len bytes)
+    //   alignment zero padding (round up to a 4-byte boundary)
+    //   terminal zero padding (4 bytes)
+
+    size_t align_pad_len = ((len + 3) & ~3) - len;
+    size_t terminal_pad_len = 4;
+    size_t iotxn_len = sizeof(TxInfo) + 16 + len + align_pad_len + terminal_pad_len;
+
+    if (iotxn_len > kWriteBufSize) {
+        errorf("iotxn buffer size insufficient for tx packet -- %d bytes needed\n",
+               (int)iotxn_len);
+        return;
+    }
+
     iotxn_t* req = nullptr;
     {
         std::lock_guard<std::mutex> guard(lock_);
@@ -2360,9 +2377,11 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     }
 
     std::memset(packet, 0, sizeof(TxPacket));
-    // packet length in the TxInfo includes the 4 32-bit Txwi fields and is 8-byte aligned
-    size_t pkt_len = (16 + len + 7) & (~7);
-    packet->tx_info.set_tx_pkt_length(pkt_len);
+
+    // The length field in TxInfo includes everything from the TXWI fields to the alignment pad
+    size_t txinfo_len = (16 + len + align_pad_len);
+    packet->tx_info.set_tx_pkt_length(txinfo_len);
+
     // TODO(tkilbourn): set these more appropriately
     packet->tx_info.set_wiv(1);
     packet->tx_info.set_qsel(2);
@@ -2370,12 +2389,14 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     packet->txwi0.set_ofdm(1);
     packet->txwi0.set_mcs(7);
 
-    packet->txwi1.set_mpdu_total_byte_count(pkt_len - 16);
+    packet->txwi1.set_mpdu_total_byte_count(len);
     packet->txwi1.set_tx_packet_id(10);
 
     std::memcpy(packet->payload, data, len);
-    // Total request length is packet length + 4 bytes for TxInfo
-    req->length = pkt_len + 4;
+    std::memset(&packet->payload[len], 0, align_pad_len + terminal_pad_len);
+
+    // Send the whole thing
+    req->length = iotxn_len;
     iotxn_queue(parent(), req);
 }
 
