@@ -1,0 +1,138 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module bluetooth.low_energy;
+
+import "lib/bluetooth/fidl/common.fidl";
+
+// Represents advertising and scan response data advertised by a broadcaster or peripheral.
+struct AdvertisingData {
+  // Name of the device.
+  string? name;
+
+  // The radio transmission power level reported in the advertisement.
+  Int8? tx_power_level;
+
+  // The appearance reported in the advertisemet.
+  UInt16? appearance;
+
+  // List of service UUIDs reported in the advertisement.
+  array<string>? service_uuids;
+
+  // Service data included in the advertisement. Each key of this dictionary is a 128-bit Bluetooth
+  // service UUID.
+  map<string, array<uint8>>? service_data;
+
+  // Manufacturer specific data entries. Each key of this dictionary is a 16-bit company identifier.
+  map<uint16, array<uint8>>? manufacturer_specific_data;
+
+  // Service UUIDs that were solicited in the advertisement. Peripherals can invite centrals that
+  // expose certain services to connect to them using service solicitation.
+  array<string>? solicited_service_uuids;
+
+  // URIs included in the advertising packet.
+  // These are full URIs (they are encoded/decoded automatically)
+  array<string>? uris;
+};
+
+// Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,
+// broadcaster, or peripheral based on the API from which it was received.
+struct RemoteDevice {
+  // Identifier that uniquely identifies this device on the current system.
+  string identifier;
+
+  // Whether or not this device is connectable. Non-connectable devices are typically acting in the
+  // LE broadcaster role.
+  bool connectable;
+
+  // The last known RSSI of this device, if known.
+  Int8? rssi;
+
+  // Advertising data broadcast by this device if this device is a broadcaster or peripheral.
+  AdvertisingData? advertising_data;
+};
+
+// Filter parameters for use during a scan. A discovered peripheral or broadcaster will be reported
+// to applications only if it satisfies all of the provided filter parameters. Null fields will be
+// ignored.
+struct ScanFilter {
+  // Filter based on advertised service UUIDs. A peripheral that advertises at least one of the
+  // entries in |service_uuids| will satisfy this filter.
+  array<string>? service_uuids;
+
+  // Filter based on service data containing one of the given UUIDs.
+  array<string>? service_data_uuids;
+
+  // Filter based on a company identifier present in the manufacturer data. If this filter parameter
+  // is set, then the advertising payload must contain manufacturer specific data with the provided
+  // company identifier to satisfy this filter.
+  UInt16? manufacturer_identifier;
+
+  // Filter based on whether or not a device is connectable. For example, a client that is only
+  // interested in peripherals that it can connect to can set this to true. Similarly a client can
+  // scan only for braodcasters by setting this to false.
+  Bool? connectable;
+
+  // Filter results based on a portion of the advertised device name.
+  string? name_substring;
+
+  // Filter results based on the path loss of the radio wave. A device that matches this filter must
+  // satisfy the following:
+  //   1. Radio transmission power level and received signal strength must be available for the path
+  //      loss calculation;
+  //   2. The calculated path loss value must be less than, or equal to, |max_path_loss|.
+  Int8? max_path_loss;
+};
+
+interface CentralDelegate {
+  // Called when the scan state changes, e.g. when a scan session terminates due to a call to
+  // Central.StopScan() or another unexpected condition.
+  OnScanStateChanged(bool scanning);
+
+  // Called for each peripheral/broadcaster that is discovered during a scan session. |rssi|
+  // contains the received signal strength of the advertising packet that generated this event, if
+  // available.
+  OnDeviceDiscovered(RemoteDevice device);
+
+  // Called when this Central's connection to a peripheral with the given identifier is terminated.
+  OnPeripheralDisconnected(string identifier);
+};
+
+[ServiceName="bluetooth::low_energy::Central"]
+interface Central {
+  // Sets the delegate that shoud be notified for LE Scanner and Central role events.
+  SetDelegate(CentralDelegate delegate);
+
+  // Returns the list of peripherals that are known to the system from previous scan, connection,
+  // and/or bonding procedures. The results can be filtered based on service UUIDs that are known to
+  // be present on the peripheral.
+  //
+  // This method only returns peripherals (i.e. connectable devices).
+  GetPeripherals(array<string>? service_uuids) => (array<RemoteDevice> peripherals);
+
+  // Returns information about a single peripheral that is known to the system from previous scan,
+  // connection, and/or bonding procedures based on its unique identifier. Returns null if
+  // |identifier| is not recognized.
+  GetPeripheral(string identifier) => (RemoteDevice? peripheral);
+
+  // Initiates a scan session for nearby peripherals and broadcasters. Discovered devices will be
+  // reported via CentralDelegate.OnDeviceDiscovered(). If a scan session is already in progress,
+  // |filter| will replace the existing session's filter.
+  //
+  // If |filter| is null or empty (i.e. none of its fields has been populated) then the delegate
+  // will be notified for all discoverable devices that are found. This is not recommended; clients
+  // should generally filter results by at least one of |filter.service_uuids|,
+  // |filter.service_data|, and/or |filter.manufacturer_identifier|.
+  StartScan(ScanFilter? filter) => (Status status);
+
+  // Terminate a previously started scan session.
+  StopScan();
+
+  // Creates a connection to the peripheral device with the given identifier.
+  // TODO(armansito): Return a gatt.Client handle here.
+  ConnectPeripheral(string identifier) => (Status status);
+
+  // Disconnects this Central's connection to the peripheral with the given identifier.
+  DisconnectPeripheral(string identifier) => (Status status);
+};

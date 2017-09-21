@@ -1,0 +1,54 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("gap") {
+  sources = [
+    "adapter.cc",
+    "adapter.h",
+    "adapter_state.cc",
+    "adapter_state.h",
+    "advertising_data.cc",
+    "advertising_data.h",
+    "discovery_filter.cc",
+    "discovery_filter.h",
+    "gap.h",
+    "low_energy_connection_manager.cc",
+    "low_energy_connection_manager.h",
+    "low_energy_discovery_manager.cc",
+    "low_energy_discovery_manager.h",
+    "low_energy_state.cc",
+    "low_energy_state.h",
+    "remote_device.cc",
+    "remote_device.h",
+    "remote_device_cache.cc",
+    "remote_device_cache.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/public/lib/bluetooth/fidl:interfaces_data_only",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "adapter_unittest.cc",
+    "advertising_data_unittest.cc",
+    "discovery_filter_unittest.cc",
+    "low_energy_connection_manager_unittest.cc",
+    "low_energy_discovery_manager_unittest.cc",
+    "remote_device_cache_unittest.cc"
+  ]
+
+  deps = [
+    ":gap",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//third_party/gtest",
+  ]
+}

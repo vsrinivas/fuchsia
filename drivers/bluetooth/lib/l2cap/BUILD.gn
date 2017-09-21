@@ -1,0 +1,45 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("l2cap") {
+  sources = [
+    "channel.cc",
+    "channel.h",
+    "channel_manager.cc",
+    "channel_manager.h",
+    "fragmenter.cc",
+    "fragmenter.h",
+    "l2cap.h",
+    "logical_link.cc",
+    "logical_link.h",
+    "pdu.cc",
+    "pdu.h",
+    "sdu.h",
+    "recombiner.cc",
+    "recombiner.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "channel_manager_unittest.cc",
+    "fragmenter_unittest.cc",
+    "pdu_unittest.cc",
+    "recombiner_unittest.cc",
+  ]
+
+  deps = [
+    ":l2cap",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//third_party/gtest",
+  ]
+}

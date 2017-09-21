@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bluetoothcli") {
+  output_name = "bluetoothcli"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "commands.cc",
+    "commands.h",
+    "helpers.cc",
+    "helpers.h",
+    "logging.cc",
+    "logging.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/bluetooth/fidl",
+    "//garnet/bin/bluetooth_tools/lib",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/third_party/ulib/linenoise",
+  ]
+}

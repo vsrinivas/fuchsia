@@ -1,0 +1,22 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("lib") {
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//garnet/drivers/bluetooth/lib/common:tests",
+    "//garnet/drivers/bluetooth/lib/gap:tests",
+    "//garnet/drivers/bluetooth/lib/hci:tests",
+    "//garnet/drivers/bluetooth/lib/l2cap:tests",
+  ]
+}

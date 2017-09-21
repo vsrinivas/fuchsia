@@ -1,0 +1,53 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module bluetooth;
+
+enum ErrorCode {
+  UNKNOWN,
+  BAD_STATE,
+  BLUETOOTH_NOT_AVAILABLE,
+  FAILED,
+  IN_PROGRESS,
+  INVALID_ARGUMENTS,
+  NOT_FOUND,
+  ALREADY,
+  PROTOCOL_ERROR,
+};
+
+// Represents an error result returned from an asynchronous operation.
+struct Error {
+  // Represents a high-level error code. If this is set to ErrorCode.PROTOCOL_ERROR, then
+  // |protocol_error_code| will represent a Bluetooth protocol error code. The specific
+  // protocol that caused the error will be context-specific, e.g. GATT interfaces will
+  // return ATT protocol error codes.
+  ErrorCode error_code;
+
+  // Protocol error code. The value of this field is relevant only if |error_code| is set to
+  // ErrorCode.PROTOCOL_ERROR.
+  uint32 protocol_error_code;
+
+  // Human-readable description of the error.
+  string? description;
+};
+
+// Represents the result of an asynchronous operation.
+struct Status {
+  // |error| will be null if this represents a "success" status, i.e. no error has occurred.
+  Error? error;
+};
+
+// Nullable primitive types:
+
+struct Bool {
+  bool value;
+};
+
+struct Int8 {
+  int8 value;
+};
+
+struct UInt16 {
+  uint16 value;
+};

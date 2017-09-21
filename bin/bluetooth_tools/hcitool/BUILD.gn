@@ -1,0 +1,19 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("hcitool") {
+  output_name = "hcitool"
+
+  sources = [
+    "commands.cc",
+    "commands.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/bin/bluetooth_tools/lib",
+  ]
+}

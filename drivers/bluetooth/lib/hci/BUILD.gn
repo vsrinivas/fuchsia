@@ -1,0 +1,65 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("hci") {
+  sources = [
+    "acl_data_channel.cc",
+    "acl_data_channel.h",
+    "acl_data_packet.cc",
+    "acl_data_packet.h",
+    "advertising_report_parser.cc",
+    "advertising_report_parser.h",
+    "command_channel.cc",
+    "command_channel.h",
+    "connection.cc",
+    "connection.h",
+    "control_packets.cc",
+    "control_packets.h",
+    "defaults.h",
+    "device_wrapper.cc",
+    "device_wrapper.h",
+    "legacy_low_energy_scanner.cc",
+    "legacy_low_energy_scanner.h",
+    "low_energy_connector.cc",
+    "low_energy_connector.h",
+    "low_energy_scanner.cc",
+    "low_energy_scanner.h",
+    "packet.h",
+    "sequential_command_runner.cc",
+    "sequential_command_runner.h",
+    "slab_allocators.h",
+    "transport.cc",
+    "transport.h",
+    "util.cc",
+    "util.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "acl_data_channel_unittest.cc",
+    "advertising_report_parser_unittest.cc",
+    "command_channel_unittest.cc",
+    "connection_unittest.cc",
+    "legacy_low_energy_scanner_unittest.cc",
+    "low_energy_connector_unittest.cc",
+    "packet_unittest.cc",
+    "sequential_command_runner_unittest.cc",
+    "slab_allocators_unittest.cc",
+  ]
+
+  deps = [
+    ":hci",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//third_party/gtest",
+  ]
+}

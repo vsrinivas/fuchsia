@@ -1,0 +1,93 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "bluetooth"
+
+  sources = [
+    "src/adapter_fidl_impl.cc",
+    "src/adapter_fidl_impl.h",
+    "src/adapter_manager_fidl_impl.cc",
+    "src/adapter_manager_fidl_impl.h",
+    "src/adapter_manager.cc",
+    "src/adapter_manager.h",
+    "src/app.cc",
+    "src/app.h",
+    "src/fidl_helpers.cc",
+    "src/fidl_helpers.h",
+    "src/low_energy_central_fidl_impl.cc",
+    "src/low_energy_central_fidl_impl.h",
+    "src/main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/drivers/bluetooth/lib",
+    "//garnet/public/lib/bluetooth/fidl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+package("bluetooth") {
+  deps = [
+    ":bin",
+    "//garnet/bin/bluetooth_tools",
+  ]
+
+  binaries = [
+    {
+      name = "bluetooth"
+    },
+
+    {
+      name = "bluetoothcli"
+    },
+
+    {
+      name = "btsnoop"
+    },
+
+    {
+      name = "hcitool"
+    },
+
+    {
+      name = "bt-intel-tool"
+    },
+  ]
+}
+
+executable("bluetooth_unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib:tests",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/gtest",
+  ]
+}
+
+package("test") {
+  testonly = true
+  package_name = "bluetooth_tests"
+
+  deps = [
+    ":bluetooth_unittests",
+    "//garnet/bin/bluetooth_tools/hci_acl_test",
+  ]
+
+  binaries = [
+    {
+      name = "bluetooth_hci_acl_test"
+    },
+  ]
+
+  tests = [
+    {
+      name = "bluetooth_unittests"
+    },
+  ]
+}
