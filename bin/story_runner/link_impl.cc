@@ -18,8 +18,6 @@
 
 namespace modular {
 
-constexpr bool kEnableIncrementalLinks{true};
-
 class LinkImpl::ReadCall : Operation<> {
  public:
   ReadCall(OperationContainer* const container,

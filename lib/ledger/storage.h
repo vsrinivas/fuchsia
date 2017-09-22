@@ -16,19 +16,22 @@
 
 namespace modular {
 
+// If this value is changed, the version in kLinkKeyPrefix must be changed too.
+constexpr bool kEnableIncrementalLinks{true};
+
 // There are four kinds of pages used by the modular runtime:
 //
 // 1. The user root page contains a list of all stories and of all devices.
 //
-
+//
 // 2. The message queue page lists all message queues that exist.
 //
 constexpr char kMessageQueuePageId[] = "MessageQueuePage";  // 16 chars
-
+//
 // 3. The trigger page contains the trigger conditions for all agents.
 //
 constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
-
+//
 // 4. Story pages (one per story) contain the story state expressed as link and
 //    module data.
 
@@ -43,13 +46,16 @@ constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
 constexpr char kStoryKeyPrefix[] = "Story/";
 constexpr char kDeviceKeyPrefix[] = "Device/";
 constexpr char kFocusKeyPrefix[] = "Focus/";
+//
 //    Message Queue page:
 constexpr char kMessageQueueKeyPrefix[] = "MessageQueue/";
 constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
+//
 //    Agent Trigger page:
 constexpr char kTriggerKeyPrefix[] = "Trigger/";
+//
 //    Story page:
-constexpr char kLinkKeyPrefix[] = "Link|2/";  // version 2 == incremental
+constexpr char kLinkKeyPrefix[] = "Link|2/";  // version 2: kEnableIncrementalLinks
 constexpr char kModuleKeyPrefix[] = "Module/";
 constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 constexpr char kStoryContextLogKeyPrefix[] = "StoryContextLog/";

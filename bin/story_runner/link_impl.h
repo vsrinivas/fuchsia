@@ -39,25 +39,36 @@ class LinkWatcherConnection;
 // ModuleContext::StartModule(), a Link instance is associated with each such
 // request, i.e. a Link instance is shared between at least two modules. The
 // same Link instance can be used in multiple StartModule() requests, so it can
-// be shared between more than two modules. The instance is identified by its
-// name in the context of the calling module.
+// be shared between more than two modules. The Link instance is identified by
+// its name in the context of the calling module.
 //
 // If a watcher is registered through one handle using the Watch() method, it
 // only receives notifications for changes by requests through other handles. To
-// make this possible, each connection is bound to a separate LinkConnection
-// instance rather than to LinkImpl directly, and LinkImpl owns all its
-// LinkConnection instances.
+// make this possible, each Link connection is bound to a separate
+// LinkConnection instance rather than to LinkImpl directly. LinkImpl owns all
+// its LinkConnection instances.
 //
-// Because changes across devices can interact, it's possible that a set of
-// changes yields a result that is not valid according to the current schema.
-// Therefore, for now, the schema is not validated after reconciliation.
+// The value in a link may be validated against a schema. The current
+// implementation is preliminary and experimental, however, in multiple ways:
+//
+// * The schema is not persisted. It's just imposed by some module at runtime.
+//
+// * It's unclear which module, or what else, should impose the schema in the
+//   first place.
+//
+// * Schema validation is applied but failing validation is not communicated to
+//   Link clients.
+//
+// * Because changes across devices can interact, it's possible that a set of
+//   changes yields a result that is not valid according to the current schema.
+//   Therefore, for now, the schema is not validated after reconciliation.
 //
 // This implementation of LinkImpl works by storing the history of change
 // operations made by the callers. Each change operation is stored as a separate
 // key/value pair, which can be reconciled by the Ledger without conflicts. The
-// ordering is determined by KeyGenerator, which orders changes based on time
-// (as well as a random nonce that's a tie breaker in the case of changes made
-// at the same time on different devices.)
+// ordering is determined by KeyGenerator, which orders changes based on time as
+// well as a random nonce that's a tie breaker in the case of changes made at
+// the same time on different devices.
 //
 // New changes are placed on the pending_ops_ queue within the class and also
 // written to the Ledger. Because the state of the Snapshot can float, the
@@ -65,14 +76,15 @@ class LinkWatcherConnection;
 // received from the ledger that the op has been applied to the ledger, at which
 // point the change operation is removed from pending_ops_.
 //
-// To arrive at the latest value, the history from the ledger is merged with
-// the history in pending_ops_. Duplicates are removed. Then the changes are
-// applied in order.  This algorithm is not "correct" due to the lack of a
-// vector clock to form the partial orderings, but it's a useful step forward.
+// To arrive at the latest value, the history from the ledger is merged with the
+// history in pending_ops_. Duplicates are removed. Then the changes are applied
+// in order. This algorithm is not "correct" due to the lack of a vector clock
+// to form the partial orderings. It will be replaced eventually by a CRDT based
+// one.
 class LinkImpl {
  public:
-  // The |module_path| is the series of module names (where the last element is
-  // the module that created this Link) that this Link is namespaced under.
+  // The |link_path| contains the series of module names (where the last element
+  // is the module that created this Link) that this Link is namespaced under.
   LinkImpl(LinkStorage* link_storage, LinkPathPtr link_path);
 
   ~LinkImpl();
@@ -109,11 +121,11 @@ class LinkImpl {
   }
 
  private:
-  // Apply the given |changes| to the current document. The current list of
+  // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream.
   void Replay(fidl::Array<LinkChangePtr> changes);
 
-  // Apply a single LinkChange.
+  // Applies a single LinkChange.
   bool ApplyChange(LinkChange* change);
 
   bool ApplySetOp(const CrtJsonPointer& ptr, const fidl::String& json);
@@ -176,14 +188,14 @@ class LinkImpl {
   // A JSON schema to be applied to the Link value.
   std::unique_ptr<rapidjson::SchemaDocument> schema_doc_;
 
-  // Ordered key generator for incremental link values
+  // Ordered key generator for incremental Link values
   KeyGenerator key_generator_;
 
   // Track changes that have been saved to the Ledger but not confirmed
   std::vector<LinkChangePtr> pending_ops_;
 
-  // The latest key that's been applied to this link. If we receive an
-  // earlier key in OnChange, then replay the history.
+  // The latest key that's been applied to this Link. If we receive an earlier
+  // key in OnChange, then replay the history.
   std::string latest_key_;
 
   OperationQueue operation_queue_;

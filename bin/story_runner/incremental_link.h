@@ -63,7 +63,6 @@ class LinkImpl::ReloadCall : Operation<> {
 
  private:
   void Run() override;
-
   void Cont1(FlowToken flow, fidl::Array<LinkChangePtr> changes);
 
   LinkImpl* const impl_;  // not owned
