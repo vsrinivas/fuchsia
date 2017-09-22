@@ -15,7 +15,7 @@ source_set("token_provider") {
   public_deps = [
     "//apps/ledger/src/callback",
     "//apps/ledger/src/network",
-    "//apps/modular/services/auth",
+    "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fxl",
   ]
 

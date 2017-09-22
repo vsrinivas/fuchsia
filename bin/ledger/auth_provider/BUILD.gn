@@ -17,7 +17,7 @@ source_set("auth_provider") {
   public_deps = [
     "//apps/ledger/src/backoff",
     "//apps/ledger/src/callback",
-    "//apps/modular/services/auth",
+    "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fxl",
   ]
 

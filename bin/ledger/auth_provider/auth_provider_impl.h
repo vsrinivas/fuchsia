@@ -12,7 +12,7 @@
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/scoped_task_runner.h"
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace auth_provider {

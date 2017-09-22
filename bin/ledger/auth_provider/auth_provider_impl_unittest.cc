@@ -9,7 +9,7 @@
 #include "apps/ledger/src/backoff/test/test_backoff.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
 

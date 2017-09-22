@@ -38,7 +38,7 @@ executable("integration") {
     "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test/cloud_server",
     "//apps/ledger/src/test/integration/sync",
-    "//apps/modular/services/auth",
+    "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",

@@ -10,7 +10,7 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/fidl_helpers/boundable.h"
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_view.h"

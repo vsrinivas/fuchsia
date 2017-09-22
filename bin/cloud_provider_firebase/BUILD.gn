@@ -11,7 +11,7 @@ executable("cloud_provider_firebase") {
 
   deps = [
     ":lib",
-    "//apps/modular/services/lifecycle",
+    "//peridot/public/lib/lifecycle/fidl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
@@ -38,7 +38,7 @@ source_set("lib") {
     "//apps/ledger/src/auth_provider",
     "//apps/ledger/src/cloud_provider",
     "//apps/ledger/src/device_set",
-    "//apps/modular/services/auth",
+    "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
   ]
@@ -68,7 +68,7 @@ executable("cloud_provider_firebase_unittests") {
     "//apps/ledger/src/device_set/test",
     "//apps/ledger/src/network:fake",
     "//apps/ledger/src/test:lib",
-    "//apps/modular/services/auth",
+    "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/test_runner/cpp:gtest_main",

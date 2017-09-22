@@ -6,7 +6,7 @@
 module ledger;
 
 import "apps/ledger/services/public/ledger.fidl";
-import "apps/modular/services/auth/token_provider.fidl";
+import "lib/auth/fidl/token_provider.fidl";
 
 // Sync configuration.
 struct FirebaseConfig {

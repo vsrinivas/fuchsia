@@ -12,6 +12,6 @@ fidl("services") {
   deps = [
     "//apps/ledger/services/cloud_provider",
     "//apps/ledger/services/public",
-    "//apps/modular/services/auth",
+    "//peridot/public/lib/auth/fidl",
   ]
 }

@@ -6,7 +6,7 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/integration/integration_test.h"
 #include "apps/ledger/src/test/integration/test_utils.h"
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace test {

@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 
 namespace test {
 // FakeTokenProvider is a dummy implementation of a TokenProvider intended to be

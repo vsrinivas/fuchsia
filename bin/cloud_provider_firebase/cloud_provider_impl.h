@@ -12,7 +12,7 @@
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/network/network_service.h"
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

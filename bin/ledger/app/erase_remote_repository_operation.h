@@ -11,7 +11,7 @@
 #include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"

@@ -28,7 +28,7 @@ source_set("lib") {
     "//apps/ledger/services/public",
     "//apps/ledger/src/fidl_helpers",
     "//apps/ledger/src/test/token_provider",
-    "//apps/modular/services/auth",
+    "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fidl/cpp/bindings:serialization",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",

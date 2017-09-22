@@ -16,7 +16,7 @@
 #include "apps/ledger/src/callback/managed_container.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/environment/environment.h"
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {
