@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/connection.cpp \
+    $(LOCAL_DIR)/managed-vfs.cpp \
     $(LOCAL_DIR)/mapped-vmo.cpp \
     $(LOCAL_DIR)/mount.cpp \
     $(LOCAL_DIR)/unmount.cpp \

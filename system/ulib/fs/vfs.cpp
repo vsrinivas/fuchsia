@@ -442,15 +442,15 @@ zx_status_t Vfs::ServeConnection(fbl::unique_ptr<Connection> connection) {
 
     zx_status_t status = connection->Serve();
     if (status == ZX_OK) {
-        // The connection will be deleted later in |OnConnectionClosedRemotely|.
-        connection.release();
+        RegisterConnection(fbl::move(connection));
     }
     return status;
 }
 
 void Vfs::OnConnectionClosedRemotely(Connection* connection) {
     ZX_DEBUG_ASSERT(connection);
-    delete connection;
+
+    UnregisterAndDestroyConnection(connection);
 }
 
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) {
@@ -466,6 +466,15 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
     }
 
     return vn->Serve(this, fbl::move(channel), O_ADMIN);
+}
+
+void Vfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
+    // The connection will be destroyed by |UnregisterAndDestroyConnection()|
+    connection.release();
+}
+
+void Vfs::UnregisterAndDestroyConnection(Connection* connection) {
+    delete connection;
 }
 
 #endif // ifdef __Fuchsia__

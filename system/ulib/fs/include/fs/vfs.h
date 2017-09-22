@@ -113,6 +113,8 @@ private:
 // may be valid across a collection of Vnodes.
 //
 // The Vfs object must outlive the Vnodes which it serves.
+//
+// This class is thread-safe.
 class Vfs {
 public:
     Vfs();
@@ -215,6 +217,12 @@ private:
 protected:
     // A lock which should be used to protect lookup and walk operations
     mtx_t vfs_lock_{};
+
+    // Starts tracking the lifetime of the connection.
+    virtual void RegisterConnection(fbl::unique_ptr<Connection> connection);
+
+    // Stops tracking the lifetime of the connection and destroys it.
+    virtual void UnregisterAndDestroyConnection(Connection* connection);
 
 #endif // ifdef __Fuchsia__
 };

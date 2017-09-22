@@ -11,7 +11,9 @@
 #include <stdint.h>
 
 #include <async/wait.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <zx/event.h>
@@ -23,7 +25,7 @@ namespace fs {
 // in response to RIO protocol messages received over the channel.
 //
 // This class is thread-safe.
-class Connection {
+class Connection : public fbl::DoublyLinkedListable<fbl::unique_ptr<Connection>> {
 public:
     // Create a connection bound to a particular vnode.
     //
