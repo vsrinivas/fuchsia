@@ -6,15 +6,16 @@
 import string
 import sys
 
-_LAYER_PREFIX = [
+# TODO(abarth): Base these paths on the sdk_dirs variable in gn.
+_SDK_DIRS = [
   "garnet/public/",
   "peridot/public/",
 ]
 
 
-# Strip the layer prefix from the given label, if necessary.
-def _remove_layer(label):
-  for prefix in _LAYER_PREFIX:
+# Strip the sdk dirs from the given label, if necessary.
+def _remove_sdk_dir(label):
+  for prefix in _SDK_DIRS:
     if label.startswith(prefix):
       return label[len(prefix):]
   return label
@@ -26,7 +27,7 @@ def convert(label):
   if not label.startswith("//"):
       sys.stderr.write("expected label to start with //, got %s\n" % label)
       return 1
-  base = _remove_layer(label[2:])
+  base = _remove_sdk_dir(label[2:])
   separator_index = string.rfind(base, ":")
   if separator_index < 0:
       sys.stderr.write("could not find target name in label %s\n" % label)
