@@ -23,18 +23,27 @@ class LevelDb : public Db {
   Status Init();
 
   // Db:
-  std::unique_ptr<Batch> StartBatch() override;
-  Status Get(convert::ExtendedStringView key, std::string* value) override;
-  Status HasKey(convert::ExtendedStringView key, bool* has_key) override;
-  Status GetObject(convert::ExtendedStringView key,
+  std::unique_ptr<Batch> StartBatch(
+      coroutine::CoroutineHandler* handler) override;
+  Status Get(coroutine::CoroutineHandler* handler,
+             convert::ExtendedStringView key,
+             std::string* value) override;
+  Status HasKey(coroutine::CoroutineHandler* handler,
+                convert::ExtendedStringView key,
+                bool* has_key) override;
+  Status GetObject(coroutine::CoroutineHandler* handler,
+                   convert::ExtendedStringView key,
                    ObjectId object_id,
                    std::unique_ptr<const Object>* object) override;
-  Status GetByPrefix(convert::ExtendedStringView prefix,
+  Status GetByPrefix(coroutine::CoroutineHandler* handler,
+                     convert::ExtendedStringView prefix,
                      std::vector<std::string>* key_suffixes) override;
   Status GetEntriesByPrefix(
+      coroutine::CoroutineHandler* handler,
       convert::ExtendedStringView prefix,
       std::vector<std::pair<std::string, std::string>>* entries) override;
   Status GetIteratorAtPrefix(
+      coroutine::CoroutineHandler* handler,
       convert::ExtendedStringView prefix,
       std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                                convert::ExtendedStringView>>>*

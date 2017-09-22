@@ -9,11 +9,14 @@
 #include <trace/event.h>
 
 #include "apps/ledger/src/cobalt/cobalt.h"
+#include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
 
 namespace storage {
+
+using coroutine::CoroutineHandler;
 
 namespace {
 
@@ -45,19 +48,23 @@ class BatchImpl : public Db::Batch {
       callback_(nullptr);
   }
 
-  Status Put(convert::ExtendedStringView key, fxl::StringView value) override {
+  Status Put(CoroutineHandler* /*handler*/,
+             convert::ExtendedStringView key,
+             fxl::StringView value) override {
     FXL_DCHECK(batch_);
     batch_->Put(key, convert::ToSlice(value));
     return Status::OK;
   }
 
-  Status Delete(convert::ExtendedStringView key) override {
+  Status Delete(CoroutineHandler* /*handler*/,
+                convert::ExtendedStringView key) override {
     FXL_DCHECK(batch_);
     batch_->Delete(key);
     return Status::OK;
   }
 
-  Status DeleteByPrefix(convert::ExtendedStringView prefix) override {
+  Status DeleteByPrefix(CoroutineHandler* /*handler*/,
+                        convert::ExtendedStringView prefix) override {
     FXL_DCHECK(batch_);
     std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
     for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
@@ -67,7 +74,7 @@ class BatchImpl : public Db::Batch {
     return ConvertStatus(it->status());
   }
 
-  Status Execute() override {
+  Status Execute(CoroutineHandler* /*handler*/) override {
     FXL_DCHECK(batch_);
     return callback_(std::move(batch_));
   }
@@ -183,7 +190,7 @@ Status LevelDb::Init() {
   return Status::OK;
 }
 
-std::unique_ptr<Db::Batch> LevelDb::StartBatch() {
+std::unique_ptr<Db::Batch> LevelDb::StartBatch(CoroutineHandler* handler) {
   auto db_batch = std::make_unique<leveldb::WriteBatch>();
   active_batches_count_++;
   return std::make_unique<BatchImpl>(
@@ -202,11 +209,15 @@ std::unique_ptr<Db::Batch> LevelDb::StartBatch() {
       });
 }
 
-Status LevelDb::Get(convert::ExtendedStringView key, std::string* value) {
+Status LevelDb::Get(CoroutineHandler* /*handler*/,
+                    convert::ExtendedStringView key,
+                    std::string* value) {
   return ConvertStatus(db_->Get(read_options_, key, value));
 }
 
-Status LevelDb::HasKey(convert::ExtendedStringView key, bool* has_key) {
+Status LevelDb::HasKey(CoroutineHandler* /*handler*/,
+                       convert::ExtendedStringView key,
+                       bool* has_key) {
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
 
@@ -214,7 +225,8 @@ Status LevelDb::HasKey(convert::ExtendedStringView key, bool* has_key) {
   return Status::OK;
 }
 
-Status LevelDb::GetObject(convert::ExtendedStringView key,
+Status LevelDb::GetObject(CoroutineHandler* /*handler*/,
+                          convert::ExtendedStringView key,
                           ObjectId object_id,
                           std::unique_ptr<const Object>* object) {
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
@@ -231,7 +243,8 @@ Status LevelDb::GetObject(convert::ExtendedStringView key,
   return Status::OK;
 }
 
-Status LevelDb::GetByPrefix(convert::ExtendedStringView prefix,
+Status LevelDb::GetByPrefix(CoroutineHandler* /*handler*/,
+                            convert::ExtendedStringView prefix,
                             std::vector<std::string>* key_suffixes) {
   std::vector<std::string> result;
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
@@ -249,6 +262,7 @@ Status LevelDb::GetByPrefix(convert::ExtendedStringView prefix,
 }
 
 Status LevelDb::GetEntriesByPrefix(
+    CoroutineHandler* /*handler*/,
     convert::ExtendedStringView prefix,
     std::vector<std::pair<std::string, std::string>>* entries) {
   std::vector<std::pair<std::string, std::string>> result;
@@ -267,6 +281,7 @@ Status LevelDb::GetEntriesByPrefix(
 }
 
 Status LevelDb::GetIteratorAtPrefix(
+    CoroutineHandler* /*handler*/,
     convert::ExtendedStringView prefix,
     std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                              convert::ExtendedStringView>>>*

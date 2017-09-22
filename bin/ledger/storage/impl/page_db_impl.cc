@@ -120,84 +120,87 @@ Status PageDbImpl::Init() {
 }
 
 std::unique_ptr<PageDb::Batch> PageDbImpl::StartBatch(
-    coroutine::CoroutineHandler* /*handler*/) {
-  return std::make_unique<PageDbBatchImpl>(db_.StartBatch(), this);
+    coroutine::CoroutineHandler* handler) {
+  return std::make_unique<PageDbBatchImpl>(db_.StartBatch(handler), this);
 }
 
-Status PageDbImpl::GetHeads(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetHeads(CoroutineHandler* handler,
                             std::vector<CommitId>* heads) {
   std::vector<std::pair<std::string, std::string>> entries;
-  RETURN_ON_ERROR(
-      db_.GetEntriesByPrefix(convert::ToSlice(HeadRow::kPrefix), &entries));
+  RETURN_ON_ERROR(db_.GetEntriesByPrefix(
+      handler, convert::ToSlice(HeadRow::kPrefix), &entries));
   ExtractSortedCommitsIds(&entries, heads);
   return Status::OK;
 }
 
-Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
                                          CommitIdView commit_id,
                                          std::string* storage_bytes) {
-  return db_.Get(CommitRow::GetKeyFor(commit_id), storage_bytes);
+  return db_.Get(handler, CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
-Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* handler,
                                          std::vector<JournalId>* journal_ids) {
-  return db_.GetByPrefix(convert::ToSlice(ImplicitJournalMetaRow::kPrefix),
-                         journal_ids);
+  return db_.GetByPrefix(
+      handler, convert::ToSlice(ImplicitJournalMetaRow::kPrefix), journal_ids);
 }
 
-Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
                                            const JournalId& journal_id,
                                            CommitId* base) {
   FXL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
   FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
-  return db_.Get(ImplicitJournalMetaRow::GetKeyFor(journal_id), base);
+  return db_.Get(handler, ImplicitJournalMetaRow::GetKeyFor(journal_id), base);
 }
 
 Status PageDbImpl::GetJournalEntries(
-    CoroutineHandler* /*handler*/,
+    CoroutineHandler* handler,
     const JournalId& journal_id,
     std::unique_ptr<Iterator<const EntryChange>>* entries) {
   std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                            convert::ExtendedStringView>>>
       it;
-  RETURN_ON_ERROR(
-      db_.GetIteratorAtPrefix(JournalEntryRow::GetPrefixFor(journal_id), &it));
+  RETURN_ON_ERROR(db_.GetIteratorAtPrefix(
+      handler, JournalEntryRow::GetPrefixFor(journal_id), &it));
 
   *entries = std::make_unique<JournalEntryIterator>(std::move(it));
   return Status::OK;
 }
 
-Status PageDbImpl::ReadObject(CoroutineHandler* /*handler*/,
+Status PageDbImpl::ReadObject(CoroutineHandler* handler,
                               ObjectId object_id,
                               std::unique_ptr<const Object>* object) {
-  return db_.GetObject(ObjectRow::GetKeyFor(object_id), object_id, object);
+  return db_.GetObject(handler, ObjectRow::GetKeyFor(object_id), object_id,
+                       object);
 }
 
-Status PageDbImpl::HasObject(CoroutineHandler* /*handler*/,
+Status PageDbImpl::HasObject(CoroutineHandler* handler,
                              ObjectIdView object_id,
                              bool* has_object) {
-  return db_.HasKey(ObjectRow::GetKeyFor(object_id), has_object);
+  return db_.HasKey(handler, ObjectRow::GetKeyFor(object_id), has_object);
 }
 
-Status PageDbImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
                                    ObjectIdView object_id,
                                    PageDbObjectStatus* object_status) {
   bool has_key;
 
-  RETURN_ON_ERROR(db_.HasKey(LocalObjectRow::GetKeyFor(object_id), &has_key));
+  RETURN_ON_ERROR(
+      db_.HasKey(handler, LocalObjectRow::GetKeyFor(object_id), &has_key));
   if (has_key) {
     *object_status = PageDbObjectStatus::LOCAL;
     return Status::OK;
   }
 
   RETURN_ON_ERROR(
-      db_.HasKey(TransientObjectRow::GetKeyFor(object_id), &has_key));
+      db_.HasKey(handler, TransientObjectRow::GetKeyFor(object_id), &has_key));
   if (has_key) {
     *object_status = PageDbObjectStatus::TRANSIENT;
     return Status::OK;
   }
 
-  RETURN_ON_ERROR(db_.HasKey(ObjectRow::GetKeyFor(object_id), &has_key));
+  RETURN_ON_ERROR(
+      db_.HasKey(handler, ObjectRow::GetKeyFor(object_id), &has_key));
   if (!has_key) {
     *object_status = PageDbObjectStatus::UNKNOWN;
     return Status::OK;
@@ -207,34 +210,35 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
   return Status::OK;
 }
 
-Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
                                         std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(db_.GetEntriesByPrefix(
-      convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
+      handler, convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
   ExtractSortedCommitsIds(&entries, commit_ids);
   return Status::OK;
 }
 
-Status PageDbImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
+Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
                                   const CommitId& commit_id,
                                   bool* is_synced) {
   bool has_key;
   RETURN_ON_ERROR(
-      db_.HasKey(UnsyncedCommitRow::GetKeyFor(commit_id), &has_key));
+      db_.HasKey(handler, UnsyncedCommitRow::GetKeyFor(commit_id), &has_key));
   *is_synced = !has_key;
   return Status::OK;
 }
 
-Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* handler,
                                      std::vector<ObjectId>* object_ids) {
-  return db_.GetByPrefix(convert::ToSlice(LocalObjectRow::kPrefix), object_ids);
+  return db_.GetByPrefix(handler, convert::ToSlice(LocalObjectRow::kPrefix),
+                         object_ids);
 }
 
-Status PageDbImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
+Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
                                    fxl::StringView key,
                                    std::string* value) {
-  return db_.Get(SyncMetadataRow::GetKeyFor(key), value);
+  return db_.Get(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
 
 Status PageDbImpl::AddHead(CoroutineHandler* handler,
