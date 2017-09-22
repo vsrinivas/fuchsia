@@ -6,6 +6,9 @@
 set -e
 
 readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
+readonly FUCHSIA_ROOT="$(cd "$SCRIPT_ROOT/.." && pwd)"
 readonly TOOL_NAME=$(basename "$0")
+
+set -- --root="$FUCHSIA_ROOT" --dotfile="$FUCHSIA_ROOT/packages/gn/.gn" "$@"
 
 source "${SCRIPT_ROOT}/exec_tool.sh"
