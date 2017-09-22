@@ -15,8 +15,9 @@ static zx_driver_ops_t ralink_driver_ops = {
     .bind = ralink_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(ralink, ralink_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(ralink, ralink_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, 0x148f),
-    BI_MATCH_IF(EQ, BIND_USB_PID, 0x5370),
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x5370),  // RT5370
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x5572),  // RT5572
 ZIRCON_DRIVER_END(ralink)

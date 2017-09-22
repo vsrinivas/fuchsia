@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
-#include <unordered_map>
+#include <map>
 #include <vector>
 
 namespace ralink {
@@ -48,22 +48,42 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
   private:
+    struct TxCalibrationValues {
+        uint8_t gain_cal_tx0 = 0;
+        uint8_t phase_cal_tx0 = 0;
+        uint8_t gain_cal_tx1 = 0;
+        uint8_t phase_cal_tx1 = 0;
+    };
+
     // wireless channel information
     struct Channel {
-        Channel(int channel, int hw_index, uint32_t N, uint32_t R, uint32_t K) :
-            channel(channel), hw_index(hw_index), N(N), R(R), K(K) {}
+        Channel(int channel, uint32_t N, uint32_t R, uint32_t K) :
+            channel(channel), N(N), R(R), K(K), mod(0) {}
+
+        Channel(int channel, uint32_t N, uint32_t R, uint32_t K, uint32_t mod) :
+            channel(channel), N(N), R(R), K(K), mod(mod) {}
 
         int channel;
-        int hw_index;
         uint32_t N;
         uint32_t R;
         uint32_t K;
+        uint32_t mod;
 
-        uint16_t max_power = 0;
-        uint16_t default_power1 = 0;
-        uint16_t default_power2 = 0;
-        uint16_t default_power3 = 0;
+        TxCalibrationValues cal_values;
+
+        int8_t default_power1 = 0;
+        int8_t default_power2 = 0;
+        int8_t default_power3 = 0;
     };
+
+    struct RegInitValue {
+        RegInitValue(uint8_t addr, uint8_t val) : addr(addr), val(val) {}
+        uint8_t addr;
+        uint8_t val;
+    };
+
+    // Configure channel tables
+    zx_status_t InitializeChannelInfo();
 
     // read and write general registers
     zx_status_t ReadRegister(uint16_t offset, uint32_t* value);
@@ -74,6 +94,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     // read and write the eeprom
     zx_status_t ReadEeprom();
     zx_status_t ReadEepromField(uint16_t addr, uint16_t* value);
+    zx_status_t ReadEepromByte(uint16_t addr, uint8_t* value);
     template <uint16_t A> zx_status_t ReadEepromField(EepromField<A>* field);
     template <uint16_t A> zx_status_t WriteEepromField(const EepromField<A>& field);
     zx_status_t ValidateEeprom();
@@ -83,13 +104,20 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     template <uint8_t A> zx_status_t ReadBbp(BbpRegister<A>* reg);
     zx_status_t WriteBbp(uint8_t addr, uint8_t val);
     template <uint8_t A> zx_status_t WriteBbp(const BbpRegister<A>& reg);
+    zx_status_t WriteBbpGroup(const std::vector<RegInitValue>& regs);
     zx_status_t WaitForBbp();
+
+    // write glrt registers
+    zx_status_t WriteGlrt(uint8_t addr, uint8_t val);
+    zx_status_t WriteGlrtGroup(const std::vector<RegInitValue>& regs);
+    zx_status_t WriteGlrtBlock(uint8_t values[], size_t size, size_t offset);
 
     // read and write rf registers
     zx_status_t ReadRfcsr(uint8_t addr, uint8_t* val);
     template <uint8_t A> zx_status_t ReadRfcsr(RfcsrRegister<A>* reg);
     zx_status_t WriteRfcsr(uint8_t addr, uint8_t val);
     template <uint8_t A> zx_status_t WriteRfcsr(const RfcsrRegister<A>& reg);
+    zx_status_t WriteRfcsrGroup(const std::vector<RegInitValue>& regs);
 
     // send a command to the MCU
     zx_status_t McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1);
@@ -99,18 +127,24 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t EnableRadio();
     zx_status_t InitRegisters();
     zx_status_t InitBbp();
+    zx_status_t InitBbp5592();
+    zx_status_t InitBbp5390();
     zx_status_t InitRfcsr();
 
     zx_status_t DetectAutoRun(bool* autorun);
     zx_status_t DisableWpdma();
     zx_status_t WaitForMacCsr();
     zx_status_t SetRxFilter();
+    zx_status_t AdjustFreqOffset();
     zx_status_t NormalModeSetup();
     zx_status_t StartQueues();
     zx_status_t StopRxQueue();
     zx_status_t SetupInterface();
 
     zx_status_t ConfigureChannel(const Channel& channel);
+    zx_status_t ConfigureChannel5390(const Channel& channel);
+    zx_status_t ConfigureChannel5592(const Channel& channel);
+
     zx_status_t ConfigureTxPower(const Channel& channel);
 
     template <typename R, typename Predicate>
@@ -140,7 +174,16 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     uint16_t rf_type_ = 0;
 
     uint8_t mac_addr_[ETH_MAC_SIZE];
-    std::unordered_map<int, Channel> channels_;
+
+    bool has_external_lna_2g_ = false;
+    bool has_external_lna_5g_ = false;
+
+    uint8_t tx_path_ = 0;
+    uint8_t rx_path_ = 0;
+
+    uint8_t antenna_diversity_ = 0;
+
+    std::map<int, Channel> channels_;
     int current_channel_ = -1;
     uint16_t lna_gain_ = 0;
     uint8_t bg_rssi_offset_[3] = {};

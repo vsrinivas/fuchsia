@@ -32,6 +32,8 @@ enum UsbModeOffset : uint8_t {
 constexpr uint16_t RT5390 = 0x5390;
 constexpr uint16_t REV_RT5390F = 0x0502;
 constexpr uint16_t REV_RT5390R = 0x1502;
+constexpr uint16_t RT5592 = 0x5592;
+constexpr uint16_t REV_RT5592C = 0x221;
 
 struct RxWcidEntry {
     uint8_t mac[6];
@@ -45,8 +47,11 @@ constexpr uint16_t WCID_ATTR_BASE = 0x6800;
 constexpr uint16_t SHARED_KEY_MODE_BASE = 0x7000;
 
 // B/G min/max TX power
-constexpr uint16_t kMinTxPower = 0;
-constexpr uint16_t kMaxTxPower = 31;
+constexpr int8_t kMinTxPower_BG = 0;
+constexpr int8_t kMaxTxPower_BG = 31;
+constexpr int8_t kMinTxPower_A = -7;
+constexpr int8_t kMaxTxPower_A = 15;
+
 // EIRP max power
 constexpr uint16_t kEirpMaxPower = 0x50;
 // TX compensation max power
@@ -181,6 +186,23 @@ class RfuseData0 : public Register<0x059c> {};
 class RfuseData1 : public Register<0x0598> {};
 class RfuseData2 : public Register<0x0594> {};
 class RfuseData3 : public Register<0x0590> {};
+
+class LdoCfg0 : public Register<0x05d4> {
+  public:
+    WLAN_BIT_FIELD(delay3, 0, 8);
+    WLAN_BIT_FIELD(delay2, 8, 8);
+    WLAN_BIT_FIELD(delay1, 16, 8);
+    WLAN_BIT_FIELD(bgsel, 24, 2);
+    WLAN_BIT_FIELD(ldo_core_vlevel, 26, 3);
+    WLAN_BIT_FIELD(ldo25_level, 29, 2);
+    WLAN_BIT_FIELD(ldo25_largea, 31, 1);
+};
+
+class DebugIndex : public Register<0x05e8> {
+  public:
+    WLAN_BIT_FIELD(testcsr_dbg_idx, 0, 8);
+    WLAN_BIT_FIELD(reserved_xtal, 31, 1);
+};
 
 class AsicVerId : public Register<0x1000> {
   public:
@@ -390,6 +412,7 @@ class TxPinCfg : public Register<0x1328> {
     WLAN_BIT_FIELD(rftr_pol, 17, 1);
     WLAN_BIT_FIELD(trsw_en, 18, 1);
     WLAN_BIT_FIELD(trsw_pol, 19, 1);
+    WLAN_BIT_FIELD(rfrx_en, 20, 1);
     WLAN_BIT_FIELD(pa_pe_a2_en, 24, 1);
     WLAN_BIT_FIELD(pa_pe_g2_en, 25, 1);
     WLAN_BIT_FIELD(pa_pe_a2_pol, 26, 1);
@@ -609,6 +632,7 @@ class TxopHldrEt : public Register<0x1608> {
     WLAN_BIT_FIELD(tx_bcn_hipri_dis, 2, 1);
     WLAN_BIT_FIELD(pape_map1s_en, 3, 1);
     WLAN_BIT_FIELD(pape_map, 4, 1);
+    WLAN_BIT_FIELD(reserved_unk, 5, 11);
     WLAN_BIT_FIELD(tx_fbk_thres, 16, 2);
     WLAN_BIT_FIELD(tx_fbk_thres_en, 18, 1);
     WLAN_BIT_FIELD(tx_dma_timeout, 19, 5);
@@ -651,7 +675,7 @@ class TxStaCnt2 : public Register<0x1714> {
     WLAN_BIT_FIELD(tx_udfl_cnt, 16, 16);
 };
 
-// EEPROM offsets
+// EEPROM word offsets
 constexpr uint16_t EEPROM_CHIP_ID = 0x0000;
 constexpr uint16_t EEPROM_VERSION = 0x0001;
 constexpr uint16_t EEPROM_MAC_ADDR_0 = 0x0002;
@@ -662,11 +686,33 @@ constexpr uint16_t EEPROM_RSSI_A = 0x0025;
 constexpr uint16_t EEPROM_RSSI_A2 = 0x0026;
 constexpr uint16_t EEPROM_TXPOWER_BG1 = 0x0029;
 constexpr uint16_t EEPROM_TXPOWER_BG2 = 0x0030;
+constexpr uint16_t EEPROM_TXPOWER_A1 = 0x003c;
+constexpr uint16_t EEPROM_TXPOWER_A2 = 0x0053;
 constexpr uint16_t EEPROM_TXPOWER_BYRATE = 0x006f;
 constexpr uint16_t EEPROM_BBP_START = 0x0078;
 
 constexpr size_t EEPROM_TXPOWER_BYRATE_SIZE = 9;
 constexpr size_t EEPROM_BBP_SIZE = 16;
+
+// EEPROM byte offsets
+constexpr size_t EEPROM_GAIN_CAL_TX0_CH0_14 = 0x130;
+constexpr size_t EEPROM_GAIN_CAL_TX0_CH36_64 = 0x144;
+constexpr size_t EEPROM_GAIN_CAL_TX0_CH100_138 = 0x146;
+constexpr size_t EEPROM_GAIN_CAL_TX0_CH140_165 = 0x148;
+constexpr size_t EEPROM_PHASE_CAL_TX0_CH0_14 = 0x131;
+constexpr size_t EEPROM_PHASE_CAL_TX0_CH36_64 = 0x145;
+constexpr size_t EEPROM_PHASE_CAL_TX0_CH100_138 = 0x147;
+constexpr size_t EEPROM_PHASE_CAL_TX0_CH140_165 = 0x149;
+constexpr size_t EEPROM_GAIN_CAL_TX1_CH0_14 = 0x133;
+constexpr size_t EEPROM_GAIN_CAL_TX1_CH36_64 = 0x14a;
+constexpr size_t EEPROM_GAIN_CAL_TX1_CH100_138 = 0x14c;
+constexpr size_t EEPROM_GAIN_CAL_TX1_CH140_165 = 0x14e;
+constexpr size_t EEPROM_PHASE_CAL_TX1_CH0_14 = 0x134;
+constexpr size_t EEPROM_PHASE_CAL_TX1_CH36_64 = 0x14b;
+constexpr size_t EEPROM_PHASE_CAL_TX1_CH100_138 = 0x14d;
+constexpr size_t EEPROM_PHASE_CAL_TX1_CH140_165 = 0x14f;
+constexpr size_t EEPROM_COMP_CTL = 0x13c;
+constexpr size_t EEPROM_IMB_COMP_CTL = 0x13d;
 
 class EepromNicConf0 : public EepromField<0x001a> {
   public:
@@ -784,6 +830,19 @@ class Bbp4 : public BbpRegister<4> {
     WLAN_BIT_FIELD(mac_if_ctrl, 6, 1);
 };
 
+class Bbp27 : public BbpRegister<27> {
+  public:
+    WLAN_BIT_FIELD(rx_chain_sel, 5, 2);
+};
+
+class Bbp105: public BbpRegister<105> {
+  public:
+    WLAN_BIT_FIELD(sig_on_pri, 0, 1);
+    WLAN_BIT_FIELD(feq, 1, 1);
+    WLAN_BIT_FIELD(mld, 2, 1);
+    WLAN_BIT_FIELD(chan_update_from_remod, 3, 1);
+};
+
 class Bbp138 : public BbpRegister<138> {
   public:
     WLAN_BIT_FIELD(rx_adc1, 1, 1);
@@ -795,6 +854,11 @@ class Bbp138 : public BbpRegister<138> {
 class Bbp152 : public BbpRegister<152> {
   public:
     WLAN_BIT_FIELD(rx_default_ant, 7, 1);
+};
+
+class Bbp254 : public BbpRegister<254> {
+  public:
+    WLAN_BIT_FIELD(unk_bit7, 7, 1);
 };
 
 // RFCSR registers
@@ -821,9 +885,22 @@ class Rfcsr3 : public RfcsrRegister<3> {
     WLAN_BIT_FIELD(vcocal_en, 7, 1);
 };
 
+class Rfcsr8 : public RfcsrRegister<8> {
+  public:
+    WLAN_BIT_FIELD(n, 0, 8);
+};
+
+class Rfcsr9 : public RfcsrRegister<9> {
+  public:
+    WLAN_BIT_FIELD(k, 0, 4);
+    WLAN_BIT_FIELD(n, 4, 1);
+    WLAN_BIT_FIELD(mod, 7, 1);
+};
+
 class Rfcsr11 : public RfcsrRegister<11> {
   public:
     WLAN_BIT_FIELD(r, 0, 2);
+    WLAN_BIT_FIELD(mod, 6, 2);
 };
 
 class Rfcsr17 : public RfcsrRegister<17> {
@@ -852,6 +929,12 @@ class Rfcsr39 : public RfcsrRegister<39> {
 };
 
 class Rfcsr49 : public RfcsrRegister<49> {
+  public:
+    WLAN_BIT_FIELD(tx, 0, 6);
+    WLAN_BIT_FIELD(ep, 6, 2);
+};
+
+class Rfcsr50 : public RfcsrRegister<50> {
   public:
     WLAN_BIT_FIELD(tx, 0, 6);
     WLAN_BIT_FIELD(ep, 6, 2);

@@ -54,9 +54,12 @@ constexpr T abs(T t) {
     return t < 0 ? -t : t;
 }
 
-uint16_t extract_tx_power(int hw_index, uint16_t txpower) {
-    uint16_t val = (hw_index % 2) ? (txpower >> 8) & 0xff : txpower & 0xff;
-    return fbl::clamp(val, ralink::kMinTxPower, ralink::kMaxTxPower);
+int8_t extract_tx_power(int byte_offset, bool is_5ghz, uint16_t eeprom_word) {
+    uint8_t val = (byte_offset % 2) ? (eeprom_word >> 8) : eeprom_word;
+    int8_t power = *reinterpret_cast<int8_t*>(&val);
+    int8_t min_power = is_5ghz ? ralink::kMinTxPower_A : ralink::kMinTxPower_BG;
+    int8_t max_power = is_5ghz ? ralink::kMaxTxPower_A : ralink::kMaxTxPower_BG;
+    return fbl::clamp(power, min_power, max_power);
 }
 }  // namespace
 
@@ -71,23 +74,6 @@ Device::Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
     rx_endpt_(bulk_in),
     tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent(), rx_endpt_);
-
-    channels_.insert({
-            {1, Channel(1, 0, 241, 2, 2)},
-            {2, Channel(2, 1, 241, 2, 7)},
-            {3, Channel(3, 2, 242, 2, 2)},
-            {4, Channel(4, 3, 242, 2, 7)},
-            {5, Channel(5, 4, 243, 2, 2)},
-            {6, Channel(6, 5, 243, 2, 7)},
-            {7, Channel(7, 6, 244, 2, 2)},
-            {8, Channel(8, 7, 244, 2, 7)},
-            {9, Channel(9, 8, 245, 2, 2)},
-            {10, Channel(10, 9, 245, 2, 7)},
-            {11, Channel(11, 10, 246, 2, 2)},
-            {12, Channel(12, 11, 246, 2, 7)},
-            {13, Channel(13, 12, 247, 2, 2)},
-            {14, Channel(14, 13, 248, 2, 4)},
-    });
 }
 
 Device::~Device() {
@@ -101,8 +87,8 @@ zx_status_t Device::Bind() {
     debugfn();
 
     AsicVerId avi;
-    auto status = ReadRegister(&avi);
-    CHECK_READ(MAC_CSR0, status);
+    zx_status_t status = ReadRegister(&avi);
+    CHECK_READ(ASIC_VER_ID, status);
 
     rt_type_ = avi.ver_id();
     rt_rev_ = avi.rev_id();
@@ -134,24 +120,39 @@ zx_status_t Device::Bind() {
         return status;
     }
 
-    for (auto& entry : channels_) {
-        // The eeprom is organized into uint16_ts, but the tx power elements are 8 bits. chan_offset
-        // represents the eeprom entry for the channel, and extract_tx_power will select the correct
-        // bits and clamp them between kMinTxPower and kMaxTxPower.
-        auto chan_offset = entry.second.hw_index >> 1;
-        auto bg1_offset = EEPROM_TXPOWER_BG1 + chan_offset;
-        auto bg2_offset = EEPROM_TXPOWER_BG2 + chan_offset;
-        uint16_t txpower_bg1, txpower_bg2;
-        status = ReadEepromField(bg1_offset, &txpower_bg1);
-        CHECK_READ(EEPROM_TXPOWER_BG1, status);
-        status = ReadEepromField(bg2_offset, &txpower_bg2);
-        CHECK_READ(EEPROM_TXPOWER_BG2, status);
-
-        entry.second.default_power1 = extract_tx_power(entry.second.hw_index, txpower_bg1);
-        entry.second.default_power2 = extract_tx_power(entry.second.hw_index, txpower_bg2);
+    status = InitializeChannelInfo();
+    if (status != ZX_OK) {
+        return status;
     }
 
-    if (rt_type_ == RT5390) {
+    int count = 0;
+    for (auto& entry : channels_) {
+        bool is_5ghz = entry.second.channel > 14;
+
+        // The eeprom is organized into uint16_ts, but the tx power elements are 8 bits.
+        // eeprom_offset represents the eeprom entry for the channel, and extract_tx_power will
+        // select the correct bits and clamp them between kMinTxPower and kMaxTxPower.
+        ZX_DEBUG_ASSERT(!is_5ghz || count >= 14);
+        auto byte_offset = is_5ghz ? (count - 14) : count;
+        auto eeprom_offset = byte_offset >> 1;
+
+        // Determine where to find the tx power elements
+        auto power1_offset = (is_5ghz ? EEPROM_TXPOWER_A1 : EEPROM_TXPOWER_BG1) + eeprom_offset;
+        auto power2_offset = (is_5ghz ? EEPROM_TXPOWER_A2 : EEPROM_TXPOWER_BG2) + eeprom_offset;
+
+        int16_t txpower1, txpower2;
+        status = ReadEepromField(power1_offset, reinterpret_cast<uint16_t*>(&txpower1));
+        CHECK_READ(EEPROM_TXPOWER_1, status);
+        status = ReadEepromField(power2_offset, reinterpret_cast<uint16_t*>(&txpower2));
+        CHECK_READ(EEPROM_TXPOWER_2, status);
+
+        entry.second.default_power1 = extract_tx_power(byte_offset, is_5ghz, txpower1);
+        entry.second.default_power2 = extract_tx_power(byte_offset, is_5ghz, txpower2);
+
+        count++;
+    }
+
+    if (rt_type_ == RT5390 || rt_type_ == RT5592) {
         status = ReadEepromField(EEPROM_CHIP_ID, &rf_type_);
         if (status != ZX_OK) {
             errorf("could not read chip id err=%d\n", status);
@@ -165,12 +166,6 @@ zx_status_t Device::Bind() {
     }
 
     // TODO(tkilbourn): default antenna configs
-
-    EepromNicConf1 enc1;
-    ReadEepromField(&enc1);
-    debugf("NIC CONF1=%#x\n", enc1.val());
-    debugf("has HW radio? %s\n", enc1.hw_radio() ? "Y" : "N");
-    debugf("has BT coexist? %s\n", enc1.bt_coexist() ? "Y" : "N");
 
     EepromFreq ef;
     ReadEepromField(&ef);
@@ -230,7 +225,7 @@ zx_status_t Device::ReadEeprom() {
     static_assert((kEepromSize % 8) == 0, "EEPROM size must be a multiple of 8.");
     for (unsigned int i = 0; i < eeprom_.size(); i += 8) {
         EfuseCtrl ec;
-        auto status = ReadRegister(&ec);
+        zx_status_t status = ReadRegister(&ec);
         CHECK_READ(EFUSE_CTRL, status);
 
         // Set the address and tell it to load the next four words. Addresses
@@ -300,6 +295,21 @@ zx_status_t Device::ReadEepromField(uint16_t addr, uint16_t* value) {
     return ZX_OK;
 }
 
+zx_status_t Device::ReadEepromByte(uint16_t addr, uint8_t* value) {
+    uint16_t word_addr = addr >> 1;
+    uint16_t word_val;
+    zx_status_t result = ReadEepromField(word_addr, &word_val);
+    if (result != ZX_OK) {
+        return result;
+    }
+    if (addr & 0x1) {
+        *value = (word_val >> 8) & 0xff;
+    } else {
+        *value = word_val & 0xff;
+    }
+    return ZX_OK;
+}
+
 template <uint16_t A> zx_status_t Device::ReadEepromField(EepromField<A>* field) {
     return ReadEepromField(field->addr(), field->mut_val());
 }
@@ -326,6 +336,8 @@ zx_status_t Device::ValidateEeprom() {
         errorf("unsupported value for EEPROM_NIC_CONF0=%#x\n", enc0.val());
         return ZX_ERR_NOT_SUPPORTED;
     }
+    tx_path_ = enc0.txpath();
+    rx_path_ = enc0.rxpath();
 
     EepromNicConf1 enc1;
     ReadEepromField(&enc1);
@@ -333,6 +345,12 @@ zx_status_t Device::ValidateEeprom() {
         errorf("unsupported value for EEPROM_NIC_CONF1=%#x\n", enc1.val());
         return ZX_ERR_NOT_SUPPORTED;
     }
+    debugf("NIC CONF1=%#x\n", enc1.val());
+    debugf("has HW radio? %s\n", enc1.hw_radio() ? "Y" : "N");
+    debugf("has BT coexist? %s\n", enc1.bt_coexist() ? "Y" : "N");
+    has_external_lna_2g_ = enc1.external_lna_2g();
+    has_external_lna_5g_ = enc1.external_lna_5g();
+    antenna_diversity_ = enc1.ant_diversity();
 
     EepromFreq ef;
     ReadEepromField(&ef);
@@ -379,7 +397,7 @@ zx_status_t Device::LoadFirmware() {
     debugfn();
     zx_handle_t fw_handle;
     size_t fw_size = 0;
-    auto status = load_firmware(zxdev(), kFirmwareFile, &fw_handle, &fw_size);
+    zx_status_t status = load_firmware(zxdev(), kFirmwareFile, &fw_handle, &fw_size);
     if (status != ZX_OK) {
         errorf("failed to load firmware '%s': err=%d\n", kFirmwareFile, status);
         return status;
@@ -527,7 +545,7 @@ zx_status_t Device::EnableRadio() {
     debugfn();
 
     // Wakeup the MCU
-    auto status = McuCommand(MCU_WAKEUP, 0xff, 0, 2);
+    zx_status_t status = McuCommand(MCU_WAKEUP, 0xff, 0, 2);
     if (status != ZX_OK) {
         errorf("error waking MCU err=%d\n", status);
         return status;
@@ -660,7 +678,7 @@ zx_status_t Device::EnableRadio() {
 zx_status_t Device::InitRegisters() {
     debugfn();
 
-    auto status = DisableWpdma();
+    zx_status_t status = DisableWpdma();
     if (status != ZX_OK) {
         return status;
     }
@@ -753,9 +771,11 @@ zx_status_t Device::InitRegisters() {
     CHECK_WRITE(TX_SW_CFG0, status);
 
     TxSwCfg1 tswc1;
-    tswc1.set_dly_pape_dis(0x06);
-    tswc1.set_dly_trsw_dis(0x06);
-    tswc1.set_dly_rftr_dis(0x08);
+    if (rt_type_ == RT5390) {
+        tswc1.set_dly_pape_dis(0x06);
+        tswc1.set_dly_trsw_dis(0x06);
+        tswc1.set_dly_rftr_dis(0x08);
+    } // else value will be set to zero
     status = WriteRegister(tswc1);
     CHECK_WRITE(TX_SW_CFG1, status);
 
@@ -791,9 +811,9 @@ zx_status_t Device::InitRegisters() {
     status = ReadRegister(&mlc);
     CHECK_READ(MAX_LEN_CFG, status);
     mlc.set_max_mpdu_len(3840);
-    mlc.set_max_psdu_len(1);
-    mlc.set_min_psdu_len(0);
-    mlc.set_min_mpdu_len(0);
+    mlc.set_max_psdu_len(3);
+    mlc.set_min_psdu_len(10);
+    mlc.set_min_mpdu_len(10);
     status = WriteRegister(mlc);
     CHECK_WRITE(MAX_LEN_CFG, status);
 
@@ -821,8 +841,8 @@ zx_status_t Device::InitRegisters() {
     TxRtyCfg trc;
     status = ReadRegister(&trc);
     CHECK_READ(TX_RTY_CFG, status);
-    trc.set_short_rty_limit(15);
-    trc.set_long_rty_limit(31);
+    trc.set_short_rty_limit(2);
+    trc.set_long_rty_limit(2);
     trc.set_long_rty_thres(2000);
     trc.set_nag_rty_mode(0);
     trc.set_agg_rty_mode(0);
@@ -838,6 +858,7 @@ zx_status_t Device::InitRegisters() {
     arc.set_cts_40m_mode(0);
     arc.set_cts_40m_ref(0);
     arc.set_cck_short_en(1);
+    arc.set_ctrl_wrap_en(0);
     arc.set_bac_ack_policy(0);
     arc.set_ctrl_pwr_bit(0);
     status = WriteRegister(arc);
@@ -974,6 +995,9 @@ zx_status_t Device::InitRegisters() {
 
     TxopHldrEt the;
     the.set_tx40m_blk_en(1);
+    if (rt_type_ == RT5592) {
+        the.set_reserved_unk(4);
+    }
     status = WriteRegister(the);
     CHECK_WRITE(TXOP_HLDR_ET, status);
 
@@ -1139,74 +1163,73 @@ zx_status_t Device::InitRegisters() {
     return ZX_OK;
 }
 
-namespace {
-const struct {
-    uint8_t addr;
-    uint8_t val;
-} BBP_REGS[] = {
-    { 31,  0x08 },
-    { 65,  0x2c },
-    { 66,  0x38 },
-    { 68,  0x0b },
-    { 69,  0x12 },
-    { 73,  0x13 },
-    { 75,  0x46 },
-    { 76,  0x28 },
-    { 77,  0x59 },
-    { 70,  0x0a },
-    { 79,  0x13 },
-    { 80,  0x05 },
-    { 81,  0x33 },
-    { 82,  0x62 },
-    { 83,  0x7a },
-    { 84,  0x9a },
-    { 86,  0x38 },
-    { 91,  0x04 },
-    { 92,  0x02 },
-    { 103, 0xc0 },
-    { 104, 0x92 },
-    { 105, 0x3c },
-    { 106, 0x03 },
-    { 128, 0x12 },
-};
-}  // namespace
-
 zx_status_t Device::InitBbp() {
     debugfn();
 
+    switch(rt_type_) {
+    case RT5390:
+        return InitBbp5390();
+    case RT5592:
+        return InitBbp5592();
+    default:
+        errorf("Invalid device type in InitBbp\n");
+        return ZX_ERR_NOT_FOUND;
+    }
+}
+
+zx_status_t Device::InitBbp5390() {
+    debugfn();
+
     Bbp4 reg;
-    auto status = ReadBbp(&reg);
+    zx_status_t status = ReadBbp(&reg);
     CHECK_READ(BBP4, status);
     reg.set_mac_if_ctrl(1);
     status = WriteBbp(reg);
     CHECK_WRITE(BBP4, status);
 
-    for (const auto& breg : BBP_REGS) {
-        status = WriteBbp(breg.addr, breg.val);
-        if (status != ZX_OK) {
-            errorf("WriteRegister error for BBP reg %u: %d\n", breg.addr, status);
-            return status;
-        }
+    std::vector<RegInitValue> reg_init_values {
+        RegInitValue(31,  0x08),
+        RegInitValue(65,  0x2c),
+        RegInitValue(66,  0x38),
+        RegInitValue(68,  0x0b),
+        RegInitValue(69,  0x12),
+        RegInitValue(73,  0x13),
+        RegInitValue(75,  0x46),
+        RegInitValue(76,  0x28),
+        RegInitValue(77,  0x59),
+        RegInitValue(70,  0x0a),
+        RegInitValue(79,  0x13),
+        RegInitValue(80,  0x05),
+        RegInitValue(81,  0x33),
+        RegInitValue(82,  0x62),
+        RegInitValue(83,  0x7a),
+        RegInitValue(84,  0x9a),
+        RegInitValue(86,  0x38),
+        RegInitValue(91,  0x04),
+        RegInitValue(92,  0x02),
+        RegInitValue(103, 0xc0),
+        RegInitValue(104, 0x92),
+        RegInitValue(105, 0x3c),
+        RegInitValue(106, 0x03),
+        RegInitValue(128, 0x12),
+    };
+    status = WriteBbpGroup(reg_init_values);
+    if (status != ZX_OK) {
+        return status;
     }
 
     // disable unused dac/adc
     Bbp138 bbp138;
     status = ReadBbp(&bbp138);
     CHECK_READ(BBP138, status);
-    EepromNicConf0 enc0;
-    status = ReadEepromField(&enc0);
-    CHECK_READ(EEPROM_NIC_CONF0, status);
-    if (enc0.txpath() == 1) {
+    if (tx_path_ == 1) {
         bbp138.set_tx_dac1(1);
     }
-    if (enc0.rxpath() == 1) {
+    if (rx_path_ == 1) {
         bbp138.set_rx_adc1(0);
     }
     status = WriteBbp(bbp138);
     CHECK_WRITE(BBP138, status);
-
-    EepromNicConf1 enc1;
-    ReadEepromField(&enc1);
 
     // TODO(tkilbourn): check for bt coexist (don't need this yet)
 
@@ -1223,7 +1246,7 @@ zx_status_t Device::InitBbp() {
     Bbp152 bbp152;
     status = ReadBbp(&bbp152);
     CHECK_READ(BBP152, status);
-    bbp152.set_rx_default_ant(enc1.ant_diversity() ? 0 : 1);
+    bbp152.set_rx_default_ant(antenna_diversity_ == 3 ? 0 : 1);
     status = WriteBbp(bbp152);
     CHECK_WRITE(BBP152, status);
 
@@ -1248,83 +1271,303 @@ zx_status_t Device::InitBbp() {
     return ZX_OK;
 }
 
-namespace {
-const struct {
-    uint8_t addr;
-    uint8_t val;
-    bool    has_alt;  // should rt_rev_ be checked
-    uint8_t alt_val;  // set if rt_rev_ >= REV_RT5390F
-} RFCSR_REGS[] = {
-#define RFCSR_REG(n,v)      { n, v, false, 0x00 }
-#define RFCSR_ALTREG(n,v,a) { n, v, true,  a }
-    RFCSR_REG(1, 0x0f),
-    RFCSR_REG(2, 0x80),
-    RFCSR_REG(3, 0x88),
-    RFCSR_REG(5, 0x10),
-    RFCSR_ALTREG(6, 0xa0, 0xe0),
-    RFCSR_REG(7, 0x00),
-    RFCSR_REG(10, 0x53),
-    RFCSR_REG(11, 0x4a),
-    RFCSR_REG(12, 0x46),
-    RFCSR_REG(13, 0x9f),
-    RFCSR_REG(14, 0x00),
-    RFCSR_REG(15, 0x00),
-    RFCSR_REG(16, 0x00),
-    RFCSR_REG(18, 0x03),
-    RFCSR_REG(19, 0x00),
-    RFCSR_REG(20, 0x00),
-    RFCSR_REG(21, 0x00),
-    RFCSR_REG(22, 0x20),
-    RFCSR_REG(23, 0x00),
-    RFCSR_REG(24, 0x00),
-    RFCSR_ALTREG(25, 0xc0, 0x80),
-    RFCSR_REG(26, 0x00),
-    RFCSR_REG(27, 0x09),
-    RFCSR_REG(28, 0x00),
-    RFCSR_REG(29, 0x10),
-    RFCSR_REG(30, 0x10),
-    RFCSR_REG(31, 0x80),
-    RFCSR_REG(32, 0x80),
-    RFCSR_REG(33, 0x00),
-    RFCSR_REG(34, 0x07),
-    RFCSR_REG(35, 0x12),
-    RFCSR_REG(36, 0x00),
-    RFCSR_REG(37, 0x08),
-    RFCSR_REG(38, 0x85),
-    RFCSR_REG(39, 0x1b),
-    RFCSR_REG(40, 0x0b),
-    RFCSR_REG(41, 0xbb),
-    RFCSR_REG(42, 0xd2),
-    RFCSR_REG(43, 0x9a),
-    RFCSR_REG(44, 0x0e),
-    RFCSR_REG(45, 0xa2),
-    RFCSR_ALTREG(46, 0x7b, 0x73),
-    RFCSR_REG(47, 0x00),
-    RFCSR_REG(48, 0x10),
-    RFCSR_REG(49, 0x94),
-    RFCSR_REG(52, 0x38),
-    RFCSR_ALTREG(53, 0x84, 0x00),
-    RFCSR_REG(54, 0x78),
-    RFCSR_REG(55, 0x44),
-    RFCSR_ALTREG(56, 0x22, 0x42),
-    RFCSR_REG(57, 0x80),
-    RFCSR_REG(58, 0x7f),
-    RFCSR_REG(59, 0x8f),
-    RFCSR_REG(60, 0x45),
-    RFCSR_ALTREG(61, 0xdd, 0xd1),
-    RFCSR_REG(62, 0x00),
-    RFCSR_REG(63, 0x00),
-#undef RFCSR_REG
-#undef RFCSR_ALTREG
-};
-}  // namespace
+zx_status_t Device::InitBbp5592() {
+    // Initialize first group of BBP registers
+    std::vector<RegInitValue> reg_init_values {
+        RegInitValue(65, 0x2c),
+        RegInitValue(66, 0x38),
+        RegInitValue(68, 0x0b),
+        RegInitValue(69, 0x12),
+        RegInitValue(70, 0x0a),
+        RegInitValue(73, 0x10),
+        RegInitValue(81, 0x37),
+        RegInitValue(82, 0x62),
+        RegInitValue(83, 0x6a),
+        RegInitValue(84, 0x99),
+        RegInitValue(86, 0x00),
+        RegInitValue(91, 0x04),
+        RegInitValue(92, 0x00),
+        RegInitValue(103, 0x00),
+        RegInitValue(105, 0x05),
+        RegInitValue(106, 0x35),
+    };
+    zx_status_t status = WriteBbpGroup(reg_init_values);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Set MLD (Maximum Likelihood Detection) in BBP location 105
+    Bbp105 bbp105;
+    status = ReadBbp(&bbp105);
+    CHECK_READ(BBP105, status);
+    bbp105.set_mld(rx_path_ == 2 ? 1 : 0);
+    status = WriteBbp(bbp105);
+    CHECK_WRITE(BBP105, status);
+
+    // Set MAC_IF_CTRL in BBP location 4
+    Bbp4 bbp4;
+    status = ReadBbp(&bbp4);
+    CHECK_READ(BBP4, status);
+    bbp4.set_mac_if_ctrl(1);
+    status = WriteBbp(bbp4);
+    CHECK_WRITE(BBP4, status);
+
+    // Initialize second group of BBP registers
+    std::vector<RegInitValue> reg_init_values2 {
+        RegInitValue(20,  0x06),
+        RegInitValue(31,  0x08),
+        RegInitValue(65,  0x2c),
+        RegInitValue(68,  0xdd),
+        RegInitValue(69,  0x1a),
+        RegInitValue(70,  0x05),
+        RegInitValue(73,  0x13),
+        RegInitValue(74,  0x0f),
+        RegInitValue(75,  0x4f),
+        RegInitValue(76,  0x28),
+        RegInitValue(77,  0x59),
+        RegInitValue(84,  0x9a),
+        RegInitValue(86,  0x38),
+        RegInitValue(88,  0x90),
+        RegInitValue(91,  0x04),
+        RegInitValue(92,  0x02),
+        RegInitValue(95,  0x9a),
+        RegInitValue(98,  0x12),
+        RegInitValue(103, 0xc0),
+        RegInitValue(104, 0x92),
+        RegInitValue(105, 0x3c),
+        RegInitValue(106, 0x35),
+        RegInitValue(128, 0x12),
+        RegInitValue(134, 0xd0),
+        RegInitValue(135, 0xf6),
+        RegInitValue(137, 0x0f),
+    };
+    status = WriteBbpGroup(reg_init_values2);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Set GLRT values (Generalized likelihood ratio tests?)
+    uint8_t glrt_values[] = { 0xe0, 0x1f, 0x38, 0x32, 0x08, 0x28, 0x19, 0x0a,
+                              0xff, 0x00, 0x16, 0x10, 0x10, 0x0b, 0x36, 0x2c,
+                              0x26, 0x24, 0x42, 0x36, 0x30, 0x2d, 0x4c, 0x46,
+                              0x3d, 0x40, 0x3e, 0x42, 0x3d, 0x40, 0x3c, 0x34,
+                              0x2c, 0x2f, 0x3c, 0x35, 0x2e, 0x2a, 0x49, 0x41,
+                              0x36, 0x31, 0x30, 0x30, 0x0e, 0x0d, 0x28, 0x21,
+                              0x1c, 0x16, 0x50, 0x4a, 0x43, 0x40, 0x10, 0x10,
+                              0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                              0x7d, 0x14, 0x32, 0x2c, 0x36, 0x4c, 0x43, 0x2c,
+                              0x2e, 0x36, 0x30, 0x6e };
+    status = WriteGlrtBlock(glrt_values, sizeof(glrt_values), 0x80);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Set MAC_IF_CTRL in BBP location 4
+    status = ReadBbp(&bbp4);
+    CHECK_READ(BBP4, status);
+    bbp4.set_mac_if_ctrl(1);
+    status = WriteBbp(bbp4);
+    CHECK_WRITE(BBP4, status);
+
+    // Set default rx antenna in BBP location 152
+    Bbp152 bbp152;
+    status = ReadBbp(&bbp152);
+    CHECK_READ(BBP152, status);
+    bbp152.set_rx_default_ant(antenna_diversity_ == 3 ? 0 : 1);
+    status = WriteBbp(bbp152);
+    CHECK_WRITE(BBP152, status);
+
+    // Set bit 7 in BBP location 254 (as per Linux)
+    if (rt_rev_ >= REV_RT5592C) {
+        Bbp254 bbp254;
+        status = ReadBbp(&bbp254);
+        CHECK_READ(BBP254, status);
+        bbp254.set_unk_bit7(1);
+        status = WriteBbp(bbp254);
+        CHECK_WRITE(BBP254, status);
+    }
+
+    // Frequency calibration
+    status = WriteBbp(BbpRegister<142>(0x01));
+    CHECK_WRITE(BBP142, status);
+    status = WriteBbp(BbpRegister<143>(0x39));
+    CHECK_WRITE(BBP143, status);
+
+    status = WriteBbp(BbpRegister<84>(0x19));
+    CHECK_WRITE(BBP84, status);
+
+    if (rt_rev_ >= REV_RT5592C) {
+        status = WriteBbp(BbpRegister<103>(0xc0));
+        CHECK_WRITE(BBP103, status);
+    }
+
+    return ZX_OK;
+}
 
 zx_status_t Device::InitRfcsr() {
     debugfn();
 
+    std::vector<RegInitValue> rfcsr_init_table;
+    switch(rt_type_) {
+    case RT5390:
+        if (rt_rev_ >= REV_RT5390F) {
+            rfcsr_init_table = {
+                RegInitValue(1,  0x0f),
+                RegInitValue(2,  0x80),
+                RegInitValue(3,  0x88),
+                RegInitValue(5,  0x10),
+                RegInitValue(6,  0xe0),
+                RegInitValue(7,  0x00),
+                RegInitValue(10, 0x53),
+                RegInitValue(11, 0x4a),
+                RegInitValue(12, 0x46),
+                RegInitValue(13, 0x9f),
+                RegInitValue(14, 0x00),
+                RegInitValue(15, 0x00),
+                RegInitValue(16, 0x00),
+                RegInitValue(18, 0x03),
+                RegInitValue(19, 0x00),
+                RegInitValue(20, 0x00),
+                RegInitValue(21, 0x00),
+                RegInitValue(22, 0x20),
+                RegInitValue(23, 0x00),
+                RegInitValue(24, 0x00),
+                RegInitValue(25, 0x80),
+                RegInitValue(26, 0x00),
+                RegInitValue(27, 0x09),
+                RegInitValue(28, 0x00),
+                RegInitValue(29, 0x10),
+                RegInitValue(30, 0x10),
+                RegInitValue(31, 0x80),
+                RegInitValue(32, 0x80),
+                RegInitValue(33, 0x00),
+                RegInitValue(34, 0x07),
+                RegInitValue(35, 0x12),
+                RegInitValue(36, 0x00),
+                RegInitValue(37, 0x08),
+                RegInitValue(38, 0x85),
+                RegInitValue(39, 0x1b),
+                RegInitValue(40, 0x0b),
+                RegInitValue(41, 0xbb),
+                RegInitValue(42, 0xd2),
+                RegInitValue(43, 0x9a),
+                RegInitValue(44, 0x0e),
+                RegInitValue(45, 0xa2),
+                RegInitValue(46, 0x73),
+                RegInitValue(47, 0x00),
+                RegInitValue(48, 0x10),
+                RegInitValue(49, 0x94),
+                RegInitValue(52, 0x38),
+                RegInitValue(53, 0x00),
+                RegInitValue(54, 0x78),
+                RegInitValue(55, 0x44),
+                RegInitValue(56, 0x42),
+                RegInitValue(57, 0x80),
+                RegInitValue(58, 0x7f),
+                RegInitValue(59, 0x8f),
+                RegInitValue(60, 0x45),
+                RegInitValue(61, 0xd1),
+                RegInitValue(62, 0x00),
+                RegInitValue(63, 0x00),
+            };
+        } else {
+            // RT5390 before rev. F
+            rfcsr_init_table = {
+                RegInitValue(1,  0x0f),
+                RegInitValue(2,  0x80),
+                RegInitValue(3,  0x88),
+                RegInitValue(5,  0x10),
+                RegInitValue(6,  0xa0),
+                RegInitValue(7,  0x00),
+                RegInitValue(10, 0x53),
+                RegInitValue(11, 0x4a),
+                RegInitValue(12, 0x46),
+                RegInitValue(13, 0x9f),
+                RegInitValue(14, 0x00),
+                RegInitValue(15, 0x00),
+                RegInitValue(16, 0x00),
+                RegInitValue(18, 0x03),
+                RegInitValue(19, 0x00),
+                RegInitValue(20, 0x00),
+                RegInitValue(21, 0x00),
+                RegInitValue(22, 0x20),
+                RegInitValue(23, 0x00),
+                RegInitValue(24, 0x00),
+                RegInitValue(25, 0xc0),
+                RegInitValue(26, 0x00),
+                RegInitValue(27, 0x09),
+                RegInitValue(28, 0x00),
+                RegInitValue(29, 0x10),
+                RegInitValue(30, 0x10),
+                RegInitValue(31, 0x80),
+                RegInitValue(32, 0x80),
+                RegInitValue(33, 0x00),
+                RegInitValue(34, 0x07),
+                RegInitValue(35, 0x12),
+                RegInitValue(36, 0x00),
+                RegInitValue(37, 0x08),
+                RegInitValue(38, 0x85),
+                RegInitValue(39, 0x1b),
+                RegInitValue(40, 0x0b),
+                RegInitValue(41, 0xbb),
+                RegInitValue(42, 0xd2),
+                RegInitValue(43, 0x9a),
+                RegInitValue(44, 0x0e),
+                RegInitValue(45, 0xa2),
+                RegInitValue(46, 0x7b),
+                RegInitValue(47, 0x00),
+                RegInitValue(48, 0x10),
+                RegInitValue(49, 0x94),
+                RegInitValue(52, 0x38),
+                RegInitValue(53, 0x84),
+                RegInitValue(54, 0x78),
+                RegInitValue(55, 0x44),
+                RegInitValue(56, 0x22),
+                RegInitValue(57, 0x80),
+                RegInitValue(58, 0x7f),
+                RegInitValue(59, 0x8f),
+                RegInitValue(60, 0x45),
+                RegInitValue(61, 0xdd),
+                RegInitValue(62, 0x00),
+                RegInitValue(63, 0x00),
+            };
+        }
+        break;
+    case RT5592:
+        rfcsr_init_table = {
+            RegInitValue(1,  0x3f),
+            RegInitValue(3,  0x08),
+            RegInitValue(5,  0x10),
+            RegInitValue(6,  0xe4),
+            RegInitValue(7,  0x00),
+            RegInitValue(14, 0x00),
+            RegInitValue(15, 0x00),
+            RegInitValue(16, 0x00),
+            RegInitValue(18, 0x03),
+            RegInitValue(19, 0x4d),
+            RegInitValue(20, 0x10),
+            RegInitValue(21, 0x8d),
+            RegInitValue(26, 0x82),
+            RegInitValue(28, 0x00),
+            RegInitValue(29, 0x10),
+            RegInitValue(33, 0xc0),
+            RegInitValue(34, 0x07),
+            RegInitValue(35, 0x12),
+            RegInitValue(47, 0x0c),
+            RegInitValue(53, 0x22),
+            RegInitValue(63, 0x07),
+            RegInitValue(2,  0x80),
+        };
+        break;
+    default:
+        errorf("Invalid device type in %s\n", __FUNCTION__);
+        return ZX_ERR_NOT_FOUND;
+    }
+
     // Init calibration
     Rfcsr2 r2;
-    auto status = ReadRfcsr(&r2);
+    zx_status_t status = ReadRfcsr(&r2);
     CHECK_READ(RF2, status);
 
     r2.set_rescal_en(1);
@@ -1336,19 +1579,21 @@ zx_status_t Device::InitRfcsr() {
     status = WriteRfcsr(r2);
     CHECK_WRITE(RF2, status);
 
-    for (const auto& entry : RFCSR_REGS) {
-        if (entry.has_alt) {
-            if (rt_rev_ >= REV_RT5390F) {
-                status = WriteRfcsr(entry.addr, entry.alt_val);
-            } else {
-                status = WriteRfcsr(entry.addr, entry.val);
-            }
-        } else {
-            status = WriteRfcsr(entry.addr, entry.val);
-        }
+    // Configure rfcsr registers
+    for (const auto& entry : rfcsr_init_table) {
+        status = WriteRfcsr(entry.addr, entry.val);
         if (status != ZX_OK) {
             errorf("WriteRegister error for RFCSR %u: %d\n", entry.addr, status);
             return status;
+        }
+    }
+
+    if (rt_type_ == RT5592) {
+        sleep_for(ZX_MSEC(1));
+        AdjustFreqOffset();
+        if (rt_rev_ >= REV_RT5592C) {
+            status = WriteBbp(BbpRegister<103>(0xc0));
+            CHECK_WRITE(BBP103, status);
         }
     }
 
@@ -1357,6 +1602,10 @@ zx_status_t Device::InitRfcsr() {
         return status;
     }
 
+    if (rt_type_ == RT5592 && rt_rev_ >= REV_RT5592C) {
+        status = WriteBbp(BbpRegister<27>(0x03));
+        CHECK_WRITE(BBP27, status);
+    }
     // TODO(tkilbourn): led open drain enable ??? (doesn't appear in vendor driver?)
 
     return ZX_OK;
@@ -1365,7 +1614,7 @@ zx_status_t Device::InitRfcsr() {
 zx_status_t Device::McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1) {
     debugf("McuCommand %u\n", command);
     H2mMailboxCsr hmc;
-    auto status = BusyWait(&hmc, [&hmc]() { return !hmc.owner(); });
+    zx_status_t status = BusyWait(&hmc, [&hmc]() { return !hmc.owner(); });
     if (status != ZX_OK) {
         return status;
     }
@@ -1390,7 +1639,7 @@ zx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
     BbpCsrCfg bcc;
     auto pred = [&bcc]() { return !bcc.bbp_csr_kick(); };
 
-    auto status = BusyWait(&bcc, pred);
+    zx_status_t status = BusyWait(&bcc, pred);
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
@@ -1425,7 +1674,7 @@ template <uint8_t A> zx_status_t Device::ReadBbp(BbpRegister<A>* reg) {
 
 zx_status_t Device::WriteBbp(uint8_t addr, uint8_t val) {
     BbpCsrCfg bcc;
-    auto status = BusyWait(&bcc, [&bcc]() { return !bcc.bbp_csr_kick(); });
+    zx_status_t status = BusyWait(&bcc, [&bcc]() { return !bcc.bbp_csr_kick(); });
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for BBP\n");
@@ -1448,9 +1697,20 @@ template <uint8_t A> zx_status_t Device::WriteBbp(const BbpRegister<A>& reg) {
     return WriteBbp(reg.addr(), reg.val());
 }
 
+zx_status_t Device::WriteBbpGroup(const std::vector<RegInitValue>& regs) {
+    for (auto reg : regs) {
+        zx_status_t status = WriteBbp(reg.addr, reg.val);
+        if (status != ZX_OK) {
+            errorf("WriteRegister error for BBP reg %u: %d\n", reg.addr, status);
+            return status;
+        }
+    }
+    return ZX_OK;
+}
+
 zx_status_t Device::WaitForBbp() {
     H2mBbpAgent hba;
-    auto status = WriteRegister(hba);
+    zx_status_t status = WriteRegister(hba);
     CHECK_WRITE(H2M_BBP_AGENT, status);
 
     H2mMailboxCsr hmc;
@@ -1471,11 +1731,40 @@ zx_status_t Device::WaitForBbp() {
     return ZX_ERR_TIMED_OUT;
 }
 
+zx_status_t Device::WriteGlrt(uint8_t addr, uint8_t val) {
+    zx_status_t status;
+    status = WriteBbp(195, addr);
+    CHECK_WRITE(BBP_GLRT_ADDR, status);
+    status = WriteBbp(196, val);
+    CHECK_WRITE(BBP_GLRT_VAL, status);
+    return ZX_OK;
+}
+
+zx_status_t Device::WriteGlrtGroup(const std::vector<RegInitValue>& regs) {
+    for (auto reg : regs) {
+        zx_status_t status = WriteGlrt(reg.addr, reg.val);
+        if (status != ZX_OK) {
+            errorf("WriteRegister error for GLRT reg %u: %d\n", reg.addr, status);
+            return status;
+        }
+    }
+    return ZX_OK;
+}
+
+zx_status_t Device::WriteGlrtBlock(uint8_t values[], size_t size, size_t offset) {
+    zx_status_t status = ZX_OK;
+    size_t ndx;
+    for (ndx = 0; ndx < size && status == ZX_OK; ndx++) {
+        status = WriteGlrt(offset + ndx, values[ndx]);
+    }
+    return status;
+}
+
 zx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
     RfCsrCfg rcc;
     auto pred = [&rcc]() { return !rcc.rf_csr_kick(); };
 
-    auto status = BusyWait(&rcc, pred);
+    zx_status_t status = BusyWait(&rcc, pred);
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
@@ -1509,7 +1798,7 @@ template <uint8_t A> zx_status_t Device::ReadRfcsr(RfcsrRegister<A>* reg) {
 
 zx_status_t Device::WriteRfcsr(uint8_t addr, uint8_t val) {
     RfCsrCfg rcc;
-    auto status = BusyWait(&rcc, [&rcc]() { return !rcc.rf_csr_kick(); });
+    zx_status_t status = BusyWait(&rcc, [&rcc]() { return !rcc.rf_csr_kick(); });
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) {
             errorf("timed out waiting for RFCSR\n");
@@ -1531,9 +1820,20 @@ template <uint8_t A> zx_status_t Device::WriteRfcsr(const RfcsrRegister<A>& reg)
     return WriteRfcsr(reg.addr(), reg.val());
 }
 
+zx_status_t Device::WriteRfcsrGroup(const std::vector<RegInitValue>& regs) {
+    for (auto reg : regs) {
+        zx_status_t status = WriteRfcsr(reg.addr, reg.val);
+        if (status != ZX_OK) {
+            errorf("WriteRegister error for RFCSR reg %u: %d\n", reg.addr, status);
+            return status;
+        }
+    }
+    return ZX_OK;
+}
+
 zx_status_t Device::DisableWpdma() {
     WpdmaGloCfg wgc;
-    auto status = ReadRegister(&wgc);
+    zx_status_t status = ReadRegister(&wgc);
     CHECK_READ(WPDMA_GLO_CFG, status);
     wgc.set_tx_dma_en(0);
     wgc.set_tx_dma_busy(0);
@@ -1572,7 +1872,7 @@ zx_status_t Device::WaitForMacCsr() {
 
 zx_status_t Device::SetRxFilter() {
     RxFiltrCfg rfc;
-    auto status = ReadRegister(&rfc);
+    zx_status_t status = ReadRegister(&rfc);
     CHECK_READ(RX_FILTR_CFG, status);
     rfc.set_drop_crc_err(1);
     rfc.set_drop_phy_err(1);
@@ -1597,21 +1897,38 @@ zx_status_t Device::SetRxFilter() {
     return ZX_OK;
 }
 
+constexpr uint8_t kFreqOffsetBound = 0x5f;
+
+zx_status_t Device::AdjustFreqOffset() {
+    EepromFreq ef;
+    ReadEepromField(&ef);
+    uint8_t freq_offset = std::min<uint8_t>(ef.offset(), kFreqOffsetBound);
+
+    Rfcsr17 r17;
+    zx_status_t status = ReadRfcsr(&r17);
+    CHECK_READ(RF17, status);
+    uint8_t prev_freq_off = r17.freq_offset();
+
+    if (prev_freq_off != freq_offset) {
+        status = McuCommand(MCU_FREQ_OFFSET, 0xff, freq_offset, prev_freq_off);
+        if (status != ZX_OK) {
+            errorf("could not set frequency offset\n");
+        }
+    }
+
+    return status;
+}
+
 zx_status_t Device::NormalModeSetup() {
     debugfn();
 
     Bbp138 bbp138;
-    auto status = ReadBbp(&bbp138);
+    zx_status_t status = ReadBbp(&bbp138);
     CHECK_READ(BBP138, status);
-
-    EepromNicConf0 enc0;
-    status = ReadEepromField(&enc0);
-    CHECK_READ(EEPROM_NIC_CONF0, status);
-
-    if (enc0.rxpath()) {
+    if (rx_path_) {
         bbp138.set_rx_adc1(0);
     }
-    if (enc0.txpath()) {
+    if (tx_path_) {
         bbp138.set_tx_dac1(1);
     }
     status = WriteBbp(bbp138);
@@ -1653,7 +1970,7 @@ zx_status_t Device::StartQueues() {
 
     // RX queue
     MacSysCtrl msc;
-    auto status = ReadRegister(&msc);
+    zx_status_t status = ReadRegister(&msc);
     CHECK_READ(MAC_SYS_CTRL, status);
     msc.set_mac_rx_en(1);
     status = WriteRegister(msc);
@@ -1676,7 +1993,7 @@ zx_status_t Device::StartQueues() {
 
 zx_status_t Device::StopRxQueue() {
     MacSysCtrl msc;
-    auto status = ReadRegister(&msc);
+    zx_status_t status = ReadRegister(&msc);
     CHECK_READ(MAC_SYS_CTRL, status);
     msc.set_mac_rx_en(0);
     status = WriteRegister(msc);
@@ -1687,7 +2004,7 @@ zx_status_t Device::StopRxQueue() {
 
 zx_status_t Device::SetupInterface() {
     BcnTimeCfg btc;
-    auto status = ReadRegister(&btc);
+    zx_status_t status = ReadRegister(&btc);
     CHECK_READ(BCN_TIME_CFG, status);
     btc.set_tsf_sync_mode(1);
     status = WriteRegister(btc);
@@ -1720,19 +2037,208 @@ zx_status_t Device::SetupInterface() {
     return ZX_OK;
 }
 
-constexpr uint8_t kRfPowerBound = 0x27;
-constexpr uint8_t kFreqOffsetBound = 0x5f;
+zx_status_t Device::InitializeChannelInfo() {
+    if (rt_type_ == RT5390) {
+        channels_.insert({
+                // Channel(channel, N, R, K)
+                {1, Channel(1, 241, 2, 2)},
+                {2, Channel(2, 241, 2, 7)},
+                {3, Channel(3, 242, 2, 2)},
+                {4, Channel(4, 242, 2, 7)},
+                {5, Channel(5, 243, 2, 2)},
+                {6, Channel(6, 243, 2, 7)},
+                {7, Channel(7, 244, 2, 2)},
+                {8, Channel(8, 244, 2, 7)},
+                {9, Channel(9, 245, 2, 2)},
+                {10, Channel(10, 245, 2, 7)},
+                {11, Channel(11, 246, 2, 2)},
+                {12, Channel(12, 246, 2, 7)},
+                {13, Channel(13, 247, 2, 2)},
+                {14, Channel(14, 248, 2, 4)},
+        });
+    } else if (rt_type_ == RT5592) {
+        DebugIndex debug_index;
+        zx_status_t status = ReadRegister(&debug_index);
+        CHECK_READ(DEBUG_INDEX, status);
+        if (debug_index.reserved_xtal()) {
+            // 40 MHz xtal
+            channels_.insert({
+                    // Channel(channel,  N, R, K,  mod)
+                    {1,   Channel(1,   241, 3, 2,  10)},
+                    {2,   Channel(2,   241, 3, 7,  10)},
+                    {3,   Channel(3,   242, 3, 2,  10)},
+                    {4,   Channel(4,   242, 3, 7,  10)},
+                    {5,   Channel(5,   243, 3, 2,  10)},
+                    {6,   Channel(6,   243, 3, 7,  10)},
+                    {7,   Channel(7,   244, 3, 2,  10)},
+                    {8,   Channel(8,   244, 3, 7,  10)},
+                    {9,   Channel(9,   245, 3, 2,  10)},
+                    {10,  Channel(10,  245, 3, 7,  10)},
+                    {11,  Channel(11,  246, 3, 2,  10)},
+                    {12,  Channel(12,  246, 3, 7,  10)},
+                    {13,  Channel(13,  247, 3, 2,  10)},
+                    {14,  Channel(14,  248, 3, 4,  10)},
+                    {36,  Channel(36,  86,  1, 4,  12)},
+                    {38,  Channel(38,  86,  1, 6,  12)},
+                    {40,  Channel(40,  86,  1, 8,  12)},
+                    {42,  Channel(42,  86,  1, 10, 12)},
+                    {44,  Channel(44,  87,  1, 0,  12)},
+                    {46,  Channel(46,  87,  1, 2,  12)},
+                    {48,  Channel(48,  87,  1, 4,  12)},
+                    {50,  Channel(50,  87,  1, 6,  12)},
+                    {52,  Channel(52,  87,  1, 8,  12)},
+                    {54,  Channel(54,  87,  1, 10, 12)},
+                    {56,  Channel(56,  88,  1, 0,  12)},
+                    {58,  Channel(58,  88,  1, 2,  12)},
+                    {60,  Channel(60,  88,  1, 4,  12)},
+                    {62,  Channel(62,  88,  1, 6,  12)},
+                    {64,  Channel(64,  88,  1, 8,  12)},
+                    {100, Channel(100, 91,  1, 8,  12)},
+                    {102, Channel(102, 91,  1, 10, 12)},
+                    {104, Channel(104, 92,  1, 0,  12)},
+                    {106, Channel(106, 92,  1, 2,  12)},
+                    {108, Channel(108, 92,  1, 4,  12)},
+                    {110, Channel(110, 92,  1, 6,  12)},
+                    {112, Channel(112, 92,  1, 8,  12)},
+                    {114, Channel(114, 92,  1, 10, 12)},
+                    {116, Channel(116, 93,  1, 0,  12)},
+                    {118, Channel(118, 93,  1, 2,  12)},
+                    {120, Channel(120, 93,  1, 4,  12)},
+                    {122, Channel(122, 93,  1, 6,  12)},
+                    {124, Channel(124, 93,  1, 8,  12)},
+                    {126, Channel(126, 93,  1, 10, 12)},
+                    {128, Channel(128, 94,  1, 0,  12)},
+                    {130, Channel(130, 94,  1, 2,  12)},
+                    {132, Channel(132, 94,  1, 4,  12)},
+                    {134, Channel(134, 94,  1, 6,  12)},
+                    {136, Channel(136, 94,  1, 8,  12)},
+                    {138, Channel(138, 94,  1, 10, 12)},
+                    {140, Channel(140, 95,  1, 0,  12)},
+                    {149, Channel(149, 95,  1, 9,  12)},
+                    {151, Channel(151, 95,  1, 11, 12)},
+                    {153, Channel(153, 96,  1, 1,  12)},
+                    {155, Channel(155, 96,  1, 3,  12)},
+                    {157, Channel(157, 96,  1, 5,  12)},
+                    {159, Channel(159, 96,  1, 7,  12)},
+                    {161, Channel(161, 96,  1, 9,  12)},
+                    {165, Channel(165, 97,  1, 1,  12)},
+                    {184, Channel(184, 82,  1, 0,  12)},
+                    {188, Channel(188, 82,  1, 4,  12)},
+                    {192, Channel(192, 82,  1, 8,  12)},
+                    {196, Channel(196, 83,  1, 0,  12)},
+            });
+        } else {
+            // 20 MHz xtal
+            channels_.insert({
+                    // Channel(channel,  N, R, K, mod)
+                    {1,   Channel(1,   482, 3, 4,  10)},
+                    {2,   Channel(2,   483, 3, 4,  10)},
+                    {3,   Channel(3,   484, 3, 4,  10)},
+                    {4,   Channel(4,   485, 3, 4,  10)},
+                    {5,   Channel(5,   486, 3, 4,  10)},
+                    {6,   Channel(6,   487, 3, 4,  10)},
+                    {7,   Channel(7,   488, 3, 4,  10)},
+                    {8,   Channel(8,   489, 3, 4,  10)},
+                    {9,   Channel(9,   490, 3, 4,  10)},
+                    {10,  Channel(10,  491, 3, 4,  10)},
+                    {11,  Channel(11,  492, 3, 4,  10)},
+                    {12,  Channel(12,  493, 3, 4,  10)},
+                    {13,  Channel(13,  494, 3, 4,  10)},
+                    {14,  Channel(14,  496, 3, 8,  10)},
+                    {36,  Channel(36,  172, 1, 8,  12)},
+                    {38,  Channel(38,  173, 1, 0,  12)},
+                    {40,  Channel(40,  173, 1, 4,  12)},
+                    {42,  Channel(42,  173, 1, 8,  12)},
+                    {44,  Channel(44,  174, 1, 0,  12)},
+                    {46,  Channel(46,  174, 1, 4,  12)},
+                    {48,  Channel(48,  174, 1, 8,  12)},
+                    {50,  Channel(50,  175, 1, 0,  12)},
+                    {52,  Channel(52,  175, 1, 4,  12)},
+                    {54,  Channel(54,  175, 1, 8,  12)},
+                    {56,  Channel(56,  176, 1, 0,  12)},
+                    {58,  Channel(58,  176, 1, 4,  12)},
+                    {60,  Channel(60,  176, 1, 8,  12)},
+                    {62,  Channel(62,  177, 1, 0,  12)},
+                    {64,  Channel(64,  177, 1, 4,  12)},
+                    {100, Channel(100, 183, 1, 4,  12)},
+                    {102, Channel(102, 183, 1, 8,  12)},
+                    {104, Channel(104, 184, 1, 0,  12)},
+                    {106, Channel(106, 184, 1, 4,  12)},
+                    {108, Channel(108, 184, 1, 8,  12)},
+                    {110, Channel(110, 185, 1, 0,  12)},
+                    {112, Channel(112, 185, 1, 4,  12)},
+                    {114, Channel(114, 185, 1, 8,  12)},
+                    {116, Channel(116, 186, 1, 0,  12)},
+                    {118, Channel(118, 186, 1, 4,  12)},
+                    {120, Channel(120, 186, 1, 8,  12)},
+                    {122, Channel(122, 187, 1, 0,  12)},
+                    {124, Channel(124, 187, 1, 4,  12)},
+                    {126, Channel(126, 187, 1, 8,  12)},
+                    {128, Channel(128, 188, 1, 0,  12)},
+                    {130, Channel(130, 188, 1, 4,  12)},
+                    {132, Channel(132, 188, 1, 8,  12)},
+                    {134, Channel(134, 189, 1, 0,  12)},
+                    {136, Channel(136, 189, 1, 4,  12)},
+                    {138, Channel(138, 189, 1, 8,  12)},
+                    {140, Channel(140, 190, 1, 0,  12)},
+                    {149, Channel(149, 191, 1, 6,  12)},
+                    {151, Channel(151, 191, 1, 10, 12)},
+                    {153, Channel(153, 192, 1, 2,  12)},
+                    {155, Channel(155, 192, 1, 6,  12)},
+                    {157, Channel(157, 192, 1, 10, 12)},
+                    {159, Channel(159, 193, 1, 2,  12)},
+                    {161, Channel(161, 193, 1, 6,  12)},
+                    {165, Channel(165, 194, 1, 2,  12)},
+                    {184, Channel(184, 164, 1, 0,  12)},
+                    {188, Channel(188, 164, 1, 4,  12)},
+                    {192, Channel(192, 165, 1, 8,  12)},
+                    {196, Channel(196, 166, 1, 0,  12)},
+            });
+        }
+        // Read all of our Tx calibration values
+        TxCalibrationValues ch0_14, ch36_64, ch100_138, ch140_165;
+        ReadEepromByte(EEPROM_GAIN_CAL_TX0_CH0_14, &ch0_14.gain_cal_tx0);
+        ReadEepromByte(EEPROM_GAIN_CAL_TX0_CH36_64, &ch36_64.gain_cal_tx0);
+        ReadEepromByte(EEPROM_GAIN_CAL_TX0_CH100_138, &ch100_138.gain_cal_tx0);
+        ReadEepromByte(EEPROM_GAIN_CAL_TX0_CH140_165, &ch140_165.gain_cal_tx0);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX0_CH0_14, &ch0_14.phase_cal_tx0);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX0_CH36_64, &ch36_64.phase_cal_tx0);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX0_CH100_138, &ch100_138.phase_cal_tx0);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX0_CH140_165, &ch140_165.phase_cal_tx0);
+        ReadEepromByte(EEPROM_GAIN_CAL_TX1_CH0_14, &ch0_14.gain_cal_tx1);
+        ReadEepromByte(EEPROM_GAIN_CAL_TX1_CH36_64, &ch36_64.gain_cal_tx1);
+        ReadEepromByte(EEPROM_GAIN_CAL_TX1_CH100_138, &ch100_138.gain_cal_tx1);
+        ReadEepromByte(EEPROM_GAIN_CAL_TX1_CH140_165, &ch140_165.gain_cal_tx1);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH0_14, &ch0_14.phase_cal_tx1);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH36_64, &ch36_64.phase_cal_tx1);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH100_138, &ch100_138.phase_cal_tx1);
+        ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH140_165, &ch140_165.phase_cal_tx1);
+        for (auto& entry : channels_) {
+            if (entry.second.channel <= 14) {
+                entry.second.cal_values = ch0_14;
+            } else if (entry.second.channel <= 64) {
+                entry.second.cal_values = ch36_64;
+            } else if (entry.second.channel <= 138) {
+                entry.second.cal_values = ch100_138;
+            } else {
+                entry.second.cal_values = ch140_165;
+            }
+        }
+    } else {
+        errorf("Unrecognized device family in %s\n", __FUNCTION__);
+        return ZX_ERR_NOT_FOUND;
+    }
+    return ZX_OK;
+}
 
-zx_status_t Device::ConfigureChannel(const Channel& channel) {
-    EepromLna lna;
-    auto status = ReadEepromField(&lna);
-    CHECK_READ(EEPROM_LNA, status);
-    lna_gain_ = lna.bg();
+constexpr uint8_t kRfPowerBound2_4Ghz = 0x27;
+constexpr uint8_t kRfPowerBound5Ghz = 0x2b;
 
+zx_status_t Device::ConfigureChannel5390(const Channel& channel) {
     WriteRfcsr(RfcsrRegister<8>(channel.N));
     WriteRfcsr(RfcsrRegister<9>(channel.K & 0x0f));
     Rfcsr11 r11;
-    status = ReadRfcsr(&r11);
+    zx_status_t status = ReadRfcsr(&r11);
     CHECK_READ(RF11, status);
     r11.set_r(channel.R);
     status = WriteRfcsr(r11);
@@ -1741,8 +2247,8 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     Rfcsr49 r49;
     status = ReadRfcsr(&r49);
     CHECK_READ(RF49, status);
-    if (channel.default_power1 > kRfPowerBound) {
-        r49.set_tx(kRfPowerBound);
+    if (channel.default_power1 > kRfPowerBound2_4Ghz) {
+        r49.set_tx(kRfPowerBound2_4Ghz);
     } else {
         r49.set_tx(channel.default_power1);
     }
@@ -1759,25 +2265,13 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = WriteRfcsr(r1);
     CHECK_WRITE(RF1, status);
 
-    // adjust freq offset
-    EepromFreq ef;
-    ReadEepromField(&ef);
-    uint8_t freq_offset = std::min<uint8_t>(ef.offset(), kFreqOffsetBound);
-
-    Rfcsr17 r17;
-    status = ReadRfcsr(&r17);
-    CHECK_READ(RF17, status);
-    uint8_t prev_freq_off = r17.val();
-
-    if (r17.freq_offset() != ef.offset()) {
-        status = McuCommand(MCU_FREQ_OFFSET, 0xff, freq_offset, prev_freq_off);
-        if (status != ZX_OK) {
-            errorf("could not set frequency offset\n");
-            return status;
-        }
+    status = AdjustFreqOffset();
+    if (status != ZX_OK) {
+        return status;
     }
 
     if (channel.channel <= 14) {
+        int hw_index = channel.channel - 1;
         if (rt_rev_ >= REV_RT5390F) {
             static const uint8_t r55[] = {
                 0x23, 0x23, 0x23, 0x23, 0x13, 0x13, 0x03, 0x03,
@@ -1787,15 +2281,15 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
                 0x07, 0x07, 0x06, 0x05, 0x04, 0x04, };
             static_assert(sizeof(r55) == sizeof(r59),
                     "r55 and r59 should have the same number of entries.");
-            ZX_DEBUG_ASSERT(channel.hw_index < (ssize_t)sizeof(r55));
-            WriteRfcsr(RfcsrRegister<55>(r55[channel.hw_index]));
-            WriteRfcsr(RfcsrRegister<59>(r59[channel.hw_index]));
+            ZX_DEBUG_ASSERT(hw_index < (ssize_t)sizeof(r55));
+            WriteRfcsr(RfcsrRegister<55>(r55[hw_index]));
+            WriteRfcsr(RfcsrRegister<59>(r59[hw_index]));
         } else {
             static const uint8_t r59[] = {
                 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8d,
                 0x8a, 0x88, 0x88, 0x87, 0x87, 0x86, };
-            ZX_DEBUG_ASSERT(channel.hw_index < (ssize_t)sizeof(r59));
-            WriteRfcsr(RfcsrRegister<59>(r59[channel.hw_index]));
+            ZX_DEBUG_ASSERT(hw_index < (ssize_t)sizeof(r59));
+            WriteRfcsr(RfcsrRegister<59>(r59[hw_index]));
         }
     }
 
@@ -1814,30 +2308,361 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = WriteRfcsr(r3);
     CHECK_WRITE(RF3, status);
 
+    return status;
+}
+
+zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
+    zx_status_t status;
+
+    // Set LDO_CORE_VLEVEL in LDO_CFG0
+    LdoCfg0 lc0;
+    status = ReadRegister(&lc0);
+    CHECK_READ(LDO_CFG0, status);
+    if (channel.channel > 14) {
+        lc0.set_ldo_core_vlevel(5);
+    } else {
+        lc0.set_ldo_core_vlevel(0);
+    }
+    status = WriteRegister(lc0);
+    CHECK_WRITE(LDO_CFG0, status);
+
+    // Set N, R, K, mod values
+    Rfcsr8 r8;
+    r8.set_n(channel.N & 0xff);
+    status = WriteRfcsr(r8);
+    CHECK_WRITE(RF8, status);
+
+    Rfcsr9 r9;
+    status = ReadRfcsr(&r9);
+    CHECK_READ(RF9, status);
+    r9.set_k(channel.K & 0xf);
+    r9.set_n(channel.N >> 8);
+    r9.set_mod((channel.mod - 8) >> 2);
+    status = WriteRfcsr(r9);
+    CHECK_WRITE(RF9, status);
+
+    Rfcsr11 r11;
+    status = ReadRfcsr(&r11);
+    CHECK_READ(RF11, status);
+    r11.set_r(channel.R - 1);
+    r11.set_mod(channel.mod - 8);
+    status = WriteRfcsr(r11);
+    CHECK_WRITE(RF11, status);
+
+    if (channel.channel <= 14) {
+        std::vector<RegInitValue> reg_init_values {
+            RegInitValue(10, 0x90),
+            RegInitValue(11, 0x4a),
+            RegInitValue(12, 0x52),
+            RegInitValue(13, 0x42),
+            RegInitValue(22, 0x40),
+            RegInitValue(24, 0x4a),
+            RegInitValue(25, 0x80),
+            RegInitValue(27, 0x42),
+            RegInitValue(36, 0x80),
+            RegInitValue(37, 0x08),
+            RegInitValue(38, 0x89),
+            RegInitValue(39, 0x1b),
+            RegInitValue(40, 0x0d),
+            RegInitValue(41, 0x9b),
+            RegInitValue(42, 0xd5),
+            RegInitValue(43, 0x72),
+            RegInitValue(44, 0x0e),
+            RegInitValue(45, 0xa2),
+            RegInitValue(46, 0x6b),
+            RegInitValue(48, 0x10),
+            RegInitValue(51, 0x3e),
+            RegInitValue(52, 0x48),
+            RegInitValue(54, 0x38),
+            RegInitValue(56, 0xa1),
+            RegInitValue(57, 0x00),
+            RegInitValue(58, 0x39),
+            RegInitValue(60, 0x45),
+            RegInitValue(61, 0x91),
+            RegInitValue(62, 0x39),
+        };
+        status = WriteRfcsrGroup(reg_init_values);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        uint8_t val = (channel.channel <= 10) ? 0x07 : 0x06;
+        status = WriteRfcsr(23, val);
+        CHECK_WRITE(RF23, status);
+        status = WriteRfcsr(59, val);
+        CHECK_WRITE(RF59, status);
+
+        status = WriteRfcsr(55, 0x43);
+        CHECK_WRITE(RF55, status);
+    } else {
+        std::vector<RegInitValue> reg_init_values {
+            RegInitValue(10, 0x97),
+            RegInitValue(11, 0x40),
+            RegInitValue(25, 0xbf),
+            RegInitValue(27, 0x42),
+            RegInitValue(36, 0x00),
+            RegInitValue(37, 0x04),
+            RegInitValue(38, 0x85),
+            RegInitValue(40, 0x42),
+            RegInitValue(41, 0xbb),
+            RegInitValue(42, 0xd7),
+            RegInitValue(45, 0x41),
+            RegInitValue(48, 0x00),
+            RegInitValue(57, 0x77),
+            RegInitValue(60, 0x05),
+            RegInitValue(61, 0x01),
+        };
+        status = WriteRfcsrGroup(reg_init_values);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (channel.channel <= 64) {
+            std::vector<RegInitValue> reg_init_values {
+                RegInitValue(12, 0x2e),
+                RegInitValue(13, 0x22),
+                RegInitValue(22, 0x60),
+                RegInitValue(23, 0x7f),
+                RegInitValue(24, channel.channel <= 50 ? 0x09 : 0x07),
+                RegInitValue(39, 0x1c),
+                RegInitValue(43, 0x5b),
+                RegInitValue(44, 0x40),
+                RegInitValue(46, 0x00),
+                RegInitValue(51, 0xfe),
+                RegInitValue(52, 0x0c),
+                RegInitValue(54, 0xf8),
+                RegInitValue(55, channel.channel <= 50 ? 0x06 : 0x04),
+                RegInitValue(56, channel.channel <= 50 ? 0xd3 : 0xbb),
+                RegInitValue(58, 0x15),
+                RegInitValue(59, 0x7f),
+                RegInitValue(62, 0x15),
+            };
+            status = WriteRfcsrGroup(reg_init_values);
+            if (status != ZX_OK) {
+                return status;
+            }
+        } else if (channel.channel <= 165) {
+            std::vector<RegInitValue> reg_init_values {
+                RegInitValue(12, 0x0e),
+                RegInitValue(13, 0x42),
+                RegInitValue(22, 0x40),
+                RegInitValue(23, channel.channel <= 153 ? 0x3c : 0x38),
+                RegInitValue(24, channel.channel <= 153 ? 0x06 : 0x05),
+                RegInitValue(39, channel.channel <= 138 ? 0x1a : 0x18),
+                RegInitValue(43, channel.channel <= 138 ? 0x3b : 0x1b),
+                RegInitValue(44, channel.channel <= 138 ? 0x20 : 0x10),
+                RegInitValue(46, channel.channel <= 138 ? 0x18 : 0x08),
+                RegInitValue(51, channel.channel <= 124 ? 0xfc : 0xec),
+                RegInitValue(52, 0x06),
+                RegInitValue(54, 0xeb),
+                RegInitValue(55, channel.channel <= 138 ? 0x01 : 0x00),
+                RegInitValue(56, channel.channel <= 128 ? 0xbb : 0xab),
+                RegInitValue(58, channel.channel <= 116 ? 0x1d : 0x15),
+                RegInitValue(59, channel.channel <= 138 ? 0x3f : 0x7c),
+                RegInitValue(62, channel.channel <= 116 ? 0x1d : 0x15),
+            };
+            status = WriteRfcsrGroup(reg_init_values);
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
+    }
+
+    uint8_t power_bound = channel.channel <= 14 ? kRfPowerBound2_4Ghz : kRfPowerBound5Ghz;
+    uint8_t power1 = (channel.default_power1 > power_bound) ? power_bound
+                                                              : channel.default_power1;
+    uint8_t power2 = (channel.default_power2 > power_bound) ? power_bound
+                                                              : channel.default_power2;
+    Rfcsr49 r49;
+    status = ReadRfcsr(&r49);
+    CHECK_READ(RF49, status);
+    r49.set_tx(power1);
+    status = WriteRfcsr(r49);
+    CHECK_WRITE(RF49, status);
+    Rfcsr50 r50;
+    status = ReadRfcsr(&r50);
+    CHECK_READ(RF50, status);
+    r50.set_tx(power2);
+    status = WriteRfcsr(r50);
+    CHECK_WRITE(RF50, status);
+
+    Rfcsr1 r1;
+    status = ReadRfcsr(&r1);
+    CHECK_READ(RF1, status);
+    r1.set_rf_block_en(1);
+    r1.set_pll_pd(1);
+    r1.set_rx0_pd(rx_path_ >= 1);
+    r1.set_tx0_pd(tx_path_ >= 1);
+    r1.set_rx1_pd(rx_path_ == 2);
+    r1.set_tx1_pd(tx_path_ == 2);
+    r1.set_rx2_pd(0);
+    r1.set_tx2_pd(0);
+    status = WriteRfcsr(r1);
+    CHECK_WRITE(RF1, status);
+
+    status = WriteRfcsr(6, 0xe4);
+    CHECK_WRITE(RF6, status);
+    status = WriteRfcsr(30, 0x10);
+    CHECK_WRITE(RF30, status);
+    status = WriteRfcsr(31, 0x80);
+    CHECK_WRITE(RF31, status);
+    status = WriteRfcsr(32, 0x80);
+    CHECK_WRITE(RF32, status);
+
+    status = AdjustFreqOffset();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    Rfcsr3 r3;
+    status = ReadRfcsr(&r3);
+    CHECK_READ(RF3, status);
+    r3.set_vcocal_en(1);
+    status = WriteRfcsr(r3);
+    CHECK_WRITE(RF3, status);
+
+    std::vector<RegInitValue> bbp_init_values {
+        RegInitValue(62, 0x37 - lna_gain_),
+        RegInitValue(63, 0x37 - lna_gain_),
+        RegInitValue(64, 0x37 - lna_gain_),
+        RegInitValue(79, 0x1c),
+        RegInitValue(80, 0x0e),
+        RegInitValue(81, 0x3a),
+        RegInitValue(82, 0x62),
+    };
+    status = WriteBbpGroup(bbp_init_values);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    std::vector<RegInitValue> glrt_init_values {
+        RegInitValue(128, 0xe0),
+        RegInitValue(129, 0x1f),
+        RegInitValue(130, 0x38),
+        RegInitValue(131, 0x32),
+        RegInitValue(133, 0x28),
+        RegInitValue(124, 0x19),
+    };
+    status = WriteGlrtGroup(glrt_init_values);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Device::ConfigureChannel(const Channel& channel) {
+    debugf("attempting to change to channel %d\n", channel.channel);
+
+    EepromLna lna;
+    zx_status_t status = ReadEepromField(&lna);
+    CHECK_READ(EEPROM_LNA, status);
+    lna_gain_ = lna.bg();
+
+    if (rt_type_ == RT5390) {
+        status = ConfigureChannel5390(channel);
+    } else if (rt_type_ == RT5592) {
+        status = ConfigureChannel5592(channel);
+    } else {
+        errorf("Invalid device type in %s\n", __FUNCTION__);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    if (status != ZX_OK) {
+        return status;
+    }
+
     WriteBbp(BbpRegister<62>(0x37 - lna_gain_));
     WriteBbp(BbpRegister<63>(0x37 - lna_gain_));
     WriteBbp(BbpRegister<64>(0x37 - lna_gain_));
     WriteBbp(BbpRegister<86>(0x00));
 
+    if (rt_type_ == RT5592) {
+        if (channel.channel <= 14) {
+            WriteBbp(BbpRegister<82>(has_external_lna_2g_ ? 0x62 : 0x84));
+            WriteBbp(BbpRegister<75>(has_external_lna_2g_ ? 0x46 : 0x50));
+        } else {
+            WriteBbp(BbpRegister<82>(0xf2));
+            WriteBbp(BbpRegister<75>(has_external_lna_5g_ ? 0x46 : 0x50));
+        }
+    }
+
     TxBandCfg tbc;
     status = ReadRegister(&tbc);
     CHECK_READ(TX_BAND_CFG, status);
     tbc.set_tx_band_sel(0);
-    tbc.set_a(0);
-    tbc.set_bg(1);
+    if (channel.channel <= 14) {
+        tbc.set_a(0);
+        tbc.set_bg(1);
+    } else {
+        tbc.set_a(1);
+        tbc.set_bg(0);
+    }
     status = WriteRegister(tbc);
     CHECK_WRITE(TX_BAND_CFG, status);
 
     TxPinCfg tpc;
-    // TODO(tkilbourn): see if we have more than 1 tx or rx chain
-    // TODO(tkilbourn): set A values for channels > 14
-    tpc.set_pa_pe_g0_en(1);
+    status = ReadRegister(&tpc);
+    CHECK_READ(TX_PIN_CFG, status);
+    tpc.set_pa_pe_g0_en(channel.channel <= 14);
+    tpc.set_pa_pe_g1_en((channel.channel <= 14) && (tx_path_ > 1));
+    tpc.set_pa_pe_a0_en(channel.channel > 14);
+    tpc.set_pa_pe_a1_en((channel.channel > 14) && (tx_path_ > 1));
     tpc.set_lna_pe_a0_en(1);
     tpc.set_lna_pe_g0_en(1);
+    tpc.set_lna_pe_a1_en(tx_path_ > 1);
+    tpc.set_lna_pe_g1_en(tx_path_ > 1);
     tpc.set_rftr_en(1);
     tpc.set_trsw_en(1);
+    tpc.set_rfrx_en(1);
     status = WriteRegister(tpc);
     CHECK_WRITE(TX_PIN_CFG, status);
+
+    WriteGlrt(141, 0x1a);
+
+    if (rt_type_ == RT5592) {
+        uint8_t rx_ndx;
+        for (rx_ndx = 0; rx_ndx < rx_path_; rx_ndx++) {
+            Bbp27 b27;
+            status = ReadBbp(&b27);
+            CHECK_READ(BBP27, status);
+            b27.set_rx_chain_sel(rx_ndx);
+            status = WriteBbp(b27);
+            CHECK_WRITE(BBP27, status);
+            status = WriteBbp(66, (lna_gain_ * 2) + (channel.channel <= 14 ? 0x1c : 0x24));
+            CHECK_WRITE(BBP66, status);
+        }
+        status = WriteBbp(158, 0x2c);
+        CHECK_WRITE(BBP158, status);
+        status = WriteBbp(159, channel.cal_values.gain_cal_tx0);
+        CHECK_WRITE(BBP159, status);
+        status = WriteBbp(158, 0x2d);
+        CHECK_WRITE(BBP158, status);
+        status = WriteBbp(159, channel.cal_values.phase_cal_tx0);
+        CHECK_WRITE(BBP159, status);
+        status = WriteBbp(158, 0x4a);
+        CHECK_WRITE(BBP158, status);
+        status = WriteBbp(159, channel.cal_values.gain_cal_tx1);
+        CHECK_WRITE(BBP159, status);
+        status = WriteBbp(158, 0x4b);
+        CHECK_WRITE(BBP158, status);
+        status = WriteBbp(159, channel.cal_values.phase_cal_tx1);
+        CHECK_WRITE(BBP159, status);
+
+        uint8_t comp_ctl, imbalance_comp_ctl;
+        status = ReadEepromByte(EEPROM_COMP_CTL, &comp_ctl);
+        CHECK_READ(EEPROM_COMP_CTL, status);
+        status = WriteBbp(158, 0x04);
+        CHECK_WRITE(BBP158, status);
+        status = WriteBbp(159, comp_ctl == 0xff ? 0 : comp_ctl);
+        CHECK_WRITE(BBP159, status);
+        status = ReadEepromByte(EEPROM_IMB_COMP_CTL, &imbalance_comp_ctl);
+        CHECK_READ(EEPROM_IMB_COMP_CTL, status);
+        status = WriteBbp(158, 0x03);
+        CHECK_WRITE(BBP158, status);
+        status = WriteBbp(159, imbalance_comp_ctl == 0xff ? 0 : imbalance_comp_ctl);
+        CHECK_WRITE(BBP159, status);
+    }
 
     Bbp4 b4;
     status = ReadBbp(&b4);
@@ -1866,6 +2691,8 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
     status = ReadRegister(&ecbs);
     CHECK_READ(EXT_CH_BUSY_STA, status);
 
+    debugf("changed to channel %d\n", channel.channel);
+
     return ZX_OK;
 }
 
@@ -1882,7 +2709,7 @@ zx_status_t Device::ConfigureTxPower(const Channel& channel) {
     // TODO(tkilbourn): calculate tx power control
     //       use 0 (normal) for now
     Bbp1 b1;
-    auto status = ReadBbp(&b1);
+    zx_status_t status = ReadBbp(&b1);
     CHECK_READ(BBP1, status);
     b1.set_tx_power_ctrl(0);
     status = WriteBbp(b1);
@@ -2137,8 +2964,10 @@ void Device::HandleRxComplete(iotxn_t* request) {
     auto ac = fbl::MakeAutoCall([&]() { iotxn_queue(parent(), request); });
 
     if (request->status == ZX_OK) {
+        size_t rx_hdr_size = (rt_type_ == RT5592) ? 28 : 20;
+
         // Handle completed rx
-        if (request->actual < 24) {
+        if (request->actual < rx_hdr_size + 4) {
             errorf("short read\n");
             return;
         }
@@ -2163,7 +2992,8 @@ void Device::HandleRxComplete(iotxn_t* request) {
             wlan_rx_info_t wlan_rx_info = {};
             fill_rx_info(&wlan_rx_info, rxwi1, rxwi2, rxwi3, bg_rssi_offset_, lna_gain_);
             wlan_rx_info.chan.channel_num = current_channel_;
-            wlanmac_proxy_->Recv(0u, data + 20, rxwi0.mpdu_total_byte_count(), &wlan_rx_info);
+            wlanmac_proxy_->Recv(0u, data + rx_hdr_size, rxwi0.mpdu_total_byte_count(),
+                                 &wlan_rx_info);
         }
 
         dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
@@ -2209,12 +3039,11 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    auto status = LoadFirmware();
+    zx_status_t status = LoadFirmware();
     if (status != ZX_OK) {
         errorf("failed to load firmware\n");
         return status;
     }
-    debugf("firmware loaded\n");
 
     // Initialize queues
     for (size_t i = 0; i < kReadReqCount; i++) {
@@ -2336,18 +3165,17 @@ void Device::WlanmacStop() {
 void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     // Our USB packet looks like:
     //   TxInfo (4 bytes)
-    //   TXWI fields (16 bytes)
+    //   TXWI fields (16-20 bytes, depending on device)
     //   packet (len bytes)
     //   alignment zero padding (round up to a 4-byte boundary)
     //   terminal zero padding (4 bytes)
-
+    size_t txwi_len = (rt_type_ == RT5592) ? 20 : 16;
     size_t align_pad_len = ((len + 3) & ~3) - len;
     size_t terminal_pad_len = 4;
-    size_t iotxn_len = sizeof(TxInfo) + 16 + len + align_pad_len + terminal_pad_len;
+    size_t iotxn_len = sizeof(TxInfo) + txwi_len + len + align_pad_len + terminal_pad_len;
 
     if (iotxn_len > kWriteBufSize) {
-        errorf("iotxn buffer size insufficient for tx packet -- %d bytes needed\n",
-               (int)iotxn_len);
+        errorf("iotxn buffer size insufficient for tx packet -- %zu bytes needed\n", iotxn_len);
         return;
     }
 
@@ -2376,11 +3204,10 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
         return;
     }
 
-    std::memset(packet, 0, sizeof(TxPacket));
+    std::memset(packet, 0, sizeof(TxInfo) + txwi_len);
 
     // The length field in TxInfo includes everything from the TXWI fields to the alignment pad
-    size_t txinfo_len = (16 + len + align_pad_len);
-    packet->tx_info.set_tx_pkt_length(txinfo_len);
+    packet->tx_info.set_tx_pkt_length(txwi_len + len + align_pad_len);
 
     // TODO(tkilbourn): set these more appropriately
     packet->tx_info.set_wiv(1);
@@ -2392,8 +3219,14 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     packet->txwi1.set_mpdu_total_byte_count(len);
     packet->txwi1.set_tx_packet_id(10);
 
-    std::memcpy(packet->payload, data, len);
-    std::memset(&packet->payload[len], 0, align_pad_len + terminal_pad_len);
+    // A TxPacket is laid out with 4 TXWI headers, so if there are more than that, we have to
+    // consider them when determining the start of the payload.
+    size_t payload_offset = txwi_len - 16;
+    uint8_t* payload_ptr = &packet->payload[payload_offset];
+
+    // Write out the payload
+    std::memcpy(payload_ptr, data, len);
+    std::memset(&payload_ptr[len], 0, align_pad_len + terminal_pad_len);
 
     // Send the whole thing
     req->length = iotxn_len;
@@ -2401,6 +3234,7 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
 }
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
+    zx_status_t status;
     if (options != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -2408,7 +3242,7 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     if (channel == channels_.end()) {
         return ZX_ERR_NOT_FOUND;
     }
-    auto status = StopRxQueue();
+    status = StopRxQueue();
     if (status != ZX_OK) {
         errorf("could not stop rx queue\n");
         return status;
@@ -2426,7 +3260,6 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
         errorf("could not start queues\n");
         return status;
     }
-
     current_channel_ = chan->channel_num;
     return ZX_OK;
 }
