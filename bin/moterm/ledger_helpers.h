@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 
 namespace moterm {
 

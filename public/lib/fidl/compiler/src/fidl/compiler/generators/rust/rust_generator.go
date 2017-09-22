@@ -94,8 +94,8 @@ func createAndOpen(outPath string) (file common.Writer) {
 	return
 }
 
-// convert a GN-style label (ex //apps/ledger/services:services) to a crate name
-// (ex apps_ledger_services).
+// convert a GN-style label (ex //garnet/foo:services) to a crate name
+// (ex garnet_foo_services).
 func labelToCrate(label string) string {
 	split_target := strings.Split(label, ":")
 	parts := strings.Split(split_target[0], "/")

@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 

@@ -24,7 +24,7 @@ executable("moterm") {
   ]
 
   deps = [
-    "//apps/ledger/services/public",
+    "//peridot/public/lib/ledger/fidl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/skia:fonts",

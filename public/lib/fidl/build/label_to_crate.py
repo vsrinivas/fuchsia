@@ -7,8 +7,8 @@
 import sys
 
 
-# convert a directory corresponding to a GN-style label (ex apps/ledger/services/services)
-# to a crate name (ex apps_ledger_services).
+# convert a directory corresponding to a GN-style label (ex garnet/foo/services/services)
+# to a crate name (ex garnet_foo_services).
 def label_to_crate(label):
     parts = label.split('/')
     if parts[-1] == parts[-2]:
