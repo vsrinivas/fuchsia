@@ -15,7 +15,7 @@ import threading
 
 
 def gn_describe(out, path):
-    gn = os.path.join(paths.FUCHSIA_ROOT, 'packages', 'gn', 'gn.py')
+    gn = os.path.join(paths.FUCHSIA_ROOT, 'buildtools', 'gn')
     data = subprocess.check_output(
         [gn, 'desc', out, path, '--format=json'], cwd=paths.FUCHSIA_ROOT)
     return json.loads(data)

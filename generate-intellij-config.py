@@ -13,8 +13,8 @@ idea_dir = os.path.join(fuchsia_dir, '.idea')
 def find_dart_directories():
   # Ask GN for all labels that depends on the target Dart SDK.
   refs = subprocess.check_output([
-      os.path.join(fuchsia_dir, 'packages', 'gn',
-                   'gn.py'), 'refs', os.environ['FUCHSIA_BUILD_DIR'],
+      os.path.join(fuchsia_dir, 'buildtools',
+                   'gn'), 'refs', os.environ['FUCHSIA_BUILD_DIR'],
       '//dart:create_sdk(//build/toolchain:host_x64)'
   ])
   # Turn that into a set of unique directories for the labels.

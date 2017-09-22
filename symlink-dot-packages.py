@@ -15,7 +15,7 @@ import sys
 def gn_desc(outdir, path):
     '''Run `gn desc` over the whole tree'''
     return json.loads(subprocess.check_output(
-        [os.path.join(paths.FUCHSIA_ROOT, 'packages', 'gn', 'gn.py'), 'desc',
+        [os.path.join(paths.FUCHSIA_ROOT, 'buildtools', 'gn'), 'desc',
          outdir, path, '--format=json']))
 
 
