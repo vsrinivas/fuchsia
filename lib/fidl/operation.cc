@@ -12,6 +12,10 @@
 
 namespace modular {
 
+constexpr const char kModularTraceCategory[] = "modular";
+constexpr const char kTraceIdKey[] = "id";
+constexpr const char kTraceInfoKey[] = "info";
+
 OperationContainer::OperationContainer() = default;
 
 OperationContainer::~OperationContainer() = default;
@@ -22,18 +26,6 @@ void OperationContainer::Schedule(OperationBase* const o) {
 
 void OperationContainer::InvalidateWeakPtrs(OperationBase* const o) {
   o->InvalidateWeakPtrs();
-}
-
-const char* OperationContainer::GetTraceName(OperationBase* const o) {
-  return o->trace_name_;
-}
-
-uint64_t OperationContainer::GetTraceId(OperationBase* const o) {
-  return o->trace_id_;
-}
-
-const std::string& OperationContainer::GetTraceInfo(OperationBase* const o) {
-  return o->trace_info_;
 }
 
 OperationCollection::OperationCollection() : weak_ptr_factory_(this) {}
@@ -53,8 +45,6 @@ fxl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
 
 void OperationCollection::Hold(OperationBase* const o) {
   operations_.emplace_back(o);
-  TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
-                    kTraceIdKey, GetTraceId(o), kTraceInfoKey, GetTraceInfo(o));
   Schedule(o);
 }
 
@@ -91,9 +81,6 @@ void OperationQueue::Hold(OperationBase* const o) {
   if (idle_) {
     FXL_DCHECK(operations_.size() == 1);
     idle_ = false;
-    TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
-                      kTraceIdKey, GetTraceId(o), kTraceInfoKey,
-                      GetTraceInfo(o));
     Schedule(o);
   }
 }
@@ -107,9 +94,6 @@ void OperationQueue::Drop(OperationBase* const o) {
 void OperationQueue::Cont() {
   if (!operations_.empty()) {
     auto o = operations_.front().get();
-    TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
-                      kTraceIdKey, GetTraceId(o), kTraceInfoKey,
-                      GetTraceInfo(o));
     Schedule(o);
   } else {
     idle_ = true;
@@ -133,6 +117,8 @@ void OperationBase::Ready() {
 }
 
 void OperationBase::Schedule() {
+  TraceAsyncBegin();
+
   fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
       [this, weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak) {
@@ -143,6 +129,16 @@ void OperationBase::Schedule() {
 
 void OperationBase::InvalidateWeakPtrs() {
   weak_ptr_factory_.InvalidateWeakPtrs();
+}
+
+void OperationBase::TraceAsyncBegin() {
+  TRACE_ASYNC_BEGIN(kModularTraceCategory, trace_name_, trace_id_,
+                    kTraceIdKey, trace_id_, kTraceInfoKey, trace_info_);
+}
+
+void OperationBase::TraceAsyncEnd() {
+  TRACE_ASYNC_END(kModularTraceCategory, trace_name_, trace_id_, kTraceIdKey,
+                  trace_id_, kTraceInfoKey, trace_info_);
 }
 
 OperationBase::FlowTokenBase::FlowTokenBase(OperationBase* const op)

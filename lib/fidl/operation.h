@@ -11,18 +11,12 @@
 #include <utility>
 #include <vector>
 
-#include <trace/event.h>
-
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace modular {
 class OperationBase;
-
-constexpr const char kModularTraceCategory[] = "modular";
-constexpr const char kTraceIdKey[] = "id";
-constexpr const char kTraceInfoKey[] = "info";
 
 // An abstract base class which provides methods to hold on to Operation
 // instances until they declare themselves to be Done().
@@ -34,9 +28,6 @@ class OperationContainer {
  protected:
   void Schedule(OperationBase* o);
   void InvalidateWeakPtrs(OperationBase* o);
-  const char* GetTraceName(OperationBase* o);
-  uint64_t GetTraceId(OperationBase* o);
-  const std::string& GetTraceInfo(OperationBase* o);
 
  private:
   // OperationBase calls the methods below.
@@ -170,8 +161,7 @@ class OperationBase {
   class FlowTokenBase;
 
  private:
-  // OperationContainer calls InvalidateWeakPtrs() and exposes trace fields to
-  // its subclasses of OperationContainer.
+  // OperationContainer calls InvalidateWeakPtrs() and Schedule().
   friend class OperationContainer;
 
   // Called only by OperationContainer.
@@ -206,6 +196,11 @@ class OperationBase {
       }
     }
   }
+
+  // Traces the duration of the Operation excution. Begin() is called from
+  // Schedule(), End() is called from Done().
+  void TraceAsyncBegin();
+  void TraceAsyncEnd();
 
   fxl::WeakPtr<OperationContainer> const container_;
 
@@ -246,8 +241,7 @@ class Operation : public OperationBase {
   // container. Must be the last thing this instance does, as it results in
   // destructor invocation.
   void Done(Args... result_args) {
-    TRACE_ASYNC_END(kModularTraceCategory, trace_name_, trace_id_, kTraceIdKey,
-                    trace_id_, kTraceInfoKey, trace_info_);
+    TraceAsyncEnd();
     DispatchCallback(std::move(result_call_), std::move(result_args)...);
   }
 
