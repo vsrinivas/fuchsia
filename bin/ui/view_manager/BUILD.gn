@@ -39,7 +39,6 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//peridot/lib/rapidjson",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/input/fidl",
