@@ -1,0 +1,30 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("sync") {
+  testonly = true
+
+  sources = [
+    "convergence.cc",
+    "lib.cc",
+    "lib.h",
+  ]
+
+  deps = [
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/fidl_helpers",
+    "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/test:ledger_instance_factory",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

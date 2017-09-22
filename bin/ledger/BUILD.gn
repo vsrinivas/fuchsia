@@ -1,0 +1,92 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/*" ]
+
+group("src") {
+  public_deps = [
+    "//apps/ledger/src/app",
+    "//apps/ledger/src/auth_provider",
+    "//apps/ledger/src/backoff",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/cloud_provider",
+    "//apps/ledger/src/cloud_sync",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/environment",
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/network",
+    "//apps/ledger/src/storage",
+    "//apps/ledger/src/tool",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":ledger_unittests",
+    "//apps/ledger/src/test/benchmark",
+    "//apps/ledger/src/test/e2e_local",
+    "//apps/ledger/src/test/e2e_sync",
+    "//apps/ledger/src/test/integration",
+  ]
+}
+
+config("ledger_config") {
+  safe_stack_flags = [
+    # The coroutine code needs to be correct both with and without safe stack. Keeping this here
+    # to easily check until safe stack is enabled globally on fuchsia.
+    "-fsanitize=safe-stack",
+    "-fstack-protector-strong",
+  ]
+
+  asmflags = safe_stack_flags
+
+  cflags = safe_stack_flags + [
+             # Remove when enabled globally by TO-99.
+             "-Wunused-lambda-capture",
+
+             # Remove when enabled globally by TO-100.
+             "-Wuser-defined-warnings",
+           ]
+
+  ldflags = safe_stack_flags + [
+              # Use a 1M stack.
+              "-Wl,-z,stack-size=0x100000",
+            ]
+}
+
+executable("ledger_unittests") {
+  testonly = true
+
+  deps = [
+    "//apps/ledger/src/app:unittests",
+    "//apps/ledger/src/auth_provider:unittests",
+    "//apps/ledger/src/backoff:unittests",
+    "//apps/ledger/src/callback:unittests",
+    "//apps/ledger/src/cloud_provider/impl:unittests",
+    "//apps/ledger/src/cloud_sync/impl:unittests",
+    "//apps/ledger/src/convert:unittests",
+    "//apps/ledger/src/coroutine:unittests",
+    "//apps/ledger/src/coroutine/context:unittests",
+    "//apps/ledger/src/device_set:unittests",
+    "//apps/ledger/src/environment:unittests",
+    "//apps/ledger/src/firebase:unittests",
+    "//apps/ledger/src/gcs:unittests",
+    "//apps/ledger/src/glue:unittests",
+    "//apps/ledger/src/network:unittests",
+    "//apps/ledger/src/storage/impl:unittests",
+    "//apps/ledger/src/storage/impl/btree:unittests",
+    "//apps/ledger/src/storage/public:unittests",
+    "//apps/ledger/src/test:unittests",
+    "//apps/ledger/src/test/token_provider:unittests",
+    "//apps/ledger/src/third_party/bup:unittests",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//garnet/public/lib/fxl:fxl_printers",
+  ]
+
+  configs += [ ":ledger_config" ]
+}

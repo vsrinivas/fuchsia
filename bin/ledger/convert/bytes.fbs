@@ -1,0 +1,40 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+namespace convert;
+
+struct IdStorage {
+  b00: ubyte;
+  b01: ubyte;
+  b02: ubyte;
+  b03: ubyte;
+  b04: ubyte;
+  b05: ubyte;
+  b06: ubyte;
+  b07: ubyte;
+  b08: ubyte;
+  b09: ubyte;
+  b10: ubyte;
+  b11: ubyte;
+  b12: ubyte;
+  b13: ubyte;
+  b14: ubyte;
+  b15: ubyte;
+  b16: ubyte;
+  b17: ubyte;
+  b18: ubyte;
+  b19: ubyte;
+  b20: ubyte;
+  b21: ubyte;
+  b22: ubyte;
+  b23: ubyte;
+  b24: ubyte;
+  b25: ubyte;
+  b26: ubyte;
+  b27: ubyte;
+  b28: ubyte;
+  b29: ubyte;
+  b30: ubyte;
+  b31: ubyte;
+}

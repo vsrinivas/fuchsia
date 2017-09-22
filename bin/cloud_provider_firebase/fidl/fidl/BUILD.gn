@@ -1,0 +1,17 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("services") {
+  sources = [
+    "factory.fidl",
+  ]
+
+  deps = [
+    "//apps/ledger/services/cloud_provider",
+    "//apps/ledger/services/public",
+    "//peridot/public/lib/auth/fidl",
+  ]
+}

@@ -1,0 +1,66 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
+
+source_set("network") {
+  sources = [
+    "network_service.h",
+    "network_service_impl.cc",
+    "network_service_impl.h",
+    "no_network_service.cc",
+    "no_network_service.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/backoff",
+    "//apps/ledger/src/callback",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("fake") {
+  testonly = true
+
+  sources = [
+    "fake_network_service.cc",
+    "fake_network_service.h",
+  ]
+
+  public_deps = [
+    ":network",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "network_service_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":network",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/netstack/fidl:net_address",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

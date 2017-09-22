@@ -1,0 +1,59 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("impl") {
+  sources = [
+    "encoding.cc",
+    "encoding.h",
+    "page_cloud_handler_impl.cc",
+    "page_cloud_handler_impl.h",
+    "paths.cc",
+    "paths.h",
+    "timestamp_conversions.cc",
+    "timestamp_conversions.h",
+    "watch_client_impl.cc",
+    "watch_client_impl.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/cloud_provider/public",
+    "//third_party/rapidjson",
+  ]
+
+  deps = [
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/public",  # For serialization version constant.
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "encoding_unittest.cc",
+    "page_cloud_handler_impl_unittest.cc",
+    "timestamp_conversions_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

@@ -1,0 +1,30 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
+
+source_set("test") {
+  testonly = true
+
+  sources = [
+    "page_cloud_handler_empty_impl.cc",
+    "page_cloud_handler_empty_impl.h",
+    "test_page_cloud_handler.cc",
+    "test_page_cloud_handler.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/cloud_provider/public",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

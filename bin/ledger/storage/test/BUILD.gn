@@ -1,0 +1,31 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("test") {
+  testonly = true
+
+  sources = [
+    "commit_empty_impl.cc",
+    "commit_empty_impl.h",
+    "page_storage_empty_impl.cc",
+    "page_storage_empty_impl.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/storage/public",
+  ]
+
+  deps = [
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/glue/socket",
+    "//apps/ledger/src/storage/impl/btree:lib",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fxl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

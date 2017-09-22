@@ -1,0 +1,170 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="cloud_provider"]
+module cloud_provider;
+
+// This file defines a cloud service that can be used by Ledger to power cloud
+// sync.
+
+// Response status for cloud provider operations.
+enum Status {
+  OK = 0,
+  AUTH_ERROR,
+  ARGUMENT_ERROR,
+  INTERNAL_ERROR,
+  NETWORK_ERROR,
+  NOT_FOUND,
+  PARSE_ERROR,
+  SERVER_ERROR,
+  UNKNOWN_ERROR = -1,
+};
+
+// Cloud service that powers cloud sync for a single user. Top-level interface
+// of this file.
+//
+// Closing the client connection to CloudProvider shuts down all controllers
+// (DeviceSets, PageClouds) that were produced by it.
+interface CloudProvider {
+  // Retrieves the controller for the user device set.
+  GetDeviceSet(DeviceSet& device_set) => (Status status);
+
+  // Retrieves the controller for cloud sync of a particular page.
+  GetPageCloud(array<uint8> app_id, array<uint8> page_id, PageCloud& page_cloud)
+      => (Status status);
+};
+
+// Cloud registry of devices participating in cloud sync.
+//
+// Closing the client connection to DeviceSet disconnects all watchers set on
+// it.
+interface DeviceSet {
+  // Verifies that the device fingerprint in the cloud is still in the list of
+  // devices, ensuring that the cloud was not erased since the last sync.
+  CheckFingerprint(array<uint8> fingerprint) => (Status status);
+
+  // Adds the device fingerprint to the list of devices in the cloud.
+  SetFingerprint(array<uint8> fingerprint) => (Status status);
+
+  // Watches the given |fingerprint| in the cloud so that |watcher| is notified
+  // when the fingerprint is erased.
+  //
+  // At most one watcher can be set at any given time. If more than one watcher
+  // is set, only the one set most recently is notified when the fingerprint is
+  // erased.
+  //
+  // The returned status is:
+  //
+  //   - OK, if setting the watcher succeeded,
+  //   - NOT_FOUND, if the fingerprint was not found in the cloud
+  //   - NETWORK_ERROR, if the watcher couldn't be set due to a network error
+  //
+  // If the returned status is not OK, the corresponding error call is also made
+  // on the watcher.
+  SetWatcher(array<uint8> fingerprint, DeviceSetWatcher watcher)
+      => (Status status);
+};
+
+// Watcher for push notifications from the cloud registry of devices
+// participating in cloud sync.
+interface DeviceSetWatcher {
+  // Called when cloud provider detects that the cloud storage was erased. No
+  // further calls are made on the watcher after this is called.
+  OnCloudErased();
+
+  // Called when the network connection is lost. No further calls are made on
+  // the watcher after this is called.
+  OnNetworkError();
+};
+
+// Commit stored in the cloud.
+struct Commit {
+  // The id of the commit.
+  array<uint8> id;
+
+  // The content of the commit.
+  array<uint8> data;
+};
+
+// Handler for cloud sync of a single page.
+//
+// Implementation of this class manages a *commit log*, which is an append-only
+// list of commits produced by all devices that participate in syncing this
+// page. Position of commits within the log are references using position
+// tokens, allowing the caller to retrieve only commits not older than the given
+// position token.
+//
+// Closing the client connection to PageCloud disconnects all watchers set on
+// it.
+interface PageCloud {
+  // Adds the given commits to the commit log in the cloud.
+  //
+  // The commits are added in one batch, on the receiving side they are
+  // delivered in the same order in a single OnNewCommits() call.
+  AddCommits(array<Commit> commits) => (Status status);
+
+  // Retrieves commits not older than the given |min_position_token|.
+  //
+  // Passing null |min_position_token| retrieves all commits.
+  //
+  // If the resulting |status| is |OK|, |commits| contains all matching commits
+  // (might be empty) and |position_token| contains the position token of the
+  // most recent of the |commits| (null if |commits| is empty).
+  GetCommits(array<uint8>? min_position_token)
+      => (Status status, array<Commit>? commits, array<uint8>? position_token);
+
+  // Uploads the given object to the cloud under the given id.
+  AddObject(array<uint8> id, handle<vmo> data) => (Status status);
+
+  // Retrieves the object of the given id from the cloud.
+  //
+  // The size of the object is passed to the callback along with the socket
+  // handle, so that the client can verify that all data was streamed when
+  // draining the socket.
+  GetObject(array<uint8> id)
+      => (Status status, uint64 size, handle<socket>? stream);
+
+  // Watches the cloud for push notifications.
+  //
+  // At most one watcher can be set at any given time. If more than one watcher
+  // is set, only the one set most recently is notified when the fingerprint is
+  // erased.
+  //
+  // This method returns only push notifications not older than
+  // |min_position_token|.
+  SetWatcher(array<uint8> min_position_token, PageCloudWatcher watcher)
+      => (Status status);
+};
+
+// Watcher for push notifications from cloud sync of a single page.
+interface PageCloudWatcher {
+  // Called when new commits are added to the commit log in the cloud.
+  //
+  // The method takes the list of new |commits| along with the |position_token|
+  // of the most recent of them.
+  //
+  // No subsequent calls are made until the client calls the callback of the
+  // previous one.
+  OnNewCommits(array<Commit> commits, array<uint8> position_token) => ();
+
+  // Called when a new object is added to the cloud.
+  //
+  // The method takes the |id| and the content of the new object.
+  //
+  // No subsequent calls are made until the client calls the callback of the
+  // previous one.
+  OnNewObject(array<uint8> id, handle<vmo> data) => ();
+
+  // Called when an error occurs.
+  //
+  // No further calls are made on the watcher after this is called. The client
+  // can then re-establish the watcher by calling SetWatcher() again.
+  //
+  // The status is one of:
+  //
+  //   - AUTH_ERROR, if the auth token needs a refresh
+  //   - NETWORK_ERROR, if the connection was dropped
+  //   - PARSE_ERROR, if an invalid server notification was received
+  OnError(Status status);
+};

@@ -1,0 +1,42 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+group("fake") {
+  testonly = true
+
+  deps = [
+    ":lib",
+  ]
+}
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "fake_commit.cc",
+    "fake_commit.h",
+    "fake_journal.cc",
+    "fake_journal.h",
+    "fake_journal_delegate.cc",
+    "fake_journal_delegate.h",
+    "fake_page_storage.cc",
+    "fake_page_storage.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/storage/test",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//apps/ledger/src/glue/crypto",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

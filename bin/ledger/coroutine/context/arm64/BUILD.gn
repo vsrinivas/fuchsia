@@ -1,0 +1,14 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("arm64") {
+  sources = [
+    "context.S",
+    "context.h",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

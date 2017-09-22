@@ -1,0 +1,26 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "crypto/crypto_test_util.cc",
+    "crypto/hmac_unittests.cc",
+    "crypto/kdf_unittests.cc",
+    "socket/socket_drainer_client_unittest.cc",
+    "socket/socket_writer_unittest.cc",
+  ]
+
+  deps = [
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/glue/socket",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

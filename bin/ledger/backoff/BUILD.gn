@@ -1,0 +1,38 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
+
+source_set("backoff") {
+  sources = [
+    "backoff.h",
+    "exponential_backoff.cc",
+    "exponential_backoff.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/glue/crypto",
+    "//garnet/public/lib/fxl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "exponential_backoff_unittest.cc",
+  ]
+
+  deps = [
+    ":backoff",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

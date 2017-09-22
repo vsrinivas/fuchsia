@@ -1,0 +1,151 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [ "//apps/ledger/src/*" ]
+
+group("impl") {
+  deps = [
+    ":lib",
+    "//apps/ledger/src/storage/impl/btree",
+  ]
+}
+
+flatbuffer("commit_storage") {
+  sources = [
+    "commit.fbs",
+  ]
+
+  deps = [
+    "//apps/ledger/src/convert:byte_storage",
+  ]
+
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+}
+
+flatbuffer("file_index") {
+  sources = [
+    "file_index.fbs",
+  ]
+
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("lib") {
+  sources = [
+    "commit_impl.cc",
+    "commit_impl.h",
+    "constants.h",
+    "db.h",
+    "db_serialization.cc",
+    "db_serialization.h",
+    "directory_reader.cc",
+    "directory_reader.h",
+    "file_index.cc",
+    "file_index.h",
+    "journal_impl.cc",
+    "journal_impl.h",
+    "ledger_storage_impl.cc",
+    "ledger_storage_impl.h",
+    "leveldb.cc",
+    "leveldb.h",
+    "number_serialization.h",
+    "object_id.cc",
+    "object_id.h",
+    "object_impl.cc",
+    "object_impl.h",
+    "page_db.h",
+    "page_db_batch_impl.cc",
+    "page_db_batch_impl.h",
+    "page_db_impl.cc",
+    "page_db_impl.h",
+    "page_storage_impl.cc",
+    "page_storage_impl.h",
+    "split.cc",
+    "split.h",
+  ]
+
+  deps = [
+    ":commit_storage",
+    ":file_index",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/cobalt",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/impl/btree:lib",
+    "//apps/ledger/src/storage/public",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/trace",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/coroutine",
+    "//apps/ledger/src/third_party/bup",
+    "//third_party/leveldb",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("test_utils") {
+  testonly = true
+
+  sources = [
+    "storage_test_utils.cc",
+    "storage_test_utils.h",
+  ]
+
+  deps = [
+    ":lib",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/glue/crypto",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/storage/impl/btree:lib",
+    "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "commit_impl_unittest.cc",
+    "commit_random_impl.cc",
+    "commit_random_impl.h",
+    "file_index_unittest.cc",
+    "ledger_storage_unittest.cc",
+    "object_id_unittest.cc",
+    "object_impl_unittest.cc",
+    "page_db_empty_impl.cc",
+    "page_db_empty_impl.h",
+    "page_db_unittest.cc",
+    "page_storage_unittest.cc",
+    "split_unittest.cc",
+  ]
+
+  deps = [
+    ":file_index",
+    ":lib",
+    ":test_utils",
+    "//apps/ledger/src/cloud_sync/impl",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/fake:lib",
+    "//apps/ledger/src/storage/impl/btree:lib",
+    "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/storage/test",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

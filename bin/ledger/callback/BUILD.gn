@@ -1,0 +1,64 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
+
+source_set("callback") {
+  sources = [
+    "auto_cleanable.h",
+    "cancellable.cc",
+    "cancellable.h",
+    "cancellable_helper.cc",
+    "cancellable_helper.h",
+    "capture.h",
+    "destruction_sentinel.cc",
+    "destruction_sentinel.h",
+    "managed_container.cc",
+    "managed_container.h",
+    "operation_serializer.h",
+    "scoped_callback.h",
+    "scoped_task_runner.cc",
+    "scoped_task_runner.h",
+    "synchronous_task.cc",
+    "synchronous_task.h",
+    "trace_callback.h",
+    "waiter.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/trace",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "auto_cleanable_unittest.cc",
+    "cancellable_helper_unittest.cc",
+    "cancellable_unittest.cc",
+    "capture_unittest.cc",
+    "destruction_sentinel_unittest.cc",
+    "managed_container_unittest.cc",
+    "scoped_callback_unittest.cc",
+    "scoped_task_runner_unittest.cc",
+    "synchronous_task_unittest.cc",
+    "waiter_unittest.cc",
+  ]
+
+  deps = [
+    ":callback",
+    "//apps/ledger/src/test:lib",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

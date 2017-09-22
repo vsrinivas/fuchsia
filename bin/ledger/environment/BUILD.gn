@@ -1,0 +1,41 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("environment") {
+  sources = [
+    "environment.cc",
+    "environment.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/coroutine",
+    "//apps/ledger/src/network",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "environment_unittest.cc",
+  ]
+
+  deps = [
+    ":environment",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

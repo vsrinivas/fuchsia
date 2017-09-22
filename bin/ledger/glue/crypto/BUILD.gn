@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("crypto") {
+  sources = [
+    "base64.cc",
+    "base64.h",
+    "hash.cc",
+    "hash.h",
+    "hmac.cc",
+    "hmac.h",
+    "kdf.cc",
+    "kdf.h",
+    "rand.cc",
+    "rand.h",
+  ]
+
+  deps = [
+    "//apps/ledger/src/third_party/modp_b64",
+    "//garnet/public/lib/fxl",
+    "//third_party/boringssl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

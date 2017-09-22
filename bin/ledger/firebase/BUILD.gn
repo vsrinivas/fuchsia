@@ -1,0 +1,59 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("firebase") {
+  sources = [
+    "encoding.cc",
+    "encoding.h",
+    "event_stream.cc",
+    "event_stream.h",
+    "firebase.h",
+    "firebase_impl.cc",
+    "firebase_impl.h",
+    "status.cc",
+    "status.h",
+    "watch_client.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/network",
+    "//third_party/rapidjson",
+  ]
+
+  deps = [
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/glue/socket",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "encoding_unittest.cc",
+    "event_stream_unittest.cc",
+    "firebase_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":firebase",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/glue/socket",
+    "//apps/ledger/src/network:fake",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

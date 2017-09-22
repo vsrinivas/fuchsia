@@ -1,0 +1,75 @@
+<md-toolbar color="primary">
+  <span>Ledger Cloud Dashboard</span>
+</md-toolbar>
+<div class="lcd-container">
+  <div *ngIf="!authenticated">
+    <md-card class="lcd-card">
+      <md-card-content>
+        <h1>Authentication required</h1>
+        <p>Please authenticate in order to use the dashboard.</p>
+      </md-card-content>
+      <md-card-actions>
+        <button md-raised-button color="accent" (click)="login()">Login</button>
+      </md-card-actions>
+    </md-card>
+  </div>
+
+  <div *ngIf="deleteInProgress">
+    <md-card class="lcd-card">
+      <md-card-content>
+        <h1>Delete in progress</h1>
+        <p>Please don't close the tab.</p>
+      </md-card-content>
+    </md-card>
+  </div>
+
+  <div *ngIf="authenticated && !deleteInProgress">
+    <!-- Info about the user -->
+    <md-card class="lcd-card">
+      <md-card-content>
+        <h1>User</h1>
+        <p>You are signed in as <b>{{ (user | async)?.email }}</b>
+          a.k.a {{ uid }} (Firebase user ID).</p>
+      </md-card-content>
+      <md-card-actions>
+        <button md-raised-button color="accent" (click)="logout()">Logout</button>
+      </md-card-actions>
+    </md-card>
+
+    <!-- State -->
+    <md-card class="lcd-card">
+      <md-card-content>
+        <h1>State</h1>
+        <div *ngIf="loading">
+          <p>Loading the state.</p>
+        </div>
+        <div *ngIf="!loading && !version">
+          <p>Ledger is empty.</p>
+        </div>
+        <div *ngIf="!loading && version">
+          <p>Looking at serialization version <b>{{ version }}</b>.</p>
+          <p>There are <b>{{ (devices | async)?.length }}</b> devices syncing.</p>
+          <ul>
+            <li class="text" *ngFor="let device of devices | async">
+              {{device.$key}}
+            </li>
+          </ul>
+          <p>Device IDs are opaque and meaningful only to Ledger.</p>
+        </div>
+      </md-card-content>
+    </md-card>
+
+    <!-- Cloud delete -->
+    <md-card class="lcd-card">
+      <md-card-content>
+        <h1>Reset Ledger state</h1>
+        <p><i>Why do we even have this lever?</i></p>
+        <p><b>This will also trigger erase of the local data, the next time each of
+            the devices sync</b></p>
+      </md-card-content>
+      <md-card-actions>
+        <button md-raised-button color="warn" (click)="erase()">Permanently erase all my data</button>
+      </md-card-actions>
+    </md-card>
+  </div>
+</div>

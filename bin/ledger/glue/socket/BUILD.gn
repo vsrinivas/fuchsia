@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("socket") {
+  sources = [
+    "socket_drainer_client.cc",
+    "socket_drainer_client.h",
+    "socket_pair.h",
+    "socket_writer.cc",
+    "socket_writer.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/callback",
+    "//garnet/public/lib/fidl/c/waiter",
+    "//garnet/public/lib/fidl/cpp/waiter",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

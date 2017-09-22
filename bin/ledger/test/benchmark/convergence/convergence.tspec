@@ -1,0 +1,14 @@
+{
+  "test_suite_name": "fuchsia.ledger",
+  "app": "ledger_benchmark_convergence",
+  "args": ["--entry-count=10", "--value-size=100"],
+  "categories": ["benchmark"],
+  "duration": 120,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "convergence",
+      "event_category": "benchmark"
+    }
+  ]
+}

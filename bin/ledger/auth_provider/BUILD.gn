@@ -1,0 +1,41 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
+
+source_set("auth_provider") {
+  sources = [
+    "auth_provider.h",
+    "auth_provider_impl.cc",
+    "auth_provider_impl.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/backoff",
+    "//apps/ledger/src/callback",
+    "//peridot/public/lib/auth/fidl",
+    "//garnet/public/lib/fxl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "auth_provider_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":auth_provider",
+    "//apps/ledger/src/backoff/test",
+    "//apps/ledger/src/test:lib",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

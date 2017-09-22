@@ -1,0 +1,40 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("coroutine") {
+  sources = [
+    "coroutine.h",
+    "coroutine_impl.cc",
+    "coroutine_impl.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/callback",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//apps/ledger/src/coroutine/context",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "coroutine_unittest.cc",
+  ]
+
+  deps = [
+    ":coroutine",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

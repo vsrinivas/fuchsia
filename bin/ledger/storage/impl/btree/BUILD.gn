@@ -1,0 +1,100 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [ "//apps/ledger/src/*" ]
+
+group("btree") {
+  deps = [
+    ":lib",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "builder.cc",
+    "builder.h",
+    "diff.cc",
+    "diff.h",
+    "encoding.cc",
+    "encoding.h",
+    "iterator.cc",
+    "iterator.h",
+    "synchronous_storage.cc",
+    "synchronous_storage.h",
+    "tree_node.cc",
+    "tree_node.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/coroutine",
+  ]
+
+  deps = [
+    ":internal",
+    ":tree_node_storage",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/public",
+    "//garnet/public/lib/fxl",
+    "//third_party/murmurhash",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+flatbuffer("tree_node_storage") {
+  sources = [
+    "tree_node.fbs",
+  ]
+
+  deps = [
+    "//apps/ledger/src/convert:byte_storage",
+  ]
+
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("internal") {
+  sources = [
+    "internal_helper.cc",
+    "internal_helper.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/storage/public",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "btree_utils_unittest.cc",
+    "encoding_unittest.cc",
+    "entry_change_iterator.h",
+    "tree_node_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    ":tree_node_storage",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/fake:lib",
+    "//apps/ledger/src/storage/impl:test_utils",
+    "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/storage/test",
+    "//apps/ledger/src/test:lib",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

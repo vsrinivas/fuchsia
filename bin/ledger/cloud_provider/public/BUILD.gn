@@ -1,0 +1,27 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("public") {
+  sources = [
+    "commit.cc",
+    "commit.h",
+    "commit_watcher.h",
+    "page_cloud_handler.h",
+    "record.cc",
+    "record.h",
+    "types.cc",
+    "types.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

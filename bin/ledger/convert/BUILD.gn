@@ -1,0 +1,70 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
+
+source_set("convert") {
+  sources = [
+    "convert.cc",
+    "convert.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+  ]
+
+  public_deps = [
+    ":byte_storage",
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/zx",
+    "//third_party/leveldb",
+    "//third_party/rapidjson",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+flatbuffer("byte_storage") {
+  sources = [
+    "bytes.fbs",
+  ]
+
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+}
+
+flatbuffer("byte_storage_test") {
+  testonly = true
+
+  sources = [
+    "bytes_test.fbs",
+  ]
+
+  deps = [
+    ":byte_storage",
+  ]
+
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "collection_view_unittest.cc",
+    "convert_unittest.cc",
+  ]
+
+  deps = [
+    ":byte_storage_test",
+    ":convert",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

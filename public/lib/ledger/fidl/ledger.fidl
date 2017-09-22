@@ -1,0 +1,440 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="ledger"]
+module ledger;
+
+/*
+ * This file contains definitions of interfaces and data structures to access
+ * the Fuchsia Ledger.
+ */
+
+// Response code for ledger operations.
+enum Status {
+  OK = 0,
+  PARTIAL_RESULT,
+  INVALID_TOKEN,
+  AUTHENTICATION_ERROR,
+  PAGE_NOT_FOUND,
+  KEY_NOT_FOUND,
+  REFERENCE_NOT_FOUND,
+  NEEDS_FETCH,
+  IO_ERROR,
+  NETWORK_ERROR,
+  TRANSACTION_ALREADY_IN_PROGRESS,
+  NO_TRANSACTION_IN_PROGRESS,
+  INTERNAL_ERROR,
+  CONFIGURATION_ERROR,
+  VALUE_TOO_LARGE,
+  UNKNOWN_ERROR = -1,
+};
+
+[ServiceName="ledger::Ledger"]
+interface Ledger {
+  // Retrieves the page with the given identifier, creating it if needed. A
+  // |null| identifier can be passed to create a new page with a random unique
+  // identifier. It is allowed to connect to the same page concurrently
+  // multiple times.
+
+  // Parameters:
+  // |id| the identifier of the page, or |null| to create a new page with a random identifier.
+  //
+  // Returns OK and binds |page_request| to the page on success.
+  GetPage(array<uint8, 16>? id, Page& page_request) => (Status status);
+
+  // Gets the page with identifier
+  // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].
+  // This is a convenience method equivalent to:
+  // GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
+  GetRootPage(Page& page_request) => (Status status);
+
+  // Deletes the page with the given id.
+  DeletePage(array<uint8, 16> id) => (Status status);
+
+  // Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
+  // If |factory| is NULL or this method is not called, a global last one wins
+  // policy will be used. If a factory is set and later on disconnected, pages
+  // for which no conflict resolution is set up will not get their conflict
+  // resolved until this method is called again.
+  SetConflictResolverFactory(ConflictResolverFactory? factory)
+      => (Status status);
+};
+
+// A reference to a value.
+struct Reference {
+  array<uint8> opaque_id;
+};
+
+// A page is the smallest unit of syncable data.
+interface Page {
+  // Returns the identifier for the page.
+  GetId() => (array<uint8, 16> id);
+
+  // Creates a snapshot of the page, allowing the client app to read a
+  // consistent view of the content of the page. If |key_prefix| is provided,
+  // the resulting snapshot includes only the entries with matching keys.
+  //
+  // If |watcher| is provided, it will receive notifications for changes of the
+  // page state on this page connection newer than the resulting snapshot. If
+  // |key_prefix| is provided too, the change notifications will only contain
+  // the entries with matching keys.
+  GetSnapshot(PageSnapshot& snapshot_request, array<uint8>? key_prefix,
+      PageWatcher? watcher) => (Status status);
+
+  // Mutation operations.
+  // Mutations are bundled together into atomic commits. If a transaction is in
+  // progress, the list of mutations bundled together is tied to the current
+  // transaction. If no transaction is in progress, mutations will be bundled
+  // with the following rules:
+  // - A call to either |GetSnapshot()|, |Watch()| or |StartTransaction()| will
+  //   commit any pending mutations.
+  // - All pending mutations will regularly be bundled together and committed.
+  //   They are guaranteed to be persisted as soon as the client receives a
+  //   successful status.
+  // |Put()| and |PutWithPriority()| can be used for small values that fit
+  // inside a FIDL message. If the value is bigger, a reference must be first
+  // created using |CreateReferenceFromSocket()| or |CreateReferenceFromVmo()|
+  // and then |PutReference()| can be used. |PutWithPriority()| and
+  // |PutReference()| have an additional |priority| parameter managing the
+  // synchronization policy for this value. |Put()| uses a default priority of
+  // |Priority.EAGER|. For the list of available priorities and their
+  // definition, see |Priority|.
+  Put(array<uint8> key, array<uint8> value) => (Status status);
+  PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
+      => (Status status);
+  PutReference(array<uint8> key, Reference reference, Priority priority)
+      => (Status status);
+  Delete(array<uint8> key) => (Status status);
+
+  // References.
+  // Creates a new reference. The object is not part of any commit. It must be
+  // associated with a key using |PutReference()|. The content of the reference
+  // will be the content of the socket. The content size must be equal to
+  // |size|, otherwise the call will fail.
+  CreateReferenceFromSocket(uint64 size, handle<socket> data)
+      => (Status status, Reference? reference);
+  // Creates a new reference. The object is not part of any commit. It must be
+  // associated with a key using |PutReference()|. The content of the reference
+  // will be the content of the vmo.
+  CreateReferenceFromVmo(handle<vmo> data)
+      => (Status status, Reference? reference);
+
+  // Transactions.
+  //
+  // Transactions allow the client to ensures changes are seen atomically by
+  // observers of this page. Once a transaction is started with
+  // |StartTransaction()|, every call to |Put(...)| and |Delete(...)| will not
+  // be visible until either |Commit()| is called, and all changes are applied
+  // in a single commit, or |Rollback()| is called and all changes are
+  // discarded.
+  //
+  // Parallel transactions on the same *page connection* are not allowed, and
+  // calling |StartTransaction()| when a transaction is already in progress
+  // returns an error. However, a client is free to connect to the same page
+  // multiple times, and run parallel transactions on the same page using
+  // separate connections. In this case, commiting each transaction creates
+  // divergent commits, which are later subject to conflict resolution.
+  //
+  // When a transaction is in progress, the page content visible *on this page
+  // connection* is pinned to the state from when |StartTransaction()| was
+  // called. In particular, no watch notifications are delivered, and the
+  // conflict resolution is not invoked while the transaction is in progress. If
+  // conflicting changes are made or synced while the transaction is in
+  // progress, conflict resolution is invoked after the transaction is
+  // committed.
+  //
+  // Starting a transaction will block until all watchers registered on this
+  // page connection have received the current page state, ie. the one that
+  // will be used as the base of the transaction. Put (with all its variants)
+  // and Delete calls may be pipelined while StartTransaction() is pending and
+  // will be taken into account in the transaction while it is pending.
+  StartTransaction() => (Status status);
+  Commit() => (Status status);
+  Rollback() => (Status status);
+
+  // Sets a watcher to track the synchronisation state of this page. The
+  // current state is immediately sent to the watcher when this method is
+  // called.
+  SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
+};
+
+// The synchronization priority of a reference.
+enum Priority {
+  // EAGER values will be downloaded with the commit and have the same
+  // availability.
+  EAGER = 0,
+  // LAZY values will not be downloaded with their commit, but only on demand.
+  // A LAZY value thus may not be available when requested, for example if the
+  // device has no internet connection at request time.
+  LAZY
+};
+
+// A pair of key and value.
+struct Entry {
+  array<uint8> key;
+  // |value| is null if the value requested has the LAZY priority and is not
+  // present on the device. Clients must use a Fetch call to retrieve the
+  // contents.
+  handle<vmo>? value;
+  Priority priority;
+};
+
+// A pair of key and an inlined value.
+struct InlinedEntry {
+  array<uint8> key;
+  // |value| is null if the value requested has the LAZY priority and is not
+  // present on the device. Clients must use a Fetch call to retrieve the
+  // contents.
+  array<uint8>? value;
+  Priority priority;
+};
+
+
+// The content of a page at a given time. Closing the connection to a |Page|
+// interface closes all |PageSnapshot| interfaces it created. The contents
+// provided by this interface are limited to the prefix provided to the
+// Page.GetSnapshot() call.
+interface PageSnapshot {
+  // Returns the entries in the page with keys starting from the provided key.
+  // If |key_start| is NULL, all entries are returned. If the result fits in a
+  // single fidl message, |status| will be |OK| and |next_token| equal to NULL.
+  // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
+  // non-NULL value. To retrieve the remaining results, another call to
+  // |GetEntries| should be made, initializing the optional |token| argument
+  // with the value of |next_token| returned in the previous call. |status|
+  // will be |PARTIAL_RESULT| as long as there are more results and |OK| once
+  // finished.
+  // Only |EAGER| values are guaranteed to be returned inside |entries|.
+  // Missing |LAZY| values can be retrieved over the network using Fetch().
+  // The returned |entries| are sorted by |key|.
+  GetEntries(array<uint8>? key_start, array<uint8>? token)
+      => (Status status, array<Entry>? entries, array<uint8>? next_token);
+
+  // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
+  // fit in a FIDL message.
+  GetEntriesInline(array<uint8>? key_start, array<uint8>? token)
+      => (Status status, array<InlinedEntry>? entries,
+          array<uint8>? next_token);
+
+  // Returns the keys of all entries in the page starting from the provided
+  // key. If |key_start| is NULL, all entries are returned. If the result fits
+  // in a single FIDL message, |status| will be |OK| and |next_token| equal to
+  // NULL. Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will
+  // have a non-NULL value. To retrieve the remaining results, another call to
+  // |GetKeys| should be made, initializing the optional |token| argument with
+  // the value of |next_token| returned in the previous call.
+  // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
+  // as there are more results and |OK| once finished.
+  GetKeys(array<uint8>? key_start, array<uint8>? token)
+      => (Status status, array<array<uint8>>? keys, array<uint8>? next_token);
+
+  // Returns the value of a given key.
+  // Only |EAGER| values are guaranteed to be returned. Calls when the value is
+  // |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
+  // be retrieved over the network using a Fetch() call.
+  Get(array<uint8> key) => (Status status, handle<vmo>? value);
+
+  // Returns the value of a given key if it fits in a FIDL message.
+  // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
+  // See |Get()| for additional information.
+  GetInline(array<uint8> key) => (Status status, array<uint8>? value);
+
+  // Fetches the value of a given key, over the network if not already present
+  // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
+  // is not available).
+  Fetch(array<uint8> key) => (Status status, handle<vmo>? value);
+
+  // Fetches the value of a given key, over the network if not already present
+  // locally, and returns a shared handle of a part of the value of a given
+  // key, starting at the position that is specified by |offset|. If |offset|
+  // is less than 0, starts at |-offset| from the end of the value.
+  // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
+  // everything.
+  FetchPartial(array<uint8> key, int64 offset, int64 max_size)
+      => (Status status, handle<vmo>? buffer);
+};
+
+enum ResultState {
+  COMPLETED = 0,
+  PARTIAL_STARTED,
+  PARTIAL_CONTINUED,
+  PARTIAL_COMPLETED,
+};
+
+struct PageChange {
+  // The timestamp of this change. This represents the number of nanoseconds
+  // since Unix epoch (i.e., since "1970-01-01 00:00 UTC", ignoring leap
+  // seconds). This value is set by the device that created the change and is
+  // not synchronized across devices. In particular, there is no guarantee that
+  // the |timestamp| of a follow up change is greater than this one's.
+  int64 timestamp;
+  // List of new and modified entries. |changes| are sorted by |key|.
+  array<Entry> changes;
+  // List of deleted keys, in sorted order.
+  array<array<uint8>> deleted_keys;
+};
+
+// Interface to watch changes to a page. The client will receive changes made by
+// itself, as well as other clients or synced from other devices. The contents
+// of a transaction will never be split across multiple OnChange() calls, but
+// the contents of multiple transactions may be merged into one OnChange() call.
+interface PageWatcher {
+  // Called for changes made on the page. If the result fits in a single fidl
+  // message, |result_state| will be |COMPLETED|. Otherwise, OnChange will be
+  // called multiple times and |result_state| will be |PARTIAL_STARTED| the
+  // first time, |PARTIAL_CONTINUED| the following ones and finally
+  // |PARTIAL_COMPLETED| on the last call. No new OnChange() call will be made
+  // while the previous one is still active. If clients are interested in the
+  // full content of the page at the time of the change, they can request a
+  // PageSnapshot in the callback. This request is optional and can be requested
+  // in any partial (started, continued or completed) and/or COMPLETED OnChange
+  // call. In any case, all requests made on a sequence of OnChange calls for
+  // the same page change, will always return the same snapshot: the one
+  // including all changes.
+  //
+  // Note that calls to Page.StartTransaction() on the page connection on which
+  // the watcher was registered will block until all OnChange() calls have
+  // finished.
+  OnChange(PageChange page_change, ResultState result_state)
+      => (PageSnapshot&? snapshot);
+};
+
+// This interface lets clients control the conflict resolution policy of the
+// ledger. It allows them to either use pre-defined policies, or provide their
+// own implementation. This can be decided on a page-by-page basis.
+interface ConflictResolverFactory {
+  // Returns the conflict resolution policy for the given page.
+  GetPolicy(array<uint8> page_id) => (MergePolicy policy);
+  // Returns a |ConflictResolver| to use for the given page. This will only be
+  // called if |GetPolicy| for the same page returned |AUTOMATIC_WITH_FALLBACK|
+  // or |CUSTOM|.
+  NewConflictResolver(array<uint8> page_id, ConflictResolver& resolver);
+};
+
+// Strategy to be used when resolving conflicts.
+enum MergePolicy {
+  // No merge happens on the device. Parallel commits are not merged.
+  NONE,
+  // Last one wins. When 2 commits are merged, the resulting commit contains:
+  //  - all keys/values that do not conflict
+  //  - all keys/values of the commit with the biggest timestamp (or biggest
+  //    id, if the timestamps are the same)
+  LAST_ONE_WINS,
+  // Commits are automatically merged when no key has been modified on both
+  // sides. When a key has been modified by both commits, conflict resolution is
+  // delegated to a user-provided |ConflictResolver| that is created by calling
+  // |ConflictResolverFactory.NewConflictResolver|. A single |ConflictResolver|
+  // is created for each page. When the |ConflictResolver| is disconnected, a
+  // new one is requested.
+  AUTOMATIC_WITH_FALLBACK,
+  // All merges are resolved by a user-provided |ConflictResolver| as described
+  // above, even when commits to be merged change a disjoined set of keys.
+  CUSTOM,
+};
+
+// A value that is either small enough to be directly embedded in |bytes| or
+// that is referenced by |reference|.
+union BytesOrReference {
+  array<uint8> bytes;
+  Reference reference;
+};
+
+// Source of the value used to resolve a conflict. The "left" source is used by
+// default in merging, so the value must be omitted entirely if chosen.
+// |DELETE| deletes the key. Used by |MergedValue|.
+enum ValueSource {
+  RIGHT = 0,
+  NEW,
+  DELETE
+};
+
+// A change in the page. If |source| is set to |NEW|, |new_value| must be set
+// to the new value. If |source| is not |NEW|, |new_value| is ignored.
+struct MergedValue {
+  array<uint8> key;
+  ValueSource source;
+  BytesOrReference? new_value;
+  Priority priority;
+};
+
+// A merge result provider, obtained from |ConflictResolver.Resolve()|. Can be
+// used to retrieve data about the conflict, and provide the merge result. When
+// all changes have been sent, |Done()| should be called to mark the end of
+// incoming merge changes.
+interface MergeResultProvider {
+  // |GetLeftDiff| and |GetRightDiff| return the set of all key/value pairs that
+  // have been modified between the common ancestor (see
+  // |ConflictResolver.Resolve()|) and the left and right branches respectively.
+  //
+  // Values of |LAZY| keys may not be present on the device. In that case,
+  // |Entry| objects inside the PageChange objects will have a NULL |value|
+  // field. If needed, |left| and |right|, provided by the
+  // |ConflictResolver.Resolve()| method can be used by clients to Fetch these
+  // values.
+  //
+  // The first call to get the |PageChange|s should be done using a NULL
+  // token. If the result does not fit in a single fidl message, |status| will
+  // be |PARTIAL_RESULT| and |next_token| will have a non-NULL value, which can
+  // be used to retrieve the rest of the results by calling |GetLeftDiff()|
+  // (or |GetRightDiff()|) with that token.
+  GetLeftDiff(array<uint8>? token)
+      => (Status status, PageChange? change, array<uint8>? next_token);
+
+  GetRightDiff(array<uint8>? token)
+      => (Status status, PageChange? change, array<uint8>? next_token);
+
+  // Once the result of the merge has been computed |Merge()| can be called with
+  // all changes that resolve this conflict. If the result does not fit in a
+  // single fidl message, |Merge()| can be called multiple times. If any of the
+  // |Merge()| calls fails, i.e. |status| is not |OK|, all following calls will
+  // fail with the same error.
+  Merge(array<MergedValue> merge_changes) => (Status status);
+
+  // Marks the end of merge changes to resolve this conflict. After |Done()| is
+  // called |MergeResultProvider| interface cannot be used any more.
+  Done() => (Status status);
+};
+
+// Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
+// |ConflictResolverFactory.GetPolicy()| returns |AUTOMATIC_WITH_FALLBACK| or
+// |CUSTOM| when called for a given page, the |NewConflictResolver| method will
+// be called and will provide a |ConflictResolver|. Each time a custom conflict
+// resolution is needed according to the chosen policy, the method
+// |ConflictResolver.Resolve()| will be called, and the client will resolve the
+// conflict by returning the final value for all conflicting keys as well as
+// values for any other key that the client wants to change.
+interface ConflictResolver {
+  // Method called when a conflict needs to be resolved. |left| and |right|
+  // contain the snapshots of the two branches and |common_version| that of the
+  // lowest common ancestor. |common_version| can be NULL if this version is no
+  // longer available. The result of the merge can be given through the
+  // |result_provider|, using the left branch as the base of the merge commit,
+  // i.e. only key/value pairs that are different from the left version of the
+  // page should be sent. |result_provider| can also be used to retrieve the set
+  // of differences, i.e. conflicting keys, between the two versions.
+  Resolve(PageSnapshot left, PageSnapshot right, PageSnapshot? common_version,
+          MergeResultProvider result_provider);
+};
+
+// Synchronization state.
+enum SyncState {
+  // There are no pending operations.
+  IDLE = 0,
+  // There are pending operations, but there is no syncing in progress. This
+  // could be because of a connection error, because another operation is in
+  // progress (e.g. a download), or due to another reason, such us a pending
+  // merge.
+  PENDING,
+  // Sync is in progress.
+  IN_PROGRESS,
+  // An internal error occurred while trying to sync.
+  ERROR,
+};
+
+// Watcher interface to be implemented by clients who wish to follow the
+// synchronization status of their ledger. SyncStateChanged callback must be
+// called for new state change calls to be sent.
+interface SyncWatcher {
+  SyncStateChanged(SyncState download_status, SyncState upload_status) => ();
+};

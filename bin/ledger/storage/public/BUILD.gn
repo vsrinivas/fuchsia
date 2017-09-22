@@ -1,0 +1,51 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("public") {
+  sources = [
+    "commit.h",
+    "commit_watcher.h",
+    "constants.cc",
+    "constants.h",
+    "data_source.cc",
+    "data_source.h",
+    "iterator.h",
+    "journal.h",
+    "ledger_storage.h",
+    "object.cc",
+    "object.h",
+    "page_storage.cc",
+    "page_storage.h",
+    "page_sync_delegate.h",
+    "types.cc",
+    "types.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/convert",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "data_source_unittest.cc",
+    "object_unittest.cc",
+  ]
+
+  deps = [
+    ":public",
+    "//apps/ledger/src/glue/socket",
+    "//apps/ledger/src/test:lib",
+  ]
+}

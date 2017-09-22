@@ -1,0 +1,19 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+namespace storage;
+
+// An entry for the identifier of a part of a file.
+table ObjectChild {
+  size: ulong;
+  object_id: [ubyte];
+}
+
+// The index of a chunked file.
+table FileIndex {
+  size: ulong;
+  children: [ObjectChild];
+}
+
+root_type FileIndex;

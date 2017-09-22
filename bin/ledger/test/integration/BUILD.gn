@@ -1,0 +1,49 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+executable("integration") {
+  output_name = "ledger_integration_tests"
+
+  testonly = true
+
+  sources = [
+    "integration_test.cc",
+    "integration_test.h",
+    "integration_test_tests.cc",
+    "ledger_app_instance_factory_integration.cc",
+    "ledger_repository_tests.cc",
+    "merging_tests.cc",
+    "page_snapshot_tests.cc",
+    "page_tests.cc",
+    "page_watcher_tests.cc",
+    "sync_tests.cc",
+    "test_utils.cc",
+    "test_utils.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/ledger/src/app:lib",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/glue/socket",
+    "//apps/ledger/src/network:fake",
+    "//apps/ledger/src/storage/fake:lib",
+    "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/test:ledger_instance_factory",
+    "//apps/ledger/src/test:lib",
+    "//apps/ledger/src/test/cloud_server",
+    "//apps/ledger/src/test/integration/sync",
+    "//peridot/public/lib/auth/fidl",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

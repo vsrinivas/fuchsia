@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("test") {
+  testonly = true
+
+  sources = [
+    "page_sync_empty_impl.cc",
+    "page_sync_empty_impl.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/cloud_sync/public",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

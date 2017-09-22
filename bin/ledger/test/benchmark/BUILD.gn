@@ -1,0 +1,47 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+group("benchmark") {
+  testonly = true
+
+  public_deps = [
+    ":launch_benchmark",
+    ":run_ledger_benchmarks",
+    "//apps/ledger/src/test/benchmark/convergence",
+    "//apps/ledger/src/test/benchmark/lib",
+    "//apps/ledger/src/test/benchmark/put",
+    "//apps/ledger/src/test/benchmark/sync",
+  ]
+}
+
+executable("launch_benchmark") {
+  testonly = true
+
+  sources = [
+    "launch_benchmark.cc",
+    "launch_benchmark.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/ledger/src/test/benchmark/lib",
+    "//apps/ledger/src/test/benchmark/put:lib",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+copy("run_ledger_benchmarks") {
+  sources = [
+    "run_ledger_benchmarks.sh",
+  ]
+  outputs = [
+    "$root_out_dir/run_ledger_benchmarks.sh",
+  ]
+}

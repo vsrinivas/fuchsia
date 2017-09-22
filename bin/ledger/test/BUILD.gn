@@ -1,0 +1,124 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "data_generator.cc",
+    "data_generator.h",
+    "fake_token_provider.cc",
+    "fake_token_provider.h",
+    "get_ledger.cc",
+    "get_ledger.h",
+    "test_with_coroutines.cc",
+    "test_with_coroutines.h",
+    "test_with_message_loop.cc",
+    "test_with_message_loop.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/ledger/services/public",
+    "//apps/ledger/src/fidl_helpers",
+    "//apps/ledger/src/test/token_provider",
+    "//peridot/public/lib/auth/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings:serialization",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  deps = [
+    "//apps/ledger/services/internal",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/coroutine",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("app_test") {
+  testonly = true
+
+  sources = [
+    "app_test.cc",
+    "app_test.h",
+  ]
+
+  public_deps = [
+    ":lib",
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    "//garnet/public/lib/test_runner/cpp/reporting",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("app_test_main") {
+  testonly = true
+
+  sources = [
+    "app_test_main.cc",
+  ]
+
+  deps = [
+    ":app_test",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "test_with_message_loop_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
+
+source_set("ledger_instance_factory") {
+  testonly = true
+
+  sources = [
+    "ledger_app_instance_factory.cc",
+    "ledger_app_instance_factory.h",
+  ]
+
+  public_deps = [
+    ":lib",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/ledger/src/fidl_helpers",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

@@ -1,0 +1,80 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="ledger"]
+module ledger;
+
+import "apps/ledger/services/public/ledger.fidl";
+import "lib/auth/fidl/token_provider.fidl";
+
+// Sync configuration.
+struct FirebaseConfig {
+  // ID of the Firebase instance.
+  string server_id;
+
+  // API key to use when connecting to Firebase.
+  string api_key;
+};
+
+// Entry interface implemented by the Ledger application, intended to be used by
+// the process setting up the user environment to obtain repositories for
+// individual users.
+[ServiceName="ledger::LedgerRepositoryFactory"]
+interface LedgerRepositoryFactory {
+  // Binds to the repository stored under |repository_path|, creating it if
+  // needed. If this is called multiple times for the same |repository_path|,
+  // only the first instance of |server_id| / |token_provider| will be used. Any
+  // subsequent ones will simply be ignored.
+  //
+  // Parameters:
+  // |repository_path| absolute path of the disk directory where the
+  //     repository is stored. At any given time, at most one repository
+  //     instance backed by the same disk directory can be running concurrently.
+  // |firebase_config| sync configuration, passing null disables sync.
+  // |token_provider| is used by the Ledger to get the appropriate auth tokens
+  //     associated with the user for whom |repository| is being created.
+  //     Passing null will only sync with an unprotected cloud instance. If the
+  //     |token_provider| sent here is disconnected, Ledger shuts down the
+  //     repository and disconnects all clients.
+  GetRepository(string repository_path,
+                FirebaseConfig? firebase_config,
+                modular.auth.TokenProvider? token_provider,
+                LedgerRepository& repository) => (Status status);
+
+  // Erases the data stored in the given repository, both locally and in the
+  // cloud.
+  //
+  // Note that there is no undo and no confirmation step on this level - the
+  // caller needs to ensure that this is only called when intended.
+  //
+  // Parameters:
+  // |firebase_config| sync configuration, passing null only clears the local
+  // state.
+  // |token_provider| is used by the Ledger to get user auth tokens, passing
+  // null only clears the local state.
+  EraseRepository(string repository_path,
+                  FirebaseConfig? firebase_config,
+                  modular.auth.TokenProvider? token_provider) => (Status status);
+};
+
+// Controller interface for the Ledger application lifecycle.
+[ServiceName="ledger::LedgerController"]
+interface LedgerController {
+  // Terminate the ledger application.
+  Terminate();
+};
+
+interface LedgerRepository {
+  // Creates a new Ledger for the given |ledger_name| if it doesn't already
+  // exist.
+  GetLedger(array<uint8> ledger_name, Ledger& ledger) => (Status status);
+
+  // Binds a new LedgerRepository handle to this repository.
+  Duplicate(LedgerRepository& request) => (Status status);
+
+  // Sets a watcher to track the synchronization state of a user's Ledger. The
+  // current state is immediately sent to the watcher when this method is
+  // called.
+  SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
+};

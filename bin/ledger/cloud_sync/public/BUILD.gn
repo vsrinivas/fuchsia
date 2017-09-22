@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+source_set("public") {
+  sources = [
+    "ledger_sync.h",
+    "page_sync.h",
+    "sync_state_watcher.cc",
+    "sync_state_watcher.h",
+    "user_config.h",
+    "user_sync.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/auth_provider",
+    "//apps/ledger/src/cloud_provider/public",
+    "//apps/ledger/src/device_set",
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
+    "//apps/ledger/src/storage/public",
+    "//garnet/public/lib/fxl",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

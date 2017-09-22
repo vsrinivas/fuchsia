@@ -1,0 +1,32 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//apps/ledger/src/*" ]
+
+executable("e2e_sync") {
+  output_name = "ledger_e2e_sync"
+  testonly = true
+
+  sources = [
+    "e2e_sync_main.cc",
+    "ledger_app_instance_factory_e2e.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/fidl_helpers",
+    "//apps/ledger/src/test:app_test",
+    "//apps/ledger/src/test:ledger_instance_factory",
+    "//apps/ledger/src/test:lib",
+    "//apps/ledger/src/test/integration/sync",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
