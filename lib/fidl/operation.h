@@ -32,6 +32,7 @@ class OperationContainer {
   virtual ~OperationContainer();
 
  protected:
+  void Schedule(OperationBase* o);
   void InvalidateWeakPtrs(OperationBase* o);
   const char* GetTraceName(OperationBase* o);
   uint64_t GetTraceId(OperationBase* o);
@@ -172,6 +173,9 @@ class OperationBase {
   // OperationContainer calls InvalidateWeakPtrs() and exposes trace fields to
   // its subclasses of OperationContainer.
   friend class OperationContainer;
+
+  // Called only by OperationContainer.
+  void Schedule();
 
   // Called only by OperationContainer.
   void InvalidateWeakPtrs();

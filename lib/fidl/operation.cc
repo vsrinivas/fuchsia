@@ -7,6 +7,7 @@
 #include <trace/event.h>
 #include <utility>
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace modular {
@@ -14,6 +15,10 @@ namespace modular {
 OperationContainer::OperationContainer() = default;
 
 OperationContainer::~OperationContainer() = default;
+
+void OperationContainer::Schedule(OperationBase* const o) {
+  o->Schedule();
+}
 
 void OperationContainer::InvalidateWeakPtrs(OperationBase* const o) {
   o->InvalidateWeakPtrs();
@@ -50,7 +55,7 @@ void OperationCollection::Hold(OperationBase* const o) {
   operations_.emplace_back(o);
   TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
                     kTraceIdKey, GetTraceId(o), kTraceInfoKey, GetTraceInfo(o));
-  o->Run();
+  Schedule(o);
 }
 
 void OperationCollection::Drop(OperationBase* const o) {
@@ -89,7 +94,7 @@ void OperationQueue::Hold(OperationBase* const o) {
     TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
                       kTraceIdKey, GetTraceId(o), kTraceInfoKey,
                       GetTraceInfo(o));
-    o->Run();
+    Schedule(o);
   }
 }
 
@@ -105,7 +110,7 @@ void OperationQueue::Cont() {
     TRACE_ASYNC_BEGIN(kModularTraceCategory, GetTraceName(o), GetTraceId(o),
                       kTraceIdKey, GetTraceId(o), kTraceInfoKey,
                       GetTraceInfo(o));
-    o->Run();
+    Schedule(o);
   } else {
     idle_ = true;
   }
@@ -125,6 +130,15 @@ OperationBase::~OperationBase() = default;
 void OperationBase::Ready() {
   FXL_DCHECK(container_);
   container_->Hold(this);
+}
+
+void OperationBase::Schedule() {
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+      [this, weak = weak_ptr_factory_.GetWeakPtr()] {
+        if (weak) {
+          Run();
+        }
+      });
 }
 
 void OperationBase::InvalidateWeakPtrs() {
