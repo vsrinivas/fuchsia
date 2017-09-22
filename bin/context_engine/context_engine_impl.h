@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/context/context_reader.fidl.h"
-#include "apps/maxwell/services/context/context_writer.fidl.h"
-#include "apps/maxwell/src/context_engine/context_repository.h"
-#include "apps/maxwell/src/context_engine/debug.h"
+#include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "peridot/bin/context_engine/context_repository.h"
+#include "peridot/bin/context_engine/debug.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {

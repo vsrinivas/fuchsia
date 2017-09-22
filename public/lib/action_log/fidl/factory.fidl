@@ -5,7 +5,7 @@
 module maxwell;
 
 import "user.fidl";
-import "../suggestion/proposal_publisher.fidl";
+import "lib/suggestion/fidl/proposal_publisher.fidl";
 
 [ServiceName="maxwell.action_log.UserActionLogFactory"]
 interface UserActionLogFactory {

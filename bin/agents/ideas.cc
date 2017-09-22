@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/agents/ideas.h"
+#include "peridot/bin/agents/ideas.h"
 
 #include <rapidjson/document.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/maxwell/services/context/context_reader.fidl.h"
-#include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];

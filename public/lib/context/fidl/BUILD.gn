@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("context") {
+fidl("fidl") {
   sources = [
     "context_engine.fidl",
     "context_reader.fidl",
@@ -16,6 +16,6 @@ fidl("context") {
   ]
 
   deps = [
-    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
   ]
 }

@@ -4,8 +4,8 @@
 
 module maxwell;
 
-import "apps/maxwell/services/suggestion/proposal.fidl";
-import "apps/maxwell/services/suggestion/user_input.fidl";
+import "lib/suggestion/fidl/proposal.fidl";
+import "lib/suggestion/fidl/user_input.fidl";
 
 // An interface enabling Agents to contribute Proposals reactively to the
 // Suggestion engine.

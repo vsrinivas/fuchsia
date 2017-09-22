@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "apps/maxwell/services/context/context_reader.fidl.h"
-#include "apps/maxwell/services/user/intelligence_services.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 #include "peridot/lib/fidl/context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

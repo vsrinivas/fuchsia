@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/integration/test_suggestion_listener.h"
+#include "peridot/bin/integration/test_suggestion_listener.h"
 
-#include "apps/maxwell/lib/suggestion/formatting.h"
+#include "lib/suggestion/cpp/formatting.h"
 
 bool suggestion_less(const maxwell::Suggestion* a,
                      const maxwell::Suggestion* b) {

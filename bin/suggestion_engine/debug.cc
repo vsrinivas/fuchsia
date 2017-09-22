@@ -4,7 +4,7 @@
 
 #include <functional>
 
-#include "apps/maxwell/src/suggestion_engine/debug.h"
+#include "peridot/bin/suggestion_engine/debug.h"
 
 namespace maxwell {
 

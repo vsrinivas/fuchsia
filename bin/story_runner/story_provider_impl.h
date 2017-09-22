@@ -10,7 +10,7 @@
 #include <unordered_set>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/fidl/scope.h"

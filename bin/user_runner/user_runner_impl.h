@@ -10,11 +10,11 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/maxwell/services/context/context_writer.fidl.h"
-#include "apps/maxwell/services/context/context_reader.fidl.h"
-#include "apps/maxwell/services/resolver/resolver.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"

@@ -9,8 +9,8 @@ source_set("scoped_context_value") {
   ]
 
   deps = [
-    "//apps/maxwell/lib/async:future_value",
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/async/cpp:future_value",
+    "//peridot/public/lib/context/fidl",
   ]
 }
 
@@ -21,6 +21,6 @@ source_set("formatting") {
   ]
 
   deps = [
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/context/fidl",
   ]
 }

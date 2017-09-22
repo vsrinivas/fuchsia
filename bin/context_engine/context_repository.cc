@@ -6,10 +6,10 @@
 #include <memory>
 #include <set>
 
-#include "apps/maxwell/src/context_engine/context_repository.h"
-#include "apps/maxwell/src/context_engine/debug.h"
+#include "peridot/bin/context_engine/context_repository.h"
+#include "peridot/bin/context_engine/debug.h"
 
-#include "apps/maxwell/lib/context/formatting.h"
+#include "lib/context/cpp/formatting.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 

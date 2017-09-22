@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/context/context_writer.fidl.h"
-#include "apps/maxwell/services/suggestion/debug.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
-#include "apps/maxwell/src/acquirers/mock/mock_gps.h"
-#include "apps/maxwell/src/agents/ideas.h"
-#include "apps/maxwell/src/integration/context_engine_test_base.h"
-#include "apps/maxwell/src/integration/test_suggestion_listener.h"
+#include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/suggestion/fidl/debug.fidl.h"
+#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
+#include "peridot/bin/acquirers/mock/mock_gps.h"
+#include "peridot/bin/agents/ideas.h"
+#include "peridot/bin/integration/context_engine_test_base.h"
+#include "peridot/bin/integration/test_suggestion_listener.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"
 #include "gtest/gtest.h"

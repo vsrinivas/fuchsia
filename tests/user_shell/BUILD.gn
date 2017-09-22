@@ -17,7 +17,7 @@ executable("test_user_shell") {
     "test_user_shell.cc",
   ]
   deps = [
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",

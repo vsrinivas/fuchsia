@@ -4,8 +4,8 @@
 
 module maxwell;
 
-import "apps/maxwell/services/resolver/resolver.fidl";
-import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
+import "lib/resolver/fidl/resolver.fidl";
+import "lib/suggestion/fidl/suggestion_provider.fidl";
 import "lib/component/fidl/component_context.fidl";
 import "lib/story/fidl/story_provider.fidl";
 import "lib/user/fidl/focus.fidl";

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
+import 'package:lib.context.fidl/context_reader.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 /// Signature for callbacks that handle context updates.

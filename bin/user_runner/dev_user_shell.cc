@@ -12,7 +12,7 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 #include "lib/story/fidl/link.fidl.h"

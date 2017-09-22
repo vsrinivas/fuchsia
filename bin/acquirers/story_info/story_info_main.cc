@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/maxwell/src/acquirers/story_info/story_info.h"
+#include "peridot/bin/acquirers/story_info/story_info.h"
 #include "lib/agent/fidl/agent.fidl.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 

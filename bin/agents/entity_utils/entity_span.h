@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/maxwell/services/context/value.fidl.h"
+#include "lib/context/fidl/value.fidl.h"
 
 namespace maxwell {
 

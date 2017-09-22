@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/suggestion_engine/timeline_stories_watcher.h"
+#include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fxl/logging.h"

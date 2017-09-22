@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "lib/fxl/time/time_point.h"
 
 #include <functional>

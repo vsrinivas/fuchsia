@@ -4,7 +4,7 @@
 
 module maxwell;
 
-import "apps/maxwell/services/suggestion/suggestion_display.fidl";
+import "lib/suggestion/fidl/suggestion_display.fidl";
 import "lib/surface/fidl/surface.fidl";
 
 // NOTE: Some future-thinking features are represented here and commented out

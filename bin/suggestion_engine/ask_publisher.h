@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/maxwell/services/suggestion/ask_handler.fidl.h"
+#include "lib/suggestion/fidl/ask_handler.fidl.h"
 
-#include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
+#include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace maxwell {

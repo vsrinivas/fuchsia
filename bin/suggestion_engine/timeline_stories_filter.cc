@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/suggestion_engine/timeline_stories_filter.h"
+#include "peridot/bin/suggestion_engine/timeline_stories_filter.h"
 
-#include "apps/maxwell/src/suggestion_engine/timeline_stories_watcher.h"
+#include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 
 namespace maxwell {
 

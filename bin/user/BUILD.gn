@@ -27,7 +27,7 @@ executable("maxwell_main") {
     ":config",
     ":user_intelligence_provider",
     "//garnet/public/lib/app/cpp",
-    "//apps/maxwell/services/user",
+    "//peridot/public/lib/user_intelligence/fidl",
     "//garnet/public/lib/fsl",
     "//third_party/rapidjson",
   ]
@@ -55,14 +55,14 @@ source_set("user_intelligence_provider") {
     ":config",
     ":intelligence_services",
     "//garnet/public/lib/cobalt/fidl",
-    "//apps/maxwell/services/action_log",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/resolver",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/suggestion:debug",
-    "//apps/maxwell/services/user",
-    "//apps/maxwell/services/user:scope",
-    "//apps/maxwell/src/acquirers/story_info:initializer",
+    "//peridot/public/lib/action_log/fidl",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/resolver/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/suggestion/fidl:debug",
+    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/bin/acquirers/story_info:initializer",
     "//garnet/public/lib/bluetooth/fidl",
     "//garnet/public/lib/network/fidl",
   ]
@@ -81,11 +81,11 @@ source_set("intelligence_services") {
   ]
 
   deps = [
-    "//apps/maxwell/services/action_log",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/user",
-    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/action_log/fidl",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
   ]
 }
 
@@ -100,6 +100,6 @@ source_set("agent_launcher") {
   ]
 
   deps = [
-    "//apps/maxwell/src:application_environment_host_impl",
+    "//peridot/lib/environment_host",
   ]
 }

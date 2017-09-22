@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/suggestion_engine/suggestion_engine_impl.h"
+#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 #include "lib/app/cpp/application_context.h"
-#include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
-#include "apps/maxwell/services/suggestion/user_input.fidl.h"
-#include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
-#include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
-#include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
+#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
+#include "lib/suggestion/fidl/user_input.fidl.h"
+#include "peridot/bin/suggestion_engine/ask_subscriber.h"
+#include "peridot/bin/suggestion_engine/interruptions_subscriber.h"
+#include "peridot/bin/suggestion_engine/next_subscriber.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"

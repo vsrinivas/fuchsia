@@ -11,10 +11,10 @@ executable("proposal_maker") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/src/agents/entity_utils:entity_span",
-    "//apps/maxwell/src/agents/entity_utils:entity_utils",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/bin/agents/entity_utils:entity_span",
+    "//peridot/bin/agents/entity_utils:entity_utils",
     "//peridot/lib/rapidjson",
     "//garnet/public/lib/fsl",
   ]

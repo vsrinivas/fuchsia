@@ -6,8 +6,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lib.app.dart/app.dart';
-import 'package:apps.maxwell.services.action_log/listener.fidl.dart';
-import 'package:apps.maxwell.services.action_log/user.fidl.dart';
+import 'package:lib.action_log.fidl/listener.fidl.dart';
+import 'package:lib.action_log.fidl/user.fidl.dart';
 
 import 'data_handler.dart';
 

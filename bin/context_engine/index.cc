@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <sstream>
 
-#include "apps/maxwell/src/context_engine/index.h"
+#include "peridot/bin/context_engine/index.h"
 
 namespace maxwell {
 

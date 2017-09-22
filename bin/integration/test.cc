@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/integration/test.h"
+#include "peridot/bin/integration/test.h"
 
 #include "lib/fxl/synchronization/sleep.h"
 #include "lib/fsl/tasks/message_loop.h"

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/ranking.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+#include "peridot/bin/suggestion_engine/ranking.h"
+#include "peridot/bin/suggestion_engine/suggestion_channel.h"
+#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 #include <functional>
 #include <vector>

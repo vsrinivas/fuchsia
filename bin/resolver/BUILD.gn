@@ -12,7 +12,7 @@ executable("resolver") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl:fidl_sync",
-    "//apps/maxwell/services/resolver",
+    "//peridot/public/lib/resolver/fidl",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/component/fidl",
     "//garnet/public/lib/fxl",

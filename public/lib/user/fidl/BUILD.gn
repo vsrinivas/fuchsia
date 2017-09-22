@@ -20,9 +20,9 @@ fidl("fidl") {
   ]
 
   deps = [
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion:suggestion",
-    "//apps/maxwell/services/suggestion:suggestion_provider",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/suggestion/fidl:suggestion_provider",
     "//garnet/public/lib/ui/views/fidl",
   ]
 }

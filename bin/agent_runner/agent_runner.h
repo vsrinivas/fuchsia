@@ -14,7 +14,7 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/lib/fidl/operation.h"
 #include "lib/agent/fidl/agent_context.fidl.h"
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"

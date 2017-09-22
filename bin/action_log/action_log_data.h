@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/maxwell/services/user/scope.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
 
 namespace maxwell {
 

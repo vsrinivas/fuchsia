@@ -4,12 +4,12 @@
 
 import 'dart:convert' show JSON;
 import 'package:lib.app.dart/app.dart';
-import 'package:apps.maxwell.lib.dart/decomposition.dart';
-import 'package:apps.maxwell.services.suggestion/ask_handler.fidl.dart';
-import 'package:apps.maxwell.services.suggestion/proposal.fidl.dart';
-import 'package:apps.maxwell.services.suggestion/proposal_publisher.fidl.dart';
-import 'package:apps.maxwell.services.suggestion/suggestion_display.fidl.dart';
-import 'package:apps.maxwell.services.suggestion/user_input.fidl.dart';
+import 'package:lib.decomposition.dart/decomposition.dart';
+import 'package:lib.suggestion.fidl/ask_handler.fidl.dart';
+import 'package:lib.suggestion.fidl/proposal.fidl.dart';
+import 'package:lib.suggestion.fidl/proposal_publisher.fidl.dart';
+import 'package:lib.suggestion.fidl/suggestion_display.fidl.dart';
+import 'package:lib.suggestion.fidl/user_input.fidl.dart';
 import 'package:web_view/web_view.dart' as web_view;
 
 final _proposalPublisher = new ProposalPublisherProxy();

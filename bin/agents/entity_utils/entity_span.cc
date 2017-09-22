@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/agents/entity_utils/entity_span.h"
+#include "peridot/bin/agents/entity_utils/entity_span.h"
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fxl/logging.h"

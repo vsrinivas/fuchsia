@@ -8,12 +8,12 @@ import 'dart:isolate';
 
 import 'package:lib.app.dart/app.dart';
 import 'package:lib.app.fidl/service_provider.fidl.dart';
-import 'package:apps.maxwell.services.context/context_writer.fidl.dart';
-import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
-import 'package:apps.maxwell.services.context/metadata.fidl.dart';
-import 'package:apps.maxwell.services.context/value.fidl.dart';
-import 'package:apps.maxwell.services.context/value_type.fidl.dart';
-import 'package:apps.maxwell.services.user/intelligence_services.fidl.dart';
+import 'package:lib.context.fidl/context_writer.fidl.dart';
+import 'package:lib.context.fidl/context_reader.fidl.dart';
+import 'package:lib.context.fidl/metadata.fidl.dart';
+import 'package:lib.context.fidl/value.fidl.dart';
+import 'package:lib.context.fidl/value_type.fidl.dart';
+import 'package:lib.user_intelligence.fidl/intelligence_services.fidl.dart';
 import 'package:lib.story.fidl/link.fidl.dart';
 import 'package:lib.lifecycle.fidl/lifecycle.fidl.dart';
 import 'package:lib.module.fidl/module.fidl.dart';

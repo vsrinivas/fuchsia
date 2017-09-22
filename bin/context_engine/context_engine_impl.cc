@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/context_engine/context_engine_impl.h"
+#include "peridot/bin/context_engine/context_engine_impl.h"
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/maxwell/src/context_engine/context_reader_impl.h"
-#include "apps/maxwell/src/context_engine/context_repository.h"
-#include "apps/maxwell/src/context_engine/context_writer_impl.h"
+#include "peridot/bin/context_engine/context_reader_impl.h"
+#include "peridot/bin/context_engine/context_repository.h"
+#include "peridot/bin/context_engine/context_writer_impl.h"
 
 namespace maxwell {
 

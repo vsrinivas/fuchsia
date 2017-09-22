@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/ask_dispatcher.h"
-#include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
+#include "peridot/bin/suggestion_engine/ask_dispatcher.h"
+#include "peridot/bin/suggestion_engine/windowed_subscriber.h"
 
 namespace maxwell {
 

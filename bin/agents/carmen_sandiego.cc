@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/maxwell/services/context/context_writer.fidl.h"
-#include "apps/maxwell/services/context/context_reader.fidl.h"
-#include "apps/maxwell/src/acquirers/gps.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "peridot/bin/acquirers/gps.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 

@@ -5,9 +5,9 @@
 #include <iostream>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
-#include "apps/maxwell/src/user/config.h"
-#include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/user/config.h"
+#include "peridot/bin/user/user_intelligence_provider_impl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fsl/tasks/message_loop.h"

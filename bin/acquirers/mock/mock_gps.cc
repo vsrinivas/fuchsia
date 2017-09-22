@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/services/user/scope.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
 
-#include "apps/maxwell/src/acquirers/mock/mock_gps.h"
+#include "peridot/bin/acquirers/mock/mock_gps.h"
 
 namespace maxwell {
 namespace acquirers {

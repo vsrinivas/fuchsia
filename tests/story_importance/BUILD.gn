@@ -17,9 +17,9 @@ executable("test_story_importance") {
     "test_story_importance.cc",
   ]
   deps = [
-    "//apps/maxwell/lib/context:formatting",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/user/scope.fidl.h"
-#include "apps/maxwell/src/integration/test.h"
+#include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
+#include "peridot/bin/integration/test.h"
 
 namespace maxwell {
 

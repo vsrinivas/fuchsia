@@ -20,10 +20,10 @@ import 'dart:collection';
 
 import 'package:lib.app.dart/app.dart';
 import 'package:lib.cobalt.fidl/cobalt.fidl.dart';
-import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
-import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
-import 'package:apps.maxwell.services.context/value.fidl.dart';
-import 'package:apps.maxwell.services.context/value_type.fidl.dart';
+import 'package:lib.context.dart/context_listener_impl.dart';
+import 'package:lib.context.fidl/context_reader.fidl.dart';
+import 'package:lib.context.fidl/value.fidl.dart';
+import 'package:lib.context.fidl/value_type.fidl.dart';
 
 // The project ID of the usage_log registered in Cobalt.
 const _cobaltProjectID = 101;
@@ -54,9 +54,8 @@ void onContextUpdate(ContextUpdate update) {
     _topicDedupSet.add(dedupKey);
 
     // print("[USAGE LOG] Recording module url $url");
-    _encoder.addStringObservation(
-        _cobaltMetricID, _cobaltEncodingID, value.meta.mod.url,
-        onAddObservationStatus);
+    _encoder.addStringObservation(_cobaltMetricID, _cobaltEncodingID,
+        value.meta.mod.url, onAddObservationStatus);
   });
 }
 
@@ -64,7 +63,7 @@ void onAddObservationStatus(Status status) {
   // If adding an observation fails, we simply drop it and do not retry.
   // TODO(jwnichols): Perhaps we should do something smarter if we fail
   if (status != Status.ok) {
-    print ("[USAGE LOG] Failed to add Cobalt observation.");
+    print("[USAGE LOG] Failed to add Cobalt observation.");
   } else {
     _encoder.sendObservations(onSendObservationStatus);
   }
@@ -74,7 +73,7 @@ void onSendObservationStatus(Status status) {
   // If sending observations fails, we simply drop them and do not retry.
   // TODO(jwnichols): Perhaps we should do something smarter if we fail
   if (status != Status.ok) {
-    print ("[USAGE LOG] Failed to send Cobalt observations.");
+    print("[USAGE LOG] Failed to send Cobalt observations.");
   }
 }
 

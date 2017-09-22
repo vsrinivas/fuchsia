@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/lib/context/formatting.h"
-#include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/src/context_engine/scope_utils.h"
-#include "apps/maxwell/src/integration/context_engine_test_base.h"
+#include "lib/context/cpp/formatting.h"
+#include "lib/context/fidl/context_engine.fidl.h"
+#include "peridot/bin/context_engine/scope_utils.h"
+#include "peridot/bin/integration/context_engine_test_base.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {

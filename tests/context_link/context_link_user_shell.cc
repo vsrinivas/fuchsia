@@ -8,9 +8,9 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "apps/maxwell/lib/context/formatting.h"
-#include "apps/maxwell/services/context/context_writer.fidl.h"
-#include "apps/maxwell/services/context/context_reader.fidl.h"
+#include "lib/context/cpp/formatting.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

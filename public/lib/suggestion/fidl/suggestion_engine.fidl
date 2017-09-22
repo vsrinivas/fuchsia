@@ -4,9 +4,9 @@
 
 module maxwell;
 
-import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
-import "apps/maxwell/services/context/context_writer.fidl";
-import "apps/maxwell/services/suggestion/suggestion_provider.fidl"; // convenience import
+import "lib/suggestion/fidl/proposal_publisher.fidl";
+import "lib/context/fidl/context_writer.fidl";
+import "lib/suggestion/fidl/suggestion_provider.fidl"; // convenience import
 import "lib/story/fidl/story_provider.fidl";
 import "lib/user/fidl/focus.fidl";
 

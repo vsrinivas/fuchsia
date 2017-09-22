@@ -4,8 +4,8 @@
 
 module maxwell;
 
-import "apps/maxwell/services/suggestion/ask_handler.fidl";
-import "apps/maxwell/services/suggestion/proposal.fidl";
+import "lib/suggestion/fidl/ask_handler.fidl";
+import "lib/suggestion/fidl/proposal.fidl";
 
 // A service enabling Agents to contribute Proposals proactively to the
 // Suggestion engine.

@@ -6,7 +6,7 @@ module maxwell;
 
 import "component.fidl";
 import "listener.fidl";
-import "../user/scope.fidl";
+import "lib/user_intelligence/fidl/scope.fidl";
 
 [ServiceName="maxwell.action_log.UserActionLog"]
 interface UserActionLog {

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/maxwell/lib/async/future_value.h"
-#include "apps/maxwell/services/context/context_writer.fidl.h"
-#include "apps/maxwell/services/context/value.fidl.h"
+#include "lib/async/cpp/future_value.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/context/fidl/value.fidl.h"
 
 namespace maxwell {
 

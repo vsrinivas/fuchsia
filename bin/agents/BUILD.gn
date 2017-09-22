@@ -7,12 +7,12 @@ group("agents") {
     # If we don't include these explicitly here, for some reason it still
     # produces the expected build products but is not sensitive to source file
     # changes.
-    "//apps/maxwell/src/agents/basic_text_listener",
-    "//apps/maxwell/src/agents/entity_selector",
-    "//apps/maxwell/src/agents/mi_dashboard",
-    "//apps/maxwell/src/agents/module_suggester_dart",
-    "//apps/maxwell/src/agents/proposal_maker",
-    "//apps/maxwell/src/agents/usage_log",
+    "//peridot/bin/agents/basic_text_listener",
+    "//peridot/bin/agents/entity_selector",
+    "//peridot/bin/agents/mi_dashboard",
+    "//peridot/bin/agents/module_suggester_dart",
+    "//peridot/bin/agents/proposal_maker",
+    "//peridot/bin/agents/usage_log",
   ]
 }
 
@@ -26,8 +26,8 @@ executable("carmen_sandiego") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/src/acquirers:gps",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/bin/acquirers:gps",
     "//peridot/lib/rapidjson",
     "//garnet/public/lib/fsl",
   ]
@@ -44,8 +44,8 @@ executable("ideas") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/lib/rapidjson",
     "//garnet/public/lib/fsl",
   ]

@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("suggestion") {
+fidl("fidl") {
   sources = [
     "ask_handler.fidl",
     "proposal.fidl",
@@ -17,7 +17,7 @@ fidl("suggestion") {
   ]
 
   deps = [
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/surface/fidl",
     "//peridot/public/lib/user/fidl:focus",
@@ -38,6 +38,6 @@ fidl("debug") {
   ]
 
   deps = [
-    ":suggestion",
+    ":fidl",
   ]
 }

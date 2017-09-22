@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
+#include "peridot/bin/suggestion_engine/windowed_subscriber.h"
 
 namespace maxwell {
 

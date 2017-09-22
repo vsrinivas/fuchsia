@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 
 import 'package:lib.app.dart/app.dart';
-import 'package:apps.maxwell.services.suggestion..debug/debug.fidl.dart';
+import 'package:lib.suggestion.fidl..debug/debug.fidl.dart';
 
 import 'data_handler.dart';
 

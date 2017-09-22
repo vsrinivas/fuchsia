@@ -9,9 +9,9 @@
 
 #include "lib/app/cpp/connect.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/maxwell/services/resolver/resolver.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/device_info/device_info.h"
 #include "peridot/lib/fidl/array_to_string.h"

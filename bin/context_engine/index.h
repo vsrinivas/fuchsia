@@ -13,8 +13,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/maxwell/services/context/metadata.fidl.h"
-#include "apps/maxwell/services/context/value.fidl.h"
+#include "lib/context/fidl/metadata.fidl.h"
+#include "lib/context/fidl/value.fidl.h"
 
 namespace maxwell {
 

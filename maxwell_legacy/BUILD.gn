@@ -8,7 +8,7 @@ package("maxwell") {
   app = true
 
   deps = [
-    "src/user:maxwell_main",
+    "//peridot/bin/user:maxwell_main",
   ]
 
   binaries = [ {
@@ -18,11 +18,11 @@ package("maxwell") {
 
   resources = [
     {
-      path = rebase_path("src/user/resources/default_config.json")
+      path = rebase_path("//peridot/bin/user/resources/default_config.json")
       dest = "maxwell/default_config.json"
     },
     {
-      path = rebase_path("src/user/resources/test_config.json")
+      path = rebase_path("//peridot/bin/user/resources/test_config.json")
       dest = "maxwell/test_config.json"
     },
   ]
@@ -32,13 +32,28 @@ package("maxwell") {
 # artifacts into packages.
 group("all") {
   deps = [
-    "src/acquirers",
-    "src/action_log",
-    "src/agents",
-    "src/context_engine",
-    "src/modules",
-    "src/resolver",
-    "src/suggestion_engine",
-    "src/user",
+    "//peridot/bin/acquirers",
+    "//peridot/bin/action_log",
+    "//peridot/bin/agents",
+    "//peridot/bin/context_engine",
+    "//peridot/bin/modules",
+    "//peridot/bin/resolver",
+    "//peridot/bin/suggestion_engine",
+    "//peridot/bin/user",
+  ]
+}
+
+group("unittests") {
+  testonly = true
+  deps = [
+    "//peridot/bin/context_engine:context_index_unittest",
+    "//peridot/bin/context_engine:context_repository_unittest",
+  ]
+}
+
+group("integration_tests") {
+  testonly = true
+  deps = [
+    "//peridot/bin/integration",
   ]
 }

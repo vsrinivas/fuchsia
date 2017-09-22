@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/services/resolver/resolver.fidl.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/component/fidl/component.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 

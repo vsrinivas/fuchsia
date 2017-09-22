@@ -9,6 +9,6 @@ source_set("formatting") {
   ]
 
   deps = [
-    "//apps/maxwell/services/suggestion:suggestion_provider",
+    "//peridot/public/lib/suggestion/fidl:suggestion_provider",
   ]
 }

@@ -4,9 +4,9 @@
 
 #include <string>
 
-#include "apps/maxwell/services/user/scope.fidl.h"
-#include "apps/maxwell/services/context/metadata.fidl.h"
-#include "apps/maxwell/services/context/context_reader.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
+#include "lib/context/fidl/metadata.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
 
 namespace maxwell {
 

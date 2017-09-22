@@ -8,11 +8,11 @@
 #include <set>
 #include <string>
 
-#include "apps/maxwell/services/context/context_reader.fidl.h"
-#include "apps/maxwell/services/context/debug.fidl.h"
-#include "apps/maxwell/services/context/metadata.fidl.h"
-#include "apps/maxwell/services/context/value.fidl.h"
-#include "apps/maxwell/src/context_engine/index.h"
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/context/fidl/debug.fidl.h"
+#include "lib/context/fidl/metadata.fidl.h"
+#include "lib/context/fidl/value.fidl.h"
+#include "peridot/bin/context_engine/index.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {

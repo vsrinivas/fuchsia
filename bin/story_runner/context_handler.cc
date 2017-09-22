@@ -4,7 +4,7 @@
 
 #include "peridot/bin/story_runner/context_handler.h"
 
-#include "apps/maxwell/services/context/context_reader.fidl.h"
+#include "lib/context/fidl/context_reader.fidl.h"
 
 namespace modular {
 

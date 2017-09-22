@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/application_environment_host_impl.h"
+#include "peridot/lib/environment_host/application_environment_host_impl.h"
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_loader.fidl.h"

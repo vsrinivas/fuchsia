@@ -5,8 +5,8 @@
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/maxwell/services/suggestion/proposal.fidl.h"
-#include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
+#include "lib/suggestion/fidl/proposal.fidl.h"
+#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

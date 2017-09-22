@@ -4,10 +4,10 @@
 
 module modular;
 
-import "apps/maxwell/services/context/context_writer.fidl";
-import "apps/maxwell/services/context/context_reader.fidl";
-import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
-import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
+import "lib/context/fidl/context_writer.fidl";
+import "lib/context/fidl/context_reader.fidl";
+import "lib/suggestion/fidl/proposal_publisher.fidl";
+import "lib/suggestion/fidl/suggestion_provider.fidl";
 import "lib/agent/fidl/agent_provider.fidl";
 import "lib/auth/fidl/account/account.fidl";
 import "lib/story/fidl/link.fidl";

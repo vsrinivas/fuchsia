@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
+#include "peridot/bin/user/user_intelligence_provider_impl.h"
 
 #include "lib/app/cpp/connect.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
-#include "apps/maxwell/services/action_log/factory.fidl.h"
-#include "apps/maxwell/services/context/debug.fidl.h"
-#include "apps/maxwell/services/resolver/resolver.fidl.h"
-#include "apps/maxwell/services/suggestion/debug.fidl.h"
-#include "apps/maxwell/services/user/scope.fidl.h"
-#include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
-#include "apps/maxwell/src/user/intelligence_services_impl.h"
+#include "lib/action_log/fidl/factory.fidl.h"
+#include "lib/context/fidl/debug.fidl.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
+#include "lib/suggestion/fidl/debug.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
+#include "peridot/bin/acquirers/story_info/initializer.fidl.h"
+#include "peridot/bin/user/intelligence_services_impl.h"
 #include "lib/bluetooth/fidl/low_energy.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fxl/files/file.h"

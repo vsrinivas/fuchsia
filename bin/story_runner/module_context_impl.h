@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "apps/maxwell/services/user/intelligence_services.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"

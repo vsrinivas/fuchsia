@@ -21,7 +21,7 @@ source_set("context_index") {
   ]
 
   deps = [
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/context/fidl",
   ]
 }
 
@@ -34,8 +34,8 @@ executable("context_index_unittest") {
 
   deps = [
     ":context_index",
-    "//apps/maxwell/lib/context:formatting",
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
@@ -49,9 +49,9 @@ source_set("context_reader_impl") {
 
   deps = [
     ":context_repository",
-    "//apps/maxwell/lib/context:formatting",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
   ]
 }
 
@@ -65,9 +65,9 @@ source_set("context_repository") {
 
   deps = [
     ":context_index",
-    "//apps/maxwell/lib/context:formatting",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/src:bound_set",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
     "//third_party/rapidjson",
   ]
@@ -82,8 +82,8 @@ executable("context_repository_unittest") {
 
   deps = [
     ":context_repository",
-    "//apps/maxwell/lib/context:formatting",
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
@@ -97,10 +97,10 @@ source_set("context_writer_impl") {
 
   deps = [
     ":context_repository",
-    "//apps/maxwell/lib/async:future_value",
-    "//apps/maxwell/lib/context:formatting",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/async/cpp:future_value",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
     "//third_party/rapidjson",
   ]
 }
@@ -119,7 +119,7 @@ source_set("context_engine_impl") {
     ":context_reader_impl",
     ":context_writer_impl",
     ":context_repository",
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/context/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
@@ -131,8 +131,8 @@ source_set("scope_utils") {
   ]
 
   deps = [
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
     "//garnet/public/lib/fxl",
     "//third_party/boringssl",  # for sha256
   ]

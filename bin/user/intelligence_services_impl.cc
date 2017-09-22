@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/user/intelligence_services_impl.h"
+#include "peridot/bin/user/intelligence_services_impl.h"
 
-#include "apps/maxwell/services/action_log/component.fidl.h"
-#include "apps/maxwell/services/action_log/user.fidl.h"
-#include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
+#include "lib/action_log/fidl/component.fidl.h"
+#include "lib/action_log/fidl/user.fidl.h"
+#include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 
 namespace maxwell {
 

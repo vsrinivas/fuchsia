@@ -9,7 +9,7 @@ source_set("entity_span") {
   ]
 
   public_deps = [
-    "//apps/maxwell/services/context",
+    "//peridot/public/lib/context/fidl",
     "//peridot/lib/rapidjson",
     "//garnet/public/lib/fxl",
   ]

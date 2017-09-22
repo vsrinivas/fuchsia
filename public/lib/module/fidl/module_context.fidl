@@ -5,7 +5,7 @@
 module modular;
 
 import "lib/app/fidl/service_provider.fidl";
-import "apps/maxwell/services/user/intelligence_services.fidl";
+import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/component/fidl/component_context.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/surface/fidl/surface.fidl";

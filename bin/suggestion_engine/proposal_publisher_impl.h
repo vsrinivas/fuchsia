@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
+#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 
-#include "apps/maxwell/src/bound_set.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_engine_impl.h"
+#include "peridot/lib/bound_set/bound_set.h"
+#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

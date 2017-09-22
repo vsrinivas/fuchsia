@@ -6,7 +6,7 @@ module maxwell;
 
 import "context_reader.fidl";
 import "metadata.fidl";
-import "../user/scope.fidl";
+import "lib/user_intelligence/fidl/scope.fidl";
 
 [ServiceName="maxwell.ContextDebug"]
 interface ContextDebug {

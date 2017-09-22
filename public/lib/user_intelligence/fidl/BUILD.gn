@@ -10,7 +10,7 @@ fidl("scope") {
   ]
 }
 
-fidl("user") {
+fidl("fidl") {
   sources = [
     "intelligence_services.fidl",
     "user_intelligence_provider.fidl",
@@ -18,10 +18,10 @@ fidl("user") {
 
   deps = [
     ":scope",
-    "//apps/maxwell/services/action_log",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/resolver",
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/action_log/fidl",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/resolver/fidl",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/user/fidl:focus",

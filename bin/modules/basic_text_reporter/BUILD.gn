@@ -8,9 +8,9 @@ flutter_app("basic_text_reporter") {
   main_dart = "lib/main.dart"
   deps = [
     "//garnet/public/lib/app/dart",
-    "//apps/maxwell/lib/dart",
-    "//apps/maxwell/services/context:context_dart",
-    "//apps/maxwell/services/user:user_dart",
+    "//peridot/public/lib/decomposition/dart",
+    "//peridot/public/lib/context/fidl:fidl_dart",
+    "//peridot/public/lib/user_intelligence/fidl:fidl_dart",
     "//peridot/public/lib/lifecycle/fidl:fidl_dart",
     "//peridot/public/lib/module/fidl:fidl_dart",
     "//peridot/public/lib/story/fidl:fidl_dart",

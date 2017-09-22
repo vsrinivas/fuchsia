@@ -27,9 +27,9 @@ source_set("context_engine_test") {
 
   deps = [
     ":context_common",
-    "//apps/maxwell/lib/context:formatting",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/src/context_engine:scope_utils",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/bin/context_engine:scope_utils",
   ]
 }
 
@@ -42,7 +42,7 @@ source_set("resolver_test") {
 
   deps = [
     ":common",
-    "//apps/maxwell/services/resolver",
+    "//peridot/public/lib/resolver/fidl",
   ]
 }
 
@@ -60,12 +60,12 @@ source_set("suggestion_engine_test") {
   deps = [
     ":context_common",
     ":test_suggestion_listener",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/suggestion:debug",
-    "//apps/maxwell/src/acquirers/mock:gps",
-    "//apps/maxwell/src/agents:carmen_sandiego",
-    "//apps/maxwell/src/agents:ideas",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/suggestion/fidl:debug",
+    "//peridot/bin/acquirers/mock:gps",
+    "//peridot/bin/agents:carmen_sandiego",
+    "//peridot/bin/agents:ideas",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
   ]
@@ -82,11 +82,11 @@ source_set("context_common") {
 
   deps = [
     ":common",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/user:scope",
   ]
 
   public_deps = [
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
     "//third_party/gtest",
   ]
 }
@@ -100,8 +100,8 @@ source_set("common") {
   ]
 
   deps = [
-    "//apps/maxwell/src:application_environment_host_impl",
-    "//apps/maxwell/src/user:agent_launcher",
+    "//peridot/lib/environment_host",
+    "//peridot/bin/user:agent_launcher",
     "//garnet/public/lib/fsl",
   ]
 
@@ -120,9 +120,9 @@ source_set("test_suggestion_listener") {
   ]
 
   deps = [
-    "//apps/maxwell/lib/suggestion:formatting",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/suggestion:debug",
+    "//peridot/public/lib/suggestion/cpp:formatting",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/suggestion/fidl:debug",
   ]
 
   public_deps = [

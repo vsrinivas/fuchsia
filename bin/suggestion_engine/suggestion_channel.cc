@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_subscriber.h"
+#include "peridot/bin/suggestion_engine/suggestion_channel.h"
+#include "peridot/bin/suggestion_engine/suggestion_subscriber.h"
 
 #include <utility>
 

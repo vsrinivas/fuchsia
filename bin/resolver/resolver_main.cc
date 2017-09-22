@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/services/resolver/resolver.fidl.h"
-#include "apps/maxwell/src/resolver/resolver_impl.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
+#include "peridot/bin/resolver/resolver_impl.h"
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"

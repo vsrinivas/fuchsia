@@ -5,14 +5,14 @@
 #pragma once
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/maxwell/services/action_log/user.fidl.h"
-#include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/resolver/resolver.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
-#include "apps/maxwell/services/user/scope.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
-#include "apps/maxwell/src/user/agent_launcher.h"
-#include "apps/maxwell/src/user/config.h"
+#include "lib/action_log/fidl/user.fidl.h"
+#include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
+#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/user/agent_launcher.h"
+#include "peridot/bin/user/config.h"
 
 namespace maxwell {
 

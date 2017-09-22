@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/lib/context/scoped_context_value.h"
+#include "lib/context/cpp/scoped_context_value.h"
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {

@@ -18,7 +18,7 @@ executable("suggestion_proposal_test_module") {
     "suggestion_proposal_test_module.cc",
   ]
   deps = [
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",
@@ -35,7 +35,7 @@ executable("suggestion_test_user_shell") {
     "suggestion_test_user_shell.cc",
   ]
   deps = [
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",

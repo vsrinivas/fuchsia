@@ -6,8 +6,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "apps/maxwell/src/application_environment_host_impl.h"
-#include "apps/maxwell/src/user/agent_launcher.h"
+#include "peridot/lib/environment_host/application_environment_host_impl.h"
+#include "peridot/bin/user/agent_launcher.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"

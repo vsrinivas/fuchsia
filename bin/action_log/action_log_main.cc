@@ -4,9 +4,9 @@
 
 #include <memory>
 
-#include "apps/maxwell/services/action_log/factory.fidl.h"
-#include "apps/maxwell/services/action_log/user.fidl.h"
-#include "apps/maxwell/src/action_log/action_log_impl.h"
+#include "lib/action_log/fidl/factory.fidl.h"
+#include "lib/action_log/fidl/user.fidl.h"
+#include "peridot/bin/action_log/action_log_impl.h"
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding.h"

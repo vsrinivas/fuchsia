@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/acquirers/story_info/link_watcher_impl.h"
+#include "peridot/bin/acquirers/story_info/link_watcher_impl.h"
 
 #include <sstream>
 
-#include "apps/maxwell/lib/context/formatting.h"
-#include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
+#include "lib/context/cpp/formatting.h"
+#include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

@@ -6,7 +6,7 @@
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger/ledger_client.h"
 #include "peridot/lib/testing/fake_application_launcher.h"

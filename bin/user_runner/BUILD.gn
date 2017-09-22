@@ -27,10 +27,10 @@ executable("user_runner") {
     "//garnet/public/lib/app/cpp",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/resolver",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/user",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/resolver/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user_intelligence/fidl",
     "//peridot/lib/device_info",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
@@ -72,7 +72,7 @@ executable("dev_user_shell") {
   ]
 
   deps = [
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",

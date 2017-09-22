@@ -4,10 +4,10 @@
 
 module maxwell;
 
-import "apps/maxwell/services/action_log/component.fidl";
-import "apps/maxwell/services/context/context_reader.fidl";
-import "apps/maxwell/services/context/context_writer.fidl";
-import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
+import "lib/action_log/fidl/component.fidl";
+import "lib/context/fidl/context_reader.fidl";
+import "lib/context/fidl/context_writer.fidl";
+import "lib/suggestion/fidl/proposal_publisher.fidl";
 
 // A container for component-scoped services. This contains any and all
 // services needed by any sort of Module/Agent.

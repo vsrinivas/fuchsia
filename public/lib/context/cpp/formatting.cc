@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/lib/context/formatting.h"
-#include "apps/maxwell/services/context/metadata.fidl.h"
+#include "lib/context/cpp/formatting.h"
+#include "lib/context/fidl/metadata.fidl.h"
 
 namespace maxwell {
 

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_subscriber.h"
+#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
+#include "peridot/bin/suggestion_engine/suggestion_subscriber.h"
 
 #include <vector>
 

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/maxwell/src/suggestion_engine/ranked_suggestions.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_subscriber.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestions.h"
+#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
+#include "peridot/bin/suggestion_engine/suggestion_subscriber.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {

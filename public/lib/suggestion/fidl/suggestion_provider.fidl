@@ -4,8 +4,8 @@
 
 module maxwell;
 
-import "apps/maxwell/services/suggestion/suggestion_display.fidl";
-import "apps/maxwell/services/suggestion/user_input.fidl";
+import "lib/suggestion/fidl/suggestion_display.fidl";
+import "lib/suggestion/fidl/user_input.fidl";
 
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based

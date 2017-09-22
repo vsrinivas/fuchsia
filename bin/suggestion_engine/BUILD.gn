@@ -22,9 +22,9 @@ executable("suggestion_engine") {
     ":timeline_stories_filter",
     ":timeline_stories_watcher",
     "//garnet/public/lib/app/cpp",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/src:bound_set",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
@@ -47,7 +47,7 @@ source_set("subscribers") {
     ":interfaces",
     ":models",
     ":state",
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 
@@ -59,7 +59,7 @@ source_set("interfaces") {
 
   deps = [
     ":models",
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 
@@ -87,7 +87,7 @@ source_set("state") {
     ":interfaces",
     ":models",
     ":ranking",
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -99,8 +99,11 @@ source_set("models") {
   ]
 
   deps = [
-    "//apps/maxwell/services/suggestion",
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 
@@ -112,7 +115,7 @@ source_set("timeline_stories_filter") {
 
   deps = [
     ":timeline_stories_watcher",
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -136,7 +139,7 @@ source_set("filter") {
   ]
 
   deps = [
-    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 
@@ -149,7 +152,7 @@ source_set("debug") {
   deps = [
     ":models",
     ":state",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/suggestion:debug",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/suggestion/fidl:debug",
   ]
 }

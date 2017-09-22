@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "apps/maxwell/services/suggestion/user_input.fidl.h"
+#include "lib/suggestion/fidl/user_input.fidl.h"
 
 namespace maxwell {
 

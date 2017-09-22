@@ -6,8 +6,8 @@
 
 #include <map>
 
-#include "apps/maxwell/services/context/debug.fidl.h"
-#include "apps/maxwell/src/context_engine/index.h"
+#include "lib/context/fidl/debug.fidl.h"
+#include "peridot/bin/context_engine/index.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {

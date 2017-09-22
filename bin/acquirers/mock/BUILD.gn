@@ -15,9 +15,9 @@ source_set("gps") {
   ]
 
   deps = [
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/user:scope",
-    "//apps/maxwell/src/acquirers:gps",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/bin/acquirers:gps",
     "//garnet/public/lib/fsl",
   ]
 }

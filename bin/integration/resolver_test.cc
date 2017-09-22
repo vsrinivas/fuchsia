@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/services/resolver/resolver.fidl.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
 
-#include "apps/maxwell/src/integration/test.h"
+#include "peridot/bin/integration/test.h"
 
 namespace {
 

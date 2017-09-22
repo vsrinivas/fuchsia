@@ -5,7 +5,7 @@
 #pragma once
 
 #include "lib/app/fidl/application_environment.fidl.h"
-#include "apps/maxwell/src/application_environment_host_impl.h"
+#include "peridot/lib/environment_host/application_environment_host_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {

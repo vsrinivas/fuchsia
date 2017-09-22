@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/maxwell/services/action_log/user.fidl.h"
-#include "apps/maxwell/services/user/intelligence_services.fidl.h"
-#include "apps/maxwell/services/user/scope.fidl.h"
+#include "lib/action_log/fidl/user.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
 
 namespace maxwell {
 

@@ -7,12 +7,12 @@
 #include <list>
 #include <vector>
 
-#include "apps/maxwell/services/suggestion/debug.fidl.h"
-#include "apps/maxwell/services/suggestion/proposal.fidl.h"
-#include "apps/maxwell/services/suggestion/user_input.fidl.h"
+#include "lib/suggestion/fidl/debug.fidl.h"
+#include "lib/suggestion/fidl/proposal.fidl.h"
+#include "lib/suggestion/fidl/user_input.fidl.h"
 
-#include "apps/maxwell/src/suggestion_engine/ranked_suggestions.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestions.h"
+#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 

@@ -6,13 +6,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lib.app.dart/app.dart';
-import 'package:apps.maxwell.services.context/debug.fidl.dart';
-import 'package:apps.maxwell.services.user/scope.fidl.dart';
+import 'package:lib.context.fidl/debug.fidl.dart';
+import 'package:lib.user_intelligence.fidl/scope.fidl.dart';
 
 import 'data_handler.dart';
 
-class ContextDataHandler extends ContextDebugListener
-    with DataHandler {
+class ContextDataHandler extends ContextDebugListener with DataHandler {
   @override
   String get name => "context";
 

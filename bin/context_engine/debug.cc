@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/context_engine/debug.h"
-#include "apps/maxwell/src/context_engine/context_repository.h"
+#include "peridot/bin/context_engine/debug.h"
+#include "peridot/bin/context_engine/context_repository.h"
 
 namespace maxwell {
 

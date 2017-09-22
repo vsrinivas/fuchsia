@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("action_log") {
+fidl("fidl") {
   sources = [
     "component.fidl",
     "factory.fidl",
@@ -13,7 +13,7 @@ fidl("action_log") {
   ]
 
   deps = [
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
   ]
 }

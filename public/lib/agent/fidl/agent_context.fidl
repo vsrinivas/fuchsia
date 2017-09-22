@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/maxwell/services/user/intelligence_services.fidl";
+import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/auth/fidl/token_provider.fidl";
 import "lib/component/fidl/component_context.fidl";
 

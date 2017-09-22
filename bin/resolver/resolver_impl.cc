@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/maxwell/src/resolver/resolver_impl.h"
+#include "peridot/bin/resolver/resolver_impl.h"
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fxl/functional/make_copyable.h"

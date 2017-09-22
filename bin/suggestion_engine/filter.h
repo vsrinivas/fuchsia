@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/services/suggestion/proposal.fidl.h"
+#include "lib/suggestion/fidl/proposal.fidl.h"
 
 namespace maxwell {
 

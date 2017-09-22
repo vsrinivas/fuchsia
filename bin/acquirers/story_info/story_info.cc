@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/acquirers/story_info/story_info.h"
+#include "peridot/bin/acquirers/story_info/story_info.h"
 
 #include <sstream>
 
-#include "apps/maxwell/services/context/value.fidl.h"
-#include "apps/maxwell/services/user/intelligence_services.fidl.h"
-#include "apps/maxwell/src/acquirers/story_info/modular.h"
-#include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
+#include "lib/context/fidl/value.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
+#include "peridot/bin/acquirers/story_info/modular.h"
+#include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"

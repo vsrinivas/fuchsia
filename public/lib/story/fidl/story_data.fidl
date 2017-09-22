@@ -35,7 +35,7 @@ struct StoryData {
 // meaning.
 struct StoryContextLog {
   // The context as obtained from the maxwell Context service. Cf.
-  // //apps/maxwell/services/context/context_reader.fidl
+  // //lib/context/fidl/context_reader.fidl
   map<string, string> context;
 
   // Where the context was captured.

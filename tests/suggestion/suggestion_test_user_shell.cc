@@ -4,7 +4,7 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"

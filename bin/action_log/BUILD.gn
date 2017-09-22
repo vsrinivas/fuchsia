@@ -13,9 +13,9 @@ executable("action_log") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/maxwell/services/action_log",
-    "//apps/maxwell/services/suggestion",
-    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/action_log/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
     "//peridot/public/lib/surface/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",

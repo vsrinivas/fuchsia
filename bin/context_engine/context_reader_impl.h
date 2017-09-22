@@ -6,9 +6,9 @@
 
 #include <list>
 
-#include "apps/maxwell/services/context/context_reader.fidl.h"
-#include "apps/maxwell/services/user/scope.fidl.h"
-#include "apps/maxwell/src/context_engine/context_repository.h"
+#include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
+#include "peridot/bin/context_engine/context_repository.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
