@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fbl/unique_ptr.h>
 #include <hw/pci.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
@@ -17,12 +18,11 @@
 #include <hypervisor/vcpu.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
-#include <fbl/unique_ptr.h>
 
 #include "acpi_priv.h"
 
 /* Interrupt vectors. */
-#define X86_INT_GP_FAULT                    13u
+#define X86_INT_GP_FAULT 13u
 
 static zx_status_t unhandled_mem(const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
     fprintf(stderr, "Unhandled address %#lx\n", mem->addr);
@@ -69,7 +69,8 @@ static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, zx_v
     return status;
 }
 
-static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
+static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem,
+                               const instruction_t* inst) {
     zx_status_t status;
     zx_vcpu_io_t mmio;
     if (inst->type == INST_MOV_WRITE) {
@@ -161,15 +162,14 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
                 status = unhandled_mem(mem, &inst);
             break;
         }
-    }
+        }
     }
 
     if (status != ZX_OK) {
         return zx_vcpu_interrupt(vcpu_ctx->vcpu, X86_INT_GP_FAULT);
     } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
         // If there was an attempt to read or test memory, update the GPRs.
-        return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state,
-                                     sizeof(vcpu_state));
+        return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     }
     return status;
 }
@@ -219,7 +219,7 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
     return vcpu_ctx->write_state(vcpu_ctx, ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
-#else // __x86_64__
+#else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
@@ -253,7 +253,7 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
             // Convert the IO packet into a vcpu_io structure.
             zx_vcpu_io_t vcpu_io;
             static_assert(sizeof(vcpu_io.data) == sizeof(io->data),
-                "data size mismatch between zx_vcpu_io and zx_packet_get_io.");
+                          "data size mismatch between zx_vcpu_io and zx_packet_get_io.");
             memcpy(vcpu_io.data, io->data, sizeof(vcpu_io.data));
             vcpu_io.access_size = io->access_size;
             return pci_device->WriteBar(bar, port_off, &vcpu_io);
@@ -262,7 +262,7 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     }
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
     return ZX_ERR_NOT_SUPPORTED;
-#else // __x86_64__
+#else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
@@ -317,11 +317,15 @@ zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet) 
     }
 }
 
-typedef struct device {
+struct device_t {
     zx_handle_t port;
     device_handler_fn_t handler;
     void* ctx;
-} device_t;
+
+    device_t(zx_handle_t port, device_handler_fn_t handler, void* ctx)
+        : port(port), handler(handler), ctx(ctx) {}
+    ~device_t() { zx_handle_close(port); }
+};
 
 static int device_loop(void* ctx) {
     fbl::unique_ptr<device_t> device(static_cast<device_t*>(ctx));
@@ -341,7 +345,6 @@ static int device_loop(void* ctx) {
         }
     }
 
-    zx_handle_close(device->port);
     return ZX_ERR_INTERNAL;
 }
 
@@ -350,21 +353,21 @@ zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_
     if (num_traps == 0)
         return ZX_ERR_INVALID_ARGS;
 
-    int ret;
-    auto device = new device_t{ZX_HANDLE_INVALID, handler, ctx};
-
     // Only create a port if we have at least one BAR that requires it.
     bool create_port = false;
     for (size_t i = 0; !create_port && i < num_traps; ++i)
         create_port = create_port || traps[i].use_port;
 
+    zx_handle_t port = ZX_HANDLE_INVALID;
     if (create_port) {
-        zx_status_t status = zx_port_create(0, &device->port);
+        zx_status_t status = zx_port_create(0, &port);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to create device port %d\n", status);
-            goto mem_cleanup;
+            return ZX_ERR_INTERNAL;
         }
     }
+
+    auto device = fbl::make_unique<device_t>(port, handler, ctx);
 
     for (size_t i = 0; i < num_traps; ++i) {
         const trap_args_t* trap = &traps[i];
@@ -372,20 +375,19 @@ zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_
         zx_handle_t port = trap->use_port ? device->port : ZX_HANDLE_INVALID;
         uint64_t key = trap->use_port ? trap->key : 0;
 
-        zx_status_t status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, port,
-                                               key);
+        zx_status_t status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, port, key);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to set trap for device port %d\n", status);
-            goto cleanup;
+            return ZX_ERR_INTERNAL;
         }
     }
 
     if (create_port) {
         thrd_t thread;
-        ret = thrd_create(&thread, device_loop, device);
+        int ret = thrd_create(&thread, device_loop, device.release());
         if (ret != thrd_success) {
             fprintf(stderr, "Failed to create device thread %d\n", ret);
-            goto cleanup;
+            return ZX_ERR_INTERNAL;
         }
 
         ret = thrd_detach(thread);
@@ -396,9 +398,4 @@ zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_
     }
 
     return ZX_OK;
-cleanup:
-    zx_handle_close(device->port);
-mem_cleanup:
-    delete device;
-    return ZX_ERR_INTERNAL;
 }

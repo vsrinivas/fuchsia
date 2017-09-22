@@ -19,7 +19,7 @@
 #define QUEUE_SIZE 128u
 
 // Convert guest-physical addresses to usable virtual addresses.
-#define guest_paddr_to_host_vaddr(device, addr) \
+#define guest_paddr_to_host_vaddr(device, addr)                                                    \
     (static_cast<zx_vaddr_t>(((device)->guest_physmem_addr()) + (addr)))
 
 VirtioDevice::VirtioDevice(uint8_t device_id, void* config, size_t config_size,
@@ -63,9 +63,8 @@ static void queue_set_segment_addr(virtio_queue_t* queue, uint64_t guest_paddr, 
     VirtioDevice* device = queue->virtio_device;
     zx_vaddr_t host_vaddr = guest_paddr_to_host_vaddr(device, guest_paddr);
 
-    *ptr = validate_queue_range(device, host_vaddr, size)
-               ? reinterpret_cast<T*>(host_vaddr)
-               : nullptr;
+    *ptr = validate_queue_range(device, host_vaddr, size) ? reinterpret_cast<T*>(host_vaddr)
+                                                          : nullptr;
 }
 
 void virtio_queue_set_desc_addr(virtio_queue_t* queue, uint64_t desc_paddr) {
@@ -150,11 +149,14 @@ void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index) {
     mtx_unlock(&queue->mutex);
 }
 
-typedef struct poll_task_args {
+struct poll_task_args_t {
     virtio_queue_t* queue;
     virtio_queue_poll_fn_t handler;
     void* ctx;
-} poll_task_args_t;
+
+    poll_task_args_t(virtio_queue_t* queue, virtio_queue_poll_fn_t handler, void* ctx)
+        : queue(queue), handler(handler), ctx(ctx) {}
+};
 
 static int virtio_queue_poll_task(void* ctx) {
     zx_status_t result = ZX_OK;
@@ -184,13 +186,12 @@ static int virtio_queue_poll_task(void* ctx) {
 }
 
 zx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t handler, void* ctx) {
-    poll_task_args_t* args = new poll_task_args_t{queue, handler, ctx};
+    auto args = fbl::make_unique<poll_task_args_t>(queue, handler, ctx);
 
     thrd_t thread;
-    int ret = thrd_create(&thread, virtio_queue_poll_task, args);
+    int ret = thrd_create(&thread, virtio_queue_poll_task, args.release());
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create queue thread %d\n", ret);
-        delete args;
         return ZX_ERR_INTERNAL;
     }
 
@@ -203,8 +204,7 @@ zx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t hand
     return ZX_OK;
 }
 
-zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index,
-                                   virtio_desc_t* out) {
+zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index, virtio_desc_t* out) {
     VirtioDevice* device = queue->virtio_device;
     volatile struct vring_desc& desc = queue->desc[desc_index];
     size_t mem_size = device->guest_physmem_size();
@@ -224,8 +224,7 @@ zx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index,
 void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len) {
     mtx_lock(&queue->mutex);
 
-    volatile struct vring_used_elem* used =
-        &queue->used->ring[ring_index(queue, queue->used->idx)];
+    volatile struct vring_used_elem* used = &queue->used->ring[ring_index(queue, queue->used->idx)];
 
     used->id = index;
     used->len = len;
