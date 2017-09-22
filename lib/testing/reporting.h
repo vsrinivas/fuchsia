@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#include "apps/modular/lib/testing/testing.h"
+#include "peridot/lib/testing/testing.h"
 #include "lib/test_runner/fidl/test_runner.fidl.h"
 
 #define TEST_PASS(label) std::cerr << "[TEST] PASS: " << (label) << std::endl

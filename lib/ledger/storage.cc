@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/ledger/storage.h"
+#include "peridot/lib/ledger/storage.h"
 
 #include <string>
 #include <vector>
 
-#include "apps/modular/lib/util/string_escape.h"
+#include "peridot/lib/util/string_escape.h"
 #include "lib/fxl/strings/join_strings.h"
 
 namespace modular {

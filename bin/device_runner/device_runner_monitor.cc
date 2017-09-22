@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/modular/services/device/device_runner_monitor.fidl.h"
+#include "lib/device/fidl/device_runner_monitor.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

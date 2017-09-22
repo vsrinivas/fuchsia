@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 
-#include "apps/modular/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "gtest/gtest.h"
 
 namespace modular {

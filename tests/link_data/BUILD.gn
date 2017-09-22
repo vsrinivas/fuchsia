@@ -17,12 +17,12 @@ executable("test_link_data") {
     "test_link_data.cc",
   ]
   deps = [
-    "//apps/modular/examples/counter_cpp:store",
-    "//apps/modular/lib/fidl:single_service_app",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/lib/testing",
-    "//apps/modular/lib/testing:component_base",
-    "//apps/modular/services/user",
+    "//peridot/examples/counter_cpp:store",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/user/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/test_runner/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",

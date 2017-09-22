@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/module_controller_impl.h"
+#include "peridot/bin/story_runner/module_controller_impl.h"
 
-#include "apps/modular/lib/common/teardown.h"
-#include "apps/modular/src/story_runner/story_controller_impl.h"
+#include "peridot/lib/common/teardown.h"
+#include "peridot/bin/story_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

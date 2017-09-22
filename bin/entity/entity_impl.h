@@ -8,8 +8,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/modular/services/entity/entity.fidl.h"
-#include "apps/modular/services/entity/entity_reference.fidl.h"
+#include "lib/entity/fidl/entity.fidl.h"
+#include "lib/entity/fidl/entity_reference.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

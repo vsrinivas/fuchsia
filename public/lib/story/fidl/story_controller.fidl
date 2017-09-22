@@ -4,12 +4,12 @@
 
 module modular;
 
-import "apps/modular/services/module/module_controller.fidl";
-import "apps/modular/services/module/module_data.fidl";
-import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/story/story_info.fidl";
-import "apps/modular/services/story/story_state.fidl";
-import "apps/modular/services/surface/surface.fidl";
+import "lib/module/fidl/module_controller.fidl";
+import "lib/module/fidl/module_data.fidl";
+import "lib/story/fidl/link.fidl";
+import "lib/story/fidl/story_info.fidl";
+import "lib/story/fidl/story_state.fidl";
+import "lib/surface/fidl/surface.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // Used by the clients of StoryProvider (UserShell) to interact with a single

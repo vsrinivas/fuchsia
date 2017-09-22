@@ -25,9 +25,9 @@ source_set("operations") {
 
   deps = [
     "//apps/ledger/services/public",
-    "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:json_xdr",
-    "//apps/modular/lib/fidl:operation",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/fidl:operation",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]
@@ -46,8 +46,8 @@ source_set("page_client") {
     ":types",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
-    "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:operation",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:operation",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
@@ -73,11 +73,14 @@ source_set("storage") {
   ]
 
   deps = [
-    "//apps/modular/lib/util",
-    "//apps/modular/services/module:module_data",
-    "//apps/modular/services/story:private",
+    "//peridot/lib/util",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib/module/fidl:module_data",
+    "//peridot/public/lib/story/fidl:private",    
   ]
 }
 
@@ -109,10 +112,10 @@ source_set("page_client_unittest") {
 
   deps = [
     ":page_client",
-    "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:operation",
-    "//apps/modular/lib/testing:ledger_repository_for_testing",
-    "//apps/modular/lib/testing:test_with_message_loop",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:operation",
+    "//peridot/lib/testing:ledger_repository_for_testing",
+    "//peridot/lib/testing:test_with_message_loop",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",

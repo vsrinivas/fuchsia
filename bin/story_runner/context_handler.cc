@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/context_handler.h"
+#include "peridot/bin/story_runner/context_handler.h"
 
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 

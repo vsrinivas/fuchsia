@@ -5,7 +5,7 @@
 module modular;
 
 import "lib/ui/views/fidl/view_token.fidl";
-import "apps/modular/services/surface/surface.fidl";
+import "lib/surface/fidl/surface.fidl";
 
 // The factory for the StoryShell service enforces that only fully
 // configured StoryShell service instances are created.

@@ -104,8 +104,8 @@ flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
   deps = [
     "//garnet/public/lib/app/dart",               # needed for ApplicationContext
-    "//apps/modular/services/module:module_dart", # module fidl dart bindings
-    "//apps/modular/services/story:story_dart", # story fidl dart bindings
+    "//peridot/public/lib/module/fidl:fidl_dart", # module fidl dart bindings
+    "//peridot/public/lib/story/fidl:fidl_dart", # story fidl dart bindings
     "//garnet/public/lib/ui/views/fidl:fidl_dart",  # view fidl dart bindings
     "//garnet/public/lib/fidl/dart",            # fidl dart libraries
     "//lib/flutter/packages/flutter",           # flutter package
@@ -127,7 +127,7 @@ at `//third_party/dart-pkg/pub/<package_name>`.
 To use any FIDL generated dart bindings, you need to first look at the
 `BUILD.gn` defining the `fidl` target that contains the desired `.fidl` file.
 For example, let's say we want to import and use the `module.fidl` file (located
-in `<fuchsia_root>/apps/modular/services/module`) in our dart code. We should
+in `<fuchsia_root>/peridot/services/module`) in our dart code. We should
 first look at the `BUILD.gn` file in the same directory. In this file we can see
 that the `module.fidl` file is included in the `fidl("module")` target.
 
@@ -151,7 +151,7 @@ our module's `BUILD.gn`, we can add the dependency with the following syntax:
 ```
 
 Let's look at the `BUILD.gn` in our hello_world example module directory again.
-It has `"//apps/modular/services/story:story_dart",` as a dependency. (Note the
+It has `"//peridot/public/lib/story/fidl:fidl_dart",` as a dependency. (Note the
 `_dart` added at the end.)
 
 Once this is done, we can use all the interfaces defined in `.fidl` files

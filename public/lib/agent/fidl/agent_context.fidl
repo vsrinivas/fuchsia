@@ -5,8 +5,8 @@
 module modular;
 
 import "apps/maxwell/services/user/intelligence_services.fidl";
-import "apps/modular/services/auth/token_provider.fidl";
-import "apps/modular/services/component/component_context.fidl";
+import "lib/auth/fidl/token_provider.fidl";
+import "lib/component/fidl/component_context.fidl";
 
 // This interface is exposed to all agents. It allows to schedule tasks to occur
 // in response to triggers which are conditions like a message arriving on a

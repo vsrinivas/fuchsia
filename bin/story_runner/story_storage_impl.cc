@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/story_storage_impl.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/ledger/operations.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/services/story/story_data.fidl.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/operations.h"
+#include "peridot/lib/ledger/storage.h"
+#include "lib/story/fidl/story_data.fidl.h"
 #include "lib/fsl/vmo/strings.h"
 
 namespace modular {

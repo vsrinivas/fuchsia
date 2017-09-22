@@ -6,10 +6,10 @@ module modular;
 
 import "lib/app/fidl/service_provider.fidl";
 import "apps/ledger/services/public/ledger.fidl";
-import "apps/modular/services/agent/agent_controller/agent_controller.fidl";
-import "apps/modular/services/component/message_queue.fidl";
-import "apps/modular/services/entity/entity_resolver.fidl";
-import "apps/modular/services/entity/entity_store.fidl";
+import "lib/agent/fidl/agent_controller/agent_controller.fidl";
+import "lib/component/fidl/message_queue.fidl";
+import "lib/entity/fidl/entity_resolver.fidl";
+import "lib/entity/fidl/entity_store.fidl";
 
 // Provided to all components in their respective intialization methods by the
 // framework. For example, a Module gets it in Module::Initialize() and an Agent

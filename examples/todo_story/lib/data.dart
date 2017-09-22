@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:apps.modular.services.story/link.fidl.dart';
+import 'package:lib.story.fidl/link.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 void _log(String msg) {

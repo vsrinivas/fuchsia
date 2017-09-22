@@ -5,8 +5,8 @@
 #include <array>
 #include <memory>
 
-#include "apps/modular/lib/fidl/single_service_app.h"
-#include "apps/modular/services/module/module.fidl.h"
+#include "peridot/lib/fidl/single_service_app.h"
+#include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/fsl/tasks/message_loop.h"
 

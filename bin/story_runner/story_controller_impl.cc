@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/story_controller_impl.h"
+#include "peridot/bin/story_runner/story_controller_impl.h"
 
 #include <memory>
 
@@ -11,16 +11,16 @@
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/services/module/module_context.fidl.h"
-#include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/services/story/story_marker.fidl.h"
-#include "apps/modular/src/story_runner/link_impl.h"
-#include "apps/modular/src/story_runner/module_context_impl.h"
-#include "apps/modular/src/story_runner/module_controller_impl.h"
-#include "apps/modular/src/story_runner/story_provider_impl.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger/storage.h"
+#include "lib/module/fidl/module_context.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "lib/story/fidl/story_marker.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/bin/story_runner/module_context_impl.h"
+#include "peridot/bin/story_runner/module_controller_impl.h"
+#include "peridot/bin/story_runner/story_provider_impl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"

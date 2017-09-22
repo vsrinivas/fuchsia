@@ -9,7 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
+#include "peridot/examples/hello_world_cpp/hello.fidl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"

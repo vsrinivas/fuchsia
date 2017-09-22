@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/component_manager/resource_loader.h"
+#include "peridot/bin/component_manager/resource_loader.h"
 
 #include <regex>
 
-#include "apps/modular/src/component_manager/make_network_error.h"
+#include "peridot/bin/component_manager/make_network_error.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/make_copyable.h"

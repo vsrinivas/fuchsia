@@ -8,15 +8,15 @@
 #include <string>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/ledger/ledger_client.h"
-#include "apps/modular/lib/ledger/page_client.h"
-#include "apps/modular/lib/ledger/types.h"
-#include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/services/story/link_change.fidl.h"
-#include "apps/modular/services/story/per_device_story_info.fidl.h"
-#include "apps/modular/services/story/story_data.fidl.h"
-#include "apps/modular/services/surface/surface.fidl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger/types.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/link_change.fidl.h"
+#include "lib/story/fidl/per_device_story_info.fidl.h"
+#include "lib/story/fidl/story_data.fidl.h"
+#include "lib/surface/fidl/surface.fidl.h"
 
 namespace modular {
 

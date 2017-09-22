@@ -22,9 +22,9 @@ executable("example_module1") {
     ":calculator",
     ":store",
     "//garnet/public/lib/app/cpp",
-    "//apps/modular/lib/fidl:single_service_app",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
@@ -40,10 +40,10 @@ executable("example_module2") {
   deps = [
     ":store",
     "//garnet/public/lib/app/cpp",
-    "//apps/modular/lib/fidl:single_service_app",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/lib/rapidjson",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
@@ -59,13 +59,13 @@ executable("example_recipe") {
   deps = [
     ":calculator",
     "//apps/ledger/services/public",
-    "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:single_service_app",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/services/component",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
-    "//apps/modular/services/user",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/lib/rapidjson",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fxl",
@@ -79,9 +79,12 @@ source_set("store") {
   ]
 
   deps = [
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/rapidjson",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
   ]
 }
 
@@ -100,10 +103,10 @@ source_set("unittests") {
 
   deps = [
     ":store",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/lib/testing:mock_base",
-    "//apps/modular/lib/testing:test_with_message_loop",
-    "//apps/modular/services/story:story_cpp_sources",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing:mock_base",
+    "//peridot/lib/testing:test_with_message_loop",
+    "//peridot/public/lib/story/fidl:fidl_cpp_sources",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",

@@ -5,10 +5,10 @@
 #include "lib/app/cpp/connect.h"
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
-#include "apps/modular/lib/testing/component_base.h"
-#include "apps/modular/lib/testing/reporting.h"
-#include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/module/module.fidl.h"
+#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/reporting.h"
+#include "peridot/lib/testing/testing.h"
+#include "lib/module/fidl/module.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;

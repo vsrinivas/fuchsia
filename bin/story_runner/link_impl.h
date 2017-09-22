@@ -7,12 +7,12 @@
 
 #include <vector>
 
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/src/story_runner/key_generator.h"
-#include "apps/modular/src/story_runner/story_storage_impl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "peridot/bin/story_runner/key_generator.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/device_runner/user_controller_impl.h"
+#include "peridot/bin/device_runner/user_controller_impl.h"
 
 #include <memory>
 #include <utility>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/modular/lib/common/async_holder.h"
-#include "apps/modular/lib/common/teardown.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
+#include "peridot/lib/common/async_holder.h"
+#include "peridot/lib/common/teardown.h"
+#include "peridot/lib/fidl/array_to_string.h"
 
 namespace modular {
 

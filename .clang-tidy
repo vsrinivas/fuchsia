@@ -1,7 +1,7 @@
 ---
 Checks:          'clang-diagnostic-*,-clang-diagnostic-unused-command-line-argument,clang-analyzer-*,google-*,misc-*,-misc-noexcept*,modernize-*,-modernize-deprecated-headers,-modernize-use-equals-default,performance-*,-performance-unnecessary-value-param,readability-*,-readability-implicit-bool-cast'
 WarningsAsErrors: false
-HeaderFilterRegex: 'apps/modular/*'
+HeaderFilterRegex: 'peridot/*'
 AnalyzeTemporaryDtors: false
 FormatStyle:     file
 CheckOptions:

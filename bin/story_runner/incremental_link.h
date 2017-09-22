@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/services/story/link_change.fidl.h"
-#include "apps/modular/src/story_runner/link_impl.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "lib/story/fidl/link_change.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
 
 namespace modular {
 

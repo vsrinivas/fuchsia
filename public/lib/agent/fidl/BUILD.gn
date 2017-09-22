@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("agent") {
+fidl("fidl") {
   sources = [
     "agent.fidl",
     "agent_context.fidl",
@@ -14,8 +14,8 @@ fidl("agent") {
   deps = [
     "//garnet/public/lib/app/fidl:service_provider",
     "//apps/maxwell/services/user",
-    "//apps/modular/services/agent/agent_controller",
-    "//apps/modular/services/auth",
-    "//apps/modular/services/component",
+    "//peridot/public/lib/agent/fidl/agent_controller",
+    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/component/fidl",
   ]
 }

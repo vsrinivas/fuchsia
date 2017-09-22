@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/story_provider_impl.h"
+#include "peridot/bin/story_runner/story_provider_impl.h"
 
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/fidl/proxy.h"
-#include "apps/modular/lib/ledger/operations.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/services/module/link_path.fidl.h"
-#include "apps/modular/src/story_runner/link_impl.h"
-#include "apps/modular/src/story_runner/story_controller_impl.h"
-#include "apps/modular/src/user_runner/focus.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/proxy.h"
+#include "peridot/lib/ledger/operations.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "lib/module/fidl/link_path.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/bin/user_runner/focus.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"

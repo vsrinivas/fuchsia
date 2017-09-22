@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/device_info/device_info.h"
+#include "peridot/lib/device_info/device_info.h"
 
 #include <limits.h>
 #include <unistd.h>
 
-#include "apps/modular/lib/util/filesystem.h"
+#include "peridot/lib/util/filesystem.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"

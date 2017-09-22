@@ -6,7 +6,7 @@
 #define APPS_MODULAR_SRC_USER_RUNNER_CONFLICT_RESOLVER_IMPL_H_
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/fidl/operation.h"
+#include "peridot/lib/fidl/operation.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/logging.h"

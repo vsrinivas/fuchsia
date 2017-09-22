@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/ledger/ledger_client.h"
-#include "apps/modular/lib/ledger/page_client.h"
-#include "apps/modular/lib/testing/ledger_repository_for_testing.h"
-#include "apps/modular/lib/testing/test_with_message_loop.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/testing/ledger_repository_for_testing.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 

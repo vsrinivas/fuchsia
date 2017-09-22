@@ -5,11 +5,11 @@
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/modular/examples/counter_cpp/calculator.fidl.h"
-#include "apps/modular/examples/counter_cpp/store.h"
-#include "apps/modular/lib/fidl/single_service_app.h"
-#include "apps/modular/services/module/module.fidl.h"
-#include "apps/modular/services/module/module_context.fidl.h"
+#include "peridot/examples/counter_cpp/calculator.fidl.h"
+#include "peridot/examples/counter_cpp/store.h"
+#include "peridot/lib/fidl/single_service_app.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

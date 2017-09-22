@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/modular/services/story/story_state.fidl";
+import "lib/story/fidl/story_state.fidl";
 
 // Information about a story running on a particular device.
 struct PerDeviceStoryInfo {

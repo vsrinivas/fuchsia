@@ -4,9 +4,9 @@
 
 module modular.auth;
 
-import "apps/modular/services/auth/account/account.fidl";
-import "apps/modular/services/auth/token_provider.fidl";
-import "apps/modular/services/device/device_shell.fidl";
+import "lib/auth/fidl/account/account.fidl";
+import "lib/auth/fidl/token_provider.fidl";
+import "lib/device/fidl/device_shell.fidl";
 
 // This is only meant to be used by the Framework.
 // An interface that allows the Framework to talk to the token manager service

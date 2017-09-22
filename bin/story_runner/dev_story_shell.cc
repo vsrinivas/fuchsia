@@ -7,9 +7,9 @@
 
 #include <memory>
 
-#include "apps/modular/lib/fidl/single_service_app.h"
-#include "apps/modular/lib/fidl/view_host.h"
-#include "apps/modular/services/story/story_shell.fidl.h"
+#include "peridot/lib/fidl/single_service_app.h"
+#include "peridot/lib/fidl/view_host.h"
+#include "lib/story/fidl/story_shell.fidl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

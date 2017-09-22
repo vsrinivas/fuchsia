@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("component") {
+fidl("fidl") {
   sources = [
     "component.fidl",
     "component_context.fidl",
@@ -14,8 +14,8 @@ fidl("component") {
   deps = [
     "//garnet/public/lib/app/fidl",
     "//apps/ledger/services/public",
-    "//apps/modular/services/agent/agent_controller",
-    "//apps/modular/services/entity",
+    "//peridot/public/lib/agent/fidl/agent_controller",
+    "//peridot/public/lib/entity/fidl",
     "//garnet/public/lib/network/fidl",
   ]
 }

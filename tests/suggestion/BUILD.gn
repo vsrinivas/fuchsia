@@ -19,11 +19,11 @@ executable("suggestion_proposal_test_module") {
   ]
   deps = [
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/testing",
-    "//apps/modular/lib/testing:component_base",
-    "//apps/modular/services/component",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/fsl",
   ]
 }
@@ -36,11 +36,11 @@ executable("suggestion_test_user_shell") {
   ]
   deps = [
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/testing",
-    "//apps/modular/lib/testing:component_base",
-    "//apps/modular/services/component",
-    "//apps/modular/services/module",
-    "//apps/modular/services/user",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/user/fidl",
     "//garnet/public/lib/fsl",
   ]
 }

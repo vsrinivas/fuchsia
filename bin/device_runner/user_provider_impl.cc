@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/device_runner/user_provider_impl.h"
+#include "peridot/bin/device_runner/user_provider_impl.h"
 
 #include <utility>
 
-#include "apps/modular/src/device_runner/users_generated.h"
+#include "peridot/bin/device_runner/users_generated.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"

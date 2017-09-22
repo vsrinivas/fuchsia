@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/device_runner/user_controller_impl.h"
+#include "peridot/bin/device_runner/user_controller_impl.h"
 
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "apps/modular/lib/testing/test_with_message_loop.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
 
 namespace modular {

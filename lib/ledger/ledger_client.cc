@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LtICENSE file.
 
-#include "apps/modular/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/ledger_client.h"
 
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/ledger/page_client.h"
-#include "apps/modular/lib/ledger/status.h"
-#include "apps/modular/lib/ledger/types.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger/status.h"
+#include "peridot/lib/ledger/types.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/vmo/strings.h"
 

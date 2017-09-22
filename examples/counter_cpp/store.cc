@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/examples/counter_cpp/store.h"
+#include "peridot/examples/counter_cpp/store.h"
 
 #include <iterator>
 #include <utility>
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/services/story/link.fidl.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "lib/story/fidl/link.fidl.h"
 #include "lib/fidl/cpp/bindings/map.h"
 
 using fidl::InterfaceHandle;

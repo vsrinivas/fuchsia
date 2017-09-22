@@ -50,13 +50,13 @@ under fuchsia. In order to start `test_runner`, you can:
 /system/apps/test_runner
 ```
 
-Each subdirectory of `apps/modular/tests` contains one integration test. They
+Each subdirectory of `peridot/tests` contains one integration test. They
 are all run together by the test runner as specified by the [modular_tests.json]
 configuration file:
 
 ```
 $FUCHSIA_DIR/apps/test_runner/src/run_test \
-  --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json --sync
+  --test_file=$FUCHSIA_DIR/peridot/tests/modular_tests.json --sync
 ```
 
 The option `--sync` is optional and causes required binaries that have changed

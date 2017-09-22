@@ -4,9 +4,9 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("config") {
+fidl("fidl") {
   sources = [
     "config.fidl",
   ]
-  visibility = [ "//apps/modular/*" ]
+  visibility = [ "//peridot/*" ]
 }

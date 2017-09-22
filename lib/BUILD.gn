@@ -6,9 +6,9 @@ group("unittests") {
   testonly = true
 
   deps = [
-    "//apps/modular/lib/fidl:unittests",
-    "//apps/modular/lib/ledger:unittests",
-    "//apps/modular/lib/testing:unittests",
-    "//apps/modular/lib/util:unittests",
+    "//peridot/lib/fidl:unittests",
+    "//peridot/lib/ledger:unittests",
+    "//peridot/lib/testing:unittests",
+    "//peridot/lib/util:unittests",
   ]
 }

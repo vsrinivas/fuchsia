@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/modular/services/module/module_state.fidl";
+import "lib/module/fidl/module_state.fidl";
 
 // This interface is used by the caller of ModuleContext.StartModule()
 // to control the started Module instance.

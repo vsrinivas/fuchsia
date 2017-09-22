@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/user_runner/focus.h"
+#include "peridot/bin/user_runner/focus.h"
 
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/ledger/operations.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger/operations.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/fsl/vmo/strings.h"

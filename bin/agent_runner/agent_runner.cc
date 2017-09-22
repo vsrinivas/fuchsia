@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/agent_runner/agent_runner.h"
+#include "peridot/bin/agent_runner/agent_runner.h"
 
 #include <unordered_set>
 #include <unordered_map>
 #include <utility>
 
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/src/agent_runner/agent_context_impl.h"
-#include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/bin/agent_runner/agent_context_impl.h"
+#include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 

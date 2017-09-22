@@ -7,7 +7,7 @@
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/modular/src/user_runner/user_runner_impl.h"
+#include "peridot/bin/user_runner/user_runner_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/command_line.h"

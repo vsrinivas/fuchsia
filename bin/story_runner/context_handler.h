@@ -10,7 +10,7 @@
 
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
-#include "apps/modular/lib/fidl/context.h"
+#include "peridot/lib/fidl/context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"

@@ -10,9 +10,9 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "apps/modular/lib/common/async_holder.h"
-#include "apps/modular/services/config/config.fidl.h"
-#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
+#include "peridot/lib/common/async_holder.h"
+#include "lib/config/fidl/config.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"

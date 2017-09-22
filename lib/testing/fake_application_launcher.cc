@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/testing/fake_application_launcher.h"
+#include "peridot/lib/testing/fake_application_launcher.h"
 
 namespace modular {
 namespace testing {

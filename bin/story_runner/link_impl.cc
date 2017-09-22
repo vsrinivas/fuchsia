@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/link_impl.h"
+#include "peridot/bin/story_runner/link_impl.h"
 
 #include <functional>
 
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/src/story_runner/incremental_link.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "peridot/bin/story_runner/incremental_link.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
-#include "apps/modular/lib/util/debug.h"
+#include "peridot/lib/util/debug.h"
 
 namespace modular {
 

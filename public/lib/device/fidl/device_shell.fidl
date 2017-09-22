@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/modular/services/device/user_provider.fidl";
+import "lib/device/fidl/user_provider.fidl";
 
 // This interface is implemented by a device shell application.
 [ServiceName="modular.DeviceShell"]

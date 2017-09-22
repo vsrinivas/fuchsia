@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/link_impl.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/lib/testing/mock_base.h"
-#include "apps/modular/lib/testing/test_with_message_loop.h"
-#include "apps/modular/services/story/link_change.fidl.h"
-#include "apps/modular/src/story_runner/story_storage_impl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/testing/mock_base.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
+#include "lib/story/fidl/link_change.fidl.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/array.h"
 

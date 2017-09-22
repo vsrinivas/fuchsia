@@ -9,7 +9,7 @@ source_set("device_info") {
   ]
 
   deps = [
-    "//apps/modular/lib/util:filesystem",
+    "//peridot/lib/util:filesystem",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -25,7 +25,7 @@ source_set("device_profile") {
   ]
 
   deps = [
-    "//apps/modular/lib/rapidjson",
+    "//peridot/lib/rapidjson",
     "//garnet/public/lib/fxl",
   ]
 }

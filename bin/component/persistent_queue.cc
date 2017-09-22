@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/component/persistent_queue.h"
+#include "peridot/bin/component/persistent_queue.h"
 
 #include <utility>
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/util/filesystem.h"
+#include "peridot/lib/util/filesystem.h"
 
 #include <fcntl.h>
 #include <zircon/device/vfs.h>

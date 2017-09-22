@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/examples/counter_cpp/store.h"
+#include "peridot/examples/counter_cpp/store.h"
 
 #include <string>
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/lib/testing/mock_base.h"
-#include "apps/modular/lib/testing/test_with_message_loop.h"
-#include "apps/modular/services/story/link.fidl.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/testing/mock_base.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
+#include "lib/story/fidl/link.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fsl/tasks/message_loop.h"

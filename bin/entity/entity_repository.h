@@ -7,11 +7,11 @@
 
 #include <unordered_map>
 
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/services/entity/entity.fidl.h"
-#include "apps/modular/services/entity/entity_resolver.fidl.h"
-#include "apps/modular/services/entity/entity_store.fidl.h"
-#include "apps/modular/src/entity/entity_impl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "lib/entity/fidl/entity.fidl.h"
+#include "lib/entity/fidl/entity_resolver.fidl.h"
+#include "lib/entity/fidl/entity_store.fidl.h"
+#include "peridot/bin/entity/entity_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"

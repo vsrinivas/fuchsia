@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("lifecycle") {
+fidl("fidl") {
   sources = [
     "lifecycle.fidl",
   ]

@@ -5,7 +5,7 @@
 import("//garnet/public/lib/fidl/fidl.gni")
 
 # For consumption outside modular.
-fidl("module") {
+fidl("fidl") {
   sources = [
     "module.fidl",
     "module_context.fidl",
@@ -14,9 +14,9 @@ fidl("module") {
   deps = [
     "//garnet/public/lib/app/fidl:service_provider",
     "//apps/maxwell/services/user",
-    "//apps/modular/services/component",
-    "//apps/modular/services/story",
-    "//apps/modular/services/surface",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/surface/fidl",
     "//garnet/public/lib/ui/views/fidl",
   ]
 
@@ -40,6 +40,6 @@ fidl("module_data") {
   ]
 
   deps = [
-    "//apps/modular/services/surface",
+    "//peridot/public/lib/surface/fidl",
   ]
 }

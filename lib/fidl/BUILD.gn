@@ -15,9 +15,9 @@ source_set("app_client") {
   ]
 
   deps = [
-    "//apps/modular/lib/common:async_holder",
-    "//apps/modular/services/config",
-    "//apps/modular/services/lifecycle",
+    "//peridot/lib/common:async_holder",
+    "//peridot/public/lib/config/fidl",
+    "//peridot/public/lib/lifecycle/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
@@ -53,7 +53,7 @@ source_set("json_xdr") {
   # MUST be public so clients pick up the defines from
   # //third_party/rapidjson:rapidjson_config
   public_deps = [
-    "//apps/modular/lib/rapidjson",
+    "//peridot/lib/rapidjson",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
@@ -106,7 +106,7 @@ source_set("single_service_app") {
   public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//apps/modular/services/lifecycle",
+    "//peridot/public/lib/lifecycle/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
@@ -138,7 +138,7 @@ source_set("message_receiver_client") {
   ]
 
   deps = [
-    "//apps/modular/services/component",
+    "//peridot/public/lib/component/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
@@ -171,7 +171,7 @@ source_set("app_client_unittest") {
     ":app_client",
     ":unittest_fidl",
     "//garnet/public/lib/app/cpp",
-    "//apps/modular/lib/testing:test_with_message_loop",
+    "//peridot/lib/testing:test_with_message_loop",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",

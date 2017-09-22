@@ -6,7 +6,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "apps/modular/services/component/component.fidl.h"
+#include "lib/component/fidl/component.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

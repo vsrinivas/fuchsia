@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/component_manager/component_index_impl.h"
+#include "peridot/bin/component_manager/component_index_impl.h"
 
 #include <iostream>
 #include <string>
 #include <utility>
 
-#include "apps/modular/services/component/component.fidl.h"
-#include "apps/modular/src/component_manager/component_resources_impl.h"
-#include "apps/modular/src/component_manager/make_network_error.h"
+#include "lib/component/fidl/component.fidl.h"
+#include "peridot/bin/component_manager/component_resources_impl.h"
+#include "peridot/bin/component_manager/make_network_error.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

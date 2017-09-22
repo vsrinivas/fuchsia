@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/modular/services/component/message_queue.fidl.h"
+#include "lib/component/fidl/message_queue.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/string.h"
 

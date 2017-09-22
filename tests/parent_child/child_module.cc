@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/testing/component_base.h"
-#include "apps/modular/lib/testing/reporting.h"
-#include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/module/module.fidl.h"
+#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/reporting.h"
+#include "peridot/lib/testing/testing.h"
+#include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 

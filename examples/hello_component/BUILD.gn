@@ -7,7 +7,7 @@ import("//build/component/component.gni")
 executable("hello_program") {
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/modular/services/component",
+    "//peridot/public/lib/component/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",

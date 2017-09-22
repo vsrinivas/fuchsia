@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/component/component_context_impl.h"
+#include "peridot/bin/component/component_context_impl.h"
 
 #include <utility>
 
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/src/agent_runner/agent_runner.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/bin/agent_runner/agent_runner.h"
 #include "lib/fxl/logging.h"
 
 namespace modular {

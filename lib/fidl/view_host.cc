@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/view_host.h"
+#include "peridot/lib/fidl/view_host.h"
 
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"

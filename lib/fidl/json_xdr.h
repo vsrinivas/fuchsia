@@ -10,7 +10,7 @@
 #include <map>
 #include <type_traits>
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"

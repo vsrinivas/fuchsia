@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/testing/ledger_repository_for_testing.h"
+#include "peridot/lib/testing/ledger_repository_for_testing.h"
 
 #include <utility>
 
-#include "apps/modular/lib/common/teardown.h"
-#include "apps/modular/lib/fidl/app_client.h"
-#include "apps/modular/lib/ledger/constants.h"
-#include "apps/modular/services/config/config.fidl.h"
+#include "peridot/lib/common/teardown.h"
+#include "peridot/lib/fidl/app_client.h"
+#include "peridot/lib/ledger/constants.h"
+#include "lib/config/fidl/config.fidl.h"
 #include "lib/test_runner/cpp/application_context.h"
 
 namespace modular {

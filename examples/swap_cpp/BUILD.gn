@@ -37,12 +37,12 @@ source_set("module") {
   ]
 
   public_deps = [
-    "//apps/modular/lib/fidl:single_service_app",
+    "//peridot/lib/fidl:single_service_app",
   ]
 
   deps = [
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/ui/view_framework",
   ]
 }
@@ -52,9 +52,9 @@ executable("swap_recipe") {
     "swap_recipe.cc",
   ]
   deps = [
-    "//apps/modular/lib/fidl:single_service_app",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/fsl",
   ]

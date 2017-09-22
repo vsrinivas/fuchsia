@@ -9,11 +9,11 @@
 #include <memory>
 #include <utility>
 
-#include "apps/modular/lib/fidl/single_service_app.h"
-#include "apps/modular/lib/testing/reporting.h"
-#include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/device/device_shell.fidl.h"
-#include "apps/modular/services/device/user_provider.fidl.h"
+#include "peridot/lib/fidl/single_service_app.h"
+#include "peridot/lib/testing/reporting.h"
+#include "peridot/lib/testing/testing.h"
+#include "lib/device/fidl/device_shell.fidl.h"
+#include "lib/device/fidl/user_provider.fidl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/component_manager/component_resources_impl.h"
+#include "peridot/bin/component_manager/component_resources_impl.h"
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/socket/strings.h"

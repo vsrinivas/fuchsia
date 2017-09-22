@@ -4,8 +4,8 @@
 
 module modular;
 
-import "apps/modular/services/auth/account/account.fidl";
-import "apps/modular/services/config/config.fidl";
+import "lib/auth/fidl/account/account.fidl";
+import "lib/config/fidl/config.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the

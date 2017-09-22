@@ -5,9 +5,9 @@
 module modular;
 
 import "apps/ledger/services/internal/internal.fidl";
-import "apps/modular/services/auth/account_provider.fidl";
-import "apps/modular/services/auth/account/account.fidl";
-import "apps/modular/services/config/config.fidl";
+import "lib/auth/fidl/account_provider.fidl";
+import "lib/auth/fidl/account/account.fidl";
+import "lib/config/fidl/config.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // The device_runner application (there is no |DeviceRunner| service) requests

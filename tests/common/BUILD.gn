@@ -17,10 +17,10 @@ executable("null_module") {
     "null_module.cc",
   ]
   deps = [
-    "//apps/modular/lib/testing",
-    "//apps/modular/lib/testing:component_base",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fsl",
   ]

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/agent_runner/agent_context_impl.h"
+#include "peridot/bin/agent_runner/agent_context_impl.h"
 
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/modular/lib/common/teardown.h"
-#include "apps/modular/src/agent_runner/agent_runner.h"
+#include "peridot/lib/common/teardown.h"
+#include "peridot/bin/agent_runner/agent_runner.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
 

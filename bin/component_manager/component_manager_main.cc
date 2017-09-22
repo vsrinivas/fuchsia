@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/modular/services/component/component.fidl.h"
-#include "apps/modular/src/component_manager/component_index_impl.h"
+#include "lib/component/fidl/component.fidl.h"
+#include "peridot/bin/component_manager/component_index_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

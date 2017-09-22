@@ -9,9 +9,9 @@
 
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
-#include "apps/modular/services/module/module_context.fidl.h"
-#include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/src/component/component_context_impl.h"
+#include "lib/module/fidl/module_context.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "peridot/bin/component/component_context_impl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

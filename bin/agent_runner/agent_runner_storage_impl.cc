@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
 
 #include <functional>
 #include <utility>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/ledger/storage.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/storage.h"
 #include "lib/fsl/vmo/strings.h"
 
 namespace modular {

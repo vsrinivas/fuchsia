@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/agent_runner/agent_runner_storage.h"
+#include "peridot/bin/agent_runner/agent_runner_storage.h"
 
 namespace modular {
 

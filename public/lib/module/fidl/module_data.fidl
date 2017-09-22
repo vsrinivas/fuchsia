@@ -4,8 +4,8 @@
 
 module modular;
 
-import "apps/modular/services/module/link_path.fidl";
-import "apps/modular/services/surface/surface.fidl";
+import "lib/module/fidl/link_path.fidl";
+import "lib/surface/fidl/surface.fidl";
 
 // Information about modules in a Story.
 struct ModuleData {

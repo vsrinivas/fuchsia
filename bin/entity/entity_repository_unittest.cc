@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/entity/entity_repository.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/testing/mock_base.h"
-#include "apps/modular/lib/testing/test_with_message_loop.h"
+#include "peridot/bin/entity/entity_repository.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/testing/mock_base.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"

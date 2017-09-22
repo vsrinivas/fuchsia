@@ -5,17 +5,17 @@
 // This file contains functions from StoryStorageImpl and LinkImpl that exist
 // solely to implement the history of change operations for Links.
 
-#include "apps/modular/src/story_runner/incremental_link.h"
+#include "peridot/bin/story_runner/incremental_link.h"
 
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/ledger/operations.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/lib/util/debug.h"
-#include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/services/story/link_change.fidl.h"
-#include "apps/modular/src/story_runner/link_impl.h"
-#include "apps/modular/src/story_runner/story_storage_impl.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger/operations.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/util/debug.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "lib/story/fidl/link_change.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 
 namespace modular {

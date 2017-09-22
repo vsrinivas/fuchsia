@@ -7,8 +7,8 @@
 
 #include <utility>
 
-#include "apps/modular/services/component/component.fidl.h"
-#include "apps/modular/src/component_manager/resource_loader.h"
+#include "lib/component/fidl/component.fidl.h"
+#include "peridot/bin/component_manager/resource_loader.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 

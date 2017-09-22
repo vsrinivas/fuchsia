@@ -6,10 +6,10 @@
 #define APPS_MODULAR_SRC_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/modular/services/auth/account_provider.fidl.h"
-#include "apps/modular/services/config/config.fidl.h"
-#include "apps/modular/services/device/user_provider.fidl.h"
-#include "apps/modular/src/device_runner/user_controller_impl.h"
+#include "lib/auth/fidl/account_provider.fidl.h"
+#include "lib/config/fidl/config.fidl.h"
+#include "lib/device/fidl/user_provider.fidl.h"
+#include "peridot/bin/device_runner/user_controller_impl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

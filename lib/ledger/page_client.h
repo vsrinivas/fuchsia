@@ -8,7 +8,7 @@
 #include <string>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/ledger/types.h"
+#include "peridot/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"

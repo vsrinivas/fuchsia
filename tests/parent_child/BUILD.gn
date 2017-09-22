@@ -18,10 +18,10 @@ executable("child_module") {
     "child_module.cc",
   ]
   deps = [
-    "//apps/modular/lib/testing",
-    "//apps/modular/lib/testing:component_base",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fsl",
   ]
@@ -34,10 +34,10 @@ executable("parent_module") {
     "parent_module.cc",
   ]
   deps = [
-    "//apps/modular/lib/testing",
-    "//apps/modular/lib/testing:component_base",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fsl",
   ]

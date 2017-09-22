@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("device") {
+fidl("fidl") {
   sources = [
     "device_runner_monitor.fidl",
     "device_shell.fidl",
@@ -12,8 +12,8 @@ fidl("device") {
   ]
 
   public_deps = [
-    "//apps/modular/services/auth/account",
-    "//apps/modular/services/config",
+    "//peridot/public/lib/auth/fidl/account",
+    "//peridot/public/lib/config/fidl",
     "//garnet/public/lib/ui/views/fidl",
   ]
 }

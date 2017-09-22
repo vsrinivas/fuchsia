@@ -5,7 +5,7 @@
 #ifndef APPS_MODULAR_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
 #define APPS_MODULAR_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
 
-#include "apps/modular/lib/device_info/device_info.h"
+#include "peridot/lib/device_info/device_info.h"
 
 #include "lib/fxl/macros.h"
 

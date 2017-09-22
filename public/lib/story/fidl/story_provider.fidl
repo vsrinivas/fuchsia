@@ -4,9 +4,9 @@
 
 module modular;
 
-import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/story/story_controller.fidl";
-import "apps/modular/services/story/story_state.fidl";
+import "lib/story/fidl/link.fidl";
+import "lib/story/fidl/story_controller.fidl";
+import "lib/story/fidl/story_state.fidl";
 
 // UserRunner creates an instance of this service and passes it to the UserShell
 // so it can operate on stories for the user. It is also passed to other

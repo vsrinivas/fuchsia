@@ -4,9 +4,9 @@
 
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "apps/modular/lib/fidl/app_client.h"
-#include "apps/modular/lib/fidl/app_client_unittest.fidl.h"
-#include "apps/modular/lib/testing/test_with_message_loop.h"
+#include "peridot/lib/fidl/app_client.h"
+#include "peridot/lib/fidl/app_client_unittest.fidl.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
 
 namespace modular {

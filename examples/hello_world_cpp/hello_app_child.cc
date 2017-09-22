@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
+#include "peridot/examples/hello_world_cpp/hello.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"

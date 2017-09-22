@@ -29,8 +29,8 @@ source_set("story_provider_watcher_base") {
   ]
 
   deps = [
-    "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/services/story",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
   ]

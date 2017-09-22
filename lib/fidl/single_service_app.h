@@ -9,7 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

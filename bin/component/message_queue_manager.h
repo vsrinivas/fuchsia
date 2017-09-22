@@ -13,11 +13,11 @@
 #include <utility>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/ledger/ledger_client.h"
-#include "apps/modular/lib/ledger/page_client.h"
-#include "apps/modular/lib/ledger/types.h"
-#include "apps/modular/services/component/message_queue.fidl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger/types.h"
+#include "lib/component/fidl/message_queue.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"

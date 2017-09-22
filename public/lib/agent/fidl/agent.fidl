@@ -5,7 +5,7 @@
 module modular;
 
 import "lib/app/fidl/service_provider.fidl";
-import "apps/modular/services/agent/agent_context.fidl";
+import "lib/agent/fidl/agent_context.fidl";
 
 // This service is implemented by an application that is meant to be run as an
 // Agent.

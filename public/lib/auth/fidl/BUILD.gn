@@ -7,14 +7,14 @@ import("//garnet/public/lib/fidl/fidl.gni")
 # TODO(alhaad/ukode): Move token_provider.fidl into a separate rule since
 # third-party components should only depend on it.
 # TODO(alhaad/ukode): Also move these services to a separate repository.
-fidl("auth") {
+fidl("fidl") {
   sources = [
     "account_provider.fidl",
     "token_provider.fidl",
   ]
 
   public_deps = [
-    "//apps/modular/services/auth/account",
-    "//apps/modular/services/device",
+    "//peridot/public/lib/auth/fidl/account",
+    "//peridot/public/lib/device/fidl",
   ]
 }

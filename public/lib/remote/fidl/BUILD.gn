@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("remote") {
+fidl("fidl") {
   sources = [
     "remote_invoker.fidl",
   ]

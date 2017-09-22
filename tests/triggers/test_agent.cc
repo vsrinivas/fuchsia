@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/testing/component_base.h"
-#include "apps/modular/lib/testing/reporting.h"
-#include "apps/modular/lib/testing/testing.h"
-#include "apps/modular/services/agent/agent.fidl.h"
-#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
-#include "apps/modular/tests/triggers/trigger_test_agent_interface.fidl.h"
+#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/reporting.h"
+#include "peridot/lib/testing/testing.h"
+#include "lib/agent/fidl/agent.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "peridot/tests/triggers/trigger_test_agent_interface.fidl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
 

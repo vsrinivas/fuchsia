@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/component/message_queue_manager.h"
+#include "peridot/bin/component/message_queue_manager.h"
 
 #include <algorithm>
 #include <deque>
 #include <utility>
 
-#include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/ledger/page_client.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/services/component/message_queue.fidl.h"
-#include "apps/modular/src/component/persistent_queue.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger/storage.h"
+#include "lib/component/fidl/message_queue.fidl.h"
+#include "peridot/bin/component/persistent_queue.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fsl/vmo/strings.h"

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/entity/entity_impl.h"
+#include "peridot/bin/entity/entity_impl.h"
 
-#include "apps/modular/src/entity/entity_repository.h"
+#include "peridot/bin/entity/entity_repository.h"
 
 namespace modular {
 

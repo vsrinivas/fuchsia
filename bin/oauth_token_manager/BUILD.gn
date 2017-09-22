@@ -24,9 +24,9 @@ executable("oauth_token_manager") {
   deps = [
     ":credentials",
     "//garnet/public/lib/app/cpp",
-    "//apps/modular/lib/fidl:operation",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/services/auth",
+    "//peridot/lib/fidl:operation",
+    "//peridot/lib/rapidjson",
+    "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/network/fidl",
     "//topaz/runtime/web_runner/services",
     "//garnet/public/lib/fidl/cpp/bindings",

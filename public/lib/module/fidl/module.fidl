@@ -4,8 +4,8 @@
 
 module modular;
 
-import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/module/module_context.fidl";
+import "lib/story/fidl/link.fidl";
+import "lib/module/fidl/module_context.fidl";
 
 // This service is implemented by an application that is meant to be
 // run in a ModuleContext (fka Story).

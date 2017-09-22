@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/json_xdr.h"
 
 #include <string>
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
 

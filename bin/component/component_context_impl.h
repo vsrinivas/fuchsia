@@ -8,9 +8,9 @@
 #include <string>
 
 #include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/src/component/message_queue_manager.h"
-#include "apps/modular/src/entity/entity_repository.h"
+#include "lib/component/fidl/component_context.fidl.h"
+#include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/entity/entity_repository.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"

@@ -9,8 +9,8 @@
 
 #include <string>
 
-#include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/services/story/story_data.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/story_data.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
 

@@ -9,7 +9,7 @@ executable("components_query") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/modular/services/component",
+    "//peridot/public/lib/component/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/rapidjson",

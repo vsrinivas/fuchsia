@@ -6,11 +6,11 @@
 #define APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/ledger/ledger_client.h"
-#include "apps/modular/lib/ledger/page_client.h"
-#include "apps/modular/lib/ledger/types.h"
-#include "apps/modular/src/agent_runner/agent_runner_storage.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger/types.h"
+#include "peridot/bin/agent_runner/agent_runner_storage.h"
 #include "lib/fxl/macros.h"
 
 namespace modular {

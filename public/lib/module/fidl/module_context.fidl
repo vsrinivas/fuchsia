@@ -6,10 +6,10 @@ module modular;
 
 import "lib/app/fidl/service_provider.fidl";
 import "apps/maxwell/services/user/intelligence_services.fidl";
-import "apps/modular/services/component/component_context.fidl";
-import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/surface/surface.fidl";
-import "apps/modular/services/module/module_controller.fidl";
+import "lib/component/fidl/component_context.fidl";
+import "lib/story/fidl/link.fidl";
+import "lib/surface/fidl/surface.fidl";
+import "lib/module/fidl/module_controller.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to

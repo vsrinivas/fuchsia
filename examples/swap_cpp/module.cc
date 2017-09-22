@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/examples/swap_cpp/module.h"
+#include "peridot/examples/swap_cpp/module.h"
 
 #include <utility>
 

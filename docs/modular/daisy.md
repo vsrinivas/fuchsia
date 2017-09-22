@@ -53,7 +53,7 @@ is in turn captured in the Daisy.
 ### in Dart
 
 ```dart
-import "apps/modular/lib/daisy.dart"
+import "peridot/lib/daisy.dart"
 
 // Assume we have a PDF Entity in |thisPdf|.
 daisy = new Daisy("coreVerbs#Preview", thisPdf);

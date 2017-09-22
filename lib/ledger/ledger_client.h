@@ -11,8 +11,8 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/ledger/types.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/logging.h"

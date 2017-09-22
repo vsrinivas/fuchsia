@@ -2,14 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("internal") {
+  include_dirs = [
+    ".",
+    "$root_gen_dir/peridot",
+  ]
+}
+
 group("modular") {
   testonly = true
 
   deps = [
     ":modular_unittests",
+    "bin:src",
     "examples",
-    "services",
-    "src",
+    "public/lib:services",
     "tests",
   ]
 }
@@ -18,12 +25,12 @@ executable("modular_unittests") {
   testonly = true
 
   deps = [
-    "//apps/modular/examples/counter_cpp:unittests",
-    "//apps/modular/lib:unittests",
-    "//apps/modular/src/agent_runner:unittests",
-    "//apps/modular/src/device_runner:unittests",
-    "//apps/modular/src/entity:unittests",
-    "//apps/modular/src/story_runner:unittests",
+    "//peridot/examples/counter_cpp:unittests",
+    "//peridot/lib:unittests",
+    "//peridot/bin/agent_runner:unittests",
+    "//peridot/bin/device_runner:unittests",
+    "//peridot/bin/entity:unittests",
+    "//peridot/bin/story_runner:unittests",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
 }

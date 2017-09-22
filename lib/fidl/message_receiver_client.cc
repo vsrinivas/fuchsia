@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/message_receiver_client.h"
+#include "peridot/lib/fidl/message_receiver_client.h"
 
 #include <utility>
 

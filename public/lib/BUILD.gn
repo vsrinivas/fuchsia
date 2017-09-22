@@ -4,17 +4,17 @@
 
 group("services") {
   deps = [
-    "agent",
-    "auth",
-    "component",
-    "config",
-    "device",
-    "entity",
-    "lifecycle",
-    "module",
-    "remote",
-    "story",
-    "surface",
-    "user",
+    "agent/fidl",
+    "auth/fidl",
+    "component/fidl",
+    "config/fidl",
+    "device/fidl",
+    "entity/fidl",
+    "lifecycle/fidl",
+    "module/fidl",
+    "remote/fidl",
+    "story/fidl",
+    "surface/fidl",
+    "user/fidl",
   ]
 }

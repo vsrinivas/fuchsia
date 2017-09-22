@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/device_info/device_profile.h"
+#include "lib/device_info/device_profile.h"
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {
 
