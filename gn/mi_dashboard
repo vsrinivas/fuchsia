@@ -3,6 +3,6 @@
         "dart"
     ],
     "packages": {
-        "mi_dashboard": "//apps/maxwell/src/agents/mi_dashboard"
+        "mi_dashboard": "//peridot/bin/agents/mi_dashboard"
     }
 }

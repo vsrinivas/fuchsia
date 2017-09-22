@@ -4,13 +4,13 @@
         "dart"
     ],
     "labels": [
-        "//apps/maxwell:all",
-        "//apps/maxwell/src:integration_tests",
-        "//apps/maxwell/src:unittests"
+        "//peridot/maxwell_legacy:all",
+        "//peridot/maxwell_legacy:integration_tests",
+        "//peridot/maxwell_legacy:unittests"
     ],
     "packages": {
-        "maxwell": "//apps/maxwell",
-        "usage_log": "//apps/maxwell/src/agents/usage_log"
+        "maxwell": "//peridot/maxwell_legacy:maxwell",
+        "usage_log": "//peridot/bin/agents/usage_log"
     },
     "binaries": [
         {
@@ -34,7 +34,7 @@
             "bootfs_path": "apps/agents/module_suggester.dartx"
         },
         {
-            "binary": "gen/apps/maxwell/src/modules/basic_text_reporter/basic_text_reporter.flx",
+            "binary": "gen/peridot/bin/modules/basic_text_reporter/basic_text_reporter.flx",
             "bootfs_path": "apps/maxwell_btr"
         },
         {
