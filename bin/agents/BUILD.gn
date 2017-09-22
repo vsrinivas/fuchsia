@@ -1,0 +1,52 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("agents") {
+  deps = [
+    # If we don't include these explicitly here, for some reason it still
+    # produces the expected build products but is not sensitive to source file
+    # changes.
+    "//apps/maxwell/src/agents/basic_text_listener",
+    "//apps/maxwell/src/agents/entity_selector",
+    "//apps/maxwell/src/agents/mi_dashboard",
+    "//apps/maxwell/src/agents/module_suggester_dart",
+    "//apps/maxwell/src/agents/proposal_maker",
+    "//apps/maxwell/src/agents/usage_log",
+  ]
+}
+
+executable("carmen_sandiego") {
+  testonly = true
+  output_name = "agents/carmen_sandiego"
+
+  sources = [
+    "carmen_sandiego.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/src/acquirers:gps",
+    "//peridot/lib/rapidjson",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+executable("ideas") {
+  testonly = true
+  output_name = "agents/ideas"
+
+  sources = [
+    "ideas.cc",
+    "ideas.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//peridot/lib/rapidjson",
+    "//garnet/public/lib/fsl",
+  ]
+}

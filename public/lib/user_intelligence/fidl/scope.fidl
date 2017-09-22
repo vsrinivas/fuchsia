@@ -1,0 +1,35 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+// Specifies the access scope a given component has to services within Maxwell.
+//
+// TODO(thatguy): Eventually, replace this with a Fuchsia-level access scope.
+union ComponentScope {
+  // Reserved for system-level services.
+  GlobalScope global_scope;
+  // Scope for a specific Module instance within a specific Story.
+  ModuleScope module_scope;  // Annoying: can't use "module" (it's reserved)
+  // Scope for a specific Agent. Agents are not tied to a specific story.
+  AgentScope agent_scope;
+  // Scope for a specific Story, potentially containing several Module instances.
+  StoryScope story_scope;
+};
+
+struct GlobalScope {};
+
+struct ModuleScope {
+  string url;
+  string story_id;
+  array<string> module_path;
+};
+
+struct AgentScope {
+  string url;
+};
+
+struct StoryScope {
+  string story_id;
+};

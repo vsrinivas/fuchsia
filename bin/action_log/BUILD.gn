@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("action_log") {
+  sources = [
+    "action_log_data.cc",
+    "action_log_data.h",
+    "action_log_impl.cc",
+    "action_log_impl.h",
+    "action_log_main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//apps/maxwell/services/action_log",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/user:scope",
+    "//peridot/public/lib/surface/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/rapidjson",
+  ]
+}

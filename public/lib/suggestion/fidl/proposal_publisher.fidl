@@ -1,0 +1,27 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "apps/maxwell/services/suggestion/ask_handler.fidl";
+import "apps/maxwell/services/suggestion/proposal.fidl";
+
+// A service enabling Agents to contribute Proposals proactively to the
+// Suggestion engine.
+[ServiceName="maxwell.ProposalPublisher"]
+interface ProposalPublisher {
+  // Includes the given |proposal| in the list from this Agent. Proposals are
+  // identified by |proposal.id|, and are namespaced by the Agent's ID.
+  // If a Proposal with the same id is already present, it is overwritten.
+  Propose(Proposal proposal);
+
+  // Removes the Proposal with the given ID from the Suggestion engine.
+  Remove(string proposal_id);
+
+  // Returns a list of all Proposals created by the identified Agent.
+  GetAll() => (array<Proposal> proposals);
+
+  // TODO: This should be a method on SuggestionEngine.
+  RegisterAskHandler(AskHandler ask_handler);
+};

@@ -1,0 +1,131 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("integration") {
+  testonly = true
+
+  output_name = "maxwell_test"
+
+  deps = [
+    ":context_engine_test",
+    ":resolver_test",
+    ":suggestion_engine_test",
+  ]
+}
+
+source_set("context_engine_test") {
+  testonly = true
+
+  sources = [
+    "context_engine_test.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    ":context_common",
+    "//apps/maxwell/lib/context:formatting",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/src/context_engine:scope_utils",
+  ]
+}
+
+source_set("resolver_test") {
+  testonly = true
+
+  sources = [
+    "resolver_test.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//apps/maxwell/services/resolver",
+  ]
+}
+
+source_set("suggestion_engine_test") {
+  testonly = true
+
+  sources = [
+    "suggestion_engine_test.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    ":context_common",
+    ":test_suggestion_listener",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:debug",
+    "//apps/maxwell/src/acquirers/mock:gps",
+    "//apps/maxwell/src/agents:carmen_sandiego",
+    "//apps/maxwell/src/agents:ideas",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing:story_provider_mock",
+  ]
+}
+
+# TODO(rosswang): move utils to a subdirectory
+
+source_set("context_common") {
+  testonly = true
+
+  sources = [
+    "context_engine_test_base.h",
+  ]
+
+  deps = [
+    ":common",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
+  ]
+
+  public_deps = [
+    "//third_party/gtest",
+  ]
+}
+
+source_set("common") {
+  testonly = true
+
+  sources = [
+    "test.cc",
+    "test.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/src:application_environment_host_impl",
+    "//apps/maxwell/src/user:agent_launcher",
+    "//garnet/public/lib/fsl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("test_suggestion_listener") {
+  testonly = true
+
+  sources = [
+    "test_suggestion_listener.cc",
+    "test_suggestion_listener.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/lib/suggestion:formatting",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:debug",
+  ]
+
+  public_deps = [
+    "//third_party/gtest",
+  ]
+}

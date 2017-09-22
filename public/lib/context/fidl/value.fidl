@@ -1,0 +1,24 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "metadata.fidl";
+import "value_type.fidl";
+
+struct ContextValue {
+  // The type of value this describes.
+  ContextValueType type;
+
+  // If |type| == ContextType.ENTITY, contains the JSON encoded representation
+  // of the Entity's content.
+  // TODO(thatguy): When Entities are handles we can pass around, make this
+  // a FIDL handle to the entity.
+  string? content;
+
+  // All metadata for the node. When this ContextValue is included in a
+  // ContextUpdate, |meta| will contain a merged view of metadata that is
+  // inclusive of all of this value node's ancestors.
+  ContextMetadata meta;
+};

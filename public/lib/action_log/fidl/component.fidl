@@ -1,0 +1,11 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+// ComponentActionLog allows a component to log actions it implements as they
+// performed by the user.
+interface ComponentActionLog {
+  LogAction(string method, string parameters);
+};

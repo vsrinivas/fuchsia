@@ -1,0 +1,15 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "user.fidl";
+import "../suggestion/proposal_publisher.fidl";
+
+[ServiceName="maxwell.action_log.UserActionLogFactory"]
+interface UserActionLogFactory {
+  GetUserActionLog(
+      maxwell.ProposalPublisher proposal_publisher,
+      UserActionLog& request);
+};

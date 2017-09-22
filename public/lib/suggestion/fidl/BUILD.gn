@@ -1,0 +1,43 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("suggestion") {
+  sources = [
+    "ask_handler.fidl",
+    "proposal.fidl",
+    "proposal_publisher.fidl",
+    "suggestion_engine.fidl",
+  ]
+
+  public_deps = [
+    ":suggestion_provider",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/surface/fidl",
+    "//peridot/public/lib/user/fidl:focus",
+  ]
+}
+
+fidl("suggestion_provider") {
+  sources = [
+    "suggestion_display.fidl",
+    "suggestion_provider.fidl",
+    "user_input.fidl",
+  ]
+}
+
+fidl("debug") {
+  sources = [
+    "debug.fidl",
+  ]
+
+  deps = [
+    ":suggestion",
+  ]
+}

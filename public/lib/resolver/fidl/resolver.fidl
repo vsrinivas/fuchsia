@@ -1,0 +1,17 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module resolver;
+
+[ServiceName="resolver"]
+interface Resolver {
+  // Find components whose module facets match the specified |contract| and can
+  // accept the optionally-specified |data|. The |results| are ordered from
+  // most relevant to least relevant.
+  ResolveModules(string contract, string? json_data) => (array<ModuleInfo> modules);
+};
+
+struct ModuleInfo {
+  string component_id;
+};

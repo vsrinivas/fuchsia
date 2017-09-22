@@ -1,0 +1,58 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+// This struct serves two purposes. It is:
+//
+// 1) Used to expose metadata along with each context node when interfacing
+// with clients either publishing, or retieving, context values.
+//
+// 2) Used while getting or querying for context values from a ContextReader to
+// restrict the set of values returned by partially specifying a
+// ContextMetadata struct.
+//
+// TODO(thatguy): Consider splitting these two purposes into their own structs
+// if the dual-responsibility becomes difficult to manage.
+struct ContextMetadata {
+  StoryMetadata? story;
+
+  // Annoyingly, "module" is a reserved word in FIDL.
+  ModuleMetadata? mod;
+
+  EntityMetadata? entity;
+
+  // TODO(thatguy): Add Agent metadata.
+  // TODO(thatguy): Add Link metadata.
+};
+
+struct StoryMetadata {
+  string? id;
+  FocusedState? focused;
+  // TODO(thatguy): Add modular.StoryState
+  // TODO(thatguy): Add visible state.
+};
+
+struct ModuleMetadata {
+  string? url;
+  array<string>? path;
+};
+
+struct EntityMetadata {
+  string? topic;
+  array<string>? type;
+};
+
+// bool type cannot be made optional (in StoryMetadata above), so we cannot
+// differentiate between an unspecified value and false. So we have to create a
+// struct with an enum in it to represent the boolean states, so that we can
+// allow it to be null.
+struct FocusedState {
+  enum State {
+    FOCUSED = 1,
+    NOT_FOCUSED = 2
+  };
+
+  State state;
+};

@@ -1,0 +1,22 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("entity_span") {
+  sources = [
+    "entity_span.cc",
+    "entity_span.h",
+  ]
+
+  public_deps = [
+    "//apps/maxwell/services/context",
+    "//peridot/lib/rapidjson",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("entity_utils") {
+  sources = [
+    "entity_utils.h",
+  ]
+}

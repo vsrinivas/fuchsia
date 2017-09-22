@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("context") {
+  sources = [
+    "context_engine.fidl",
+    "context_reader.fidl",
+    "context_writer.fidl",
+    "debug.fidl",
+    "metadata.fidl",
+    "value_type.fidl",
+    "value.fidl",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/user:scope",
+  ]
+}

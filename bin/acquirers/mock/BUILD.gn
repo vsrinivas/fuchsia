@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("gps") {
+  testonly = true
+
+  sources = [
+    "mock_gps.cc",
+    "mock_gps.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
+    "//apps/maxwell/src/acquirers:gps",
+    "//garnet/public/lib/fsl",
+  ]
+}

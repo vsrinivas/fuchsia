@@ -1,0 +1,155 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("suggestion_engine") {
+  sources = [
+    "ask_publisher.h",
+    "proposal_publisher_impl.cc",
+    "proposal_publisher_impl.h",
+    "suggestion_engine_impl.cc",
+    "suggestion_engine_impl.h",
+  ]
+
+  deps = [
+    ":debug",
+    ":filter",
+    ":interfaces",
+    ":models",
+    ":ranking",
+    ":state",
+    ":subscribers",
+    ":timeline_stories_filter",
+    ":timeline_stories_watcher",
+    "//garnet/public/lib/app/cpp",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/src:bound_set",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("subscribers") {
+  sources = [
+    "ask_subscriber.cc",
+    "ask_subscriber.h",
+    "interruptions_subscriber.h",
+    "next_subscriber.h",
+    "windowed_subscriber.cc",
+    "windowed_subscriber.h",
+  ]
+
+  deps = [
+    ":interfaces",
+    ":models",
+    ":state",
+    "//apps/maxwell/services/suggestion",
+  ]
+}
+
+source_set("interfaces") {
+  sources = [
+    "ask_dispatcher.h",
+    "suggestion_subscriber.h",
+  ]
+
+  deps = [
+    ":models",
+    "//apps/maxwell/services/suggestion",
+  ]
+}
+
+source_set("ranking") {
+  sources = [
+    "ranking.cc",
+    "ranking.h",
+  ]
+
+  deps = [
+    ":models",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+source_set("state") {
+  sources = [
+    "ranked_suggestions.cc",
+    "ranked_suggestions.h",
+    "suggestion_channel.cc",
+    "suggestion_channel.h",
+  ]
+
+  deps = [
+    ":interfaces",
+    ":models",
+    ":ranking",
+    "//apps/maxwell/services/suggestion",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("models") {
+  sources = [
+    "suggestion_prototype.cc",
+    "suggestion_prototype.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/suggestion",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("timeline_stories_filter") {
+  sources = [
+    "timeline_stories_filter.cc",
+    "timeline_stories_filter.h",
+  ]
+
+  deps = [
+    ":timeline_stories_watcher",
+    "//apps/maxwell/services/suggestion",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("timeline_stories_watcher") {
+  sources = [
+    "timeline_stories_watcher.cc",
+    "timeline_stories_watcher.h",
+  ]
+
+  deps = [
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("filter") {
+  sources = [
+    "filter.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/suggestion",
+  ]
+}
+
+source_set("debug") {
+  sources = [
+    "debug.cc",
+    "debug.h",
+  ]
+
+  deps = [
+    ":models",
+    ":state",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:debug",
+  ]
+}

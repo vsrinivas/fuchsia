@@ -1,0 +1,112 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.c
+
+module maxwell;
+
+import "apps/maxwell/services/suggestion/suggestion_display.fidl";
+import "lib/surface/fidl/surface.fidl";
+
+// NOTE: Some future-thinking features are represented here and commented out
+// to give a sense for the likely future direction of this service, and are left
+// here for informational purposes at this time.
+
+struct Proposal {
+  string id;  // namespaced internally to the proposing Agent. A URI?
+
+  // The Proposal is only considered valid if all of |preconditions| are
+  // evaluated to true.
+  // array<Precondition> preconditions;
+
+  // The Proposal is considered expired if *any* of the |expiry_conditions|
+  // are true.
+  // array<ExpiryCondition> expiry_conditions;
+
+  // The list of actions to take when the user selects the associated
+  // Suggestion.
+  array<Action> on_selected;
+
+  SuggestionDisplay display;
+};
+
+/*
+union Precondition {
+  DateTime after_time;
+  GeoArea geo_fence;
+}
+*/
+
+/*
+union ExpiryCondition {
+  DateTime expiry_time;
+}
+*/
+
+union Action {
+  CreateStory create_story;
+  FocusStory focus_story;
+  AddModuleToStory add_module_to_story;
+  CustomAction custom_action;
+
+  // TODO(thatguy): Add other actions.
+};
+
+// Creates a new story with the specified module
+struct CreateStory {
+  // TODO(alhaad, thatguy): This should be renamed to module_url.
+  string module_id;
+
+  // Passed as root_json argument to StoryProvider.CreateStoryWithInfo()
+  // Link.Set() to set the value in the root link of the new Story's primary
+  // module.
+  string? initial_data;
+};
+
+// Brings an existing story into focus.
+//
+// TODO(alhaad): It is not entirely clear to me whether it is the user shell
+// which checks if the story is running when brought into focus. Re-visit this.
+struct FocusStory {
+  string story_id;
+
+  // TODO(alhaad): Add some Link data that could be used to provide information
+  // to the story as to why it was brought into focus.
+};
+
+// Adds a module to an existing story
+struct AddModuleToStory {
+  // Story to which the module is to be added.
+  string story_id;
+
+  // Name of the module which is to be added.
+  string module_name;
+
+  // URL of the module which is to be added.
+  string module_url;
+
+  // Name of the link for the added module.
+  string link_name;
+
+  // If not null the JSON value of the link of the added module is set to this
+  // value. If the action is used to connect to an existing link from an
+  // existing module (indicated by module_path), then setting this likely
+  // defeats the purpose of the action, because it overwrites the existing value
+  // of the link.
+  string? initial_data;
+
+  // Module instance which is already in the story and to which the added module
+  // is to be associated. |link_name| then refers to a link emanating from that
+  // module. If empty, the module is added as a root module to the story.
+  array<string> module_path;
+
+  // Advise the framework on how to layout the newly added module.
+  modular.SurfaceRelation surface_relation;
+};
+
+// An action that calls back to the proposal publisher to be performed.
+// The callback can optionally resolve to a sequence of actions to perform.
+// This can be used to defer expensive RPCs until the suggestion has been
+// selected.
+interface CustomAction {
+  Execute() => (array<Action>? actions);
+};

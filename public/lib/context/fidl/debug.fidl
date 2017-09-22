@@ -1,0 +1,44 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "context_reader.fidl";
+import "metadata.fidl";
+import "../user/scope.fidl";
+
+[ServiceName="maxwell.ContextDebug"]
+interface ContextDebug {
+  // The watch will stay active until the |listener| handle is closed.
+  Watch(ContextDebugListener listener);
+};
+
+interface ContextDebugListener {
+  // Called any time a value is added, updated or removed. Each element in
+  // |values| represents a single add, update or remove operation.  Values are
+  // guaranteed to appear before their children in the case that a parent and
+  // its child are included in the same update.
+  OnValuesChanged(array<ContextDebugValue> values);
+
+  OnSubscriptionsChanged(array<ContextDebugSubscription> subscription);
+};
+
+// Represents a single update to a value. If |value| is omitted, the value with
+// |id| was deleted.
+struct ContextDebugValue {
+  array<string> parent_ids;
+  string id;
+  ContextValue? value;
+};
+
+// If |query| is omitted, this subscription was removed.
+struct ContextDebugSubscription {
+  string id;
+  SubscriptionDebugInfo debug_info;
+  ContextQuery? query;
+};
+
+struct SubscriptionDebugInfo {
+  ComponentScope client_info;
+};

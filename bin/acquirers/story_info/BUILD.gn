@@ -1,0 +1,52 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+executable("story_info") {
+  output_name = "acquirers/story_info_main"
+
+  sources = [
+    "link_watcher_impl.cc",
+    "link_watcher_impl.h",
+    "modular.cc",
+    "modular.h",
+    "story_info.cc",
+    "story_info.h",
+    "story_info_main.cc",
+    "story_watcher_impl.cc",
+    "story_watcher_impl.h",
+  ]
+
+  deps = [
+    ":initializer",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/svc/cpp",
+    "//apps/maxwell/lib/context:formatting",
+    "//apps/maxwell/lib/context:scoped_context_value",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/ledger:storage",
+    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/lifecycle/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//third_party/rapidjson",
+  ]
+}
+
+fidl("initializer") {
+  sources = [
+    "initializer.fidl",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl:focus",
+  ]
+}

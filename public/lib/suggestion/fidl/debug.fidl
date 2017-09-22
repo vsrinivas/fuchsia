@@ -1,0 +1,43 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "proposal.fidl";
+import "user_input.fidl";
+
+// Debug service provider interface that provides the ability to listen to
+// the internal state of the suggestion service.
+[ServiceName="maxwell.SuggestionDebug"]
+interface SuggestionDebug {
+  WatchAskProposals(AskProposalListener listener);
+  WatchInterruptionProposals(InterruptionProposalListener listener);
+  WatchNextProposals(NextProposalListener listener);
+};
+
+interface AskProposalListener {
+  // Receives the current ask query and ranked proposals
+  OnAskStart(string query, array<ProposalSummary> proposals);
+  // Receives notification of query completion or dismissal.
+  // |selected_proposal| is null if query was dismissed
+  OnProposalSelected(ProposalSummary selected_proposal);
+};
+
+interface InterruptionProposalListener {
+  // Receives updates to the current proposal list and rankings
+  OnInterrupt(ProposalSummary interruption_proposal);
+};
+
+interface NextProposalListener {
+  // Receives updates to the current proposal list and rankings
+  OnNextUpdate(array<ProposalSummary> proposals);
+};
+
+// This is necessary because a Proposal is not Clone-able, as CustomAction
+// can contain an InterfaceHandle.
+struct ProposalSummary {
+  string id;
+  string publisher_url;
+  SuggestionDisplay display;
+};

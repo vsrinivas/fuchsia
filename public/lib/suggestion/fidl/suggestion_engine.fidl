@@ -1,0 +1,22 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
+import "apps/maxwell/services/context/context_writer.fidl";
+import "apps/maxwell/services/suggestion/suggestion_provider.fidl"; // convenience import
+import "lib/story/fidl/story_provider.fidl";
+import "lib/user/fidl/focus.fidl";
+
+// Administrative interface for Suggestion Engine.
+[ServiceName="maxwell.SuggestionEngine"]
+interface SuggestionEngine {
+  // Initializes the SuggestionEngine and provides dependencies.
+  Initialize(modular.StoryProvider story_provider, modular.FocusProvider focus_provider,
+      ContextWriter context_writer);
+
+  // Registers a component that produces suggestions.
+  RegisterPublisher(string url, ProposalPublisher& client);
+};

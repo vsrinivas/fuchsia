@@ -1,0 +1,31 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "apps/maxwell/services/suggestion/proposal.fidl";
+import "apps/maxwell/services/suggestion/user_input.fidl";
+
+// An interface enabling Agents to contribute Proposals reactively to the
+// Suggestion engine.
+//
+// TODO(rosswang): Consider also allowing this mode for next.
+interface AskHandler {
+  // Produces a list of Proposals in response to an Ask query. The query may be
+  // empty in the case of an initial ask, and this method is called every time
+  // the query changes.
+  //
+  // Proposals given in the callback have their lifecycle tied to this Ask
+  // query. After the Ask has completed, the proposals are dismissed. When the
+  // query changes, any proposals missing from the next callback are likewise
+  // dismissed. These Proposals may share IDs with existing Next proposals, in
+  // which case those proposals are updated and bound to this query (and will
+  // likewise be auto-dismissed).
+  //
+  // Alternately, the client is free to call Propose on its
+  // ProposalPublisher to make persistent Proposals. However, these
+  // proposals may be subject to more stringent filtering by the Suggestion
+  // Engine. TODO(rosswang): spec/revisit.
+  Ask(UserInput query) => (array<Proposal> proposals);
+};

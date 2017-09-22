@@ -1,0 +1,22 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "apps/maxwell/services/action_log/component.fidl";
+import "apps/maxwell/services/context/context_reader.fidl";
+import "apps/maxwell/services/context/context_writer.fidl";
+import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
+
+// A container for component-scoped services. This contains any and all
+// services needed by any sort of Module/Agent.
+interface IntelligenceServices {
+  // These are just here for illustrative purposes, and are not a complete
+  // list.
+  GetContextReader(ContextReader& context_reader);
+  GetContextWriter(ContextWriter& context_writer);
+
+  GetProposalPublisher(ProposalPublisher& proposal_publisher);
+  GetActionLog(ComponentActionLog& action_log);
+};

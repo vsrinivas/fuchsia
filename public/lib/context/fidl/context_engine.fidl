@@ -1,0 +1,21 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "context_reader.fidl";
+import "context_writer.fidl";
+import "debug.fidl";
+import "../user/scope.fidl";
+
+// Top-level service provider interface that vends services to read and write
+// context data.
+[ServiceName="maxwell.ContextEngine"]
+interface ContextEngine {
+  GetReader(ComponentScope client_info, ContextReader& request);
+
+  GetWriter(ComponentScope client_info, ContextWriter& request);
+
+  GetContextDebug(ContextDebug& request);
+};

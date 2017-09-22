@@ -1,0 +1,50 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "apps/maxwell/services/resolver/resolver.fidl";
+import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
+import "lib/component/fidl/component_context.fidl";
+import "lib/story/fidl/story_provider.fidl";
+import "lib/user/fidl/focus.fidl";
+
+import "intelligence_services.fidl";
+import "scope.fidl";
+
+[ServiceName="maxwell.UserIntelligenceProviderFactory"]
+interface UserIntelligenceProviderFactory {
+  // Creates and returns a |UserIntelligenceProvider|. The |ComponentContext|
+  // is used to allow intelligence services to use |MessageQueue|s to
+  // communicate with clients.
+  //
+  // NOTE: Any future dependencies needed are provided here, and are assumed to
+  // be scoped to the user.
+  GetUserIntelligenceProvider(
+      modular.ComponentContext user_intelligence_context,
+      modular.StoryProvider story_provider,
+      modular.FocusProvider focus_provider,
+      modular.VisibleStoriesProvider visible_stories_provider,
+      UserIntelligenceProvider& provider);
+};
+
+interface UserIntelligenceProvider {
+  // Creates an |IntelligenceServices| scoped to a specific Component,
+  // identified by |scope|.
+  //
+  // NOTE: Eventually |component_id| will become more complex, specifying
+  // information needed to evaluate access-control policies for downstream
+  // services.
+  //
+  // ANOTHER NOTE: |IntelligenceServices| is a short-term "big bucket" in which
+  // to put any and all services that are to be exposed to Agents and Modules.
+  // Once our understanding of the needs of Agents/Modules is clearer, we
+  // should break the bucket apart.
+  GetComponentIntelligenceServices(ComponentScope scope,
+                                   IntelligenceServices& services);
+
+  GetSuggestionProvider(SuggestionProvider& suggestion_provider);
+
+  GetResolver(resolver.Resolver& resolver);
+};

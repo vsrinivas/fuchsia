@@ -1,0 +1,20 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "component.fidl";
+import "listener.fidl";
+import "../user/scope.fidl";
+
+[ServiceName="maxwell.action_log.UserActionLog"]
+interface UserActionLog {
+  GetComponentActionLog(maxwell.ComponentScope scope,
+      ComponentActionLog& component_action_log);
+
+  // When a new action is logged, a UserAction is sent to |listener|.
+  Subscribe(ActionLogListener listener);
+
+  Duplicate(UserActionLog& request);
+};

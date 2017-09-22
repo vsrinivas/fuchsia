@@ -1,0 +1,29 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("scope") {
+  sources = [
+    "scope.fidl",
+  ]
+}
+
+fidl("user") {
+  sources = [
+    "intelligence_services.fidl",
+    "user_intelligence_provider.fidl",
+  ]
+
+  deps = [
+    ":scope",
+    "//apps/maxwell/services/action_log",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/resolver",
+    "//apps/maxwell/services/suggestion",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl:focus",
+  ]
+}

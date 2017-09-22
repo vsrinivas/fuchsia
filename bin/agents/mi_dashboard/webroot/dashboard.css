@@ -1,0 +1,192 @@
+:root {
+  --mdc-theme-primary: #00AAC0;
+}
+
+body {
+  background-color: #EEEEEE;
+  display: block;
+  margin: 0px;
+}
+
+.action-log-card {
+  grid-column-start: 3;
+  grid-column-end: span 8;
+}
+
+.agent-card {
+  grid-column-start: 3;
+  grid-column-end: span 8;
+}
+
+.agent-context {
+  padding-bottom: 0px;
+}
+
+.agent-context-table {
+  padding-top: 5px;
+}
+
+.agent-subhead {
+  padding-top: 10px;
+  padding-bottom: 5px;
+  font-style: italic;
+  font-size: larger;
+  color: darkgrey;
+}
+
+.context-link-item {
+  height: 24px;
+}
+
+.context-subscribers-card {
+  grid-column-end: span 4;
+}
+
+.context-root-value {
+  padding-top: 1em;
+}
+
+.context-indent {
+  padding-left: 2em;
+}
+
+.context-selector-type, .context-selector-metadata {
+  font-size: 0.75rem;
+  padding-left: 1em;
+}
+
+.entity-list-item {
+  padding-left: 30px;
+}
+
+.entity-name {
+  font-size: smaller;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.entity-value {
+  font-size: smaller;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.last-query-card {
+  .grid-column-end: span 5;
+}
+
+.last-selection-card {
+  .grid-column-end: span 5;
+}
+
+.context-topics-card {
+  grid-column-end: span 8;
+}
+
+.ask-proposals-card {
+  grid-column-end: span 5;
+}
+
+.module-list-item {
+  padding-left: 20px;
+}
+
+.module-path {
+  font-size: smaller;
+}
+
+.module-url {
+  font-size: smaller;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.mdc-card {
+  background-color: white;
+}
+
+.mdc-list {
+  padding-bottom: 20px;
+}
+
+.mdc-list-divider {
+  padding-top: 10px;
+}
+
+.mdc-tab-bar {
+  padding-left: 24px;
+}
+
+.next-proposals-card {
+  grid-column-end: span 5;
+}
+
+.overview-action-log-card {
+  grid-column-start: 5;
+}
+
+.overview-ask-query-card {
+  grid-column-start: 9;
+}
+
+.overview-header-card {
+  grid-column-end: span 12;
+}
+
+.overview-story-card {
+}
+
+.overview-suggestions-card {
+  grid-column-start: 9;
+}
+
+.panel {
+  display: none;
+  padding: 24px;
+}
+
+.panel.active {
+  display: block;
+}
+
+.story-id {
+
+}
+
+.story-list-item {
+  padding: 10px;
+}
+
+.story-name {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.story-status {
+
+}
+
+.story-visible {
+
+}
+
+.subscriber {
+  overflow: hidden;
+  max-width: 450px;
+  word-wrap: break-word;
+}
+
+td.wrappable {
+  overflow: hidden;
+  max-width: 450px;
+  word-wrap: break-word;
+}
+
+span.ask-query {
+  font-family: serif;
+  font-size: x-large;
+}

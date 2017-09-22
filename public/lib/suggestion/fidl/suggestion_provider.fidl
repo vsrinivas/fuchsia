@@ -1,0 +1,117 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "apps/maxwell/services/suggestion/suggestion_display.fidl";
+import "apps/maxwell/services/suggestion/user_input.fidl";
+
+// Allows clients to subscribe to different Suggestion "channels" and iterate
+// through the results. Supports both passive consumption of Suggestions based
+// on contextual changes, as well as Suggestions derived from user-driven
+// "Asks".
+[ServiceName="maxwell.SuggestionProvider"]
+interface SuggestionProvider {
+  // Creates a subscription to the "interruptions" category of Suggestions.
+  // Interruptions are delivered immediately once they become available, and are
+  // potentially unlimited in number.
+  //
+  // Closing the |listener| pipe terminates the subscription.
+  //
+  // Any user interactions received by the client should be forwarded to the
+  // SuggestionService by calling NotifyInteraction().
+  SubscribeToInterruptions(SuggestionListener listener);
+
+  // Creates a subscription to "Next" Suggestions, with changes sent to
+  // |listener|, and binds |controller| to a service that offers control over
+  // result paging.
+  //
+  // Closing the the |listener| pipe terminates the subscription.
+  SubscribeToNext(SuggestionListener listener, NextController& controller);
+
+  // Should be called when the user initiates an "Ask". Results are sent to
+  // |listener|, and changes to user input as well as paging controls are made
+  // available through |controller|.
+  //
+  // Closing the |listener| pipe signals to the SuggestionService that the "Ask"
+  // has been completed or canceled.
+  InitiateAsk(SuggestionListener listener, AskController& controller);
+
+  // Notifies the suggestion engine that the user has interacted with the given
+  // Suggestion in the manner described in |interaction|.
+  NotifyInteraction(string suggestion_uuid, Interaction interaction);
+};
+
+// Exposed through |InitiateAsk()| on the SuggestionProvider. Gives clients the ability
+// to update the suggestion engine on changes to user input once a user
+// initiates an "Ask" interaction.
+interface AskController {
+  // Use this to signal to the service that the user input has changed, and
+  // results should be updated to reflect it.
+  SetUserInput(UserInput input);
+
+  // Sets the number of desired results. If the new count is larger than the
+  // previous value, the corresponding listener will get one or more |OnAdd()|
+  // calls. If the new value is smaller, the listener will get one or more
+  // |OnRemove()| calls.
+  SetResultCount(int32 count);
+};
+
+interface NextController {
+  // Sets the number of desired results. If the new count is larger than the
+  // previous value, the corresponding listener will get one or more |OnAdd()|
+  // calls. If the new value is smaller, the listener will get one or more
+  // |OnRemove()| calls.
+  SetResultCount(int32 count);
+};
+
+interface SuggestionListener {
+  // TODO(thatguy): Figure out what's the best pattern to use here, to make sure
+  // that UI updates are smooth.
+  // TODO(anwilson): Sit down with thatguy@ and hash this out.
+  // TODO(rosswang): For now, changed suggestions will maintain the same UUID
+  // but will result in a remove/add pair. This may change in the future; if it
+  // doesn't, document this behavior here.
+  OnAdd(array<Suggestion> suggestions);
+  OnRemove(string uuid);
+  OnRemoveAll();
+};
+
+interface AskSuggestionListener {
+  OnAskResults(UserInput query, array<Suggestion> suggestions);
+};
+
+enum InteractionType {
+  SELECTED,
+  DISMISSED
+  // SNOOZED
+};
+
+struct Interaction {
+  InteractionType type;
+
+  // TODO(thatguy): Include parameters for each type of interaction where
+  // applicable. Consider making this a union in lieu of the struct/enum combo.
+};
+
+struct Suggestion {
+  // Uniquely and globally identifies this Suggestion.
+  string uuid;
+
+  // Specifies the sort order for Suggestions within a single subscription.
+  // Lower ranks appear first.
+  float rank;
+
+  // The probability that a given suggestion would be selected if it were the
+  // only suggestion shown to the user. This score tends to decrease as rank
+  // increases, but unlike rank this score may be the same between suggestions.
+  float confidence;
+
+  // Display properties of the Suggestion
+  SuggestionDisplay display;
+
+  // When the suggestion affects a specific story, the ID of that story will be
+  // included here.
+  string? story_id;
+};
