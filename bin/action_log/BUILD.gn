@@ -16,7 +16,7 @@ executable("action_log") {
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user:scope",
-    "//apps/modular/services/surface",
+    "//peridot/public/lib/surface/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/rapidjson",

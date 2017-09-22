@@ -28,7 +28,7 @@ executable("carmen_sandiego") {
     "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/acquirers:gps",
-    "//apps/modular/lib/rapidjson",
+    "//peridot/lib/rapidjson",
     "//garnet/public/lib/fsl",
   ]
 }
@@ -46,7 +46,7 @@ executable("ideas") {
     "//garnet/public/lib/app/cpp",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/rapidjson",
+    "//peridot/lib/rapidjson",
     "//garnet/public/lib/fsl",
   ]
 }

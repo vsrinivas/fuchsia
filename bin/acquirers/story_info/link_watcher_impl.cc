@@ -8,9 +8,9 @@
 
 #include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
-#include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {

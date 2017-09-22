@@ -14,7 +14,7 @@ executable("basic_text_listener") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/agents/entity_utils:entity_span",
     "//apps/maxwell/src/agents/entity_utils:entity_utils",
-    "//apps/modular/lib/rapidjson",
+    "//peridot/lib/rapidjson",
     "//garnet/public/lib/fsl",
   ]
 }

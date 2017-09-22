@@ -4,8 +4,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "apps/maxwell/src/acquirers/story_info/story_info.h"
-#include "apps/modular/services/agent/agent.fidl.h"
-#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
+#include "lib/agent/fidl/agent.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 
 #include "lib/fsl/tasks/message_loop.h"
 

@@ -22,8 +22,8 @@ fidl("user") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/services/component",
-    "//apps/modular/services/story",
-    "//apps/modular/services/user:focus",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl:focus",
   ]
 }

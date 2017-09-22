@@ -25,10 +25,10 @@ executable("suggestion_engine") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src:bound_set",
-    "//apps/modular/lib/fidl:json_xdr",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
-    "//apps/modular/services/user",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl",
     "//garnet/public/lib/fsl",
   ]
 }
@@ -124,8 +124,8 @@ source_set("timeline_stories_watcher") {
   ]
 
   deps = [
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/fxl",
   ]
 }

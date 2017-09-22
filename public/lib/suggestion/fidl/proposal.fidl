@@ -5,7 +5,7 @@
 module maxwell;
 
 import "apps/maxwell/services/suggestion/suggestion_display.fidl";
-import "apps/modular/services/surface/surface.fidl";
+import "lib/surface/fidl/surface.fidl";
 
 // NOTE: Some future-thinking features are represented here and commented out
 // to give a sense for the likely future direction of this service, and are left

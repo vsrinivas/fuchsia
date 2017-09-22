@@ -27,12 +27,12 @@ executable("story_info") {
     "//apps/maxwell/lib/context:scoped_context_value",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user",
-    "//apps/modular/lib/fidl:json_xdr",
-    "//apps/modular/lib/ledger:storage",
-    "//apps/modular/services/agent",
-    "//apps/modular/services/lifecycle",
-    "//apps/modular/services/story",
-    "//apps/modular/services/user",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/ledger:storage",
+    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/lifecycle/fidl",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/rapidjson",
@@ -46,7 +46,7 @@ fidl("initializer") {
 
   deps = [
     "//apps/maxwell/services/context",
-    "//apps/modular/services/story",
-    "//apps/modular/services/user:focus",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/user/fidl:focus",
   ]
 }

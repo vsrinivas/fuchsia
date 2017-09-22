@@ -11,9 +11,9 @@
 
 #include "apps/maxwell/lib/context/scoped_context_value.h"
 #include "apps/maxwell/services/context/context_writer.fidl.h"
-#include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/services/story/story_controller.fidl.h"
-#include "apps/modular/services/story/story_provider.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/story_controller.fidl.h"
+#include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 

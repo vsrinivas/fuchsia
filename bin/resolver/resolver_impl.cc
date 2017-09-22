@@ -7,7 +7,7 @@
 
 #include "apps/maxwell/src/resolver/resolver_impl.h"
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/schema.h"

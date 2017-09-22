@@ -10,7 +10,7 @@
 #include "apps/maxwell/src/context_engine/debug.h"
 
 #include "apps/maxwell/lib/context/formatting.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
 namespace maxwell {

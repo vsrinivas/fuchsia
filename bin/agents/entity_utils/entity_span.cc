@@ -4,7 +4,7 @@
 
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fxl/logging.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"

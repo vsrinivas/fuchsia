@@ -10,7 +10,7 @@
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/modular.h"
 #include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"

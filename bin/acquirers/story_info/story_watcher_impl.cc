@@ -8,7 +8,7 @@
 #include "apps/maxwell/src/acquirers/story_info/link_watcher_impl.h"
 #include "apps/maxwell/src/acquirers/story_info/modular.h"
 #include "apps/maxwell/src/acquirers/story_info/story_info.h"
-#include "apps/modular/lib/ledger/storage.h"
+#include "peridot/lib/ledger/storage.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {

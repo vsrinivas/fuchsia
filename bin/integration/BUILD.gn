@@ -66,8 +66,8 @@ source_set("suggestion_engine_test") {
     "//apps/maxwell/src/acquirers/mock:gps",
     "//apps/maxwell/src/agents:carmen_sandiego",
     "//apps/maxwell/src/agents:ideas",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/lib/testing:story_provider_mock",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing:story_provider_mock",
   ]
 }
 

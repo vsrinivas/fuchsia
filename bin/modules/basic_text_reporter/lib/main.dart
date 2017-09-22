@@ -14,10 +14,10 @@ import 'package:apps.maxwell.services.context/metadata.fidl.dart';
 import 'package:apps.maxwell.services.context/value.fidl.dart';
 import 'package:apps.maxwell.services.context/value_type.fidl.dart';
 import 'package:apps.maxwell.services.user/intelligence_services.fidl.dart';
-import 'package:apps.modular.services.story/link.fidl.dart';
-import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
-import 'package:apps.modular.services.module/module.fidl.dart';
-import 'package:apps.modular.services.module/module_context.fidl.dart';
+import 'package:lib.story.fidl/link.fidl.dart';
+import 'package:lib.lifecycle.fidl/lifecycle.fidl.dart';
+import 'package:lib.module.fidl/module.fidl.dart';
+import 'package:lib.module.fidl/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 import 'package:flutter/material.dart';

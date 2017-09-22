@@ -9,7 +9,7 @@
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
 

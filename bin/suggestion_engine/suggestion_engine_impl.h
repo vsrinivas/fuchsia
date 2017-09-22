@@ -24,8 +24,8 @@
 
 #include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
-#include "apps/modular/services/story/story_provider.fidl.h"
-#include "apps/modular/services/user/focus.fidl.h"
+#include "lib/story/fidl/story_provider.fidl.h"
+#include "lib/user/fidl/focus.fidl.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"

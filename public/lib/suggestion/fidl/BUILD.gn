@@ -18,9 +18,9 @@ fidl("suggestion") {
 
   deps = [
     "//apps/maxwell/services/context",
-    "//apps/modular/services/story",
-    "//apps/modular/services/surface",
-    "//apps/modular/services/user:focus",
+    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/surface/fidl",
+    "//peridot/public/lib/user/fidl:focus",
   ]
 }
 

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
-#include "apps/modular/services/component/component.fidl.h"
+#include "lib/component/fidl/component.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace resolver {

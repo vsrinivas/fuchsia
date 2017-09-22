@@ -11,7 +11,7 @@
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_display.fidl.h"
 #include "apps/maxwell/src/action_log/action_log_data.h"
-#include "apps/modular/services/surface/surface.fidl.h"
+#include "lib/surface/fidl/surface.fidl.h"
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
