@@ -197,7 +197,7 @@ Status PageDbBatchImpl::SetSyncMetadata(CoroutineHandler* /*handler*/,
   return batch_->Put(SyncMetadataRow::GetKeyFor(key), value);
 }
 
-Status PageDbBatchImpl::Execute() {
+Status PageDbBatchImpl::Execute(CoroutineHandler* /*handler*/) {
   return batch_->Execute();
 }
 

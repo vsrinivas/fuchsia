@@ -72,7 +72,7 @@ class PageDbBatchImpl : public PageDb::Batch {
                          fxl::StringView key,
                          fxl::StringView value) override;
 
-  Status Execute() override;
+  Status Execute(coroutine::CoroutineHandler* handler) override;
 
  private:
   bool CheckHasObject(coroutine::CoroutineHandler* handler,

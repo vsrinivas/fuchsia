@@ -145,7 +145,8 @@ class FakePageDbImpl : public PageDbEmptyImpl {
     return Status::OK;
   }
 
-  std::unique_ptr<PageDb::Batch> StartBatch() override {
+  std::unique_ptr<PageDb::Batch> StartBatch(
+      CoroutineHandler* /*handler*/) override {
     return std::make_unique<FakePageDbImpl>();
   }
 };

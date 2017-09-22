@@ -1199,7 +1199,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     std::vector<ObjectId> new_objects,
     bool* notify_watchers) {
   // Apply all changes atomically.
-  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch();
+  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch(handler);
   std::set<const CommitId*, StringPointerComparator> added_commits;
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
@@ -1327,7 +1327,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     return s;
   }
 
-  s = batch->Execute();
+  s = batch->Execute(handler);
 
   *notify_watchers = commits_to_send_.empty();
   commits_to_send_.emplace(source, std::move(commits_to_send));

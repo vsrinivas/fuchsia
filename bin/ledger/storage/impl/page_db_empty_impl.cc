@@ -11,7 +11,8 @@ using coroutine::CoroutineHandler;
 Status PageDbEmptyImpl::Init() {
   return Status::NOT_IMPLEMENTED;
 }
-std::unique_ptr<PageDb::Batch> PageDbEmptyImpl::StartBatch() {
+std::unique_ptr<PageDb::Batch> PageDbEmptyImpl::StartBatch(
+    CoroutineHandler* /*handler*/) {
   return std::make_unique<PageDbEmptyImpl>();
 }
 Status PageDbEmptyImpl::GetHeads(CoroutineHandler* /*handler*/,
@@ -150,7 +151,7 @@ Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageDbEmptyImpl::Execute() {
+Status PageDbEmptyImpl::Execute(CoroutineHandler* /*handler*/) {
   return Status::NOT_IMPLEMENTED;
 }
 

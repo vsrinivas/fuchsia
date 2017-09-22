@@ -16,7 +16,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
 
   // PageDb:
   Status Init() override;
-  std::unique_ptr<PageDb::Batch> StartBatch() override;
+  std::unique_ptr<PageDb::Batch> StartBatch(
+      coroutine::CoroutineHandler* handler) override;
   Status GetHeads(coroutine::CoroutineHandler* handler,
                   std::vector<CommitId>* heads) override;
   Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler,
@@ -97,7 +98,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                          fxl::StringView value) override;
 
   // PageDb::Batch:
-  Status Execute() override;
+  Status Execute(coroutine::CoroutineHandler* handler) override;
 };
 
 }  // namespace storage

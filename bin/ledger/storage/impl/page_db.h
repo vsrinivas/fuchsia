@@ -143,7 +143,7 @@ class PageDb : public PageDbMutator {
 
     // Executes this batch. No further operations in this batch are supported
     // after a successful execution.
-    virtual Status Execute() = 0;
+    virtual Status Execute(coroutine::CoroutineHandler* handler) = 0;
 
    private:
     FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
@@ -157,7 +157,8 @@ class PageDb : public PageDbMutator {
 
   // Starts a new batch. The batch will be written when the Execute is called on
   // the returned object. The PageDb object must outlive the batch object.
-  virtual std::unique_ptr<Batch> StartBatch() = 0;
+  virtual std::unique_ptr<Batch> StartBatch(
+      coroutine::CoroutineHandler* handler) = 0;
 
   // Heads.
   // Finds all head commits and replaces the contents of |heads| with their ids.
