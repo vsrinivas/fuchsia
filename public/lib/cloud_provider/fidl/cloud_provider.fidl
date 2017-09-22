@@ -107,6 +107,10 @@ interface PageCloud {
   // Retrieves commits not older than the given |min_position_token|.
   //
   // Passing null |min_position_token| retrieves all commits.
+  //
+  // If the resulting |status| is |OK|, |commits| contains all matching commits
+  // (might be empty) and |position_token| contains the position token of the
+  // most recent of the |commits| (null if |commits| is empty).
   GetCommits(array<uint8>? min_position_token)
       => (Status status, array<Commit>? commits, array<uint8>? position_token);
 

@@ -5,6 +5,7 @@
 #include "apps/ledger/src/cloud_provider/test/test_page_cloud_handler.h"
 
 #include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace cloud_provider_firebase {
@@ -32,12 +33,12 @@ void TestPageCloudHandler::AddCommits(
     std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
   ++add_commits_calls;
-  if (commit_status_to_return == Status::OK) {
+  if (status_to_return == Status::OK) {
     std::move(commits.begin(), commits.end(),
               std::back_inserter(received_commits));
   }
   task_runner_->PostTask(
-      [this, callback]() { callback(commit_status_to_return); });
+      [ status = status_to_return, callback ] { callback(status); });
 }
 
 void TestPageCloudHandler::WatchCommits(const std::string& auth_token,
@@ -60,15 +61,25 @@ void TestPageCloudHandler::GetCommits(
     std::function<void(Status, std::vector<Record>)> callback) {
   get_commits_calls++;
   get_commits_auth_tokens.push_back(auth_token);
-  if (should_fail_get_commits) {
+  task_runner_->PostTask(fxl::MakeCopyable([
+    callback, status = status_to_return, records = std::move(records_to_return)
+  ]() mutable { callback(status, std::move(records)); }));
+}
+
+void TestPageCloudHandler::AddObject(const std::string& auth_token,
+                                     ObjectIdView object_id,
+                                     zx::vmo data,
+                                     std::function<void(Status)> callback) {
+  std::string data_str;
+  if (!fsl::StringFromVmo(data, &data_str)) {
     task_runner_->PostTask(
-        [callback]() { callback(Status::NETWORK_ERROR, {}); });
+        [callback = std::move(callback)] { callback(Status::INTERNAL_ERROR); });
     return;
   }
-
-  task_runner_->PostTask([this, callback]() {
-    callback(Status::OK, std::move(records_to_return));
-  });
+  added_objects[object_id.ToString()] = data_str;
+  task_runner_->PostTask([
+    status = status_to_return, callback = std::move(callback)
+  ] { callback(status); });
 }
 
 void TestPageCloudHandler::GetObject(
@@ -78,9 +89,10 @@ void TestPageCloudHandler::GetObject(
         callback) {
   get_object_calls++;
   get_object_auth_tokens.push_back(auth_token);
-  if (should_fail_get_object) {
-    task_runner_->PostTask(
-        [callback]() { callback(Status::NETWORK_ERROR, 0, zx::socket()); });
+  if (status_to_return != Status::OK) {
+    task_runner_->PostTask([ status = status_to_return, callback ] {
+      callback(status, 0, zx::socket());
+    });
     return;
   }
 

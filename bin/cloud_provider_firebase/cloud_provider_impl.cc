@@ -6,10 +6,12 @@
 
 #include <utility>
 
+#include "apps/ledger/src/cloud_provider/impl/page_cloud_handler_impl.h"
 #include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
+#include "apps/ledger/src/gcs/cloud_storage_impl.h"
 #include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
@@ -50,11 +52,29 @@ void CloudProviderImpl::GetDeviceSet(
 }
 
 void CloudProviderImpl::GetPageCloud(
-    fidl::Array<uint8_t> /*app_id*/,
-    fidl::Array<uint8_t> /*page_id*/,
+    fidl::Array<uint8_t> app_id,
+    fidl::Array<uint8_t> page_id,
     fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     const GetPageCloudCallback& callback) {
-  page_clouds_.emplace(auth_provider_.get(), std::move(page_cloud));
+  std::string app_id_str = convert::ToString(app_id);
+  std::string page_id_str = convert::ToString(page_id);
+
+  std::string app_firebase_path = GetFirebasePathForApp(user_id_, app_id_str);
+  auto firebase = std::make_unique<firebase::FirebaseImpl>(
+      network_service_, server_id_,
+      GetFirebasePathForPage(app_firebase_path, page_id_str));
+
+  std::string app_gcs_prefix = GetGcsPrefixForApp(user_id_, app_id_str);
+  auto cloud_storage = std::make_unique<gcs::CloudStorageImpl>(
+      main_runner_, network_service_, server_id_,
+      GetGcsPrefixForPage(app_gcs_prefix, page_id_str));
+
+  auto handler =
+      std::make_unique<cloud_provider_firebase::PageCloudHandlerImpl>(
+          firebase.get(), cloud_storage.get());
+  page_clouds_.emplace(auth_provider_.get(), std::move(firebase),
+                       std::move(cloud_storage), std::move(handler),
+                       std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 }
 

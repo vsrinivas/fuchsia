@@ -5,8 +5,8 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_TEST_PAGE_CLOUD_HANDLER_H_
 #define APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_TEST_PAGE_CLOUD_HANDLER_H_
 
+#include <map>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
@@ -17,12 +17,11 @@
 namespace cloud_provider_firebase {
 namespace test {
 
-// Fake implementation of cloud_provider_firebase::PageCloudHandler.
+// Fake implementation of PageCloudHandler.
 //
 // Registers for inspection the calls made on it and injects the returned status
 // for individual methods allowing the test to verify error error handling.
-class TestPageCloudHandler
-    : public cloud_provider_firebase::test::PageCloudHandlerEmptyImpl {
+class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
  public:
   explicit TestPageCloudHandler(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
@@ -31,39 +30,37 @@ class TestPageCloudHandler
   void DeliverRemoteCommits();
 
   // PageCloudHandler:
-  void AddCommits(const std::string& /*auth_token*/,
-                  std::vector<cloud_provider_firebase::Commit> commits,
-                  const std::function<void(cloud_provider_firebase::Status)>&
-                      callback) override;
+  void AddCommits(const std::string& auth_token,
+                  std::vector<Commit> commits,
+                  const std::function<void(Status)>& callback) override;
 
-  void WatchCommits(
-      const std::string& auth_token,
-      const std::string& min_timestamp,
-      cloud_provider_firebase::CommitWatcher* watcher_ptr) override;
+  void WatchCommits(const std::string& auth_token,
+                    const std::string& min_timestamp,
+                    CommitWatcher* watcher_ptr) override;
 
-  void UnwatchCommits(
-      cloud_provider_firebase::CommitWatcher* /*watcher*/) override;
+  void UnwatchCommits(CommitWatcher* watcher) override;
 
   void GetCommits(
       const std::string& auth_token,
-      const std::string& /*min_timestamp*/,
-      std::function<void(cloud_provider_firebase::Status,
-                         std::vector<cloud_provider_firebase::Record>)>
+      const std::string& min_timestamp,
+      std::function<void(Status, std::vector<Record>)> callback) override;
+
+  void AddObject(const std::string& auth_token,
+                 ObjectIdView object_id,
+                 zx::vmo data,
+                 std::function<void(Status)> callback) override;
+
+  void GetObject(
+      const std::string& auth_token,
+      ObjectIdView object_id,
+      std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 
-  void GetObject(const std::string& auth_token,
-                 cloud_provider_firebase::ObjectIdView object_id,
-                 std::function<void(cloud_provider_firebase::Status status,
-                                    uint64_t size,
-                                    zx::socket data)> callback) override;
-
-  bool should_fail_get_commits = false;
-  bool should_fail_get_object = false;
-  std::vector<cloud_provider_firebase::Record> records_to_return;
-  std::vector<cloud_provider_firebase::Record> notifications_to_deliver;
-  cloud_provider_firebase::Status commit_status_to_return =
-      cloud_provider_firebase::Status::OK;
-  std::unordered_map<std::string, std::string> objects_to_return;
+  std::vector<Record> records_to_return;
+  std::vector<Record> notifications_to_deliver;
+  Status status_to_return = Status::OK;
+  std::map<std::string, std::string> objects_to_return;
+  std::map<std::string, std::string> added_objects;
 
   std::vector<std::string> watch_commits_auth_tokens;
   std::vector<std::string> watch_call_min_timestamps;
@@ -72,9 +69,9 @@ class TestPageCloudHandler
   std::vector<std::string> get_commits_auth_tokens;
   unsigned int get_object_calls = 0u;
   std::vector<std::string> get_object_auth_tokens;
-  std::vector<cloud_provider_firebase::Commit> received_commits;
+  std::vector<Commit> received_commits;
   bool watcher_removed = false;
-  cloud_provider_firebase::CommitWatcher* watcher = nullptr;
+  CommitWatcher* watcher = nullptr;
 
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

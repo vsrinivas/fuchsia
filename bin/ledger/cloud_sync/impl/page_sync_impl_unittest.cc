@@ -569,10 +569,17 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
 // Verifies that failing uploads are retried. In production the retries are
 // delayed, here we set the delays to 0.
 TEST_F(PageSyncImplTest, RetryUpload) {
-  storage_.NewCommit("id1", "content1");
-  cloud_provider_.commit_status_to_return =
-      cloud_provider_firebase::Status::NETWORK_ERROR;
+  // Complete the initial sync.
   StartPageSync();
+  EXPECT_TRUE(
+      RunLoopUntil([this] { return cloud_provider_.get_commits_calls > 0u; }));
+
+  // Add a new local commit, but set the cloud_provider to fail.
+  cloud_provider_.status_to_return =
+      cloud_provider_firebase::Status::NETWORK_ERROR;
+  auto commit1 = storage_.NewCommit("id1", "content1");
+  storage_.new_commits_to_return["id1"] = commit1->Clone();
+  page_sync_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
 
   // Test cloud provider logs every commit, even if it reports that upload
   // failed for each. Here we loop through at least five attempts to upload the
@@ -583,7 +590,6 @@ TEST_F(PageSyncImplTest, RetryUpload) {
            // side.
            backoff_get_next_calls_ >= 5;
   }));
-
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
   EXPECT_GE(backoff_get_next_calls_, 5);
@@ -826,9 +832,8 @@ TEST_F(PageSyncImplTest, CoalesceMultipleNotifications) {
 // Verifies that failing attempts to download the backlog of unsynced commits
 // are retried.
 TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
-  cloud_provider_.should_fail_get_commits = true;
+  cloud_provider_.status_to_return =
+      cloud_provider_firebase::Status::NETWORK_ERROR;
   StartPageSync();
 
   // Loop through five attempts to download the backlog.
@@ -840,7 +845,9 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, storage_.received_commits.size());
 
-  cloud_provider_.should_fail_get_commits = false;
+  cloud_provider_.status_to_return = cloud_provider_firebase::Status::OK;
+  cloud_provider_.records_to_return.emplace_back(
+      cloud_provider_firebase::Commit("id1", "content1"), "42");
   message_loop_.SetAfterTaskCallback([this] {
     if (storage_.received_commits.size() == 1u) {
       message_loop_.QuitNow();
@@ -954,13 +961,14 @@ TEST_F(PageSyncImplTest, GetObjectAuthError) {
 
 // Verifies that sync retries GetObject() attempts upon connection error.
 TEST_F(PageSyncImplTest, RetryGetObject) {
-  cloud_provider_.should_fail_get_object = true;
+  cloud_provider_.status_to_return =
+      cloud_provider_firebase::Status::NETWORK_ERROR;
   StartPageSync();
 
   message_loop_.SetAfterTaskCallback([this] {
     // Allow the operation to succeed after looping through five attempts.
     if (cloud_provider_.get_object_calls == 5u) {
-      cloud_provider_.should_fail_get_object = false;
+      cloud_provider_.status_to_return = cloud_provider_firebase::Status::OK;
       cloud_provider_.objects_to_return["object_id"] = "content";
     }
   });
@@ -1021,7 +1029,7 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  cloud_provider_.commit_status_to_return =
+  cloud_provider_.status_to_return =
       cloud_provider_firebase::Status::NETWORK_ERROR;
 
   auto commit = storage_.NewCommit("id", "content");
@@ -1040,7 +1048,7 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
   // Commit was rejected.
   ASSERT_EQ(0u, cloud_provider_.received_commits.size());
 
-  cloud_provider_.commit_status_to_return = cloud_provider_firebase::Status::OK;
+  cloud_provider_.status_to_return = cloud_provider_firebase::Status::OK;
   cloud_provider_.add_commits_calls = 0u;
 
   // Simulate the commit being received from the cloud.
@@ -1058,13 +1066,17 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
 // upload the commit once we received a notification for it through the cloud
 // sync watcher.
 TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
-  // Create a local commit.
-  storage_.new_commits_to_return["id1"] = storage_.NewCommit("id1", "content1");
-
-  // Upload should fail.
-  cloud_provider_.commit_status_to_return =
-      cloud_provider_firebase::Status::SERVER_ERROR;
+  // Complete the initial sync.
   StartPageSync();
+  EXPECT_TRUE(
+      RunLoopUntil([this] { return cloud_provider_.get_commits_calls > 0u; }));
+
+  // Create a local commit, but make the upload fail.
+  cloud_provider_.status_to_return =
+      cloud_provider_firebase::Status::SERVER_ERROR;
+  auto commit1 = storage_.NewCommit("id1", "content1");
+  storage_.new_commits_to_return["id1"] = commit1->Clone();
+  page_sync_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
 
   EXPECT_TRUE(RunLoopUntil([this] {
     return cloud_provider_.add_commits_calls == 1u &&
