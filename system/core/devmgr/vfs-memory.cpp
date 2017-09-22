@@ -10,7 +10,6 @@
 #include <sys/stat.h>
 
 #include <async/loop.h>
-#include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
@@ -702,7 +701,7 @@ fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
         zx_status_t r = memfs_create_fs("system", &memfs::systemfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'system' file system\n", r);
-            panic();
+            __builtin_trap();
         }
     }
     return memfs::systemfs_root;
@@ -713,7 +712,7 @@ fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
         zx_status_t r = memfs_create_fs("tmp", &memfs::memfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'tmp' file system\n", r);
-            panic();
+            __builtin_trap();
         }
     }
     return memfs::memfs_root;
@@ -724,7 +723,7 @@ fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
         zx_status_t r = memfs_create_fs("dev", &memfs::devfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'device' file system\n", r);
-            panic();
+            __builtin_trap();
         }
     }
     return memfs::devfs_root;
@@ -735,7 +734,7 @@ fbl::RefPtr<memfs::VnodeDir> BootfsRoot() {
         zx_status_t r = memfs_create_fs("boot", &memfs::bootfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'boot' file system\n", r);
-            panic();
+            __builtin_trap();
         }
     }
     return memfs::bootfs_root;
@@ -797,7 +796,7 @@ VnodeDir* vfs_create_global_root() {
         zx_status_t r = memfs_create_fs("<root>", &memfs::vfs_root);
         if (r < 0) {
             printf("fatal error %d allocating root file system\n", r);
-            panic();
+            __builtin_trap();
         }
 
         memfs::vfs.MountSubtree(memfs::vfs_root.get(), DevfsRoot());

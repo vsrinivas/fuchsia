@@ -12,7 +12,6 @@
 #include <fbl/unique_ptr.h>
 
 #include "dnode.h"
-#include "devmgr.h"
 #include "memfs-private.h"
 
 namespace memfs {

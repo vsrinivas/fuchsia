@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <ddk/device.h>
+#include <sys/types.h>
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -16,6 +17,7 @@ void devfs_init(zx_handle_t root_job);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
+void devmgr_set_mdi(zx_handle_t mdi_handle);
 
 zx_status_t devmgr_launch(zx_handle_t job, const char* name,
                           int argc, const char* const* argv,

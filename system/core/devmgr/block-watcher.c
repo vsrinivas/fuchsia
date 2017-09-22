@@ -10,6 +10,7 @@
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
+#include <zircon/device/device.h>
 #include <fdio/watcher.h>
 
 #include "devmgr.h"

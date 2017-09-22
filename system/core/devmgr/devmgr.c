@@ -18,18 +18,12 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <zircon/status.h>
 
 #include <fdio/namespace.h>
 #include <fdio/util.h>
 
 #include "devmgr.h"
 #include "memfs-private.h"
-
-// When adding VMOs to the boot filesystem, add them under the directory
-// /boot/VMO_SUBDIR. This constant must end, but not start, with a slash.
-#define VMO_SUBDIR "kernel/"
-#define VMO_SUBDIR_LEN (sizeof(VMO_SUBDIR) - 1)
 
 // The handle used to transmit messages to appmgr.
 static zx_handle_t svc_root_handle;
@@ -258,7 +252,9 @@ int service_starter(void* arg) {
     }
 
     if (!netboot) {
+#ifndef WITH_FSHOST
         block_device_watcher(svcs_job_handle);
+#endif
     }
     return 0;
 }
@@ -296,55 +292,6 @@ static void start_console_shell(void) {
 #else
 static void start_console_shell(void) {}
 #endif
-
-// Look for VMOs passed as startup handles of PA_HND_TYPE type, and add them to
-// the filesystem under the path /boot/VMO_SUBDIR_LEN/<vmo-name>.
-static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
-    for (uint_fast16_t i = 0; true; ++i) {
-        zx_handle_t vmo = zx_get_startup_handle(PA_HND(type, i));
-        if (vmo == ZX_HANDLE_INVALID)
-            break;
-
-        if (type == PA_VMO_VDSO && i == 0) {
-            // The first vDSO is the default vDSO.  Since we've stolen
-            // the startup handle, launchpad won't find it on its own.
-            // So point launchpad at it.
-            launchpad_set_vdso_vmo(vmo);
-        }
-
-        // The vDSO VMOs have names like "vdso/default", so those
-        // become VMO files at "/boot/kernel/vdso/default".
-        char name[VMO_SUBDIR_LEN + ZX_MAX_NAME_LEN] = VMO_SUBDIR;
-        size_t size;
-        zx_status_t status = zx_object_get_property(vmo, ZX_PROP_NAME,
-                name + VMO_SUBDIR_LEN, sizeof(name) - VMO_SUBDIR_LEN);
-        if (status != ZX_OK) {
-            printf("devmgr: zx_object_get_property on %s %u: %s\n",
-                   debug_type_name, i, zx_status_get_string(status));
-            continue;
-        }
-        status = zx_vmo_get_size(vmo, &size);
-        if (status != ZX_OK) {
-            printf("devmgr: zx_vmo_get_size on %s %u: %s\n",
-                   debug_type_name, i, zx_status_get_string(status));
-            continue;
-        }
-        if (size == 0) {
-            // empty vmos do not get installed
-            zx_handle_close(vmo);
-            continue;
-        }
-        if (!strcmp(name + VMO_SUBDIR_LEN, "crashlog")) {
-            // the crashlog has a special home
-            strcpy(name, "log/last-panic.txt");
-        }
-        status = bootfs_add_file(name, vmo, 0, size);
-        if (status != ZX_OK) {
-            printf("devmgr: failed to add %s %u to filesystem: %s\n",
-                   debug_type_name, i, zx_status_get_string(status));
-        }
-    }
-}
 
 static void load_cmdline_from_bootfs(void) {
     int fd = open("/boot/config/devmgr", O_RDONLY);
@@ -431,19 +378,7 @@ int main(int argc, char** argv) {
 
     devfs_init(root_job_handle);
 
-    devmgr_vfs_init();
-
-    load_cmdline_from_bootfs();
-
-    char** e = environ;
-    while (*e) {
-        printf("cmdline: %s\n", *e++);
-    }
-
     zx_object_set_property(root_job_handle, ZX_PROP_NAME, "root", 4);
-
-    fetch_vmos(PA_VMO_VDSO, "PA_VMO_VDSO");
-    fetch_vmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
 
     zx_status_t status = zx_job_create(root_job_handle, 0u, &svcs_job_handle);
     if (status < 0) {
@@ -458,6 +393,15 @@ int main(int argc, char** argv) {
     zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
 
     zx_channel_create(0, &svc_root_handle, &svc_request_handle);
+
+    devmgr_vfs_init();
+
+    load_cmdline_from_bootfs();
+
+    char** e = environ;
+    while (*e) {
+        printf("cmdline: %s\n", *e++);
+    }
 
     start_console_shell();
 
@@ -474,6 +418,22 @@ int main(int argc, char** argv) {
     printf("devmgr: coordinator exited?!\n");
     return 0;
 }
+
+#ifdef WITH_FSHOST
+void fshost_start(void) {
+}
+
+zx_handle_t fs_root_clone(void) {
+    return ZX_HANDLE_INVALID;
+}
+
+void devmgr_vfs_exit(void) {
+}
+
+bool secondary_bootfs_ready(void) {
+    return false;
+}
+#endif
 
 void devmgr_vfs_init(void) {
     printf("devmgr: vfs init\n");

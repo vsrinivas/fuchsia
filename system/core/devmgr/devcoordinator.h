@@ -194,6 +194,4 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
                        zx_handle_t* handles, size_t hcount,
                        dc_status_t* rsp, size_t rsp_len);
 
-void devmgr_set_mdi(zx_handle_t mdi_handle);
-
 extern bool dc_asan_drivers;

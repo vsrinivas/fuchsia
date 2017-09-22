@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devcoordinator.h"
 #include "devmgr.h"
 #include "memfs-private.h"
 
@@ -10,13 +9,22 @@
 
 #include <fdio/util.h>
 
+#include <launchpad/launchpad.h>
+
 #include <zircon/boot/bootdata.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
+
+// When adding VMOs to the boot filesystem, add them under the directory
+// /boot/VMO_SUBDIR. This constant must end, but not start, with a slash.
+#define VMO_SUBDIR "kernel/"
+#define VMO_SUBDIR_LEN (sizeof(VMO_SUBDIR) - 1)
 
 struct callback_data {
     zx_handle_t vmo;
@@ -208,12 +216,71 @@ ssize_t devmgr_add_systemfs_vmo(zx_handle_t vmo) {
     return added;
 }
 
+// Look for VMOs passed as startup handles of PA_HND_TYPE type, and add them to
+// the filesystem under the path /boot/VMO_SUBDIR_LEN/<vmo-name>.
+static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
+    for (uint_fast16_t i = 0; true; ++i) {
+        zx_handle_t vmo = zx_get_startup_handle(PA_HND(type, i));
+        if (vmo == ZX_HANDLE_INVALID)
+            break;
+
+        if (type == PA_VMO_VDSO && i == 0) {
+            // The first vDSO is the default vDSO.  Since we've stolen
+            // the startup handle, launchpad won't find it on its own.
+            // So point launchpad at it.
+            launchpad_set_vdso_vmo(vmo);
+        }
+
+        // The vDSO VMOs have names like "vdso/default", so those
+        // become VMO files at "/boot/kernel/vdso/default".
+        char name[VMO_SUBDIR_LEN + ZX_MAX_NAME_LEN] = VMO_SUBDIR;
+        size_t size;
+        zx_status_t status = zx_object_get_property(vmo, ZX_PROP_NAME,
+                name + VMO_SUBDIR_LEN, sizeof(name) - VMO_SUBDIR_LEN);
+        if (status != ZX_OK) {
+            printf("devmgr: zx_object_get_property on %s %u: %s\n",
+                   debug_type_name, i, zx_status_get_string(status));
+            continue;
+        }
+        status = zx_vmo_get_size(vmo, &size);
+        if (status != ZX_OK) {
+            printf("devmgr: zx_vmo_get_size on %s %u: %s\n",
+                   debug_type_name, i, zx_status_get_string(status));
+            continue;
+        }
+        if (size == 0) {
+            // empty vmos do not get installed
+            zx_handle_close(vmo);
+            continue;
+        }
+        if (!strcmp(name + VMO_SUBDIR_LEN, "crashlog")) {
+            // the crashlog has a special home
+            strcpy(name, "log/last-panic.txt");
+        }
+        status = bootfs_add_file(name, vmo, 0, size);
+        if (status != ZX_OK) {
+            printf("devmgr: failed to add %s %u to filesystem: %s\n",
+                   debug_type_name, i, zx_status_get_string(status));
+        }
+    }
+}
+
 void fshost_start(void) {
     setup_bootfs();
 
     vfs_global_init(vfs_create_global_root());
+
+    fetch_vmos(PA_VMO_VDSO, "PA_VMO_VDSO");
+    fetch_vmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
 }
 
 zx_handle_t fs_root_clone(void) {
     return vfs_create_global_root_handle();
 }
+
+#ifdef WITH_FSHOST
+int main(int argc, char** argv) {
+    printf("fshost: hello!\n");
+    for (;;) ;
+}
+#endif
