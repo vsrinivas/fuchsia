@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/ui/sketchy/scene.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/ui/scenic/client/session.h"
-#include "lib/ui/sketchy/canvas.h"
 #include "lib/ui/scenic/fidl/display_info.fidl-common.h"
 #include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "lib/ui/sketchy/canvas.h"
 
 namespace sketchy_example {
 

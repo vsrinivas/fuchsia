@@ -17,6 +17,7 @@ source_set("tasks") {
   ]
   libs = [
     "async-default",
+    "fdio",
     "zircon",
   ]
   public_deps = [

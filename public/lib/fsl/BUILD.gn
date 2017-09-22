@@ -22,7 +22,6 @@ shared_library("fsl_lib") {
     "//garnet/public/lib/fsl/socket",
     "//garnet/public/lib/fsl/tasks",
     "//garnet/public/lib/fsl/threading",
-    "//garnet/public/lib/fsl/vfs",
     "//garnet/public/lib/fsl/vmo",
     "//garnet/public/lib/fsl/waiter",
   ]

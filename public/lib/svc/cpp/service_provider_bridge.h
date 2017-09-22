@@ -5,9 +5,10 @@
 #ifndef APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
 #define APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
 
-#include <zx/channel.h>
 #include <fbl/ref_ptr.h>
+#include <fs/managed-vfs.h>
 #include <svcfs/svcfs.h>
+#include <zx/channel.h>
 
 #include <functional>
 #include <string>
@@ -17,7 +18,6 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/vfs/vfs_dispatcher.h"
 
 namespace app {
 
@@ -70,8 +70,7 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   void ConnectToService(const fidl::String& service_name,
                         zx::channel channel) override;
 
-  fs::Vfs vfs_;
-  fsl::VFSDispatcher dispatcher_;
+  fs::ManagedVfs vfs_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
   fbl::RefPtr<svcfs::VnodeProviderDir> directory_;
 

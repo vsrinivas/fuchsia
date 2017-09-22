@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/fxl/macros.h"
 
 namespace shadertoy_client {
 

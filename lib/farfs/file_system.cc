@@ -6,6 +6,8 @@
 
 #include <fcntl.h>
 
+#include "lib/fsl/tasks/message_loop.h"
+
 namespace archive {
 namespace {
 
@@ -23,7 +25,7 @@ struct DirRecord {
   fbl::RefPtr<vmofs::VnodeDir> CreateDirectory() {
     size_t count = names.size();
     fbl::Array<fbl::StringPiece> names_array(new fbl::StringPiece[count],
-                                               count);
+                                             count);
     fbl::Array<fbl::RefPtr<vmofs::Vnode>> children_array(
         new fbl::RefPtr<vmofs::Vnode>[count], count);
     for (size_t i = 0; i < count; ++i) {
@@ -68,7 +70,7 @@ fbl::StringPiece ToStringPiece(fxl::StringView view) {
 }
 
 fbl::RefPtr<vmofs::VnodeFile> CreateFile(zx_handle_t vmo,
-                                          const DirectoryTableEntry& entry) {
+                                         const DirectoryTableEntry& entry) {
   return fbl::AdoptRef(
       new vmofs::VnodeFile(vmo, entry.data_offset, entry.data_length));
 }
@@ -83,7 +85,8 @@ void LeaveDirectory(fxl::StringView name, std::vector<DirRecord>* stack) {
 
 }  // namespace
 
-FileSystem::FileSystem(zx::vmo vmo) : vmo_(vmo.get()), vfs_(&dispatcher_) {
+FileSystem::FileSystem(zx::vmo vmo)
+    : vmo_(vmo.get()), vfs_(fsl::MessageLoop::GetCurrent()->async()) {
   uint64_t num_bytes = 0;
   zx_status_t status = vmo.get_size(&num_bytes);
   if (status != ZX_OK)
@@ -98,8 +101,8 @@ FileSystem::FileSystem(zx::vmo vmo) : vmo_(vmo.get()), vfs_(&dispatcher_) {
 FileSystem::~FileSystem() = default;
 
 bool FileSystem::Serve(zx::channel channel) {
-  return directory_ && vfs_.ServeDirectory(directory_,
-                                           std::move(channel)) == ZX_OK;
+  return directory_ &&
+         vfs_.ServeDirectory(directory_, std::move(channel)) == ZX_OK;
 }
 
 zx::channel FileSystem::OpenAsDirectory() {

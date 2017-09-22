@@ -8,17 +8,18 @@
 #include <cmath>
 #include <utility>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/fidl/ime_service.fidl.h"
-#include "lib/ui/views/cpp/formatting.h"
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/fidl/ime_service.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/views/cpp/formatting.h"
 
 namespace view_manager {
 namespace {

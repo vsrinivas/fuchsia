@@ -5,15 +5,15 @@
 #ifndef APPLICATION_LIB_FARFS_FARFS_H_
 #define APPLICATION_LIB_FARFS_FARFS_H_
 
+#include <fs/managed-vfs.h>
+#include <vmofs/vmofs.h>
 #include <zx/channel.h>
 #include <zx/vmo.h>
-#include <vmofs/vmofs.h>
 
 #include <memory>
 
 #include "garnet/lib/far/archive_reader.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fsl/vfs/vfs_dispatcher.h"
 
 namespace archive {
 
@@ -47,8 +47,7 @@ class FileSystem {
   // The owning reference to the vmo is stored inside |reader_| as a file
   /// descriptor.
   zx_handle_t vmo_;
-  fs::Vfs vfs_;
-  fsl::VFSDispatcher dispatcher_;
+  fs::ManagedVfs vfs_;
   std::unique_ptr<ArchiveReader> reader_;
   fbl::RefPtr<vmofs::VnodeDir> directory_;
 };

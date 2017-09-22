@@ -4,6 +4,8 @@
 
 #include "lib/ui/sketchy/canvas.h"
 
+#include "lib/fsl/tasks/message_loop.h"
+
 namespace sketchy_lib {
 
 Canvas::Canvas(app::ApplicationContext* context)

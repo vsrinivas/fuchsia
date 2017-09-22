@@ -5,21 +5,23 @@
 #include "lib/svc/cpp/service_namespace.h"
 
 #include <fcntl.h>
-#include <zircon/device/vfs.h>
 #include <fdio/util.h>
+#include <zircon/device/vfs.h>
 
 #include <utility>
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/unique_fd.h"
 
 namespace app {
 
 ServiceNamespace::ServiceNamespace()
-    : directory_(fbl::AdoptRef(new svcfs::VnodeDir())) {}
+    : vfs_(fsl::MessageLoop::GetCurrent()->async()),
+      directory_(fbl::AdoptRef(new svcfs::VnodeDir())) {}
 
 ServiceNamespace::ServiceNamespace(
     fidl::InterfaceRequest<app::ServiceProvider> request)
-    : vfs_(&dispatcher_), directory_(fbl::AdoptRef(new svcfs::VnodeDir())) {
+    : ServiceNamespace() {
   AddBinding(std::move(request));
 }
 

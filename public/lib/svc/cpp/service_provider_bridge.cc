@@ -5,15 +5,18 @@
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 #include <fcntl.h>
-#include <zircon/device/vfs.h>
 #include <fdio/util.h>
+#include <zircon/device/vfs.h>
 
 #include <utility>
+
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace app {
 
 ServiceProviderBridge::ServiceProviderBridge()
-    : vfs_(&dispatcher_), directory_(fbl::AdoptRef(new svcfs::VnodeProviderDir())) {
+    : vfs_(fsl::MessageLoop::GetCurrent()->async()),
+      directory_(fbl::AdoptRef(new svcfs::VnodeProviderDir())) {
   directory_->SetServiceProvider(this);
 }
 

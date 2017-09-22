@@ -5,9 +5,10 @@
 #ifndef APPLICATION_LIB_SVC_SERVICE_NAMESPACE_H_
 #define APPLICATION_LIB_SVC_SERVICE_NAMESPACE_H_
 
-#include <zx/channel.h>
 #include <fbl/ref_ptr.h>
+#include <fs/managed-vfs.h>
 #include <svcfs/svcfs.h>
+#include <zx/channel.h>
 
 #include <functional>
 #include <string>
@@ -17,7 +18,6 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/vfs/vfs_dispatcher.h"
 
 namespace app {
 
@@ -120,8 +120,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
-  fs::Vfs vfs_;
-  fsl::VFSDispatcher dispatcher_;
+  fs::ManagedVfs vfs_;
   fbl::RefPtr<svcfs::VnodeDir> directory_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
 
