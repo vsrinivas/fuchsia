@@ -496,13 +496,15 @@ def ParseStringAttribute(attribute):
   return attribute
 
 # See //build/dart/label_to_package_name.py
-_LAYER_PREFIX = [
+# TODO(abarth): Base these paths on the sdk_dirs variable in gn.
+_SDK_DIRS = [
   "garnet/public/",
   "peridot/public/",
 ]
 
-def _remove_layer(label):
-  for prefix in _LAYER_PREFIX:
+# Strip the sdk dirs from the given label, if necessary.
+def _remove_sdk_dir(label):
+  for prefix in _SDK_DIRS:
     if label.startswith(prefix):
       return label[len(prefix):]
   return label
@@ -510,7 +512,7 @@ def _remove_layer(label):
 def GetPackage(module):
   if module.path.startswith('/'):
     raise Exception('Uh oh, path %s looks absolute' % module.path)
-  return os.path.dirname(_remove_layer(module.path)).replace('/', '.')
+  return os.path.dirname(_remove_sdk_dir(module.path)).replace('/', '.')
 
 def GetImportUri(module):
   return os.path.join(GetPackage(module), module.name)
