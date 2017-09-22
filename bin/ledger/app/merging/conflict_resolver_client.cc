@@ -53,37 +53,35 @@ void ConflictResolverClient::Start() {
   // Prepare the journal for the merge commit.
   storage_->StartMergeCommit(
       left_->GetId(), right_->GetId(),
-      [weak_this = weak_factory_.GetWeakPtr()](
-          storage::Status status, std::unique_ptr<storage::Journal> journal) {
-        if (!weak_this) {
-          return;
-        }
-        weak_this->journal_ = std::move(journal);
-        if (status != storage::Status::OK) {
-          FXL_LOG(ERROR) << "Unable to start merge commit: " << status;
-          weak_this->Finalize(PageUtils::ConvertStatus(status));
-          return;
-        }
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this](storage::Status status,
+                 std::unique_ptr<storage::Journal> journal) {
+            journal_ = std::move(journal);
+            if (status != storage::Status::OK) {
+              FXL_LOG(ERROR) << "Unable to start merge commit: " << status;
+              Finalize(PageUtils::ConvertStatus(status));
+              return;
+            }
 
-        PageSnapshotPtr page_snapshot_ancestor;
-        weak_this->manager_->BindPageSnapshot(
-            weak_this->ancestor_->Clone(), page_snapshot_ancestor.NewRequest(),
-            "");
+            PageSnapshotPtr page_snapshot_ancestor;
+            manager_->BindPageSnapshot(ancestor_->Clone(),
+                                       page_snapshot_ancestor.NewRequest(), "");
 
-        PageSnapshotPtr page_snapshot_left;
-        weak_this->manager_->BindPageSnapshot(
-            weak_this->left_->Clone(), page_snapshot_left.NewRequest(), "");
+            PageSnapshotPtr page_snapshot_left;
+            manager_->BindPageSnapshot(left_->Clone(),
+                                       page_snapshot_left.NewRequest(), "");
 
-        PageSnapshotPtr page_snapshot_right;
-        weak_this->manager_->BindPageSnapshot(
-            weak_this->right_->Clone(), page_snapshot_right.NewRequest(), "");
+            PageSnapshotPtr page_snapshot_right;
+            manager_->BindPageSnapshot(right_->Clone(),
+                                       page_snapshot_right.NewRequest(), "");
 
-        weak_this->in_client_request_ = true;
-        weak_this->conflict_resolver_->Resolve(
-            std::move(page_snapshot_left), std::move(page_snapshot_right),
-            std::move(page_snapshot_ancestor),
-            weak_this->merge_result_provider_binding_.NewBinding());
-      });
+            in_client_request_ = true;
+            conflict_resolver_->Resolve(
+                std::move(page_snapshot_left), std::move(page_snapshot_right),
+                std::move(page_snapshot_ancestor),
+                merge_result_provider_binding_.NewBinding());
+          }));
 }
 
 void ConflictResolverClient::Cancel() {
@@ -178,31 +176,29 @@ void ConflictResolverClient::GetDiff(
   diff_utils::ComputePageChange(
       storage_, *ancestor_, commit, "", convert::ToString(token),
       diff_utils::PaginationBehavior::BY_SIZE,
-      [ weak_this = weak_factory_.GetWeakPtr(), callback ](
-          Status status,
-          std::pair<PageChangePtr, std::string> page_change) mutable {
-        if (!weak_this) {
-          callback(Status::INTERNAL_ERROR, nullptr, nullptr);
-          return;
-        }
-        if (weak_this->cancelled_) {
-          callback(Status::INTERNAL_ERROR, nullptr, nullptr);
-          weak_this->Finalize(Status::INTERNAL_ERROR);
-          return;
-        }
-        if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Unable to compute diff due to error " << status
-                         << ", aborting.";
-          callback(status, nullptr, nullptr);
-          weak_this->Finalize(status);
-          return;
-        }
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, callback](Status status,
+                           std::pair<PageChangePtr, std::string> page_change) {
+            if (cancelled_) {
+              callback(Status::INTERNAL_ERROR, nullptr, nullptr);
+              Finalize(Status::INTERNAL_ERROR);
+              return;
+            }
+            if (status != Status::OK) {
+              FXL_LOG(ERROR) << "Unable to compute diff due to error " << status
+                             << ", aborting.";
+              callback(status, nullptr, nullptr);
+              Finalize(status);
+              return;
+            }
 
-        const std::string& next_token = page_change.second;
-        status = next_token.empty() ? Status::OK : Status::PARTIAL_RESULT;
-        callback(status, std::move(page_change.first),
-                 next_token.empty() ? nullptr : convert::ToArray(next_token));
-      });
+            const std::string& next_token = page_change.second;
+            status = next_token.empty() ? Status::OK : Status::PARTIAL_RESULT;
+            callback(
+                status, std::move(page_change.first),
+                next_token.empty() ? nullptr : convert::ToArray(next_token));
+          }));
 }
 
 // Merge(array<MergedValue>? merge_changes) => (Status status);
@@ -273,18 +269,19 @@ void ConflictResolverClient::Done(const DoneCallback& callback) {
   FXL_DCHECK(!cancelled_);
   FXL_DCHECK(journal_);
 
-  storage_->CommitJournal(std::move(journal_), [
-    weak_this = weak_factory_.GetWeakPtr(), callback
-  ](storage::Status status, std::unique_ptr<const storage::Commit>) {
-    if (status != storage::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to commit merge journal: " << status;
-    }
-    Status ledger_status = PageUtils::ConvertStatus(status);
-    callback(ledger_status);
-    if (weak_this) {
-      weak_this->Finalize(ledger_status);
-    }
-  });
+  storage_->CommitJournal(
+      std::move(journal_),
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this, callback](storage::Status status,
+                           std::unique_ptr<const storage::Commit>) {
+            if (status != storage::Status::OK) {
+              FXL_LOG(ERROR) << "Unable to commit merge journal: " << status;
+            }
+            Status ledger_status = PageUtils::ConvertStatus(status);
+            callback(ledger_status);
+            Finalize(ledger_status);
+          }));
 }
 
 }  // namespace ledger

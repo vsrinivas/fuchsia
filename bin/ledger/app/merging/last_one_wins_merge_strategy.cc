@@ -71,15 +71,13 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
   storage_->StartMergeCommit(
       left_->GetId(), right_->GetId(),
-      [weak_this = weak_factory_.GetWeakPtr()](
-          storage::Status s, std::unique_ptr<storage::Journal> journal) {
-        if (!weak_this) {
-          return;
-        }
-        FXL_DCHECK(s == storage::Status::OK);
-        weak_this->journal_ = std::move(journal);
-        weak_this->BuildAndCommitJournal();
-      });
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          [this](storage::Status s, std::unique_ptr<storage::Journal> journal) {
+            FXL_DCHECK(s == storage::Status::OK);
+            journal_ = std::move(journal);
+            BuildAndCommitJournal();
+          }));
 }
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {

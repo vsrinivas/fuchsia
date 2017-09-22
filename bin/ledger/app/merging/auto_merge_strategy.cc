@@ -100,13 +100,12 @@ void AutoMergeStrategy::AutoMerger::Start() {
     return true;
   };
 
-  auto callback = fxl::MakeCopyable([
-    weak_this = weak_factory_.GetWeakPtr(), changes = std::move(changes)
-  ](storage::Status status) mutable {
-    if (weak_this) {
-      weak_this->OnRightChangeReady(status, std::move(changes));
-    }
-  });
+  auto callback =
+      callback::MakeScoped(weak_factory_.GetWeakPtr(), fxl::MakeCopyable([
+                             this, changes = std::move(changes)
+                           ](storage::Status status) mutable {
+                             OnRightChangeReady(status, std::move(changes));
+                           }));
 
   storage_->GetCommitContentsDiff(*ancestor_, *right_, "", std::move(on_next),
                                   std::move(callback));
@@ -168,15 +167,12 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   });
 
   // |callback| is called when the full diff is computed.
-  auto callback = fxl::MakeCopyable([
-    weak_this = weak_factory_.GetWeakPtr(),
-    right_change = std::move(right_change), index = std::move(index)
-  ](storage::Status status) mutable {
-    if (weak_this) {
-      weak_this->OnComparisonDone(status, std::move(right_change),
-                                  index->distinct);
-    }
-  });
+  auto callback = callback::MakeScoped(
+      weak_factory_.GetWeakPtr(), fxl::MakeCopyable([
+        this, right_change = std::move(right_change), index = std::move(index)
+      ](storage::Status status) mutable {
+        OnComparisonDone(status, std::move(right_change), index->distinct);
+      }));
 
   storage_->GetCommitContentsDiff(*ancestor_, *left_, "", std::move(on_next),
                                   std::move(callback));
@@ -205,11 +201,8 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
     delegated_merge_ = std::make_unique<ConflictResolverClient>(
         storage_, manager_, conflict_resolver_, std::move(left_),
         std::move(right_), std::move(ancestor_),
-        [weak_this = weak_factory_.GetWeakPtr()](Status status) {
-          if (weak_this) {
-            weak_this->Done(status);
-          }
-        });
+        callback::MakeScoped(weak_factory_.GetWeakPtr(),
+                             [this](Status status) { Done(status); }));
 
     delegated_merge_->Start();
     return;
@@ -219,21 +212,19 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   // StartMergeCommit uses the left commit (first parameter) as its base, we
   // only have to apply the right diff to it and we are done.
   storage_->StartMergeCommit(
-      left_->GetId(), right_->GetId(), fxl::MakeCopyable([
-        weak_this = weak_factory_.GetWeakPtr(),
-        right_changes = std::move(right_changes)
-      ](storage::Status s, std::unique_ptr<storage::Journal> journal) mutable {
-        if (!weak_this) {
-          return;
-        }
-        if (s != storage::Status::OK) {
-          FXL_LOG(ERROR) << "Unable to start merge commit: " << s;
-          weak_this->Done(PageUtils::ConvertStatus(s));
-          return;
-        }
-        weak_this->ApplyDiffOnJournal(std::move(journal),
-                                      std::move(right_changes));
-      }));
+      left_->GetId(), right_->GetId(),
+      callback::MakeScoped(
+          weak_factory_.GetWeakPtr(),
+          fxl::MakeCopyable([ this, right_changes = std::move(right_changes) ](
+              storage::Status s,
+              std::unique_ptr<storage::Journal> journal) mutable {
+            if (s != storage::Status::OK) {
+              FXL_LOG(ERROR) << "Unable to start merge commit: " << s;
+              Done(PageUtils::ConvertStatus(s));
+              return;
+            }
+            ApplyDiffOnJournal(std::move(journal), std::move(right_changes));
+          })));
 }
 
 void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
