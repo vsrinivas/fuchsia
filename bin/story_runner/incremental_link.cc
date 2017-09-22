@@ -118,7 +118,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
 
       data_->key = impl_->key_generator_.Create();
       impl_->pending_ops_.push_back(data_.Clone());
-      new IncrementalWriteCall(&operation_queue_, impl_, data_.Clone(), [] {});
+      new IncrementalWriteCall(&operation_queue_, impl_, data_.Clone(), [flow] {});
     }
 
     const bool reload = data_->key < impl_->latest_key_;
