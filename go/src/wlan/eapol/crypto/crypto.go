@@ -59,7 +59,7 @@ func PRF(k []byte, a string, b []byte, bits int) []byte {
 
 // IEEE Std 802.11-2016, 12.7.1.3
 // Note: This method is so far AKM-2 specific. Refactor once we support additional AKMs.
-func DeriveKeys(pmk, sAddr, aAddr, aNonce, sNonce []byte) PTK {
+func DeriveKeys(pmk, sAddr, aAddr, aNonce, sNonce []byte) *PTK {
 	var data bytes.Buffer
 	data.Write(Min(aAddr, sAddr))
 	data.Write(Max(aAddr, sAddr))
@@ -70,7 +70,7 @@ func DeriveKeys(pmk, sAddr, aAddr, aNonce, sNonce []byte) PTK {
 	kekLen := 16
 	tkLen := 16
 	ptk := PRF(pmk, "Pairwise key expansion", data.Bytes(), (kckLen+kekLen+tkLen)*8)
-	return PTK{
+	return &PTK{
 		KCK: ptk[:kckLen],
 		KEK: ptk[kckLen: kckLen+kekLen],
 		TK:  ptk[kckLen+kekLen:],

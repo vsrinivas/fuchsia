@@ -32,6 +32,9 @@ func NewClient(config Config) *Client {
 
 func (c *Client) HandleEAPOLFrame(frame []byte) {
 	if c.config.KeyExchange == nil {
+		if debug {
+			log.Println("no KeyExchange method configured")
+		}
 		return
 	}
 

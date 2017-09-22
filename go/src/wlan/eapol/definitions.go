@@ -6,11 +6,14 @@ package eapol
 
 import (
 	"wlan/wlan/sme"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
 
 	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"crypto/hmac"
+	"crypto/sha1"
 )
 
 // IEEE Std 802.1X-2010, 11.3.2, Table 11-3
@@ -28,6 +31,10 @@ type KeyInfo uint16 // Bitmask
 func (k KeyInfo) IsSet(test KeyInfo) bool { return k&test != 0 }
 
 func (k KeyInfo) Extract(mask KeyInfo) uint16 { return uint16(k & mask) }
+
+func (k KeyInfo) Update(clear KeyInfo, set KeyInfo) KeyInfo {
+	return k & ^clear | set
+}
 
 const (
 	KeyInfo_DescriptorVersion KeyInfo = 7 // Bit 0-2
@@ -130,6 +137,8 @@ func ParseKeyFrame(hdr *Header, body []byte, micBits int) (*KeyFrame, error) {
 
 func (f *KeyFrame) Bytes() []uint8 {
 	// We have to insert 8 reserved bytes and hence have to write field by field, rather than the struct all at once.
+	// Enforce correct packet body length by always updating it.
+	f.Header.PacketBodyLength = uint16(KeyFrameBodyMinLenExclusiveMIC + len(f.MIC) + len(f.Data))
 	buf := bytes.Buffer{}
 	binary.Write(&buf, binary.BigEndian, f.Header)
 	binary.Write(&buf, binary.BigEndian, f.DescriptorType)
@@ -146,9 +155,36 @@ func (f *KeyFrame) Bytes() []uint8 {
 	return buf.Bytes()
 }
 
+func (f *KeyFrame) HasValidMIC(kck []byte) bool {
+	mic := computeMIC(kck, f)
+	return bytes.Compare(mic, f.MIC) == 0
+}
+
+func (f *KeyFrame) UpdateMIC(kck []byte) {
+	f.MIC = computeMIC(kck, f)
+}
+
+// IEEE Std 802.11-2016, 12.7.2 h)
+func computeMIC(kck []byte, f *KeyFrame) []byte {
+	if len(f.MIC) == 0 {
+		panic("MIC size is zero. Did you forget to initialize MIC?")
+	}
+
+	// Frame's MIC must be set to zero for computing the MIC.
+	mic := make([]byte, len(f.MIC))
+	copy(mic, f.MIC)
+	f.MIC = make([]byte, len(f.MIC))
+	defer func() { copy(f.MIC, mic) }() // Restore MIC when done.
+	// Integrity algorithm depends on the negotiated AKM. Only AKM-2 is supported for now.
+	// IEEE Std 802.11-2016, 12.7.3 Table 12-8
+	hsha1 := hmac.New(sha1.New, kck)
+	binary.Write(hsha1, binary.BigEndian, f.Bytes())
+	return hsha1.Sum(nil)[:len(kck)]
+}
+
 // Responsible for processing incoming EAPOL frames and computing the KEK, KCK and TK. Note, that
 // none of the incoming EAPOL Key frames was checked or filtered for correctness. It's the
-// implementations responsibility to verify the frame's correctness, e.g., verifying KeyInfo & MIC.
+// implementation's responsibility to verify the frame's correctness, e.g., verifying KeyInfo & MIC.
 // TODO(hahnr): Evaluate whether we need a more granular component separation. E.g., to split up
 // authentication, and key derivation.
 type KeyExchange interface {
@@ -157,7 +193,7 @@ type KeyExchange interface {
 
 // Transports EAPOL frames to their destination.
 type Transport interface {
-	SendEAPOLKeyFrame(f *KeyFrame) error
+	SendEAPOLKeyFrame(srcAddr [6]uint8, dstAddr [6]uint8, f *KeyFrame) error
 }
 
 // Sends EAPOL frames via SME.
@@ -165,7 +201,12 @@ type SMETransport struct {
 	SME sme.Transport
 }
 
-func (s *SMETransport) SendEAPOLKeyFrame(f *KeyFrame) error {
-	// TODO(hahnr): Construct and send MLME-EAPOL.Request message.
+func (s *SMETransport) SendEAPOLKeyFrame(srcAddr [6]uint8, dstAddr [6]uint8, f *KeyFrame) error {
+	req := &mlme.EapolRequest{
+		SrcAddr: srcAddr,
+		DstAddr: dstAddr,
+		Data:	f.Bytes(),
+	}
+	s.SME.SendMessage(req, int32(mlme.Method_EapolRequest))
 	return nil
 }

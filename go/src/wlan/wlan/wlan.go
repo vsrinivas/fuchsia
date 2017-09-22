@@ -337,6 +337,9 @@ func parseResponse(buf []byte) (interface{}, error) {
 			return nil, fmt.Errorf("could not decode EapolIndication: %v", err)
 		}
 		return &ind, nil
+	case int32(mlme.Method_EapolConfirm):
+		var resp mlme.EapolResponse
+		return &resp, nil
 	default:
 		return nil, fmt.Errorf("unknown ordinal: %v", header.ordinal)
 	}

@@ -504,6 +504,9 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 			c.eapolC.HandleEAPOLFrame(v.Data)
 		}
 		return s, nil
+	case *mlme.EapolResponse:
+		// TODO(hahnr): Evaluate response code.
+		return s, nil
 	default:
 		return s, fmt.Errorf("unexpected message type: %T", v)
 	}
