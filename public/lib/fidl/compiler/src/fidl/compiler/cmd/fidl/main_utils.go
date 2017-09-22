@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -53,13 +52,6 @@ func (dl *DirectoryList) String() string {
 
 func (dl *DirectoryList) Set(args string) error {
 	for _, name := range strings.Split(args, ",") {
-		info, err := os.Stat(name)
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("%s is not a directory.", name)
-		}
 		*dl = append(*dl, name)
 	}
 	return nil
