@@ -8,6 +8,7 @@
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/fxl/functional/closure.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {
 
@@ -38,6 +39,9 @@ class BatchDownload {
   fxl::Closure on_done_;
   fxl::Closure on_error_;
   bool started_ = false;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<BatchDownload> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchDownload);
 };
