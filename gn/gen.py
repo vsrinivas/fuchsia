@@ -5,7 +5,6 @@
 
 import argparse
 import json
-import gn
 import os
 import paths
 import subprocess
@@ -121,7 +120,7 @@ def main():
     if passthrough:
         gn_command += passthrough
 
-    return gn.run(gn_command)
+    return subprocess.call([paths.GN_PATH] + gn_command)
 
 
 if __name__ == "__main__":
