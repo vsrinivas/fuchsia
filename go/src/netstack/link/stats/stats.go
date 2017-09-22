@@ -23,6 +23,8 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 )
 
+var debug = false
+
 type StatsEndpoint struct {
 	dispatcher stack.NetworkDispatcher
 	lower      stack.LinkEndpoint
@@ -104,7 +106,9 @@ func (e *StatsEndpoint) analyzeIPv4(ts *nsfidl.NetTrafficStats, ipPkt header.IPv
 
 	// Add conditions not to collect stats in.
 	if mcastToSelf {
-		log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
+		if debug {
+			log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
+		}
 		return
 	}
 
@@ -128,7 +132,9 @@ func (e *StatsEndpoint) analyzeIPv6(ts *nsfidl.NetTrafficStats, ipPkt header.IPv
 
 	// Add conditions not to collect stats in.
 	if mcastToSelf {
-		log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
+		if debug {
+			log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
+		}
 		return
 	}
 
