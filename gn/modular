@@ -4,12 +4,12 @@
         "dart"
     ],
     "labels": [
-        "//apps/modular",
-        "//apps/modular:modular_unittests"
+        "//peridot:modular",
+        "//peridot:modular_unittests"
     ],
     "components": [
-        "apps/modular/src/component_manager/component_manager.json",
-        "apps/modular/examples/hello_component/hello_component.json"
+        "peridot/bin/component_manager/component_manager.json",
+        "peridot/examples/hello_component/hello_component.json"
     ],
     "binaries": [
         {
@@ -73,19 +73,19 @@
             "bootfs_path": "apps/dev_story_shell"
         },
         {
-            "binary": "gen/apps/modular/examples/counter_flutter/child/example_flutter_counter_child.flx",
+            "binary": "gen/peridot/examples/counter_flutter/child/example_flutter_counter_child.flx",
             "bootfs_path": "apps/example_flutter_counter_child"
         },
         {
-            "binary": "gen/apps/modular/examples/counter_flutter/parent/example_flutter_counter_parent.flx",
+            "binary": "gen/peridot/examples/counter_flutter/parent/example_flutter_counter_parent.flx",
             "bootfs_path": "apps/example_flutter_counter_parent"
         },
         {
-            "binary": "gen/apps/modular/examples/hello_world_flutter/example_flutter_hello_world.flx",
+            "binary": "gen/peridot/examples/hello_world_flutter/example_flutter_hello_world.flx",
             "bootfs_path": "apps/example_flutter_hello_world"
         },
         {
-            "binary": "gen/apps/modular/examples/story_shell_flutter/example_flutter_story_shell.flx",
+            "binary": "gen/peridot/examples/story_shell_flutter/example_flutter_story_shell.flx",
             "bootfs_path": "apps/example_flutter_story_shell"
         },
         {
@@ -105,7 +105,7 @@
             "bootfs_path": "apps/example_todo_headless"
         },
         {
-            "binary": "gen/apps/modular/examples/todo_story/example_todo_story.flx",
+            "binary": "gen/peridot/examples/todo_story/example_todo_story.flx",
             "bootfs_path": "apps/example_todo_story"
         },
         {
@@ -161,7 +161,7 @@
             "bootfs_path": "apps/suggest_shell_controller"
         },
         {
-            "binary": "gen/apps/modular/examples/suggest_shell/view/suggest_shell_view.flx",
+            "binary": "gen/peridot/examples/suggest_shell/view/suggest_shell_view.flx",
             "bootfs_path": "apps/suggest_shell_view"
         },
         {
@@ -212,7 +212,7 @@
     "resources": [
         {
             "bootfs_path": "test/run_modular_tests.sh",
-            "file": "apps/modular/tests/run_modular_tests.sh"
+            "file": "peridot/tests/run_modular_tests.sh"
         }
     ]
 }
