@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/macros.h"
 
 namespace storage {

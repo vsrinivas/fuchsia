@@ -10,7 +10,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger/storage.h"
 #include "lib/module/fidl/module_context.fidl.h"

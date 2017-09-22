@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//apps/ledger/src/*",
-  "//apps/ledger/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
 ]
 
 source_set("backoff") {
@@ -15,11 +15,11 @@ source_set("backoff") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/glue/crypto",
+    "//peridot/bin/ledger/glue/crypto",
     "//garnet/public/lib/fxl",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -34,5 +34,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

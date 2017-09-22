@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/custom_merge_strategy.h"
+#include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
 
 #include <memory>
 
-#include "apps/ledger/src/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_manager.h"
 #include "lib/fxl/functional/closure.h"
 
 namespace ledger {

@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "lib/app/fidl/application_controller.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/lib/fidl/context.h"
 #include "peridot/lib/fidl/operation.h"

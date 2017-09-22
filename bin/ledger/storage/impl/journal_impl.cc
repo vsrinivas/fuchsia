@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/journal_impl.h"
+#include "peridot/bin/ledger/storage/impl/journal_impl.h"
 
 #include <functional>
 #include <map>
 #include <string>
 #include <utility>
 
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/storage/impl/btree/builder.h"
-#include "apps/ledger/src/storage/impl/commit_impl.h"
-#include "apps/ledger/src/storage/public/commit.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/storage/impl/btree/builder.h"
+#include "peridot/bin/ledger/storage/impl/commit_impl.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {

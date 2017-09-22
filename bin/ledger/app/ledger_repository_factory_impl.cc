@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/ledger_repository_factory_impl.h"
+#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 
 #include <trace/event.h>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/auth_provider/auth_provider_impl.h"
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_provider/impl/paths.h"
-#include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
-#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider_impl.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
+#include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"

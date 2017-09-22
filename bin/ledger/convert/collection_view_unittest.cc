@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/convert/collection_view.h"
+#include "peridot/bin/ledger/convert/collection_view.h"
 
 #include <iterator>
 #include <set>

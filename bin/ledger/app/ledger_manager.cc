@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/ledger_manager.h"
+#include "peridot/bin/ledger/app/ledger_manager.h"
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

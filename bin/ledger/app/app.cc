@@ -11,14 +11,14 @@
 #include <zircon/device/vfs.h>
 #include <trace-provider/provider.h>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/src/app/erase_remote_repository_operation.h"
-#include "apps/ledger/src/app/ledger_repository_factory_impl.h"
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cobalt/cobalt.h"
-#include "apps/ledger/src/environment/environment.h"
-#include "apps/ledger/src/network/network_service_impl.h"
-#include "apps/ledger/src/network/no_network_service.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
+#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/cobalt/cobalt.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/network/network_service_impl.h"
+#include "peridot/bin/ledger/network/no_network_service.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"

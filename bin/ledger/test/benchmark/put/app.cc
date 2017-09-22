@@ -6,7 +6,7 @@
 
 #include <trace-provider/provider.h>
 
-#include "apps/ledger/src/test/benchmark/put/put.h"
+#include "peridot/bin/ledger/test/benchmark/put/put.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/random/rand.h"

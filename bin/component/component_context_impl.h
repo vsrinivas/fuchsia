@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_repository.h"

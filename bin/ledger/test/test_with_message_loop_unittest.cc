@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace test {
 namespace {

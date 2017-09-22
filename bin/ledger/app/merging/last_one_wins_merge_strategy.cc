@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
+#include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
 
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/callback/waiter.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/callback/waiter.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

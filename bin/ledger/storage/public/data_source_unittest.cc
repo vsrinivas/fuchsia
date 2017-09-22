@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/public/data_source.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
 
-#include "apps/ledger/src/glue/socket/socket_pair.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"

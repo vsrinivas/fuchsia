@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("cloud_server") {
   testonly = true
@@ -21,17 +21,17 @@ source_set("cloud_server") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/glue/socket",
+    "//peridot/bin/ledger/glue/socket",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netstack/fidl:net_address",
   ]
 
   deps = [
-    "//apps/ledger/src/convert",
+    "//peridot/bin/ledger/convert",
     "//garnet/public/lib/url",
     "//third_party/rapidjson",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

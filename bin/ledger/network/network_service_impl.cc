@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/network/network_service_impl.h"
+#include "peridot/bin/ledger/network/network_service_impl.h"
 
 #include <utility>
 
-#include "apps/ledger/src/callback/cancellable_helper.h"
-#include "apps/ledger/src/callback/destruction_sentinel.h"
-#include "apps/ledger/src/callback/trace_callback.h"
+#include "peridot/bin/ledger/callback/cancellable_helper.h"
+#include "peridot/bin/ledger/callback/destruction_sentinel.h"
+#include "peridot/bin/ledger/callback/trace_callback.h"
 #include "lib/fxl/strings/ascii.h"
 
 namespace ledger {

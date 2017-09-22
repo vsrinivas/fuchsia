@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "zx/vmo.h"
 
 namespace test {

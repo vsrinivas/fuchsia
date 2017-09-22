@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 executable("app") {
   output_name = "ledger"
@@ -13,12 +13,12 @@ executable("app") {
   deps = [
     ":lib",
     "//garnet/public/lib/app/cpp",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/src/cobalt",
-    "//apps/ledger/src/environment",
-    "//apps/ledger/src/network",
-    "//apps/ledger/src/storage/impl:lib",
-    "//apps/ledger/src/storage/public",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/cobalt",
+    "//peridot/bin/ledger/environment",
+    "//peridot/bin/ledger/network",
+    "//peridot/bin/ledger/storage/impl:lib",
+    "//peridot/bin/ledger/storage/public",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
@@ -26,7 +26,7 @@ executable("app") {
     "//zircon/system/ulib/trace-provider",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("lib") {
@@ -79,25 +79,25 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/device_set",
-    "//apps/ledger/src/firebase",
+    "//peridot/bin/ledger/device_set",
+    "//peridot/bin/ledger/firebase",
   ]
 
   deps = [
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/cloud_sync/impl",
-    "//apps/ledger/src/cloud_sync/public",
-    "//apps/ledger/src/cobalt",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/environment",
-    "//apps/ledger/src/fidl_helpers",
-    "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/glue/socket",
-    "//apps/ledger/src/network",
-    "//apps/ledger/src/storage/impl:lib",
-    "//apps/ledger/src/storage/public",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/cloud_sync/impl",
+    "//peridot/bin/ledger/cloud_sync/public",
+    "//peridot/bin/ledger/cobalt",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/environment",
+    "//peridot/bin/ledger/fidl_helpers",
+    "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/glue/socket",
+    "//peridot/bin/ledger/network",
+    "//peridot/bin/ledger/storage/impl:lib",
+    "//peridot/bin/ledger/storage/public",
     "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
@@ -105,7 +105,7 @@ source_set("lib") {
     "//zircon/system/ulib/trace",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -125,16 +125,16 @@ source_set("unittests") {
 
   deps = [
     ":lib",
-    "//apps/ledger/src/backoff/test",
-    "//apps/ledger/src/cloud_sync/impl",
-    "//apps/ledger/src/cloud_sync/test",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/storage/fake:lib",
-    "//apps/ledger/src/storage/impl:lib",
-    "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/storage/test",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/backoff/test",
+    "//peridot/bin/ledger/cloud_sync/impl",
+    "//peridot/bin/ledger/cloud_sync/test",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/storage/fake:lib",
+    "//peridot/bin/ledger/storage/impl:lib",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/storage/test",
+    "//peridot/bin/ledger/test:lib",
     "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
@@ -142,5 +142,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

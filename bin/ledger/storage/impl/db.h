@@ -5,10 +5,10 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_DB_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_DB_H_
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/public/iterator.h"
-#include "apps/ledger/src/storage/public/object.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/public/iterator.h"
+#include "peridot/bin/ledger/storage/public/object.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 

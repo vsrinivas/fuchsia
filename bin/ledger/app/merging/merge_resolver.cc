@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/merge_resolver.h"
+#include "peridot/bin/ledger/app/merging/merge_resolver.h"
 
 #include <algorithm>
 #include <memory>
@@ -10,14 +10,14 @@
 #include <set>
 #include <utility>
 
-#include "apps/ledger/src/app/merging/common_ancestor.h"
-#include "apps/ledger/src/app/merging/ledger_merge_manager.h"
-#include "apps/ledger/src/app/merging/merge_strategy.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/callback/scoped_callback.h"
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/cobalt/cobalt.h"
+#include "peridot/bin/ledger/app/merging/common_ancestor.h"
+#include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
+#include "peridot/bin/ledger/app/merging/merge_strategy.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/callback/scoped_callback.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"

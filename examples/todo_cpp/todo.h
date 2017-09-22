@@ -8,7 +8,7 @@
 #include <random>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/examples/todo_cpp/generator.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"

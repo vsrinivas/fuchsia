@@ -6,10 +6,10 @@
 #define APPS_LEDGER_SRC_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
 
 #include <memory>
-#include "apps/ledger/src/app/merging/merge_strategy.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/app/merging/merge_strategy.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {

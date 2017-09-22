@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/impl/encoding.h"
+#include "peridot/bin/ledger/cloud_provider/impl/encoding.h"
 
 #include <algorithm>
 
-#include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
-#include "apps/ledger/src/firebase/encoding.h"
+#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
+#include "peridot/bin/ledger/firebase/encoding.h"
 #include "lib/fxl/logging.h"
 
 #include <rapidjson/document.h>

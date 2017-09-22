@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"

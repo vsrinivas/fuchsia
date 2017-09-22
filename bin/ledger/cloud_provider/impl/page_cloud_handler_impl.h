@@ -9,12 +9,12 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/cloud_provider/impl/watch_client_impl.h"
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/cloud_provider/public/types.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/firebase/watch_client.h"
-#include "apps/ledger/src/gcs/cloud_storage.h"
+#include "peridot/bin/ledger/cloud_provider/impl/watch_client_impl.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_provider/public/types.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
+#include "peridot/bin/ledger/firebase/watch_client.h"
+#include "peridot/bin/ledger/gcs/cloud_storage.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

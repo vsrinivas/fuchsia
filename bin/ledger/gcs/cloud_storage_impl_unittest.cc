@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/gcs/cloud_storage_impl.h"
+#include "peridot/bin/ledger/gcs/cloud_storage_impl.h"
 
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/network/fake_network_service.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/network/fake_network_service.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"

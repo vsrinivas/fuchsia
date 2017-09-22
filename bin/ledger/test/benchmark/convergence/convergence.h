@@ -8,10 +8,10 @@
 #include <memory>
 #include <unordered_set>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
-#include "apps/ledger/src/test/data_generator.h"
-#include "apps/ledger/src/test/fake_token_provider.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
+#include "peridot/bin/ledger/test/data_generator.h"
+#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 

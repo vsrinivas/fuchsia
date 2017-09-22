@@ -24,7 +24,7 @@ source_set("operations") {
   ]
 
   deps = [
-    "//apps/ledger/services/public",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:operation",
@@ -44,8 +44,8 @@ source_set("page_client") {
   deps = [
     ":status",
     ":types",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:operation",
     "//garnet/public/lib/fidl/cpp/bindings",
@@ -61,7 +61,7 @@ source_set("status") {
   ]
 
   deps = [
-    "//apps/ledger/services/public",
+    "//peridot/public/lib/ledger/fidl",
     "//garnet/public/lib/fxl",
   ]
 }

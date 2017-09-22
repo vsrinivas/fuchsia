@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
-#include "apps/ledger/src/coroutine/context/context.h"
-#include "apps/ledger/src/coroutine/context/stack.h"
+#include "peridot/bin/ledger/coroutine/context/context.h"
+#include "peridot/bin/ledger/coroutine/context/stack.h"
 #include "lib/fxl/logging.h"
 
 namespace coroutine {

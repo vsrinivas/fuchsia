@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/page_impl.h"
+#include "peridot/bin/ledger/app/page_impl.h"
 
 #include <algorithm>
 #include <map>
 #include <memory>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/fidl/serialization_size.h"
-#include "apps/ledger/src/app/merging/merge_resolver.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "apps/ledger/src/environment/environment.h"
-#include "apps/ledger/src/storage/fake/fake_journal.h"
-#include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
-#include "apps/ledger/src/storage/fake/fake_page_storage.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/fidl/serialization_size.h"
+#include "peridot/bin/ledger/app/merging/merge_resolver.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
+#include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/socket/strings.h"

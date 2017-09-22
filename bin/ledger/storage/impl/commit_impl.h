@@ -5,8 +5,8 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_COMMIT_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_COMMIT_IMPL_H_
 
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace storage {

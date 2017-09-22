@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "zx/vmo.h"

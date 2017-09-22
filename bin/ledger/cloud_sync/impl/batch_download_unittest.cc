@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/batch_download.h"
+#include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 
 #include <unordered_map>
 
-#include "apps/ledger/src/cloud_sync/impl/constants.h"
-#include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"

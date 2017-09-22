@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/page_impl.h"
+#include "peridot/bin/ledger/app/page_impl.h"
 
 #include <trace/event.h>
 
-#include "apps/ledger/src/app/page_delegate.h"
-#include "apps/ledger/src/callback/trace_callback.h"
+#include "peridot/bin/ledger/app/page_delegate.h"
+#include "peridot/bin/ledger/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 
 namespace ledger {

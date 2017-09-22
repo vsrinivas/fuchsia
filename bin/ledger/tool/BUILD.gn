@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 executable("tool") {
   output_name = "ledger_tool"
@@ -19,17 +19,17 @@ executable("tool") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/ledger/src/app:lib",
-    "//apps/ledger/src/cloud_provider/impl",
-    "//apps/ledger/src/cloud_sync/impl",
-    "//apps/ledger/src/coroutine",
-    "//apps/ledger/src/firebase",
-    "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/storage/impl:lib",
+    "//peridot/bin/ledger/app:lib",
+    "//peridot/bin/ledger/cloud_provider/impl",
+    "//peridot/bin/ledger/cloud_sync/impl",
+    "//peridot/bin/ledger/coroutine",
+    "//peridot/bin/ledger/firebase",
+    "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/storage/impl:lib",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

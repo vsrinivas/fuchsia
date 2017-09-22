@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/src/device_set/cloud_device_set.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace cloud_provider_firebase {

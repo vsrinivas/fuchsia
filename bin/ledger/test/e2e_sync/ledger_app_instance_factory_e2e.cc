@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/ledger_app_instance_factory.h"
+#include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
 
 #include <thread>
 
-#include "apps/ledger/src/callback/synchronous_task.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
-#include "apps/ledger/src/test/fake_token_provider.h"
+#include "peridot/bin/ledger/callback/synchronous_task.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
+#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"

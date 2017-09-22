@@ -8,8 +8,8 @@ package("ledger") {
   app = true
 
   deps = [
-    "//apps/ledger/cloud_provider_firebase",
-    "//apps/ledger/src",
+    "//peridot/bin/cloud_provider_firebase",
+    "//peridot/bin/ledger",
   ]
 
   binaries = [
@@ -36,8 +36,8 @@ package("ledger_tests") {
   app = true
 
   deps = [
-    "//apps/ledger/cloud_provider_firebase:tests",
-    "//apps/ledger/src:tests",
+    "//peridot/bin/cloud_provider_firebase:tests",
+    "//peridot/bin/ledger:tests",
   ]
 
   binaries = [
@@ -86,47 +86,47 @@ package("ledger_tests") {
 
   resources = [
     {
-      path = rebase_path("src/test/benchmark/convergence/convergence.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/convergence/convergence.tspec")
       dest = "ledger/benchmark/convergence.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/put/transaction.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/transaction.tspec")
       dest = "ledger/benchmark/transaction.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/put/entry_count.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/entry_count.tspec")
       dest = "ledger/benchmark/entry_count.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/put/entry_count_update.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/entry_count_update.tspec")
       dest = "ledger/benchmark/entry_count_update.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/put/key_size.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/key_size.tspec")
       dest = "ledger/benchmark/key_size.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/put/put.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/put.tspec")
       dest = "ledger/benchmark/put.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/put/transaction_size.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/transaction_size.tspec")
       dest = "ledger/benchmark/transaction_size.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/put/value_size.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/put/value_size.tspec")
       dest = "ledger/benchmark/value_size.tspec"
     },
 
     {
-      path = rebase_path("src/test/benchmark/sync/sync.tspec")
+      path = rebase_path("//peridot/bin/ledger/test/benchmark/sync/sync.tspec")
       dest = "ledger/benchmark/sync.tspec"
     },
   ]

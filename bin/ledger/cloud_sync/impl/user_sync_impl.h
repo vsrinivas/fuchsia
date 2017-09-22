@@ -5,19 +5,19 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_USER_SYNC_IMPL_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_USER_SYNC_IMPL_H_
 
-#include "apps/ledger/src/cloud_sync/public/user_sync.h"
+#include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
 
 #include <memory>
 #include <unordered_set>
 
-#include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/callback/scoped_task_runner.h"
-#include "apps/ledger/src/cloud_sync/impl/aggregator.h"
-#include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
-#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
-#include "apps/ledger/src/environment/environment.h"
-#include "apps/ledger/src/firebase/firebase.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/callback/scoped_task_runner.h"
+#include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
+#include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
 
 namespace cloud_sync {
 

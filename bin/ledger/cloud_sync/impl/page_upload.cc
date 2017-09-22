@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/page_upload.h"
+#include "peridot/bin/ledger/cloud_sync/impl/page_upload.h"
 
 #include "lib/fxl/functional/make_copyable.h"
 

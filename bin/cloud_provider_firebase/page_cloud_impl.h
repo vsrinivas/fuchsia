@@ -8,13 +8,13 @@
 #include <memory>
 #include <utility>
 
-#include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
-#include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/gcs/cloud_storage.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/cloud_provider/public/commit_watcher.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
+#include "peridot/bin/ledger/gcs/cloud_storage.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"

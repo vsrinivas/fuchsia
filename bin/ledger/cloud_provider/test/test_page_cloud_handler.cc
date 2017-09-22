@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/test/test_page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_provider/test/test_page_cloud_handler.h"
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"

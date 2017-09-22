@@ -9,11 +9,11 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/cloud_sync/public/page_sync.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/gcs/cloud_storage.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
+#include "peridot/bin/ledger/gcs/cloud_storage.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/macros.h"
 
 namespace cloud_sync {

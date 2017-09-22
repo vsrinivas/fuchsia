@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/public/ledger_storage.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace storage {

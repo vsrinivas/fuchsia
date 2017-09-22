@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace test {

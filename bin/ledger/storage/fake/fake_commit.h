@@ -8,9 +8,9 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/storage/fake/fake_journal.h"
-#include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
-#include "apps/ledger/src/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
 
 namespace storage {
 namespace fake {

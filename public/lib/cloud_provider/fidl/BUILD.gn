@@ -4,7 +4,7 @@
 
 import("//garnet/public/lib/fidl/fidl.gni")
 
-fidl("cloud_provider") {
+fidl("fidl") {
   sources = [
     "cloud_provider.fidl",
   ]

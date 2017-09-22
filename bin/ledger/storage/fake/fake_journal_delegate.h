@@ -8,9 +8,9 @@
 #include <map>
 #include <string>
 
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/macros.h"
 
 namespace storage {

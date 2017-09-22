@@ -6,11 +6,11 @@
 #define APPS_LEDGER_SRC_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
 
 #include <memory>
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/merging/conflict_resolver_client.h"
-#include "apps/ledger/src/app/merging/merge_strategy.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
+#include "peridot/bin/ledger/app/merging/merge_strategy.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {

@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//apps/ledger/src/*",
-  "//apps/ledger/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
 ]
 
 source_set("device_set") {
@@ -15,7 +15,7 @@ source_set("device_set") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/firebase",
+    "//peridot/bin/ledger/firebase",
     "//garnet/public/lib/fxl",
   ]
 
@@ -23,7 +23,7 @@ source_set("device_set") {
     "//third_party/rapidjson",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -35,10 +35,10 @@ source_set("unittests") {
 
   deps = [
     ":device_set",
-    "//apps/ledger/src/firebase",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/firebase",
+    "//peridot/bin/ledger/test:lib",
     "//third_party/rapidjson",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

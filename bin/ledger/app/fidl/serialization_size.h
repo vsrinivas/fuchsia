@@ -8,7 +8,7 @@
 #include <zircon/types.h>
 #include <stddef.h>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 
 namespace ledger {
 namespace fidl_serialization {

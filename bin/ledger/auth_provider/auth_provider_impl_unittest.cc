@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/auth_provider/auth_provider_impl.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider_impl.h"
 
 #include <utility>
 
-#include "apps/ledger/src/backoff/test/test_backoff.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/backoff/test/test_backoff.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/make_copyable.h"

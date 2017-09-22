@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/page_delegate.h"
+#include "peridot/bin/ledger/app/page_delegate.h"
 
 #include <string>
 #include <utility>
@@ -10,12 +10,12 @@
 
 #include <trace/event.h>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/app/page_snapshot_impl.h"
-#include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/convert/convert.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_snapshot_impl.h"
+#include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/convert/convert.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 

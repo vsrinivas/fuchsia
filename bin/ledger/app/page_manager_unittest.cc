@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_manager.h"
 
 #include <memory>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/merging/merge_resolver.h"
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
-#include "apps/ledger/src/cloud_sync/test/page_sync_empty_impl.h"
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "apps/ledger/src/environment/environment.h"
-#include "apps/ledger/src/storage/fake/fake_page_storage.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
-#include "apps/ledger/src/storage/test/commit_empty_impl.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/merging/merge_resolver.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
+#include "peridot/bin/ledger/cloud_sync/test/page_sync_empty_impl.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"

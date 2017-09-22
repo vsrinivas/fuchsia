@@ -2,24 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/*" ]
+visibility = [ "//peridot/*" ]
 
-group("src") {
+group("ledger") {
   public_deps = [
-    "//apps/ledger/src/app",
-    "//apps/ledger/src/auth_provider",
-    "//apps/ledger/src/backoff",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/cloud_provider",
-    "//apps/ledger/src/cloud_sync",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/environment",
-    "//apps/ledger/src/firebase",
-    "//apps/ledger/src/gcs",
-    "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/network",
-    "//apps/ledger/src/storage",
-    "//apps/ledger/src/tool",
+    "//peridot/bin/ledger/app",
+    "//peridot/bin/ledger/auth_provider",
+    "//peridot/bin/ledger/backoff",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/cloud_provider",
+    "//peridot/bin/ledger/cloud_sync",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/environment",
+    "//peridot/bin/ledger/firebase",
+    "//peridot/bin/ledger/gcs",
+    "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/network",
+    "//peridot/bin/ledger/storage",
+    "//peridot/bin/ledger/tool",
   ]
 }
 
@@ -28,10 +28,10 @@ group("tests") {
 
   public_deps = [
     ":ledger_unittests",
-    "//apps/ledger/src/test/benchmark",
-    "//apps/ledger/src/test/e2e_local",
-    "//apps/ledger/src/test/e2e_sync",
-    "//apps/ledger/src/test/integration",
+    "//peridot/bin/ledger/test/benchmark",
+    "//peridot/bin/ledger/test/e2e_local",
+    "//peridot/bin/ledger/test/e2e_sync",
+    "//peridot/bin/ledger/test/integration",
   ]
 }
 
@@ -63,27 +63,27 @@ executable("ledger_unittests") {
   testonly = true
 
   deps = [
-    "//apps/ledger/src/app:unittests",
-    "//apps/ledger/src/auth_provider:unittests",
-    "//apps/ledger/src/backoff:unittests",
-    "//apps/ledger/src/callback:unittests",
-    "//apps/ledger/src/cloud_provider/impl:unittests",
-    "//apps/ledger/src/cloud_sync/impl:unittests",
-    "//apps/ledger/src/convert:unittests",
-    "//apps/ledger/src/coroutine:unittests",
-    "//apps/ledger/src/coroutine/context:unittests",
-    "//apps/ledger/src/device_set:unittests",
-    "//apps/ledger/src/environment:unittests",
-    "//apps/ledger/src/firebase:unittests",
-    "//apps/ledger/src/gcs:unittests",
-    "//apps/ledger/src/glue:unittests",
-    "//apps/ledger/src/network:unittests",
-    "//apps/ledger/src/storage/impl:unittests",
-    "//apps/ledger/src/storage/impl/btree:unittests",
-    "//apps/ledger/src/storage/public:unittests",
-    "//apps/ledger/src/test:unittests",
-    "//apps/ledger/src/test/token_provider:unittests",
-    "//apps/ledger/src/third_party/bup:unittests",
+    "//peridot/bin/ledger/app:unittests",
+    "//peridot/bin/ledger/auth_provider:unittests",
+    "//peridot/bin/ledger/backoff:unittests",
+    "//peridot/bin/ledger/callback:unittests",
+    "//peridot/bin/ledger/cloud_provider/impl:unittests",
+    "//peridot/bin/ledger/cloud_sync/impl:unittests",
+    "//peridot/bin/ledger/convert:unittests",
+    "//peridot/bin/ledger/coroutine:unittests",
+    "//peridot/bin/ledger/coroutine/context:unittests",
+    "//peridot/bin/ledger/device_set:unittests",
+    "//peridot/bin/ledger/environment:unittests",
+    "//peridot/bin/ledger/firebase:unittests",
+    "//peridot/bin/ledger/gcs:unittests",
+    "//peridot/bin/ledger/glue:unittests",
+    "//peridot/bin/ledger/network:unittests",
+    "//peridot/bin/ledger/storage/impl:unittests",
+    "//peridot/bin/ledger/storage/impl/btree:unittests",
+    "//peridot/bin/ledger/storage/public:unittests",
+    "//peridot/bin/ledger/test:unittests",
+    "//peridot/bin/ledger/test/token_provider:unittests",
+    "//peridot/bin/ledger/third_party/bup:unittests",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/fxl:fxl_printers",
   ]

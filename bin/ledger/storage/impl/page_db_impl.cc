@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/page_db_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 
 #include <algorithm>
 #include <string>
 
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/impl/db_serialization.h"
-#include "apps/ledger/src/storage/impl/journal_impl.h"
-#include "apps/ledger/src/storage/impl/number_serialization.h"
-#include "apps/ledger/src/storage/impl/object_impl.h"
-#include "apps/ledger/src/storage/impl/page_db_batch_impl.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/impl/db_serialization.h"
+#include "peridot/bin/ledger/storage/impl/journal_impl.h"
+#include "peridot/bin/ledger/storage/impl/number_serialization.h"
+#include "peridot/bin/ledger/storage/impl/object_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
 #include "lib/fxl/strings/concatenate.h"
 
 #define RETURN_ON_ERROR(expr)   \

@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_TEST_PAGE_SYNC_EMPTY_IMPL_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_TEST_PAGE_SYNC_EMPTY_IMPL_H_
 
-#include "apps/ledger/src/cloud_sync/public/page_sync.h"
+#include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
 
 namespace cloud_sync {
 namespace test {

@@ -8,9 +8,9 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/firebase/firebase_impl.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

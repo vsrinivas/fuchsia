@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 #define APPS_LEDGER_SRC_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
-#include "apps/ledger/src/test/cloud_server/fake_cloud_url_loader.h"
+#include "peridot/bin/ledger/test/cloud_server/fake_cloud_url_loader.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"

@@ -10,13 +10,13 @@
 #include <memory>
 #include <type_traits>
 
-#include "apps/ledger/src/app/ledger_impl.h"
-#include "apps/ledger/src/app/merging/ledger_merge_manager.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/environment/environment.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/app/ledger_impl.h"
+#include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"

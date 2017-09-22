@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/convert/convert.h"
+#include "peridot/bin/ledger/convert/convert.h"
 
-#include "apps/ledger/src/convert/bytes_test_generated.h"
+#include "peridot/bin/ledger/convert/bytes_test_generated.h"
 #include "gtest/gtest.h"
 
 namespace convert {

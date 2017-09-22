@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/integration/integration_test.h"
+#include "peridot/bin/ledger/test/integration/integration_test.h"
 
 #include <thread>
 
-#include "apps/ledger/src/app/erase_remote_repository_operation.h"
-#include "apps/ledger/src/app/ledger_repository_factory_impl.h"
-#include "apps/ledger/src/callback/synchronous_task.h"
-#include "apps/ledger/src/glue/socket/socket_pair.h"
-#include "apps/ledger/src/glue/socket/socket_writer.h"
-#include "apps/ledger/src/network/network_service_impl.h"
-#include "apps/ledger/src/test/fake_token_provider.h"
-#include "apps/ledger/src/test/integration/test_utils.h"
+#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
+#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
+#include "peridot/bin/ledger/callback/synchronous_task.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/glue/socket/socket_writer.h"
+#include "peridot/bin/ledger/network/network_service_impl.h"
+#include "peridot/bin/ledger/test/fake_token_provider.h"
+#include "peridot/bin/ledger/test/integration/test_utils.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"

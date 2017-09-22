@@ -5,12 +5,12 @@
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/test/integration/integration_test.h"
-#include "apps/ledger/src/test/integration/test_utils.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/test/integration/integration_test.h"
+#include "peridot/bin/ledger/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/files/scoped_temp_dir.h"

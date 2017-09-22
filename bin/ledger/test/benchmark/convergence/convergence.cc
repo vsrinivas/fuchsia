@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/benchmark/convergence/convergence.h"
+#include "peridot/bin/ledger/test/benchmark/convergence/convergence.h"
 
 #include <iostream>
 
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/test/benchmark/lib/logging.h"
-#include "apps/ledger/src/test/get_ledger.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/test/benchmark/lib/logging.h"
+#include "peridot/bin/ledger/test/get_ledger.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"

@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace storage {
 namespace test {

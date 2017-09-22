@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/firebase/firebase_impl.h"
+#include "peridot/bin/ledger/firebase/firebase_impl.h"
 
 #include <memory>
 #include <utility>
 
 #include <rapidjson/document.h>
 
-#include "apps/ledger/src/glue/socket/socket_pair.h"
-#include "apps/ledger/src/network/fake_network_service.h"
-#include "apps/ledger/src/network/network_service_impl.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/network/fake_network_service.h"
+#include "peridot/bin/ledger/network/network_service_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"

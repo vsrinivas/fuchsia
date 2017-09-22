@@ -4,9 +4,9 @@
 
 #include <memory>
 
-#include "apps/ledger/src/cloud_sync/impl/aggregator.h"
+#include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 
-#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "lib/fxl/logging.h"
 
 namespace cloud_sync {

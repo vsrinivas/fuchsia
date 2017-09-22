@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/glue/crypto/base64.h"
+#include "peridot/bin/ledger/glue/crypto/base64.h"
 
-#include "apps/ledger/src/third_party/modp_b64/modp_b64.h"
+#include "peridot/bin/ledger/third_party/modp_b64/modp_b64.h"
 #include "lib/fxl/logging.h"
 
 namespace glue {

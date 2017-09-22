@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/public/object.h"
+#include "peridot/bin/ledger/storage/public/object.h"
 
 #include "lib/fsl/vmo/strings.h"
 

@@ -10,8 +10,8 @@
 
 #include <rapidjson/document.h>
 
-#include "apps/ledger/src/convert/collection_view.h"
-#include "apps/ledger/src/test/cloud_server/server.h"
+#include "peridot/bin/ledger/convert/collection_view.h"
+#include "peridot/bin/ledger/test/cloud_server/server.h"
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/url/gurl.h"
 

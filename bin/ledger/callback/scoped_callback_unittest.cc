@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/callback/scoped_callback.h"
+#include "peridot/bin/ledger/callback/scoped_callback.h"
 
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"

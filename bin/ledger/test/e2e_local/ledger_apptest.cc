@@ -4,13 +4,13 @@
 
 #include <string.h>
 
-#include "apps/ledger/services/internal/internal.fidl-sync.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl-sync.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/test/app_test.h"
-#include "apps/ledger/src/test/fake_token_provider.h"
+#include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl-sync.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/test/app_test.h"
+#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_environment.fidl.h"

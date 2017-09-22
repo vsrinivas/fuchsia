@@ -12,7 +12,7 @@
 #include <iostream>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"

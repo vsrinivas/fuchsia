@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/page_db_batch_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
 
 #include <memory>
 
-#include "apps/ledger/src/storage/impl/db_serialization.h"
-#include "apps/ledger/src/storage/impl/journal_impl.h"
-#include "apps/ledger/src/storage/impl/number_serialization.h"
+#include "peridot/bin/ledger/storage/impl/db_serialization.h"
+#include "peridot/bin/ledger/storage/impl/journal_impl.h"
+#include "peridot/bin/ledger/storage/impl/number_serialization.h"
 #include "lib/fxl/strings/concatenate.h"
 
 namespace storage {

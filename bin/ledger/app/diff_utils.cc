@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/diff_utils.h"
+#include "peridot/bin/ledger/app/diff_utils.h"
 
 #include <limits>
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/app/fidl/serialization_size.h"
-#include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/storage/public/object.h"
+#include "peridot/bin/ledger/app/fidl/serialization_size.h"
+#include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/storage/public/object.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 

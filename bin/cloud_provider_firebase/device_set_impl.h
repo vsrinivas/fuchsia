@@ -7,10 +7,10 @@
 
 #include <memory>
 
-#include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
-#include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/device_set/cloud_device_set.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/ledger_app_instance_factory.h"
+#include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
 
-#include "apps/ledger/src/callback/synchronous_task.h"
-#include "apps/ledger/src/convert/convert.h"
+#include "peridot/bin/ledger/callback/synchronous_task.h"
+#include "peridot/bin/ledger/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"

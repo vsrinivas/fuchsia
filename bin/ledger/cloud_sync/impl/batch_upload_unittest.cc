@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
+#include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 
 #include <functional>
 #include <unordered_map>
 #include <utility>
 
-#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/cloud_provider/test/page_cloud_handler_empty_impl.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/object.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/test/commit_empty_impl.h"
-#include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_provider/test/page_cloud_handler_empty_impl.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/object.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"

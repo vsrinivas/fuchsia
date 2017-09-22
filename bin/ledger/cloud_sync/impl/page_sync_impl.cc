@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
+#include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 
 #include <algorithm>
 #include <map>
@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/cloud_sync/impl/constants.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 

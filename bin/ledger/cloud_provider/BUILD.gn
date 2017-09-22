@@ -3,13 +3,13 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//apps/ledger/src/*",
-  "//apps/ledger/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
 ]
 
 group("cloud_provider") {
   public_deps = [
-    "//apps/ledger/src/cloud_provider/impl",
-    "//apps/ledger/src/cloud_provider/public",
+    "//peridot/bin/ledger/cloud_provider/impl",
+    "//peridot/bin/ledger/cloud_provider/public",
   ]
 }

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/btree/diff.h"
+#include "peridot/bin/ledger/storage/impl/btree/diff.h"
 
-#include "apps/ledger/src/storage/impl/btree/internal_helper.h"
-#include "apps/ledger/src/storage/impl/btree/iterator.h"
-#include "apps/ledger/src/storage/impl/btree/synchronous_storage.h"
+#include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
+#include "peridot/bin/ledger/storage/impl/btree/iterator.h"
+#include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
 
 namespace storage {
 namespace btree {

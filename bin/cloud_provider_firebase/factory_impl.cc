@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/cloud_provider_firebase/factory_impl.h"
+#include "peridot/bin/cloud_provider_firebase/factory_impl.h"
 
-#include "apps/ledger/src/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 

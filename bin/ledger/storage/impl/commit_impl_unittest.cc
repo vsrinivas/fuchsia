@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/commit_impl.h"
+#include "peridot/bin/ledger/storage/impl/commit_impl.h"
 
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/fake/fake_page_storage.h"
-#include "apps/ledger/src/storage/impl/commit_random_impl.h"
-#include "apps/ledger/src/storage/impl/storage_test_utils.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
+#include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
+#include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 

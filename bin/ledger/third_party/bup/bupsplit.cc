@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "apps/ledger/src/third_party/bup/bupsplit.h"
+#include "peridot/bin/ledger/third_party/bup/bupsplit.h"
 
 #include <memory.h>
 #include <stdint.h>

@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "apps/ledger/src/device_set/cloud_device_set.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 
 namespace cloud_sync {
 

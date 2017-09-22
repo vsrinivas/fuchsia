@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/btree/encoding.h"
+#include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 
 #include <algorithm>
 
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/impl/btree/tree_node_generated.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
 #include "lib/fxl/logging.h"
 
 namespace storage {

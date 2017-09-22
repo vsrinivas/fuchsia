@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"

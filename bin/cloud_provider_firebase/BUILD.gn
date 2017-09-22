@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/*" ]
+visibility = [ "//peridot/*" ]
 
 executable("cloud_provider_firebase") {
   sources = [
@@ -33,20 +33,20 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//apps/ledger/cloud_provider_firebase/services",
-    "//apps/ledger/services/cloud_provider",
-    "//apps/ledger/src/auth_provider",
-    "//apps/ledger/src/cloud_provider",
-    "//apps/ledger/src/device_set",
+    "//peridot/bin/cloud_provider_firebase/fidl",
+    "//peridot/public/lib/cloud_provider/fidl",
+    "//peridot/bin/ledger/auth_provider",
+    "//peridot/bin/ledger/cloud_provider",
+    "//peridot/bin/ledger/device_set",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/auth/fidl",
   ]
 
   deps = [
-    "//apps/ledger/src/backoff",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/convert",
+    "//peridot/bin/ledger/backoff",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/convert",
   ]
 }
 
@@ -62,13 +62,13 @@ executable("cloud_provider_firebase_unittests") {
 
   deps = [
     ":lib",
-    "//apps/ledger/cloud_provider_firebase/services",
-    "//apps/ledger/services/cloud_provider",
-    "//apps/ledger/src/auth_provider/test",
-    "//apps/ledger/src/cloud_provider/test",
-    "//apps/ledger/src/device_set/test",
-    "//apps/ledger/src/network:fake",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/cloud_provider_firebase/fidl",
+    "//peridot/public/lib/cloud_provider/fidl",
+    "//peridot/bin/ledger/auth_provider/test",
+    "//peridot/bin/ledger/cloud_provider/test",
+    "//peridot/bin/ledger/device_set/test",
+    "//peridot/bin/ledger/network:fake",
+    "//peridot/bin/ledger/test:lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/test_runner/cpp:gtest_main",

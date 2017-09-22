@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("bup") {
   sources = [
@@ -24,6 +24,6 @@ source_set("unittests") {
 
   deps = [
     ":bup",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/test:lib",
   ]
 }

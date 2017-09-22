@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
+#include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
 
 #include <utility>
 
-#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
-#include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/backoff/test/test_backoff.h"
-#include "apps/ledger/src/device_set/cloud_device_set.h"
-#include "apps/ledger/src/device_set/test/test_cloud_device_set.h"
-#include "apps/ledger/src/network/fake_network_service.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/backoff/test/test_backoff.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set.h"
+#include "peridot/bin/ledger/device_set/test/test_cloud_device_set.h"
+#include "peridot/bin/ledger/network/fake_network_service.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"

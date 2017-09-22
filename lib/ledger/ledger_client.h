@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

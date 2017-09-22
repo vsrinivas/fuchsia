@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/impl/encoding.h"
+#include "peridot/bin/ledger/cloud_provider/impl/encoding.h"
 
 #include <memory>
 
-#include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
+#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/time/time_delta.h"
 

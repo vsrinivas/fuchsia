@@ -102,8 +102,8 @@ source_set("ledger_repository_for_testing") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/ledger:constants",

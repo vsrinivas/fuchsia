@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("context") {
   sources = [
@@ -13,7 +13,7 @@ source_set("context") {
   ]
 
   deps = [
-    "//apps/ledger/src/coroutine/context/$target_cpu",
+    "//peridot/bin/ledger/coroutine/context/$target_cpu",
     "//garnet/public/lib/fxl",
   ]
 
@@ -21,7 +21,7 @@ source_set("context") {
     "//zircon/system/ulib/zx",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -37,5 +37,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

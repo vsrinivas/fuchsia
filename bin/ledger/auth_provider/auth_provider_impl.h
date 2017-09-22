@@ -9,9 +9,9 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/callback/scoped_task_runner.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/tasks/task_runner.h"
 

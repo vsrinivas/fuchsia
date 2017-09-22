@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace storage {

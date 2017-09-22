@@ -5,7 +5,7 @@
 #ifndef APPS_MODULAR_SRC_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
 #define APPS_MODULAR_SRC_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/lib/fidl/operation.h"
 #include "lib/remote/fidl/remote_invoker.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

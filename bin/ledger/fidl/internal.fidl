@@ -5,7 +5,7 @@
 [DartPackage="ledger"]
 module ledger;
 
-import "apps/ledger/services/public/ledger.fidl";
+import "lib/ledger/fidl/ledger.fidl";
 import "lib/auth/fidl/token_provider.fidl";
 
 // Sync configuration.

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/cloud_provider_firebase/device_set_impl.h"
+#include "peridot/bin/cloud_provider_firebase/device_set_impl.h"
 
-#include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
-#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/device_set/test/test_cloud_device_set.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/device_set/test/test_cloud_device_set.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 

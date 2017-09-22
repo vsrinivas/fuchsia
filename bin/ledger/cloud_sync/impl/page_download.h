@@ -5,14 +5,14 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
-#include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/callback/scoped_task_runner.h"
-#include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/cloud_sync/impl/base_coordinator_delegate.h"
-#include "apps/ledger/src/cloud_sync/impl/batch_download.h"
-#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
-#include "apps/ledger/src/storage/public/page_sync_delegate.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/callback/scoped_task_runner.h"
+#include "peridot/bin/ledger/cloud_provider/public/commit_watcher.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
+#include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

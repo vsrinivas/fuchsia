@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 executable("e2e_sync") {
   output_name = "ledger_e2e_sync"
@@ -15,18 +15,18 @@ executable("e2e_sync") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/fidl_helpers",
-    "//apps/ledger/src/test:app_test",
-    "//apps/ledger/src/test:ledger_instance_factory",
-    "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test/integration/sync",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/fidl_helpers",
+    "//peridot/bin/ledger/test:app_test",
+    "//peridot/bin/ledger/test:ledger_instance_factory",
+    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/test/integration/sync",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

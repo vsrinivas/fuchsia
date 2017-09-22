@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/object_impl.h"
+#include "peridot/bin/ledger/storage/impl/object_impl.h"
 
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/impl/object_id.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/impl/object_id.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"

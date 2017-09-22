@@ -5,9 +5,9 @@
 #ifndef APPS_LEDGER_SRC_APP_SYNC_WATCHER_SET_H_
 #define APPS_LEDGER_SRC_APP_SYNC_WATCHER_SET_H_
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"

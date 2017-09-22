@@ -10,14 +10,14 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/firebase/event_stream.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/firebase/status.h"
-#include "apps/ledger/src/firebase/watch_client.h"
-#include "apps/ledger/src/glue/socket/socket_drainer_client.h"
-#include "apps/ledger/src/network/network_service.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/firebase/event_stream.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
+#include "peridot/bin/ledger/firebase/status.h"
+#include "peridot/bin/ledger/firebase/watch_client.h"
+#include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
+#include "peridot/bin/ledger/network/network_service.h"
 
 #include <rapidjson/document.h>
 

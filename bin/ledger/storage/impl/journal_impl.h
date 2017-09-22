@@ -5,18 +5,18 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_JOURNAL_IMPL_H_
 
-#include "apps/ledger/src/storage/public/journal.h"
+#include "peridot/bin/ledger/storage/public/journal.h"
 
 #include <functional>
 #include <memory>
 #include <string>
 #include <unordered_set>
 
-#include "apps/ledger/src/callback/operation_serializer.h"
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/callback/operation_serializer.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/macros.h"
 
 namespace storage {

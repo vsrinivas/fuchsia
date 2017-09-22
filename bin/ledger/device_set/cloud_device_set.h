@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/src/firebase/firebase.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
 
 namespace cloud_provider_firebase {
 

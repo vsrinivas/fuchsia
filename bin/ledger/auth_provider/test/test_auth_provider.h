@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
 #define APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
 
-#include "apps/ledger/src/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
 
 #include "lib/fxl/tasks/task_runner.h"
 

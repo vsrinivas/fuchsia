@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/commit_impl.h"
+#include "peridot/bin/ledger/storage/impl/commit_impl.h"
 
 #include <algorithm>
 #include <utility>
@@ -10,11 +10,11 @@
 #include <flatbuffers/flatbuffers.h>
 #include <sys/time.h>
 
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/storage/impl/btree/tree_node.h"
-#include "apps/ledger/src/storage/impl/commit_generated.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
+#include "peridot/bin/ledger/storage/impl/commit_generated.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "lib/fxl/build_config.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_counted.h"

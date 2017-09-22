@@ -8,12 +8,12 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/callback/operation_serializer.h"
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/callback/operation_serializer.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
+#include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 
 #include <algorithm>
 #include <iterator>
 
 #include <dirent.h>
 
-#include "apps/ledger/src/glue/crypto/base64.h"
-#include "apps/ledger/src/storage/impl/directory_reader.h"
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/glue/crypto/base64.h"
+#include "peridot/bin/ledger/storage/impl/directory_reader.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/make_copyable.h"

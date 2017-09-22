@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//apps/ledger/src/*",
-  "//apps/ledger/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
 ]
 
 source_set("test") {
@@ -18,7 +18,7 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/cloud_provider/public",
+    "//peridot/bin/ledger/cloud_provider/public",
   ]
 
   deps = [
@@ -26,5 +26,5 @@ source_set("test") {
     "//zircon/system/ulib/zx",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

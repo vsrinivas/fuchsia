@@ -8,14 +8,14 @@
 #include <memory>
 #include <unordered_set>
 
-#include "apps/ledger/src/cloud_sync/impl/aggregator.h"
-#include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
-#include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
-#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
-#include "apps/ledger/src/cloud_sync/public/user_config.h"
-#include "apps/ledger/src/environment/environment.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/network/network_service.h"
+#include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
+#include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
+#include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/cloud_sync/public/user_config.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
+#include "peridot/bin/ledger/network/network_service.h"
 
 namespace cloud_sync {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
+#include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -10,9 +10,9 @@
 
 #include <trace/event.h>
 
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/cloud_provider/public/commit.h"
-#include "apps/ledger/src/cloud_provider/public/types.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/cloud_provider/public/commit.h"
+#include "peridot/bin/ledger/cloud_provider/public/types.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 

@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_APP_PAGE_IMPL_H_
 #define APPS_LEDGER_SRC_APP_PAGE_IMPL_H_
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {

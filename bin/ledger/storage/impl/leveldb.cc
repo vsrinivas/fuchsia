@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/leveldb.h"
+#include "peridot/bin/ledger/storage/impl/leveldb.h"
 
 #include <utility>
 
 #include <trace/event.h>
 
-#include "apps/ledger/src/cobalt/cobalt.h"
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/object_impl.h"
+#include "peridot/bin/ledger/cobalt/cobalt.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
 

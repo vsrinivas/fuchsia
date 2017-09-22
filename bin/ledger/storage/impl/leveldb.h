@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_LEVELDB_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_LEVELDB_H_
 
-#include "apps/ledger/src/storage/impl/db.h"
+#include "peridot/bin/ledger/storage/impl/db.h"
 
 #include <utility>
 

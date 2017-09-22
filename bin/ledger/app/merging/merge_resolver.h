@@ -7,11 +7,11 @@
 
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/callback/scoped_task_runner.h"
-#include "apps/ledger/src/environment/environment.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/callback/scoped_task_runner.h"
+#include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

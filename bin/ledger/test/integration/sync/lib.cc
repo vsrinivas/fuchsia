@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/integration/sync/lib.h"
+#include "peridot/bin/ledger/test/integration/sync/lib.h"
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 

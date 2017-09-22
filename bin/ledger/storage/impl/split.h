@@ -7,8 +7,8 @@
 
 #include <unordered_set>
 
-#include "apps/ledger/src/storage/public/data_source.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 

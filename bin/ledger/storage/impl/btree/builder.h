@@ -8,10 +8,10 @@
 #include <memory>
 #include <unordered_set>
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/public/iterator.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/public/iterator.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 namespace btree {

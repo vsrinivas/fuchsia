@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/token_provider/service_account_token_provider.h"
+#include "peridot/bin/ledger/test/token_provider/service_account_token_provider.h"
 
 #include <openssl/bio.h>
 #include <openssl/digest.h>
@@ -14,8 +14,8 @@
 #include <rapidjson/writer.h>
 #include <time.h>
 
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/glue/crypto/base64.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/glue/crypto/base64.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/file.h"

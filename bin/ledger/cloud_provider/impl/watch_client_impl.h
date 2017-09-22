@@ -7,10 +7,10 @@
 
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
-#include "apps/ledger/src/cloud_provider/public/record.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/firebase/watch_client.h"
+#include "peridot/bin/ledger/cloud_provider/public/commit_watcher.h"
+#include "peridot/bin/ledger/cloud_provider/public/record.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
+#include "peridot/bin/ledger/firebase/watch_client.h"
 
 #include <rapidjson/document.h>
 

@@ -8,7 +8,7 @@
 #include <string>
 
 #include "lib/app/cpp/connect.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"

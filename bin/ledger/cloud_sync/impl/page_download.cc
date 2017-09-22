@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/page_download.h"
+#include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
-#include "apps/ledger/src/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "lib/fxl/strings/concatenate.h"
 
 namespace cloud_sync {

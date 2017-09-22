@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/benchmark/launch_benchmark.h"
+#include "peridot/bin/ledger/test/benchmark/launch_benchmark.h"
 
 #include <iostream>
 
-#include "apps/ledger/src/test/benchmark/put/put.h"
+#include "peridot/bin/ledger/test/benchmark/put/put.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"

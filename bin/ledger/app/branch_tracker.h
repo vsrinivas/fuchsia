@@ -7,13 +7,13 @@
 
 #include <memory>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/page_snapshot_impl.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/public/commit_watcher.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/page_snapshot_impl.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/public/commit_watcher.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {

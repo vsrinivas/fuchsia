@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//apps/ledger/src/*",
-  "//apps/ledger/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
 ]
 
 source_set("lib") {
@@ -25,9 +25,9 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/ledger/services/public",
-    "//apps/ledger/src/fidl_helpers",
-    "//apps/ledger/src/test/token_provider",
+    "//peridot/public/lib/ledger/fidl",
+    "//peridot/bin/ledger/fidl_helpers",
+    "//peridot/bin/ledger/test/token_provider",
     "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/fidl/cpp/bindings:serialization",
     "//garnet/public/lib/fxl",
@@ -36,15 +36,15 @@ source_set("lib") {
   ]
 
   deps = [
-    "//apps/ledger/services/internal",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/coroutine",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/coroutine",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("app_test") {
@@ -67,7 +67,7 @@ source_set("app_test") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("app_test_main") {
@@ -81,7 +81,7 @@ source_set("app_test_main") {
     ":app_test",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -95,7 +95,7 @@ source_set("unittests") {
     ":lib",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("ledger_instance_factory") {
@@ -108,17 +108,17 @@ source_set("ledger_instance_factory") {
 
   public_deps = [
     ":lib",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
-    "//apps/ledger/src/fidl_helpers",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
+    "//peridot/bin/ledger/fidl_helpers",
     "//garnet/public/lib/fxl",
   ]
 
   deps = [
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/convert",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/convert",
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

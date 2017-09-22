@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
+#include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 
 #include <memory>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
-#include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/cloud_provider/test/test_page_cloud_handler.h"
-#include "apps/ledger/src/cloud_sync/impl/constants.h"
-#include "apps/ledger/src/cloud_sync/impl/test/test_page_storage.h"
-#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/test/commit_empty_impl.h"
-#include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/cloud_provider/test/test_page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_storage.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"

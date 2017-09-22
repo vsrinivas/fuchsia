@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/page_db.h"
+#include "peridot/bin/ledger/storage/impl/page_db.h"
 
 #include <algorithm>
 #include <memory>
@@ -11,15 +11,15 @@
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/impl/commit_impl.h"
-#include "apps/ledger/src/storage/impl/commit_random_impl.h"
-#include "apps/ledger/src/storage/impl/journal_impl.h"
-#include "apps/ledger/src/storage/impl/page_db_impl.h"
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
-#include "apps/ledger/src/storage/impl/storage_test_utils.h"
-#include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/test/test_with_coroutines.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/impl/commit_impl.h"
+#include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
+#include "peridot/bin/ledger/storage/impl/journal_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_db_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
+#include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/test/test_with_coroutines.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"

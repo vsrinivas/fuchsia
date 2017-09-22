@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("impl") {
   sources = [
@@ -27,14 +27,14 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/backoff",
-    "//apps/ledger/src/cloud_provider/impl",
-    "//apps/ledger/src/cloud_provider/public",
-    "//apps/ledger/src/cloud_sync/public",
-    "//apps/ledger/src/device_set",
-    "//apps/ledger/src/environment",
-    "//apps/ledger/src/firebase",
-    "//apps/ledger/src/storage/public",
+    "//peridot/bin/ledger/backoff",
+    "//peridot/bin/ledger/cloud_provider/impl",
+    "//peridot/bin/ledger/cloud_provider/public",
+    "//peridot/bin/ledger/cloud_sync/public",
+    "//peridot/bin/ledger/device_set",
+    "//peridot/bin/ledger/environment",
+    "//peridot/bin/ledger/firebase",
+    "//peridot/bin/ledger/storage/public",
   ]
 
   deps = [
@@ -42,7 +42,7 @@ source_set("impl") {
     "//zircon/system/ulib/trace",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -60,21 +60,21 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//apps/ledger/src/auth_provider/test",
-    "//apps/ledger/src/backoff/test",
-    "//apps/ledger/src/cloud_provider/test",
-    "//apps/ledger/src/cloud_sync/impl/test",
-    "//apps/ledger/src/cloud_sync/test",
-    "//apps/ledger/src/device_set",
-    "//apps/ledger/src/device_set/test",
-    "//apps/ledger/src/network:fake",
-    "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/storage/test",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/auth_provider/test",
+    "//peridot/bin/ledger/backoff/test",
+    "//peridot/bin/ledger/cloud_provider/test",
+    "//peridot/bin/ledger/cloud_sync/impl/test",
+    "//peridot/bin/ledger/cloud_sync/test",
+    "//peridot/bin/ledger/device_set",
+    "//peridot/bin/ledger/device_set/test",
+    "//peridot/bin/ledger/network:fake",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/storage/test",
+    "//peridot/bin/ledger/test:lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

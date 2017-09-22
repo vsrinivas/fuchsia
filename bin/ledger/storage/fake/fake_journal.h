@@ -8,9 +8,9 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
-#include "apps/ledger/src/storage/public/journal.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
+#include "peridot/bin/ledger/storage/public/journal.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/macros.h"
 
 namespace storage {

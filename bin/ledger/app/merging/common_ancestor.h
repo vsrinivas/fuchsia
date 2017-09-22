@@ -8,8 +8,8 @@
 #include <functional>
 #include <memory>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/tasks/task_runner.h"
 

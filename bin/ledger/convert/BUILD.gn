@@ -5,8 +5,8 @@
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 visibility = [
-  "//apps/ledger/src/*",
-  "//apps/ledger/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
 ]
 
 source_set("convert") {
@@ -27,7 +27,7 @@ source_set("convert") {
     "//third_party/rapidjson",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 flatbuffer("byte_storage") {
@@ -35,7 +35,7 @@ flatbuffer("byte_storage") {
     "bytes.fbs",
   ]
 
-  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 flatbuffer("byte_storage_test") {
@@ -49,7 +49,7 @@ flatbuffer("byte_storage_test") {
     ":byte_storage",
   ]
 
-  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -66,5 +66,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

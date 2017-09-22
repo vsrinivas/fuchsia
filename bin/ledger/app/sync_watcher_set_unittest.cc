@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/sync_watcher_set.h"
+#include "peridot/bin/ledger/app/sync_watcher_set.h"
 
 #include <algorithm>
 #include <string>
 
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"

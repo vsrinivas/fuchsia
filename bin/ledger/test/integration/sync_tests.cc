@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/test/integration/integration_test.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/test/integration/integration_test.h"
 #include "lib/fsl/vmo/strings.h"
 
 namespace test {

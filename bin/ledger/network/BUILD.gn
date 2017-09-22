@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//apps/ledger/src/*",
-  "//apps/ledger/cloud_provider_firebase/*",
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
 ]
 
 source_set("network") {
@@ -17,14 +17,14 @@ source_set("network") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/backoff",
-    "//apps/ledger/src/callback",
+    "//peridot/bin/ledger/backoff",
+    "//peridot/bin/ledger/callback",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
     "//zircon/system/ulib/zx",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("fake") {
@@ -44,7 +44,7 @@ source_set("fake") {
     "//garnet/public/lib/fsl",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -56,11 +56,11 @@ source_set("unittests") {
 
   deps = [
     ":network",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/test:lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/netstack/fidl:net_address",
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

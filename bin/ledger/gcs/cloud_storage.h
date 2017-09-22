@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/src/gcs/status.h"
+#include "peridot/bin/ledger/gcs/status.h"
 #include "lib/fxl/macros.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/auto_merge_strategy.h"
+#include "peridot/bin/ledger/app/merging/auto_merge_strategy.h"
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/app/merging/conflict_resolver_client.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/app/page_utils.h"
+#include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_utils.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"

@@ -7,10 +7,10 @@
 
 #include <memory>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/merging/merge_resolver.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/merging/merge_resolver.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {
 class PageManager;

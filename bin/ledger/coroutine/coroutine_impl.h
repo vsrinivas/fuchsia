@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/coroutine/coroutine.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "lib/fxl/macros.h"
 
 namespace context {

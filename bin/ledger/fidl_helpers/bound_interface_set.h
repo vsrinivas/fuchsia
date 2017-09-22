@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_FIDL_HELPERS_BOUND_INTERFACE_SET_H_
 #define APPS_LEDGER_SRC_FIDL_HELPERS_BOUND_INTERFACE_SET_H_
 
-#include "apps/ledger/src/fidl_helpers/boundable.h"
+#include "peridot/bin/ledger/fidl_helpers/boundable.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 

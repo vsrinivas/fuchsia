@@ -44,7 +44,7 @@ fidl("private") {
   ]
 
   deps = [
-    "//apps/ledger/services/internal",
+    "//peridot/bin/ledger/fidl",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/auth/fidl/account",
     "//peridot/public/lib/config/fidl",

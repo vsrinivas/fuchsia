@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/leveldb.h"
-#include "apps/ledger/src/storage/impl/page_db.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/impl/leveldb.h"
+#include "peridot/bin/ledger/storage/impl/page_db.h"
 #include "lib/fxl/functional/auto_call.h"
 
 namespace storage {

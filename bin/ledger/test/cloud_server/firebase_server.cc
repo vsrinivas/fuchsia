@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/cloud_server/firebase_server.h"
+#include "peridot/bin/ledger/test/cloud_server/firebase_server.h"
 
 #include <algorithm>
 #include <deque>
@@ -15,10 +15,10 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/glue/socket/socket_pair.h"
-#include "apps/ledger/src/glue/socket/socket_writer.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/glue/socket/socket_writer.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"

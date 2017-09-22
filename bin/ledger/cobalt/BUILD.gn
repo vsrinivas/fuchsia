@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("cobalt") {
   sources = [
@@ -17,9 +17,9 @@ source_set("cobalt") {
 
   deps = [
     "//garnet/public/lib/cobalt/fidl",
-    "//apps/ledger/src/backoff",
-    "//apps/ledger/src/callback",
+    "//peridot/bin/ledger/backoff",
+    "//peridot/bin/ledger/callback",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

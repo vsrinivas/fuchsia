@@ -5,12 +5,12 @@
 #ifndef APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_FACTORY_IMPL_H_
 #define APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_FACTORY_IMPL_H_
 
-#include "apps/ledger/cloud_provider_firebase/cloud_provider_impl.h"
-#include "apps/ledger/cloud_provider_firebase/services/factory.fidl.h"
-#include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/network/network_service.h"
+#include "peridot/bin/cloud_provider_firebase/cloud_provider_impl.h"
+#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/network/network_service.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

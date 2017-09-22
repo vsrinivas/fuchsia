@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/common_ancestor.h"
+#include "peridot/bin/ledger/app/merging/common_ancestor.h"
 
 #include <utility>
 
-#include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/callback/waiter.h"
+#include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/callback/waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 

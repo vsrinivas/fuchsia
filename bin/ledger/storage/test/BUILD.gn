@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("test") {
   testonly = true
@@ -15,17 +15,17 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/storage/public",
+    "//peridot/bin/ledger/storage/public",
   ]
 
   deps = [
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/glue/socket",
-    "//apps/ledger/src/storage/impl/btree:lib",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/glue/socket",
+    "//peridot/bin/ledger/storage/impl/btree:lib",
+    "//peridot/bin/ledger/test:lib",
     "//garnet/public/lib/fxl",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

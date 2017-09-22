@@ -5,10 +5,10 @@
 #ifndef APPS_LEDGER_SRC_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define APPS_LEDGER_SRC_NETWORK_NETWORK_SERVICE_IMPL_H_
 
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/callback/scoped_task_runner.h"
-#include "apps/ledger/src/network/network_service.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/scoped_task_runner.h"
+#include "peridot/bin/ledger/network/network_service.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
 

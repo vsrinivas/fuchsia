@@ -8,8 +8,8 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/test/commit_empty_impl.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 
 namespace cloud_sync {
 namespace test {

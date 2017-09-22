@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_PUBLIC_ITERATOR_H_
 #define APPS_LEDGER_SRC_STORAGE_PUBLIC_ITERATOR_H_
 
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/macros.h"
 
 namespace storage {

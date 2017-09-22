@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/cloud_provider/test/page_cloud_handler_empty_impl.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_provider/test/page_cloud_handler_empty_impl.h"
 #include "garnet/public/lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/macros.h"
 

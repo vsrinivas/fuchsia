@@ -8,14 +8,14 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/src/app/erase_remote_repository_operation.h"
-#include "apps/ledger/src/app/ledger_repository_impl.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/callback/managed_container.h"
-#include "apps/ledger/src/cloud_sync/public/user_config.h"
-#include "apps/ledger/src/environment/environment.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
+#include "peridot/bin/ledger/app/ledger_repository_impl.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/callback/managed_container.h"
+#include "peridot/bin/ledger/cloud_sync/public/user_config.h"
+#include "peridot/bin/ledger/environment/environment.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/macros.h"
 

@@ -9,8 +9,8 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/callback/destruction_sentinel.h"
-#include "apps/ledger/src/firebase/status.h"
+#include "peridot/bin/ledger/callback/destruction_sentinel.h"
+#include "peridot/bin/ledger/firebase/status.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"

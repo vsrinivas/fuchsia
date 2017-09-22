@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("test") {
   testonly = true
@@ -15,11 +15,11 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/cloud_provider/impl",
-    "//apps/ledger/src/cloud_provider/public",
-    "//apps/ledger/src/cloud_sync/public",
-    "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/storage/test",
+    "//peridot/bin/ledger/cloud_provider/impl",
+    "//peridot/bin/ledger/cloud_provider/public",
+    "//peridot/bin/ledger/cloud_sync/public",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/storage/test",
   ]
 
   deps = [
@@ -27,5 +27,5 @@ source_set("test") {
     "//zircon/system/ulib/trace",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

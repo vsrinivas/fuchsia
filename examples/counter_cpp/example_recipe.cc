@@ -6,7 +6,7 @@
 // creates other Modules in the story.
 
 #include "lib/app/cpp/connect.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/examples/counter_cpp/calculator.fidl.h"
 #include "peridot/examples/counter_cpp/store.h"
 #include "peridot/lib/fidl/array_to_string.h"

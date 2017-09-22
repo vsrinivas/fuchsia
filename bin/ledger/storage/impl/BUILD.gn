@@ -4,12 +4,12 @@
 
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 group("impl") {
   deps = [
     ":lib",
-    "//apps/ledger/src/storage/impl/btree",
+    "//peridot/bin/ledger/storage/impl/btree",
   ]
 }
 
@@ -19,10 +19,10 @@ flatbuffer("commit_storage") {
   ]
 
   deps = [
-    "//apps/ledger/src/convert:byte_storage",
+    "//peridot/bin/ledger/convert:byte_storage",
   ]
 
-  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 flatbuffer("file_index") {
@@ -30,7 +30,7 @@ flatbuffer("file_index") {
     "file_index.fbs",
   ]
 
-  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("lib") {
@@ -70,24 +70,24 @@ source_set("lib") {
   deps = [
     ":commit_storage",
     ":file_index",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/cobalt",
-    "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/storage/impl/btree:lib",
-    "//apps/ledger/src/storage/public",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/cobalt",
+    "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/storage/impl/btree:lib",
+    "//peridot/bin/ledger/storage/public",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//zircon/system/ulib/trace",
   ]
 
   public_deps = [
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/coroutine",
-    "//apps/ledger/src/third_party/bup",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/coroutine",
+    "//peridot/bin/ledger/third_party/bup",
     "//third_party/leveldb",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("test_utils") {
@@ -100,14 +100,14 @@ source_set("test_utils") {
 
   deps = [
     ":lib",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/glue/crypto",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/glue/crypto",
   ]
 
   public_deps = [
-    "//apps/ledger/src/storage/impl/btree:lib",
-    "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/storage/impl/btree:lib",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/test:lib",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
   ]
@@ -135,17 +135,17 @@ source_set("unittests") {
     ":file_index",
     ":lib",
     ":test_utils",
-    "//apps/ledger/src/cloud_sync/impl",
-    "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/storage/fake:lib",
-    "//apps/ledger/src/storage/impl/btree:lib",
-    "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/storage/test",
-    "//apps/ledger/src/test:lib",
+    "//peridot/bin/ledger/cloud_sync/impl",
+    "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/storage/fake:lib",
+    "//peridot/bin/ledger/storage/impl/btree:lib",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/storage/test",
+    "//peridot/bin/ledger/test:lib",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

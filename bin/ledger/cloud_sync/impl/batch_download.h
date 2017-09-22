@@ -5,8 +5,8 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
-#include "apps/ledger/src/cloud_provider/public/record.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/cloud_provider/public/record.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

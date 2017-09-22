@@ -5,8 +5,8 @@
 [DartPackage="cloud_provider_firebase"]
 module cloud_provider_firebase;
 
-import "apps/ledger/services/public/ledger.fidl";
-import "apps/ledger/services/cloud_provider/cloud_provider.fidl";
+import "lib/ledger/fidl/ledger.fidl";
+import "lib/cloud_provider/fidl/cloud_provider.fidl";
 import "lib/auth/fidl/token_provider.fidl";
 
 // Configuration to use when connecting to the Firebase server.

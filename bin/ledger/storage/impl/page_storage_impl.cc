@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -18,21 +18,21 @@
 
 #include <trace/event.h>
 
-#include "apps/ledger/src/callback/trace_callback.h"
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/cobalt/cobalt.h"
-#include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/storage/impl/btree/diff.h"
-#include "apps/ledger/src/storage/impl/btree/iterator.h"
-#include "apps/ledger/src/storage/impl/commit_impl.h"
-#include "apps/ledger/src/storage/impl/constants.h"
-#include "apps/ledger/src/storage/impl/file_index.h"
-#include "apps/ledger/src/storage/impl/file_index_generated.h"
-#include "apps/ledger/src/storage/impl/journal_impl.h"
-#include "apps/ledger/src/storage/impl/object_id.h"
-#include "apps/ledger/src/storage/impl/object_impl.h"
-#include "apps/ledger/src/storage/impl/split.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/callback/trace_callback.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/cobalt/cobalt.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/storage/impl/btree/diff.h"
+#include "peridot/bin/ledger/storage/impl/btree/iterator.h"
+#include "peridot/bin/ledger/storage/impl/commit_impl.h"
+#include "peridot/bin/ledger/storage/impl/constants.h"
+#include "peridot/bin/ledger/storage/impl/file_index.h"
+#include "peridot/bin/ledger/storage/impl/file_index_generated.h"
+#include "peridot/bin/ledger/storage/impl/journal_impl.h"
+#include "peridot/bin/ledger/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/impl/object_impl.h"
+#include "peridot/bin/ledger/storage/impl/split.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"

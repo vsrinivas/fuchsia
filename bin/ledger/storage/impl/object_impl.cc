@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/object_impl.h"
+#include "peridot/bin/ledger/storage/impl/object_impl.h"
 
 #include <utility>
 

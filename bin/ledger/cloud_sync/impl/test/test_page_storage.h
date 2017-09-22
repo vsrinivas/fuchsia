@@ -10,10 +10,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/cloud_sync/impl/test/test_commit.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/cloud_sync/impl/test/test_commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"

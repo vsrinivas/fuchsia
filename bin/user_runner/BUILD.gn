@@ -25,8 +25,8 @@ executable("user_runner") {
   deps = [
     ":focus",
     "//garnet/public/lib/app/cpp",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/resolver/fidl",
     "//peridot/public/lib/suggestion/fidl",
@@ -93,7 +93,7 @@ source_set("focus") {
   ]
 
   deps = [
-    "//apps/ledger/services/public",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:operation",

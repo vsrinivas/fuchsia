@@ -9,7 +9,7 @@
 #include <rapidjson/document.h>
 #include <string>
 
-#include "apps/ledger/src/convert/bytes_generated.h"
+#include "peridot/bin/ledger/convert/bytes_generated.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"

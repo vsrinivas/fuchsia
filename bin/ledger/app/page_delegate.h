@@ -10,16 +10,16 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/branch_tracker.h"
-#include "apps/ledger/src/app/page_impl.h"
-#include "apps/ledger/src/app/sync_watcher_set.h"
-#include "apps/ledger/src/callback/operation_serializer.h"
-#include "apps/ledger/src/fidl_helpers/bound_interface.h"
-#include "apps/ledger/src/storage/public/data_source.h"
-#include "apps/ledger/src/storage/public/journal.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/branch_tracker.h"
+#include "peridot/bin/ledger/app/page_impl.h"
+#include "peridot/bin/ledger/app/sync_watcher_set.h"
+#include "peridot/bin/ledger/callback/operation_serializer.h"
+#include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
+#include "peridot/bin/ledger/storage/public/journal.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 

@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/commit.h"
-#include "apps/ledger/src/cloud_provider/public/record.h"
+#include "peridot/bin/ledger/cloud_provider/public/commit.h"
+#include "peridot/bin/ledger/cloud_provider/public/record.h"
 #include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {

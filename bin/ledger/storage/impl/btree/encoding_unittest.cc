@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/btree/encoding.h"
+#include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 
-#include "apps/ledger/src/storage/impl/btree/tree_node_generated.h"
-#include "apps/ledger/src/storage/impl/storage_test_utils.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
+#include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 

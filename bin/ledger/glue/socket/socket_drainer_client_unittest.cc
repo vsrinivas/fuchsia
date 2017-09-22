@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/glue/socket/socket_drainer_client.h"
+#include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
 
-#include "apps/ledger/src/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 

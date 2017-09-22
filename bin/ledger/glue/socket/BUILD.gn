@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("socket") {
   sources = [
@@ -14,12 +14,12 @@ source_set("socket") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/callback",
+    "//peridot/bin/ledger/callback",
     "//garnet/public/lib/fidl/c/waiter",
     "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/fsl",
     "//zircon/system/ulib/zx",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/impl/object_id.h"
 
-#include "apps/ledger/src/glue/crypto/hash.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "gtest/gtest.h"
 
 namespace storage {

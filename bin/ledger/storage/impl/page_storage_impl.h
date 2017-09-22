@@ -5,16 +5,16 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_STORAGE_IMPL_H_
 
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 
 #include <queue>
 #include <set>
 
-#include "apps/ledger/src/callback/managed_container.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/page_db_impl.h"
-#include "apps/ledger/src/storage/public/page_sync_delegate.h"
+#include "peridot/bin/ledger/callback/managed_container.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/impl/page_db_impl.h"
+#include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/tasks/task_runner.h"

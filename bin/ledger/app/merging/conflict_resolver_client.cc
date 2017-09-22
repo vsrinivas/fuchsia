@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/conflict_resolver_client.h"
+#include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
 
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/app/diff_utils.h"
-#include "apps/ledger/src/app/fidl/serialization_size.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/callback/waiter.h"
+#include "peridot/bin/ledger/app/diff_utils.h"
+#include "peridot/bin/ledger/app/fidl/serialization_size.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"

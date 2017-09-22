@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/glue/crypto/hmac.h"
+#include "peridot/bin/ledger/glue/crypto/hmac.h"
 
 #include <gtest/gtest.h>
 
-#include "apps/ledger/src/glue/crypto/crypto_test_util.h"
+#include "peridot/bin/ledger/glue/crypto/crypto_test_util.h"
 
 namespace glue {
 namespace {

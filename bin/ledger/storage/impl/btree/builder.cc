@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/btree/builder.h"
+#include "peridot/bin/ledger/storage/impl/btree/builder.h"
 
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/storage/impl/btree/internal_helper.h"
-#include "apps/ledger/src/storage/impl/btree/synchronous_storage.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
+#include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "third_party/murmurhash/murmurhash.h"

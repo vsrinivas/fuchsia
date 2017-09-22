@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/tool/inspect_command.h"
+#include "peridot/bin/ledger/tool/inspect_command.h"
 
 #include <fcntl.h>
 
@@ -15,8 +15,8 @@
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/tool/convert.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/tool/convert.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/eintr_wrapper.h"

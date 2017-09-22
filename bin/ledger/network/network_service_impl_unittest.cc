@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/network/network_service_impl.h"
+#include "peridot/bin/ledger/network/network_service_impl.h"
 
 #include <memory>
 #include <utility>
@@ -10,7 +10,7 @@
 
 #include <zx/socket.h>
 
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/socket/strings.h"

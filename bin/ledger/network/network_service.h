@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_NETWORK_NETWORK_SERVICE_H_
 #define APPS_LEDGER_SRC_NETWORK_NETWORK_SERVICE_H_
 
-#include "apps/ledger/src/callback/cancellable.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/url_request.fidl.h"

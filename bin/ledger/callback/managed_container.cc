@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/callback/managed_container.h"
+#include "peridot/bin/ledger/callback/managed_container.h"
 
 #include <algorithm>
 
-#include "apps/ledger/src/callback/scoped_callback.h"
+#include "peridot/bin/ledger/callback/scoped_callback.h"
 
 namespace callback {
 

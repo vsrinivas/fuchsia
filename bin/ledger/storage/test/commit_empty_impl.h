@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
 
 namespace storage {
 namespace test {

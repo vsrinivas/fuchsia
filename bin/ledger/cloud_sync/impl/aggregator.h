@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "lib/fxl/macros.h"
 
 namespace cloud_sync {

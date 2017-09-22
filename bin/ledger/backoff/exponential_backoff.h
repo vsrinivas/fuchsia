@@ -7,8 +7,8 @@
 
 #include <random>
 
-#include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
 
 namespace backoff {
 

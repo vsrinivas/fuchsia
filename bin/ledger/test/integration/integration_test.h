@@ -8,11 +8,11 @@
 #include <functional>
 #include <thread>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/test/cloud_server/fake_cloud_network_service.h"
-#include "apps/ledger/src/test/ledger_app_instance_factory.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/test/cloud_server/fake_cloud_network_service.h"
+#include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 

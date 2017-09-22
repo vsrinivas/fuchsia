@@ -9,10 +9,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/object.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/object.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 namespace btree {

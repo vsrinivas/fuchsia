@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/fidl/serialization_size.h"
+#include "peridot/bin/ledger/app/fidl/serialization_size.h"
 
 namespace ledger {
 namespace fidl_serialization {

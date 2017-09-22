@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
+#include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 
 #include <memory>
 
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"

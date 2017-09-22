@@ -5,11 +5,11 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_OBJECT_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_OBJECT_IMPL_H_
 
-#include "apps/ledger/src/storage/public/object.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/object.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "zx/vmar.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"
 

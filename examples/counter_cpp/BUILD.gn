@@ -58,7 +58,7 @@ executable("example_recipe") {
 
   deps = [
     ":calculator",
-    "//apps/ledger/services/public",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",

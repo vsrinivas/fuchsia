@@ -7,13 +7,13 @@
 
 #include <memory>
 
-#include "apps/ledger/src/coroutine/context/stack.h"
+#include "peridot/bin/ledger/coroutine/context/stack.h"
 #include "lib/fxl/build_config.h"
 
 #if defined(ARCH_CPU_X86_64)
-#include "apps/ledger/src/coroutine/context/x64/context.h"
+#include "peridot/bin/ledger/coroutine/context/x64/context.h"
 #elif defined(ARCH_CPU_ARM64)
-#include "apps/ledger/src/coroutine/context/arm64/context.h"
+#include "peridot/bin/ledger/coroutine/context/arm64/context.h"
 #else
 #error Please add support for your architecture.
 #endif

@@ -8,9 +8,9 @@
 #include <functional>
 #include <vector>
 
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/gcs/cloud_storage.h"
-#include "apps/ledger/src/network/network_service.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/gcs/cloud_storage.h"
+#include "peridot/bin/ledger/network/network_service.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"

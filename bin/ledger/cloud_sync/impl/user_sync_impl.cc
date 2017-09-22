@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
+#include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
 
 #include <utility>
 
-#include "apps/ledger/src/cloud_provider/impl/paths.h"
-#include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/firebase/firebase_impl.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
+#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
+#include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/firebase/firebase_impl.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
+#include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_provider/impl/page_cloud_handler_impl.h"
-#include "apps/ledger/src/cloud_provider/impl/paths.h"
-#include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
-#include "apps/ledger/src/firebase/encoding.h"
-#include "apps/ledger/src/firebase/firebase_impl.h"
-#include "apps/ledger/src/gcs/cloud_storage_impl.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/cloud_provider/impl/page_cloud_handler_impl.h"
+#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
+#include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
+#include "peridot/bin/ledger/firebase/encoding.h"
+#include "peridot/bin/ledger/firebase/firebase_impl.h"
+#include "peridot/bin/ledger/gcs/cloud_storage_impl.h"
 
 namespace cloud_sync {
 

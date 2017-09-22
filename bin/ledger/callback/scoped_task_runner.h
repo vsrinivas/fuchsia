@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_CALLBACK_SCOPED_TASK_RUNNER_H_
 #define APPS_LEDGER_SRC_CALLBACK_SCOPED_TASK_RUNNER_H_
 
-#include "apps/ledger/src/callback/scoped_callback.h"
+#include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"

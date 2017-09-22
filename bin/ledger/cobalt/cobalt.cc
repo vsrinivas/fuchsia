@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cobalt/cobalt.h"
+#include "peridot/bin/ledger/cobalt/cobalt.h"
 
 #include <set>
 
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/callback/waiter.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/callback/waiter.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"

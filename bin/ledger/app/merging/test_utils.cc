@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/test_utils.h"
+#include "peridot/bin/ledger/app/merging/test_utils.h"
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 

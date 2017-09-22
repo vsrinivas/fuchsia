@@ -6,12 +6,12 @@
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/types.h"
-#include "apps/ledger/src/test/integration/integration_test.h"
-#include "apps/ledger/src/test/integration/test_utils.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/bin/ledger/test/integration/integration_test.h"
+#include "peridot/bin/ledger/test/integration/test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/data_generator.h"
+#include "peridot/bin/ledger/test/data_generator.h"
 
 #include <algorithm>
 #include <functional>
 #include <string>
 
-#include "apps/ledger/src/convert/convert.h"
+#include "peridot/bin/ledger/convert/convert.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/concatenate.h"

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/ledger/ledger_client.h"
 #include "peridot/lib/ledger/page_client.h"

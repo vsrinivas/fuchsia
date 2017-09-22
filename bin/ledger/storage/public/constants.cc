@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 
-#include "apps/ledger/src/convert/convert.h"
+#include "peridot/bin/ledger/convert/convert.h"
 
 namespace storage {
 

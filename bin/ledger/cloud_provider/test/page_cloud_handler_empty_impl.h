@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

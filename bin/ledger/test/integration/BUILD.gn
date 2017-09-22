@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 executable("integration") {
   output_name = "ledger_integration_tests"
@@ -25,19 +25,19 @@ executable("integration") {
   ]
 
   deps = [
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
-    "//apps/ledger/src/app:lib",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/glue/socket",
-    "//apps/ledger/src/network:fake",
-    "//apps/ledger/src/storage/fake:lib",
-    "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/test:ledger_instance_factory",
-    "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test/cloud_server",
-    "//apps/ledger/src/test/integration/sync",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
+    "//peridot/bin/ledger/app:lib",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/glue/socket",
+    "//peridot/bin/ledger/network:fake",
+    "//peridot/bin/ledger/storage/fake:lib",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/test:ledger_instance_factory",
+    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/test/cloud_server",
+    "//peridot/bin/ledger/test/integration/sync",
     "//peridot/public/lib/auth/fidl",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/fidl/cpp/bindings",
@@ -45,5 +45,5 @@ executable("integration") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

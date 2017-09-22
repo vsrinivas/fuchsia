@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/ledger_manager.h"
+#include "peridot/bin/ledger/app/ledger_manager.h"
 
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/fake/fake_page_storage.h"
-#include "apps/ledger/src/storage/public/ledger_storage.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
+#include "peridot/bin/ledger/storage/public/ledger_storage.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/test/integration/sync/lib.h"
+#include "peridot/bin/ledger/test/integration/sync/lib.h"
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/callback/auto_cleanable.h"
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/types.h"
-#include "apps/ledger/src/test/data_generator.h"
-#include "apps/ledger/src/test/get_ledger.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/bin/ledger/test/data_generator.h"
+#include "peridot/bin/ledger/test/get_ledger.h"
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"

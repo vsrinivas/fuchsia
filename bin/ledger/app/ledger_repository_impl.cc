@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/ledger_repository_impl.h"
+#include "peridot/bin/ledger/app/ledger_repository_impl.h"
 
 #include <trace/event.h>
 
-#include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
+#include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
 
 namespace ledger {
 

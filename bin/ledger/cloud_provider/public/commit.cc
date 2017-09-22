@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/public/commit.h"
+#include "peridot/bin/ledger/cloud_provider/public/commit.h"
 
 #include <utility>
 

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/ledger_merge_manager.h"
+#include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
 
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/app/merging/auto_merge_strategy.h"
-#include "apps/ledger/src/app/merging/custom_merge_strategy.h"
-#include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
-#include "apps/ledger/src/app/merging/merge_resolver.h"
-#include "apps/ledger/src/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/app/merging/auto_merge_strategy.h"
+#include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
+#include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
+#include "peridot/bin/ledger/app/merging/merge_resolver.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
 
 namespace ledger {
 LedgerMergeManager::LedgerMergeManager(Environment* environment)

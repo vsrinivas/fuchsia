@@ -5,9 +5,9 @@
 #ifndef _APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_BATCH_IMPL_H_
 #define _APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_BATCH_IMPL_H_
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/db.h"
-#include "apps/ledger/src/storage/impl/page_db.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/impl/db.h"
+#include "peridot/bin/ledger/storage/impl/page_db.h"
 
 namespace storage {
 

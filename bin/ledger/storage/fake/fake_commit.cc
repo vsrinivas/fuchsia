@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/fake/fake_commit.h"
+#include "peridot/bin/ledger/storage/fake/fake_commit.h"
 
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/iterator.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/iterator.h"
 
 namespace storage {
 namespace fake {

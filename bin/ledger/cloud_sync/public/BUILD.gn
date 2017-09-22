@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("public") {
   sources = [
@@ -15,14 +15,14 @@ source_set("public") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/auth_provider",
-    "//apps/ledger/src/cloud_provider/public",
-    "//apps/ledger/src/device_set",
-    "//apps/ledger/src/firebase",
-    "//apps/ledger/src/gcs",
-    "//apps/ledger/src/storage/public",
+    "//peridot/bin/ledger/auth_provider",
+    "//peridot/bin/ledger/cloud_provider/public",
+    "//peridot/bin/ledger/device_set",
+    "//peridot/bin/ledger/firebase",
+    "//peridot/bin/ledger/gcs",
+    "//peridot/bin/ledger/storage/public",
     "//garnet/public/lib/fxl",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

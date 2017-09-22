@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/page_storage_impl.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 
 #include <dirent.h>
 
@@ -10,25 +10,25 @@
 #include <memory>
 #include <thread>
 
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/callback/synchronous_task.h"
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/impl/btree/encoding.h"
-#include "apps/ledger/src/storage/impl/btree/tree_node.h"
-#include "apps/ledger/src/storage/impl/commit_impl.h"
-#include "apps/ledger/src/storage/impl/commit_random_impl.h"
-#include "apps/ledger/src/storage/impl/constants.h"
-#include "apps/ledger/src/storage/impl/directory_reader.h"
-#include "apps/ledger/src/storage/impl/journal_impl.h"
-#include "apps/ledger/src/storage/impl/object_id.h"
-#include "apps/ledger/src/storage/impl/page_db_empty_impl.h"
-#include "apps/ledger/src/storage/impl/split.h"
-#include "apps/ledger/src/storage/impl/storage_test_utils.h"
-#include "apps/ledger/src/storage/public/commit_watcher.h"
-#include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/callback/synchronous_task.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/impl/btree/encoding.h"
+#include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
+#include "peridot/bin/ledger/storage/impl/commit_impl.h"
+#include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
+#include "peridot/bin/ledger/storage/impl/constants.h"
+#include "peridot/bin/ledger/storage/impl/directory_reader.h"
+#include "peridot/bin/ledger/storage/impl/journal_impl.h"
+#include "peridot/bin/ledger/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/impl/page_db_empty_impl.h"
+#include "peridot/bin/ledger/storage/impl/split.h"
+#include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
+#include "peridot/bin/ledger/storage/public/commit_watcher.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"

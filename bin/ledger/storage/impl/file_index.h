@@ -5,9 +5,9 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_FILE_INDEX_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_FILE_INDEX_H_
 
-#include "apps/ledger/src/storage/impl/file_index_generated.h"
-#include "apps/ledger/src/storage/public/data_source.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/impl/file_index_generated.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace storage {

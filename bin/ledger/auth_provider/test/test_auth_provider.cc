@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
 
 #include <utility>
 
-#include "apps/ledger/src/callback/cancellable_helper.h"
+#include "peridot/bin/ledger/callback/cancellable_helper.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace auth_provider {

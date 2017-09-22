@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/impl/paths.h"
+#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
 
 #include <string>
 
-#include "apps/ledger/src/firebase/encoding.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/firebase/encoding.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "lib/fxl/strings/concatenate.h"
 
 namespace cloud_provider_firebase {

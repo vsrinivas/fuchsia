@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 group("convergence") {
   testonly = true
@@ -17,12 +17,12 @@ executable("ledger_benchmark_convergence") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test/benchmark/lib",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/test/benchmark/lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/erase_remote_repository_operation.h"
+#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 
 #include <utility>
 
-#include "apps/ledger/src/auth_provider/auth_provider_impl.h"
-#include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_provider/impl/paths.h"
-#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider_impl.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 
 namespace ledger {
 

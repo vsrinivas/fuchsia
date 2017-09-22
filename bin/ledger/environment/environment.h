@@ -7,8 +7,8 @@
 
 #include <thread>
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/network/network_service.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/network/network_service.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"

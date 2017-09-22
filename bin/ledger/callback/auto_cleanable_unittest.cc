@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "gtest/gtest.h"
 
 namespace callback {

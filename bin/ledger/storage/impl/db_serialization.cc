@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/db_serialization.h"
+#include "peridot/bin/ledger/storage/impl/db_serialization.h"
 
-#include "apps/ledger/src/glue/crypto/rand.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
 

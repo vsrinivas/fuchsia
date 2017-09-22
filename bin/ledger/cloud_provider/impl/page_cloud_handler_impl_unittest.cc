@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/impl/page_cloud_handler_impl.h"
+#include "peridot/bin/ledger/cloud_provider/impl/page_cloud_handler_impl.h"
 
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/callback/capture.h"
-#include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
-#include "apps/ledger/src/firebase/encoding.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/firebase/status.h"
-#include "apps/ledger/src/gcs/cloud_storage.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
+#include "peridot/bin/ledger/firebase/encoding.h"
+#include "peridot/bin/ledger/firebase/firebase.h"
+#include "peridot/bin/ledger/firebase/status.h"
+#include "peridot/bin/ledger/gcs/cloud_storage.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"

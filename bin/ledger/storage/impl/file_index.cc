@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/file_index.h"
+#include "peridot/bin/ledger/storage/impl/file_index.h"
 
 namespace storage {
 

@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/fake/fake_page_storage.h"
+#include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/fake/fake_commit.h"
-#include "apps/ledger/src/storage/fake/fake_journal.h"
-#include "apps/ledger/src/storage/public/constants.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/fake/fake_commit.h"
+#include "peridot/bin/ledger/storage/fake/fake_journal.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"

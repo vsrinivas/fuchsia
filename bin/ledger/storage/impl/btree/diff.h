@@ -7,9 +7,9 @@
 
 #include <functional>
 
-#include "apps/ledger/src/coroutine/coroutine.h"
-#include "apps/ledger/src/storage/impl/btree/tree_node.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 namespace btree {

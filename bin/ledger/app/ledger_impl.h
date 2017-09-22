@@ -7,10 +7,10 @@
 
 #include <memory>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/ledger_storage.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 

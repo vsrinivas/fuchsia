@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/impl/split.h"
+#include "peridot/bin/ledger/storage/impl/split.h"
 
 #include <string.h>
 
-#include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/ledger/src/storage/impl/constants.h"
-#include "apps/ledger/src/storage/impl/file_index.h"
-#include "apps/ledger/src/storage/impl/file_index_generated.h"
-#include "apps/ledger/src/storage/impl/object_id.h"
-#include "apps/ledger/src/storage/public/data_source.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/impl/constants.h"
+#include "peridot/bin/ledger/storage/impl/file_index.h"
+#include "peridot/bin/ledger/storage/impl/file_index_generated.h"
+#include "peridot/bin/ledger/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 

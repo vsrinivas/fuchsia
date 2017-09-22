@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("coroutine") {
   sources = [
@@ -12,15 +12,15 @@ source_set("coroutine") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/callback",
+    "//peridot/bin/ledger/callback",
     "//garnet/public/lib/fxl",
   ]
 
   deps = [
-    "//apps/ledger/src/coroutine/context",
+    "//peridot/bin/ledger/coroutine/context",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -36,5 +36,5 @@ source_set("unittests") {
     "//third_party/gtest",
   ]
 
-  configs += [ "//apps/ledger/src:ledger_config" ]
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }

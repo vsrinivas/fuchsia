@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_manager.h"
 
 #include <algorithm>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/logging.h"
 
 namespace ledger {

@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/ledger/src/callback/capture.h"
+#include "peridot/bin/ledger/callback/capture.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 

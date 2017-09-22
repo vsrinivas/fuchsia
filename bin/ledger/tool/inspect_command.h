@@ -7,11 +7,11 @@
 
 #include <memory>
 
-#include "apps/ledger/src/cloud_sync/public/user_config.h"
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/tool/command.h"
+#include "peridot/bin/ledger/cloud_sync/public/user_config.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/tool/command.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace tool {

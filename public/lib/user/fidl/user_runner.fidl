@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/ledger/services/internal/internal.fidl";
+import "peridot/bin/ledger/fidl/internal.fidl";
 import "lib/auth/fidl/account_provider.fidl";
 import "lib/auth/fidl/account/account.fidl";
 import "lib/config/fidl/config.fidl";

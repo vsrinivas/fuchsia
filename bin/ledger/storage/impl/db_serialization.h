@@ -5,7 +5,7 @@
 #ifndef _APPS_LEDGER_SRC_STORAGE_IMPL_DB_SERIALIZATION_H_
 #define _APPS_LEDGER_SRC_STORAGE_IMPL_DB_SERIALIZATION_H_
 
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace storage {

@@ -5,8 +5,8 @@
 #ifndef _APPS_LEDGER_SRC_TEST_TEST_WITH_COROUTINES_H_
 #define _APPS_LEDGER_SRC_TEST_TEST_WITH_COROUTINES_H_
 
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 

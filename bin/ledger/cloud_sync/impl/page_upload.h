@@ -8,13 +8,13 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/cloud_sync/impl/base_coordinator_delegate.h"
-#include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
-#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/commit_watcher.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
+#include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/commit_watcher.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace cloud_sync {
 // PageUpload handles all the upload operations for a page.

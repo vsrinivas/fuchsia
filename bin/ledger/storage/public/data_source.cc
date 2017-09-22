@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/storage/public/data_source.h"
+#include "peridot/bin/ledger/storage/public/data_source.h"
 
-#include "apps/ledger/src/convert/convert.h"
+#include "peridot/bin/ledger/convert/convert.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "zx/vmar.h"
 

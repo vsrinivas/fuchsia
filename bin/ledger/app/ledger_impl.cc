@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/ledger_impl.h"
+#include "peridot/bin/ledger/app/ledger_impl.h"
 
 #include <memory>
 #include <string>
@@ -10,11 +10,11 @@
 
 #include <trace/event.h>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/page_impl.h"
-#include "apps/ledger/src/callback/trace_callback.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/page_impl.h"
+#include "peridot/bin/ledger/callback/trace_callback.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "lib/fxl/logging.h"
 
 namespace ledger {

@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/fidl_helpers/boundable.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/fidl_helpers/boundable.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/callback/managed_container.h"
+#include "peridot/bin/ledger/callback/managed_container.h"
 
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/auto_call.h"

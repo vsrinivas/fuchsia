@@ -7,10 +7,10 @@
 
 #include <memory>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
-#include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/fidl_helpers/bound_interface_set.h"
-#include "apps/ledger/src/test/fake_token_provider.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
+#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 
-#include "apps/ledger/src/cloud_provider/public/types.h"
+#include "peridot/bin/ledger/cloud_provider/public/types.h"
 #include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/tool/tool.h"
+#include "peridot/bin/ledger/tool/tool.h"
 
 #include <iostream>
 #include <unordered_set>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/cloud_provider/public/types.h"
-#include "apps/ledger/src/firebase/encoding.h"
-#include "apps/ledger/src/tool/convert.h"
-#include "apps/ledger/src/tool/inspect_command.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/cloud_provider/public/types.h"
+#include "peridot/bin/ledger/firebase/encoding.h"
+#include "peridot/bin/ledger/tool/convert.h"
+#include "peridot/bin/ledger/tool/inspect_command.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"

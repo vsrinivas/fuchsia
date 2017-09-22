@@ -7,7 +7,7 @@
 
 #include <set>
 
-#include "apps/ledger/src/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"

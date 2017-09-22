@@ -9,11 +9,11 @@
 #include <memory>
 #include <queue>
 
-#include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/cloud_provider/public/page_cloud_handler.h"
-#include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/storage/public/commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 

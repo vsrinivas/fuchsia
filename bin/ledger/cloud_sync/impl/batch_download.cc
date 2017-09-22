@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/batch_download.h"
+#include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 
 #include <utility>
 
-#include "apps/ledger/src/callback/scoped_callback.h"
-#include "apps/ledger/src/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/callback/scoped_callback.h"
+#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 
 namespace cloud_sync {
 

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [ "//peridot/bin/ledger/*" ]
 
 group("benchmark") {
   testonly = true
@@ -10,10 +10,10 @@ group("benchmark") {
   public_deps = [
     ":launch_benchmark",
     ":run_ledger_benchmarks",
-    "//apps/ledger/src/test/benchmark/convergence",
-    "//apps/ledger/src/test/benchmark/lib",
-    "//apps/ledger/src/test/benchmark/put",
-    "//apps/ledger/src/test/benchmark/sync",
+    "//peridot/bin/ledger/test/benchmark/convergence",
+    "//peridot/bin/ledger/test/benchmark/lib",
+    "//peridot/bin/ledger/test/benchmark/put",
+    "//peridot/bin/ledger/test/benchmark/sync",
   ]
 }
 
@@ -27,10 +27,10 @@ executable("launch_benchmark") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
-    "//apps/ledger/src/test/benchmark/lib",
-    "//apps/ledger/src/test/benchmark/put:lib",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/public/lib/ledger/fidl",
+    "//peridot/bin/ledger/test/benchmark/lib",
+    "//peridot/bin/ledger/test/benchmark/put:lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",

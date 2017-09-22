@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/page_utils.h"
+#include "peridot/bin/ledger/app/page_utils.h"
 
 #include <memory>
 
-#include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/storage/public/object.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/storage/public/object.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fsl/vmo/strings.h"
 
 namespace ledger {

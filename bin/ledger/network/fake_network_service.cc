@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/network/fake_network_service.h"
+#include "peridot/bin/ledger/network/fake_network_service.h"
 
 #include <utility>
 
-#include "apps/ledger/src/callback/cancellable_helper.h"
+#include "peridot/bin/ledger/callback/cancellable_helper.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 
