@@ -15,10 +15,10 @@ package("mozart_tests") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/ui/geometry/cpp:apptests",
     "input_reader/tests",
     "scene_manager/tests",
     "view_manager/tests",
+    "//garnet/public/lib/ui/geometry/cpp:apptests",
   ]
 
   tests = [
@@ -89,171 +89,19 @@ package("view_manager") {
       } ]
 }
 
-package("jank_view") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui/jank",
-  ]
-
-  binaries = [ {
-        name = "jank_view"
-        dest = "app"
-      } ]
-}
-
-package("noodles_view") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui//noodles",
-  ]
-
-  binaries = [ {
-        name = "noodles_view"
-        dest = "app"
-      } ]
-}
-
-package("paint_view") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui//paint",
-  ]
-
-  binaries = [ {
-        name = "paint_view"
-        dest = "app"
-      } ]
-}
-
-package("shapes_view") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui//shapes",
-  ]
-
-  binaries = [ {
-        name = "shapes_view"
-        dest = "app"
-      } ]
-}
-
-package("spinning_square_view") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui//spinning_square",
-  ]
-
-  binaries = [ {
-        name = "spinning_square_view"
-        dest = "app"
-      } ]
-}
-
-package("tile_view") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui//tile",
-  ]
-
-  binaries = [ {
-        name = "tile_view"
-        dest = "app"
-      } ]
-}
-
-package("basic_wm") {
-  app = true
-
-  deps = [
-    "//garnet/examples/ui//basic_wm",
-  ]
-
-  binaries = [ {
-        name = "basic_wm"
-        source = "gen/garnet/examples/ui/basic_wm/basic_wm.flx"
-      } ]
-}
-
-package("hello_material") {
-  app = true
-
-  deps = [
-    "//garnet/examples/ui//hello_material",
-  ]
-
-  binaries = [ {
-        name = "hello_material"
-        source = "gen/garnet/examples/ui/hello_material/hello_material.flx"
-      } ]
-}
-
-package("shadertoy") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui//shadertoy/client",
-    "//garnet/examples/ui//shadertoy/service",
-  ]
-
-  binaries = [
-    {
-      name = "shadertoy_service"
-      dest = "app"
-    },
-    {
-      name = "shadertoy_client"
-      dest = "app"
-    },
-  ]
-}
-
-package("sketchy") {
-  archive = true
-
-  deps = [
-    "//garnet/examples/ui/sketchy",
-    "sketchy",
-  ]
-
-  binaries = [
-    {
-      name = "sketchy_client"
-      dest = "app"
-    },
-    {
-      name = "sketchy_service"
-      dest = "app"
-    },
-  ]
-}
-
 package("mozart") {
   app = true
 
   deps = [
-    "scene_manager",
     "input",
     "launch",
     "print_input",
-    "//garnet/examples/ui/hello_scene_manager",
-    "//garnet/examples/ui/shadertoy/client",
-    "//garnet/examples/ui/shadertoy/service",
-    "//garnet/examples/ui/sketchy",
-    "sketchy",
+    "scene_manager",
   ]
 
   binaries = [
     {
       name = "scene_manager"
-    },
-    {
-      name = "hello_scene_manager"
     },
     {
       name = "input"
@@ -263,18 +111,6 @@ package("mozart") {
     },
     {
       name = "print_input"
-    },
-    {
-      name = "shadertoy_service"
-    },
-    {
-      name = "shadertoy_client"
-    },
-    {
-      name = "sketchy_client"
-    },
-    {
-      name = "sketchy_service"
     },
   ]
 }

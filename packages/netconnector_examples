@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "netconnector_example": "//garnet/examples/netconnector:netconnector_example"
+    }
+}

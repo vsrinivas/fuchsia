@@ -1,0 +1,22 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/mozart",
+        "packages/gn/dart"
+    ],
+    "packages": {
+        "basic_wm": "//garnet/examples/ui:basic_wm",
+        "hello_material": "//garnet/examples/ui:hello_material",
+        "hello_scene_manager": "//garnet/examples/ui:hello_scene_manager",
+        "jank_view": "//garnet/examples/ui:jank_view",
+        "noodles_view": "//garnet/examples/ui:noodles_view",
+        "paint_view": "//garnet/examples/ui:paint_view",
+        "shadertoy": "//garnet/examples/ui:shadertoy",
+        "shapes_view": "//garnet/examples/ui:shapes_view",
+        "sketchy": "//garnet/examples/ui:sketchy",
+        "spinning_square_view": "//garnet/examples/ui:spinning_square_view",
+        "tile_view": "//garnet/examples/ui:tile_view"
+    }
+}

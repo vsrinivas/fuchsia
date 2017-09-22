@@ -3,7 +3,6 @@
         "cpp"
     ],
     "imports": [
-        "packages/gn/dart",
         "garnet/packages/fxl",
         "garnet/packages/magma",
         "garnet/packages/fsl",
@@ -12,17 +11,9 @@
     ],
     "packages": {
         "mozart": "//garnet/bin/ui:mozart",
-        "basic_wm": "//garnet/bin/ui:basic_wm",
-        "hello_material": "//garnet/bin/ui:hello_material",
-        "shapes_view": "//garnet/bin/ui:shapes_view",
-        "noodles_view": "//garnet/bin/ui:noodles_view",
-        "jank_view": "//garnet/bin/ui:jank_view",
-        "paint_view": "//garnet/bin/ui:paint_view",
         "root_presenter": "//garnet/bin/ui:root_presenter",
-        "spinning_square_view": "//garnet/bin/ui:spinning_square_view",
         "view_manager": "//garnet/bin/ui:view_manager",
         "ime_service": "//garnet/bin/ui:ime_service",
-        "tile_view": "//garnet/bin/ui:tile_view",
         "mozart_tests": "//garnet/bin/ui:mozart_tests"
     }
 }
