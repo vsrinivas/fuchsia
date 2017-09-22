@@ -122,11 +122,17 @@ class LinkImpl {
 
  private:
   // Applies the given |changes| to the current document. The current list of
-  // pending operations is merged into the change stream.
+  // pending operations is merged into the change stream. Implemented in
+  // incremental_link.cc.
   void Replay(fidl::Array<LinkChangePtr> changes);
 
-  // Applies a single LinkChange.
+  // Applies a single LinkChange. Implemented in incremental_link.cc.
   bool ApplyChange(LinkChange* change);
+
+  // Implemented in incremental_link.cc.
+  void MakeReloadCall(std::function<void()> done);
+  void MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()> done);
+  void MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src);
 
   bool ApplySetOp(const CrtJsonPointer& ptr, const fidl::String& json);
   bool ApplyUpdateOp(const CrtJsonPointer& ptr, const fidl::String& json);
@@ -211,7 +217,7 @@ class LinkImpl {
   class WatchCall;
   class ChangeCall;
   // Calls below are for incremental links, which can be found in
-  // incremental_link.{cc,h}
+  // incremental_link.cc.
   class ReloadCall;
   class IncrementalWriteCall;
   class IncrementalChangeCall;

@@ -14,7 +14,6 @@ source_set("story_runner") {
     "context_handler.cc",
     "context_handler.h",
     "incremental_link.cc",
-    "incremental_link.h",
     "key_generator.cc",
     "key_generator.h",
     "link_impl.cc",

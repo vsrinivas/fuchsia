@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file contains functions from StoryStorageImpl and LinkImpl that exist
+// This file contains functions and Operation classes from LinkImpl that exist
 // solely to implement the history of change operations for Links.
-
-#include "peridot/bin/story_runner/incremental_link.h"
 
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/story/fidl/link.fidl.h"
@@ -20,103 +18,144 @@
 
 namespace modular {
 
-LinkImpl::IncrementalWriteCall::IncrementalWriteCall(
-    OperationContainer* const container,
-    LinkImpl* const impl,
-    LinkChangePtr data,
-    ResultCall result_call)
-    : Operation("LinkImpl::IncrementalWriteCall",
-                container,
-                std::move(result_call)),
-      impl_(impl),
-      data_(std::move(data)) {
-  FXL_DCHECK(!data_->key.is_null());
-  Ready();
-}
-
-std::string LinkImpl::IncrementalWriteCall::key() {
-  return data_->key;
-}
-
-void LinkImpl::IncrementalWriteCall::Run() {
-  FlowToken flow{this};
-
-  impl_->link_storage_->WriteIncrementalLinkData(
-      impl_->link_path_, data_->key, std::move(data_), [this, flow] {});
-}
-
-LinkImpl::IncrementalChangeCall::IncrementalChangeCall(
-    OperationContainer* const container,
-    LinkImpl* const impl,
-    LinkChangePtr data,
-    uint32_t src)
-    : Operation("LinkImpl::IncrementalChangeCall", container, [] {}),
-      impl_(impl),
-      data_(std::move(data)),
-      src_(src) {
-  Ready();
-}
-
-void LinkImpl::IncrementalChangeCall::Run() {
-  FlowToken flow{this};
-
-  // If the change already exists in pending_ops_, then the Ledger has
-  // processed the change and the change can be removed from pending_ops_.
-  // For operations coming directly from the API, data_->key is empty, so this
-  // block will do nothing.
-  if (!impl_->pending_ops_.empty() &&
-      data_->key == impl_->pending_ops_[0]->key) {
-    impl_->pending_ops_.erase(impl_->pending_ops_.begin());
-    return;
+// Reload needs to run if:
+// 1. LinkImpl was just constructed
+// 2. IncrementalChangeCall sees an out-of-order change
+class LinkImpl::ReloadCall : Operation<> {
+ public:
+  ReloadCall(OperationContainer* const container,
+             LinkImpl* const impl, ResultCall result_call)
+      : Operation("LinkImpl::ReloadCall", container, result_call), impl_(impl) {
+    Ready();
   }
 
-  old_json_ = JsonValueToString(impl_->doc_);
+ private:
+  void Run() {
+    FlowToken flow{this};
+    impl_->link_storage_->ReadAllLinkData(
+        impl_->link_path_, [this, flow](fidl::Array<LinkChangePtr> changes) {
+          impl_->Replay(std::move(changes));
+        });
+  }
 
-  if (data_->key.is_null()) {
-    if (!data_->json.is_null()) {
-      rapidjson::Document doc;
-      doc.Parse(data_->json.get());
-      if (doc.HasParseError()) {
-        FXL_LOG(ERROR) << "LinkImpl::IncrementalChangeCall::Run() "
-                       << EncodeLinkPath(impl_->link_path_)
-                       << " JSON parse failed error #" << doc.GetParseError()
-                       << std::endl
-                       << data_->json.get();
-        return;
+  LinkImpl* const impl_;  // not owned
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReloadCall);
+};
+
+class LinkImpl::IncrementalWriteCall : Operation<> {
+ public:
+  IncrementalWriteCall(
+      OperationContainer* const container, LinkImpl* const impl,
+      LinkChangePtr data, ResultCall result_call)
+      : Operation("LinkImpl::IncrementalWriteCall", container,
+                  std::move(result_call)),
+        impl_(impl),
+        data_(std::move(data)) {
+    FXL_DCHECK(!data_->key.is_null());
+    Ready();
+  }
+
+  std::string key() { return data_->key; }
+
+ private:
+  void Run() {
+    FlowToken flow{this};
+
+    impl_->link_storage_->WriteIncrementalLinkData(
+        impl_->link_path_, data_->key, std::move(data_), [this, flow] {});
+  }
+
+  LinkImpl* const impl_;  // not owned
+  LinkChangePtr data_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
+};
+
+class LinkImpl::IncrementalChangeCall : Operation<> {
+ public:
+  IncrementalChangeCall(
+      OperationContainer* const container, LinkImpl* const impl,
+      LinkChangePtr data, uint32_t src)
+      : Operation("LinkImpl::IncrementalChangeCall", container, [] {}),
+        impl_(impl),
+        data_(std::move(data)),
+        src_(src) {
+    Ready();
+  }
+
+ private:
+  void Run() {
+    FlowToken flow{this};
+
+    // If the change already exists in pending_ops_, then the Ledger has
+    // processed the change and the change can be removed from pending_ops_. For
+    // operations coming directly from the API, data_->key is empty, so this
+    // block will do nothing.
+    if (!impl_->pending_ops_.empty() &&
+        data_->key == impl_->pending_ops_[0]->key) {
+      impl_->pending_ops_.erase(impl_->pending_ops_.begin());
+      return;
+    }
+
+    old_json_ = JsonValueToString(impl_->doc_);
+
+    if (data_->key.is_null()) {
+      if (!data_->json.is_null()) {
+        rapidjson::Document doc;
+        doc.Parse(data_->json.get());
+        if (doc.HasParseError()) {
+          FXL_LOG(ERROR) << "LinkImpl::IncrementalChangeCall::Run() "
+                         << EncodeLinkPath(impl_->link_path_)
+                         << " JSON parse failed error #" << doc.GetParseError()
+                         << std::endl
+                         << data_->json.get();
+          return;
+        }
+
+        data_->json = JsonValueToString(doc);
       }
 
-      data_->json = JsonValueToString(doc);
+      data_->key = impl_->key_generator_.Create();
+      impl_->pending_ops_.push_back(data_.Clone());
+      new IncrementalWriteCall(&operation_queue_, impl_, data_.Clone(), [] {});
     }
 
-    data_->key = impl_->key_generator_.Create();
-    impl_->pending_ops_.push_back(data_.Clone());
-    new IncrementalWriteCall(&operation_queue_, impl_, data_.Clone(), [] {});
-  }
-
-  const bool reload = data_->key < impl_->latest_key_;
-  if (reload) {
-    // Use kOnChangeConnectionId because the interaction of this change with
-    // later changes is unpredictable.
-    new ReloadCall(&operation_queue_, impl_,
-                   [this, flow] { Cont1(flow, kOnChangeConnectionId); });
-  } else {
-    if (impl_->ApplyChange(data_.get())) {
-      CrtJsonPointer ptr = CreatePointer(impl_->doc_, data_->pointer);
-      impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
-                            data_->json);
+    const bool reload = data_->key < impl_->latest_key_;
+    if (reload) {
+      // Use kOnChangeConnectionId because the interaction of this change with
+      // later changes is unpredictable.
+      new ReloadCall(&operation_queue_, impl_,
+                     [this, flow] { Cont1(flow, kOnChangeConnectionId); });
     } else {
-      FXL_LOG(WARNING) << "IncrementalChangeCall::Run - ApplyChange() failed ";
+      if (impl_->ApplyChange(data_.get())) {
+        CrtJsonPointer ptr = CreatePointer(impl_->doc_, data_->pointer);
+        impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
+                              data_->json);
+      } else {
+        FXL_LOG(WARNING) << "IncrementalChangeCall::Run - ApplyChange() failed ";
+      }
+      impl_->latest_key_ = data_->key;
+      Cont1(flow, src_);
     }
-    impl_->latest_key_ = data_->key;
-    Cont1(flow, src_);
   }
-}
 
-void LinkImpl::IncrementalChangeCall::Cont1(FlowToken flow, uint32_t src) {
-  if (old_json_ != JsonValueToString(impl_->doc_)) {
-    impl_->NotifyWatchers(src);
+  void Cont1(FlowToken flow, uint32_t src) {
+    if (old_json_ != JsonValueToString(impl_->doc_)) {
+      impl_->NotifyWatchers(src);
+    }
   }
-}
+
+  LinkImpl* const impl_;  // not owned
+  LinkChangePtr data_;
+  std::string old_json_;
+  uint32_t src_;
+
+  // IncrementalWriteCall is executed here.
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalChangeCall);
+};
 
 void LinkImpl::Replay(fidl::Array<LinkChangePtr> changes) {
   doc_ = CrtJsonDoc();
@@ -171,26 +210,6 @@ void LinkImpl::Replay(fidl::Array<LinkChangePtr> changes) {
   }
 }
 
-LinkImpl::ReloadCall::ReloadCall(OperationContainer* const container,
-                                 LinkImpl* const impl,
-                                 ResultCall result_call)
-    : Operation("LinkImpl::ReloadCall", container, result_call), impl_(impl) {
-  Ready();
-}
-
-void LinkImpl::ReloadCall::Run() {
-  FlowToken flow{this};
-  impl_->link_storage_->ReadAllLinkData(
-      impl_->link_path_, [this, flow](fidl::Array<LinkChangePtr> changes) {
-        Cont1(flow, std::move(changes));
-      });
-}
-
-void LinkImpl::ReloadCall::Cont1(FlowToken flow,
-                                 fidl::Array<LinkChangePtr> changes) {
-  impl_->Replay(std::move(changes));
-}
-
 bool LinkImpl::ApplyChange(LinkChange* change) {
   CrtJsonPointer ptr = CreatePointer(doc_, change->pointer);
 
@@ -205,6 +224,18 @@ bool LinkImpl::ApplyChange(LinkChange* change) {
       FXL_DCHECK(false);
       return false;
   }
+}
+
+void LinkImpl::MakeReloadCall(std::function<void()> done) {
+  new ReloadCall(&operation_queue_, this, std::move(done));
+}
+
+void LinkImpl::MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()> done) {
+  new IncrementalWriteCall(&operation_queue_, this, std::move(data), std::move(done));
+}
+
+void LinkImpl::MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src) {
+  new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
 }
 
 }  // namespace modular

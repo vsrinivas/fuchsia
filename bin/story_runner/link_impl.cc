@@ -10,7 +10,6 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
 #include "lib/story/fidl/link.fidl.h"
-#include "peridot/bin/story_runner/incremental_link.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -343,7 +342,7 @@ class LinkImpl::ChangeCall : Operation<> {
 
 LinkImpl::LinkImpl(LinkStorage* const link_storage, LinkPathPtr link_path)
     : link_path_(std::move(link_path)), link_storage_(link_storage) {
-  new ReloadCall(&operation_queue_, this, [this] {
+  MakeReloadCall([this] {
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));
     }
@@ -399,7 +398,7 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
     data->op = LinkChangeOp::SET;
     data->pointer = std::move(path);
     data->json = json;
-    new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+    MakeIncrementalChangeCall(std::move(data), src);
   } else {
     new SetCall(&operation_queue_, this, std::move(path), json, src);
   }
@@ -417,7 +416,7 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
     data->op = LinkChangeOp::UPDATE;
     data->pointer = std::move(path);
     data->json = json;
-    new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+    MakeIncrementalChangeCall(std::move(data), src);
   } else {
     new UpdateObjectCall(&operation_queue_, this, std::move(path), json, src);
   }
@@ -431,7 +430,7 @@ void LinkImpl::Erase(fidl::Array<fidl::String> path, const uint32_t src) {
     data->pointer = std::move(path);
     // Leave data->json null for ERASE.
 
-    new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+    MakeIncrementalChangeCall(std::move(data), src);
   } else {
     new EraseCall(&operation_queue_, this, std::move(path), src);
   }
@@ -548,8 +547,7 @@ void LinkImpl::OnChange(const fidl::String& json) {
     return;
   }
 
-  new IncrementalChangeCall(&operation_queue_, this, std::move(data),
-                            kOnChangeConnectionId);
+  MakeIncrementalChangeCall(std::move(data), kOnChangeConnectionId);
 }
 
 // To be called after:
