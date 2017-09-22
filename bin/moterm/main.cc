@@ -4,10 +4,10 @@
 
 #include <trace-provider/provider.h>
 
-#include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
-#include "apps/modular/services/module/module.fidl.h"
-#include "apps/modular/services/story/story_marker.fidl.h"
+#include "lib/component/fidl/component_context.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/story/fidl/story_marker.fidl.h"
 #include "lib/ui/skia/skia_font_loader.h"
 #include "lib/ui/view_framework/view_provider_service.h"
 #include "garnet/bin/moterm/history.h"

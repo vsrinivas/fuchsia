@@ -7,9 +7,9 @@
 #include <memory>
 
 #include "lib/app/cpp/application_context.h"
-#include "apps/modular/services/module/module.fidl.h"
-#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
-#include "apps/modular/services/module/module_context.fidl.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
 #include "examples/common/demo_harness.h"
 #include "garnet/lib/escher/examples/common/services/escher_demo.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

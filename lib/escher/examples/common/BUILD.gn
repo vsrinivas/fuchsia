@@ -31,8 +31,8 @@ static_library("common") {
   if (is_fuchsia) {
     deps += [
       "//garnet/public/lib/app/cpp",
-      "//apps/modular/services/lifecycle",
-      "//apps/modular/services/module",
+      "//peridot/public/lib/lifecycle/fidl",
+      "//peridot/public/lib/module/fidl",
       "//garnet/lib/escher/examples/common/services",
       "//garnet/public/lib/fsl",
     ]

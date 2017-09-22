@@ -24,12 +24,8 @@ executable("moterm") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
     "//apps/ledger/services/public",
-    "//apps/modular/services/component",
-    "//apps/modular/services/lifecycle",
-    "//apps/modular/services/module",
-    "//apps/modular/services/story",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/skia:fonts",
     "//garnet/public/lib/ui/view_framework:skia",
@@ -43,9 +39,13 @@ executable("moterm") {
     "//garnet/public/lib/fonts/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//zircon/system/ulib/trace-provider",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/lifecycle/fidl",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
     "//third_party/libteken",
     "//third_party/skia",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   libs = [ "launchpad" ]
