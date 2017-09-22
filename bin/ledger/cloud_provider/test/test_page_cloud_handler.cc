@@ -18,14 +18,13 @@ TestPageCloudHandler::TestPageCloudHandler(
 TestPageCloudHandler::~TestPageCloudHandler() = default;
 
 void TestPageCloudHandler::DeliverRemoteCommits() {
-  for (auto& record : notifications_to_deliver) {
-    task_runner_->PostTask(
-        fxl::MakeCopyable([ this, record = std::move(record) ]() mutable {
-          std::vector<Record> records;
-          records.push_back(std::move(record));
-          watcher->OnRemoteCommits(std::move(records));
-        }));
+  if (notifications_to_deliver.empty()) {
+    return;
   }
+
+  task_runner_->PostTask(fxl::MakeCopyable([
+    this, records = std::move(notifications_to_deliver)
+  ]() mutable { watcher->OnRemoteCommits(std::move(records)); }));
 }
 
 void TestPageCloudHandler::AddCommits(

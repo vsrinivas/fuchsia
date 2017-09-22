@@ -18,9 +18,11 @@
 namespace cloud_provider_firebase {
 namespace {
 
-class PageCloudImplTest : public ::test::TestWithMessageLoop {
+class PageCloudImplTest : public ::test::TestWithMessageLoop,
+                          cloud_provider::PageCloudWatcher {
  public:
-  PageCloudImplTest() : auth_provider_(message_loop_.task_runner()) {
+  PageCloudImplTest()
+      : auth_provider_(message_loop_.task_runner()), watcher_binding_(this) {
     auto handler = std::make_unique<test::TestPageCloudHandler>(
         message_loop_.task_runner());
     handler_ = handler.get();
@@ -29,13 +31,42 @@ class PageCloudImplTest : public ::test::TestWithMessageLoop {
         page_cloud_.NewRequest());
   }
 
+  // cloud_provider::PageCloudWatcher:
+  void OnNewCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+                    fidl::Array<uint8_t> position_token,
+                    const OnNewCommitsCallback& callback) override {
+    on_new_commits_calls_++;
+    on_new_commits_commits_ = std::move(commits);
+    on_new_commits_position_token_ = std::move(position_token);
+    on_new_commits_commits_callback_ = callback;
+    message_loop_.PostQuitTask();
+  }
+
+  void OnNewObject(fidl::Array<uint8_t> id,
+                   zx::vmo data,
+                   const OnNewObjectCallback& callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
+
+  void OnError(cloud_provider::Status status) override {
+    on_error_status_ = status;
+    message_loop_.PostQuitTask();
+  }
+
  protected:
   auth_provider::test::TestAuthProvider auth_provider_;
   cloud_provider::PageCloudPtr page_cloud_;
   test::TestPageCloudHandler* handler_ = nullptr;
   std::unique_ptr<PageCloudImpl> page_cloud_impl_;
+  fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 
- private:
+  int on_new_commits_calls_ = 0;
+  fidl::Array<cloud_provider::CommitPtr> on_new_commits_commits_;
+  fidl::Array<uint8_t> on_new_commits_position_token_;
+  OnNewCommitsCallback on_new_commits_commits_callback_;
+
+  cloud_provider::Status on_error_status_ = cloud_provider::Status::OK;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudImplTest);
 };
 
@@ -196,6 +227,114 @@ TEST_F(PageCloudImplTest, GetObjectNetworkError) {
       callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::NETWORK_ERROR, status);
+}
+
+TEST_F(PageCloudImplTest, SetWatcher) {
+  cloud_provider::Status status;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  watcher_binding_.Bind(watcher.NewRequest());
+  page_cloud_->SetWatcher(convert::ToArray("bazinga"), std::move(watcher),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  EXPECT_TRUE(on_new_commits_commits_.empty());
+  handler_->notifications_to_deliver.emplace_back(
+      cloud_provider_firebase::Commit("id_0", "data_0"), "42");
+  handler_->notifications_to_deliver.emplace_back(
+      cloud_provider_firebase::Commit("id_1", "data_1"), "43");
+
+  handler_->DeliverRemoteCommits();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(2u, on_new_commits_commits_.size());
+  EXPECT_EQ("id_0", convert::ToString(on_new_commits_commits_[0]->id));
+  EXPECT_EQ("data_0", convert::ToString(on_new_commits_commits_[0]->data));
+  EXPECT_EQ("id_1", convert::ToString(on_new_commits_commits_[1]->id));
+  EXPECT_EQ("data_1", convert::ToString(on_new_commits_commits_[1]->data));
+  EXPECT_EQ("43", convert::ToString(on_new_commits_position_token_));
+  on_new_commits_commits_callback_();
+}
+
+TEST_F(PageCloudImplTest, SetWatcherNotificationsOneAtATime) {
+  cloud_provider::Status status;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  watcher_binding_.Bind(watcher.NewRequest());
+  page_cloud_->SetWatcher(convert::ToArray("bazinga"), std::move(watcher),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  EXPECT_TRUE(on_new_commits_commits_.empty());
+  handler_->notifications_to_deliver.emplace_back(
+      cloud_provider_firebase::Commit("id_0", "data_0"), "42");
+  handler_->DeliverRemoteCommits();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, on_new_commits_commits_.size());
+  EXPECT_EQ(1, on_new_commits_calls_);
+
+  handler_->notifications_to_deliver.emplace_back(
+      cloud_provider_firebase::Commit("id_1", "data_1"), "43");
+  handler_->DeliverRemoteCommits();
+  // Verify that the client does not receive another notification.
+  message_loop_.task_runner()->PostDelayedTask(
+      [this] { message_loop_.PostQuitTask(); },
+      fxl::TimeDelta::FromMilliseconds(1));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, on_new_commits_commits_.size());
+  EXPECT_EQ(1, on_new_commits_calls_);
+
+  // Call the pending callback and verify that the client did receive the next
+  // notification.
+  on_new_commits_commits_callback_();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, on_new_commits_commits_.size());
+  EXPECT_EQ(2, on_new_commits_calls_);
+  on_new_commits_commits_callback_();
+}
+
+TEST_F(PageCloudImplTest, SetWatcherNetworkError) {
+  cloud_provider::Status status;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  watcher_binding_.Bind(watcher.NewRequest());
+  page_cloud_->SetWatcher(convert::ToArray("bazinga"), std::move(watcher),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  EXPECT_EQ(cloud_provider::Status::OK, on_error_status_);
+  page_cloud_impl_->OnConnectionError();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::NETWORK_ERROR, on_error_status_);
+}
+
+TEST_F(PageCloudImplTest, SetWatcherAuthError) {
+  cloud_provider::Status status;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  watcher_binding_.Bind(watcher.NewRequest());
+  page_cloud_->SetWatcher(convert::ToArray("bazinga"), std::move(watcher),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  EXPECT_EQ(cloud_provider::Status::OK, on_error_status_);
+  page_cloud_impl_->OnTokenExpired();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::AUTH_ERROR, on_error_status_);
+}
+
+TEST_F(PageCloudImplTest, SetWatcherParseError) {
+  cloud_provider::Status status;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  watcher_binding_.Bind(watcher.NewRequest());
+  page_cloud_->SetWatcher(convert::ToArray("bazinga"), std::move(watcher),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+
+  EXPECT_EQ(cloud_provider::Status::OK, on_error_status_);
+  page_cloud_impl_->OnMalformedNotification();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::PARSE_ERROR, on_error_status_);
 }
 
 }  // namespace

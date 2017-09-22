@@ -127,9 +127,13 @@ interface PageCloud {
 
   // Watches the cloud for push notifications.
   //
+  // At most one watcher can be set at any given time. If more than one watcher
+  // is set, only the one set most recently is notified when the fingerprint is
+  // erased.
+  //
   // This method returns only push notifications not older than
   // |min_position_token|.
-  SetWatcher(PageCloudWatcher watcher, array<uint8> min_position_token)
+  SetWatcher(array<uint8> min_position_token, PageCloudWatcher watcher)
       => (Status status);
 };
 
@@ -139,10 +143,28 @@ interface PageCloudWatcher {
   //
   // The method takes the list of new |commits| along with the |position_token|
   // of the most recent of them.
+  //
+  // No subsequent calls are made until the client calls the callback of the
+  // previous one.
   OnNewCommits(array<Commit> commits, array<uint8> position_token) => ();
 
   // Called when a new object is added to the cloud.
   //
   // The method takes the |id| and the content of the new object.
+  //
+  // No subsequent calls are made until the client calls the callback of the
+  // previous one.
   OnNewObject(array<uint8> id, handle<vmo> data) => ();
+
+  // Called when an error occurs.
+  //
+  // No further calls are made on the watcher after this is called. The client
+  // can then re-establish the watcher by calling SetWatcher() again.
+  //
+  // The status is one of:
+  //
+  //   - AUTH_ERROR, if the auth token needs a refresh
+  //   - NETWORK_ERROR, if the connection was dropped
+  //   - PARSE_ERROR, if an invalid server notification was received
+  OnError(Status status);
 };

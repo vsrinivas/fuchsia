@@ -245,10 +245,6 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
 
   cloud_provider_.notifications_to_deliver.emplace_back(
       cloud_provider_firebase::Commit("id1", "content1"), "42");
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id2", "content2"), "43");
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id3", "content3"), "44");
 
   // Make the storage delay requests to add remote commits.
   storage_.should_delay_add_commit_confirmation = true;
@@ -267,7 +263,14 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, storage_.delayed_add_commit_confirmations.size());
 
-  // Fire the delayed confirmation.
+  // Add two more remote commits, before storage confirms adding the first one.
+  cloud_provider_.notifications_to_deliver.emplace_back(
+      cloud_provider_firebase::Commit("id2", "content2"), "43");
+  cloud_provider_.notifications_to_deliver.emplace_back(
+      cloud_provider_firebase::Commit("id3", "content3"), "44");
+  cloud_provider_.DeliverRemoteCommits();
+
+  // Make storage confirm adding the first commit.
   storage_.should_delay_add_commit_confirmation = false;
   storage_.delayed_add_commit_confirmations.front()();
   EXPECT_TRUE(

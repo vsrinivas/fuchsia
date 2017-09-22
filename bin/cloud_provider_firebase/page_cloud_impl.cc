@@ -31,6 +31,25 @@ cloud_provider::Status ConvertInternalStatus(Status status) {
   }
 }
 
+void ConvertRecords(const std::vector<Record>& records,
+                    fidl::Array<cloud_provider::CommitPtr>* out_commits,
+                    fidl::Array<uint8_t>* out_token) {
+  fidl::Array<cloud_provider::CommitPtr> commits;
+  for (auto& record : records) {
+    cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
+    commit->id = convert::ToArray(record.commit.id);
+    commit->data = convert::ToArray(record.commit.content);
+    commits.push_back(std::move(commit));
+  }
+  fidl::Array<uint8_t> token;
+  if (!records.empty()) {
+    token = convert::ToArray(records.back().timestamp);
+  }
+
+  out_commits->Swap(&commits);
+  out_token->Swap(&token);
+}
+
 }  // namespace
 
 PageCloudImpl::PageCloudImpl(
@@ -53,7 +72,53 @@ PageCloudImpl::PageCloudImpl(
   });
 }
 
-PageCloudImpl::~PageCloudImpl() {}
+PageCloudImpl::~PageCloudImpl() {
+  if (handler_watcher_set_) {
+    Unregister();
+  }
+}
+
+void PageCloudImpl::OnRemoteCommits(std::vector<Record> records) {
+  FXL_DCHECK(watcher_);
+  std::move(records.begin(), records.end(), std::back_inserter(records_));
+  if (!waiting_for_remote_commits_ack_) {
+    SendRemoteCommits();
+  }
+}
+
+void PageCloudImpl::OnConnectionError() {
+  FXL_DCHECK(watcher_);
+  watcher_->OnError(cloud_provider::Status::NETWORK_ERROR);
+  Unregister();
+}
+
+void PageCloudImpl::OnTokenExpired() {
+  FXL_DCHECK(watcher_);
+  watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
+  Unregister();
+}
+
+void PageCloudImpl::OnMalformedNotification() {
+  FXL_DCHECK(watcher_);
+  watcher_->OnError(cloud_provider::Status::PARSE_ERROR);
+  Unregister();
+}
+
+void PageCloudImpl::SendRemoteCommits() {
+  if (records_.empty()) {
+    return;
+  }
+
+  fidl::Array<cloud_provider::CommitPtr> commits;
+  fidl::Array<uint8_t> position_token;
+  ConvertRecords(records_, &commits, &position_token);
+  waiting_for_remote_commits_ack_ = true;
+  watcher_->OnNewCommits(std::move(commits), std::move(position_token), [this] {
+    waiting_for_remote_commits_ack_ = false;
+    SendRemoteCommits();
+  });
+  records_.clear();
+}
 
 void PageCloudImpl::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
@@ -105,14 +170,8 @@ void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
             return;
           }
 
-          for (auto& record : records) {
-            cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
-            commit->id = convert::ToArray(record.commit.id);
-            commit->data = convert::ToArray(record.commit.content);
-            commits.push_back(std::move(commit));
-          }
-          fidl::Array<uint8_t> position_token =
-              convert::ToArray(records.back().timestamp);
+          fidl::Array<uint8_t> position_token;
+          ConvertRecords(records, &commits, &position_token);
           callback(ConvertInternalStatus(status), std::move(commits),
                    std::move(position_token));
         });
@@ -161,11 +220,37 @@ void PageCloudImpl::GetObject(fidl::Array<uint8_t> id,
 }
 
 void PageCloudImpl::SetWatcher(
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
-    fidl::Array<uint8_t> /*min_position_token*/,
+    fidl::Array<uint8_t> min_position_token,
+    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  watcher_ = cloud_provider::PageCloudWatcherPtr::Create(std::move(watcher));
+  watcher_.set_connection_error_handler([this] {
+    if (handler_watcher_set_) {
+      Unregister();
+    }
+    waiting_for_remote_commits_ack_ = false;
+  });
+  auto request = auth_provider_->GetFirebaseToken([
+    this, min_timestamp = convert::ToString(min_position_token), callback
+  ](auth_provider::AuthStatus auth_status, std::string auth_token) mutable {
+    if (auth_status != auth_provider::AuthStatus::OK) {
+      watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
+      callback(cloud_provider::Status::AUTH_ERROR);
+      return;
+    }
+
+    handler_->WatchCommits(std::move(auth_token), std::move(min_timestamp),
+                           this);
+    handler_watcher_set_ = true;
+    callback(cloud_provider::Status::OK);
+  });
+  auth_token_requests_.emplace(request);
+}
+
+void PageCloudImpl::Unregister() {
+  FXL_DCHECK(handler_watcher_set_);
+  handler_->UnwatchCommits(this);
+  handler_watcher_set_ = false;
 }
 
 }  // namespace cloud_provider_firebase
