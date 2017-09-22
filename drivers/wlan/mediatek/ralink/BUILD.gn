@@ -17,8 +17,6 @@ driver_module("ralink_driver") {
     "ralink.h",
   ]
 
-  defines = [ "ZX_DEBUGLEVEL=2" ]
-
   deps = [
     "//garnet/drivers/wlan/common",
     "//zircon/system/ulib/ddktl",

@@ -21,7 +21,6 @@ driver_module("wlan-testdev") {
 
   defines = [
     "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
-    "ZX_DEBUGLEVEL=2",
   ]
 
   cflags = [

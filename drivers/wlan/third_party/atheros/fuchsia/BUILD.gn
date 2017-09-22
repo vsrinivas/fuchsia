@@ -26,8 +26,6 @@ driver_module("ath10k_driver") {
     "driver.cpp",
   ]
 
-  defines = [ "ZX_DEBUGLEVEL=2" ]
-
   deps = [
     "//garnet/drivers/wlan/common",
     "//zircon/system/ulib/ddktl",

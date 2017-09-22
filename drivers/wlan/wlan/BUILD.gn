@@ -7,7 +7,6 @@ import("//packages/package.gni")
 
 config("wlan_config") {
   include_dirs = [ "." ]
-  defines = [ "ZX_DEBUGLEVEL=2" ]
 }
 
 source_set("mlme") {
