@@ -167,7 +167,7 @@ class PageStorageTest : public StorageTest {
 
     Status status;
     storage_->Init(callback::Capture(MakeQuitTask(), &status));
-    message_loop_.Run();
+    EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(id, storage_->GetId());
   }
@@ -520,6 +520,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
   Status status;
   storage_->AddCommitsFromSync(std::move(commits_and_bytes),
                                callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 }
 
@@ -700,6 +701,7 @@ TEST_F(PageStorageTest, CreateJournals) {
   std::unique_ptr<Journal> journal;
   storage_->StartMergeCommit(
       left_id, right_id, callback::Capture(MakeQuitTask(), &status, &journal));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_NE(nullptr, journal);
 
@@ -1088,6 +1090,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   // values and the (also unsynced) root node.
   storage_->MarkPieceSynced(data_array[1].object_id,
                             callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::vector<ObjectId> objects;
   storage_->GetUnsyncedPieces(
@@ -1347,6 +1350,7 @@ TEST_F(PageStorageTest, Generation) {
   storage_->StartMergeCommit(
       commit_id1, commit_id2,
       callback::Capture(MakeQuitTask(), &status, &journal));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
   std::unique_ptr<const Commit> commit3 =
@@ -1553,6 +1557,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   storage_->StartMergeCommit(
       commit_a->GetId(), commit_b->GetId(),
       callback::Capture(MakeQuitTask(), &status, &journal_merge));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(storage::Status::OK, status);
 
   std::unique_ptr<const Commit> commit_merge =
