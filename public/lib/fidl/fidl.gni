@@ -19,7 +19,10 @@ declare_args() {
   generate_fidl_for_rust = packages_have_rust
 
   # Directories to search for FIDL imports.
-  fidl_import_dirs = [ "//garnet/public" ]
+  fidl_import_dirs = [
+    "//garnet/public",
+    "//peridot/public",
+  ]
 }
 
 if (generate_fidl_for_dart) {
@@ -230,6 +233,9 @@ template("fidl") {
     }
 
     public_configs = [ "//garnet/public/lib/fidl/build/config:fidl_source" ]
+    foreach(import_dir, fidl_import_dirs) {
+      public_configs += [ "$import_dir:config" ]
+    }
 
     public_deps = [
       "//garnet/public/lib/fidl/cpp/bindings",
