@@ -15,16 +15,21 @@
 
 #define EXPECTED_INT 43u
 
-static void stub_io_apic(io_apic_t* io_apic) {
+static void stub_io_apic(IoApic* io_apic) {
     static local_apic_t local_apic = {};
+    static local_apic_regs_t local_apic_regs = {};
     local_apic.vcpu = ZX_HANDLE_INVALID;
-    io_apic_init(io_apic);
-    io_apic->local_apic[0] = &local_apic;
+    local_apic.regs = &local_apic_regs;
+    io_apic->RegisterLocalApic(0, &local_apic);
 }
 
-static void io_apic_init_with_vector(io_apic_t* io_apic) {
+static void io_apic_init_with_vector(IoApic* io_apic) {
     stub_io_apic(io_apic);
-    io_apic->redirect[X86_INT_UART * 2] = EXPECTED_INT;
+    IoApic::RedirectEntry entry = {
+        .upper = 0,
+        .lower = EXPECTED_INT,
+    };
+    io_apic->SetRedirect(X86_INT_UART, entry);
 }
 
 static zx_status_t ok_raise_interrupt(zx_handle_t vcpu, uint32_t vector) {
@@ -39,7 +44,7 @@ static bool irq_redirect(void) {
     BEGIN_TEST;
 
     uart_t uart;
-    io_apic_t io_apic;
+    IoApic io_apic;
     {
         // Interrupts cannot be raised unless the UART IRQ redirect is in place.
         stub_io_apic(&io_apic);
@@ -110,7 +115,7 @@ static bool read_rbr(void) {
     BEGIN_TEST;
 
     uart_t uart;
-    io_apic_t io_apic;
+    IoApic io_apic;
     {
         // Reads from RBR should unset UART_LINE_STATUS_DATA_READY,
         // clear interrupt status and trigger further interrupts if available.
@@ -152,7 +157,7 @@ static bool write_ier(void) {
     BEGIN_TEST;
 
     uart_t uart;
-    io_apic_t io_apic;
+    IoApic io_apic;
     {
         // Setting IER when divisor latch is on should be a no-op
         stub_io_apic(&io_apic);
@@ -235,7 +240,7 @@ static bool write_thr(void) {
     BEGIN_TEST;
 
     uart_t uart;
-    io_apic_t io_apic;
+    IoApic io_apic;
     {
         io_apic_init_with_vector(&io_apic);
         uart_init(&uart, &io_apic);

@@ -31,7 +31,8 @@
 
 // clang-format on
 
-typedef struct io_apic io_apic_t;
+class IoApic;
+
 typedef struct zx_packet_guest_io zx_packet_guest_io_t;
 typedef struct zx_vcpu_io zx_vcpu_io_t;
 
@@ -40,7 +41,7 @@ typedef struct uart {
     mtx_t mutex;
 
     // IO APIC for use with interrupt redirects.
-    const io_apic_t* io_apic;
+    const IoApic* io_apic;
 
     // Transmit holding register (THR).
     uint8_t tx_buffer[UART_BUFFER_SIZE];
@@ -66,7 +67,7 @@ typedef struct uart {
     zx_status_t (*raise_interrupt)(zx_handle_t vcpu, uint32_t vector);
 } uart_t;
 
-void uart_init(uart_t* uart, const io_apic_t* io_apic);
+void uart_init(uart_t* uart, const IoApic* io_apic);
 zx_status_t uart_read(uart_t* uart, uint16_t port, zx_vcpu_io_t* vcpu_io);
 zx_status_t uart_write(uart_t* uart, const zx_packet_guest_io_t* io);
 

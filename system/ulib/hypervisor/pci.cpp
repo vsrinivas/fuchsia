@@ -70,7 +70,7 @@ static const PciDevice::Attributes kRootComplexAttributes = {
 PciDevice::PciDevice(const Attributes attrs)
     : attrs_(attrs) {}
 
-PciBus::PciBus(zx_handle_t guest, const io_apic_t* io_apic)
+PciBus::PciBus(zx_handle_t guest, const IoApic* io_apic)
     : guest_(guest), io_apic_(io_apic), root_complex_(kRootComplexAttributes) {}
 
 zx_status_t PciBus::Init() {
@@ -596,5 +596,5 @@ zx_status_t PciDevice::Interrupt() const {
 }
 
 zx_status_t PciBus::Interrupt(const PciDevice& device) const {
-    return io_apic_interrupt(io_apic_, device.global_irq_);
+    return io_apic_->Interrupt(device.global_irq_);
 }

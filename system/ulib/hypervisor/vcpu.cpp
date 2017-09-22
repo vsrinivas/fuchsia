@@ -154,7 +154,7 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
             status = local_apic_handler(&vcpu_ctx->local_apic, mem, &inst);
             break;
         case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
-            status = io_apic_handler(guest_ctx->io_apic, mem, &inst);
+            status = guest_ctx->io_apic->Handler(mem, &inst);
             break;
         default: {
             status = handle_mmio(vcpu_ctx, mem, &inst);

@@ -269,9 +269,8 @@ int main(int argc, char** argv) {
     guest_ctx_t guest_ctx;
     memset(&guest_ctx, 0, sizeof(guest_ctx));
     // Setup IO APIC.
-    io_apic_t io_apic;
+    IoApic io_apic;
     guest_ctx.io_apic = &io_apic;
-    io_apic_init(&io_apic);
     // Setup IO ports.
     io_port_t io_port;
     guest_ctx.io_port = &io_port;
@@ -322,7 +321,7 @@ int main(int argc, char** argv) {
 #endif // __x86_64__
     vcpu_ctx.guest_ctx = &guest_ctx;
     // Setup Local APIC.
-    status = io_apic_register_local_apic(&io_apic, 0, &vcpu_ctx.local_apic);
+    status = io_apic.RegisterLocalApic(0, &vcpu_ctx.local_apic);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to register Local APIC with IO APIC\n");
         return status;

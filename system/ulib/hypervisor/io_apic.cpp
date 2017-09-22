@@ -4,6 +4,7 @@
 
 #include <string.h>
 
+#include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
@@ -26,7 +27,7 @@
 /* IO APIC configuration constants. */
 #define IO_APIC_VERSION                 0x11
 #define FIRST_REDIRECT_OFFSET           0x10
-#define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
+#define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IoApic::kNumRedirectOffsets - 1)
 
 /* DESTMOD register. */
 #define IO_APIC_DESTMOD_PHYSICAL        0x00
@@ -36,33 +37,29 @@
 
 // clang-format on
 
-void io_apic_init(io_apic_t* io_apic) {
-    memset(io_apic, 0, sizeof(*io_apic));
-}
-
-zx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
-                                        local_apic_t* local_apic) {
-    if (local_apic_id >= IO_APIC_MAX_LOCAL_APICS)
+zx_status_t IoApic::RegisterLocalApic(uint8_t local_apic_id, local_apic_t* local_apic) {
+    if (local_apic_id >= kMaxLocalApics)
         return ZX_ERR_OUT_OF_RANGE;
-    if (io_apic->local_apic[local_apic_id] != NULL)
+    if (local_apic_[local_apic_id] != nullptr)
         return ZX_ERR_ALREADY_EXISTS;
 
     local_apic->regs->id.u32 = local_apic_id;
-    io_apic->local_apic[local_apic_id] = local_apic;
+    local_apic_[local_apic_id] = local_apic;
     return ZX_OK;
 }
 
-zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint8_t* out_vector,
-                             zx_handle_t* out_vcpu) {
-    if (global_irq >= IO_APIC_REDIRECTS)
+zx_status_t IoApic::Redirect(uint32_t global_irq, uint8_t* out_vector,
+                             zx_handle_t* out_vcpu) const {
+    if (global_irq >= kNumRedirects)
         return ZX_ERR_OUT_OF_RANGE;
 
-    mtx_lock((mtx_t*)&io_apic->mutex);
-    uint32_t lower = io_apic->redirect[global_irq * 2];
-    uint32_t upper = io_apic->redirect[global_irq * 2 + 1];
-    mtx_unlock((mtx_t*)&io_apic->mutex);
+    RedirectEntry entry;
+    {
+        fbl::AutoLock lock(&mutex_);
+        entry = redirect_[global_irq];
+    }
 
-    uint32_t vector = bits_shift(lower, 7, 0);
+    uint32_t vector = bits_shift(entry.lower, 7, 0);
 
     // The "destination mode" (DESTMOD) determines how the dest field in the
     // redirection entry should be interpreted.
@@ -76,11 +73,11 @@ zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint
     //
     // See 82093AA (IOAPIC) Section 2.3.4.
     // See Intel Volume 3, Section 10.6.2.
-    uint8_t destmod = BIT_SHIFT(lower, 11);
+    uint8_t destmod = BIT_SHIFT(entry.lower, 11);
     if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
-        uint32_t dest = bits_shift(upper, 27, 24);
-        local_apic_t* apic = dest < IO_APIC_MAX_LOCAL_APICS ? io_apic->local_apic[dest] : NULL;
-        if (apic == NULL)
+        uint32_t dest = bits_shift(entry.upper, 27, 24);
+        local_apic_t* apic = dest < kMaxLocalApics ? local_apic_[dest] : nullptr;
+        if (apic == nullptr)
             return ZX_ERR_NOT_FOUND;
         *out_vector = static_cast<uint8_t>(vector);
         *out_vcpu = apic->vcpu;
@@ -88,10 +85,10 @@ zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint
     }
 
     // Logical DESTMOD.
-    uint32_t dest = bits_shift(upper, 31, 24);
-    for (uint8_t local_apic_id = 0; local_apic_id < IO_APIC_MAX_LOCAL_APICS; ++local_apic_id) {
-        local_apic_t* local_apic = io_apic->local_apic[local_apic_id];
-        if (local_apic == NULL)
+    uint32_t dest = bits_shift(entry.upper, 31, 24);
+    for (uint8_t local_apic_id = 0; local_apic_id < kMaxLocalApics; ++local_apic_id) {
+        local_apic_t* local_apic = local_apic_[local_apic_id];
+        if (local_apic == nullptr)
             continue;
 
         // Intel Volume 3, Section 10.6.2.2: Each local APIC performs a
@@ -117,41 +114,59 @@ zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq) {
+zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
+    if (global_irq >= kNumRedirects)
+        return ZX_ERR_OUT_OF_RANGE;
+    fbl::AutoLock lock(&mutex_);
+    redirect_[global_irq] = redirect;
+    return ZX_OK;
+}
+
+zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
     uint8_t vector;
     zx_handle_t vcpu;
-    zx_status_t status = io_apic_redirect(io_apic, global_irq, &vector, &vcpu);
+    zx_status_t status = Redirect(global_irq, &vector, &vcpu);
     if (status != ZX_OK)
         return status;
     return zx_vcpu_interrupt(vcpu, vector);
 }
 
-static zx_status_t io_apic_register_handler(io_apic_t* io_apic, const instruction_t* inst) {
-    switch (io_apic->select) {
-    case IO_APIC_REGISTER_ID:
-        return inst_rw32(inst, &io_apic->id);
+zx_status_t IoApic::RegisterHandler(const instruction_t* inst) {
+    uint32_t select_register;
+    {
+        fbl::AutoLock lock(&mutex_);
+        select_register = select_;
+    }
+
+    switch (select_register) {
+    case IO_APIC_REGISTER_ID: {
+        fbl::AutoLock lock(&mutex_);
+        return inst_rw32(inst, &id_);
+    }
     case IO_APIC_REGISTER_VER:
         // There are two redirect offsets per redirection entry. We return
         // the maximum redirection entry index.
         //
         // From Intel 82093AA, Section 3.2.2.
-        return inst_read32(inst, (IO_APIC_REDIRECT_OFFSETS / 2 - 1) << 16 | IO_APIC_VERSION);
+        return inst_read32(inst, (kNumRedirects - 1) << 16 | IO_APIC_VERSION);
     case IO_APIC_REGISTER_ARBITRATION:
         // Since we have a single I/O APIC, it is always the winner
         // of arbitration and its arbitration register is always 0.
         return inst_read32(inst, 0);
     case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
-        uint32_t i = io_apic->select - FIRST_REDIRECT_OFFSET;
-        return inst_rw32(inst, io_apic->redirect + i);
+        fbl::AutoLock lock(&mutex_);
+        uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
+        RedirectEntry& entry = redirect_[redirect_offset / 2];
+        uint32_t* redirect_register = redirect_offset % 2 == 0 ? &entry.lower : &entry.upper;
+        return inst_rw32(inst, redirect_register);
     }
     default:
-        fprintf(stderr, "Unhandled IO APIC register %#x\n", io_apic->select);
+        fprintf(stderr, "Unhandled IO APIC register %#x\n", select_register);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-zx_status_t io_apic_handler(io_apic_t* io_apic, const zx_packet_guest_mem_t* mem,
-                            const instruction_t* inst) {
+zx_status_t IoApic::Handler(const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
     ZX_ASSERT(mem->addr >= IO_APIC_PHYS_BASE);
     zx_vaddr_t offset = mem->addr - IO_APIC_PHYS_BASE;
 
@@ -161,17 +176,13 @@ zx_status_t io_apic_handler(io_apic_t* io_apic, const zx_packet_guest_mem_t* mem
         zx_status_t status = inst_write32(inst, &select);
         if (status != ZX_OK)
             return status;
-        mtx_lock((mtx_t*)&io_apic->mutex);
-        io_apic->select = select;
-        mtx_unlock((mtx_t*)&io_apic->mutex);
-        return select > UINT8_MAX ? ZX_ERR_INVALID_ARGS : ZX_OK;
+
+        fbl::AutoLock lock(&mutex_);
+        select_ = select;
+        return select_ > UINT8_MAX ? ZX_ERR_INVALID_ARGS : ZX_OK;
     }
-    case IO_APIC_IOWIN: {
-        mtx_lock((mtx_t*)&io_apic->mutex);
-        zx_status_t status = io_apic_register_handler(io_apic, inst);
-        mtx_unlock((mtx_t*)&io_apic->mutex);
-        return status;
-    }
+    case IO_APIC_IOWIN:
+        return RegisterHandler(inst);
     default:
         fprintf(stderr, "Unhandled IO APIC address %#lx\n", offset);
         return ZX_ERR_NOT_SUPPORTED;

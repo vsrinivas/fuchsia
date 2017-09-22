@@ -45,10 +45,10 @@
 
 // clang-format on
 
+class IoApic;
 class PciBus;
 
 typedef struct instruction instruction_t;
-typedef struct io_apic io_apic_t;
 typedef struct zx_packet_guest_io zx_packet_guest_io_t;
 typedef struct zx_packet_guest_mem zx_packet_guest_mem_t;
 typedef struct zx_vcpu_io zx_vcpu_io_t;
@@ -193,7 +193,7 @@ public:
     // Base address in MMIO space to map device BAR registers.
     static const uint32_t kMmioBarBase = 0xf0000000;
 
-    PciBus(zx_handle_t guest, const io_apic_t* io_apic);
+    PciBus(zx_handle_t guest, const IoApic* io_apic);
 
     zx_status_t Init();
 
@@ -252,7 +252,7 @@ private:
     // Devices on the virtual PCI bus.
     PciDevice* device_[PCI_MAX_DEVICES] = {};
     // IO APIC for use with interrupt redirects.
-    const io_apic_t* io_apic_ = nullptr;
+    const IoApic* io_apic_ = nullptr;
     // Embedded root complex device.
     PciDevice root_complex_;
     // Next pio window to be allocated to connected devices.

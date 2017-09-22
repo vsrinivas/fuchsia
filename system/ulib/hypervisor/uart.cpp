@@ -18,7 +18,7 @@
 /* UART configuration masks. */
 static const uint8_t kUartInterruptIdNoFifoMask = bit_mask<uint8_t>(4);
 
-void uart_init(uart_t* uart, const io_apic_t* io_apic) {
+void uart_init(uart_t* uart, const IoApic* io_apic) {
     memset(uart, 0, sizeof(*uart));
     cnd_init(&uart->rx_cnd);
     cnd_init(&uart->tx_cnd);
@@ -32,7 +32,7 @@ void uart_init(uart_t* uart, const io_apic_t* io_apic) {
 static zx_status_t try_raise_interrupt(uart_t* uart, uint8_t interrupt_id) {
     uint8_t vector = 0;
     zx_handle_t vcpu;
-    zx_status_t status = io_apic_redirect(uart->io_apic, X86_INT_UART, &vector, &vcpu);
+    zx_status_t status = uart->io_apic->Redirect(X86_INT_UART, &vector, &vcpu);
     if (status != ZX_OK)
         return status;
 
@@ -52,7 +52,7 @@ static zx_status_t try_raise_interrupt(uart_t* uart, uint8_t interrupt_id) {
 static bool can_raise_interrupt(uart_t* uart) {
     uint8_t vector = 0;
     zx_handle_t vcpu;
-    zx_status_t status = io_apic_redirect(uart->io_apic, X86_INT_UART, &vector, &vcpu);
+    zx_status_t status = uart->io_apic->Redirect(X86_INT_UART, &vector, &vcpu);
     return status == ZX_OK && vector != 0;
 }
 

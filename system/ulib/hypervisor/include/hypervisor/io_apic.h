@@ -6,43 +6,53 @@
 
 #include <threads.h>
 
+#include <fbl/mutex.h>
 #include <hypervisor/decode.h>
 #include <zircon/syscalls/port.h>
-
-#define IO_APIC_REDIRECTS 48u
-#define IO_APIC_REDIRECT_OFFSETS (IO_APIC_REDIRECTS * 2)
-#define IO_APIC_MAX_LOCAL_APICS 16u
+#include <zircon/thread_annotations.h>
 
 typedef struct local_apic local_apic_t;
 
 /* Stores the IO APIC state. */
-typedef struct io_apic {
-    mtx_t mutex;
+class IoApic {
+public:
+    static constexpr size_t kNumRedirects = 48u;
+    static constexpr size_t kNumRedirectOffsets = kNumRedirects * 2;
+    static constexpr size_t kMaxLocalApics = 16u;
+
+    // An entry in the redirect table.
+    struct RedirectEntry {
+        uint32_t upper;
+        uint32_t lower;
+    };
+
+    // Associate a local APIC with an IO APIC.
+    zx_status_t RegisterLocalApic(uint8_t local_apic_id, local_apic_t* local_apic);
+
+    // Handle memory access to the IO APIC.
+    zx_status_t Handler(const zx_packet_guest_mem_t* mem, const instruction_t* inst);
+
+    // Returns the redirected interrupt vector and target VCPU for the given
+    // global IRQ.
+    zx_status_t Redirect(uint32_t global_irq, uint8_t* vector, zx_handle_t* vcpu) const;
+
+    // Writes the redirect entry for a global IRQ.
+    zx_status_t SetRedirect(uint32_t global_irq, RedirectEntry& redirect);
+
+    // Signals the given global IRQ.
+    zx_status_t Interrupt(uint32_t global_irq) const;
+
+private:
+    zx_status_t RegisterHandler(const instruction_t* inst);
+
+    mutable fbl::Mutex mutex_;
     // IO register-select register.
-    uint32_t select;
+    uint32_t select_ TA_GUARDED(mutex_) = 0;
     // IO APIC identification register.
-    uint32_t id;
-    // IO redirection table offsets.
-    uint32_t redirect[IO_APIC_REDIRECT_OFFSETS];
+    uint32_t id_ TA_GUARDED(mutex_) = 0;
+    // IO redirection table.
+    RedirectEntry redirect_[kNumRedirects] TA_GUARDED(mutex_) = {};
     // Connected local APICs.
-    local_apic_t* local_apic[IO_APIC_MAX_LOCAL_APICS];
-} io_apic_t;
+    local_apic_t* local_apic_[kMaxLocalApics] = {};
+};
 
-void io_apic_init(io_apic_t* io_apic);
-
-/* Associate a local APIC with an IO APIC. */
-zx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
-                                        local_apic_t* local_apic);
-
-/* Handle memory access to the IO APIC. */
-zx_status_t io_apic_handler(io_apic_t* io_apic, const zx_packet_guest_mem_t* mem,
-                            const instruction_t* inst);
-
-/* Returns the redirected interrupt vector and target VCPU for the given
- * global IRQ.
- */
-zx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint8_t* vector,
-                             zx_handle_t* vcpu);
-
-/* Signals the given global IRQ. */
-zx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq);

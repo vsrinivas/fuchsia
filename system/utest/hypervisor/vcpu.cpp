@@ -22,7 +22,7 @@
 typedef struct test {
     vcpu_ctx_t vcpu_ctx;
     guest_ctx_t guest_ctx;
-    io_apic_t io_apic;
+    IoApic io_apic;
     io_port_t io_port;
     PciBus pci_bus;
     zx_vcpu_io_t vcpu_io;
@@ -47,7 +47,6 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
 
 static void setup(test_t* test) {
     vcpu_init(&test->vcpu_ctx, ZX_HANDLE_INVALID);
-    io_apic_init(&test->io_apic);
     io_port_init(&test->io_port);
 
     test->guest_ctx.io_apic = &test->io_apic;
