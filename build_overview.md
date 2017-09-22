@@ -125,13 +125,13 @@ $ dot -Tpng tree.dot -o tree.png
 #### Inspecting the content of a GN target
 
 ```
-$ packages/gn/gn.py desc out/debug-x86-64 //path/to/my:target
+$ buildtools/gn desc out/debug-x86-64 //path/to/my:target
 ```
 
 #### Finding references to a GN target
 
 ```
-$ packages/gn/gn.py refs out/debug-x86-64 //path/to/my:target
+$ buildtools/gn refs out/debug-x86-64 //path/to/my:target
 ```
 
 #### Referencing targets for the build host
@@ -162,7 +162,7 @@ $ buildtools/ninja -C out/debug-x86-64 -j64 foo/bar/blah:dash
 GN extensively documents which Ninja targets it generates. The documentation is
 accessible with:
 ```
-$ packages/gn/gn.py help ninja_rules
+$ buildtools/gn help ninja_rules
 ```
 
 You can also browse the set of Ninja targets currently defined in your output
