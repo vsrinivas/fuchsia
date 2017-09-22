@@ -4,9 +4,8 @@
 
 #include "peridot/lib/fidl/operation.h"
 
-#include <utility>
-
 #include <trace/event.h>
+#include <utility>
 
 #include "lib/fxl/logging.h"
 
@@ -43,10 +42,6 @@ OperationCollection::~OperationCollection() {
   }
 }
 
-bool OperationCollection::Empty() {
-  return operations_.empty();
-}
-
 fxl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
@@ -80,10 +75,6 @@ OperationQueue::~OperationQueue() {
     InvalidateWeakPtrs(operations_.front().get());
     operations_.pop();
   }
-}
-
-bool OperationQueue::Empty() {
-  return operations_.empty();
 }
 
 fxl::WeakPtr<OperationContainer> OperationQueue::GetWeakPtr() {
@@ -134,6 +125,10 @@ OperationBase::~OperationBase() = default;
 void OperationBase::Ready() {
   FXL_DCHECK(container_);
   container_->Hold(this);
+}
+
+void OperationBase::InvalidateWeakPtrs() {
+  weak_ptr_factory_.InvalidateWeakPtrs();
 }
 
 OperationBase::FlowTokenBase::FlowTokenBase(OperationBase* const op)
