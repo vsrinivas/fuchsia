@@ -13,7 +13,7 @@
             "bootfs_path": "apps/waterfall"
         },
         {
-            "binary": "gen/garnet/lib/escher/examples/sketchy/ui/sketchy_ui.flx",
+            "binary": "gen/garnet/examples/escher/sketchy/ui/sketchy_ui.flx",
             "bootfs_path": "apps/sketchy_ui"
         },
         {

@@ -1,0 +1,12 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/network"
+    ],
+    "packages": {
+        "postfile": "//garnet/examples/network/postfile",
+        "wget": "//garnet/examples/network/wget"
+    }
+}

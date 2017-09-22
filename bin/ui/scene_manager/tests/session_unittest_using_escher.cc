@@ -9,7 +9,7 @@
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
 #include "gtest/gtest.h"
-#include "lib/escher/examples/common/demo_harness.h"
+#include "garnet/examples/escher/common/demo_harness.h"
 
 std::unique_ptr<scene_manager::test::EscherTestEnvironment> g_escher_env;
 

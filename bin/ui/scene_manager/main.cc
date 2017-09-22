@@ -6,7 +6,7 @@
 
 #include <trace-provider/provider.h>
 
-#include "lib/escher/examples/common/demo_harness_fuchsia.h"
+#include "garnet/examples/escher/common/demo_harness_fuchsia.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"

@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("echo_client_cpp_bin") {
+  output_name = "echo_client_cpp"
+
+  sources = [
+    "echo_client.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/examples/fidl/services",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+package("echo_client_cpp") {
+  app = true
+
+  deps = [
+    ":echo_client_cpp_bin",
+  ]
+
+  binaries = [ {
+        name = "echo_client_cpp"
+      } ]
+}

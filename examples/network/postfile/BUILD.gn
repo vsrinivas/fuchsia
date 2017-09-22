@@ -1,0 +1,31 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "postfile"
+
+  sources = [
+    "postfile.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/network/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+  ]
+}
+
+package("postfile") {
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "postfile"
+    },
+  ]
+}

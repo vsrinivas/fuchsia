@@ -15,7 +15,7 @@ executable("scene_manager") {
 
   deps = [
     ":common",
-    "//garnet/lib/escher/examples/common",
+    "//garnet/examples/escher/common",
     "//zircon/system/ulib/trace-provider",
   ]
 }
@@ -142,15 +142,15 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/ui/geometry/fidl",
-    "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/examples/escher/common",
     "//garnet/lib/escher/escher",
-    "//garnet/lib/escher/examples/common",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/geometry/cpp",
+    "//garnet/public/lib/ui/geometry/fidl",
+    "//garnet/public/lib/ui/scenic/fidl",
   ]
 
   public_configs = [ ":common_include_dirs" ]

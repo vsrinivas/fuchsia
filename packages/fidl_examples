@@ -4,9 +4,9 @@
         "go"
     ],
     "packages": {
-        "echo_client_cpp": "//garnet/public/lib/fidl/examples/echo_client_cpp",
-        "echo_client_go": "//garnet/public/lib/fidl/examples/echo_client_go",
-        "echo_server_cpp": "//garnet/public/lib/fidl/examples/echo_server_cpp",
-        "echo_server_go": "//garnet/public/lib/fidl/examples/echo_server_go"
+        "echo_client_cpp": "//garnet/examples/fidl/echo_client_cpp",
+        "echo_client_go": "//garnet/examples/fidl/echo_client_go",
+        "echo_server_cpp": "//garnet/examples/fidl/echo_server_cpp",
+        "echo_server_go": "//garnet/examples/fidl/echo_server_go"
     }
 }

@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+group("examples") {
+  testonly = true
+
+  public_deps = [
+    "third_party/asio:async_client",
+    "third_party/asio:async_https",
+  ]
+}
+
+package("nc") {
+  deps = [
+    "third_party/openbsd-netcat:nc",
+  ]
+
+  binaries = [ {
+        name = "nc"
+      } ]
+}

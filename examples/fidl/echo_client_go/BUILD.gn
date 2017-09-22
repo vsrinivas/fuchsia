@@ -1,0 +1,52 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//packages/package.gni")
+
+go_binary("echo_client_go_bin") {
+  output_name = "echo_client_go"
+  gopackage = "fuchsia.googlesource.com/fidl_examples/echo_client_go"
+  deps = [
+    "//garnet/examples/fidl/services",
+    "//garnet/public/lib/app/fidl",
+  ]
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/fidl_examples/echo_client_go"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "garnet/examples/fidl/services"
+      source = "$root_gen_dir/go/src/garnet/examples/fidl/services"
+    },
+    {
+      package = "app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+  ]
+}
+
+package("echo_client_go") {
+  app = true
+
+  deps = [
+    ":echo_client_go_bin",
+  ]
+
+  binaries = [ {
+        name = "echo_client_go"
+      } ]
+}

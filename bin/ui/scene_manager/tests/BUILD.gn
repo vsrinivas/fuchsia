@@ -100,6 +100,6 @@ executable("unittests_using_escher") {
     ":testing_deps",
     "//garnet/public/lib/test_runner/cpp/reporting",
     "//garnet/lib/escher/escher",
-    "//garnet/lib/escher/examples/common",
+    "//garnet/examples/escher/common",
   ]
 }

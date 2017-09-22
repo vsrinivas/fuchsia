@@ -20,6 +20,7 @@
         "garnet/packages/netstack_examples",
         "garnet/packages/netstack_tests",
         "garnet/packages/network",
+        "garnet/packages/network_examples",
         "garnet/packages/network_time",
         "garnet/packages/openssh-keys",
         "garnet/packages/openssh",

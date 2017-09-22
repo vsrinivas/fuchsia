@@ -9,8 +9,8 @@
 #include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
-#include "lib/escher/examples/common/demo.h"
-#include "lib/escher/examples/common/demo_harness_fuchsia.h"
+#include "garnet/examples/escher/common/demo.h"
+#include "garnet/examples/escher/common/demo_harness_fuchsia.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/command_line.h"
 

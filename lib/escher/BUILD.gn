@@ -4,8 +4,8 @@
 
 group("examples") {
   deps = [
-    "//garnet/lib/escher/examples/sketchy",
-    "//garnet/lib/escher/examples/waterfall",
+    "//garnet/examples/escher/sketchy",
+    "//garnet/examples/escher/waterfall",
   ]
 }
 

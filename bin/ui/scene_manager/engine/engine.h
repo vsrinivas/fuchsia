@@ -12,7 +12,7 @@
 #include "lib/escher/escher/renderer/simple_image_factory.h"
 #include "lib/escher/escher/resources/resource_recycler.h"
 #include "lib/escher/escher/shape/rounded_rect_factory.h"
-#include "lib/escher/examples/common/demo_harness.h"
+#include "garnet/examples/escher/common/demo_harness.h"
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"
