@@ -10,7 +10,7 @@
         "garnet/packages/url"
     ],
     "packages": {
-        "ledger": "//apps/ledger",
-        "ledger_tests": "//apps/ledger:ledger_tests"
+        "ledger": "//peridot/ledger_legacy:ledger",
+        "ledger_tests": "//peridot/ledger_legacy:ledger_tests"
     }
 }
