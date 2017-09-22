@@ -46,6 +46,8 @@ class Db {
 
   // Starts a new batch. The batch will be written when Execute is called on the
   // returned object. The Db object must outlive the batch object.
+  // The handler (and the corresponding coroutine) only need to remain active
+  // until the result is returned.
   virtual std::unique_ptr<Batch> StartBatch(
       coroutine::CoroutineHandler* handler) = 0;
 
