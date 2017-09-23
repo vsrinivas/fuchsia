@@ -12,8 +12,8 @@ rust_binary("ledger_example") {
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
     "//garnet/public/rust/crates/mxruntime",
-    "//peridot/bin/ledger/fidl:internal_rust_library",
-    "//peridot/public/lib/ledger/fidl:public_rust_library",
+    "//peridot/bin/ledger/fidl:fidl_rust_library",
+    "//peridot/public/lib/ledger/fidl:fidl_rust_library",
     "//third_party/rust-crates:tokio-core-0.1.9",
   ]
 }

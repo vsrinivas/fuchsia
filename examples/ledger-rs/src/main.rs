@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 #![feature(asm)]
 
-extern crate apps_ledger_services_public;
-extern crate apps_ledger_services_internal;
+extern crate peridot_public_lib_ledger_fidl;
+extern crate peridot_bin_ledger_fidl;
 extern crate fidl;
 extern crate futures;
 extern crate garnet_public_lib_app_fidl;
@@ -20,7 +20,7 @@ mod ledger;
 use zircon::ClockId;
 use tokio_core::reactor;
 use fuchsia::{ApplicationContext, Launcher, install_panic_backtrace_hook};
-use apps_ledger_services_public::*;
+use peridot_public_lib_ledger_fidl::*;
 use futures::Future;
 
 pub fn main() {

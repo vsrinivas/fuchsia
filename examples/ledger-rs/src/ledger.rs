@@ -1,5 +1,5 @@
-use apps_ledger_services_public::*;
-use apps_ledger_services_internal::*;
+use peridot_public_lib_ledger_fidl::*;
+use peridot_bin_ledger_fidl::*;
 use fidl;
 use fuchsia::{Launcher, App};
 use garnet_public_lib_app_fidl::ApplicationController;
