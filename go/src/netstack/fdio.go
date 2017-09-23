@@ -34,6 +34,7 @@ const debug2 = false
 
 const ZX_SOCKET_HALF_CLOSE = 1
 const ZXSIO_SIGNAL_INCOMING = zx.SignalUser0
+const ZXSIO_SIGNAL_OUTGOING = zx.SignalUser1
 const ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
 const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
 
@@ -99,14 +100,13 @@ type iostate struct {
 
 	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
 	transProto tcpip.TransportProtocolNumber // TCP or UDP
-	// dataHandle is used to communicate with libc.
-	// dataHandle is an zx.Socket for TCP, or an zx.Channel for UDP.
-	dataHandle     zx.Handle
+
+	dataHandle     zx.Handle // a zx.Socket, used to communicate with libc
 	peerDataHandle zx.Handle // other end of dataHandle
 
-	mu      sync.Mutex
-	refs    int
-	closing bool
+	mu        sync.Mutex
+	refs      int
+	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
 	writeBufFlushed chan struct{}
 }
@@ -131,7 +131,7 @@ func (ios *iostate) release(f func()) {
 // loopSocketWrite connects libc write to the network stack for TCP sockets.
 //
 // TODO: replace WaitOne with a method that parks goroutines when waiting
-// for a signal on an zx.Socket.
+// for a signal on a zx.Socket.
 //
 // As written, we have two netstack threads per socket.
 // That's not so bad for small client work, but even a client OS is
@@ -739,8 +739,16 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
 	if opt := val.Unpack(); opt != nil {
 		switch o := opt.(type) {
 		case tcpip.ErrorOption:
+			ios.mu.Lock()
+			err := ios.lastError
+			ios.lastError = nil
+			ios.mu.Unlock()
+
+			if err == nil {
+				err = ios.ep.GetSockOpt(o)
+			}
+
 			errno := uint32(0)
-			err := ios.ep.GetSockOpt(o)
 			if err != nil {
 				// TODO: should this be a unix errno?
 				errno = uint32(mxNetError(err))
@@ -1015,9 +1023,26 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 	e := ios.ep.Connect(*addr)
+
+	msg.SetOff(0)
+	msg.Datalen = 0
+
 	if e == tcpip.ErrConnectStarted {
-		<-notifyCh
-		e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
+		go func() {
+			<-notifyCh
+			ios.wq.EventUnregister(&waitEntry)
+			sigs := zx.Signals(ZXSIO_SIGNAL_OUTGOING)
+			e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
+			if err != nil {
+				ios.mu.Lock()
+				ios.lastError = e
+				ios.mu.Unlock()
+			} else {
+				sigs |= ZXSIO_SIGNAL_CONNECTED
+			}
+			zx.Handle(ios.dataHandle).SignalPeer(0, sigs)
+		}()
+		return zx.ErrShouldWait
 	}
 	ios.wq.EventUnregister(&waitEntry)
 	if e != nil {
@@ -1039,8 +1064,6 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 		}
 	}
 
-	msg.SetOff(0)
-	msg.Datalen = 0
 	return zx.ErrOk
 }
 
