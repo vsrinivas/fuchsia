@@ -22,13 +22,13 @@ executable("example_module1") {
     ":calculator",
     ":store",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -40,14 +40,14 @@ executable("example_module2") {
   deps = [
     ":store",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -58,18 +58,18 @@ executable("example_recipe") {
 
   deps = [
     ":calculator",
-    "//peridot/public/lib/ledger/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/user/fidl",
-    "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -103,12 +103,12 @@ source_set("unittests") {
 
   deps = [
     ":store",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:mock_base",
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/story/fidl:fidl_cpp_sources",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }

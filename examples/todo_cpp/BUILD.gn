@@ -7,15 +7,15 @@ executable("todo_cpp") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/lifecycle/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 
   sources = [

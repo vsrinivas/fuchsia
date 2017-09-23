@@ -23,13 +23,13 @@ executable("component_context_test") {
   ]
   deps = [
     ":test_agent1_interface",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -41,10 +41,10 @@ executable("component_context_test_agent1") {
   ]
   deps = [
     ":test_agent1_interface",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -55,10 +55,10 @@ executable("component_context_test_agent2") {
     "test_agent2.cc",
   ]
   deps = [
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -69,10 +69,10 @@ executable("component_context_unstoppable_agent") {
     "unstoppable_agent.cc",
   ]
   deps = [
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 

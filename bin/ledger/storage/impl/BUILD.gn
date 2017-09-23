@@ -70,13 +70,13 @@ source_set("lib") {
   deps = [
     ":commit_storage",
     ":file_index",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/cobalt",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/trace",
   ]
 
@@ -105,11 +105,11 @@ source_set("test_utils") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/test:lib",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -135,6 +135,8 @@ source_set("unittests") {
     ":file_index",
     ":lib",
     ":test_utils",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cloud_sync/impl",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/fake:lib",
@@ -142,8 +144,6 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
     "//peridot/bin/ledger/test:lib",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 

@@ -19,6 +19,9 @@ executable("tool") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
     "//peridot/bin/ledger/app:lib",
     "//peridot/bin/ledger/cloud_provider/impl",
     "//peridot/bin/ledger/cloud_sync/impl",
@@ -26,9 +29,6 @@ executable("tool") {
     "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/impl:lib",
-    "//garnet/public/lib/network/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

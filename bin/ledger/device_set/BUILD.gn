@@ -15,8 +15,8 @@ source_set("device_set") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/firebase",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/firebase",
   ]
 
   deps = [

@@ -22,14 +22,14 @@ executable("suggestion_engine") {
     ":timeline_stories_filter",
     ":timeline_stories_watcher",
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/suggestion/fidl",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -87,8 +87,8 @@ source_set("state") {
     ":interfaces",
     ":models",
     ":ranking",
-    "//peridot/public/lib/suggestion/fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 
@@ -115,8 +115,8 @@ source_set("timeline_stories_filter") {
 
   deps = [
     ":timeline_stories_watcher",
-    "//peridot/public/lib/suggestion/fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 
@@ -127,9 +127,9 @@ source_set("timeline_stories_watcher") {
   ]
 
   deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/fxl",
   ]
 }
 

@@ -14,10 +14,10 @@ flutter_app("example_flutter_story_shell") {
   main_dart = "lib/main.dart"
   deps = [
     "//garnet/public/lib/app/dart",
-    "//peridot/public/lib/story/fidl:fidl_dart",
+    "//garnet/public/lib/fidl/dart",
     "//garnet/public/lib/ui/flutter",
     "//garnet/public/lib/ui/views/fidl:fidl_dart",
-    "//garnet/public/lib/fidl/dart",
     "//lib/flutter/packages/flutter",
+    "//peridot/public/lib/story/fidl:fidl_dart",
   ]
 }

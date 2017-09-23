@@ -5,10 +5,10 @@
 group("ledger") {
   deps = [
     ":constants",
-    ":types",
     ":operations",
     ":page_client",
     ":storage",
+    ":types",
   ]
 }
 
@@ -24,12 +24,12 @@ source_set("operations") {
   ]
 
   deps = [
-    "//peridot/public/lib/ledger/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:operation",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/ledger/fidl",
   ]
 }
 
@@ -44,13 +44,13 @@ source_set("page_client") {
   deps = [
     ":status",
     ":types",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:operation",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/ledger/fidl",
   ]
 }
 
@@ -61,8 +61,8 @@ source_set("status") {
   ]
 
   deps = [
-    "//peridot/public/lib/ledger/fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/ledger/fidl",
   ]
 }
 
@@ -73,14 +73,14 @@ source_set("storage") {
   ]
 
   deps = [
-    "//peridot/lib/util",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/util",
   ]
 
   public_deps = [
     "//peridot/public/lib/module/fidl:module_data",
-    "//peridot/public/lib/story/fidl:private",    
+    "//peridot/public/lib/story/fidl:private",
   ]
 }
 
@@ -98,8 +98,8 @@ group("unittests") {
   testonly = true
 
   deps = [
-    ":storage_unittest",
     ":page_client_unittest",
+    ":storage_unittest",
   ]
 }
 
@@ -112,16 +112,15 @@ source_set("page_client_unittest") {
 
   deps = [
     ":page_client",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:operation",
     "//peridot/lib/testing:ledger_repository_for_testing",
     "//peridot/lib/testing:test_with_message_loop",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }
-
 
 source_set("storage_unittest") {
   testonly = true
@@ -132,8 +131,8 @@ source_set("storage_unittest") {
 
   deps = [
     ":storage",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 }

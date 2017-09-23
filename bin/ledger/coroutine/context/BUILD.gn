@@ -13,8 +13,8 @@ source_set("context") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/coroutine/context/$target_cpu",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/coroutine/context/$target_cpu",
   ]
 
   public_deps = [

@@ -20,10 +20,10 @@ fidl("fidl") {
   ]
 
   deps = [
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/suggestion/fidl:suggestion_provider",
-    "//garnet/public/lib/ui/views/fidl",
   ]
 }
 
@@ -44,14 +44,12 @@ fidl("private") {
   ]
 
   deps = [
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/bin/ledger/fidl",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/auth/fidl/account",
     "//peridot/public/lib/config/fidl",
-    "//garnet/public/lib/ui/views/fidl",
   ]
 
-  visibility = [
-    "//peridot/*",
-  ]
+  visibility = [ "//peridot/*" ]
 }

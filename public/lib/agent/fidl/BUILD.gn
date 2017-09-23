@@ -13,9 +13,9 @@ fidl("fidl") {
 
   deps = [
     "//garnet/public/lib/app/fidl:service_provider",
-    "//peridot/public/lib/user_intelligence/fidl",
     "//peridot/public/lib/agent/fidl/agent_controller",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/user_intelligence/fidl",
   ]
 }

@@ -21,12 +21,12 @@ executable("agent_trigger_test") {
   ]
   deps = [
     ":trigger_test_agent_interface",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -38,11 +38,11 @@ executable("trigger_test_agent") {
   ]
   deps = [
     ":trigger_test_agent_interface",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/lifecycle/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 

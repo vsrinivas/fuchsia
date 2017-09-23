@@ -16,9 +16,9 @@ source_set("unittests") {
   ]
 
   deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/glue/socket",
-    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

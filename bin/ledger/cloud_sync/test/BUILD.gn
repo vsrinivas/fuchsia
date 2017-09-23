@@ -17,8 +17,8 @@ source_set("test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

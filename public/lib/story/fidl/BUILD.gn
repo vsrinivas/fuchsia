@@ -20,11 +20,11 @@ fidl("fidl") {
 
   deps = [
     "//garnet/public/lib/app/fidl:service_provider",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/module/fidl:module_controller",
     "//peridot/public/lib/module/fidl:module_data",
     "//peridot/public/lib/surface/fidl",
-    "//garnet/public/lib/ui/views/fidl",
   ]
 }
 
@@ -39,9 +39,9 @@ fidl("private") {
   ]
 
   deps = [
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/bin/ledger/fidl",
     "//peridot/public/lib/ledger/fidl",
-    "//garnet/public/lib/ui/views/fidl",
   ]
 
   visibility = [ "//peridot/*" ]

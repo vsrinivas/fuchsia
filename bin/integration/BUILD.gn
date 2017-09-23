@@ -27,9 +27,9 @@ source_set("context_engine_test") {
 
   deps = [
     ":context_common",
+    "//peridot/bin/context_engine:scope_utils",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
-    "//peridot/bin/context_engine:scope_utils",
   ]
 }
 
@@ -60,14 +60,14 @@ source_set("suggestion_engine_test") {
   deps = [
     ":context_common",
     ":test_suggestion_listener",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/suggestion/fidl:debug",
     "//peridot/bin/acquirers/mock:gps",
     "//peridot/bin/agents:carmen_sandiego",
     "//peridot/bin/agents:ideas",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/suggestion/fidl:debug",
   ]
 }
 
@@ -100,9 +100,9 @@ source_set("common") {
   ]
 
   deps = [
-    "//peridot/lib/environment_host",
-    "//peridot/bin/user:agent_launcher",
     "//garnet/public/lib/fsl",
+    "//peridot/bin/user:agent_launcher",
+    "//peridot/lib/environment_host",
   ]
 
   public_deps = [

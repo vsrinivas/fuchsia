@@ -13,16 +13,16 @@ source_set("token_provider") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/network",
     "//peridot/public/lib/auth/fidl",
-    "//garnet/public/lib/fxl",
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/glue/crypto",
-    "//garnet/public/lib/fsl",
     "//third_party/boringssl",
     "//third_party/rapidjson",
   ]

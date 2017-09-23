@@ -25,11 +25,13 @@ executable("integration") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/ledger/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/app:lib",
     "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/glue/socket",
     "//peridot/bin/ledger/network:fake",
     "//peridot/bin/ledger/storage/fake:lib",
@@ -39,9 +41,7 @@ executable("integration") {
     "//peridot/bin/ledger/test/cloud_server",
     "//peridot/bin/ledger/test/integration/sync",
     "//peridot/public/lib/auth/fidl",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/ledger/fidl",
     "//third_party/gtest",
   ]
 

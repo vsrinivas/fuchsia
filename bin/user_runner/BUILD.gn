@@ -25,15 +25,18 @@ executable("user_runner") {
   deps = [
     ":focus",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/bin/agent_runner",
+    "//peridot/bin/component",
+    "//peridot/bin/entity",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/resolver/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
-    "//peridot/lib/device_info",
+    "//peridot/bin/story_runner",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
+    "//peridot/lib/device_info",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
@@ -50,18 +53,15 @@ executable("user_runner") {
     "//peridot/public/lib/agent/fidl/agent_controller",
     "//peridot/public/lib/auth/fidl/account",
     "//peridot/public/lib/config/fidl",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/remote/fidl",
+    "//peridot/public/lib/resolver/fidl",
     "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl:private",
-    "//peridot/bin/agent_runner",
-    "//peridot/bin/component",
-    "//peridot/bin/entity",
-    "//peridot/bin/story_runner",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/user_intelligence/fidl",
     "//zircon/system/ulib/trace-provider",
   ]
 }
@@ -72,17 +72,17 @@ executable("dev_user_shell") {
   ]
 
   deps = [
-    "//peridot/public/lib/suggestion/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/view_framework",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
-    "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -93,7 +93,9 @@ source_set("focus") {
   ]
 
   deps = [
-    "//peridot/public/lib/ledger/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:operation",
@@ -102,10 +104,8 @@ source_set("focus") {
     "//peridot/lib/ledger:storage",
     "//peridot/lib/ledger:types",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/user/fidl:focus",
     "//peridot/public/lib/user/fidl:private",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }

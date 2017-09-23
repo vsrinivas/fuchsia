@@ -27,8 +27,8 @@ executable("maxwell_main") {
     ":config",
     ":user_intelligence_provider",
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib/user_intelligence/fidl",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/user_intelligence/fidl",
     "//third_party/rapidjson",
   ]
 }
@@ -54,7 +54,10 @@ source_set("user_intelligence_provider") {
     ":agent_launcher",
     ":config",
     ":intelligence_services",
+    "//garnet/public/lib/bluetooth/fidl",
     "//garnet/public/lib/cobalt/fidl",
+    "//garnet/public/lib/network/fidl",
+    "//peridot/bin/acquirers/story_info:initializer",
     "//peridot/public/lib/action_log/fidl",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/resolver/fidl",
@@ -62,9 +65,6 @@ source_set("user_intelligence_provider") {
     "//peridot/public/lib/suggestion/fidl:debug",
     "//peridot/public/lib/user_intelligence/fidl",
     "//peridot/public/lib/user_intelligence/fidl:scope",
-    "//peridot/bin/acquirers/story_info:initializer",
-    "//garnet/public/lib/bluetooth/fidl",
-    "//garnet/public/lib/network/fidl",
   ]
 
   defines = []

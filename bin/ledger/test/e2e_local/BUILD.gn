@@ -15,14 +15,14 @@ executable("e2e_local") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/fidl:fidl_sync",
-    "//peridot/public/lib/ledger/fidl:fidl_sync",
     "//peridot/bin/ledger/test:app_test",
     "//peridot/bin/ledger/test:app_test_main",
     "//peridot/bin/ledger/test:lib",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/ledger/fidl:fidl_sync",
     "//third_party/gtest",
   ]
 

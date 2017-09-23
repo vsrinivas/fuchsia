@@ -11,8 +11,8 @@ fidl("fidl") {
     "context_writer.fidl",
     "debug.fidl",
     "metadata.fidl",
-    "value_type.fidl",
     "value.fidl",
+    "value_type.fidl",
   ]
 
   deps = [

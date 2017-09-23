@@ -24,12 +24,12 @@ source_set("impl") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/gcs",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/public",  # For serialization version constant.
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/zx",
   ]
 
@@ -47,11 +47,11 @@ source_set("unittests") {
 
   deps = [
     ":impl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/gcs",
     "//peridot/bin/ledger/test:lib",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

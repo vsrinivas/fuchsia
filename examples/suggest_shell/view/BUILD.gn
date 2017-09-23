@@ -14,12 +14,12 @@ flutter_app("suggest_shell_view") {
   main_dart = "lib/main.dart"
   deps = [
     "//garnet/public/lib/app/dart",
+    "//garnet/public/lib/fidl/dart",
+    "//garnet/public/lib/ui/flutter",
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",
+    "//lib/flutter/packages/flutter",
     "//peridot/public/lib/lifecycle/fidl:fidl_dart",
     "//peridot/public/lib/module/fidl:fidl_dart",
     "//peridot/public/lib/story/fidl:fidl_dart",
-    "//garnet/public/lib/ui/flutter",
-    "//garnet/public/lib/ui/views/fidl:fidl_dart",
-    "//garnet/public/lib/fidl/dart",
-    "//lib/flutter/packages/flutter",
   ]
 }

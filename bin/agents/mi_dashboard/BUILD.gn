@@ -14,12 +14,12 @@ dart_app("mi_dashboard_dart") {
 
   deps = [
     "//garnet/public/lib/app/dart",
+    "//garnet/public/lib/fidl/dart",
     "//peridot/public/lib/context/dart",
     "//peridot/public/lib/context/fidl:fidl_dart",
     "//peridot/public/lib/suggestion/fidl:debug_dart",
     "//peridot/public/lib/suggestion/fidl:fidl_dart",
     "//peridot/public/lib/user_intelligence/fidl:fidl_dart",
-    "//garnet/public/lib/fidl/dart",
     "//third_party/dart-pkg/pub/http",
   ]
 }
@@ -41,28 +41,25 @@ package("mi_dashboard") {
 
   resources = [
     {
-      path = rebase_path(
-              "//peridot/bin/agents/mi_dashboard/webroot/index.html")
+      path = rebase_path("//peridot/bin/agents/mi_dashboard/webroot/index.html")
       dest = "mi_dashboard/webroot/index.html"
     },
     {
-      path = rebase_path(
-              "//peridot/bin/agents/mi_dashboard/webroot/dashboard.js")
+      path =
+          rebase_path("//peridot/bin/agents/mi_dashboard/webroot/dashboard.js")
       dest = "mi_dashboard/webroot/dashboard.js"
     },
     {
-      path = rebase_path(
-              "//peridot/bin/agents/mi_dashboard/webroot/dashboard.css")
+      path =
+          rebase_path("//peridot/bin/agents/mi_dashboard/webroot/dashboard.css")
       dest = "mi_dashboard/webroot/dashboard.css"
     },
     {
-      path =
-          rebase_path("//peridot/bin/agents/mi_dashboard/webroot/logo.png")
+      path = rebase_path("//peridot/bin/agents/mi_dashboard/webroot/logo.png")
       dest = "mi_dashboard/webroot/logo.png"
     },
     {
-      path =
-          rebase_path("//peridot/bin/agents/mi_dashboard/dashboard.config")
+      path = rebase_path("//peridot/bin/agents/mi_dashboard/dashboard.config")
       dest = "mi_dashboard/dashboard.config"
     },
   ]

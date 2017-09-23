@@ -19,11 +19,11 @@ executable("component_manager_main") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib/component/fidl",
-    "//garnet/public/lib/network/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/url",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
+    "//garnet/public/lib/url",
+    "//peridot/public/lib/component/fidl",
     "//third_party/rapidjson",
   ]
 

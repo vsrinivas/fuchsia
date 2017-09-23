@@ -13,8 +13,11 @@ source_set("component") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/agent_runner:public",
+    "//peridot/bin/entity",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:message_receiver_client",
@@ -23,9 +26,6 @@ source_set("component") {
     "//peridot/lib/ledger:storage",
     "//peridot/lib/ledger:types",
     "//peridot/public/lib/component/fidl",
-    "//peridot/bin/agent_runner:public",
-    "//peridot/bin/entity",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/ledger/fidl",
   ]
 }

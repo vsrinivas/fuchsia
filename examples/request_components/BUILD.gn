@@ -5,9 +5,9 @@
 executable("request_components") {
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib/component/fidl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/component/fidl",
   ]
 
   sources = [

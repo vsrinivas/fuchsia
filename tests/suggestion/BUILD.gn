@@ -18,13 +18,13 @@ executable("suggestion_proposal_test_module") {
     "suggestion_proposal_test_module.cc",
   ]
   deps = [
-    "//peridot/public/lib/suggestion/fidl",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 
@@ -35,12 +35,12 @@ executable("suggestion_test_user_shell") {
     "suggestion_test_user_shell.cc",
   ]
   deps = [
-    "//peridot/public/lib/suggestion/fidl",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }

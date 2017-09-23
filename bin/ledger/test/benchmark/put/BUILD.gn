@@ -25,14 +25,14 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/ledger/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/test:lib",
     "//peridot/bin/ledger/test/benchmark/lib",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/ledger/fidl",
   ]
 }
 
@@ -41,8 +41,8 @@ executable("ledger_benchmark_put") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/trace-provider",
   ]
 

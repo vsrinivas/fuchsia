@@ -13,12 +13,12 @@ executable("action_log") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/public/lib/action_log/fidl",
     "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user_intelligence/fidl:scope",
     "//peridot/public/lib/surface/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/user_intelligence/fidl:scope",
     "//third_party/rapidjson",
   ]
 }

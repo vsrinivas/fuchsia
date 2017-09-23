@@ -63,6 +63,8 @@ executable("ledger_unittests") {
   testonly = true
 
   deps = [
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/app:unittests",
     "//peridot/bin/ledger/auth_provider:unittests",
     "//peridot/bin/ledger/backoff:unittests",
@@ -84,8 +86,6 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/test:unittests",
     "//peridot/bin/ledger/test/token_provider:unittests",
     "//peridot/bin/ledger/third_party/bup:unittests",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//garnet/public/lib/fxl:fxl_printers",
   ]
 
   configs += [ ":ledger_config" ]

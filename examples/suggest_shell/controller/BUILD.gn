@@ -17,13 +17,13 @@ executable("suggest_shell_controller") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib/suggestion/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }

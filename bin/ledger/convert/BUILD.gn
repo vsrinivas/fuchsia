@@ -22,9 +22,9 @@ source_set("convert") {
   public_deps = [
     ":byte_storage",
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/zx",
     "//third_party/leveldb",
     "//third_party/rapidjson",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

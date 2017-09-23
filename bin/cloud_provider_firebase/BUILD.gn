@@ -33,14 +33,14 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/bin/ledger/auth_provider",
     "//peridot/bin/ledger/cloud_provider",
     "//peridot/bin/ledger/device_set",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
     "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/cloud_provider/fidl",
   ]
 
   deps = [
@@ -62,17 +62,17 @@ executable("cloud_provider_firebase_unittests") {
 
   deps = [
     ":lib",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/bin/ledger/auth_provider/test",
     "//peridot/bin/ledger/cloud_provider/test",
     "//peridot/bin/ledger/device_set/test",
     "//peridot/bin/ledger/network:fake",
     "//peridot/bin/ledger/test:lib",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl:fxl_printers",
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/cloud_provider/fidl",
   ]
 }
 

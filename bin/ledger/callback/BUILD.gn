@@ -30,8 +30,8 @@ source_set("callback") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/trace",
   ]
 

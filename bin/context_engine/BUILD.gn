@@ -16,8 +16,8 @@ executable("context_engine") {
 
 source_set("context_index") {
   sources = [
-    "index.h",
     "index.cc",
+    "index.h",
   ]
 
   deps = [
@@ -34,9 +34,9 @@ executable("context_index_unittest") {
 
   deps = [
     ":context_index",
+    "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
-    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }
@@ -65,10 +65,10 @@ source_set("context_repository") {
 
   deps = [
     ":context_index",
-    "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/fidl",
     "//third_party/rapidjson",
   ]
 }
@@ -82,9 +82,9 @@ executable("context_repository_unittest") {
 
   deps = [
     ":context_repository",
+    "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
-    "//garnet/public/lib/fsl",
     "//third_party/gtest",
   ]
 }
@@ -117,10 +117,10 @@ source_set("context_engine_impl") {
 
   deps = [
     ":context_reader_impl",
-    ":context_writer_impl",
     ":context_repository",
-    "//peridot/public/lib/context/fidl",
+    ":context_writer_impl",
     "//garnet/public/lib/fidl/cpp/bindings",
+    "//peridot/public/lib/context/fidl",
   ]
 }
 
@@ -131,9 +131,9 @@ source_set("scope_utils") {
   ]
 
   deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/user_intelligence/fidl:scope",
-    "//garnet/public/lib/fxl",
     "//third_party/boringssl",  # for sha256
   ]
 }

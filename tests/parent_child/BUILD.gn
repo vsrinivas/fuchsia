@@ -18,12 +18,12 @@ executable("child_module") {
     "child_module.cc",
   ]
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -34,11 +34,11 @@ executable("parent_module") {
     "parent_module.cc",
   ]
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }

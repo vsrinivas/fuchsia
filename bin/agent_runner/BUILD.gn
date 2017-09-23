@@ -18,8 +18,10 @@ source_set("agent_runner") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/component",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
@@ -32,11 +34,9 @@ source_set("agent_runner") {
     "//peridot/public/lib/agent/fidl/agent_controller",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/lifecycle/fidl",
-    "//peridot/bin/component",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/user_intelligence/fidl",
   ]
 }
 
@@ -52,7 +52,10 @@ source_set("unittests") {
     ":public",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/component",
+    "//peridot/bin/entity",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger:page_client",
     "//peridot/lib/testing:fake_application_launcher",
@@ -61,12 +64,9 @@ source_set("unittests") {
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/bin/component",
-    "//peridot/bin/entity",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
-    "//zircon/system/ulib/trace",
+    "//peridot/public/lib/user_intelligence/fidl",
     "//third_party/gtest",
+    "//zircon/system/ulib/trace",
   ]
 }
 
@@ -80,15 +80,15 @@ source_set("public") {
 
   deps = [
     "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/entity",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
     "//peridot/lib/fidl:operation",
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/agent/fidl/agent_controller",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/bin/entity",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/ledger/fidl",
+    "//peridot/public/lib/user_intelligence/fidl",
   ]
 }

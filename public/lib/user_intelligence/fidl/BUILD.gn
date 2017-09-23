@@ -19,11 +19,11 @@ fidl("fidl") {
   deps = [
     ":scope",
     "//peridot/public/lib/action_log/fidl",
+    "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/resolver/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl:focus",
   ]
 }

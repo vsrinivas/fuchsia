@@ -17,17 +17,17 @@ executable("test_last_focus_time") {
     "test_last_focus_time.cc",
   ]
   deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/common:story_provider_watcher_base",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/lib/common:story_provider_watcher_base",
     "//peridot/public/lib/user/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }

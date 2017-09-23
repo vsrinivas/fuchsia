@@ -60,6 +60,8 @@ source_set("unittests") {
 
   deps = [
     ":impl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/auth_provider/test",
     "//peridot/bin/ledger/backoff/test",
     "//peridot/bin/ledger/cloud_provider/test",
@@ -71,8 +73,6 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
     "//peridot/bin/ledger/test:lib",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

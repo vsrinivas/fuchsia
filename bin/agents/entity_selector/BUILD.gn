@@ -11,10 +11,10 @@ executable("entity_selector") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib/context/fidl",
+    "//garnet/public/lib/fsl",
     "//peridot/bin/agents/entity_utils:entity_span",
     "//peridot/bin/agents/entity_utils:entity_utils",
     "//peridot/lib/rapidjson",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/context/fidl",
   ]
 }

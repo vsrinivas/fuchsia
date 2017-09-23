@@ -15,9 +15,9 @@ source_set("gps") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/bin/acquirers:gps",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/user_intelligence/fidl:scope",
-    "//peridot/bin/acquirers:gps",
-    "//garnet/public/lib/fsl",
   ]
 }

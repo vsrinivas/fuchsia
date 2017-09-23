@@ -19,8 +19,8 @@ source_set("crypto") {
   ]
 
   deps = [
-    "//peridot/bin/ledger/third_party/modp_b64",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/third_party/modp_b64",
     "//third_party/boringssl",
   ]
 

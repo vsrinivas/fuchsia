@@ -15,8 +15,8 @@ source_set("filesystem") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

@@ -21,15 +21,15 @@ source_set("cloud_server") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/glue/socket",
-    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/netstack/fidl:net_address",
+    "//garnet/public/lib/network/fidl",
+    "//peridot/bin/ledger/glue/socket",
   ]
 
   deps = [
-    "//peridot/bin/ledger/convert",
     "//garnet/public/lib/url",
+    "//peridot/bin/ledger/convert",
     "//third_party/rapidjson",
   ]
 

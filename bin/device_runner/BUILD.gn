@@ -27,6 +27,10 @@ executable("device_runner") {
     ":lib",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
@@ -38,10 +42,6 @@ executable("device_runner") {
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/device/fidl",
     "//peridot/public/lib/user/fidl:private",
-    "//garnet/public/lib/ui/presentation/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//zircon/system/ulib/trace-provider",
   ]
 }
@@ -58,6 +58,10 @@ source_set("lib") {
     ":users",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
@@ -68,10 +72,6 @@ source_set("lib") {
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/device/fidl",
     "//peridot/public/lib/user/fidl:private",
-    "//garnet/public/lib/ui/presentation/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//zircon/system/ulib/trace",
   ]
 }
@@ -84,9 +84,9 @@ executable("device_runner_monitor") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//peridot/public/lib/device/fidl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/device/fidl",
   ]
 }
 
@@ -96,12 +96,12 @@ executable("dev_device_shell") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/testing",
     "//peridot/public/lib/device/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -115,9 +115,9 @@ source_set("unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/app/cpp",
-    "//peridot/lib/testing:test_with_message_loop",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/testing:test_with_message_loop",
     "//third_party/gtest",
   ]
 }

@@ -15,8 +15,8 @@ source_set("backoff") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/glue/crypto",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/glue/crypto",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

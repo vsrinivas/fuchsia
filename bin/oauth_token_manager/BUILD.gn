@@ -24,14 +24,14 @@ executable("oauth_token_manager") {
   deps = [
     ":credentials",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
     "//peridot/lib/fidl:operation",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/auth/fidl",
-    "//garnet/public/lib/network/fidl",
     "//topaz/runtime/web_runner/services",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//zircon/system/ulib/trace-provider",
   ]
 }

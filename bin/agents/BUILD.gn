@@ -26,10 +26,10 @@ executable("carmen_sandiego") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//peridot/public/lib/context/fidl",
+    "//garnet/public/lib/fsl",
     "//peridot/bin/acquirers:gps",
     "//peridot/lib/rapidjson",
-    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/context/fidl",
   ]
 }
 
@@ -44,9 +44,9 @@ executable("ideas") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/rapidjson",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
-    "//peridot/lib/rapidjson",
-    "//garnet/public/lib/fsl",
   ]
 }

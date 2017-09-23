@@ -21,12 +21,12 @@ executable("queue_persistence_test_module") {
   ]
   deps = [
     ":queue_persistence_test_agent_interface",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -38,12 +38,12 @@ executable("queue_persistence_test_agent") {
   ]
   deps = [
     ":queue_persistence_test_agent_interface",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/component/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }
 

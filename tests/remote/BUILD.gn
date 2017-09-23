@@ -19,6 +19,7 @@ executable("remote_invoker_test") {
     "remote_invoker_test_module.cc",
   ]
   deps = [
+    "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
@@ -27,6 +28,5 @@ executable("remote_invoker_test") {
     "//peridot/public/lib/remote/fidl",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/user/fidl",
-    "//garnet/public/lib/fsl",
   ]
 }

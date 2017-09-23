@@ -9,9 +9,9 @@ source_set("entity_span") {
   ]
 
   public_deps = [
-    "//peridot/public/lib/context/fidl",
-    "//peridot/lib/rapidjson",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/rapidjson",
+    "//peridot/public/lib/context/fidl",
   ]
 }
 

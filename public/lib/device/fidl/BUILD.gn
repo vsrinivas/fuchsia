@@ -12,8 +12,8 @@ fidl("fidl") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/auth/fidl/account",
     "//peridot/public/lib/config/fidl",
-    "//garnet/public/lib/ui/views/fidl",
   ]
 }

@@ -17,8 +17,8 @@ source_set("async_holder") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -29,10 +29,10 @@ source_set("story_provider_watcher_base") {
   ]
 
   deps = [
-    "//peridot/lib/fidl:array_to_string",
-    "//peridot/public/lib/story/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/public/lib/story/fidl",
   ]
 }
 
@@ -45,4 +45,3 @@ source_set("teardown") {
     "//garnet/public/lib/fxl",
   ]
 }
-

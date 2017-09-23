@@ -8,4 +8,3 @@ config("config") {
     "$root_gen_dir/peridot/public",
   ]
 }
-

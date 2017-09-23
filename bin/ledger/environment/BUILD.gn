@@ -11,9 +11,9 @@ source_set("environment") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/network",
-    "//garnet/public/lib/fxl",
   ]
 
   deps = [
@@ -32,8 +32,8 @@ source_set("unittests") {
 
   deps = [
     ":environment",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
 

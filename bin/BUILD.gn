@@ -8,9 +8,9 @@ group("src") {
   deps = [
     "component_manager",
     "device_runner:all",
+    "entity",
     "oauth_token_manager:all",
     "story_runner:all",
     "user_runner:all",
-    "entity",
   ]
 }

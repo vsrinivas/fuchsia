@@ -17,16 +17,16 @@ executable("test_user_shell") {
     "test_user_shell.cc",
   ]
   deps = [
-    "//peridot/public/lib/suggestion/fidl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }
