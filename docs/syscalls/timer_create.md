@@ -29,7 +29,7 @@ The possible values are:
   later timers.
 + **ZX_TIMER_SLACK_EARLY** coalescing is allowed only with earlier
   timers.
-+ **ZX_TIMER_SLACK_LAYE** coalescing is allowed only with later
++ **ZX_TIMER_SLACK_LATE** coalescing is allowed only with later
   timers.
 
 Passing 0 in options is equivalent to ZX_TIMER_SLACK_CENTER.
