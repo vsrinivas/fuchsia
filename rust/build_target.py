@@ -308,10 +308,9 @@ def main():
                 continue
             artifact_name = info["name"]
             base_path = info["base_path"]
-            if artifact_name not in dependencies:
-                dependencies[artifact_name] = {}
-            dependencies[artifact_name]["path"] = os.path.relpath(base_path,
-                                                                  args.gen_dir)
+            dependencies[artifact_name] = {
+                "path": os.path.relpath(base_path, args.gen_dir),
+            }
 
         # Create replace section with mirrors and local crates.
         # This intentionally erases any existing replace section which could

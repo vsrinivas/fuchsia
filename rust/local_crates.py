@@ -11,26 +11,34 @@ import os
 ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 
 RUST_CRATES = {
-    # Fuchsia crates.
+    # Local crates.
+    # These are usually Fuchsia-owned crates with BUILD.gn files, but may
+    # occasionally (and temporarily) contain third-party mirrors with changes
+    # specific to Fuchsia. GN files for these mirrors will be hosted under
+    # //build/secondary.
     "published": {
-        "magenta": {
+        "fuchsia-zircon": {
             "version": "0.2.0",
             "path": "garnet/public/rust/crates/fuchsia-zircon",
             "target": "//garnet/public/rust/crates/fuchsia-zircon",
         },
-        "magenta-sys": {
+        "fuchsia-zircon-sys": {
             "version": "0.2.0",
             "path": "garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
             "target": "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
         },
-    },
-    # Third-party crates whose sources are mirrored.
-    # The GN target for these will be automatically generated.
-    "mirrors": {
+        # TODO(pylaligand): move mio back to the mirrors group once
+        # fuchsia-zircon is published.
         "mio": {
             "version": "0.6.10",
             "path": "third_party/rust-mirrors/mio",
+            "target": "//third_party/rust-mirrors/mio",
         },
+    },
+    # Third-party crates whose sources are mirrored.
+    # The GN target for these will be automatically generated under
+    # //third_party/rust-crates.
+    "mirrors": {
         "tokio-core": {
             "version": "0.1.9",
             "path": "third_party/rust-mirrors/tokio-core",
