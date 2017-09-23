@@ -49,7 +49,7 @@ class PageClient : ledger::PageWatcher {
   explicit PageClient(std::string context,
                       LedgerClient* ledger_client,
                       LedgerPageId page_id,
-                      const char* prefix);
+                      std::string prefix = "");
   ~PageClient() override;
 
   // Returns the current page snapshot. It is returned as a shared_ptr, so that

@@ -2,101 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/story_runner/link_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/story/fidl/link_change.fidl.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/mock_base.h"
+#include "peridot/lib/testing/ledger_repository_for_testing.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
+
+// Defined in incremental_link.cc.
+void XdrLinkChange(XdrContext* const xdr, LinkChange* const data);
+
 namespace {
-
-// LinkStorage is not a fidl interface.
-class LinkStorageMock : LinkStorage, public testing::MockBase {
- public:
-  LinkStorageMock() = default;
-  ~LinkStorageMock() override = default;
-
-  const LinkChangePtr& write_link_change() const {
-    return changes_.rbegin()->second;
-  }
-
-  int changes_size() const { return changes_.size(); }
-
-  const std::string& write_link_path() const { return write_link_path_; }
-
-  const std::string& read_link_path() const { return read_link_path_; }
-
-  LinkStorage* interface() { return this; }
-
- private:
-  // Sends back whatever we most recently wrote
-  void ReadLinkData(const LinkPathPtr& link_path,
-                    const DataCallback& callback) override {
-    ++counts["ReadLinkData"];
-    read_link_path_ = EncodeLinkPath(link_path);
-    callback(write_link_change()->json);
-  }
-
-  void ReadAllLinkData(const LinkPathPtr& link_path,
-                       const AllLinkChangeCallback& callback) override {
-    ++counts["ReadAllLinkData"];
-    read_link_path_ = EncodeLinkPath(link_path);
-    auto arr = fidl::Array<LinkChangePtr>::New(0);
-    for (auto& c : changes_) {
-      arr.push_back(c.second.Clone());
-    }
-
-    callback(std::move(arr));
-  }
-
-  void WriteLinkData(const LinkPathPtr& link_path,
-                     const fidl::String& data,
-                     const SyncCallback& callback) override {
-    ++counts["WriteLinkData"];
-    write_link_path_ = EncodeLinkPath(link_path);
-    callback();
-  }
-
-  void WriteIncrementalLinkData(const LinkPathPtr& link_path,
-                                fidl::String key,
-                                LinkChangePtr link_change,
-                                const SyncCallback& callback) override {
-    ++counts["WriteIncrementalLinkData"];
-    write_link_path_ = EncodeLinkPath(link_path);
-    changes_[key] = std::move(link_change);
-
-    callback();
-  }
-
-  void FlushWatchers(const SyncCallback& callback) override {
-    ++counts["FlushWatchers"];
-    callback();
-  }
-
-  void WatchLink(const LinkPathPtr& /*link_path*/,
-                 LinkImpl* /*impl*/,
-                 const DataCallback& /*watcher*/) override {
-    ++counts["WatchLink"];
-  }
-
-  void DropWatcher(LinkImpl* /*impl*/) override {
-    ++counts["DropWatcher"];
-  }
-
-  void Sync(const SyncCallback& /*callback*/) override {
-    ++counts["Sync"];
-  }
-
- private:
-  std::string read_link_path_;
-  std::string write_link_path_;
-  std::map<std::string, LinkChangePtr> changes_;
-};
 
 LinkPathPtr GetTestLinkPath() {
   LinkPathPtr link_path = LinkPath::New();
@@ -106,137 +31,233 @@ LinkPathPtr GetTestLinkPath() {
   return link_path;
 }
 
-constexpr char kPrettyTestLinkPath[] = "root:photos/theLinkName";
+// TODO(mesch): Duplicated from ledger_client.cc.
+bool HasPrefix(const std::string& value, const std::string& prefix) {
+  if (value.size() < prefix.size()) {
+    return false;
+  }
 
-class LinkImplTest : public testing::TestWithMessageLoop, modular::LinkWatcher {
- public:
-  LinkImplTest() : binding_(this) { link_impl_->Connect(std::move(request_)); }
-
-  ~LinkImplTest() {
-    if (binding_.is_bound()) {
-      binding_.Close();  // Disconnect from Watch()
+  for (size_t i = 0; i < prefix.size(); ++i) {
+    if (value[i] != prefix[i]) {
+      return false;
     }
   }
 
-  virtual void Notify(const fidl::String& json) {
+  return true;
+}
+
+class PageClientPeer : modular::PageClient {
+ public:
+  PageClientPeer(LedgerClient* const ledger_client,
+                 LedgerPageId page_id,
+                 std::string expected_prefix)
+      : PageClient("PageClientPeer", ledger_client, std::move(page_id)),
+        expected_prefix_(std::move(expected_prefix)) {}
+
+  void OnPageChange(const std::string& key, const std::string& value) {
+    EXPECT_TRUE(HasPrefix(key, expected_prefix_)) << " key=" << key
+                                                  << " expected_prefix=" << expected_prefix_;
+    changes.push_back(std::make_pair(key, value));
+    EXPECT_TRUE(XdrRead(value, &last_change, XdrLinkChange)) << key << " " << value;
+    FXL_LOG(INFO) << "PageChange " << key << " = " << value;
+  };
+
+  std::vector<std::pair<std::string,std::string>> changes;
+  LinkChangePtr last_change;
+
+ private:
+  std::string expected_prefix_;
+};
+
+// TODO(mesch): Factor setup and teardown of ledger repository for testing out
+// into a common fixture class, e.g. testing::TestWithLedger.
+class LinkImplTest : public testing::TestWithMessageLoop, modular::LinkWatcher {
+ public:
+  LinkImplTest() : watcher_binding_(this) {}
+
+  void SetUp() override {
+    OperationBase::set_observer([this](const char* const operation_name) {
+        FXL_LOG(INFO) << "Operation " << operation_name;
+        operations_[operation_name]++;
+      });
+
+    ledger_repo_app_ =
+      std::make_unique<modular::testing::LedgerRepositoryForTesting>("link_impl_unittest");
+
+    ledger_client_.reset(new LedgerClient(ledger_repo_app_->ledger_repository(),
+                                          __FILE__,
+                                          [] { ASSERT_TRUE(false); }));
+
+    auto page_id = to_array("0123456789123456");
+    auto link_path = GetTestLinkPath();
+
+    link_impl_ = std::make_unique<LinkImpl>(ledger_client_.get(),
+                                            page_id.Clone(),
+                                            link_path->Clone());
+
+    link_impl_->Connect(link_.NewRequest());
+
+    ledger_client_peer_ = ledger_client_->GetLedgerClientPeer();
+    page_client_peer_ =  std::make_unique<PageClientPeer>(ledger_client_peer_.get(),
+                                                          page_id.Clone(),
+                                                          MakeLinkKey(link_path));
+  }
+
+  void TearDown() override {
+    OperationBase::set_observer(nullptr);
+
+    if (watcher_binding_.is_bound()) {
+      watcher_binding_.Close();
+    }
+
+    link_impl_.reset();
+    link_.reset();
+    ledger_client_.reset();
+
+    page_client_peer_.reset();
+    ledger_client_peer_.reset();
+
+    bool repo_deleted = false;
+    ledger_repo_app_->Reset([&repo_deleted] { repo_deleted = true; });
+    if (!repo_deleted) {
+      RunLoopUntil([&repo_deleted] { return repo_deleted; });
+    }
+
+    bool terminated = false;
+    ledger_repo_app_->Terminate([&terminated] { terminated = true; });
+    if (!terminated) {
+      RunLoopUntil([&terminated] { return terminated; });
+    }
+
+    ledger_repo_app_.reset();
+  }
+
+  int ledger_change_count() const {
+    return page_client_peer_->changes.size();
+  }
+
+  LinkChangePtr& last_change() {
+    return page_client_peer_->last_change;
+  }
+
+  void ExpectOneCall(const std::string& operation_name) {
+    EXPECT_EQ(1u, operations_.count(operation_name)) << operation_name;
+    operations_.erase(operation_name);
+  }
+
+  void ExpectNoOtherCalls() {
+    EXPECT_TRUE(operations_.empty());
+    for (const auto& c : operations_) {
+      FXL_LOG(INFO) << "    Unexpected call: " << c.first;
+    }
+  }
+
+  void ClearCalls() {
+    operations_.clear();
+  }
+
+  void Notify(const fidl::String& json) override {
+    step_++;
     last_json_notify_ = json;
     continue_();
   };
 
+  std::unique_ptr<modular::testing::LedgerRepositoryForTesting> ledger_repo_app_;
+  std::unique_ptr<LedgerClient> ledger_client_;
+  std::unique_ptr<LinkImpl> link_impl_;
+  LinkPtr link_;
+  std::unique_ptr<LedgerClient> ledger_client_peer_;
+  std::unique_ptr<PageClientPeer> page_client_peer_;
+
+  fidl::Binding<modular::LinkWatcher> watcher_binding_;
   int step_{};
   std::string last_json_notify_;
   std::function<void()> continue_;
-  LinkPathPtr link_path = GetTestLinkPath();
-  LinkStorageMock storage_mock;
-  LinkPtr link_ptr_;
-  fidl::InterfaceRequest<Link> request_ = link_ptr_.NewRequest();
-  std::unique_ptr<LinkImpl> link_impl_ =
-      std::make_unique<LinkImpl>(storage_mock.interface(),
-                                 std::move(link_path));
-  fidl::Binding<modular::LinkWatcher> binding_;
+
+  std::map<std::string, int> operations_;
 };
 
 TEST_F(LinkImplTest, Constructor) {
   bool finished{};
   continue_ = [this, &finished] {
-    EXPECT_EQ("null", last_json_notify_);
-    EXPECT_EQ(kPrettyTestLinkPath, storage_mock.read_link_path());
-    storage_mock.ExpectCalledOnce("ReadAllLinkData");
-    storage_mock.ExpectCalledOnce("WatchLink");
-    storage_mock.ExpectNoOtherCalls();
-
-    binding_.Close();  // Disconnect from Watch()
-    link_impl_.reset();
-    storage_mock.ExpectCalledOnce("DropWatcher");
-    storage_mock.ExpectNoOtherCalls();
     finished = true;
   };
 
-  link_ptr_->WatchAll(binding_.NewBinding());
+  link_->WatchAll(watcher_binding_.NewBinding());
 
-  RunLoopUntil([&finished] { return finished; });
-  ASSERT_TRUE(finished);
-  ASSERT_FALSE(binding_.is_bound());
+  EXPECT_TRUE(RunLoopUntil([&finished] { return finished; }));
+  EXPECT_EQ("null", last_json_notify_);
+  ExpectOneCall("LinkImpl::ReloadCall");
+  ExpectOneCall("ReadAllDataCall");
+  ExpectOneCall("LinkImpl::WatchCall");
+  ExpectNoOtherCalls();
 }
 
 TEST_F(LinkImplTest, Set) {
   continue_ = [this] {
-    ++step_;
     EXPECT_TRUE(step_ <= 2);
   };
 
-  link_ptr_->WatchAll(binding_.NewBinding());
+  link_->WatchAll(watcher_binding_.NewBinding());
+  link_->Set(nullptr, "{ \"value\": 7 }");
 
-  link_ptr_->Set(nullptr, "{ \"value\": 7 }");
-
-  RunLoopUntil([this] { return storage_mock.changes_size() == 1; });
-  ASSERT_EQ(1, storage_mock.changes_size());
-
-  storage_mock.ExpectCalledOnce("ReadAllLinkData");
-  storage_mock.ExpectCalledOnce("WatchLink");
-  storage_mock.ExpectCalledOnce("WriteIncrementalLinkData");
-  storage_mock.ExpectNoOtherCalls();
-
-  EXPECT_NE(nullptr, storage_mock.write_link_change().get());
-  EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
+  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 1; }));
+  // Calls from constructor and setup.
+  ExpectOneCall("LinkImpl::ReloadCall");
+  ExpectOneCall("ReadAllDataCall");
+  ExpectOneCall("LinkImpl::WatchCall");
+  // Calls from Set().
+  ExpectOneCall("LinkImpl::IncrementalChangeCall");
+  ExpectOneCall("LinkImpl::IncrementalWriteCall");
+  ExpectOneCall("WriteDataCall");
+  ExpectNoOtherCalls();
   EXPECT_EQ("{\"value\":7}", last_json_notify_);
 }
 
 TEST_F(LinkImplTest, Update) {
   continue_ = [this] {
-    ++step_;
     EXPECT_TRUE(step_ <= 3);
   };
 
-  link_ptr_->WatchAll(binding_.NewBinding());
+  link_->WatchAll(watcher_binding_.NewBinding());
 
-  link_ptr_->Set(nullptr, "{ \"value\": 8 }");
+  link_->Set(nullptr, "{ \"value\": 8 }");
+  link_->UpdateObject(nullptr, "{ \"value\": 50 }");
 
-  link_ptr_->UpdateObject(nullptr, "{ \"value\": 50 }");
-
-  RunLoopUntil([this] { return storage_mock.changes_size() == 2; });
-  ASSERT_EQ(2, storage_mock.changes_size());
-
-  EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
-  EXPECT_EQ("{\"value\":50}", storage_mock.write_link_change()->json);
+  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 2; }));
+  EXPECT_EQ("{\"value\":50}", last_change()->json);
+  EXPECT_EQ("{\"value\":50}", last_json_notify_);
 }
 
 TEST_F(LinkImplTest, UpdateNewKey) {
   continue_ = [this] {
-    ++step_;
     EXPECT_TRUE(step_ <= 3);
   };
 
-  link_ptr_->WatchAll(binding_.NewBinding());
+  link_->WatchAll(watcher_binding_.NewBinding());
 
-  link_ptr_->Set(nullptr, "{ \"value\": 9 }");
+  link_->Set(nullptr, "{ \"value\": 9 }");
+  link_->UpdateObject(nullptr, "{ \"century\": 100 }");
 
-  link_ptr_->UpdateObject(nullptr, "{ \"century\": 100 }");
-
-  RunLoopUntil([this] { return storage_mock.changes_size() == 2; });
-  ASSERT_EQ(2, storage_mock.changes_size());
-
-  EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
+  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 2; }));
+  EXPECT_EQ("{\"century\":100}", last_change()->json);
   EXPECT_EQ("{\"value\":9,\"century\":100}", last_json_notify_);
 }
 
 TEST_F(LinkImplTest, Erase) {
   continue_ = [this] {
-    ++step_;
     EXPECT_TRUE(step_ <= 3);
   };
 
-  link_ptr_->WatchAll(binding_.NewBinding());
+  link_->WatchAll(watcher_binding_.NewBinding());
 
-  link_ptr_->Set(nullptr, "{ \"value\": 4 }");
+  link_->Set(nullptr, "{ \"value\": 4 }");
 
   std::vector<std::string> segments{"value"};
-  link_ptr_->Erase(fidl::Array<fidl::String>::From(segments));
+  link_->Erase(fidl::Array<fidl::String>::From(segments));
 
-  RunLoopUntil([this] { return storage_mock.changes_size() == 2; });
-  ASSERT_EQ(2, storage_mock.changes_size());
-
-  EXPECT_TRUE(storage_mock.write_link_change()->json.is_null());
+  EXPECT_TRUE(RunLoopUntil([this] { return ledger_change_count() == 2; }));
+  EXPECT_TRUE(last_change()->json.is_null());
   EXPECT_EQ("{}", last_json_notify_);
 }
 

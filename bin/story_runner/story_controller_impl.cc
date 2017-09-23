@@ -28,6 +28,7 @@
 #include "peridot/bin/story_runner/module_context_impl.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/storage.h"
 
@@ -797,8 +798,10 @@ StoryControllerImpl::StoryControllerImpl(
     StoryProviderImpl* const story_provider_impl)
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
+      ledger_client_(ledger_client),
+      story_page_id_(std::move(story_page_id)),
       story_storage_impl_(
-          new StoryStorageImpl(ledger_client, std::move(story_page_id))),
+          new StoryStorageImpl(ledger_client_, story_page_id_.Clone())),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this),
@@ -941,7 +944,7 @@ void StoryControllerImpl::ConnectLinkPath(
   }
 
   LinkImpl* const link_impl =
-      new LinkImpl(story_storage_impl_.get(), std::move(link_path));
+      new LinkImpl(ledger_client_, story_page_id_.Clone(), std::move(link_path));
   link_impl->Connect(std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(

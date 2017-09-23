@@ -180,8 +180,7 @@ AgentRunnerStorageImpl::AgentRunnerStorageImpl(LedgerClient* ledger_client,
                                                LedgerPageId page_id)
     : PageClient("AgentRunnerStorageImpl",
                  ledger_client,
-                 std::move(page_id),
-                 nullptr) {}
+                 std::move(page_id)) {}
 
 AgentRunnerStorageImpl::~AgentRunnerStorageImpl() = default;
 

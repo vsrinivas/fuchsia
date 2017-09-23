@@ -18,11 +18,11 @@ class PageClientImpl : PageClient {
  public:
   PageClientImpl(LedgerClient* ledger_client,
                  LedgerPageId page_id,
-                 const char* const prefix)
+                 std::string prefix = "")
       : PageClient("PageClientImpl",
                    ledger_client,
                    std::move(page_id),
-                   prefix) {}
+                   std::move(prefix)) {}
 
   ~PageClientImpl() override = default;
 
@@ -82,7 +82,7 @@ class PageClientTest : public TestWithMessageLoop {
     page_client_b_.reset(
         new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "b/"));
     page_client_.reset(
-        new PageClientImpl(ledger_client_.get(), page_id_.Clone(), nullptr));
+        new PageClientImpl(ledger_client_.get(), page_id_.Clone()));
 
     ledger_client_->ledger()->GetPage(
         page_id_.Clone(), page_.NewRequest(),

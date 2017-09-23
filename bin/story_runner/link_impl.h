@@ -15,9 +15,12 @@
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/story/fidl/link.fidl.h"
+#include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/bin/story_runner/key_generator.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/page_client.h"
+#include "peridot/lib/ledger_client/types.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
@@ -81,11 +84,11 @@ class LinkWatcherConnection;
 // in order. This algorithm is not "correct" due to the lack of a vector clock
 // to form the partial orderings. It will be replaced eventually by a CRDT based
 // one.
-class LinkImpl {
+class LinkImpl : PageClient {
  public:
   // The |link_path| contains the series of module names (where the last element
   // is the module that created this Link) that this Link is namespaced under.
-  LinkImpl(LinkStorage* link_storage, LinkPathPtr link_path);
+  LinkImpl(LedgerClient* ledger_client, LedgerPageId page_id, LinkPathPtr link_path);
 
   ~LinkImpl();
 
@@ -121,6 +124,9 @@ class LinkImpl {
   }
 
  private:
+  // |PageClient|
+  void OnPageChange(const std::string& key, const std::string& value) override;
+
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
   // incremental_link.cc.
@@ -143,7 +149,6 @@ class LinkImpl {
                           CrtJsonValue::AllocatorType& allocator);
 
   void NotifyWatchers(uint32_t src);
-  void OnChange(const fidl::String& json);
   void ValidateSchema(const char* entry_point,
                       const CrtJsonPointer& debug_pointer,
                       const std::string& debug_json);
@@ -182,9 +187,6 @@ class LinkImpl {
   // The hierarchical identifier of this Link instance within its Story.
   const LinkPathPtr link_path_;
 
-  // Link values are stored here.
-  LinkStorage* const link_storage_;
-
   // When the Link instance loses all its Link connections, this callback is
   // invoked. It will cause the Link instance to be deleted. Remaining
   // LinkWatcher connections do not retain the Link instance, but instead can
@@ -207,6 +209,9 @@ class LinkImpl {
   OperationQueue operation_queue_;
 
   // Operations implemented here.
+  class ReadLinkDataCall;
+  class WriteLinkDataCall;
+  class FlushWatchersCall;
   class ReadCall;
   class WriteCall;
   class GetCall;

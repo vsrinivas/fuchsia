@@ -41,7 +41,6 @@ class DeviceMapImpl;
 class FocusHandler;
 class LedgerClient;
 class LinkImpl;
-class LinkStorage;
 class MessageQueueManager;
 class RemoteInvokerImpl;
 class StoryProviderImpl;
@@ -143,11 +142,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   // Given to the user shell so it can store its own data. These data are shared
   // between all user shells (so it's not private to the user shell *app*).
-  //
-  // HACK(mesch): The user shell link must be defined *before* the link storage
-  // because it invokes a method of link storage (DropWatcher()) in its
-  // destructor, which must happen before the link storage is destroyed.
-  std::unique_ptr<LinkStorage> link_storage_;
   std::unique_ptr<LinkImpl> user_shell_link_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);

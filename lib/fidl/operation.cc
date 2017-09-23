@@ -100,7 +100,7 @@ void OperationQueue::Cont() {
   }
 }
 
-OperationBase::OperationBase(const char* trace_name,
+OperationBase::OperationBase(const char* const trace_name,
                              OperationContainer* const c,
                              std::string trace_info)
     : container_(c->GetWeakPtr()),
@@ -134,12 +134,30 @@ void OperationBase::InvalidateWeakPtrs() {
 void OperationBase::TraceAsyncBegin() {
   TRACE_ASYNC_BEGIN(kModularTraceCategory, trace_name_, trace_id_,
                     kTraceIdKey, trace_id_, kTraceInfoKey, trace_info_);
+
+  // NOTE(mesch): This is used for testing. The usual setup is that the observer
+  // counts invocations of Operations that affect the ledger, and a page client
+  // peer observes changes in the ledger. The page client triggers test
+  // validation. Therefore, Operations need to be observed before they begin,
+  // such that when ledger updates trigger validation, they are already
+  // counted. This also reports nested Operations in order of invocation rather
+  // than in reverse, which is easier to understand.
+  //
+  // TODO(mesch): Other setup of tests is imaginable where observing the
+  // completion of the operation directly would be desirable. We can add
+  // observation in End() too once needed.
+  if (observer_) {
+    observer_(trace_name_);
+  }
 }
 
 void OperationBase::TraceAsyncEnd() {
   TRACE_ASYNC_END(kModularTraceCategory, trace_name_, trace_id_, kTraceIdKey,
                   trace_id_, kTraceInfoKey, trace_info_);
 }
+
+// static
+std::function<void(const char*)> OperationBase::observer_{nullptr};
 
 OperationBase::FlowTokenBase::FlowTokenBase(OperationBase* const op)
     : refcount_(new int), weak_op_(op->weak_ptr_factory_.GetWeakPtr()) {

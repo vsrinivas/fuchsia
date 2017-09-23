@@ -17,6 +17,10 @@ namespace modular {
 
 namespace {
 
+// HACK(mesch): PageClient here is not used for watching the page, only to write
+// to it. This will change soon.
+constexpr char kNoPrefix[] = "=======";
+
 void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
@@ -55,188 +59,12 @@ void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
 
 }  // namespace
 
-// TODO(jimbe) Remove this function when incremental links are deprecated.
-// This must be outside of the anonymous namespace.
-void XdrLinkChange(XdrContext* const xdr, LinkChange* const data) {
-  xdr->Field("key", &data->key);
-  xdr->Field("op", &data->op);
-  xdr->Field("path", &data->pointer);
-  xdr->Field("json", &data->json);
-}
-
-// TODO(jimbe) Remove this function when incremental links are deprecated.
-std::string MakeSequencedLinkKey(const LinkPathPtr& link_path,
-                                 const std::string& sequence_key) {
-  // |sequence_key| uses characters that never require escaping
-  return MakeLinkKey(link_path) + kSeparator + sequence_key;
-}
-
-class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
- public:
-  ReadLinkDataCall(OperationContainer* const container,
-                   ledger::Page* const page,
-                   const LinkPathPtr& link_path,
-                   ResultCall result_call)
-      : Operation("StoryStorageImpl::ReadLinkDataCall",
-                  container,
-                  std::move(result_call)),
-        page_(page),
-        link_key_(MakeLinkKey(link_path)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &result_};
-
-    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this, flow](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
-                                          << " Page.GetSnapshot() " << status;
-                           return;
-                         }
-
-                         Cont(flow);
-                       });
-  }
-
-  void Cont(FlowToken flow) {
-    page_snapshot_->Get(to_array(link_key_), [this, flow](ledger::Status status,
-                                                          zx::vmo value) {
-      if (status != ledger::Status::OK) {
-        if (status != ledger::Status::KEY_NOT_FOUND) {
-          // It's expected that the key is not found when the link is
-          // accessed for the first time. Don't log an error then.
-          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
-                         << " PageSnapshot.Get() " << status;
-        }
-        return;
-      }
-
-      std::string value_as_string;
-      if (value) {
-        if (!fsl::StringFromVmo(value, &value_as_string)) {
-          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
-                         << " Unable to extract data.";
-          return;
-        }
-      }
-
-      result_.Swap(&value_as_string);
-    });
-  }
-
-  ledger::Page* const page_;  // not owned
-  ledger::PageSnapshotPtr page_snapshot_;
-  const std::string link_key_;
-  fidl::String result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
-};
-
-class StoryStorageImpl::WriteLinkDataCall : Operation<> {
- public:
-  WriteLinkDataCall(OperationContainer* const container,
-                    ledger::Page* const page,
-                    const LinkPathPtr& link_path,
-                    fidl::String data,
-                    ResultCall result_call)
-      : Operation("StoryStorageImpl::WriteLinkDataCall",
-                  container,
-                  std::move(result_call)),
-        page_(page),
-        link_key_(MakeLinkKey(link_path)),
-        data_(data) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    page_->Put(to_array(link_key_), to_array(data_),
-               [this, flow](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR)
-                       << "WriteLinkDataCall() link key =" << link_key_
-                       << ", Page.Put() " << status;
-                 }
-               });
-  }
-
-  ledger::Page* const page_;  // not owned
-  const std::string link_key_;
-  fidl::String data_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
-};
-
-class StoryStorageImpl::FlushWatchersCall : Operation<> {
- public:
-  FlushWatchersCall(OperationContainer* const container,
-                    ledger::Page* const page,
-                    ResultCall result_call)
-      : Operation("StoryStorageImpl::FlushWatchersCall",
-                  container,
-                  std::move(result_call)),
-        page_(page) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    // Cf. the documentation in ledger.fidl: Before StartTransaction() returns,
-    // all pending watcher notifications on the same connection are guaranteed
-    // to have returned. If we execute this Operation after a WriteLinkData()
-    // call, then all link watcher notifications are guaranteed to have been
-    // received when this Operation is Done().
-
-    page_->StartTransaction([this, flow](ledger::Status status) {
-      if (status != ledger::Status::OK) {
-        FXL_LOG(ERROR) << "FlushWatchersCall()"
-                       << " Page.StartTransaction() " << status;
-        return;
-      }
-
-      page_->Commit([this, flow](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << "FlushWatchersCall()"
-                         << " Page.Commit() " << status;
-          return;
-        }
-      });
-    });
-  }
-
-  ledger::Page* const page_;  // not owned
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
-};
-
-LinkStorage::~LinkStorage() = default;
-
 StoryStorageImpl::StoryStorageImpl(LedgerClient* const ledger_client,
                                    LedgerPageId story_page_id)
-    : PageClient("StoryStorageImpl",
-                 ledger_client,
-                 std::move(story_page_id),
-                 kLinkKeyPrefix) {}
+    : PageClient("StoryStorageImpl", ledger_client, std::move(story_page_id),
+                 kNoPrefix) {}
 
 StoryStorageImpl::~StoryStorageImpl() = default;
-
-void StoryStorageImpl::ReadLinkData(const LinkPathPtr& link_path,
-                                    const DataCallback& callback) {
-  new ReadLinkDataCall(&operation_queue_, page(), link_path, callback);
-}
-
-void StoryStorageImpl::WriteLinkData(const LinkPathPtr& link_path,
-                                     const fidl::String& data,
-                                     const SyncCallback& callback) {
-  new WriteLinkDataCall(&operation_queue_, page(), link_path, data, callback);
-}
 
 void StoryStorageImpl::ReadModuleData(
     const fidl::Array<fidl::String>& module_path,
@@ -293,60 +121,6 @@ void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
       XdrPerDeviceStoryInfo, std::move(data), callback);
 }
 
-void StoryStorageImpl::ReadAllLinkData(const LinkPathPtr& link_path,
-                                       const AllLinkChangeCallback& callback) {
-  new ReadAllDataCall<LinkChange>(&operation_queue_, page(),
-                                  MakeLinkKey(link_path), XdrLinkChange,
-                                  callback);
-}
-
-class StoryStorageImpl::WriteIncrementalLinkDataCall : Operation<> {
- public:
-  WriteIncrementalLinkDataCall(OperationContainer* const container,
-                               ledger::Page* const page,
-                               LinkChangeOp op,
-                               const LinkPathPtr& link_path,
-                               fidl::String key,   // KeyGenerator.Create()
-                               fidl::String json,  // Must be null for Erase
-                               ResultCall result_call)
-      : Operation("StoryStorageImpl::WriteIncrementalLinkDataCall",
-                  container,
-                  std::move(result_call)),
-        page_(page),
-        link_key_(MakeSequencedLinkKey(link_path, key)),
-        json_(json) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    page_->Put(to_array(link_key_), to_array(json_),
-               [this, flow](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR) << "WriteIncrementalLinkDataCall() link key ="
-                                  << link_key_ << ", Page.Put() " << status;
-                 }
-               });
-  }
-
-  ledger::Page* const page_;  // not owned
-  const std::string link_key_;
-  const fidl::String json_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(WriteIncrementalLinkDataCall);
-};
-
-void StoryStorageImpl::WriteIncrementalLinkData(const LinkPathPtr& link_path,
-                                                fidl::String key,
-                                                LinkChangePtr link_change,
-                                                const SyncCallback& callback) {
-  new WriteDataCall<LinkChange>(
-      &operation_queue_, page(), MakeSequencedLinkKey(link_path, key),
-      XdrLinkChange, std::move(link_change), callback);
-}
-
 void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
   new WriteDataCall<StoryContextLog>(
       &operation_queue_, page(),
@@ -362,40 +136,6 @@ void StoryStorageImpl::ReadLog(const LogCallback& callback) {
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {
   new SyncCall(&operation_queue_, callback);
-}
-
-void StoryStorageImpl::FlushWatchers(const SyncCallback& callback) {
-  new FlushWatchersCall(&operation_queue_, page(), callback);
-}
-
-void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,
-                                 LinkImpl* const impl,
-                                 const DataCallback& watcher) {
-  // Add kSeparator to the Link key to create a prefix key so that
-  // OnPageChange() will see each separate Link operation.
-  watchers_.emplace_back(
-      WatcherEntry{MakeLinkKey(link_path) + kSeparator, impl, watcher});
-}
-
-void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
-  auto f = std::find_if(watchers_.begin(), watchers_.end(),
-                        [impl](auto& entry) { return entry.impl == impl; });
-  FXL_DCHECK(f != watchers_.end());
-  watchers_.erase(f);
-}
-
-void StoryStorageImpl::OnPageChange(const std::string& key,
-                                    const std::string& value) {
-  for (auto& watcher_entry : watchers_) {
-    const bool is_prefix =
-        !watcher_entry.key.empty() && watcher_entry.key.back() == *kSeparator;
-    if (is_prefix &&
-        key.compare(0, watcher_entry.key.size(), watcher_entry.key) == 0) {
-      watcher_entry.watcher(value);
-    } else if (key == watcher_entry.key) {
-      watcher_entry.watcher(value);
-    }
-  }
 }
 
 }  // namespace modular

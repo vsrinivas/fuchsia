@@ -202,6 +202,8 @@ class StoryControllerImpl : StoryController, StoryContext {
 
   StoryProviderImpl* const story_provider_impl_;
 
+  LedgerClient* const ledger_client_;
+  const LedgerPageId story_page_id_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
 
   // The scope in which the modules within this story run.

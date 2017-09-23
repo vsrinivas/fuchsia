@@ -29,7 +29,6 @@
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/remote_invoker_impl.h"
@@ -402,13 +401,13 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
     return;
   }
 
-  link_storage_ = std::make_unique<StoryStorageImpl>(
-      ledger_client_.get(), fidl::Array<uint8_t>::New(16));
   LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = fidl::Array<fidl::String>::New(0);
   link_path->link_name = kUserShellLinkName;
   user_shell_link_ =
-      std::make_unique<LinkImpl>(link_storage_.get(), std::move(link_path));
+      std::make_unique<LinkImpl>(
+          ledger_client_.get(), fidl::Array<uint8_t>::New(16),
+          std::move(link_path));
   user_shell_link_->Connect(std::move(request));
 }
 

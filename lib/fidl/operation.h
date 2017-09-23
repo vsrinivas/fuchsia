@@ -5,6 +5,7 @@
 #ifndef PERIDOT_LIB_FIDL_OPERATION_H_
 #define PERIDOT_LIB_FIDL_OPERATION_H_
 
+#include <functional>
 #include <memory>
 #include <queue>
 #include <tuple>
@@ -145,6 +146,11 @@ class OperationBase {
   // passed along the asynchronous flow of control of the Operation.
   virtual void Run() = 0;
 
+  // For tests only.
+  static void set_observer(std::function<void(const char*)> observer) {
+    observer_ = std::move(observer);
+  }
+
  protected:
   // Derived classes pass the OperationContainer here. The constructor adds the
   // instance to the container. The trace_name and trace_info parameters are
@@ -218,6 +224,9 @@ class OperationBase {
 
   // Additional information added to trace events for this operation.
   const std::string trace_info_;
+
+  // For tests only.
+  static std::function<void(const char*)> observer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
 };

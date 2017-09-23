@@ -11,11 +11,157 @@
 #include "lib/fxl/logging.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/util/debug.h"
 
 namespace modular {
+
+class LinkImpl::ReadLinkDataCall : Operation<fidl::String> {
+ public:
+  ReadLinkDataCall(OperationContainer* const container,
+                   ledger::Page* const page,
+                   const LinkPathPtr& link_path,
+                   ResultCall result_call)
+      : Operation("LinkImpl::ReadLinkDataCall",
+                  container,
+                  std::move(result_call)),
+        page_(page),
+        link_key_(MakeLinkKey(link_path)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &result_};
+
+    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+                       [this, flow](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                                          << " Page.GetSnapshot() " << status;
+                           return;
+                         }
+
+                         Cont(flow);
+                       });
+  }
+
+  void Cont(FlowToken flow) {
+    page_snapshot_->Get(to_array(link_key_), [this, flow](ledger::Status status,
+                                                          zx::vmo value) {
+      if (status != ledger::Status::OK) {
+        if (status != ledger::Status::KEY_NOT_FOUND) {
+          // It's expected that the key is not found when the link is
+          // accessed for the first time. Don't log an error then.
+          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                         << " PageSnapshot.Get() " << status;
+        }
+        return;
+      }
+
+      std::string value_as_string;
+      if (value) {
+        if (!fsl::StringFromVmo(value, &value_as_string)) {
+          FXL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                         << " Unable to extract data.";
+          return;
+        }
+      }
+
+      result_.Swap(&value_as_string);
+    });
+  }
+
+  ledger::Page* const page_;  // not owned
+  ledger::PageSnapshotPtr page_snapshot_;
+  const std::string link_key_;
+  fidl::String result_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
+};
+
+class LinkImpl::WriteLinkDataCall : Operation<> {
+ public:
+  WriteLinkDataCall(OperationContainer* const container,
+                    ledger::Page* const page,
+                    const LinkPathPtr& link_path,
+                    fidl::String data,
+                    ResultCall result_call)
+      : Operation("LinkImpl::WriteLinkDataCall",
+                  container,
+                  std::move(result_call)),
+        page_(page),
+        link_key_(MakeLinkKey(link_path)),
+        data_(data) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    page_->Put(to_array(link_key_), to_array(data_),
+               [this, flow](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FXL_LOG(ERROR)
+                       << "WriteLinkDataCall() link key =" << link_key_
+                       << ", Page.Put() " << status;
+                 }
+               });
+  }
+
+  ledger::Page* const page_;  // not owned
+  const std::string link_key_;
+  fidl::String data_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
+};
+
+class LinkImpl::FlushWatchersCall : Operation<> {
+ public:
+  FlushWatchersCall(OperationContainer* const container,
+                    ledger::Page* const page,
+                    ResultCall result_call)
+      : Operation("LinkImpl::FlushWatchersCall",
+                  container,
+                  std::move(result_call)),
+        page_(page) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // Cf. the documentation in ledger.fidl: Before StartTransaction() returns,
+    // all pending watcher notifications on the same connection are guaranteed
+    // to have returned. If we execute this Operation after a WriteLinkData()
+    // call, then all link watcher notifications are guaranteed to have been
+    // received when this Operation is Done().
+
+    page_->StartTransaction([this, flow](ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FXL_LOG(ERROR) << "FlushWatchersCall()"
+                       << " Page.StartTransaction() " << status;
+        return;
+      }
+
+      page_->Commit([this, flow](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR) << "FlushWatchersCall()"
+                         << " Page.Commit() " << status;
+          return;
+        }
+      });
+    });
+  }
+
+  ledger::Page* const page_;  // not owned
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
+};
 
 class LinkImpl::ReadCall : Operation<> {
  public:
@@ -30,16 +176,18 @@ class LinkImpl::ReadCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-
-    impl_->link_storage_->ReadLinkData(impl_->link_path_,
-                                       [this, flow](const fidl::String& json) {
-                                         if (!json.is_null()) {
-                                           impl_->doc_.Parse(json.get());
-                                         }
-                                       });
+    new ReadLinkDataCall(&operation_queue_,
+                         impl_->page(),
+                         impl_->link_path_,
+                         [this, flow](const fidl::String& json) {
+                           if (!json.is_null()) {
+                             impl_->doc_.Parse(json.get());
+                           }
+                         });
   }
 
   LinkImpl* const impl_;  // not owned
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadCall);
 };
@@ -59,20 +207,24 @@ class LinkImpl::WriteCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-
-    impl_->link_storage_->WriteLinkData(impl_->link_path_,
-                                        JsonValueToString(impl_->doc_),
-                                        [this, flow] { Cont1(flow); });
+    new WriteLinkDataCall(&operation_queue_,
+                          impl_->page(),
+                          impl_->link_path_,
+                          JsonValueToString(impl_->doc_),
+                          [this, flow] { Cont1(flow); });
   }
 
   void Cont1(FlowToken flow) {
-    impl_->link_storage_->FlushWatchers([this, flow] { Cont2(flow); });
+    new FlushWatchersCall(&operation_queue_,
+                          impl_->page(),
+                          [this, flow] { Cont2(flow); });
   }
 
   void Cont2(FlowToken /*flow*/) { impl_->NotifyWatchers(src_); }
 
   LinkImpl* const impl_;  // not owned
   const uint32_t src_;
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteCall);
 };
@@ -340,8 +492,11 @@ class LinkImpl::ChangeCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
 };
 
-LinkImpl::LinkImpl(LinkStorage* const link_storage, LinkPathPtr link_path)
-    : link_path_(std::move(link_path)), link_storage_(link_storage) {
+LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
+                   LinkPathPtr link_path)
+    : PageClient(MakeLinkKey(link_path), ledger_client, std::move(page_id),
+                 MakeLinkKey(link_path)),
+      link_path_(std::move(link_path)) {
   MakeReloadCall([this] {
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));
@@ -349,14 +504,9 @@ LinkImpl::LinkImpl(LinkStorage* const link_storage, LinkPathPtr link_path)
     requests_.clear();
     ready_ = true;
   });
-
-  link_storage_->WatchLink(
-      link_path_, this, [this](const fidl::String& json) { OnChange(json); });
 }
 
-LinkImpl::~LinkImpl() {
-  link_storage_->DropWatcher(this);
-}
+LinkImpl::~LinkImpl() = default;
 
 void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
   if (ready_) {
@@ -537,17 +687,6 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
                      << "  API json " << debug_json << std::endl;
     }
   }
-}
-
-void LinkImpl::OnChange(const fidl::String& json) {
-  LinkChangePtr data;
-  if (!XdrRead(json, &data, XdrLinkChange)) {
-    FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
-                   << "LinkImpl::OnChange() - XdrRead failed!";
-    return;
-  }
-
-  MakeIncrementalChangeCall(std::move(data), kOnChangeConnectionId);
 }
 
 // To be called after:

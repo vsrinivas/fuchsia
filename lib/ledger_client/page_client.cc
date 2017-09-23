@@ -18,13 +18,13 @@ namespace modular {
 PageClient::PageClient(std::string context,
                        LedgerClient* ledger_client,
                        LedgerPageId page_id,
-                       const char* const prefix)
+                       std::string prefix)
     : binding_(this),
       context_(std::move(context)),
       ledger_client_(ledger_client),
       page_id_(std::move(page_id)),
       page_(ledger_client_->GetPage(this, context_, page_id_)),
-      prefix_(prefix == nullptr ? "" : prefix) {
+      prefix_(std::move(prefix)) {
   page_->GetSnapshot(NewRequest(), to_array(prefix_), binding_.NewBinding(),
                      [this](ledger::Status status) {
                        if (status != ledger::Status::OK) {

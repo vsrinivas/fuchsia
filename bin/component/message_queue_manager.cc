@@ -633,8 +633,7 @@ MessageQueueManager::MessageQueueManager(LedgerClient* const ledger_client,
                                          std::string local_path)
     : PageClient("MessageQueueManager",
                  ledger_client,
-                 std::move(page_id),
-                 nullptr),
+                 std::move(page_id)),
       local_path_(std::move(local_path)) {}
 
 MessageQueueManager::~MessageQueueManager() = default;

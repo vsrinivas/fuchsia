@@ -9,14 +9,32 @@
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/bin/story_runner/link_impl.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
+#include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/util/debug.h"
 
 namespace modular {
+
+// Not in anonymous namespace; needs extern linkage for use by test.
+void XdrLinkChange(XdrContext* const xdr, LinkChange* const data) {
+  xdr->Field("key", &data->key);
+  xdr->Field("op", &data->op);
+  xdr->Field("path", &data->pointer);
+  xdr->Field("json", &data->json);
+}
+
+namespace {
+
+std::string MakeSequencedLinkKey(const LinkPathPtr& link_path,
+                                 const std::string& sequence_key) {
+  // |sequence_key| uses characters that never require escaping
+  return MakeLinkKey(link_path) + kSeparator + sequence_key;
+}
+
+}  // namespace
 
 // Reload needs to run if:
 // 1. LinkImpl was just constructed
@@ -32,13 +50,18 @@ class LinkImpl::ReloadCall : Operation<> {
  private:
   void Run() {
     FlowToken flow{this};
-    impl_->link_storage_->ReadAllLinkData(
-        impl_->link_path_, [this, flow](fidl::Array<LinkChangePtr> changes) {
+    new ReadAllDataCall<LinkChange>(
+        &operation_queue_,
+        impl_->page(),
+        MakeLinkKey(impl_->link_path_),
+        XdrLinkChange,
+        [this, flow](fidl::Array<LinkChangePtr> changes) {
           impl_->Replay(std::move(changes));
         });
   }
 
   LinkImpl* const impl_;  // not owned
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ReloadCall);
 };
@@ -61,13 +84,16 @@ class LinkImpl::IncrementalWriteCall : Operation<> {
  private:
   void Run() {
     FlowToken flow{this};
-
-    impl_->link_storage_->WriteIncrementalLinkData(
-        impl_->link_path_, data_->key, std::move(data_), [this, flow] {});
+    new WriteDataCall<LinkChange>(
+        &operation_queue_,
+        impl_->page(),
+        MakeSequencedLinkKey(impl_->link_path_, data_->key),
+        XdrLinkChange, std::move(data_), [this, flow] {});
   }
 
   LinkImpl* const impl_;  // not owned
   LinkChangePtr data_;
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
 };
@@ -236,6 +262,18 @@ void LinkImpl::MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()
 
 void LinkImpl::MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src) {
   new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+}
+
+void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
+  LinkChangePtr data;
+  if (!XdrRead(value, &data, XdrLinkChange)) {
+    FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
+                   << "LinkImpl::OnChange() XdrRead failed: "
+                   << key << " " << value;
+    return;
+  }
+
+  MakeIncrementalChangeCall(std::move(data), kOnChangeConnectionId);
 }
 
 }  // namespace modular
