@@ -141,6 +141,10 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mskip-rax-setup
 endif
 
+ifeq ($(call TOBOOL,$(ENABLE_NEW_BOOTDATA)),true)
+MODULE_DEFINES += ENABLE_NEW_BOOTDATA=1
+endif
+
 ARCH_OPTFLAGS := -O2
 
 LINKER_SCRIPT += $(SUBARCH_BUILDDIR)/kernel.ld

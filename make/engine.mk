@@ -169,10 +169,6 @@ KERNEL_CPPFLAGS :=
 KERNEL_ASMFLAGS :=
 KERNEL_LDFLAGS :=
 
-ifeq ($(call TOBOOL,$(ENABLE_NEW_BOOTDATA)),true)
-KERNEL_COMPILEFLAGS += -DENABLE_NEW_BOOTDATA=1
-endif
-
 # Build flags for modules that want frame pointers.
 # crashlogger, ngunwind, backtrace use this so that the simplisitic unwinder
 # will work with them. These are recorded here so that modules don't need
