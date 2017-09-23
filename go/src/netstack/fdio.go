@@ -1020,7 +1020,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 	}
 	ios.wq.EventUnregister(&waitEntry)
 	if e != nil {
-		log.Printf("connect: addr=%s, %v", *addr, err)
+		log.Printf("connect: addr=%v, %v", *addr, err)
 		return mxNetError(e)
 	}
 	if debug2 {
