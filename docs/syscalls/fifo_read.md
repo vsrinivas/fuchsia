@@ -11,7 +11,7 @@ fifo_read - read data from a fifo
 
 zx_status_t zx_fifo_read(zx_handle_t handle,
                          void* buffer, size_t size,
-                         uint32_t* num_entries_read) {
+                         uint32_t* num_entries_read);
 ```
 
 ## DESCRIPTION

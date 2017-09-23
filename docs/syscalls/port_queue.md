@@ -33,7 +33,7 @@ typedef struct zx_port_packet {
 
 ```
 
-In **zx** *type* should be ZX_PKT_TYPE_USER and only the **user**
+In *packet* *type* should be **ZX_PKT_TYPE_USER** and only the **user**
 union element is considered valid:
 
 ```

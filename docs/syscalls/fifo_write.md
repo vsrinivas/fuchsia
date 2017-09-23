@@ -11,7 +11,7 @@ fifo_write - write data to a fifo
 
 zx_status_t zx_fifo_write(zx_handle_t handle,
                           const void* buffer, size_t size,
-                          uint32_t* num_entries_written) {
+                          uint32_t* num_entries_written);
 ```
 
 ## DESCRIPTION
