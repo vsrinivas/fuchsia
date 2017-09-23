@@ -18,7 +18,7 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <lib/heap.h>
 #include <platform.h>
 #include <trace.h>

@@ -6,11 +6,11 @@
 // https://opensource.org/licenses/MIT
 
 #include "vm_priv.h"
-#include <kernel/vm.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 

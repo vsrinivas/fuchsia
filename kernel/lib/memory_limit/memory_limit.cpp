@@ -11,7 +11,7 @@
 #include <inttypes.h>
 #include <iovec.h>
 #include <kernel/cmdline.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <fbl/algorithm.h>
 #include <platform.h>
 #include <stdio.h>

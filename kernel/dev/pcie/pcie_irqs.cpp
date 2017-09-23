@@ -13,11 +13,11 @@
 #include <dev/pcie_root.h>
 #include <err.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm.h>
 #include <list.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>

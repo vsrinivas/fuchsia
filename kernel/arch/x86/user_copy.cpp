@@ -13,7 +13,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/user_copy.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE 0
 

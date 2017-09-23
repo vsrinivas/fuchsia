@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <arch/ops.h>
 #include <arch/efi.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <inttypes.h>
 #include <string.h>
 

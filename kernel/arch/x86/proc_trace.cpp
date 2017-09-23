@@ -24,7 +24,6 @@
 #include <err.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
 #include <vm/vm_aspace.h>
 #include <lib/ktrace.h>
 #include <zircon/device/intel-pt.h>
@@ -38,6 +37,7 @@
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 
 using fbl::AutoLock;
 

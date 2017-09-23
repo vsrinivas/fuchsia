@@ -16,7 +16,7 @@
 #include <list.h>
 #include <arch/ops.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/pmm.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/console.h>

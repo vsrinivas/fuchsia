@@ -19,7 +19,7 @@
 #include <lib/dpc.h>
 
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_object_paged.h>

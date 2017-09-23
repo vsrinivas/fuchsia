@@ -9,9 +9,9 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <inttypes.h>
-#include <kernel/vm.h>
 #include <trace.h>
 #include <vm/pmm.h>
+#include <vm/vm.h>
 #include <zircon/types.h>
 
 #include "vm_priv.h"

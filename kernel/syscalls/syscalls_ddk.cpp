@@ -14,7 +14,7 @@
 
 #include <dev/interrupt.h>
 #include <dev/udisplay.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
 #include <lib/user_copy/user_ptr.h>

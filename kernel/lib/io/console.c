@@ -17,7 +17,7 @@
 #include <platform.h>
 #include <platform/debug.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 
 #if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>

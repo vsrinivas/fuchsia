@@ -12,7 +12,7 @@
 #include <string.h>
 #include <trace.h>
 
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 #include <zxcpp/new.h>

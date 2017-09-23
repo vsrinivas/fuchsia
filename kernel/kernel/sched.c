@@ -13,14 +13,14 @@
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
 #include <lib/ktrace.h>
 #include <list.h>
-#include <zircon/types.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
 #include <target.h>
+#include <vm/vm.h>
+#include <zircon/types.h>
 
 /* disable priority boosting */
 #define NO_BOOST 0

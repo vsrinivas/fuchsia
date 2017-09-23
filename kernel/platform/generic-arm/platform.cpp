@@ -17,7 +17,7 @@
 #include <arch.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <kernel/spinlock.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>

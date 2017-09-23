@@ -10,23 +10,16 @@
 #include <arch.h>
 #include <assert.h>
 #include <list.h>
-#include <zircon/compiler.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 #define PAGE_ALIGN(x) ALIGN((x), PAGE_SIZE)
 #define ROUNDUP_PAGE_SIZE(x) ROUNDUP((x), PAGE_SIZE)
 #define IS_PAGE_ALIGNED(x) IS_ALIGNED((x), PAGE_SIZE)
 
 // kernel address space
-#ifndef KERNEL_ASPACE_BASE
-#define KERNEL_ASPACE_BASE ((vaddr_t)0x80000000UL)
-#endif
-#ifndef KERNEL_ASPACE_SIZE
-#define KERNEL_ASPACE_SIZE ((vaddr_t)0x80000000UL)
-#endif
-
 static_assert(KERNEL_ASPACE_BASE + (KERNEL_ASPACE_SIZE - 1) > KERNEL_ASPACE_BASE, "");
 
 static inline bool is_kernel_address(vaddr_t va) {
@@ -35,13 +28,6 @@ static inline bool is_kernel_address(vaddr_t va) {
 }
 
 // user address space, defaults to below kernel space with a 16MB guard gap on either side
-#ifndef USER_ASPACE_BASE
-#define USER_ASPACE_BASE ((vaddr_t)0x01000000UL)
-#endif
-#ifndef USER_ASPACE_SIZE
-#define USER_ASPACE_SIZE ((vaddr_t)KERNEL_ASPACE_BASE - USER_ASPACE_BASE - 0x01000000UL)
-#endif
-
 static_assert(USER_ASPACE_BASE + (USER_ASPACE_SIZE - 1) > USER_ASPACE_BASE, "");
 
 static inline bool is_user_address(vaddr_t va) {

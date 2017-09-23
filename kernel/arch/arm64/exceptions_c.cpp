@@ -17,7 +17,7 @@
 #include <arch/user_copy.h>
 #include <kernel/thread.h>
 #include <kernel/stats.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <platform.h>
 #include <vm/fault.h>
 

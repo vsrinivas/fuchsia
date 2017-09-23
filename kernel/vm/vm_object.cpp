@@ -14,12 +14,12 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <inttypes.h>
-#include <kernel/vm.h>
 #include <lib/console.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <zircon/types.h>
 

@@ -12,7 +12,6 @@
 #include <inttypes.h>
 #include <kernel/mp.h>
 #include <kernel/timer.h>
-#include <kernel/vm.h>
 #include <lib/console.h>
 #include <lk/init.h>
 #include <platform.h>
@@ -20,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 
 #include "pmm_arena.h"
 #include "vm_priv.h"

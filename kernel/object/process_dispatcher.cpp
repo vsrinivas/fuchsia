@@ -16,7 +16,7 @@
 #include <arch/defines.h>
 
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 

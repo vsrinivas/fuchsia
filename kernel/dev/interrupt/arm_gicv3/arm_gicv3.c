@@ -12,7 +12,7 @@
 #include <dev/interrupt/arm_gic.h>
 #include <kernel/thread.h>
 #include <kernel/stats.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <lk/init.h>
 #include <dev/interrupt.h>
 #include <trace.h>

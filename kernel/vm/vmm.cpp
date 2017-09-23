@@ -11,7 +11,6 @@
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
-#include <kernel/vm.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <object/diagnostics.h>
@@ -19,6 +18,7 @@
 #include <trace.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
+#include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>

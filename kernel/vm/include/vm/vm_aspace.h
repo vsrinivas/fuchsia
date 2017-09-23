@@ -16,9 +16,9 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/mutex.h>
-#include <kernel/vm.h>
 #include <lib/crypto/prng.h>
 #include <vm/arch_vm_aspace.h>
+#include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <zircon/types.h>
 

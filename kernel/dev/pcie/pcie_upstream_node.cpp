@@ -12,7 +12,7 @@
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <lk/init.h>
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>

@@ -8,7 +8,7 @@
 #include <lib/vdso-constants.h>
 
 #include <kernel/cmdline.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>

@@ -10,13 +10,13 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/vm.h>
 #include <lk/init.h>
 #include <fbl/limits.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
 #include <platform.h>
+#include <vm/vm.h>
 
 #include <dev/pci_config.h>
 #include <dev/pcie_bridge.h>

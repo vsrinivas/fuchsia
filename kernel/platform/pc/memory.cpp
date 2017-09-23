@@ -9,7 +9,6 @@
 #include <efi/boot-services.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/vm.h>
 #include <lib/memory_limit.h>
 #include <zircon/boot/multiboot.h>
 #include <zircon/types.h>
@@ -19,6 +18,7 @@
 #include <platform/pc/memory.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 
 #include "platform_p.h"
 

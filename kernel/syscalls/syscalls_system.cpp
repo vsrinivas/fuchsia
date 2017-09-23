@@ -11,7 +11,7 @@
 #include <kernel/cmdline.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/boot/bootdata.h>

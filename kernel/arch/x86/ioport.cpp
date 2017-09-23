@@ -14,8 +14,8 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
 #include <vm/vm_aspace.h>
+#include <vm/vm.h>
 #include <malloc.h>
 #include <string.h>
 

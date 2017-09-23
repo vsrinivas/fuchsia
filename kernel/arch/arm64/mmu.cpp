@@ -13,7 +13,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/mutex.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
 #include <lib/heap.h>

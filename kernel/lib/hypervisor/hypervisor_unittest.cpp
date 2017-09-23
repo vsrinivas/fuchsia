@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 #include <vm/pmm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>

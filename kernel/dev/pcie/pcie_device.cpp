@@ -15,7 +15,6 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm.h>
 #include <vm/arch_vm_aspace.h>
 #include <lk/init.h>
 #include <fbl/algorithm.h>
@@ -25,6 +24,7 @@
 #include <string.h>
 #include <trace.h>
 #include <platform.h>
+#include <vm/vm.h>
 
 #include <fbl/alloc_checker.h>
 

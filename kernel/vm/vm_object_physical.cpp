@@ -13,12 +13,12 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
-#include <kernel/vm.h>
 #include <lib/console.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm.h>
 #include <zircon/types.h>
 
 using fbl::AutoLock;

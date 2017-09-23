@@ -12,10 +12,10 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
-#include <kernel/vm.h>
 #include <pow2.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
+#include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <zircon/types.h>

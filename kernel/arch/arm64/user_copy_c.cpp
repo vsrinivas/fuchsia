@@ -11,7 +11,7 @@
 #include <arch/user_copy.h>
 #include <arch/arm64/user_copy.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE 0
 

@@ -27,13 +27,13 @@
 #include <arch/x86/mp.h>
 #include <arch/x86/proc_trace.h>
 #include <arch/mmu.h>
-#include <kernel/vm.h>
 #include <lib/console.h>
 #include <lk/init.h>
 #include <lk/main.h>
 #include <platform.h>
 #include <sys/types.h>
 #include <string.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE 0
 

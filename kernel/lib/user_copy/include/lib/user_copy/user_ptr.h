@@ -5,10 +5,10 @@
 #pragma once
 
 #include <arch/user_copy.h>
-#include <kernel/vm.h>
+#include <fbl/type_support.h>
 #include <lib/user_copy/internal.h>
 #include <zircon/types.h>
-#include <fbl/type_support.h>
+#include <vm/vm.h>
 
 // user_ptr<> wraps a pointer to user memory, to differentiate it from kernel
 // memory.

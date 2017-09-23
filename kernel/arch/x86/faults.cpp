@@ -17,9 +17,9 @@
 #include <arch/x86/descriptor.h>
 #include <kernel/thread.h>
 #include <kernel/stats.h>
-#include <kernel/vm.h>
 #include <platform.h>
 #include <vm/fault.h>
+#include <vm/vm.h>
 
 #include <fbl/auto_call.h>
 #include <zircon/syscalls/exception.h>

@@ -26,7 +26,6 @@
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <kernel/vm.h>
 #include <lib/dpc.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
@@ -37,6 +36,7 @@
 #include <printf.h>
 #include <string.h>
 #include <target.h>
+#include <vm/vm.h>
 
 /* global thread list */
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);

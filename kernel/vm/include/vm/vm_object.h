@@ -15,11 +15,11 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/mutex.h>
-#include <kernel/vm.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <stdint.h>
 #include <vm/page.h>
+#include <vm/vm.h>
 #include <vm/vm_page_list.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>

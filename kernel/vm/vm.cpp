@@ -13,7 +13,6 @@
 #include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lk/init.h>
@@ -21,6 +20,7 @@
 #include <trace.h>
 #include <vm/initial_map.h>
 #include <vm/pmm.h>
+#include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <zircon/types.h>
 
