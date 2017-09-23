@@ -597,16 +597,16 @@ all:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 tools:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 
 # meta rule for the kernel
-.PHONY: kern
+.PHONY: kernel
 ifeq ($(ENABLE_BUILD_LISTFILES),true)
-kern: $(OUTLKBIN) $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
+kernel: $(OUTLKBIN) $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
 else
-kern: $(OUTLKBIN)
+kernel: $(OUTLKBIN)
 endif
 
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
 # add the kernel to the build
-all:: kern
+all:: kernel
 else
 # No kernel, but we want the bootdata.bin containing the shared libraries.
 all:: $(USER_BOOTDATA)

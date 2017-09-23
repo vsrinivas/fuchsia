@@ -33,6 +33,7 @@ help:
 	@echo "make clean: cleans build of current project"
 	@echo "make spotless: removes all build directories"
 	@echo "make gigaboot: build the bootloader"
+	@echo "make kernel: build the kernel"
 	@echo "make <project>: try to build project named <project>"
 	@echo ""
 	@echo "Examples:"
