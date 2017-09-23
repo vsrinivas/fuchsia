@@ -183,9 +183,10 @@ zx_status_t VnodeVmo::Read(void* data, size_t len, size_t off, size_t* out_actua
     return zx_vmo_read(vmo_, data, offset_ + off, len, out_actual);
 }
 
-zx_status_t VnodeFile::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
+zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
+                             size_t* out_actual) {
     zx_status_t status;
-    size_t newlen = off + len;
+    size_t newlen = offset + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
     size_t alignedLen = fbl::roundup(newlen, static_cast<size_t>(PAGE_SIZE));
 
@@ -201,14 +202,14 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t off, size_t* o
         }
     }
 
-    if ((status = zx_vmo_write(vmo_, data, off, len, out_actual)) != ZX_OK) {
+    if ((status = zx_vmo_write(vmo_, data, offset, len, out_actual)) != ZX_OK) {
         return status;
     }
 
     if (newlen > length_) {
         length_ = newlen;
     }
-    if (*out_actual == 0 && off >= kMemfsMaxFileSize) {
+    if (*out_actual == 0 && offset >= kMemfsMaxFileSize) {
         // short write because we're beyond the end of the permissible length
         return ZX_ERR_FILE_BIG;
     }
@@ -216,6 +217,12 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t off, size_t* o
     return ZX_OK;
 }
 
+zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end,
+                              size_t* out_actual) {
+    zx_status_t status = Write(data, len, length_, out_actual);
+    *out_end = length_;
+    return status;
+}
 
 zx_status_t VnodeFile::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
     if (vmo_ == ZX_HANDLE_INVALID) {

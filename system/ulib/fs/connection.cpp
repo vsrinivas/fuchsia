@@ -259,21 +259,24 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         if (!IsWritable(flags_)) {
             return ZX_ERR_BAD_HANDLE;
         }
-        if (flags_ & O_APPEND) {
-            vnattr_t attr;
-            zx_status_t r;
-            if ((r = vnode_->Getattr(&attr)) < 0) {
-                return r;
-            }
-            offset_ = attr.size;
-        }
+
         size_t actual;
-        zx_status_t status = vnode_->Write(msg->data, len, offset_, &actual);
-        if (status == ZX_OK) {
-            ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(len));
-            offset_ += actual;
-            msg->arg2.off = offset_;
+        zx_status_t status;
+        if (flags_ & O_APPEND) {
+            size_t end;
+            status = vnode_->Append(msg->data, len, &end, &actual);
+            if (status == ZX_OK) {
+                offset_ = end;
+                msg->arg2.off = offset_;
+            }
+        } else {
+            status = vnode_->Write(msg->data, len, offset_, &actual);
+            if (status == ZX_OK) {
+                offset_ += actual;
+                msg->arg2.off = offset_;
+            }
         }
+        ZX_DEBUG_ASSERT(actual <= static_cast<size_t>(len));
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_WRITE_AT: {

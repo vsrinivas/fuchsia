@@ -142,7 +142,10 @@ private:
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-    zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t len, size_t offset,
+                      size_t* out_actual) final;
+    zx_status_t Append(const void* data, size_t len, size_t* out_end,
+                       size_t* out_actual) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len,

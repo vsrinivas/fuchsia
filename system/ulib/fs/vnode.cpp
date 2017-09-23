@@ -42,7 +42,11 @@ zx_status_t Vnode::Read(void* data, size_t len, size_t off, size_t* out_actual) 
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
+zx_status_t Vnode::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Vnode::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

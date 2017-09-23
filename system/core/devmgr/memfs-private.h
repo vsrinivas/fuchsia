@@ -69,7 +69,10 @@ public:
 
 private:
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-    zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) final;
+    zx_status_t Write(const void* data, size_t len, size_t offset,
+                      size_t* out_actual) final;
+    zx_status_t Append(const void* data, size_t len, size_t* out_end,
+                       size_t* out_actual) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;

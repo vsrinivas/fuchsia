@@ -99,11 +99,19 @@ public:
     // less than or equal to |len|.
     virtual zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual);
 
-    // Write data to vn at offset.
+    // Write |len| bytes of |data| to the file, starting at |offset|.
     //
     // If successful, returns the number of bytes written in |out_actual|. This must be
     // less than or equal to |len|.
-    virtual zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual);
+    virtual zx_status_t Write(const void* data, size_t len, size_t offset,
+                              size_t* out_actual);
+
+    // Write |len| bytes of |data| to the end of the file.
+    //
+    // If successful, returns the number of bytes written in |out_actual|, and
+    // returns the new end of file offset in |out_end|.
+    virtual zx_status_t Append(const void* data, size_t len, size_t* out_end,
+                               size_t* out_actual);
 
     // Attempt to find child of vn, child returned on success.
     // Name is len bytes long, and does not include a null terminator.

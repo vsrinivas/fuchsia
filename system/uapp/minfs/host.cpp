@@ -108,6 +108,10 @@ int emu_open(const char* path, int flags, mode_t mode) {
     //TODO: fdtab lock
     PATH_WRAP(path, open, path, flags, mode);
     int fd;
+    if (flags & O_APPEND) {
+        errno = ENOTSUP;
+        return -1;
+    }
     for (fd = 0; fd < MAXFD; fd++) {
         if (fdtab[fd].vn == nullptr) {
             const char* pathout = nullptr;

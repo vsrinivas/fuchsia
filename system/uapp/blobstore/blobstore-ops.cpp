@@ -71,11 +71,20 @@ zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actu
     return ReadInternal(data, len, off, out_actual);
 }
 
-zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
+zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t offset,
+                             size_t* out_actual) {
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
-    return WriteInternal(data, len, out_actual);
+    zx_status_t status = WriteInternal(data, len, out_actual);
+    return status;
+}
+
+zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end,
+                              size_t* out_actual) {
+    zx_status_t status = Write(data, len, bytes_written_, out_actual);
+    *out_actual = bytes_written_;
+    return status;
 }
 
 zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
