@@ -89,7 +89,7 @@ define generate-copy-dst-src
 $1: $2
 	@$$(MKDIR)
 	$(call BUILDECHO,installing $$@)
-	$$(NOECHO) cp -f $$< $$@
+	$$(NOECHO) ln -f $$< $$@ 2> /dev/null || cp -f $$< $$@
 endef
 
 copy-dst-src = $(eval $(call generate-copy-dst-src,$(strip $1),$(strip $2)))
