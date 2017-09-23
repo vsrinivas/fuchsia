@@ -2135,7 +2135,7 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 // This detects recursion via the error function.
 static bool loader_svc_rpc_in_progress;
-static zx_txid_t loader_svc_txid;
+static atomic_uint_fast32_t loader_svc_txid;
 
 __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t opcode,
                                                  const void* data, size_t len,
@@ -2161,7 +2161,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t opcode,
     }
 
     memset(&msg.header, 0, sizeof msg.header);
-    msg.header.txid = ++loader_svc_txid;
+    msg.header.txid = atomic_fetch_add(&loader_svc_txid, 1);
     msg.header.opcode = opcode;
     memcpy(msg.data, data, len);
     msg.data[len] = 0;
@@ -2252,7 +2252,7 @@ __NO_SAFESTACK static zx_status_t get_library_vmo(const char* name,
                           ZX_HANDLE_INVALID, result);
 }
 
-__NO_SAFESTACK zx_status_t dl_clone_loader_sevice(zx_handle_t* out) {
+__NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
     if (loader_svc == ZX_HANDLE_INVALID) {
         return ZX_ERR_UNAVAILABLE;
     }
@@ -2261,7 +2261,43 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_sevice(zx_handle_t* out) {
     if ((status = _zx_channel_create(0, &h0, &h1)) != ZX_OK) {
         return status;
     }
-    if ((status = loader_svc_rpc(LOADER_SVC_OP_CLONE, NULL, 0, h1, NULL)) != ZX_OK) {
+    struct {
+        zx_loader_svc_msg_t hdr;
+        uint8_t data[1];
+    } msg = {
+        .hdr = {
+            .txid = atomic_fetch_add(&loader_svc_txid, 1),
+            .opcode = LOADER_SVC_OP_CLONE,
+        }
+    };
+    zx_channel_call_args_t call = {
+        .wr_bytes = &msg,
+        .wr_num_bytes = sizeof(msg.hdr) + 1,
+        .wr_handles = &h1,
+        .wr_num_handles = 1,
+        .rd_bytes = &msg,
+        .rd_num_bytes = sizeof(msg.hdr),
+        .rd_handles = NULL,
+        .rd_num_handles = 0,
+    };
+    uint32_t reply_size;
+    uint32_t handle_count;
+    zx_status_t read_status = ZX_OK;
+    if ((status = _zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE,
+                                   &call, &reply_size, &handle_count,
+                                   &read_status)) != ZX_OK) {
+        if (status != ZX_ERR_CALL_FAILED)
+            _zx_handle_close(h1);
+        else if (read_status != ZX_OK)
+            status = read_status;
+    } else if ((reply_size != sizeof(msg.hdr)) ||
+               (msg.hdr.opcode != LOADER_SVC_OP_STATUS)) {
+        status = ZX_ERR_INVALID_ARGS;
+    } else if (msg.hdr.arg != ZX_OK) {
+        status = msg.hdr.arg;
+    }
+
+    if (status != ZX_OK) {
         _zx_handle_close(h0);
     } else {
         *out = h0;

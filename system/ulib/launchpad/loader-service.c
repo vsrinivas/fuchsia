@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include <zircon/compiler.h>
+#include <zircon/dlfcn.h>
 #include <zircon/device/dmctl.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
@@ -482,12 +483,19 @@ static loader_service_t local_loader_svc = {
 };
 
 zx_status_t loader_service_get_default(zx_handle_t* out) {
+    // Try to clone the active loader service (if it exists)
+    if (dl_clone_loader_service(out) == ZX_OK) {
+        return ZX_OK;
+    }
+
+    // Otherwise try to use the system loader service,
+    // unless we are forbidden by force_local...
     if (!force_local_loader_service) {
-        // Try to use the system loader service.
         if (loader_service_get_system(out) == ZX_OK) {
             return ZX_OK;
         }
     }
+
     // Fall back to an in-process loader service.
     return loader_service_connect(&local_loader_svc, out);
 }
