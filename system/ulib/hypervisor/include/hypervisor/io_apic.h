@@ -11,7 +11,7 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 
-typedef struct local_apic local_apic_t;
+class LocalApic;
 
 /* Stores the IO APIC state. */
 class IoApic {
@@ -27,7 +27,7 @@ public:
     };
 
     // Associate a local APIC with an IO APIC.
-    zx_status_t RegisterLocalApic(uint8_t local_apic_id, local_apic_t* local_apic);
+    zx_status_t RegisterLocalApic(uint8_t local_apic_id, LocalApic* local_apic);
 
     // Handle memory access to the IO APIC.
     zx_status_t Handler(const zx_packet_guest_mem_t* mem, const instruction_t* inst);
@@ -53,6 +53,6 @@ private:
     // IO redirection table.
     RedirectEntry redirect_[kNumRedirects] TA_GUARDED(mutex_) = {};
     // Connected local APICs.
-    local_apic_t* local_apic_[kMaxLocalApics] = {};
+    LocalApic* local_apic_[kMaxLocalApics] = {};
 };
 

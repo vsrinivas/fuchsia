@@ -16,10 +16,9 @@
 #define EXPECTED_INT 43u
 
 static void stub_io_apic(IoApic* io_apic) {
-    static local_apic_t local_apic = {};
-    static local_apic_regs_t local_apic_regs = {};
-    local_apic.vcpu = ZX_HANDLE_INVALID;
-    local_apic.regs = &local_apic_regs;
+    static LocalApic::Registers local_apic_regs;
+    static LocalApic local_apic(ZX_HANDLE_INVALID, reinterpret_cast<uintptr_t>(&local_apic_regs));
+    memset(&local_apic_regs, 0, sizeof(local_apic_regs));
     io_apic->RegisterLocalApic(0, &local_apic);
 }
 

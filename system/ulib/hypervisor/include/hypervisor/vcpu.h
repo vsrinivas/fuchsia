@@ -32,17 +32,17 @@ typedef zx_status_t (*write_state_fn_t)(vcpu_ctx_t* vcpu, uint32_t kind, const v
 
 /* Stores the state associated with a single VCPU. */
 typedef struct vcpu_ctx {
+    vcpu_ctx(zx_handle_t vcpu_, uintptr_t apic_addr_);
+    vcpu_ctx(zx_handle_t vcpu_) : vcpu_ctx(vcpu_, 0) {}
+
     zx_handle_t vcpu;
 
     read_state_fn_t read_state;
     write_state_fn_t write_state;
 
-    local_apic_t local_apic;
-    guest_ctx_t* guest_ctx;
+    LocalApic local_apic;
+    guest_ctx_t* guest_ctx = nullptr;
 } vcpu_ctx_t;
-
-/* Initializes a VCPU context. */
-void vcpu_init(vcpu_ctx_t* vcpu_ctx, zx_handle_t vcpu);
 
 /* Controls execution of a VCPU context, providing the main logic. */
 zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx);

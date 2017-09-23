@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/local_apic.h>
 #include <zircon/assert.h>
@@ -32,9 +33,22 @@
 #define LOCAL_APIC_REGISTER_INITIAL_COUNT   0x0380
 
 // clang-format on
+void LocalApic::set_id(uint32_t id) {
+    fbl::AutoLock lock(&mutex_);
+    regs_->id.u32 = id;
+}
 
-zx_status_t local_apic_handler(local_apic_t* local_apic, const zx_packet_guest_mem_t* mem,
-                               instruction_t* inst) {
+uint32_t LocalApic::ldr() const {
+    fbl::AutoLock lock(&mutex_);
+    return regs_->ldr.u32;
+}
+
+uint32_t LocalApic::dfr() const {
+    fbl::AutoLock lock(&mutex_);
+    return regs_->dfr.u32;
+}
+
+zx_status_t LocalApic::Handler(const zx_packet_guest_mem_t* mem, instruction_t* inst) {
     ZX_ASSERT(mem->addr >= LOCAL_APIC_PHYS_BASE);
     zx_vaddr_t offset = mem->addr - LOCAL_APIC_PHYS_BASE;
     // From Intel Volume 3, Section 10.4.1.: All 32-bit registers should be
@@ -66,11 +80,12 @@ zx_status_t local_apic_handler(local_apic_t* local_apic, const zx_packet_guest_m
         return inst_read32(inst, 0);
     case LOCAL_APIC_REGISTER_ID: {
         // The IO APIC implementation currently assumes these won't change.
-        if (inst->type == INST_MOV_WRITE && inst_val32(inst) != local_apic->regs->id.u32) {
+        fbl::AutoLock lock(&mutex_);
+        if (inst->type == INST_MOV_WRITE && inst_val32(inst) != regs_->id.u32) {
             fprintf(stderr, "Changing APIC IDs is not supported.\n");
             return ZX_ERR_NOT_SUPPORTED;
         }
-        uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic->apic_addr) + offset;
+        uintptr_t addr = reinterpret_cast<uintptr_t>(regs_) + offset;
         return inst_rw32(inst, reinterpret_cast<uint32_t*>(addr));
     }
     case LOCAL_APIC_REGISTER_DFR:
@@ -83,7 +98,8 @@ zx_status_t local_apic_handler(local_apic_t* local_apic, const zx_packet_guest_m
     case LOCAL_APIC_REGISTER_LVT_THERMAL:
     case LOCAL_APIC_REGISTER_LVT_TIMER:
     case LOCAL_APIC_REGISTER_SVR: {
-        uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic->apic_addr) + offset;
+        fbl::AutoLock lock(&mutex_);
+        uintptr_t addr = reinterpret_cast<uintptr_t>(regs_) + offset;
         return inst_rw32(inst, reinterpret_cast<uint32_t*>(addr));
     }
     case LOCAL_APIC_REGISTER_INITIAL_COUNT: {

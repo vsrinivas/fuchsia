@@ -314,11 +314,13 @@ int main(int argc, char** argv) {
     if (balloon_poll_interval > 0)
         poll_balloon_stats(&balloon, balloon_poll_interval);
 
-    vcpu_ctx_t vcpu_ctx;
-    vcpu_init(&vcpu_ctx, vcpu);
+    // TODO: Move APIC initialization into a Vcpu factory method. This
+    // reduces the need for platform switches here.
+    vcpu_ctx_t vcpu_ctx(vcpu
 #if __x86_64__
-    vcpu_ctx.local_apic.apic_addr = (void*)apic_addr;
-#endif // __x86_64__
+        , apic_addr
+#endif
+    );
     vcpu_ctx.guest_ctx = &guest_ctx;
     // Setup Local APIC.
     status = io_apic.RegisterLocalApic(0, &vcpu_ctx.local_apic);
