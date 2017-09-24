@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/acquire_fence.h"
+#include "garnet/bin/ui/scene_manager/sync/acquire_fence.h"
 
 #include <zx/time.h>
 #include "garnet/public/lib/fxl/functional/closure.h"

@@ -7,9 +7,9 @@
 #include <trace/event.h>
 
 #include "garnet/bin/ui/scene_manager/engine/session.h"
-#include "garnet/bin/ui/scene_manager/fence.h"
 #include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
 #include "garnet/bin/ui/scene_manager/resources/host_memory.h"
+#include "garnet/bin/ui/scene_manager/sync/fence.h"
 
 namespace scene_manager {
 

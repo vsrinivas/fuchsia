@@ -5,10 +5,10 @@
 #include "escher/impl/command_buffer_sequencer.h"
 #include "gtest/gtest.h"
 
-#include "lib/ui/tests/test_with_message_loop.h"
-#include "garnet/bin/ui/scene_manager/acquire_fence_set.h"
-#include "garnet/bin/ui/scene_manager/fence.h"
+#include "garnet/bin/ui/scene_manager/sync/acquire_fence_set.h"
+#include "garnet/bin/ui/scene_manager/sync/fence.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scene_manager {
 namespace test {

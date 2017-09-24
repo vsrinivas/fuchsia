@@ -5,14 +5,14 @@
 #include "escher/util/image_utils.h"
 #include "gtest/gtest.h"
 
-#include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/tests/test_with_message_loop.h"
-#include "garnet/bin/ui/scene_manager/acquire_fence.h"
-#include "garnet/bin/ui/scene_manager/fence.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
+#include "garnet/bin/ui/scene_manager/sync/acquire_fence.h"
+#include "garnet/bin/ui/scene_manager/sync/fence.h"
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scene_manager {
 namespace test {

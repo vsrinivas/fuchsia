@@ -11,7 +11,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 
-#include "garnet/bin/ui/scene_manager/fence.h"
+#include "garnet/bin/ui/scene_manager/sync/fence.h"
 
 namespace scene_manager {
 

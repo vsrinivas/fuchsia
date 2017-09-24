@@ -11,7 +11,7 @@
 #include "escher/renderer/simple_image_factory.h"
 
 namespace {
-// TODO: Copied this constant from mozart/src/scene_manager/fence.h.
+// TODO: Copied this constant from mozart/src/scene_manager/sync/fence.h.
 // Put it in a shared header file somewhere.
 constexpr zx_status_t kFenceSignalled = ZX_EVENT_SIGNALED;
 }  // namespace

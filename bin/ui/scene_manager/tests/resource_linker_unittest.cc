@@ -10,8 +10,8 @@
 #include "lib/fxl/synchronization/waitable_event.h"
 #include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
+#include "garnet/bin/ui/scene_manager/engine/resource_linker.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
-#include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
 #include "lib/ui/scenic/fidl_helpers.h"

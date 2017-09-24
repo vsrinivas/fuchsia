@@ -6,11 +6,11 @@
 
 #include <vector>
 
-#include "garnet/bin/ui/scene_manager/acquire_fence_set.h"
 #include "garnet/bin/ui/scene_manager/engine/engine.h"
 #include "garnet/bin/ui/scene_manager/engine/event_reporter.h"
+#include "garnet/bin/ui/scene_manager/engine/resource_map.h"
 #include "garnet/bin/ui/scene_manager/resources/memory.h"
-#include "garnet/bin/ui/scene_manager/resources/resource_map.h"
+#include "garnet/bin/ui/scene_manager/sync/acquire_fence_set.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"

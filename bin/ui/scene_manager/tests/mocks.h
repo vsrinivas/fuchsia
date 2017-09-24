@@ -7,8 +7,8 @@
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/engine/engine.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
-#include "garnet/bin/ui/scene_manager/release_fence_signaller.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
+#include "garnet/bin/ui/scene_manager/sync/release_fence_signaller.h"
 
 namespace scene_manager {
 namespace test {

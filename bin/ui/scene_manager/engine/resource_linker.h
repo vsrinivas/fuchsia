@@ -10,8 +10,8 @@
 #include <async/auto_wait.h>
 #include "lib/fsl/handles/object_info.h"
 
+#include "garnet/bin/ui/scene_manager/engine/unresolved_imports.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "garnet/bin/ui/scene_manager/resources/unresolved_imports.h"
 #include "lib/ui/scenic/fidl/ops.fidl-common.h"
 
 namespace scene_manager {

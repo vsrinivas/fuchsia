@@ -6,9 +6,9 @@
 
 #include <algorithm>
 
+#include "garnet/bin/ui/scene_manager/engine/resource_linker.h"
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/resources/import.h"
-#include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
 
 namespace scene_manager {
 

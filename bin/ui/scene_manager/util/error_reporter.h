@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-#include "garnet/bin/ui/scene_manager/print_op.h"
+#include "garnet/bin/ui/scene_manager/util/print_op.h"
 #include "lib/fxl/logging.h"
 
 namespace scene_manager {

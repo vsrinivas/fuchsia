@@ -17,10 +17,10 @@
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_scheduler.h"
-#include "garnet/bin/ui/scene_manager/release_fence_signaller.h"
+#include "garnet/bin/ui/scene_manager/engine/resource_linker.h"
 #include "garnet/bin/ui/scene_manager/resources/import.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/scene.h"
-#include "garnet/bin/ui/scene_manager/resources/resource_linker.h"
+#include "garnet/bin/ui/scene_manager/sync/release_fence_signaller.h"
 #include "garnet/bin/ui/scene_manager/util/event_timestamper.h"
 
 namespace scene_manager {

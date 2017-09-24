@@ -8,10 +8,10 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/ui/tests/test_with_message_loop.h"
-#include "garnet/bin/ui/scene_manager/fence.h"
+#include "garnet/bin/ui/scene_manager/sync/fence.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
 #include "garnet/bin/ui/scene_manager/util/event_timestamper.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scene_manager {
 namespace test {

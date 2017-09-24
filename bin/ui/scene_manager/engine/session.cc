@@ -8,7 +8,6 @@
 
 #include "garnet/bin/ui/scene_manager/engine/hit_tester.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
-#include "garnet/bin/ui/scene_manager/print_op.h"
 #include "garnet/bin/ui/scene_manager/resources/buffer.h"
 #include "garnet/bin/ui/scene_manager/resources/camera.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/display_compositor.h"
@@ -29,6 +28,7 @@
 #include "garnet/bin/ui/scene_manager/resources/shapes/mesh_shape.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/rectangle_shape.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/rounded_rectangle_shape.h"
+#include "garnet/bin/ui/scene_manager/util/print_op.h"
 #include "garnet/bin/ui/scene_manager/util/unwrap.h"
 #include "garnet/bin/ui/scene_manager/util/wrap.h"
 

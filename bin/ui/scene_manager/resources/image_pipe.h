@@ -9,17 +9,17 @@
 
 #include <deque>
 
-#include "lib/images/fidl/image_pipe.fidl.h"
-#include "garnet/bin/ui/scene_manager/acquire_fence.h"
+#include "garnet/bin/ui/scene_manager/engine/resource_map.h"
 #include "garnet/bin/ui/scene_manager/resources/image.h"
 #include "garnet/bin/ui/scene_manager/resources/image_base.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe_handler.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "garnet/bin/ui/scene_manager/resources/resource_map.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "garnet/bin/ui/scene_manager/sync/acquire_fence.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/tasks/message_loop_handler.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/images/fidl/image_pipe.fidl.h"
 
 namespace scene_manager {
 
