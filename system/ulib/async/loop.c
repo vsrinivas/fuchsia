@@ -397,10 +397,23 @@ static zx_status_t async_loop_begin_wait(async_t* async, async_wait_t* wait) {
     if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
         return ZX_ERR_BAD_STATE;
 
-    zx_status_t status = async_loop_wait_async(loop, wait);
-    if (status == ZX_OK && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
+    if (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN) {
+        // Add the wait object to the wait_list before we begin waiting, so
+        // a dispatcher can safely remove the waiter from the list if the
+        // handler is invoked.
         mtx_lock(&loop->lock);
         list_add_head(&loop->wait_list, wait_to_node(wait));
+        mtx_unlock(&loop->lock);
+    }
+
+    zx_status_t status = async_loop_wait_async(loop, wait);
+
+    if (status != ZX_OK && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
+        // In this rare condition, the wait failed, but we already added
+        // the waiter to the wait_list. Since a dispatched handler will
+        // never be invoked on the wait object, we remove it ourselves.
+        mtx_lock(&loop->lock);
+        list_delete(wait_to_node(wait));
         mtx_unlock(&loop->lock);
     }
     return status;
