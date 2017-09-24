@@ -53,6 +53,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
     // We check it early so we can throw away the protocol part of flags.
     bool pipeline = flags & O_PIPELINE;
     uint32_t open_flags = flags & (~O_PIPELINE);
+    size_t hcount = 0;
 
     fbl::RefPtr<Vnode> vnode;
     zx_status_t r = vfs->Open(fbl::move(parent), &vnode, path, &path, open_flags, mode);
@@ -76,19 +77,20 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
         return;
     } else {
         // Acquire the handles to the VFS object
-        if ((r = vnode->GetHandles(flags, obj.handle, &obj.type, obj.extra, &obj.esize)) < 0) {
+        r = vnode->GetHandles(flags, obj.handle, &hcount, &obj.type, obj.extra, &obj.esize);
+        if (r != ZX_OK) {
             vnode->Close();
         }
     }
 
-    // If r >= 0, then we hold a reference to vnode from open.
-    // Otherwise, vnode is closed, and we're simply responding to the client.
+    // If r >= 0, then we hold a reference to vn from open.
+    // Otherwise, vn is closed, and we're simply responding to the client.
 
-    if (pipeline && r > 0) {
+    if (pipeline && hcount > 0) {
         // If a pipeline open was requested, but extra handles are required, then
         // we cannot complete the open in a pipelined fashion.
-        while (r-- > 0) {
-            zx_handle_close(obj.handle[r]);
+        while (hcount-- > 0) {
+            zx_handle_close(obj.handle[hcount]);
         }
         vnode->Close();
         return;
@@ -96,13 +98,13 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
 
     if (!pipeline) {
         // Describe the VFS object to the caller in the non-pipelined case.
-        obj.status = (r < 0) ? r : ZX_OK;
-        obj.hcount = (r > 0) ? r : 0;
+        obj.status = r;
+        obj.hcount = static_cast<uint32_t>(hcount);
         channel.write(0, &obj, static_cast<uint32_t>(ZXRIO_OBJECT_MINSIZE + obj.esize),
                       obj.handle, obj.hcount);
     }
 
-    if (r < 0) {
+    if (r != ZX_OK) {
         return;
     }
 

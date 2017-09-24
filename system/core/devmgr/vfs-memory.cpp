@@ -130,7 +130,7 @@ zx_status_t VnodeVmo::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnds,
+zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount,
                                  uint32_t* type, void* extra, uint32_t* esize) {
     zx_off_t* off = static_cast<zx_off_t*>(extra);
     zx_off_t* len = off + 1;
@@ -157,7 +157,8 @@ zx_status_t VnodeVmo::GetHandles(uint32_t flags, zx_handle_t* hnds,
     hnds[0] = vmo;
     *type = FDIO_PROTOCOL_VMOFILE;
     *esize = sizeof(zx_off_t) * 2;
-    return 1;
+    *hcount = 1;
+    return ZX_OK;
 }
 
 zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actual) {

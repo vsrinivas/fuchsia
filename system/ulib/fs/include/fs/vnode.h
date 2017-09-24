@@ -61,8 +61,18 @@ public:
     virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
 
     // Extract handle(s), type, and extra info from a vnode.
-    // Returns the number of handles which should be returned on the requesting handle.
-    virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds,
+    //
+    // On success, the following output parameters are set:
+    //
+    // |hnds| is an array of FDIO_MAX_HANDLES handles representing the Vnode.
+    // |hcount| indicates how many |hnds| are being returned.
+    // |type| is an optional output FDIO_PROTOCOL type indicating how the
+    // handles should be interpreted.
+    // |extra| is an output buffer holding ZXRIO_OBJECT_EXTRA bytes.
+    // The usage of this field is dependent on the |type|.
+    // |esize| is an output parameter indicating how many bytes in extra
+    // have been used.
+    virtual zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount,
                                    uint32_t* type, void* extra, uint32_t* esize);
 
     virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd);
