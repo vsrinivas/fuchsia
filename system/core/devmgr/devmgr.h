@@ -18,6 +18,9 @@ void devfs_init(zx_handle_t root_job);
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
 void devmgr_set_mdi(zx_handle_t mdi_handle);
+zx_status_t devmgr_read_mdi(zx_handle_t vmo, zx_off_t offset, size_t length);
+
+zx_handle_t devmgr_load_file(const char* path);
 
 zx_status_t devmgr_launch(zx_handle_t job, const char* name,
                           int argc, const char* const* argv,
@@ -29,7 +32,7 @@ void devmgr_launch_devhost(zx_handle_t job,
                            zx_handle_t hdevice, zx_handle_t hrpc);
 ssize_t devmgr_add_systemfs_vmo(zx_handle_t vmo);
 bool secondary_bootfs_ready(void);
-int devmgr_start_appmgr(void* arg);
+void fuchsia_start(void);
 void fshost_start(void);
 zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
 

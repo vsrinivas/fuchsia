@@ -69,7 +69,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             if (st != ZX_OK) {
                 printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_SYSTEM, st);
             } else {
-                devmgr_start_appmgr(NULL);
+                fuchsia_start();
             }
 
             return st;

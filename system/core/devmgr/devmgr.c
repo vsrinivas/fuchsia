@@ -13,6 +13,7 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/loader-service.h>
+#include <zircon/boot/bootdata.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -83,51 +84,65 @@ void do_autorun(const char* name, const char* env) {
     }
 }
 
-static mtx_t appmgr_lock = MTX_INIT;
+static zx_handle_t fuchsia_event;
 
-int devmgr_start_appmgr(void* arg) {
-    static bool appmgr_started = false;
-    static bool autorun_started = false;
-
-    // we're starting the appmgr because /system is present
-    // so we also signal the device coordinator that those
-    // drivers are now loadable
-    load_system_drivers();
-
-    mtx_lock(&appmgr_lock);
-    struct stat s;
-    if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
-        unsigned int appmgr_hnd_count = 0;
-        zx_handle_t appmgr_hnds[2] = {};
-        uint32_t appmgr_ids[2] = {};
-        if (svc_request_handle) {
-            assert(appmgr_hnd_count < countof(appmgr_hnds));
-            appmgr_hnds[appmgr_hnd_count] = svc_request_handle;
-            appmgr_ids[appmgr_hnd_count] = PA_SERVICE_REQUEST;
-            appmgr_hnd_count++;
-            svc_request_handle = ZX_HANDLE_INVALID;
-        }
-        devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
-                      argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
-                      appmgr_hnd_count, NULL);
-        appmgr_started = true;
-    }
-    if (!autorun_started) {
-        do_autorun("autorun:system", "zircon.autorun.system");
-        autorun_started = true;
-    }
-    mtx_unlock(&appmgr_lock);
-    return 0;
+void fuchsia_start(void) {
+    zx_object_signal(fuchsia_event, 0, ZX_USER_SIGNAL_0);
 }
 
-int service_timeout(void* arg) {
-    zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
-    mtx_lock(&appmgr_lock);
-    if (svc_request_handle != ZX_HANDLE_INVALID) {
-        printf("devmgr: appmgr not found, closing service handle\n");
-        zx_handle_close(svc_request_handle);
-    }
-    mtx_unlock(&appmgr_lock);
+static int fuchsia_starter(void* arg) {
+    bool appmgr_started = false;
+    bool autorun_started = false;
+    bool drivers_loaded = false;
+
+    zx_time_t deadline = zx_deadline_after(ZX_SEC(10));
+
+    do {
+        zx_status_t status = zx_object_wait_one(fuchsia_event, ZX_USER_SIGNAL_0, deadline, NULL);
+        if (status == ZX_ERR_TIMED_OUT) {
+            if (svc_request_handle != ZX_HANDLE_INVALID) {
+                printf("devmgr: appmgr not launched in 10s, closing svc handle\n");
+                zx_handle_close(svc_request_handle);
+            }
+            deadline = ZX_TIME_INFINITE;
+            continue;
+        }
+        if (status != ZX_OK) {
+            printf("devmgr: error waiting on fuchsia start event: %d\n", status);
+            break;
+        }
+        zx_object_signal(fuchsia_event, ZX_USER_SIGNAL_0, 0);
+
+        if (!drivers_loaded) {
+            // we're starting the appmgr because /system is present
+            // so we also signal the device coordinator that those
+            // drivers are now loadable
+            load_system_drivers();
+            drivers_loaded = true;
+        }
+
+        struct stat s;
+        if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
+            unsigned int appmgr_hnd_count = 0;
+            zx_handle_t appmgr_hnds[2] = {};
+            uint32_t appmgr_ids[2] = {};
+            if (svc_request_handle) {
+                assert(appmgr_hnd_count < countof(appmgr_hnds));
+                appmgr_hnds[appmgr_hnd_count] = svc_request_handle;
+                appmgr_ids[appmgr_hnd_count] = PA_SERVICE_REQUEST;
+                appmgr_hnd_count++;
+                svc_request_handle = ZX_HANDLE_INVALID;
+            }
+            devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
+                          argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
+                          appmgr_hnd_count, NULL);
+            appmgr_started = true;
+        }
+        if (!autorun_started) {
+            do_autorun("autorun:system", "zircon.autorun.system");
+            autorun_started = true;
+        }
+    } while (!appmgr_started);
     return 0;
 }
 
@@ -179,14 +194,9 @@ int service_starter(void* arg) {
         }
     }
 
-    if (secondary_bootfs_ready()) {
-        devmgr_start_appmgr(NULL);
-    }
-
     char vcmd[64];
     bool netboot = false;
     bool vruncmd = false;
-
     if (!getenv_bool("netsvc.disable", false)) {
         const char* args[] = { "/boot/bin/netsvc", NULL, NULL };
         int argc = 1;
@@ -241,7 +251,6 @@ int service_starter(void* arg) {
                       &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, NULL);
     }
 
-
     do_autorun("autorun:boot", "zircon.autorun.boot");
     struct stat s;
     if (stat(argv_autorun0[1], &s) == 0) {
@@ -249,6 +258,11 @@ int service_starter(void* arg) {
         devmgr_launch(svcs_job_handle, "sh:autorun0",
                       countof(argv_autorun0), argv_autorun0,
                       NULL, -1, NULL, NULL, 0, NULL);
+    }
+
+    thrd_t t;
+    if ((thrd_create_with_name(&t, fuchsia_starter, NULL, "fuchsia-starter")) == thrd_success) {
+        thrd_detach(t);
     }
 
     if (!netboot) {
@@ -362,8 +376,7 @@ static void load_cmdline_from_bootfs(void) {
 int main(int argc, char** argv) {
     // Close the loader-service channel so the service can go away.
     // We won't use it any more (no dlopen calls in this process).
-    zx_handle_t loader_svc = dl_set_loader_service(ZX_HANDLE_INVALID);
-    zx_handle_close(loader_svc);
+    zx_handle_close(dl_set_loader_service(ZX_HANDLE_INVALID));
 
     devmgr_io_init();
 
@@ -387,8 +400,8 @@ int main(int argc, char** argv) {
         printf("unable to create service job\n");
     }
     zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
-
     zx_channel_create(0, &svc_root_handle, &svc_request_handle);
+    zx_event_create(0, &fuchsia_event);
 
     devmgr_vfs_init();
 
@@ -406,28 +419,220 @@ int main(int argc, char** argv) {
         thrd_detach(t);
     }
 
-    if ((thrd_create_with_name(&t, service_timeout, NULL, "service-timout")) == thrd_success) {
-        thrd_detach(t);
-    }
-
     coordinator();
     printf("devmgr: coordinator exited?!\n");
     return 0;
 }
 
+zx_status_t devmgr_read_mdi(zx_handle_t vmo, zx_off_t offset, size_t length) {
+    zx_handle_t mdi_handle;
+    zx_status_t status = copy_vmo(vmo, offset, length, &mdi_handle);
+    if (status != ZX_OK) {
+        printf("devmgr_read_mdi failed to copy MDI data: %d\n", status);
+        return status;
+    }
+
+    devmgr_set_mdi(mdi_handle);
+    return ZX_OK;
+
+fail:
+    printf("devmgr_read_mdi failed %d\n", status);
+    zx_handle_close(mdi_handle);
+    return status;
+}
+
 #ifdef WITH_FSHOST
+static void devmgr_import_bootdata(zx_handle_t vmo) {
+    bootdata_t bootdata;
+    size_t actual;
+    zx_status_t status = zx_vmo_read(vmo, &bootdata, 0, sizeof(bootdata), &actual);
+    if ((status < 0) || (actual != sizeof(bootdata))) {
+        return;
+    }
+    if ((bootdata.type != BOOTDATA_CONTAINER) || (bootdata.extra != BOOTDATA_MAGIC)) {
+        printf("devmgr: bootdata item does not contain bootdata\n");
+        return;
+    }
+    size_t len = bootdata.length;
+    size_t off = sizeof(bootdata);
+    if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
+        off += sizeof(bootextra_t);
+    }
+
+    while (len > sizeof(bootdata)) {
+        zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata), &actual);
+        if ((status < 0) || (actual != sizeof(bootdata))) {
+            break;
+        }
+        size_t hdrsz = sizeof(bootdata_t);
+        if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
+            hdrsz += sizeof(bootextra_t);
+        }
+        size_t itemlen = BOOTDATA_ALIGN(hdrsz + bootdata.length);
+        if (itemlen > len) {
+            printf("devmgr: bootdata item too large (%zd > %zd)\n", itemlen, len);
+            break;
+        }
+        switch (bootdata.type) {
+        case BOOTDATA_CONTAINER:
+            printf("devmgr: unexpected bootdata container header\n");
+            return;
+        case BOOTDATA_MDI:
+            devmgr_read_mdi(vmo, off, itemlen);
+            break;
+        default:
+            break;
+        }
+        off += itemlen;
+        len -= itemlen;
+    }
+}
+
+static zx_handle_t fs_root;
+
+static bootfs_t bootfs;
+
+static zx_status_t load_object(void* ctx, const char* name, zx_handle_t* vmo) {
+    char tmp[256];
+    if (snprintf(tmp, sizeof(tmp), "lib/%s", name) >= (int)sizeof(tmp)) {
+        return ZX_ERR_BAD_PATH;
+    }
+    bootfs_t* bootfs = ctx;
+    return bootfs_open(bootfs, tmp, vmo);
+}
+
+static zx_status_t load_abspath(void *ctx, const char* name, zx_handle_t* vmo) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
+    zx_handle_close(vmo);
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static loader_service_ops_t loader_ops = {
+    .load_object = load_object,
+    .load_abspath = load_abspath,
+    .publish_data_sink = publish_data_sink,
+};
+
+static loader_service_t* loader_service;
+
+#define MAXHND ZX_CHANNEL_MAX_MSG_HANDLES
+
 void fshost_start(void) {
+    zx_handle_t vmo = zx_get_startup_handle(PA_HND(PA_VMO_BOOTFS, 0));
+    if ((vmo == ZX_HANDLE_INVALID) ||
+        (bootfs_create(&bootfs, vmo) != ZX_OK)) {
+        printf("devmgr: cannot find and open bootfs\n");
+        exit(1);
+    }
+
+    // create a local loader service backed directly by the primary bootfs
+    // to allow us to load the fshost (since we don't have filesystems before
+    // the fshost starts up).
+    zx_handle_t svc;
+    if ((loader_service_create("bootfs-loader", &loader_ops,
+                               &bootfs, &loader_service) != ZX_OK) ||
+        (loader_service_connect(loader_service, &svc) != ZX_OK)) {
+        printf("devmgr: cannot create loader service\n");
+        exit(1);
+    }
+
+    // set the bootfs-loader as the default loader service for now
+    zx_handle_close(dl_set_loader_service(svc));
+
+    // assemble handles to pass down to fshost
+    zx_handle_t handles[MAXHND];
+    uint32_t types[MAXHND];
+    size_t n = 0;
+
+    // pass /, /dev, and /svc handles to fsboot
+    if (zx_channel_create(0, &fs_root, &handles[0]) == ZX_OK) {
+        types[n++] = PA_HND(PA_USER0, 0);
+    }
+    if ((handles[n] = devfs_root_clone()) != ZX_HANDLE_INVALID) {
+        types[n++] = PA_HND(PA_USER0, 1);
+    }
+    if ((handles[n] = svc_root_clone()) != ZX_HANDLE_INVALID) {
+        types[n++] = PA_HND(PA_USER0, 2);
+    }
+    if (zx_channel_create(0, &svc, &handles[n]) == ZX_OK) {
+        types[n++] = PA_HND(PA_USER0, 3);
+    } else {
+        svc = ZX_HANDLE_INVALID;
+    }
+
+    // pass primary bootfs to fshost
+    handles[n] = vmo;
+    types[n++] = PA_HND(PA_VMO_BOOTFS, 0);
+
+    // pass fuchsia start event to fshost
+    if (zx_handle_duplicate(fuchsia_event, ZX_RIGHT_SAME_RIGHTS, &handles[n]) == ZX_OK) {
+        types[n++] = PA_HND(PA_USER1, 0);
+    }
+
+    // pass bootdata VMOs to fshost
+    for (size_t m = 0; n < MAXHND; m++) {
+        uint32_t type = PA_HND(PA_VMO_BOOTDATA, m);
+        if ((handles[n] = zx_get_startup_handle(type)) != ZX_HANDLE_INVALID) {
+            devmgr_import_bootdata(handles[n]);
+            types[n++] = type;
+        } else {
+            break;
+        }
+    }
+
+    // pass VDSO VMOS to fsboot
+    vmo = ZX_HANDLE_INVALID;
+    for (size_t m = 0; n < MAXHND; m++) {
+        uint32_t type = PA_HND(PA_VMO_VDSO, m);
+        if ((handles[n] = zx_get_startup_handle(type)) != ZX_HANDLE_INVALID) {
+            if (m == 0) {
+                zx_handle_duplicate(handles[n], ZX_RIGHT_SAME_RIGHTS, &vmo);
+            }
+            types[n++] = type;
+        } else {
+            break;
+        }
+    }
+
+    // pass KERNEL FILE VMOS to fsboot
+    for (size_t m = 0; n < MAXHND; m++) {
+        uint32_t type = PA_HND(PA_VMO_KERNEL_FILE, m);
+        if ((handles[n] = zx_get_startup_handle(type)) != ZX_HANDLE_INVALID) {
+            types[n++] = type;
+        } else {
+            break;
+        }
+    }
+
+    launchpad_set_vdso_vmo(vmo);
+
+    //TODO: tell fshost not to run block watcher if we're in zedboot mode
+    const char* args[] = { "/boot/bin/fshost" };
+    devmgr_launch(svcs_job_handle, "fshost", 1, args,
+                  NULL, -1, handles, types, n, NULL);
+
+    // switch to system loader service provided by fshost
+    zx_handle_close(dl_set_loader_service(svc));
+}
+
+zx_handle_t devmgr_load_file(const char* path) {
+    if (strncmp(path, "/boot/", 6)) {
+        return ZX_HANDLE_INVALID;
+    }
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    bootfs_open(&bootfs, path + 6, &vmo);
+    return vmo;
 }
 
 zx_handle_t fs_root_clone(void) {
-    return ZX_HANDLE_INVALID;
+    return fdio_service_clone(fs_root);
 }
 
 void devmgr_vfs_exit(void) {
-}
-
-bool secondary_bootfs_ready(void) {
-    return false;
+    //TODO: wire up correctly
 }
 #endif
 

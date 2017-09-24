@@ -60,29 +60,40 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
 
     launchpad_t* lp;
     launchpad_create(job_copy, name, &lp);
-    launchpad_load_from_file(lp, argv[0]);
+
+    zx_handle_t file_vmo;
+    if ((file_vmo = devmgr_load_file(argv[0])) != ZX_HANDLE_INVALID) {
+        launchpad_load_from_vmo(lp, file_vmo);
+    } else {
+        launchpad_load_from_file(lp, argv[0]);
+    }
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
 
-    const char* nametable[3] = { "/", NULL, NULL, };
-    size_t name_count = 0;
+    // fshost builds its own namespace because of chickens and eggs
+    // other processes get pre-assembled namespaces
+    if (strcmp(name, "fshost")) {
+        const char* nametable[3] = { "/" };
+        size_t count = 0;
 
-    zx_handle_t h = fs_root_clone();
-    launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
+        zx_handle_t h = fs_root_clone();
+        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, count++));
 
-    //TODO: constrain to /svc/debug, or other as appropriate
-    if (strcmp(name, "init") && ((h = svc_root_clone()) != ZX_HANDLE_INVALID)) {
-        nametable[name_count] = "/svc";
-        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
+        //TODO: constrain to /svc/debug, or other as appropriate
+        if (strcmp(name, "init") && ((h = svc_root_clone()) != ZX_HANDLE_INVALID)) {
+            nametable[count] = "/svc";
+            launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, count++));
+        }
+        if ((h = devfs_root_clone()) != ZX_HANDLE_INVALID) {
+            nametable[count] = "/dev";
+            launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, count++));
+        }
+        launchpad_set_nametable(lp, count, nametable);
     }
-    if ((h = devfs_root_clone()) != ZX_HANDLE_INVALID) {
-        nametable[name_count] = "/dev";
-        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
-    }
-    launchpad_set_nametable(lp, name_count, nametable);
 
     if (stdiofd < 0) {
         zx_status_t r;
+        zx_handle_t h;
         if ((r = zx_log_create(0, &h) < 0)) {
             launchpad_abort(lp, r, "devmgr: cannot create debuglog handle");
         } else {

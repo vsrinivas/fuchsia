@@ -7,11 +7,14 @@
 
 #include <bootdata/decompress.h>
 
+#include <fdio/namespace.h>
 #include <fdio/util.h>
 
 #include <launchpad/launchpad.h>
+#include <launchpad/loader-service.h>
 
 #include <zircon/boot/bootdata.h>
+#include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -38,14 +41,6 @@ static zx_status_t callback(void* arg, const bootfs_entry_t* entry) {
     cd->add_file(entry->name, cd->vmo, entry->data_off, entry->data_len);
     ++cd->file_count;
     return ZX_OK;
-}
-
-static void start_system_init(void) {
-    thrd_t t;
-    int r = thrd_create_with_name(&t, devmgr_start_appmgr, NULL, "system-init");
-    if (r == thrd_success) {
-        thrd_detach(t);
-    }
 }
 
 static bool has_secondary_bootfs = false;
@@ -93,23 +88,6 @@ static void setup_last_crashlog(zx_handle_t vmo_in, uint64_t off_in, size_t sz) 
         return;
     }
     bootfs_add_file("log/last-panic.txt", vmo, 0, sz);
-}
-
-static zx_status_t devmgr_read_mdi(zx_handle_t vmo, zx_off_t offset, size_t length) {
-    zx_handle_t mdi_handle;
-    zx_status_t status = copy_vmo(vmo, offset, length, &mdi_handle);
-    if (status != ZX_OK) {
-        printf("devmgr_read_mdi failed to copy MDI data: %d\n", status);
-        return status;
-    }
-
-    devmgr_set_mdi(mdi_handle);
-    return ZX_OK;
-
-fail:
-    printf("devmgr_read_mdi failed %d\n", status);
-    zx_handle_close(mdi_handle);
-    return status;
 }
 
 #define HND_BOOTFS(n) PA_HND(PA_VMO_BOOTFS, n)
@@ -181,24 +159,13 @@ static void setup_bootfs(void) {
             case BOOTDATA_LAST_CRASHLOG:
                 setup_last_crashlog(vmo, off + hdrsz, bootdata.length);
                 break;
+#ifndef WITH_FSHOST
             case BOOTDATA_MDI:
                 devmgr_read_mdi(vmo, off, itemlen);
                 break;
-            case BOOTDATA_CMDLINE:
-            case BOOTDATA_ACPI_RSDP:
-            case BOOTDATA_FRAMEBUFFER:
-            case BOOTDATA_E820_TABLE:
-            case BOOTDATA_EFI_MEMORY_MAP:
-            case BOOTDATA_EFI_SYSTEM_TABLE:
-            case BOOTDATA_DEBUG_UART:
-            case BOOTDATA_LASTLOG_NVRAM:
-            case BOOTDATA_LASTLOG_NVRAM2:
-            case BOOTDATA_IGNORE:
-                // quietly ignore these
-                break;
+#endif
             default:
-                printf("devmgr: ignoring bootdata type=%08x size=%u\n",
-                       bootdata.type, bootdata.length);
+                break;
             }
             off += itemlen;
             len -= itemlen;
@@ -211,7 +178,7 @@ done:
 ssize_t devmgr_add_systemfs_vmo(zx_handle_t vmo) {
     ssize_t added = setup_bootfs_vmo(100, BOOTDATA_BOOTFS_SYSTEM, vmo);
     if (added > 0) {
-        start_system_init();
+        fuchsia_start();
     }
     return added;
 }
@@ -272,15 +239,82 @@ void fshost_start(void) {
 
     fetch_vmos(PA_VMO_VDSO, "PA_VMO_VDSO");
     fetch_vmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
+
+    // if we have a /system ramdisk, start higher level services
+    if (has_secondary_bootfs) {
+        fuchsia_start();
+    }
 }
 
 zx_handle_t fs_root_clone(void) {
     return vfs_create_global_root_handle();
 }
 
+zx_handle_t devmgr_load_file(const char* path) {
+    return ZX_HANDLE_INVALID;
+}
+
 #ifdef WITH_FSHOST
+static zx_handle_t devfs_root;
+static zx_handle_t svc_root;
+static zx_handle_t fuchsia_event;
+
+zx_handle_t devfs_root_clone(void) {
+    return fdio_service_clone(devfs_root);
+}
+
+zx_handle_t svc_root_clone(void) {
+    return fdio_service_clone(svc_root);
+}
+
+void fuchsia_start(void) {
+    zx_object_signal(fuchsia_event, 0, ZX_USER_SIGNAL_0);
+}
+
+static loader_service_t* loader_service;
+
 int main(int argc, char** argv) {
-    printf("fshost: hello!\n");
-    for (;;) ;
+    printf("fshost: started.\n");
+
+    zx_handle_t fs_root = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    devfs_root = zx_get_startup_handle(PA_HND(PA_USER0, 1));
+    svc_root = zx_get_startup_handle(PA_HND(PA_USER0, 2));
+    zx_handle_t devmgr_loader = zx_get_startup_handle(PA_HND(PA_USER0, 3));
+    fuchsia_event = zx_get_startup_handle(PA_HND(PA_USER1, 0));
+
+    fshost_start();
+
+    vfs_connect_global_root_handle(fs_root);
+
+    fdio_ns_t* ns;
+    zx_status_t r;
+    if ((r = fdio_ns_create(&ns)) != ZX_OK) {
+        printf("fshost: cannot create namespace: %d\n", r);
+        return -1;
+    }
+    if ((r = fdio_ns_bind(ns, "/", fs_root_clone())) != ZX_OK) {
+        printf("fshost: cannot bind / to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_bind(ns, "/dev", devfs_root_clone())) != ZX_OK) {
+        printf("fshost: cannot bind /dev to namespace: %d\n", r);
+    }
+    if ((r = fdio_ns_install(ns)) != ZX_OK) {
+        printf("fshost: cannot install namespace: %d\n", r);
+    }
+
+    if ((r = loader_service_create_fs("system-loader", &loader_service)) != ZX_OK) {
+        printf("fshost: failed to create loader service: %d\n", r);
+    } else {
+        loader_service_attach(loader_service, devmgr_loader);
+        zx_handle_t svc;
+        if ((r = loader_service_connect(loader_service, &svc)) != ZX_OK) {
+            printf("fshost: failed to connect to loader service: %d\n", r);
+        } else {
+            // switch from bootfs-loader to system-loader
+            zx_handle_close(dl_set_loader_service(svc));
+        }
+    }
+
+    block_device_watcher(zx_job_default());
 }
 #endif
