@@ -17,6 +17,8 @@ class Stroke;
 using StrokePtr = fxl::RefPtr<Stroke>;
 using StrokePath = std::vector<sketchy::StrokeSegment>;
 
+class StrokeGroup;
+
 class Stroke final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
@@ -24,7 +26,11 @@ class Stroke final : public Resource {
 
   Stroke(escher::Escher* escher);
   bool SetPath(sketchy::StrokePathPtr path);
-  escher::MeshPtr Tessellate();
+
+  // Tessellate and merge the mesh into larger buffers of |stroke_group|.
+  void TessellateAndMerge(escher::impl::CommandBuffer* command,
+                          escher::BufferFactory* buffer_factory,
+                          StrokeGroup* stroke_group);
 
  private:
   escher::Escher* const escher_;

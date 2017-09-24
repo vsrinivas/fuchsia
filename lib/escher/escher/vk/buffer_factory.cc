@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "escher/vk/buffer_factory.h"
+#include "escher/vk/gpu_mem.h"
 
 #include "escher/escher.h"
 
@@ -16,6 +17,13 @@ BufferPtr BufferFactory::NewBuffer(
     vk::MemoryPropertyFlags memory_property_flags) {
   return Buffer::New(this, escher()->gpu_allocator(), size, usage_flags,
                      memory_property_flags);
+}
+
+BufferPtr BufferFactory::NewBuffer(GpuMemPtr mem,
+                                   vk::BufferUsageFlags usage_flags,
+                                   vk::DeviceSize size,
+                                   vk::DeviceSize offset) {
+  return Buffer::New(this, mem, usage_flags, size, offset);
 }
 
 }  // namespace escher

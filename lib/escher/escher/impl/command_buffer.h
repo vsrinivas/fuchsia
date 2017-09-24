@@ -75,6 +75,10 @@ class CommandBuffer {
                  vk::ImageLayout dst_layout,
                  vk::ImageCopy* region);
 
+  // Copy memory from one buffer to another.
+  void CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
+                  vk::BufferCopy region);
+
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.
   void TransitionImageLayout(const ImagePtr& image,

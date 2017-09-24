@@ -40,12 +40,21 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
                       {1200.f, 770.f},
                       {1200.f, 820.f},
                       {1100.f, 870.f});
-  StrokePath path({curve1, curve2});
-  Stroke stroke(canvas_.get());
-  stroke.SetPath(path);
+  StrokePath path1({curve1, curve2});
+  Stroke stroke1(canvas_.get());
+  stroke1.SetPath(path1);
+
+  CubicBezier2 curve3({1100.f, 700.f},
+                      {1150.f, 700.f},
+                      {1200.f, 700.f},
+                      {1300.f, 700.f});
+  StrokePath path2({curve3});
+  Stroke stroke2(canvas_.get());
+  stroke2.SetPath(path2);
 
   StrokeGroup group(canvas_.get());
-  group.AddStroke(stroke);
+  group.AddStroke(stroke1);
+  group.AddStroke(stroke2);
   ImportNode node(canvas_.get(), scene_->stroke_group_holder());
   node.AddChild(group);
 

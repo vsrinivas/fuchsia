@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "escher/impl/command_buffer_pool.h"
 #include "garnet/bin/ui/sketchy/canvas.h"
+#include "garnet/bin/ui/sketchy/escher_utils.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
-#include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace sketchy_service {
@@ -33,6 +34,20 @@ void CanvasImpl::Present(uint64_t presentation_time,
     }
   }
   ops_.reset();
+
+  auto command =
+      escher_->command_buffer_pool()->GetCommandBuffer();
+  while (!dirty_stroke_groups_.empty()) {
+    const auto& stroke_group = *dirty_stroke_groups_.begin();
+    dirty_stroke_groups_.erase(stroke_group);
+    stroke_group->ApplyChanges(command, &buffer_factory_);
+  }
+
+  auto pair = NewSemaphoreEventPair(escher_);
+  command->AddSignalSemaphore(std::move(pair.first));
+  session_->EnqueueAcquireFence(std::move(pair.second));
+
+  command->Submit(escher_->device()->vk_main_queue(), {});
   session_->Present(presentation_time, callback);
 }
 
@@ -109,6 +124,7 @@ bool CanvasImpl::ApplyAddStrokeOp(const sketchy::AddStrokeOpPtr& op) {
     FXL_LOG(ERROR) << "No StrokeGroup of id " << op->group_id << " was found!";
     return false;
   }
+  dirty_stroke_groups_.insert(group);
   return group->AddStroke(std::move(stroke));
 }
 

@@ -9,11 +9,17 @@
 #include "escher/escher.h"
 #include "escher/geometry/tessellation.h"
 #include "escher/shape/mesh.h"
+#include "escher/vk/gpu_mem.h"
 
 namespace {
 
 constexpr vk::DeviceSize kInitVertexBufferSize = 8192;
 constexpr vk::DeviceSize kInitIndexBufferSize = 4096;
+
+constexpr auto kMeshVertexPositionType = scenic::ValueType::kVector2;
+constexpr auto kMeshVertexNormalType = scenic::ValueType::kNone;
+constexpr auto kMeshVertexTexCoodType = scenic::ValueType::kVector2;
+constexpr auto kMeshIndexFormat = scenic::MeshIndexFormat::kUint32;
 
 }  // namespace
 
@@ -25,54 +31,53 @@ const ResourceTypeInfo StrokeGroup::kTypeInfo("StrokeGroup",
 
 StrokeGroup::StrokeGroup(scenic_lib::Session* session,
                          escher::BufferFactory* buffer_factory)
-    : session_(session),
-      shape_node_(session),
+    : shape_node_(session),
       mesh_(session),
       material_(session),
-      vertex_buffer_(Buffer::NewVertexBuffer(
-          session, buffer_factory, kInitVertexBufferSize)),
-      index_buffer_(Buffer::NewIndexBuffer(
-          session, buffer_factory, kInitIndexBufferSize)),
-      vertex_buffer_offset_(0),
-      index_buffer_offset_(0) {
+      vertex_buffer_(Buffer::New(
+          session, buffer_factory, BufferType::kVertex, kInitVertexBufferSize)),
+      index_buffer_(Buffer::New(
+          session, buffer_factory, BufferType::kIndex, kInitIndexBufferSize)),
+      num_vertices_(0),
+      num_indices_(0) {
   material_.SetColor(255, 0, 255, 255);
   shape_node_.SetMaterial(material_);
+  shape_node_.SetShape(mesh_);
 }
 
 bool StrokeGroup::AddStroke(StrokePtr stroke) {
-  // TODO(MZ-269): Support more strokes. When this is revisited, none of the
-  // rest of the code in the method should be assumed to be valid.
-  if (vertex_buffer_offset_ != 0 || index_buffer_offset_ != 0) {
-    FXL_LOG(ERROR) << "Premature feature: only one stroke is supported.";
+  if (strokes_to_add_.find(stroke) != strokes_to_add_.end()) {
+    FXL_LOG(WARNING) << "Stroke " << stroke.get()
+                     << " has already been added to group.";
     return false;
   }
+  strokes_to_add_.insert(stroke);
+  return true;
+}
 
-  auto escher_mesh = stroke->Tessellate();
+void StrokeGroup::ApplyChanges(escher::impl::CommandBuffer* command,
+                               escher::BufferFactory* buffer_factory) {
+  while (!strokes_to_add_.empty()) {
+    const auto& stroke = *strokes_to_add_.begin();
+    strokes_to_add_.erase(stroke);
+    strokes_.insert(stroke);
+    stroke->TessellateAndMerge(command, buffer_factory, this);
+  }
 
-  vertex_buffer_ =
-      std::make_unique<Buffer>(session_, escher_mesh->vertex_buffer());
-  index_buffer_ =
-      std::make_unique<Buffer>(session_, escher_mesh->index_buffer());
-  vertex_buffer_offset_ = vertex_buffer_->escher_buffer()->size();
-  index_buffer_offset_ = index_buffer_->escher_buffer()->size();
-
-  auto bb_min = escher_mesh->bounding_box().min();
-  auto bb_max = escher_mesh->bounding_box().max();
+  auto bb_min = bounding_box_.min();
+  auto bb_max = bounding_box_.max();
   float bb_min_arr[] = {bb_min.x, bb_min.y, bb_min.z};
   float bb_max_arr[] = {bb_max.x, bb_max.y, bb_max.z};
-
   mesh_.BindBuffers(
-      index_buffer_->scenic_buffer(), scenic::MeshIndexFormat::kUint32,
-      escher_mesh->index_buffer_offset(), escher_mesh->num_indices(),
+      index_buffer_->scenic_buffer(),
+      kMeshIndexFormat, 0 /* index_offset */, num_indices_,
       vertex_buffer_->scenic_buffer(),
-      scenic_lib::NewMeshVertexFormat(scenic::ValueType::kVector2,
-                                      scenic::ValueType::kNone,
-                                      scenic::ValueType::kVector2),
-      escher_mesh->vertex_buffer_offset(), escher_mesh->num_vertices(),
+      scenic_lib::NewMeshVertexFormat(
+          kMeshVertexPositionType,
+          kMeshVertexNormalType,
+          kMeshVertexTexCoodType),
+      0 /* vertex_offset */, num_vertices_,
       bb_min_arr, bb_max_arr);
-  shape_node_.SetShape(mesh_);
-
-  return true;
 }
 
 }  // namespace sketchy_service

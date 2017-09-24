@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "escher/impl/command_buffer.h"
-
 #include "escher/impl/descriptor_set_pool.h"
 #include "escher/impl/mesh_shader_binding.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 #include "escher/shape/mesh.h"
 #include "escher/util/trace_macros.h"
+#include "escher/vk/buffer.h"
 
 #include "lib/fxl/macros.h"
 
@@ -144,6 +144,14 @@ void CommandBuffer::CopyImage(const ImagePtr& src_image,
                             dst_layout, 1, region);
   KeepAlive(src_image);
   KeepAlive(dst_image);
+}
+
+void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
+                               vk::BufferCopy region) {
+  command_buffer_.copyBuffer(src->get(), dst->get(),
+                             1 /* region_count */, &region);
+  KeepAlive(src);
+  KeepAlive(dst);
 }
 
 void CommandBuffer::TransitionImageLayout(const ImagePtr& image,

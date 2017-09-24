@@ -6,6 +6,7 @@
 #include "escher/shape/mesh_builder.h"
 #include "escher/shape/mesh_spec.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
+#include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 
 namespace {
 
@@ -51,12 +52,15 @@ bool Stroke::SetPath(sketchy::StrokePathPtr path) {
   return true;
 }
 
-// TODO(MZ-269): Add back the code that are commented out when the alignment
-// issue is solved.
-escher::MeshPtr Stroke::Tessellate() {
+// TODO(MZ-269): The scenic mesh API takes position, uv, normal in order. For
+// now only the position is used. The code that are commented out will be useful
+// when we support wobble.
+void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
+                                escher::BufferFactory* buffer_factory,
+                                StrokeGroup* stroke_group) {
   if (path_.empty()) {
     FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
-    return escher::MeshPtr();
+    return;
   }
 
   std::vector<size_t> vertex_counts = ComputeVertexCounts(path_);
@@ -106,6 +110,8 @@ escher::MeshPtr Stroke::Tessellate() {
 
       struct StrokeVertex {
         glm::vec2 pos;
+        // TODO(MZ-269): It's supposed to be normal here, but ok now, as it's
+        // not used. It will be helpful later when we support wobble.
         glm::vec2 pos_offset;
 //        glm::vec2 uv;
 //        float perimeter_pos;
@@ -129,11 +135,21 @@ escher::MeshPtr Stroke::Tessellate() {
 
   // Generate indices.
   for (int i = 0; i < vertex_count - 2; i += 2) {
-    builder->AddIndex(i).AddIndex(i + 1).AddIndex(i + 3);
-    builder->AddIndex(i).AddIndex(i + 3).AddIndex(i + 2);
+    uint32_t j = i + stroke_group->num_vertices_;
+    builder->AddIndex(j).AddIndex(j + 1).AddIndex(j + 3);
+    builder->AddIndex(j).AddIndex(j + 3).AddIndex(j + 2);
   }
 
-  return builder->Build();
+  auto mesh = builder->Build();
+
+  // Start merging.
+  stroke_group->vertex_buffer_->Merge(
+      command, buffer_factory, mesh->vertex_buffer());
+  stroke_group->index_buffer_->Merge(
+      command, buffer_factory, mesh->index_buffer());
+  stroke_group->num_vertices_ += mesh->num_vertices();
+  stroke_group->num_indices_ += mesh->num_indices();
+  stroke_group->bounding_box_.Join(mesh->bounding_box());
 }
 
 }  // namespace sketchy_service

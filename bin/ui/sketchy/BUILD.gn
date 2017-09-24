@@ -12,6 +12,8 @@ executable("sketchy") {
     "buffer.h",
     "canvas.cc",
     "canvas.h",
+    "escher_utils.cc",
+    "escher_utils.h",
     "main.cc",
     "resources/import_node.cc",
     "resources/import_node.h",

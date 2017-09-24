@@ -9,6 +9,7 @@
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/fun/sketchy/fidl/canvas.fidl.h"
 #include "garnet/bin/ui/sketchy/resources/resource_map.h"
+#include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 #include "garnet/bin/ui/sketchy/resources/types.h"
 #include "escher/escher.h"
 #include "escher/vk/buffer_factory.h"
@@ -61,6 +62,7 @@ class CanvasImpl final : public sketchy::Canvas {
 
   ::fidl::Array<sketchy::OpPtr> ops_;
   ResourceMap resource_map_;
+  std::set<StrokeGroupPtr> dirty_stroke_groups_;
 };
 
 }  // namespace sketchy_service

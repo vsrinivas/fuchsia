@@ -124,6 +124,7 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   auto index_buffer = Buffer::New(manager_->resource_recycler(), allocator,
                                   index_count_ * sizeof(uint32_t),
                                   vk::BufferUsageFlagBits::eIndexBuffer |
+                                      vk::BufferUsageFlagBits::eTransferSrc |
                                       vk::BufferUsageFlagBits::eTransferDst,
                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
 

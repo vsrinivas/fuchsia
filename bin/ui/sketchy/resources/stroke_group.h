@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "escher/geometry/bounding_box.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/buffer.h"
@@ -23,23 +24,32 @@ class StrokeGroup final : public Resource {
   StrokeGroup(scenic_lib::Session* session,
               escher::BufferFactory* buffer_factory);
 
+  // Record the stroke to add.
   bool AddStroke(StrokePtr stroke);
   // TODO(MZ-269): Implement.
   // bool RemoveStroke(StrokePtr stroke);
 
+  // Record the applied changed to command buffer.
+  void ApplyChanges(escher::impl::CommandBuffer* command,
+                    escher::BufferFactory* buffer_factory);
+
   const scenic_lib::ShapeNode& shape_node() const { return shape_node_; }
 
  private:
-  scenic_lib::Session* const session_;
+  friend class Stroke;
+
   scenic_lib::ShapeNode shape_node_;
   scenic_lib::Mesh mesh_;
   scenic_lib::Material material_;
 
-  // TODO: more sophisticated buffer management.
   std::unique_ptr<Buffer> vertex_buffer_;
   std::unique_ptr<Buffer> index_buffer_;
-  size_t vertex_buffer_offset_;
-  size_t index_buffer_offset_;
+  uint32_t num_vertices_;
+  uint32_t num_indices_;
+  escher::BoundingBox bounding_box_;
+
+  std::set<StrokePtr> strokes_to_add_;
+  std::set<StrokePtr> strokes_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
 };
