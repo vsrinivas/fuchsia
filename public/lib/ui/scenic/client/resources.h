@@ -44,7 +44,7 @@ class Resource {
   explicit Resource(Session* session);
   Resource(Resource&& moved);
 
-  ~Resource();
+  virtual ~Resource();
 
  private:
   Session* const session_;
