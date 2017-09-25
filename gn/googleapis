@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "dart"
-    ],
-    "packages": {
-        "googleapis": "//apps/modules/googleapis",
-        "googleapis_test": "//apps/modules/googleapis:test"
-    }
-}

@@ -5,10 +5,7 @@
     "imports": [
         "packages/gn/chat",
         "packages/gn/contacts",
-        "packages/gn/drive",
-        "packages/gn/email",
         "packages/gn/music",
-        "packages/gn/prototypes",
         "packages/gn/video"
     ],
     "packages": {
