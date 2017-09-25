@@ -86,12 +86,14 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
     // No strategy, or a merge already in progress. Let's bail out early.
     return;
   }
+  merge_in_progress_ = true;
   storage_->GetHeadCommitIds(
       [this, delayed_status](storage::Status s,
                              std::vector<storage::CommitId> heads) {
         FXL_DCHECK(s == storage::Status::OK);
         if (heads.size() == 1) {
           // No conflict.
+          merge_in_progress_ = false;
           return;
         }
         heads.resize(2);
@@ -103,7 +105,6 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                      std::vector<storage::CommitId> heads) {
   FXL_DCHECK(heads.size() == 2);
 
-  merge_in_progress_ = true;
   auto cleanup = fxl::MakeAutoCall(task_runner_.MakeScoped([this] {
     // |merge_in_progress_| must be reset before calling |on_empty_callback_|.
     merge_in_progress_ = false;
