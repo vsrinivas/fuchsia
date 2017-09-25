@@ -7,7 +7,6 @@
         "garnet/packages/media_examples",
         "garnet/packages/media_tests",
         "garnet/packages/media",
-        "garnet/packages/mozart",
         "garnet/packages/mozart_examples",
         "packages/gn/amber",
         "packages/gn/asio",
