@@ -962,7 +962,8 @@ function ftest() {
     return 1
   fi
   fcp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
-  fcmd "/tmp/${target}" "${@:1}"
+  shift
+  fcmd "/tmp/${target}" $*
 }
 
 function fclock() {
