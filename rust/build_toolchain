@@ -1,0 +1,70 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(raggi): add support for arm targets
+
+if [[ -z $RUST_ROOT ]]; then
+  echo "Need \$RUST_ROOT to be set"
+  exit 1
+fi
+
+if [[ -z $FUCHSIA_DIR ]]; then
+  echo "Need \$FUCHSIA_DIR to be set"
+  exit 1
+fi
+
+
+if [[ -z $FUCHSIA_OUT_DIR ]]; then
+  echo "Need \$FUCHSIA_OUT_DIR to be set"
+  exit 1
+fi
+
+
+case $(uname) in
+  Darwin)
+    export PREFIX=$FUCHSIA_DIR/buildtools/mac-x64/rust
+    clangdir="$FUCHSIA_DIR/buildtools/mac-x64/clang"
+    export TARGETS=x86_64-unknown-fuchsia,x86_64-apple-darwin
+    ;;
+  Linux)
+    export PREFIX=$FUCHSIA_DIR/buildtools/linux-x64/rust
+    clangdir="$FUCHSIA_DIR/buildtools/linux-x64/clang"
+    export TARGETS=x86_64-unknown-fuchsia,x86_64-unknown-linux-gnu
+    ;;
+  *)
+    echo "Unsupported platform" >&2
+    exit 1
+    ;;
+esac
+
+if [[ ! -d $clangdir ]]; then
+  echo "Prebuilt clang toolchain missing $clangdir, maybe you need to update?" >&2
+  exit 1
+fi
+
+export PATH=$FUCHSIA_DIR/buildtools:$clangdir/bin:$PATH
+
+for arch in x86_64 ; do
+  for tool in clang clang++; do
+    cat > $clangdir/bin/${arch}-unknown-fuchsia-${tool} <<EOF
+#!/bin/sh
+${tool} --target=${arch}-unknown-fuchsia --sysroot=$FUCHSIA_OUT_DIR/build-zircon/build-zircon-pc-x86-64/sysroot/ "\$@"
+EOF
+    chmod +x $clangdir/bin/${arch}-unknown-fuchsia-${tool}
+  done
+  export AR_${arch}_unknown_fuchsia=llvm-ar
+  export CC_${arch}_unknown_fuchsia=${arch}-unknown-fuchsia-clang
+  export CXX_${arch}_unknown_fuchsia=${arch}-unknown-fuchsia-clang++
+done
+
+
+mkdir -p $FUCHSIA_OUT_DIR/rust
+cd $FUCHSIA_OUT_DIR/rust
+
+if [[ ! -f config.toml ]]; then
+  $RUST_ROOT/configure --target=$TARGETS --sysconfdir=$PREFIX/etc --enable-extended --prefix=$PREFIX --enable-ninja --enable-optimize --enable-optimize-llvm  --enable-cargo-openssl-static
+fi
+
+python2.7 $RUST_ROOT/x.py dist && python2.7 $RUST_ROOT/x.py install
