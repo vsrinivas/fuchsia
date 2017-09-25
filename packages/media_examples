@@ -4,6 +4,6 @@
         "dart"
     ],
     "packages": {
-        "media_examples": "//garnet/bin/media:examples"
+        "media_examples": "//garnet/examples/media"
     }
 }

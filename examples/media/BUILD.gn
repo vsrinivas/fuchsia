@@ -1,0 +1,54 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+import("//packages/package.gni")
+
+package("media") {
+  package_name = "media_examples"
+  app = true
+  deps = [
+    "audio_player",
+    "master_gain",
+    "media_player",
+    "vu_meter",
+  ]
+
+  binaries = [
+    {
+      name = "audio_player"
+    },
+
+    {
+      name = "master_gain"
+    },
+
+    {
+      name = "media_player"
+    },
+
+    {
+      name = "vu_meter"
+    },
+  ]
+
+  resources = []
+
+  # This example depend on generated code for Dart, so we need to evaluate the build rules only
+  # when we're performing generation for Dart code.
+  if (generate_fidl_for_dart) {
+    deps += [ "media_player_flutter" ]
+
+    binaries += [ {
+          name = "media_player_flutter"
+          source = "gen/garnet/examples/media/media_player_flutter/media_player_flutter.flx"
+        } ]
+    resources = [ {
+          path = rebase_path(
+                  "//garnet/examples/media/media_player_flutter/media_player_flutter.config")
+          dest = "media_player_flutter/media_player_flutter.config"
+        } ]
+  }
+}
+
