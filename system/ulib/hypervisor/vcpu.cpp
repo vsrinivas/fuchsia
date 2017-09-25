@@ -42,8 +42,8 @@ static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, uint8
     uint16_t device_offset;
     PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
     PciDevice* pci_device;
-    zx_status_t status = bus->MappedDevice(PCI_BAR_IO_TYPE_MMIO, addr, &pci_device, &bar,
-                                                 &device_offset);
+    zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_MMIO, addr, &pci_device, &bar,
+                                           &device_offset);
     if (status != ZX_ERR_NOT_FOUND) {
         return pci_device->ReadBar(bar, device_offset, io->access_size, io);
     }
@@ -60,8 +60,8 @@ static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, zx_v
     uint16_t device_offset;
     PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
     PciDevice* pci_device;
-    zx_status_t status = bus->MappedDevice(PCI_BAR_IO_TYPE_MMIO, addr, &pci_device, &bar,
-                                                 &device_offset);
+    zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_MMIO, addr, &pci_device, &bar,
+                                           &device_offset);
     if (status != ZX_ERR_NOT_FOUND) {
         return pci_device->WriteBar(bar, device_offset, io);
     }
@@ -200,8 +200,8 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
         uint16_t port_off;
         PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
         PciDevice* pci_device;
-        zx_status_t status = bus->MappedDevice(PCI_BAR_IO_TYPE_MMIO, io->port, &pci_device, &bar,
-                                                     &port_off);
+        zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_MMIO, io->port, &pci_device, &bar,
+                                               &port_off);
         if (status != ZX_ERR_NOT_FOUND) {
             status = pci_device->ReadBar(bar, port_off, io->access_size, &vcpu_io);
             break;
@@ -328,42 +328,54 @@ static int device_loop(void* ctx) {
     return ZX_ERR_INTERNAL;
 }
 
-zx_status_t device_async(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
-                         device_handler_fn_t handler, void* ctx) {
+zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
+                        device_handler_fn_t handler, void* ctx) {
     if (num_traps == 0)
         return ZX_ERR_INVALID_ARGS;
 
     int ret;
     auto device = new device_t{ZX_HANDLE_INVALID, handler, ctx};
 
-    zx_status_t status = zx_port_create(0, &device->port);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create device port %d\n", status);
-        goto mem_cleanup;
+    // Only create a port if we have at least one BAR that requires it.
+    bool create_port = false;
+    for (size_t i = 0; !create_port && i < num_traps; ++i)
+        create_port = create_port || traps[i].use_port;
+
+    if (create_port) {
+        zx_status_t status = zx_port_create(0, &device->port);
+        if (status != ZX_OK) {
+            fprintf(stderr, "Failed to create device port %d\n", status);
+            goto mem_cleanup;
+        }
     }
 
     for (size_t i = 0; i < num_traps; ++i) {
         const trap_args_t* trap = &traps[i];
 
-        status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, device->port,
-                                   trap->key);
+        zx_handle_t port = trap->use_port ? device->port : ZX_HANDLE_INVALID;
+        uint64_t key = trap->use_port ? trap->key : 0;
+
+        zx_status_t status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, port,
+                                               key);
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to set trap for device port %d\n", status);
             goto cleanup;
         }
     }
 
-    thrd_t thread;
-    ret = thrd_create(&thread, device_loop, device);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to create device thread %d\n", ret);
-        goto cleanup;
-    }
+    if (create_port) {
+        thrd_t thread;
+        ret = thrd_create(&thread, device_loop, device);
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to create device thread %d\n", ret);
+            goto cleanup;
+        }
 
-    ret = thrd_detach(thread);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to detach device thread %d\n", ret);
-        return ZX_ERR_INTERNAL;
+        ret = thrd_detach(thread);
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to detach device thread %d\n", ret);
+            return ZX_ERR_INTERNAL;
+        }
     }
 
     return ZX_OK;

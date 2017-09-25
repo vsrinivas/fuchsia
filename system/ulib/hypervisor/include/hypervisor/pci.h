@@ -22,9 +22,9 @@
 #define PCI_MAX_BARS                1u
 
 // PCI configuration constants.
-#define PCI_BAR_IO_TYPE_MASK        0x0001u
-#define PCI_BAR_IO_TYPE_PIO         0x0001u
-#define PCI_BAR_IO_TYPE_MMIO        0x0000u
+#define PCI_BAR_ASPACE_MASK         0x0001u
+#define PCI_BAR_ASPACE_PIO          0x0001u
+#define PCI_BAR_ASPACE_MMIO         0x0000u
 #define PCI_VENDOR_ID_INTEL         0x8086u
 #define PCI_DEVICE_ID_INTEL_Q35     0x29c0u
 #define PCI_CLASS_BRIDGE_HOST       0x0600u
@@ -72,13 +72,30 @@ typedef struct pci_cap {
     uint8_t len;
 } pci_cap_t;
 
+/* Determines how to handle accesses to a BAR region. */
+enum class PciMemoryType {
+    // Strongly ordered. All accesses occur and are committed in the order they
+    // are generated.
+    STRONG = 0,
+
+    // Weakly ordered. VCPU execution will resume before the result of a write
+    // has been committed.
+    WEAK = 1,
+
+    // Weakly ordered but no value is decoded. All accesses to a region with a
+    // BELL type will appear as a 'write 0' to the device.
+    BELL = 2,
+};
+
 typedef struct pci_bar {
     // Register value.
     uint32_t addr;
     // Size of this BAR.
     uint32_t size;
-    // IO type for this bar (memory or IO ports).
-    uint32_t io_type;
+    // Address space for this bar (memory or IO ports).
+    uint32_t aspace;
+    // Memory type to emulate.
+    PciMemoryType memory_type;
 } pci_bar_t;
 
 /* Stores the state of PCI devices. */
@@ -115,9 +132,6 @@ public:
     // Send the configured interrupt for this device.
     zx_status_t Interrupt() const;
 
-    // Begin async handling of writes to BAR registers for this device.
-    zx_status_t StartAsync(zx_handle_t guest);
-
     // Determines if the given base address register is implemented for this
     // device.
     bool is_bar_implemented(size_t bar) const {
@@ -143,6 +157,10 @@ protected:
 
 private:
     friend class PciBus;
+
+    // Setup traps and handlers for accesses to BAR regions.
+    zx_status_t SetupBarTraps(zx_handle_t guest);
+
     static zx_status_t Handler(zx_port_packet_t* packet, void* ctx);
 
     zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value);
@@ -175,18 +193,18 @@ public:
     // Base address in MMIO space to map device BAR registers.
     static const uint32_t kMmioBarBase = 0xf0000000;
 
-    PciBus(const io_apic_t* io_apic);
+    PciBus(zx_handle_t guest, const io_apic_t* io_apic);
 
-    zx_status_t Init(zx_handle_t guest);
+    zx_status_t Init();
 
-    // Search for any devices that have a BAR mapped to the provided |io_type|
+    // Search for any devices that have a BAR mapped to the provided |aspace|
     // and |addr|.
     //
     // If found, |bar_out| and |bar_off_out| are populated with the BAR &
     // offset, the device is returned in |device_out|, and ZX_OK is returned.
     //
     // If no mapping exists ZX_ERR_NOT_FOUND is returned.
-    zx_status_t MappedDevice(uint8_t io_type, uintptr_t addr, PciDevice** device_out,
+    zx_status_t MappedDevice(uint8_t aspace, uintptr_t addr, PciDevice** device_out,
                              uint8_t* bar_out, uint16_t* bar_off_out);
 
     // Connect a PCI device to the bus.
@@ -225,6 +243,9 @@ public:
 
 private:
     fbl::Mutex mutex_;
+
+    // Guest handle.
+    zx_handle_t guest_;
     // Selected address in PCI config space.
     uint32_t config_addr_ TA_GUARDED(mutex_) = 0;
 

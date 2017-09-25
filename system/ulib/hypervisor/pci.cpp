@@ -44,10 +44,10 @@ static const uint8_t kPciCapNextOffset = 1;
 static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34};
 
 static uint32_t pci_bar_base(pci_bar_t* bar) {
-    switch (bar->io_type) {
-    case PCI_BAR_IO_TYPE_PIO:
+    switch (bar->aspace) {
+    case PCI_BAR_ASPACE_PIO:
         return bar->addr & kPioAddressMask;
-    case PCI_BAR_IO_TYPE_MMIO:
+    case PCI_BAR_ASPACE_MMIO:
         return bar->addr & kMmioAddressMask;
     default:
         return 0;
@@ -70,16 +70,17 @@ static const PciDevice::Attributes kRootComplexAttributes = {
 PciDevice::PciDevice(const Attributes attrs)
     : attrs_(attrs) {}
 
-PciBus::PciBus(const io_apic_t* io_apic)
-    : io_apic_(io_apic), root_complex_(kRootComplexAttributes) {}
+PciBus::PciBus(zx_handle_t guest, const io_apic_t* io_apic)
+    : guest_(guest), io_apic_(io_apic), root_complex_(kRootComplexAttributes) {}
 
-zx_status_t PciBus::Init(zx_handle_t guest) {
+zx_status_t PciBus::Init() {
     root_complex_.bar_[0].size = 0x10;
-    root_complex_.bar_[0].io_type = PCI_BAR_IO_TYPE_PIO;
+    root_complex_.bar_[0].aspace = PCI_BAR_ASPACE_PIO;
+    root_complex_.bar_[0].memory_type = PciMemoryType::STRONG;
     zx_status_t status = Connect(&root_complex_, PCI_DEVICE_ROOT_COMPLEX);
     if (status != ZX_OK)
         return status;
-    return zx_guest_set_trap(guest, ZX_GUEST_TRAP_MEM, PCI_ECAM_PHYS_BASE,
+    return zx_guest_set_trap(guest_, ZX_GUEST_TRAP_MEM, PCI_ECAM_PHYS_BASE,
                              PCI_ECAM_PHYS_TOP - PCI_ECAM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
 }
 
@@ -101,33 +102,33 @@ zx_status_t PciBus::Connect(PciDevice* device, uint8_t slot) {
 
     // Initialize BAR registers.
     for (uint8_t bar_num = 0; bar_num < PCI_MAX_BARS; ++bar_num) {
+        pci_bar_t* bar = &device->bar_[bar_num];
+
         // Skip unimplemented bars.
         if (!device->is_bar_implemented(bar_num))
-            continue;
+            break;
 
         device->bus_ = this;
-        if (device->bar_[bar_num].io_type == PCI_BAR_IO_TYPE_PIO) {
+        if (device->bar_[bar_num].aspace == PCI_BAR_ASPACE_PIO) {
             // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1
             //
             // This design implies that all address spaces used are a power of two in
             // size and are naturally aligned.
-            uint32_t bar_size = round_up_pow2(device->bar_[bar_num].size);
-            uint32_t bar_base = align(pio_base_, bar_size);
-
-            device->bar_[bar_num].addr = bar_base;
-            device->bar_[bar_num].size = bar_size;
-            pio_base_ = bar_base + bar_size;
+            bar->size = round_up_pow2(bar->size);
+            bar->addr = align(pio_base_, bar->size);
+            pio_base_ = bar->addr + bar->size;
         } else {
-            uint32_t bar_size = align(device->bar_[bar_num].size, PAGE_SIZE);
-            device->bar_[bar_num].addr = mmio_base_;
-            device->bar_[bar_num].size = static_cast<uint16_t>(bar_size);
-            mmio_base_ += bar_size;
+            bar->size = static_cast<uint16_t>(align(bar->size, PAGE_SIZE));
+            bar->addr = mmio_base_;
+            mmio_base_ += bar->size;
         }
     }
+
     device->command_ = PCI_COMMAND_IO_EN | PCI_COMMAND_MEM_EN;
     device->global_irq_ = kPciGlobalIrqAssigments[slot];
     device_[slot] = device;
-    return ZX_OK;
+
+    return device->SetupBarTraps(guest_);
 }
 
 static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
@@ -363,7 +364,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
 
         fbl::AutoLock lock(&mutex_);
         const pci_bar_t* bar = &bar_[bar_num];
-        *value = bar->addr | bar->io_type;
+        *value = bar->addr | bar->aspace;
         return ZX_OK;
     }
     //  -------------------------------------------------------------
@@ -475,18 +476,18 @@ zx_status_t PciDevice::WriteConfig(uint16_t reg, uint8_t len, uint32_t value) {
     }
 }
 
-static bool pci_device_io_enabled(uint8_t io_type, uint16_t command) {
-    switch (io_type) {
-    case PCI_BAR_IO_TYPE_PIO:
+static bool pci_device_aspace_enabled(uint8_t aspace, uint16_t command) {
+    switch (aspace) {
+    case PCI_BAR_ASPACE_PIO:
         return command & PCI_COMMAND_IO_EN;
-    case PCI_BAR_IO_TYPE_MMIO:
+    case PCI_BAR_ASPACE_MMIO:
         return command & PCI_COMMAND_MEM_EN;
     default:
         return false;
     }
 }
 
-zx_status_t PciBus::MappedDevice(uint8_t io_type, uintptr_t addr,
+zx_status_t PciBus::MappedDevice(uint8_t aspace, uintptr_t addr,
                                  PciDevice** device_out, uint8_t* bar_out,
                                  uint16_t* off) {
     for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
@@ -505,14 +506,14 @@ zx_status_t PciBus::MappedDevice(uint8_t io_type, uintptr_t addr,
             }
 
             // Ensure IO operations are enabled for this device.
-            if (!pci_device_io_enabled(io_type, command))
+            if (!pci_device_aspace_enabled(aspace, command))
                 continue;
 
             // Check if the BAR is implemented and configured for the requested
             // IO type.
             uintptr_t bar_base = pci_bar_base(bar);
             uint16_t bar_size = pci_bar_size(bar);
-            if (!bar_size || bar->io_type != io_type)
+            if (!bar_size || bar->aspace != aspace)
                 continue;
 
             if (addr >= bar_base && addr < bar_base + bar_size) {
@@ -533,36 +534,59 @@ zx_status_t PciDevice::Handler(zx_port_packet_t* packet, void* ctx) {
     if (packet->key > UINT8_MAX)
         return ZX_ERR_OUT_OF_RANGE;
     uint8_t bar = static_cast<uint8_t>(packet->key);
+    uint32_t bar_base = pci_bar_base(&pci_device->bar_[bar]);
 
+    uint16_t device_port;
     zx_vcpu_io_t io;
     io.access_size = packet->guest_io.access_size;
-    io.u32 = packet->guest_io.u32;
-    uint32_t bar_base = pci_bar_base(&pci_device->bar_[bar]);
-    uint16_t device_port = static_cast<uint16_t>(packet->guest_io.port - bar_base);
+    switch (packet->type) {
+    case ZX_PKT_TYPE_GUEST_BELL:
+        // Translate all BELLs into a write-0. We're intentionally using the
+        // zx_vcpu_io_t structure to conform to the PciDevice interface.
+        //
+        // TODO(tjdetwiler): Introduce a new structure for the purpose of
+        // handling traps to decouple from zx_vcpu_io_t.
+        device_port = static_cast<uint16_t>(packet->guest_bell.addr - bar_base);
+        io.u32 = 0;
+        break;
+    case ZX_PKT_TYPE_GUEST_IO:
+        device_port = static_cast<uint16_t>(packet->guest_io.port - bar_base);
+        io.u32 = packet->guest_io.u32;
+        break;
+    // Async mem traps are not supported.
+    case ZX_PKT_TYPE_GUEST_MEM:
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
     return pci_device->WriteBar(bar, device_port, &io);
 }
 
-zx_status_t PciDevice::StartAsync(zx_handle_t guest) {
+zx_status_t PciDevice::SetupBarTraps(zx_handle_t guest) {
     size_t num_traps = 0;
     trap_args_t traps[PCI_MAX_BARS];
     for (uint8_t i = 0; i < PCI_MAX_BARS; ++i) {
         pci_bar_t* bar = &bar_[i];
         if (!is_bar_implemented(i))
-            continue;
-        // Mem trap ports are not currently supported.
-        if (bar->io_type == PCI_BAR_IO_TYPE_MMIO)
-            continue;
+            break;
 
         trap_args_t* trap = &traps[num_traps++];
         trap->key = i;
         trap->addr = pci_bar_base(bar);
         trap->len = pci_bar_size(bar);
-        trap->kind = bar->io_type == PCI_BAR_IO_TYPE_PIO ? ZX_GUEST_TRAP_IO : ZX_GUEST_TRAP_MEM;
+        if (bar->aspace == PCI_BAR_ASPACE_PIO) {
+            if (bar->memory_type == PciMemoryType::BELL)
+                return ZX_ERR_INVALID_ARGS;
+            trap->kind = ZX_GUEST_TRAP_IO;
+        } else {
+            trap->kind = bar->memory_type == PciMemoryType::BELL
+                ? ZX_GUEST_TRAP_BELL : ZX_GUEST_TRAP_MEM;
+        }
+        trap->use_port = bar->memory_type != PciMemoryType::STRONG;
     }
 
     if (num_traps == 0)
         return ZX_OK;
-    return device_async(guest, traps, num_traps, PciDevice::Handler, this);
+    return device_trap(guest, traps, num_traps, PciDevice::Handler, this);
 }
 
 zx_status_t PciDevice::Interrupt() const {

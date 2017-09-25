@@ -277,9 +277,9 @@ int main(int argc, char** argv) {
     guest_ctx.io_port = &io_port;
     io_port_init(&io_port);
     // Setup PCI.
-    PciBus bus(&io_apic);
+    PciBus bus(guest, &io_apic);
     guest_ctx.pci_bus = &bus;
-    status = bus.Init(guest);
+    status = bus.Init();
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create PCI bus\n");
         return status;
@@ -305,18 +305,11 @@ int main(int argc, char** argv) {
         status = bus.Connect(&virtio_block, PCI_DEVICE_VIRTIO_BLOCK);
         if (status != ZX_OK)
             return status;
-
-        status = virtio_block.StartAsync(guest);
-        if (status != ZX_OK)
-            return status;
     }
     // Setup memory balloon.
     VirtioBalloon balloon(addr, kVmoSize, physmem_vmo);
     balloon.set_deflate_on_demand(balloon_deflate_on_demand);
     status = bus.Connect(&balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
-    if (status != ZX_OK)
-        return status;
-    status = balloon.pci_device().StartAsync(guest);
     if (status != ZX_OK)
         return status;
     if (balloon_poll_interval > 0)

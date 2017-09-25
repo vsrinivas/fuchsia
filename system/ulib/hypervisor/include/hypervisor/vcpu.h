@@ -61,10 +61,11 @@ typedef struct trap_args {
     zx_vaddr_t addr;
     size_t len;
     uint32_t key;
+    bool use_port;
 } trap_args_t;
 
-/* Start asynchronous handling of device operations, based on a set of traps
- * provided. A trap will be created for every trap in |traps|.
+/* Set traps for a device and start asynchronous handling of device operations
+ * for any traps where |trap_args_t::use_port| is true.
  */
-zx_status_t device_async(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
-                         device_handler_fn_t handler, void* ctx);
+zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
+                        device_handler_fn_t handler, void* ctx);

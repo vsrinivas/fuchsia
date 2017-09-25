@@ -265,6 +265,7 @@ zx_status_t uart_async(uart_t* uart, zx_handle_t guest) {
         .addr = UART_RECEIVE_PORT,
         .len = 1,
         .key = 0,
+        .use_port = true,
     };
-    return device_async(guest, &trap, 1, uart_handler, uart);
+    return device_trap(guest, &trap, 1, uart_handler, uart);
 }

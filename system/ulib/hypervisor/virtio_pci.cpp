@@ -387,7 +387,8 @@ void VirtioPci::SetupCaps() {
     static_assert(kVirtioPciBar < PCI_MAX_BARS, "Not enough BAR registers available.");
     bar_[kVirtioPciBar].size = static_cast<uint32_t>(
         kVirtioPciDeviceCfgBase + device_->device_config_size_);
-    bar_[kVirtioPciBar].io_type = PCI_BAR_IO_TYPE_MMIO;
+    bar_[kVirtioPciBar].aspace = PCI_BAR_ASPACE_MMIO;
+    bar_[kVirtioPciBar].memory_type = PciMemoryType::STRONG;
 }
 
 static constexpr uint16_t virtio_pci_id(uint16_t virtio_id) {
