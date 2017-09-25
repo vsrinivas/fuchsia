@@ -22,28 +22,28 @@ static uint16_t kPciVendorIdVirtio = 0x1af4;
 
 /* Virtio PCI Bar Layout.
  *
- * We currently use a simple layout where all fields appear sequentially in
- * BAR 0. We place the device config as the last capability as it has a
- * variable length.
+ * Expose all read/write fields on BAR0 using a strongly ordered mapping.
+ * Map the Queue notify region to BAR1 with a BELL type that does not require
+ * the guest to decode any instruction fields. The queue to notify can be
+ * inferred based on the address accessed alone.
  *
- *          BAR0
- *      ------------  00h
- *     | Virtio PCI |
- *     |   Common   |
- *     |   Config   |
- *     |------------| 38h
- *     |   Notify   |
- *     |   Config   |
- *     |------------| 3ah
- *     | ISR Config |
- *     |------------| 3ch
- *     |  Device-   |
- *     | Specific   |
- *     |  Config    |
- *      ------------
+ *          BAR0                BAR1
+ *      ------------  00h   ------------  00h
+ *     | Virtio PCI |      |  Queue 0   |
+ *     |   Common   |      |   Notify   |
+ *     |   Config   |      |------------| 04h
+ *     |------------| 38h  |  Queue 1   |
+ *     | ISR Config |      |   Notify   |
+ *     |------------| 3ch  |------------|
+ *     |  Device-   |      |    ...     |
+ *     | Specific   |      |------------| 04 * N
+ *     |  Config    |      |  Queue N   |
+ *     |            |      |   Notify   |
+ *      ------------        ------------
  * These structures are defined in Virtio 1.0 Section 4.1.4.
  */
 static const uint8_t kVirtioPciBar = 0;
+static const uint8_t kVirtioPciNotifyBar = 1;
 
 // Common configuration.
 static const size_t kVirtioPciCommonCfgBase = 0;
@@ -63,18 +63,24 @@ static_assert(is_aligned(kVirtioPciCommonCfgBase, 4),
 //
 //      cap.offset + queue_notify_off * notify_off_multiplier
 //
-// By fixing the multipler to 0 we provide only a single notify register for
-// each device.
-static const size_t kVirtioPciNotifyCfgMultiplier = 0;
-static const size_t kVirtioPciNotifyCfgBase = 0x38;
-static const size_t kVirtioPciNotifyCfgSize = 2;
-static const size_t kVirtioPciNotifyCfgTop = kVirtioPciNotifyCfgBase + kVirtioPciNotifyCfgSize - 1;
+// Virtio 1.0 Section 4.1.4.4.1: The device MUST either present
+// notify_off_multiplier as an even power of 2, or present
+// notify_off_multiplier as 0.
+//
+// By using a multiplier of 4, we use sequential 4b words to notify, ex:
+//
+//      cap.offset + 0  -> Notify Queue 0
+//      cap.offset + 4  -> Notify Queue 1
+//      ...
+//      cap.offset + 4n -> Notify Queuen 'n'
+static const size_t kVirtioPciNotifyCfgMultiplier = 4;
+static const size_t kVirtioPciNotifyCfgBase = 0;
 // Virtio 1.0 Section 4.1.4.4.1: offset MUST be 2-byte aligned.
 static_assert(is_aligned(kVirtioPciNotifyCfgBase, 2),
               "Virtio PCI notify config has illegal alignment.");
 
 // Interrupt status configuration.
-static const size_t kVirtioPciIsrCfgBase = 0x3a;
+static const size_t kVirtioPciIsrCfgBase = 0x38;
 static const size_t kVirtioPciIsrCfgSize = 1;
 static const size_t kVirtioPciIsrCfgTop = kVirtioPciIsrCfgBase + kVirtioPciIsrCfgSize - 1;
 // Virtio 1.0 Section 4.1.4.5: The offset for the ISR status has no alignment
@@ -179,11 +185,19 @@ zx_status_t VirtioPci::CommonCfgRead(uint16_t port, uint8_t access_size, zx_vcpu
         vcpu_io->access_size = 4;
         return ZX_OK;
     }
+    case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF: {
+        fbl::AutoLock lock(&device_->mutex_);
+        if (device_->queue_sel_ >= device_->num_queues_)
+            return ZX_ERR_BAD_STATE;
+
+        vcpu_io->u32 = device_->queue_sel_;
+        vcpu_io->access_size = 4;
+        return ZX_OK;
+    }
 
     // Currently not implmeneted.
     case VIRTIO_PCI_COMMON_CFG_CONFIG_GEN:
     case VIRTIO_PCI_COMMON_CFG_QUEUE_MSIX_VECTOR:
-    case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF:
     case VIRTIO_PCI_COMMON_CFG_MSIX_CONFIG:
         vcpu_io->u32 = 0;
         vcpu_io->access_size = access_size;
@@ -192,11 +206,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint16_t port, uint8_t access_size, zx_vcpu
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::ReadBar(uint8_t bar, uint16_t port, uint8_t access_size,
-                               zx_vcpu_io_t* vcpu_io) {
-    if (bar != kVirtioPciBar)
-        return ZX_ERR_NOT_SUPPORTED;
-
+zx_status_t VirtioPci::ConfigBarRead(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
     switch (port) {
     case kVirtioPciCommonCfgBase... kVirtioPciCommonCfgTop:
         return CommonCfgRead(port - kVirtioPciCommonCfgBase, access_size, vcpu_io);
@@ -318,20 +328,12 @@ zx_status_t VirtioPci::CommonCfgWrite(uint16_t port, const zx_vcpu_io_t* io) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::WriteBar(uint8_t bar, uint16_t port, const zx_vcpu_io_t* io) {
-    if (bar != kVirtioPciBar)
-        return ZX_ERR_NOT_SUPPORTED;
-
+zx_status_t VirtioPci::ConfigBarWrite(uint16_t port, const zx_vcpu_io_t* io) {
     switch (port) {
     case kVirtioPciCommonCfgBase... kVirtioPciCommonCfgTop: {
         uint16_t offset = port - kVirtioPciCommonCfgBase;
         return CommonCfgWrite(offset, io);
     }
-    case kVirtioPciNotifyCfgBase... kVirtioPciNotifyCfgTop:
-        if (io->access_size != 2)
-            return ZX_ERR_IO_DATA_INTEGRITY;
-
-        return device_->Kick(io->u16);
     }
 
     size_t device_config_top = kVirtioPciDeviceCfgBase + device_->device_config_size_;
@@ -344,9 +346,9 @@ zx_status_t VirtioPci::WriteBar(uint8_t bar, uint16_t port, const zx_vcpu_io_t* 
 }
 
 void VirtioPci::SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
-                         size_t cap_len, size_t data_length, size_t bar_offset) {
+                         size_t cap_len, size_t data_length, uint8_t bar, size_t bar_offset) {
     virtio_cap->cfg_type = cfg_type;
-    virtio_cap->bar = kVirtioPciBar;
+    virtio_cap->bar = bar;
     virtio_cap->offset = static_cast<uint32_t>(bar_offset);
     virtio_cap->length = static_cast<uint32_t>(data_length);
 
@@ -359,23 +361,27 @@ void VirtioPci::SetupCaps() {
     // Common configuration.
     SetupCap(&capabilities_[0], &common_cfg_cap_,
              VIRTIO_PCI_CAP_COMMON_CFG, sizeof(common_cfg_cap_),
-             kVirtioPciCommonCfgSize, kVirtioPciCommonCfgBase);
+             kVirtioPciCommonCfgSize, kVirtioPciBar, kVirtioPciCommonCfgBase);
 
     // Notify configuration.
     notify_cfg_cap_.notify_off_multiplier = kVirtioPciNotifyCfgMultiplier;
+    size_t notify_size = device_->num_queues() * kVirtioPciNotifyCfgMultiplier;
     SetupCap(&capabilities_[1], &notify_cfg_cap_.cap,
              VIRTIO_PCI_CAP_NOTIFY_CFG, sizeof(notify_cfg_cap_),
-             kVirtioPciNotifyCfgSize, kVirtioPciNotifyCfgBase);
+             notify_size, kVirtioPciNotifyBar, kVirtioPciNotifyCfgBase);
+    bar_[kVirtioPciNotifyBar].size = static_cast<uint32_t>(notify_size);
+    bar_[kVirtioPciNotifyBar].aspace = PCI_BAR_ASPACE_MMIO;
+    bar_[kVirtioPciNotifyBar].memory_type = PciMemoryType::BELL;
 
     // ISR configuration.
     SetupCap(&capabilities_[2], &isr_cfg_cap_,
              VIRTIO_PCI_CAP_ISR_CFG, sizeof(isr_cfg_cap_),
-             kVirtioPciIsrCfgSize, kVirtioPciIsrCfgBase);
+             kVirtioPciIsrCfgSize, kVirtioPciBar, kVirtioPciIsrCfgBase);
 
     // Device-specific configuration.
     SetupCap(&capabilities_[3], &device_cfg_cap_,
              VIRTIO_PCI_CAP_DEVICE_CFG, sizeof(device_cfg_cap_),
-             device_->device_config_size_, kVirtioPciDeviceCfgBase);
+             device_->device_config_size_, kVirtioPciBar, kVirtioPciDeviceCfgBase);
 
     // Note VIRTIO_PCI_CAP_PCI_CFG is not implmeneted.
     // This one is more complex since it is writable and doesn't seem to be
@@ -416,4 +422,34 @@ VirtioPci::VirtioPci(VirtioDevice* device)
       device_(device) {
 
     SetupCaps();
+}
+
+zx_status_t VirtioPci::ReadBar(uint8_t bar, uint16_t offset, uint8_t access_size,
+                               zx_vcpu_io_t* vcpu_io) {
+    switch (bar) {
+    case kVirtioPciBar:
+        return ConfigBarRead(offset, access_size, vcpu_io);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t VirtioPci::WriteBar(uint8_t bar, uint16_t offset, const zx_vcpu_io_t* io) {
+    switch (bar) {
+    case kVirtioPciBar:
+        return ConfigBarWrite(offset, io);
+    case kVirtioPciNotifyBar:
+        return NotifyBarWrite(offset, io);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t VirtioPci::NotifyBarWrite(uint16_t offset, const zx_vcpu_io_t* io) {
+    if (!is_aligned(offset, kVirtioPciNotifyCfgMultiplier))
+        return ZX_ERR_INVALID_ARGS;
+
+    uint32_t notify_queue = offset / kVirtioPciNotifyCfgMultiplier;
+    if (notify_queue >= device_->num_queues())
+        return ZX_ERR_INVALID_ARGS;
+
+    return device_->Kick(static_cast<uint16_t>(notify_queue));
 }

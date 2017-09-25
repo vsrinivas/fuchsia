@@ -40,12 +40,20 @@ public:
     zx_status_t WriteBar(uint8_t bar, uint16_t offset, const zx_vcpu_io_t* io) override;
 
 private:
+    // Handle accesses to the general configuration BAR.
+    zx_status_t ConfigBarRead(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
+    zx_status_t ConfigBarWrite(uint16_t port, const zx_vcpu_io_t* io);
+
+    // Handle accesses to the common configuration region.
     zx_status_t CommonCfgRead(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
     zx_status_t CommonCfgWrite(uint16_t port, const zx_vcpu_io_t* io);
 
+    // Handle writes to the notify BAR.
+    zx_status_t NotifyBarWrite(uint16_t port, const zx_vcpu_io_t* io);
+
     void SetupCaps();
     void SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
-                  size_t cap_len, size_t data_length, size_t bar_offset);
+                  size_t cap_len, size_t data_length, uint8_t bar, size_t bar_offset);
 
     virtio_queue_t* selected_queue();
 
@@ -85,6 +93,8 @@ public:
 
     uintptr_t guest_physmem_addr() { return guest_physmem_addr_; }
     size_t guest_physmem_size() { return guest_physmem_size_; }
+
+    uint16_t num_queues() const { return num_queues_; }
 
     // ISR flag values.
     enum IsrFlags : uint8_t {
