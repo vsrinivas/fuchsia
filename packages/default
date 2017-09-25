@@ -15,6 +15,7 @@
         "garnet/packages/icu",
         "garnet/packages/icu_data",
         "garnet/packages/listen",
+        "garnet/packages/mozart",
         "garnet/packages/netconnector",
         "garnet/packages/netconnector_examples",
         "garnet/packages/netstack",
