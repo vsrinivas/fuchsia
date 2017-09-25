@@ -9,7 +9,8 @@
 #include <arch/asm_macros.h>
 
 #define HCR_EL2_RW  (1 << 31)
-#define SCR_EL3_HCE (1 << 1)
+#define SCR_EL3_NS  (1 << 0)
+#define SCR_EL3_HCE (1 << 8)
 #define SCR_EL3_RW  (1 << 10)
 
 /* void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp); */
@@ -61,6 +62,7 @@ FUNCTION(arm64_elX_to_el1)
 
     /* set EL2 to 64bit and enable HVC instruction */
     mrs x9, scr_el3
+    orr x9, x9, #SCR_EL3_NS
     orr x9, x9, #SCR_EL3_HCE
     orr x9, x9, #SCR_EL3_RW
     msr scr_el3, x9
