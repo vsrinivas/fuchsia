@@ -340,14 +340,18 @@ static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 
+__attribute__((noinline)) static void stomp_stack(size_t size) {
+    // -Wvla prevents VLAs but not explicit alloca.
+    // Neither is allowed anywhere in the kernel outside this test code.
+    void* death = __builtin_alloca(size); // OK in test-only code.
+    memset(death, 0xaa, size);
+    thread_sleep_relative(LK_USEC(1));
+}
+
 static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags)
 {
-    for (size_t i = 0; i < DEFAULT_STACK_SIZE * 2; i++) {
-        uint8_t death[i];
-
-        memset(death, 0xaa, i);
-        thread_sleep_relative(LK_USEC(1));
-    }
+    for (size_t i = 0; i < DEFAULT_STACK_SIZE * 2; i++)
+        stomp_stack(i);
 
     printf("survived.\n");
 
@@ -384,4 +388,3 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags)
 
     return 0;
 }
-
