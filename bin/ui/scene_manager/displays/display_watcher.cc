@@ -13,13 +13,7 @@
 
 namespace scene_manager {
 
-namespace {
-const std::string kDisplayDir = "/dev/class/display";
-
-// TODO(MZ-16): Need to specify different device pixel ratio for NUC vs.
-// Acer Switch 12.
-constexpr float kHardcodedDevicePixelRatio = 2.f;
-}  // namespace
+static const std::string kDisplayDir = "/dev/class/display";
 
 DisplayWatcher::DisplayWatcher() = default;
 
@@ -60,9 +54,27 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   }
   zx_handle_close(description.vmo);  // we don't need the vmo
 
+  // TODO(MZ-16): Need to have a database of ratios for different devices.
+  // Given a target of 1 DP = 1/160 inch, we can directly compute this value in
+  // cases where we know both the resolution and the physical dimensions of a
+  // display, but we often don't know the latter.
+  const uint32_t width = description.info.width;
+  const uint32_t height = description.info.height;
+  float device_pixel_ratio = 2.f;
+  if (width == 2400 && height == 1600) {
+    // We assume that the device is a Pixel.  Assuming a 12.246 inch screen with
+    // square pixels, this gives a device-pixel ratio of 1.472.
+    FXL_LOG(INFO) << "SceneManager: treating device as a Pixel.";
+    device_pixel_ratio = 1.472134279;
+  } else if (width == 2160 && height == 1440) {
+    // We assume that the device is an Acer Switch 12 Alpha.  Assuming a 12.246
+    // inch screen with square pixels, this gives a device-pixel ratio of 1.330.
+    FXL_LOG(INFO) << "SceneManager: treating device as an Acer Switch 12.";
+    device_pixel_ratio = 1.329916454;
+  }
+
   // Invoke the callback, passing the display attributes.
-  callback(true, description.info.width, description.info.height,
-           kHardcodedDevicePixelRatio);
+  callback(true, width, height, device_pixel_ratio);
 }
 
 }  // namespace scene_manager
