@@ -200,7 +200,7 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
         uint16_t port_off;
         PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
         PciDevice* pci_device;
-        zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_MMIO, io->port, &pci_device, &bar,
+        zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_PIO, io->port, &pci_device, &bar,
                                                &port_off);
         if (status != ZX_ERR_NOT_FOUND) {
             status = pci_device->ReadBar(bar, port_off, io->access_size, &vcpu_io);
@@ -242,6 +242,23 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
         return vcpu_ctx->guest_ctx->pci_bus->WriteIoPort(io);
     case UART_INTERRUPT_ENABLE_PORT ... UART_SCR_SCRATCH_PORT:
         return uart_write(vcpu_ctx->guest_ctx->uart, io);
+    default: {
+        uint8_t bar;
+        uint16_t port_off;
+        PciBus* bus = vcpu_ctx->guest_ctx->pci_bus;
+        PciDevice* pci_device;
+        zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_PIO, io->port, &pci_device, &bar,
+                                               &port_off);
+        if (status != ZX_ERR_NOT_FOUND) {
+            // Convert the IO packet into a vcpu_io structure.
+            zx_vcpu_io_t vcpu_io;
+            static_assert(sizeof(vcpu_io.data) == sizeof(io->data),
+                "data size mismatch between zx_vcpu_io and zx_packet_get_io.");
+            memcpy(vcpu_io.data, io->data, sizeof(vcpu_io.data));
+            vcpu_io.access_size = io->access_size;
+            return pci_device->WriteBar(bar, port_off, &vcpu_io);
+        }
+    }
     }
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
     return ZX_ERR_NOT_SUPPORTED;

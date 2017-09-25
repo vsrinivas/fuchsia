@@ -53,6 +53,8 @@ zx_status_t PortRange::Init() {
 }
 
 zx_status_t PortRange::Queue(const zx_port_packet_t& packet, StateReloader* reloader) {
+    if (port_ == nullptr)
+        return ZX_ERR_NOT_FOUND;
     PortPacket* port_packet = port_allocator_.Alloc(reloader);
     if (port_packet == nullptr)
         return ZX_ERR_NO_MEMORY;
@@ -106,6 +108,8 @@ zx_status_t PacketMux::Queue(uint32_t kind, zx_vaddr_t addr, const zx_port_packe
     zx_status_t status = FindPortRange(kind, addr, &port_range);
     if (status != ZX_OK)
         return status;
+
+    DEBUG_ASSERT(port_range->HasPort());
     return port_range->Queue(packet, reloader);
 }
 
