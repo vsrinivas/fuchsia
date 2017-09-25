@@ -71,6 +71,7 @@ typedef struct clHASH_CTX {
 #define clHASH_update(ctx, data, len) (ctx)->f->update(ctx, data, len)
 #define clHASH_final(ctx) (ctx)->f->final(ctx)
 #define clHASH_size(ctx) (ctx)->f->size
+#define clHASH_MAX_DIGEST_SIZE 32
 
 // Generic hmac interface ----------------------------------------
 

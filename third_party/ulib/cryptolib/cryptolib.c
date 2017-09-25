@@ -87,7 +87,7 @@ static void _HMAC_init(clHMAC_CTX* ctx, const void* key, int len) {
 }
 
 const uint8_t* clHMAC_final(clHMAC_CTX* ctx) {
-  uint8_t digest[clHASH_size(&ctx->hash)];
+  uint8_t digest[clHASH_MAX_DIGEST_SIZE];
   memcpy(digest, clHASH_final(&ctx->hash), sizeof(digest));
   clHASH_init(&ctx->hash);
   clHASH_update(&ctx->hash, ctx->opad, sizeof(ctx->opad));
@@ -482,10 +482,10 @@ static void modExp(const clBignumModulus* M,
                    uint8_t* c,
                    const uint32_t* a,
                    const uint8_t* x, const int size_x) {
-  uint32_t tmp[M->nwords];
-  uint32_t base[M->nwords];
-  uint32_t one[M->nwords];  // Could be const member of M to save stack.
-  uint32_t accu[M->nwords];
+  uint32_t tmp[clBIGNUMWORDS];
+  uint32_t base[clBIGNUMWORDS];
+  uint32_t one[clBIGNUMWORDS];  // Could be const member of M to save stack.
+  uint32_t accu[clBIGNUMWORDS];
   int64_t offset = base - one;
   int i, b;
 
@@ -524,7 +524,7 @@ static int dhGE(const uint32_t* a, const uint32_t* b, int nwords) {
 
 // Returns 2 <= n < M->n - 1
 static int dhCheck(const clBignumModulus* M, const uint32_t* n) {
-  uint32_t Mmin1[M->nwords];
+  uint32_t Mmin1[clBIGNUMWORDS];
   if (!dhGE(n, dh_G, M->nwords)) return 0;  // n >= 2?
   memcpy(Mmin1, M->n, sizeof Mmin1);
   Mmin1[0] -= 1;  // M->n odd, so just decrementing Mmin1[0] works.
@@ -534,7 +534,7 @@ static int dhCheck(const clBignumModulus* M, const uint32_t* n) {
 int clDHgenerate(const clBignumModulus* M,
                  const uint8_t* x, const int size_x,
                  uint8_t* out) {
-  uint32_t chk[M->nwords];
+  uint32_t chk[clBIGNUMWORDS];
   modExp(M, out, dh_G, x, size_x);
   // Make sure we didn't compute a value outside [2..M-1>
   u8tou32(chk, out, M->size);
@@ -546,7 +546,7 @@ int clDHcompute(const clBignumModulus* M,
                 const uint8_t* gy, const int size_gy,
                 const uint8_t* x, const int size_x,
                 uint8_t* out) {
-  uint32_t base[M->nwords];
+  uint32_t base[clBIGNUMWORDS];
   if (size_gy != M->size) return 0;
   u8tou32(base, gy, size_gy);
   // Make sure the other party's value is inside [2..M-1>

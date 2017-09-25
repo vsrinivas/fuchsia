@@ -5,3 +5,4 @@ License: Apache License version 2.0
 Modifications:
  - Changed header guard to "#pragma once"
  - Added __BEGIN_CDECLS / __END_CDECLS
+ - Changed code to avoid VLAs.
