@@ -1,0 +1,15 @@
+{
+    "languages": [
+        "cpp",
+        "rust"
+    ],
+    "labels": [
+        "//garnet/public/rust/crates/fuchsia-vfs"
+    ],
+    "binaries": [
+      {
+        "binary": "fuchsia-vfs-lib-test",
+        "bootfs_path": "test/fuchsia-vfs-lib-test"
+      }
+    ]
+}

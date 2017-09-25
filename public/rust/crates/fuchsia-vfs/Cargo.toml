@@ -1,0 +1,11 @@
+[package]
+name = "fuchsia-vfs"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["James Tucker <raggi@google.com>"]
+description = "Fuchsia VFS Server bindings"
+repository = "https://fuchsia.googlesource.com/garnet/"
+
+[dependencies]
+fuchsia-zircon = { path = "../fuchsia-zircon", version = "0.2" }
+fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys", version = "0.2" }
