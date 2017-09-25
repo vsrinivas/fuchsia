@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
-#define APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
 
 #include <memory>
 #include <utility>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit_watcher.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/firebase/firebase.h"
 #include "peridot/bin/ledger/gcs/cloud_storage.h"
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -86,4 +86,4 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_

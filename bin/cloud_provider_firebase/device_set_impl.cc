@@ -4,8 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/device_set_impl.h"
 
-#include "peridot/bin/ledger/convert/convert.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/convert/convert.h"
 
 namespace cloud_provider_firebase {
 

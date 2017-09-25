@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_IMPL_H_
-#define APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_IMPL_H_
 
 #include <memory>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "peridot/bin/ledger/auth_provider/auth_provider.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 
 namespace cloud_provider_firebase {
 
@@ -61,4 +61,4 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_IMPL_H_

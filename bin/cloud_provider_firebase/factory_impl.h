@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_FACTORY_IMPL_H_
-#define APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_FACTORY_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FACTORY_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FACTORY_IMPL_H_
 
+#include "lib/auth/fidl/token_provider.fidl.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/cloud_provider_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/network/network_service.h"
-#include "lib/auth/fidl/token_provider.fidl.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 
@@ -50,4 +50,4 @@ class FactoryImpl : public Factory {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // APPS_LEDGER_CLOUD_PRFIREBASE_FACTORY_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_CLOUD_PRFIREBASE_FACTORY_IMPL_H_

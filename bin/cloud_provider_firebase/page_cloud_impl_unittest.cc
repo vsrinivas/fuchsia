@@ -5,15 +5,15 @@
 #include "peridot/bin/cloud_provider_firebase/page_cloud_impl.h"
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/cloud_provider/test/test_page_cloud_handler.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/macros.h"
 
 namespace cloud_provider_firebase {
 namespace {

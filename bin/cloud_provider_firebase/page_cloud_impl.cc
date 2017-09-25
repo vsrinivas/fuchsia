@@ -4,8 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firebase/page_cloud_impl.h"
 
-#include "peridot/bin/ledger/convert/convert.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/ledger/convert/convert.h"
 
 namespace cloud_provider_firebase {
 

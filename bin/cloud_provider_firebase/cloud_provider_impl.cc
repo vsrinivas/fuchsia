@@ -6,13 +6,13 @@
 
 #include <utility>
 
+#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/cloud_provider/impl/page_cloud_handler_impl.h"
 #include "peridot/bin/ledger/cloud_provider/impl/paths.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 #include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "peridot/bin/ledger/gcs/cloud_storage_impl.h"
-#include "lib/fxl/logging.h"
 
 namespace cloud_provider_firebase {
 
