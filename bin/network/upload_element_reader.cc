@@ -10,80 +10,84 @@
 
 namespace network {
 
+UploadElementReader::UploadElementReader() : err_(ZX_OK) {}
+UploadElementReader::~UploadElementReader() = default;
+
 SocketUploadElementReader::SocketUploadElementReader(zx::socket socket)
     : socket_(std::move(socket)) {}
 
 SocketUploadElementReader::~SocketUploadElementReader() {}
 
-zx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
-  zx_status_t result = ZX_OK;
+size_t SocketUploadElementReader::size() {
+  return kUnknownSize;
+}
 
+bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
   while (true) {
     size_t num_bytes = buf_.size();
-    result = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
-    if (result == ZX_ERR_SHOULD_WAIT) {
-      result = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                ZX_TIME_INFINITE, nullptr);
-      if (result == ZX_OK)
+    err_ = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
+    if (err_ == ZX_ERR_SHOULD_WAIT) {
+      err_ = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                              ZX_TIME_INFINITE, nullptr);
+      if (err_ == ZX_OK)
         continue;  // retry now that the socket is ready
     }
 
-    if (result != ZX_OK) {
-      // If the other end closes the socket,
-      // we get ZX_ERR_PEER_CLOSED.
-      if (result == ZX_ERR_PEER_CLOSED) {
-        result = ZX_OK;
-        break;
+    if (err_ != ZX_OK) {
+      // If the other end closes the socket, we get MX_ERR_PEER_CLOSED.
+      if (err_ == ZX_ERR_PEER_CLOSED) {
+        err_ = ZX_OK;
+        return false;
       }
-      FXL_VLOG(1) << "SocketUploadElementReader: result=" << result;
-      break;
+      FXL_VLOG(1) << "SocketUploadElementReader: result=" << err_;
+      return false;
     }
 
     os->write(buf_.data(), num_bytes);
     if (!*os) {
       // TODO(toshik): better result code?
-      result = ZX_ERR_BUFFER_TOO_SMALL;
-      FXL_VLOG(1) << "SocketUploadElementReader: result=" << result;
-      break;
+      err_ = ZX_ERR_BUFFER_TOO_SMALL;
+      FXL_VLOG(1) << "SocketUploadElementReader: result=" << err_;
+      return false;
+    } else {
+      return true;
     }
   }
-
-  return result;
 }
 
 VmoUploadElementReader::VmoUploadElementReader(zx::vmo vmo)
-    : vmo_(std::move(vmo)) {}
+    : vmo_(std::move(vmo)), offset_(0) {}
 
 VmoUploadElementReader::~VmoUploadElementReader() {}
 
-zx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
-  uint64_t remaining;
-  zx_status_t result = vmo_.get_size(&remaining);
-  if (result != ZX_OK) {
-    FXL_VLOG(1) << "VmoUploadELementReader: result=" << result;
-    return result;
+size_t VmoUploadElementReader::size() {
+  size_t size;
+  err_ = vmo_.get_size(&size);
+  return size;
+}
+
+bool VmoUploadElementReader::ReadAvailable(std::ostream* os) {
+  size_t num_bytes = buf_.size();
+  err_ = vmo_.read(buf_.data(), offset_, num_bytes, &num_bytes);
+  if (err_ != ZX_OK) {
+    FXL_VLOG(1) << "VmoUploadElementReader: result=" << err_;
+    return false;
   }
 
-  uint64_t offset = 0;
-  while (remaining > 0) {
-    size_t num_bytes = buf_.size();
-    result = vmo_.read(buf_.data(), offset, num_bytes, &num_bytes);
-    if (result != ZX_OK) {
-      FXL_VLOG(1) << "VmoUploadELementReader: result=" << result;
-      return result;
-    }
-
+  if (num_bytes > 0) {
     os->write(buf_.data(), num_bytes);
     if (!*os) {
       FXL_VLOG(1) << "VmoUploadElementReader: Unable to write to stream.";
       // TODO(toshik): better result code?
-      return ZX_ERR_BUFFER_TOO_SMALL;
+      err_ = ZX_ERR_BUFFER_TOO_SMALL;
+      return false;
     }
-    offset += num_bytes;
-    remaining -= num_bytes;
-  }
+    offset_ += num_bytes;
 
-  return ZX_OK;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 }  // namespace network

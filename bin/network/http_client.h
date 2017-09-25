@@ -44,7 +44,7 @@ class URLLoaderImpl::HTTPClient {
       const std::string& path,
       const std::string& method,
       const std::map<std::string, std::string>& extra_headers,
-      const std::vector<std::unique_ptr<UploadElementReader>>& element_readers);
+      std::unique_ptr<UploadElementReader> request_body_reader);
   void Start(const std::string& server, const std::string& port);
 
  private:
@@ -55,7 +55,10 @@ class URLLoaderImpl::HTTPClient {
   bool OnVerifyCertificate(bool preverified, asio::ssl::verify_context& ctx);
   void OnConnect(const asio::error_code& err);
   void OnHandShake(const asio::error_code& err);
-  void OnWriteRequest(const asio::error_code& err, std::size_t transferred);
+  void OnWriteRequestHeaders(const asio::error_code& err,
+                             std::size_t transferred);
+  void WriteRequestBody();
+  void OnWriteRequestBody(const asio::error_code& err, std::size_t transferred);
   void OnReadStatusLine(const asio::error_code& err);
   zx_status_t SendStreamedBody();
   zx_status_t SendBufferedBody();
@@ -78,9 +81,10 @@ class URLLoaderImpl::HTTPClient {
 
   tcp::resolver resolver_;
   T socket_;
-  std::vector<asio::streambuf::const_buffers_type> request_bufs_;
   asio::streambuf request_header_buf_;
+  std::unique_ptr<UploadElementReader> request_body_reader_;
   asio::streambuf request_body_buf_;
+  std::ostream request_body_stream_;
   asio::streambuf response_buf_;
 
   std::string http_version_;
@@ -119,13 +123,19 @@ URLLoaderImpl::HTTPClient<ssl_socket_t>::HTTPClient(
     URLLoaderImpl* loader,
     asio::io_service& io_service,
     asio::ssl::context& context)
-    : loader_(loader), resolver_(io_service), socket_(io_service, context) {}
+    : loader_(loader),
+      resolver_(io_service),
+      socket_(io_service, context),
+      request_body_stream_(&request_body_buf_) {}
 
 template <>
 URLLoaderImpl::HTTPClient<nonssl_socket_t>::HTTPClient(
     URLLoaderImpl* loader,
     asio::io_service& io_service)
-    : loader_(loader), resolver_(io_service), socket_(io_service) {}
+    : loader_(loader),
+      resolver_(io_service),
+      socket_(io_service),
+      request_body_stream_(&request_body_buf_) {}
 
 template <typename T>
 zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
@@ -133,7 +143,7 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
     const std::string& path,
     const std::string& method,
     const std::map<std::string, std::string>& extra_headers,
-    const std::vector<std::unique_ptr<UploadElementReader>>& element_readers) {
+    std::unique_ptr<UploadElementReader> request_body_reader) {
   if (!IsMethodAllowed(method)) {
     FXL_VLOG(1) << "Method " << method << " is not allowed";
     return ZX_ERR_INVALID_ARGS;
@@ -155,23 +165,18 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
   if (!has_accept)
     request_header_stream << "Accept: */*\r\n";
 
-  std::ostream request_body_stream(&request_body_buf_);
-
-  for (auto it = element_readers.begin(); it != element_readers.end(); ++it) {
-    zx_status_t result = (*it)->ReadAll(&request_body_stream);
-    if (result != ZX_OK)
-      return result;
+  request_body_reader_ = std::move(request_body_reader);
+  if (request_body_reader_) {
+    size_t content_length = request_body_reader_->size();
+    if (request_body_reader_->err() != ZX_OK) {
+      return request_body_reader_->err();
+    }
+    if (content_length != UploadElementReader::kUnknownSize) {
+      request_header_stream << "Content-Length: " << content_length << "\r\n";
+    }
   }
 
-  uint64_t content_length = request_body_buf_.size();
-
-  if (content_length > 0)
-    request_header_stream << "Content-Length: " << content_length << "\r\n";
-
   request_header_stream << "\r\n";
-
-  request_bufs_.push_back(request_header_buf_.data());
-  request_bufs_.push_back(request_body_buf_.data());
 
   return ZX_OK;
 }
@@ -230,7 +235,6 @@ bool URLLoaderImpl::HTTPClient<T>::OnVerifyCertificate(
   char subject_name[256];
   X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
   X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-// FXL_VLOG(1) << "Verifying " << subject_name;
 
 #ifdef NETWORK_SERVICE_HTTPS_CERT_HACK
   preverified = true;
@@ -256,8 +260,8 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(
     const asio::error_code& err) {
   if (!err) {
     asio::async_write(
-        socket_, request_bufs_,
-        std::bind(&HTTPClient<nonssl_socket_t>::OnWriteRequest, this,
+        socket_, request_header_buf_,
+        std::bind(&HTTPClient<nonssl_socket_t>::OnWriteRequestHeaders, this,
                   std::placeholders::_1, std::placeholders::_2));
   } else {
     FXL_VLOG(1) << "Connect(NonSSL): " << err.message();
@@ -268,8 +272,8 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
   if (!err) {
-    asio::async_write(socket_, request_bufs_,
-                      std::bind(&HTTPClient<T>::OnWriteRequest, this,
+    asio::async_write(socket_, request_header_buf_,
+                      std::bind(&HTTPClient<T>::OnWriteRequestHeaders, this,
                                 std::placeholders::_1, std::placeholders::_2));
   } else {
     FXL_VLOG(1) << "HandShake: " << err.message();
@@ -278,36 +282,56 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
 }
 
 template <typename T>
-void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err,
-                                                  std::size_t transferred) {
+void URLLoaderImpl::HTTPClient<T>::OnWriteRequestHeaders(
+    const asio::error_code& err,
+    std::size_t transferred) {
   if (!err) {
-    std::size_t transferred_from_header =
-        std::min(request_header_buf_.size(), transferred);
-    request_header_buf_.consume(transferred_from_header);
-    if (transferred > transferred_from_header)
-      request_body_buf_.consume(transferred - transferred_from_header);
+    request_header_buf_.consume(transferred);
 
-    request_bufs_.clear();
-    if (request_header_buf_.size() > 0)
-      request_bufs_.push_back(request_header_buf_.data());
-    if (request_body_buf_.size() > 0)
-      request_bufs_.push_back(request_body_buf_.data());
-
-    if (!request_bufs_.empty()) {
+    if (request_header_buf_.size() > 0) {
       asio::async_write(
-          socket_, request_bufs_,
-          std::bind(&HTTPClient<T>::OnWriteRequest, this, std::placeholders::_1,
-                    std::placeholders::_2));
+          socket_, request_header_buf_,
+          std::bind(&HTTPClient<T>::OnWriteRequestHeaders, this,
+                    std::placeholders::_1, std::placeholders::_2));
     } else {
-      // TODO(toshik): The response_ streambuf will automatically grow
-      // The growth may be limited by passing a maximum size to the
-      // streambuf constructor.
-      asio::async_read_until(socket_, response_buf_, "\r\n",
-                             std::bind(&HTTPClient<T>::OnReadStatusLine, this,
-                                       std::placeholders::_1));
+      WriteRequestBody();
     }
   } else {
-    FXL_VLOG(1) << "WriteRequest: " << err.message();
+    FXL_VLOG(1) << "WriteRequestHeaders: " << err.message();
+    // TODO(toshik): better error code?
+    SendError(network::NETWORK_ERR_FAILED);
+  }
+}
+
+template <typename T>
+void URLLoaderImpl::HTTPClient<T>::WriteRequestBody() {
+  if (request_body_buf_.size() > 0 ||
+      (request_body_reader_ &&
+       request_body_reader_->ReadAvailable(&request_body_stream_))) {
+    asio::async_write(socket_, request_body_buf_,
+                      std::bind(&HTTPClient<T>::OnWriteRequestBody, this,
+                                std::placeholders::_1, std::placeholders::_2));
+  } else if (request_body_reader_ && request_body_reader_->err() != ZX_OK) {
+    SendError(network::NETWORK_ERR_FAILED);
+  } else {
+    // TODO(toshik): The response_ streambuf will automatically grow
+    // The growth may be limited by passing a maximum size to the
+    // streambuf constructor.
+    asio::async_read_until(socket_, response_buf_, "\r\n",
+                           std::bind(&HTTPClient<T>::OnReadStatusLine, this,
+                                     std::placeholders::_1));
+  }
+}
+
+template <typename T>
+void URLLoaderImpl::HTTPClient<T>::OnWriteRequestBody(
+    const asio::error_code& err,
+    std::size_t transferred) {
+  if (!err) {
+    request_body_buf_.consume(transferred);
+    WriteRequestBody();
+  } else {
+    FXL_VLOG(1) << "WriteRequestBody: " << err.message();
     // TODO(toshik): better error code?
     SendError(network::NETWORK_ERR_FAILED);
   }

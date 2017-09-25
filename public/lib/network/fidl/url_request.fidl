@@ -46,7 +46,8 @@ struct URLRequest {
   array<HttpHeader>? headers;
 
   // The payload for the request body. For HTTP requests, the method must be set
-  // to "POST" or "PUT".
+  // to "POST" or "PUT". If a buffer is used for the body, a Content-Length
+  // header will automatically be added.
   URLBody? body;
 
   // The buffer size of the socket returned in URLResponse's |body| member.

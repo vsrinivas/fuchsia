@@ -69,7 +69,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   std::string url_str(request->url);
   std::string method(request->method);
   std::map<std::string, std::string> extra_headers;
-  std::vector<std::unique_ptr<UploadElementReader>> element_readers;
+  std::unique_ptr<UploadElementReader> request_body_reader;
 
   if (request->headers) {
     for (size_t i = 0; i < request->headers.size(); ++i)
@@ -79,11 +79,11 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   if (request->body) {
     // TODO(kulakowski) Implement responses into a shared_buffer
     if (request->body->is_stream()) {
-      element_readers.push_back(std::make_unique<SocketUploadElementReader>(
-          std::move(request->body->get_stream())));
+      request_body_reader = std::make_unique<SocketUploadElementReader>(
+          std::move(request->body->get_stream()));
     } else {
-      element_readers.push_back(std::make_unique<VmoUploadElementReader>(
-          std::move(request->body->get_buffer())));
+      request_body_reader = std::make_unique<VmoUploadElementReader>(
+          std::move(request->body->get_buffer()));
     }
   }
 
@@ -116,7 +116,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
           current_url_.host(),
           current_url_.path() +
               (current_url_.has_query() ? "?" + current_url_.query() : ""),
-          method, extra_headers, element_readers);
+          method, extra_headers, std::move(request_body_reader));
       if (result != ZX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
@@ -145,7 +145,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
           current_url_.host(),
           current_url_.path() +
               (current_url_.has_query() ? "?" + current_url_.query() : ""),
-          method, extra_headers, element_readers);
+          method, extra_headers, std::move(request_body_reader));
       if (result != ZX_OK) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;

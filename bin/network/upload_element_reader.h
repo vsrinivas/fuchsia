@@ -10,17 +10,29 @@
 #include "zx/vmo.h"
 
 #include <array>
+#include <limits>
 
 namespace network {
 
 class UploadElementReader {
  public:
   static constexpr size_t BUFSIZE = 1024;
+  static constexpr size_t kUnknownSize = std::numeric_limits<size_t>::max();
 
-  UploadElementReader() {}
-  virtual ~UploadElementReader(){};
+  UploadElementReader();
+  virtual ~UploadElementReader();
 
-  virtual zx_status_t ReadAll(std::ostream* os) = 0;
+  zx_status_t err() const { return err_; }
+
+  // may produce kUnknownSize
+  virtual size_t size() = 0;
+
+  // returns true if and only if content was read or there is potentially more
+  // to read
+  virtual bool ReadAvailable(std::ostream* os) = 0;
+
+ protected:
+  zx_status_t err_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
@@ -31,7 +43,9 @@ class SocketUploadElementReader : public UploadElementReader {
   SocketUploadElementReader(zx::socket socket);
   ~SocketUploadElementReader() override;
 
-  zx_status_t ReadAll(std::ostream* os) override;
+  // always kUnknownSize
+  size_t size() override;
+  bool ReadAvailable(std::ostream* os) override;
 
  private:
   zx::socket socket_;
@@ -43,10 +57,12 @@ class VmoUploadElementReader : public UploadElementReader {
   VmoUploadElementReader(zx::vmo vmo);
   ~VmoUploadElementReader() override;
 
-  zx_status_t ReadAll(std::ostream* os) override;
+  size_t size() override;
+  bool ReadAvailable(std::ostream* os) override;
 
  private:
   zx::vmo vmo_;
+  uint64_t offset_;
   std::array<char, BUFSIZE> buf_;
 };
 
