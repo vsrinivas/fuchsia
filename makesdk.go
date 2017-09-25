@@ -190,7 +190,7 @@ func copyKernelDebugObjs(src, dstPrefix string) {
 		id, absPath := s[0], s[1]
 		relPath, err := filepath.Rel(absBase, absPath)
 		if err != nil {
-			log.Warning("could not create relative path from absolute path", absPath, "and base", absBase, "skipping entry")
+			log.Println("could not create relative path from absolute path", absPath, "and base", absBase, "skipping entry")
 		} else {
 			fmt.Fprintln(dstIds, id, relPath)
 		}
