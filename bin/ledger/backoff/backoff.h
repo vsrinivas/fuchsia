@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_BACKOFF_BACKOFF_H_
-#define APPS_LEDGER_SRC_BACKOFF_BACKOFF_H_
+#ifndef PERIDOT_BIN_LEDGER_BACKOFF_BACKOFF_H_
+#define PERIDOT_BIN_LEDGER_BACKOFF_BACKOFF_H_
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
@@ -25,4 +25,4 @@ class Backoff {
 
 }  // namespace backoff
 
-#endif  // APPS_LEDGER_SRC_BACKOFF_BACKOFF_H_
+#endif  // PERIDOT_BIN_LEDGER_BACKOFF_BACKOFF_H_

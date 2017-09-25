@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_GCS_CLOUD_STORAGE_H_
-#define APPS_LEDGER_SRC_GCS_CLOUD_STORAGE_H_
+#ifndef PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_H_
+#define PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_H_
 
 #include <functional>
 #include <string>
@@ -37,4 +37,4 @@ class CloudStorage {
 
 }  // namespace gcs
 
-#endif  // APPS_LEDGER_SRC_GCS_CLOUD_STORAGE_H_
+#endif  // PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_H_

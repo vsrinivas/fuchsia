@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_GLUE_CRYPTO_KDF_H_
-#define APPS_LEDGER_SRC_GLUE_CRYPTO_KDF_H_
+#ifndef PERIDOT_BIN_LEDGER_GLUE_CRYPTO_KDF_H_
+#define PERIDOT_BIN_LEDGER_GLUE_CRYPTO_KDF_H_
 
 #include <string>
 
@@ -16,4 +16,4 @@ namespace glue {
 std::string HMAC256KDF(fxl::StringView data, size_t length);
 }  // namespace glue
 
-#endif  // APPS_LEDGER_SRC_GLUE_CRYPTO_KDF_H_
+#endif  // PERIDOT_BIN_LEDGER_GLUE_CRYPTO_KDF_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_WRITER_H_
-#define APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_WRITER_H_
+#ifndef PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_WRITER_H_
+#define PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_WRITER_H_
 
 #include <functional>
 #include <memory>
@@ -83,4 +83,4 @@ class StringSocketWriter : public SocketWriter::Client {
 
 }  // namespace glue
 
-#endif  // APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_WRITER_H_
+#endif  // PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_WRITER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _APPS_LEDGER_SRC_TEST_TEST_WITH_COROUTINES_H_
-#define _APPS_LEDGER_SRC_TEST_TEST_WITH_COROUTINES_H_
+#ifndef PERIDOT_BIN_LEDGER_TEST_TEST_WITH_COROUTINES_H_
+#define PERIDOT_BIN_LEDGER_TEST_TEST_WITH_COROUTINES_H_
 
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
@@ -30,4 +30,4 @@ class TestWithCoroutines : public TestWithMessageLoop {
 
 }  // namespace test
 
-#endif  // _APPS_LEDGER_SRC_TEST_TEST_WITH_COROUTINES_H_
+#endif  // PERIDOT_BIN_LEDGER_TEST_TEST_WITH_COROUTINES_H_

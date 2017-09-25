@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CALLBACK_SCOPED_TASK_RUNNER_H_
-#define APPS_LEDGER_SRC_CALLBACK_SCOPED_TASK_RUNNER_H_
+#ifndef PERIDOT_BIN_LEDGER_CALLBACK_SCOPED_TASK_RUNNER_H_
+#define PERIDOT_BIN_LEDGER_CALLBACK_SCOPED_TASK_RUNNER_H_
 
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "lib/fxl/macros.h"
@@ -52,4 +52,4 @@ class ScopedTaskRunner {
 
 }  // namespace callback
 
-#endif  // APPS_LEDGER_SRC_CALLBACK_SCOPED_TASK_RUNNER_H_
+#endif  // PERIDOT_BIN_LEDGER_CALLBACK_SCOPED_TASK_RUNNER_H_

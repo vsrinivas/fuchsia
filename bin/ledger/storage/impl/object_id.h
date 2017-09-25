@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_IMPL_OBJECT_ID_H_
-#define APPS_LEDGER_SRC_STORAGE_IMPL_OBJECT_ID_H_
+#ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_ID_H_
+#define PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_ID_H_
 
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -38,4 +38,4 @@ ObjectId ComputeObjectId(ObjectType type, convert::ExtendedStringView content);
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_OBJECT_ID_H_
+#endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_ID_H_

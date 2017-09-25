@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_MERGING_LEDGER_MERGE_MANAGER_H_
-#define APPS_LEDGER_SRC_APP_MERGING_LEDGER_MERGE_MANAGER_H_
+#ifndef PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
+#define PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 
 #include <memory>
 #include <unordered_map>
@@ -44,4 +44,4 @@ class LedgerMergeManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerMergeManager);
 };
 }  // namespace ledger
-#endif  // APPS_LEDGER_SRC_APP_MERGING_LEDGER_MERGE_MANAGER_H_
+#endif  // PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_

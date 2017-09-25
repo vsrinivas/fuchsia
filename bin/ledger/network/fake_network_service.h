@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_NETWORK_FAKE_NETWORK_SERVICE_H_
-#define APPS_LEDGER_SRC_NETWORK_FAKE_NETWORK_SERVICE_H_
+#ifndef PERIDOT_BIN_LEDGER_NETWORK_FAKE_NETWORK_SERVICE_H_
+#define PERIDOT_BIN_LEDGER_NETWORK_FAKE_NETWORK_SERVICE_H_
 
 #include "peridot/bin/ledger/network/network_service.h"
 #include "lib/fxl/macros.h"
@@ -41,4 +41,4 @@ class FakeNetworkService : public NetworkService {
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_NETWORK_FAKE_NETWORK_SERVICE_H_
+#endif  // PERIDOT_BIN_LEDGER_NETWORK_FAKE_NETWORK_SERVICE_H_

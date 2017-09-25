@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
-#define APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
+#ifndef PERIDOT_BIN_LEDGER_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
+#define PERIDOT_BIN_LEDGER_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
 
 #include "peridot/bin/ledger/auth_provider/auth_provider.h"
 
@@ -36,4 +36,4 @@ class TestAuthProvider : public AuthProvider {
 }  // namespace test
 }  // namespace auth_provider
 
-#endif  // APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
+#endif  // PERIDOT_BIN_LEDGER_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_

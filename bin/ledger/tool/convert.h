@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_TOOL_CONVERT_H_
-#define APPS_LEDGER_SRC_TOOL_CONVERT_H_
+#ifndef PERIDOT_BIN_LEDGER_TOOL_CONVERT_H_
+#define PERIDOT_BIN_LEDGER_TOOL_CONVERT_H_
 
 #include <string>
 
@@ -17,4 +17,4 @@ bool FromHexString(fxl::StringView hex_string, std::string* result);
 
 }  // namespace tool
 
-#endif  // APPS_LEDGER_SRC_TOOL_CONVERT_H_
+#endif  // PERIDOT_BIN_LEDGER_TOOL_CONVERT_H_

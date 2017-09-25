@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_FIREBASE_FIREBASE_H_
-#define APPS_LEDGER_SRC_FIREBASE_FIREBASE_H_
+#ifndef PERIDOT_BIN_LEDGER_FIREBASE_FIREBASE_H_
+#define PERIDOT_BIN_LEDGER_FIREBASE_FIREBASE_H_
 
 #include <functional>
 #include <string>
@@ -74,4 +74,4 @@ class Firebase {
 
 }  // namespace firebase
 
-#endif  // APPS_LEDGER_SRC_FIREBASE_FIREBASE_H_
+#endif  // PERIDOT_BIN_LEDGER_FIREBASE_FIREBASE_H_

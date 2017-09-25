@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
-#define APPS_LEDGER_SRC_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
+#ifndef PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
+#define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
 #include "peridot/bin/ledger/test/cloud_server/fake_cloud_url_loader.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -61,4 +61,4 @@ class FakeCloudNetworkService : public network::NetworkService {
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
+#endif  // PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_

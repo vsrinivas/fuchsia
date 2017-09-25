@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_TESTING_TEST_COMMIT_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_TESTING_TEST_COMMIT_H_
+#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_COMMIT_H_
+#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_COMMIT_H_
 
 #include <memory>
 #include <vector>
@@ -36,4 +36,4 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 }  // namespace test
 }  // namespace cloud_sync
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_STORAGE_H_
+#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_COMMIT_H_

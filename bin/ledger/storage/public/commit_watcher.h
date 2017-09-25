@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_PUBLIC_COMMIT_WATCHER_H_
-#define APPS_LEDGER_SRC_STORAGE_PUBLIC_COMMIT_WATCHER_H_
+#ifndef PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_COMMIT_WATCHER_H_
+#define PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_COMMIT_WATCHER_H_
 
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -26,4 +26,4 @@ class CommitWatcher {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_PUBLIC_COMMIT_WATCHER_H_
+#endif  // PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_COMMIT_WATCHER_H_

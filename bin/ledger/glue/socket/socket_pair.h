@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_PAIR_H_
-#define APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_PAIR_H_
+#ifndef PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_PAIR_H_
+#define PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_PAIR_H_
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -32,4 +32,4 @@ inline SocketPair::~SocketPair() {}
 
 }  // namespace glue
 
-#endif  // APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_PAIR_H_
+#endif  // PERIDOT_BIN_LEDGER_GLUE_SOCKET_SOCKET_PAIR_H_

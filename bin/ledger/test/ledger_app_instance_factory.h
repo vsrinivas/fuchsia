@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_TEST_LEDGER_APP_INSTANCE_FACTORY_H_
-#define APPS_LEDGER_SRC_TEST_LEDGER_APP_INSTANCE_FACTORY_H_
+#ifndef PERIDOT_BIN_LEDGER_TEST_LEDGER_APP_INSTANCE_FACTORY_H_
+#define PERIDOT_BIN_LEDGER_TEST_LEDGER_APP_INSTANCE_FACTORY_H_
 
 #include <memory>
 
@@ -83,4 +83,4 @@ std::unique_ptr<LedgerAppInstanceFactory> GetLedgerAppInstanceFactory();
 
 }  // namespace test
 
-#endif  // APPS_LEDGER_SRC_TEST_LEDGER_APP_INSTANCE_FACTORY_H_
+#endif  // PERIDOT_BIN_LEDGER_TEST_LEDGER_APP_INSTANCE_FACTORY_H_

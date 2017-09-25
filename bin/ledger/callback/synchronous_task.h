@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CALLBACK_SYNCHRONOUS_TASK_H_
-#define APPS_LEDGER_SRC_CALLBACK_SYNCHRONOUS_TASK_H_
+#ifndef PERIDOT_BIN_LEDGER_CALLBACK_SYNCHRONOUS_TASK_H_
+#define PERIDOT_BIN_LEDGER_CALLBACK_SYNCHRONOUS_TASK_H_
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -20,4 +20,4 @@ bool RunSynchronously(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
                       fxl::TimeDelta timeout);
 }  // namespace callback
 
-#endif  // APPS_LEDGER_SRC_CALLBACK_SYNCHRONOUS_TASK_H_
+#endif  // PERIDOT_BIN_LEDGER_CALLBACK_SYNCHRONOUS_TASK_H_

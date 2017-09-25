@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_SYNC_WATCHER_SET_H_
-#define APPS_LEDGER_SRC_APP_SYNC_WATCHER_SET_H_
+#ifndef PERIDOT_BIN_LEDGER_APP_SYNC_WATCHER_SET_H_
+#define PERIDOT_BIN_LEDGER_APP_SYNC_WATCHER_SET_H_
 
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
@@ -38,4 +38,4 @@ class SyncWatcherSet : public cloud_sync::SyncStateWatcher {
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_SYNC_WATCHER_SET_H_
+#endif  // PERIDOT_BIN_LEDGER_APP_SYNC_WATCHER_SET_H_

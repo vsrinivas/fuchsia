@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _APPS_LEDGER_SRC_STORAGE_IMPL_NUMBER_SERIALIZATION_H_
-#define _APPS_LEDGER_SRC_STORAGE_IMPL_NUMBER_SERIALIZATION_H_
+#ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_NUMBER_SERIALIZATION_H_
+#define PERIDOT_BIN_LEDGER_STORAGE_IMPL_NUMBER_SERIALIZATION_H_
 
 namespace storage {
 
@@ -22,4 +22,4 @@ fxl::StringView SerializeNumber(const I& value) {
 
 }  // namespace storage
 
-#endif  // _APPS_LEDGER_SRC_STORAGE_IMPL_NUMBER_SERIALIZATION_H_
+#endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_NUMBER_SERIALIZATION_H_

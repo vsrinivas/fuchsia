@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CALLBACK_PENDING_OPERATION_H_
-#define APPS_LEDGER_SRC_CALLBACK_PENDING_OPERATION_H_
+#ifndef PERIDOT_BIN_LEDGER_CALLBACK_MANAGED_CONTAINER_H_
+#define PERIDOT_BIN_LEDGER_CALLBACK_MANAGED_CONTAINER_H_
 
 #include <memory>
 #include <utility>
@@ -105,4 +105,4 @@ class ManagedContainer {
 
 }  // namespace callback
 
-#endif  // APPS_LEDGER_SRC_CALLBACK_PENDING_OPERATION_H_
+#endif  // PERIDOT_BIN_LEDGER_CALLBACK_MANAGED_CONTAINER_H_

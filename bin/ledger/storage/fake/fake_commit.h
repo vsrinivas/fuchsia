@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_FAKE_FAKE_COMMIT_H_
-#define APPS_LEDGER_SRC_STORAGE_FAKE_FAKE_COMMIT_H_
+#ifndef PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_COMMIT_H_
+#define PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_COMMIT_H_
 
 #include <memory>
 #include <string>
@@ -44,4 +44,4 @@ class FakeCommit : public Commit {
 }  // namespace fake
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_FAKE_FAKE_COMMIT_H_
+#endif  // PERIDOT_BIN_LEDGER_STORAGE_FAKE_FAKE_COMMIT_H_

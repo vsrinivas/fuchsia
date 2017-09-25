@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_GLUE_CRYPTO_HMAC_H_
-#define APPS_LEDGER_SRC_GLUE_CRYPTO_HMAC_H_
+#ifndef PERIDOT_BIN_LEDGER_GLUE_CRYPTO_HMAC_H_
+#define PERIDOT_BIN_LEDGER_GLUE_CRYPTO_HMAC_H_
 
 #include "lib/fxl/strings/string_view.h"
 
@@ -13,4 +13,4 @@ namespace glue {
 std::string SHA256HMAC(fxl::StringView key, fxl::StringView data);
 }  // namespace glue
 
-#endif  // APPS_LEDGER_SRC_GLUE_CRYPTO_HMAC_H_
+#endif  // PERIDOT_BIN_LEDGER_GLUE_CRYPTO_HMAC_H_

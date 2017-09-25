@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_TEST_BENCHMARK_CONVERGENCE_CONVERGENCE_H_
-#define APPS_LEDGER_SRC_TEST_BENCHMARK_CONVERGENCE_CONVERGENCE_H_
+#ifndef PERIDOT_BIN_LEDGER_TEST_BENCHMARK_CONVERGENCE_CONVERGENCE_H_
+#define PERIDOT_BIN_LEDGER_TEST_BENCHMARK_CONVERGENCE_CONVERGENCE_H_
 
 #include <memory>
 #include <unordered_set>
@@ -73,4 +73,4 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
 }  // namespace benchmark
 }  // namespace test
 
-#endif  // APPS_LEDGER_SRC_TEST_BENCHMARK_CONVERGENCE_CONVERGENCE_H_
+#endif  // PERIDOT_BIN_LEDGER_TEST_BENCHMARK_CONVERGENCE_CONVERGENCE_H_

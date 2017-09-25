@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CALLBACK_CANCELLABLE_HELPER_H_
-#define APPS_LEDGER_SRC_CALLBACK_CANCELLABLE_HELPER_H_
+#ifndef PERIDOT_BIN_LEDGER_CALLBACK_CANCELLABLE_HELPER_H_
+#define PERIDOT_BIN_LEDGER_CALLBACK_CANCELLABLE_HELPER_H_
 
 #include <type_traits>
 
@@ -99,4 +99,4 @@ fxl::RefPtr<callback::Cancellable> CreateDoneCancellable();
 
 }  // namespace callback
 
-#endif  // APPS_LEDGER_SRC_CALLBACK_CANCELLABLE_HELPER_H_
+#endif  // PERIDOT_BIN_LEDGER_CALLBACK_CANCELLABLE_HELPER_H_

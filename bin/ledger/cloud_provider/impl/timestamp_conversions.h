@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_TIMESTAMP_CONVERSIONS_H_
-#define APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_TIMESTAMP_CONVERSIONS_H_
+#ifndef PERIDOT_BIN_LEDGER_CLOUD_PROVIDER_IMPL_TIMESTAMP_CONVERSIONS_H_
+#define PERIDOT_BIN_LEDGER_CLOUD_PROVIDER_IMPL_TIMESTAMP_CONVERSIONS_H_
 
 #include <string>
 
@@ -20,4 +20,4 @@ int64_t BytesToServerTimestamp(const std::string& bytes);
 
 }  // namespace cloud_provider_firebase
 
-#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_TIMESTAMP_CONVERSIONS_H_
+#endif  // PERIDOT_BIN_LEDGER_CLOUD_PROVIDER_IMPL_TIMESTAMP_CONVERSIONS_H_

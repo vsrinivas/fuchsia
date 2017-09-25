@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_CONSTANTS_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_CONSTANTS_H_
+#ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_CONSTANTS_H_
+#define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_CONSTANTS_H_
 
 #include "lib/fxl/strings/string_view.h"
 
@@ -14,4 +14,4 @@ constexpr fxl::StringView kTimestampKey = "timestamp";
 
 }  // namespace cloud_sync
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_CONSTANTS_H_
+#endif  // PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_CONSTANTS_H_

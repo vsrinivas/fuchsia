@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_PUBLIC_PAGE_STORAGE_H_
-#define APPS_LEDGER_SRC_STORAGE_PUBLIC_PAGE_STORAGE_H_
+#ifndef PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_PAGE_STORAGE_H_
+#define PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_PAGE_STORAGE_H_
 
 #include <functional>
 #include <memory>
@@ -192,4 +192,4 @@ class PageStorage {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_PUBLIC_PAGE_STORAGE_H_
+#endif  // PERIDOT_BIN_LEDGER_STORAGE_PUBLIC_PAGE_STORAGE_H_

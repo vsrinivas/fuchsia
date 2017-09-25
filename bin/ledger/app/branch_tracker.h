@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_BRANCH_TRACKER_H_
-#define APPS_LEDGER_SRC_APP_BRANCH_TRACKER_H_
+#ifndef PERIDOT_BIN_LEDGER_APP_BRANCH_TRACKER_H_
+#define PERIDOT_BIN_LEDGER_APP_BRANCH_TRACKER_H_
 
 #include <memory>
 
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
@@ -14,7 +15,6 @@
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class PageManager;
@@ -98,4 +98,4 @@ class BranchTracker : public storage::CommitWatcher {
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_BRANCH_TRACKER_H_
+#endif  // PERIDOT_BIN_LEDGER_APP_BRANCH_TRACKER_H_

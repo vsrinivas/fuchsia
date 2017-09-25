@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_TEST_CLOUD_SERVER_SERVER_H_
-#define APPS_LEDGER_SRC_TEST_CLOUD_SERVER_SERVER_H_
+#ifndef PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_SERVER_H_
+#define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_SERVER_H_
 
 #include <unordered_map>
 
@@ -55,4 +55,4 @@ class Server {
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_TEST_CLOUD_SERVER_SERVER_H_
+#endif  // PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_SERVER_H_
