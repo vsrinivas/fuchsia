@@ -76,7 +76,12 @@ func (f *Filesystem) Mount(path string) error {
 
 // Unmount detaches the filesystem from a previously mounted path. If mount was not previously called or successful, this will panic.
 func (f *Filesystem) Unmount() {
-	syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).IoctlSetHandle(fdio.IoctlVFSUnmountFS, f.mountInfo.serveChannel.Handle)
+	handles, err := syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
+	if err == nil {
+		if len(handles) >= 1 {
+			syscall.FDIOForFD(int(handles[0])).Ioctl(fdio.IoctlVFSUnmountFS, nil, nil)
+		}
+	}
 	// TODO(raggi): log errors?
 	f.mountInfo.serveChannel.Close()
 	f.mountInfo.parentFd.Close()

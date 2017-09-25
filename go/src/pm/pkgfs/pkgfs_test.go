@@ -42,19 +42,28 @@ func tmain(m *testing.M) int {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(blobstorePath)
+	defer func() {
+		println("removing blobstore path")
+		os.RemoveAll(blobstorePath)
+	}()
 
 	indexPath, err := ioutil.TempDir("", "pkgfs-test-index")
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(indexPath)
+	defer func() {
+		println("removing index path")
+		os.RemoveAll(indexPath)
+	}()
 
 	rd, err := ramdisk.New(10 * 1024 * 1024)
 	if err != nil {
 		panic(err)
 	}
-	defer rd.Destroy()
+	defer func() {
+		println("destroying ramdisk")
+		rd.Destroy()
+	}()
 
 	if err := rd.MkfsBlobstore(); err != nil {
 		panic(err)
@@ -63,7 +72,10 @@ func tmain(m *testing.M) int {
 	if err := rd.MountBlobstore(blobstorePath); err != nil {
 		panic(err)
 	}
-	defer rd.Umount(blobstorePath)
+	defer func() {
+		println("unmounting blobstore")
+		rd.Umount(blobstorePath)
+	}()
 
 	fmt.Printf("blobstore mounted at %s\n", blobstorePath)
 
@@ -71,7 +83,10 @@ func tmain(m *testing.M) int {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(d)
+	defer func() {
+		println("removing pkgfs mount dir")
+		os.RemoveAll(d)
+	}()
 
 	pkgfs, err := New(indexPath, blobstorePath)
 	if err != nil {
@@ -80,14 +95,20 @@ func tmain(m *testing.M) int {
 	if err := pkgfs.Mount(d); err != nil {
 		panic(err)
 	}
+	defer func() {
+		println("unmounting pkgfs")
+		pkgfs.Unmount()
+	}()
 	pkgfsMount = d
 
 	return m.Run()
-
 }
 
 func TestMain(m *testing.M) {
-	os.Exit(tmain(m))
+	println("starting tests")
+	v := tmain(m)
+	println("cleaned up tests")
+	os.Exit(v)
 }
 
 func TestAddFile(t *testing.T) {
