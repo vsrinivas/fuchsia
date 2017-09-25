@@ -20,6 +20,8 @@ executable("bin") {
     "fidl_helpers.h",
     "low_energy_central_fidl_impl.cc",
     "low_energy_central_fidl_impl.h",
+    "low_energy_peripheral_fidl_impl.cc",
+    "low_energy_peripheral_fidl_impl.h",
     "main.cc",
   ]
 

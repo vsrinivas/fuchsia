@@ -10,6 +10,7 @@
 #include "garnet/bin/bluetooth/adapter_manager.h"
 #include "garnet/bin/bluetooth/adapter_manager_fidl_impl.h"
 #include "garnet/bin/bluetooth/low_energy_central_fidl_impl.h"
+#include "garnet/bin/bluetooth/low_energy_peripheral_fidl_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/bluetooth/fidl/control.fidl.h"
 #include "lib/fxl/macros.h"
@@ -43,6 +44,11 @@ class App final : public AdapterManager::Observer {
   void OnLowEnergyCentralRequest(
       ::fidl::InterfaceRequest<::bluetooth::low_energy::Central> request);
 
+  // Called when there is an interface request for the low_energy::Peripheral
+  // FIDL service.
+  void OnLowEnergyPeripheralRequest(
+      ::fidl::InterfaceRequest<::bluetooth::low_energy::Peripheral> request);
+
   // Called when a AdapterManagerFidlImpl that we own notifies a connection
   // error handler.
   void OnAdapterManagerFidlImplDisconnected(
@@ -52,6 +58,11 @@ class App final : public AdapterManager::Observer {
   // error handler.
   void OnLowEnergyCentralFidlImplDisconnected(
       LowEnergyCentralFidlImpl* low_energy_central_fidl_impl);
+
+  // Called when a LowEnergyPeripheralFidlImpl that we own notifies its
+  // connection error handler.
+  void OnLowEnergyPeripheralFidlImplDisconnected(
+      LowEnergyPeripheralFidlImpl* low_energy_peripheral_fidl_impl);
 
   // Provides access to the environment. This is used to publish outgoing
   // services.
@@ -70,6 +81,11 @@ class App final : public AdapterManager::Observer {
   // vended out.
   std::vector<std::unique_ptr<LowEnergyCentralFidlImpl>>
       low_energy_central_fidl_impls_;
+
+  // The list of low_energy::Peripheral FIDL interface handles that have been
+  // vended out.
+  std::vector<std::unique_ptr<LowEnergyPeripheralFidlImpl>>
+      low_energy_peripheral_fidl_impls_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
