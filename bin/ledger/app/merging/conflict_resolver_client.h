@@ -11,6 +11,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/callback/operation_serializer.h"
 #include "peridot/bin/ledger/callback/waiter.h"
@@ -43,19 +44,22 @@ class ConflictResolverClient : public MergeResultProvider {
           callback::Waiter<storage::Status, storage::ObjectDigest>>& waiter);
   void Finalize(Status status);
 
-  void GetDiff(
-      const storage::Commit& commit,
-      fidl::Array<uint8_t> token,
-      const std::function<void(Status, PageChangePtr, fidl::Array<uint8_t>)>&
-          callback);
+  // Performs a diff of the given type on the conflict.
+  void GetDiff(diff_utils::DiffType type,
+               fidl::Array<uint8_t> token,
+               const std::function<void(Status,
+                                        fidl::Array<DiffEntryPtr>,
+                                        fidl::Array<uint8_t>)>& callback);
 
   // MergeResultProvider:
-  void GetLeftDiff(fidl::Array<uint8_t> token,
-                   const GetLeftDiffCallback& callback) override;
-  void GetRightDiff(fidl::Array<uint8_t> token,
-                    const GetRightDiffCallback& callback) override;
+  void GetFullDiff(fidl::Array<uint8_t> token,
+                   const GetFullDiffCallback& callback) override;
+  void GetConflictingDiff(fidl::Array<uint8_t> token,
+                          const GetConflictingDiffCallback& callback) override;
   void Merge(fidl::Array<MergedValuePtr> merged_values,
              const MergeCallback& callback) override;
+  void MergeNonConflictingEntries(
+      const MergeNonConflictingEntriesCallback& callback) override;
   void Done(const DoneCallback& callback) override;
 
   // Checks whether this ConflictResolverClient is not cancelled and the storage
@@ -74,6 +78,9 @@ class ConflictResolverClient : public MergeResultProvider {
 
   std::function<void(Status)> callback_;
 
+  // |has_merged_values_| is true when |Merge| has been called to set some
+  // values. It is used as an optimization in |MergeNonConflictingEntries|.
+  bool has_merged_values_ = false;
   std::unique_ptr<storage::Journal> journal_;
   // |in_client_request_| is true when waiting for the callback of the
   // ConflictResolver.Resolve call. When this merge is cancelled, we check this

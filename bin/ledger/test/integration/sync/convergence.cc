@@ -147,37 +147,24 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
                    result_provider) override {
     ledger::MergeResultProviderPtr merge_result_provider =
         ledger::MergeResultProviderPtr::Create(std::move(result_provider));
-    auto waiter =
-        callback::Waiter<ledger::Status, ledger::PageChangePtr>::Create(
-            ledger::Status::OK);
-    merge_result_provider->GetLeftDiff(
-        nullptr, [callback = waiter->NewCallback()](
-                     ledger::Status status, ledger::PageChangePtr change,
-                     fidl::Array<uint8_t> next_token) {
-          callback(status, std::move(change));
-        });
-    merge_result_provider->GetRightDiff(
-        nullptr, [callback = waiter->NewCallback()](
-                     ledger::Status status, ledger::PageChangePtr change,
-                     fidl::Array<uint8_t> next_token) {
-          callback(status, std::move(change));
-        });
-    waiter->Finalize(fxl::MakeCopyable(
-        [merge_result_provider = std::move(merge_result_provider)](
-            ledger::Status status,
-            std::vector<ledger::PageChangePtr> changes) mutable {
+    ledger::MergeResultProvider* merge_result_provider_ptr =
+        merge_result_provider.get();
+    merge_result_provider_ptr->GetFullDiff(
+        nullptr,
+        fxl::MakeCopyable([merge_result_provider =
+                               std::move(merge_result_provider)](
+                              ledger::Status status,
+                              fidl::Array<ledger::DiffEntryPtr> changes,
+                              fidl::Array<uint8_t> next_token) mutable {
           ASSERT_EQ(ledger::Status::OK, status);
-          ASSERT_EQ(2u, changes.size());
-
-          EXPECT_EQ(convert::ExtendedStringView(changes[0]->changes[0]->key),
-                    convert::ExtendedStringView(changes[1]->changes[0]->key));
+          ASSERT_EQ(1u, changes.size());
 
           double d1, d2;
-          EXPECT_TRUE(VmoToDouble(changes[0]->changes[0]->value, &d1));
-          EXPECT_TRUE(VmoToDouble(changes[1]->changes[0]->value, &d2));
+          EXPECT_TRUE(VmoToDouble(changes[0]->left->value, &d1));
+          EXPECT_TRUE(VmoToDouble(changes[0]->right->value, &d2));
           double new_value = (4 * d1 + d2) / 3;
           ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
-          merged_value->key = std::move(changes[0]->changes[0]->key);
+          merged_value->key = std::move(changes[0]->key);
           merged_value->source = ledger::ValueSource::NEW;
           merged_value->new_value = ledger::BytesOrReference::New();
           merged_value->new_value->set_bytes(DoubleToArray(new_value));

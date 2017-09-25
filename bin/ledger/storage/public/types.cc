@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/lib/util/ptr.h"
 
 namespace storage {
 namespace {
@@ -12,17 +13,6 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& ptr) {
     return os << *ptr;
   }
   return os;
-}
-
-template <typename T>
-bool EqualPtr(const std::unique_ptr<T>& lhs, const std::unique_ptr<T>& rhs) {
-  if (bool(lhs) != bool(rhs)) {
-    return false;
-  }
-  if (!lhs && !rhs) {
-    return true;
-  }
-  return *lhs == *rhs;
 }
 }  // namespace
 
@@ -71,8 +61,9 @@ std::ostream& operator<<(std::ostream& os, const EntryChange& e) {
 }
 
 bool operator==(const ThreeWayChange& lhs, const ThreeWayChange& rhs) {
-  return EqualPtr(lhs.base, rhs.base) && EqualPtr(lhs.left, rhs.left) &&
-         EqualPtr(lhs.right, rhs.right);
+  return util::EqualPtr(lhs.base, rhs.base) &&
+         util::EqualPtr(lhs.left, rhs.left) &&
+         util::EqualPtr(lhs.right, rhs.right);
 }
 
 bool operator!=(const ThreeWayChange& lhs, const ThreeWayChange& rhs) {

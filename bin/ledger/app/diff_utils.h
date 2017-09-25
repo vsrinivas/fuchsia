@@ -20,6 +20,13 @@ enum class PaginationBehavior {
   BY_SIZE,
 };
 
+// Type of three-way diff performed. If |CONFLICTING| is selected, only
+// conflicting keys are returned.
+enum class DiffType {
+  FULL,
+  CONFLICTING,
+};
+
 // Asynchronously creates a PageChange representing the diff of the two provided
 // commits, starting from the given |min_key|. If |pagination_behavior| is
 // |NO_PAGINATION|, it provides all results. If |pagination_behavior| is
@@ -37,6 +44,20 @@ void ComputePageChange(
     std::string min_key,
     PaginationBehavior pagination_behavior,
     std::function<void(Status, std::pair<PageChangePtr, std::string>)>
+        callback);
+
+// Asynchronously computes the three-way diff between a base commit and two
+// other commits, starting from the given |min_key|.
+void ComputeThreeWayDiff(
+    storage::PageStorage* storage,
+    const storage::Commit& base,
+    const storage::Commit& left,
+    const storage::Commit& right,
+    std::string prefix_key,
+    std::string min_key,
+    DiffType diff_type,
+    std::function<void(Status,
+                       std::pair<fidl::Array<DiffEntryPtr>, std::string>)>
         callback);
 
 }  // namespace diff_utils

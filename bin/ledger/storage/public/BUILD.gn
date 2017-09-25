@@ -34,6 +34,7 @@ source_set("public") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/convert",
+    "//peridot/lib/util:ptr",
     "//zircon/system/ulib/zx",
   ]
 

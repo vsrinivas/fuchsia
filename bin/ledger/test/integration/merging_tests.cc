@@ -9,6 +9,8 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/sized_vmo.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -62,23 +64,6 @@ class Watcher : public ledger::PageWatcher {
   fxl::Closure change_callback_;
 };
 
-ledger::PageChangePtr NewPageChange() {
-  ledger::PageChangePtr change = ledger::PageChange::New();
-  change->changes = fidl::Array<ledger::EntryPtr>::New(0);
-  change->deleted_keys = fidl::Array<fidl::Array<uint8_t>>::New(0);
-  return change;
-}
-
-void AppendChanges(ledger::PageChangePtr* base, ledger::PageChangePtr changes) {
-  (*base)->timestamp = changes->timestamp;
-  for (size_t i = 0; i < changes->changes.size(); ++i) {
-    (*base)->changes.push_back(std::move(changes->changes[i]));
-  }
-  for (size_t i = 0; i < changes->deleted_keys.size(); ++i) {
-    (*base)->deleted_keys.push_back(std::move(changes->deleted_keys[i]));
-  }
-}
-
 enum class MergeType {
   SIMPLE,
   MULTIPART,
@@ -113,39 +98,37 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
           result_provider(ledger::MergeResultProviderPtr::Create(
               std::move(result_provider))) {}
 
-    // Returns the changes from the left and right branch.
-    ::testing::AssertionResult GetDiff(ledger::PageChangePtr* change_left,
-                                       ledger::PageChangePtr* change_right) {
-      return GetDiff(change_left, change_right, 0);
-    }
-
-    // Returns the changes from the left and right branch and makes sure that at
+    // Returns the full list of changes.
+    // Returns the full list of changes between branches and makes sure that at
     // least |min_queries| of partial results are returned before retrieving the
     // complete result for the left and for the right changes.
-    ::testing::AssertionResult GetDiff(ledger::PageChangePtr* change_left,
-                                       ledger::PageChangePtr* change_right,
-                                       int min_queries) {
-      *change_left = NewPageChange();
-      *change_right = NewPageChange();
-      ::testing::AssertionResult left_result =
-          GetDiff(nullptr, change_left, 0, min_queries,
-                  [this](fidl::Array<uint8_t> token,
-                         const std::function<void(
-                             ledger::Status, ledger::PageChangePtr change,
-                             fidl::Array<uint8_t> next_token)>& callback) {
-                    result_provider->GetLeftDiff(std::move(token), callback);
-                  });
-      if (!left_result) {
-        return left_result;
-      }
-      return GetDiff(nullptr, change_right, 0, min_queries,
-                     [this](fidl::Array<uint8_t> token,
-                            const std::function<void(
-                                ledger::Status, ledger::PageChangePtr change,
-                                fidl::Array<uint8_t> next_token)>& callback) {
-                       result_provider->GetRightDiff(std::move(token),
-                                                     callback);
-                     });
+    ::testing::AssertionResult GetFullDiff(
+        fidl::Array<ledger::DiffEntryPtr>* entries,
+        int min_queries = 0) {
+      return GetDiff(
+          nullptr,
+          [this](fidl::Array<uint8_t> token,
+                 std::function<void(ledger::Status,
+                                    fidl::Array<ledger::DiffEntryPtr>,
+                                    fidl::Array<uint8_t>)> callback) mutable {
+            result_provider->GetFullDiff(std::move(token), std::move(callback));
+          },
+          entries, 0, min_queries);
+    }
+
+    ::testing::AssertionResult GetConflictingDiff(
+        fidl::Array<ledger::DiffEntryPtr>* entries,
+        int min_queries = 0) {
+      return GetDiff(
+          nullptr,
+          [this](fidl::Array<uint8_t> token,
+                 std::function<void(ledger::Status,
+                                    fidl::Array<ledger::DiffEntryPtr>,
+                                    fidl::Array<uint8_t>)> callback) mutable {
+            result_provider->GetConflictingDiff(std::move(token),
+                                                std::move(callback));
+          },
+          entries, 0, min_queries);
     }
 
     // Resolves the conflict by sending the given merge results. If
@@ -192,36 +175,53 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
       return ::testing::AssertionSuccess();
     }
 
+    ::testing::AssertionResult MergeNonConflictingEntries() {
+      ledger::Status status;
+      result_provider->MergeNonConflictingEntries(
+          callback::Capture([] {}, &status));
+      if (!result_provider.WaitForIncomingResponse()) {
+        return ::testing::AssertionFailure()
+               << "MergeNonConflictingEntries failed.";
+      }
+      if (status != ledger::Status::OK) {
+        return ::testing::AssertionFailure()
+               << "MergeNonConflictingEntries failed with status " << status
+               << ".";
+      }
+      return ::testing::AssertionSuccess();
+    }
+
    private:
     ::testing::AssertionResult GetDiff(
         fidl::Array<uint8_t> token,
-        ledger::PageChangePtr* page_change,
-        int num_queries,
-        int min_queries,
         std::function<void(fidl::Array<uint8_t>,
-                           const std::function<void(ledger::Status,
-                                                    ledger::PageChangePtr,
-                                                    fidl::Array<uint8_t>)>&)>
-            get_left_or_right_diff) {
+                           std::function<void(ledger::Status,
+                                              fidl::Array<ledger::DiffEntryPtr>,
+                                              fidl::Array<uint8_t>)>)> get_diff,
+        fidl::Array<ledger::DiffEntryPtr>* entries,
+        int num_queries,
+        int min_queries) {
       ledger::Status status;
       fidl::Array<uint8_t> next_token;
       do {
-        get_left_or_right_diff(
+        get_diff(
             std::move(token),
-            [&status, page_change, &next_token](ledger::Status s,
-                                                ledger::PageChangePtr change,
-                                                fidl::Array<uint8_t> next) {
+            [&status, entries, &next_token](
+                ledger::Status s, fidl::Array<ledger::DiffEntryPtr> changes,
+                fidl::Array<uint8_t> next) {
               status = s;
-              AppendChanges(page_change, std::move(change));
+              for (auto& change : changes) {
+                entries->push_back(std::move(change));
+              }
               next_token = std::move(next);
             });
         if (!result_provider.WaitForIncomingResponse()) {
-          return ::testing::AssertionFailure() << "GetLeftDiff failed.";
+          return ::testing::AssertionFailure() << "GetDiff failed.";
         }
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
           return ::testing::AssertionFailure()
-                 << "GetLeftDiff failed with status " << status;
+                 << "GetDiff failed with status " << status;
         }
         if (!next_token != (status == ledger::Status::OK)) {
           return ::testing::AssertionFailure()
@@ -288,11 +288,11 @@ class DummyConflictResolver : public ledger::ConflictResolver {
 
  private:
   // ledger::ConflictResolver:
-  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
+  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> /*left_version*/,
+               fidl::InterfaceHandle<ledger::PageSnapshot> /*right_version*/,
+               fidl::InterfaceHandle<ledger::PageSnapshot> /*common_version*/,
                fidl::InterfaceHandle<ledger::MergeResultProvider>
-                   result_provider) override {
+               /*result_provider*/) override {
     // Do nothing.
   }
 
@@ -356,31 +356,66 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   fxl::TimeDelta response_delay_;
 };
 
-::testing::AssertionResult ChangesMatch(
-    std::vector<std::string> expected_keys,
-    std::vector<std::string> expected_values,
-    const fidl::Array<ledger::EntryPtr>& found_entries) {
-  FXL_DCHECK(expected_keys.size() == expected_values.size());
-  if (found_entries.size() != expected_keys.size()) {
+// Optional is an object that optionally contains another object.
+template <typename T>
+class Optional {
+ public:
+  Optional() : obj_() {}
+  explicit Optional(T obj) : valid_(true), obj_(std::move(obj)) {}
+
+  constexpr const T& operator*() const& { return obj_; }
+
+  constexpr const T* operator->() const { return &obj_; }
+
+  constexpr explicit operator bool() const { return valid_; }
+
+ private:
+  bool const valid_ = false;
+  T const obj_;
+};
+
+::testing::AssertionResult ValueMatch(const std::string& type,
+                                      const ledger::ValuePtr& value,
+                                      const Optional<std::string>& expected) {
+  if (expected) {
+    if (!value) {
+      return ::testing::AssertionFailure()
+             << type << " has no value but expected \"" << *expected << "\".";
+    }
+    if (ToString(value->value) != *expected) {
+      return ::testing::AssertionFailure()
+             << type << " has value \"" << ToString(value->value)
+             << "\" but expected \"" << *expected << "\".";
+    }
+  } else if (!expected && value) {
     return ::testing::AssertionFailure()
-           << "Wrong changes size. Expected " << expected_keys.size()
-           << " but found " << found_entries.size();
-  }
-  for (size_t i = 0; i < expected_keys.size(); ++i) {
-    if (expected_keys[i] !=
-        convert::ExtendedStringView(found_entries[i]->key)) {
-      return ::testing::AssertionFailure()
-             << "Expected key \"" << expected_keys[i] << "\" but found \""
-             << convert::ExtendedStringView(found_entries[i]->key) << "\"";
-    }
-    std::string found_entry = ToString(found_entries[i]->value);
-    if (expected_values[i] != found_entry) {
-      return ::testing::AssertionFailure()
-             << "Expected value \"" << expected_values[i] << "\" but found \""
-             << found_entry << "\"";
-    }
+           << type << " has value \"" << ToString(value->value)
+           << "\" but expected no value.";
   }
   return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult ChangeMatch(std::string expected_key,
+                                       Optional<std::string> expected_base,
+                                       Optional<std::string> expected_left,
+                                       Optional<std::string> expected_right,
+                                       const ledger::DiffEntryPtr& entry) {
+  convert::ExtendedStringView found_key(entry->key);
+  if (expected_key != convert::ExtendedStringView(found_key)) {
+    return ::testing::AssertionFailure()
+           << "Expected key \"" << expected_key << "\" but found \""
+           << found_key << "\"";
+  }
+  ::testing::AssertionResult result =
+      ValueMatch("Base", entry->base, expected_base);
+  if (!result) {
+    return result;
+  }
+  result = ValueMatch("Left", entry->left, expected_left);
+  if (!result) {
+    return result;
+  }
+  return ValueMatch("Right", entry->right, expected_right);
 }
 
 TEST_F(MergingIntegrationTest, Merging) {
@@ -670,19 +705,22 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  ledger::PageChangePtr change_left;
-  ledger::PageChangePtr change_right;
-  ASSERT_TRUE(resolver_impl->requests[0].GetDiff(&change_left, &change_right));
+  fidl::Array<ledger::DiffEntryPtr> changes;
+  ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
-  // Left change is the most recent, so the one made on |page2|.
-  EXPECT_TRUE(ChangesMatch(
-      std::vector<std::string>({"email", "phone"}),
-      std::vector<std::string>({"alice@example.org", "0123456789"}),
-      change_left->changes));
-  // Right change comes from |page1|.
-  EXPECT_TRUE(ChangesMatch(std::vector<std::string>({"city", "name"}),
-                           std::vector<std::string>({"Paris", "Alice"}),
-                           change_right->changes));
+  EXPECT_EQ(4u, changes.size());
+  EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(),
+                          Optional<std::string>(),
+                          Optional<std::string>("Paris"), changes[0]));
+  EXPECT_TRUE(ChangeMatch("email", Optional<std::string>(),
+                          Optional<std::string>("alice@example.org"),
+                          Optional<std::string>(), changes[1]));
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
+                          Optional<std::string>(),
+                          Optional<std::string>("Alice"), changes[2]));
+  EXPECT_TRUE(ChangeMatch("phone", Optional<std::string>(),
+                          Optional<std::string>("0123456789"),
+                          Optional<std::string>(), changes[3]));
 
   // Common ancestor is empty.
   ledger::PageSnapshotPtr snapshot = ledger::PageSnapshotPtr::Create(
@@ -796,17 +834,23 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  ledger::PageChangePtr change_left;
-  ledger::PageChangePtr change_right;
-  ASSERT_TRUE(
-      resolver_impl->requests[0].GetDiff(&change_left, &change_right, 1));
+  fidl::Array<ledger::DiffEntryPtr> changes;
+  ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes, 1));
 
-  std::vector<std::string> values;
-  values.resize(N, "value");
-  // Left change is the most recent, so the one made on |page2|.
-  EXPECT_TRUE(ChangesMatch(page2_keys, values, change_left->changes));
-  // Right change comes from |page1|.
-  EXPECT_TRUE(ChangesMatch(page1_keys, values, change_right->changes));
+  EXPECT_EQ(2u * N, changes.size());
+  // Keys are in order, so we expect to have all the page1_key_* keys before the
+  // page2_key_* keys.
+  for (int i = 0; i < N; ++i) {
+    // Left change is the most recent, so the one made on |page2|; right change
+    // comes from |page1|.
+    EXPECT_TRUE(ChangeMatch(page1_keys[i], Optional<std::string>(),
+                            Optional<std::string>(),
+                            Optional<std::string>("value"), changes[i]));
+
+    EXPECT_TRUE(ChangeMatch(page2_keys[i], Optional<std::string>(),
+                            Optional<std::string>("value"),
+                            Optional<std::string>(), changes[N + i]));
+  }
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
@@ -1333,18 +1377,18 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  ledger::PageChangePtr change_left;
-  ledger::PageChangePtr change_right;
-  ASSERT_TRUE(resolver_impl->requests[0].GetDiff(&change_left, &change_right));
+  fidl::Array<ledger::DiffEntryPtr> changes;
+  ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
+  EXPECT_EQ(2u, changes.size());
   // Left change is the most recent, so the one made on |page2|.
-  EXPECT_TRUE(ChangesMatch(std::vector<std::string>({"city", "name"}),
-                           std::vector<std::string>({"San Francisco", "Alice"}),
-                           change_left->changes));
-  // Right change comes from |page1|.
-  EXPECT_TRUE(ChangesMatch(std::vector<std::string>({"city"}),
-                           std::vector<std::string>({"Paris"}),
-                           change_right->changes));
+  EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(),
+                          Optional<std::string>("San Francisco"),
+                          Optional<std::string>("Paris"), changes[0]));
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
+                          Optional<std::string>("Alice"),
+                          Optional<std::string>(), changes[1]));
+
   // Common ancestor is empty.
   ledger::PageSnapshotPtr snapshot = ledger::PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
@@ -1729,6 +1773,114 @@ TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
   // Now conflict_resolved_callback can run.
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(conflicts_resolved_callback_called);
+}
+
+TEST_F(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
+  auto instance = NewLedgerAppInstance();
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  ledger::PagePtr page1 = instance->GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
+
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(
+      convert::ToArray("city"), convert::ToArray("Paris"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Bob"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(
+      convert::ToArray("phone"), convert::ToArray("0123456789"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl->requests.size());
+
+  fidl::Array<ledger::DiffEntryPtr> changes;
+  ASSERT_TRUE(resolver_impl->requests[0].GetConflictingDiff(&changes));
+
+  EXPECT_EQ(1u, changes.size());
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
+                          Optional<std::string>("Bob"),
+                          Optional<std::string>("Alice"), changes[0]));
+
+  // Prepare the merged values
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
+  {
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
+    merged_value->key = convert::ToArray("name");
+    merged_value->source = ledger::ValueSource::RIGHT;
+    merged_values.push_back(std::move(merged_value));
+  }
+  ASSERT_TRUE(resolver_impl->requests[0].MergeNonConflictingEntries());
+
+  // Watch for the change.
+  ledger::PageWatcherPtr watcher_ptr;
+  Watcher watcher(GetProxy(&watcher_ptr),
+                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  ledger::PageSnapshotPtr snapshot2;
+  page1->GetSnapshot(
+      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
+
+  // Wait for the watcher to be called.
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  fidl::Array<ledger::EntryPtr> final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
+  ASSERT_EQ(3u, final_entries.size());
+  EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
+  EXPECT_EQ("Paris", ToString(final_entries[0]->value));
+  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
+  EXPECT_EQ("Alice", ToString(final_entries[1]->value));
+  EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2]->key));
+  EXPECT_EQ("0123456789", ToString(final_entries[2]->value));
 }
 
 }  // namespace

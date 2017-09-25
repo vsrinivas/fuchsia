@@ -205,7 +205,6 @@ struct InlinedEntry {
   Priority priority;
 };
 
-
 // The content of a page at a given time. Closing the connection to a |Page|
 // interface closes all |PageSnapshot| interfaces it created. The contents
 // provided by this interface are limited to the prefix provided to the
@@ -353,9 +352,12 @@ union BytesOrReference {
   Reference reference;
 };
 
-// Source of the value used to resolve a conflict. The "left" source is used by
-// default in merging, so the value must be omitted entirely if chosen.
-// |DELETE| deletes the key. Used by |MergedValue|.
+// Source of the value used to resolve a conflict.
+//
+// |DELETE| deletes the key; |NEW| creates a new value; |RIGHT|
+// selects the value from the right branch. If no value is sent, the left
+// branch is selected.
+// Used by |MergedValue|.
 enum ValueSource {
   RIGHT = 0,
   NEW,
@@ -363,11 +365,34 @@ enum ValueSource {
 };
 
 // A change in the page. If |source| is set to |NEW|, |new_value| must be set
-// to the new value. If |source| is not |NEW|, |new_value| is ignored.
+// to the new value. If |source| is not |NEW|, |new_value| and |priority| are
+// ignored.
 struct MergedValue {
   array<uint8> key;
   ValueSource source;
   BytesOrReference? new_value;
+  Priority priority;
+};
+
+// An entry in a diff, as returned by |MergeResultProvider|.
+//
+// If |base|, |left| or |right| are NULL, this means that the corresponding key
+// was not present in the base, left or right (respectively) branch of the
+// page.
+struct DiffEntry {
+  array<uint8> key;
+
+  Value? base;
+  Value? left;
+  Value? right;
+};
+
+// A value in a DiffEntry.
+//
+// If the value is LAZY and is not present locally, |value| will be NULL. The
+// value can be retrieved using a |Fetch()| call on a corresponding snapshot.
+struct Value {
+  fsl.SizedVmoTransport? value;
   Priority priority;
 };
 
@@ -376,33 +401,51 @@ struct MergedValue {
 // all changes have been sent, |Done()| should be called to mark the end of
 // incoming merge changes.
 interface MergeResultProvider {
-  // |GetLeftDiff| and |GetRightDiff| return the set of all key/value pairs that
+  // |GetFullDiff| returns the set of all key/value pairs (entries) that
   // have been modified between the common ancestor (see
-  // |ConflictResolver.Resolve()|) and the left and right branches respectively.
+  // |ConflictResolver.Resolve()|) and the left and right branches.
   //
   // Values of |LAZY| keys may not be present on the device. In that case,
-  // |Entry| objects inside the PageChange objects will have a NULL |value|
-  // field. If needed, |left| and |right|, provided by the
-  // |ConflictResolver.Resolve()| method can be used by clients to Fetch these
-  // values.
+  // |value| VMOs inside the Value objects will have a NULL |value| field. If
+  // needed, |left| and |right|, provided by the |ConflictResolver.Resolve()|
+  // method can be used by clients to Fetch these values. If a key is not
+  // present at all in one of the branches, its corresponding Value object will
+  // be NULL.
   //
-  // The first call to get the |PageChange|s should be done using a NULL
+  // The first call to get the |DiffEntry|s should be done using a NULL
   // token. If the result does not fit in a single fidl message, |status| will
   // be |PARTIAL_RESULT| and |next_token| will have a non-NULL value, which can
-  // be used to retrieve the rest of the results by calling |GetLeftDiff()|
-  // (or |GetRightDiff()|) with that token.
-  GetLeftDiff(array<uint8>? token)
-      => (Status status, PageChange? change, array<uint8>? next_token);
+  // be used to retrieve the rest of the results by calling |GetFullDiff()|
+  // with that token.
+  GetFullDiff(array<uint8>? token)
+      => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
 
-  GetRightDiff(array<uint8>? token)
-      => (Status status, PageChange? change, array<uint8>? next_token);
+  // |GetConflictingDiff| returns the set of all key/value pairs that were
+  // modified on both sides to different values, or deleted on one side and
+  // modified on the other.
+  //
+  // It behaves like |GetFullDiff| otherwise.
+  GetConflictingDiff(array<uint8>? token)
+      => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
 
   // Once the result of the merge has been computed |Merge()| can be called with
   // all changes that resolve this conflict. If the result does not fit in a
   // single fidl message, |Merge()| can be called multiple times. If any of the
   // |Merge()| calls fails, i.e. |status| is not |OK|, all following calls will
   // fail with the same error.
+  //
+  // For all keys for which no merged value has been set (either here or
+  // through |MergeNonConflictingEntries()| below), the left value will be
+  // used. It is thus not necessary to send a MergedValue with a |LEFT| value
+  // source, unless to overwrite a previous MergedValue.
   Merge(array<MergedValue> merge_changes) => (Status status);
+
+  // Automatically merges all non conflicting entries (entries that are
+  // modified on one side only or identical on both sides). This is equivalent
+  // to sending, through |Merge()|, a MergedValue with a |RIGHT| ValueSource
+  // for all non-conflicting keys modified on the right side. Conflicting
+  // entries can still be merged using the |Merge()| method.
+  MergeNonConflictingEntries() => (Status status);
 
   // Marks the end of merge changes to resolve this conflict. After |Done()| is
   // called |MergeResultProvider| interface cannot be used any more.
@@ -427,7 +470,7 @@ interface ConflictResolver {
   // page should be sent. |result_provider| can also be used to retrieve the set
   // of differences, i.e. conflicting keys, between the two versions.
   Resolve(PageSnapshot left, PageSnapshot right, PageSnapshot? common_version,
-          MergeResultProvider result_provider);
+          MergeResultProvider new_result_provider);
 };
 
 // Synchronization state.

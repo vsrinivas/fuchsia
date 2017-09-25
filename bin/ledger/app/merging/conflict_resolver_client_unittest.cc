@@ -190,5 +190,157 @@ TEST_F(ConflictResolverClientTest, Error) {
   EXPECT_EQ(2u, conflict_resolver_impl.requests.size());
 }
 
+TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
+  // Set up conflict.
+  CreateCommit(storage::kFirstPageCommitId,
+               AddKeyValueToJournal("key1", "value1"));
+  CreateCommit(storage::kFirstPageCommitId,
+               AddKeyValueToJournal("key2", "value2"));
+
+  // Set the resolver.
+  ConflictResolverPtr conflict_resolver_ptr;
+  ConflictResolverImpl conflict_resolver_impl(
+      conflict_resolver_ptr.NewRequest());
+  std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
+      std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
+
+  merge_resolver_->SetMergeStrategy(std::move(custom_merge_strategy));
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_FALSE(merge_resolver_->IsEmpty());
+  EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
+
+  Status status;
+  conflict_resolver_impl.requests[0]
+      .result_provider_ptr->MergeNonConflictingEntries(
+          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  conflict_resolver_impl.requests[0].result_provider_ptr->Done(
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  storage::Status storage_status;
+  std::vector<storage::CommitId> ids;
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &storage_status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+  // The merge happened.
+  EXPECT_EQ(1u, ids.size());
+
+  // Let's verify the contents.
+  std::unique_ptr<const storage::Commit> commit;
+  page_storage_->GetCommit(
+      ids[0], callback::Capture(MakeQuitTask(), &storage_status, &commit));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+
+  storage::Entry key1_entry, key2_entry;
+  page_storage_->GetEntryFromCommit(
+      *commit, "key1",
+      callback::Capture(MakeQuitTask(), &storage_status, &key1_entry));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+
+  page_storage_->GetEntryFromCommit(
+      *commit, "key2",
+      callback::Capture(MakeQuitTask(), &storage_status, &key2_entry));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+
+  std::string value1, value2;
+  GetValue(key1_entry.object_digest, &value1);
+  EXPECT_EQ("value1", value1);
+  GetValue(key2_entry.object_digest, &value2);
+  EXPECT_EQ("value2", value2);
+}
+
+TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
+  // Set up conflict.
+  storage::CommitId base_id = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "value1"));
+  CreateCommit(base_id, AddKeyValueToJournal("key2", "value2"));
+  CreateCommit(base_id, AddKeyValueToJournal("key1", "value1bis"));
+
+  // Set the resolver.
+  ConflictResolverPtr conflict_resolver_ptr;
+  ConflictResolverImpl conflict_resolver_impl(
+      conflict_resolver_ptr.NewRequest());
+  std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
+      std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
+
+  merge_resolver_->SetMergeStrategy(std::move(custom_merge_strategy));
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_FALSE(merge_resolver_->IsEmpty());
+  EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
+
+  Status status;
+  fidl::Array<MergedValuePtr> merged_values =
+      fidl::Array<MergedValuePtr>::New(0);
+  {
+    MergedValuePtr merged_value = MergedValue::New();
+    merged_value->key = convert::ToArray("key1");
+    merged_value->source = ValueSource::RIGHT;
+    merged_values.push_back(std::move(merged_value));
+  }
+
+  conflict_resolver_impl.requests[0].result_provider_ptr->Merge(
+      std::move(merged_values), callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  conflict_resolver_impl.requests[0]
+      .result_provider_ptr->MergeNonConflictingEntries(
+          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  conflict_resolver_impl.requests[0].result_provider_ptr->Done(
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  storage::Status storage_status;
+  std::vector<storage::CommitId> ids;
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &storage_status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+  // The merge happened.
+  EXPECT_EQ(1u, ids.size());
+
+  // Let's verify the contents.
+  std::unique_ptr<const storage::Commit> commit;
+  page_storage_->GetCommit(
+      ids[0], callback::Capture(MakeQuitTask(), &storage_status, &commit));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+
+  storage::Entry key1_entry, key2_entry;
+  page_storage_->GetEntryFromCommit(
+      *commit, "key1",
+      callback::Capture(MakeQuitTask(), &storage_status, &key1_entry));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+
+  page_storage_->GetEntryFromCommit(
+      *commit, "key2",
+      callback::Capture(MakeQuitTask(), &storage_status, &key2_entry));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, storage_status);
+
+  std::string value1, value2;
+  GetValue(key1_entry.object_digest, &value1);
+  EXPECT_EQ("value1bis", value1);
+  GetValue(key2_entry.object_digest, &value2);
+  EXPECT_EQ("value2", value2);
+}
+
 }  // namespace
 }  // namespace ledger

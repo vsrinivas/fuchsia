@@ -18,6 +18,7 @@
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/lib/util/ptr.h"
 
 namespace ledger {
 
@@ -158,33 +159,34 @@ void ConflictResolverClient::Finalize(Status status) {
   callback(status);
 }
 
-// GetLeftDiff(array<uint8>? token)
-//     => (Status status, PageChange? change, array<uint8>? next_token);
-void ConflictResolverClient::GetLeftDiff(fidl::Array<uint8_t> token,
-                                         const GetLeftDiffCallback& callback) {
-  GetDiff(*left_, std::move(token), callback);
+// GetFullDiff(array<uint8>? token)
+//    => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
+void ConflictResolverClient::GetFullDiff(fidl::Array<uint8_t> token,
+                                         const GetFullDiffCallback& callback) {
+  GetDiff(diff_utils::DiffType::FULL, std::move(token), callback);
 }
 
-// GetRightDiff(array<uint8>? token)
-//     => (Status status, PageChange? change, array<uint8>? next_token);
-void ConflictResolverClient::GetRightDiff(
+//   GetConflictingDiff(array<uint8>? token)
+//      => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
+void ConflictResolverClient::GetConflictingDiff(
     fidl::Array<uint8_t> token,
-    const GetRightDiffCallback& callback) {
-  GetDiff(*right_, std::move(token), callback);
+    const GetConflictingDiffCallback& callback) {
+  GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token), callback);
 }
 
 void ConflictResolverClient::GetDiff(
-    const storage::Commit& commit,
+    diff_utils::DiffType type,
     fidl::Array<uint8_t> token,
-    const std::function<void(Status, PageChangePtr, fidl::Array<uint8_t>)>&
-        callback) {
-  diff_utils::ComputePageChange(
-      storage_, *ancestor_, commit, "", convert::ToString(token),
-      diff_utils::PaginationBehavior::BY_SIZE,
+    const std::function<void(Status,
+                             fidl::Array<DiffEntryPtr>,
+                             fidl::Array<uint8_t>)>& callback) {
+  diff_utils::ComputeThreeWayDiff(
+      storage_, *ancestor_, *left_, *right_, "", convert::ToString(token), type,
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
-          [this, callback](Status status,
-                           std::pair<PageChangePtr, std::string> page_change) {
+          [this, callback](
+              Status status,
+              std::pair<fidl::Array<DiffEntryPtr>, std::string> page_change) {
             if (cancelled_) {
               callback(Status::INTERNAL_ERROR, nullptr, nullptr);
               Finalize(Status::INTERNAL_ERROR);
@@ -209,6 +211,7 @@ void ConflictResolverClient::GetDiff(
 // Merge(array<MergedValue>? merge_changes) => (Status status);
 void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
                                    const MergeCallback& callback) {
+  has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(),
                                    merged_values = std::move(merged_values)](
@@ -257,6 +260,49 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
               });
             })));
       }));
+}
+
+// MergeNonConflictingEntries() => (Status status);
+void ConflictResolverClient::MergeNonConflictingEntries(
+    const MergeNonConflictingEntriesCallback& callback) {
+  auto waiter =
+      callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
+
+  auto on_next = [this, waiter](storage::ThreeWayChange change) {
+    // When |MergeNonConflictingEntries| is called first, we know that the base
+    // state of |journal_| is equal to the left version. In that case, we only
+    // want to merge diffs where the change is only on the right side: no change
+    // means no diff, 3 different versions means conflict (so we skip), and
+    // left-only changes are already taken into account.
+    if (util::EqualPtr(change.base, change.left)) {
+      if (change.right) {
+        this->journal_->Put(change.right->key, change.right->object_digest,
+                            change.right->priority, waiter->NewCallback());
+      } else {
+        this->journal_->Delete(change.base->key, waiter->NewCallback());
+      }
+    } else if (util::EqualPtr(change.base, change.right) &&
+               has_merged_values_) {
+      if (change.left) {
+        this->journal_->Put(change.left->key, change.left->object_digest,
+                            change.left->priority, waiter->NewCallback());
+      } else {
+        this->journal_->Delete(change.base->key, waiter->NewCallback());
+      }
+    }
+    return true;
+  };
+  auto on_done = [waiter, callback](storage::Status status) {
+    if (status != storage::Status::OK) {
+      callback(PageUtils::ConvertStatus(status));
+      return;
+    }
+    waiter->Finalize([callback](storage::Status status) {
+      callback(PageUtils::ConvertStatus(status));
+    });
+  };
+  storage_->GetThreeWayContentsDiff(*ancestor_, *left_, *right_, "",
+                                    std::move(on_next), std::move(on_done));
 }
 
 // Done() => (Status status);
