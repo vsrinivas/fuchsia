@@ -1,0 +1,23 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+group("cpp") {
+  public_deps = [":module_impl"]
+}
+
+source_set("module_impl") {
+  sources = [
+    "module_impl.h",
+    "module_impl.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//peridot/public/lib/module/fidl",
+  ]
+}

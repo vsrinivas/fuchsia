@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+group("cpp") {
+  public_deps = [":lifecycle_impl"]
+}
+
+source_set("lifecycle_impl") {
+  sources = [
+    "lifecycle_impl.h",
+    "lifecycle_impl.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//peridot/public/lib/lifecycle/fidl",
+  ]
+}
