@@ -23,7 +23,7 @@ namespace modular {
 class PageClient;
 
 // The primary purpose of the ledger client is to act as conflict resolver
-// factory which is able to dispatche conflicts to the page clients based on
+// factory which is able to dispatch conflicts to the page clients based on
 // their page and key prefix.
 class LedgerClient : ledger::ConflictResolverFactory {
  public:
@@ -40,7 +40,23 @@ class LedgerClient : ledger::ConflictResolverFactory {
     watchers_.emplace_back(std::move(watcher));
   }
 
+  // Creates a new LedgerClient instance connected to the same Ledger as the
+  // LedgerClient it was obtained from, but it creates new Page connections for
+  // its PageClients. This allows the creation of PageClients that behave as if
+  // they run on another device. Useful to simplify testing of cross device
+  // behavior. See StoryProvider.GetLinkPeer().
+  //
+  // The Peer instance does NOT register itself as a conflict resolver for the
+  // Ledger, as the primary LedgerClient must remain the conflict resolver.
+  // (Ledger currently does not support registration of multiple conflict
+  // resolvers for the same ledger, even on different connections. Later
+  // registrations simply overwrite earlier ones.)
+  std::unique_ptr<LedgerClient> GetLedgerClientPeer();
+
  private:
+  // Supports GetLedgerClientPeer().
+  LedgerClient(ledger::LedgerRepository* ledger_repository, const std::string& name);
+
   friend class PageClient;
   class ConflictResolverImpl;
   struct PageEntry;
@@ -65,6 +81,11 @@ class LedgerClient : ledger::ConflictResolverFactory {
 
   void ClearConflictResolver(const LedgerPageId& page_id);
 
+  // Supports GetLedgerClientPeer().
+  ledger::LedgerRepositoryPtr ledger_repository_;
+  const std::string ledger_name_;
+
+  // The ledger this is a client of.
   ledger::LedgerPtr ledger_;
 
   fidl::BindingSet<ledger::ConflictResolverFactory> bindings_;

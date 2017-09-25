@@ -442,6 +442,7 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
 };
 
 struct StoryProviderImpl::LinkPeer {
+  std::unique_ptr<LedgerClient> ledger;
   std::unique_ptr<StoryStorageImpl> storage;
   std::unique_ptr<LinkImpl> link;
 };
@@ -479,8 +480,9 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   void Cont(FlowToken flow) {
     auto link_peer = std::make_unique<LinkPeer>();
 
-    link_peer->storage.reset(new StoryStorageImpl(
-        impl_->ledger_client_, story_data_->story_page_id.Clone()));
+    link_peer->ledger = impl_->ledger_client_->GetLedgerClientPeer();
+    link_peer->storage.reset(new StoryStorageImpl(link_peer->ledger.get(),
+                                                  story_data_->story_page_id.Clone()));
     auto* const storage = link_peer->storage.get();
 
     auto link_path = LinkPath::New();
