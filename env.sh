@@ -446,12 +446,18 @@ function fset() {
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
   export GOPATH="${FUCHSIA_BUILD_DIR}"
+  FUCHSIA_RUST_BIN="${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/rust/bin"
 
   # Add tools to path, removing prior tools directory if any. This also
   # matches the Zircon tools directory added by zset, so add it back too.
   export PATH="$(__patched_path \
       "${FUCHSIA_OUT_DIR}/[^/]*-[^/]*/tools" \
       "${FUCHSIA_TOOLS_DIR}:${ZIRCON_TOOLS_DIR}"
+  )"
+
+  export PATH="$(__patched_path \
+    "$FUCHSIA_RUST_BIN" \
+    "$FUCHSIA_RUST_BIN"
   )"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
