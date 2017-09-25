@@ -62,7 +62,7 @@ fi
 
 if [[ $DARWIN == false && $(pidof NetworkManager) ]]
 then
-  nmstat=$(nmcli d status | awk "/$INTERFACE/ { print \$3 }")
+  nmstat=$(nmcli d status | awk "/$INTERFACE / { print \$3 }")
   if [[ -n $nmstat && $nmstat != unmanaged ]]; then
     echo "$INTERFACE is managed by NetworkManager so can't be configured by this script."
     echo ""
