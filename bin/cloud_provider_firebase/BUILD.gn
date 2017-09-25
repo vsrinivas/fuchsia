@@ -24,6 +24,8 @@ source_set("lib") {
   sources = [
     "cloud_provider_impl.cc",
     "cloud_provider_impl.h",
+    "convert_status.cc",
+    "convert_status.h",
     "device_set_impl.cc",
     "device_set_impl.h",
     "factory_impl.cc",

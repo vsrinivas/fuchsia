@@ -5,6 +5,7 @@
 #include "peridot/bin/cloud_provider_firebase/device_set_impl.h"
 
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
 #include "peridot/bin/ledger/convert/convert.h"
 
 namespace cloud_provider_firebase {
@@ -138,6 +139,35 @@ void DeviceSetImpl::SetWatcher(
           }
         });
   });
+  auth_token_requests_.emplace(request);
+}
+
+void DeviceSetImpl::Erase(const EraseCallback& callback) {
+  auto request = auth_provider_->GetFirebaseToken(
+      [this, callback](auth_provider::AuthStatus auth_status,
+                       std::string auth_token) mutable {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
+        cloud_device_set_->EraseAllFingerprints(auth_token, [
+          this, callback = std::move(callback)
+        ](CloudDeviceSet::Status status) {
+          switch (status) {
+            case CloudDeviceSet::Status::OK:
+              callback(cloud_provider::Status::OK);
+              return;
+            case CloudDeviceSet::Status::ERASED:
+              FXL_NOTREACHED();
+              callback(cloud_provider::Status::INTERNAL_ERROR);
+              return;
+            case CloudDeviceSet::Status::NETWORK_ERROR:
+              callback(cloud_provider::Status::NETWORK_ERROR);
+              return;
+          }
+        });
+
+      });
   auth_token_requests_.emplace(request);
 }
 

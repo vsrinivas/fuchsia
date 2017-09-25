@@ -16,6 +16,8 @@
 #include "peridot/bin/cloud_provider_firebase/page_cloud_impl.h"
 #include "peridot/bin/ledger/auth_provider/auth_provider_impl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "peridot/bin/ledger/network/network_service.h"
 
 namespace cloud_provider_firebase {
@@ -48,17 +50,23 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
+  void EraseAllData(const EraseAllDataCallback& callback) override;
+
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
   ledger::NetworkService* const network_service_;
   const std::string user_id_;
   const std::string server_id_;
   std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
+  firebase::FirebaseImpl user_firebase_;
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
 
   callback::AutoCleanableSet<PageCloudImpl> page_clouds_;
+
+  // Pending auth token requests to be cancelled when this class goes away.
+  callback::CancellableContainer auth_token_requests_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImpl);
 };

@@ -93,6 +93,26 @@ void CloudDeviceSetImpl::WatchFingerprint(
   watch_callback_ = callback;
 }
 
+void CloudDeviceSetImpl::EraseAllFingerprints(
+    std::string auth_token,
+    std::function<void(Status)> callback) {
+  std::vector<std::string> query_params;
+  if (!auth_token.empty()) {
+    query_params.push_back("auth=" + auth_token);
+  }
+
+  user_firebase_->Delete(
+      kDeviceMapRelpath,
+      query_params, [callback = std::move(callback)](firebase::Status status) {
+        if (status != firebase::Status::OK) {
+          callback(Status::NETWORK_ERROR);
+          return;
+        }
+
+        callback(Status::OK);
+      });
+}
+
 void CloudDeviceSetImpl::OnPut(const std::string& /*path*/,
                                const rapidjson::Value& value) {
   FXL_DCHECK(firebase_watcher_set_ && watch_callback_);

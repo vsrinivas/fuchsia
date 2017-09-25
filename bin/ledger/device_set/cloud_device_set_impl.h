@@ -39,6 +39,9 @@ class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
                         std::string fingerprint,
                         std::function<void(Status)> callback) override;
 
+  void EraseAllFingerprints(std::string auth_token,
+                            std::function<void(Status)> callback) override;
+
   // firebase::WatchClient:
   void OnPut(const std::string& path, const rapidjson::Value& value) override;
   void OnPatch(const std::string& path, const rapidjson::Value& value) override;

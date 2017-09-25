@@ -31,6 +31,9 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
                         std::string fingerprint,
                         std::function<void(Status)> callback) override;
 
+  void EraseAllFingerprints(std::string auth_token,
+                            std::function<void(Status)> callback) override;
+
   CloudDeviceSet::Status status_to_return = CloudDeviceSet::Status::OK;
 
   std::string checked_fingerprint;

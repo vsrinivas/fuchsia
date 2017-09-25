@@ -5,31 +5,12 @@
 #include "peridot/bin/cloud_provider_firebase/page_cloud_impl.h"
 
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/cloud_provider_firebase/convert_status.h"
 #include "peridot/bin/ledger/convert/convert.h"
 
 namespace cloud_provider_firebase {
 
 namespace {
-// TODO(ppi): drop internal status and use cloud_provider::Status everywhere
-// inside cloud_provider_firebase.
-cloud_provider::Status ConvertInternalStatus(Status status) {
-  switch (status) {
-    case Status::OK:
-      return cloud_provider::Status::OK;
-    case Status::ARGUMENT_ERROR:
-      return cloud_provider::Status::ARGUMENT_ERROR;
-    case Status::NETWORK_ERROR:
-      return cloud_provider::Status::NETWORK_ERROR;
-    case Status::NOT_FOUND:
-      return cloud_provider::Status::NOT_FOUND;
-    case Status::INTERNAL_ERROR:
-      return cloud_provider::Status::INTERNAL_ERROR;
-    case Status::PARSE_ERROR:
-      return cloud_provider::Status::PARSE_ERROR;
-    case Status::SERVER_ERROR:
-      return cloud_provider::Status::SERVER_ERROR;
-  }
-}
 
 void ConvertRecords(const std::vector<Record>& records,
                     fidl::Array<cloud_provider::CommitPtr>* out_commits,

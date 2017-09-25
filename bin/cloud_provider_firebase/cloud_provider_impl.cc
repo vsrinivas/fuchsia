@@ -7,11 +7,11 @@
 #include <utility>
 
 #include "lib/fxl/logging.h"
+#include "peridot/bin/cloud_provider_firebase/convert_status.h"
 #include "peridot/bin/ledger/cloud_provider/impl/page_cloud_handler_impl.h"
 #include "peridot/bin/ledger/cloud_provider/impl/paths.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
-#include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "peridot/bin/ledger/gcs/cloud_storage_impl.h"
 
 namespace cloud_provider_firebase {
@@ -28,6 +28,9 @@ CloudProviderImpl::CloudProviderImpl(
       user_id_(std::move(user_id)),
       server_id_(config->server_id),
       auth_provider_(std::move(auth_provider)),
+      user_firebase_(network_service_,
+                     server_id_,
+                     GetFirebasePathForUser(user_id_)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
   binding_.set_connection_error_handler([this] {
@@ -42,6 +45,8 @@ CloudProviderImpl::~CloudProviderImpl() {}
 void CloudProviderImpl::GetDeviceSet(
     fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
+  // TODO(ppi): Once the switch to standalone cloud provider is done, change
+  // CloudDeviceSet to take a raw ptr and re-use |user_firebase_| here.
   auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
       network_service_, server_id_, GetFirebasePathForUser(user_id_));
   auto cloud_device_set =
@@ -76,6 +81,29 @@ void CloudProviderImpl::GetPageCloud(
                        std::move(cloud_storage), std::move(handler),
                        std::move(page_cloud));
   callback(cloud_provider::Status::OK);
+}
+
+void CloudProviderImpl::EraseAllData(const EraseAllDataCallback& callback) {
+  auto request = auth_provider_->GetFirebaseToken(
+      [this, callback](auth_provider::AuthStatus auth_status,
+                       std::string auth_token) mutable {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
+        std::vector<std::string> query_params;
+        if (!auth_token.empty()) {
+          query_params = {"auth=" + auth_token};
+        }
+
+        user_firebase_.Delete(
+            "", query_params,
+            [callback = std::move(callback)](firebase::Status status) {
+              callback(ConvertInternalStatus(ConvertFirebaseStatus(status)));
+            });
+
+      });
+  auth_token_requests_.emplace(request);
 }
 
 }  // namespace cloud_provider_firebase

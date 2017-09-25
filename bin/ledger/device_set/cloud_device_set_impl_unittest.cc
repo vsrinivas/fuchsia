@@ -46,11 +46,12 @@ class FakeFirebase : public firebase::Firebase {
     FXL_NOTREACHED();
   }
 
-  void Delete(
-      const std::string& /*key*/,
-      const std::vector<std::string>& /*query_params*/,
-      std::function<void(firebase::Status status)> /*callback*/) override {
-    FXL_NOTREACHED();
+  void Delete(const std::string& key,
+              const std::vector<std::string>& query_params,
+              std::function<void(firebase::Status status)> callback) override {
+    delete_keys.push_back(key);
+    delete_query_params.push_back(query_params);
+    callback(returned_status);
   }
 
   void Watch(const std::string& key,
@@ -72,6 +73,8 @@ class FakeFirebase : public firebase::Firebase {
   std::vector<std::vector<std::string>> get_query_params;
   std::vector<std::vector<std::string>> put_query_params;
   std::vector<std::string> put_data;
+  std::vector<std::vector<std::string>> delete_query_params;
+  std::vector<std::string> delete_keys;
   std::vector<std::string> watch_keys;
   std::vector<std::vector<std::string>> watch_query_params;
   firebase::WatchClient* watch_client;
@@ -184,6 +187,18 @@ TEST_F(CloudDeviceSetImplTest, WatchUnwatchOnDelete) {
     EXPECT_EQ(0, firebase_->unwatch_calls);
   }
   EXPECT_EQ(1, firebase_->unwatch_calls);
+}
+
+TEST_F(CloudDeviceSetImplTest, EraseAllFingerprints) {
+  CloudDeviceSet::Status status;
+  cloud_device_set_.EraseAllFingerprints(
+      "some-token", callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(CloudDeviceSet::Status::OK, status);
+  EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
+            firebase_->delete_query_params);
+  EXPECT_EQ((std::vector<std::string>{kDeviceMapRelpath}),
+            firebase_->delete_keys);
 }
 
 }  // namespace

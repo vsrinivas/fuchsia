@@ -137,4 +137,22 @@ TEST_F(DeviceSetImplTest, SetWatcherFailToSet) {
   EXPECT_EQ(1, on_network_error_calls_);
 }
 
+TEST_F(DeviceSetImplTest, Erase) {
+  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
+  cloud_provider::Status status;
+  device_set_->CheckFingerprint(convert::ToArray("bazinga"),
+                                callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+}
+
+TEST_F(DeviceSetImplTest, EraseNetworkError) {
+  cloud_device_set_->status_to_return = CloudDeviceSet::Status::NETWORK_ERROR;
+  cloud_provider::Status status;
+  device_set_->CheckFingerprint(convert::ToArray("bazinga"),
+                                callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::NETWORK_ERROR, status);
+}
+
 }  // namespace cloud_provider_firebase

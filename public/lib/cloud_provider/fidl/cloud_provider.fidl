@@ -33,6 +33,10 @@ interface CloudProvider {
   // Retrieves the controller for cloud sync of a particular page.
   GetPageCloud(array<uint8> app_id, array<uint8> page_id, PageCloud& page_cloud)
       => (Status status);
+
+  // Permanently removes all data stored by the user in the cloud. Before
+  // calling this method, make sure this is really what we want.
+  EraseAllData() => (Status status);
 };
 
 // Cloud registry of devices participating in cloud sync.
@@ -64,6 +68,10 @@ interface DeviceSet {
   // on the watcher.
   SetWatcher(array<uint8> fingerprint, DeviceSetWatcher watcher)
       => (Status status);
+
+  // Erases the entire registry of devices. This makes all devices detect that
+  // cloud has been erased.
+  Erase() => (Status status);
 };
 
 // Watcher for push notifications from the cloud registry of devices

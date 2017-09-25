@@ -42,6 +42,8 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
       fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
+  void Erase(const EraseCallback& callback) override;
+
   auth_provider::AuthProvider* const auth_provider_;
   std::unique_ptr<CloudDeviceSet> cloud_device_set_;
   fidl::Binding<cloud_provider::DeviceSet> binding_;

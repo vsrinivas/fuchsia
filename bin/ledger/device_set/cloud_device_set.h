@@ -57,6 +57,11 @@ class CloudDeviceSet {
                                 std::string fingerprint,
                                 std::function<void(Status)> callback) = 0;
 
+  // Erases the entire device set. The resulting status is OK if the erase
+  // succeeded and NETWORK_ERROR if not.
+  virtual void EraseAllFingerprints(std::string auth_token,
+                                    std::function<void(Status)> callback) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudDeviceSet);
 };
