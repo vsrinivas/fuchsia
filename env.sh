@@ -83,7 +83,7 @@ zircon functions:
   zboot, zbuild, zcheck, zgo, zrun, zset, zsymbolize
 fuchsia functions:
   fboot, fbuild, fbuild-sysroot, fcheck, fcmd, fcp, fgen,
-  fgen-if-changed, fgo, finstall, freboot, frun, fset, fsymbolize, ftrace
+  fgen-if-changed, fgo, finstall, freboot, frun, fset, fsymbolize
 END
     return
   fi
@@ -790,21 +790,6 @@ function freboot() {
   fcheck || return 1
   echo "Rebooting system..."
   netruncmd $timeout_flag "${freboot_host}" "dm reboot"
-}
-
-### ftrace: collects and presents traces
-
-function ftrace-usage() {
-  cat >&2 <<END
-Usage: ftrace [--help] [extra trace.sh args...]
-Starts a trace.
-END
-}
-
-function ftrace() {
-  fcheck || return 1
-
-  "${FUCHSIA_SCRIPTS_DIR}/trace.sh" "$@"
 }
 
 ### fmkzedboot: builds the Fuchsia bootloader and zeboot and places it on an
