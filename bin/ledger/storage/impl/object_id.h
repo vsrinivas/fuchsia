@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_ID_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_ID_H_
 
+#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 

@@ -10,14 +10,14 @@
 
 #include <trace/event.h>
 
+#include "lib/fsl/socket/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/convert/convert.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace ledger {
 

@@ -7,12 +7,12 @@
 
 #include <string>
 
+#include "lib/fsl/socket/strings.h"
+#include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/test/test_with_coroutines.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace storage {
 

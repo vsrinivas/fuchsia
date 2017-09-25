@@ -8,12 +8,12 @@
 #include <string>
 #include <vector>
 
-#include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
-#include "peridot/bin/ledger/app/page_manager.h"
-#include "peridot/bin/ledger/app/page_utils.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
+#include "peridot/bin/ledger/app/page_manager.h"
+#include "peridot/bin/ledger/app/page_utils.h"
 
 namespace ledger {
 class AutoMergeStrategy::AutoMerger {

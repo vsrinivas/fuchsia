@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/storage/impl/object_id.h"
 
+#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
-#include "lib/fxl/strings/concatenate.h"
 
 namespace storage {
 

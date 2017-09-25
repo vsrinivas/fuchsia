@@ -8,13 +8,13 @@
 
 #include <numeric>
 
+#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 #include "peridot/bin/ledger/storage/impl/object_id.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "lib/fxl/strings/string_printf.h"
 
 namespace storage {
 

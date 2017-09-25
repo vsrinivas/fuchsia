@@ -9,13 +9,13 @@
 #include <memory>
 #include <queue>
 
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
 
 namespace cloud_sync {
 

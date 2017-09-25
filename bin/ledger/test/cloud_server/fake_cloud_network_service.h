@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 #define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
-#include "peridot/bin/ledger/test/cloud_server/fake_cloud_url_loader.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/ledger/test/cloud_server/fake_cloud_url_loader.h"
 
 namespace ledger {
 

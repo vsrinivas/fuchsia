@@ -9,14 +9,14 @@
 #include <utility>
 #include <vector>
 
-#include "peridot/bin/ledger/callback/capture.h"
-#include "peridot/bin/ledger/cloud_sync/impl/test/test_commit.h"
-#include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/cloud_sync/impl/test/test_commit.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 
 namespace cloud_sync {
 namespace test {

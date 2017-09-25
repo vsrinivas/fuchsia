@@ -8,11 +8,11 @@
 #include <string>
 #include <utility>
 
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 
 namespace firebase {
 

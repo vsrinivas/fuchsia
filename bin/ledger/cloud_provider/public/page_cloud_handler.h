@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit_watcher.h"
 #include "peridot/bin/ledger/cloud_provider/public/record.h"
 #include "peridot/bin/ledger/cloud_provider/public/types.h"
-#include "lib/fxl/macros.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

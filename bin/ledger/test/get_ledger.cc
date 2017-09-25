@@ -6,14 +6,14 @@
 
 #include <utility>
 
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/bin/ledger/callback/capture.h"
-#include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace test {
 namespace {

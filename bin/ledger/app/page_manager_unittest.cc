@@ -6,6 +6,9 @@
 
 #include <memory>
 
+#include "gtest/gtest.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/backoff/exponential_backoff.h"
@@ -18,9 +21,6 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

@@ -9,13 +9,13 @@
 #include <string>
 #include <vector>
 
+#include "lib/app/cpp/application_context.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "peridot/bin/ledger/network/network_service_impl.h"
 #include "peridot/bin/ledger/tool/command.h"
-#include "lib/app/cpp/application_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/macros.h"
 
 namespace tool {
 

@@ -8,10 +8,10 @@
 #include <map>
 #include <string>
 
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {

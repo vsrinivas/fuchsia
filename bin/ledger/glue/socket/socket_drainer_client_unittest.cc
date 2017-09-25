@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
 
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 
 namespace glue {
 namespace {

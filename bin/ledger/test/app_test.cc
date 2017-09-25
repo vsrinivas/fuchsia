@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/test/app_test.h"
 
-#include "peridot/bin/ledger/test/get_ledger.h"
-#include "lib/test_runner/cpp/reporting/gtest_listener.h"
-#include "lib/test_runner/cpp/reporting/reporter.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/logging.h"
+#include "lib/test_runner/cpp/reporting/gtest_listener.h"
+#include "lib/test_runner/cpp/reporting/reporter.h"
+#include "peridot/bin/ledger/test/get_ledger.h"
 
 namespace test {
 

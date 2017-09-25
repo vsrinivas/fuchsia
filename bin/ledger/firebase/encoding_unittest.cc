@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/ledger/firebase/encoding.h"
-#include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/utf_codecs.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
 
 #include <string>
 

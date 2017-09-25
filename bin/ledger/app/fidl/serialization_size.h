@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_FIDL_SERIALIZATION_SIZE_H_
 #define PERIDOT_BIN_LEDGER_APP_FIDL_SERIALIZATION_SIZE_H_
 
-#include <zircon/types.h>
 #include <stddef.h>
+#include <zircon/types.h>
 
 #include "lib/ledger/fidl/ledger.fidl.h"
 

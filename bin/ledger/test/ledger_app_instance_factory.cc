@@ -4,12 +4,12 @@
 
 #include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
 
-#include "peridot/bin/ledger/callback/synchronous_task.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "peridot/bin/ledger/callback/synchronous_task.h"
+#include "peridot/bin/ledger/convert/convert.h"
 
 namespace test {
 namespace {

@@ -8,10 +8,10 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "peridot/bin/ledger/cloud_provider/impl/encoding.h"
-#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
+#include "peridot/bin/ledger/cloud_provider/impl/encoding.h"
+#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
 
 namespace cloud_provider_firebase {
 

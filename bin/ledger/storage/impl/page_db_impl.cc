@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <string>
 
+#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
@@ -14,7 +15,6 @@
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
-#include "lib/fxl/strings/concatenate.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \

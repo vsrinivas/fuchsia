@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/firebase/encoding.h"
 
-#include "peridot/bin/ledger/glue/crypto/base64.h"
 #include "lib/fxl/strings/utf_codecs.h"
+#include "peridot/bin/ledger/glue/crypto/base64.h"
 
 namespace firebase {
 

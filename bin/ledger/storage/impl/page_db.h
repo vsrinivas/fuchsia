@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/db.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
@@ -16,8 +18,6 @@
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 

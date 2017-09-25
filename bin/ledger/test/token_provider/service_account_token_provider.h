@@ -7,9 +7,9 @@
 
 #include <unordered_map>
 
+#include "lib/auth/fidl/token_provider.fidl.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/network/network_service.h"
-#include "lib/auth/fidl/token_provider.fidl.h"
 
 #include "lib/fxl/macros.h"
 

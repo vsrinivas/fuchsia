@@ -6,8 +6,6 @@
 
 #include <set>
 
-#include "peridot/bin/ledger/backoff/exponential_backoff.h"
-#include "peridot/bin/ledger/callback/waiter.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
@@ -15,6 +13,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/callback/waiter.h"
 
 namespace ledger {
 namespace {
@@ -82,8 +82,7 @@ void CobaltContext::ConnectToCobaltApplication() {
 void CobaltContext::OnConnectionError() {
   FXL_LOG(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
 
-  events_to_send_.insert(events_in_transit_.begin(),
-                         events_in_transit_.end());
+  events_to_send_.insert(events_in_transit_.begin(), events_in_transit_.end());
   events_in_transit_.clear();
   encoder_.reset();
   task_runner_->PostDelayedTask([this] { ConnectToCobaltApplication(); },

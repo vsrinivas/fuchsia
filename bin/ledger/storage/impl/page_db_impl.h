@@ -9,10 +9,10 @@
 #include <string>
 #include <vector>
 
+#include "lib/fxl/functional/auto_call.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
-#include "lib/fxl/functional/auto_call.h"
 
 namespace storage {
 

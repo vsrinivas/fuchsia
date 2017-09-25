@@ -8,6 +8,9 @@
 #include <functional>
 #include <queue>
 
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
@@ -22,9 +25,6 @@
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace cloud_sync {
 

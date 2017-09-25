@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/auth/fidl/token_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/integration/integration_test.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
-#include "lib/auth/fidl/token_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace test {
 namespace integration {

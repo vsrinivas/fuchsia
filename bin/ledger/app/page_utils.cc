@@ -6,11 +6,11 @@
 
 #include <memory>
 
+#include "lib/fsl/vmo/strings.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace ledger {
 namespace {

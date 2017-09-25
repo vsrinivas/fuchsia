@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
-#include "peridot/bin/ledger/callback/cancellable.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
 
 namespace auth_provider {
 

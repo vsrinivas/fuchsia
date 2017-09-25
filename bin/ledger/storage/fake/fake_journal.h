@@ -8,10 +8,10 @@
 #include <memory>
 #include <string>
 
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal_delegate.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {

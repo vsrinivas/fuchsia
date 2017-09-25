@@ -7,10 +7,10 @@
 
 #include <memory>
 
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace ledger {
 

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"
 
-#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "lib/fxl/strings/concatenate.h"
+#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 
 namespace cloud_sync {
 namespace {

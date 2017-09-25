@@ -4,6 +4,9 @@
 
 #include "peridot/bin/ledger/test/integration/sync/lib.h"
 
+#include "lib/fsl/vmo/vector.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/capture.h"
@@ -12,9 +15,6 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/test/data_generator.h"
 #include "peridot/bin/ledger/test/get_ledger.h"
-#include "lib/fsl/vmo/vector.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace test {
 namespace integration {

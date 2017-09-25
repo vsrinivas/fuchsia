@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
 
-#include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
 
 namespace storage {
 

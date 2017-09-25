@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_NETWORK_NO_NETWORK_SERVICE_H_
 #define PERIDOT_BIN_LEDGER_NETWORK_NO_NETWORK_SERVICE_H_
 
-#include "peridot/bin/ledger/network/network_service.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/ledger/network/network_service.h"
 
 namespace ledger {
 

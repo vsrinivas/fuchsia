@@ -8,6 +8,9 @@
 #include <memory>
 #include <vector>
 
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_delegate.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
@@ -19,9 +22,6 @@
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace ledger {
 // Manages a ledger page.

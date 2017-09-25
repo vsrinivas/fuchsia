@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_SYNC_WATCHER_SET_H_
 #define PERIDOT_BIN_LEDGER_APP_SYNC_WATCHER_SET_H_
 
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
-#include "lib/fxl/macros.h"
 
 namespace ledger {
 

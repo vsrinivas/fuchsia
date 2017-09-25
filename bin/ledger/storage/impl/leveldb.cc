@@ -8,11 +8,11 @@
 
 #include <trace/event.h>
 
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/path.h"
 
 namespace storage {
 

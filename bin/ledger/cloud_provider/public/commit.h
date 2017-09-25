@@ -8,8 +8,8 @@
 #include <map>
 #include <string>
 
-#include "peridot/bin/ledger/cloud_provider/public/types.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/cloud_provider/public/types.h"
 
 namespace cloud_provider_firebase {
 

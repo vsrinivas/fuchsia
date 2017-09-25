@@ -8,10 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
-#include "peridot/bin/ledger/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -19,6 +15,10 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace test {
 namespace integration {

@@ -6,9 +6,9 @@
 
 #include <algorithm>
 
+#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
-#include "lib/fxl/logging.h"
 
 namespace storage {
 namespace btree {

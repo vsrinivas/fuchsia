@@ -6,6 +6,12 @@
 
 #include <thread>
 
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/callback/synchronous_task.h"
@@ -14,12 +20,6 @@
 #include "peridot/bin/ledger/network/network_service_impl.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace test {
 namespace integration {

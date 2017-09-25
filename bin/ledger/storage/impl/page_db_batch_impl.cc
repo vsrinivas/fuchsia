@@ -6,10 +6,10 @@
 
 #include <memory>
 
+#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
-#include "lib/fxl/strings/concatenate.h"
 
 namespace storage {
 

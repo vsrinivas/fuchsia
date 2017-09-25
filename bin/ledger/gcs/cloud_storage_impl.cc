@@ -8,7 +8,6 @@
 
 #include <string>
 
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fsl/socket/files.h"
 #include "lib/fsl/vmo/file.h"
@@ -23,6 +22,7 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
 
 namespace gcs {
 

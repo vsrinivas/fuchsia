@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/object_id.h"
 
-#include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/glue/crypto/hash.h"
 
 namespace storage {
 namespace {

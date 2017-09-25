@@ -7,11 +7,11 @@
 
 #include <functional>
 
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 #include "zx/vmo.h"
 
 namespace ledger {

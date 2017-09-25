@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_PROVIDER_PUBLIC_RECORD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_PROVIDER_PUBLIC_RECORD_H_
 
-#include "peridot/bin/ledger/cloud_provider/public/commit.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/cloud_provider/public/commit.h"
 
 namespace cloud_provider_firebase {
 

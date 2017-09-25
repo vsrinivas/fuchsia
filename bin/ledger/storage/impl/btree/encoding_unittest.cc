@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"
 
+#include "gtest/gtest.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "gtest/gtest.h"
-#include "lib/fxl/strings/string_printf.h"
 
 namespace storage {
 namespace btree {

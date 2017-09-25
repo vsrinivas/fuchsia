@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/storage/public/data_source.h"
 
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace storage {
 namespace {

@@ -9,10 +9,10 @@
 #include <memory>
 #include <string>
 
-#include "peridot/bin/ledger/callback/destruction_sentinel.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/callback/destruction_sentinel.h"
 
 namespace glue {
 

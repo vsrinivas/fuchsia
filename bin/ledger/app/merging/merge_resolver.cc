@@ -10,6 +10,9 @@
 #include <set>
 #include <utility>
 
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/merging/common_ancestor.h"
 #include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
@@ -18,9 +21,6 @@
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
-#include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

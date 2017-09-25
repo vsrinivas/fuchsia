@@ -12,12 +12,12 @@
 #include <string>
 #include <unordered_set>
 
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/callback/operation_serializer.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fxl/macros.h"
 
 namespace storage {
 

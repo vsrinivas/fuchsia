@@ -7,6 +7,9 @@
 #include <limits>
 #include <sstream>
 
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
@@ -15,9 +18,6 @@
 #include "peridot/bin/ledger/storage/impl/object_id.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/third_party/bup/bupsplit.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/macros.h"
 
 namespace storage {
 

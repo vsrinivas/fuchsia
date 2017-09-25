@@ -7,14 +7,14 @@
 
 #include <vector>
 
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class PageManager;

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 
-#include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 
 namespace storage {
 namespace {

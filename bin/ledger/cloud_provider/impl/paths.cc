@@ -6,9 +6,9 @@
 
 #include <string>
 
+#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/firebase/encoding.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "lib/fxl/strings/concatenate.h"
 
 namespace cloud_provider_firebase {
 

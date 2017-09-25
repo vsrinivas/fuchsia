@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_PAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_PAGE_IMPL_H_
 
-#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/macros.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 
 namespace ledger {
 class PageDelegate;

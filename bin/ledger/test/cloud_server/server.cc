@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/test/cloud_server/server.h"
 
+#include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/glue/socket/socket_writer.h"
-#include "lib/fxl/strings/string_number_conversions.h"
 
 namespace ledger {
 

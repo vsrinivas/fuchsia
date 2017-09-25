@@ -6,14 +6,14 @@
 
 #include <vector>
 
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "peridot/bin/ledger/callback/waiter.h"
-#include "lib/fxl/functional/auto_call.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace ledger {
 class BranchTracker::PageWatcherContainer {

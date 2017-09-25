@@ -6,9 +6,9 @@
 
 #include <trace/event.h>
 
+#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/app/page_delegate.h"
 #include "peridot/bin/ledger/callback/trace_callback.h"
-#include "lib/fxl/logging.h"
 
 namespace ledger {
 

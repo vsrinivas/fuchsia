@@ -7,9 +7,9 @@
 
 #include <functional>
 
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace diff_utils {

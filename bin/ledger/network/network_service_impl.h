@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_IMPL_H_
 
+#include "lib/fxl/tasks/task_runner.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/network/network_service.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include "lib/network/fidl/network_service.fidl.h"
 
 namespace ledger {
 

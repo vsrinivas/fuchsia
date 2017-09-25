@@ -7,9 +7,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "peridot/bin/ledger/callback/capture.h"
-#include "peridot/bin/ledger/network/fake_network_service.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -17,6 +14,9 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/network/fake_network_service.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace test {
 namespace {

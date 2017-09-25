@@ -5,7 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_IMPL_H_
 
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
@@ -14,9 +16,7 @@
 #include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace ledger {
 

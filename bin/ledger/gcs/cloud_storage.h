@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
-#include "peridot/bin/ledger/gcs/status.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/gcs/status.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

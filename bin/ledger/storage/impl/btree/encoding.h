@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 namespace btree {

@@ -8,8 +8,8 @@
 #include <memory>
 #include <vector>
 
-#include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 
 namespace context {
 class Stack;

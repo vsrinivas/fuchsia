@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/callback/capture.h"
 
 namespace callback {
 namespace {

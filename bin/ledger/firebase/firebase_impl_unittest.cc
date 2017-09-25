@@ -9,16 +9,16 @@
 
 #include <rapidjson/document.h>
 
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
-#include "peridot/bin/ledger/network/fake_network_service.h"
-#include "peridot/bin/ledger/network/network_service_impl.h"
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/network/fake_network_service.h"
+#include "peridot/bin/ledger/network/network_service_impl.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace firebase {
 namespace {

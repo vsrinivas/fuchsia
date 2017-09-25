@@ -8,8 +8,8 @@
 #include <functional>
 #include <unordered_map>
 
-#include "peridot/bin/ledger/test/cloud_server/server.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/ledger/test/cloud_server/server.h"
 
 namespace ledger {
 

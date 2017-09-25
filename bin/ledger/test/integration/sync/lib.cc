@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/test/integration/sync/lib.h"
 
-#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 
 namespace test {
 namespace integration {

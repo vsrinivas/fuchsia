@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/convert/convert.h"
 
-#include "peridot/bin/ledger/convert/bytes_test_generated.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/ledger/convert/bytes_test_generated.h"
 
 namespace convert {
 namespace {

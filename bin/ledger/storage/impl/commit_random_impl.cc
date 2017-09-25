@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 
+#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "lib/fxl/logging.h"
 
 namespace storage {
 namespace test {

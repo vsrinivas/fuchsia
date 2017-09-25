@@ -8,8 +8,8 @@
 #include <ostream>
 #include <string>
 
-#include "peridot/bin/ledger/convert/convert.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/convert/convert.h"
 
 namespace storage {
 

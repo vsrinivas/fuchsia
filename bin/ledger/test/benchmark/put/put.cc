@@ -6,13 +6,13 @@
 
 #include <trace/event.h>
 
-#include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/test/benchmark/lib/logging.h"
-#include "peridot/bin/ledger/test/get_ledger.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/test/benchmark/lib/logging.h"
+#include "peridot/bin/ledger/test/get_ledger.h"
 
 namespace {
 

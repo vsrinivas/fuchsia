@@ -8,10 +8,10 @@
 #include <functional>
 #include <vector>
 
+#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/gcs/cloud_storage.h"
 #include "peridot/bin/ledger/network/network_service.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

@@ -8,16 +8,16 @@
 #include <functional>
 #include <memory>
 
+#include "gtest/gtest.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/get_ledger.h"
 #include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/macros.h"
 
 namespace test {
 namespace integration {

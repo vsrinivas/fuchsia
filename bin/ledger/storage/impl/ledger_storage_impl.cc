@@ -9,15 +9,15 @@
 
 #include <dirent.h>
 
-#include "peridot/bin/ledger/glue/crypto/base64.h"
-#include "peridot/bin/ledger/storage/impl/directory_reader.h"
-#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
-#include "peridot/bin/ledger/storage/public/constants.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
+#include "peridot/bin/ledger/glue/crypto/base64.h"
+#include "peridot/bin/ledger/storage/impl/directory_reader.h"
+#include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
+#include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace storage {
 

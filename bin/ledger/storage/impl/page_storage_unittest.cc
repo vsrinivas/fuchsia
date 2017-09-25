@@ -10,6 +10,18 @@
 #include <memory>
 #include <thread>
 
+#include "gtest/gtest.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -29,18 +41,6 @@
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "gtest/gtest.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_printf.h"
 
 namespace storage {
 

@@ -8,15 +8,15 @@
 #include <utility>
 #include <vector>
 
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
 
 namespace storage {
 namespace fake {

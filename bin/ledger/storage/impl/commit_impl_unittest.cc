@@ -4,13 +4,13 @@
 
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 
+#include "gtest/gtest.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
 
 namespace storage {
 namespace {

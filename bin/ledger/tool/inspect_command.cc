@@ -15,8 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include "peridot/bin/ledger/callback/waiter.h"
-#include "peridot/bin/ledger/tool/convert.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/eintr_wrapper.h"
@@ -25,6 +23,8 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/tool/convert.h"
 
 #define FILE_CREATE_MODE 0666
 

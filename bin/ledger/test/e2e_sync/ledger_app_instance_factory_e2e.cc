@@ -6,10 +6,6 @@
 
 #include <thread>
 
-#include "peridot/bin/ledger/callback/synchronous_task.h"
-#include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -19,6 +15,10 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/ledger/callback/synchronous_task.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
+#include "peridot/bin/ledger/test/fake_token_provider.h"
 
 namespace test {
 namespace {

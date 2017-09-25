@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_DB_SERIALIZATION_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_DB_SERIALIZATION_H_
 
-#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 

@@ -10,15 +10,11 @@
 #include <sstream>
 #include <unordered_map>
 
-#include <zircon/syscalls.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <zircon/syscalls.h>
 
-#include "peridot/bin/ledger/callback/auto_cleanable.h"
-#include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/glue/socket/socket_pair.h"
-#include "peridot/bin/ledger/glue/socket/socket_writer.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
@@ -26,6 +22,10 @@
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/url/gurl.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/glue/socket/socket_pair.h"
+#include "peridot/bin/ledger/glue/socket/socket_writer.h"
 
 namespace ledger {
 

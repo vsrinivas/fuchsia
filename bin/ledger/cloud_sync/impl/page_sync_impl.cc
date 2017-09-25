@@ -10,10 +10,10 @@
 #include <utility>
 #include <vector>
 
-#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
-#include "peridot/bin/ledger/storage/public/types.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace cloud_sync {
 

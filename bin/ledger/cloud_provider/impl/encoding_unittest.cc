@@ -6,9 +6,9 @@
 
 #include <memory>
 
-#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/time/time_delta.h"
+#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
 
 namespace cloud_provider_firebase {
 namespace {

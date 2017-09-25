@@ -9,6 +9,8 @@
 #include <memory>
 #include <utility>
 
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
@@ -16,8 +18,6 @@
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 
 namespace storage {
 

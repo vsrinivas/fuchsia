@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "peridot/bin/ledger/app/page_manager.h"
 #include "lib/fxl/functional/closure.h"
+#include "peridot/bin/ledger/app/page_manager.h"
 
 namespace ledger {
 CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)

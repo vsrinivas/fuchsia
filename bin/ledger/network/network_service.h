@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_H_
 #define PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_H_
 
-#include "peridot/bin/ledger/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/url_request.fidl.h"
 #include "lib/network/fidl/url_response.fidl.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
 
 namespace ledger {
 

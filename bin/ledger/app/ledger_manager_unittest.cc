@@ -8,6 +8,9 @@
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/convert/convert.h"
@@ -16,9 +19,6 @@
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

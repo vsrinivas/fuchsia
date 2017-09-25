@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_BACKOFF_TEST_TEST_BACKOFF_H_
 #define PERIDOT_BIN_LEDGER_BACKOFF_TEST_TEST_BACKOFF_H_
 
-#include "peridot/bin/ledger/backoff/backoff.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/time/time_delta.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
 
 namespace backoff {
 

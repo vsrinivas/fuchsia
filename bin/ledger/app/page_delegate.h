@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/branch_tracker.h"
 #include "peridot/bin/ledger/app/page_impl.h"
@@ -20,8 +22,6 @@
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/fxl/macros.h"
 
 namespace ledger {
 class PageManager;

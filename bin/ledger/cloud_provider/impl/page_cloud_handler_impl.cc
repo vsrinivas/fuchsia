@@ -4,16 +4,16 @@
 
 #include "peridot/bin/ledger/cloud_provider/impl/page_cloud_handler_impl.h"
 
-#include "peridot/bin/ledger/cloud_provider/impl/encoding.h"
-#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
-#include "peridot/bin/ledger/firebase/encoding.h"
-#include "peridot/bin/ledger/firebase/status.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/cloud_provider/impl/encoding.h"
+#include "peridot/bin/ledger/cloud_provider/impl/timestamp_conversions.h"
+#include "peridot/bin/ledger/firebase/encoding.h"
+#include "peridot/bin/ledger/firebase/status.h"
 
 namespace cloud_provider_firebase {
 namespace {

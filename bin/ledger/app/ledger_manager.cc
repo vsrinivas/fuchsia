@@ -8,13 +8,13 @@
 #include <utility>
 #include <vector>
 
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
 
 namespace ledger {
 

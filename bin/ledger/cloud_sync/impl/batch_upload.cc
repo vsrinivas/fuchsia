@@ -10,11 +10,11 @@
 
 #include <trace/event.h>
 
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit.h"
 #include "peridot/bin/ledger/cloud_provider/public/types.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/logging.h"
 
 namespace cloud_sync {
 

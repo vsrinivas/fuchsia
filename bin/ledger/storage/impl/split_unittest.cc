@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#include "gtest/gtest.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
@@ -13,8 +15,6 @@
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_id.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
-#include "gtest/gtest.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {
 namespace {

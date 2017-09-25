@@ -7,10 +7,10 @@
 
 #include <unordered_map>
 
-#include "peridot/bin/ledger/test/cloud_server/firebase_server.h"
-#include "peridot/bin/ledger/test/cloud_server/gcs_server.h"
 #include "lib/fxl/macros.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/ledger/test/cloud_server/firebase_server.h"
+#include "peridot/bin/ledger/test/cloud_server/gcs_server.h"
 
 namespace ledger {
 

@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 
+#include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
 

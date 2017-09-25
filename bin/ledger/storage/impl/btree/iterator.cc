@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
 
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace storage {
 namespace btree {

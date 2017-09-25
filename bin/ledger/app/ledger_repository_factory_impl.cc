@@ -6,12 +6,6 @@
 
 #include <trace/event.h>
 
-#include "peridot/bin/ledger/app/constants.h"
-#include "peridot/bin/ledger/auth_provider/auth_provider_impl.h"
-#include "peridot/bin/ledger/backoff/exponential_backoff.h"
-#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
-#include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
@@ -19,6 +13,12 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider_impl.h"
+#include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
+#include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
+#include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 
 namespace ledger {
 

@@ -6,12 +6,12 @@
 #define PERIDOT_BIN_LEDGER_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
 
 #include <memory>
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
-#include "lib/fxl/macros.h"
 
 namespace ledger {
 // Strategy for merging commits using the CUSTOM policy.

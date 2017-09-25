@@ -7,11 +7,11 @@
 #include <algorithm>
 #include <string>
 
-#include "peridot/bin/ledger/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace ledger {
 namespace {

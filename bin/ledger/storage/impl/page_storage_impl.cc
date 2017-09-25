@@ -18,6 +18,16 @@
 
 #include <trace/event.h>
 
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/file_descriptor.h"
+#include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/callback/trace_callback.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
@@ -33,16 +43,6 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/file_descriptor.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/unique_fd.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/strings/concatenate.h"
 #include "zx/vmar.h"
 #include "zx/vmo.h"
 

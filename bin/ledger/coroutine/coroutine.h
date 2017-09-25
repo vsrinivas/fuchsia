@@ -7,9 +7,9 @@
 
 #include <functional>
 
-#include "peridot/bin/ledger/callback/capture.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/ledger/callback/capture.h"
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
 // that can interrupt itself by yielding, and the computation will resume at the

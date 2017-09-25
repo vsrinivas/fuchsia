@@ -9,10 +9,10 @@
 #include <string>
 #include <vector>
 
-#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
-#include "peridot/bin/ledger/cloud_provider/test/page_cloud_handler_empty_impl.h"
 #include "garnet/public/lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/cloud_provider/test/page_cloud_handler_empty_impl.h"
 
 namespace cloud_provider_firebase {
 namespace test {

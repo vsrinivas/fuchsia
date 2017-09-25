@@ -6,8 +6,8 @@
 
 #include <algorithm>
 
-#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/logging.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 
 namespace ledger {
 

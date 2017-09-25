@@ -7,9 +7,9 @@
 
 #include <type_traits>
 
-#include "peridot/bin/ledger/callback/cancellable.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
 
 namespace callback {
 

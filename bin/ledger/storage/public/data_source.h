@@ -13,9 +13,9 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
-#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace storage {
 

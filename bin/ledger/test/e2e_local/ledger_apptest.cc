@@ -4,13 +4,6 @@
 
 #include <string.h>
 
-#include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "lib/ledger/fidl/ledger.fidl-sync.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/callback/capture.h"
-#include "peridot/bin/ledger/test/app_test.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_environment.fidl.h"
@@ -21,6 +14,13 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/ledger/fidl/ledger.fidl-sync.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/bin/ledger/test/app_test.h"
+#include "peridot/bin/ledger/test/fake_token_provider.h"
 
 namespace test {
 namespace e2e_local {

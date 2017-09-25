@@ -6,8 +6,8 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 
-#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 
 namespace cloud_sync {
 class Aggregator::Listener : public SyncStateWatcher {

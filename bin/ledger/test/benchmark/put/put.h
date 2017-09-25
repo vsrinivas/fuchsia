@@ -7,12 +7,12 @@
 
 #include <memory>
 
+#include "lib/app/cpp/application_context.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/data_generator.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
-#include "lib/app/cpp/application_context.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace test {
 namespace benchmark {

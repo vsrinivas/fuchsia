@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
-#include "peridot/bin/ledger/cloud_provider/public/record.h"
-#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "peridot/bin/ledger/cloud_provider/public/record.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace cloud_sync {
 

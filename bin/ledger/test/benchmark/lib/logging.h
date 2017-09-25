@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
-#include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/fxl/strings/string_view.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
 
 namespace test {
 namespace benchmark {

@@ -7,17 +7,17 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "peridot/bin/ledger/app/constants.h"
-#include "peridot/bin/ledger/cloud_provider/public/types.h"
-#include "peridot/bin/ledger/firebase/encoding.h"
-#include "peridot/bin/ledger/tool/convert.h"
-#include "peridot/bin/ledger/tool/inspect_command.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/cloud_provider/public/types.h"
+#include "peridot/bin/ledger/firebase/encoding.h"
+#include "peridot/bin/ledger/tool/convert.h"
+#include "peridot/bin/ledger/tool/inspect_command.h"
 
 namespace tool {
 

@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <string>
 
+#include "gtest/gtest.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"
 #include "peridot/bin/ledger/callback/cancellable_helper.h"
@@ -15,9 +18,6 @@
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/macros.h"
 
 namespace ledger {
 namespace {

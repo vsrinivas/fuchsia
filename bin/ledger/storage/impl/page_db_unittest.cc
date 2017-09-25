@@ -11,6 +11,10 @@
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
@@ -20,10 +24,6 @@
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/test/test_with_coroutines.h"
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/macros.h"
 
 namespace storage {
 namespace {

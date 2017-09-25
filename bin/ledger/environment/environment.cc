@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/environment/environment.h"
 
-#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace ledger {
 

@@ -8,6 +8,11 @@
 #include <unordered_map>
 #include <utility>
 
+#include "gtest/gtest.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
@@ -18,11 +23,6 @@
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 
 namespace cloud_sync {
 namespace {

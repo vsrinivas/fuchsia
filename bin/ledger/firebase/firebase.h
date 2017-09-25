@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/firebase/status.h"
 #include "peridot/bin/ledger/firebase/watch_client.h"
-#include "lib/fxl/macros.h"
 
 #include <rapidjson/document.h>
 

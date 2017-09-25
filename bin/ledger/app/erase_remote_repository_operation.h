@@ -8,13 +8,13 @@
 #include <memory>
 #include <string>
 
-#include "peridot/bin/ledger/auth_provider/auth_provider.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/ledger/callback/cancellable.h"
+#include "peridot/bin/ledger/firebase/firebase_impl.h"
 
 namespace ledger {
 

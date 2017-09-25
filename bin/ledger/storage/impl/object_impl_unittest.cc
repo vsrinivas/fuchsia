@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 
-#include "peridot/bin/ledger/glue/crypto/rand.h"
-#include "peridot/bin/ledger/storage/impl/object_id.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/impl/object_id.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 
 namespace storage {

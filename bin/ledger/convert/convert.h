@@ -9,9 +9,9 @@
 #include <rapidjson/document.h>
 #include <string>
 
-#include "peridot/bin/ledger/convert/bytes_generated.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/convert/bytes_generated.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace convert {
