@@ -11,6 +11,60 @@
 
 namespace registers {
 
+class GpuId : public RegisterBase {
+public:
+    DEF_FIELD(3, 0, version_status);
+    DEF_FIELD(11, 4, minor_revision);
+    DEF_FIELD(15, 12, major_revision);
+    DEF_FIELD(31, 16, product_id);
+
+    static auto Get() { return RegisterAddr<GpuId>(0); }
+};
+
+class L2Features : public RegisterBase {
+public:
+    DEF_FIELD(7, 0, log2_line_size);
+    DEF_FIELD(15, 8, associativity);
+    DEF_FIELD(23, 16, log2_cache_size);
+    DEF_FIELD(31, 24, external_bus_width);
+
+    static auto Get() { return RegisterAddr<L2Features>(0x4); }
+};
+
+class TilerFeatures : public RegisterBase {
+public:
+    DEF_FIELD(5, 0, log2_bin_size_bytes);
+    DEF_FIELD(11, 8, max_active_levels);
+
+    static auto Get() { return RegisterAddr<TilerFeatures>(0xc); }
+};
+
+class MemoryFeatures : public RegisterBase {
+public:
+    DEF_FIELD(1, 0, groups_l2_coherent);
+    DEF_FIELD(11, 8, num_l2_slices_minus1);
+
+    static auto Get() { return RegisterAddr<MemoryFeatures>(0x10); }
+};
+
+class MmuFeatures : public RegisterBase {
+public:
+    DEF_FIELD(7, 0, va_bits);
+    DEF_FIELD(15, 8, pa_bits);
+
+    static auto Get() { return RegisterAddr<MmuFeatures>(0x14); }
+};
+
+class ThreadFeatures : public RegisterBase {
+public:
+    DEF_FIELD(15, 0, max_registers);
+    DEF_FIELD(23, 16, max_task_queue);
+    DEF_FIELD(29, 24, max_thread_group_split);
+    DEF_FIELD(31, 30, impl_tech);
+
+    static auto Get() { return RegisterAddr<ThreadFeatures>(0xac); }
+};
+
 class GpuCommand {
 public:
     static constexpr uint32_t kOffset = 0x30;

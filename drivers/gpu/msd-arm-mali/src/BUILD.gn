@@ -9,6 +9,7 @@ source_set("src") {
   sources = [
     "device_request.h",
     "entry_stubs.cc",
+    "gpu_features.h",
     "msd_arm_buffer.cc",
     "msd_arm_buffer.h",
     "msd_arm_connection.cc",

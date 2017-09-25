@@ -112,6 +112,9 @@ bool MsdArmDevice::Init(void* device_handle)
 
     register_io_ = std::make_unique<RegisterIo>(std::move(mmio));
 
+    gpu_features_.ReadFrom(register_io_.get());
+    magma::log(magma::LOG_INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
+
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
     if (!InitializeInterrupts())

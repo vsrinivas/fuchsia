@@ -11,6 +11,7 @@
 #include <ddk/protocol/platform-device.h>
 
 #include "device_request.h"
+#include "gpu_features.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
@@ -109,6 +110,8 @@ private:
     std::unique_ptr<magma::PlatformInterrupt> gpu_interrupt_;
     std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
     std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
+
+    GpuFeatures gpu_features_;
 };
 
 #endif // MSD_ARM_DEVICE_H
