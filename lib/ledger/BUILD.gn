@@ -24,6 +24,7 @@ source_set("operations") {
   ]
 
   deps = [
+    ":page_client",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",

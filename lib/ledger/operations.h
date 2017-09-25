@@ -16,6 +16,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/page_client.h"
 
 namespace modular {
 
