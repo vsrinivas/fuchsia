@@ -55,22 +55,26 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
 
     if (!strcmp(argv[1].str, "list")) {
         printf("thread list:\n");
-        dump_all_threads(false);
-
-        /* reschedule to let debuglog potentially run */
-        if (!(flags & CMD_FLAG_PANIC))
-            thread_reschedule();
+        if (flags & CMD_FLAG_PANIC) {
+            dump_all_threads_locked(false);
+        } else {
+            dump_all_threads(false);
+        }
     } else if (!strcmp(argv[1].str, "list_full")) {
         printf("thread list:\n");
-        dump_all_threads(true);
-
-        /* reschedule to let debuglog potentially run */
-        if (!(flags & CMD_FLAG_PANIC))
-            thread_reschedule();
+        if (flags & CMD_FLAG_PANIC) {
+            dump_all_threads_locked(true);
+        } else {
+            dump_all_threads(true);
+        }
     } else {
         printf("invalid args\n");
         goto usage;
     }
+
+    /* reschedule to let debuglog potentially run */
+    if (!(flags & CMD_FLAG_PANIC))
+        thread_reschedule();
 
     return 0;
 }

@@ -262,6 +262,7 @@ void thread_process_pending_signals(void);
 void dump_thread(thread_t* t, bool full);
 void arch_dump_thread(thread_t* t);
 void dump_all_threads(bool full);
+void dump_all_threads_locked(bool full);
 
 static inline bool thread_is_realtime(thread_t* t) {
     return (t->flags & THREAD_FLAG_REAL_TIME) && t->base_priority > DEFAULT_PRIORITY;

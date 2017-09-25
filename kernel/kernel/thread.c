@@ -1154,9 +1154,14 @@ void dump_thread(thread_t* t, bool full_dump) {
  * @brief  Dump debugging info about all threads
  */
 void dump_all_threads(bool full) {
+    THREAD_LOCK(state);
+    dump_all_threads_locked(full);
+    THREAD_UNLOCK(state);
+}
+
+void dump_all_threads_locked(bool full) {
     thread_t* t;
 
-    THREAD_LOCK(state);
     list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
         if (t->magic != THREAD_MAGIC) {
             dprintf(INFO, "bad magic on thread struct %p, aborting.\n", t);
@@ -1165,7 +1170,6 @@ void dump_all_threads(bool full) {
         }
         dump_thread(t, full);
     }
-    THREAD_UNLOCK(state);
 }
 
 /** @} */
