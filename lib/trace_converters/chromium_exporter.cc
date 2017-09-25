@@ -72,40 +72,31 @@ void ChromiumExporter::Start() {
 }
 
 void ChromiumExporter::Stop() {
+  writer_.EndArray();
+  writer_.Key("systemTraceEvents");
+  writer_.StartObject();
+  writer_.Key("type");
+  writer_.String("fuchsia");
+  writer_.Key("events");
+  writer_.StartArray();
+
   for (const auto& pair : processes_) {
     const zx_koid_t process_koid = pair.first;
     const std::string& name = pair.second;
 
     writer_.StartObject();
     writer_.Key("ph");
-    writer_.String("M");
-    writer_.Key("name");
-    writer_.String("process_name");
+    writer_.String("p");
     writer_.Key("pid");
     writer_.Uint64(process_koid);
-    writer_.Key("args");
-    writer_.StartObject();
     writer_.Key("name");
     writer_.String(name.data(), name.size());
-    writer_.EndObject();
-    writer_.EndObject();
 
-    // Sort kernel threads to the top of the process list.
     if (process_koid == kNoProcess) {
-      writer_.StartObject();
-      writer_.Key("ph");
-      writer_.String("M");
-      writer_.Key("name");
-      writer_.String("process_sort_index");
-      writer_.Key("pid");
-      writer_.Uint64(process_koid);
-      writer_.Key("args");
-      writer_.StartObject();
       writer_.Key("sort_index");
       writer_.Int64(-1);
-      writer_.EndObject();
-      writer_.EndObject();
     }
+    writer_.EndObject();
   }
 
   for (const auto& pair : threads_) {
@@ -115,22 +106,23 @@ void ChromiumExporter::Stop() {
 
     writer_.StartObject();
     writer_.Key("ph");
-    writer_.String("M");
-    writer_.Key("name");
-    writer_.String("thread_name");
+    writer_.String("t");
     writer_.Key("pid");
     writer_.Uint64(process_koid);
     writer_.Key("tid");
     writer_.Uint64(thread_koid);
-    writer_.Key("args");
-    writer_.StartObject();
     writer_.Key("name");
     writer_.String(name.data(), name.size());
     writer_.EndObject();
-    writer_.EndObject();
+  }
+
+  for (const auto& record : fuchsia_records_) {
+    // Only context switch records are processed right now.
+    ExportContextSwitch(record.GetContextSwitch());
   }
 
   writer_.EndArray();
+  writer_.EndObject();
   writer_.EndObject();
 }
 
@@ -150,6 +142,8 @@ void ChromiumExporter::ExportRecord(const reader::Record& record) {
     case RecordType::kLog:
       ExportLog(record.GetLog());
       break;
+    case RecordType::kContextSwitch:
+      fuchsia_records_.push_back(record);
     default:
       break;
   }
@@ -355,6 +349,34 @@ void ChromiumExporter::ExportLog(const reader::Record::Log& log) {
   writer_.StartObject();
   writer_.Key("message");
   writer_.String(log.message.c_str(), log.message.size());
+  writer_.EndObject();
+  writer_.EndObject();
+}
+
+void ChromiumExporter::ExportContextSwitch(
+    const reader::Record::ContextSwitch& context_switch) {
+  writer_.StartObject();
+  writer_.Key("ph");
+  writer_.String("k");
+  writer_.Key("ts");
+  writer_.Double(context_switch.timestamp * tick_scale_);
+  writer_.Key("cpu");
+  writer_.Uint(context_switch.cpu_number);
+  writer_.Key("out");
+  writer_.StartObject();
+  writer_.Key("pid");
+  writer_.Uint64(context_switch.outgoing_thread.process_koid);
+  writer_.Key("tid");
+  writer_.Uint64(context_switch.outgoing_thread.thread_koid);
+  writer_.Key("state");
+  writer_.Uint(static_cast<uint32_t>(context_switch.outgoing_thread_state));
+  writer_.EndObject();
+  writer_.Key("in");
+  writer_.StartObject();
+  writer_.Key("pid");
+  writer_.Uint64(context_switch.incoming_thread.process_koid);
+  writer_.Key("tid");
+  writer_.Uint64(context_switch.incoming_thread.thread_koid);
   writer_.EndObject();
   writer_.EndObject();
 }
