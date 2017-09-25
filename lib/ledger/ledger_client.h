@@ -9,14 +9,14 @@
 #include <memory>
 #include <vector>
 
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/types.h"
 
 namespace modular {
 
@@ -27,7 +27,8 @@ class PageClient;
 // their page and key prefix.
 class LedgerClient : ledger::ConflictResolverFactory {
  public:
-  LedgerClient(ledger::LedgerRepository* ledger_repository, const std::string& name,
+  LedgerClient(ledger::LedgerRepository* ledger_repository,
+               const std::string& name,
                std::function<void()> error);
   ~LedgerClient() override;
 

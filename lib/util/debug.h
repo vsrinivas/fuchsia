@@ -12,7 +12,7 @@ namespace modular {
 
 // When debugging multiple copies of an object (such as Links), this creates a
 // printable id to disambiguate them
-inline std::string GetDebugId(void *p) {
+inline std::string GetDebugId(void* p) {
   std::ostringstream stream;
   stream << std::hex << ((uint64_t)p & 0x0fff) << " ";
   return stream.str();

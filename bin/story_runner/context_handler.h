@@ -9,13 +9,13 @@
 #include <vector>
 
 #include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
-#include "peridot/lib/fidl/context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
+#include "peridot/lib/fidl/context.h"
 
 namespace modular {
 
@@ -29,7 +29,8 @@ class ContextHandler : maxwell::ContextListener {
   explicit ContextHandler(maxwell::IntelligenceServices* intelligence_services);
   ~ContextHandler() override;
 
-  // Selects topics to watch for and subscribes to the context engine for updates.
+  // Selects topics to watch for and subscribes to the context engine for
+  // updates.
   //
   // To be notified of updates, register a listener by calling Watch() before
   // calling SelectTopics().

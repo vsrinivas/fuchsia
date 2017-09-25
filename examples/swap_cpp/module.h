@@ -5,9 +5,9 @@
 #ifndef APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
 #define APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
 
-#include "peridot/lib/fidl/single_service_app.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
+#include "peridot/lib/fidl/single_service_app.h"
 
 namespace modular_example {
 

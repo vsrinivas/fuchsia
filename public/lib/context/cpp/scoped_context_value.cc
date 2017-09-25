@@ -77,8 +77,9 @@ void ScopedContextValue::Set(ContextValuePtr new_value) {
           [this](const fidl::String& value_id) { value_id_ = value_id; });
     }
   } else {
-    value_id_.OnValue(fxl::MakeCopyable([ v = new_value.Clone(), writer = writer_ ](
-        const fidl::String& id) mutable { writer->Update(id, std::move(v)); }));
+    value_id_.OnValue(fxl::MakeCopyable([
+      v = new_value.Clone(), writer = writer_
+    ](const fidl::String& id) mutable { writer->Update(id, std::move(v)); }));
   }
   value_ = std::move(new_value);
 }

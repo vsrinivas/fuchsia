@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/examples/swap_cpp/module.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "peridot/examples/swap_cpp/module.h"
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;

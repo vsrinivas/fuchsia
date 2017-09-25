@@ -6,14 +6,16 @@
 #include <regex>
 #include <sstream>
 
-#include "peridot/bin/context_engine/scope_utils.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/context_engine/scope_utils.h"
 
 namespace maxwell {
 
-ContextSelectorPtr ComponentScopeToContextSelector(const ComponentScopePtr& scope) {
+ContextSelectorPtr ComponentScopeToContextSelector(
+    const ComponentScopePtr& scope) {
   ContextSelectorPtr selector;
-  if (!scope || scope->is_global_scope()) return selector;
+  if (!scope || scope->is_global_scope())
+    return selector;
   selector = ContextSelector::New();
   if (scope->is_module_scope()) {
     selector->type = ContextValueType::MODULE;
@@ -21,8 +23,7 @@ ContextSelectorPtr ComponentScopeToContextSelector(const ComponentScopePtr& scop
     selector->meta->story = StoryMetadata::New();
     selector->meta->story->id = scope->get_module_scope()->story_id;
     selector->meta->mod = ModuleMetadata::New();
-    selector->meta->mod->path =
-        scope->get_module_scope()->module_path.Clone();
+    selector->meta->mod->path = scope->get_module_scope()->module_path.Clone();
   } else if (scope->is_agent_scope()) {
     // TODO(thatguy)
   } else if (scope->is_story_scope()) {

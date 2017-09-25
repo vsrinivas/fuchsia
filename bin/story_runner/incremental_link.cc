@@ -7,23 +7,26 @@
 
 #include "peridot/bin/story_runner/incremental_link.h"
 
+#include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "lib/story/fidl/link_change.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger/operations.h"
 #include "peridot/lib/ledger/storage.h"
 #include "peridot/lib/util/debug.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/story/fidl/link_change.fidl.h"
-#include "peridot/bin/story_runner/link_impl.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
-#include "lib/fidl/cpp/bindings/struct_ptr.h"
 
 namespace modular {
 
 LinkImpl::IncrementalWriteCall::IncrementalWriteCall(
-    OperationContainer* const container, LinkImpl* const impl,
-    LinkChangePtr data, ResultCall result_call)
-    : Operation("LinkImpl::IncrementalWriteCall", container,
+    OperationContainer* const container,
+    LinkImpl* const impl,
+    LinkChangePtr data,
+    ResultCall result_call)
+    : Operation("LinkImpl::IncrementalWriteCall",
+                container,
                 std::move(result_call)),
       impl_(impl),
       data_(std::move(data)) {
@@ -31,7 +34,9 @@ LinkImpl::IncrementalWriteCall::IncrementalWriteCall(
   Ready();
 }
 
-std::string LinkImpl::IncrementalWriteCall::key() { return data_->key; }
+std::string LinkImpl::IncrementalWriteCall::key() {
+  return data_->key;
+}
 
 void LinkImpl::IncrementalWriteCall::Run() {
   FlowToken flow{this};
@@ -41,8 +46,10 @@ void LinkImpl::IncrementalWriteCall::Run() {
 }
 
 LinkImpl::IncrementalChangeCall::IncrementalChangeCall(
-    OperationContainer* const container, LinkImpl* const impl,
-    LinkChangePtr data, uint32_t src)
+    OperationContainer* const container,
+    LinkImpl* const impl,
+    LinkChangePtr data,
+    uint32_t src)
     : Operation("LinkImpl::IncrementalChangeCall", container, [] {}),
       impl_(impl),
       data_(std::move(data)),
@@ -165,7 +172,8 @@ void LinkImpl::Replay(fidl::Array<LinkChangePtr> changes) {
 }
 
 LinkImpl::ReloadCall::ReloadCall(OperationContainer* const container,
-                                 LinkImpl* const impl, ResultCall result_call)
+                                 LinkImpl* const impl,
+                                 ResultCall result_call)
     : Operation("LinkImpl::ReloadCall", container, result_call), impl_(impl) {
   Ready();
 }

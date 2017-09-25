@@ -6,11 +6,11 @@
 
 #include <string>
 
-#include "peridot/lib/ledger/storage.h"
-#include "peridot/bin/story_runner/module_controller_impl.h"
-#include "peridot/bin/story_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/strings/join_strings.h"
+#include "peridot/bin/story_runner/module_controller_impl.h"
+#include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/lib/ledger/storage.h"
 
 namespace modular {
 

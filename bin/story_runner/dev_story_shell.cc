@@ -7,13 +7,13 @@
 
 #include <memory>
 
-#include "peridot/lib/fidl/single_service_app.h"
-#include "peridot/lib/fidl/view_host.h"
-#include "lib/story/fidl/story_shell.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/story/fidl/story_shell.fidl.h"
+#include "peridot/lib/fidl/single_service_app.h"
+#include "peridot/lib/fidl/view_host.h"
 
 namespace {
 

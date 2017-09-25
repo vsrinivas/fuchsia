@@ -7,12 +7,12 @@
 
 #include <string>
 
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/lib/fidl/app_client.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/lib/fidl/app_client.h"
 
 namespace modular {
 namespace testing {
@@ -36,8 +36,7 @@ class LedgerRepositoryForTesting {
 
  private:
   const std::string repository_path_;
-  std::unique_ptr<AppClient<ledger::LedgerController>>
-      ledger_app_client_;
+  std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_client_;
   ledger::LedgerRepositoryFactoryPtr ledger_repo_factory_;
   ledger::LedgerRepositoryPtr ledger_repo_;
 

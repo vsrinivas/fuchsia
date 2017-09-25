@@ -5,16 +5,16 @@
 #include <utility>
 
 #include "lib/app/cpp/connect.h"
+#include "lib/component/fidl/component_context.fidl.h"
+#include "lib/component/fidl/message_queue.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/memory/weak_ptr.h"
+#include "lib/module/fidl/module.fidl.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "lib/component/fidl/component_context.fidl.h"
-#include "lib/component/fidl/message_queue.fidl.h"
-#include "lib/module/fidl/module.fidl.h"
 #include "peridot/tests/component_context/test_agent1_interface.fidl.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 

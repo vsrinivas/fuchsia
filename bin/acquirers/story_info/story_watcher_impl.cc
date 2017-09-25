@@ -5,11 +5,11 @@
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 
 #include "lib/context/cpp/formatting.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/acquirers/story_info/link_watcher_impl.h"
 #include "peridot/bin/acquirers/story_info/modular.h"
 #include "peridot/bin/acquirers/story_info/story_info.h"
 #include "peridot/lib/ledger/storage.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {
 

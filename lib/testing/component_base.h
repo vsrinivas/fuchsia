@@ -6,11 +6,11 @@
 #define APPS_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
 
 #include "lib/app/cpp/connect.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 namespace testing {

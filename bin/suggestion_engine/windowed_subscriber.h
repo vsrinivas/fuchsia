@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/bin/suggestion_engine/suggestion_subscriber.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 #include <vector>
 

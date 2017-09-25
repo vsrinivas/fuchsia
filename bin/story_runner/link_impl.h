@@ -7,18 +7,18 @@
 
 #include <vector>
 
-#include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "peridot/bin/story_runner/key_generator.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "peridot/bin/story_runner/key_generator.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace modular {

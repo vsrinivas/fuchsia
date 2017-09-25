@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/agents/entity_utils/entity_span.h"
 #include "peridot/bin/agents/entity_utils/entity_utils.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
@@ -22,11 +22,11 @@ class SelectedEntityFinder : ContextListener {
   SelectedEntityFinder()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
-        writer_(
-            app_context_->ConnectToEnvironmentService<ContextWriter>()),
+        writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
     auto query = ContextQuery::New();
-    for (const std::string& topic : {kFocalEntitiesTopic, kRawTextSelectionTopic}) {
+    for (const std::string& topic :
+         {kFocalEntitiesTopic, kRawTextSelectionTopic}) {
       auto selector = ContextSelector::New();
       selector->type = ContextValueType::ENTITY;
       selector->meta = ContextMetadata::New();
@@ -91,11 +91,11 @@ class SelectedEntityFinder : ContextListener {
     }
     const std::vector<EntitySpan> entities =
         EntitySpan::FromContextValues(result->values[kFocalEntitiesTopic]);
-    const std::pair<int, int> start_and_end =
-        GetSelectionFromJson(result->values[kRawTextSelectionTopic][0]->content);
+    const std::pair<int, int> start_and_end = GetSelectionFromJson(
+        result->values[kRawTextSelectionTopic][0]->content);
     writer_->WriteEntityTopic(kSelectedEntitiesTopic,
-                        GetSelectedEntities(entities, start_and_end.first,
-                                            start_and_end.second));
+                              GetSelectedEntities(entities, start_and_end.first,
+                                                  start_and_end.second));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;

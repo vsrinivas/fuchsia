@@ -6,22 +6,22 @@
 // creates other Modules in the story.
 
 #include "lib/app/cpp/connect.h"
+#include "lib/component/fidl/component_context.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
+#include "lib/user/fidl/device_map.fidl.h"
 #include "peridot/examples/counter_cpp/calculator.fidl.h"
 #include "peridot/examples/counter_cpp/store.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/single_service_app.h"
-#include "lib/component/fidl/component_context.fidl.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/user/fidl/device_map.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace {
 

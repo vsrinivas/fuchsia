@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/component/fidl/component.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/resolver/fidl/resolver.fidl.h"
 
 namespace resolver {
 

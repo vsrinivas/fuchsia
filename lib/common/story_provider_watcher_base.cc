@@ -10,7 +10,7 @@
 namespace modular {
 
 StoryProviderWatcherBase::StoryProviderWatcherBase()
-    : continue_([]{}), binding_(this) {}
+    : continue_([] {}), binding_(this) {}
 
 StoryProviderWatcherBase::~StoryProviderWatcherBase() = default;
 
@@ -23,7 +23,9 @@ void StoryProviderWatcherBase::Watch(
   (*story_provider)->Watch(binding_.NewBinding());
 }
 
-void StoryProviderWatcherBase::Reset() { binding_.Close(); }
+void StoryProviderWatcherBase::Reset() {
+  binding_.Close();
+}
 
 void StoryProviderWatcherBase::OnDelete(const ::fidl::String& /*story_id*/) {}
 

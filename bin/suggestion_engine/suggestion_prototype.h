@@ -6,8 +6,8 @@
 
 #include <strstream>
 
-#include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/fxl/time/time_point.h"
+#include "lib/suggestion/fidl/proposal.fidl.h"
 
 namespace maxwell {
 

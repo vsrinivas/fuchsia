@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/agent/fidl/agent.fidl.h"
+#include "lib/component/fidl/message_queue.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "lib/agent/fidl/agent.fidl.h"
-#include "lib/component/fidl/message_queue.fidl.h"
 #include "peridot/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
-#include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 

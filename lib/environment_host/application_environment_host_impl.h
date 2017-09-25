@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "lib/svc/cpp/service_namespace.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/app/fidl/application_environment_host.fidl.h"
+#include "lib/svc/cpp/service_namespace.h"
 
 namespace maxwell {
 

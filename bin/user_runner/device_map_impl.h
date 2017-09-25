@@ -5,15 +5,15 @@
 #ifndef APPS_MODULAR_SRC_USER_RUNNER_DEVICE_MAP_IMPL_H_
 #define APPS_MODULAR_SRC_USER_RUNNER_DEVICE_MAP_IMPL_H_
 
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/user/fidl/device_map.fidl.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/ledger/ledger_client.h"
 #include "peridot/lib/ledger/page_client.h"
 #include "peridot/lib/ledger/types.h"
-#include "lib/user/fidl/device_map.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace modular {
 

@@ -5,18 +5,18 @@
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 

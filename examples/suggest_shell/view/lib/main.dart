@@ -90,15 +90,13 @@ class _AppState {
   _AppState(this._context) {
     _module = new _Module(_updateValue);
     _context.outgoingServices
-    ..addServiceForName(
-        (InterfaceRequest<Module> request) {
-      _log('Service request for Module');
-      _module.bindModule(request);
-    }, Module.serviceName)
-    ..addServiceForName(
-        (InterfaceRequest<Lifecycle> request) {
-      _module.bindLifecycle(request);
-    }, Lifecycle.serviceName);
+      ..addServiceForName((InterfaceRequest<Module> request) {
+        _log('Service request for Module');
+        _module.bindModule(request);
+      }, Module.serviceName)
+      ..addServiceForName((InterfaceRequest<Lifecycle> request) {
+        _module.bindLifecycle(request);
+      }, Lifecycle.serviceName);
   }
 
   // NOTE(mesch): _context is a constructor argument and only used

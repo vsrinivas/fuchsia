@@ -4,8 +4,8 @@
 
 #include "peridot/bin/integration/test.h"
 
-#include "lib/fxl/synchronization/sleep.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/synchronization/sleep.h"
 
 constexpr auto kYieldSleepPeriod = fxl::TimeDelta::FromMilliseconds(1);
 constexpr auto kYieldBatchPeriod = fxl::TimeDelta::FromMilliseconds(0);

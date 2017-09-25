@@ -4,9 +4,9 @@
 
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
+#include "gtest/gtest.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
-#include "gtest/gtest.h"
 
 namespace modular {
 namespace {

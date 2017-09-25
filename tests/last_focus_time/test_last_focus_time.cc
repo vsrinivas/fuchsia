@@ -7,18 +7,18 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "peridot/lib/fidl/single_service_app.h"
-#include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/testing.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/common/story_provider_watcher_base.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/test_runner/fidl/test_runner.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "peridot/lib/fidl/single_service_app.h"
+#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/testing.h"
 
 namespace {
 
@@ -27,8 +27,7 @@ constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/null_module";
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the StoryInfo it receives, and pushes the
 // test through to the next step.
-class StoryProviderWatcherImpl
-    : public modular::StoryProviderWatcherBase {
+class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
  public:
   StoryProviderWatcherImpl() = default;
   ~StoryProviderWatcherImpl() override = default;
@@ -59,12 +58,12 @@ class StoryProviderWatcherImpl
       case 1:
         last_focus_time_created_.Pass();
         break;
-     case 2:
-       last_focus_time_focused_.Pass();
-       break;
-     default:
-       FXL_CHECK(change_count_ == 1 || change_count_ == 2);
-       break;
+      case 2:
+        last_focus_time_focused_.Pass();
+        break;
+      default:
+        FXL_CHECK(change_count_ == 1 || change_count_ == 2);
+        break;
     }
 
     last_focus_time_ = story_info->last_focus_time;

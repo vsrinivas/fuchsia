@@ -5,19 +5,19 @@
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
-#include "peridot/examples/counter_cpp/calculator.fidl.h"
-#include "peridot/examples/counter_cpp/store.h"
-#include "peridot/lib/fidl/single_service_app.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
+#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "peridot/examples/counter_cpp/calculator.fidl.h"
+#include "peridot/examples/counter_cpp/store.h"
+#include "peridot/lib/fidl/single_service_app.h"
 
 namespace {
 
@@ -71,7 +71,7 @@ class Module1View : public mozart::BaseView {
         kTickRotationDegrees * store_->counter.counter * M_PI * 2;
 
     scenic_lib::Rectangle background_shape(session(), logical_size().width,
-                                               logical_size().height);
+                                           logical_size().height);
     background_node_.SetShape(background_shape);
     background_node_.SetTranslation(
         (float[]){center_x, center_y, kBackgroundElevation});

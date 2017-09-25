@@ -7,13 +7,13 @@
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "peridot/bin/user_runner/user_runner_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/user_runner/user_runner_impl.h"
 
 namespace modular {
 

@@ -7,11 +7,11 @@
 
 #include <string>
 
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/lib/ledger/types.h"
 
 namespace modular {
 
@@ -79,11 +79,7 @@ class PageClient : ledger::PageWatcher {
   ledger::Page* page() { return page_; }
 
   // Computed by implementations of OnPageConflict() in derived classes.
-  enum ConflictResolution {
-    LEFT,
-    RIGHT,
-    MERGE
-  };
+  enum ConflictResolution { LEFT, RIGHT, MERGE };
 
   // The argument to OnPageConflict(). It's mutated in place so it's easier to
   // extend without having to alter clients.

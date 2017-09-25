@@ -7,24 +7,24 @@
 
 #include <string>
 
-#include "lib/app/fidl/application_controller.fidl.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
-#include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/operation.h"
 #include "lib/agent/fidl/agent.fidl.h"
 #include "lib/agent/fidl/agent_context.fidl.h"
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
+#include "lib/app/fidl/application_controller.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/auth/fidl/account_provider.fidl.h"
 #include "lib/component/fidl/component_context.fidl.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "peridot/bin/component/component_context_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/one_shot_timer.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/component/component_context_impl.h"
+#include "peridot/lib/fidl/app_client.h"
+#include "peridot/lib/fidl/operation.h"
 
 namespace modular {
 

@@ -12,13 +12,13 @@
 #include <iostream>
 
 #include "lib/app/cpp/connect.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace todo {
 

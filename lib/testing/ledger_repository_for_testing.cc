@@ -6,27 +6,27 @@
 
 #include <utility>
 
+#include "lib/config/fidl/config.fidl.h"
+#include "lib/test_runner/cpp/application_context.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger/constants.h"
-#include "lib/config/fidl/config.fidl.h"
-#include "lib/test_runner/cpp/application_context.h"
 
 namespace modular {
 
 namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting(
-    const std::string& repository_name) : repository_path_("/tmp/" + repository_name) {
+    const std::string& repository_name)
+    : repository_path_("/tmp/" + repository_name) {
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
 
   auto& app_launcher = test_runner::GetApplicationContext()->launcher();
-  ledger_app_client_ =
-      std::make_unique<AppClient<ledger::LedgerController>>(
-          app_launcher.get(), std::move(ledger_config));
+  ledger_app_client_ = std::make_unique<AppClient<ledger::LedgerController>>(
+      app_launcher.get(), std::move(ledger_config));
 
   ConnectToService(ledger_app_client_->services(),
                    ledger_repo_factory_.NewRequest());
@@ -48,11 +48,11 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
 
 void LedgerRepositoryForTesting::Reset(std::function<void()> done) {
   if (ledger_repo_) {
-    ledger_repo_factory_->EraseRepository(
-        repository_path_, nullptr, nullptr, [this, done](ledger::Status status) {
-          ledger_repo_.reset();
-          done();
-        });
+    ledger_repo_factory_->EraseRepository(repository_path_, nullptr, nullptr,
+                                          [this, done](ledger::Status status) {
+                                            ledger_repo_.reset();
+                                            done();
+                                          });
   } else {
     done();
   }
@@ -61,10 +61,10 @@ void LedgerRepositoryForTesting::Reset(std::function<void()> done) {
 void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
   if (ledger_app_client_) {
     ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
-        ledger_repo_factory_.reset();
-        ledger_app_client_.reset();
-        done();
-      });
+      ledger_repo_factory_.reset();
+      ledger_app_client_.reset();
+      done();
+    });
 
   } else {
     done();

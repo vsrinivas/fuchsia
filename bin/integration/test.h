@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "peridot/lib/environment_host/application_environment_host_impl.h"
-#include "peridot/bin/user/agent_launcher.h"
-#include "gtest/gtest.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
+#include "peridot/bin/user/agent_launcher.h"
+#include "peridot/lib/environment_host/application_environment_host_impl.h"
 
 // 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
 constexpr auto kSignalDeadline = fxl::TimeDelta::FromSeconds(5);

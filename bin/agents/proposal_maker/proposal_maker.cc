@@ -4,10 +4,10 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/bin/agents/entity_utils/entity_span.h"
 #include "peridot/bin/agents/entity_utils/entity_utils.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace maxwell {
@@ -67,7 +67,8 @@ class ProposalMaker : ContextListener {
  private:
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr result) override {
-    if (result->values[kSelectedEntitiesTopic].empty()) return;
+    if (result->values[kSelectedEntitiesTopic].empty())
+      return;
     const std::vector<EntitySpan> entities =
         EntitySpan::FromContextValues(result->values[kSelectedEntitiesTopic]);
     for (const EntitySpan& e : entities) {

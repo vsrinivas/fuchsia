@@ -8,9 +8,9 @@
 #include <utility>
 
 #include "lib/component/fidl/component.fidl.h"
-#include "peridot/bin/component_manager/resource_loader.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/component_manager/resource_loader.h"
 
 namespace component {
 

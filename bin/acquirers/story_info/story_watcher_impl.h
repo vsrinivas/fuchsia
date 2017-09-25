@@ -11,11 +11,11 @@
 
 #include "lib/context/cpp/scoped_context_value.h"
 #include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/story/fidl/story_controller.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/macros.h"
 
 namespace maxwell {
 
@@ -35,7 +35,8 @@ class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
   void DropLink(const std::string& link_key);
 
   // Used by |owner_|.
-  void OnStoryStateChange(modular::StoryInfoPtr info, modular::StoryState state);
+  void OnStoryStateChange(modular::StoryInfoPtr info,
+                          modular::StoryState state);
   void OnFocusChange(bool focused);
 
  private:

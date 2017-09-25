@@ -7,23 +7,23 @@
 #include <list>
 
 #include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
 
 class ContextReaderImpl : ContextReader {
  public:
-  ContextReaderImpl(ComponentScopePtr client, ContextRepository* repository,
-      fidl::InterfaceRequest<ContextReader> request);
+  ContextReaderImpl(ComponentScopePtr client,
+                    ContextRepository* repository,
+                    fidl::InterfaceRequest<ContextReader> request);
   ~ContextReaderImpl() override;
 
  private:
   // |ContextReader|
-  void Subscribe(
-      ContextQueryPtr query,
-      fidl::InterfaceHandle<ContextListener> listener) override;
+  void Subscribe(ContextQueryPtr query,
+                 fidl::InterfaceHandle<ContextListener> listener) override;
 
   fidl::Binding<ContextReader> binding_;
 

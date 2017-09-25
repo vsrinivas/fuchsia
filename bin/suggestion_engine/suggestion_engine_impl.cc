@@ -4,14 +4,14 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/ask_subscriber.h"
 #include "peridot/bin/suggestion_engine/interruptions_subscriber.h"
 #include "peridot/bin/suggestion_engine/next_subscriber.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 

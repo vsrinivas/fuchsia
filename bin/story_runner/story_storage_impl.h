@@ -8,15 +8,15 @@
 #include <string>
 
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/ledger/ledger_client.h"
-#include "peridot/lib/ledger/page_client.h"
-#include "peridot/lib/ledger/types.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "lib/story/fidl/per_device_story_info.fidl.h"
 #include "lib/story/fidl/story_data.fidl.h"
 #include "lib/surface/fidl/surface.fidl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger/types.h"
 
 namespace modular {
 
@@ -81,7 +81,8 @@ class StoryStorageImpl : PageClient, public LinkStorage {
                      const SyncCallback& callback) override;
 
   // |LinkStorage|
-  void WriteIncrementalLinkData(const LinkPathPtr& link_path, fidl::String key,
+  void WriteIncrementalLinkData(const LinkPathPtr& link_path,
+                                fidl::String key,
                                 LinkChangePtr link_change,
                                 const SyncCallback& callback) override;
 

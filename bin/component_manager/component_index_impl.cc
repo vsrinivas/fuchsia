@@ -9,14 +9,14 @@
 #include <utility>
 
 #include "lib/component/fidl/component.fidl.h"
-#include "peridot/bin/component_manager/component_resources_impl.h"
-#include "peridot/bin/component_manager/make_network_error.h"
+#include "lib/fsl/socket/strings.h"
+#include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/socket/strings.h"
-#include "lib/fsl/vmo/strings.h"
 #include "lib/url/gurl.h"
+#include "peridot/bin/component_manager/component_resources_impl.h"
+#include "peridot/bin/component_manager/make_network_error.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"

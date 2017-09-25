@@ -5,17 +5,17 @@
 #ifndef APPS_MODULAR_LIB_FIDL_JSON_XDR_H_
 #define APPS_MODULAR_LIB_FIDL_JSON_XDR_H_
 
-#include <string>
-#include <vector>
 #include <map>
+#include <string>
 #include <type_traits>
+#include <vector>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/fxl/macros.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {
 

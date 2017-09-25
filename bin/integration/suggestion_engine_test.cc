@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gtest/gtest.h"
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "peridot/bin/acquirers/mock/mock_gps.h"
@@ -12,8 +14,6 @@
 #include "peridot/bin/integration/test_suggestion_listener.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"
-#include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
 
@@ -155,7 +155,8 @@ class NProposals : public Proposinator, public ContextListener {
   }
 
   void OnContextUpdate(ContextUpdatePtr update) override {
-    if (update->values["n"].empty()) return;
+    if (update->values["n"].empty())
+      return;
     int n = std::stoi(update->values["n"][0]->content);
 
     for (int i = n_; i < n; i++)

@@ -7,12 +7,12 @@
 #include <functional>
 #include <utility>
 
+#include "lib/fsl/vmo/strings.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/ledger/storage.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 namespace {
@@ -155,16 +155,17 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
     FlowToken flow{this, &success_result_};
 
     std::string key = MakeTriggerKey(agent_url_, task_id_);
-    storage_->page()->Delete(to_array(key), [this, flow](ledger::Status status) {
-      // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
-      // request to delete a token which does not exist. This is okay.
-      if (status != ledger::Status::OK &&
-          status != ledger::Status::INVALID_TOKEN) {
-        FXL_LOG(ERROR) << "Ledger operation returned status: " << status;
-        return;
-      }
-      success_result_ = true;
-    });
+    storage_->page()->Delete(
+        to_array(key), [this, flow](ledger::Status status) {
+          // ledger::Status::INVALID_TOKEN is okay because we might have gotten
+          // a request to delete a token which does not exist. This is okay.
+          if (status != ledger::Status::OK &&
+              status != ledger::Status::INVALID_TOKEN) {
+            FXL_LOG(ERROR) << "Ledger operation returned status: " << status;
+            return;
+          }
+          success_result_ = true;
+        });
   }
 
   bool success_result_ = false;
@@ -175,9 +176,12 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteTaskCall);
 };
 
-AgentRunnerStorageImpl::AgentRunnerStorageImpl(
-    LedgerClient* ledger_client, LedgerPageId page_id)
-    : PageClient("AgentRunnerStorageImpl", ledger_client, std::move(page_id), nullptr) {}
+AgentRunnerStorageImpl::AgentRunnerStorageImpl(LedgerClient* ledger_client,
+                                               LedgerPageId page_id)
+    : PageClient("AgentRunnerStorageImpl",
+                 ledger_client,
+                 std::move(page_id),
+                 nullptr) {}
 
 AgentRunnerStorageImpl::~AgentRunnerStorageImpl() = default;
 

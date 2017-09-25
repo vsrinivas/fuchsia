@@ -25,7 +25,8 @@ void ContextHandler::SelectTopics(const std::vector<fidl::String>& topics) {
   for (const auto& topic : topics) {
     auto selector = maxwell::ContextSelector::New();
     selector->type = maxwell::ContextValueType::ENTITY;
-    selector->meta = maxwell::ContextMetadata::New();;
+    selector->meta = maxwell::ContextMetadata::New();
+    ;
     selector->meta->entity = maxwell::EntityMetadata::New();
     selector->meta->entity->topic = topic;
     query->selector[topic] = std::move(selector);
@@ -41,7 +42,8 @@ void ContextHandler::Watch(const std::function<void()>& watcher) {
 void ContextHandler::OnContextUpdate(maxwell::ContextUpdatePtr update) {
   state_ = fidl::Map<fidl::String, fidl::String>();
   for (const auto& it : update->values) {
-    if (it.GetValue().empty()) continue;
+    if (it.GetValue().empty())
+      continue;
     // HACK(thatguy): It is possible to have more than one value come back per
     // ContextSelector. Use just the first value, as that will at least be
     // deterministically the first until the value is deleted.

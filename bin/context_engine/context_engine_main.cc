@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "peridot/bin/context_engine/context_engine_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/context_engine/context_engine_impl.h"
 
 namespace maxwell {
 namespace {

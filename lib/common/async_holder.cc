@@ -4,21 +4,22 @@
 
 #include "peridot/lib/common/async_holder.h"
 
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace modular {
 
-AsyncHolderBase::AsyncHolderBase(std::string name)
-    : name_(std::move(name)) {}
+AsyncHolderBase::AsyncHolderBase(std::string name) : name_(std::move(name)) {}
 
 AsyncHolderBase::~AsyncHolderBase() = default;
 
-void AsyncHolderBase::Teardown(fxl::TimeDelta timeout, std::function<void()> done) {
+void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
+                               std::function<void()> done) {
   // TODO(mesch): There is duplication with code in
   // AppClientBase::AppTerminate(). Should be unified.
   auto called = std::make_shared<bool>(false);
-  auto cont = [this, called, done = std::move(done)](const bool from_timeout) {
+  auto cont =
+      [ this, called, done = std::move(done) ](const bool from_timeout) {
     if (*called) {
       return;
     }
@@ -34,15 +35,12 @@ void AsyncHolderBase::Teardown(fxl::TimeDelta timeout, std::function<void()> don
     done();
   };
 
-  auto cont_timeout = [cont] {
-    cont(true);
-  };
+  auto cont_timeout = [cont] { cont(true); };
 
-  auto cont_normal = [cont] {
-    cont(false);
-  };
+  auto cont_normal = [cont] { cont(false); };
 
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont_timeout, timeout);
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont_timeout,
+                                                                 timeout);
   ImplTeardown(cont_normal);
 }
 

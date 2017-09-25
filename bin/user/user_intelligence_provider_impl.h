@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/action_log/fidl/user.fidl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"

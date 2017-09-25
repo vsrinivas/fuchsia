@@ -194,19 +194,19 @@ void main() {
 
   /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
   _appContext.outgoingServices
-  ..addServiceForName(
-    (request) {
-      _log('Received binding request for Module');
-      _module.bindModule(request);
-    },
-    Module.serviceName,
-  )
-  ..addServiceForName(
-    (request) {
-      _module.bindLifecycle(request);
-    },
-    Lifecycle.serviceName,
-  );
+    ..addServiceForName(
+      (request) {
+        _log('Received binding request for Module');
+        _module.bindModule(request);
+      },
+      Module.serviceName,
+    )
+    ..addServiceForName(
+      (request) {
+        _module.bindLifecycle(request);
+      },
+      Lifecycle.serviceName,
+    );
 
   _controller.addListener(() {
     String currentText = _controller.text;

@@ -4,14 +4,14 @@
 
 #include "peridot/bin/user_runner/focus.h"
 
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/time/time_point.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger/operations.h"
 #include "peridot/lib/ledger/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fxl/time/time_point.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -29,7 +29,10 @@ void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
 FocusHandler::FocusHandler(const fidl::String& device_id,
                            LedgerClient* const ledger_client,
                            LedgerPageId page_id)
-    : PageClient("FocusHandler", ledger_client, std::move(page_id), kFocusKeyPrefix),
+    : PageClient("FocusHandler",
+                 ledger_client,
+                 std::move(page_id),
+                 kFocusKeyPrefix),
       device_id_(device_id) {}
 
 FocusHandler::~FocusHandler() = default;

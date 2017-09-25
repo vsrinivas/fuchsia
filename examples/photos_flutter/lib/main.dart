@@ -65,18 +65,19 @@ void main() {
 
   /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
   _appContext.outgoingServices
-  ..addServiceForName(
-    (request) {
-      _log('Received binding request for Module');
-      _moduleImpl.bindModule(request);
-    },
-    Module.serviceName,
-  )..addServiceForName(
-    (request) {
-      _moduleImpl.bindLifecycle(request);
-    },
-    Lifecycle.serviceName,
-  );
+    ..addServiceForName(
+      (request) {
+        _log('Received binding request for Module');
+        _moduleImpl.bindModule(request);
+      },
+      Module.serviceName,
+    )
+    ..addServiceForName(
+      (request) {
+        _moduleImpl.bindLifecycle(request);
+      },
+      Lifecycle.serviceName,
+    );
   final storage = new DummyPhotoStorage();
   runApp(new MaterialApp(
     title: 'Photos Example',

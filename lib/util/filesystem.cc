@@ -5,9 +5,9 @@
 #include "peridot/lib/util/filesystem.h"
 
 #include <fcntl.h>
+#include <unistd.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
-#include <unistd.h>
 #include <memory>
 
 #include "lib/fxl/files/file.h"

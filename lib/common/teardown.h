@@ -26,9 +26,8 @@ constexpr auto kAgentRunnerTimeout = kBasicTimeout * 2;
 constexpr auto kStoryProviderTimeout = kBasicTimeout * 2;
 
 // Multiple parts as described.
-constexpr auto kUserRunnerTimeout = kBasicTimeout * 3
-    + kAgentRunnerTimeout
-    + kStoryProviderTimeout;
+constexpr auto kUserRunnerTimeout =
+    kBasicTimeout * 3 + kAgentRunnerTimeout + kStoryProviderTimeout;
 
 constexpr auto kUserProviderTimeout = kBasicTimeout + kUserRunnerTimeout;
 

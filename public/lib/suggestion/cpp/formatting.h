@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/formatting.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 
 namespace maxwell {
 

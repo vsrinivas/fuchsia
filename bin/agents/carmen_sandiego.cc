@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
-#include "peridot/bin/acquirers/gps.h"
+#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/acquirers/gps.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
@@ -18,8 +18,7 @@ class CarmenSandiegoApp : public ContextListener {
  public:
   CarmenSandiegoApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        writer_(
-            app_context_->ConnectToEnvironmentService<ContextWriter>()),
+        writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         binding_(this) {
     auto selector = ContextSelector::New();
@@ -35,7 +34,8 @@ class CarmenSandiegoApp : public ContextListener {
  private:
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr update) override {
-    if (update->values["gps"].empty()) return;
+    if (update->values["gps"].empty())
+      return;
 
     std::string hlloc = "somewhere";
 

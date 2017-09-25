@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include "peridot/lib/fidl/json_xdr.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/story/fidl/story_state.fidl.h"
+#include "peridot/lib/fidl/json_xdr.h"
 
 namespace maxwell {
 

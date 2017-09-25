@@ -6,12 +6,12 @@
 
 #include <utility>
 
-#include "peridot/bin/device_runner/users_generated.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "peridot/bin/device_runner/users_generated.h"
 
 namespace modular {
 

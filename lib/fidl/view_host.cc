@@ -4,10 +4,10 @@
 
 #include "peridot/lib/fidl/view_host.h"
 
-#include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/view_framework/base_view.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
 
 namespace modular {
 

@@ -10,15 +10,15 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "peridot/lib/common/async_holder.h"
 #include "lib/config/fidl/config.fidl.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "peridot/lib/common/async_holder.h"
 
 namespace modular {
 

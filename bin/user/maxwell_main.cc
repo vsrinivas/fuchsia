@@ -5,12 +5,12 @@
 #include <iostream>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/files/file.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/user/config.h"
 #include "peridot/bin/user/user_intelligence_provider_impl.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/schema.h"

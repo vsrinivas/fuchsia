@@ -10,22 +10,22 @@
 #include <string>
 #include <unordered_map>
 
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
-#include "peridot/lib/fidl/operation.h"
 #include "lib/agent/fidl/agent_context.fidl.h"
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
 #include "lib/agent/fidl/agent_provider.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
+#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/auth/fidl/account_provider.fidl.h"
-#include "peridot/bin/agent_runner/agent_runner_storage.h"
-#include "peridot/bin/entity/entity_repository.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/agent_runner/agent_runner_storage.h"
+#include "peridot/bin/entity/entity_repository.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include "peridot/lib/fidl/operation.h"
 
 namespace modular {
 

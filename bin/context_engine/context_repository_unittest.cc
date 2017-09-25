@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/context_engine/context_repository.h"
+#include "gtest/gtest.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
-#include "gtest/gtest.h"
 
 namespace maxwell {
 namespace {

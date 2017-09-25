@@ -4,15 +4,15 @@
 
 #include "peridot/bin/story_runner/module_controller_impl.h"
 
-#include "peridot/lib/common/teardown.h"
-#include "peridot/bin/story_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/lib/common/teardown.h"
 
 namespace modular {
 

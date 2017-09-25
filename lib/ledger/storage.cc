@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "peridot/lib/util/string_escape.h"
 #include "lib/fxl/strings/join_strings.h"
+#include "peridot/lib/util/string_escape.h"
 
 namespace modular {
 

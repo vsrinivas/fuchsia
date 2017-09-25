@@ -12,8 +12,8 @@
 #include "lib/context/fidl/debug.fidl.h"
 #include "lib/context/fidl/metadata.fidl.h"
 #include "lib/context/fidl/value.fidl.h"
-#include "peridot/bin/context_engine/index.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "peridot/bin/context_engine/index.h"
 
 namespace maxwell {
 

@@ -8,9 +8,9 @@
 #include <list>
 #include <memory>
 
+#include "garnet/public/lib/fsl/tasks/message_loop.h"
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fsl/tasks/message_loop.h"
 
 namespace maxwell {
 

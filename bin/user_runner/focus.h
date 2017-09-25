@@ -8,16 +8,16 @@
 #include <string>
 #include <vector>
 
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/ledger/ledger_client.h"
-#include "peridot/lib/ledger/page_client.h"
-#include "peridot/lib/ledger/types.h"
-#include "lib/user/fidl/focus.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/string.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/user/fidl/focus.fidl.h"
+#include "peridot/lib/fidl/operation.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger/types.h"
 
 // See services/user/focus.fidl for details.
 
@@ -26,7 +26,8 @@ namespace modular {
 class FocusHandler : FocusProvider, FocusController, PageClient {
  public:
   FocusHandler(const fidl::String& device_id,
-               LedgerClient* ledger_client, LedgerPageId page_id);
+               LedgerClient* ledger_client,
+               LedgerPageId page_id);
   ~FocusHandler() override;
 
   void AddProviderBinding(fidl::InterfaceRequest<FocusProvider> request);

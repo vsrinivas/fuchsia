@@ -4,14 +4,14 @@
 
 #include "peridot/bin/action_log/action_log_impl.h"
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/suggestion_display.fidl.h"
-#include "peridot/bin/action_log/action_log_data.h"
 #include "lib/surface/fidl/surface.fidl.h"
+#include "peridot/bin/action_log/action_log_data.h"
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"

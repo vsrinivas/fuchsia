@@ -109,9 +109,9 @@ void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
   auto it = stories_.find(info->id);
   if (it == stories_.end()) {
     auto ret = stories_.emplace(std::make_pair(
-        info->id, std::make_unique<StoryWatcherImpl>(
-                      this, context_writer_.get(), story_provider_.get(),
-                      info->id)));
+        info->id,
+        std::make_unique<StoryWatcherImpl>(this, context_writer_.get(),
+                                           story_provider_.get(), info->id)));
     it = ret.first;
   }
   it->second->OnStoryStateChange(std::move(info), state);

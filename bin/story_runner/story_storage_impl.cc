@@ -4,14 +4,14 @@
 
 #include "peridot/bin/story_runner/story_storage_impl.h"
 
+#include "lib/fsl/vmo/strings.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/story/fidl/story_data.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/ledger/operations.h"
 #include "peridot/lib/ledger/storage.h"
-#include "lib/story/fidl/story_data.fidl.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -227,7 +227,9 @@ LinkStorage::~LinkStorage() = default;
 
 StoryStorageImpl::StoryStorageImpl(LedgerClient* const ledger_client,
                                    LedgerPageId story_page_id)
-    : PageClient("StoryStorageImpl", ledger_client, std::move(story_page_id),
+    : PageClient("StoryStorageImpl",
+                 ledger_client,
+                 std::move(story_page_id),
                  kLinkKeyPrefix) {}
 
 StoryStorageImpl::~StoryStorageImpl() = default;
@@ -240,8 +242,7 @@ void StoryStorageImpl::ReadLinkData(const LinkPathPtr& link_path,
 void StoryStorageImpl::WriteLinkData(const LinkPathPtr& link_path,
                                      const fidl::String& data,
                                      const SyncCallback& callback) {
-  new WriteLinkDataCall(&operation_queue_, page(), link_path, data,
-                        callback);
+  new WriteLinkDataCall(&operation_queue_, page(), link_path, data, callback);
 }
 
 void StoryStorageImpl::ReadModuleData(
@@ -254,8 +255,8 @@ void StoryStorageImpl::ReadModuleData(
 
 void StoryStorageImpl::ReadAllModuleData(
     const AllModuleDataCallback& callback) {
-  new ReadAllDataCall<ModuleData>(&operation_queue_, page(),
-                                  kModuleKeyPrefix, XdrModuleData, callback);
+  new ReadAllDataCall<ModuleData>(&operation_queue_, page(), kModuleKeyPrefix,
+                                  XdrModuleData, callback);
 }
 
 void StoryStorageImpl::WriteModuleData(
@@ -280,8 +281,8 @@ void StoryStorageImpl::WriteModuleData(
 void StoryStorageImpl::WriteModuleData(ModuleDataPtr data,
                                        const SyncCallback& callback) {
   const std::string key{MakeModuleKey(data->module_path)};
-  new WriteDataCall<ModuleData>(&operation_queue_, page(), key,
-                                XdrModuleData, std::move(data), callback);
+  new WriteDataCall<ModuleData>(&operation_queue_, page(), key, XdrModuleData,
+                                std::move(data), callback);
 }
 
 void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
@@ -308,13 +309,15 @@ void StoryStorageImpl::ReadAllLinkData(const LinkPathPtr& link_path,
 
 class StoryStorageImpl::WriteIncrementalLinkDataCall : Operation<> {
  public:
-  WriteIncrementalLinkDataCall(
-      OperationContainer* const container, ledger::Page* const page,
-      LinkChangeOp op, const LinkPathPtr& link_path,
-      fidl::String key,   // KeyGenerator.Create()
-      fidl::String json,  // Must be null for Erase
-      ResultCall result_call)
-      : Operation("StoryStorageImpl::WriteIncrementalLinkDataCall", container,
+  WriteIncrementalLinkDataCall(OperationContainer* const container,
+                               ledger::Page* const page,
+                               LinkChangeOp op,
+                               const LinkPathPtr& link_path,
+                               fidl::String key,   // KeyGenerator.Create()
+                               fidl::String json,  // Must be null for Erase
+                               ResultCall result_call)
+      : Operation("StoryStorageImpl::WriteIncrementalLinkDataCall",
+                  container,
                   std::move(result_call)),
         page_(page),
         link_key_(MakeSequencedLinkKey(link_path, key)),

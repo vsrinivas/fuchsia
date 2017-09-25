@@ -9,22 +9,22 @@
 #include <vector>
 
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
+#include "lib/module/fidl/link_path.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/bin/user_runner/focus.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/ledger/operations.h"
 #include "peridot/lib/ledger/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/module/fidl/link_path.fidl.h"
-#include "peridot/bin/story_runner/link_impl.h"
-#include "peridot/bin/story_runner/story_controller_impl.h"
-#include "peridot/bin/user_runner/focus.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -479,8 +479,8 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   void Cont(FlowToken flow) {
     auto link_peer = std::make_unique<LinkPeer>();
 
-    link_peer->storage.reset(new StoryStorageImpl(impl_->ledger_client_,
-                                                  story_data_->story_page_id.Clone()));
+    link_peer->storage.reset(new StoryStorageImpl(
+        impl_->ledger_client_, story_data_->story_page_id.Clone()));
     auto* const storage = link_peer->storage.get();
 
     auto link_path = LinkPath::New();
@@ -520,8 +520,10 @@ StoryProviderImpl::StoryProviderImpl(
     FocusProviderPtr focus_provider,
     maxwell::IntelligenceServices* const intelligence_services,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
-    : PageClient("StoryProviderImpl", ledger_client,
-                 std::move(root_page_id), kStoryKeyPrefix),
+    : PageClient("StoryProviderImpl",
+                 ledger_client,
+                 std::move(root_page_id),
+                 kStoryKeyPrefix),
       user_scope_(user_scope),
       device_id_(std::move(device_id)),
       ledger_client_(ledger_client),
@@ -630,16 +632,15 @@ void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
     return true;
   };
 
-  new MutateStoryDataCall(&operation_queue_, page(), story_id, mutate,
-                          done);
+  new MutateStoryDataCall(&operation_queue_, page(), story_id, mutate, done);
 };
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(const fidl::String& module_url,
                                     const CreateStoryCallback& callback) {
   FXL_LOG(INFO) << "CreateStory() " << module_url;
-  new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this, module_url,
-                      FidlStringMap(), fidl::String(), callback);
+  new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
+                      module_url, FidlStringMap(), fidl::String(), callback);
 }
 
 // |StoryProvider|
@@ -649,8 +650,8 @@ void StoryProviderImpl::CreateStoryWithInfo(
     const fidl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
-  new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this, module_url,
-                      std::move(extra_info), root_json, callback);
+  new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
+                      module_url, std::move(extra_info), root_json, callback);
 }
 
 // |StoryProvider|
@@ -666,8 +667,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
                                      const GetStoryInfoCallback& callback) {
   MakeGetStoryDataCall(
-      &operation_queue_, page(), story_id,
-      [callback](StoryDataPtr story_data) {
+      &operation_queue_, page(), story_id, [callback](StoryDataPtr story_data) {
         callback(story_data ? std::move(story_data->story_info) : nullptr);
       });
 }

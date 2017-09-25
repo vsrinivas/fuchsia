@@ -10,26 +10,26 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/ledger/storage.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/story/fidl/story_marker.fidl.h"
-#include "peridot/bin/story_runner/link_impl.h"
-#include "peridot/bin/story_runner/module_context_impl.h"
-#include "peridot/bin/story_runner/module_controller_impl.h"
-#include "peridot/bin/story_runner/story_provider_impl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/join_strings.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "lib/story/fidl/story_marker.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/bin/story_runner/module_context_impl.h"
+#include "peridot/bin/story_runner/module_controller_impl.h"
+#include "peridot/bin/story_runner/story_provider_impl.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger/storage.h"
 
 namespace modular {
 
@@ -797,8 +797,8 @@ StoryControllerImpl::StoryControllerImpl(
     StoryProviderImpl* const story_provider_impl)
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
-      story_storage_impl_(new StoryStorageImpl(
-          ledger_client, std::move(story_page_id))),
+      story_storage_impl_(
+          new StoryStorageImpl(ledger_client, std::move(story_page_id))),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this),

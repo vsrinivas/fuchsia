@@ -4,12 +4,13 @@
 
 #include <string>
 
-#include "lib/user_intelligence/fidl/scope.fidl.h"
-#include "lib/context/fidl/metadata.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/context/fidl/metadata.fidl.h"
+#include "lib/user_intelligence/fidl/scope.fidl.h"
 
 namespace maxwell {
 
-ContextSelectorPtr ComponentScopeToContextSelector(const ComponentScopePtr& scope);
+ContextSelectorPtr ComponentScopeToContextSelector(
+    const ComponentScopePtr& scope);
 
 }  // namespace maxwell

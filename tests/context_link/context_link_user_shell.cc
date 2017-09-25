@@ -9,27 +9,27 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/context/cpp/formatting.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/single_service_app.h"
-#include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
-#include "lib/user/fidl/focus.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "lib/user/fidl/focus.fidl.h"
+#include "lib/user/fidl/user_shell.fidl.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/single_service_app.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
+#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/reporting.h"
+#include "peridot/lib/testing/testing.h"
 
 namespace {
 
@@ -58,8 +58,9 @@ class ContextListenerImpl : maxwell::ContextListener {
     query->selector["all"] = std::move(selector);
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
-    binding_.set_connection_error_handler(
-        [] { FXL_LOG(ERROR) << "Lost ContextListener connection to ContextReader."; });
+    binding_.set_connection_error_handler([] {
+      FXL_LOG(ERROR) << "Lost ContextListener connection to ContextReader.";
+    });
   }
 
   using Handler = std::function<void(const maxwell::ContextValuePtr&)>;
@@ -116,9 +117,8 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
     user_shell_context_->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
-    context_reader_.set_connection_error_handler([] {
-        FXL_LOG(ERROR) << "Lost ContextReader connection.";
-      });
+    context_reader_.set_connection_error_handler(
+        [] { FXL_LOG(ERROR) << "Lost ContextReader connection."; });
 
     CreateStory();
   }
@@ -140,10 +140,9 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   void StartStory() {
     start_story_enter_.Pass();
 
-    context_listener_.Handle(
-        [this](const maxwell::ContextValuePtr& value) {
-          GetContextTopic(value);
-        });
+    context_listener_.Handle([this](const maxwell::ContextValuePtr& value) {
+      GetContextTopic(value);
+    });
 
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
 
@@ -163,7 +162,8 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     // The context link value has metadata that is derived from the story id in
     // which it was published.
     if (!value->meta || !value->meta->story || !value->meta->entity) {
-      FXL_LOG(ERROR) << "ContextValue missing story or entity metadata: " << value;
+      FXL_LOG(ERROR) << "ContextValue missing story or entity metadata: "
+                     << value;
       return;
     }
 

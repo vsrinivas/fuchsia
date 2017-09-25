@@ -7,17 +7,17 @@
 
 #include <string>
 
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "peridot/bin/component/component_context_impl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
+#include "lib/module/fidl/module_context.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
+#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/component/component_context_impl.h"
 
 namespace modular {
 

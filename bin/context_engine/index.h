@@ -32,12 +32,8 @@ class ContextIndex {
   // TODO(thatguy): Move this enum into context_repository.cc.
   using Id = std::string;
 
-  void Add(Id id,
-           ContextValueType type,
-           const ContextMetadataPtr& metadata);
-  void Remove(Id id,
-              ContextValueType type,
-              const ContextMetadataPtr& metadata);
+  void Add(Id id, ContextValueType type, const ContextMetadataPtr& metadata);
+  void Remove(Id id, ContextValueType type, const ContextMetadataPtr& metadata);
 
   // Intersects the ids in |out| with those of type |type| and match every
   // field in |metadata|.

@@ -45,15 +45,13 @@ class AsyncHolderBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(AsyncHolderBase);
 };
 
-template<class Impl>
+template <class Impl>
 class AsyncHolder : public AsyncHolderBase {
  public:
   AsyncHolder(const char* const name) : AsyncHolderBase(name) {}
   ~AsyncHolder() override = default;
 
-  void reset(Impl* const impl) {
-    impl_.reset(impl);
-  }
+  void reset(Impl* const impl) { impl_.reset(impl); }
 
   // Must not be used to invoke Impl::Teardown().
   Impl* operator->() {
@@ -62,9 +60,7 @@ class AsyncHolder : public AsyncHolderBase {
   }
 
   // Must not be used to invoke Impl::Teardown().
-  Impl* get() {
-    return impl_.get();
-  }
+  Impl* get() { return impl_.get(); }
 
  private:
   void ImplTeardown(std::function<void()> done) override {
@@ -72,9 +68,7 @@ class AsyncHolder : public AsyncHolderBase {
     impl_->Teardown(done);
   }
 
-  void ImplReset() override {
-    impl_.reset();
-  }
+  void ImplReset() override { impl_.reset(); }
 
   std::unique_ptr<Impl> impl_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AsyncHolder);

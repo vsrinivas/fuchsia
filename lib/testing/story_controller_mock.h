@@ -7,10 +7,10 @@
 
 #include <string>
 
-#include "lib/story/fidl/story_controller.fidl.h"
-#include "lib/surface/fidl/surface.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/story/fidl/story_controller.fidl.h"
+#include "lib/surface/fidl/surface.fidl.h"
 
 namespace modular {
 

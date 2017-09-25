@@ -7,14 +7,14 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/time/time_point.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger/operations.h"
 #include "peridot/lib/ledger/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fxl/time/time_point.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -46,7 +46,10 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                              const std::string& device_profile,
                              LedgerClient* const ledger_client,
                              LedgerPageId page_id)
-    : PageClient("DeviceMapImpl", ledger_client, std::move(page_id), kDeviceKeyPrefix) {
+    : PageClient("DeviceMapImpl",
+                 ledger_client,
+                 std::move(page_id),
+                 kDeviceKeyPrefix) {
   current_device_.name = device_name;
   current_device_.device_id = device_id;
   current_device_.profile = device_profile;

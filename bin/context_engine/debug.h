@@ -7,8 +7,8 @@
 #include <map>
 
 #include "lib/context/fidl/debug.fidl.h"
-#include "peridot/bin/context_engine/index.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "peridot/bin/context_engine/index.h"
 
 namespace maxwell {
 
@@ -16,6 +16,7 @@ class ContextRepository;
 
 class ContextDebugImpl : public ContextDebug {
   using Id = ContextIndex::Id;
+
  public:
   ContextDebugImpl(const ContextRepository* repository);
   ~ContextDebugImpl();

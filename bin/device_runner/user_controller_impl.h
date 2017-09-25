@@ -7,20 +7,20 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_environment.fidl.h"
-#include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/scope.h"
 #include "lib/auth/fidl/account/account.fidl.h"
 #include "lib/auth/fidl/account_provider.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/device/fidl/user_provider.fidl.h"
-#include "lib/user/fidl/user_runner.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
+#include "lib/user/fidl/user_runner.fidl.h"
+#include "peridot/lib/fidl/app_client.h"
+#include "peridot/lib/fidl/scope.h"
 
 namespace modular {
 

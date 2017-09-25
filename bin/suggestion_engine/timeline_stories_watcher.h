@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/story/fidl/story_provider.fidl.h"
 
 namespace maxwell {
 

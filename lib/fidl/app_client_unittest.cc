@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/lib/fidl/app_client.h"
+#include "gtest/gtest.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/app_client_unittest.fidl.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
-#include "gtest/gtest.h"
 
 namespace modular {
 namespace {
@@ -94,11 +94,10 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
                                 GetTestAppConfig());
 
   bool app_terminated_callback_called = false;
-  app_client_base.Teardown(
-      fxl::TimeDelta::Zero(),
-      [&app_terminated_callback_called] {
-        app_terminated_callback_called = true;
-      });
+  app_client_base.Teardown(fxl::TimeDelta::Zero(),
+                           [&app_terminated_callback_called] {
+                             app_terminated_callback_called = true;
+                           });
 
   EXPECT_TRUE(RunLoopUntil(
       [&app_terminated_callback_called, &test_application_launcher] {

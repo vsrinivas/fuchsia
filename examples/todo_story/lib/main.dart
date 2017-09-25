@@ -76,18 +76,19 @@ void main() {
   final module = new TodoModule();
 
   _appContext.outgoingServices
-  ..addServiceForName(
-    (request) {
-      _log('Received binding request for Module');
-      module.bindModule(request);
-    },
-    Module.serviceName,
-  )..addServiceForName(
-    (request) {
-      module.bindLifecycle(request);
-    },
-    Lifecycle.serviceName,
-  );
+    ..addServiceForName(
+      (request) {
+        _log('Received binding request for Module');
+        module.bindModule(request);
+      },
+      Module.serviceName,
+    )
+    ..addServiceForName(
+      (request) {
+        module.bindLifecycle(request);
+      },
+      Lifecycle.serviceName,
+    );
 
   runApp(new MaterialApp(
     title: 'Todo (Story)',

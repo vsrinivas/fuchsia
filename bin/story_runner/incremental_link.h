@@ -7,18 +7,18 @@
 
 #include <string>
 
-#include "peridot/lib/fidl/json_xdr.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
 
 class LinkImpl::IncrementalWriteCall : Operation<> {
  public:
   IncrementalWriteCall(OperationContainer* container,
-            LinkImpl* impl,
-            LinkChangePtr data,
-            ResultCall result_call);
+                       LinkImpl* impl,
+                       LinkChangePtr data,
+                       ResultCall result_call);
 
   std::string key();
 
@@ -34,7 +34,9 @@ class LinkImpl::IncrementalWriteCall : Operation<> {
 class LinkImpl::IncrementalChangeCall : Operation<> {
  public:
   IncrementalChangeCall(OperationContainer* const container,
-                        LinkImpl* const impl, LinkChangePtr data, uint32_t src);
+                        LinkImpl* const impl,
+                        LinkChangePtr data,
+                        uint32_t src);
 
  private:
   void Run() override;
@@ -56,8 +58,8 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
 class LinkImpl::ReloadCall : Operation<> {
  public:
   ReloadCall(OperationContainer* container,
-            LinkImpl* impl,
-            ResultCall result_call);
+             LinkImpl* impl,
+             ResultCall result_call);
 
  private:
   void Run() override;
@@ -72,7 +74,6 @@ class LinkImpl::ReloadCall : Operation<> {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ReloadCall);
 };
-
 
 }  // namespace modular
 

@@ -7,11 +7,11 @@
 
 #include <iterator>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/story/fidl/link.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular_example {
 

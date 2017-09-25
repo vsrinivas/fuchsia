@@ -9,10 +9,10 @@
 
 #include <string>
 
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/story_data.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
+#include "lib/module/fidl/module_data.fidl.h"
+#include "lib/story/fidl/story_data.fidl.h"
 
 namespace modular {
 

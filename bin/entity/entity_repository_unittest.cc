@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/entity/entity_repository.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/testing/mock_base.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/testing/mock_base.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
 
 // TODO(vardhan): A unittest with a module/agent passing an entity between
 // each other using an entity reference.

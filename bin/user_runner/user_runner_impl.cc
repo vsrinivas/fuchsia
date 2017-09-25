@@ -7,24 +7,24 @@
 #include <memory>
 #include <string>
 
+#include "lib/agent/fidl/agent_provider.fidl.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/config/fidl/config.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
-#include "peridot/lib/common/teardown.h"
-#include "peridot/lib/device_info/device_info.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/scope.h"
-#include "peridot/lib/ledger/constants.h"
-#include "peridot/lib/ledger/ledger_client.h"
-#include "peridot/lib/ledger/status.h"
-#include "peridot/lib/ledger/storage.h"
-#include "lib/agent/fidl/agent_provider.fidl.h"
-#include "lib/config/fidl/config.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
+#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/story_runner/link_impl.h"
@@ -33,14 +33,14 @@
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/remote_invoker_impl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "peridot/lib/common/teardown.h"
+#include "peridot/lib/device_info/device_info.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/scope.h"
+#include "peridot/lib/ledger/constants.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger/status.h"
+#include "peridot/lib/ledger/storage.h"
 
 namespace modular {
 
@@ -129,8 +129,8 @@ void UserRunnerImpl::Initialize(
   const std::string device_profile = LoadDeviceProfile();
 
   device_map_impl_ = std::make_unique<DeviceMapImpl>(
-      device_name_, device_id, device_profile,
-      ledger_client_.get(), fidl::Array<uint8_t>::New(16));
+      device_name_, device_id, device_profile, ledger_client_.get(),
+      fidl::Array<uint8_t>::New(16));
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         if (device_map_impl_) {
@@ -142,7 +142,8 @@ void UserRunnerImpl::Initialize(
 
   // TODO(planders) Do not create RemoteInvoker until service is actually
   // requested.
-  remote_invoker_impl_ = std::make_unique<RemoteInvokerImpl>(ledger_client_->ledger());
+  remote_invoker_impl_ =
+      std::make_unique<RemoteInvokerImpl>(ledger_client_->ledger());
   user_scope_->AddService<RemoteInvoker>(
       [this](fidl::InterfaceRequest<RemoteInvoker> request) {
         if (remote_invoker_impl_) {
@@ -197,9 +198,8 @@ void UserRunnerImpl::Initialize(
 
   entity_repository_ = std::make_unique<EntityRepository>();
 
-  agent_runner_storage_ =
-      std::make_unique<AgentRunnerStorageImpl>(
-          ledger_client_.get(), to_array(kAgentRunnerPageId));
+  agent_runner_storage_ = std::make_unique<AgentRunnerStorageImpl>(
+      ledger_client_.get(), to_array(kAgentRunnerPageId));
 
   agent_runner_.reset(new AgentRunner(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
@@ -207,10 +207,9 @@ void UserRunnerImpl::Initialize(
       token_provider_factory_.get(), user_intelligence_provider_.get(),
       entity_repository_.get()));
 
-  ComponentContextInfo component_context_info{message_queue_manager_.get(),
-                                              agent_runner_.get(),
-                                              ledger_repository_.get(),
-                                              entity_repository_.get()};
+  ComponentContextInfo component_context_info{
+      message_queue_manager_.get(), agent_runner_.get(),
+      ledger_repository_.get(), entity_repository_.get()};
 
   maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
@@ -227,8 +226,9 @@ void UserRunnerImpl::Initialize(
         "--config=/system/data/maxwell/test_config.json");
   }
 
-  maxwell_ = std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
-      user_scope_->GetLauncher(), std::move(maxwell_config));
+  maxwell_ =
+      std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
+          user_scope_->GetLauncher(), std::move(maxwell_config));
 
   maxwell_->primary_service()->GetUserIntelligenceProvider(
       maxwell_component_context_binding_->NewBinding(),
@@ -255,10 +255,9 @@ void UserRunnerImpl::Initialize(
 
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_id, ledger_client_.get(),
-      fidl::Array<uint8_t>::New(16),
-      std::move(story_shell), component_context_info,
-      std::move(focus_provider_story_provider), intelligence_services_.get(),
-      user_intelligence_provider_.get()));
+      fidl::Array<uint8_t>::New(16), std::move(story_shell),
+      component_context_info, std::move(focus_provider_story_provider),
+      intelligence_services_.get(), user_intelligence_provider_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   focus_handler_ = std::make_unique<FocusHandler>(
@@ -304,56 +303,56 @@ void UserRunnerImpl::Terminate() {
   // This list is the reverse from the initialization order executed in
   // Initialize() above.
   user_shell_->Teardown(kBasicTimeout, [this] {
-      FXL_DLOG(INFO) << "- UserShell down";
-      user_shell_.reset();
+    FXL_DLOG(INFO) << "- UserShell down";
+    user_shell_.reset();
 
-      visible_stories_handler_.reset();
-      focus_handler_.reset();
+    visible_stories_handler_.reset();
+    focus_handler_.reset();
 
-      // We teardown |story_provider_impl_| before |agent_runner_| because the
-      // modules running in a story might freak out if agents they are connected
-      // to go away while they are still running. On the other hand agents are
-      // meant to outlive story lifetimes.
-      story_provider_impl_.Teardown(kStoryProviderTimeout, [this] {
-          FXL_DLOG(INFO) << "- StoryProvider down";
+    // We teardown |story_provider_impl_| before |agent_runner_| because the
+    // modules running in a story might freak out if agents they are connected
+    // to go away while they are still running. On the other hand agents are
+    // meant to outlive story lifetimes.
+    story_provider_impl_.Teardown(kStoryProviderTimeout, [this] {
+      FXL_DLOG(INFO) << "- StoryProvider down";
 
-          user_intelligence_provider_.reset();
-          maxwell_->Teardown(kBasicTimeout, [this] {
-              FXL_DLOG(INFO) << "- Maxwell down";
-              maxwell_.reset();
+      user_intelligence_provider_.reset();
+      maxwell_->Teardown(kBasicTimeout, [this] {
+        FXL_DLOG(INFO) << "- Maxwell down";
+        maxwell_.reset();
 
-              maxwell_component_context_binding_.reset();
-              maxwell_component_context_impl_.reset();
+        maxwell_component_context_binding_.reset();
+        maxwell_component_context_impl_.reset();
 
-              agent_runner_.Teardown(kAgentRunnerTimeout, [this] {
-                  FXL_DLOG(INFO) << "- AgentRunner down";
-                  agent_runner_storage_.reset();
+        agent_runner_.Teardown(kAgentRunnerTimeout, [this] {
+          FXL_DLOG(INFO) << "- AgentRunner down";
+          agent_runner_storage_.reset();
 
-                  entity_repository_.reset();
-                  message_queue_manager_.reset();
-                  remote_invoker_impl_.reset();
-                  device_map_impl_.reset();
+          entity_repository_.reset();
+          message_queue_manager_.reset();
+          remote_invoker_impl_.reset();
+          device_map_impl_.reset();
 
-                  ledger_client_.reset();
-                  ledger_repository_.reset();
-                  ledger_repository_factory_.reset();
-                  ledger_app_client_->Teardown(kBasicTimeout, [this] {
-                      FXL_DLOG(INFO) << "- Ledger down";
-                      ledger_app_client_.reset();
+          ledger_client_.reset();
+          ledger_repository_.reset();
+          ledger_repository_factory_.reset();
+          ledger_app_client_->Teardown(kBasicTimeout, [this] {
+            FXL_DLOG(INFO) << "- Ledger down";
+            ledger_app_client_.reset();
 
-                      user_shell_.reset();
-                      user_scope_.reset();
-                      account_.reset();
-                      user_context_.reset();
-                      token_provider_factory_.reset();
+            user_shell_.reset();
+            user_scope_.reset();
+            account_.reset();
+            user_context_.reset();
+            token_provider_factory_.reset();
 
-                      FXL_LOG(INFO) << "UserRunner::Terminate(): done";
-                      fsl::MessageLoop::GetCurrent()->QuitNow();
-                    });
-                });
-            });
+            FXL_LOG(INFO) << "UserRunner::Terminate(): done";
+            fsl::MessageLoop::GetCurrent()->QuitNow();
+          });
         });
+      });
     });
+  });
 }
 
 void UserRunnerImpl::GetAccount(const GetAccountCallback& callback) {
@@ -452,9 +451,8 @@ void UserRunnerImpl::SetupLedger() {
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
-  ledger_app_client_ =
-      std::make_unique<AppClient<ledger::LedgerController>>(
-          user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
+  ledger_app_client_ = std::make_unique<AppClient<ledger::LedgerController>>(
+      user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
   ledger_app_client_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
@@ -492,9 +490,8 @@ void UserRunnerImpl::SetupLedger() {
   // is cleared), ledger will close the connection to |ledger_repository_|.
   ledger_repository_.set_connection_error_handler([this] { Logout(); });
 
-  ledger_client_.reset(new LedgerClient(
-      ledger_repository_.get(), kAppId,
-      [this] {
+  ledger_client_.reset(
+      new LedgerClient(ledger_repository_.get(), kAppId, [this] {
         FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
         Logout();
       }));

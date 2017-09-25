@@ -7,15 +7,15 @@
 
 #include <unordered_map>
 
-#include "peridot/lib/fidl/operation.h"
 #include "lib/entity/fidl/entity.fidl.h"
 #include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/entity/fidl/entity_store.fidl.h"
-#include "peridot/bin/entity/entity_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/entity/entity_impl.h"
+#include "peridot/lib/fidl/operation.h"
 
 namespace modular {
 

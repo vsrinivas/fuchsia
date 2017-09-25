@@ -4,24 +4,24 @@
 
 #include <memory>
 
+#include "gtest/gtest.h"
+#include "lib/agent/fidl/agent.fidl.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
+#include "lib/auth/fidl/account_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/agent_runner/agent_runner.h"
+#include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/entity/entity_repository.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger/ledger_client.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
-#include "lib/agent/fidl/agent.fidl.h"
-#include "lib/auth/fidl/account_provider.fidl.h"
-#include "peridot/bin/agent_runner/agent_runner.h"
-#include "peridot/bin/component/message_queue_manager.h"
-#include "peridot/bin/entity/entity_repository.h"
-#include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 namespace testing {

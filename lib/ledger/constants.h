@@ -10,10 +10,9 @@ namespace modular {
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerNoMinfsWaitFlag[] = "--no_minfs_wait";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
-constexpr uint8_t kLedgerRootPageId[] = { 0, 0, 0, 0,
-                                          0, 0, 0, 0,
-                                          0, 0, 0, 0,
-                                          0, 0, 0, 0, };
+constexpr uint8_t kLedgerRootPageId[] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
 
 // Hard-coded communal Ledger instance.
 const char kFirebaseServerId[] = "fuchsia-ledger";

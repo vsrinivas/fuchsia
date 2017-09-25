@@ -8,9 +8,9 @@
 #include <map>
 #include <memory>
 
+#include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/fxl/macros.h"
 
 namespace modular {
 

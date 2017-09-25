@@ -4,17 +4,17 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "peridot/lib/testing/component_base.h"
-#include "peridot/lib/testing/reporting.h"
-#include "peridot/lib/testing/testing.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "lib/user/fidl/user_shell.fidl.h"
+#include "peridot/lib/testing/component_base.h"
+#include "peridot/lib/testing/reporting.h"
+#include "peridot/lib/testing/testing.h"
 
 using modular::testing::TestPoint;
 

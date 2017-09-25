@@ -8,8 +8,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -36,7 +36,8 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
   }
 
   void OnContextUpdate(ContextUpdatePtr update) override {
-    if (update->values[kLocationTopic].empty()) return;
+    if (update->values[kLocationTopic].empty())
+      return;
     rapidjson::Document d;
     d.Parse(update->values[kLocationTopic][0]->content.data());
 

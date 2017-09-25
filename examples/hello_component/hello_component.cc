@@ -5,9 +5,9 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 

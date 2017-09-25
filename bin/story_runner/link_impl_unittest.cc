@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/story_runner/link_impl.h"
+#include "gtest/gtest.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/story/fidl/link_change.fidl.h"
+#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/lib/ledger/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
-#include "lib/story/fidl/link_change.fidl.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
-#include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/array.h"
 
 namespace modular {
 namespace {
@@ -60,7 +60,8 @@ class LinkStorageMock : LinkStorage, public testing::MockBase {
     callback();
   }
 
-  void WriteIncrementalLinkData(const LinkPathPtr& link_path, fidl::String key,
+  void WriteIncrementalLinkData(const LinkPathPtr& link_path,
+                                fidl::String key,
                                 LinkChangePtr link_change,
                                 const SyncCallback& callback) override {
     ++counts["WriteIncrementalLinkData"];
@@ -103,13 +104,11 @@ constexpr char kPrettyTestLinkPath[] = "root:photos/theLinkName";
 
 class LinkImplTest : public testing::TestWithMessageLoop, modular::LinkWatcher {
  public:
-  LinkImplTest() : binding_(this) {
-    link_impl_->Connect(std::move(request_));
-  }
+  LinkImplTest() : binding_(this) { link_impl_->Connect(std::move(request_)); }
 
   ~LinkImplTest() {
     if (binding_.is_bound()) {
-      binding_.Close(); // Disconnect from Watch()
+      binding_.Close();  // Disconnect from Watch()
     }
   }
 
@@ -125,8 +124,9 @@ class LinkImplTest : public testing::TestWithMessageLoop, modular::LinkWatcher {
   LinkStorageMock storage_mock;
   LinkPtr link_ptr_;
   fidl::InterfaceRequest<Link> request_ = link_ptr_.NewRequest();
-  std::unique_ptr<LinkImpl> link_impl_ = std::make_unique<LinkImpl>(
-      storage_mock.interface(), std::move(link_path));
+  std::unique_ptr<LinkImpl> link_impl_ =
+      std::make_unique<LinkImpl>(storage_mock.interface(),
+                                 std::move(link_path));
   fidl::Binding<modular::LinkWatcher> binding_;
 };
 
@@ -139,7 +139,7 @@ TEST_F(LinkImplTest, Constructor) {
     storage_mock.ExpectCalledOnce("WatchLink");
     storage_mock.ExpectNoOtherCalls();
 
-    binding_.Close(); // Disconnect from Watch()
+    binding_.Close();  // Disconnect from Watch()
     link_impl_.reset();
     storage_mock.ExpectCalledOnce("DropWatcher");
     storage_mock.ExpectNoOtherCalls();

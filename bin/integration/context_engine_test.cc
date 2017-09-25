@@ -4,9 +4,9 @@
 
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/context_engine/scope_utils.h"
 #include "peridot/bin/integration/context_engine_test_base.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
 namespace {
@@ -116,7 +116,8 @@ TEST_F(ContextEngineTest, BasicWriteSubscribe) {
 
   value = ContextValue::New();
   value->type = ContextValueType::ENTITY;
-  value->content = R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })";
+  value->content =
+      R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })";
   value->meta = ContextMetadata::New();
   value->meta->entity = EntityMetadata::New();
   value->meta->entity->topic = "frob";
@@ -145,8 +146,8 @@ TEST_F(ContextEngineTest, BasicWriteSubscribe) {
 }
 
 TEST_F(ContextEngineTest, CloseListenerAndReader) {
-  // Ensure that listeners can be closed individually, and that the reader itself
-  // can be closed and listeners are still valid.
+  // Ensure that listeners can be closed individually, and that the reader
+  // itself can be closed and listeners are still valid.
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
   selector->meta = ContextMetadata::New();

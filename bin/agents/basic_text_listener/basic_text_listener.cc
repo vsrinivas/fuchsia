@@ -6,12 +6,12 @@
 #include <vector>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
+#include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/agents/entity_utils/entity_span.h"
 #include "peridot/bin/agents/entity_utils/entity_utils.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
@@ -27,8 +27,7 @@ class BasicTextListener : ContextListener {
   BasicTextListener()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
-        writer_(
-            app_context_->ConnectToEnvironmentService<ContextWriter>()),
+        writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
     auto selector = ContextSelector::New();
     selector->type = ContextValueType::ENTITY;
@@ -71,11 +70,12 @@ class BasicTextListener : ContextListener {
 
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr result) override {
-    if (result->values[kRawTextTopic].empty()) return;
+    if (result->values[kRawTextTopic].empty())
+      return;
     rapidjson::Document text_doc;
     // TODO(thatguy): This is only taking the first raw_text entry. We should be
-    // keeping track of each one, and writing N new context values out for Entities
-    // we extracted.
+    // keeping track of each one, and writing N new context values out for
+    // Entities we extracted.
     text_doc.Parse(result->values[kRawTextTopic][0]->content);
     // TODO(travismart): What to do if there are multiple topics, or if
     // topics_[0] has more than one entry?
@@ -85,7 +85,8 @@ class BasicTextListener : ContextListener {
     }
     const std::string raw_text = text_doc[0]["text"].GetString();
 
-    writer_->WriteEntityTopic(kFocalEntitiesTopic, GetEntitiesFromText(raw_text));
+    writer_->WriteEntityTopic(kFocalEntitiesTopic,
+                              GetEntitiesFromText(raw_text));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;

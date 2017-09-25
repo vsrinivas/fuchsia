@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 using modular::testing::TestPoint;
 

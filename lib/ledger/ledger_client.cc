@@ -4,12 +4,12 @@
 
 #include "peridot/lib/ledger/ledger_client.h"
 
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger/page_client.h"
 #include "peridot/lib/ledger/status.h"
 #include "peridot/lib/ledger/types.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -26,31 +26,32 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       ledger::PageChange* const change_all,
                       LedgerPageKey token,
                       std::function<void(ledger::Status)> callback) {
-  auto cont = fxl::MakeCopyable(
-      [result, left, change_all, callback = std::move(callback)](
-          ledger::Status status, ledger::PageChangePtr change_delta, LedgerPageKey token) {
-        if (status != ledger::Status::OK &&
-            status != ledger::Status::PARTIAL_RESULT) {
-          callback(status);
-          return;
-        }
+  auto cont = fxl::MakeCopyable([
+    result, left, change_all, callback = std::move(callback)
+  ](ledger::Status status, ledger::PageChangePtr change_delta,
+    LedgerPageKey token) {
+    if (status != ledger::Status::OK &&
+        status != ledger::Status::PARTIAL_RESULT) {
+      callback(status);
+      return;
+    }
 
-        for (auto& entry : change_delta->changes) {
-          change_all->changes.push_back(std::move(entry));
-        }
+    for (auto& entry : change_delta->changes) {
+      change_all->changes.push_back(std::move(entry));
+    }
 
-        for (auto& deleted : change_delta->deleted_keys) {
-          change_all->deleted_keys.push_back(std::move(deleted));
-        }
+    for (auto& deleted : change_delta->deleted_keys) {
+      change_all->deleted_keys.push_back(std::move(deleted));
+    }
 
-        if (status == ledger::Status::OK) {
-          callback(ledger::Status::OK);
-          return;
-        }
+    if (status == ledger::Status::OK) {
+      callback(ledger::Status::OK);
+      return;
+    }
 
-        GetDiffRecursive(result, left, change_all, std::move(token),
-                         std::move(callback));
-      });
+    GetDiffRecursive(result, left, change_all, std::move(token),
+                     std::move(callback));
+  });
 
   if (left) {
     result->GetLeftDiff(std::move(token), cont);
@@ -63,7 +64,8 @@ void GetDiff(ledger::MergeResultProvider* const result,
              const bool left,
              ledger::PageChange* const change_all,
              std::function<void(ledger::Status)> callback) {
-  GetDiffRecursive(result, left, change_all, nullptr /* token */, std::move(callback));
+  GetDiffRecursive(result, left, change_all, nullptr /* token */,
+                   std::move(callback));
 }
 
 bool HasPrefix(const std::string& value, const std::string& prefix) {
@@ -117,17 +119,18 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
               Cont(flow);
             });
 
-    GetEntries(left_version_.get(), &left_entries_, [this, flow](ledger::Status) {
-        LogEntries("left", left_entries_);
-      });
+    GetEntries(
+        left_version_.get(), &left_entries_,
+        [this, flow](ledger::Status) { LogEntries("left", left_entries_); });
 
-    GetEntries(right_version_.get(), &right_entries_, [this, flow](ledger::Status) {
-        LogEntries("right", right_entries_);
-      });
+    GetEntries(
+        right_version_.get(), &right_entries_,
+        [this, flow](ledger::Status) { LogEntries("right", right_entries_); });
 
-    GetEntries(common_version_.get(), &common_entries_, [this, flow](ledger::Status) {
-        LogEntries("common", common_entries_);
-      });
+    GetEntries(common_version_.get(), &common_entries_,
+               [this, flow](ledger::Status) {
+                 LogEntries("common", common_entries_);
+               });
   }
 
   void Cont(FlowToken flow) {
@@ -161,7 +164,8 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
                 } else {
                   merged_value->source = ledger::ValueSource::NEW;
                   merged_value->new_value = ledger::BytesOrReference::New();
-                  merged_value->new_value->set_bytes(to_array(pair.second->merged));
+                  merged_value->new_value->set_bytes(
+                      to_array(pair.second->merged));
                 }
               }
               merge_changes.push_back(std::move(merged_value));
@@ -191,8 +195,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
       if (merge_changes.size() > 0) {
         merge_count_++;
         result_provider_->Merge(
-            std::move(merge_changes),
-            [this, flow](ledger::Status status) {
+            std::move(merge_changes), [this, flow](ledger::Status status) {
               if (status != ledger::Status::OK) {
                 FXL_LOG(ERROR) << "ResultProvider.Merge() " << status;
               }
@@ -207,11 +210,11 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
   void MergeDone(FlowToken flow) {
     if (--merge_count_ == 0) {
       result_provider_->Done([this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << "ResultProvider.Done() " << status;
-          }
-          impl_->NotifyWatchers();
-        });
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR) << "ResultProvider.Done() " << status;
+        }
+        impl_->NotifyWatchers();
+      });
     }
   }
 
@@ -252,7 +255,8 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
     }
   }
 
-  void LogEntries(const std::string& headline, const std::vector<ledger::EntryPtr>& entries) {
+  void LogEntries(const std::string& headline,
+                  const std::vector<ledger::EntryPtr>& entries) {
     FXL_LOG(INFO) << "Entries " << headline;
     for (const ledger::EntryPtr& entry : entries) {
       FXL_LOG(INFO) << " - " << to_string(entry->key);
@@ -288,11 +292,11 @@ LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
                            std::function<void()> error) {
   // Open Ledger.
   ledger_repository->GetLedger(
-      to_array(name), ledger_.NewRequest(), [this, error](ledger::Status status) {
+      to_array(name), ledger_.NewRequest(),
+      [this, error](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR)
-              << "LedgerRepository.GetLedger() failed: "
-              << LedgerStatusToString(status);
+          FXL_LOG(ERROR) << "LedgerRepository.GetLedger() failed: "
+                         << LedgerStatusToString(status);
           error();
         }
       });
@@ -302,13 +306,11 @@ LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
   ledger_->SetConflictResolverFactory(
       bindings_.AddBinding(this), [this, error](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR)
-              << "Ledger.SetConflictResolverFactory() failed: "
-              << LedgerStatusToString(status);
+          FXL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
+                         << LedgerStatusToString(status);
           error();
         }
       });
-
 }
 
 LedgerClient::~LedgerClient() = default;
@@ -316,10 +318,9 @@ LedgerClient::~LedgerClient() = default;
 ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
                                     const std::string& context,
                                     const LedgerPageId& page_id) {
-  auto i = std::find_if(pages_.begin(), pages_.end(),
-                        [&page_id](auto& entry) {
-                          return entry->page_id.Equals(page_id);
-                        });
+  auto i = std::find_if(pages_.begin(), pages_.end(), [&page_id](auto& entry) {
+    return entry->page_id.Equals(page_id);
+  });
 
   if (i != pages_.end()) {
     (*i)->clients.push_back(page_client);
@@ -328,8 +329,7 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
 
   ledger::PagePtr page;
   ledger_->GetPage(
-      page_id.Clone(), page.NewRequest(),
-      [context](ledger::Status status) {
+      page_id.Clone(), page.NewRequest(), [context](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR) << "Ledger.GetPage() " << context << " " << status;
         }
@@ -341,12 +341,12 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
 
   entry->page = std::move(page);
   entry->page.set_connection_error_handler([context] {
-      // TODO(mesch): If this happens, larger things are wrong. This should
-      // probably be signalled up, or at least must be signalled to the page
-      // client.
-      FXL_LOG(ERROR) << context << ": "
-                     << "Page connection unexpectedly closed.";
-    });
+    // TODO(mesch): If this happens, larger things are wrong. This should
+    // probably be signalled up, or at least must be signalled to the page
+    // client.
+    FXL_LOG(ERROR) << context << ": "
+                   << "Page connection unexpectedly closed.";
+  });
 
   pages_.emplace_back(std::move(entry));
   return pages_.back()->page.get();
@@ -357,9 +357,8 @@ void LedgerClient::DropPageClient(PageClient* const page_client) {
     std::vector<PageClient*>* const page_clients = &(*i)->clients;
 
     auto ii = std::remove_if(
-        page_clients->begin(), page_clients->end(), [page_client](PageClient* item) {
-          return item == page_client;
-        });
+        page_clients->begin(), page_clients->end(),
+        [page_client](PageClient* item) { return item == page_client; });
 
     if (ii != page_clients->end()) {
       page_clients->erase(ii, page_clients->end());
@@ -375,10 +374,9 @@ void LedgerClient::DropPageClient(PageClient* const page_client) {
 
 void LedgerClient::GetPolicy(LedgerPageId page_id,
                              const GetPolicyCallback& callback) {
-  auto i = std::find_if(pages_.begin(), pages_.end(),
-                        [&page_id](auto& entry) {
-                          return entry->page_id.Equals(page_id);
-                        });
+  auto i = std::find_if(pages_.begin(), pages_.end(), [&page_id](auto& entry) {
+    return entry->page_id.Equals(page_id);
+  });
 
   // This is wrong if GetPolicy() is called for a page before its page client
   // has registered. Therefore, if an app keeps multiple connections to a page,
@@ -412,9 +410,8 @@ void LedgerClient::NewConflictResolver(
 
 void LedgerClient::ClearConflictResolver(const LedgerPageId& page_id) {
   auto i = std::remove_if(
-      resolvers_.begin(), resolvers_.end(), [&page_id](auto& item) {
-        return item->page_id().Equals(page_id);
-      });
+      resolvers_.begin(), resolvers_.end(),
+      [&page_id](auto& item) { return item->page_id().Equals(page_id); });
 
   if (i != resolvers_.end()) {
     resolvers_.erase(i, resolvers_.end());
@@ -438,18 +435,19 @@ void LedgerClient::ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
     fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
     fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
-  new ResolveCall(&operation_queue_, this,
-                  ledger::MergeResultProviderPtr::Create(std::move(result_provider)),
-                  ledger::PageSnapshotPtr::Create(std::move(left_version)),
-                  ledger::PageSnapshotPtr::Create(std::move(right_version)),
-                  ledger::PageSnapshotPtr::Create(std::move(common_version)));
+  new ResolveCall(
+      &operation_queue_, this,
+      ledger::MergeResultProviderPtr::Create(std::move(result_provider)),
+      ledger::PageSnapshotPtr::Create(std::move(left_version)),
+      ledger::PageSnapshotPtr::Create(std::move(right_version)),
+      ledger::PageSnapshotPtr::Create(std::move(common_version)));
 }
 
-void LedgerClient::ConflictResolverImpl::GetPageClients(std::vector<PageClient*>* page_clients) {
+void LedgerClient::ConflictResolverImpl::GetPageClients(
+    std::vector<PageClient*>* page_clients) {
   auto i = std::find_if(
-      ledger_client_->pages_.begin(), ledger_client_->pages_.end(), [this](auto& item) {
-        return item->page_id.Equals(page_id_);
-      });
+      ledger_client_->pages_.begin(), ledger_client_->pages_.end(),
+      [this](auto& item) { return item->page_id.Equals(page_id_); });
 
   FXL_CHECK(i != ledger_client_->pages_.end());
   *page_clients = (*i)->clients;

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/application_context.h"
-#include "peridot/bin/acquirers/story_info/story_info.h"
 #include "lib/agent/fidl/agent.fidl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "peridot/bin/acquirers/story_info/story_info.h"
 
 #include "lib/fsl/tasks/message_loop.h"
 

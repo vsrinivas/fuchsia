@@ -6,15 +6,15 @@
 
 #include <map>
 
-#include "lib/svc/cpp/service_namespace.h"
-#include "lib/context/fidl/context_writer.fidl.h"
-#include "peridot/bin/acquirers/story_info/initializer.fidl.h"
 #include "lib/agent/fidl/agent.fidl.h"
-#include "lib/story/fidl/story_controller.fidl.h"
-#include "lib/story/fidl/story_provider.fidl.h"
-#include "lib/user/fidl/focus.fidl.h"
+#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
+#include "lib/story/fidl/story_controller.fidl.h"
+#include "lib/story/fidl/story_provider.fidl.h"
+#include "lib/svc/cpp/service_namespace.h"
+#include "lib/user/fidl/focus.fidl.h"
+#include "peridot/bin/acquirers/story_info/initializer.fidl.h"
 
 namespace maxwell {
 

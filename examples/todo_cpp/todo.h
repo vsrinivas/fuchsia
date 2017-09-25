@@ -8,21 +8,22 @@
 #include <random>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/examples/todo_cpp/generator.h"
 #include "lib/component/fidl/component_context.fidl.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/module/fidl/module.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
+#include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
+#include "peridot/examples/todo_cpp/generator.h"
 
 namespace todo {
 
 using Key = fidl::Array<uint8_t>;
 
-class TodoApp : public modular::Module, public ledger::PageWatcher,
+class TodoApp : public modular::Module,
+                public ledger::PageWatcher,
                 modular::Lifecycle {
  public:
   TodoApp();

@@ -4,9 +4,9 @@
 
 #include "peridot/lib/fidl/app_client.h"
 
-#include <zircon/processargs.h>
 #include <fdio/limits.h>
 #include <fdio/util.h>
+#include <zircon/processargs.h>
 
 #include <fcntl.h>
 
@@ -100,8 +100,7 @@ void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}
 void AppClientBase::ServiceReset() {}
 
 template <>
-void AppClient<Lifecycle>::ServiceTerminate(
-    const std::function<void()>& done) {
+void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done) {
   SetAppErrorHandler(done);
   if (primary_service())
     primary_service()->Terminate();

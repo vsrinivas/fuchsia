@@ -6,13 +6,13 @@
 
 #include <string>
 
+#include "gtest/gtest.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/strings/string_view.h"
+#include "lib/story/fidl/link.fidl.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_message_loop.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "gtest/gtest.h"
-#include "lib/fxl/strings/string_view.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace modular {
 namespace {

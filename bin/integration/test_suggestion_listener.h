@@ -6,9 +6,9 @@
 
 #include <unordered_map>
 
+#include "gtest/gtest.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "gtest/gtest.h"
 
 class TestSuggestionListener : public maxwell::SuggestionListener {
  public:

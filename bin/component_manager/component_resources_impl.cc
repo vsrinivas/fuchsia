@@ -4,9 +4,9 @@
 
 #include "peridot/bin/component_manager/component_resources_impl.h"
 
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace component {
 

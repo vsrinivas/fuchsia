@@ -8,9 +8,9 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/component/fidl/component.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace {
 

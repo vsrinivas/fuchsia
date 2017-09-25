@@ -10,7 +10,6 @@
 
 #include "lib/app/cpp/application_context.h"
 
-#include "peridot/lib/bound_set/bound_set.h"
 #include "peridot/bin/suggestion_engine/ask_dispatcher.h"
 #include "peridot/bin/suggestion_engine/ask_publisher.h"
 #include "peridot/bin/suggestion_engine/debug.h"
@@ -21,10 +20,11 @@
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_filter.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
+#include "peridot/lib/bound_set/bound_set.h"
 
 #include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
+#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -158,10 +158,9 @@ class SuggestionEngineImpl : public SuggestionEngine,
       fidl::InterfaceRequest<ProposalPublisher> client) override;
 
   // |SuggestionEngine|
-  void Initialize(
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<ContextWriter> context_writer) override;
+  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+                  fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
+                  fidl::InterfaceHandle<ContextWriter> context_writer) override;
 
   // |AskDispatcher|
   void DispatchAsk(UserInputPtr input) override;

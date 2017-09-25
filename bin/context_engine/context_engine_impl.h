@@ -7,9 +7,9 @@
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/debug.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {
 

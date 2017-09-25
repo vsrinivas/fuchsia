@@ -5,20 +5,21 @@
 #ifndef APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 #define APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 
+#include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/agent_runner/agent_runner_storage.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/ledger/ledger_client.h"
 #include "peridot/lib/ledger/page_client.h"
 #include "peridot/lib/ledger/types.h"
-#include "peridot/bin/agent_runner/agent_runner_storage.h"
-#include "lib/fxl/macros.h"
 
 namespace modular {
 
 // An implementation of |AgentRunnerStorage| that persists data in the ledger.
 class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
  public:
-  explicit AgentRunnerStorageImpl(LedgerClient* ledger_client, LedgerPageId page_id);
+  explicit AgentRunnerStorageImpl(LedgerClient* ledger_client,
+                                  LedgerPageId page_id);
   ~AgentRunnerStorageImpl() override;
 
  private:

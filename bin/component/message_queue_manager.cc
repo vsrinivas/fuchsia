@@ -8,15 +8,15 @@
 #include <deque>
 #include <utility>
 
+#include "lib/component/fidl/message_queue.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "peridot/bin/component/persistent_queue.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger/page_client.h"
 #include "peridot/lib/ledger/storage.h"
-#include "lib/component/fidl/message_queue.fidl.h"
-#include "peridot/bin/component/persistent_queue.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -631,7 +631,10 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
 MessageQueueManager::MessageQueueManager(LedgerClient* const ledger_client,
                                          LedgerPageId page_id,
                                          std::string local_path)
-    : PageClient("MessageQueueManager", ledger_client, std::move(page_id), nullptr),
+    : PageClient("MessageQueueManager",
+                 ledger_client,
+                 std::move(page_id),
+                 nullptr),
       local_path_(std::move(local_path)) {}
 
 MessageQueueManager::~MessageQueueManager() = default;
@@ -745,8 +748,8 @@ void MessageQueueManager::GetMessageSender(
     return;
   }
 
-  new GetMessageSenderCall(&operation_collection_, this, page(),
-                           queue_token, std::move(request));
+  new GetMessageSenderCall(&operation_collection_, this, page(), queue_token,
+                           std::move(request));
 }
 
 void MessageQueueManager::RegisterWatcher(

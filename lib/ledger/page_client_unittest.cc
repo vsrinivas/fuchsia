@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/ledger/ledger_client.h"
 #include "peridot/lib/ledger/page_client.h"
-#include "peridot/lib/testing/ledger_repository_for_testing.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
+#include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/testing/ledger_repository_for_testing.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
 
 namespace modular {
 namespace testing {
@@ -16,9 +16,13 @@ namespace {
 
 class PageClientImpl : PageClient {
  public:
-  PageClientImpl(LedgerClient* ledger_client, LedgerPageId page_id,
+  PageClientImpl(LedgerClient* ledger_client,
+                 LedgerPageId page_id,
                  const char* const prefix)
-      : PageClient("PageClientImpl", ledger_client, std::move(page_id), prefix) {}
+      : PageClient("PageClientImpl",
+                   ledger_client,
+                   std::move(page_id),
+                   prefix) {}
 
   ~PageClientImpl() override = default;
 
@@ -28,18 +32,15 @@ class PageClientImpl : PageClient {
     values_[key] = value;
 
     FXL_LOG(INFO) << "OnPageChange \"" << prefix() << "\""
-                  << " " << change_count_
-                  << " " << key << " " << value;
+                  << " " << change_count_ << " " << key << " " << value;
   }
 
   void OnPageConflict(Conflict* const conflict) override {
     ++conflict_count_;
 
-    FXL_LOG(INFO) << "OnPageConflict " << prefix()
-                  << " " << conflict_count_
-                  << " " << conflict->key
-                  << " " << conflict->left
-                  << " " << conflict->right;
+    FXL_LOG(INFO) << "OnPageConflict " << prefix() << " " << conflict_count_
+                  << " " << conflict->key << " " << conflict->left << " "
+                  << conflict->right;
 
     conflict->resolution = MERGE;
     conflict->merged = "value3";
@@ -67,21 +68,21 @@ class PageClientTest : public TestWithMessageLoop {
     ledger_repository_app_ =
         std::make_unique<LedgerRepositoryForTesting>("page_client_unittest");
 
-    ledger_client_.reset(new LedgerClient(ledger_repository_app_->ledger_repository(),
-                                          __FILE__, [] {
-                                            ASSERT_TRUE(false);
-                                          }));
+    ledger_client_.reset(
+        new LedgerClient(ledger_repository_app_->ledger_repository(), __FILE__,
+                         [] { ASSERT_TRUE(false); }));
 
     // We only handle one conflict resolution per test case for now.
-    ledger_client_->add_watcher([this] {
-        resolved_ = true;
-      });
+    ledger_client_->add_watcher([this] { resolved_ = true; });
 
     // TODO(mesch): Registration order matters for overlapping prefixes. This
     // should not be like that.
-    page_client_a_.reset(new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "a/"));
-    page_client_b_.reset(new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "b/"));
-    page_client_.reset(new PageClientImpl(ledger_client_.get(), page_id_.Clone(), nullptr));
+    page_client_a_.reset(
+        new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "a/"));
+    page_client_b_.reset(
+        new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "b/"));
+    page_client_.reset(
+        new PageClientImpl(ledger_client_.get(), page_id_.Clone(), nullptr));
 
     ledger_client_->ledger()->GetPage(
         page_id_.Clone(), page_.NewRequest(),
@@ -129,40 +130,40 @@ class PageClientTest : public TestWithMessageLoop {
     };
   }
 
-  void Finish() {
-    finished_ = true;
-  }
+  void Finish() { finished_ = true; }
 
   // Runs the message loop until after Finish() completes, then optionally until
   // conflicts are resolved, then until the observed |condition| becomes true.
   void Run(const bool wait_for_resolved, std::function<bool()> condition) {
-    RunLoopUntil([this, wait_for_resolved, condition = std::move(condition)] {
-        // First wait for Finish() to be called.
-        if (!finished_) {
-          return false;
-        }
+    RunLoopUntil(
+        [ this, wait_for_resolved, condition = std::move(condition) ] {
+          // First wait for Finish() to be called.
+          if (!finished_) {
+            return false;
+          }
 
-        // Then wait for conflict resolution to complete.
-        if (wait_for_resolved && !resolved_) {
-          return false;
-        }
+          // Then wait for conflict resolution to complete.
+          if (wait_for_resolved && !resolved_) {
+            return false;
+          }
 
-        // Finally, wait for the observed condition. TODO(mesch): This is lame,
-        // because test failure now requires us to time out, however the actual
-        // condition to wait for -- that the conflict is resolved and watcher
-        // notifications are dispatched -- is not observable from here.
-        if (!condition()) {
-          return false;
-        }
+          // Finally, wait for the observed condition. TODO(mesch): This is
+          // lame, because test failure now requires us to time out, however the
+          // actual condition to wait for -- that the conflict is resolved and
+          // watcher notifications are dispatched -- is not observable from
+          // here.
+          if (!condition()) {
+            return false;
+          }
 
-        return true;
-      },
+          return true;
+        },
 
-      // NOTE(mesch): Test cases here take about 300ms when running in CI.
-      // Occasionally they take much longer, presumably because of load on
-      // shared machines. With the default timeout, we see flakiness. Cf.
-      // FW-287.
-      fxl::TimeDelta::FromSeconds(10));
+        // NOTE(mesch): Test cases here take about 300ms when running in CI.
+        // Occasionally they take much longer, presumably because of load on
+        // shared machines. With the default timeout, we see flakiness. Cf.
+        // FW-287.
+        fxl::TimeDelta::FromSeconds(10));
   }
 
  private:
@@ -206,9 +207,9 @@ TEST_F(PageClientTest, PrefixWrite) {
   Finish();
 
   Run(false, [this] {
-      return page_client_a()->value("a/key") == "value"
-          && page_client_b()->value("b/key") == "value";
-    });
+    return page_client_a()->value("a/key") == "value" &&
+           page_client_b()->value("b/key") == "value";
+  });
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ(0, page_client_a()->conflict_count());
@@ -223,40 +224,39 @@ TEST_F(PageClientTest, ConcurrentWrite) {
   Finish();
 
   Run(false, [this] {
-      return page_client()->value("key1") == "value1"
-          && page_client()->value("key2") == "value2";
-    });
+    return page_client()->value("key1") == "value1" &&
+           page_client()->value("key2") == "value2";
+  });
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ("value1", page_client()->value("key1"));
   EXPECT_EQ("value2", page_client()->value("key2"));
 }
 
-
 TEST_F(PageClientTest, ConflictWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
-      EXPECT_EQ(ledger::Status::OK, status);
-      page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
+    EXPECT_EQ(ledger::Status::OK, status);
+    page2()->Put(
+        to_array("key"), to_array("value2"), [this](ledger::Status status) {
           EXPECT_EQ(ledger::Status::OK, status);
           page1()->StartTransaction([this](ledger::Status status) {
-              EXPECT_EQ(ledger::Status::OK, status);
-              page1()->Put(to_array("key"), to_array("value1"), [this](ledger::Status status) {
-                  EXPECT_EQ(ledger::Status::OK, status);
-                  page2()->Commit([this](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                      page1()->Commit([this](ledger::Status status) {
-                          EXPECT_EQ(ledger::Status::OK, status);
-                          Finish();
-                        });
-                    });
-                });
-            });
+            EXPECT_EQ(ledger::Status::OK, status);
+            page1()->Put(to_array("key"), to_array("value1"),
+                         [this](ledger::Status status) {
+                           EXPECT_EQ(ledger::Status::OK, status);
+                           page2()->Commit([this](ledger::Status status) {
+                             EXPECT_EQ(ledger::Status::OK, status);
+                             page1()->Commit([this](ledger::Status status) {
+                               EXPECT_EQ(ledger::Status::OK, status);
+                               Finish();
+                             });
+                           });
+                         });
+          });
         });
-    });
+  });
 
-  Run(true, [this] {
-      return page_client()->value("key") == "value3";
-    });
+  Run(true, [this] { return page_client()->value("key") == "value3"; });
 
   EXPECT_EQ(1, page_client()->conflict_count());
   EXPECT_EQ("value3", page_client()->value("key"));
@@ -264,28 +264,28 @@ TEST_F(PageClientTest, ConflictWrite) {
 
 TEST_F(PageClientTest, ConflictPrefixWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
-      EXPECT_EQ(ledger::Status::OK, status);
-      page2()->Put(to_array("a/key"), to_array("value2"), [this](ledger::Status status) {
+    EXPECT_EQ(ledger::Status::OK, status);
+    page2()->Put(
+        to_array("a/key"), to_array("value2"), [this](ledger::Status status) {
           EXPECT_EQ(ledger::Status::OK, status);
           page1()->StartTransaction([this](ledger::Status status) {
-              EXPECT_EQ(ledger::Status::OK, status);
-              page1()->Put(to_array("a/key"), to_array("value1"), [this](ledger::Status status) {
-                  EXPECT_EQ(ledger::Status::OK, status);
-                  page2()->Commit([this](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                      page1()->Commit([this](ledger::Status status) {
-                          EXPECT_EQ(ledger::Status::OK, status);
-                          Finish();
-                        });
-                    });
-                });
-            });
+            EXPECT_EQ(ledger::Status::OK, status);
+            page1()->Put(to_array("a/key"), to_array("value1"),
+                         [this](ledger::Status status) {
+                           EXPECT_EQ(ledger::Status::OK, status);
+                           page2()->Commit([this](ledger::Status status) {
+                             EXPECT_EQ(ledger::Status::OK, status);
+                             page1()->Commit([this](ledger::Status status) {
+                               EXPECT_EQ(ledger::Status::OK, status);
+                               Finish();
+                             });
+                           });
+                         });
+          });
         });
-    });
+  });
 
-  Run(true, [this] {
-      return page_client_a()->value("a/key") == "value3";
-    });
+  Run(true, [this] { return page_client_a()->value("a/key") == "value3"; });
 
   EXPECT_EQ(1, page_client_a()->conflict_count());
   EXPECT_EQ(0, page_client_b()->conflict_count());
@@ -294,32 +294,35 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
 
 TEST_F(PageClientTest, ConcurrentConflictWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
-      EXPECT_EQ(ledger::Status::OK, status);
-      page2()->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
-      page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
+    EXPECT_EQ(ledger::Status::OK, status);
+    page2()->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
+    page2()->Put(
+        to_array("key"), to_array("value2"), [this](ledger::Status status) {
           EXPECT_EQ(ledger::Status::OK, status);
           page1()->StartTransaction([this](ledger::Status status) {
-              EXPECT_EQ(ledger::Status::OK, status);
-              page1()->Put(to_array("key1"), to_array("value1"), log("Put 1 key1"));
-              page1()->Put(to_array("key"), to_array("value1"), [this](ledger::Status status) {
-                  EXPECT_EQ(ledger::Status::OK, status);
-                  page2()->Commit([this](ledger::Status status) {
-                      EXPECT_EQ(ledger::Status::OK, status);
-                      page1()->Commit([this](ledger::Status status) {
-                          EXPECT_EQ(ledger::Status::OK, status);
-                          Finish();
-                        });
-                    });
-                });
-            });
+            EXPECT_EQ(ledger::Status::OK, status);
+            page1()->Put(to_array("key1"), to_array("value1"),
+                         log("Put 1 key1"));
+            page1()->Put(to_array("key"), to_array("value1"),
+                         [this](ledger::Status status) {
+                           EXPECT_EQ(ledger::Status::OK, status);
+                           page2()->Commit([this](ledger::Status status) {
+                             EXPECT_EQ(ledger::Status::OK, status);
+                             page1()->Commit([this](ledger::Status status) {
+                               EXPECT_EQ(ledger::Status::OK, status);
+                               Finish();
+                             });
+                           });
+                         });
+          });
         });
-    });
+  });
 
   Run(true, [this] {
-      return page_client()->value("key") == "value3"
-          && page_client()->value("key1") == "value1"
-          && page_client()->value("key2") == "value2";
-    });
+    return page_client()->value("key") == "value3" &&
+           page_client()->value("key1") == "value1" &&
+           page_client()->value("key2") == "value2";
+  });
 
   EXPECT_EQ(1, page_client()->conflict_count());
   EXPECT_EQ("value1", page_client()->value("key1"));

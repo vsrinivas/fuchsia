@@ -6,14 +6,14 @@
 
 #include <functional>
 
-#include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger/storage.h"
-#include "peridot/lib/rapidjson/rapidjson.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "peridot/bin/story_runner/incremental_link.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
+#include "lib/story/fidl/link.fidl.h"
+#include "peridot/bin/story_runner/incremental_link.h"
+#include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/util/debug.h"
 
 namespace modular {
@@ -72,9 +72,7 @@ class LinkImpl::WriteCall : Operation<> {
     impl_->link_storage_->FlushWatchers([this, flow] { Cont2(flow); });
   }
 
-  void Cont2(FlowToken /*flow*/) {
-    impl_->NotifyWatchers(src_);
-  }
+  void Cont2(FlowToken /*flow*/) { impl_->NotifyWatchers(src_); }
 
   LinkImpl* const impl_;  // not owned
   const uint32_t src_;
@@ -410,7 +408,8 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
 }
 
 void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
-                            const fidl::String& json, const uint32_t src) {
+                            const fidl::String& json,
+                            const uint32_t src) {
   // TODO(jimbe, mesch): This method needs a success status,
   // otherwise clients have no way to know they sent bogus data.
 
@@ -438,7 +437,6 @@ void LinkImpl::Erase(fidl::Array<fidl::String> path, const uint32_t src) {
   } else {
     new EraseCall(&operation_queue_, this, std::move(path), src);
   }
-
 }
 
 void LinkImpl::Sync(const std::function<void()>& callback) {
@@ -488,7 +486,7 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
                            CrtJsonValue::AllocatorType& allocator) {
   if (!source.IsObject()) {
     FXL_LOG(WARNING) << "LinkImpl::MergeObject() - source is not an object "
-                  << JsonValueToPrettyString(source);
+                     << JsonValueToPrettyString(source);
     return false;
   }
 

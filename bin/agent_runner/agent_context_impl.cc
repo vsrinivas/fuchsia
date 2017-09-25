@@ -7,17 +7,17 @@
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
-#include "peridot/lib/common/teardown.h"
-#include "peridot/bin/agent_runner/agent_runner.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/agent_runner/agent_runner.h"
+#include "peridot/lib/common/teardown.h"
 
 namespace modular {
 
 class AgentContextImpl::InitializeCall : Operation<> {
  public:
   InitializeCall(OperationContainer* const container,
-                         AgentContextImpl* const agent_context_impl)
+                 AgentContextImpl* const agent_context_impl)
       : Operation("AgentContextImpl::InitializeCall",
                   container,
                   [] {},
@@ -36,10 +36,11 @@ class AgentContextImpl::InitializeCall : Operation<> {
                      agent_context_impl_->agent_.NewRequest());
 
     // We only want to use Lifecycle if it exists.
-    agent_context_impl_->app_client_.primary_service().set_connection_error_handler(
-        [agent_context_impl = agent_context_impl_] {
-          agent_context_impl->app_client_.primary_service().reset();
-        });
+    agent_context_impl_->app_client_.primary_service()
+        .set_connection_error_handler(
+            [agent_context_impl = agent_context_impl_] {
+              agent_context_impl->app_client_.primary_service().reset();
+            });
 
     // When the agent process dies, we remove it.
     // TODO(alhaad): In the future we would want to detect a crashing agent and
@@ -104,8 +105,8 @@ class AgentContextImpl::StopCall : Operation<bool> {
 
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATING;
-    agent_context_impl_->app_client_.Teardown(
-        kBasicTimeout, [this, flow] { Kill(flow); });
+    agent_context_impl_->app_client_.Teardown(kBasicTimeout,
+                                              [this, flow] { Kill(flow); });
   }
 
   void Kill(FlowToken flow) {

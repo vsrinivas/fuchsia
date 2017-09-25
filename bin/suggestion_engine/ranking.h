@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "lib/fxl/time/time_point.h"
+#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 #include <functional>
 #include <limits>

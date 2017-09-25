@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
 #include <map>
+#include <vector>
 
-#include "peridot/lib/fidl/json_xdr.h"
 #include "gtest/gtest.h"
+#include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
 namespace {

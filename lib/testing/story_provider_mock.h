@@ -7,10 +7,10 @@
 
 #include <string>
 
-#include "peridot/lib/testing/story_controller_mock.h"
-#include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/story/fidl/story_provider.fidl.h"
+#include "peridot/lib/testing/story_controller_mock.h"
 
 namespace modular {
 

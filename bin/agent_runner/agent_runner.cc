@@ -4,17 +4,17 @@
 
 #include "peridot/bin/agent_runner/agent_runner.h"
 
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/vmo/strings.h"
+#include "peridot/bin/agent_runner/agent_context_impl.h"
+#include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger/storage.h"
-#include "peridot/bin/agent_runner/agent_context_impl.h"
-#include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -49,7 +49,8 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
   // No new agents will be scheduled to run.
   *terminating_ = true;
 
-  FXL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size() << " agents";
+  FXL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size()
+                << " agents";
 
   // No agents were running, we are good to go.
   if (running_agents_.empty()) {
@@ -73,9 +74,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
     callback();
   };
 
-  termination_callback_ = [cont] {
-    cont(false);
-  };
+  termination_callback_ = [cont] { cont(false); };
 
   for (auto& it : running_agents_) {
     // The running agent will call |AgentRunner::RemoveAgent()| to remove itself
@@ -84,9 +83,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
     it.second->StopForTeardown();
   }
 
-  auto cont_timeout = [cont] {
-    cont(true);
-  };
+  auto cont_timeout = [cont] { cont(true); };
 
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       std::move(cont_timeout), kTeardownTimeout);
@@ -112,9 +109,8 @@ void AgentRunner::MaybeRunAgent(const std::string& agent_url,
 
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
-  ComponentContextInfo component_info = {message_queue_manager_, this,
-                                         ledger_repository_,
-                                         entity_repository_};
+  ComponentContextInfo component_info = {
+      message_queue_manager_, this, ledger_repository_, entity_repository_};
   AgentContextInfo info = {component_info, application_launcher_,
                            token_provider_factory_,
                            user_intelligence_provider_};
@@ -122,8 +118,8 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   agent_config->url = agent_url;
 
   FXL_CHECK(running_agents_
-                .emplace(agent_url,
-                         std::make_unique<AgentContextImpl>(info, std::move(agent_config)))
+                .emplace(agent_url, std::make_unique<AgentContextImpl>(
+                                        info, std::move(agent_config)))
                 .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);

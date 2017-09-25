@@ -10,8 +10,8 @@
 
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 namespace testing {

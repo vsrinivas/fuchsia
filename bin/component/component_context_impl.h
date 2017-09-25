@@ -7,13 +7,13 @@
 
 #include <string>
 
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "lib/component/fidl/component_context.fidl.h"
-#include "peridot/bin/component/message_queue_manager.h"
-#include "peridot/bin/entity/entity_repository.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/entity/entity_repository.h"
+#include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace modular {
 
@@ -78,7 +78,8 @@ class ComponentContextImpl : public ComponentContext {
   void GetEntityStore(fidl::InterfaceRequest<EntityStore> request) override;
 
   // |ComponentContext|
-  void GetEntityResolver(fidl::InterfaceRequest<EntityResolver> request) override;
+  void GetEntityResolver(
+      fidl::InterfaceRequest<EntityResolver> request) override;
 
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;

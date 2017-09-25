@@ -6,9 +6,9 @@
 
 #include <string>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
+#include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {
 

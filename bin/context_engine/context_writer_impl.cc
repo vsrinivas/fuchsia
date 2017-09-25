@@ -75,8 +75,10 @@ void MaybeFillEntityMetadata(ContextValuePtr* const value_ptr) {
 }
 
 bool MaybeFindParentValueId(ContextRepository* repository,
-    const ContextSelectorPtr& selector, ContextRepository::Id* out) {
-  if (!selector) return false;
+                            const ContextSelectorPtr& selector,
+                            ContextRepository::Id* out) {
+  if (!selector)
+    return false;
   // There is technically a race condition here, since on construction, we
   // are given a ComponentScope, which contains some metadata to find a value
   // in the context engine. It is the responsibility of the story_info
@@ -103,7 +105,8 @@ void ContextWriterImpl::AddValue(ContextValuePtr value,
   MaybeFillEntityMetadata(&value);
   if (parent_value_selector_) {
     ContextRepository::Id parent_id;
-    if (MaybeFindParentValueId(repository_, parent_value_selector_, &parent_id)) {
+    if (MaybeFindParentValueId(repository_, parent_value_selector_,
+                               &parent_id)) {
       done(repository_->Add(parent_id, std::move(value)));
       return;
     }
@@ -183,7 +186,8 @@ void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
   if (it == topic_value_ids_.end()) {
     ContextRepository::Id parent_id;
     ContextRepository::Id id;
-    if (MaybeFindParentValueId(repository_, parent_value_selector_, &parent_id)) {
+    if (MaybeFindParentValueId(repository_, parent_value_selector_,
+                               &parent_id)) {
       id = repository_->Add(parent_id, std::move(value_ptr));
     } else {
       id = repository_->Add(std::move(value_ptr));

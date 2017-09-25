@@ -8,10 +8,10 @@
 
 #include <memory>
 
+#include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger/ledger_client.h"
-#include "lib/fxl/functional/make_copyable.h"
-#include "lib/fsl/vmo/strings.h"
 
 namespace modular {
 
@@ -25,13 +25,13 @@ PageClient::PageClient(std::string context,
       page_id_(std::move(page_id)),
       page_(ledger_client_->GetPage(this, context_, page_id_)),
       prefix_(prefix == nullptr ? "" : prefix) {
-  page_->GetSnapshot(
-      NewRequest(), to_array(prefix_),
-      binding_.NewBinding(), [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << context_ << " Page.GetSnapshot() " << status;
-        }
-      });
+  page_->GetSnapshot(NewRequest(), to_array(prefix_), binding_.NewBinding(),
+                     [this](ledger::Status status) {
+                       if (status != ledger::Status::OK) {
+                         FXL_LOG(ERROR)
+                             << context_ << " Page.GetSnapshot() " << status;
+                       }
+                     });
 }
 
 PageClient::~PageClient() {
@@ -102,10 +102,9 @@ void PageClient::OnPageChange(const std::string& /*key*/,
 void PageClient::OnPageDelete(const std::string& /*key*/) {}
 
 void PageClient::OnPageConflict(Conflict* const conflict) {
-  FXL_LOG(INFO) << "PageClient::OnPageConflict() " << context_
-                << " " << conflict->key
-                << " " << conflict->left
-                << " " << conflict->right;
+  FXL_LOG(INFO) << "PageClient::OnPageConflict() " << context_ << " "
+                << conflict->key << " " << conflict->left << " "
+                << conflict->right;
 };
 
 namespace {

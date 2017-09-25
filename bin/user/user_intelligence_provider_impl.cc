@@ -4,19 +4,19 @@
 
 #include "peridot/bin/user/user_intelligence_provider_impl.h"
 
-#include "lib/app/cpp/connect.h"
-#include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/action_log/fidl/factory.fidl.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/bluetooth/fidl/low_energy.fidl.h"
+#include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/context/fidl/debug.fidl.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/acquirers/story_info/initializer.fidl.h"
 #include "peridot/bin/user/intelligence_services_impl.h"
-#include "lib/bluetooth/fidl/low_energy.fidl.h"
-#include "lib/network/fidl/network_service.fidl.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace maxwell {
 
@@ -83,8 +83,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   fidl::InterfaceHandle<ContextWriter> context_writer;
   auto scope = ComponentScope::New();
   scope->set_global_scope(GlobalScope::New());
-  context_engine_->GetWriter(std::move(scope),
-                                context_writer.NewRequest());
+  context_engine_->GetWriter(std::move(scope), context_writer.NewRequest());
 
   // Initialize the SuggestionEngine.
   suggestion_engine_->Initialize(Duplicate(story_provider),

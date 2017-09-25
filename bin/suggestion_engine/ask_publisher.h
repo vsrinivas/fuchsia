@@ -6,8 +6,8 @@
 
 #include "lib/suggestion/fidl/ask_handler.fidl.h"
 
-#include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 
 namespace maxwell {
 

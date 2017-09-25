@@ -4,11 +4,11 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/component/fidl/component.fidl.h"
-#include "peridot/bin/component_manager/component_index_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/component_manager/component_index_impl.h"
 
 namespace component {
 
