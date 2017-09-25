@@ -16,10 +16,6 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
 
 void msd_context_release_buffer(msd_context_t* context, msd_buffer_t* buffer) {}
 
-msd_buffer_t* msd_buffer_import(uint32_t handle) { return nullptr; }
-
-void msd_buffer_destroy(msd_buffer_t* buf) {}
-
 magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out)
 {
     return MAGMA_STATUS_OK;

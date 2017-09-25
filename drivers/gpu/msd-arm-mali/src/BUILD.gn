@@ -7,6 +7,8 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 source_set("src") {
   sources = [
     "entry_stubs.cc",
+    "msd_arm_buffer.cc",
+    "msd_arm_buffer.h",
     "msd_arm_connection.cc",
     "msd_arm_connection.h",
     "msd_arm_device.cc",
