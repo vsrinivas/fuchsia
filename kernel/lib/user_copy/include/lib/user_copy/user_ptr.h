@@ -17,6 +17,13 @@ class user_ptr {
 public:
     explicit user_ptr(T* p) : ptr_(p) {}
 
+    user_ptr(const user_ptr& other) : ptr_(other.ptr_) {}
+
+    user_ptr& operator=(const user_ptr& other) {
+        ptr_ = other.ptr_;
+        return *this;
+    }
+
     T* get() const { return ptr_; }
 
     template <typename C>
@@ -86,7 +93,7 @@ private:
     // It is very important that this class only wrap the pointer type itself
     // and not include any other members so as not to break the ABI between
     // the kernel and user space.
-    T* const ptr_;
+    T* ptr_;
 };
 
 template <typename T>
