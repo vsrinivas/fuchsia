@@ -8,7 +8,6 @@
 
 #include <string.h>
 
-#include <lib/user_copy/user_ptr.h>
 #include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -121,7 +120,7 @@ void FifoDispatcher::OnPeerZeroHandles() {
     state_tracker_.UpdateState(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
 }
 
-zx_status_t FifoDispatcher::WriteFromUser(const uint8_t* ptr, size_t len, uint32_t* actual) {
+zx_status_t FifoDispatcher::WriteFromUser(user_ptr<const uint8_t> ptr, size_t len, uint32_t* actual) {
     canary_.Assert();
 
     fbl::RefPtr<FifoDispatcher> other;
@@ -135,7 +134,7 @@ zx_status_t FifoDispatcher::WriteFromUser(const uint8_t* ptr, size_t len, uint32
     return other->WriteSelf(ptr, len, actual);
 }
 
-zx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32_t* actual) {
+zx_status_t FifoDispatcher::WriteSelf(user_ptr<const uint8_t> ptr, size_t bytelen, uint32_t* actual) {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;
@@ -166,8 +165,8 @@ zx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
         // number of slots we can actually copy
         size_t to_copy = (count > n) ? n : count;
 
-        zx_status_t status = make_user_ptr(ptr).copy_array_from_user(&data_[offset * elem_size_],
-                                                                     to_copy * elem_size_);
+        zx_status_t status = ptr.copy_array_from_user(&data_[offset * elem_size_],
+                                                      to_copy * elem_size_);
         if (status != ZX_OK) {
             // roll back, in case this is the second copy
             head_ = old_head;
@@ -178,7 +177,7 @@ zx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
         // due to size limitations on fifo, to_copy will always fit in a u32
         head_ += static_cast<uint32_t>(to_copy);
         count -= to_copy;
-        ptr += to_copy * elem_size_;
+        ptr = ptr.byte_offset(to_copy * elem_size_);
     }
 
     // if was empty, we've become readable
@@ -193,7 +192,7 @@ zx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
     return ZX_OK;
 }
 
-zx_status_t FifoDispatcher::ReadToUser(uint8_t* ptr, size_t bytelen, uint32_t* actual) {
+zx_status_t FifoDispatcher::ReadToUser(user_ptr<uint8_t> ptr, size_t bytelen, uint32_t* actual) {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;
@@ -224,8 +223,8 @@ zx_status_t FifoDispatcher::ReadToUser(uint8_t* ptr, size_t bytelen, uint32_t* a
         // number of slots we can actually copy
         size_t to_copy = (count > n) ? n : count;
 
-        zx_status_t status = make_user_ptr(ptr).copy_array_to_user(&data_[offset * elem_size_],
-                                                                   to_copy * elem_size_);
+        zx_status_t status = ptr.copy_array_to_user(&data_[offset * elem_size_],
+                                                    to_copy * elem_size_);
         if (status != ZX_OK) {
             // roll back, in case this is the second copy
             tail_ = old_tail;
@@ -236,8 +235,7 @@ zx_status_t FifoDispatcher::ReadToUser(uint8_t* ptr, size_t bytelen, uint32_t* a
         // due to size limitations on fifo, to_copy will always fit in a u32
         tail_ += static_cast<uint32_t>(to_copy);
         count -= to_copy;
-        ptr += to_copy * elem_size_;
-
+        ptr = ptr.byte_offset(to_copy * elem_size_);
     }
 
     // if we were full, we have become writable

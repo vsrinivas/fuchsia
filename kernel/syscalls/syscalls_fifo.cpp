@@ -67,8 +67,7 @@ zx_status_t sys_fifo_write(zx_handle_t handle, user_ptr<const void> entries,
         return status;
 
     uint32_t actual;
-    // TODO(andymutton): Change FifoDispatcher to accept user_ptr
-    status = fifo->WriteFromUser(reinterpret_cast<const uint8_t*>(entries.get()), len, &actual);
+    status = fifo->WriteFromUser(entries.reinterpret<const uint8_t>(), len, &actual);
     if (status != ZX_OK)
         return status;
 
@@ -87,8 +86,7 @@ zx_status_t sys_fifo_read(zx_handle_t handle, user_ptr<void> entries, size_t len
         return status;
 
     uint32_t actual;
-    // TODO(andymutton): Change FifoDispatcher to accept user_ptr
-    status = fifo->ReadToUser(reinterpret_cast<uint8_t*>(entries.get()), len, &actual);
+    status = fifo->ReadToUser(entries.reinterpret<uint8_t>(), len, &actual);
     if (status != ZX_OK)
         return status;
 
