@@ -443,6 +443,7 @@ void FirebaseServer::HandlePut(
     // Ledger database is configured to prevent data overwritting.
     callback(BuildResponse(request->url, Server::ResponseCode::kUnauthorized,
                            "Data already exists"));
+    return;
   }
 
   rapidjson::Document new_value;
