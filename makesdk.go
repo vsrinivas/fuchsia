@@ -13,7 +13,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -185,12 +184,16 @@ func copyKernelDebugObjs(src, dstPrefix string) {
 	defer dstIds.Close()
 	scanner := bufio.NewScanner(srcIds)
 	cwd, _ := os.Getwd()
-	absSrc := path.Join(cwd, src)
+	absBase := filepath.Join(cwd, src)
 	for scanner.Scan() {
 		s := strings.Split(scanner.Text(), " ")
 		id, absPath := s[0], s[1]
-		relPath := absPath[len(absSrc):]
-		fmt.Fprintln(dstIds, id, relPath)
+		relPath, err := filepath.Rel(absBase, absPath)
+		if err != nil {
+			log.Warning("could not create relative path from absolute path", absPath, "and base", absBase, "skipping entry")
+		} else {
+			fmt.Fprintln(dstIds, id, relPath)
+		}
 	}
 }
 
