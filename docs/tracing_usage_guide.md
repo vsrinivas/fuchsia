@@ -6,54 +6,63 @@ Fuchsia tracing library and utilities require access to the `trace_manager`'s
 services in the environment, which is typically set up by the
 [boot sequence](https://fuchsia.googlesource.com/docs/+/master/boot_sequence.md).
 
-## Capturing Trace Data on Device
+## Capturing Traces From a Development Host
 
-The `trace` app takes care of starting and stopping tracing sessions and
-persisting incoming trace data to disk for later retrieval with `netcp`.
+Traces are captured using the `traceutil` host utility.  To record a trace
+simply run the following on your development host:
 
 ```{shell}
-trace [options] command [command-specific options]
-  --help: Produce this help message
-
-  list-categories - list all known categories
-  list-providers - list all registered providers
-  record - starts tracing and records data
-    --categories=[""]: Categories that should be enabled for tracing
-    --append-args=[""]: Additional args for the app being traced, appended to
-        those from the spec file, if any
-    --detach: Don't stop the traced program when tracing finished
-    --decouple: Don't stop tracing when the traced program exits
-    --duration=[10s]: Trace will be active for this long
-    --output-file=[/tmp/trace.json]: Trace data is stored in this file
-    --spec-file=[none]: Tracing specification file
-    [command args]: Run program before starting trace. The program is terminated
-        when tracing ends unless --detach is specified
-```
-Any remaining arguments are interpreted as a program to run.
-
-An example invocation for tracing for 15 seconds,
-capturing only categories `gfx` and `flutter` looks like:
-```
-trace record --duration=15 --categories=gfx,flutter launch noodles_view
+traceutil record
 ```
 
-The default output file is `/tmp/trace.json`.
-Assuming that networking is configured correctly (see [Getting Started](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md)),
-the resulting trace can then be retrieved from the device with `netcp` as in:
+This will:
+ * Take a trace on the target using the default option.
+ * Download it from the target to your development host.
+ * Convert the trace into a viewable HTML file.
+
+This is a great place to start an investigation.  It is also a good when you
+are reporting a bug and are unsure what data is useful.
+
+Some additional command line arguments to `traceutil record` include:
+ * `--duration <time>`
+
+   Sets the duration of the trace in seconds.
+
+ * `--target <hostname or ip address>`
+
+   Specifies one which target to take a trace.  Useful if you have multiple
+   targets on the same network or network discovery is not working.
+
+For a complete list of command line arguments run `traceutil --help`.
+
+## Capturing Traces From a Fuchsia Target
+
+Under the hood `traceutil` uses the `trace` utility on the Fuchsia
+target to interact with the tracing manager.  To record a trace run the
+following in a shell on your target:
+
+```{shell}
+trace record
 ```
-$ netcp :/tmp/trace.json trace.json
+
+This will save your trace in /data/trace.json by default.  For more information
+on, run `trace --help` at a Fuchsia shell.
+
+## Converting a JSON Trace to a Viewable HTML Trace.
+
+The Fuchsia tracing system uses Chromium's
+[Trace-Viewer](https://github.com/catapult-project/catapult/tree/master/tracing).
+The easiest way to view a JSON trace is to embed it into an HTML file with
+Trace-Viewer.  To convert one or more JSON files run:
+
+```{shell}
+traceutil convert FILE ...
 ```
 
-### Visualizing trace files
+The HTML files written are standalone and can be opened in the
+[Chrome](https://google.com/chrome) web browser.
 
-You can use [Chromium](https://www.chromium.org/Home)'s (or
-[Google Chrome](https://www.google.com/chrome/)'s) [Trace Event Profiling
-Tool](https://www.chromium.org/developers/how-tos/trace-event-profiling-tool) to
-visualize `trace.json` files:
-
-1.  Navigate to `chrome://tracing/`
-1.  Click the **Load** button
-1.  Select the `trace.json` file you copied off the fuchsia device
+## Advanced Tracing
 
 ### Tracing specification file
 
@@ -152,24 +161,6 @@ the following additional parameters must be passed to `trace record`:
 
 In order to experiment against a local instance of the dashboard, follow these
 [instructions](docs/catapult.md).
-
-## Capturing Trace Data from Host
-
-The `scripts/trace.sh` script takes care of remotely running `trace`, downloading
-the trace file, and converting it to HTML for easy consumption.
-
-This script requires the Fuchsia environment to be set up so that it can
-find the necessary tools.  This also makes it possible to run `scripts/trace.sh`
-by simply typing `ftrace` at the command prompt.
-
-```
-$ cd [fuchsia-root-dir]
-$ source scripts/env.sh
-$ fset x86-64
-$ fbuild
-$ ftrace --help
-$ ftrace --bootstrap launch noodles_view
-```
 
 ## Configuration
 
