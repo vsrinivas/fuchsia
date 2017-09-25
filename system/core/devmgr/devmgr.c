@@ -365,10 +365,6 @@ int main(int argc, char** argv) {
     zx_handle_t loader_svc = dl_set_loader_service(ZX_HANDLE_INVALID);
     zx_handle_close(loader_svc);
 
-    // Ensure that devmgr doesn't try to connect to the global
-    // loader sevice (as this leads to deadlocks in devhost v2)
-    loader_service_force_local();
-
     devmgr_io_init();
 
     root_resource_handle = zx_get_startup_handle(PA_HND(PA_RESOURCE, 0));

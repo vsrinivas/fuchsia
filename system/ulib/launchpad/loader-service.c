@@ -453,29 +453,6 @@ zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out) {
     return ZX_OK;
 }
 
-static bool force_local_loader_service = false;
-
-void loader_service_force_local(void) {
-    force_local_loader_service = true;
-}
-
-// Returns a channel to the system loader service.
-zx_status_t loader_service_get_system(zx_handle_t* out) {
-    int fd = open("/dev/misc/dmctl", O_RDONLY);
-    if (fd < 0) {
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    zx_handle_t h;
-    ssize_t s = ioctl_dmctl_get_loader_service_channel(fd, &h);
-    close(fd);
-    if (s != (ssize_t)sizeof(zx_handle_t)) {
-        return s < 0 ? s : ZX_ERR_INTERNAL;
-    }
-    *out = h;
-    return ZX_OK;
-}
-
 // In-process multiloader
 static loader_service_t local_loader_svc = {
     .name = "local-loader-svc",
@@ -488,15 +465,7 @@ zx_status_t loader_service_get_default(zx_handle_t* out) {
         return ZX_OK;
     }
 
-    // Otherwise try to use the system loader service,
-    // unless we are forbidden by force_local...
-    if (!force_local_loader_service) {
-        if (loader_service_get_system(out) == ZX_OK) {
-            return ZX_OK;
-        }
-    }
-
-    // Fall back to an in-process loader service.
+    // Otherwise, fall back to an in-process loader service.
     return loader_service_connect(&local_loader_svc, out);
 }
 

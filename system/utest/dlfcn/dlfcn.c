@@ -6,7 +6,6 @@
 #include <inttypes.h>
 #include <launchpad/vmo.h>
 #include <launchpad/loader-service.h>
-#include <zircon/device/dmctl.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -148,20 +147,12 @@ bool loader_service_test(void) {
     END_TEST;
 }
 
-#define DMCTL_PATH "/dev/misc/dmctl"
-
-bool ioctl_test(void) {
+bool clone_test(void) {
     BEGIN_TEST;
 
-    int fd = open(DMCTL_PATH, O_RDONLY);
-    ASSERT_GE(fd, 0, "can't open " DMCTL_PATH);
-
     zx_handle_t h = ZX_HANDLE_INVALID;
-    ssize_t s = ioctl_dmctl_get_loader_service_channel(fd, &h);
-    close(fd);
-
-    EXPECT_EQ(s, (ssize_t)sizeof(zx_handle_t),
-              "unexpected return value from ioctl");
+    zx_status_t s = dl_clone_loader_service(&h);
+    EXPECT_EQ(s, ZX_OK, "unexpected return value from ioctl");
     EXPECT_NE(h, ZX_HANDLE_INVALID, "invalid handle from ioctl");
 
     zx_handle_close(h);
@@ -174,7 +165,7 @@ bool ioctl_test(void) {
 BEGIN_TEST_CASE(dlfcn_tests)
 RUN_TEST(dlopen_vmo_test);
 RUN_TEST(loader_service_test);
-RUN_TEST(ioctl_test);
+RUN_TEST(clone_test);
 END_TEST_CASE(dlfcn_tests)
 
 int main(int argc, char** argv) {

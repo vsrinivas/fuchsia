@@ -32,28 +32,17 @@ typedef zx_status_t (*loader_service_fn_t)(void* loader_arg, uint32_t load_cmd,
                                            zx_handle_t request_handle, const char* file,
                                            zx_handle_t* out);
 
-
-// Obtain a handle to the system loader service, if possible
-zx_status_t loader_service_get_system(zx_handle_t* out);
-
-// Obtain the default loader service for this process
-// Normally it attempts to use the system loader service, and
-// if that fails attempts to create a process-local service
-// (which depends on the process having filesystem access
-// to executables and libraries needing loading)
+// Obtain the default loader service for this process.
+// That is normally a new connection to the service that
+// was used to load this process, if allowed and available.
+// Otherwise an in-process loader service, using the filesystem
+// will be created.
 zx_status_t loader_service_get_default(zx_handle_t* out);
-
-// After this function returns, loader_service_get_default will no
-// longer attempt to use the system loader service for the current
-// process. Should only be used by the system loader service itself.
-void loader_service_force_local(void);
-
 
 // Create a simple single-threaded loader service, which
 // will use the provided service_fn to process load commands
 zx_status_t loader_service_simple(loader_service_fn_t loader,
                                   void* loader_arg, zx_handle_t* out);
-
 
 typedef struct loader_service loader_service_t;
 
