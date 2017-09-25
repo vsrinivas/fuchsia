@@ -183,11 +183,8 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     Delegate* delegate,
-    ledger::Environment* environment,
-    ConfigPersistence config_persistence)
-    : delegate_(delegate),
-      environment_(environment),
-      config_persistence_(config_persistence) {}
+    ledger::Environment* environment)
+    : delegate_(delegate), environment_(environment) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -326,63 +323,10 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
       }));
 }
 
-// Verifies that the current server id is not different from the server id used
-// in a previous run and wipes the local state in case of a mismatch.
-//
-// Ledger does not support cloud migrations - once the repository is synced with
-// a cloud, we can't change the server.
-bool LedgerRepositoryFactoryImpl::CheckSyncConfig(
-    const cloud_sync::UserConfig& user_config,
-    const RepositoryInformation& repository_information) {
-  std::string server_id_path = fxl::Concatenate(
-      {repository_information.content_path, "/", kServerIdFilename});
-  if (files::IsFile(server_id_path)) {
-    std::string previous_server_id;
-    if (!files::ReadFileToString(server_id_path, &previous_server_id)) {
-      FXL_LOG(ERROR) << "Failed to read the previous server id for "
-                     << "compatibility check";
-      return false;
-    }
-
-    if (previous_server_id == user_config.server_id) {
-      return true;
-    }
-
-    FXL_LOG(WARNING) << "Mismatch between the previous server id: "
-                     << previous_server_id
-                     << " and the current one: " << user_config.server_id
-                     << ".";
-    FXL_LOG(WARNING) << "Ledger does not support cloud migrations: "
-                     << "Deleting local state at "
-                     << repository_information.content_path << ".";
-    if (DeleteRepositoryDirectory(repository_information) != Status::OK) {
-      FXL_LOG(ERROR) << "Unable to delete ledger directory. "
-                     << "Reset Ledger using "
-                     << "`rm -rf " << repository_information.content_path
-                     << "`";
-      return false;
-    }
-  }
-
-  if (!files::WriteFileInTwoPhases(server_id_path, user_config.server_id,
-                                   repository_information.staging_path)) {
-    FXL_LOG(ERROR) << "Failed to write the current server_id for compatibility "
-                   << "check.";
-    return false;
-  }
-
-  return true;
-}
-
 void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
     const RepositoryInformation& repository_information,
     cloud_sync::UserConfig user_config) {
-  if (config_persistence_ == ConfigPersistence::PERSIST &&
-      !CheckSyncConfig(user_config, repository_information)) {
-    container->SetRepository(Status::CONFIGURATION_ERROR, nullptr);
-    return;
-  }
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   fxl::Closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);

@@ -36,10 +36,8 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
     FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
 
-  enum class ConfigPersistence { PERSIST, FORGET };
-  explicit LedgerRepositoryFactoryImpl(Delegate* delegate,
-                                       ledger::Environment* environment,
-                                       ConfigPersistence config_persistence);
+  LedgerRepositoryFactoryImpl(Delegate* delegate,
+                              ledger::Environment* environment);
   ~LedgerRepositoryFactoryImpl() override;
 
  private:
@@ -59,14 +57,6 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
       fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
       const EraseRepositoryCallback& callback) override;
 
-  // Verifies that the current server id is not different from the server id
-  // used in a previous run and wipes the local state in case of a mismatch.
-  //
-  // Ledger does not support cloud migrations - once the repository is synced
-  // with a cloud, we can't change the server.
-  bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
-                       const RepositoryInformation& repository_information);
-
   void CreateRepository(LedgerRepositoryContainer* container,
                         const RepositoryInformation& repository_information,
                         cloud_sync::UserConfig user_config);
@@ -78,7 +68,6 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
 
   Delegate* const delegate_;
   ledger::Environment* const environment_;
-  const ConfigPersistence config_persistence_;
 
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
       repositories_;

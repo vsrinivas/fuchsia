@@ -39,7 +39,6 @@ constexpr fxl::StringView kPersistentFileSystem = "/data";
 constexpr fxl::StringView kMinFsName = "minfs";
 constexpr fxl::TimeDelta kMaxPollingDelay = fxl::TimeDelta::FromSeconds(10);
 constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
-constexpr fxl::StringView kNoPersistedConfig = "no_persisted_config";
 constexpr fxl::StringView kNoNetworkForTesting = "no_network_for_testing";
 constexpr fxl::StringView kNoStatisticsReporting =
     "no_statistics_reporting_for_testing";
@@ -47,8 +46,6 @@ constexpr fxl::StringView kTriggerCloudErasedForTesting =
     "trigger_cloud_erased_for_testing";
 
 struct AppParams {
-  LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence =
-      LedgerRepositoryFactoryImpl::ConfigPersistence::PERSIST;
   bool no_network_for_testing = false;
   bool trigger_cloud_erased_for_testing = false;
   bool disable_statistics = false;
@@ -79,8 +76,7 @@ class App : public LedgerController,
         application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
                                     loop_.task_runner(),
-                                    application_context_.get())),
-        config_persistence_(app_params_.config_persistence) {
+                                    application_context_.get())) {
     FXL_DCHECK(application_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
@@ -104,8 +100,8 @@ class App : public LedgerController,
       environment_->SetTriggerCloudErasedForTesting();
     }
 
-    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        this, environment_.get(), config_persistence_);
+    factory_impl_ =
+        std::make_unique<LedgerRepositoryFactoryImpl>(this, environment_.get());
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>(
@@ -171,7 +167,6 @@ class App : public LedgerController,
   trace::TraceProvider trace_provider_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
-  const LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence_;
   std::unique_ptr<NetworkService> network_service_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
@@ -214,10 +209,6 @@ int main(int argc, const char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line);
 
   ledger::AppParams app_params;
-  if (command_line.HasOption(ledger::kNoPersistedConfig)) {
-    app_params.config_persistence =
-        ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET;
-  }
   app_params.no_network_for_testing =
       command_line.HasOption(ledger::kNoNetworkForTesting);
   app_params.trigger_cloud_erased_for_testing =

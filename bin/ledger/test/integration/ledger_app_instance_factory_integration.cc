@@ -48,10 +48,7 @@ class LedgerAppInstanceImpl final
         fidl::InterfaceRequest<ledger::LedgerRepositoryFactory> request)
         : network_service_(task_runner, std::move(network_factory)),
           environment_(task_runner, &network_service_),
-          factory_impl_(
-              this,
-              &environment_,
-              ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET),
+          factory_impl_(this, &environment_),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() override {}
 

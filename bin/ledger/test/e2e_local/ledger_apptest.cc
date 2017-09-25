@@ -54,7 +54,6 @@ class LedgerAppTest : public ::test::TestWithMessageLoop {
     launch_info->url = "ledger";
     launch_info->services = child_services.NewRequest();
     launch_info->arguments.push_back("--no_minfs_wait");
-    launch_info->arguments.push_back("--no_persisted_config");
     launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
     for (auto& additional_arg : additional_args) {
       launch_info->arguments.push_back(additional_arg);
