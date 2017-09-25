@@ -20,17 +20,10 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params)
       loop_(fsl::MessageLoop::GetCurrent()),
       owned_loop_(loop_ ? nullptr : new fsl::MessageLoop()),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      module_binding_(this),
       escher_demo_binding_(this) {
   if (!loop_) {
     loop_ = owned_loop_.get();
   }
-
-  application_context_->outgoing_services()->AddService<modular::Module>(
-      [this](fidl::InterfaceRequest<modular::Module> request) {
-        FXL_DCHECK(!module_binding_.is_bound());
-        module_binding_.Bind(std::move(request));
-      });
 }
 
 void DemoHarnessFuchsia::InitWindowSystem() {}
@@ -95,26 +88,4 @@ void DemoHarnessFuchsia::HandleTouchEnd(uint64_t touch_id,
                                         double xpos,
                                         double ypos) {
   demo_->EndTouch(touch_id, xpos, ypos);
-}
-
-// |Module|
-void DemoHarnessFuchsia::Initialize(
-    fidl::InterfaceHandle<modular::ModuleContext> module_context,
-    fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
-  module_context_.Bind(std::move(module_context));
-
-  // Provide EscherDemo service only to the Module that started us.
-  outgoing_services_ =
-      std::make_unique<app::ServiceProviderImpl>(std::move(outgoing_services));
-  outgoing_services_->AddService<escher_demo::EscherDemo>(
-      [this](fidl::InterfaceRequest<escher_demo::EscherDemo> request) {
-        FXL_DCHECK(!escher_demo_binding_.is_bound());
-        escher_demo_binding_.Bind(std::move(request));
-      });
-}
-
-// |Lifecycle|
-void DemoHarnessFuchsia::Terminate() {
-  fsl::MessageLoop::GetCurrent()->QuitNow();
 }

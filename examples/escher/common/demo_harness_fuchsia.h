@@ -6,19 +6,13 @@
 
 #include <memory>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "garnet/examples/escher/common/services/escher_demo.fidl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-class DemoHarnessFuchsia : public DemoHarness,
-                           public escher_demo::EscherDemo,
-                           modular::Module,
-                           modular::Lifecycle {
+class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
  public:
   DemoHarnessFuchsia(WindowParams window_params);
 
@@ -33,20 +27,11 @@ class DemoHarnessFuchsia : public DemoHarness,
                            double ypos) override;
   void HandleTouchEnd(uint64_t touch_id, double xpos, double ypos) override;
 
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
-
   app::ApplicationContext* application_context() {
     return application_context_.get();
   }
 
  private:
-  // |Lifecycle|
-  void Terminate() override;
-
   // Called by Init().
   void InitWindowSystem() override;
   vk::SurfaceKHR CreateWindowAndSurface(
@@ -67,8 +52,6 @@ class DemoHarnessFuchsia : public DemoHarness,
   std::unique_ptr<fsl::MessageLoop> owned_loop_;
 
   std::unique_ptr<app::ApplicationContext> application_context_;
-  fidl::Binding<modular::Module> module_binding_;
   fidl::Binding<escher_demo::EscherDemo> escher_demo_binding_;
   std::unique_ptr<app::ServiceProviderImpl> outgoing_services_;
-  fidl::InterfacePtr<modular::ModuleContext> module_context_;
 };
