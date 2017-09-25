@@ -28,7 +28,13 @@ int uname(struct utsname* uts) {
         .nodename = "",
         .release = "",
         .version = "",
+#if defined(__x86_64__)
+        .machine = "x86_64",
+#elif defined(__aarch64__)
+        .machine = "aarch64",
+#else
         .machine = "",
+#endif
     };
     int s = socket(AF_INET, SOCK_DGRAM, 0);
     ioctl_netc_get_nodename(s, uts->nodename, sizeof(uts->nodename));
