@@ -18,20 +18,29 @@ def resolve_imports(import_queue):
     while import_queue:
         config_name = import_queue.pop()
         config_path = os.path.join(paths.FUCHSIA_ROOT, config_name)
-        with open(config_path) as f:
-            try:
-                config = json.load(f)
-                if config.get("languages"):
-                    languages.update(config.get("languages"))
-                for i in config.get("imports", []):
-                    if i not in imported:
-                        import_queue.append(i)
-                        imported.add(i)
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                sys.stderr.write("Failed to parse config %s, error %s\n" % (config_path, str(e)))
-                return None
+        try:
+            with open(config_path) as f:
+                try:
+                    config = json.load(f)
+                    if config.get("languages"):
+                        languages.update(config.get("languages"))
+                    for i in config.get("imports", []):
+                        if i not in imported:
+                            import_queue.append(i)
+                            imported.add(i)
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    sys.stderr.write("Failed to parse config %s, error %s\n" % (config_path, str(e)))
+                    return None
+        except IOError, e:
+            sys.stderr.write("Failed to read package '%s' from '%s'.\n" % (config_name, config_path))
+            if "/" not in config_name:
+                sys.stderr.write("""
+Package names are relative to the root of the source tree but the requested path
+did not contain a '/'. Did you mean 'packages/gn/%s' instead?
+""" % config_name)
+            return None
     return languages
 
 
@@ -41,6 +50,8 @@ def main():
     args = parser.parse_args()
 
     languages = resolve_imports(args.modules.split(","))
+    if languages is None:
+        return -1
 
     for language in ["cpp", "dart", "go", "rust"]:
         sys.stdout.write("have_%s = %s\n" % (language, str(language in languages).lower()))
