@@ -52,8 +52,8 @@ typedef struct zx_vcpu_state {
     uint64_t r13;
     uint64_t r14;
     uint64_t r15;
-    // Only the user-controllable lower 32-bits of the flags register.
-    uint32_t flags;
+    // Contains only the user-controllable lower 32-bits of the flags register.
+    uint64_t rflags;
 #endif
 } zx_vcpu_state_t;
 

@@ -268,7 +268,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, zx_vcpu_stat
         inst->mem = 1;
         inst->imm = 0;
         inst->reg = NULL;
-        inst->flags = &vcpu_state->flags;
+        inst->flags = &vcpu_state->rflags;
         memcpy(&inst->imm, inst_buf + disp_size + 2, 1);
         return ZX_OK;
     default:

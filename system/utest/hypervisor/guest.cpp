@@ -163,7 +163,7 @@ static bool vcpu_read_write_state(void) {
         .r13 = 14u,
         .r14 = 15u,
         .r15 = 16u,
-        .flags = 0
+        .rflags = 0
 #endif // __x86_64__
     };
 
@@ -193,7 +193,7 @@ static bool vcpu_read_write_state(void) {
     EXPECT_EQ(vcpu_state.r13, 28u);
     EXPECT_EQ(vcpu_state.r14, 30u);
     EXPECT_EQ(vcpu_state.r15, 32u);
-    EXPECT_EQ(vcpu_state.flags, (1u << 0) | (1u << 18));
+    EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
 #endif // __x86_64__
 
     ASSERT_TRUE(teardown(&test));

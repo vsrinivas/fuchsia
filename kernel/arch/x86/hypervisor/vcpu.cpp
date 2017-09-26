@@ -729,7 +729,7 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
         register_copy(state, vmx_state_.guest_state);
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
-        state->flags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
+        state->rflags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
         return ZX_OK;
     }
     }
@@ -747,10 +747,10 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
         register_copy(&vmx_state_.guest_state, *state);
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         vmcs.Write(VmcsFieldXX::GUEST_RSP, state->rsp);
-        if (state->flags & X86_FLAGS_RESERVED_ONES) {
+        if (state->rflags & X86_FLAGS_RESERVED_ONES) {
             const uint64_t rflags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS);
             const uint64_t user_flags = (rflags & ~X86_FLAGS_USER) |
-                                        (state->flags & X86_FLAGS_USER);
+                                        (state->rflags & X86_FLAGS_USER);
             vmcs.Write(VmcsFieldXX::GUEST_RFLAGS, user_flags);
         }
         return ZX_OK;

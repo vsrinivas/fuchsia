@@ -480,7 +480,7 @@ static bool decode_test_f6(void) {
     EXPECT_EQ(inst.mem, 1u);
     EXPECT_EQ(inst.imm, 0x1u);
     EXPECT_NULL(inst.reg);
-    EXPECT_EQ(inst.flags, &vcpu_state.flags);
+    EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
     // test 0x10, -0x1(%rbx)
     uint8_t test_disp_1[] = {0xf6, 0b01000011, 0xff, 0x10};
@@ -489,7 +489,7 @@ static bool decode_test_f6(void) {
     EXPECT_EQ(inst.mem, 1u);
     EXPECT_EQ(inst.imm, 0x10u);
     EXPECT_NULL(inst.reg);
-    EXPECT_EQ(inst.flags, &vcpu_state.flags);
+    EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
     // test 0x11, -0x1000000(%rbx)
     uint8_t test_disp_4[] = {0xf6, 0b10000011, 0, 0, 0, 0xff, 0x11};
@@ -498,7 +498,7 @@ static bool decode_test_f6(void) {
     EXPECT_EQ(inst.mem, 1u);
     EXPECT_EQ(inst.imm, 0x11u);
     EXPECT_NULL(inst.reg);
-    EXPECT_EQ(inst.flags, &vcpu_state.flags);
+    EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
     END_TEST;
 }
