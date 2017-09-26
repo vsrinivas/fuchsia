@@ -5,15 +5,11 @@
 import("//packages/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-package("magma-fidl") {
+package("image-pipe-swapchain") {
   if (target_cpu == "x64") {
     deps = [
-      "$magma_build_root/src/display_pipe:display_pipe_service",
       "src/swapchain",
     ]
-    binaries = [ {
-          name = "display_pipe"
-        } ]
     libraries = [ {
           name = "libVkLayer_image_pipe_swapchain.so"
         } ]
@@ -24,7 +20,7 @@ package("magma-fidl") {
   }
 }
 
-package("magma-fidl-tests") {
+package("image-pipe-swapchain-tests") {
   testonly = true
 
   if (target_cpu == "x64") {
@@ -34,9 +30,6 @@ package("magma-fidl-tests") {
     ]
     binaries = [ {
           name = "vkcube_image_pipe_swapchain"
-        } ]
-    tests = [ {
-          name = "test_vkcube_image_pipe_swapchain"
         } ]
   }
 }

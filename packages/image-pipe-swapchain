@@ -1,0 +1,13 @@
+{
+    "imports": [
+        "garnet/packages/magma",
+        "garnet/packages/fxl",
+        "garnet/packages/fsl",
+        "garnet/packages/runtime_config"
+    ],
+    "packages": {
+        "image-pipe-swapchain": "//garnet/lib/vulkan:image-pipe-swapchain",
+        "image-pipe-swapchain-tests": "//garnet/lib/vulkan:image-pipe-swapchain-tests",
+        "display-pipe": "//garnet/lib/magma:display-pipe"
+    }
+}
