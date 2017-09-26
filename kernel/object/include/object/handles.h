@@ -29,6 +29,9 @@ void DeleteHandle(Handle* handle);
 // Maps an integer obtained by Handle->base_value() back to a Handle.
 Handle* MapU32ToHandle(uint32_t value);
 
+// To be called once during bringup.
+void HandleTableInit();
+
 namespace internal {
 // Dumps internal details of the handle table using printf().
 // Should only be called by diagnostics.cpp.
