@@ -8,8 +8,8 @@
     ],
     "binaries": [
       {
-        "binary": "fuchsia-vfs-lib-test",
-        "bootfs_path": "test/fuchsia-vfs-lib-test"
+        "binary": "fuchsia_vfs-lib-test",
+        "bootfs_path": "test/fuchsia_vfs-lib-test"
       }
     ]
 }
