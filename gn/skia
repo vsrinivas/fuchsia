@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "garnet/packages/magma",
+        "garnet/packages/vulkan",
         "garnet/packages/zlib"
     ],
     "labels": [
