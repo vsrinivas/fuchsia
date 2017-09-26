@@ -20,7 +20,7 @@ const IOCTL_FAMILY_VFS: ::std::os::raw::c_int = 2;
 const IOCTL_KIND_GET_HANDLE: ::std::os::raw::c_int = 1;
 const IOCTL_KIND_SET_HANDLE: ::std::os::raw::c_int = 3;
 const IOCTL_VFS_MOUNT_FS: ::std::os::raw::c_int =
-    ((IOCTL_KIND_SET_HANDLE & 0xF) << 20) | (((IOCTL_FAMILY_VFS & 0xFF) << 8) | (0 & 0xFF));
+    ((IOCTL_KIND_SET_HANDLE & 0xF) << 20) | ((IOCTL_FAMILY_VFS & 0xFF) << 8);
 
 const IOCTL_VFS_UNMOUNT_NODE: ::std::os::raw::c_int =
     ((IOCTL_KIND_GET_HANDLE & 0xF) << 20) | (((IOCTL_FAMILY_VFS & 0xFF) << 8) | (2 & 0xFF));
@@ -86,7 +86,7 @@ impl Drop for Mount {
     }
 }
 
-pub fn mount(path: PathBuf, chan: zircon::Channel) -> Result<(), zircon::Status> {
+pub fn mount(path: &PathBuf, chan: zircon::Channel) -> Result<Mount, zircon::Status> {
     let dir = fs::OpenOptions::new()
         .read(true)
         .custom_flags(O_DIRECTORY | O_ADMIN | O_NOREMOTE)
@@ -117,7 +117,7 @@ pub fn mount(path: PathBuf, chan: zircon::Channel) -> Result<(), zircon::Status>
     // prevent Handle.drop
     std::mem::forget(chan);
 
-    Ok(())
+    Ok(mount)
 }
 
 #[cfg(test)]
@@ -126,23 +126,23 @@ mod test {
 
     // TODO(raggi): switch out for tempdir crate once rand crate links zircon
     struct Tempdir {
-        path: String
+        path: String,
     }
 
     impl Tempdir {
         fn create(name: &str) -> Tempdir {
             let mut b = [0; 8];
             zircon::cprng_draw(&mut b).unwrap();
-            let rs : String = b.iter().map(|&c| format!("{:X}", c)).collect();
-            Tempdir{
-                path: format!("/tmp/{}-{}", name, rs)
+            let rs: String = b.iter().map(|&c| format!("{:X}", c)).collect();
+            Tempdir {
+                path: format!("/tmp/{}-{}", name, rs),
             }
         }
     }
 
     impl Drop for Tempdir {
         fn drop(&mut self) {
-            fs::remove_dir_all(&self.path);
+            fs::remove_dir_all(&self.path).ok();
         }
     }
 
@@ -150,29 +150,42 @@ mod test {
     fn test_mount_unmount() {
         let (c1, c2) = zircon::Channel::create(zircon::ChannelOpts::default()).unwrap();
 
-        // TODO(raggi): where is the appropriate place to put this, it's part of the mount protocol.
-        c2.signal_handle(zircon_sys::ZX_SIGNAL_NONE, zircon_sys::ZX_USER_SIGNAL_0).unwrap();
+        // TODO(raggi): where is the appropriate place to put this, it's part of the mount protocol?
+        c2.signal_handle(zircon_sys::ZX_SIGNAL_NONE, zircon_sys::ZX_USER_SIGNAL_0)
+            .unwrap();
 
         let port = zircon::Port::create(zircon::PortOpts::default()).unwrap();
 
-        c2.wait_async_handle(&port, 1,
-                             zircon_sys::ZX_CHANNEL_PEER_CLOSED,
-                             zircon::WaitAsyncOpts::Once).unwrap();
+        c2.wait_async_handle(
+            &port,
+            1,
+            zircon_sys::ZX_CHANNEL_PEER_CLOSED,
+            zircon::WaitAsyncOpts::Once,
+        ).unwrap();
 
         let td = Tempdir::create("test_mount_unmount");
 
         fs::create_dir(&td.path).expect("mkdir");
 
-        // this drops the serving side, which should result in c2 getting closed.
-        mount(PathBuf::from(&td.path), c1).unwrap();
+        let m = mount(PathBuf::from(&td.path), c1).unwrap();
+
+        assert_eq!(
+            zircon::Status::ErrTimedOut,
+            port.wait(zircon::deadline_after(2_000_000))
+                .expect_err("timeout")
+        );
+
+        std::mem::drop(m);
 
         let packet = port.wait(zircon::deadline_after(2_000_000)).unwrap();
         match packet.contents() {
             zircon::PacketContents::SignalOne(sp) => {
-                assert_eq!(zircon_sys::ZX_CHANNEL_PEER_CLOSED,
-                           sp.observed() & zircon_sys::ZX_CHANNEL_PEER_CLOSED);
+                assert_eq!(
+                    zircon_sys::ZX_CHANNEL_PEER_CLOSED,
+                    sp.observed() & zircon_sys::ZX_CHANNEL_PEER_CLOSED
+                );
             }
-            _ => { assert!(false, "expected signalone packet") }
+            _ => assert!(false, "expected signalone packet"),
         }
     }
 }
