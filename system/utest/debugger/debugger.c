@@ -1022,7 +1022,7 @@ static bool suspended_in_exception_reg_access_test(void)
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior, &eport,
                               suspended_in_exception_handler, &data);
-    EXPECT_GT(eport, 0, "");
+    EXPECT_NE(eport, ZX_HANDLE_INVALID, "");
 
     enum message msg;
     send_msg(channel, MSG_CRASH_AND_RECOVER_TEST);
