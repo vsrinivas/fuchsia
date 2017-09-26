@@ -12,7 +12,7 @@
 
 __UNUSED static const size_t kMaxPacketsPerRange = 256;
 
-BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
+BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange - 1) {}
 
 zx_status_t BlockingPortAllocator::Init() {
     return arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
