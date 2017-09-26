@@ -10,6 +10,7 @@
         "garnet/packages/fonts",
         "garnet/packages/fortune",
         "garnet/packages/fsl",
+        "garnet/packages/fuchsia-vfs-tests",
         "garnet/packages/fxl",
         "garnet/packages/gdbserver",
         "garnet/packages/icu",

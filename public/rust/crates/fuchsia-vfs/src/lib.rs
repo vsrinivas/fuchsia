@@ -167,7 +167,7 @@ mod test {
 
         fs::create_dir(&td.path).expect("mkdir");
 
-        let m = mount(PathBuf::from(&td.path), c1).unwrap();
+        let m = mount(&PathBuf::from(&td.path), c1).unwrap();
 
         assert_eq!(
             zircon::Status::ErrTimedOut,
