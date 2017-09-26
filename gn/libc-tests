@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "libc-tests": "//libc-tests"
+        "libc-tests": "//third_party/libc-tests"
     }
 }
