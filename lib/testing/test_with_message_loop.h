@@ -66,14 +66,8 @@ class TestWithMessageLoop : public ::testing::Test {
   bool RunLoopUntil(std::function<bool()> condition,
                     fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1));
 
-  // Creates a closure that quits the test message loop when executed.
-  std::function<void()> MakeQuitTask();
-
-  // TODO(mesch): Once we use FIDL on the message loop, we cannot replace the
-  // message loop instance. If we do, FIDL connections estabslished on the
-  // second instance get closed. It is unclear why, but if we keep a single
-  // message loop instance, FIDL connections work.
-  static fsl::MessageLoop* message_loop_;
+  // The message loop for the test.
+  fsl::MessageLoop message_loop_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);

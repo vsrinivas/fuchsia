@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "lib/config/fidl/config.fidl.h"
-#include "lib/test_runner/cpp/application_context.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger/constants.h"
@@ -18,13 +17,14 @@ namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting(
     const std::string& repository_name)
-    : repository_path_("/tmp/" + repository_name) {
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      tmp_dir_("/tmp/" + repository_name) {
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
 
-  auto& app_launcher = test_runner::GetApplicationContext()->launcher();
+  auto& app_launcher = application_context_->launcher();
   ledger_app_client_ = std::make_unique<AppClient<ledger::LedgerController>>(
       app_launcher.get(), std::move(ledger_config));
 
@@ -37,7 +37,7 @@ LedgerRepositoryForTesting::~LedgerRepositoryForTesting() = default;
 ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(
-        repository_path_, nullptr, nullptr, ledger_repo_.NewRequest(),
+        tmp_dir_.path(), nullptr, nullptr, ledger_repo_.NewRequest(),
         [this](ledger::Status status) {
           FXL_CHECK(status == ledger::Status::OK);
         });
@@ -48,7 +48,7 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
 
 void LedgerRepositoryForTesting::Reset(std::function<void()> done) {
   if (ledger_repo_) {
-    ledger_repo_factory_->EraseRepository(repository_path_, nullptr, nullptr,
+    ledger_repo_factory_->EraseRepository(tmp_dir_.path(), nullptr, nullptr,
                                           [this, done](ledger::Status status) {
                                             ledger_repo_.reset();
                                             done();

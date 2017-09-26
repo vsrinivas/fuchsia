@@ -7,7 +7,9 @@
 
 #include <string>
 
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
@@ -35,7 +37,8 @@ class LedgerRepositoryForTesting {
   void Terminate(std::function<void()> done);
 
  private:
-  const std::string repository_path_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
+  files::ScopedTempDir tmp_dir_;
   std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_client_;
   ledger::LedgerRepositoryFactoryPtr ledger_repo_factory_;
   ledger::LedgerRepositoryPtr ledger_repo_;

@@ -57,6 +57,7 @@ source_set("test_with_message_loop") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
@@ -104,7 +105,6 @@ source_set("ledger_repository_for_testing") {
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/cpp:application_context",
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
