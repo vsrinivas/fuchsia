@@ -9,15 +9,16 @@
 
 #include <kernel/spinlock.h>
 #include <list.h>
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
 void timer_queue_init(void);
 
 struct timer;
-typedef enum handler_return (*timer_callback)(struct timer*, lk_time_t now, void* arg);
+typedef enum handler_return (*timer_callback)(struct timer*, zx_time_t now, void* arg);
 
 #define TIMER_MAGIC (0x74696D72) //'timr'
 
@@ -31,7 +32,7 @@ typedef struct timer {
     int magic;
     struct list_node node;
 
-    lk_time_t scheduled_time;
+    zx_time_t scheduled_time;
     int64_t slack; // Stores the applied slack adjustment from
                    // the ideal scheduled_time.
     timer_callback callback;
@@ -81,7 +82,7 @@ void timer_init(timer_t*);
  * arg: the argument to pass to the callback
  *
  * The timer function is declared as:
- *   enum handler_return callback(struct timer *, lk_time_t now, void *arg) { ... }
+ *   enum handler_return callback(struct timer *, zx_time_t now, void *arg) { ... }
  *
  * The |slack| parameter defines an interval depending on the |mode| in which
  * is acceptable to fire the timer:
@@ -91,7 +92,7 @@ void timer_init(timer_t*);
  * - TIMER_SLACK_EARLY: |deadline - slack| to |deadline|
  *
  */
-void timer_set(timer_t* timer, lk_time_t deadline,
+void timer_set(timer_t* timer, zx_time_t deadline,
                enum slack_mode mode, uint64_t slack, timer_callback callback, void* arg);
 
 /**
@@ -106,7 +107,7 @@ bool timer_cancel(timer_t*);
 
 /* Equivalent to timer_set with a slack of 0 */
 static inline void timer_set_oneshot(
-    timer_t* timer, lk_time_t deadline, timer_callback callback, void* arg) {
+    timer_t* timer, zx_time_t deadline, timer_callback callback, void* arg) {
     return timer_set(timer, deadline, TIMER_SLACK_CENTER, 0ull, callback, arg);
 }
 
@@ -117,7 +118,7 @@ static inline void timer_set_oneshot(
  * - Cannot be called from the timer itself
  */
 /* NOTE: internal api that is needed probably only by the scheduler */
-void timer_reset_oneshot_local(timer_t* timer, lk_time_t deadline, timer_callback callback, void* arg);
+void timer_reset_oneshot_local(timer_t* timer, zx_time_t deadline, timer_callback callback, void* arg);
 
 /* Internal routines used when bringing cpus online/offline */
 

@@ -11,14 +11,15 @@
 #include <platform.h>
 #include <pow2.h>
 
-#include <zircon/compiler.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls/port.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
 #include <object/excp_port.h>
 #include <object/state_tracker.h>
+#include <zircon/compiler.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 

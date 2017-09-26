@@ -356,7 +356,7 @@ void thread_signal_policy_exception(void) {
     THREAD_UNLOCK(state);
 }
 
-status_t thread_join(thread_t* t, int* retcode, lk_time_t deadline) {
+status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     THREAD_LOCK(state);
@@ -774,7 +774,7 @@ void thread_reschedule(void) {
 }
 
 /* timer callback to wake up a sleeping thread */
-static enum handler_return thread_sleep_handler(timer_t* timer, lk_time_t now, void* arg) {
+static enum handler_return thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
     thread_t* t = (thread_t*)arg;
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -805,10 +805,10 @@ static enum handler_return thread_sleep_handler(timer_t* timer, lk_time_t now, v
 #define DIV_SLEEP_SLACK 10u
 
 /* computes the amount of slack the thread_sleep timer will use */
-static uint64_t sleep_slack(lk_time_t deadline, lk_time_t now) {
+static uint64_t sleep_slack(zx_time_t deadline, zx_time_t now) {
     if (deadline < now)
         return MIN_SLEEP_SLACK;
-    lk_time_t slack = (deadline - now) / DIV_SLEEP_SLACK;
+    zx_duration_t slack = (deadline - now) / DIV_SLEEP_SLACK;
     return MAX(MIN_SLEEP_SLACK, MIN(slack, MAX_SLEEP_SLACK));
 }
 
@@ -825,9 +825,9 @@ static uint64_t sleep_slack(lk_time_t deadline, lk_time_t now) {
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
-status_t thread_sleep_etc(lk_time_t deadline, bool interruptable) {
+status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
     thread_t* current_thread = get_current_thread();
-    lk_time_t now = current_time();
+    zx_time_t now = current_time();
     status_t blocked_status;
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
@@ -872,7 +872,7 @@ out:
     return blocked_status;
 }
 
-status_t thread_sleep_relative(lk_time_t delay) {
+status_t thread_sleep_relative(zx_duration_t delay) {
     if (delay != ZX_TIME_INFINITE) {
         delay += current_time();
     }
@@ -885,10 +885,10 @@ status_t thread_sleep_relative(lk_time_t delay) {
  * This takes the thread_lock to ensure there are no races while calculating the
  * runtime of the thread.
  */
-lk_time_t thread_runtime(const thread_t* t) {
+zx_duration_t thread_runtime(const thread_t* t) {
     THREAD_LOCK(state);
 
-    lk_time_t runtime = t->runtime_ns;
+    zx_duration_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
         runtime += current_time() - t->last_started_running;
     }
@@ -1114,7 +1114,7 @@ void dump_thread(thread_t* t, bool full_dump) {
         dprintf(INFO, "dump_thread WARNING: thread at %p has bad magic\n", t);
     }
 
-    lk_time_t runtime = t->runtime_ns;
+    zx_duration_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
         runtime += current_time() - t->last_started_running;
     }
@@ -1202,7 +1202,7 @@ void wait_queue_init(wait_queue_t* wait) {
     *wait = (wait_queue_t)WAIT_QUEUE_INITIAL_VALUE(*wait);
 }
 
-static enum handler_return wait_queue_timeout_handler(timer_t* timer, lk_time_t now, void* arg) {
+static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t now, void* arg) {
     thread_t* thread = (thread_t*)arg;
 
     DEBUG_ASSERT(thread->magic == THREAD_MAGIC);
@@ -1242,7 +1242,7 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, lk_time_t 
  * @return ZX_ERR_TIMED_OUT on timeout, else returns the return
  * value specified when the queue was woken by wait_queue_wake_one().
  */
-status_t wait_queue_block(wait_queue_t* wait, lk_time_t deadline) {
+status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
     timer_t timer;
 
     thread_t* current_thread = get_current_thread();

@@ -365,7 +365,7 @@ void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]) {
     }
 }
 
-extern "C" enum handler_return pmm_dump_timer(struct timer* t, lk_time_t now, void*) TA_REQ(arena_lock) {
+extern "C" enum handler_return pmm_dump_timer(struct timer* t, zx_time_t now, void*) TA_REQ(arena_lock) {
     timer_set(t, now + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(20), &pmm_dump_timer, nullptr);
     pmm_dump_free();
     return INT_NO_RESCHEDULE;

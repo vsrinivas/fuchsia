@@ -29,6 +29,7 @@
 #include <err.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
+#include <sys/types.h>
 
 /**
  * @brief  Initialize an event object
@@ -76,7 +77,7 @@ void event_destroy(event_t* e) {
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
-status_t event_wait_deadline(event_t* e, lk_time_t deadline, bool interruptable) {
+status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptable) {
     thread_t* current_thread = get_current_thread();
     status_t ret = ZX_OK;
 

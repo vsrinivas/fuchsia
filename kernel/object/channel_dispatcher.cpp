@@ -19,10 +19,11 @@
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/type_support.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 
@@ -346,7 +347,7 @@ int ChannelDispatcher::MessageWaiter::Cancel(zx_status_t status) {
     return event_.Signal(status);
 }
 
-zx_status_t ChannelDispatcher::MessageWaiter::Wait(lk_time_t deadline) {
+zx_status_t ChannelDispatcher::MessageWaiter::Wait(zx_time_t deadline) {
     if (unlikely(!channel_)) {
         return ZX_ERR_BAD_STATE;
     }

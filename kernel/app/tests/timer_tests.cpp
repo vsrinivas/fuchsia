@@ -18,7 +18,7 @@
 
 #include <zircon/types.h>
 
-static enum handler_return timer_cb(struct timer* timer, lk_time_t now, void* arg) {
+static enum handler_return timer_cb(struct timer* timer, zx_time_t now, void* arg) {
     event_t* event = (event_t*)arg;
     event_signal(event, false);
 
@@ -70,14 +70,14 @@ static void timer_test_all_cpus(void) {
     printf("%u threads created, %u threads joined\n", max, joined);
 }
 
-static enum handler_return timer_cb2(struct timer* timer, lk_time_t now, void* arg) {
+static enum handler_return timer_cb2(struct timer* timer, zx_time_t now, void* arg) {
     int* timer_count = (int*)arg;
     atomic_add(timer_count, 1);
     return INT_RESCHEDULE;
 }
 
 static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
-                                  const lk_time_t* deadline, const int64_t* expected_adj, int count) {
+                                  const zx_time_t* deadline, const int64_t* expected_adj, int count) {
     printf("testing coalsecing mode %d\n", mode);
 
     int timer_count = 0;
@@ -87,7 +87,7 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
     printf("       orig         new       adjustment\n");
     for (int ix = 0; ix != count; ++ix) {
         timer_init(&timer[ix]);
-        lk_time_t dl = deadline[ix];
+        zx_time_t dl = deadline[ix];
         timer_set(&timer[ix], dl, mode, slack, timer_cb2, &timer_count);
         printf("[%d] %" PRIu64 "  -> %" PRIu64 ", %" PRIi64 "\n",
                ix, dl, timer[ix].scheduled_time, timer[ix].slack);
@@ -106,11 +106,11 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
 }
 
 static void timer_test_coalescing_center(void) {
-    lk_time_t when = current_time() + ZX_MSEC(1);
-    lk_time_t off = ZX_USEC(10);
-    lk_time_t slack = 2u * off;
+    zx_time_t when = current_time() + ZX_MSEC(1);
+    zx_duration_t off = ZX_USEC(10);
+    zx_duration_t slack = 2u * off;
 
-    const lk_time_t deadline[] = {
+    const zx_time_t deadline[] = {
         when + (6u * off), // non-coalesced, adjustment = 0
         when,              // non-coalesced, adjustment = 0
         when - off,        // coalesced with [1], adjustment = 10u
@@ -129,11 +129,11 @@ static void timer_test_coalescing_center(void) {
 }
 
 static void timer_test_coalescing_late(void) {
-    lk_time_t when = current_time() + ZX_MSEC(1);
-    lk_time_t off = ZX_USEC(10);
-    lk_time_t slack = 3u * off;
+    zx_time_t when = current_time() + ZX_MSEC(1);
+    zx_duration_t off = ZX_USEC(10);
+    zx_duration_t slack = 3u * off;
 
-    const lk_time_t deadline[] = {
+    const zx_time_t deadline[] = {
         when + off,        // non-coalesced, adjustment = 0
         when + (2u * off), // non-coalesced, adjustment = 0
         when - off,        // coalesced with [0], adjustment = 20u
@@ -151,11 +151,11 @@ static void timer_test_coalescing_late(void) {
 }
 
 static void timer_test_coalescing_early(void) {
-    lk_time_t when = current_time() + ZX_MSEC(1);
-    lk_time_t off = ZX_USEC(10);
-    lk_time_t slack = 3u * off;
+    zx_time_t when = current_time() + ZX_MSEC(1);
+    zx_duration_t off = ZX_USEC(10);
+    zx_duration_t slack = 3u * off;
 
-    const lk_time_t deadline[] = {
+    const zx_time_t deadline[] = {
         when,              // non-coalesced, adjustment = 0
         when + (2u * off), // coalesced with [0], adjustment = -20u
         when - off,        // non-coalesced, adjustment = 0

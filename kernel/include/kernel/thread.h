@@ -14,8 +14,9 @@
 #include <kernel/spinlock.h>
 #include <kernel/wait.h>
 #include <list.h>
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -83,8 +84,8 @@ typedef struct thread {
     /* active bits */
     struct list_node queue_node;
     enum thread_state state;
-    lk_time_t last_started_running;
-    lk_time_t remaining_time_slice;
+    zx_time_t last_started_running;
+    zx_duration_t remaining_time_slice;
     unsigned int flags;
     unsigned int signals;
 
@@ -108,7 +109,7 @@ typedef struct thread {
     /* Total time in THREAD_RUNNING state.  If the thread is currently in
      * THREAD_RUNNING state, this excludes the time it has accrued since it
      * left the scheduler. */
-    lk_time_t runtime_ns;
+    zx_duration_t runtime_ns;
 
     /* if blocked, a pointer to the wait queue */
     struct wait_queue* blocking_wait_queue;
@@ -206,7 +207,7 @@ void thread_forget(thread_t*);
 void thread_migrate_cpu(const uint target_cpuid);
 
 status_t thread_detach(thread_t* t);
-status_t thread_join(thread_t* t, int* retcode, lk_time_t deadline);
+status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline);
 status_t thread_detach_and_resume(thread_t* t);
 status_t thread_set_real_time(thread_t* t);
 
@@ -235,18 +236,18 @@ static inline bool thread_stopped_in_exception(const thread_t* thread) {
 /* wait until after the specified deadline. interruptable may return early with
  * ZX_ERR_INTERNAL_INTR_KILLED if thread is signaled for kill.
  */
-status_t thread_sleep_etc(lk_time_t deadline, bool interruptable);
+status_t thread_sleep_etc(zx_time_t deadline, bool interruptable);
 
 /* non interruptable version of thread_sleep_etc */
-static inline status_t thread_sleep(lk_time_t deadline) {
+static inline status_t thread_sleep(zx_time_t deadline) {
     return thread_sleep_etc(deadline, false);
 }
 
 /* non-interruptable relative delay version of thread_sleep */
-status_t thread_sleep_relative(lk_time_t delay);
+status_t thread_sleep_relative(zx_duration_t delay);
 
 /* return the number of nanoseconds a thread has been running for */
-lk_time_t thread_runtime(const thread_t* t);
+zx_duration_t thread_runtime(const thread_t* t);
 
 /* deliver a kill signal to a thread */
 void thread_kill(thread_t* t, bool block);

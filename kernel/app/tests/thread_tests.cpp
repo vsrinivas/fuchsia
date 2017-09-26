@@ -454,10 +454,10 @@ static void sleeper_thread_exit(enum thread_user_state_change new_state, void* a
 static int sleeper_kill_thread(void* arg) {
     thread_sleep_relative(ZX_MSEC(100));
 
-    lk_time_t t = current_time();
+    zx_time_t t = current_time();
     zx_status_t err = thread_sleep_etc(t + ZX_SEC(5), true);
-    t = (current_time() - t) / ZX_MSEC(1);
-    TRACEF("thread_sleep_etc returns %d after %" PRIu64 " msecs\n", err, t);
+    zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
+    TRACEF("thread_sleep_etc returns %d after %" PRIu64 " msecs\n", err, duration);
 
     return 0;
 }
@@ -471,10 +471,10 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
 
     thread_sleep_relative(ZX_MSEC(100));
 
-    lk_time_t t = current_time();
+    zx_time_t t = current_time();
     zx_status_t err = event_wait_deadline(e, ZX_TIME_INFINITE, true);
-    t = (current_time() - t) / ZX_MSEC(1);
-    TRACEF("event_wait_deadline returns %d after %" PRIu64 " msecs\n", err, t);
+    zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
+    TRACEF("event_wait_deadline returns %d after %" PRIu64 " msecs\n", err, duration);
 
     return 0;
 }
@@ -484,10 +484,10 @@ static int waiter_kill_thread(void* arg) {
 
     thread_sleep_relative(ZX_MSEC(100));
 
-    lk_time_t t = current_time();
+    zx_time_t t = current_time();
     zx_status_t err = event_wait_deadline(e, t + ZX_SEC(5), true);
-    t = (current_time() - t) / ZX_MSEC(1);
-    TRACEF("event_wait_deadline with deadline returns %d after %" PRIu64 " msecs\n", err, t);
+    zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
+    TRACEF("event_wait_deadline with deadline returns %d after %" PRIu64 " msecs\n", err, duration);
 
     return 0;
 }

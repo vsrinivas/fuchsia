@@ -5,14 +5,15 @@
 // https://opensource.org/licenses/MIT
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
 /* per cpu kernel level statistics */
 struct cpu_stats {
-    lk_time_t idle_time;
+    zx_duration_t idle_time;
     ulong reschedules;
     ulong context_switches;
     ulong irq_preempts;

@@ -16,9 +16,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/types.h>
 
 static void bench_cache(size_t bufsize, uint8_t* buf) {
-    lk_time_t t;
+    zx_time_t t;
     bool do_free;
 
     if (buf == 0) {
@@ -35,20 +36,20 @@ static void bench_cache(size_t bufsize, uint8_t* buf) {
 
     t = current_time();
     arch_clean_cache_range((addr_t)buf, bufsize);
-    t = current_time() - t;
+    zx_duration_t duration = current_time() - t;
 
-    printf("took %" PRIu64 " nsecs to clean %zu bytes (cold)\n", t, bufsize);
+    printf("took %" PRIu64 " nsecs to clean %zu bytes (cold)\n", duration, bufsize);
 
     memset(buf, 0x99, bufsize);
 
     t = current_time();
     arch_clean_cache_range((addr_t)buf, bufsize);
-    t = current_time() - t;
+    duration = current_time() - t;
 
     if (do_free)
         free(buf);
 
-    printf("took %" PRIu64 " nsecs to clean %zu bytes (hot)\n", t, bufsize);
+    printf("took %" PRIu64 " nsecs to clean %zu bytes (hot)\n", duration, bufsize);
 }
 
 static int cache_tests(int argc, const cmd_args* argv, uint32_t flags) {

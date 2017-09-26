@@ -24,7 +24,7 @@ public:
     __WARN_UNUSED_RESULT int Post();
 
     // Returns whether we blocked via |was_blocked|.
-    zx_status_t Wait(lk_time_t deadline, bool* was_blocked);
+    zx_status_t Wait(zx_time_t deadline, bool* was_blocked);
 
 private:
     int64_t count_;

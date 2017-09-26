@@ -11,6 +11,7 @@
 #include <fbl/mutex.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

@@ -27,11 +27,13 @@
 #include <object/resources.h>
 #include <object/thread_dispatcher.h>
 
-#include <zircon/syscalls/log.h>
-#include <zircon/syscalls/policy.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
 #include <fbl/ref_ptr.h>
+
+#include <zircon/syscalls/log.h>
+#include <zircon/syscalls/policy.h>
+#include <zircon/types.h>
 
 #include "syscalls_priv.h"
 

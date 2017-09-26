@@ -11,6 +11,7 @@
 #include <fbl/auto_lock.h>
 #include <object/thread_dispatcher.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 

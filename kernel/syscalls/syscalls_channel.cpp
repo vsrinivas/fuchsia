@@ -10,12 +10,13 @@
 
 #include <lib/ktrace.h>
 
-#include <zircon/syscalls/policy.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle_owner.h>
 #include <object/handles.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
+#include <zircon/syscalls/policy.h>
+#include <zircon/types.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>

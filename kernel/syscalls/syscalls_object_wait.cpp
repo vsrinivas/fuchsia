@@ -24,6 +24,8 @@
 #include <fbl/inline_array.h>
 #include <fbl/ref_ptr.h>
 
+#include <zircon/types.h>
+
 #include "syscalls_priv.h"
 
 using fbl::AutoLock;

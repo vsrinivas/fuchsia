@@ -131,9 +131,9 @@ static void* null_memcpy(void* dst, const void* src, size_t len) {
     return dst;
 }
 
-static lk_time_t bench_memcpy_routine(void* memcpy_routine(void*, const void*, size_t), size_t srcalign, size_t dstalign) {
+static zx_duration_t bench_memcpy_routine(void* memcpy_routine(void*, const void*, size_t), size_t srcalign, size_t dstalign) {
     int i;
-    lk_time_t t0;
+    zx_time_t t0;
 
     t0 = current_time();
     for (i = 0; i < ITERATIONS; i++) {
@@ -143,7 +143,7 @@ static lk_time_t bench_memcpy_routine(void* memcpy_routine(void*, const void*, s
 }
 
 static void bench_memcpy(void) {
-    lk_time_t null, c, libc, mine;
+    zx_duration_t null, c, libc, mine;
     size_t srcalign, dstalign;
 
     printf("memcpy speed test\n");
@@ -154,10 +154,10 @@ static void bench_memcpy(void) {
 
             spin_lock_saved_state_t state;
             arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-            null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign) / (1000 * 1000);
-            c = bench_memcpy_routine(&c_memmove, srcalign, dstalign) / (1000 * 1000);
-            libc = bench_memcpy_routine(&memcpy, srcalign, dstalign) / (1000 * 1000);
-            mine = bench_memcpy_routine(&mymemcpy, srcalign, dstalign) / (1000 * 1000);
+            null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign) / ZX_MSEC(1);
+            c = bench_memcpy_routine(&c_memmove, srcalign, dstalign) / ZX_MSEC(1);
+            libc = bench_memcpy_routine(&memcpy, srcalign, dstalign) / ZX_MSEC(1);
+            mine = bench_memcpy_routine(&mymemcpy, srcalign, dstalign) / ZX_MSEC(1);
             arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
             printf("srcalign %zu, dstalign %zu: ", srcalign, dstalign);
@@ -223,9 +223,9 @@ static void validate_memcpy(void) {
     }
 }
 
-static lk_time_t bench_memset_routine(void* memset_routine(void*, int, size_t), size_t dstalign, size_t len) {
+static zx_duration_t bench_memset_routine(void* memset_routine(void*, int, size_t), size_t dstalign, size_t len) {
     int i;
-    lk_time_t t0;
+    zx_time_t t0;
 
     t0 = current_time();
     for (i = 0; i < ITERATIONS; i++) {
@@ -235,7 +235,7 @@ static lk_time_t bench_memset_routine(void* memset_routine(void*, int, size_t), 
 }
 
 static void bench_memset(void) {
-    lk_time_t c, libc, mine;
+    zx_duration_t c, libc, mine;
     size_t dstalign;
 
     printf("memset speed test\n");
@@ -245,9 +245,9 @@ static void bench_memset(void) {
 
         spin_lock_saved_state_t state;
         arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-        c = bench_memset_routine(&c_memset, dstalign, BUFFER_SIZE) / (1000 * 1000);
-        libc = bench_memset_routine(&memset, dstalign, BUFFER_SIZE) / (1000 * 1000);
-        mine = bench_memset_routine(&mymemset, dstalign, BUFFER_SIZE) / (1000 * 1000);
+        c = bench_memset_routine(&c_memset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
+        libc = bench_memset_routine(&memset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
+        mine = bench_memset_routine(&mymemset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
         arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
         printf("dstalign %zu: ", dstalign);

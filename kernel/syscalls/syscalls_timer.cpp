@@ -18,6 +18,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 
+#include <zircon/types.h>
+
 #include "syscalls_priv.h"
 
 zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<zx_handle_t> out) {

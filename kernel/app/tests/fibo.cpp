@@ -59,7 +59,7 @@ int fibo(int argc, const cmd_args* argv) {
         return -1;
     }
 
-    lk_time_t tim = current_time();
+    zx_time_t tim = current_time();
 
     thread_t* t = thread_create("fibo", &fibo_thread, (void*)(uintptr_t)argv[1].u, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
@@ -67,10 +67,10 @@ int fibo(int argc, const cmd_args* argv) {
     int retcode;
     thread_join(t, &retcode, ZX_TIME_INFINITE);
 
-    tim = (current_time() - tim) / (1000 * 1000);
+    zx_duration_t msec_duration = (current_time() - tim) / ZX_MSEC(1);
 
     printf("fibo %d\n", retcode);
-    printf("took %" PRIu64 " msecs to calculate\n", tim);
+    printf("took %" PRIu64 " msecs to calculate\n", msec_duration);
 
     return ZX_OK;
 }

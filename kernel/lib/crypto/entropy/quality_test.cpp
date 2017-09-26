@@ -106,9 +106,9 @@ void EarlyBootTest() {
                "ENTROPY_COLLECTOR_TEST_MAXLEN)\n", sizeof(entropy_buf));
     }
 
-    lk_time_t start = current_time();
+    zx_time_t start = current_time();
     size_t result = collector->DrawEntropy(entropy_buf, entropy_len);
-    lk_time_t end = current_time();
+    zx_time_t end = current_time();
 
     if (result < entropy_len) {
         printf("entropy-boot-test: source only returned %zu bytes.\n", result);

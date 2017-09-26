@@ -343,7 +343,7 @@ static uint32_t* apic_reg(LocalApicState* local_apic_state, uint16_t reg) {
     return reinterpret_cast<uint32_t*>(addr + reg);
 }
 
-static handler_return deadline_callback(timer_t* timer, lk_time_t now, void* arg) {
+static handler_return deadline_callback(timer_t* timer, zx_time_t now, void* arg) {
     LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
     uint32_t* lvt_timer = apic_reg(local_apic_state, kLocalApicLvtTimer);
     uint8_t vector = *lvt_timer & LVT_TIMER_VECTOR_MASK;
@@ -389,7 +389,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         timer_cancel(&local_apic_state->timer);
         uint64_t tsc_deadline = guest_state->rdx << 32 | (guest_state->rax & UINT32_MAX);
         if (tsc_deadline > 0) {
-            lk_time_t deadline = ticks_to_nanos(tsc_deadline);
+            zx_time_t deadline = ticks_to_nanos(tsc_deadline);
             timer_set_oneshot(&local_apic_state->timer, deadline, deadline_callback,
                               local_apic_state);
         }

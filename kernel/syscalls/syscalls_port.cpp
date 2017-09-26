@@ -14,10 +14,12 @@
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 
-#include <zircon/syscalls/policy.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+
+#include <zircon/syscalls/policy.h>
+#include <zircon/types.h>
 
 #include "syscalls_priv.h"
 

@@ -8,6 +8,7 @@
 
 #include <err.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 Semaphore::Semaphore(int64_t initial_count) : count_(initial_count) {
     wait_queue_init(&waitq_);
@@ -26,7 +27,7 @@ int Semaphore::Post() {
     return 0;
 }
 
-zx_status_t Semaphore::Wait(lk_time_t deadline, bool* was_blocked) {
+zx_status_t Semaphore::Wait(zx_time_t deadline, bool* was_blocked) {
     thread_t *current_thread = get_current_thread();
 
      // If there are no resources available then we need to

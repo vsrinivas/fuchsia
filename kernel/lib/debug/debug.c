@@ -17,12 +17,13 @@
 #include <platform.h>
 #include <platform/debug.h>
 #include <kernel/spinlock.h>
+#include <zircon/types.h>
 
 void spin(uint32_t usecs)
 {
-    lk_time_t start = current_time();
+    zx_time_t start = current_time();
 
-    lk_time_t nsecs = (lk_time_t)usecs * 1000;
+    zx_duration_t nsecs = ZX_USEC(usecs);
     while ((current_time() - start) < nsecs)
         ;
 }

@@ -79,7 +79,7 @@ public:
         int Cancel(zx_status_t status);
         fbl::RefPtr<ChannelDispatcher> get_channel() { return channel_; }
         zx_txid_t get_txid() const { return txid_; }
-        zx_status_t Wait(lk_time_t deadline);
+        zx_status_t Wait(zx_time_t deadline);
         // Returns any delivered message via out and the status.
         zx_status_t EndWait(fbl::unique_ptr<MessagePacket>* out);
 

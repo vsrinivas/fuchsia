@@ -12,7 +12,6 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <zircon/compiler.h>
 #include <platform.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -21,6 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unittest.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 /**
  * \brief Function called to dump results
@@ -147,16 +148,16 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
         return false;
     }
 
-    lk_time_t testcase_start = current_time();
+    zx_time_t testcase_start = current_time();
 
     for (size_t i = 0; i < testcase->test_cnt; ++i) {
         const unittest_registration_t* test = &testcase->tests[i];
 
         printf(fmt_string, test->name ? test->name : "");
 
-        lk_time_t test_start = current_time();
+        zx_time_t test_start = current_time();
         bool good = test->fn ? test->fn(context) : false;
-        lk_time_t test_runtime = current_time() - test_start;
+        zx_duration_t test_runtime = current_time() - test_start;
 
         if (good) {
             passed++;
@@ -169,7 +170,7 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
                         test_runtime);
     }
 
-    lk_time_t testcase_runtime = current_time() - testcase_start;
+    zx_duration_t testcase_runtime = current_time() - testcase_start;
 
     unittest_printf("%s : %sll tests passed (%zu/%zu) in %" PRIu64 " nSec\n",
                     testcase->name,

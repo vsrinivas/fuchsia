@@ -341,7 +341,7 @@ void sched_reschedule(void) {
 }
 
 /* preemption timer that is set whenever a thread is scheduled */
-static enum handler_return sched_timer_tick(struct timer* t, lk_time_t now, void* arg) {
+static enum handler_return sched_timer_tick(struct timer* t, zx_time_t now, void* arg) {
     /* if the preemption timer went off on the idle or a real time thread, ignore it */
     thread_t* current_thread = get_current_thread();
     if (unlikely(thread_is_real_time_or_idle(current_thread)))
@@ -413,11 +413,11 @@ void sched_resched_internal(void) {
     if (newthread == oldthread)
         return;
 
-    lk_time_t now = current_time();
+    zx_time_t now = current_time();
 
     /* account for time used on the old thread */
     DEBUG_ASSERT(now >= oldthread->last_started_running);
-    zx_time_t old_runtime = now - oldthread->last_started_running;
+    zx_duration_t old_runtime = now - oldthread->last_started_running;
     oldthread->runtime_ns += old_runtime;
     oldthread->remaining_time_slice -= MIN(old_runtime, oldthread->remaining_time_slice);
 

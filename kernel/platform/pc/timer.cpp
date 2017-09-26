@@ -113,9 +113,9 @@ static uint32_t ns_per_hpet_rounded_up;
 
 #define LOCAL_TRACE 0
 
-lk_time_t current_time(void)
+zx_time_t current_time(void)
 {
-    lk_time_t time;
+    zx_time_t time;
 
     switch (wall_clock) {
         case CLOCK_TSC: {
@@ -141,8 +141,8 @@ lk_time_t current_time(void)
 
 // Round up t to a clock tick, so that when the APIC timer fires, the wall time
 // will have elapsed.
-static lk_time_t discrete_time_roundup(lk_time_t t) {
-    lk_time_t value = t;
+static zx_time_t discrete_time_roundup(zx_time_t t) {
+    zx_time_t value = t;
     switch (wall_clock) {
         case CLOCK_TSC: {
             value += ns_per_tsc_rounded_up;
@@ -172,7 +172,7 @@ uint64_t ticks_per_second(void)
     return tsc_ticks_per_ms * 1000;
 }
 
-lk_time_t ticks_to_nanos(uint64_t ticks) {
+zx_time_t ticks_to_nanos(uint64_t ticks) {
     return u64_mul_u64_fp32_64(ticks, ns_per_tsc);
 }
 
@@ -524,7 +524,7 @@ static void platform_init_timer(uint level)
 }
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
-zx_status_t platform_set_oneshot_timer(lk_time_t deadline)
+zx_status_t platform_set_oneshot_timer(zx_time_t deadline)
 {
     DEBUG_ASSERT(arch_ints_disabled());
 
@@ -542,14 +542,14 @@ zx_status_t platform_set_oneshot_timer(lk_time_t deadline)
         return ZX_OK;
     }
 
-    const lk_time_t now = current_time();
+    const zx_time_t now = current_time();
     if (now >= deadline) {
         // Deadline has already passed. We still need to schedule a timer so that
         // the interrupt fires.
         LTRACEF("Scheduling oneshot timer for min duration\n");
         return apic_timer_set_oneshot(1, 1, false /* unmasked */);
     }
-    const lk_time_t interval = deadline - now;
+    const zx_duration_t interval = deadline - now;
     DEBUG_ASSERT(interval != 0);
 
     uint64_t apic_ticks_needed = u64_mul_u64_fp32_64(interval, apic_ticks_per_ns);

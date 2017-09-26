@@ -13,6 +13,7 @@
 #include <vm/pmm.h>
 #include <lib/heap.h>
 #include <platform.h>
+#include <zircon/types.h>
 
 #include <object/diagnostics.h>
 #include <object/handle_owner.h>

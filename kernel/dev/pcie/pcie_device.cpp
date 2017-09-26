@@ -273,7 +273,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
 
     // 3) Poll the transaction pending bit until it clears.  This may take
     //    "several seconds"
-    lk_time_t start = current_time();
+    zx_time_t start = current_time();
     ret = ZX_ERR_TIMED_OUT;
     do {
         if (!check_trans_pending(this)) {

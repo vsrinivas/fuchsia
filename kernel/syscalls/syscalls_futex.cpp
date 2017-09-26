@@ -7,6 +7,7 @@
 #include <trace.h>
 
 #include <object/process_dispatcher.h>
+#include <zircon/types.h>
 
 #include "syscalls_priv.h"
 

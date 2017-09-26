@@ -20,7 +20,7 @@
 
 void clock_tests(void) {
     uint64_t c;
-    lk_time_t t2;
+    zx_time_t t2;
 
     thread_sleep_relative(ZX_MSEC(100));
     c = arch_cycle_count();
@@ -31,8 +31,8 @@ void clock_tests(void) {
     printf("making sure time never goes backwards\n");
     {
         printf("testing current_time()\n");
-        lk_time_t start = current_time();
-        lk_time_t last = start;
+        zx_time_t start = current_time();
+        zx_time_t last = start;
         for (;;) {
             t2 = current_time();
             //printf("%llu %llu\n", last, t2);
@@ -67,7 +67,7 @@ void clock_tests(void) {
 
         for (int i = 0; i < 3; i++) {
             uint64_t cycles = arch_cycle_count();
-            lk_time_t start = current_time();
+            zx_time_t start = current_time();
             while ((current_time() - start) < ZX_SEC(1))
                 ;
             cycles = arch_cycle_count() - cycles;

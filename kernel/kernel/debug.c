@@ -103,9 +103,9 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
     return 0;
 }
 
-static enum handler_return threadload(struct timer* t, lk_time_t now, void* arg) {
+static enum handler_return threadload(struct timer* t, zx_time_t now, void* arg) {
     static struct cpu_stats old_stats[SMP_MAX_CPUS];
-    static lk_time_t last_idle_time[SMP_MAX_CPUS];
+    static zx_duration_t last_idle_time[SMP_MAX_CPUS];
 
     printf("cpu    load"
            " sched (cs ylds pmpts irq_pmpts)"
@@ -119,7 +119,7 @@ static enum handler_return threadload(struct timer* t, lk_time_t now, void* arg)
         if (!mp_is_cpu_active(i))
             continue;
 
-        lk_time_t idle_time = percpu[i].stats.idle_time;
+        zx_duration_t idle_time = percpu[i].stats.idle_time;
 
         /* if the cpu is currently idle, add the time since it went idle up until now to the idle counter */
         bool is_idle = !!mp_is_cpu_idle(i);
@@ -127,8 +127,8 @@ static enum handler_return threadload(struct timer* t, lk_time_t now, void* arg)
             idle_time += current_time() - percpu[i].idle_thread.last_started_running;
         }
 
-        lk_time_t delta_time = idle_time - last_idle_time[i];
-        lk_time_t busy_time = ZX_SEC(1) - (delta_time > ZX_SEC(1) ? ZX_SEC(1) : delta_time);
+        zx_duration_t delta_time = idle_time - last_idle_time[i];
+        zx_duration_t busy_time = ZX_SEC(1) - (delta_time > ZX_SEC(1) ? ZX_SEC(1) : delta_time);
         uint busypercent = (busy_time * 10000) / ZX_SEC(1);
 
         printf("%3u"

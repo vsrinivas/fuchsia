@@ -7,5 +7,6 @@
 #pragma once
 
 #include <sys/types.h>
+#include <zircon/types.h>
 
-lk_time_t ticks_to_nanos(uint64_t ticks);
+zx_time_t ticks_to_nanos(uint64_t ticks);

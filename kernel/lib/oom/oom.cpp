@@ -9,11 +9,12 @@
 #include <kernel/thread.h>
 #include <vm/pmm.h>
 #include <lib/console.h>
-#include <zircon/errors.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <platform.h>
 #include <pretty/sizes.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <inttypes.h>
 #include <string.h>
@@ -174,7 +175,7 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
             oom_running = false;
             thread_t* t = oom_thread;
             oom_thread = nullptr;
-            lk_time_t deadline = current_time() + 4 * oom_sleep_duration_ns;
+            zx_time_t deadline = current_time() + 4 * oom_sleep_duration_ns;
 
             lock.release();
             zx_status_t s = thread_join(t, nullptr, deadline);

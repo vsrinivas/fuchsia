@@ -12,14 +12,15 @@
 
 #include <kernel/thread.h>
 
-#include <zircon/compiler.h>
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <zircon/compiler.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 
-static handler_return timer_irq_callback(timer* timer, lk_time_t now, void* arg) {
+static handler_return timer_irq_callback(timer* timer, zx_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
     // schedule a DPC to do so. TODO(cpu): figure out ways to reduce the lag.
     dpc_queue(reinterpret_cast<dpc_t*>(arg), false);

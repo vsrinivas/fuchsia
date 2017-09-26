@@ -7,17 +7,18 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
-typedef enum handler_return(*platform_timer_callback)(lk_time_t now);
+typedef enum handler_return(*platform_timer_callback)(zx_time_t now);
 
 // API to set/clear a hardware timer that is responsible for calling timer_tick() when it fires
-status_t platform_set_oneshot_timer(lk_time_t deadline);
+status_t platform_set_oneshot_timer(zx_time_t deadline);
 void     platform_stop_timer(void);
 
-enum handler_return timer_tick(lk_time_t now);
+enum handler_return timer_tick(zx_time_t now);
 
 __END_CDECLS

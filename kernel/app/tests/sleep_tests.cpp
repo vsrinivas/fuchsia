@@ -16,9 +16,9 @@
 static int thread_sleep_test(void) {
     int early = 0;
     for (int i = 0; i < 5; i++) {
-        lk_time_t now = current_time();
+        zx_time_t now = current_time();
         thread_sleep_relative(ZX_MSEC(500));
-        lk_time_t actual_delay = current_time() - now;
+        zx_duration_t actual_delay = current_time() - now;
         if (actual_delay < ZX_MSEC(500)) {
             early = 1;
             printf("thread_sleep_relative(ZX_MSEC(500)) returned after %" PRIu64 " ns\n", actual_delay);
