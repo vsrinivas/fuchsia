@@ -4,7 +4,7 @@
 
 #include "lib/resolver/fidl/resolver.fidl.h"
 
-#include "peridot/bin/integration/test.h"
+#include "peridot/tests/maxwell_integration/test.h"
 
 namespace {
 

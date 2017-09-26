@@ -4,7 +4,7 @@
 
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
-#include "peridot/bin/integration/test.h"
+#include "peridot/tests/maxwell_integration/test.h"
 
 namespace maxwell {
 

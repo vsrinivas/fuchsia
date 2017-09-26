@@ -54,6 +54,6 @@ group("unittests") {
 group("integration_tests") {
   testonly = true
   deps = [
-    "//peridot/bin/integration",
+    "//peridot/tests/maxwell_integration",
   ]
 }

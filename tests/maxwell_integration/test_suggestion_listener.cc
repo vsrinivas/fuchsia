@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/integration/test_suggestion_listener.h"
+#include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
 
 #include "lib/suggestion/cpp/formatting.h"
 
