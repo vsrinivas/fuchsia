@@ -44,7 +44,27 @@ TEST(MagmaUtil, MockMmio)
     test_mock_mmio(std::unique_ptr<MockMmio>(MockMmio::Create(1024)).get());
 }
 
-TEST(MagmaUtil, PlatformMmio)
+TEST(PlatformDevice, MapMmio)
+{
+    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    ASSERT_NE(platform_device, nullptr);
+
+    uint32_t index = 0;
+
+    // Map once
+    auto mmio = platform_device->CpuMapMmio(index, magma::PlatformMmio::CACHE_POLICY_CACHED);
+    EXPECT_NE(mmio, nullptr);
+
+    // Map again same policy
+    auto mmio2 = platform_device->CpuMapMmio(index, magma::PlatformMmio::CACHE_POLICY_CACHED);
+    EXPECT_NE(mmio2, nullptr);
+
+    // Map again different policy - this is now permitted though it's a bad idea.
+    auto mmio3 = platform_device->CpuMapMmio(index, magma::PlatformMmio::CACHE_POLICY_UNCACHED);
+    EXPECT_NE(mmio3, nullptr);
+}
+
+TEST(PlatformPciDevice, MapMmio)
 {
     magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);

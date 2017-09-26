@@ -258,6 +258,8 @@ void MsdArmDevice::EnableInterrupts()
 
 void MsdArmDevice::DisableInterrupts()
 {
+    if (!register_io_)
+        return;
     auto gpu_flags = registers::GpuIrqFlags::GetIrqMask().FromValue(0);
     gpu_flags.WriteTo(register_io_.get());
 

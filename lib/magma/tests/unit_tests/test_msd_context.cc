@@ -8,13 +8,10 @@
 
 TEST(MsdContext, CreateAndDestroy)
 {
-    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
-    ASSERT_NE(platform_device, nullptr);
-
     auto msd_driver = msd_driver_create();
     ASSERT_NE(msd_driver, nullptr);
 
-    auto msd_device = msd_driver_create_device(msd_driver, platform_device->GetDeviceHandle());
+    auto msd_device = msd_driver_create_device(msd_driver, GetTestDeviceHandle());
     ASSERT_NE(msd_device, nullptr);
 
     auto msd_connection = msd_device_open(msd_device, 0);

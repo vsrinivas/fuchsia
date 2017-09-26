@@ -8,7 +8,28 @@
 #include "gtest/gtest.h"
 #include <thread>
 
-TEST(PlatformInterrupt, Register)
+TEST(PlatformDevice, RegisterInterrupt)
+{
+    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    ASSERT_NE(platform_device, nullptr);
+
+    uint32_t index = 0;
+    auto interrupt = platform_device->RegisterInterrupt(index);
+    ASSERT_NE(nullptr, interrupt);
+
+    std::thread thread([interrupt_raw = interrupt.get()] {
+        DLOG("waiting for interrupt");
+        interrupt_raw->Wait();
+        DLOG("returned from interrupt");
+    });
+
+    interrupt->Signal();
+
+    DLOG("waiting for thread");
+    thread.join();
+}
+
+TEST(PlatformPciDevice, RegisterInterrupt)
 {
     magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);

@@ -16,15 +16,11 @@ class TestMultithread {
 public:
     static std::unique_ptr<TestMultithread> Create(bool wait)
     {
-        auto platform_device = TestPlatformPciDevice::GetInstance();
-        if (!platform_device)
-            return DRETP(nullptr, "no platform device");
-
         auto driver = MagmaDriver::Create();
         if (!driver)
             return DRETP(nullptr, "no driver");
 
-        auto device = driver->CreateDevice(platform_device->GetDeviceHandle());
+        auto device = driver->CreateDevice(GetTestDeviceHandle());
         if (!device)
             return DRETP(nullptr, "no device");
 
