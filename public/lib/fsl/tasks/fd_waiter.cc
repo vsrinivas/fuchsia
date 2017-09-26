@@ -11,8 +11,9 @@
 
 namespace fsl {
 
-FDWaiter::FDWaiter(async_t* async)
-    : async_(async), io_(nullptr) {}
+FDWaiter::FDWaiter(async_t* async) : async_(async), io_(nullptr) {
+  FXL_DCHECK(async_);
+}
 
 FDWaiter::~FDWaiter() {
   if (io_) {
