@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
-
 executable("test_vkcube_image_pipe_swapchain") {
   testonly = true
   sources = [
@@ -11,7 +9,7 @@ executable("test_vkcube_image_pipe_swapchain") {
     "test_vk_cube.cc",
   ]
   deps = [
-    "$lib_vulkan_root/tests/vkcube:vkcube_common",
+    "//garnet/lib/vulkan/tests/vkcube:vkcube_common",
     "//third_party/gtest",
   ]
 }

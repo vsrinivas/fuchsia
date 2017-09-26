@@ -26,8 +26,8 @@ source_set("vkcube_common") {
   ]
 
   sources = [
-    "$lib_vulkan_root/third_party/vkcube/cube.cc",
-    "$lib_vulkan_root/third_party/vkcube/cube.h",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.h",
     "test_vk_cube.h",
   ]
 

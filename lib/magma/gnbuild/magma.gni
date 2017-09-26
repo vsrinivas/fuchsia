@@ -8,7 +8,6 @@ declare_args() {
   msd_intel_gen_build_root = "//garnet/drivers/gpu/msd-intel-gen"
   glm_build_root = "//third_party/glm"
   zircon_build_root = "//zircon"
-  lib_vulkan_root = "$magma_build_root/vulkan"
 
   magma_python_path = rebase_path("//third_party/mako")
 
