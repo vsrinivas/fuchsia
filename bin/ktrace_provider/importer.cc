@@ -221,7 +221,8 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
 
 bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
                                 const TagInfo& tag_info) {
-  fbl::StringPiece name(record->name, strnlen(record->name, KTRACE_NAMESIZE));
+  fbl::StringPiece name(record->name,
+                        strnlen(record->name, ZX_MAX_NAME_LEN - 1));
   FXL_VLOG(2) << "NAME: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), id=0x" << record->id << ", arg=0x"
               << record->arg << ", name='" << fbl::String(name).c_str() << "'";
