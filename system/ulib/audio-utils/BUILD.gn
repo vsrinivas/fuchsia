@@ -19,9 +19,9 @@ source_set("audio-utils") {
   ]
 
   public_deps = [
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxcpp",
-    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":audio-utils-config" ]

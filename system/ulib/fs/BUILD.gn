@@ -9,6 +9,7 @@ config("fs_config") {
 static_library("fs") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
+    "connection.cpp",
     "include/fs/block-txn.h",
     "include/fs/client.h",
     "include/fs/connection.h",
@@ -19,7 +20,6 @@ static_library("fs") {
     "include/fs/vfs.h",
     "include/fs/vnode.h",
     "include/fs/watcher.h",
-    "connection.cpp",
     "managed-vfs.cpp",
     "mapped-vmo.cpp",
     "mount.cpp",
@@ -40,9 +40,9 @@ static_library("fs") {
 
   deps = [
     "//zircon/system/ulib/async",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxcpp",
-    "//zircon/system/ulib/fbl",
   ]
 
   libs = [

@@ -9,14 +9,14 @@ config("async_config") {
 source_set("async") {
   # Don't forget to update rules.mk as well for the Zircon build.
   sources = [
+    "auto_task.cpp",
+    "auto_wait.cpp",
     "include/async/auto_task.h",
     "include/async/auto_wait.h",
     "include/async/receiver.h",
     "include/async/task.h",
     "include/async/wait.h",
     "include/async/wait_with_timeout.h",
-    "auto_task.cpp",
-    "auto_wait.cpp",
     "receiver.cpp",
     "task.cpp",
     "wait.cpp",

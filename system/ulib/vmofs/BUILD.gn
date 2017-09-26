@@ -15,9 +15,9 @@ static_library("vmofs") {
   public_configs = [ ":vmofs_config" ]
 
   public_deps = [
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxcpp",
-    "//zircon/system/ulib/fbl",
   ]
 }

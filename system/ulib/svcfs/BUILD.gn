@@ -16,8 +16,8 @@ static_library("svcfs") {
   public_configs = [ ":svcfs_config" ]
 
   public_deps = [
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/zx",
-    "//zircon/system/ulib/fbl",
   ]
 }

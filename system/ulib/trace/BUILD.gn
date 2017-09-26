@@ -26,8 +26,8 @@ source_set("trace") {
 
   public_deps = [
     "//zircon/system/ulib/async",
-    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ ":trace_config" ]
