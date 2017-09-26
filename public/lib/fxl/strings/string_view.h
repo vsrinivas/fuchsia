@@ -120,7 +120,11 @@ class FXL_EXPORT StringView {
     return StringView(data_ + pos, min(n, size_ - pos));
   }
 
+  // Returns negative, 0, or positive when |this| is lexigraphically
+  // less than, equal to, or greater than |other|, a la
+  // std::basic_string_view::compare.
   int compare(StringView other);
+
   size_t find(StringView s, size_t pos = 0) const;
   size_t find(char c, size_t pos = 0) const;
   size_t rfind(StringView s, size_t pos = npos) const;
