@@ -597,6 +597,13 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
             return ret;
     }
 
+    if (bootloader.uart.type != BOOTDATA_UART_NONE) {
+        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.uart,
+                                      sizeof(bootloader.uart), BOOTDATA_DEBUG_UART, 0, 0);
+        if (ret != ZX_OK)
+            return ret;
+    }
+
     return ZX_OK;
 }
 
