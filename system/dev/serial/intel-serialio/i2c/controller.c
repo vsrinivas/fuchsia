@@ -227,7 +227,7 @@ static uint32_t intel_serialio_compute_scl_lcnt(
     return low_count / 1000000 - 1;
 }
 
-static zx_status_t intel_serialio_configure_bus_timing(
+static zx_status_t intel_serialio_compute_bus_timing(
     intel_serialio_i2c_device_t* device) {
 
     uint32_t clock_frequency = device->controller_freq;
@@ -252,10 +252,11 @@ static zx_status_t intel_serialio_configure_bus_timing(
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, fs_hcnt);
-    RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, fs_lcnt);
-    RMWREG32(&device->regs->ss_scl_hcnt, 0, 16, ss_hcnt);
-    RMWREG32(&device->regs->ss_scl_lcnt, 0, 16, ss_lcnt);
+    device->fs_scl_hcnt = fs_hcnt;
+    device->fs_scl_lcnt = fs_lcnt;
+    device->ss_scl_hcnt = ss_hcnt;
+    device->ss_scl_lcnt = ss_lcnt;
+    device->sda_hold = 1;
     return ZX_OK;
 }
 
@@ -595,9 +596,11 @@ zx_status_t intel_serialio_i2c_reset_controller(
     RMWREG32(&device->regs->i2c_en, I2C_EN_ENABLE, 1, 0);
 
     // Reconfigure the bus timing
-    status = intel_serialio_configure_bus_timing(device);
-    if (status < 0)
-        return status;
+    RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, device->fs_scl_hcnt);
+    RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, device->fs_scl_lcnt);
+    RMWREG32(&device->regs->ss_scl_hcnt, 0, 16, device->ss_scl_hcnt);
+    RMWREG32(&device->regs->ss_scl_lcnt, 0, 16, device->ss_scl_lcnt);
+    RMWREG32(&device->regs->sda_hold, 0, 16, device->sda_hold);
 
     unsigned int speed = CTL_SPEED_STANDARD;
     if (device->bus_freq == I2C_MAX_FAST_SPEED_HZ) {
@@ -762,6 +765,19 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
     status = intel_serialio_i2c_device_specific_init(device, pci_config);
     if (status < 0)
         goto fail;
+
+    status = intel_serialio_compute_bus_timing(device);
+    if (status < 0)
+        goto fail;
+
+    // Temporary hack until we have routed through the FMCN ACPI tables.
+    if (pci_config->vendor_id == INTEL_VID &&
+        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID) {
+        // TODO: These should all be extracted from FMCN in the ACPI tables.
+        device->fs_scl_lcnt = 0x00ba;
+        device->fs_scl_hcnt = 0x005d;
+        device->sda_hold = 0x24;
+    }
 
     // Configure the I2C controller. We don't need to hold the lock because
     // nobody else can see this controller yet.
