@@ -15,6 +15,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform-devices.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -134,6 +135,18 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     intf.ops = &qemu_bus_bus_ops;
     intf.ctx = bus;
     pbus_set_interface(&bus->pbus, &intf);
+
+    pbus_dev_t pci_dev = {
+        .name = "pci",
+        .vid = PDEV_VID_GENERIC,
+        .pid = PDEV_PID_GENERIC,
+        .did = PDEV_DID_KPCI,
+    };
+
+    status = pbus_device_add(&bus->pbus, &pci_dev, 0);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "qemu_bus_bind could not add pci_dev: %d\n", status);
+    }
 
     return ZX_OK;
 

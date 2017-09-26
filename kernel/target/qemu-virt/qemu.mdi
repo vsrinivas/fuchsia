@@ -37,12 +37,4 @@ platform = {
     pid = 1
 
     bus = {}
-
-    // bind point for kpci driver
-    device = {
-        name = "pci"
-        vid = PDEV_VID_GENERIC
-        pid = PDEV_PID_GENERIC
-        did = PDEV_DID_KPCI
-    }
 }
