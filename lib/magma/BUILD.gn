@@ -5,6 +5,25 @@
 import("//packages/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+# This target is not built but ensures that the packages don't reference
+# driver directories that are invalid for the current platform.
+group("platform_driver_nodeps") {
+  testonly = true
+  assert_no_deps = []
+  if (!build_intel_gen) {
+    assert_no_deps += [ "//third_party/mesa/*" ]
+  }
+  if (!build_libvulkan_arm_mali) {
+    assert_no_deps += [ "//third_party/arm-mali-bifrost/*" ]
+  }
+  deps = [
+    ":magma",
+    ":magma-dev",
+    "tests:magma-test",
+    "tests:magma-test-build-only",
+  ]
+}
+
 package("magma") {
   deps = []
   if (build_libvulkan_arm_mali || build_intel_gen) {
