@@ -13,13 +13,11 @@
         "packages/gn/curl",
         "packages/gn/dart",
         "packages/gn/dart_runner",
-        "packages/gn/dashboard",
         "packages/gn/flutter",
         "packages/gn/garnet",
         "packages/gn/go_stdlib_tests",
         "packages/gn/install-fuchsia",
         "packages/gn/iperf",
-        "packages/gn/latin-ime",
         "packages/gn/ledger",
         "packages/gn/leveldb",
         "packages/gn/libc-tests",
@@ -28,14 +26,11 @@
         "packages/gn/maxwell",
         "packages/gn/mi_dashboard",
         "packages/gn/modular",
-        "packages/gn/modules",
-        "packages/gn/mondrian",
-        "packages/gn/moterm",
         "packages/gn/pm",
         "packages/gn/pmd",
         "packages/gn/pmd_tests",
         "packages/gn/re2",
-        "packages/gn/sysui",
-        "packages/gn/web_view"
+        "packages/gn/web_view",
+        "topaz/packages/default"
     ]
 }

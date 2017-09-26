@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "dart",
-        "rust"
-    ],
-    "packages": {
-        "xi": "//topaz/app/xi"
-    }
-}

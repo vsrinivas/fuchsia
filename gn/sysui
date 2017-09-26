@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "dart"
-    ],
-    "packages": {
-        "sysui": "//topaz/shell:sysui",
-        "sysui_tests": "//topaz/shell:sysui_tests"
-    }
-}
