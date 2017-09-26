@@ -16,7 +16,7 @@
  *   - moved to %r10
  */
 
-# status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, void **fault_return)
+# zx_status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, void **fault_return)
 FUNCTION(_x86_copy_to_or_from_user)
     # Copy fault_return out of %rcx, because %rcx is used by "rep movsb" later.
     movq %rcx, %r10

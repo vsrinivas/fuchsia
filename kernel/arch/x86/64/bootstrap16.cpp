@@ -18,8 +18,9 @@
 #include <fbl/auto_call.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
 
-status_t x86_bootstrap16_prep(
+zx_status_t x86_bootstrap16_prep(
         paddr_t bootstrap_phys_addr,
         uintptr_t entry64,
         fbl::RefPtr<VmAspace> *temp_aspace,
@@ -79,7 +80,7 @@ status_t x86_bootstrap16_prep(
     };
     for (unsigned int i = 0; i < fbl::count_of(page_mappings); ++i) {
         void *vaddr = (void *)page_mappings[i].start_vaddr;
-        status_t status = bootstrap_aspace->AllocPhysical(
+        zx_status_t status = bootstrap_aspace->AllocPhysical(
                 "bootstrap_mapping",
                 page_mappings[i].size,
                 &vaddr,
@@ -95,7 +96,7 @@ status_t x86_bootstrap16_prep(
 
     // Map the AP bootstrap page and a low mem data page to configure
     // the AP processors with
-    status_t status = kernel_aspace->AllocPhysical(
+    zx_status_t status = kernel_aspace->AllocPhysical(
             "bootstrap16_aperture",
             PAGE_SIZE * 2, // size
             &bootstrap_virt_addr, // requested virtual address

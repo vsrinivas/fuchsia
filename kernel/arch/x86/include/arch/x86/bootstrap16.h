@@ -23,8 +23,9 @@
 
 #ifndef ASSEMBLY
 #include <assert.h>
-#include <zircon/compiler.h>
 #include <vm/vm_aspace.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -83,7 +84,7 @@ struct __PACKED x86_ap_bootstrap_data {
 // Upon success, returns a pointer to the bootstrap aspace and to the
 // virtual address of the bootstrap data.  It is the caller's
 // responsibility to free the aspace and unmap the aperature.
-status_t x86_bootstrap16_prep(
+zx_status_t x86_bootstrap16_prep(
         paddr_t bootstrap_phys_addr,
         uintptr_t entry64,
         fbl::RefPtr<VmAspace> *temp_aspace,

@@ -35,7 +35,7 @@ FUNCTION(arch_idle)
 END_FUNCTION(arch_idle)
 
 
-/* status_t read_msr_safe(uint32_t msr_id, uint64_t *val); */
+/* zx_status_t read_msr_safe(uint32_t msr_id, uint64_t *val); */
 FUNCTION(read_msr_safe)
     # Set up MSR index
     mov %rdi, %rcx

@@ -40,6 +40,7 @@
 #ifndef ASSEMBLY
 
 #include <sys/types.h>
+#include <zircon/types.h>
 
 /* Holds the register state used to restore a host. */
 struct HostState {
@@ -127,7 +128,7 @@ __BEGIN_CDECLS
  * If we return 0, we have exited from the guest, otherwise we have failed to
  * launch the guest.
  */
-status_t vmx_enter(VmxState* vmx_state);
+zx_status_t vmx_enter(VmxState* vmx_state);
 
 /* Exit from the guest, and load the saved host state.
  * This function is never called directly, but is executed on exit from a guest.

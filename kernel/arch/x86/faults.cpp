@@ -23,6 +23,7 @@
 
 #include <fbl/auto_call.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include <lib/ktrace.h>
 
@@ -71,13 +72,13 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-static status_t call_dispatch_user_exception(uint kind,
-                                             struct arch_exception_context *context,
-                                             x86_iframe_t *frame)
+static zx_status_t call_dispatch_user_exception(uint kind,
+                                                struct arch_exception_context *context,
+                                                x86_iframe_t *frame)
 {
     thread_t *thread = get_current_thread();
     x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
-    status_t status = dispatch_user_exception(kind, context);
+    zx_status_t status = dispatch_user_exception(kind, context);
     x86_reset_suspended_general_regs(&thread->arch);
     return status;
 }
@@ -89,7 +90,7 @@ static bool try_dispatch_user_exception(x86_iframe_t *frame, uint kind)
         struct arch_exception_context context = { false, frame, 0 };
         arch_set_in_int_handler(false);
         arch_enable_ints();
-        status_t erc = call_dispatch_user_exception(kind, &context, frame);
+        zx_status_t erc = call_dispatch_user_exception(kind, &context, frame);
         arch_disable_ints();
         arch_set_in_int_handler(true);
         if (erc == ZX_OK)
@@ -227,7 +228,7 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
     exception_die(frame, "unhandled page fault, halting\n");
 }
 
-static status_t x86_pfe_handler(x86_iframe_t *frame)
+static zx_status_t x86_pfe_handler(x86_iframe_t *frame)
 {
     /* Handle a page fault exception */
     uint64_t error_code = frame->err_code;
@@ -269,7 +270,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     flags |= (error_code & PFEX_P) ? 0 : VMM_PF_FLAG_NOT_PRESENT;
 
     /* call the high level page fault handler */
-    status_t pf_err = vmm_page_fault_handler(va, flags);
+    zx_status_t pf_err = vmm_page_fault_handler(va, flags);
     if (likely(pf_err == ZX_OK))
         return ZX_OK;
 
@@ -478,7 +479,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
     zx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
-status_t arch_dispatch_user_policy_exception(void)
+zx_status_t arch_dispatch_user_policy_exception(void)
 {
     x86_iframe_t frame = {};
     arch_exception_context_t context = {};

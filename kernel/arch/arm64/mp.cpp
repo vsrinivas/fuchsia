@@ -12,6 +12,7 @@
 #include <err.h>
 #include <dev/interrupt.h>
 #include <arch/ops.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -64,7 +65,7 @@ static uint arch_curr_cpu_num_slow() {
     return arm64_cpu_map[cluster][cpu];
 }
 
-status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi) {
+zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi) {
     LTRACEF("target %d mask %#x, ipi %d\n", target, mask, ipi);
 
     // translate the high level target + mask mechanism into just a mask

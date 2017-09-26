@@ -18,6 +18,7 @@
 #include <vm/vm.h>
 #include <malloc.h>
 #include <string.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
@@ -132,7 +133,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
 
-    status_t status = ZX_OK;
+    zx_status_t status = ZX_OK;
     do {
         AutoSpinLock guard(&lock_);
 

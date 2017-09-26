@@ -19,6 +19,7 @@
 #include <err.h>
 #include <vm/vm_aspace.h>
 #include <dev/interrupt.h>
+#include <zircon/types.h>
 
 #include <lib/console.h>
 
@@ -87,7 +88,7 @@ void apic_vm_init(void)
 {
     ASSERT(apic_virt_base == NULL);
     // Create a mapping for the page of MMIO registers
-    status_t res = VmAspace::kernel_aspace()->AllocPhysical(
+    zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
             "lapic",
             PAGE_SIZE, // size
             &apic_virt_base, // returned virtual address
@@ -209,7 +210,7 @@ void apic_issue_eoi(void)
 
 // If this function returns an error, timer state will not have
 // been changed.
-static status_t apic_timer_set_divide_value(uint8_t v) {
+static zx_status_t apic_timer_set_divide_value(uint8_t v) {
     uint32_t new_value = 0;
     switch (v) {
         case 1: new_value = 0xb; break;
@@ -259,8 +260,8 @@ void apic_timer_stop(void) {
     arch_interrupt_restore(state, 0);
 }
 
-status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
-    status_t status = ZX_OK;
+zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
+    zx_status_t status = ZX_OK;
     uint32_t timer_config = LVT_VECTOR(X86_INT_APIC_TIMER) |
             LVT_TIMER_MODE_ONESHOT;
     if (masked) {
@@ -303,8 +304,8 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
     arch_interrupt_restore(state, 0);
 }
 
-status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
-    status_t status = ZX_OK;
+zx_status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
+    zx_status_t status = ZX_OK;
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
 

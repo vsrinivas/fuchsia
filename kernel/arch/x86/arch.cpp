@@ -34,6 +34,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <vm/vm.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -213,14 +214,14 @@ usage:
             printf("specify a cpu_id\n");
             goto usage;
         }
-        status_t status = mp_unplug_cpu((uint)argv[2].u);
+        zx_status_t status = mp_unplug_cpu((uint)argv[2].u);
         printf("CPU %lu unplugged: %d\n", argv[2].u, status);
     } else if (!strcmp(argv[1].str, "hotplug")) {
         if (argc < 3) {
             printf("specify a cpu_id\n");
             goto usage;
         }
-        status_t status = mp_hotplug_cpu((uint)argv[2].u);
+        zx_status_t status = mp_hotplug_cpu((uint)argv[2].u);
         printf("CPU %lu hotplugged: %d\n", argv[2].u, status);
     } else {
         printf("unknown command\n");

@@ -9,28 +9,29 @@
 
 #include <arch/arm64/mmu.h>
 #include <vm/arch_vm_aspace.h>
-#include <zircon/compiler.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
 public:
     ArmArchVmAspace();
     virtual ~ArmArchVmAspace();
 
-    status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
+    zx_status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
 
-    status_t Destroy() override;
+    zx_status_t Destroy() override;
 
     // main methods
-    status_t Map(vaddr_t vaddr, paddr_t paddr, size_t count,
-                 uint mmu_flags, size_t* mapped) override;
+    zx_status_t Map(vaddr_t vaddr, paddr_t paddr, size_t count,
+                    uint mmu_flags, size_t* mapped) override;
 
-    status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) override;
+    zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) override;
 
-    status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
+    zx_status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
 
-    status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) override;
+    zx_status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) override;
 
     vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags,
                      vaddr_t end, uint next_region_mmu_flags,
@@ -49,7 +50,7 @@ private:
     volatile pte_t* GetPageTable(vaddr_t index, uint page_size_shift,
                                  volatile pte_t* page_table) TA_REQ(lock_);
 
-    status_t AllocPageTable(paddr_t* paddrp, uint page_size_shift) TA_REQ(lock_);
+    zx_status_t AllocPageTable(paddr_t* paddrp, uint page_size_shift) TA_REQ(lock_);
 
     void FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift) TA_REQ(lock_);
 
@@ -76,10 +77,10 @@ private:
                        uint page_size_shift, volatile pte_t* top_page_table,
                        uint asid) TA_REQ(lock_);
 
-    status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
-                          vaddr_t vaddr_base, uint top_size_shift,
-                          uint top_index_shift, uint page_size_shift,
-                          volatile pte_t* top_page_table, uint asid) TA_REQ(lock_);
+    zx_status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
+                             vaddr_t vaddr_base, uint top_size_shift,
+                             uint top_index_shift, uint page_size_shift,
+                             volatile pte_t* top_page_table, uint asid) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("VAAS")> canary_;
 

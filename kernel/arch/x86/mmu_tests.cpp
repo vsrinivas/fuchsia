@@ -10,6 +10,7 @@
 #include <arch/mmu.h>
 #include <arch/x86/mmu.h>
 #include <vm/arch_vm_aspace.h>
+#include <zircon/types.h>
 
 static bool mmu_tests(void* context) {
     BEGIN_TEST;
@@ -18,7 +19,7 @@ static bool mmu_tests(void* context) {
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
         size_t size = (1UL << 47) - base - (1UL << 20);
-        status_t err = aspace.Init(1UL << 20, size, 0);
+        zx_status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, ZX_OK, "init aspace");
         EXPECT_EQ(aspace.pt_pages(), 1u, "single page for PML4 table");
 
@@ -78,7 +79,7 @@ static bool mmu_tests(void* context) {
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
         size_t size = (1UL << 47) - base - (1UL << 20);
-        status_t err = aspace.Init(1UL << 20, size, 0);
+        zx_status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, ZX_OK, "init aspace");
         EXPECT_EQ(aspace.pt_pages(), 1u, "single page for PML4 table");
 
@@ -123,7 +124,7 @@ static bool mmu_tests(void* context) {
         ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
         size_t size = (1UL << 47) - base - (1UL << 20);
-        status_t err = aspace.Init(1UL << 20, size, 0);
+        zx_status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, ZX_OK, "init aspace");
         EXPECT_EQ(aspace.pt_pages(), 1u, "single page for PML4 table");
 

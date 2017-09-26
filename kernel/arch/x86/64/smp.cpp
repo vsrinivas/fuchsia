@@ -21,11 +21,12 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <vm/vm_aspace.h>
+#include <zircon/types.h>
 
 void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 {
     DEBUG_ASSERT(num_cpus <= UINT8_MAX);
-    status_t status = x86_allocate_ap_structures(apic_ids, (uint8_t)num_cpus);
+    zx_status_t status = x86_allocate_ap_structures(apic_ids, (uint8_t)num_cpus);
     if (status != ZX_OK) {
         TRACEF("Failed to allocate structures for APs");
         return;
@@ -34,10 +35,10 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
     lk_init_secondary_cpus(num_cpus - 1);
 }
 
-status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
+zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 {
     volatile int aps_still_booting = 0;
-    status_t status = ZX_ERR_INTERNAL;
+    zx_status_t status = ZX_ERR_INTERNAL;
 
     // if being asked to bring up 0 cpus, move on
     if (count == 0) {

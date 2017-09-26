@@ -13,6 +13,7 @@
 #include <kernel/spinlock.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
+#include <zircon/types.h>
 
 #define IO_APIC_IND(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOREGSEL))
 #define IO_APIC_DAT(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOWIN))
@@ -129,7 +130,7 @@ void apic_io_init(
         if (vaddr == NULL) {
             paddr_t paddr_page_base = ROUNDDOWN(paddr, PAGE_SIZE);
             ASSERT(paddr + IO_APIC_WINDOW_SIZE <= paddr_page_base + PAGE_SIZE);
-            status_t res = VmAspace::kernel_aspace()->AllocPhysical(
+            zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
                     "ioapic",
                     PAGE_SIZE, // size
                     &vaddr, // requested virtual vaddress
@@ -342,7 +343,7 @@ void apic_io_configure_irq(
     spin_unlock_irqrestore(&lock, state);
 }
 
-status_t apic_io_fetch_irq_config(
+zx_status_t apic_io_fetch_irq_config(
         uint32_t global_irq,
         enum interrupt_trigger_mode* trig_mode,
         enum interrupt_polarity* polarity)

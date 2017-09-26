@@ -7,6 +7,8 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <dev/interrupt.h>
 
 __BEGIN_CDECLS
@@ -58,9 +60,9 @@ void apic_send_broadcast_self_ipi(
         enum apic_interrupt_delivery_mode dm);
 void apic_issue_eoi(void);
 
-status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked);
+zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked);
 void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked);
-status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor);
+zx_status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor);
 uint32_t apic_timer_current_count(void);
 void apic_timer_mask(void);
 void apic_timer_unmask(void);
@@ -117,7 +119,7 @@ void apic_io_configure_irq(
         enum apic_interrupt_dst_mode dst_mode,
         uint8_t dst,
         uint8_t vector);
-status_t apic_io_fetch_irq_config(
+zx_status_t apic_io_fetch_irq_config(
         uint32_t global_irq,
         enum interrupt_trigger_mode* trig_mode,
         enum interrupt_polarity* polarity);

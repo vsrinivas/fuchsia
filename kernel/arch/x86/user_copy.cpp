@@ -14,6 +14,7 @@
 #include <arch/x86/user_copy.h>
 #include <kernel/thread.h>
 #include <vm/vm.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -33,7 +34,7 @@ static bool can_access(const void *base, size_t len)
     return is_user_address_range((vaddr_t)base, len);
 }
 
-status_t arch_copy_from_user(void *dst, const void *src, size_t len)
+zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len)
 {
     DEBUG_ASSERT(!ac_flag());
 
@@ -41,14 +42,14 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len)
         return ZX_ERR_INVALID_ARGS;
 
     thread_t *thr = get_current_thread();
-    status_t status = _x86_copy_to_or_from_user(dst, src, len,
-                                                &thr->arch.page_fault_resume);
+    zx_status_t status = _x86_copy_to_or_from_user(dst, src, len,
+                                                   &thr->arch.page_fault_resume);
 
     DEBUG_ASSERT(!ac_flag());
     return status;
 }
 
-status_t arch_copy_to_user(void *dst, const void *src, size_t len)
+zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len)
 {
     DEBUG_ASSERT(!ac_flag());
 
@@ -56,8 +57,8 @@ status_t arch_copy_to_user(void *dst, const void *src, size_t len)
         return ZX_ERR_INVALID_ARGS;
 
     thread_t *thr = get_current_thread();
-    status_t status = _x86_copy_to_or_from_user(dst, src, len,
-                                                &thr->arch.page_fault_resume);
+    zx_status_t status = _x86_copy_to_or_from_user(dst, src, len,
+                                                   &thr->arch.page_fault_resume);
 
     DEBUG_ASSERT(!ac_flag());
     return status;

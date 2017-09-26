@@ -30,9 +30,10 @@
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
 #include <assert.h>
+#include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/tls.h>
-#include <stdint.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -96,7 +97,7 @@ void x86_set_local_apic_id(uint32_t apic_id);
 int x86_apic_id_to_cpu_num(uint32_t apic_id);
 
 // Allocate all of the necessary structures for all of the APs to run.
-status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count);
+zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count);
 
 static inline struct x86_percpu *x86_get_percpu(void)
 {

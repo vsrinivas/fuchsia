@@ -5,7 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
+
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -13,7 +15,7 @@ __BEGIN_CDECLS
  * It should not be called anywhere except in the x86 usercopy
  * implementation. */
 
-status_t _x86_copy_to_or_from_user(
+zx_status_t _x86_copy_to_or_from_user(
         void *dst,
         const void *src,
         size_t len,

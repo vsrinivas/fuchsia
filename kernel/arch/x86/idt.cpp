@@ -13,6 +13,7 @@
 #include <vm/vm_aspace.h>
 #include <fbl/algorithm.h>
 #include <arch/ops.h>
+#include <zircon/types.h>
 
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
@@ -130,7 +131,7 @@ void idt_setup(struct idt *idt)
 void idt_setup_readonly(void) {
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
     DEBUG_ASSERT(mp_get_online_mask() == 1);
-    status_t status = VmAspace::kernel_aspace()->AllocPhysical(
+    zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
                                          "idt_readonly",
                                          sizeof(_idt),
                                          (void **)&_idt_ro,

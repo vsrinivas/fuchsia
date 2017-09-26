@@ -24,6 +24,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 #define TRACE_CONTEXT_SWITCH 0
@@ -42,7 +43,7 @@ uint32_t arm64_zva_shift;
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP] __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8)
     __SECTION(".bss.prebss.translation_table");
 
-static status_t arm64_mmu_alloc_asid(uint16_t* asid) {
+static zx_status_t arm64_mmu_alloc_asid(uint16_t* asid) {
 
     uint16_t new_asid;
     uint32_t retry = 1 << MMU_ARM64_ASID_BITS;
@@ -66,7 +67,7 @@ static status_t arm64_mmu_alloc_asid(uint16_t* asid) {
     return ZX_OK;
 }
 
-static status_t arm64_mmu_free_asid(uint16_t asid) {
+static zx_status_t arm64_mmu_free_asid(uint16_t asid) {
 
     mutex_acquire(&asid_lock);
 
@@ -124,7 +125,7 @@ static pte_t mmu_flags_to_pte_attr(uint flags) {
     return attr;
 }
 
-status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
+zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
     ulong index;
     uint index_shift;
     uint page_size_shift;
@@ -232,7 +233,7 @@ status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) 
     return 0;
 }
 
-status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shift) {
+zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shift) {
     size_t size = 1UL << page_size_shift;
 
     DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
@@ -299,7 +300,7 @@ volatile pte_t* ArmArchVmAspace::GetPageTable(vaddr_t index, uint page_size_shif
     pte = page_table[index];
     switch (pte & MMU_PTE_DESCRIPTOR_MASK) {
     case MMU_PTE_DESCRIPTOR_INVALID: {
-        status_t ret = AllocPageTable(&paddr, page_size_shift);
+        zx_status_t ret = AllocPageTable(&paddr, page_size_shift);
         if (ret) {
             TRACEF("failed to allocate page table\n");
             return NULL;
@@ -633,10 +634,10 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size,
     return ret;
 }
 
-status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
-                                       vaddr_t vaddr_base, uint top_size_shift,
-                                       uint top_index_shift, uint page_size_shift,
-                                       volatile pte_t* top_page_table, uint asid) {
+zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
+                                          vaddr_t vaddr_base, uint top_size_shift,
+                                          uint top_index_shift, uint page_size_shift,
+                                          volatile pte_t* top_page_table, uint asid) {
     vaddr_t vaddr_rel = vaddr - vaddr_base;
     vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -655,15 +656,15 @@ status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs,
-                                    top_index_shift, page_size_shift,
-                                    top_page_table, asid);
+    zx_status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs,
+                                       top_index_shift, page_size_shift,
+                                       top_page_table, asid);
     DSB;
     return ret;
 }
 
-status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
-                              uint mmu_flags, size_t* mapped) {
+zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
+                                 uint mmu_flags, size_t* mapped) {
     canary_.Assert();
     LTRACEF("vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %zu flags %#x\n",
             vaddr, paddr, count, mmu_flags);
@@ -710,10 +711,10 @@ status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
         DEBUG_ASSERT(*mapped <= count);
     }
 
-    return (ret < 0) ? (status_t)ret : ZX_OK;
+    return (ret < 0) ? (zx_status_t)ret : ZX_OK;
 }
 
-status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
+zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
     canary_.Assert();
     LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
@@ -750,10 +751,10 @@ status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
         DEBUG_ASSERT(*unmapped <= count);
     }
 
-    return (ret < 0) ? (status_t)ret : 0;
+    return (ret < 0) ? (zx_status_t)ret : 0;
 }
 
-status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
+zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
     canary_.Assert();
 
     if (!IsValidVaddr(vaddr))
@@ -785,7 +786,7 @@ status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
     return ret;
 }
 
-status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
+zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
     canary_.Assert();
     LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n",
             this, base, size, flags);
@@ -836,7 +837,7 @@ status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
     return ZX_OK;
 }
 
-status_t ArmArchVmAspace::Destroy() {
+zx_status_t ArmArchVmAspace::Destroy() {
     canary_.Assert();
     LTRACEF("aspace %p\n", this);
 

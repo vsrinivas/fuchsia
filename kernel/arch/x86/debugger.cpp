@@ -12,6 +12,7 @@
 #include <arch/x86/feature.h>
 #include <arch/debugger.h>
 #include <zircon/syscalls/debug.h>
+#include <zircon/types.h>
 
 uint arch_num_regsets(void)
 {
@@ -99,7 +100,7 @@ static void x86_fill_in_iframe_from_gregs(x86_iframe_t *out,
     out->flags |= in->rflags & X86_FLAGS_USER;
 }
 
-static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
+static zx_status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
 {
     zx_x86_64_general_regs_t *out = (zx_x86_64_general_regs_t *)grp;
 
@@ -137,7 +138,7 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
     return ZX_OK;
 }
 
-static status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
+static zx_status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
 {
     const zx_x86_64_general_regs_t *in = (const zx_x86_64_general_regs_t *)grp;
 
@@ -184,7 +185,7 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
 
 // The caller is responsible for making sure the thread is in an exception
 // or is suspended, and stays so.
-status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)
+zx_status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)
 {
     switch (regset)
     {
@@ -197,7 +198,7 @@ status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_
 
 // The caller is responsible for making sure the thread is in an exception
 // or is suspended, and stays so.
-status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, uint32_t buf_size)
+zx_status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, uint32_t buf_size)
 {
     switch (regset)
     {

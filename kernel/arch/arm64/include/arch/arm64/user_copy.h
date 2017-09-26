@@ -5,7 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
+
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -14,13 +16,13 @@ __BEGIN_CDECLS
  * function.  These should not be called anywhere except in the arm64 usercopy
  * implementation. */
 
-status_t _arm64_copy_from_user(
+zx_status_t _arm64_copy_from_user(
         void *dst,
         const void *src,
         size_t len,
         void **fault_return);
 
-status_t _arm64_copy_to_user(
+zx_status_t _arm64_copy_to_user(
         void *dst,
         const void *src,
         size_t len,

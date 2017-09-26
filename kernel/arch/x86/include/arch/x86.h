@@ -9,10 +9,11 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <arch/x86/general_regs.h>
 #include <arch/x86/registers.h>
@@ -93,7 +94,7 @@ void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus);
  * @return ZX_ERR_BAD_STATE if one of the targets is currently online
  * @return ZX_ERR_TIMED_OUT if one of the targets failed to launch
  */
-status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count);
+zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count);
 
 #define IO_BITMAP_BITS      65536
 #define IO_BITMAP_BYTES     (IO_BITMAP_BITS/8)
@@ -353,7 +354,7 @@ static inline uint64_t read_msr (uint32_t msr_id)
     return ((uint64_t)msr_read_val_hi << 32) | msr_read_val_lo;
 }
 
-status_t read_msr_safe(uint32_t msr_id, uint64_t *val);
+zx_status_t read_msr_safe(uint32_t msr_id, uint64_t *val);
 
 static inline void write_msr (uint32_t msr_id, uint64_t msr_write_val)
 {

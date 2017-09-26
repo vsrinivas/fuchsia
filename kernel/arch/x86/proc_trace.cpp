@@ -38,6 +38,7 @@
 #include <string.h>
 #include <trace.h>
 #include <vm/vm.h>
+#include <zircon/types.h>
 
 using fbl::AutoLock;
 
@@ -163,7 +164,7 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
     x86_set_extended_register_pt_state(new_mode == IPT_TRACE_THREADS);
 }
 
-status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
+zx_status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -194,7 +195,7 @@ status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
 
 // Allocate all needed state for tracing.
 
-status_t x86_ipt_cpu_mode_alloc() {
+zx_status_t x86_ipt_cpu_mode_alloc() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -219,7 +220,7 @@ status_t x86_ipt_cpu_mode_alloc() {
 // This doesn't care if resources have already been freed to save callers
 // from having to care during any cleanup.
 
-status_t x86_ipt_cpu_mode_free() {
+zx_status_t x86_ipt_cpu_mode_free() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -260,7 +261,7 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 
 // Begin the trace.
 
-status_t x86_ipt_cpu_mode_start() {
+zx_status_t x86_ipt_cpu_mode_start() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -328,7 +329,7 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 // This can be called while not active, so the caller doesn't have to care
 // during any cleanup.
 
-status_t x86_ipt_cpu_mode_stop() {
+zx_status_t x86_ipt_cpu_mode_stop() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -346,7 +347,7 @@ status_t x86_ipt_cpu_mode_stop() {
     return ZX_OK;
 }
 
-status_t x86_ipt_stage_cpu_data(uint32_t cpu, const zx_x86_pt_regs_t* regs) {
+zx_status_t x86_ipt_stage_cpu_data(uint32_t cpu, const zx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)
@@ -372,7 +373,7 @@ status_t x86_ipt_stage_cpu_data(uint32_t cpu, const zx_x86_pt_regs_t* regs) {
     return ZX_OK;
 }
 
-status_t x86_ipt_get_cpu_data(uint32_t cpu, zx_x86_pt_regs_t* regs) {
+zx_status_t x86_ipt_get_cpu_data(uint32_t cpu, zx_x86_pt_regs_t* regs) {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)

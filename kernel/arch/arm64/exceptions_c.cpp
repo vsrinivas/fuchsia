@@ -22,6 +22,7 @@
 #include <vm/fault.h>
 
 #include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -49,7 +50,7 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint6
     panic("unhandled syscall vector\n");
 }
 
-static status_t try_dispatch_user_data_fault_exception(
+static zx_status_t try_dispatch_user_data_fault_exception(
     zx_excp_type_t type, struct arm64_iframe_long *iframe,
     uint32_t esr, uint64_t far)
 {
@@ -63,13 +64,13 @@ static status_t try_dispatch_user_data_fault_exception(
     arch_enable_ints();
     DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
     thread->arch.suspended_general_regs = iframe;
-    status_t status = dispatch_user_exception(type, &context);
+    zx_status_t status = dispatch_user_exception(type, &context);
     thread->arch.suspended_general_regs = nullptr;
     arch_disable_ints();
     return status;
 }
 
-static status_t try_dispatch_user_exception(
+static zx_status_t try_dispatch_user_exception(
     zx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
 {
     return try_dispatch_user_data_fault_exception(type, iframe, esr, 0);
@@ -161,7 +162,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
             iframe->elr, is_user, far, esr, iss);
 
     arch_enable_ints();
-    status_t err = vmm_page_fault_handler(far, pf_flags);
+    zx_status_t err = vmm_page_fault_handler(far, pf_flags);
     arch_disable_ints();
     if (err >= 0)
         return;
@@ -204,7 +205,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
         CPU_STATS_INC(page_faults);
         arch_enable_ints();
-        status_t err = vmm_page_fault_handler(far, pf_flags);
+        zx_status_t err = vmm_page_fault_handler(far, pf_flags);
         arch_disable_ints();
         if (err >= 0){
             return;
@@ -446,7 +447,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
     }
 }
 
-status_t arch_dispatch_user_policy_exception(void)
+zx_status_t arch_dispatch_user_policy_exception(void)
 {
     struct arm64_iframe_long frame = {};
     arch_exception_context_t context = {};

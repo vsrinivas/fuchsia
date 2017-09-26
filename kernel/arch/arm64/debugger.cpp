@@ -11,6 +11,7 @@
 #include <arch/debugger.h>
 #include <kernel/thread.h>
 #include <zircon/syscalls/debug.h>
+#include <zircon/types.h>
 
 // Only the NZCV flags (bits 31 to 28 respectively) of the CPSR are
 // readable and writable by userland on ARM64.
@@ -21,7 +22,7 @@ uint arch_num_regsets(void)
     return 1; // TODO(dje): Just the general regs for now.
 }
 
-static status_t arch_get_general_regs(struct thread *thread, zx_arm64_general_regs_t *out, uint32_t *buf_size)
+static zx_status_t arch_get_general_regs(struct thread *thread, zx_arm64_general_regs_t *out, uint32_t *buf_size)
 {
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*out);
@@ -54,7 +55,7 @@ static status_t arch_get_general_regs(struct thread *thread, zx_arm64_general_re
     return ZX_OK;
 }
 
-static status_t arch_set_general_regs(struct thread *thread, const zx_arm64_general_regs_t *in, uint32_t buf_size)
+static zx_status_t arch_set_general_regs(struct thread *thread, const zx_arm64_general_regs_t *in, uint32_t buf_size)
 {
     if (buf_size != sizeof(*in))
         return ZX_ERR_INVALID_ARGS;
@@ -87,7 +88,7 @@ static status_t arch_set_general_regs(struct thread *thread, const zx_arm64_gene
 
 // The caller is responsible for making sure the thread is in an exception
 // or is suspended, and stays so.
-status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)
+zx_status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)
 {
     switch (regset)
     {
@@ -100,7 +101,7 @@ status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_
 
 // The caller is responsible for making sure the thread is in an exception
 // or is suspended, and stays so.
-status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, uint32_t buf_size)
+zx_status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, uint32_t buf_size)
 {
     switch (regset)
     {

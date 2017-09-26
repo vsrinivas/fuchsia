@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -115,8 +116,8 @@ void arm_reset(void);
  * |unsafe_sp| must point to the top (highest address, exclusive) of the
  * memory to use as the stacks.
  */
-status_t arm64_set_secondary_sp(uint cluster, uint cpu,
-                                void* sp, void* unsafe_sp);
+zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu,
+                                   void* sp, void* unsafe_sp);
 
 /* block size of the dc zva instruction */
 extern uint32_t arm64_zva_shift;

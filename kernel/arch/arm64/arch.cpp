@@ -19,6 +19,7 @@
 #include <lk/init.h>
 #include <lk/main.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 #include <inttypes.h>
 #include <platform.h>
 #include <string.h>
@@ -72,8 +73,8 @@ uint64_t arm64_get_boot_el(void)
     return arch_boot_el >> 2;
 }
 
-status_t arm64_set_secondary_sp(uint cluster, uint cpu,
-                                void* sp, void* unsafe_sp) {
+zx_status_t arm64_set_secondary_sp(uint cluster, uint cpu,
+                                   void* sp, void* unsafe_sp) {
     uint64_t mpid = ARM64_MPID(cluster, cpu);
 
     uint32_t i = 0;

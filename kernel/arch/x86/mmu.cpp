@@ -21,6 +21,7 @@
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <fbl/auto_lock.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -568,7 +569,7 @@ static volatile pt_entry_t* _map_alloc_page(void) {
  * @brief Split the given large page into smaller pages
  */
 template <typename PageTable>
-status_t X86ArchVmAspace::SplitLargePage(vaddr_t vaddr, volatile pt_entry_t* pte) {
+zx_status_t X86ArchVmAspace::SplitLargePage(vaddr_t vaddr, volatile pt_entry_t* pte) {
     static_assert(PageTable::level != PT_L, "tried splitting PT_L");
     LTRACEF_LEVEL(2, "splitting table %p at level %d\n", pte, PageTable::level);
 
@@ -623,9 +624,9 @@ static inline volatile pt_entry_t* get_next_table_from_entry(pt_entry_t entry) {
  * @return ZX_ERR_NOT_FOUND if mapping is not found
  */
 template <typename PageTable>
-status_t X86ArchVmAspace::GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
-                                     enum page_table_levels* ret_level,
-                                     volatile pt_entry_t** mapping) {
+zx_status_t X86ArchVmAspace::GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
+                                        enum page_table_levels* ret_level,
+                                        volatile pt_entry_t** mapping) {
     DEBUG_ASSERT(table);
     DEBUG_ASSERT(ret_level);
     DEBUG_ASSERT(mapping);
@@ -651,7 +652,7 @@ status_t X86ArchVmAspace::GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
 }
 
 template <>
-status_t X86ArchVmAspace::GetMapping<PageTable<PT_L>>(
+zx_status_t X86ArchVmAspace::GetMapping<PageTable<PT_L>>(
     volatile pt_entry_t* table, vaddr_t vaddr,
     enum page_table_levels* ret_level,
     volatile pt_entry_t** mapping) {
@@ -659,7 +660,7 @@ status_t X86ArchVmAspace::GetMapping<PageTable<PT_L>>(
 }
 
 template <>
-status_t X86ArchVmAspace::GetMapping<ExtendedPageTable<PT_L>>(
+zx_status_t X86ArchVmAspace::GetMapping<ExtendedPageTable<PT_L>>(
     volatile pt_entry_t* table, vaddr_t vaddr,
     enum page_table_levels* ret_level,
     volatile pt_entry_t** mapping) {
@@ -667,9 +668,9 @@ status_t X86ArchVmAspace::GetMapping<ExtendedPageTable<PT_L>>(
 }
 
 template <typename PageTable>
-status_t X86ArchVmAspace::GetMappingL0(volatile pt_entry_t* table, vaddr_t vaddr,
-                                       enum page_table_levels* ret_level,
-                                       volatile pt_entry_t** mapping) {
+zx_status_t X86ArchVmAspace::GetMappingL0(volatile pt_entry_t* table, vaddr_t vaddr,
+                                          enum page_table_levels* ret_level,
+                                          volatile pt_entry_t** mapping) {
     static_assert(PageTable::level == PT_L, "GetMappingL0 used with wrong level");
 
     /* do the final page table lookup */
@@ -734,7 +735,7 @@ bool X86ArchVmAspace::RemoveMapping(volatile pt_entry_t* table,
             }
             // Otherwise, we need to split it
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
-            status_t status = SplitLargePage<PageTable>(page_vaddr, e);
+            zx_status_t status = SplitLargePage<PageTable>(page_vaddr, e);
             if (status != ZX_OK) {
                 // If split fails, just unmap the whole thing, and let a
                 // subsequent page fault clean it up.
@@ -852,14 +853,14 @@ bool X86ArchVmAspace::RemoveMappingL0(volatile pt_entry_t* table,
  * @return ZX_ERR_NO_MEMORY if intermediate page tables could not be allocated
  */
 template <typename PageTable>
-status_t X86ArchVmAspace::AddMapping(volatile pt_entry_t* table, uint mmu_flags,
-                                     const MappingCursor& start_cursor,
-                                     MappingCursor* new_cursor) {
+zx_status_t X86ArchVmAspace::AddMapping(volatile pt_entry_t* table, uint mmu_flags,
+                                        const MappingCursor& start_cursor,
+                                        MappingCursor* new_cursor) {
     DEBUG_ASSERT(table);
     DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
     DEBUG_ASSERT(x86_mmu_check_paddr(start_cursor.paddr));
 
-    status_t ret = ZX_OK;
+    zx_status_t ret = ZX_OK;
     *new_cursor = start_cursor;
 
     arch_flags_t interm_arch_flags = PageTable::intermediate_arch_flags();
@@ -934,7 +935,7 @@ err:
 }
 
 template <>
-status_t X86ArchVmAspace::AddMapping<PageTable<PT_L>>(
+zx_status_t X86ArchVmAspace::AddMapping<PageTable<PT_L>>(
     volatile pt_entry_t* table, uint mmu_flags,
     const MappingCursor& start_cursor, MappingCursor* new_cursor) {
     return AddMappingL0<PageTable<PT_L>>(table, mmu_flags, start_cursor,
@@ -942,7 +943,7 @@ status_t X86ArchVmAspace::AddMapping<PageTable<PT_L>>(
 }
 
 template <>
-status_t X86ArchVmAspace::AddMapping<ExtendedPageTable<PT_L>>(
+zx_status_t X86ArchVmAspace::AddMapping<ExtendedPageTable<PT_L>>(
     volatile pt_entry_t* table, uint mmu_flags,
     const MappingCursor& start_cursor, MappingCursor* new_cursor) {
     return AddMappingL0<ExtendedPageTable<PT_L>>(table, mmu_flags, start_cursor,
@@ -951,9 +952,9 @@ status_t X86ArchVmAspace::AddMapping<ExtendedPageTable<PT_L>>(
 
 // Base case of AddMapping for smallest page size.
 template <typename PageTable>
-status_t X86ArchVmAspace::AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
-                                       const MappingCursor& start_cursor,
-                                       MappingCursor* new_cursor) {
+zx_status_t X86ArchVmAspace::AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
+                                          const MappingCursor& start_cursor,
+                                          MappingCursor* new_cursor) {
     static_assert(PageTable::level == PT_L, "AddMappingL0 used with wrong level");
     DEBUG_ASSERT(IS_PAGE_ALIGNED(start_cursor.size));
 
@@ -991,16 +992,16 @@ status_t X86ArchVmAspace::AddMappingL0(volatile pt_entry_t* table, uint mmu_flag
  * completed.  Must be non-null.
  */
 template <typename PageTable>
-status_t X86ArchVmAspace::UpdateMapping(volatile pt_entry_t* table,
-                                        uint mmu_flags,
-                                        const MappingCursor& start_cursor,
-                                        MappingCursor* new_cursor) {
+zx_status_t X86ArchVmAspace::UpdateMapping(volatile pt_entry_t* table,
+                                           uint mmu_flags,
+                                           const MappingCursor& start_cursor,
+                                           MappingCursor* new_cursor) {
     DEBUG_ASSERT(table);
     LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", PageTable::level, start_cursor.vaddr,
             start_cursor.size);
     DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
 
-    status_t ret = ZX_OK;
+    zx_status_t ret = ZX_OK;
     *new_cursor = start_cursor;
 
     arch_flags_t arch_flags = PageTable::arch_flags(flags_, mmu_flags);
@@ -1065,7 +1066,7 @@ status_t X86ArchVmAspace::UpdateMapping(volatile pt_entry_t* table,
 }
 
 template <>
-status_t X86ArchVmAspace::UpdateMapping<PageTable<PT_L>>(
+zx_status_t X86ArchVmAspace::UpdateMapping<PageTable<PT_L>>(
     volatile pt_entry_t* table, uint mmu_flags,
     const MappingCursor& start_cursor, MappingCursor* new_cursor) {
     return UpdateMappingL0<PageTable<PT_L>>(table, mmu_flags,
@@ -1073,7 +1074,7 @@ status_t X86ArchVmAspace::UpdateMapping<PageTable<PT_L>>(
 }
 
 template <>
-status_t X86ArchVmAspace::UpdateMapping<ExtendedPageTable<PT_L>>(
+zx_status_t X86ArchVmAspace::UpdateMapping<ExtendedPageTable<PT_L>>(
     volatile pt_entry_t* table, uint mmu_flags,
     const MappingCursor& start_cursor, MappingCursor* new_cursor) {
     return UpdateMappingL0<ExtendedPageTable<PT_L>>(table, mmu_flags,
@@ -1082,10 +1083,10 @@ status_t X86ArchVmAspace::UpdateMapping<ExtendedPageTable<PT_L>>(
 
 // Base case of UpdateMapping for smallest page size.
 template <typename PageTable>
-status_t X86ArchVmAspace::UpdateMappingL0(volatile pt_entry_t* table,
-                                          uint mmu_flags,
-                                          const MappingCursor& start_cursor,
-                                          MappingCursor* new_cursor) {
+zx_status_t X86ArchVmAspace::UpdateMappingL0(volatile pt_entry_t* table,
+                                             uint mmu_flags,
+                                             const MappingCursor& start_cursor,
+                                             MappingCursor* new_cursor) {
     static_assert(PageTable::level == PT_L, "UpdateMappingL0 used with wrong level");
     LTRACEF("%016" PRIxPTR " %016zx\n", start_cursor.vaddr, start_cursor.size);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(start_cursor.size));
@@ -1114,8 +1115,8 @@ status_t X86ArchVmAspace::UpdateMappingL0(volatile pt_entry_t* table,
 }
 
 template <template <int> class PageTable>
-status_t X86ArchVmAspace::UnmapPages(vaddr_t vaddr, const size_t count,
-                                     size_t* unmapped) {
+zx_status_t X86ArchVmAspace::UnmapPages(vaddr_t vaddr, const size_t count,
+                                        size_t* unmapped) {
     LTRACEF("aspace %p, vaddr %#" PRIxPTR ", count %#zx\n", this, vaddr, count);
 
     canary_.Assert();
@@ -1143,7 +1144,7 @@ status_t X86ArchVmAspace::UnmapPages(vaddr_t vaddr, const size_t count,
     return ZX_OK;
 }
 
-status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
+zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
     fbl::AutoLock a(&lock_);
 
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
@@ -1154,9 +1155,9 @@ status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
 }
 
 template <template <int> class PageTable>
-status_t X86ArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr,
-                                   const size_t count, uint mmu_flags,
-                                   size_t* mapped) {
+zx_status_t X86ArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr,
+                                      const size_t count, uint mmu_flags,
+                                      size_t* mapped) {
     canary_.Assert();
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
@@ -1180,7 +1181,7 @@ status_t X86ArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr,
         .paddr = paddr, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
-    status_t status = AddMapping<PageTable<MAX_PAGING_LEVEL>>(pt_virt_, mmu_flags,
+    zx_status_t status = AddMapping<PageTable<MAX_PAGING_LEVEL>>(pt_virt_, mmu_flags,
                                                               start, &result);
     if (status != ZX_OK) {
         dprintf(SPEW, "Add mapping failed with err=%d\n", status);
@@ -1194,8 +1195,8 @@ status_t X86ArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr,
     return ZX_OK;
 }
 
-status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
-                              uint mmu_flags, size_t* mapped) {
+zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
+                                 uint mmu_flags, size_t* mapped) {
     fbl::AutoLock a(&lock_);
 
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
@@ -1208,7 +1209,7 @@ status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
 }
 
 template <template <int> class PageTable>
-status_t X86ArchVmAspace::ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags) {
+zx_status_t X86ArchVmAspace::ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags) {
     canary_.Assert();
 
     LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n",
@@ -1228,7 +1229,7 @@ status_t X86ArchVmAspace::ProtectPages(vaddr_t vaddr, size_t count, uint mmu_fla
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
-    status_t status = UpdateMapping<PageTable<MAX_PAGING_LEVEL>>(
+    zx_status_t status = UpdateMapping<PageTable<MAX_PAGING_LEVEL>>(
         pt_virt_, mmu_flags, start, &result);
     if (status != ZX_OK) {
         return status;
@@ -1237,7 +1238,7 @@ status_t X86ArchVmAspace::ProtectPages(vaddr_t vaddr, size_t count, uint mmu_fla
     return ZX_OK;
 }
 
-status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
+zx_status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
     fbl::AutoLock a(&lock_);
 
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
@@ -1280,7 +1281,7 @@ X86ArchVmAspace::X86ArchVmAspace() {}
 /*
  * Fill in the high level x86 arch aspace structure and allocating a top level page table.
  */
-status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
+zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
     static_assert(sizeof(mp_cpu_mask_t) == sizeof(active_cpus_), "err");
     canary_.Assert();
 
@@ -1336,7 +1337,7 @@ status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
 }
 
 template <template <int> class PageTable>
-status_t X86ArchVmAspace::DestroyAspace() {
+zx_status_t X86ArchVmAspace::DestroyAspace() {
     canary_.Assert();
     DEBUG_ASSERT(active_cpus_ == 0);
 
@@ -1365,7 +1366,7 @@ status_t X86ArchVmAspace::DestroyAspace() {
     return ZX_OK;
 }
 
-status_t X86ArchVmAspace::Destroy() {
+zx_status_t X86ArchVmAspace::Destroy() {
     fbl::AutoLock a(&lock_);
 
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE)
@@ -1403,8 +1404,8 @@ void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmAspace
 }
 
 template <template <int> class PageTable, typename F>
-status_t X86ArchVmAspace::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
-                                     uint* mmu_flags, F arch_to_mmu) {
+zx_status_t X86ArchVmAspace::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
+                                        uint* mmu_flags, F arch_to_mmu) {
     canary_.Assert();
 
     page_table_levels ret_level;
@@ -1416,7 +1417,7 @@ status_t X86ArchVmAspace::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
         return ZX_ERR_INVALID_ARGS;
 
     volatile pt_entry_t* last_valid_entry;
-    status_t status = GetMapping<PageTable<MAX_PAGING_LEVEL>>(
+    zx_status_t status = GetMapping<PageTable<MAX_PAGING_LEVEL>>(
         pt_virt_, vaddr, &ret_level, &last_valid_entry);
     if (status != ZX_OK)
         return status;
@@ -1455,7 +1456,7 @@ status_t X86ArchVmAspace::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
     return ZX_OK;
 }
 
-status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
+zx_status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
     fbl::AutoLock a(&lock_);
 
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {

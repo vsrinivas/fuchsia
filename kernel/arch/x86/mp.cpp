@@ -29,6 +29,7 @@
 #include <kernel/event.h>
 #include <kernel/timer.h>
 #include <platform.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -37,7 +38,7 @@ uint8_t x86_num_cpus = 1;
 
 extern struct idt _idt;
 
-status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
+zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
 {
     ASSERT(ap_percpus == NULL);
 
@@ -224,7 +225,7 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id)
     return -1;
 }
 
-status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi)
+zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi)
 {
     uint8_t vector = 0;
     switch (ipi) {
@@ -302,14 +303,14 @@ void x86_ipi_halt_handler(void)
     }
 }
 
-status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
+zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
     if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
 }
 
-status_t arch_mp_cpu_unplug(uint cpu_id)
+zx_status_t arch_mp_cpu_unplug(uint cpu_id)
 {
     /* we do not allow unplugging the bootstrap processor */
     if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
@@ -327,7 +328,7 @@ status_t arch_mp_cpu_unplug(uint cpu_id)
     return ZX_OK;
 }
 
-status_t arch_mp_cpu_hotplug(uint cpu_id)
+zx_status_t arch_mp_cpu_hotplug(uint cpu_id)
 {
     if (cpu_id >= x86_num_cpus) {
         return ZX_ERR_INVALID_ARGS;

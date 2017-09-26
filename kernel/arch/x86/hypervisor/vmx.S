@@ -11,7 +11,7 @@
 
 .text
 
-/* status_t vmx_enter(VmxState* vmx_state) */
+/* zx_status_t vmx_enter(VmxState* vmx_state) */
 FUNCTION(vmx_enter)
     // Store the return address.
     // We do this first to adjust the RSP we store.

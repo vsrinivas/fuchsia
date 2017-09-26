@@ -19,7 +19,7 @@ typedef struct zx_port_packet zx_port_packet_t;
 
 class Guest {
 public:
-    static status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
+    static zx_status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 

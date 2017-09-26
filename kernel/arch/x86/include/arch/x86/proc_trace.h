@@ -11,6 +11,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/device/intel-pt.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -25,18 +26,18 @@ typedef enum {
     IPT_TRACE_THREADS
 } ipt_trace_mode_t;
 
-status_t x86_ipt_set_mode(ipt_trace_mode_t mode);
+zx_status_t x86_ipt_set_mode(ipt_trace_mode_t mode);
 
-status_t x86_ipt_cpu_mode_alloc();
+zx_status_t x86_ipt_cpu_mode_alloc();
 
-status_t x86_ipt_cpu_mode_free();
+zx_status_t x86_ipt_cpu_mode_free();
 
-status_t x86_ipt_cpu_mode_start();
+zx_status_t x86_ipt_cpu_mode_start();
 
-status_t x86_ipt_cpu_mode_stop();
+zx_status_t x86_ipt_cpu_mode_stop();
 
-status_t x86_ipt_stage_cpu_data(uint32_t options, const zx_x86_pt_regs_t* regs);
+zx_status_t x86_ipt_stage_cpu_data(uint32_t options, const zx_x86_pt_regs_t* regs);
 
-status_t x86_ipt_get_cpu_data(uint32_t options, zx_x86_pt_regs_t* regs);
+zx_status_t x86_ipt_get_cpu_data(uint32_t options, zx_x86_pt_regs_t* regs);
 
 #endif // __cplusplus
