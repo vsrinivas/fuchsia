@@ -199,7 +199,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 
         flags |= (must_be_dir ? O_DIRECTORY : 0);
 #endif
-        if ((r = vn->Open(flags)) < 0) {
+        if ((r = OpenVnode(flags, &vn)) < 0) {
             return r;
         }
         if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
@@ -410,7 +410,7 @@ void Vfs::OnConnectionClosedRemotely(Connection* connection) {
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) {
     // Make sure the Vnode really is a directory.
     zx_status_t r;
-    if ((r = vn->Open(O_DIRECTORY)) != ZX_OK) {
+    if ((r = OpenVnode(O_DIRECTORY, &vn)) != ZX_OK) {
         return r;
     }
 

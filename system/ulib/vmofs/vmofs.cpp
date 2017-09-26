@@ -48,7 +48,7 @@ uint32_t VnodeFile::GetVType() {
     return V_TYPE_FILE;
 }
 
-zx_status_t VnodeFile::Open(uint32_t flags) {
+zx_status_t VnodeFile::Open(uint32_t flags, fbl::RefPtr<fs::Vnode>* vnode) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
@@ -134,7 +134,7 @@ uint32_t VnodeDir::GetVType() {
     return V_TYPE_DIR;
 }
 
-zx_status_t VnodeDir::Open(uint32_t flags) {
+zx_status_t VnodeDir::Open(uint32_t flags, fbl::RefPtr<fs::Vnode>* vnode) {
     return ZX_OK;
 }
 

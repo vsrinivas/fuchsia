@@ -41,7 +41,7 @@ public:
              ServiceProvider* provider);
     ~VnodeSvc() override;
 
-    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
 
     uint64_t node_id() const { return node_id_; }
@@ -67,7 +67,7 @@ public:
     explicit VnodeDir();
     ~VnodeDir() override;
 
-    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
 
@@ -96,7 +96,7 @@ public:
     explicit VnodeProviderDir();
     ~VnodeProviderDir() override;
 
-    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
 

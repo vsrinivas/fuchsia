@@ -70,8 +70,15 @@ public:
 
     virtual void Notify(const char* name, size_t len, unsigned event);
 
-    // Ensure that it is valid to open vn.
-    virtual zx_status_t Open(uint32_t flags) = 0;
+    // Ensures that it is valid to open the vnode with given flags and provides
+    // an opportunity to redirect subsequent I/O operations to a different vnode.
+    //
+    // If the implementation of |Open()| sets |out_redirect| to a non-null value.
+    // all following I/O operations on the opened file will be redirected to the
+    // indicated vnode instead of being handled by this instance.
+    //
+    // |flags| are the open flags to be validated, such as |O_RDONLY| and |O_DIRECTORY|.
+    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) = 0;
 
     // Closes vn. Typically, most Vnodes simply return "ZX_OK".
     virtual zx_status_t Close();
@@ -164,6 +171,17 @@ protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
     Vnode();
 };
+
+// Opens a vnode by reference.
+// The |vnode| reference is updated in-place if redirection occurs.
+inline zx_status_t OpenVnode(uint32_t flags, fbl::RefPtr<Vnode>* vnode) {
+    fbl::RefPtr<Vnode> redirect;
+    zx_status_t status = (*vnode)->Open(flags, &redirect);
+    if (status == ZX_OK && redirect != nullptr) {
+        *vnode = fbl::move(redirect);
+    }
+    return status;
+}
 
 // Helper class used to fill direntries during calls to Readdir.
 class DirentFiller {

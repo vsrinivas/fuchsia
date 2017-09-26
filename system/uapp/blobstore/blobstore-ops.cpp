@@ -38,7 +38,7 @@ VnodeBlob::~VnodeBlob() {
     }
 }
 
-zx_status_t VnodeBlob::Open(uint32_t flags) {
+zx_status_t VnodeBlob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ZX_ERR_NOT_DIR;
     } else if (IsDirectory() && ((flags & O_ACCMODE) != 0)) {

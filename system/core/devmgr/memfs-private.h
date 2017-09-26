@@ -65,7 +65,7 @@ public:
     VnodeFile(zx_handle_t vmo, zx_off_t length);
     ~VnodeFile();
 
-    virtual zx_status_t Open(uint32_t flags) final;
+    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
 
 private:
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
@@ -83,7 +83,7 @@ public:
     VnodeDir();
     virtual ~VnodeDir();
 
-    virtual zx_status_t Open(uint32_t flags) final;
+    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
 
@@ -138,7 +138,7 @@ public:
     VnodeVmo(zx_handle_t vmo, zx_off_t offset, zx_off_t length);
     ~VnodeVmo();
 
-    virtual zx_status_t Open(uint32_t flags) override;
+    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) override;
 
 private:
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;

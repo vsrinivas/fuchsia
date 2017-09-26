@@ -31,7 +31,7 @@ public:
               zx_off_t length);
     ~VnodeFile() override;
 
-    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<fs::Vnode>* vnode) final;
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
@@ -55,7 +55,7 @@ public:
              fbl::Array<fbl::RefPtr<Vnode>> children);
     ~VnodeDir() override;
 
-    zx_status_t Open(uint32_t flags) final;
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<fs::Vnode>* vnode) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;

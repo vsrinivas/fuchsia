@@ -46,7 +46,7 @@ VnodeSvc::VnodeSvc(uint64_t node_id,
 
 VnodeSvc::~VnodeSvc() = default;
 
-zx_status_t VnodeSvc::Open(uint32_t flags) {
+zx_status_t VnodeSvc::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
@@ -84,7 +84,7 @@ VnodeDir::VnodeDir()
 
 VnodeDir::~VnodeDir() = default;
 
-zx_status_t VnodeDir::Open(uint32_t flags) {
+zx_status_t VnodeDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     return ZX_OK;
 }
 
@@ -176,7 +176,7 @@ VnodeProviderDir::VnodeProviderDir()
 
 VnodeProviderDir::~VnodeProviderDir() = default;
 
-zx_status_t VnodeProviderDir::Open(uint32_t flags) {
+zx_status_t VnodeProviderDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     return ZX_OK;
 }
 

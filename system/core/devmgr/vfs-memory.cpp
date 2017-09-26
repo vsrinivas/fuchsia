@@ -98,7 +98,7 @@ VnodeVmo::~VnodeVmo() {
     }
 }
 
-zx_status_t VnodeDir::Open(uint32_t flags) {
+zx_status_t VnodeDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     switch (flags & O_ACCMODE) {
     case O_WRONLY:
     case O_RDWR:
@@ -107,14 +107,14 @@ zx_status_t VnodeDir::Open(uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t VnodeFile::Open(uint32_t flags) {
+zx_status_t VnodeFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
     return ZX_OK;
 }
 
-zx_status_t VnodeVmo::Open(uint32_t flags) {
+zx_status_t VnodeVmo::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
