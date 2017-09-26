@@ -103,9 +103,6 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
     if (st != ZX_OK)
         return st;
 
-    // remove internal flag bits
-    pp.type &= PKT_FLAG_MASK;
-
     if (packet_out.copy_array_to_user(&pp, sizeof(pp)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 

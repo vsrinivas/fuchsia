@@ -35,7 +35,7 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, zx_koid_t pid, zx_koi
         return nullptr;
 
     port_packet->packet.key = key;
-    port_packet->packet.type = type | PKT_FLAG_EPHEMERAL;
+    port_packet->packet.type = type;
     port_packet->packet.exception.pid = pid;
     port_packet->packet.exception.tid = tid;
     port_packet->packet.exception.reserved0 = 0;

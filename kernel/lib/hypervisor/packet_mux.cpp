@@ -60,7 +60,6 @@ zx_status_t PortRange::Queue(const zx_port_packet_t& packet, StateReloader* relo
         return ZX_ERR_NO_MEMORY;
     port_packet->packet = packet;
     port_packet->packet.key = key_;
-    port_packet->packet.type |= PKT_FLAG_EPHEMERAL;
     zx_status_t status = port_->Queue(port_packet, ZX_SIGNAL_NONE, 0);
     if (status != ZX_OK)
         port_allocator_.Free(port_packet);

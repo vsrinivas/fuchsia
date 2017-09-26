@@ -201,7 +201,7 @@ zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
         return ZX_ERR_NO_MEMORY;
 
     port_packet->packet = packet;
-    port_packet->packet.type = ZX_PKT_TYPE_USER | PKT_FLAG_EPHEMERAL;
+    port_packet->packet.type = ZX_PKT_TYPE_USER;
 
     auto status = Queue(port_packet, 0u, 0u);
     if (status < 0)

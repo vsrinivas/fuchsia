@@ -79,9 +79,6 @@ class PortDispatcher;
 class PortObserver;
 struct PortPacket;
 
-#define PKT_FLAG_EPHEMERAL  0x10000000u
-#define PKT_FLAG_MASK       0x0FFFFFFFu
-
 struct PortAllocator {
     virtual ~PortAllocator() = default;
 
