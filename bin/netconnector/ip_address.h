@@ -18,6 +18,8 @@ namespace netconnector {
 class IpAddress {
  public:
   static const IpAddress kInvalid;
+  static const IpAddress kV4Loopback;
+  static const IpAddress kV6Loopback;
 
   // Creates an IpAddress from a string containing a numeric IP address. Returns
   // |kInvalid| if |address_string| cannot be converted into a valid IP address.
@@ -65,6 +67,8 @@ class IpAddress {
   bool is_v4() const { return family() == AF_INET; }
 
   bool is_v6() const { return family() == AF_INET6; }
+
+  bool is_loopback() const;
 
   const in_addr& as_in_addr() const {
     FXL_DCHECK(is_v4());

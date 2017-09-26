@@ -66,11 +66,15 @@ bool MdnsTransceiver::InterfaceEnabled(const netstack::NetInterface* if_info) {
     return false;
   }
 
+  IpAddress addr(if_info->addr.get());
+  if (addr.is_loopback()) {
+    return false;
+  }
+
   if (enabled_interfaces_.empty()) {
     return true;
   }
 
-  IpAddress addr(if_info->addr.get());
   for (auto& enabled_interface : enabled_interfaces_) {
     if (enabled_interface.name_ == if_info->name &&
         enabled_interface.family_ == addr.family()) {
@@ -109,25 +113,14 @@ bool MdnsTransceiver::FindNewInterfaces() {
 
         // Launch a transceiver for each new interface.
         for (const auto& if_info : interfaces) {
-          // We seem to get a good family value regardless of whether we have an
-          // IP
-          // address, but we check anyway.
           if (if_info->addr->family ==
               netstack::NetAddressFamily::UNSPECIFIED) {
-            FXL_LOG(ERROR) << "Not starting mDNS for interface "
-                           << if_info->name << ": unspecified address family";
+            recheck_addresses = true;
             continue;
           }
 
           if (InterfaceEnabled(if_info.get())) {
             IpAddress address(if_info->addr.get());
-
-            // TODO(mpcomplete): I don't think this is necessary - unset
-            // addresses should be UNSPECIFIED.
-            if (!AddressIsSet(address)) {
-              recheck_addresses = true;
-              continue;
-            }
 
             if (InterfaceAlreadyFound(address)) {
               continue;
@@ -168,19 +161,6 @@ bool MdnsTransceiver::FindNewInterfaces() {
 bool MdnsTransceiver::InterfaceAlreadyFound(const IpAddress& address) {
   for (auto& i : interfaces_) {
     if (i->address() == address) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool MdnsTransceiver::AddressIsSet(const IpAddress& address) {
-  size_t word_count = address.word_count();
-  const uint16_t* words = address.as_words();
-
-  for (size_t i = 0; i < word_count; ++i, ++words) {
-    if (*words != 0) {
       return true;
     }
   }

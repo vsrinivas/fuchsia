@@ -74,9 +74,6 @@ class MdnsTransceiver {
   // specified address.
   bool InterfaceAlreadyFound(const IpAddress& address);
 
-  // Determines if |address| has been set (e.g. via DHCP).
-  bool AddressIsSet(const IpAddress& address);
-
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::vector<InterfaceId> enabled_interfaces_;
   InboundMessageCallback inbound_message_callback_;

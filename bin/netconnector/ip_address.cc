@@ -16,6 +16,10 @@ namespace netconnector {
 
 // static
 const IpAddress IpAddress::kInvalid;
+// static
+const IpAddress IpAddress::kV4Loopback(127, 0, 0, 1);
+// static
+const IpAddress IpAddress::kV6Loopback(0, 0, 0, 0, 0, 0, 0, 1);
 
 // static
 IpAddress IpAddress::FromString(const std::string address_string,
@@ -133,6 +137,17 @@ IpAddress::IpAddress(const netstack::NetAddress* addr) {
     default:
       FXL_DCHECK(false);
       break;
+  }
+}
+
+bool IpAddress::is_loopback() const {
+  switch (family_) {
+    case AF_INET:
+      return *this == kV4Loopback;
+    case AF_INET6:
+      return *this == kV6Loopback;
+    default:
+      return false;
   }
 }
 
