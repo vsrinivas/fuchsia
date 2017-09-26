@@ -25,14 +25,9 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/tables/tbxface.c \
 	$(LOCAL_DIR)/source/components/tables/tbxfroot.c \
 	$(LOCAL_DIR)/source/components/utilities/utalloc.c \
-	$(LOCAL_DIR)/source/components/utilities/utcache.c \
 	$(LOCAL_DIR)/source/components/utilities/utexcep.c \
 	$(LOCAL_DIR)/source/components/utilities/utglobal.c \
-	$(LOCAL_DIR)/source/components/utilities/utlock.c \
 	$(LOCAL_DIR)/source/components/utilities/utmisc.c \
-	$(LOCAL_DIR)/source/components/utilities/utmutex.c \
-	$(LOCAL_DIR)/source/components/utilities/utownerid.c \
-	$(LOCAL_DIR)/source/components/utilities/utstate.c \
 	$(LOCAL_DIR)/source/components/utilities/utstring.c \
 	$(LOCAL_DIR)/source/components/utilities/utxferror.c \
 	$(LOCAL_DIR)/source/os_specific/service_layers/oszircon.cpp
