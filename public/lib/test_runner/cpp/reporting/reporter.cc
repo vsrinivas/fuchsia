@@ -5,35 +5,26 @@
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include "lib/test_runner/fidl/test_runner.fidl-sync.h"
+#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 
 namespace test_runner {
 
-Reporter::Reporter(std::string identity) : identity_(std::move(identity)) {}
-
-Reporter::~Reporter() {
-  Stop();
-}
-
-void Reporter::Report(TestResultPtr result) {
-  test_runner_->ReportResult(std::move(result));
-}
-
-void Reporter::Start(app::ApplicationContext* context) {
-  if (context->has_environment_services()) {
-    auto test_runner_request = fidl::GetSynchronousProxy(&test_runner_);
-    context->ConnectToEnvironmentService(std::move(test_runner_request));
-
-    test_runner_->Identify(identity_);
+void ReportResult(std::string identity,
+                  app::ApplicationContext* context,
+                  std::vector<TestResultPtr> results) {
+  if (!context->has_environment_services()) {
+    return;
   }
+
+  fidl::SynchronousInterfacePtr<TestRunner> test_runner;
+  context->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&test_runner));
+
+  test_runner->Identify(identity);
+  for (auto& result : results) {
+    test_runner->ReportResult(std::move(result));
+  }
+  test_runner->Teardown();
 }
 
-void Reporter::Stop() {
-  if (test_runner_)
-    test_runner_->Teardown();
-}
-
-bool Reporter::connected() {
-  return test_runner_.is_bound();
-}
 }  // namespace test_runner

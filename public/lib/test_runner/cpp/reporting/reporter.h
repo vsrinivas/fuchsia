@@ -5,34 +5,16 @@
 #ifndef APPS_TEST_RUNNER_LIB_REPORTER_H_
 #define APPS_TEST_RUNNER_LIB_REPORTER_H_
 
+#include <vector>
+
 #include "lib/app/cpp/application_context.h"
-#include "lib/test_runner/fidl/test_runner.fidl-sync.h"
-#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/test_runner/fidl/test_runner.fidl.h"
 
 namespace test_runner {
 
-// Connects to the TestRunner service and reports test results.
-class Reporter {
- public:
-  explicit Reporter(std::string identity);
-
-  ~Reporter();
-
-  void Start(app::ApplicationContext* context);
-
-  // Reports a test result.
-  void Report(TestResultPtr result);
-
-  // Return whether the connection to TestRunner was successful.
-  bool connected();
-
- private:
-  // Reports teardown to the TestRunner service and waits for acknoledgement.
-  void Stop();
-
-  std::string identity_;
-  fidl::SynchronousInterfacePtr<TestRunner> test_runner_;
-};
+void ReportResult(std::string identity,
+                  app::ApplicationContext* context,
+                  std::vector<TestResultPtr> results);
 
 }  // namespace test_runner
 

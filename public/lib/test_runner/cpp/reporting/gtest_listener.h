@@ -10,13 +10,10 @@
 
 namespace test_runner {
 
-class Reporter;
-
-// Handles events from the GoogleTest framework and publishes them to a
-// Reporter.
+// Handles events from the GoogleTest framework and stores them.
 class GTestListener : public ::testing::EmptyTestEventListener {
  public:
-  GTestListener(const std::string& executable, Reporter* reporter);
+  GTestListener(const std::string& executable);
 
   ~GTestListener() override;
 
@@ -28,9 +25,11 @@ class GTestListener : public ::testing::EmptyTestEventListener {
   // Gets called when all of the tests are done running.
   void OnTestProgramEnd(const ::testing::UnitTest& test) override;
 
+  std::vector<TestResultPtr> GetResults();
+
  private:
   std::string executable_;
-  Reporter* reporter_;
+  std::vector<TestResultPtr> results_;
 };
 
 }  // namespace test_runner

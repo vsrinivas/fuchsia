@@ -6,14 +6,12 @@
 
 #include <regex>
 
-#include "lib/test_runner/cpp/reporting/reporter.h"
 #include "lib/test_runner/fidl/test_runner.fidl.h"
 #include "gtest/gtest.h"
 
 namespace test_runner {
 
-GTestListener::GTestListener(const std::string& executable, Reporter* reporter)
-    : reporter_(reporter) {
+GTestListener::GTestListener(const std::string& executable) {
   std::regex file_prefix("^file://");
   executable_ = std::regex_replace(executable, file_prefix, "");
 }
@@ -52,9 +50,15 @@ void GTestListener::OnTestEnd(const ::testing::TestInfo& info) {
   result->failed = failed;
   result->message = message.str();
 
-  reporter_->Report(std::move(result));
+  results_.push_back(std::move(result));
 }
 
 void GTestListener::OnTestProgramEnd(const ::testing::UnitTest& test) {}
+
+std::vector<TestResultPtr> GTestListener::GetResults() {
+  std::vector<TestResultPtr> results = std::move(results_);
+  results_.clear();
+  return results;
+}
 
 }  // namespace test_runner

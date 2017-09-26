@@ -11,21 +11,20 @@
 std::unique_ptr<app::ApplicationContext> g_application_context;
 
 int main(int argc, char** argv) {
-  test_runner::Reporter reporter(argv[0]);
-  test_runner::GTestListener listener(argv[0], &reporter);
+  test_runner::GTestListener listener(argv[0]);
 
+  fsl::MessageLoop message_loop;
   g_application_context =
       app::ApplicationContext::CreateFromStartupInfoNotChecked();
-
-  reporter.Start(g_application_context.get());
 
   testing::InitGoogleTest(&argc, argv);
   testing::UnitTest::GetInstance()->listeners().Append(&listener);
 
-  fsl::MessageLoop message_loop;
   int status = RUN_ALL_TESTS();
 
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
+
+  test_runner::ReportResult(argv[0], g_application_context.get(), listener.GetResults());
 
   return status;
 }
