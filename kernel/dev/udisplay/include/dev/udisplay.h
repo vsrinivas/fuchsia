@@ -7,15 +7,16 @@
 #pragma once
 
 #include <dev/display.h>
-#include <zircon/compiler.h>
 #include <err.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
-status_t udisplay_init(void);
-status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size);
-status_t udisplay_set_display_info(struct display_info* display);
-status_t udisplay_bind_gfxconsole(void);
+zx_status_t udisplay_init(void);
+zx_status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size);
+zx_status_t udisplay_set_display_info(struct display_info* display);
+zx_status_t udisplay_bind_gfxconsole(void);
 
 __END_CDECLS
 
@@ -24,6 +25,6 @@ __END_CDECLS
 #include <fbl/ref_ptr.h>
 
 class VmObject;
-status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo);
+zx_status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo);
 
 #endif
