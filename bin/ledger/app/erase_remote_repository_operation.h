@@ -43,7 +43,6 @@ class EraseRemoteRepositoryOperation {
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   ledger::NetworkService* network_service_;
-  std::string repository_path_;
   std::string server_id_;
   std::string api_key_;
   std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
