@@ -20,8 +20,10 @@ status_t udisplay_bind_gfxconsole(void);
 __END_CDECLS
 
 #ifdef __cplusplus
-#include <object/dispatcher.h>
+
+#include <fbl/ref_ptr.h>
 
 class VmObject;
 status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo);
+
 #endif
