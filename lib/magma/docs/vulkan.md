@@ -9,7 +9,7 @@ Vulkan Development
 
     In order for your project to access the vulkan headers, and to link against the vulkan loader libvulkan.so, add the following GN dependency:
 
-    //garnet/lib/magma:vulkan
+    //garnet/public/lib/vulkan
 
 3) Rendering onscreen
 

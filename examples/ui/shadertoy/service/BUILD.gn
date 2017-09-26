@@ -41,7 +41,7 @@ executable("service") {
     "//garnet/lib/escher/escher",
     "//garnet/examples/escher/common",
     "//zircon/system/ulib/trace-provider",
-    "//garnet/lib/magma:vulkan",
+    "//garnet/public/lib/vulkan",
   ]
 
   include_dirs = [
