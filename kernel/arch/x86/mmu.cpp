@@ -1331,7 +1331,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
         LTRACEF("user aspace: pt phys %#" PRIxPTR ", virt %p\n", pt_phys_, pt_virt_);
     }
     pt_pages_ = 1;
-    active_cpus_ = 0;
+    fbl::atomic_init(&active_cpus_, 0);
 
     return ZX_OK;
 }
@@ -1339,7 +1339,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
 template <template <int> class PageTable>
 zx_status_t X86ArchVmAspace::DestroyAspace() {
     canary_.Assert();
-    DEBUG_ASSERT(active_cpus_ == 0);
+    DEBUG_ASSERT(active_cpus_.load() == 0);
 
 #if LK_DEBUGLEVEL > 1
     pt_entry_t* table = static_cast<pt_entry_t*>(pt_virt_);
@@ -1383,14 +1383,14 @@ void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmAspace
         x86_set_cr3(aspace->pt_phys_);
 
         if (old_aspace != nullptr) {
-            atomic_and(&old_aspace->active_cpus_, ~cpu_bit);
+            old_aspace->active_cpus_.fetch_and(~cpu_bit);
         }
-        atomic_or(&aspace->active_cpus_, cpu_bit);
+        aspace->active_cpus_.fetch_or(cpu_bit);
     } else {
         LTRACEF_LEVEL(3, "switching to kernel aspace, pt %#" PRIxPTR "\n", kernel_pt_phys);
         x86_set_cr3(kernel_pt_phys);
         if (old_aspace != nullptr) {
-            atomic_and(&old_aspace->active_cpus_, ~cpu_bit);
+            old_aspace->active_cpus_.fetch_and(~cpu_bit);
         }
     }
 

@@ -9,8 +9,8 @@
 
 #include <arch/x86/ioport.h>
 #include <arch/x86/mmu.h>
-#include <kernel/atomic.h>
 #include <vm/arch_vm_aspace.h>
+#include <fbl/atomic.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <zircon/compiler.h>
@@ -50,7 +50,7 @@ public:
 
     size_t pt_pages() const { return pt_pages_; }
 
-    int active_cpus() { return atomic_load(&active_cpus_); }
+    int active_cpus() { return active_cpus_.load(); }
 
     IoBitmap& io_bitmap() { return io_bitmap_; }
 
@@ -146,7 +146,7 @@ private:
 
     // CPUs that are currently executing in this aspace.
     // Actually an mp_cpu_mask_t, but header dependencies.
-    volatile int active_cpus_ = 0;
+    fbl::atomic_int active_cpus_{0};
 };
 
 using ArchVmAspace = X86ArchVmAspace;
