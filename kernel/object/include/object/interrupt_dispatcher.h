@@ -37,7 +37,7 @@ public:
     virtual zx_status_t UserSignal() = 0;
 
     zx_status_t WaitForInterrupt() {
-        return event_wait_deadline(&event_, INFINITE_TIME, true);
+        return event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
     }
 
     virtual void on_zero_handles() final {

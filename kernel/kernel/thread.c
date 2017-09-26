@@ -585,7 +585,7 @@ void thread_kill(thread_t* t, bool block) {
 
     /* wait for the thread to exit */
     if (block && !(t->flags & THREAD_FLAG_DETACHED)) {
-        wait_queue_block(&t->retcode_wait_queue, INFINITE_TIME);
+        wait_queue_block(&t->retcode_wait_queue, ZX_TIME_INFINITE);
     }
 
 done:
@@ -873,7 +873,7 @@ out:
 }
 
 status_t thread_sleep_relative(lk_time_t delay) {
-    if (delay != INFINITE_TIME) {
+    if (delay != ZX_TIME_INFINITE) {
         delay += current_time();
     }
     return thread_sleep(delay);
@@ -1235,7 +1235,7 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, lk_time_t 
  * @param  deadline The time at which to abort the wait
  *
  * If the deadline is zero, this function returns immediately with
- * ZX_ERR_TIMED_OUT.  If the deadline is INFINITE_TIME, this function
+ * ZX_ERR_TIMED_OUT.  If the deadline is ZX_TIME_INFINITE, this function
  * waits indefinitely.  Otherwise, this function returns with
  * ZX_ERR_TIMED_OUT when the deadline occurs.
  *
@@ -1270,7 +1270,7 @@ status_t wait_queue_block(wait_queue_t* wait, lk_time_t deadline) {
     current_thread->blocked_status = ZX_OK;
 
     /* if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue */
-    if (deadline != INFINITE_TIME) {
+    if (deadline != ZX_TIME_INFINITE) {
         timer_init(&timer);
         timer_set_oneshot(&timer, deadline, wait_queue_timeout_handler, (void*)current_thread);
     }
@@ -1278,7 +1278,7 @@ status_t wait_queue_block(wait_queue_t* wait, lk_time_t deadline) {
     sched_block();
 
     /* we don't really know if the timer fired or not, so it's better safe to try to cancel it */
-    if (deadline != INFINITE_TIME) {
+    if (deadline != ZX_TIME_INFINITE) {
         timer_cancel(&timer);
     }
 

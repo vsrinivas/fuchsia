@@ -23,6 +23,7 @@
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -99,7 +100,7 @@ retry:
     }
 
     // we have signalled that we're blocking, so drop into the wait queue
-    status_t ret = wait_queue_block(&m->wait, INFINITE_TIME);
+    status_t ret = wait_queue_block(&m->wait, ZX_TIME_INFINITE);
     if (unlikely(ret < ZX_OK)) {
         // mutexes are not interruptable and cannot time out, so it
         // is illegal to return with any error state.

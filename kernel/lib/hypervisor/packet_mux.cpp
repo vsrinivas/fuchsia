@@ -6,9 +6,10 @@
 
 #include <hypervisor/packet_mux.h>
 
-#include <zircon/syscalls/hypervisor.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/types.h>
 
 __UNUSED static const size_t kMaxPacketsPerRange = 256;
 
@@ -20,7 +21,7 @@ zx_status_t BlockingPortAllocator::Init() {
 
 PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
     bool was_blocked;
-    zx_status_t status = semaphore_.Wait(INFINITE_TIME, &was_blocked);
+    zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE, &was_blocked);
     if (status != ZX_OK)
         return nullptr;
     if (was_blocked)

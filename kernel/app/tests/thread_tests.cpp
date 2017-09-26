@@ -87,7 +87,7 @@ static int mutex_test(void) {
     }
 
     for (uint i = 0; i < countof(threads); i++) {
-        thread_join(threads[i], NULL, INFINITE_TIME);
+        thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
 
     thread_sleep_relative(ZX_MSEC(100));
@@ -118,7 +118,7 @@ static int event_waiter(void* arg) {
 
     while (count > 0) {
         printf("thread %p: waiting on event...\n", get_current_thread());
-        zx_status_t err = event_wait_deadline(&e, INFINITE_TIME, true);
+        zx_status_t err = event_wait_deadline(&e, ZX_TIME_INFINITE, true);
         if (err == ZX_ERR_INTERNAL_INTR_KILLED) {
             printf("thread %p: killed\n");
             return -1;
@@ -156,7 +156,7 @@ static void event_test(void) {
         thread_resume(threads[i]);
 
     for (uint i = 0; i < countof(threads); i++)
-        thread_join(threads[i], NULL, INFINITE_TIME);
+        thread_join(threads[i], NULL, ZX_TIME_INFINITE);
 
     thread_sleep_relative(ZX_SEC(2));
     printf("destroying event\n");
@@ -178,7 +178,7 @@ static void event_test(void) {
 
     for (uint i = 0; i < countof(threads); i++) {
         thread_kill(threads[i], true);
-        thread_join(threads[i], NULL, INFINITE_TIME);
+        thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
 
     event_destroy(&e);
@@ -299,7 +299,7 @@ static void atomic_test(void) {
 
     /* wait for them to all stop */
     for (uint i = 0; i < countof(threads); i++) {
-        thread_join(threads[i], NULL, INFINITE_TIME);
+        thread_join(threads[i], NULL, ZX_TIME_INFINITE);
     }
 
     printf("atomic count == %d (should be zero)\n", atomic);
@@ -378,7 +378,7 @@ static int join_tester_server(void* arg) {
     thread_resume(t);
     ret = 99;
     printf("\tthread magic is 0x%x (should be 0x%x)\n", t->magic, THREAD_MAGIC);
-    err = thread_join(t, &ret, INFINITE_TIME);
+    err = thread_join(t, &ret, ZX_TIME_INFINITE);
     printf("\tthread_join returns err %d, retval %d\n", err, ret);
     printf("\tthread magic is 0x%x (should be 0)\n", t->magic);
 
@@ -388,7 +388,7 @@ static int join_tester_server(void* arg) {
     thread_sleep_relative(ZX_SEC(1)); // wait until thread is already dead
     ret = 99;
     printf("\tthread magic is 0x%x (should be 0x%x)\n", t->magic, THREAD_MAGIC);
-    err = thread_join(t, &ret, INFINITE_TIME);
+    err = thread_join(t, &ret, ZX_TIME_INFINITE);
     printf("\tthread_join returns err %d, retval %d\n", err, ret);
     printf("\tthread magic is 0x%x (should be 0)\n", t->magic);
 
@@ -423,7 +423,7 @@ static void join_test(void) {
     t = thread_create("join tester server", &join_tester_server, (void*)1, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
     ret = 99;
-    err = thread_join(t, &ret, INFINITE_TIME);
+    err = thread_join(t, &ret, ZX_TIME_INFINITE);
     printf("thread_join returns err %d, retval %d (should be 0 and 55)\n", err, ret);
 }
 
@@ -472,7 +472,7 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
     thread_sleep_relative(ZX_MSEC(100));
 
     lk_time_t t = current_time();
-    zx_status_t err = event_wait_deadline(e, INFINITE_TIME, true);
+    zx_status_t err = event_wait_deadline(e, ZX_TIME_INFINITE, true);
     t = (current_time() - t) / ZX_MSEC(1);
     TRACEF("event_wait_deadline returns %d after %" PRIu64 " msecs\n", err, t);
 
@@ -502,7 +502,7 @@ static void kill_tests(void) {
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
     thread_kill(t, true);
-    thread_join(t, NULL, INFINITE_TIME);
+    thread_join(t, NULL, ZX_TIME_INFINITE);
 
     printf("starting sleeper thread, then killing it before it wakes up.\n");
     t = thread_create("sleeper", sleeper_kill_thread, 0, LOW_PRIORITY, DEFAULT_STACK_SIZE);
@@ -510,7 +510,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &sleeper_thread_exit);
     thread_resume(t);
     thread_kill(t, true);
-    thread_join(t, NULL, INFINITE_TIME);
+    thread_join(t, NULL, ZX_TIME_INFINITE);
 
     printf("starting sleeper thread, then killing it before it is unsuspended.\n");
     t = thread_create("sleeper", sleeper_kill_thread, 0, LOW_PRIORITY, DEFAULT_STACK_SIZE);
@@ -518,7 +518,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &sleeper_thread_exit);
     thread_kill(t, false); // kill it before it is resumed
     thread_resume(t);
-    thread_join(t, NULL, INFINITE_TIME);
+    thread_join(t, NULL, ZX_TIME_INFINITE);
 
     event_t e;
 
@@ -530,7 +530,7 @@ static void kill_tests(void) {
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
     thread_kill(t, true);
-    thread_join(t, NULL, INFINITE_TIME);
+    thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
     printf("starting waiter thread that waits forever, then killing it before it wakes up.\n");
@@ -540,7 +540,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
     thread_kill(t, true);
-    thread_join(t, NULL, INFINITE_TIME);
+    thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
     printf("starting waiter thread that waits some time, then killing it while it blocks.\n");
@@ -551,7 +551,7 @@ static void kill_tests(void) {
     thread_resume(t);
     thread_sleep_relative(ZX_MSEC(200));
     thread_kill(t, true);
-    thread_join(t, NULL, INFINITE_TIME);
+    thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 
     printf("starting waiter thread that waits some time, then killing it before it wakes up.\n");
@@ -561,7 +561,7 @@ static void kill_tests(void) {
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
     thread_kill(t, true);
-    thread_join(t, NULL, INFINITE_TIME);
+    thread_join(t, NULL, ZX_TIME_INFINITE);
     event_destroy(&e);
 }
 

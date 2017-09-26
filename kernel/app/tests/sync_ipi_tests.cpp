@@ -15,6 +15,7 @@
 #include <kernel/thread.h>
 #include <stdio.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -67,7 +68,7 @@ static void deadlock_test(void) {
 cleanup:
     for (uint i = 0; i < countof(threads); ++i) {
         if (threads[i]) {
-            thread_join(threads[i], NULL, INFINITE_TIME);
+            thread_join(threads[i], NULL, ZX_TIME_INFINITE);
         }
     }
     event_destroy(&gate);

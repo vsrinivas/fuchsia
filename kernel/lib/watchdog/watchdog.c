@@ -10,8 +10,9 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <zircon/compiler.h>
 #include <platform.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <kernel/thread.h>
 #include <kernel/timer.h>
@@ -41,7 +42,7 @@ static enum handler_return watchdog_timer_callback(struct timer *timer, lk_time_
 zx_status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name)
 {
     DEBUG_ASSERT(NULL != dog);
-    DEBUG_ASSERT(INFINITE_TIME != timeout);
+    DEBUG_ASSERT(ZX_TIME_INFINITE != timeout);
 
     dog->magic   = WATCHDOG_MAGIC;
     dog->name    = name ? name : "unnamed watchdog";
@@ -104,7 +105,7 @@ static enum handler_return hw_watchdog_timer_callback(struct timer *timer, lk_ti
 
 zx_status_t watchdog_hw_init(lk_time_t timeout)
 {
-    DEBUG_ASSERT(INFINITE_TIME != timeout);
+    DEBUG_ASSERT(ZX_TIME_INFINITE != timeout);
     timer_init(&hw_watchdog_timer);
     return platform_watchdog_init(timeout, &hw_watchdog_pet_timeout);
 }

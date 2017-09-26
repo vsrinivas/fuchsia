@@ -13,6 +13,7 @@
 #include <platform.h>
 #include <rand.h>
 #include <stdio.h>
+#include <zircon/types.h>
 
 static int fibo_thread(void* argv) {
     long fibo = (intptr_t)argv;
@@ -36,7 +37,7 @@ static int fibo_thread(void* argv) {
     if (!t[1]) {
         printf("error creating thread for fibo %d\n", fibo - 2);
         thread_resume(t[0]);
-        thread_join(t[0], NULL, INFINITE_TIME);
+        thread_join(t[0], NULL, ZX_TIME_INFINITE);
         return 0;
     }
 
@@ -45,8 +46,8 @@ static int fibo_thread(void* argv) {
 
     int retcode0, retcode1;
 
-    thread_join(t[0], &retcode0, INFINITE_TIME);
-    thread_join(t[1], &retcode1, INFINITE_TIME);
+    thread_join(t[0], &retcode0, ZX_TIME_INFINITE);
+    thread_join(t[1], &retcode1, ZX_TIME_INFINITE);
 
     return retcode0 + retcode1;
 }
@@ -64,7 +65,7 @@ int fibo(int argc, const cmd_args* argv) {
     thread_resume(t);
 
     int retcode;
-    thread_join(t, &retcode, INFINITE_TIME);
+    thread_join(t, &retcode, ZX_TIME_INFINITE);
 
     tim = (current_time() - tim) / (1000 * 1000);
 

@@ -20,6 +20,7 @@
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <zircon/syscalls/hypervisor.h>
+#include <zircon/types.h>
 #include <platform/pc/timer.h>
 
 #include "vcpu_priv.h"
@@ -249,7 +250,7 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
 static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
                               LocalApicState* local_apic_state) {
     do {
-        zx_status_t status = event_wait_deadline(&local_apic_state->event, INFINITE_TIME, true);
+        zx_status_t status = event_wait_deadline(&local_apic_state->event, ZX_TIME_INFINITE, true);
         vmcs->Reload();
         if (status != ZX_OK)
             return ZX_ERR_CANCELED;

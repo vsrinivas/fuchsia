@@ -26,6 +26,7 @@
 
 #include <zircon/rights.h>
 #include <zircon/syscalls/debug.h>
+#include <zircon/types.h>
 
 #include <object/c_user_thread.h>
 #include <object/excp_port.h>
@@ -77,7 +78,7 @@ ThreadDispatcher::~ThreadDispatcher() {
         // join the LK thread before doing anything else to clean up LK state and ensure
         // the thread we're destroying has stopped.
         LTRACEF("joining LK thread to clean up state\n");
-        __UNUSED auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
+        __UNUSED auto ret = thread_join(&thread_, nullptr, ZX_TIME_INFINITE);
         LTRACEF("done joining LK thread\n");
         DEBUG_ASSERT_MSG(ret == ZX_OK, "thread_join returned something other than ZX_OK\n");
         break;
@@ -687,7 +688,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
 
     zx_status_t status;
     do {
-        status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
+        status = event_wait_deadline(&exception_event_, ZX_TIME_INFINITE, true);
     } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
 
     AutoLock lock(&state_lock_);

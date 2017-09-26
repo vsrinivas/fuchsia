@@ -328,7 +328,7 @@ static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags)
             thread_t *t = thread_create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
             thread_resume(t);
 
-            thread_join(t, NULL, INFINITE_TIME);
+            thread_join(t, NULL, ZX_TIME_INFINITE);
             return 0;
         }
     }
