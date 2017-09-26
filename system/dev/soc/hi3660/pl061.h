@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device.h>
 #include <zircon/listnode.h>
@@ -13,7 +14,7 @@
 typedef struct {
     list_node_t node;
     mtx_t lock;
-    pdev_mmio_buffer_t buffer;
+    io_buffer_t buffer;
     uint32_t gpio_start;
     uint32_t gpio_count;
     const uint32_t* irqs;

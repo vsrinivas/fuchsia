@@ -13,8 +13,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/usb-mode-switch.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -25,13 +23,11 @@
 #include "hi3660-regs.h"
 #include "hikey960-hw.h"
 
-// MMIO indices
-enum {
-    // GPIO MMIOs precede these
-    MMIO_USB3OTG_BC = 5,
-    MMIO_PERI_CRG,
-    MMIO_PCTRL,
-};
+// MMIO addresses
+// TODO(voydanoff) move to a header file
+#define MMIO_USB3OTG_BC 0xff200000
+#define MMIO_PERI_CRG   0xfff35000
+#define MMIO_PCTRL      0xe8a09000
 
 static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, unsigned pin) {
     pl061_gpios_t* gpios;
@@ -123,17 +119,15 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
 };
 
 static zx_status_t hi3660_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+    hi3660_bus_t* bus = ctx;
+
     switch (proto_id) {
     case ZX_PROTOCOL_GPIO: {
-        gpio_protocol_t* proto = out;
-        proto->ctx = ctx;
-        proto->ops = &gpio_ops;
+        memcpy(out, &bus->gpio, sizeof(bus->gpio));
         return ZX_OK;
     }
     case ZX_PROTOCOL_USB_MODE_SWITCH: {
-        usb_mode_switch_protocol_t* proto = out;
-        proto->ctx = ctx;
-        proto->ops = &usb_mode_switch_ops;
+        memcpy(out, &bus->usb_mode_switch, sizeof(bus->usb_mode_switch));
         return ZX_OK;
     }
     default:
@@ -143,27 +137,6 @@ static zx_status_t hi3660_get_protocol(void* ctx, uint32_t proto_id, void* out) 
 
 static zx_status_t hi3660_add_gpios(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
                                     const uint32_t* irqs, uint32_t irq_count) {
-    hi3660_bus_t* bus = ctx;
-
-    pl061_gpios_t* gpios = calloc(1, sizeof(pl061_gpios_t));
-    if (!gpios) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_status_t status = pdev_map_mmio_buffer(&bus->pdev, mmio_index,
-                                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpios->buffer);
-    if (status != ZX_OK) {
-        free(gpios);
-        return status;
-    }
-
-    mtx_init(&gpios->lock, mtx_plain);
-    gpios->gpio_start = start;
-    gpios->gpio_count = count;
-    gpios->irqs = irqs;
-    gpios->irq_count = irq_count;
-    list_add_tail(&bus->gpios, &gpios->node);
-
     return ZX_OK;
 }
 
@@ -177,13 +150,13 @@ static void hi3660_release(void* ctx) {
     pl061_gpios_t* gpios;
 
     while ((gpios = list_remove_head_type(&bus->gpios, pl061_gpios_t, node)) != NULL) {
-        pdev_mmio_buffer_release(&gpios->buffer);
+        io_buffer_release(&gpios->buffer);
         free(gpios);
     }
 
-    pdev_mmio_buffer_release(&bus->usb3otg_bc);
-    pdev_mmio_buffer_release(&bus->peri_crg);
-    pdev_mmio_buffer_release(&bus->pctrl);
+    io_buffer_release(&bus->usb3otg_bc);
+    io_buffer_release(&bus->peri_crg);
+    io_buffer_release(&bus->pctrl);
 
     free(bus);
 }
@@ -195,31 +168,20 @@ static zx_protocol_device_t hi3660_device_protocol = {
 
 // test thread that cycles the 4 LEDs on the hikey 960 board
 static int led_test_thread(void *arg) {
-    zx_device_t* parent = arg;
-
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
-        printf("led_test_thread: could not get pdev protocol!\n");
-        return ZX_ERR_INTERNAL;
-    }
-
-    gpio_protocol_t gpio;
-    if (pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, &gpio) != ZX_OK) {
-        printf("led_test_thread: could not get GPIO protocol!\n");
-        return ZX_ERR_INTERNAL;
-    }
+    hi3660_bus_t* bus = arg;
+    gpio_protocol_t* gpio = &bus->gpio;
 
     uint32_t led_gpios[] = { GPIO_USER_LED1, GPIO_USER_LED2, GPIO_USER_LED3, GPIO_USER_LED4 };
 
     for (unsigned i = 0; i < countof(led_gpios); i++) {
-        gpio_config(&gpio, led_gpios[i], GPIO_DIR_OUT);
+        gpio_config(gpio, led_gpios[i], GPIO_DIR_OUT);
     }
 
     while (1) {
          for (unsigned i = 0; i < countof(led_gpios); i++) {
-            gpio_write(&gpio, led_gpios[i], 1);
+            gpio_write(gpio, led_gpios[i], 1);
             sleep(1);
-            gpio_write(&gpio, led_gpios[i], 0);
+            gpio_write(gpio, led_gpios[i], 0);
         }
     }
 
@@ -237,21 +199,18 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &bus->pdev) != ZX_OK) {
-        free(bus);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     list_initialize(&bus->gpios);
     bus->usb_mode = USB_MODE_NONE;
 
+    // TODO(voydanoff) get from platform bus driver somehow
+    zx_handle_t resource = get_root_resource();
     zx_status_t status;
-    if ((status = pdev_map_mmio_buffer(&bus->pdev, MMIO_USB3OTG_BC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       &bus->usb3otg_bc)) != ZX_OK ||
-         (status = pdev_map_mmio_buffer(&bus->pdev, MMIO_PERI_CRG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       &bus->peri_crg)) != ZX_OK ||
-         (status = pdev_map_mmio_buffer(&bus->pdev, MMIO_PCTRL, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       &bus->pctrl)) != ZX_OK) {
+    if ((status = io_buffer_init_physical(&bus->usb3otg_bc, MMIO_USB3OTG_BC, PAGE_SIZE, resource,
+                                          ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
+         (status = io_buffer_init_physical(&bus->peri_crg, MMIO_PERI_CRG, PAGE_SIZE, resource,
+                                          ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
+         (status = io_buffer_init_physical(&bus->pctrl, MMIO_PCTRL, PAGE_SIZE, resource,
+                                          ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
         goto fail;
     }
 
@@ -274,12 +233,25 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     intf.ctx = bus;
     pbus_set_interface(&bus->pbus, &intf);
 
-#if 0
+    bus->gpio.ops = &gpio_ops;
+    bus->gpio.ctx = bus;
+    bus->usb_mode_switch.ops = &usb_mode_switch_ops;
+    bus->usb_mode_switch.ctx = bus;
+
+    if ((status = hi3360_add_gpios(bus)) != ZX_OK) {
+        printf("hi3660_bind: hi3360_add_gpios failed!\n");;
+    }
+
+    if ((status = hi3360_add_devices(bus)) != ZX_OK) {
+        printf("hi3660_bind: hi3360_add_devices failed!\n");;
+    }
+
+#if 1
     thrd_t thrd;
-    thrd_create_with_name(&thrd, led_test_thread, parent, "led_test_thread");
+    thrd_create_with_name(&thrd, led_test_thread, bus, "led_test_thread");
 #endif
 
-    // must be after pdev_set_interface
+    // must be after pbus_set_interface
     if ((status = hi3360_usb_init(bus)) != ZX_OK) {
         printf("hi3660_bind: hi3360_usb_init failed!\n");;
     }

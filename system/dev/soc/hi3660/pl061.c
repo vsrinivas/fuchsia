@@ -25,7 +25,7 @@
 static zx_status_t pl061_gpio_config(void* ctx, unsigned pin, gpio_config_flags_t flags) {
     pl061_gpios_t* gpios = ctx;
     pin -= gpios->gpio_start;
-    volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
+    volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
     uint8_t bit = 1 << (pin % GPIOS_PER_PAGE);
 
     mtx_lock(&gpios->lock);
@@ -71,7 +71,7 @@ static zx_status_t pl061_gpio_config(void* ctx, unsigned pin, gpio_config_flags_
 static zx_status_t pl061_gpio_read(void* ctx, unsigned pin, unsigned* out_value) {
     pl061_gpios_t* gpios = ctx;
     pin -= gpios->gpio_start;
-    volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
+    volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
     uint8_t bit = 1 << (pin % GPIOS_PER_PAGE);
 
     *out_value = !!(readb(regs + GPIODATA(bit)) & bit);
@@ -81,7 +81,7 @@ static zx_status_t pl061_gpio_read(void* ctx, unsigned pin, unsigned* out_value)
 static zx_status_t pl061_gpio_write(void* ctx, unsigned pin, unsigned value) {
     pl061_gpios_t* gpios = ctx;
     pin -= gpios->gpio_start;
-    volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
+    volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
     uint8_t bit = 1 << (pin % GPIOS_PER_PAGE);
 
     writeb((value ? bit : 0), regs + GPIODATA(bit));
@@ -91,7 +91,7 @@ static zx_status_t pl061_gpio_write(void* ctx, unsigned pin, unsigned value) {
 static zx_status_t pl061_gpio_int_enable(void* ctx, unsigned pin, bool enable) {
     pl061_gpios_t* gpios = ctx;
     pin -= gpios->gpio_start;
-    volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
+    volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
     uint8_t bit = 1 << (pin % GPIOS_PER_PAGE);
 
     mtx_lock(&gpios->lock);
@@ -109,7 +109,7 @@ static zx_status_t pl061_gpio_int_enable(void* ctx, unsigned pin, bool enable) {
 static zx_status_t pl061_gpio_get_int_status(void* ctx, unsigned pin, bool* out_status) {
     pl061_gpios_t* gpios = ctx;
     pin -= gpios->gpio_start;
-    volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
+    volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
     uint8_t bit = 1 << (pin % GPIOS_PER_PAGE);
 
     *out_status = !!(readb(regs + GPIOMIS) & bit);
@@ -119,7 +119,7 @@ static zx_status_t pl061_gpio_get_int_status(void* ctx, unsigned pin, bool* out_
 static zx_status_t pl061_gpio_int_clear(void* ctx, unsigned pin) {
     pl061_gpios_t* gpios = ctx;
     pin -= gpios->gpio_start;
-    volatile uint8_t* regs = gpios->buffer.vaddr + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
+    volatile uint8_t* regs = io_buffer_virt(&gpios->buffer) + PAGE_SIZE * (pin / GPIOS_PER_PAGE);
     uint8_t bit = 1 << (pin % GPIOS_PER_PAGE);
 
     mtx_lock(&gpios->lock);

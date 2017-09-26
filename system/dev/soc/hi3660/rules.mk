@@ -10,6 +10,8 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/hi3660-bus.c \
+    $(LOCAL_DIR)/hi3660-devices.c \
+    $(LOCAL_DIR)/hi3660-gpios.c \
     $(LOCAL_DIR)/hi3660-usb.c \
     $(LOCAL_DIR)/pl061.c \
 
