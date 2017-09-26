@@ -5,7 +5,7 @@
     "resources": [
         {
             "bootfs_path": "data/bootstrap/apps.config",
-            "file": "apps/modular/tests/boot_test.config"
+            "file": "peridot/tests/boot_test.config"
         }
     ]
 }
