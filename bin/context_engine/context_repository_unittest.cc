@@ -4,6 +4,7 @@
 
 #include "peridot/bin/context_engine/context_repository.h"
 #include "gtest/gtest.h"
+#include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
 
@@ -63,13 +64,6 @@ ContextValuePtr CreateValue(ContextValueType type,
   return value;
 }
 
-ContextMetadataPtr CreateStoryIdMetadata(const std::string id) {
-  auto meta = ContextMetadata::New();
-  meta->story = StoryMetadata::New();
-  meta->story->id = id;
-  return meta;
-}
-
 }  // namespace
 
 TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
@@ -98,8 +92,9 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   EXPECT_EQ("content", value1->content);
 
   // Let's create metadata.
-  auto id3 = repository_.Add(CreateValue(ContextValueType::ENTITY, "content3",
-                                         CreateStoryIdMetadata("id3story")));
+  auto id3 = repository_.Add(
+      CreateValue(ContextValueType::ENTITY, "content3",
+                  ContextMetadataBuilder().SetStoryId("id3story").Build()));
   auto value3 = repository_.Get(id3);
   ASSERT_TRUE(value3);
   EXPECT_EQ("content3", value3->content);
@@ -107,8 +102,10 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   EXPECT_EQ("id3story", value3->meta->story->id);
 
   // Update one of the previous values.
-  repository_.Update(id2, CreateValue(ContextValueType::ENTITY, "new content2",
-                                      CreateStoryIdMetadata("id2story")));
+  repository_.Update(
+      id2,
+      CreateValue(ContextValueType::ENTITY, "new content2",
+                  ContextMetadataBuilder().SetStoryId("id2story").Build()));
   value2 = repository_.Get(id2);
   ASSERT_TRUE(value2);
   ASSERT_TRUE(value2->meta);
@@ -131,15 +128,12 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
 TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
   // When a value is added as a child of another value, the child inherits the
   // metadata of its parent.
-  auto meta1 = ContextMetadata::New();
-  meta1->story = StoryMetadata::New();
-  meta1->story->id = "id";
+  ContextMetadataPtr meta1 = ContextMetadataBuilder().SetStoryId("id").Build();
   auto id1 = repository_.Add(
       CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
 
-  auto meta2 = ContextMetadata::New();
-  meta2->mod = ModuleMetadata::New();
-  meta2->mod->url = "url";
+  ContextMetadataPtr meta2 =
+      ContextMetadataBuilder().SetModuleUrl("url").Build();
   auto id2 = repository_.Add(
       id1, CreateValue(ContextValueType::MODULE, "m", std::move(meta2)));
 
@@ -178,9 +172,8 @@ TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
 
   // If a parent contains metadata that the child also contains (they both have
   // 'mod' metadata), the parent's takes precendence.
-  meta1 = ContextMetadata::New();
-  meta1->mod = ModuleMetadata::New();
-  meta1->mod->url = "override";
+  meta1 =
+      ContextMetadataBuilder(meta1.Clone()).SetModuleUrl("override").Build();
   repository_.Update(
       id1, CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
   value2 = repository_.GetMerged(id2);
@@ -203,9 +196,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   auto query = ContextQuery::New();
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
-  selector->meta = ContextMetadata::New();
-  selector->meta->entity = EntityMetadata::New();
-  selector->meta->entity->topic = "topic";
+  selector->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   query->selector["a"] = std::move(selector);
 
   TestListener listener;
@@ -218,9 +209,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   auto value = ContextValue::New();
   value->type = ContextValueType::STORY;
   value->content = "no match";
-  value->meta = ContextMetadata::New();
-  value->meta->entity = EntityMetadata::New();
-  value->meta->entity->topic = "topic";
+  value->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
   // No new update because nothing changed for our subscription.
   EXPECT_FALSE(listener.last_update);
@@ -230,9 +219,8 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   value = ContextValue::New();
   value->type = ContextValueType::ENTITY;
   value->content = "no match yet";
-  value->meta = ContextMetadata::New();
-  value->meta->entity = EntityMetadata::New();
-  value->meta->entity->topic = "not the topic";
+  value->meta =
+      ContextMetadataBuilder().SetEntityTopic("not the topic").Build();
   auto id = repository_.Add(std::move(value));  // Save id for later.
   // No new update because nothing changed for our subscription.
   EXPECT_FALSE(listener.last_update);
@@ -242,9 +230,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   value = ContextValue::New();
   value->type = ContextValueType::ENTITY;
   value->content = "match";
-  value->meta = ContextMetadata::New();
-  value->meta->entity = EntityMetadata::New();
-  value->meta->entity->topic = "topic";
+  value->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
   EXPECT_EQ(1lu, listener.last_update->values["a"].size());
   EXPECT_EQ("match", listener.last_update->values["a"][0]->content);
@@ -254,13 +240,13 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   value = ContextValue::New();
   value->type = ContextValueType::ENTITY;
   value->content = "now it matches";
-  value->meta = ContextMetadata::New();
-  value->meta->entity = EntityMetadata::New();
-  value->meta->entity->topic = "topic";
   // Add more metadata than the query is looking for. It shouldn't affect
   // the query, because it doesn't express any constraint on 'type'.
-  value->meta->entity->type = fidl::Array<fidl::String>::From(
-      std::vector<fidl::String>{"type1", "type2"});
+  value->meta = ContextMetadataBuilder()
+                    .SetEntityTopic("topic")
+                    .AddEntityType("type1")
+                    .AddEntityType("type2")
+                    .Build();
   repository_.Update(id, std::move(value));
   ASSERT_TRUE(listener.last_update);
   EXPECT_EQ(2lu, listener.last_update->values["a"].size());
@@ -275,9 +261,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   auto query = ContextQuery::New();
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
-  selector->meta = ContextMetadata::New();
-  selector->meta->story = StoryMetadata::New();
-  selector->meta->story->id = "match";
+  selector->meta = ContextMetadataBuilder().SetStoryId("match").Build();
   query->selector["a"] = std::move(selector);
 
   TestListener listener;
@@ -290,9 +274,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   // Add a Story value.
   auto story_value = ContextValue::New();
   story_value->type = ContextValueType::STORY;
-  story_value->meta = ContextMetadata::New();
-  story_value->meta->story = StoryMetadata::New();
-  story_value->meta->story->id = "no match";
+  story_value->meta = ContextMetadataBuilder().SetStoryId("no match").Build();
   auto first_story_value = story_value.Clone();  // Save for later.
   auto story_value_id = repository_.Add(std::move(story_value));
 
@@ -312,9 +294,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   // see the entity value returned in our update.
   story_value = ContextValue::New();
   story_value->type = ContextValueType::STORY;
-  story_value->meta = ContextMetadata::New();
-  story_value->meta->story = StoryMetadata::New();
-  story_value->meta->story->id = "match";
+  story_value->meta = ContextMetadataBuilder().SetStoryId("match").Build();
   auto matching_story_value = story_value.Clone();  // Save for later.
   repository_.Update(story_value_id, std::move(story_value));
 
@@ -345,12 +325,6 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   EXPECT_EQ(0lu, listener.last_update->values["a"].size());
   listener.reset();
 }
-
-// Code to write:
-// * Add backwards-compat code.
-// * Update the debug interface.
-// * Update StoryInfoAcquirer
-// * Update all other acquirers
 
 }  // namespace maxwell
 

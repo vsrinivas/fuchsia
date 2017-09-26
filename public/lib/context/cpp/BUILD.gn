@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("context_metadata_builder") {
+  sources = [
+    "context_metadata_builder.cc",
+    "context_metadata_builder.h",
+  ]
+
+  deps = [
+    "//peridot/public/lib/context/fidl",
+  ]
+}
+
 source_set("scoped_context_value") {
   sources = [
     "scoped_context_value.cc",

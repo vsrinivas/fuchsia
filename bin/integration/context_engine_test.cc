@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -76,38 +77,18 @@ class ContextEngineTest : public ContextEngineTestBase {
   ContextWriterPtr writer_;
 };
 
-/*
-ContextQueryPtr CreateQuery(const std::vector<std::string> topics) {
-  auto query = ContextQuery::New();
-  for (const auto& topic : topics) {
-    query->topics.push_back(topic);
-  }
-  return query;
-}
-*/
-
 }  // namespace
 
 // Tests to add:
 // * Write with parent.
 // * Update.
 // * Remove.
-// * Compat:
-//   - Write to Module scope if it exists
-//   - Read to:
-//     /story/visible_ids
-//     /story/focused/link/<topic>
-//     /story/id/<id>/link/<topic>
-//     /story/focused/explicit/<topic>
-//     /story/id/<id>/explicit/<topic>
 
 TEST_F(ContextEngineTest, BasicWriteSubscribe) {
   auto value = ContextValue::New();
   value->type = ContextValueType::ENTITY;
   value->content = R"({ "@type": "someType", "foo": "bar" })";
-  value->meta = ContextMetadata::New();
-  value->meta->entity = EntityMetadata::New();
-  value->meta->entity->topic = "topic";
+  value->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
 
   fidl::String value1_id;
   writer_->AddValue(std::move(value),
@@ -118,9 +99,7 @@ TEST_F(ContextEngineTest, BasicWriteSubscribe) {
   value->type = ContextValueType::ENTITY;
   value->content =
       R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })";
-  value->meta = ContextMetadata::New();
-  value->meta->entity = EntityMetadata::New();
-  value->meta->entity->topic = "frob";
+  value->meta = ContextMetadataBuilder().SetEntityTopic("frob").Build();
 
   fidl::String value2_id;
   writer_->AddValue(std::move(value),
@@ -130,9 +109,7 @@ TEST_F(ContextEngineTest, BasicWriteSubscribe) {
   // Subscribe to those values.
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
-  selector->meta = ContextMetadata::New();
-  selector->meta->entity = EntityMetadata::New();
-  selector->meta->entity->type.push_back("someType");
+  selector->meta = ContextMetadataBuilder().AddEntityType("someType").Build();
   auto query = ContextQuery::New();
   query->selector["a"] = std::move(selector);
 
@@ -150,9 +127,7 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   // itself can be closed and listeners are still valid.
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
-  selector->meta = ContextMetadata::New();
-  selector->meta->entity = EntityMetadata::New();
-  selector->meta->entity->topic = "topic";
+  selector->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   auto query = ContextQuery::New();
   query->selector["a"] = std::move(selector);
 
@@ -168,9 +143,7 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
 
   auto value = ContextValue::New();
   value->type = ContextValueType::ENTITY;
-  value->meta = ContextMetadata::New();
-  value->meta->entity = EntityMetadata::New();
-  value->meta->entity->topic = "topic";
+  value->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   // We don't want to crash. There's no way to assert that here, but it will
   // show up in the logs.
   fidl::String value_id;

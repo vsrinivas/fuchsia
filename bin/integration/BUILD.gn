@@ -28,6 +28,7 @@ source_set("context_engine_test") {
   deps = [
     ":context_common",
     "//peridot/bin/context_engine:scope_utils",
+    "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
   ]

@@ -83,6 +83,7 @@ executable("context_repository_unittest") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//third_party/gtest",
