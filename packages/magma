@@ -2,9 +2,6 @@
     "languages": [
         "cpp"
     ],
-    "imports": [
-        "garnet/packages/vulkan_loader_and_layers"
-    ],
     "packages": {
         "magma": "//garnet/lib/magma",
         "magma-test-build-only": "//garnet/lib/magma/tests:magma-test-build-only",
