@@ -72,14 +72,14 @@ public:
 
     fbl::RefPtr<PcieUpstreamNode> GetUpstream();
 
-    status_t     Claim();
+    zx_status_t  Claim();
     void         Unclaim();
     virtual void Unplug();
 
     /*
      * Trigger a function level reset (if possible)
      */
-    status_t DoFunctionLevelReset();
+    zx_status_t DoFunctionLevelReset();
 
     /*
      * Modify bits in the device's command register (in the device config space),
@@ -90,18 +90,18 @@ public:
      *
      * @param clr_bits The mask of bits to be cleared.
      * @param clr_bits The mask of bits to be set.
-     * @return A status_t indicating success or failure of the operation.
+     * @return A zx_status_t indicating success or failure of the operation.
      */
-    status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits);
+    zx_status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits);
 
     /*
      * Enable or disable bus mastering in a device's configuration.
      *
      * @param enable If true, allow the device to access main system memory as a bus
      * master.
-     * @return A status_t indicating success or failure of the operation.
+     * @return A zx_status_t indicating success or failure of the operation.
      */
-    inline status_t EnableBusMaster(bool enabled) {
+    inline zx_status_t EnableBusMaster(bool enabled) {
         if (enabled && disabled_)
             return ZX_ERR_BAD_STATE;
 
@@ -113,9 +113,9 @@ public:
      * Enable or disable PIO access in a device's configuration.
      *
      * @param enable If true, allow the device to access its PIO mapped registers.
-     * @return A status_t indicating success or failure of the operation.
+     * @return A zx_status_t indicating success or failure of the operation.
      */
-    inline status_t EnablePio(bool enabled) {
+    inline zx_status_t EnablePio(bool enabled) {
         if (enabled && disabled_)
             return ZX_ERR_BAD_STATE;
 
@@ -127,9 +127,9 @@ public:
      * Enable or disable MMIO access in a device's configuration.
      *
      * @param enable If true, allow the device to access its MMIO mapped registers.
-     * @return A status_t indicating success or failure of the operation.
+     * @return A zx_status_t indicating success or failure of the operation.
      */
-    inline status_t EnableMmio(bool enabled) {
+    inline zx_status_t EnableMmio(bool enabled) {
         if (enabled && disabled_)
             return ZX_ERR_BAD_STATE;
 
@@ -166,10 +166,10 @@ public:
      * @param out_caps A pointer to structure which, upon success, will hold the
      * capabilities of the selected IRQ mode.
      *
-     * @return A status_t indicating the success or failure of the operation.
+     * @return A zx_status_t indicating the success or failure of the operation.
      */
-    status_t QueryIrqModeCapabilities(pcie_irq_mode_t mode,
-                                      pcie_irq_mode_caps_t* out_caps) const;
+    zx_status_t QueryIrqModeCapabilities(pcie_irq_mode_t mode,
+                                         pcie_irq_mode_caps_t* out_caps) const;
 
     /**
      * Fetch details about the currently configured IRQ mode.
@@ -178,13 +178,13 @@ public:
      * info about the currently configured IRQ mode.  @see pcie_irq_mode_info_t for
      * more details.
      *
-     * @return A status_t indicating the success or failure of the operation.
+     * @return A zx_status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
      * ++ ZX_ERR_UNAVAILABLE
      *    The device has become unplugged and is waiting to be released.
      */
-    status_t GetIrqMode(pcie_irq_mode_info_t* out_info) const;
+    zx_status_t GetIrqMode(pcie_irq_mode_info_t* out_info) const;
 
     /**
      * Configure the base IRQ mode, requesting a specific number of vectors and
@@ -204,7 +204,7 @@ public:
      * @param requested_irqs The number of individual IRQ vectors the device would
      * like to use.
      *
-     * @return A status_t indicating the success or failure of the operation.
+     * @return A zx_status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
      * ++ ZX_ERR_UNAVAILABLE
@@ -220,7 +220,7 @@ public:
      *    The system is unable to allocate sufficient system IRQs to satisfy the
      *    number of IRQs and exclusivity mode requested the device driver.
      */
-    status_t SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs);
+    zx_status_t SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs);
 
     /**
      * Set the current IRQ mode to PCIE_IRQ_MODE_DISABLED
@@ -230,7 +230,7 @@ public:
     void SetIrqModeDisabled() {
         /* It should be impossible to fail a transition to the DISABLED state,
          * regardless of the state of the system.  ASSERT this in debug builds */
-        __UNUSED status_t result;
+        __UNUSED zx_status_t result;
 
         result = SetIrqMode(PCIE_IRQ_MODE_DISABLED, 0);
 
@@ -246,7 +246,7 @@ public:
      * handler.
      * @param ctx A user supplied context pointer to pass to a registered handler.
      *
-     * @return A status_t indicating the success or failure of the operation.
+     * @return A zx_status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
      * ++ ZX_ERR_UNAVAILABLE
@@ -256,7 +256,7 @@ public:
      * ++ ZX_ERR_INVALID_ARGS
      *    The irq_id parameter is out of range for the currently configured mode.
      */
-    status_t RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
+    zx_status_t RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
 
     /**
      * Mask or unmask the specified IRQ for the given device.
@@ -264,7 +264,7 @@ public:
      * @param irq_id The ID of the IRQ to mask or unmask.
      * @param mask If true, mask (disable) the IRQ.  Otherwise, unmask it.
      *
-     * @return A status_t indicating the success or failure of the operation.
+     * @return A zx_status_t indicating the success or failure of the operation.
      * Status codes may include (but are not limited to)...
      *
      * ++ ZX_ERR_UNAVAILABLE
@@ -278,15 +278,15 @@ public:
      *    The device is operating in MSI mode, but neither the PCI device nor the
      *    platform interrupt controller support masking the MSI vector.
      */
-    status_t MaskUnmaskIrq(uint irq_id, bool mask);
+    zx_status_t MaskUnmaskIrq(uint irq_id, bool mask);
 
     void SetQuirksDone() { quirks_done_ = true; }
 
     /**
      * Convenience functions.  @see MaskUnmaskIrq for details.
      */
-    status_t MaskIrq(uint irq_id)   { return MaskUnmaskIrq(irq_id, true); }
-    status_t UnmaskIrq(uint irq_id) { return MaskUnmaskIrq(irq_id, false); }
+    zx_status_t MaskIrq(uint irq_id)   { return MaskUnmaskIrq(irq_id, true); }
+    zx_status_t UnmaskIrq(uint irq_id) { return MaskUnmaskIrq(irq_id, false); }
 
     const PciConfig*     config()      const { return cfg_; }
     paddr_t              config_phys() const { return cfg_phys_; }
@@ -333,20 +333,20 @@ protected:
     void AssignCmdLocked(uint16_t value) { ModifyCmdLocked(0xFFFF, value); }
 
     // Initialization and probing.
-    status_t Init(PcieUpstreamNode& upstream);
-    status_t InitLocked(PcieUpstreamNode& upstream);
-    status_t ProbeBarsLocked();
-    status_t ProbeBarLocked(uint bar_id);
-    status_t ProbeCapabilitiesLocked();
-    status_t ParseStdCapabilitiesLocked();
-    status_t ParseExtCapabilitiesLocked();
-    status_t MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream);
-    status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream);
+    zx_status_t Init(PcieUpstreamNode& upstream);
+    zx_status_t InitLocked(PcieUpstreamNode& upstream);
+    zx_status_t ProbeBarsLocked();
+    zx_status_t ProbeBarLocked(uint bar_id);
+    zx_status_t ProbeCapabilitiesLocked();
+    zx_status_t ParseStdCapabilitiesLocked();
+    zx_status_t ParseExtCapabilitiesLocked();
+    zx_status_t MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream);
+    zx_status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream);
 
     // BAR allocation
-    virtual status_t AllocateBars();
-    status_t         AllocateBarsLocked();
-    status_t         AllocateBarLocked(pcie_bar_info_t& info);
+    virtual zx_status_t AllocateBars();
+    zx_status_t         AllocateBarsLocked();
+    zx_status_t         AllocateBarLocked(pcie_bar_info_t& info);
 
     // Disable a device, and anything downstream of it.  The device will
     // continue to enumerate, but users will only be able to access config (and
@@ -387,17 +387,17 @@ private:
     friend class SharedLegacyIrqHandler;
 
     // Top level internal IRQ support.
-    status_t QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
-                                            pcie_irq_mode_caps_t* out_caps) const;
-    status_t GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const;
-    status_t SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs);
-    status_t RegisterIrqHandlerLocked(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
-    status_t MaskUnmaskIrqLocked(uint irq_id, bool mask);
+    zx_status_t QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
+                                               pcie_irq_mode_caps_t* out_caps) const;
+    zx_status_t GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const;
+    zx_status_t SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs);
+    zx_status_t RegisterIrqHandlerLocked(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
+    zx_status_t MaskUnmaskIrqLocked(uint irq_id, bool mask);
 
     // Internal Legacy IRQ support.
-    status_t MaskUnmaskLegacyIrq(bool mask);
-    status_t EnterLegacyIrqMode(uint requested_irqs);
-    void     LeaveLegacyIrqMode();
+    zx_status_t MaskUnmaskLegacyIrq(bool mask);
+    zx_status_t EnterLegacyIrqMode(uint requested_irqs);
+    void        LeaveLegacyIrqMode();
 
     // Internal MSI IRQ support.
     void SetMsiEnb(bool enb) {
@@ -407,21 +407,21 @@ private:
                 PCIE_CAP_MSI_CTRL_SET_ENB(enb, cfg_->Read(irq_.msi->ctrl_reg())));
     }
 
-    bool     MaskUnmaskMsiIrqLocked(uint irq_id, bool mask);
-    status_t MaskUnmaskMsiIrq(uint irq_id, bool mask);
-    void     MaskAllMsiVectors();
-    void     SetMsiTarget(uint64_t tgt_addr, uint32_t tgt_data);
-    void     FreeMsiBlock();
-    void     SetMsiMultiMessageEnb(uint requested_irqs);
-    void     LeaveMsiIrqMode();
-    status_t EnterMsiIrqMode(uint requested_irqs);
+    bool        MaskUnmaskMsiIrqLocked(uint irq_id, bool mask);
+    zx_status_t MaskUnmaskMsiIrq(uint irq_id, bool mask);
+    void        MaskAllMsiVectors();
+    void        SetMsiTarget(uint64_t tgt_addr, uint32_t tgt_data);
+    void        FreeMsiBlock();
+    void        SetMsiMultiMessageEnb(uint requested_irqs);
+    void        LeaveMsiIrqMode();
+    zx_status_t EnterMsiIrqMode(uint requested_irqs);
 
     enum handler_return        MsiIrqHandler(pcie_irq_handler_state_t& hstate);
     static enum handler_return MsiIrqHandlerThunk(void *arg);
 
     // Common Internal IRQ support.
-    void     ResetCommonIrqBookkeeping();
-    status_t AllocIrqHandlers(uint requested_irqs, bool is_masked);
+    void        ResetCommonIrqBookkeeping();
+    zx_status_t AllocIrqHandlers(uint requested_irqs, bool is_masked);
 
     /* Capabilities */
     // TODO(cja): organize capabilities into their own structure

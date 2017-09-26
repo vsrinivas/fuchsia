@@ -87,10 +87,10 @@ public:
      *
      * @return A status code indicating the success or failure of the operation.
      */
-    virtual status_t AllocMsiBlock(uint requested_irqs,
-                                   bool can_target_64bit,
-                                   bool is_msix,
-                                   pcie_msi_block_t* out_block) {
+    virtual zx_status_t AllocMsiBlock(uint requested_irqs,
+                                      bool can_target_64bit,
+                                      bool is_msix,
+                                      pcie_msi_block_t* out_block) {
         // Bus driver code should not be calling this if the platform does not
         // indicate support for MSI.
         DEBUG_ASSERT(false);

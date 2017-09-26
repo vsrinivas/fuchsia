@@ -719,7 +719,7 @@ int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv, uint32_t flags
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
     } else {
         printf("Attempting reset of device %02x:%02x.%01x...\n", bus_id, dev_id, func_id);
-        status_t res = dev->DoFunctionLevelReset();
+        zx_status_t res = dev->DoFunctionLevelReset();
         dev = nullptr;
         if (res != ZX_OK)
             printf("Reset attempt failed (res = %d).\n", res);

@@ -43,7 +43,7 @@ void PcieUpstreamNode::AllocateDownstreamBars() {
     for (uint i = 0; i < fbl::count_of(downstream_); ++i) {
         auto device = GetDownstream(i);
         if (device != nullptr) {
-            status_t res = device->AllocateBars();
+            zx_status_t res = device->AllocateBars();
             if (res != ZX_OK)
                 device->Disable();
         }

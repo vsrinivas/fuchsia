@@ -62,7 +62,7 @@ fbl::RefPtr<PcieDevice> PcieDeviceImpl::Create(PcieUpstreamNode& upstream,
     }
 
     auto dev = fbl::AdoptRef(static_cast<PcieDevice*>(raw_dev));
-    status_t res = raw_dev->Init(upstream);
+    zx_status_t res = raw_dev->Init(upstream);
     if (res != ZX_OK) {
         TRACEF("Failed to initialize PCIe device %02x:%02x.%01x. (res %d)\n",
                 upstream.managed_bus_id(), dev_id, func_id, res);
@@ -101,10 +101,10 @@ fbl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev_
     return PcieDeviceImpl::Create(upstream, dev_id, func_id);
 }
 
-status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
+zx_status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
     AutoLock dev_lock(&dev_lock_);
 
-    status_t res = InitLocked(upstream);
+    zx_status_t res = InitLocked(upstream);
     if (res == ZX_OK) {
         // Things went well, flag the device as plugged in and link ourselves up to
         // the graph.
@@ -115,8 +115,8 @@ status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
     return res;
 }
 
-status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
-    status_t res;
+zx_status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
+    zx_status_t res;
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(cfg_ == nullptr);
 
@@ -187,8 +187,8 @@ void PcieDevice::Unplug() {
     bus_drv_.UnlinkDeviceFromUpstream(*this);
 }
 
-status_t PcieDevice::DoFunctionLevelReset() {
-    status_t ret;
+zx_status_t PcieDevice::DoFunctionLevelReset() {
+    zx_status_t ret;
 
     // TODO(johngro) : Function level reset is an operation which can take quite
     // a long time (more than a second).  We should not hold the device lock for
@@ -336,7 +336,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
     return ret;
 }
 
-status_t PcieDevice::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
+zx_status_t PcieDevice::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
     AutoLock dev_lock(&dev_lock_);
 
     /* In order to keep internal bookkeeping coherent, and interactions between
@@ -365,7 +365,7 @@ void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
     }
 }
 
-status_t PcieDevice::ProbeBarsLocked() {
+zx_status_t PcieDevice::ProbeBarsLocked() {
     DEBUG_ASSERT(cfg_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
@@ -383,7 +383,7 @@ status_t PcieDevice::ProbeBarsLocked() {
         DEBUG_ASSERT(bars_[i].size == 0);
         DEBUG_ASSERT(bars_[i].allocation == nullptr);
 
-        status_t probe_res = ProbeBarLocked(i);
+        zx_status_t probe_res = ProbeBarLocked(i);
         if (probe_res != ZX_OK)
             return probe_res;
 
@@ -405,7 +405,7 @@ status_t PcieDevice::ProbeBarsLocked() {
     return ZX_OK;
 }
 
-status_t PcieDevice::ProbeBarLocked(uint bar_id) {
+zx_status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     DEBUG_ASSERT(cfg_);
     DEBUG_ASSERT(bar_id < bar_count_);
     DEBUG_ASSERT(bar_id < fbl::count_of(bars_));
@@ -493,12 +493,12 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
 }
 
 
-status_t PcieDevice::AllocateBars() {
+zx_status_t PcieDevice::AllocateBars() {
     AutoLock dev_lock(&dev_lock_);
     return AllocateBarsLocked();
 }
 
-status_t PcieDevice::AllocateBarsLocked() {
+zx_status_t PcieDevice::AllocateBarsLocked() {
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(plugged_in_);
 
@@ -510,7 +510,7 @@ status_t PcieDevice::AllocateBarsLocked() {
     DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
     for (size_t i = 0; i < bar_count_; ++i) {
         if (bars_[i].size) {
-            status_t ret = AllocateBarLocked(bars_[i]);
+            zx_status_t ret = AllocateBarLocked(bars_[i]);
             if (ret != ZX_OK)
                 return ret;
         }
@@ -519,7 +519,7 @@ status_t PcieDevice::AllocateBarsLocked() {
     return ZX_OK;
 }
 
-status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
+zx_status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(plugged_in_);
 
@@ -554,7 +554,7 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
             alloc = &upstream->pio_regions();
         }
 
-        status_t res = ZX_ERR_NOT_FOUND;
+        zx_status_t res = ZX_ERR_NOT_FOUND;
         if (alloc != nullptr) {
             res = alloc->GetRegion({ .base = info.bus_addr, .size = info.size }, info.allocation);
         }
@@ -598,7 +598,7 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
         uint64_t align_size  = ((info.size >= PAGE_SIZE) || is_io_space)
                              ? info.size
                              : PAGE_SIZE;
-        status_t res = alloc->GetRegion(align_size, align_size, info.allocation);
+        zx_status_t res = alloc->GetRegion(align_size, align_size, info.allocation);
 
         if (res != ZX_OK) {
             if ((res == ZX_ERR_NOT_FOUND) && (alloc == &upstream->mmio_hi_regions())) {

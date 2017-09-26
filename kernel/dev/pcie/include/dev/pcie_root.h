@@ -44,7 +44,7 @@ public:
     //
     // @return ZX_OK if we successfully swizzled
     // @return ZX_ERR_NOT_FOUND if we did not know how to swizzle this pin
-    virtual status_t Swizzle(uint dev_id, uint func_id, uint pin, uint *irq) = 0;
+    virtual zx_status_t Swizzle(uint dev_id, uint func_id, uint pin, uint *irq) = 0;
 
     // WAVL-tree Index
     uint GetKey() const { return managed_bus_id(); }

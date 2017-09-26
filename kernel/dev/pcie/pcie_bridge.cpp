@@ -53,7 +53,7 @@ fbl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
     }
 
     auto bridge = fbl::AdoptRef(static_cast<PcieDevice*>(raw_bridge));
-    status_t res = raw_bridge->Init(upstream);
+    zx_status_t res = raw_bridge->Init(upstream);
     if (res != ZX_OK) {
         TRACEF("Failed to initialize PCIe bridge %02x:%02x.%01x. (res %d)\n",
                 upstream.managed_bus_id(), dev_id, func_id, res);
@@ -63,11 +63,11 @@ fbl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
     return bridge;
 }
 
-status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
+zx_status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
     AutoLock dev_lock(&dev_lock_);
 
     // Initialize the device portion of ourselves first.
-    status_t res = PcieDevice::InitLocked(upstream);
+    zx_status_t res = PcieDevice::InitLocked(upstream);
     if (res != ZX_OK)
         return res;
 
@@ -119,7 +119,7 @@ status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
     return res;
 }
 
-status_t PcieBridge::ParseBusWindowsLocked() {
+zx_status_t PcieBridge::ParseBusWindowsLocked() {
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
     // Parse the currently configured windows used to determine MMIO/PIO
@@ -169,11 +169,11 @@ void PcieBridge::Unplug() {
     PcieUpstreamNode::UnplugDownstream();
 }
 
-status_t PcieBridge::AllocateBars() {
+zx_status_t PcieBridge::AllocateBars() {
     AutoLock dev_lock(&dev_lock_);
 
     // Start by making sure we can allocate our bridge windows.
-    status_t res = AllocateBridgeWindowsLocked();
+    zx_status_t res = AllocateBridgeWindowsLocked();
     if (res != ZX_OK)
         return res;
 
@@ -189,8 +189,8 @@ status_t PcieBridge::AllocateBars() {
     return ZX_OK;
 }
 
-status_t PcieBridge::AllocateBridgeWindowsLocked() {
-    status_t ret;
+zx_status_t PcieBridge::AllocateBridgeWindowsLocked() {
+    zx_status_t ret;
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
     // Hold a reference to our upstream node while we do this.  If we cannot

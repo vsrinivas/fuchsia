@@ -54,17 +54,17 @@ public:
     bool     supports_32bit_pio() const { return supports_32bit_pio_; }
 
 protected:
-    status_t AllocateBars() override;
-    status_t AllocateBridgeWindowsLocked();
-    void     Disable() override;
+    zx_status_t AllocateBars() override;
+    zx_status_t AllocateBridgeWindowsLocked();
+    void        Disable() override;
 
 private:
     friend class PcieBusDriver;
 
     PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id, uint mbus_id);
 
-    status_t ParseBusWindowsLocked();
-    status_t Init(PcieUpstreamNode& upstream);
+    zx_status_t ParseBusWindowsLocked();
+    zx_status_t Init(PcieUpstreamNode& upstream);
 
     RegionAllocator mmio_lo_regions_;
     RegionAllocator mmio_hi_regions_;

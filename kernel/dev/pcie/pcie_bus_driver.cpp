@@ -73,7 +73,7 @@ PcieBusDriver::~PcieBusDriver() {
     ecam_regions_.clear();
 }
 
-status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
+zx_status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
     if (root == nullptr)
         return ZX_ERR_INVALID_ARGS;
 
@@ -96,7 +96,7 @@ status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
     return ZX_OK;
 }
 
-status_t PcieBusDriver::RescanDevices() {
+zx_status_t PcieBusDriver::RescanDevices() {
     if (!IsOperational()) {
         TRACEF("Cannot rescan devices until the bus driver is operational!\n");
         return ZX_ERR_BAD_STATE;
@@ -145,7 +145,7 @@ bool PcieBusDriver::AdvanceState(State expected, State next) {
     return true;
 }
 
-status_t PcieBusDriver::StartBusDriver() {
+zx_status_t PcieBusDriver::StartBusDriver() {
     if (!AdvanceState(State::NOT_STARTED, State::STARTING_SCANNING))
         return ZX_ERR_BAD_STATE;
 
@@ -345,7 +345,7 @@ void PcieBusDriver::ForeachDevice(ForeachDeviceCallback cbk, void* ctx) {
                    }, &foreach_device_ctx);
 }
 
-status_t PcieBusDriver::AllocBookkeeping() {
+zx_status_t PcieBusDriver::AllocBookkeeping() {
     // Create the RegionPool we will use to supply the memory for the
     // bookkeeping for all of our region tracking and allocation needs.  Then
     // assign it to each of our allocators.
@@ -396,10 +396,10 @@ bool PcieBusDriver::ForeachDownstreamDevice(const fbl::RefPtr<PcieUpstreamNode>&
     return keep_going;
 }
 
-status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
-                                             uint64_t size,
-                                             PciAddrSpace aspace,
-                                             bool add_op) {
+zx_status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
+                                                uint64_t size,
+                                                PciAddrSpace aspace,
+                                                bool add_op) {
     if (!IsNotStarted(true)) {
         TRACEF("Cannot add/subtract bus regions once the bus driver has been started!\n");
         return ZX_ERR_BAD_STATE;
@@ -428,7 +428,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
             uint64_t hi_base = U32_MAX + 1;
             uint64_t lo_size = hi_base - lo_base;
             uint64_t hi_size = size - lo_size;
-            status_t res;
+            zx_status_t res;
 
             res = (mmio_lo.*OpPtr)({ .base = lo_base, .size = lo_size }, true);
             if (res != ZX_OK)
@@ -446,7 +446,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
     }
 }
 
-status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
+zx_status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
     AutoLock lock(&driver_lock_);
 
     if (driver_ != nullptr) {
@@ -461,7 +461,7 @@ status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status_t ret = driver_->AllocBookkeeping();
+    zx_status_t ret = driver_->AllocBookkeeping();
     if (ret != ZX_OK)
         driver_.reset();
 
@@ -547,7 +547,7 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
     return cfg.get();
 }
 
-status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
+zx_status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
     if (!IsNotStarted()) {
         TRACEF("Cannot add/subtract ECAM regions once the bus driver has been started!\n");
         return ZX_ERR_BAD_STATE;
@@ -587,7 +587,7 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status_t res = region->MapEcam();
+    zx_status_t res = region->MapEcam();
     if (res != ZX_OK) {
         TRACEF("Failed to map ECAM region for bus range [0x%02x, 0x%02x]\n",
                ecam.bus_start, ecam.bus_end);
@@ -605,7 +605,7 @@ PcieBusDriver::MappedEcamRegion::~MappedEcamRegion() {
     }
 }
 
-status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
+zx_status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
     DEBUG_ASSERT(ecam_.bus_start <= ecam_.bus_end);
     DEBUG_ASSERT((ecam_.size % PCIE_ECAM_BYTE_PER_BUS) == 0);
     DEBUG_ASSERT((ecam_.size / PCIE_ECAM_BYTE_PER_BUS) ==

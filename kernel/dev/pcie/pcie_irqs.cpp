@@ -50,7 +50,7 @@ void PcieDevice::ResetCommonIrqBookkeeping() {
     irq_.handler_count = 0;
 }
 
-status_t PcieDevice::AllocIrqHandlers(uint requested_irqs, bool is_masked) {
+zx_status_t PcieDevice::AllocIrqHandlers(uint requested_irqs, bool is_masked) {
     DEBUG_ASSERT(requested_irqs);
     DEBUG_ASSERT(!irq_.handlers);
     DEBUG_ASSERT(!irq_.handler_count);
@@ -225,7 +225,7 @@ void SharedLegacyIrqHandler::RemoveDevice(PcieDevice& dev) {
         mask_interrupt(irq_id_);
 }
 
-status_t PcieDevice::MaskUnmaskLegacyIrq(bool mask) {
+zx_status_t PcieDevice::MaskUnmaskLegacyIrq(bool mask) {
     if (!irq_.handlers || !irq_.handler_count)
         return ZX_ERR_INVALID_ARGS;
 
@@ -242,7 +242,7 @@ status_t PcieDevice::MaskUnmaskLegacyIrq(bool mask) {
     return ZX_OK;
 }
 
-status_t PcieDevice::EnterLegacyIrqMode(uint requested_irqs) {
+zx_status_t PcieDevice::EnterLegacyIrqMode(uint requested_irqs) {
     DEBUG_ASSERT(requested_irqs);
 
     if (!irq_.legacy.pin || (requested_irqs > 1))
@@ -253,7 +253,7 @@ status_t PcieDevice::EnterLegacyIrqMode(uint requested_irqs) {
 
     // We can never fail to allocated a single handlers (since we are going to
     // use the pre-allocated singleton)
-    __UNUSED status_t res = AllocIrqHandlers(requested_irqs, true);
+    __UNUSED zx_status_t res = AllocIrqHandlers(requested_irqs, true);
     DEBUG_ASSERT(res == ZX_OK);
     DEBUG_ASSERT(irq_.handlers == &irq_.singleton_handler);
 
@@ -311,7 +311,7 @@ bool PcieDevice::MaskUnmaskMsiIrqLocked(uint irq_id, bool mask) {
     return ret;
 }
 
-status_t PcieDevice::MaskUnmaskMsiIrq(uint irq_id, bool mask) {
+zx_status_t PcieDevice::MaskUnmaskMsiIrq(uint irq_id, bool mask) {
     if (irq_id >= irq_.handler_count)
         return ZX_ERR_INVALID_ARGS;
 
@@ -416,10 +416,10 @@ void PcieDevice::LeaveMsiIrqMode() {
     ResetCommonIrqBookkeeping();
 }
 
-status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
+zx_status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
     DEBUG_ASSERT(requested_irqs);
 
-    status_t res = ZX_OK;
+    zx_status_t res = ZX_OK;
 
     // We cannot go into MSI mode if we don't support MSI at all, or we don't
     // support the number of IRQs requested
@@ -537,8 +537,8 @@ enum handler_return PcieDevice::MsiIrqHandlerThunk(void *arg) {
  * Internal implementation of the Kernel facing API.
  *
  ******************************************************************************/
-status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
-                                                    pcie_irq_mode_caps_t* out_caps) const {
+zx_status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
+                                                       pcie_irq_mode_caps_t* out_caps) const {
     DEBUG_ASSERT(plugged_in_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(out_caps);
@@ -595,7 +595,7 @@ status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
     return ZX_OK;
 }
 
-status_t PcieDevice::GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const {
+zx_status_t PcieDevice::GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const {
     DEBUG_ASSERT(plugged_in_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(out_info);
@@ -607,7 +607,7 @@ status_t PcieDevice::GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const {
     return ZX_OK;
 }
 
-status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs) {
+zx_status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs) {
     DEBUG_ASSERT(plugged_in_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
@@ -671,7 +671,7 @@ status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs)
     }
 }
 
-status_t PcieDevice::RegisterIrqHandlerLocked(uint irq_id,
+zx_status_t PcieDevice::RegisterIrqHandlerLocked(uint irq_id,
                                               pcie_irq_handler_fn_t handler,
                                               void* ctx) {
     DEBUG_ASSERT(plugged_in_);
@@ -711,7 +711,7 @@ status_t PcieDevice::RegisterIrqHandlerLocked(uint irq_id,
     return ZX_OK;
 }
 
-status_t PcieDevice::MaskUnmaskIrqLocked(uint irq_id, bool mask) {
+zx_status_t PcieDevice::MaskUnmaskIrqLocked(uint irq_id, bool mask) {
     DEBUG_ASSERT(plugged_in_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
@@ -751,7 +751,7 @@ status_t PcieDevice::MaskUnmaskIrqLocked(uint irq_id, bool mask) {
  * Kernel API; prototypes in dev/pcie_irqs.h
  *
  ******************************************************************************/
-status_t PcieDevice::QueryIrqModeCapabilities(pcie_irq_mode_t mode,
+zx_status_t PcieDevice::QueryIrqModeCapabilities(pcie_irq_mode_t mode,
                                               pcie_irq_mode_caps_t* out_caps) const {
     if (!out_caps)
         return ZX_ERR_INVALID_ARGS;
@@ -763,7 +763,7 @@ status_t PcieDevice::QueryIrqModeCapabilities(pcie_irq_mode_t mode,
         : ZX_ERR_BAD_STATE;
 }
 
-status_t PcieDevice::GetIrqMode(pcie_irq_mode_info_t* out_info) const {
+zx_status_t PcieDevice::GetIrqMode(pcie_irq_mode_info_t* out_info) const {
     if (!out_info)
         return ZX_ERR_INVALID_ARGS;
 
@@ -774,7 +774,7 @@ status_t PcieDevice::GetIrqMode(pcie_irq_mode_info_t* out_info) const {
         : ZX_ERR_BAD_STATE;
 }
 
-status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
+zx_status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
     AutoLock dev_lock(&dev_lock_);
 
     return ((mode == PCIE_IRQ_MODE_DISABLED) || (plugged_in_ && !disabled_))
@@ -782,7 +782,7 @@ status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
         : ZX_ERR_BAD_STATE;
 }
 
-status_t PcieDevice::RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx) {
+zx_status_t PcieDevice::RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx) {
     AutoLock dev_lock(&dev_lock_);
 
     return (plugged_in_ && !disabled_)
@@ -790,7 +790,7 @@ status_t PcieDevice::RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handl
         : ZX_ERR_BAD_STATE;
 }
 
-status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
+zx_status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
     AutoLock dev_lock(&dev_lock_);
 
     return (mask || (plugged_in_ && !disabled_))
@@ -810,7 +810,7 @@ status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
 // Platform dependent remapping is an exercise for the reader.  FWIW: PC
 // architectures use the _PRT tables in ACPI to perform the remapping.
 //
-status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream) {
+zx_status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
     if (!legacy_irq_pin() || (legacy_irq_pin() > PCIE_MAX_LEGACY_IRQ_PINS))
@@ -902,7 +902,7 @@ status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream)
     return root->Swizzle(dev->dev_id(), dev->func_id(), pin, &irq_.legacy.irq_id);
 }
 
-status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
+zx_status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(cfg_);
     DEBUG_ASSERT(irq_.legacy.shared_handler == nullptr);
@@ -915,7 +915,7 @@ status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
     // handler.
     irq_.legacy.pin = cfg_->Read(PciConfig::kInterruptPin);
     if (irq_.legacy.pin) {
-        status_t res = MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>(&upstream));
+        zx_status_t res = MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>(&upstream));
         if (res != ZX_OK) {
             TRACEF("Failed to map legacy pin to platform IRQ ID for "
                    "dev %02x:%02x.%01x (pin %u)\n",

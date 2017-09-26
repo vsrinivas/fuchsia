@@ -257,7 +257,7 @@ PciCapMsi::PciCapMsi(const PcieDevice& dev, uint16_t base, uint8_t id)
 }
 
 /* Catch quirks and invalid capability offsets we may see */
-inline status_t validate_capability_offset(uint8_t offset) {
+inline zx_status_t validate_capability_offset(uint8_t offset) {
     if (offset == 0xFF
         || offset < PCIE_CAP_PTR_MIN_VALID
         || offset > PCIE_CAP_PTR_MAX_VALID) {
@@ -274,8 +274,8 @@ inline status_t validate_capability_offset(uint8_t offset) {
  * std / ext attributes.
  */
 
-status_t PcieDevice::ParseStdCapabilitiesLocked() {
-    status_t res = ZX_OK;
+zx_status_t PcieDevice::ParseStdCapabilitiesLocked() {
+    zx_status_t res = ZX_OK;
     uint8_t cap_offset = cfg_->Read(PciConfig::kCapabilitiesPtr);
     uint8_t caps_found = 0;
     fbl::AllocChecker ac;
@@ -338,7 +338,7 @@ status_t PcieDevice::ParseStdCapabilitiesLocked() {
     return res;
 }
 
-status_t PcieDevice::ParseExtCapabilitiesLocked() {
+zx_status_t PcieDevice::ParseExtCapabilitiesLocked() {
     /*
      * TODO(cja): Since ExtCaps are a no-op right now (we had nothing in the table for
      * supported extended capabilities) this is a stub for now.
@@ -348,8 +348,8 @@ status_t PcieDevice::ParseExtCapabilitiesLocked() {
 
 // Parse PCI Standard Capabilities starting with the pointer in the PCI
 // config structure.
-status_t PcieDevice::ProbeCapabilitiesLocked() {
-    status_t ret = ParseStdCapabilitiesLocked();
+zx_status_t PcieDevice::ProbeCapabilitiesLocked() {
+    zx_status_t ret = ParseStdCapabilitiesLocked();
     if (ret != ZX_OK) {
         return ret;
     }
