@@ -21,19 +21,6 @@ source_set("cpp") {
   ]
 }
 
-source_set("application_context") {
-  testonly = true
-
-  sources = [
-    "application_context.cc",
-    "application_context.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/app/cpp",
-  ]
-}
-
 # Drop this into a gtest executable target as a dependency and it will run all
 # of the tests and report results to the TestRunner service.
 source_set("gtest_main") {
@@ -43,7 +30,6 @@ source_set("gtest_main") {
   ]
   deps = [
     "//garnet/public/lib/test_runner/cpp/reporting",
-    "//garnet/public/lib/test_runner/cpp:application_context",
   ]
   public_deps = [
     "//third_party/gtest",

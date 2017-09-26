@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+ #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/test_runner/cpp/application_context.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
@@ -18,8 +18,8 @@ int main(int argc, char** argv) {
 
   {
     fsl::MessageLoop message_loop;
-    test_runner::ReportResult(argv[0], test_runner::GetApplicationContext(),
-                 listener.GetResults());
+    auto context = app::ApplicationContext::CreateFromStartupInfo();
+    test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 
   return status;
