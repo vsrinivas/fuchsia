@@ -140,11 +140,16 @@ config("thread_safety_annotations") {
   defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
 }
 
+config("enable_zircon_asserts") {
+  defines = [ "ZX_DEBUGLEVEL=2" ]
+}
+
+declare_args() {
+  zircon_asserts = is_debug
+}
+
 config("zircon_asserts") {
-  if (is_debug) {
-    debug_level = 2
-  } else {
-    debug_level = 0
+  if (zircon_asserts) {
+    configs = [ ":enable_zircon_asserts" ]
   }
-  defines = [ "ZX_DEBUGLEVEL=$debug_level" ]
 }
