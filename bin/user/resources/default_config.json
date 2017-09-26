@@ -11,8 +11,7 @@
     "file:///system/apps/agents/maxwell_entity_selector",
     "file:///system/apps/agents/maxwell_proposal_maker",
     "file:///system/apps/agents/usage_log.dartx",
-    "file:///system/apps/weather_agent",
-    "https://storage.googleapis.com/maxwell-agents/kronk"
+    "file:///system/apps/weather_agent"
   ],
   "mi_dashboard": true
 }
