@@ -188,6 +188,12 @@ static int i2c_hid_irq_thread(void* arg) {
     uint16_t len = letoh16(dev->hiddesc->wMaxInputLength);
     uint8_t* buf = malloc(len);
 
+    // Last report received, so we can deduplicate.  This is only necessary since
+    // we haven't wired through interrupts yet, and some devices always return
+    // the last received report when you attempt to read from them.
+    uint8_t* last_report = malloc(len);
+    size_t last_report_len = 0;
+
     zx_time_t last_timeout_warning = 0;
     const zx_duration_t kMinTimeBetweenWarnings = ZX_SEC(10);
 
@@ -207,7 +213,7 @@ static int i2c_hid_irq_thread(void* arg) {
                 continue;
             }
             dprintf(ERROR, "i2c-hid: fatal device_read failure %d\n", status);
-            return status;
+            break;
         }
         if (actual < 2) {
             dprintf(ERROR, "i2c-hid: short read (%zd < 2)!!!\n", actual);
@@ -224,15 +230,29 @@ static int i2c_hid_irq_thread(void* arg) {
                     report_len, actual);
             continue;
         }
+
+        // Check for duplicates.  See comment by |last_report| definition.
+        if (last_report_len == report_len && !memcmp(buf, last_report, report_len)) {
+            continue;
+        }
+
         mtx_lock(&dev->lock);
         if (dev->ifc) {
             dev->ifc->io_queue(dev->cookie, buf + 2, report_len - 2);
         }
         mtx_unlock(&dev->lock);
+
+        last_report_len = report_len;
+
+        // Swap buffers
+        uint8_t* tmp = last_report;
+        last_report = buf;
+        buf = tmp;
     }
 
     // TODO: figure out how to clean up
     free(buf);
+    free(last_report);
     return 0;
 }
 
