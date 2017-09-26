@@ -1,0 +1,54 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "cpuperf_provider"
+
+  sources = [
+    "main.cc",
+  ]
+
+  # arm64 support will come later
+  if (current_cpu == "x64") {
+    sources += [
+      "app.cc",
+      "app.h",
+      "categories.cc",
+      "categories.h",
+      "events.cc",
+      "events.h",
+      "importer.cc",
+      "importer.h",
+      "reader.cc",
+      "reader.h",
+    ]
+  }
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+
+package("cpuperf_provider") {
+  archive = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [ {
+        name = "cpuperf_provider"
+        dest = "app"
+      } ]
+
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
+}

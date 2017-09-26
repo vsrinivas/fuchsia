@@ -8,6 +8,7 @@
     "packages": {
         "trace": "//garnet/bin/trace",
         "trace_tests": "//garnet/bin/trace:trace_tests",
+        "cpuperf_provider": "//garnet/bin/cpuperf_provider",
         "ktrace_provider": "//garnet/bin/ktrace_provider",
         "trace_manager": "//garnet/bin/trace_manager"
     }

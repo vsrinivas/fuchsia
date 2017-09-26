@@ -13,9 +13,11 @@ using namespace tracing::internal;
 namespace tracing {
 namespace {
 
-const fxl::TimeDelta kStopTimeout = fxl::TimeDelta::FromSeconds(20);
+// For large traces or when verbosity is on it can take awhile to write out
+// all the records. E.g., ipm_provider can take 40 seconds with --verbose=2
+const fxl::TimeDelta kStopTimeout = fxl::TimeDelta::FromSeconds(60);
 static constexpr uint32_t kMinBufferSizeMegabytes = 1;
-static constexpr uint32_t kMaxBufferSizeMegabytes = 32;
+static constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 
 std::string SanitizeLabel(const fidl::String& label) {
   std::string result =
