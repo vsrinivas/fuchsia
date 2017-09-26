@@ -404,7 +404,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // Look for a kernel image on disk
     size_t ksz = 0;
     void* kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
-    if (!have_network && kernel == NULL) {
+    if (!have_network && zedboot_kernel == NULL && kernel == NULL) {
         goto fail;
     }
 
