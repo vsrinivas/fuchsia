@@ -52,6 +52,7 @@ LOCAL_CFLAGS += -ffreestanding
 
 LOCAL_SRCS := \
     $(LOCAL_DIR)/zircon/get_startup_handle.c \
+    $(LOCAL_DIR)/zircon/getentropy.c \
     $(LOCAL_DIR)/zircon/internal.c \
     $(LOCAL_DIR)/zircon/thrd_get_zx_handle.c \
     $(LOCAL_DIR)/pthread/allocate.c \
