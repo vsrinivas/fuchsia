@@ -21,17 +21,34 @@ both want to use LIB_ABC_XYZ_XYZ_H_ as a header guard.
 
 import argparse
 import collections
+import fileinput
 import os.path
 import paths
 import re
 import sys
 
+LAYERS = [
+    'garnet',
+    'peridot',
+    'topaz',
+]
+LAYER_PREFIXES = list(map(lambda l: '%s_PUBLIC_' % l.upper(), LAYERS))
+
 all_header_guards = collections.defaultdict(list)
 
 pragma_once = re.compile('^#pragma once$')
+disallowed_header_characters = re.compile('[^a-zA-Z0-9_]')
 
 
-def check_file(path):
+def adjust_for_layer(header_guard):
+    """Remove common layer prefix from header guard if applicable."""
+    for layer in LAYER_PREFIXES:
+        if header_guard.startswith(layer):
+            return header_guard[len(layer):]
+    return header_guard
+
+
+def check_file(path, fix_guards=False):
     """Check whether the file has a correct header guard.
 
     A header guard can either be a #pragma once, or else a matching set of
@@ -54,12 +71,13 @@ def check_file(path):
     assert(path.startswith(paths.FUCHSIA_ROOT))
     relative_path = path[len(paths.FUCHSIA_ROOT):].strip('/')
     upper_path = relative_path.upper()
-    header_guard = upper_path.replace('.', '_').replace('/', '_') + '_'
+    header_guard = re.sub(disallowed_header_characters, '_', upper_path) + '_'
+    header_guard = adjust_for_layer(header_guard)
     all_header_guards[header_guard].append(path)
 
     ifndef = re.compile('^#ifndef %s$' % header_guard)
     define = re.compile('^#define %s$' % header_guard)
-    endif = re.compile('^#endif +// %s$' % header_guard)
+    endif = re.compile('^#endif +// *%s$' % header_guard)
 
     found_pragma_once = False
     found_ifndef = False
@@ -107,17 +125,56 @@ def check_file(path):
 
     if found_ifndef or found_define or found_endif:
         print('%s contained only part of a header guard' % path)
-        return False
-
-    print('%s contained neither a header guard nor #pragma once' % path)
+    else:
+        print('%s contained neither a header guard nor #pragma once' % path)
+    if fix_guards:
+        fix_header_guard(path, header_guard)
     return False
 
 
-def check_dir(p):
-    """ Walk recursively over a directory checking .h files"""
+def fix_header_guard(path, header_guard):
+    """Attempt to fix the header guard in the given file."""
+    ifndef = re.compile('^#ifndef [^\s]+_H_$')
+    define = re.compile('^#define [^\s]+_H_$')
+    endif = re.compile('^#endif +// *[^\s]+_H_$')
+    fixed_ifndef = False
+    fixed_define = False
+    fixed_endif = False
+
+    for line in fileinput.input(path, inplace=1):
+        (new_line, changes) = re.subn(ifndef,
+                                      '#ifndef %s' % header_guard,
+                                      line)
+        if changes:
+            fixed_ifndef = True
+            sys.stdout.write(new_line)
+            continue
+        (new_line, changes) = re.subn(define,
+                                      '#define %s' % header_guard,
+                                      line)
+        if changes:
+            fixed_define = True
+            sys.stdout.write(new_line)
+            continue
+        (new_line, changes) = re.subn(endif,
+                                      '#endif  // %s' % header_guard,
+                                      line)
+        if changes:
+            fixed_endif = True
+            sys.stdout.write(new_line)
+            continue
+        sys.stdout.write(line)
+    if fixed_ifndef and fixed_define and fixed_endif:
+        print('Fixed!')
+    else:
+        print('Not fixed...')
+
+
+def check_dir(p, fix_guards=False):
+    """Walk recursively over a directory checking .h files"""
 
     def prune(d):
-        if d[0] == '.':
+        if d[0] == '.' or d == 'third_party':
             return True
         return False
 
@@ -125,7 +182,7 @@ def check_dir(p):
         # Prune dot directories like .git
         [dirs.remove(d) for d in list(dirs) if prune(d)]
         for path in paths:
-            check_file(os.path.join(root, path))
+            check_file(os.path.join(root, path), fix_guards=fix_guards)
 
 
 def check_collisions():
@@ -138,12 +195,18 @@ def check_collisions():
 
 
 def main():
-    for p in sys.argv[1:]:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--fix',
+                        help='Correct wrong header guards',
+                        action='store_true')
+    (arg_results, other_args) = parser.parse_known_args()
+    fix_guards = arg_results.fix
+    for p in other_args:
         p = os.path.abspath(p)
         if os.path.isdir(p):
-            check_dir(p)
+            check_dir(p, fix_guards=fix_guards)
         else:
-            check_file(p)
+            check_file(p, fix_guards=fix_guards)
     check_collisions()
 
 
