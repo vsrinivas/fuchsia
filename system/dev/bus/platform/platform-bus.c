@@ -11,63 +11,11 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <mdi/mdi.h>
+#include <mdi/mdi-defs.h>
 #include <zircon/process.h>
 
 #include "platform-bus.h"
-
-static void platform_bus_release_mdi(platform_bus_t* bus) {
-    if (bus->mdi_addr) {
-        zx_vmar_unmap(zx_vmar_root_self(), bus->mdi_addr, bus->mdi_size);
-        bus->mdi_addr = 0;
-    }
-    if (bus->mdi_handle != ZX_HANDLE_INVALID) {
-        zx_handle_close(bus->mdi_handle);
-        bus->mdi_handle = ZX_HANDLE_INVALID;
-    }
-}
-
-static void platform_bus_add_gpios(platform_bus_t* bus) {
-    mdi_node_ref_t  gpios, gpio_node, node;
-    if (mdi_find_node(&bus->bus_node, MDI_PLATFORM_BUS_GPIOS, &gpios) == ZX_OK) {
-        mdi_each_child(&gpios, &gpio_node) {
-            uint32_t start, count, mmio_index;
-
-            if (mdi_find_node(&gpio_node, MDI_PLATFORM_BUS_GPIOS_START, &node) != ZX_OK) {
-                printf("platform_bus_add_gpios: could not find MDI_PLATFORM_BUS_GPIOS_START\n");
-                continue;
-            }
-            mdi_node_uint32(&node, &start);
-            if (mdi_find_node(&gpio_node, MDI_PLATFORM_BUS_GPIOS_COUNT, &node) != ZX_OK) {
-                printf("platform_bus_add_gpios: could not find MDI_PLATFORM_BUS_GPIOS_COUNT\n");
-                continue;
-            }
-            mdi_node_uint32(&node, &count);
-            if (mdi_find_node(&gpio_node, MDI_PLATFORM_BUS_GPIOS_MMIO_INDEX, &node) != ZX_OK) {
-                printf("platform_bus_add_gpios: could not find MDI_PLATFORM_BUS_GPIOS_MMIO_INDEX\n");
-                continue;
-            }
-            mdi_node_uint32(&node, &mmio_index);
-
-            const uint32_t* irqs = NULL;
-            uint32_t irq_count = 0;
-            if (mdi_find_node(&gpio_node, MDI_PLATFORM_IRQS, &node) == ZX_OK) {
-                irqs = mdi_array_values(&node);
-                irq_count = mdi_array_length(&node);
-            }
-
-           pbus_interface_add_gpios(&bus->interface, start, count, mmio_index, irqs, irq_count);
-        }
-    }
-}
-
-static void platform_bus_publish_devices(platform_bus_t* bus) {
-    mdi_node_ref_t  node;
-    mdi_each_child(&bus->platform_node, &node) {
-        if (mdi_id(&node) == MDI_PLATFORM_DEVICE) {
-            platform_bus_publish_device(bus, &node);
-        }
-    }
-}
 
 zx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
     if (!interface) {
@@ -76,29 +24,7 @@ zx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
     platform_bus_t* bus = ctx;
     memcpy(&bus->interface, interface, sizeof(bus->interface));
 
-    platform_bus_add_gpios(bus);
-    platform_bus_publish_devices(bus);
     return ZX_OK;
-}
-
-static zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    platform_bus_t* bus = ctx;
-
-    if (bus->interface.ops == NULL) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return pbus_interface_get_protocol(&bus->interface, proto_id, out);
-}
-
-static zx_status_t platform_bus_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
-                                         void** vaddr, size_t* size, zx_handle_t* out_handle) {
-    platform_bus_t* bus = ctx;
-    return platform_map_mmio(&bus->resources, index, cache_policy, vaddr, size, out_handle);
-}
-
-static zx_status_t platform_bus_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
-    platform_bus_t* bus = ctx;
-    return platform_map_interrupt(&bus->resources, index, out_handle);
 }
 
 static zx_status_t platform_bus_device_add(void* ctx, const pbus_dev_t* dev, uint32_t flags) {
@@ -119,36 +45,11 @@ static zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t 
     return ZX_ERR_NOT_FOUND;
 }
 
-static platform_device_protocol_ops_t platform_dev_proto_ops = {
-    .get_protocol = platform_bus_get_protocol,
-    .map_mmio = platform_bus_map_mmio,
-    .map_interrupt = platform_bus_map_interrupt,
-};
-
 static platform_bus_protocol_ops_t platform_bus_proto_ops = {
     .set_interface = platform_bus_set_interface,
     .device_add = platform_bus_device_add,
     .device_enable = platform_bus_device_enable,
 };
-
-static zx_status_t platform_bus_get_device_protocol(void* ctx, uint32_t proto_id, void* out) {
-    switch (proto_id) {
-    case ZX_PROTOCOL_PLATFORM_BUS: {
-        platform_bus_protocol_t* proto = out;
-        proto->ops = &platform_bus_proto_ops;
-        proto->ctx = ctx;
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_PLATFORM_DEV: {
-        platform_device_protocol_t* proto = out;
-        proto->ops = &platform_dev_proto_ops;
-        proto->ctx = ctx;
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
 
 static void platform_bus_release(void* ctx) {
     platform_bus_t* bus = ctx;
@@ -158,14 +59,11 @@ static void platform_bus_release(void* ctx) {
         platform_dev_free(dev);
     }
 
-    platform_bus_release_mdi(bus);
-    platform_release_resources(&bus->resources);
     free(bus);
 }
 
 static zx_protocol_device_t platform_bus_proto = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = platform_bus_get_device_protocol,
     .release = platform_bus_release,
 };
 
@@ -200,7 +98,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
         goto fail;
     }
 
-    mdi_node_ref_t  platform_node, bus_node;
+    mdi_node_ref_t  platform_node;
     if (mdi_find_node(&root_node, MDI_PLATFORM, &platform_node) != ZX_OK) {
         printf("platform_bus_bind: couldn't find MDI_PLATFORM\n");
         goto fail;
@@ -219,23 +117,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
     }
     mdi_node_uint32(&node, &pid);
 
-    // count resources for bus device
-    uint32_t mmio_count = 0;
-    uint32_t irq_count = 0;
-    bool has_platform_bus_node = false;
-    if (mdi_find_node(&platform_node, MDI_PLATFORM_BUS, &bus_node) == ZX_OK) {
-        has_platform_bus_node = true;
-
-        if (mdi_find_node(&bus_node, MDI_PLATFORM_MMIOS, &node) == ZX_OK) {
-            mmio_count = mdi_child_count(&node);
-        }
-        if (mdi_find_node(&bus_node, MDI_PLATFORM_IRQS, &node) == ZX_OK) {
-            irq_count = mdi_array_length(&node);
-        }
-     }
-
-    bus = calloc(1, sizeof(platform_bus_t) + mmio_count * sizeof(platform_mmio_t)
-                 + irq_count * sizeof(platform_irq_t));
+    bus = calloc(1, sizeof(platform_bus_t));
     if (!bus) {
         status = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -245,19 +127,6 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
     bus->vid = vid;
     bus->pid = pid;
     list_initialize(&bus->devices);
-    memcpy(&bus->platform_node, &platform_node, sizeof(bus->platform_node));
-    memcpy(&bus->bus_node, &bus_node, sizeof(bus->bus_node));
-    bus->mdi_addr = mdi_addr;
-    bus->mdi_size = mdi_size;
-    bus->mdi_handle = mdi_handle;
-
-    platform_init_resources(&bus->resources, mmio_count, irq_count);
-    if (mmio_count || irq_count) {
-        zx_status_t status = platform_add_resources(bus, &bus->resources, &bus_node);
-        if (status != ZX_OK) {
-            goto fail;
-        }
-    }
 
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, bus->vid},
@@ -277,23 +146,15 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
     };
 
     status = device_add(parent, &add_args, &bus->zxdev);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-
-    if (!has_platform_bus_node) {
-        // there is no platform bus driver to wait for, so publish our devices immediately
-        platform_bus_publish_devices(bus);
-    }
-
-    return ZX_OK;
 
 fail:
     if (mdi_addr) {
         zx_vmar_unmap(zx_vmar_root_self(), mdi_addr, mdi_size);
     }
     zx_handle_close(mdi_handle);
-    free(bus);
+    if (status != ZX_OK) {
+        free(bus);
+    }
 
     return status;
 }

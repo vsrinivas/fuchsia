@@ -26,12 +26,12 @@ static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void*
 static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
                                          void** vaddr, size_t* size, zx_handle_t* out_handle) {
     platform_dev_t* pdev = ctx;
-    return platform_map_mmio(&pdev->resources, index, cache_policy, vaddr, size, out_handle);
+    return platform_map_mmio(pdev, index, cache_policy, vaddr, size, out_handle);
 }
 
 static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
     platform_dev_t* pdev = ctx;
-    return platform_map_interrupt(&pdev->resources, index, out_handle);
+    return platform_map_interrupt(pdev, index, out_handle);
 }
 
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
@@ -41,7 +41,6 @@ static platform_device_protocol_ops_t platform_dev_proto_ops = {
 };
 
 void platform_dev_free(platform_dev_t* dev) {
-    platform_release_resources(&dev->resources);
     free(dev);
 }
 
@@ -129,85 +128,6 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
 
     if (status == ZX_OK) {
         dev->enabled = enable;
-    }
-
-    return status;
-}
-
-zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node) {
-    uint32_t vid = bus->vid;
-    uint32_t pid = bus->pid;
-    uint32_t did = 0;
-    bool enabled = true;
-    uint32_t mmio_count = 0;
-    uint32_t irq_count = 0;
-    const char* name = NULL;
-    mdi_node_ref_t  node;
-
-    // first pass to determine DID and count resources
-    mdi_each_child(device_node, &node) {
-        switch (mdi_id(&node)) {
-        case MDI_NAME:
-            name = mdi_node_string(&node);
-            break;
-        case MDI_PLATFORM_DEVICE_VID:
-            mdi_node_uint32(&node, &vid);
-            break;
-        case MDI_PLATFORM_DEVICE_PID:
-            mdi_node_uint32(&node, &pid);
-            break;
-        case MDI_PLATFORM_DEVICE_DID:
-            mdi_node_uint32(&node, &did);
-            break;
-        case MDI_PLATFORM_DEVICE_ENABLED:
-            mdi_node_boolean(&node, &enabled);
-            break;
-        case MDI_PLATFORM_MMIOS:
-            mmio_count = mdi_child_count(&node);
-            break;
-        case MDI_PLATFORM_IRQS:
-            irq_count = mdi_array_length(&node);
-            break;
-        }
-    }
-
-    if (!name || !did) {
-        printf("platform_bus_publish_device: missing name or did\n");
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (did == PDEV_BUS_IMPLEMENTOR_DID) {
-        printf("platform_bus_publish_device: PDEV_BUS_IMPLEMENTOR_DID not allowed\n");
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    platform_dev_t* dev = calloc(1, sizeof(platform_dev_t) + mmio_count * sizeof(platform_mmio_t)
-                                 + irq_count * sizeof(platform_irq_t));
-    if (!dev) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    dev->bus = bus;
-    strlcpy(dev->name, name, sizeof(dev->name));
-    dev->vid = vid;
-    dev->pid = pid;
-    dev->did = did;
-
-    zx_status_t status = ZX_OK;
-    platform_init_resources(&dev->resources, mmio_count, irq_count);
-    if (mmio_count || irq_count) {
-        status = platform_add_resources(bus, &dev->resources, device_node);
-        if (status != ZX_OK) {
-            goto fail;
-        }
-    }
-    list_add_tail(&bus->devices, &dev->node);
-
-    if (enabled) {
-        status = platform_device_enable(dev, true);
-    }
-
-fail:
-    if (status != ZX_OK) {
-        platform_dev_free(dev);
     }
 
     return status;
