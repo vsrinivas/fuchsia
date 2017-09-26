@@ -15,7 +15,6 @@
 #ifndef ASSEMBLY
 
 #include <arch/defines.h>
-#include <kernel/atomic.h>
 #include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stddef.h>
