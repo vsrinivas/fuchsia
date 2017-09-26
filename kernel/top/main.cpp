@@ -14,6 +14,7 @@
 #include <app.h>
 #include <arch.h>
 #include <debug.h>
+#include <kernel/init.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <lib/heap.h>
@@ -31,8 +32,6 @@ extern int _end;
 static uint secondary_idle_thread_count;
 
 static int bootstrap2(void* arg);
-
-extern "C" void kernel_init();
 
 static void call_constructors() {
     for (void (*const* a)() = __init_array_start; a != __init_array_end; a++)
