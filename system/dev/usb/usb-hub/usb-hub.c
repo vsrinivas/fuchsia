@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/hw/usb-hub.h>
 #include <sync/completion.h>
@@ -38,7 +39,7 @@ typedef struct usb_hub {
     // delay after port power in microseconds
     zx_time_t power_on_delay;
 
-    iotxn_t* status_request;
+    usb_request_t* status_request;
     completion_t completion;
 
     thrd_t thread;
@@ -153,8 +154,8 @@ static zx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, port_status_t
     return ZX_ERR_TIMED_OUT;
 }
 
-static void usb_hub_interrupt_complete(iotxn_t* txn, void* cookie) {
-    dprintf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "\n", txn->status, txn->actual);
+static void usb_hub_interrupt_complete(usb_request_t* req, void* cookie) {
+    dprintf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "\n", req->response.status, req->response.actual);
     usb_hub_t* hub = (usb_hub_t*)cookie;
     completion_signal(&hub->completion);
 }
@@ -253,7 +254,7 @@ static void usb_hub_unbind(void* ctx) {
 }
 
 static zx_status_t usb_hub_free(usb_hub_t* hub) {
-    iotxn_release(hub->status_request);
+    usb_request_release(hub->status_request);
     free(hub->port_status);
     free(hub);
     return ZX_OK;
@@ -276,7 +277,7 @@ static zx_protocol_device_t usb_hub_device_proto = {
 
 static int usb_hub_thread(void* arg) {
     usb_hub_t* hub = (usb_hub_t*)arg;
-    iotxn_t* txn = hub->status_request;
+    usb_request_t* req = hub->status_request;
 
     usb_hub_descriptor_t desc;
     int desc_type = (hub->hub_speed == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
@@ -332,15 +333,15 @@ static int usb_hub_thread(void* arg) {
     // This loop handles events from our interrupt endpoint
     while (1) {
         completion_reset(&hub->completion);
-        iotxn_queue(hub->usb_device, txn);
+        usb_request_queue(&hub->usb, req);
         completion_wait(&hub->completion, ZX_TIME_INFINITE);
-        if (txn->status != ZX_OK || hub->thread_done) {
+        if (req->response.status != ZX_OK || hub->thread_done) {
             break;
         }
 
-        iotxn_copyfrom(txn, status_buf, txn->actual, 0);
+        usb_request_copyfrom(req, status_buf, req->response.actual, 0);
         uint8_t* bitmap = status_buf;
-        uint8_t* bitmap_end = bitmap + txn->actual;
+        uint8_t* bitmap_end = bitmap + req->response.actual;
 
         // bit zero is hub status
         if (bitmap[0] & 1) {
@@ -426,15 +427,14 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
     memcpy(&hub->usb, &usb, sizeof(usb_protocol_t));
     memcpy(&hub->bus, &bus, sizeof(usb_bus_protocol_t));
 
-    iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size);
-    if (!txn) {
-        status = ZX_ERR_NO_MEMORY;
+    usb_request_t* req;
+    status = usb_request_alloc(&req, max_packet_size, ep_addr);
+    if (status != ZX_OK) {
         goto fail;
     }
-    txn->length = max_packet_size;
-    txn->complete_cb = usb_hub_interrupt_complete;
-    txn->cookie = hub;
-    hub->status_request = txn;
+    req->complete_cb = usb_hub_interrupt_complete;
+    req->cookie = hub;
+    hub->status_request = req;
 
     int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
     if (ret != thrd_success) {

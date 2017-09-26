@@ -5,6 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/listnode.h>
@@ -67,16 +68,16 @@ typedef struct {
 static void queue_acl_read_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_acl_read_reqs)) != NULL) {
-        iotxn_t* txn = containerof(node, iotxn_t, node);
-        iotxn_queue(hci->usb_zxdev, txn);
+        usb_request_t* req = containerof(node, usb_request_t, node);
+        usb_request_queue(&hci->usb, req);
     }
 }
 
 static void queue_interrupt_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_event_reqs)) != NULL) {
-        iotxn_t* txn = containerof(node, iotxn_t, node);
-        iotxn_queue(hci->usb_zxdev, txn);
+        usb_request_t* req = containerof(node, usb_request_t, node);
+        usb_request_queue(&hci->usb, req);
     }
 }
 
@@ -116,7 +117,7 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
     }
 }
 
-static void hci_event_complete(iotxn_t* txn, void* cookie) {
+static void hci_event_complete(usb_request_t* req, void* cookie) {
     hci_t* hci = (hci_t*)cookie;
     mtx_lock(&hci->mutex);
 
@@ -125,10 +126,14 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
     if (hci->cmd_channel == ZX_HANDLE_INVALID && hci->snoop_channel == ZX_HANDLE_INVALID)
         goto out2;
 
-    if (txn->status == ZX_OK) {
+    if (req->response.status == ZX_OK) {
         uint8_t* buffer;
-        iotxn_mmap(txn, (void **)&buffer);
-        size_t length = txn->actual;
+        zx_status_t status = usb_request_mmap(req, (void*)&buffer);
+        if (status != ZX_OK) {
+            printf("usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            goto out2;
+        }
+        size_t length = req->response.actual;
         size_t packet_size = buffer[1] + 2;
 
         // simple case - packet fits in received data
@@ -178,53 +183,64 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
     }
 
 out:
-    list_add_head(&hci->free_event_reqs, &txn->node);
+    list_add_head(&hci->free_event_reqs, &req->node);
     queue_interrupt_requests_locked(hci);
 out2:
     mtx_unlock(&hci->mutex);
 }
 
-static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
+static void hci_acl_read_complete(usb_request_t* req, void* cookie) {
     hci_t* hci = (hci_t*)cookie;
 
     mtx_lock(&hci->mutex);
 
-    if (txn->status == ZX_OK) {
+    if (req->response.status == ZX_OK) {
         void* buffer;
-        iotxn_mmap(txn, &buffer);
+        zx_status_t status = usb_request_mmap(req, &buffer);
+        if (status != ZX_OK) {
+            printf("usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            mtx_unlock(&hci->mutex);
+            return;
+        }
 
         // The channel handle could be invalid here (e.g. if no process called
         // the ioctl or they closed their endpoint). Instead of explicitly
         // checking we let zx_channel_write fail with ZX_ERR_BAD_HANDLE or
         // ZX_ERR_PEER_CLOSED.
-        zx_status_t status = zx_channel_write(hci->acl_channel, 0, buffer, txn->actual, NULL, 0);
+        status = zx_channel_write(hci->acl_channel, 0, buffer, req->response.actual, NULL, 0);
         if (status < 0) {
             printf("hci_acl_read_complete failed to write: %s\n", zx_status_get_string(status));
         }
 
         // If the snoop channel is open then try to write the packet even if acl_channel was closed.
         snoop_channel_write_locked(
-            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_RECEIVED, buffer, txn->actual);
+            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_RECEIVED, buffer, req->response.actual);
     }
 
-    list_add_head(&hci->free_acl_read_reqs, &txn->node);
+    list_add_head(&hci->free_acl_read_reqs, &req->node);
     queue_acl_read_requests_locked(hci);
 
     mtx_unlock(&hci->mutex);
 }
 
-static void hci_acl_write_complete(iotxn_t* txn, void* cookie) {
+static void hci_acl_write_complete(usb_request_t* req, void* cookie) {
     hci_t* hci = (hci_t*)cookie;
 
     // FIXME what to do with error here?
     mtx_lock(&hci->mutex);
-    list_add_tail(&hci->free_acl_write_reqs, &txn->node);
+    list_add_tail(&hci->free_acl_write_reqs, &req->node);
 
     if (hci->snoop_channel) {
         void* buffer;
-        iotxn_mmap(txn, &buffer);
+        zx_status_t status = usb_request_mmap(req, &buffer);
+        if (status != ZX_OK) {
+            printf("usb_request_mmap failed: %s\n", zx_status_get_string(status));
+            mtx_unlock(&hci->mutex);
+            return;
+        }
+
         snoop_channel_write_locked(
-            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_SENT, buffer, txn->actual);
+            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_SENT, buffer, req->response.actual);
     }
 
     mtx_unlock(&hci->mutex);
@@ -298,7 +314,7 @@ static bool hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
         list_node_t* node = list_peek_head(&hci->free_acl_write_reqs);
         mtx_unlock(&hci->mutex);
 
-        // We don't have enough iotxn's. Simply punt the channel read until later.
+        // We don't have enough reqs. Simply punt the channel read until later.
         if (!node) return node;
 
         uint8_t buf[BT_HCI_MAX_FRAME_SIZE];
@@ -319,10 +335,10 @@ static bool hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
         // they were cleaned up in hci_release(). Just drop the packet.
         if (!node) return true;
 
-        iotxn_t* txn = containerof(node, iotxn_t, node);
-        iotxn_copyto(txn, buf, length, 0);
-        txn->length = length;
-        iotxn_queue(hci->usb_zxdev, txn);
+        usb_request_t* req = containerof(node, usb_request_t, node);
+        usb_request_copyto(req, buf, length, 0);
+        req->header.length = length;
+        usb_request_queue(&hci->usb, req);
     }
 
     return true;
@@ -506,15 +522,15 @@ static void hci_release(void* ctx) {
 
     mtx_lock(&hci->mutex);
 
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&hci->free_event_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    usb_request_t* req;
+    while ((req = list_remove_head_type(&hci->free_event_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&hci->free_acl_read_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&hci->free_acl_read_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&hci->free_acl_write_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&hci->free_acl_write_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
 
     mtx_unlock(&hci->mutex);
@@ -592,37 +608,34 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device, void** cookie) {
     memcpy(&hci->usb, &usb, sizeof(hci->usb));
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet);
-        if (!txn) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, intr_max_packet, intr_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        txn->length = intr_max_packet;
-        txn->complete_cb = hci_event_complete;
-        txn->cookie = hci;
-        list_add_head(&hci->free_event_reqs, &txn->node);
+        req->complete_cb = hci_event_complete;
+        req->cookie = hci;
+        list_add_head(&hci->free_event_reqs, &req->node);
     }
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, BT_HCI_MAX_FRAME_SIZE);
-        if (!txn) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, BT_HCI_MAX_FRAME_SIZE, bulk_in_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        txn->length = BT_HCI_MAX_FRAME_SIZE;
-        txn->complete_cb = hci_acl_read_complete;
-        txn->cookie = hci;
-        list_add_head(&hci->free_acl_read_reqs, &txn->node);
+        req->complete_cb = hci_acl_read_complete;
+        req->cookie = hci;
+        list_add_head(&hci->free_acl_read_reqs, &req->node);
     }
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, BT_HCI_MAX_FRAME_SIZE);
-        if (!txn) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, BT_HCI_MAX_FRAME_SIZE, bulk_out_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        txn->length = BT_HCI_MAX_FRAME_SIZE;
-        txn->complete_cb = hci_acl_write_complete;
-        txn->cookie = hci;
-        list_add_head(&hci->free_acl_write_reqs, &txn->node);
+        req->complete_cb = hci_acl_write_complete;
+        req->cookie = hci;
+        list_add_head(&hci->free_acl_write_reqs, &req->node);
     }
 
     mtx_lock(&hci->mutex);

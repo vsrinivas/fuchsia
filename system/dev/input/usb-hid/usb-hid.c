@@ -5,11 +5,12 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/iotxn.h>
 #include <ddk/protocol/hidbus.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/hw/usb-hid.h>
 
+#include <zircon/status.h>
 #include <zircon/types.h>
 #include <pretty/hexdump.h>
 
@@ -31,8 +32,8 @@ typedef struct usb_hid_device {
     usb_protocol_t usb;
 
     hid_info_t info;
-    iotxn_t* txn;
-    bool txn_queued;
+    usb_request_t* req;
+    bool req_queued;
 
     mtx_t lock;
     hidbus_ifc_t* ifc;
@@ -42,38 +43,42 @@ typedef struct usb_hid_device {
     usb_hid_descriptor_t* hid_desc;
 } usb_hid_device_t;
 
-static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
+static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
     usb_hid_device_t* hid = (usb_hid_device_t*)cookie;
-    // TODO use iotxn copyfrom instead of mmap
+    // TODO use usb request copyfrom instead of mmap
     void* buffer;
-    iotxn_mmap(txn, &buffer);
+    zx_status_t status = usb_request_mmap(req, &buffer);
+    if (status != ZX_OK) {
+        printf("usb-hid: usb_request_mmap failed: %s\n", zx_status_get_string(status));
+        return;
+    }
 #if USB_HID_DEBUG
-    printf("usb-hid: callback request status %d\n", txn->status);
-    hexdump(buffer, txn->actual);
+    printf("usb-hid: callback request status %d\n", req->response.status);
+    hexdump(buffer, req->response.actual);
 #endif
 
     bool requeue = true;
-    switch (txn->status) {
+    switch (req->response.status) {
     case ZX_ERR_IO_NOT_PRESENT:
         requeue = false;
         break;
     case ZX_OK:
         mtx_lock(&hid->lock);
         if (hid->ifc) {
-            hid->ifc->io_queue(hid->cookie, buffer, txn->actual);
+            hid->ifc->io_queue(hid->cookie, buffer, req->response.actual);
         }
         mtx_unlock(&hid->lock);
         break;
     default:
-        printf("usb-hid: unknown interrupt status %d; not requeuing iotxn\n", txn->status);
+        printf("usb-hid: unknown interrupt status %d; not requeuing req\n", req->response.status);
         requeue = false;
         break;
     }
 
     if (requeue) {
-        iotxn_queue(hid->usbdev, txn);
+        usb_request_queue(&hid->usb, req);
     } else {
-        hid->txn_queued = false;
+        hid->req_queued = false;
     }
 }
 
@@ -97,9 +102,9 @@ static zx_status_t usb_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
     }
     hid->ifc = ifc;
     hid->cookie = cookie;
-    if (!hid->txn_queued) {
-        hid->txn_queued = true;
-        iotxn_queue(hid->usbdev, hid->txn);
+    if (!hid->req_queued) {
+        hid->req_queued = true;
+        usb_request_queue(&hid->usb, hid->req);
     }
     mtx_unlock(&hid->lock);
     return ZX_OK;
@@ -226,7 +231,7 @@ static void usb_hid_unbind(void* ctx) {
 
 static void usb_hid_release(void* ctx) {
     usb_hid_device_t* hid = ctx;
-    iotxn_release(hid->txn);
+    usb_request_release(hid->req);
     free(hid);
 }
 
@@ -304,15 +309,15 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
             usbhid->info.dev_class = HID_DEV_CLASS_POINTER;
         }
 
-        usbhid->txn = usb_alloc_iotxn(endpt->bEndpointAddress, usb_ep_max_packet(endpt));
-        if (usbhid->txn == NULL) {
+        status = usb_request_alloc(&usbhid->req, usb_ep_max_packet(endpt),
+                                   endpt->bEndpointAddress);
+        if (status != ZX_OK) {
             usb_desc_iter_release(&iter);
             free(usbhid);
             return ZX_ERR_NO_MEMORY;
         }
-        usbhid->txn->length = usb_ep_max_packet(endpt);
-        usbhid->txn->complete_cb = usb_interrupt_callback;
-        usbhid->txn->cookie = usbhid;
+        usbhid->req->complete_cb = usb_interrupt_callback;
+        usbhid->req->cookie = usbhid;
 
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,
@@ -326,7 +331,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
         status = device_add(dev, &args, &usbhid->zxdev);
         if (status != ZX_OK) {
             usb_desc_iter_release(&iter);
-            iotxn_release(usbhid->txn);
+            usb_request_release(usbhid->req);
             free(usbhid);
             return status;
         }
