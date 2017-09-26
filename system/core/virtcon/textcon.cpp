@@ -398,6 +398,10 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
         moveto(tc, tc->x, y ? (y - 1) : 0);
         break;
     case 'm': // (SGR) Character Attributes
+        if (tc->argn_count == 0) { // no params == default param
+            tc->argn[0] = 0;
+            tc->argn_count = 1;
+        }
         for (int i = 0; i < tc->argn_count; i++) {
             int n = tc->argn[i];
             if ((n >= 30) && (n <= 37)) { // set fg
