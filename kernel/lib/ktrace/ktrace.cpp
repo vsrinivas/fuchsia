@@ -283,7 +283,7 @@ void* ktrace_open(uint32_t tag) {
 static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
     ktrace_state_t* ks = &KTRACE_STATE;
     if ((tag & atomic_load(&ks->grpmask)) || always) {
-        uint32_t len = static_cast<uint32_t>(strnlen(name, 31));
+        uint32_t len = static_cast<uint32_t>(strnlen(name, ZX_MAX_NAME_LEN - 1));
 
         // set size to: sizeof(hdr) + len + 1, round up to multiple of 8
         tag = (tag & 0xFFFFFFF0) | ((KTRACE_NAMESIZE + len + 1 + 7) >> 3);
