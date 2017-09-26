@@ -12,6 +12,26 @@ SharedBufferSetAllocator::SharedBufferSetAllocator(uint32_t local_map_flags,
 
 SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
 
+bool SharedBufferSetAllocator::SetFixedBufferSize(uint64_t size) {
+  FXL_DCHECK(size != 0);
+
+  fxl::MutexLocker locker(&mutex_);
+
+  FXL_DCHECK(!use_fixed_buffer_) << "SetFixedBufferSize called more than once";
+  FXL_DCHECK(buffers_.empty())
+      << "SetFixedBufferSize called after AllocateRegion";
+  FXL_DCHECK(active_sliced_buffer_id_ == kNullBufferId);
+
+  active_sliced_buffer_id_ = CreateBuffer(false, size);
+  if (active_sliced_buffer_id_ == kNullBufferId) {
+    return false;
+  }
+
+  use_fixed_buffer_ = true;
+
+  return true;
+}
+
 void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
   FXL_DCHECK(size != 0);
 
@@ -19,7 +39,7 @@ void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
 
   Locator locator;
 
-  if (size >= kWholeRegionMinimumSize) {
+  if (size >= kWholeRegionMinimumSize && !use_fixed_buffer_) {
     locator = AllocateWholeRegion(size);
   } else {
     locator = AllocateSlicedRegion(size);
@@ -105,6 +125,7 @@ SharedBufferSet::Locator SharedBufferSetAllocator::AllocateSlicedRegion(
     uint64_t size) {
   if (active_sliced_buffer_id_ == kNullBufferId) {
     // No buffer has been established for allocating sliced buffers. Create one.
+    FXL_DCHECK(!use_fixed_buffer_);
     active_sliced_buffer_id_ =
         CreateBuffer(false, size * kSlicedBufferInitialSizeMultiplier);
     if (active_sliced_buffer_id_ == kNullBufferId) {
@@ -120,6 +141,11 @@ SharedBufferSet::Locator SharedBufferSetAllocator::AllocateSlicedRegion(
   if (offset != FifoAllocator::kNullOffset) {
     // Allocation succeeded.
     return Locator(active_sliced_buffer_id_, offset);
+  }
+
+  if (use_fixed_buffer_) {
+    // Allocation failed, and we're using a fixed buffer. Fail the request.
+    return Locator::Null();
   }
 
   // Allocation failed - we need a bigger buffer. We either grow the buffer size

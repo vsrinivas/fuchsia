@@ -62,6 +62,16 @@ void* AllocateRegion(SharedBufferSetAllocator* under_test,
   return region;
 }
 
+void AllocateRegionShouldFail(SharedBufferSetAllocator* under_test,
+                              uint64_t size) {
+  // Do an allocation.
+  void* region = under_test->AllocateRegion(size);
+  EXPECT_FALSE(region);
+
+  // Make sure no buffer was created unexpectedly.
+  VerifyNoBufferUpdate(under_test);
+}
+
 uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
                             uint32_t expected_buffer_id) {
   uint32_t buffer_id;
@@ -161,6 +171,32 @@ TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
 
   // Do another allocation from the new buffer.
   AllocateRegion(&under_test, kSmallAlloc, second_buffer_id);
+}
+
+// Tests SharedBufferSetAllocator::SetFixedBufferSize.
+TEST(SharedBufferSetAllocatorTest, SetFixedBufferSize) {
+  SharedBufferSetAllocator under_test(
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_MAP);
+
+  EXPECT_TRUE(under_test.SetFixedBufferSize(kSmallAlloc * 3));
+  uint32_t buffer_id = VerifyBufferAdd(&under_test);
+
+  void* region_0 = AllocateRegion(&under_test, kSmallAlloc, buffer_id);
+  void* region_1 = AllocateRegion(&under_test, kSmallAlloc, buffer_id);
+  void* region_2 = AllocateRegion(&under_test, kSmallAlloc, buffer_id);
+  AllocateRegionShouldFail(&under_test, kSmallAlloc);
+
+  under_test.ReleaseRegion(region_0);
+  void* region_3 = AllocateRegion(&under_test, kSmallAlloc, buffer_id);
+  AllocateRegionShouldFail(&under_test, kSmallAlloc);
+
+  under_test.ReleaseRegion(region_1);
+  under_test.ReleaseRegion(region_2);
+  under_test.ReleaseRegion(region_3);
+
+  // Shouldn't see any buffer updates.
+  VerifyNoBufferUpdate(&under_test);
 }
 
 }  // namespace

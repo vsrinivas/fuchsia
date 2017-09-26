@@ -104,6 +104,13 @@ class SharedBufferSetAllocator : public SharedBufferSet {
 
   ~SharedBufferSetAllocator() override;
 
+  // Configures the allocator to use a single buffer of the specified size for
+  // all allocations. |AllocateRegion| fails if the requested allocation cannot
+  // be accommodated using the single VMO. This method should be called before
+  // any allocation attempts. Returns true unless the VMO could not be
+  // allocated.
+  bool SetFixedBufferSize(uint64_t size);
+
   // Allocates a region, returning a pointer. If the requested region could not
   // be allocated, returns nullptr.
   void* AllocateRegion(uint64_t size);
@@ -180,6 +187,7 @@ class SharedBufferSetAllocator : public SharedBufferSet {
 
   zx_rights_t remote_rights_;
   mutable fxl::Mutex mutex_;
+  bool use_fixed_buffer_ FXL_GUARDED_BY(mutex_) = false;
   std::vector<Buffer> buffers_ FXL_GUARDED_BY(mutex_);
   std::multimap<uint64_t, uint32_t> free_whole_buffer_ids_by_size_
       FXL_GUARDED_BY(mutex_);
