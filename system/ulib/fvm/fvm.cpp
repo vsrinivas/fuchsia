@@ -9,15 +9,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_ptr.h>
+#include <fdio/debug.h>
+#include <fdio/watcher.h>
 #include <fs/mapped-vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <fdio/debug.h>
-#include <fdio/watcher.h>
-#include <fbl/unique_ptr.h>
 
 #include "fvm/fvm.h"
 
@@ -133,6 +134,7 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
     // size of the FVM's underlying partition.
     block_info_t block_info;
     ssize_t rc = ioctl_block_get_info(fd, &block_info);
+
     if (rc < 0) {
         return static_cast<zx_status_t>(rc);
     } else if (rc != sizeof(block_info)) {
@@ -203,6 +205,80 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
            fvm::UsableSlicesCount(disk_size, slice_size));
 
     return ZX_OK;
+}
+
+// Helper function to overwrite FVM given the slice_size
+zx_status_t fvm_overwrite(const char* path, size_t slice_size) {
+    int fd = open(path, O_RDWR);
+
+    if (fd <= 0) {
+        fprintf(stderr, "fvm_destroy: Failed to open block device\n");
+        return -1;
+    }
+
+    block_info_t block_info;
+    ssize_t rc = ioctl_block_get_info(fd, &block_info);
+
+    if (rc < 0 || rc != sizeof(block_info)) {
+        printf("fvm_destroy: Failed to query block device\n");
+        return -1;
+    }
+
+    size_t disk_size = block_info.block_count * block_info.block_size;
+    size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[metadata_size]);
+    if (!ac.check()) {
+        printf("fvm_destroy: Failed to allocate buffer\n");
+        return -1;
+    }
+
+    memset(buf.get(), 0, metadata_size);
+
+    if (lseek(fd, 0, SEEK_SET) < 0) {
+        return -1;
+    }
+
+    // Write to primary copy.
+    if (write(fd, buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
+        return -1;
+    }
+
+    // Write to backup copy
+    if (write(fd, buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
+       return -1;
+    }
+
+    if (ioctl_block_rr_part(fd) != 0) {
+        return -1;
+    }
+
+    close(fd);
+    return ZX_OK;
+}
+
+// Helper function to destroy FVM
+zx_status_t fvm_destroy(const char* path) {
+    char fvm_driver[PATH_MAX];
+    strcpy(fvm_driver, path);
+    strcat(fvm_driver, "/fvm");
+    int driver_fd = open(fvm_driver, O_RDWR);
+
+    if (driver_fd <= 0) {
+        fprintf(stderr, "fvm_destroy: Failed to open fvm driver: %d\n", driver_fd);
+        return -1;
+    }
+
+    fvm_info_t fvm_info;
+    ssize_t r;
+    if ((r = ioctl_block_fvm_query(driver_fd, &fvm_info)) <= 0) {
+        fprintf(stderr, "fvm_destroy: Failed to query fvm: %ld\n", r);
+        return -1;
+    }
+
+    close(driver_fd);
+    return fvm_overwrite(path, fvm_info.slice_size);
 }
 
 // Helper function to allocate, find, and open VPartition.

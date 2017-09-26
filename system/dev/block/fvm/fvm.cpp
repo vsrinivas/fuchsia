@@ -325,8 +325,9 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
 
     {
         fbl::AutoLock lock(&vp->lock_);
-        if (vp->IsKilledLocked())
+        if (vp->IsKilledLocked()) {
             return ZX_ERR_BAD_STATE;
+        }
         for (size_t i = 0; i < count; i++) {
             size_t pslice;
             auto vslice = vslice_start + i;
@@ -364,6 +365,7 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
             vp->SliceFreeLocked(vslice);
         }
     }
+
     return status;
 }
 

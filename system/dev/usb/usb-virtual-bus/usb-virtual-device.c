@@ -115,7 +115,6 @@ static zx_status_t virt_device_get_protocol(void* ctx, uint32_t proto_id, void* 
 }
 
 static zx_status_t virt_device_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-printf("device_open\n");
     return ZX_OK;
 }
 
@@ -125,7 +124,6 @@ static void virt_device_iotxn_queue(void* ctx, iotxn_t* txn) {
 }
 
 static void virt_device_unbind(void* ctx) {
-    printf("virt_device_unbind\n");
     usb_virtual_device_t* device = ctx;
     device_remove(device->zxdev);
 }

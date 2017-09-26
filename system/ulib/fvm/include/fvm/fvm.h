@@ -127,6 +127,10 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup,
 
 // Format a block device to be an empty FVM.
 zx_status_t fvm_init(int fd, size_t slice_size);
+// Queries driver to obtain slice_size, then overwrites and unbinds an FVM
+zx_status_t fvm_destroy(const char* path);
+// Given the slice_size, overwrites and unbinds an FVM
+zx_status_t fvm_overwrite(const char* path, size_t slice_size);
 
 // Allocates a new vpartition in the fvm, and waits for it to become
 // accessible (by watching for a corresponding block device).

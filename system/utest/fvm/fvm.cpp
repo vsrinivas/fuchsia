@@ -45,45 +45,58 @@
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
-// Creates a ramdisk, formats it, and binds to it.
+static bool use_real_disk = false;
+static char test_disk_path[PATH_MAX];
+static uint64_t test_block_size;
+static uint64_t test_block_count;
+
 static int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size,
-                        char* ramdisk_path_out, char* fvm_driver_out) {
-    if (create_ramdisk(blk_size, blk_count, ramdisk_path_out)) {
-        fprintf(stderr, "fvm: Could not create ramdisk\n");
-        return -1;
+                        char* disk_path_out, char* fvm_driver_out) {
+    int fd;
+    ssize_t r;
+    disk_path_out[0] = 0;
+    if (!use_real_disk) {
+        if (create_ramdisk(blk_size, blk_count, disk_path_out)) {
+            fprintf(stderr, "fvm: Could not create ramdisk\n");
+            goto fail;
+        }
+    } else {
+        strcpy(disk_path_out, test_disk_path);
     }
 
-    int fd = open(ramdisk_path_out, O_RDWR);
+    fd = open(disk_path_out, O_RDWR);
     if (fd < 0) {
         fprintf(stderr, "fvm: Could not open ramdisk\n");
-        destroy_ramdisk(ramdisk_path_out);
-        return -1;
+        goto fail;
     }
 
-    zx_status_t status = fvm_init(fd, slice_size);
-    if (status != ZX_OK) {
+    if (fvm_init(fd, slice_size) != ZX_OK) {
         fprintf(stderr, "fvm: Could not initialize fvm\n");
-        destroy_ramdisk(ramdisk_path_out);
         close(fd);
-        return -1;
+        goto fail;
     }
 
-    ssize_t r = ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
+    r = ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
     close(fd);
     if (r < 0) {
         fprintf(stderr, "fvm: Error binding to fvm driver\n");
-        destroy_ramdisk(ramdisk_path_out);
-        return -1;
+        goto fail;
     }
 
-    if (wait_for_driver_bind(ramdisk_path_out, "fvm")) {
+    if (wait_for_driver_bind(disk_path_out, "fvm")) {
         fprintf(stderr, "fvm: Error waiting for fvm driver to bind\n");
-        return -1;
+        goto fail;
     }
-    strcpy(fvm_driver_out, ramdisk_path_out);
+    strcpy(fvm_driver_out, disk_path_out);
     strcat(fvm_driver_out, "/fvm");
 
     return 0;
+
+fail:
+    if (!use_real_disk && disk_path_out[0]) {
+        destroy_ramdisk(disk_path_out);
+    }
+    return -1;
 }
 
 typedef struct {
@@ -161,9 +174,40 @@ static int FVMRebind(int fvm_fd, char* ramdisk_path, const partition_entry_t* en
     return fvm_fd;
 }
 
+static int FVMCheck(const char* fvm_path, size_t expected_slice_size) {
+    int fd = open(fvm_path, O_RDWR);
+
+    if (fd < 0) {
+        fprintf(stderr, "FVMCheck: Failed to open fvm driver: %d\n", fd);
+        return -1;
+    }
+
+    fvm_info_t fvm_info;
+    ssize_t r;
+    if ((r = ioctl_block_fvm_query(fd, &fvm_info)) <= 0) {
+        fprintf(stderr, "FVMCheck: Failed to query fvm: %ld\n", r);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+
+    if (expected_slice_size != fvm_info.slice_size) {
+        fprintf(stderr, "Slice size %lu did not match expected: %lu\n", fvm_info.slice_size,
+                expected_slice_size);
+        return -1;
+    }
+
+    return 0;
+}
+
 // Unbind FVM driver and removes the backing ramdisk device.
 static int EndFVMTest(const char* ramdisk_path) {
-    return destroy_ramdisk(ramdisk_path);
+    if (!use_real_disk) {
+        return destroy_ramdisk(ramdisk_path);
+    } else {
+        return fvm_destroy(ramdisk_path);
+    }
 }
 
 /////////////////////// Helper functions, definitions
@@ -417,6 +461,12 @@ static bool CheckDeadBlock(int fd) {
 // Test initializing the FVM on a partition that is smaller than a slice
 static bool TestTooSmall(void) {
     BEGIN_TEST;
+
+    if (use_real_disk) {
+        fprintf(stderr, "Test is ramdisk-exclusive; ignoring\n");
+        return true;
+    }
+
     char ramdisk_path[PATH_MAX];
     uint64_t blk_size = 512;
     uint64_t blk_count = (1 << 15);
@@ -435,6 +485,7 @@ static bool TestEmpty(void) {
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -474,6 +525,7 @@ static bool TestAllocateOne(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -516,6 +568,7 @@ static bool TestAllocateMany(void) {
     ASSERT_EQ(close(sys_fd), 0);
 
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -577,6 +630,7 @@ static bool TestCloseDuringAccess(void) {
     ASSERT_EQ(res, 0, "Background thread failed");
 
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -585,6 +639,12 @@ static bool TestCloseDuringAccess(void) {
 // operations.
 static bool TestReleaseDuringAccess(void) {
     BEGIN_TEST;
+
+    if (use_real_disk) {
+        fprintf(stderr, "Test is ramdisk-exclusive; ignoring\n");
+        return true;
+    }
+
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
@@ -626,7 +686,7 @@ static bool TestReleaseDuringAccess(void) {
     ASSERT_EQ(thrd_create(&thread, bg_thread, &vp_fd), thrd_success);
     // Let the background thread warm up a little bit...
     usleep(10000);
-    // ... and close the entire ramdisk from undearneath it!
+    // ... and close the entire ramdisk from underneath it!
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
 
     int res;
@@ -638,13 +698,75 @@ static bool TestReleaseDuringAccess(void) {
     END_TEST;
 }
 
+static bool TestDestroyDuringAccess(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0,
+              "error mounting FVM");
+
+    int fd = open(fvm_driver, O_RDWR);
+    ASSERT_GT(fd, 0);
+
+    alloc_req_t request;
+    request.slice_count = 1;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0);
+
+    auto bg_thread = [](void* arg) {
+        int vp_fd = *reinterpret_cast<int*>(arg);
+        unsigned count = 0;
+        while (true) {
+            if (++count % 10000 == 0) {
+                printf("Run %u\n", count);
+            }
+            uint8_t in[8192];
+            memset(in, 'a', sizeof(in));
+            if (write(vp_fd, in, sizeof(in)) != static_cast<ssize_t>(sizeof(in))) {
+                return 0;
+            }
+            uint8_t out[8192];
+            memset(out, 0, sizeof(out));
+            lseek(vp_fd, 0, SEEK_SET);
+            if (read(vp_fd, out, sizeof(out)) != static_cast<ssize_t>(sizeof(out))) {
+                return 0;
+            }
+            // If we DID manage to read it, then the data should be valid...
+            if (memcmp(in, out, sizeof(in)) != 0) {
+                return -1;
+            }
+        }
+    };
+
+    // Launch a background thread to read from / write to the VPartition
+    thrd_t thread;
+    ASSERT_EQ(thrd_create(&thread, bg_thread, &vp_fd), thrd_success);
+    // Let the background thread warm up a little bit...
+    usleep(10000);
+    // ... and destroy the vpartition
+    ASSERT_EQ(ioctl_block_fvm_destroy(vp_fd), 0);
+
+    int res;
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
+    ASSERT_EQ(res, 0, "Background thread failed");
+
+    close(vp_fd);
+    close(fd);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
 // Test allocating additional slices to a vpartition.
 static bool TestVPartitionExtend(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
-    const size_t kDiskSize = 512 * (1 << 20);
+    const size_t kDiskSize = use_real_disk ? test_block_size * test_block_count : 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
     ASSERT_GT(fd, 0);
@@ -721,6 +843,7 @@ static bool TestVPartitionExtend(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -730,12 +853,11 @@ static bool TestVPartitionExtendSparse(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
-    uint64_t blk_size = 512;
-    uint64_t blk_count = 1 << 20;
+    uint64_t blk_size = use_real_disk ? test_block_size : 512;
+    uint64_t blk_count = use_real_disk ? test_block_size : 1 << 20;
     uint64_t slice_size = 16 * blk_size;
     ASSERT_EQ(StartFVMTest(blk_size, blk_count, slice_size, ramdisk_path,
-                           fvm_driver),
-              0, "error mounting FVM");
+                           fvm_driver), 0, "error mounting FVM");
 
     size_t slices_left = fvm::UsableSlicesCount(blk_size * blk_count, slice_size);
     int fd = open(fvm_driver, O_RDWR);
@@ -785,6 +907,7 @@ static bool TestVPartitionExtendSparse(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, slice_size), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -795,7 +918,7 @@ static bool TestVPartitionShrink(void) {
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
-    const size_t kDiskSize = 512 * (1 << 20);
+    const size_t kDiskSize = use_real_disk ? test_block_size * test_block_count : 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
     ASSERT_GT(fd, 0);
@@ -876,6 +999,7 @@ static bool TestVPartitionShrink(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1008,6 +1132,7 @@ static bool TestVPartitionSplit(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1073,8 +1198,9 @@ static bool TestVPartitionDestroy(void) {
     ASSERT_EQ(close(data_fd), 0);
     ASSERT_EQ(close(blob_fd), 0);
     ASSERT_EQ(close(sys_fd), 0);
-
     ASSERT_EQ(close(fd), 0);
+
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1171,6 +1297,7 @@ static bool TestVPartitionQuery(void) {
 
     ASSERT_EQ(close(part_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, slice_size), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1235,6 +1362,7 @@ static bool TestSliceAccessContiguous(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1247,7 +1375,7 @@ static bool TestSliceAccessMany(void) {
     // The size of a slice must be carefully constructed for this test
     // so that we can hold multiple slices in memory without worrying
     // about hitting resource limits.
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = use_real_disk ? test_block_size : 512;
     const size_t kBlocksPerSlice = 256;
     const size_t kSliceSize = kBlocksPerSlice * kBlockSize;
     ASSERT_EQ(StartFVMTest(kBlockSize, (1 << 20), kSliceSize, ramdisk_path, fvm_driver), 0, "error mounting FVM");
@@ -1311,6 +1439,7 @@ static bool TestSliceAccessMany(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, kSliceSize), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1322,8 +1451,9 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
-    ASSERT_EQ(StartFVMTest(512, 1 << 20, 8lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
-    const size_t kDiskSize = 512 * (1 << 20);
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 8lu * (1 << 20), ramdisk_path, fvm_driver), 0,
+              "error mounting FVM");
+    const size_t kDiskSize = use_real_disk ? test_block_size * test_block_count : 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
     ASSERT_GT(fd, 0);
@@ -1430,6 +1560,7 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
     }
 
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, slice_size), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1514,6 +1645,7 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
     }
 
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver,slice_size), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1632,6 +1764,7 @@ static bool TestPersistenceSimple(void) {
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1814,6 +1947,7 @@ static bool TestMounting(void) {
     ASSERT_EQ(umount(mount_path), ZX_OK);
     ASSERT_EQ(rmdir(mount_path), 0);
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1824,8 +1958,11 @@ static bool TestCorruptionOk(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
-    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
-    const size_t kDiskSize = 512 * (1 << 20);
+
+    size_t kDiskSize = use_real_disk ? test_block_size * test_block_count : 512 * (1 << 20);
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0,
+              "error mounting FVM");
+
     int ramdisk_fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(ramdisk_fd, 0);
 
@@ -1874,8 +2011,10 @@ static bool TestCorruptionOk(void) {
     const partition_entry_t entries[] = {
         {kTestPartName1, 1},
     };
+
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
+
     vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
 
@@ -1887,6 +2026,8 @@ static bool TestCorruptionOk(void) {
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(close(ramdisk_fd), 0);
+
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1956,6 +2097,7 @@ static bool TestCorruptionRegression(void) {
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(close(ramdisk_fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1965,7 +2107,7 @@ static bool TestCorruptionUnrecoverable(void) {
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
-    const size_t kDiskSize = 512 * (1 << 20);
+    const size_t kDiskSize = use_real_disk ? test_block_size * test_block_count : 512 * (1 << 20);
     int ramdisk_fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(ramdisk_fd, 0);
 
@@ -2023,7 +2165,13 @@ static bool TestCorruptionUnrecoverable(void) {
 
     // Clean up
     ASSERT_EQ(close(ramdisk_fd), 0);
-    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+
+    // FVM is no longer valid - only need to remove if using ramdisk
+    if (!use_real_disk) {
+        ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    } else {
+        fvm_overwrite(ramdisk_path, slice_size);
+    }
     END_TEST;
 }
 
@@ -2240,8 +2388,8 @@ static bool TestRandomOpMultithreaded(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
-    const size_t kBlockSize = 512;
-    const size_t kBlockCount = 1 << 20;
+    const size_t kBlockSize = use_real_disk ? test_block_size : 512;
+    const size_t kBlockCount = use_real_disk ? test_block_count : 1 << 20;
     const size_t kBlocksPerSlice = 256;
     const size_t kSliceSize = kBlocksPerSlice * kBlockSize;
     ASSERT_EQ(StartFVMTest(kBlockSize, kBlockCount, kSliceSize, ramdisk_path,
@@ -2251,8 +2399,12 @@ static bool TestRandomOpMultithreaded(void) {
     const size_t kDiskSize = kBlockSize * kBlockCount;
     const size_t kSlicesCount = fvm::UsableSlicesCount(kDiskSize, kSliceSize);
 
-    static_assert(kSlicesCount > ThreadCount * 2,
-                  "Not enough slices to distribute between threads");
+    if (use_real_disk && kSlicesCount <= ThreadCount * 2) {
+        printf("Not enough slices to distribute between threads: ignoring test\n");
+        return true;
+    }
+
+    ASSERT_GT(kSlicesCount, ThreadCount * 2, "Not enough slices to distribute between threads");
 
     fvm_test_state_t<ThreadCount> s{};
     s.block_size = kBlockSize;
@@ -2341,6 +2493,7 @@ static bool TestRandomOpMultithreaded(void) {
     }
 
     ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(FVMCheck(fvm_driver, kSliceSize), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -2352,6 +2505,7 @@ RUN_TEST_MEDIUM(TestAllocateOne)
 RUN_TEST_MEDIUM(TestAllocateMany)
 RUN_TEST_MEDIUM(TestCloseDuringAccess)
 RUN_TEST_MEDIUM(TestReleaseDuringAccess)
+RUN_TEST_MEDIUM(TestDestroyDuringAccess)
 RUN_TEST_MEDIUM(TestVPartitionExtend)
 RUN_TEST_MEDIUM(TestVPartitionExtendSparse)
 RUN_TEST_MEDIUM(TestVPartitionShrink)
@@ -2381,5 +2535,40 @@ RUN_TEST_MEDIUM(TestCorruptMount)
 END_TEST_CASE(fvm_tests)
 
 int main(int argc, char** argv) {
+    int i = 1;
+    while (i < argc - 1) {
+        if (!strcmp(argv[i], "-d")) {
+            if (strnlen(argv[i + 1], PATH_MAX) > 0) {
+                int fd = open(argv[i + 1], O_RDWR);
+
+                if (fd < 0) {
+                    fprintf(stderr, "[fs] Could not open block device\n");
+                    return -1;
+                } else if (ioctl_device_get_topo_path(fd, test_disk_path, PATH_MAX) < 0) {
+                    fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
+                    return -1;
+                }
+
+                block_info_t block_info;
+                ssize_t rc = ioctl_block_get_info(fd, &block_info);
+
+                if (rc < 0 || rc != sizeof(block_info)) {
+                    fprintf(stderr, "[fs] Could not query block device info\n");
+                    return -1;
+                }
+
+                // If there is already an FVM on this partition, remove it
+                fvm_destroy(test_disk_path);
+
+                use_real_disk = true;
+                test_block_size = block_info.block_size;
+                test_block_count = block_info.block_count;
+                close(fd);
+                break;
+            }
+        }
+        i += 1;
+    }
+
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

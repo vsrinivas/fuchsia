@@ -144,6 +144,9 @@ static zx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
         // Propagate sync to parent device
         return device_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
+    case IOCTL_BLOCK_RR_PART: {
+        return device_rebind(device->zxdev);
+    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
