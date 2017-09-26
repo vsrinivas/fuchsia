@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
+#include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -124,9 +125,9 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   std::string json = modular::JsonValueToString(doc);
   context_value->content = json;
   context_value->type = ContextValueType::ENTITY;
-  context_value->meta = ContextMetadata::New();
-  context_value->meta->entity = EntityMetadata::New();
-  context_value->meta->entity->topic = MakeLinkTopic(context.topic);
+  context_value->meta = ContextMetadataBuilder()
+                            .SetEntityTopic(MakeLinkTopic(context.topic))
+                            .Build();
 
   FXL_LOG(INFO) << "Publishing context: " << context_value << std::endl
                 << "Original link value: " << value << std::endl

@@ -4,6 +4,7 @@
 
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 
+#include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/acquirers/story_info/link_watcher_impl.h"
@@ -33,11 +34,10 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
   story_watcher_binding_.set_connection_error_handler(
       [this] { owner_->DropStoryWatcher(story_id_); });
 
-  context_metadata_ = ContextMetadata::New();
-  context_metadata_->story = StoryMetadata::New();
-  context_metadata_->story->id = story_id;
-  context_metadata_->story->focused = FocusedState::New();
-  context_metadata_->story->focused->state = FocusedState::State::NOT_FOCUSED;
+  context_metadata_ = ContextMetadataBuilder()
+                          .SetStoryId(story_id)
+                          .SetStoryFocused(false)
+                          .Build();
   // TODO(thatguy): Add modular.StoryState.
   // TODO(thatguy): Add visible state.
 
@@ -69,14 +69,12 @@ void StoryWatcherImpl::OnStateChange(modular::StoryState new_state) {
 
 // |StoryWatcher|
 void StoryWatcherImpl::OnModuleAdded(modular::ModuleDataPtr module_data) {
-  auto metadata = ContextMetadata::New();
-  metadata->mod = ModuleMetadata::New();
-  metadata->mod->path = module_data->module_path.Clone();
-  metadata->mod->url = module_data->module_url;
-
   auto value = ContextValue::New();
   value->type = ContextValueType::MODULE;
-  value->meta = std::move(metadata);
+  value->meta = ContextMetadataBuilder()
+                    .SetModuleUrl(module_data->module_url)
+                    .SetModulePath(module_data->module_path.Clone())
+                    .Build();
 
   auto path = modular::EncodeModulePath(module_data->module_path);
   context_value_.OnId(
