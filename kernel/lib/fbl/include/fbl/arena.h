@@ -131,7 +131,7 @@ private:
 template <typename T, typename Mtx>
 class TypedArena {
 public:
-    status_t Init(const char* name, size_t max_count) TA_NO_THREAD_SAFETY_ANALYSIS {
+    zx_status_t Init(const char* name, size_t max_count) TA_NO_THREAD_SAFETY_ANALYSIS {
         return arena_.Init(name, sizeof(T), max_count);
     }
 

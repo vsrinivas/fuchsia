@@ -201,8 +201,8 @@ static handler_status_t exception_handler_worker(uint exception_type,
 //
 // TODO(dje): Support unwinding from this exception and introducing a different
 // exception?
-status_t dispatch_user_exception(uint exception_type,
-                                 arch_exception_context_t* context) {
+zx_status_t dispatch_user_exception(uint exception_type,
+                                    arch_exception_context_t* context) {
     LTRACEF("type %u, context %p\n", exception_type, context);
 
     ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
