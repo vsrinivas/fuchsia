@@ -51,6 +51,50 @@ static zx_protocol_device_t platform_dev_proto = {
     // need to support re-adding platform devices when they are reenabled.
 };
 
+zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uint32_t flags) {
+    platform_dev_t* dev = calloc(1, sizeof(platform_dev_t)
+                                 + pdev->mmio_count * sizeof(platform_mmio_t)
+                                 + pdev->irq_count * sizeof(platform_irq_t));
+    if (!dev) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    if (flags & ~PDEV_ADD_DISABLED) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    dev->bus = bus;
+    strlcpy(dev->name, pdev->name, sizeof(dev->name));
+    dev->vid = pdev->vid;
+    dev->pid = pdev->pid;
+    dev->did = pdev->did;
+
+    zx_status_t status = ZX_OK;
+    platform_init_resources(&dev->resources, pdev->mmio_count, pdev->irq_count);
+    if (pdev->mmio_count) {
+        status = platform_bus_add_mmios(bus, &dev->resources, pdev->mmios, pdev->mmio_count);
+        if (status != ZX_OK) {
+            goto fail;
+        }
+    }
+    if (pdev->irq_count) {
+        status = platform_bus_add_irqs(bus, &dev->resources, pdev->irqs, pdev->irq_count);
+        if (status != ZX_OK) {
+            goto fail;
+        }
+    }
+    list_add_tail(&bus->devices, &dev->node);
+
+    if ((flags & PDEV_ADD_DISABLED) == 0) {
+        status = platform_device_enable(dev, true);
+    }
+
+fail:
+    if (status != ZX_OK) {
+        platform_dev_free(dev);
+    }
+
+    return status;
+}
+
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
     zx_status_t status = ZX_OK;
 

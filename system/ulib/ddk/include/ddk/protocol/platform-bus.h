@@ -9,6 +9,34 @@
 
 __BEGIN_CDECLS;
 
+typedef struct {
+    zx_paddr_t  base;
+    size_t      length;
+    uint32_t    id;
+} pbus_mmio_t;
+
+typedef struct {
+    uint32_t    irq;
+    uint32_t    id;
+} pbus_irq_t;
+
+typedef struct {
+    const char* name;
+    uint32_t vid;
+    uint32_t pid;
+    uint32_t did;
+    const pbus_mmio_t* mmios;
+    size_t mmio_count;
+    const pbus_irq_t* irqs;
+    size_t irq_count;
+} pbus_dev_t;
+
+// flags for pbus_device_add()
+enum {
+    // Add the device but to not publish it to the devmgr until enabled with pbus_device_enable().
+    PDEV_ADD_DISABLED = (1 << 0),
+};
+
 // DID reserved for the platform bus implementation driver
 #define PDEV_BUS_IMPLEMENTOR_DID    0
 
@@ -39,6 +67,7 @@ static inline zx_status_t pbus_interface_add_gpios(pbus_interface_t* intf, uint3
 
 typedef struct {
     zx_status_t (*set_interface)(void* ctx, pbus_interface_t* interface);
+    zx_status_t (*device_add)(void* ctx, const pbus_dev_t* dev, uint32_t flags);
     zx_status_t (*device_enable)(void* ctx, uint32_t vid, uint32_t pid, uint32_t did, bool enable);
 } platform_bus_protocol_ops_t;
 
@@ -50,6 +79,11 @@ typedef struct {
 static inline zx_status_t pbus_set_interface(platform_bus_protocol_t* pbus,
                                              pbus_interface_t* interface) {
     return pbus->ops->set_interface(pbus->ctx, interface);
+}
+
+static inline zx_status_t pbus_device_add(platform_bus_protocol_t* pbus, const pbus_dev_t* dev,
+                                          uint32_t flags) {
+    return pbus->ops->device_add(pbus->ctx, dev, flags);
 }
 
 // Dynamically enables or disables a platform device by adding or removing it

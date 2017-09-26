@@ -176,3 +176,51 @@ zx_status_t platform_add_resources(platform_bus_t* bus, platform_resources_t* re
 
     return ZX_OK;
 }
+
+zx_status_t platform_bus_add_mmios(platform_bus_t* bus, platform_resources_t* resources,
+                                   const pbus_mmio_t* pbus_mmios, size_t mmio_count) {
+    platform_mmio_t* mmios = resources->mmios;
+
+    for (size_t i = 0; i < mmio_count; i++) {
+        const pbus_mmio_t* pbus_mmio = pbus_mmios++;
+        zx_paddr_t base = pbus_mmio->base;
+        size_t length = pbus_mmio->length;
+
+        if (!base || !length) {
+            printf("platform_add_mmios: missing base or length\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        mmios->base = base;
+        mmios->length = length;
+        zx_status_t status = zx_resource_create(bus->resource, ZX_RSRC_KIND_MMIO, base,
+                                                base + length - 1, &mmios->resource);
+        if (status != ZX_OK) {
+            printf("platform_add_mmios: zx_resource_create failed %d\n", status);
+            return status;
+        }
+        mmios++;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t platform_bus_add_irqs(platform_bus_t* bus, platform_resources_t* resources,
+                                  const pbus_irq_t* pbus_irqs, size_t irq_count) {
+    platform_irq_t* irqs = resources->irqs;
+
+    for (size_t i = 0; i < irq_count; i++) {
+        const pbus_irq_t* pbus_irq = pbus_irqs++;
+        uint32_t irq = pbus_irq->irq;
+        irqs->irq = irq;
+        zx_status_t status = zx_resource_create(bus->resource, ZX_RSRC_KIND_IRQ, irq, irq,
+                                                &irqs->resource);
+        if (status != ZX_OK) {
+            printf("platform_bus_add_irqs: zx_resource_create failed %d\n", status);
+            return status;
+        }
+        irqs++;
+    }
+
+    return ZX_OK;
+}

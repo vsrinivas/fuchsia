@@ -71,6 +71,7 @@ typedef struct {
 // platform-device.c
 void platform_dev_free(platform_dev_t* dev);
 zx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node);
+zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* dev, uint32_t flags);
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable);
 
 // platform-resources.c
@@ -84,3 +85,7 @@ void platform_init_resources(platform_resources_t* resources, uint32_t mmio_coun
                              uint32_t irq_count);
 zx_status_t platform_add_resources(platform_bus_t* bus, platform_resources_t* resources,
                                    mdi_node_ref_t* node);
+zx_status_t platform_bus_add_mmios(platform_bus_t* bus, platform_resources_t* resources,
+                                   const pbus_mmio_t* mmios, size_t mmio_count);
+zx_status_t platform_bus_add_irqs(platform_bus_t* bus, platform_resources_t* resources,
+                                  const pbus_irq_t* irqs, size_t irq_count);

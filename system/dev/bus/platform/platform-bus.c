@@ -101,8 +101,13 @@ static zx_status_t platform_bus_map_interrupt(void* ctx, uint32_t index, zx_hand
     return platform_map_interrupt(&bus->resources, index, out_handle);
 }
 
-zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t pid, uint32_t did,
-                                       bool enable) {
+static zx_status_t platform_bus_device_add(void* ctx, const pbus_dev_t* dev, uint32_t flags) {
+    platform_bus_t* bus = ctx;
+    return platform_device_add(bus, dev, flags);
+}
+
+static zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t pid, uint32_t did,
+                                              bool enable) {
     platform_bus_t* bus = ctx;
     platform_dev_t* dev;
     list_for_every_entry(&bus->devices, dev, platform_dev_t, node) {
@@ -122,6 +127,7 @@ static platform_device_protocol_ops_t platform_dev_proto_ops = {
 
 static platform_bus_protocol_ops_t platform_bus_proto_ops = {
     .set_interface = platform_bus_set_interface,
+    .device_add = platform_bus_device_add,
     .device_enable = platform_bus_device_enable,
 };
 
@@ -235,7 +241,6 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
         goto fail;
     }
 
-    // TODO(voydanoff) get resource from devmgr
     bus->resource = get_root_resource();
     bus->vid = vid;
     bus->pid = pid;
