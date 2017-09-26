@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_KTRACE_PROVIDER_LOG_IMPORTER_H_
-#define APPS_TRACING_SRC_KTRACE_PROVIDER_LOG_IMPORTER_H_
+#ifndef GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_
+#define GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_
 
 #include <async/wait.h>
 #include <zx/log.h>
@@ -36,4 +36,4 @@ class LogImporter {
 
 }  // namespace ktrace_provider
 
-#endif  // APPS_TRACING_SRC_KTRACE_PROVIDER_LOG_IMPORTER_H_
+#endif  // GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
-#define APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
+#ifndef LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
+#define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
 
 #include <memory>
 #include <unordered_map>
@@ -42,4 +42,4 @@ class MockInputDeviceRegistry : public mozart::InputDeviceRegistry {
 }  // namespace test
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
+#endif  // LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_

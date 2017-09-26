@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FXL_RANDOM_RAND_H_
-#define FXL_RANDOM_RAND_H_
+#ifndef LIB_FXL_RANDOM_RAND_H_
+#define LIB_FXL_RANDOM_RAND_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -21,4 +21,4 @@ FXL_EXPORT bool RandBytes(unsigned char* output, size_t output_length);
 
 }  // namespace fxl
 
-#endif  // FXL_RANDOM_RAND_H_
+#endif  // LIB_FXL_RANDOM_RAND_H_

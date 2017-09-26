@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_VIEW_PROVIDER_SERVICE_H_
-#define APPS_MOZART_LIB_VIEW_FRAMEWORK_VIEW_PROVIDER_SERVICE_H_
+#ifndef LIB_UI_VIEW_FRAMEWORK_VIEW_PROVIDER_SERVICE_H_
+#define LIB_UI_VIEW_FRAMEWORK_VIEW_PROVIDER_SERVICE_H_
 
 #include <functional>
 #include <vector>
@@ -58,4 +58,4 @@ class ViewProviderService : public ViewProvider {
 
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_VIEW_FRAMEWORK_VIEW_PROVIDER_SERVICE_H_
+#endif  // LIB_UI_VIEW_FRAMEWORK_VIEW_PROVIDER_SERVICE_H_

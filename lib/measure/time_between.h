@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_MEASURE_TIME_BETWEEN_H_
-#define APPS_TRACING_LIB_MEASURE_TIME_BETWEEN_H_
+#ifndef GARNET_LIB_MEASURE_TIME_BETWEEN_H_
+#define GARNET_LIB_MEASURE_TIME_BETWEEN_H_
 
 #include <map>
 #include <stack>
@@ -68,4 +68,4 @@ class MeasureTimeBetween {
 }  // namespace measure
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_MEASURE_TIME_BETWEEN_H_
+#endif  // GARNET_LIB_MEASURE_TIME_BETWEEN_H_

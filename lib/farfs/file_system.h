@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_FARFS_FARFS_H_
-#define APPLICATION_LIB_FARFS_FARFS_H_
+#ifndef GARNET_LIB_FARFS_FILE_SYSTEM_H_
+#define GARNET_LIB_FARFS_FILE_SYSTEM_H_
 
 #include <fs/managed-vfs.h>
 #include <vmofs/vmofs.h>
@@ -54,4 +54,4 @@ class FileSystem {
 
 }  // namespace archive
 
-#endif  // APPLICATION_LIB_FARFS_FARFS_H_
+#endif  // GARNET_LIB_FARFS_FILE_SYSTEM_H_

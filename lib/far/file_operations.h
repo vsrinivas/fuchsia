@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_FAR_FILE_OPERATIONS_H_
-#define APPLICATION_LIB_FAR_FILE_OPERATIONS_H_
+#ifndef GARNET_LIB_FAR_FILE_OPERATIONS_H_
+#define GARNET_LIB_FAR_FILE_OPERATIONS_H_
 
 #include <vector>
 
@@ -49,4 +49,4 @@ bool CopyFileToFile(int src_fd, int dst_fd, uint64_t length);
 
 }  // namespace archive
 
-#endif  // APPLICATION_LIB_FAR_FILE_OPERATIONS_H_
+#endif  // GARNET_LIB_FAR_FILE_OPERATIONS_H_

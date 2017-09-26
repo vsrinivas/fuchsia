@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MAGMA_SYSTEM_CONTEXT_H_
-#define _MAGMA_SYSTEM_CONTEXT_H_
+#ifndef GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONTEXT_H_
+#define GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONTEXT_H_
 
 #include <functional>
 #include <memory>
@@ -47,4 +47,4 @@ private:
     friend class CommandBufferHelper;
 };
 
-#endif // _MAGMA_SYSTEM_CONTEXT_H_
+#endif  // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONTEXT_H_

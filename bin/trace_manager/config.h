@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_MANAGER_CONFIG_H_
-#define APPS_TRACING_SRC_TRACE_MANAGER_CONFIG_H_
+#ifndef GARNET_BIN_TRACE_MANAGER_CONFIG_H_
+#define GARNET_BIN_TRACE_MANAGER_CONFIG_H_
 
 #include <map>
 #include <string>
@@ -41,4 +41,4 @@ class Config {
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_MANAGER_CONFIG_H_
+#endif  // GARNET_BIN_TRACE_MANAGER_CONFIG_H_

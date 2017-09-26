@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_MANAGER_APPLICATION_CONTROLLER_IMPL_H_
-#define APPLICATION_SRC_MANAGER_APPLICATION_CONTROLLER_IMPL_H_
+#ifndef GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
+#define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 
 #include <zx/process.h>
 
@@ -55,4 +55,4 @@ class ApplicationControllerImpl : public ApplicationController,
 
 }  // namespace app
 
-#endif  // APPLICATION_SRC_MANAGER_APPLICATION_CONTROLLER_IMPL_H_
+#endif  // GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_

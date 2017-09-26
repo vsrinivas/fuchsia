@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_APP_APPLICATION_CONTEXT_H_
-#define APPLICATION_LIB_APP_APPLICATION_CONTEXT_H_
+#ifndef LIB_APP_CPP_APPLICATION_CONTEXT_H_
+#define LIB_APP_CPP_APPLICATION_CONTEXT_H_
 
 #include <memory>
 
@@ -103,4 +103,4 @@ class ApplicationContext {
 
 }  // namespace app
 
-#endif  // APPLICATION_LIB_APP_APPLICATION_CONTEXT_H_
+#endif  // LIB_APP_CPP_APPLICATION_CONTEXT_H_

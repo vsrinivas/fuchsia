@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SLEEP_H_
-#define SLEEP_H_
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_SLEEP_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_SLEEP_H_
 
 #include "magma_util/macros.h"
 #include <chrono>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_MEASURE_EVENT_SPEC_H_
-#define APPS_TRACING_LIB_MEASURE_EVENT_SPEC_H_
+#ifndef GARNET_LIB_MEASURE_EVENT_SPEC_H_
+#define GARNET_LIB_MEASURE_EVENT_SPEC_H_
 
 #include <string>
 
@@ -26,4 +26,4 @@ std::ostream& operator<<(std::ostream& os, EventSpec event_spec);
 }  // namespace measure
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_MEASURE_EVENT_SPEC_H_
+#endif  // GARNET_LIB_MEASURE_EVENT_SPEC_H_

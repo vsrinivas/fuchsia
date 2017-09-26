@@ -5,8 +5,8 @@
 // Helpers for event macros.
 // Note: This file is only intended to be included from event.h.
 
-#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_
-#define APPS_TRACING_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_
+#ifndef GARNET_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_
+#define GARNET_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_
 
 #include "garnet/lib/trace/writer.h"
 
@@ -268,4 +268,4 @@ class DurationEventScope {
 }  // namespace internal
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_
+#endif  // GARNET_LIB_TRACE_INTERNAL_EVENT_HELPERS_H_

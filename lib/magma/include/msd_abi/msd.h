@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MSD_H_
-#define _MSD_H_
+#ifndef GARNET_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_
+#define GARNET_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_
 
 #include "msd_defs.h"
 
@@ -105,4 +105,4 @@ void msd_semaphore_release(struct msd_semaphore_t* semaphore);
 }
 #endif
 
-#endif // _MSD_H_
+#endif  // GARNET_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_

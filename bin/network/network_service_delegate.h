@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_NETWORK_NETWORK_SERVICE_DELEGATE_H_
-#define APPS_NETWORK_NETWORK_SERVICE_DELEGATE_H_
+#ifndef GARNET_BIN_NETWORK_NETWORK_SERVICE_DELEGATE_H_
+#define GARNET_BIN_NETWORK_NETWORK_SERVICE_DELEGATE_H_
 
 #include <memory>
 
@@ -26,4 +26,4 @@ class NetworkServiceDelegate {
 
 }  // namespace network
 
-#endif  // APPS_NETWORK_NETWORK_SERVICE_DELEGATE_H_
+#endif  // GARNET_BIN_NETWORK_NETWORK_SERVICE_DELEGATE_H_

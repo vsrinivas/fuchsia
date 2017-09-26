@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_RESULTS_OUTPUT_H_
-#define APPS_TRACING_SRC_TRACE_RESULTS_OUTPUT_H_
+#ifndef GARNET_BIN_TRACE_RESULTS_OUTPUT_H_
+#define GARNET_BIN_TRACE_RESULTS_OUTPUT_H_
 
 #include <ostream>
 #include <vector>
@@ -18,4 +18,4 @@ void OutputResults(std::ostream& out,
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_RESULTS_OUTPUT_H_
+#endif  // GARNET_BIN_TRACE_RESULTS_OUTPUT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
-#define APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
+#ifndef LIB_UI_SKIA_TYPE_CONVERTERS_H_
+#define LIB_UI_SKIA_TYPE_CONVERTERS_H_
 
 #include "lib/ui/geometry/fidl/geometry.fidl.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
@@ -93,4 +93,4 @@ struct TypeConverter<mozart::TransformPtr, SkMatrix44> {
 
 }  // namespace fidl
 
-#endif  // APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
+#endif  // LIB_UI_SKIA_TYPE_CONVERTERS_H_

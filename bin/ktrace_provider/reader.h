@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_KTRACE_PROVIDER_READER_H_
-#define APPS_TRACING_SRC_KTRACE_PROVIDER_READER_H_
+#ifndef GARNET_BIN_KTRACE_PROVIDER_READER_H_
+#define GARNET_BIN_KTRACE_PROVIDER_READER_H_
 
 #include <zircon/ktrace.h>
 
@@ -38,4 +38,4 @@ class Reader {
 
 }  // namespace ktrace_provider
 
-#endif  // APPS_TRACING_SRC_KTRACE_PROVIDER_READER_H_
+#endif  // GARNET_BIN_KTRACE_PROVIDER_READER_H_

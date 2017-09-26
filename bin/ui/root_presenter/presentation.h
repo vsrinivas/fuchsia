@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_ROOT_PRESENTER_PRESENTATION_H_
-#define APPS_MOZART_SRC_ROOT_PRESENTER_PRESENTATION_H_
+#ifndef GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_H_
+#define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_H_
 
 #include <map>
 #include <memory>
@@ -172,4 +172,4 @@ class Presentation : private mozart::ViewTreeListener,
 
 }  // namespace root_presenter
 
-#endif  // APPS_MOZART_SRC_ROOT_PRESENTER_PRESENTATION_H_
+#endif  // GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_H_

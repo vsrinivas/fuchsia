@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
+#ifndef GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
+#define GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 
 #include "lib/ui/input/fidl/ime_service.fidl.h"
 #include "lib/ui/input/fidl/input_connection.fidl.h"
@@ -93,4 +93,4 @@ class InputConnectionImpl : public mozart::InputConnection,
 
 }  // namespace view_manager
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
+#endif  // GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_

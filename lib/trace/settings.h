@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_SETTINGS_H_
-#define APPS_TRACING_LIB_TRACE_SETTINGS_H_
+#ifndef GARNET_LIB_TRACE_SETTINGS_H_
+#define GARNET_LIB_TRACE_SETTINGS_H_
 
 #include "lib/fxl/command_line.h"
 
@@ -29,4 +29,4 @@ bool ParseTraceSettings(const fxl::CommandLine& command_line,
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_SETTINGS_H_
+#endif  // GARNET_LIB_TRACE_SETTINGS_H_

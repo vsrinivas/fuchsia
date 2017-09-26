@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
-#define APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
+#ifndef LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
+#define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -41,4 +41,4 @@ class MockInputDevice : public mozart::InputDevice {
 }  // namespace test
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
+#endif  // LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_TICKS_H_
-#define APPS_TRACING_LIB_TRACE_TICKS_H_
+#ifndef GARNET_LIB_TRACE_TICKS_H_
+#define GARNET_LIB_TRACE_TICKS_H_
 
 #include <stdint.h>
 
@@ -32,4 +32,4 @@ inline Ticks GetTicksPerSecond() {
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_TICKS_H_
+#endif  // GARNET_LIB_TRACE_TICKS_H_

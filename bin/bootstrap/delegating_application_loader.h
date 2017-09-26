@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
-#define APPLICATION_SRC_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
+#ifndef GARNET_BIN_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
+#define GARNET_BIN_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
 
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/application_loader.fidl.h"
@@ -58,4 +58,4 @@ class DelegatingApplicationLoader : public app::ApplicationLoader {
 
 }  // namespace bootstrap
 
-#endif  // APPLICATION_SRC_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_
+#endif  // GARNET_BIN_BOOTSTRAP_DELEGATING_APPLICATION_LOADER_H_

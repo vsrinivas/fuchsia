@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_FAR_MANIFEST_H_
-#define APPLICATION_LIB_FAR_MANIFEST_H_
+#ifndef GARNET_LIB_FAR_MANIFEST_H_
+#define GARNET_LIB_FAR_MANIFEST_H_
 
 #include "lib/fxl/strings/string_view.h"
 
@@ -14,4 +14,4 @@ bool ReadManifest(fxl::StringView path, ArchiveWriter* writer);
 
 }  // namespace archive
 
-#endif  // APPLICATION_LIB_FAR_MANIFEST_H_
+#endif  // GARNET_LIB_FAR_MANIFEST_H_

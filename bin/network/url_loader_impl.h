@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_NETWORK_URL_LOADER_IMPL_H_
-#define APPS_NETWORK_URL_LOADER_IMPL_H_
+#ifndef GARNET_BIN_NETWORK_URL_LOADER_IMPL_H_
+#define GARNET_BIN_NETWORK_URL_LOADER_IMPL_H_
 
 #include "lib/network/fidl/url_loader.fidl.h"
 
@@ -51,4 +51,4 @@ class URLLoaderImpl : public URLLoader {
 
 }  // namespace network
 
-#endif  // APPS_NETWORK_URL_LOADER_IMPL_H_
+#endif  // GARNET_BIN_NETWORK_URL_LOADER_IMPL_H_

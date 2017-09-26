@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_
+#ifndef LIB_UI_TESTS_TEST_WITH_MESSAGE_LOOP_H_
+#define LIB_UI_TESTS_TEST_WITH_MESSAGE_LOOP_H_
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
@@ -40,4 +40,4 @@ bool RunLoopWithTimeout(
 }  // namespace test
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_
+#endif  // LIB_UI_TESTS_TEST_WITH_MESSAGE_LOOP_H_

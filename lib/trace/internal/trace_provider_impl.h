@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_PROVIDER_IMPL_H_
-#define APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_PROVIDER_IMPL_H_
+#ifndef GARNET_LIB_TRACE_INTERNAL_TRACE_PROVIDER_IMPL_H_
+#define GARNET_LIB_TRACE_INTERNAL_TRACE_PROVIDER_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -67,4 +67,4 @@ class TraceProviderImpl : public TraceProvider {
 }  // namespace internal
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_PROVIDER_IMPL_H_
+#endif  // GARNET_LIB_TRACE_INTERNAL_TRACE_PROVIDER_IMPL_H_

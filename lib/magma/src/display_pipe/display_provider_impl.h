@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MAGMA_DISPLAY_PROVIDER_IMPL_H_
-#define MAGMA_DISPLAY_PROVIDER_IMPL_H_
+#ifndef GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_DISPLAY_PROVIDER_IMPL_H_
+#define GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_DISPLAY_PROVIDER_IMPL_H_
 
 #include <unordered_map>
 
@@ -34,4 +34,4 @@ class DisplayProviderImpl : public DisplayProvider {
 };
 }  // namespace display_pipe
 
-#endif  // MAGMA_DISPLAY_PROVIDER_IMPL_H_
+#endif  // GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_DISPLAY_PROVIDER_IMPL_H_

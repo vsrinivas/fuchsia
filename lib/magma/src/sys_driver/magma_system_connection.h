@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MAGMA_SYSTEM_CONNECTION_H_
-#define _MAGMA_SYSTEM_CONNECTION_H_
+#ifndef GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONNECTION_H_
+#define GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONNECTION_H_
 
 #include "magma_system_buffer.h"
 #include "magma_system_context.h"
@@ -89,4 +89,4 @@ private:
     bool has_render_capability_;
 };
 
-#endif //_MAGMA_SYSTEM_CONNECTION_H_
+#endif  // GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONNECTION_H_

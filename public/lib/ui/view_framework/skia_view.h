@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_VIEW_H_
-#define APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_VIEW_H_
+#ifndef LIB_UI_VIEW_FRAMEWORK_SKIA_VIEW_H_
+#define LIB_UI_VIEW_FRAMEWORK_SKIA_VIEW_H_
 
 #include "lib/ui/scenic/skia/host_canvas_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -43,4 +43,4 @@ class SkiaView : public BaseView {
 
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_VIEW_H_
+#endif  // LIB_UI_VIEW_FRAMEWORK_SKIA_VIEW_H_

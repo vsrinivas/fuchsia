@@ -1,8 +1,8 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef _DISPLAY_PIPE_BUFFER_H_
-#define _DISPLAY_PIPE_BUFFER_H_
+#ifndef GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_CLIENT_BUFFER_H_
+#define GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_CLIENT_BUFFER_H_
 
 #include <stdint.h>
 
@@ -48,5 +48,5 @@ struct Buffer {
   zx::event release_fence_;
 };
 
-#endif  // _DISPLAY_PIPE_BUFFER_H_
+#endif  // GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_CLIENT_BUFFER_H_
 

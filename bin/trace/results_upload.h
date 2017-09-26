@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_RESULTS_UPLOAD_H_
-#define APPS_TRACING_SRC_TRACE_RESULTS_UPLOAD_H_
+#ifndef GARNET_BIN_TRACE_RESULTS_UPLOAD_H_
+#define GARNET_BIN_TRACE_RESULTS_UPLOAD_H_
 
 #include <functional>
 #include <ostream>
@@ -43,4 +43,4 @@ void UploadResults(std::ostream& out,
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_RESULTS_UPLOAD_H_
+#endif  // GARNET_BIN_TRACE_RESULTS_UPLOAD_H_

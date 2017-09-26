@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_MEASURE_MEASUREMENTS_H_
-#define APPS_TRACING_LIB_MEASURE_MEASUREMENTS_H_
+#ifndef GARNET_LIB_MEASURE_MEASUREMENTS_H_
+#define GARNET_LIB_MEASURE_MEASUREMENTS_H_
 
 #include <unordered_map>
 #include <vector>
@@ -27,4 +27,4 @@ struct Measurements {
 }  // namespace measure
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_MEASURE_MEASUREMENTS_H_
+#endif  // GARNET_LIB_MEASURE_MEASUREMENTS_H_

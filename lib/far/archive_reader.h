@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_FAR_ARCHIVE_READER_H_
-#define APPLICATION_LIB_FAR_ARCHIVE_READER_H_
+#ifndef GARNET_LIB_FAR_ARCHIVE_READER_H_
+#define GARNET_LIB_FAR_ARCHIVE_READER_H_
 
 #include <vector>
 
@@ -65,4 +65,4 @@ class ArchiveReader {
 
 }  // namespace archive
 
-#endif  // APPLICATION_LIB_FAR_ARCHIVE_READER_H_
+#endif  // GARNET_LIB_FAR_ARCHIVE_READER_H_

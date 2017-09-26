@@ -4,8 +4,8 @@
 
 // Helpers for using |ServiceProvider|s.
 
-#ifndef APPLICATION_LIB_APP_CONNECT_H_
-#define APPLICATION_LIB_APP_CONNECT_H_
+#ifndef LIB_APP_CPP_CONNECT_H_
+#define LIB_APP_CPP_CONNECT_H_
 
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -38,4 +38,4 @@ inline void ConnectToService(
 
 }  // namespace app
 
-#endif  // APPLICATION_LIB_APP_CONNECT_H_
+#endif  // LIB_APP_CPP_CONNECT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_MANAGER_TRACE_PROVIDER_BUNDLE_H_
-#define APPS_TRACING_SRC_TRACE_MANAGER_TRACE_PROVIDER_BUNDLE_H_
+#ifndef GARNET_BIN_TRACE_MANAGER_TRACE_PROVIDER_BUNDLE_H_
+#define GARNET_BIN_TRACE_MANAGER_TRACE_PROVIDER_BUNDLE_H_
 
 #include <stdint.h>
 
@@ -24,4 +24,4 @@ std::ostream& operator<<(std::ostream& out, const TraceProviderBundle& bundle);
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_MANAGER_TRACE_PROVIDER_BUNDLE_H_
+#endif  // GARNET_BIN_TRACE_MANAGER_TRACE_PROVIDER_BUNDLE_H_

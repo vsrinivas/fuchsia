@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MSD_DEFS_H_
-#define _MSD_DEFS_H_
+#ifndef GARNET_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_DEFS_H_
+#define GARNET_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_DEFS_H_
 
 #include "magma_common_defs.h"
 #include <stdint.h>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_INPUT_INPUT_DEVICE_IMPL_H_
-#define APPS_MOZART_LIB_INPUT_INPUT_DEVICE_IMPL_H_
+#ifndef LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_
+#define LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_
 
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ui/input/fidl/input_reports.fidl.h"
@@ -42,4 +42,4 @@ class InputDeviceImpl : public mozart::InputDevice {
 
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_INPUT_INPUT_DEVICE_IMPL_H_
+#endif  // LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_

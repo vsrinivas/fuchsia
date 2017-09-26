@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MAGMA_CONNECTION_H_
-#define _MAGMA_CONNECTION_H_
+#ifndef GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_MAGMA_CONNECTION_H_
+#define GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_MAGMA_CONNECTION_H_
 
 #include <zx/event.h>
 #include <zx/vmo.h>
@@ -36,4 +36,4 @@ class MagmaConnection {
   magma_connection_t *conn_;
 };
 
-#endif  // _MAGMA_CONNECTION_H_
+#endif  // GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_MAGMA_CONNECTION_H_

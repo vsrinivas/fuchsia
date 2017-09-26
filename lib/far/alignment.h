@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_FAR_ALIGNMENT_H_
-#define APPLICATION_LIB_FAR_ALIGNMENT_H_
+#ifndef GARNET_LIB_FAR_ALIGNMENT_H_
+#define GARNET_LIB_FAR_ALIGNMENT_H_
 
 namespace archive {
 
@@ -17,4 +17,4 @@ constexpr inline uint64_t AlignTo8ByteBoundary(uint64_t offset) {
 
 }  // namespace archive
 
-#endif  // APPLICATION_LIB_FAR_ALIGNMENT_H_
+#endif  // GARNET_LIB_FAR_ALIGNMENT_H_

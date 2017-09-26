@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_OBSERVER_LIST_H_
-#define LIB_FXL_OBSERVER_LIST_H_
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_OBSERVER_LIST_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_OBSERVER_LIST_H_
 
 // Derived from chromium/src/base/observer_list.h
 
@@ -348,4 +348,4 @@ class ObserverList : public ObserverListBase<ObserverType> {
 }  // namespace common
 }  // namespace bluetooth
 
-#endif  // LIB_FXL_OBSERVER_LIST_H_
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_OBSERVER_LIST_H_

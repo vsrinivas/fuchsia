@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TEST_RUNNER_LIB_GTEST_LISTENER_H_
-#define APPS_TEST_RUNNER_LIB_GTEST_LISTENER_H_
+#ifndef LIB_TEST_RUNNER_CPP_REPORTING_GTEST_LISTENER_H_
+#define LIB_TEST_RUNNER_CPP_REPORTING_GTEST_LISTENER_H_
 
 #include "lib/test_runner/fidl/test_runner.fidl.h"
 #include "gtest/gtest.h"
@@ -34,4 +34,4 @@ class GTestListener : public ::testing::EmptyTestEventListener {
 
 }  // namespace test_runner
 
-#endif  // APPS_TEST_RUNNER_LIB_GTEST_LISTENER_H_
+#endif  // LIB_TEST_RUNNER_CPP_REPORTING_GTEST_LISTENER_H_

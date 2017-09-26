@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_
-#define APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_
+#ifndef GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_
+#define GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_
 
 #include <map>
 #include <utility>
@@ -68,4 +68,4 @@ class InputReader {
 }  // namespace input
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_
+#endif  // GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_

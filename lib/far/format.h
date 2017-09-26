@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_FAR_FORMAT_H_
-#define APPLICATION_LIB_FAR_FORMAT_H_
+#ifndef GARNET_LIB_FAR_FORMAT_H_
+#define GARNET_LIB_FAR_FORMAT_H_
 
 #include <stdint.h>
 
@@ -51,4 +51,4 @@ struct DirectoryHashChunk {
 
 }  // namespace archive
 
-#endif  // APPLICATION_LIB_FAR_FORMAT_H_
+#endif  // GARNET_LIB_FAR_FORMAT_H_

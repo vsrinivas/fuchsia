@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_IME_IME_IMPL_H_
-#define APPS_MOZART_SRC_IME_IME_IMPL_H_
+#ifndef GARNET_BIN_UI_IME_IME_IMPL_H_
+#define GARNET_BIN_UI_IME_IME_IMPL_H_
 
 #include <memory>
 #include <vector>
@@ -48,4 +48,4 @@ class ImeImpl : public mozart::InputMethodEditor {
 
 }  // namespace ime
 
-#endif  // APPS_MOZART_SRC_IME_IME_IMPL_H_
+#endif  // GARNET_BIN_UI_IME_IME_IMPL_H_

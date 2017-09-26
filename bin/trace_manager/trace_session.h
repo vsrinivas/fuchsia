@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_MANAGER_TRACE_SESSION_H_
-#define APPS_TRACING_SRC_TRACE_MANAGER_TRACE_SESSION_H_
+#ifndef GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_
+#define GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_
 
 #include <functional>
 #include <list>
@@ -90,4 +90,4 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_MANAGER_TRACE_SESSION_H_
+#endif  // GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_

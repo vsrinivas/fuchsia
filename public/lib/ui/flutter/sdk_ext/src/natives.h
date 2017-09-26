@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_FLUTTER_SDK_EXT_SRC_NATIVES_H_
-#define APPS_MOZART_LIB_FLUTTER_SDK_EXT_SRC_NATIVES_H_
+#ifndef LIB_UI_FLUTTER_SDK_EXT_SRC_NATIVES_H_
+#define LIB_UI_FLUTTER_SDK_EXT_SRC_NATIVES_H_
 
 #include "dart/runtime/include/dart_api.h"
 
@@ -26,4 +26,4 @@ const uint8_t* NativeSymbol(Dart_NativeFunction nf);
 
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_FLUTTER_SDK_EXT_SRC_NATIVES_H_
+#endif  // LIB_UI_FLUTTER_SDK_EXT_SRC_NATIVES_H_

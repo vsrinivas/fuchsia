@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THREAD_H_
-#define THREAD_H_
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_THREAD_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_THREAD_H_
 
 #include "platform_thread.h"
 
@@ -16,4 +16,4 @@ public:
 
 } // namespace magma
 
-#endif // MACROS_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_THREAD_H_

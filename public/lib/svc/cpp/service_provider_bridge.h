@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
-#define APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
+#ifndef LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_
+#define LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_
 
 #include <fbl/ref_ptr.h>
 #include <fs/managed-vfs.h>
@@ -82,4 +82,4 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
 
 }  // namespace app
 
-#endif  // APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
+#endif  // LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_

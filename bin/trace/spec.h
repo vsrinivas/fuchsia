@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_SPEC_H_
-#define APPS_TRACING_SRC_TRACE_SPEC_H_
+#ifndef GARNET_BIN_TRACE_SPEC_H_
+#define GARNET_BIN_TRACE_SPEC_H_
 
 #include "garnet/lib/measure/duration.h"
 #include "garnet/lib/measure/measurements.h"
@@ -41,4 +41,4 @@ bool DecodeSpec(const std::string& json, Spec* spec);
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_SPEC_H_
+#endif  // GARNET_BIN_TRACE_SPEC_H_

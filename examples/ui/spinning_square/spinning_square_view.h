@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
-#define APPS_MOZART_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
+#ifndef GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
+#define GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -33,4 +33,4 @@ class SpinningSquareView : public mozart::BaseView {
 
 }  // namespace examples
 
-#endif  // APPS_MOZART_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
+#endif  // GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_

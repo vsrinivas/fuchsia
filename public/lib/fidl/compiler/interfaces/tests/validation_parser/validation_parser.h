@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_VALIDATION_PARSER_H_
-#define MOJO_VALIDATION_PARSER_H_
+#ifndef LIB_FIDL_COMPILER_INTERFACES_TESTS_VALIDATION_PARSER_VALIDATION_PARSER_H_
+#define LIB_FIDL_COMPILER_INTERFACES_TESTS_VALIDATION_PARSER_VALIDATION_PARSER_H_
 
 #include <stdint.h>
 #include <string.h>

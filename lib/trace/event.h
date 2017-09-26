@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_EVENT_H_
-#define APPS_TRACING_LIB_TRACE_EVENT_H_
+#ifndef GARNET_LIB_TRACE_EVENT_H_
+#define GARNET_LIB_TRACE_EVENT_H_
 
 #include "garnet/lib/trace/internal/event_helpers.h"
 
@@ -85,4 +85,4 @@
 #define TRACE_HANDLE(handle, args...) \
   TRACE_INTERNAL_HANDLE(handle, TRACE_INTERNAL_MAKE_ARGS(args))
 
-#endif  // APPS_TRACING_LIB_TRACE_EVENT_H_
+#endif  // GARNET_LIB_TRACE_EVENT_H_

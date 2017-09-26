@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MOCK_MSD_H_
-#define _MOCK_MSD_H_
+#ifndef GARNET_LIB_MAGMA_TESTS_MOCK_MOCK_MSD_H_
+#define GARNET_LIB_MAGMA_TESTS_MOCK_MOCK_MSD_H_
 
 #include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"

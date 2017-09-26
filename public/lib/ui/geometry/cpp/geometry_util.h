@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SERVICES_GEOMETRY_CPP_GEOMETRY_UTIL_H_
-#define APPS_MOZART_SERVICES_GEOMETRY_CPP_GEOMETRY_UTIL_H_
+#ifndef LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_
+#define LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_
 
 #include "lib/ui/geometry/fidl/geometry.fidl.h"
 
@@ -58,4 +58,4 @@ PointF TransformPoint(const Transform& transform, const PointF& point);
 
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SERVICES_GEOMETRY_CPP_GEOMETRY_UTIL_H_
+#endif  // LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_

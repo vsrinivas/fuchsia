@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_DEVICE_H_
-#define APPS_MOZART_SRC_INPUT_READER_INPUT_DEVICE_H_
+#ifndef GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_
+#define GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_
 
 #include <hid/acer12.h>
 #include <zircon/device/input.h>
@@ -99,4 +99,4 @@ class InputInterpreter {
 }  // namespace input
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_INPUT_READER_INPUT_DEVICE_H_
+#endif  // GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_

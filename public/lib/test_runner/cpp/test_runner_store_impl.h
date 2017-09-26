@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TEST_RUNNER_TEST_RUNNER_STORE_IMPL_H_
-#define APPS_TEST_RUNNER_TEST_RUNNER_STORE_IMPL_H_
+#ifndef LIB_TEST_RUNNER_CPP_TEST_RUNNER_STORE_IMPL_H_
+#define LIB_TEST_RUNNER_CPP_TEST_RUNNER_STORE_IMPL_H_
 
 #include <map>
 #include <queue>
@@ -38,4 +38,4 @@ class TestRunnerStoreImpl : public TestRunnerStore {
 
 }  // namespace test_runner
 
-#endif  // APPS_TEST_RUNNER_TEST_RUNNER_STORE_IMPL_H_
+#endif  // LIB_TEST_RUNNER_CPP_TEST_RUNNER_STORE_IMPL_H_

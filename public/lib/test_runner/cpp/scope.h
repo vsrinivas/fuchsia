@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TEST_RUNNER_LIB_SCOPE_H_
-#define APPS_TEST_RUNNER_LIB_SCOPE_H_
+#ifndef LIB_TEST_RUNNER_CPP_SCOPE_H_
+#define LIB_TEST_RUNNER_CPP_SCOPE_H_
 
 #include <memory>
 #include <string>
@@ -51,4 +51,4 @@ class Scope : public app::ApplicationEnvironmentHost {
 
 }  // namespace test_runner
 
-#endif  // APPS_TEST_RUNNER_LIB_SCOPE_H_
+#endif  // LIB_TEST_RUNNER_CPP_SCOPE_H_

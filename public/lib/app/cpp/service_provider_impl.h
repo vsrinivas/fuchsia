@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_APP_SERVICE_PROVIDER_IMPL_H_
-#define APPLICATION_LIB_APP_SERVICE_PROVIDER_IMPL_H_
+#ifndef LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
+#define LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
 
 #include <zx/channel.h>
 
@@ -131,4 +131,4 @@ class ServiceProviderImpl : public ServiceProvider {
 
 }  // namespace app
 
-#endif  // APPLICATION_LIB_APP_SERVICE_PROVIDER_IMPL_H_
+#endif  // LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_

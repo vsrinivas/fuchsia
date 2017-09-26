@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MAGMA_H_
-#define _MAGMA_H_
+#ifndef GARNET_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_H_
+#define GARNET_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_H_
 
 #include "magma_common_defs.h"
 #include <stdint.h>

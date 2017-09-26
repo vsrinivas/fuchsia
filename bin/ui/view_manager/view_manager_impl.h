@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
+#ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
+#define GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "garnet/bin/ui/view_manager/view_registry.h"
@@ -38,4 +38,4 @@ class ViewManagerImpl : public mozart::ViewManager {
 
 }  // namespace view_manager
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
+#endif  // GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_

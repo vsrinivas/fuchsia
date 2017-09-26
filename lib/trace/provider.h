@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_PROVIDER_H_
-#define APPS_TRACING_LIB_TRACE_PROVIDER_H_
+#ifndef GARNET_LIB_TRACE_PROVIDER_H_
+#define GARNET_LIB_TRACE_PROVIDER_H_
 
 #include "lib/app/cpp/application_context.h"
 #include "garnet/lib/trace/dump.h"
@@ -40,4 +40,4 @@ void SetDumpCallback(DumpCallback callback);
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_PROVIDER_H_
+#endif  // GARNET_LIB_TRACE_PROVIDER_H_

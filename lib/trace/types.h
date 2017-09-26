@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_TYPES_H_
-#define APPS_TRACING_LIB_TRACE_TYPES_H_
+#ifndef GARNET_LIB_TRACE_TYPES_H_
+#define GARNET_LIB_TRACE_TYPES_H_
 
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -149,4 +149,4 @@ struct hash<tracing::ProcessThread> {
 };
 }  // namespace std
 
-#endif  // APPS_TRACING_LIB_TRACE_TYPES_H_
+#endif  // GARNET_LIB_TRACE_TYPES_H_

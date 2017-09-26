@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_MANAGER_APPLICATION_RUNNER_HOLDER_H_
-#define APPLICATION_SRC_MANAGER_APPLICATION_RUNNER_HOLDER_H_
+#ifndef GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_
+#define GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_
 
 #include <zx/vmo.h>
 
@@ -35,4 +35,4 @@ class ApplicationRunnerHolder {
 
 }  // namespace app
 
-#endif  // APPLICATION_SRC_MANAGER_APPLICATION_RUNNER_HOLDER_H_
+#endif  // GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_

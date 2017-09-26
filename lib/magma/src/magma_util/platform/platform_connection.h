@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _PLATFORM_CONNECTION_H_
-#define _PLATFORM_CONNECTION_H_
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_CONNECTION_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_CONNECTION_H_
 
 #include "magma.h"
 #include "magma_util/macros.h"
@@ -123,4 +123,4 @@ private:
 
 } // namespace magma
 
-#endif //_PLATFORM_CONNECTION_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_CONNECTION_H_

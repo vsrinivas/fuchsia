@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_COMMANDS_LIST_PROVIDERS_H_
-#define APPS_TRACING_SRC_TRACE_COMMANDS_LIST_PROVIDERS_H_
+#ifndef GARNET_BIN_TRACE_COMMANDS_LIST_PROVIDERS_H_
+#define GARNET_BIN_TRACE_COMMANDS_LIST_PROVIDERS_H_
 
 #include "garnet/bin/trace/command.h"
 
@@ -19,4 +19,4 @@ class ListProviders : public CommandWithTraceController {
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_COMMANDS_LIST_PROVIDERS_H_
+#endif  // GARNET_BIN_TRACE_COMMANDS_LIST_PROVIDERS_H_

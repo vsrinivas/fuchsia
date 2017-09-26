@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FXL_RANDOM_UUID_H_
-#define FXL_RANDOM_UUID_H_
+#ifndef LIB_FXL_RANDOM_UUID_H_
+#define LIB_FXL_RANDOM_UUID_H_
 
 #include <stdint.h>
 
@@ -35,4 +35,4 @@ FXL_EXPORT bool IsValidUUIDOutputString(const std::string& guid);
 
 }  // namespace fxl
 
-#endif  // FXL_RANDOM_UUID_H_
+#endif  // LIB_FXL_RANDOM_UUID_H_

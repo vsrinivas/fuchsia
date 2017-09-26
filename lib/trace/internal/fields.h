@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_FIELDS_H_
-#define APPS_TRACING_LIB_TRACE_INTERNAL_FIELDS_H_
+#ifndef GARNET_LIB_TRACE_INTERNAL_FIELDS_H_
+#define GARNET_LIB_TRACE_INTERNAL_FIELDS_H_
 
 #include <stdint.h>
 
@@ -153,4 +153,4 @@ struct LogRecordFields : RecordFields {
 }  // namespace internal
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_FIELDS_H_
+#endif  // GARNET_LIB_TRACE_INTERNAL_FIELDS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MACROS_H_
-#define MACROS_H_
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_MACROS_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_MACROS_H_
 
 #include <assert.h>
 #include <limits.h> // PAGE_SIZE
@@ -161,4 +161,4 @@ template <class T> static inline T round_up(T val, uint32_t alignment)
 
 } // namespace magma
 
-#endif // MACROS_H_
+#endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_MACROS_H_

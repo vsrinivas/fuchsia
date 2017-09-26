@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_SRC_TRACE_APP_H_
-#define APPS_TRACING_SRC_TRACE_APP_H_
+#ifndef GARNET_BIN_TRACE_APP_H_
+#define GARNET_BIN_TRACE_APP_H_
 
 #include <functional>
 #include <map>
@@ -34,4 +34,4 @@ class App : public Command {
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_SRC_TRACE_APP_H_
+#endif  // GARNET_BIN_TRACE_APP_H_

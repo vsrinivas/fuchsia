@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_NETWORK_NET_ERRORS_H_
-#define APPS_NETWORK_NET_ERRORS_H_
+#ifndef GARNET_BIN_NETWORK_NET_ERRORS_H_
+#define GARNET_BIN_NETWORK_NET_ERRORS_H_
 
 #include <string>
 
@@ -26,4 +26,4 @@ std::string ErrorToShortString(int error);
 
 }  // namespace network
 
-#endif  // APPS_NETWORK_NET_ERRORS_H_
+#endif  // GARNET_BIN_NETWORK_NET_ERRORS_H_

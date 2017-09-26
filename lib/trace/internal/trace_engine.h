@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_ENGINE_H_
-#define APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_ENGINE_H_
+#ifndef GARNET_LIB_TRACE_INTERNAL_TRACE_ENGINE_H_
+#define GARNET_LIB_TRACE_INTERNAL_TRACE_ENGINE_H_
 
 #include "stdint.h"
 
@@ -166,4 +166,4 @@ class TraceEngine final : private fsl::MessageLoopHandler {
 }  // namespace internal
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_ENGINE_H_
+#endif  // GARNET_LIB_TRACE_INTERNAL_TRACE_ENGINE_H_

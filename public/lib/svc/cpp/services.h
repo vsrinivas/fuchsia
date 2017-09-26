@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_SVC_SERVICES_H_
-#define APPLICATION_LIB_SVC_SERVICES_H_
+#ifndef LIB_SVC_CPP_SERVICES_H_
+#define LIB_SVC_CPP_SERVICES_H_
 
 #include <zx/channel.h>
 
@@ -53,4 +53,4 @@ class Services {
 
 }  // namespace app
 
-#endif  // APPLICATION_LIB_SVC_SERVICES_H_
+#endif  // LIB_SVC_CPP_SERVICES_H_

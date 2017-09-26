@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
-#define APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
+#ifndef GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_
+#define GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_
 
 #include "lib/fxl/macros.h"
 #include "zx/socket.h"
@@ -52,4 +52,4 @@ class VmoUploadElementReader : public UploadElementReader {
 
 }  // namespace network
 
-#endif  // APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
+#endif  // GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_

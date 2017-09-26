@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MAGMA_IMAGE_H_
-#define MAGMA_IMAGE_H_
+#ifndef GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_IMAGE_H_
+#define GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_IMAGE_H_
 
 #include "lib/images/fidl/image_info.fidl.h"
 #include "garnet/lib/magma/src/display_pipe/magma_connection.h"
@@ -31,4 +31,4 @@ class Image {
   magma_buffer_t buffer_;
 };
 }  // namespace display_pipe
-#endif  // MAGMA_IMAGE_H_
+#endif  // GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_IMAGE_H_

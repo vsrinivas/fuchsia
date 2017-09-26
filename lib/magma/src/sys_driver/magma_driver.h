@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _MAGMA_DRIVER_H_
-#define _MAGMA_DRIVER_H_
+#ifndef GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_DRIVER_H_
+#define GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_DRIVER_H_
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

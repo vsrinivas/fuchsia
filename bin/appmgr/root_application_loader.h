@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_MANAGER_ROOT_APPLICATION_LOADER_H_
-#define APPLICATION_SRC_MANAGER_ROOT_APPLICATION_LOADER_H_
+#ifndef GARNET_BIN_APPMGR_ROOT_APPLICATION_LOADER_H_
+#define GARNET_BIN_APPMGR_ROOT_APPLICATION_LOADER_H_
 
 #include <functional>
 #include <string>
@@ -34,4 +34,4 @@ class RootApplicationLoader : public ApplicationLoader {
 
 }  // namespace app
 
-#endif  // APPLICATION_SRC_MANAGER_ROOT_APPLICATION_LOADER_H_
+#endif  // GARNET_BIN_APPMGR_ROOT_APPLICATION_LOADER_H_

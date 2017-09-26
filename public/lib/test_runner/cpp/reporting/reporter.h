@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TEST_RUNNER_LIB_REPORTER_H_
-#define APPS_TEST_RUNNER_LIB_REPORTER_H_
+#ifndef LIB_TEST_RUNNER_CPP_REPORTING_REPORTER_H_
+#define LIB_TEST_RUNNER_CPP_REPORTING_REPORTER_H_
 
 #include <vector>
 
@@ -18,4 +18,4 @@ void ReportResult(std::string identity,
 
 }  // namespace test_runner
 
-#endif  // APPS_TEST_RUNNER_LIB_REPORTER_H_
+#endif  // LIB_TEST_RUNNER_CPP_REPORTING_REPORTER_H_

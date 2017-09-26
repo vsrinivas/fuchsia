@@ -4,8 +4,8 @@
 
 #include "lib/fxl/time/time_delta.h"
 
-#ifndef LIB_FXL_TIMEOUT_TOLERANCE_H_
-#define LIB_FXL_TIMEOUT_TOLERANCE_H_
+#ifndef LIB_FXL_TEST_TIMEOUT_TOLERANCE_H_
+#define LIB_FXL_TEST_TIMEOUT_TOLERANCE_H_
 
 namespace fxl {
 #if defined(OS_WIN)
@@ -16,4 +16,4 @@ constexpr TimeDelta kTimeoutTolerance = TimeDelta::Zero();
 #endif  // defined(OS_WIN
 }  // namespace fxl
 
-#endif  // LIB_FXL_TIMEOUT_TOLERANCE_H_
+#endif  // LIB_FXL_TEST_TIMEOUT_TOLERANCE_H_

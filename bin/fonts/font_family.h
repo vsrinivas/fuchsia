@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_FONTS_FONT_FAMILY_H_
-#define APPS_FONTS_FONT_FAMILY_H_
+#ifndef GARNET_BIN_FONTS_FONT_FAMILY_H_
+#define GARNET_BIN_FONTS_FONT_FAMILY_H_
 
 #include <zx/vmo.h>
 
@@ -46,4 +46,4 @@ class FontFamily {
 
 }  // namespace fonts
 
-#endif  // APPS_FONTS_FONT_FAMILY_H_
+#endif  // GARNET_BIN_FONTS_FONT_FAMILY_H_
