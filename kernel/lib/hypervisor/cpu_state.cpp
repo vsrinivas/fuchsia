@@ -29,3 +29,12 @@ mp_cpu_mask_t percpu_exec(percpu_task_t task, void* context) {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, percpu_task, &state);
     return state.cpu_mask.load();
 }
+
+thread_t* pin_thread(uint cpu) {
+    thread_t* thread = get_current_thread();
+    if (thread_pinned_cpu(thread) != static_cast<int>(cpu))
+        thread_set_pinned_cpu(thread, cpu);
+    if (arch_curr_cpu_num() != cpu)
+        thread_reschedule();
+    return thread;
+}

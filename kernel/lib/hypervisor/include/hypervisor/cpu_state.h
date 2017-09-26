@@ -53,3 +53,6 @@ typedef zx_status_t (* percpu_task_t)(void* context, uint cpu_num);
 /* Executes a task on each online CPU, and returns a CPU mask containing each
  * CPU the task was successfully run on. */
 mp_cpu_mask_t percpu_exec(percpu_task_t task, void* context);
+
+/* Pin the current thread to a CPU, and reschedule it to execute on that CPU. */
+thread_t* pin_thread(uint cpu);

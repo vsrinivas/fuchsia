@@ -101,8 +101,6 @@ public:
     zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
     zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
-    uint16_t vpid() const { return vpid_; }
-
 private:
     const thread_t* thread_;
     const uint16_t vpid_;

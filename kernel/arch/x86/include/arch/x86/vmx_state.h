@@ -39,7 +39,6 @@
 
 #ifndef ASSEMBLY
 
-#include <sys/types.h>
 #include <zircon/types.h>
 
 /* Holds the register state used to restore a host. */
@@ -124,6 +123,7 @@ static_assert(__offsetof(VmxState, guest_state.r15) == GS_R15, "");
 static_assert(__offsetof(VmxState, guest_state.cr2) == GS_CR2, "");
 
 __BEGIN_CDECLS
+
 /* Launch the guest and save the host state.
  * If we return 0, we have exited from the guest, otherwise we have failed to
  * launch the guest.

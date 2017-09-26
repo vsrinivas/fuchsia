@@ -170,8 +170,6 @@ enum class VmcsFieldXX : uint64_t {
 
 // clang-format on
 
-class Vcpu;
-
 /* Loads a VMCS within a given scope. */
 class AutoVmcs : public StateReloader {
 public:
@@ -202,10 +200,10 @@ private:
 /* Pins execution to a CPU within a given scope. */
 class AutoPin {
 public:
-    AutoPin(const Vcpu* vcpu);
+    AutoPin(uint cpu);
     ~AutoPin();
 
 private:
-    thread_t* thread_;
     int prev_cpu_;
+    thread_t* thread_;
 };
