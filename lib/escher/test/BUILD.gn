@@ -39,7 +39,7 @@ executable("escher_unittests") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//garnet/lib/magma:vulkan" ]
+    deps += [ "//garnet/public/lib/vulkan" ]
   }
 
   if (is_linux) {

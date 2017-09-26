@@ -157,6 +157,6 @@ source_set("common") {
 
   deps = [
     "//zircon/system/ulib/trace",
-    "//garnet/lib/magma:vulkan",
+    "//garnet/public/lib/vulkan",
   ]
 }
