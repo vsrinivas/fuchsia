@@ -4,12 +4,14 @@
 
 #pragma once
 
+#include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <zircon/device/usb-device.h>
 #include <zircon/listnode.h>
 
 typedef struct {
     list_node_t gpios;
+    platform_bus_protocol_t pbus;
     platform_device_protocol_t pdev;
     pdev_mmio_buffer_t usb3otg_bc;
     pdev_mmio_buffer_t peri_crg;

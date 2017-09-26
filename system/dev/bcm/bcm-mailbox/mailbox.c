@@ -13,6 +13,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/display.h>
+#include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 
 #include <zircon/process.h>
@@ -325,6 +326,11 @@ static zx_status_t mailbox_bind(void* ctx, zx_device_t* parent, void** cookie) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    platform_bus_protocol_t pbus;
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus) != ZX_OK) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     // Carve out some address space for the device -- it's memory mapped.
     uintptr_t mmio_base;
     size_t mmio_size;
@@ -362,7 +368,7 @@ static zx_status_t mailbox_bind(void* ctx, zx_device_t* parent, void** cookie) {
     pbus_interface_t intf;
     intf.ops = &mailbox_bus_ops;
     intf.ctx = NULL;    // TODO(voydanoff) - add mailbox ctx struct
-    pdev_set_interface(&pdev, &intf);
+    pbus_set_interface(&pbus, &intf);
 
     return ZX_OK;
 }
@@ -373,7 +379,7 @@ static zx_driver_ops_t bcm_mailbox_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_BROADCOMM_RPI3),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),

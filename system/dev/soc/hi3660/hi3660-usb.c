@@ -79,7 +79,7 @@ zx_status_t hi3660_usb_set_mode(hi3660_bus_t* bus, usb_mode_t mode) {
     gpio_write(&gpio, GPIO_USBSW_SW_SEL, mode == USB_MODE_HOST);
 
     // add or remove XHCI device
-    pdev_device_enable(&bus->pdev, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
+    pbus_device_enable(&bus->pbus, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
                        mode == USB_MODE_HOST);
 
     bus->usb_mode = mode;

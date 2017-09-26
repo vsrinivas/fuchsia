@@ -14,7 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform-device.h>
+#include <ddk/protocol/platform-bus.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -23,7 +23,7 @@
 #include "qemu-virt.h"
 
 typedef struct {
-    platform_device_protocol_t pdev;
+    platform_bus_protocol_t pbus;
 } qemu_bus_t;
 
 static zx_status_t qemu_pci_init(void) {
@@ -102,18 +102,16 @@ static zx_protocol_device_t qemu_bus_device_protocol = {
 };
 
 static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     // we don't really need a context struct yet, but lets create one for future expansion.
     qemu_bus_t* bus = calloc(1, sizeof(qemu_bus_t));
     if (!bus) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    memcpy(&bus->pdev, &pdev, sizeof(bus->pdev));
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus) != ZX_OK) {
+        free(bus);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     zx_status_t status = qemu_pci_init();
     if (status != ZX_OK) {
@@ -135,7 +133,7 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     pbus_interface_t intf;
     intf.ops = &qemu_bus_bus_ops;
     intf.ctx = bus;
-    pdev_set_interface(&pdev, &intf);
+    pbus_set_interface(&bus->pbus, &intf);
 
     return ZX_OK;
 
@@ -151,7 +149,7 @@ static zx_driver_ops_t qemu_bus_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(qemu_bus, qemu_bus_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, 0x1234),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, 1),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),

@@ -114,13 +114,35 @@ zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t pid, ui
     return ZX_ERR_NOT_FOUND;
 }
 
-static platform_device_protocol_ops_t platform_bus_proto_ops = {
-    .set_interface = platform_bus_set_interface,
+static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .get_protocol = platform_bus_get_protocol,
     .map_mmio = platform_bus_map_mmio,
     .map_interrupt = platform_bus_map_interrupt,
+};
+
+static platform_bus_protocol_ops_t platform_bus_proto_ops = {
+    .set_interface = platform_bus_set_interface,
     .device_enable = platform_bus_device_enable,
 };
+
+static zx_status_t platform_bus_get_device_protocol(void* ctx, uint32_t proto_id, void* out) {
+    switch (proto_id) {
+    case ZX_PROTOCOL_PLATFORM_BUS: {
+        platform_bus_protocol_t* proto = out;
+        proto->ops = &platform_bus_proto_ops;
+        proto->ctx = ctx;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_PLATFORM_DEV: {
+        platform_device_protocol_t* proto = out;
+        proto->ops = &platform_dev_proto_ops;
+        proto->ctx = ctx;
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
 
 static void platform_bus_release(void* ctx) {
     platform_bus_t* bus = ctx;
@@ -137,6 +159,7 @@ static void platform_bus_release(void* ctx) {
 
 static zx_protocol_device_t platform_bus_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = platform_bus_get_device_protocol,
     .release = platform_bus_release,
 };
 
@@ -242,7 +265,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
         .name = "platform-bus",
         .ctx = bus,
         .ops = &platform_bus_proto,
-        .proto_id = ZX_PROTOCOL_PLATFORM_DEV,
+        .proto_id = ZX_PROTOCOL_PLATFORM_BUS,
         .proto_ops = &platform_bus_proto_ops,
         .props = props,
         .prop_count = countof(props),

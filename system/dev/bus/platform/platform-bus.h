@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <ddk/device.h>
+#include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <mdi/mdi.h>
 #include <mdi/mdi-defs.h>

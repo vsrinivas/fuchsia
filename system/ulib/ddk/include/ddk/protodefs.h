@@ -52,6 +52,7 @@ DDK_PROTOCOL_DEF(IHDA,           'pHDA', "intel-hda", 0)
 DDK_PROTOCOL_DEF(IHDA_CODEC,     'pIHC', "intel-hda-codec", 0)
 DDK_PROTOCOL_DEF(TEST,           'pTST', "test", 0)
 DDK_PROTOCOL_DEF(BCM_BUS,        'pBCB', "bcm-bus", 0)
+DDK_PROTOCOL_DEF(PLATFORM_BUS,   'pPBU', "platform-bus", 0)
 DDK_PROTOCOL_DEF(PLATFORM_DEV,   'pPDV', "platform-dev", 0)
 // Protocol definition at garnet/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h
 DDK_PROTOCOL_DEF(GPU,            'pGPU', "gpu", 0)

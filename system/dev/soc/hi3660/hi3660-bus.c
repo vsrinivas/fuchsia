@@ -227,26 +227,30 @@ static int led_test_thread(void *arg) {
 }
 
 static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    platform_device_protocol_t pdev;
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev) != ZX_OK) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     hi3660_bus_t* bus = calloc(1, sizeof(hi3660_bus_t));
     if (!bus) {
         return ZX_ERR_NO_MEMORY;
     }
 
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus) != ZX_OK) {
+        free(bus);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &bus->pdev) != ZX_OK) {
+        free(bus);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     list_initialize(&bus->gpios);
-    memcpy(&bus->pdev, &pdev, sizeof(bus->pdev));
     bus->usb_mode = USB_MODE_NONE;
 
     zx_status_t status;
-    if ((status = pdev_map_mmio_buffer(&pdev, MMIO_USB3OTG_BC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    if ((status = pdev_map_mmio_buffer(&bus->pdev, MMIO_USB3OTG_BC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        &bus->usb3otg_bc)) != ZX_OK ||
-         (status = pdev_map_mmio_buffer(&pdev, MMIO_PERI_CRG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+         (status = pdev_map_mmio_buffer(&bus->pdev, MMIO_PERI_CRG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        &bus->peri_crg)) != ZX_OK ||
-         (status = pdev_map_mmio_buffer(&pdev, MMIO_PCTRL, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+         (status = pdev_map_mmio_buffer(&bus->pdev, MMIO_PCTRL, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                        &bus->pctrl)) != ZX_OK) {
         goto fail;
     }
@@ -268,7 +272,7 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     pbus_interface_t intf;
     intf.ops = &hi3660_bus_ops;
     intf.ctx = bus;
-    pdev_set_interface(&pdev, &intf);
+    pbus_set_interface(&bus->pbus, &intf);
 
 #if 0
     thrd_t thrd;
@@ -295,7 +299,7 @@ static zx_driver_ops_t hi3660_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(hi3660, hi3660_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, 0x12D1),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, 0x0960),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),

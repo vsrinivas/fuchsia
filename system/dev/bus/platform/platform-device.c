@@ -13,10 +13,6 @@
 
 #include "platform-bus.h"
 
-zx_status_t platform_dev_set_interface(void* ctx, pbus_interface_t* interface) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     platform_dev_t* pdev = ctx;
     platform_bus_t* bus = pdev->bus;
@@ -38,17 +34,10 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_hand
     return platform_map_interrupt(&pdev->resources, index, out_handle);
 }
 
-static zx_status_t platform_dev_device_enable(void* ctx, uint32_t vid, uint32_t pid, uint32_t did,
-                                              bool enable) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
-    .set_interface = platform_dev_set_interface,
     .get_protocol = platform_dev_get_protocol,
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
-    .device_enable = platform_dev_device_enable,
 };
 
 void platform_dev_free(platform_dev_t* dev) {
