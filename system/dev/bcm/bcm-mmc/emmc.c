@@ -68,12 +68,11 @@ typedef struct emmc {
    zx_handle_t mmio_handle;
 } emmc_t;
 
-static zx_handle_t emmc_sdhci_get_interrupt(void* ctx) {
+static zx_status_t emmc_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
     emmc_t* emmc = ctx;
 
-    zx_handle_t handle;
-    if (pdev_map_interrupt(&emmc->pdev, IRQ_INDEX, &handle) == ZX_OK) {
-        return handle;
+    if (pdev_map_interrupt(&emmc->pdev, IRQ_INDEX, handle_out) == ZX_OK) {
+        return ZX_OK;
     } else {
         return ZX_HANDLE_INVALID;
     }

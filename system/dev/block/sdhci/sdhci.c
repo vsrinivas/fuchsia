@@ -861,10 +861,9 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent, void** cookie) {
         goto fail;
     }
 
-    dev->irq_handle = dev->sdhci.ops->get_interrupt(dev->sdhci.ctx);
-    if (dev->irq_handle < 0) {
+    status = dev->sdhci.ops->get_interrupt(dev->sdhci.ctx, &dev->irq_handle);
+    if (status < 0) {
         dprintf(ERROR, "sdhci: error %d in get_interrupt\n", status);
-        status = dev->irq_handle;
         goto fail;
     }
 

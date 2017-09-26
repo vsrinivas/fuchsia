@@ -12,7 +12,7 @@ __BEGIN_CDECLS;
 
 typedef struct sdhci_protocol_ops {
     // TODO: should be replaced with a generic busdev mechanism
-    zx_handle_t (*get_interrupt)(void* ctx);
+    zx_status_t (*get_interrupt)(void* ctx, zx_handle_t* handle_out);
     zx_status_t (*get_mmio)(void* ctx, volatile sdhci_regs_t** out);
     uint32_t (*get_base_clock)(void* ctx);
     // TODO: replace this function with iotxn_phys(txn, ctx)
