@@ -10,13 +10,18 @@
 #include "magma_util/platform/zircon/zircon_platform_ioctl.h"
 
 const char* kDeviceName = "/dev/class/display/000";
+const char* kGpuDeviceName = "/dev/class/gpu/000";
 
 int main(int argc, char** argv)
 {
-    int fd = open(kDeviceName, O_RDONLY);
+    int fd = open(kGpuDeviceName, O_RDONLY);
     if (fd < 0) {
-        printf("Failed to open display device: %s\n", kDeviceName);
-        return -1;
+        // TODO(MA-349): Use only /dev/class/gpu.
+        fd = open(kDeviceName, O_RDONLY);
+        if (fd < 0) {
+            printf("Failed to open display device %s or %s\n", kGpuDeviceName, kDeviceName);
+            return -1;
+        }
     }
 
     int ret = fdio_ioctl(fd, IOCTL_MAGMA_DUMP_STATUS, nullptr, 0, nullptr, 0);
