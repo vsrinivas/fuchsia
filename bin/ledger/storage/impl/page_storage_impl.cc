@@ -158,17 +158,8 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    bool notify_watchers = false;
-    Status status = SynchronousAddCommitFromLocal(
-        handler, std::move(commit), std::move(new_objects), &notify_watchers);
-
-    // Notify the watchers after calling the callback. Otherwise, client
-    // code will receive the new commits notification before the
-    // confirmation that the given commits were successfully added.
-    callback(status);
-    if (status == Status::OK && notify_watchers) {
-      NotifyWatchers();
-    }
+    callback(SynchronousAddCommitFromLocal(handler, std::move(commit),
+                                           std::move(new_objects)));
   }));
 }
 
@@ -182,17 +173,7 @@ void PageStorageImpl::AddCommitsFromSync(
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    bool notify_watchers = false;
-    Status status = SynchronousAddCommitsFromSync(
-        handler, std::move(ids_and_bytes), &notify_watchers);
-
-    // Notify the watchers after calling the callback. Otherwise, client
-    // code will receive the new commits notification before the
-    // confirmation that the given commits were successfully added.
-    callback(status);
-    if (status == Status::OK && notify_watchers) {
-      NotifyWatchers();
-    }
+    callback(SynchronousAddCommitsFromSync(handler, std::move(ids_and_bytes)));
   }));
 }
 
@@ -1077,8 +1058,7 @@ Status PageStorageImpl::SynchronousGetCommit(
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
     CoroutineHandler* handler,
     std::unique_ptr<const Commit> commit,
-    std::vector<ObjectId> new_objects,
-    bool* notify_watchers) {
+    std::vector<ObjectId> new_objects) {
   // If the commit is already present, do nothing.
   if (ContainsCommit(handler, commit->GetId()) == Status::OK) {
     return Status::OK;
@@ -1089,13 +1069,12 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(
   commits.push_back(std::move(commit));
 
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::LOCAL,
-                               std::move(new_objects), notify_watchers);
+                               std::move(new_objects));
 }
 
 Status PageStorageImpl::SynchronousAddCommitsFromSync(
     CoroutineHandler* handler,
-    std::vector<CommitIdAndBytes> ids_and_bytes,
-    bool* notify_watchers) {
+    std::vector<CommitIdAndBytes> ids_and_bytes) {
   std::vector<std::unique_ptr<const Commit>> commits;
 
   std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
@@ -1152,7 +1131,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   }
 
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
-                               std::vector<ObjectId>(), notify_watchers);
+                               std::vector<ObjectId>());
 }
 
 Status PageStorageImpl::SynchronousGetUnsyncedCommits(
@@ -1196,8 +1175,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
-    std::vector<ObjectId> new_objects,
-    bool* notify_watchers) {
+    std::vector<ObjectId> new_objects) {
   // Apply all changes atomically.
   std::unique_ptr<PageDb::Batch> batch = db_->StartBatch(handler);
   std::set<const CommitId*, StringPointerComparator> added_commits;
@@ -1329,8 +1307,12 @@ Status PageStorageImpl::SynchronousAddCommits(
 
   s = batch->Execute(handler);
 
-  *notify_watchers = commits_to_send_.empty();
+  // TODO(nellyv): we can probably remove commits_to_send_ and send
+  // commits_to_send directly to NotifyWatchers(). See LE-320.
+  FXL_DCHECK(commits_to_send_.empty());
   commits_to_send_.emplace(source, std::move(commits_to_send));
+  NotifyWatchers();
+
   return s;
 }
 

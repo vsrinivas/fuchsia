@@ -197,13 +197,11 @@ class PageStorageImpl : public PageStorage {
 
   Status SynchronousAddCommitFromLocal(coroutine::CoroutineHandler* handler,
                                        std::unique_ptr<const Commit> commit,
-                                       std::vector<ObjectId> new_objects,
-                                       bool* notify_watchers);
+                                       std::vector<ObjectId> new_objects);
 
   Status SynchronousAddCommitsFromSync(
       coroutine::CoroutineHandler* handler,
-      std::vector<CommitIdAndBytes> ids_and_bytes,
-      bool* notify_watchers);
+      std::vector<CommitIdAndBytes> ids_and_bytes);
 
   Status SynchronousGetUnsyncedCommits(
       coroutine::CoroutineHandler* handler,
@@ -216,8 +214,7 @@ class PageStorageImpl : public PageStorage {
       coroutine::CoroutineHandler* handler,
       std::vector<std::unique_ptr<const Commit>> commits,
       ChangeSource source,
-      std::vector<ObjectId> new_objects,
-      bool* notify_watchers);
+      std::vector<ObjectId> new_objects);
 
   Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
                              ObjectId object_id,

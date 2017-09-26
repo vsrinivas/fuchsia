@@ -1210,37 +1210,6 @@ TEST_F(PageStorageTest, CommitWatchers) {
   EXPECT_EQ(1, watcher2.commit_count);
 }
 
-TEST_F(PageStorageTest, OrderOfCommitWatch) {
-  FakeCommitWatcher watcher;
-  storage_->AddCommitWatcher(&watcher);
-
-  Status status;
-  std::unique_ptr<Journal> journal;
-  storage_->StartCommit(GetFirstHead()->GetId(), JournalType::EXPLICIT,
-                        callback::Capture(MakeQuitTask(), &status, &journal));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key1", RandomObjectId(),
-                           KeyPriority::EAGER));
-
-  std::unique_ptr<const Commit> commit;
-  storage_->CommitJournal(std::move(journal),
-                          callback::Capture(
-                              [this, &watcher] {
-                                // We should get the callback before the
-                                // watchers.
-                                EXPECT_EQ(0, watcher.commit_count);
-                                message_loop_.PostQuitTask();
-                              },
-                              &status, &commit));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-
-  EXPECT_EQ(1, watcher.commit_count);
-  EXPECT_EQ(commit->GetId(), watcher.last_commit_id);
-  EXPECT_EQ(ChangeSource::LOCAL, watcher.last_source);
-}
-
 TEST_F(PageStorageTest, SyncMetadata) {
   std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {
       {"foo1", "foo2"}, {"bar1", " bar2 "}};
