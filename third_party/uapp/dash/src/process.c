@@ -111,7 +111,7 @@ zx_status_t process_subshell(union node* n, const char* const* envp, zx_handle_t
 }
 
 int process_launch(int argc, const char* const* argv, const char* path, int index, zx_handle_t* process,
-                   const char** errmsg) {
+                   zx_status_t* status_out, const char** errmsg) {
     zx_status_t status = ZX_OK;
 
     // All exported variables
@@ -119,8 +119,6 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
 
     if (strchr(argv[0], '/') != NULL) {
         status = launch(argv[0], argc, argv, envp, process, errmsg);
-        if (status == ZX_OK)
-            return 0;
     } else {
         status = ZX_ERR_NOT_FOUND;
         const char* filename = NULL;
@@ -130,6 +128,8 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
             stunalloc(filename);
         }
     }
+
+    *status_out = status;
 
     switch (status) {
     case ZX_OK:

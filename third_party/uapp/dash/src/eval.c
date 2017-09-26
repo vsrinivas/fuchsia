@@ -849,11 +849,13 @@ bail:
 	switch (cmdentry.cmdtype) {
 	default: {
 		zx_handle_t process = ZX_HANDLE_INVALID;
+		zx_status_t zx_status = ZX_OK;
 		const char* errmsg = NULL;
 		status = process_launch(argc, (const char* const*)argv, path,
-		                        cmdentry.u.index, &process, &errmsg);
+		                        cmdentry.u.index, &process, &zx_status, &errmsg);
 		if (status) {
-			sh_error("Cannot create child process: %s: %s", zx_status_get_string(status), errmsg);
+			sh_error("Cannot create child process: %d: %s: %s", zx_status,
+		                 zx_status_get_string(zx_status), errmsg);
 			break;
 		}
 		settitle(argv[0]);
