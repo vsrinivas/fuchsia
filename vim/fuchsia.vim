@@ -29,6 +29,7 @@ if $FUCHSIA_DIR != ""
 
   augroup fuchsia
     autocmd BufRead,BufNewFile $FUCHSIA_DIR/** call FuchsiaBuffer()
+    autocmd BufNewFile,BufRead $FUCHSIA_DIR/packages/gn/*,$FUCHSIA_DIR/*/packages/* set filetype=json sw=4
   augroup END
 
 endif
