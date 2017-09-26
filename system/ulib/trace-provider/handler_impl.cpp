@@ -70,6 +70,10 @@ zx_status_t TraceHandlerImpl::StopEngine() {
 }
 
 bool TraceHandlerImpl::IsCategoryEnabled(const char* category) {
+    if (enabled_categories_.size() == 0) {
+      // If none are specified, enable all categories.
+      return true;
+    }
     return enabled_category_set_.find(category) != enabled_category_set_.end();
 }
 
