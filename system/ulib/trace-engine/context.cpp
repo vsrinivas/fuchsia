@@ -610,7 +610,7 @@ void trace_context_write_thread_info_record(
     trace_context_register_string_literal(context, "process", &arg.name_ref);
     arg.value.type = TRACE_ARG_KOID;
     arg.value.koid_value = process_koid;
-    trace_context_write_kernel_object_record(context, process_koid, ZX_OBJ_TYPE_THREAD,
+    trace_context_write_kernel_object_record(context, thread_koid, ZX_OBJ_TYPE_THREAD,
                                              thread_name_ref, &arg, 1u);
 }
 
