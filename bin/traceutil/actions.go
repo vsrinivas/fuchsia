@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const defaultCategories = "app,benchmark,gfx,input,kernel:sched,ledger,magma,modular,motown,view,flutter,dart"
+const defaultCategories = "app,benchmark,gfx,input,kernel:meta,kernel:sched,ledger,magma,modular,motown,view,flutter,dart"
 
 type captureTraceConfig struct {
 	Categories string
