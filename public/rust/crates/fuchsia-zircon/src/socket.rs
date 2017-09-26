@@ -150,7 +150,7 @@ mod tests {
 
         // Close the socket from one end.
         assert!(s1.half_close().is_ok());
-        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrPeerClosed));
+        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrBadState));
         assert_eq!(s1.write(SocketWriteOpts::Default, b"fail"), Err(Status::ErrBadState));
 
         // Writing in the other direction should still work.

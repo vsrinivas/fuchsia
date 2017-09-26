@@ -636,8 +636,6 @@ mod tests {
         let ticks2 = ticks_get();
         // The number of ticks should have increased by at least 1 ms worth
         assert!(ticks2 > ticks1 + sleep_ns * ticks_per_second() / one_second_ns);
-        // And not more than 4 ms worth
-        assert!(ticks2 < ticks1 + 4 * sleep_ns * ticks_per_second() / one_second_ns);
     }
 
     #[test]
