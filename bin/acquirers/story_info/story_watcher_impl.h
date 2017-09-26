@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-#include "lib/context/cpp/scoped_context_value.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
@@ -51,13 +50,11 @@ class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
 
   void WatchLink(const modular::LinkPathPtr& link_path);
 
-  void UpdateContext();
-
   StoryInfoAcquirer* const owner_;
   ContextWriter* const writer_;
   modular::StoryControllerPtr story_controller_;
   const std::string story_id_;
-  ScopedContextValue context_value_;
+  ContextValueWriterPtr context_value_;
   ContextMetadataPtr context_metadata_;
 
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
@@ -65,7 +62,7 @@ class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
 
   std::map<std::string, std::unique_ptr<LinkWatcherImpl>> links_;
   // serialized module path -> context value.
-  std::map<std::string, ScopedContextValue> module_values_;
+  std::map<std::string, ContextValueWriterPtr> module_values_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };

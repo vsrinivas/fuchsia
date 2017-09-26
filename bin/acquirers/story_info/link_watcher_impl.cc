@@ -52,15 +52,13 @@ std::string MakeLinkTopic(const fidl::String& base_topic) {
 LinkWatcherImpl::LinkWatcherImpl(
     StoryWatcherImpl* const owner,
     modular::StoryController* const story_controller,
-    ContextWriter* const writer,
     const std::string& story_id,
-    const fidl::String& parent_value_id,
+    ContextValueWriter* const story_value,
     const modular::LinkPathPtr& link_path)
     : owner_(owner),
       story_controller_(story_controller),
-      writer_(writer),
       story_id_(story_id),
-      parent_value_id_(parent_value_id),
+      story_value_(story_value),
       link_path_(link_path->Clone()),
       link_watcher_binding_(this) {
   modular::LinkPtr link;
@@ -121,25 +119,18 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   modular::XdrWrite(&source_doc, &source, XdrSource);
   doc.AddMember(kSourceProperty, source_doc, doc.GetAllocator());
 
-  auto context_value = ContextValue::New();
   std::string json = modular::JsonValueToString(doc);
-  context_value->content = json;
-  context_value->type = ContextValueType::ENTITY;
-  context_value->meta = ContextMetadataBuilder()
-                            .SetEntityTopic(MakeLinkTopic(context.topic))
-                            .Build();
 
-  FXL_LOG(INFO) << "Publishing context: " << context_value << std::endl
-                << "Original link value: " << value << std::endl
-                << "Parent context value ID: " << parent_value_id_;
   auto it = values_.find(context.topic);
   if (it == values_.end()) {
-    it = values_
-             .emplace(context.topic,
-                      ScopedContextValue(writer_, parent_value_id_))
-             .first;
+    ContextValueWriterPtr topic_value;
+    story_value_->CreateChildValue(topic_value.NewRequest(),
+                                   ContextValueType::ENTITY);
+    it = values_.emplace(context.topic, std::move(topic_value)).first;
   }
-  it->second.Set(std::move(context_value));
+  it->second->Set(json, ContextMetadataBuilder()
+                            .SetEntityTopic(MakeLinkTopic(context.topic))
+                            .Build());
 }
 
 }  // namespace maxwell

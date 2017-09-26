@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-#include "lib/context/cpp/scoped_context_value.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
@@ -25,9 +24,8 @@ class LinkWatcherImpl : modular::LinkWatcher {
  public:
   LinkWatcherImpl(StoryWatcherImpl* const owner,
                   modular::StoryController* const story_controller,
-                  ContextWriter* const writer,
                   const std::string& story_id,
-                  const fidl::String& parent_value_id,
+                  ContextValueWriter* story_value,
                   const modular::LinkPathPtr& link_path);
 
   ~LinkWatcherImpl() override;
@@ -40,14 +38,13 @@ class LinkWatcherImpl : modular::LinkWatcher {
 
   StoryWatcherImpl* const owner_;
   modular::StoryController* const story_controller_;
-  ContextWriter* const writer_;
 
   const std::string story_id_;
-  const fidl::String parent_value_id_;
+  ContextValueWriter* const story_value_;
   const modular::LinkPathPtr link_path_;
 
   // Per context link topic, the context value.
-  std::map<fidl::String, ScopedContextValue> values_;
+  std::map<fidl::String, ContextValueWriterPtr> values_;
 
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
 
