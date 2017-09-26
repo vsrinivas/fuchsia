@@ -26,6 +26,7 @@ namespace wlan {
 
 Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     : device_(device), timer_(std::move(timer)) {
+    nbrs_bss_.Reset();
     ZX_DEBUG_ASSERT(timer_.get());
 }
 
@@ -115,7 +116,8 @@ void Scanner::Reset() {
     channel_index_ = 0;
     channel_start_ = 0;
     timer_->CancelTimer();
-    bss_descriptors_.clear();
+
+    nbrs_bss_.Reset();
 }
 
 bool Scanner::IsRunning() const {
@@ -151,109 +153,28 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
 
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
     ZX_DEBUG_ASSERT(rxinfo);
+
     auto hdr = packet->field<MgmtFrameHeader>(0);
-    auto bcn = packet->field<Beacon>(sizeof(MgmtFrameHeader));
-    debugbcn("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n", bcn->timestamp,
-             bcn->beacon_interval, bcn->cap.val());
 
-    BSSDescription* bss;
-    uint64_t sender = DeviceAddress(hdr->addr2).to_u64();
-    auto entry = bss_descriptors_.find(sender);
-    if (entry == bss_descriptors_.end()) {
-        auto bssptr = BSSDescription::New();
-        bss = bssptr.get();
-        bss_descriptors_.insert({sender, std::move(bssptr)});
+    MacAddr bssid(hdr->addr3);
+    MacAddr src_addr(hdr->addr2);
 
-        bss->bssid = fidl::Array<uint8_t>::New(sizeof(hdr->addr3));
-        std::memcpy(bss->bssid.data(), hdr->addr3, bss->bssid.size());
-        bss->rsn = fidl::Array<uint8_t>::New(RsnElement::kMaxLen);
-    } else {
-        bss = entry->second.get();
+    if (!bssid.Equals(src_addr)) {
+        // Undefined situation. Investigate if roaming needs this or this is a plain dark art.
+        debugbcn("Rxed a beacon/probe_resp from the non-BSSID station: BSSID %s   SrcAddr %s\n",
+                 bssid.ToString().c_str(), src_addr.ToString().c_str());
+        return ZX_OK;  // Do not process.
     }
 
-    // TODO(porce): Remove once we changed BSSDescription to use an internal rather than FIDL
-    // representation.
-    bss->rsn.reset();
+    auto hdr_len = hdr->len();
+    auto beacon = packet->field<Beacon>(hdr_len);
+    size_t beacon_len = packet->len() - hdr_len;  // packet->len() does not include FCS.
+    auto status = nbrs_bss_.Upsert(bssid, beacon, beacon_len, rxinfo);
 
-    // Insert / update all the fields
-    if (bcn->cap.ess()) {
-        bss->bss_type = BSSTypes::INFRASTRUCTURE;
-    } else if (bcn->cap.ibss()) {
-        bss->bss_type = BSSTypes::INDEPENDENT;
+    if (status != ZX_OK) {
+        debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
+                 bssid.ToString().c_str(), beacon->timestamp);
     }
-    bss->beacon_period = bcn->beacon_interval;
-    bss->timestamp = bcn->timestamp;
-    bss->channel = rxinfo->chan.channel_num;
-    if (rxinfo->flags & WLAN_RX_INFO_RSSI_PRESENT) {
-        bss->rssi_measurement = rxinfo->rssi;
-    } else {
-        bss->rssi_measurement = 0xff;
-    }
-    if (rxinfo->flags & WLAN_RX_INFO_RCPI_PRESENT) {
-        bss->rcpi_measurement = rxinfo->rcpi;
-    } else {
-        bss->rcpi_measurement = 0xff;
-    }
-    if (rxinfo->flags & WLAN_RX_INFO_SNR_PRESENT) {
-        bss->rsni_measurement = rxinfo->snr;
-    } else {
-        bss->rsni_measurement = 0xff;
-    }
-
-    size_t elt_len = packet->len() - sizeof(MgmtFrameHeader) - sizeof(Beacon);
-    ElementReader reader(bcn->elements, elt_len);
-
-    while (reader.is_valid()) {
-        const ElementHeader* hdr = reader.peek();
-        if (hdr == nullptr) break;
-
-        switch (hdr->id) {
-        case element_id::kSsid: {
-            auto ssid = reader.read<SsidElement>();
-            debugbcn("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
-            bss->ssid = fidl::String(ssid->ssid, ssid->hdr.len);
-            break;
-        }
-        case element_id::kSuppRates: {
-            auto supprates = reader.read<SupportedRatesElement>();
-            if (supprates == nullptr) goto done_iter;
-            char buf[256];
-            char* bptr = buf;
-            for (int i = 0; i < supprates->hdr.len; i++) {
-                size_t used = bptr - buf;
-                ZX_DEBUG_ASSERT(sizeof(buf) > used);
-                bptr += snprintf(bptr, sizeof(buf) - used, " %u", supprates->rates[i]);
-            }
-            debugbcn("supported rates:%s\n", buf);
-            break;
-        }
-        case element_id::kDsssParamSet: {
-            auto dsss_params = reader.read<DsssParamSetElement>();
-            if (dsss_params == nullptr) goto done_iter;
-            debugbcn("current channel: %u\n", dsss_params->current_chan);
-            break;
-        }
-        case element_id::kCountry: {
-            auto country = reader.read<CountryElement>();
-            if (country == nullptr) goto done_iter;
-            debugbcn("country: %.*s\n", 3, country->country);
-            break;
-        }
-        case element_id::kRsn: {
-            auto rsn = reader.read<RsnElement>();
-            if (rsn == nullptr) goto done_iter;
-            size_t len = sizeof(ElementHeader) + rsn->hdr.len;
-            bss->rsn.resize(len);
-            memcpy(bss->rsn.data(), rsn, len);
-            break;
-        }
-        default:
-            debugbcn("unknown element id: %u len: %u\n", hdr->id, hdr->len);
-            reader.skip(sizeof(ElementHeader) + hdr->len);
-            break;
-        }
-    }
-done_iter:
 
     return ZX_OK;
 }
@@ -401,9 +322,14 @@ zx_status_t Scanner::SendProbeRequest() {
 
 zx_status_t Scanner::SendScanResponse() {
     debugfn();
-    for (auto& bss : bss_descriptors_) {
-        if (req_->ssid.size() == 0 || req_->ssid == bss.second->ssid) {
-            resp_->bss_description_set.push_back(std::move(bss.second));
+
+    for (auto& iter : nbrs_bss_.map()) {
+        Bss* bss = iter.second;
+        if (bss == nullptr) continue;
+
+        if (req_->ssid.size() == 0 || req_->ssid == bss->SsidToString()) {
+            debugbss("%s\n", bss->ToString().c_str());
+            resp_->bss_description_set.push_back(bss->ToFidl());
         }
     }
 
@@ -420,7 +346,7 @@ zx_status_t Scanner::SendScanResponse() {
         status = device_->SendService(std::move(packet));
     }
 
-    bss_descriptors_.clear();
+    nbrs_bss_.Reset();  // TODO(porce): Decouple BSS management from Scanner.
     return status;
 }
 

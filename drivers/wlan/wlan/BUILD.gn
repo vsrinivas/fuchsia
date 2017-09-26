@@ -11,6 +11,9 @@ config("wlan_config") {
 
 source_set("mlme") {
   sources = [
+    "bss.cpp",
+    "bss.h",
+    "channel.h",
     "clock.h",
     "device_interface.cpp",
     "device_interface.h",

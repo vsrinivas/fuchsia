@@ -328,11 +328,11 @@ class FrameControl : public common::BitField<uint16_t> {
     // For type == Control and subtype == Control Frame Extension
     WLAN_BIT_FIELD(cf_extension, 8, 4);
 
-    bool IsMgmt() { return type() == FrameType::kManagement; }
-    bool IsCtrl() { return type() == FrameType::kControl; }
-    bool IsData() { return type() == FrameType::kData; }
+    bool IsMgmt() const { return type() == FrameType::kManagement; }
+    bool IsCtrl() const { return type() == FrameType::kControl; }
+    bool IsData() const { return type() == FrameType::kData; }
 
-    bool HasHtCtrl() { return htc_order() != 0; }
+    bool HasHtCtrl() const { return htc_order() != 0; }
 };
 
 // IEEE Std 802.11-2016, 9.3.3.2
@@ -347,20 +347,24 @@ struct MgmtFrameHeader {
     // Use accessors for optional field.
     // uint8_t ht_ctrl[4];
 
-    uint16_t len() {
+    uint16_t len() const {
         uint16_t len = sizeof(MgmtFrameHeader);
         if (fc.HasHtCtrl()) { len += kHtCtrlLen; }
         return len;
     }
 
-    HtControl* ht_ctrl() {
+    const HtControl* ht_ctrl() const {
         if (!fc.HasHtCtrl()) return nullptr;
         uint16_t offset = sizeof(MgmtFrameHeader);
-        return reinterpret_cast<HtControl*>(raw() + offset);
+        return reinterpret_cast<const HtControl* const>(raw() + offset);
     }
 
+    bool IsBeacon() const { return fc.subtype() == kBeacon; }
+
+    bool IsProbeResponse() const { return fc.subtype() == kProbeResponse; }
+
    private:
-    uint8_t* raw() { return reinterpret_cast<uint8_t*>(this); }
+    const uint8_t* raw() const { return reinterpret_cast<const uint8_t*>(this); }
 
 } __PACKED;
 

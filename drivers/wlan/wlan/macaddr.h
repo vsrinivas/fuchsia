@@ -7,7 +7,9 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <string>
 
 namespace wlan {
@@ -16,6 +18,11 @@ constexpr size_t kMacAddrLen = 6;  // bytes
 
 struct MacAddr {
     uint8_t byte[kMacAddrLen];
+
+    MacAddr() {}
+    MacAddr(const MacAddr& addr) { Set(addr); }
+    MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
+    MacAddr(const std::string& addr) { Set(addr); }
 
     std::string ToString() const {
         char buf[17 + 1];
@@ -61,7 +68,7 @@ struct MacAddr {
 
     // Overloaded initializer.
     void Set(const MacAddr& addr) { std::memcpy(byte, addr.byte, kMacAddrLen); }
-    void Set(uint8_t addr[]) { std::memcpy(byte, addr, kMacAddrLen); }
+    void Set(const uint8_t addr[kMacAddrLen]) { std::memcpy(byte, addr, kMacAddrLen); }
     void Set(const std::string& addr) { FromStr(addr); }
 
     bool FromStr(const std::string& str) {
@@ -78,7 +85,26 @@ struct MacAddr {
         }
         return true;
     }
-} __PACKED;
+
+    uint64_t ToU64() const {
+        // Refer to DeviceAddress::to_u64()
+        uint64_t m = 0;
+        for (size_t idx = 0; idx < kMacAddrLen; idx++) {
+            m <<= 8;
+            m |= byte[idx];
+        }
+        return m;
+    }
+
+    bool operator==(const MacAddr& addr) const { return Cmp(addr) == 0; }
+}  // namespace wlan
+__PACKED;
+
+struct MacAddrHasher {
+    std::size_t operator()(const MacAddr& addr) const {
+        return std::hash<uint64_t>()(addr.ToU64());
+    }
+};
 
 // Defined in macaddr.cpp
 extern const MacAddr kZeroMac;

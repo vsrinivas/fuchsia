@@ -10,6 +10,7 @@
 
 #include <unordered_map>
 
+#include "bss.h"
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
 namespace wlan {
@@ -56,8 +57,8 @@ class Scanner {
     size_t channel_index_ = 0;
     zx_time_t channel_start_ = 0;
 
-    // TODO(porce): Use internal representation rather than FIDL.
-    std::unordered_map<uint64_t, BSSDescriptionPtr> bss_descriptors_;
+    // TODO(porce): Decouple neighbor BSS management from scanner.
+    BssMap nbrs_bss_;
 };
 
 }  // namespace wlan

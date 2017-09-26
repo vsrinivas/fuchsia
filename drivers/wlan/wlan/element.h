@@ -294,6 +294,7 @@ enum ElementIdExtension : uint8_t {
     // 15-255 Reserved
 };
 
+// IEEE Std 802.11-2016, 9.4.2.2
 struct SsidElement : public Element<SsidElement, element_id::kSsid> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* ssid);
     static const size_t kMaxLen = 32;
@@ -302,6 +303,7 @@ struct SsidElement : public Element<SsidElement, element_id::kSsid> {
     char ssid[];
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.3
 struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
     static const size_t kMaxLen = 8;
@@ -310,6 +312,7 @@ struct SupportedRatesElement : public Element<SupportedRatesElement, element_id:
     uint8_t rates[];
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.4
 struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDsssParamSet> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t chan);
 
@@ -317,6 +320,7 @@ struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDs
     uint8_t current_chan;
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.5
 struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfParamSet> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t count, uint8_t period,
                        uint16_t max_duration, uint16_t dur_remaining);
@@ -351,14 +355,17 @@ struct TimElement : public Element<TimElement, element_id::kTim> {
     bool traffic_buffered(uint16_t aid) const;
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.9
 struct CountryElement : public Element<CountryElement, element_id::kCountry> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* country);
+    static const size_t kCountryLen = 3;
 
     ElementHeader hdr;
-    char country[3];
+    char country[kCountryLen];
     uint8_t triplets[];  // TODO(tkilbourn): define these
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.13
 struct ExtendedSupportedRatesElement
     : public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);

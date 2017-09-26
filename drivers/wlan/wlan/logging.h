@@ -49,6 +49,7 @@ constexpr uint64_t kLogLevel = kLogInfos;
 #define debugjoin(args...) wlogf(kLogDataJoinTrace, "[V:join] ", args)
 #define debughdr(args...)  wlogf(kLogDataHeaderTrace, "[V:hdr ] ", args)
 #define debugbcn(args...)  wlogf(kLogDataBeaconTrace, "[V:bcn ] ", args)
+#define debugbss(args...)  wlogf(kLogDataBeaconTrace, "[V:bss ] ", args)
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
