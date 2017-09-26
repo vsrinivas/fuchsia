@@ -206,7 +206,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusGetDescriptor(uint8_t desc_type, void*
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                                    size_t len) {
+                                                    size_t len, size_t* out_len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

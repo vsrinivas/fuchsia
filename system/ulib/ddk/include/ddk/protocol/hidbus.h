@@ -60,7 +60,8 @@ typedef struct hidbus_protocol_ops {
 
     // HID operations. See Device Class Definition for HID for details.
     zx_status_t (*get_descriptor)(void* ctx, uint8_t desc_type, void** data, size_t* len);
-    zx_status_t (*get_report)(void* ctx, uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
+    zx_status_t (*get_report)(void* ctx, uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                              size_t* out_len);
     zx_status_t (*set_report)(void* ctx, uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
     zx_status_t (*get_idle)(void* ctx, uint8_t rpt_id, uint8_t* duration);
     zx_status_t (*set_idle)(void* ctx, uint8_t rpt_id, uint8_t duration);

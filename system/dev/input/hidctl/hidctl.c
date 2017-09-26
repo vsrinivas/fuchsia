@@ -41,7 +41,8 @@ zx_status_t hidctl_get_descriptor(zx_hid_device_t* dev, uint8_t desc_type, void*
     return ZX_OK;
 }
 
-zx_status_t hidctl_get_report(zx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len) {
+zx_status_t hidctl_get_report(zx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id, void* data,
+                              size_t len, size_t* out_len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

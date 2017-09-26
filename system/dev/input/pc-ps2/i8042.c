@@ -673,7 +673,7 @@ static zx_status_t i8042_get_descriptor(void* ctx, uint8_t desc_type,
 }
 
 static zx_status_t i8042_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-        void* data, size_t len) {
+        void* data, size_t len, size_t* out_len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

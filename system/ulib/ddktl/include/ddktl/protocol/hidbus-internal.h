@@ -69,10 +69,10 @@ constexpr void CheckHidBusProtocolSubclass() {
     static_assert(internal::has_hidbus_get_report<D>::value,
                   "HidBusProtocol subclasses must implement HidBusGetReport");
     static_assert(fbl::is_same<decltype(&D::HidBusGetReport),
-                                zx_status_t (D::*)(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len)>::value,
+                                zx_status_t (D::*)(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len, size_t* out_len)>::value,
                   "HidBusGetReport must be a non-static member function with signature "
-                  "'zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len)', and be visible to "
-                  "ddk::HidBusProtocol<D> (either because they are public, or because of "
+                  "'zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len, size_t* out_len)',"
+                  " and be visible to ddk::HidBusProtocol<D> (either because they are public, or because of "
                   "friendship).");
 
     static_assert(internal::has_hidbus_set_report<D>::value,

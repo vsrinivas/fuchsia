@@ -104,8 +104,8 @@ static inline zx_status_t hid_op_get_descriptor(hid_device_t* hid, uint8_t desc_
 }
 
 static inline zx_status_t hid_op_get_report(hid_device_t* hid, uint8_t rpt_type, uint8_t rpt_id,
-                                            void* data, size_t len) {
-    return hid->hid.ops->get_report(hid->hid.ctx, rpt_type, rpt_id, data, len);
+                                            void* data, size_t len, size_t* out_len) {
+    return hid->hid.ops->get_report(hid->hid.ctx, rpt_type, rpt_id, data, len, out_len);
 }
 
 static inline zx_status_t hid_op_set_report(hid_device_t* hid, uint8_t rpt_type, uint8_t rpt_id,
@@ -249,12 +249,7 @@ static zx_status_t hid_get_report(hid_device_t* hid, const void* in_buf, size_t 
     if (needed == 0) return ZX_ERR_INVALID_ARGS;
     if (out_len < (size_t)needed) return ZX_ERR_BUFFER_TOO_SMALL;
 
-    zx_status_t status = hid_op_get_report(hid, inp->type, inp->id, out_buf, out_len);
-    if (status >= 0) {
-        *out_actual = status;
-        status = ZX_OK;
-    }
-    return status;
+    return hid_op_get_report(hid, inp->type, inp->id, out_buf, out_len, out_actual);
 }
 
 static zx_status_t hid_set_report(hid_device_t* hid, const void* in_buf, size_t in_len) {

@@ -147,11 +147,21 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
 }
 
 static zx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-                                      void* data, size_t len) {
+                                      void* data, size_t len, size_t* out_len) {
+    if (out_len == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     usb_hid_device_t* hid = ctx;
-    return usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+    // TODO: update this when usb_control returns actual length separately from the status
+    zx_status_t status = usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len,
             ZX_TIME_INFINITE);
+    if (status >= 0) {
+        *out_len = status;
+        status = ZX_OK;
+    }
+    return status;
 }
 
 static zx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,

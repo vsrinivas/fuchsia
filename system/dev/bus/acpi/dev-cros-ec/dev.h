@@ -58,7 +58,8 @@ public:
     zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy);
     void HidBusStop();
     zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
+    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                                size_t* out_len);
     zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
     zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
     zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);

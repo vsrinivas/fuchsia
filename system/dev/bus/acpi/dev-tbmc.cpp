@@ -38,7 +38,8 @@ public:
     zx_status_t HidBusStart(ddk::HidBusIfcProxy proxy);
     void HidBusStop();
     zx_status_t HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
-    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
+    zx_status_t HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                                size_t* out_len);
     zx_status_t HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len);
     zx_status_t HidBusGetIdle(uint8_t rpt_id, uint8_t* duration);
     zx_status_t HidBusSetIdle(uint8_t rpt_id, uint8_t duration);
@@ -199,7 +200,11 @@ zx_status_t AcpiTbmcDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, 
 }
 
 zx_status_t AcpiTbmcDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                            size_t len) {
+                                            size_t len, size_t* out_len) {
+    if (out_len == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     if (rpt_type != HID_REPORT_TYPE_INPUT || rpt_id != 0) {
         return ZX_ERR_NOT_FOUND;
     }
@@ -213,8 +218,8 @@ zx_status_t AcpiTbmcDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, vo
     static_assert(sizeof(report) == kHidReportLen, "");
     memcpy(data, &report, kHidReportLen);
 
-    // This API returns the length written
-    return kHidReportLen;
+    *out_len = kHidReportLen;
+    return ZX_OK;
 }
 
 zx_status_t AcpiTbmcDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
