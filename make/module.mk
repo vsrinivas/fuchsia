@@ -58,10 +58,12 @@ DUPMODULES += $(MODULE)
 # if there's a manifest group, remove whitespace and wrap it in {}s
 ifneq ($(strip $(MODULE_GROUP)),)
 MODULE_GROUP := {$(strip $(MODULE_GROUP))}
+else ifeq ($(MODULE_TYPE),driver)
+MODULE_GROUP := {core}
+else ifeq ($(MODULE_TYPE),userlib)
+MODULE_GROUP := {libs}
 else ifneq (,$(filter usertest drivertest,$(MODULE_TYPE)))
 MODULE_GROUP := {test}
-else ifneq (,$(filter userlib driver,$(MODULE_TYPE)))
-MODULE_GROUP := {core}
 endif
 
 # all library deps go on the deps list
