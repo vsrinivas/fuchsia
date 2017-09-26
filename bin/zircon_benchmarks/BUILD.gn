@@ -13,6 +13,7 @@ executable("benchmarks") {
     "sockets.cc",
     "syscalls.cc",
     "threads.cc",
+    "vmo.cc",
   ]
   deps = [
     "//third_party/benchmark",
