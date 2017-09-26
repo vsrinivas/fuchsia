@@ -29,6 +29,8 @@
 
 #include <fbl/function.h>
 
+#include <zircon/types.h>
+
 #define LOCAL_TRACE 0
 
 // All jobs and processes are rooted at the |root_job|.
@@ -221,7 +223,7 @@ static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     PortDispatcher::Init();
     // Be sure to update kernel_cmdline.md if any of these defaults change.
     oom_init(cmdline_get_bool("kernel.oom.enable", true),
-             LK_SEC(cmdline_get_uint64("kernel.oom.sleep-sec", 1)),
+             ZX_SEC(cmdline_get_uint64("kernel.oom.sleep-sec", 1)),
              cmdline_get_uint64("kernel.oom.redline-mb", 50) * MB,
              oom_lowmem);
 }

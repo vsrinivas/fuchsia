@@ -23,7 +23,7 @@
 static int sleep_thread(void* arg) {
     for (;;) {
         printf("sleeper %p\n", get_current_thread());
-        thread_sleep_relative(LK_MSEC(rand() % 500));
+        thread_sleep_relative(ZX_MSEC(rand() % 500));
     }
     return 0;
 }
@@ -90,7 +90,7 @@ static int mutex_test(void) {
         thread_join(threads[i], NULL, INFINITE_TIME);
     }
 
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
 
     printf("done with mutex tests\n");
 
@@ -101,7 +101,7 @@ static event_t e;
 
 static int event_signaler(void* arg) {
     printf("event signaler pausing\n");
-    thread_sleep_relative(LK_SEC(1));
+    thread_sleep_relative(ZX_SEC(1));
 
     //  for (;;) {
     printf("signaling event\n");
@@ -158,7 +158,7 @@ static void event_test(void) {
     for (uint i = 0; i < countof(threads); i++)
         thread_join(threads[i], NULL, INFINITE_TIME);
 
-    thread_sleep_relative(LK_SEC(2));
+    thread_sleep_relative(ZX_SEC(2));
     printf("destroying event\n");
     event_destroy(&e);
 
@@ -174,7 +174,7 @@ static void event_test(void) {
     for (uint i = 0; i < countof(threads); i++)
         thread_resume(threads[i]);
 
-    thread_sleep_relative(LK_SEC(2));
+    thread_sleep_relative(ZX_SEC(2));
 
     for (uint i = 0; i < countof(threads); i++) {
         thread_kill(threads[i], true);
@@ -216,7 +216,7 @@ static int context_switch_tester(void* arg) {
         thread_yield();
     }
     total_count += arch_cycle_count() - count;
-    thread_sleep_relative(LK_SEC(1));
+    thread_sleep_relative(ZX_SEC(1));
     printf("took %" PRIu64 " cycles to yield %d times, %" PRIu64 " per yield, %" PRIu64 " per yield per thread\n",
            total_count, iter, total_count / iter, total_count / iter / thread_count);
 
@@ -230,19 +230,19 @@ static void context_switch_test(void) {
     event_init(&context_switch_done_event, false, 0);
 
     thread_detach_and_resume(thread_create("context switch idle", &context_switch_tester, (void*)1, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
     event_signal(&context_switch_event, true);
     event_wait(&context_switch_done_event);
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
 
     event_unsignal(&context_switch_event);
     event_unsignal(&context_switch_done_event);
     thread_detach_and_resume(thread_create("context switch 2a", &context_switch_tester, (void*)2, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
     thread_detach_and_resume(thread_create("context switch 2b", &context_switch_tester, (void*)2, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
     event_signal(&context_switch_event, true);
     event_wait(&context_switch_done_event);
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
 
     event_unsignal(&context_switch_event);
     event_unsignal(&context_switch_done_event);
@@ -250,10 +250,10 @@ static void context_switch_test(void) {
     thread_detach_and_resume(thread_create("context switch 4b", &context_switch_tester, (void*)4, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
     thread_detach_and_resume(thread_create("context switch 4c", &context_switch_tester, (void*)4, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
     thread_detach_and_resume(thread_create("context switch 4d", &context_switch_tester, (void*)4, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
     event_signal(&context_switch_event, true);
     event_wait(&context_switch_done_event);
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
 }
 
 static volatile int atomic;
@@ -329,7 +329,7 @@ static void preempt_test(void) {
         thread_detach_and_resume(thread_create("preempt tester", &preempt_tester, NULL, LOW_PRIORITY, DEFAULT_STACK_SIZE));
 
     while (preempt_count > 0) {
-        thread_sleep_relative(LK_SEC(1));
+        thread_sleep_relative(ZX_SEC(1));
     }
 
     printf("done with preempt test, above time stamps should be very close\n");
@@ -350,7 +350,7 @@ static void preempt_test(void) {
     }
 
     while (preempt_count > 0) {
-        thread_sleep_relative(LK_SEC(1));
+        thread_sleep_relative(ZX_SEC(1));
     }
 
     printf("done with real-time preempt test, above time stamps should be 1 second apart\n");
@@ -360,7 +360,7 @@ static int join_tester(void* arg) {
     int val = (int)(uintptr_t)arg;
 
     printf("\t\tjoin tester starting\n");
-    thread_sleep_relative(LK_MSEC(500));
+    thread_sleep_relative(ZX_MSEC(500));
     printf("\t\tjoin tester exiting with result %d\n", val);
 
     return val;
@@ -385,7 +385,7 @@ static int join_tester_server(void* arg) {
     printf("\tcreating and waiting on thread to exit with thread_join, after thread has exited\n");
     t = thread_create("join tester", &join_tester, (void*)2, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
-    thread_sleep_relative(LK_SEC(1)); // wait until thread is already dead
+    thread_sleep_relative(ZX_SEC(1)); // wait until thread is already dead
     ret = 99;
     printf("\tthread magic is 0x%x (should be 0x%x)\n", t->magic, THREAD_MAGIC);
     err = thread_join(t, &ret, INFINITE_TIME);
@@ -396,13 +396,13 @@ static int join_tester_server(void* arg) {
     t = thread_create("join tester", &join_tester, (void*)3, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_detach(t);
     thread_resume(t);
-    thread_sleep_relative(LK_SEC(1)); // wait until the thread should be dead
+    thread_sleep_relative(ZX_SEC(1)); // wait until the thread should be dead
     printf("\tthread magic is 0x%x (should be 0)\n", t->magic);
 
     printf("\tcreating a thread, detaching it after it should be dead\n");
     t = thread_create("join tester", &join_tester, (void*)4, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
     thread_resume(t);
-    thread_sleep_relative(LK_SEC(1)); // wait until thread is already dead
+    thread_sleep_relative(ZX_SEC(1)); // wait until thread is already dead
     printf("\tthread magic is 0x%x (should be 0x%x)\n", t->magic, THREAD_MAGIC);
     thread_detach(t);
     printf("\tthread magic is 0x%x\n", t->magic);
@@ -452,11 +452,11 @@ static void sleeper_thread_exit(enum thread_user_state_change new_state, void* a
 }
 
 static int sleeper_kill_thread(void* arg) {
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
 
     lk_time_t t = current_time();
-    zx_status_t err = thread_sleep_etc(t + LK_SEC(5), true);
-    t = (current_time() - t) / LK_MSEC(1);
+    zx_status_t err = thread_sleep_etc(t + ZX_SEC(5), true);
+    t = (current_time() - t) / ZX_MSEC(1);
     TRACEF("thread_sleep_etc returns %d after %" PRIu64 " msecs\n", err, t);
 
     return 0;
@@ -469,11 +469,11 @@ static void waiter_thread_exit(enum thread_user_state_change new_state, void* ar
 static int waiter_kill_thread_infinite_wait(void* arg) {
     event_t* e = (event_t*)arg;
 
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
 
     lk_time_t t = current_time();
     zx_status_t err = event_wait_deadline(e, INFINITE_TIME, true);
-    t = (current_time() - t) / LK_MSEC(1);
+    t = (current_time() - t) / ZX_MSEC(1);
     TRACEF("event_wait_deadline returns %d after %" PRIu64 " msecs\n", err, t);
 
     return 0;
@@ -482,11 +482,11 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
 static int waiter_kill_thread(void* arg) {
     event_t* e = (event_t*)arg;
 
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
 
     lk_time_t t = current_time();
-    zx_status_t err = event_wait_deadline(e, t + LK_SEC(5), true);
-    t = (current_time() - t) / LK_MSEC(1);
+    zx_status_t err = event_wait_deadline(e, t + ZX_SEC(5), true);
+    t = (current_time() - t) / ZX_MSEC(1);
     TRACEF("event_wait_deadline with deadline returns %d after %" PRIu64 " msecs\n", err, t);
 
     return 0;
@@ -500,7 +500,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &sleeper_thread_exit);
     thread_resume(t);
-    thread_sleep_relative(LK_MSEC(200));
+    thread_sleep_relative(ZX_MSEC(200));
     thread_kill(t, true);
     thread_join(t, NULL, INFINITE_TIME);
 
@@ -528,7 +528,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
-    thread_sleep_relative(LK_MSEC(200));
+    thread_sleep_relative(ZX_MSEC(200));
     thread_kill(t, true);
     thread_join(t, NULL, INFINITE_TIME);
     event_destroy(&e);
@@ -549,7 +549,7 @@ static void kill_tests(void) {
     t->user_thread = t;
     thread_set_user_callback(t, &waiter_thread_exit);
     thread_resume(t);
-    thread_sleep_relative(LK_MSEC(200));
+    thread_sleep_relative(ZX_MSEC(200));
     thread_kill(t, true);
     thread_join(t, NULL, INFINITE_TIME);
     event_destroy(&e);
@@ -574,7 +574,7 @@ int thread_tests(void) {
     spinlock_test();
     atomic_test();
 
-    thread_sleep_relative(LK_MSEC(200));
+    thread_sleep_relative(ZX_MSEC(200));
     context_switch_test();
 
     preempt_test();

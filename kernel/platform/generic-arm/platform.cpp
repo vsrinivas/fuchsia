@@ -424,7 +424,7 @@ void platform_halt_secondary_cpus(void) {
     }
 
     // TODO(gkalsi): Wait for the secondaries to shutdown rather than sleeping
-    thread_sleep_relative(LK_SEC(2));
+    thread_sleep_relative(ZX_SEC(2));
 }
 
 static void platform_start_cpu(uint cluster, uint cpu) {

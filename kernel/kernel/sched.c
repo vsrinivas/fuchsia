@@ -47,7 +47,7 @@
     } while (0)
 
 /* threads get 10ms to run before they use up their time slice and the scheduler is invoked */
-#define THREAD_INITIAL_TIME_SLICE LK_MSEC(10)
+#define THREAD_INITIAL_TIME_SLICE ZX_MSEC(10)
 
 /* the run queue */
 static struct list_node run_queue[NUM_PRIORITIES];

@@ -19,6 +19,7 @@
 #include <kernel/thread.h>
 #include <vm/pmm.h>
 #include <arch.h>
+#include <zircon/types.h>
 
 #include <lib/console.h>
 
@@ -298,10 +299,10 @@ static int cmd_chain(int argc, const cmd_args *argv, uint32_t flags)
 
 static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
 {
-    lk_time_t t = LK_SEC(1); /* default to 1 second */
+    lk_time_t t = ZX_SEC(1); /* default to 1 second */
 
     if (argc >= 2) {
-        t = LK_MSEC(argv[1].u);
+        t = ZX_MSEC(argv[1].u);
         if (!strcmp(argv[0].str, "sleep"))
             t *= 1000;
     }
@@ -345,7 +346,7 @@ __attribute__((noinline)) static void stomp_stack(size_t size) {
     // Neither is allowed anywhere in the kernel outside this test code.
     void* death = __builtin_alloca(size); // OK in test-only code.
     memset(death, 0xaa, size);
-    thread_sleep_relative(LK_USEC(1));
+    thread_sleep_relative(ZX_USEC(1));
 }
 
 static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags)

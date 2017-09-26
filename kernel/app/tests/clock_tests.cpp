@@ -16,12 +16,13 @@
 #include <platform.h>
 #include <rand.h>
 #include <stdio.h>
+#include <zircon/types.h>
 
 void clock_tests(void) {
     uint64_t c;
     lk_time_t t2;
 
-    thread_sleep_relative(LK_MSEC(100));
+    thread_sleep_relative(ZX_MSEC(100));
     c = arch_cycle_count();
     current_time();
     c = arch_cycle_count() - c;
@@ -41,14 +42,14 @@ void clock_tests(void) {
                 continue;
             }
             last = t2;
-            if (last - start > LK_SEC(5))
+            if (last - start > ZX_SEC(5))
                 break;
         }
     }
 
     printf("counting to 5, in one second intervals\n");
     for (int i = 0; i < 5; i++) {
-        thread_sleep_relative(LK_SEC(1));
+        thread_sleep_relative(ZX_SEC(1));
         printf("%d\n", i + 1);
     }
 
@@ -67,7 +68,7 @@ void clock_tests(void) {
         for (int i = 0; i < 3; i++) {
             uint64_t cycles = arch_cycle_count();
             lk_time_t start = current_time();
-            while ((current_time() - start) < LK_SEC(1))
+            while ((current_time() - start) < ZX_SEC(1))
                 ;
             cycles = arch_cycle_count() - cycles;
             printf("cpu %u: %" PRIu64 " cycles per second\n", cpu, cycles);

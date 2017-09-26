@@ -25,6 +25,7 @@
 #include <trace.h>
 #include <platform.h>
 #include <vm/vm.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 
@@ -279,8 +280,8 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
             ret = ZX_OK;
             break;
         }
-        thread_sleep_relative(LK_MSEC(1));
-    } while ((current_time() - start) < LK_SEC(5));
+        thread_sleep_relative(ZX_MSEC(1));
+    } while ((current_time() - start) < ZX_SEC(5));
 
     if (ret != ZX_OK) {
         TRACEF("Timeout waiting for pending transactions to clear the bus "
@@ -297,7 +298,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
         initiate_flr(this);
 
         // 5) Software waits 100mSec
-        thread_sleep_relative(LK_MSEC(100));
+        thread_sleep_relative(ZX_MSEC(100));
     }
 
     // NOTE: Even though the spec says that the reset operation is supposed
@@ -313,8 +314,8 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
             ret = ZX_OK;
             break;
         }
-        thread_sleep_relative(LK_MSEC(1));
-    } while ((current_time() - start) < LK_SEC(5));
+        thread_sleep_relative(ZX_MSEC(1));
+    } while ((current_time() - start) < ZX_SEC(5));
 
     if (ret == ZX_OK) {
         // 6) Software reconfigures the function and enables it for normal operation

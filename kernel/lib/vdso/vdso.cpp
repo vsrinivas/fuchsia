@@ -16,6 +16,7 @@
 #include <fbl/type_support.h>
 #include <object/handles.h>
 #include <platform.h>
+#include <zircon/types.h>
 
 #include "vdso-code.h"
 

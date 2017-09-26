@@ -15,6 +15,7 @@
 #include <lk/init.h>
 #include <platform.h>
 #include <string.h>
+#include <zircon/types.h>
 
 #define DLOG_SIZE (128u * 1024u)
 #define DLOG_MASK (DLOG_SIZE - 1u)
@@ -287,8 +288,8 @@ static int debuglog_dumper(void *arg) {
             }
             int n;
             n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                         (int) (rec.hdr.timestamp / LK_SEC(1)),
-                         (int) ((rec.hdr.timestamp / LK_MSEC(1)) % 1000ULL),
+                         (int) (rec.hdr.timestamp / ZX_SEC(1)),
+                         (int) ((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL),
                          rec.hdr.pid, rec.hdr.tid, rec.data);
             if (n > (int)sizeof(tmp)) {
                 n = sizeof(tmp);
@@ -312,7 +313,7 @@ void dlog_bluescreen_init(void) {
     // replay debug log?
 
     dprintf(INFO, "\nZIRCON KERNEL PANIC\n\nUPTIME: %" PRIu64 "ms\n",
-            current_time() / LK_MSEC(1));
+            current_time() / ZX_MSEC(1));
     dprintf(INFO, "BUILDID %s\n\n", version.buildid);
 
     // Log the ELF build ID in the format the symbolizer scripts understand.

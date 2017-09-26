@@ -32,7 +32,7 @@ static int timer_do_one_thread(void* arg) {
     event_init(&event, false, 0);
     timer_init(&timer);
 
-    timer_set(&timer, current_time() + LK_MSEC(10), TIMER_SLACK_CENTER, 0, timer_cb, &event);
+    timer_set(&timer, current_time() + ZX_MSEC(10), TIMER_SLACK_CENTER, 0, timer_cb, &event);
     event_wait(&event);
 
     printf("got timer on cpu %u\n", arch_curr_cpu_num());
@@ -63,7 +63,7 @@ static void timer_test_all_cpus(void) {
     }
     uint joined = 0;
     for (i = 0; i < max; i++) {
-        if (thread_join(timer_threads[i], NULL, LK_SEC(1)) == 0) {
+        if (thread_join(timer_threads[i], NULL, ZX_SEC(1)) == 0) {
             joined += 1;
         }
     }
@@ -99,15 +99,15 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
 
     // Wait for the timers to fire.
     while (atomic_load(&timer_count) != count) {
-        thread_sleep(current_time() + LK_MSEC(5));
+        thread_sleep(current_time() + ZX_MSEC(5));
     }
 
     free(timer);
 }
 
 static void timer_test_coalescing_center(void) {
-    lk_time_t when = current_time() + LK_MSEC(1);
-    lk_time_t off = LK_USEC(10);
+    lk_time_t when = current_time() + ZX_MSEC(1);
+    lk_time_t off = ZX_USEC(10);
     lk_time_t slack = 2u * off;
 
     const lk_time_t deadline[] = {
@@ -122,15 +122,15 @@ static void timer_test_coalescing_center(void) {
     };
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, 0, LK_USEC(10), 0, -(int64_t)LK_USEC(10), 0, LK_USEC(10), 0};
+        0, 0, ZX_USEC(10), 0, -(int64_t)ZX_USEC(10), 0, ZX_USEC(10), 0};
 
     timer_test_coalescing(
         TIMER_SLACK_CENTER, slack, deadline, expected_adj, countof(deadline));
 }
 
 static void timer_test_coalescing_late(void) {
-    lk_time_t when = current_time() + LK_MSEC(1);
-    lk_time_t off = LK_USEC(10);
+    lk_time_t when = current_time() + ZX_MSEC(1);
+    lk_time_t off = ZX_USEC(10);
     lk_time_t slack = 3u * off;
 
     const lk_time_t deadline[] = {
@@ -144,15 +144,15 @@ static void timer_test_coalescing_late(void) {
     };
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, 0, LK_USEC(20), 0, 0, 0, LK_USEC(10)};
+        0, 0, ZX_USEC(20), 0, 0, 0, ZX_USEC(10)};
 
     timer_test_coalescing(
         TIMER_SLACK_LATE, slack, deadline, expected_adj, countof(deadline));
 }
 
 static void timer_test_coalescing_early(void) {
-    lk_time_t when = current_time() + LK_MSEC(1);
-    lk_time_t off = LK_USEC(10);
+    lk_time_t when = current_time() + ZX_MSEC(1);
+    lk_time_t off = ZX_USEC(10);
     lk_time_t slack = 3u * off;
 
     const lk_time_t deadline[] = {
@@ -166,7 +166,7 @@ static void timer_test_coalescing_early(void) {
     };
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, -(int64_t)LK_USEC(20), 0, 0, 0, -(int64_t)LK_USEC(10), -(int64_t)LK_USEC(10)};
+        0, -(int64_t)ZX_USEC(20), 0, 0, 0, -(int64_t)ZX_USEC(10), -(int64_t)ZX_USEC(10)};
 
     timer_test_coalescing(
         TIMER_SLACK_EARLY, slack, deadline, expected_adj, countof(deadline));
@@ -180,7 +180,7 @@ static void timer_far_deadline(void) {
     timer_init(&timer);
 
     timer_set(&timer, UINT64_MAX - 5, TIMER_SLACK_CENTER, 0, timer_cb, &event);
-    zx_status_t st = event_wait_deadline(&event, current_time() + LK_MSEC(100), false);
+    zx_status_t st = event_wait_deadline(&event, current_time() + ZX_MSEC(100), false);
     if (st != ZX_ERR_TIMED_OUT) {
         printf("error: unexpected timer fired!\n");
     } else {

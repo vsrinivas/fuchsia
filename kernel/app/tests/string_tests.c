@@ -12,6 +12,7 @@
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/types.h>
 
 static uint8_t* src;
 static uint8_t* dst;
@@ -146,7 +147,7 @@ static void bench_memcpy(void) {
     size_t srcalign, dstalign;
 
     printf("memcpy speed test\n");
-    thread_sleep_relative(LK_MSEC(200)); // let the debug string clear the serial port
+    thread_sleep_relative(ZX_MSEC(200)); // let the debug string clear the serial port
 
     for (srcalign = 0; srcalign < 64;) {
         for (dstalign = 0; dstalign < 64;) {
@@ -238,7 +239,7 @@ static void bench_memset(void) {
     size_t dstalign;
 
     printf("memset speed test\n");
-    thread_sleep_relative(LK_MSEC(200)); // let the debug string clear the serial port
+    thread_sleep_relative(ZX_MSEC(200)); // let the debug string clear the serial port
 
     for (dstalign = 0; dstalign < 64; dstalign++) {
 

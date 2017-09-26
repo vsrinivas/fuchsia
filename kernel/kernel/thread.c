@@ -37,6 +37,7 @@
 #include <string.h>
 #include <target.h>
 #include <vm/vm.h>
+#include <zircon/types.h>
 
 /* global thread list */
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
@@ -799,8 +800,8 @@ static enum handler_return thread_sleep_handler(timer_t* timer, lk_time_t now, v
     return INT_RESCHEDULE;
 }
 
-#define MIN_SLEEP_SLACK LK_USEC(1)
-#define MAX_SLEEP_SLACK LK_SEC(1)
+#define MIN_SLEEP_SLACK ZX_USEC(1)
+#define MAX_SLEEP_SLACK ZX_SEC(1)
 #define DIV_SLEEP_SLACK 10u
 
 /* computes the amount of slack the thread_sleep timer will use */

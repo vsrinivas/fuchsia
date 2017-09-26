@@ -10,17 +10,18 @@
 #include <kernel/thread.h>
 #include <platform.h>
 #include <stdio.h>
+#include <zircon/types.h>
 
 // Tests that thread_sleep and current_time() are consistent.
 static int thread_sleep_test(void) {
     int early = 0;
     for (int i = 0; i < 5; i++) {
         lk_time_t now = current_time();
-        thread_sleep_relative(LK_MSEC(500));
+        thread_sleep_relative(ZX_MSEC(500));
         lk_time_t actual_delay = current_time() - now;
-        if (actual_delay < LK_MSEC(500)) {
+        if (actual_delay < ZX_MSEC(500)) {
             early = 1;
-            printf("thread_sleep_relative(LK_MSEC(500)) returned after %" PRIu64 " ns\n", actual_delay);
+            printf("thread_sleep_relative(ZX_MSEC(500)) returned after %" PRIu64 " ns\n", actual_delay);
         }
     }
     return early;

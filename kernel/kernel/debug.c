@@ -25,6 +25,7 @@
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/types.h>
 
 #if WITH_LIB_CONSOLE
 #include <lib/console.h>
@@ -127,8 +128,8 @@ static enum handler_return threadload(struct timer* t, lk_time_t now, void* arg)
         }
 
         lk_time_t delta_time = idle_time - last_idle_time[i];
-        lk_time_t busy_time = LK_SEC(1) - (delta_time > LK_SEC(1) ? LK_SEC(1) : delta_time);
-        uint busypercent = (busy_time * 10000) / LK_SEC(1);
+        lk_time_t busy_time = ZX_SEC(1) - (delta_time > ZX_SEC(1) ? ZX_SEC(1) : delta_time);
+        uint busypercent = (busy_time * 10000) / ZX_SEC(1);
 
         printf("%3u"
                " %3u.%02u%%"
@@ -158,7 +159,7 @@ static enum handler_return threadload(struct timer* t, lk_time_t now, void* arg)
         last_idle_time[i] = idle_time;
     }
 
-    timer_set(t, now + LK_SEC(1), TIMER_SLACK_CENTER, LK_MSEC(10), &threadload, NULL);
+    timer_set(t, now + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(10), &threadload, NULL);
 
     /* reschedule here to allow the debuglog a chance to run */
     return INT_RESCHEDULE;
@@ -171,8 +172,8 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
     if (showthreadload == false) {
         // start the display
         timer_init(&tltimer);
-        timer_set(&tltimer, current_time() + LK_SEC(1),
-                  TIMER_SLACK_CENTER, LK_MSEC(10), &threadload, NULL);
+        timer_set(&tltimer, current_time() + ZX_SEC(1),
+                  TIMER_SLACK_CENTER, ZX_MSEC(10), &threadload, NULL);
         showthreadload = true;
     } else {
         timer_cancel(&tltimer);

@@ -366,7 +366,7 @@ void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]) {
 }
 
 extern "C" enum handler_return pmm_dump_timer(struct timer* t, lk_time_t now, void*) TA_REQ(arena_lock) {
-    timer_set(t, now + LK_SEC(1), TIMER_SLACK_CENTER, LK_MSEC(20), &pmm_dump_timer, nullptr);
+    timer_set(t, now + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(20), &pmm_dump_timer, nullptr);
     pmm_dump_free();
     return INT_NO_RESCHEDULE;
 }
@@ -420,7 +420,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         if (!show_mem) {
             printf("pmm free: issue the same command to stop.\n");
             timer_init(&timer);
-            timer_set(&timer, current_time() + LK_SEC(1), TIMER_SLACK_CENTER, LK_MSEC(20),
+            timer_set(&timer, current_time() + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(20),
                       &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {

@@ -15,6 +15,7 @@
 #include <dev/timer/arm_generic.h>
 #include <platform/timer.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #if WITH_DEV_PDEV
 #include <pdev/driver.h>
@@ -268,7 +269,7 @@ static void test_time_conversion_check_result(uint64_t a, uint64_t b, uint64_t l
 static void test_lk_time_to_cntpct(uint32_t cntfrq, lk_time_t lk_time)
 {
     uint64_t cntpct = lk_time_to_cntpct(lk_time);
-    const uint64_t nanos_per_sec = LK_SEC(1);
+    const uint64_t nanos_per_sec = ZX_SEC(1);
     uint64_t expected_cntpct = ((uint64_t)cntfrq * lk_time + nanos_per_sec / 2) / nanos_per_sec;
 
     test_time_conversion_check_result(cntpct, expected_cntpct, 1, false);
@@ -279,7 +280,7 @@ static void test_lk_time_to_cntpct(uint32_t cntfrq, lk_time_t lk_time)
 
 static void test_cntpct_to_lk_bigtime(uint32_t cntfrq, uint64_t expected_s)
 {
-    lk_time_t expected_lk_bigtime = LK_SEC(expected_s);
+    lk_time_t expected_lk_bigtime = ZX_SEC(expected_s);
     uint64_t cntpct = (uint64_t)cntfrq * expected_s;
     lk_time_t lk_bigtime = cntpct_to_lk_bigtime(cntpct);
 
@@ -308,8 +309,8 @@ static void test_time_conversions(uint32_t cntfrq)
 
 static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq)
 {
-    fp_32_64_div_32_32(&cntpct_per_ns, cntfrq, LK_SEC(1));
-    fp_32_64_div_32_32(&ns_per_cntpct, LK_SEC(1), cntfrq);
+    fp_32_64_div_32_32(&cntpct_per_ns, cntfrq, ZX_SEC(1));
+    fp_32_64_div_32_32(&ns_per_cntpct, ZX_SEC(1), cntfrq);
     dprintf(SPEW, "cntpct_per_ns: %08x.%08x%08x\n", cntpct_per_ns.l0, cntpct_per_ns.l32, cntpct_per_ns.l64);
     dprintf(SPEW, "ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32, ns_per_cntpct.l64);
 }

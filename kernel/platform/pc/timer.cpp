@@ -109,7 +109,7 @@ static uint32_t ns_per_hpet_rounded_up;
 
 /* Maximum amount of time that can be program on the timer to schedule the next
  *  interrupt, in miliseconds */
-#define MAX_TIMER_INTERVAL LK_MSEC(55)
+#define MAX_TIMER_INTERVAL ZX_MSEC(55)
 
 #define LOCAL_TRACE 0
 
@@ -531,7 +531,7 @@ zx_status_t platform_set_oneshot_timer(lk_time_t deadline)
     deadline = discrete_time_roundup(deadline);
 
     if (use_tsc_deadline) {
-        if (UINT64_MAX / deadline < (tsc_ticks_per_ms / LK_MSEC(1))) {
+        if (UINT64_MAX / deadline < (tsc_ticks_per_ms / ZX_MSEC(1))) {
             return ZX_ERR_INVALID_ARGS;
         }
 

@@ -110,7 +110,7 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     dprintf(INFO, "\n");
 
     // Wait 10 ms and then send the startup signals
-    thread_sleep_relative(LK_MSEC(10));
+    thread_sleep_relative(ZX_MSEC(10));
 
     // Actually send the startups
     ASSERT(PHYS_BOOTSTRAP_PAGE < 1 * MB);
@@ -131,7 +131,7 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         }
         // Wait 1ms for cores to boot.  The docs recommend 200us between STARTUP
         // IPIs.
-        thread_sleep_relative(LK_MSEC(1));
+        thread_sleep_relative(ZX_MSEC(1));
     }
 
     // The docs recommend waiting 200us for cores to boot.  We do a bit more
@@ -140,7 +140,7 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
          aps_still_booting != 0 && tries_left > 0;
          --tries_left) {
 
-        thread_sleep_relative(LK_MSEC(5));
+        thread_sleep_relative(ZX_MSEC(5));
     }
 
     uint failed_aps;

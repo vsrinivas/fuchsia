@@ -19,6 +19,7 @@
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <pretty/sizes.h>
+#include <zircon/types.h>
 
 // Machinery to walk over a job tree and run a callback on each process.
 template <typename ProcessCallbackType>
@@ -722,7 +723,7 @@ static int hwd_thread(void* arg) {
 
         previous_handle_count = handle_count;
 
-        thread_sleep_relative(LK_SEC(1));
+        thread_sleep_relative(ZX_SEC(1));
     }
 }
 
@@ -746,7 +747,7 @@ static void DumpPortPacketInfo() {
 
 static int mwd_thread(void* arg) {
     for (;;) {
-        thread_sleep_relative(LK_SEC(1));
+        thread_sleep_relative(ZX_SEC(1));
         DumpProcessMemoryUsage("MemoryHog! ", mwd_limit);
     }
 }
