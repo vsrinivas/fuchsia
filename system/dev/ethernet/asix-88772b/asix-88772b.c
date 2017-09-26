@@ -6,6 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/ethernet.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
@@ -121,15 +122,19 @@ static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
     list_node_t* node;
     while ((node = list_remove_head(&eth->free_intr_reqs)) != NULL) {
-        iotxn_t* req = containerof(node, iotxn_t, node);
-        iotxn_queue(eth->usb_device, req);
+        usb_request_t* req = containerof(node, usb_request_t, node);
+        usb_request_queue(&eth->usb, req);
     }
 }
 
-static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
-    size_t len = request->actual;
+static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
+    size_t len = request->response.actual;
     uint8_t* pkt;
-    iotxn_mmap(request, (void**) &pkt);
+    zx_status_t status = usb_request_mmap(request, (void*)&pkt);
+    if (status != ZX_OK) {
+        printf("usb_request_mmap failed: %d\n", status);
+        return;
+    }
 
     while (len > ETH_HEADER_SIZE) {
         uint16_t length1 = (pkt[0] | (uint16_t)pkt[1] << 8) & 0x7FF;
@@ -161,32 +166,32 @@ static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
     }
 }
 
-static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
+static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->status == ZX_OK) && eth->ifc) {
+    if ((request->response.status == ZX_OK) && eth->ifc) {
         ax88772b_recv(eth, request);
     }
 
     if (eth->online) {
-        iotxn_queue(eth->usb_device, request);
+        usb_request_queue(&eth->usb, request);
     } else {
         list_add_head(&eth->free_read_reqs, &request->node);
     }
     mtx_unlock(&eth->mutex);
 }
 
-static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
+static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
@@ -195,19 +200,19 @@ static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
+static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if (request->status == ZX_OK && request->actual == sizeof(eth->status)) {
+    if (request->response.status == ZX_OK && request->response.actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
-        iotxn_copyfrom(request, status, sizeof(status), 0);
+        usb_request_copyfrom(request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
 #if 0
             const uint8_t* b = status;
@@ -225,11 +230,11 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
                 }
 
                 // Now that we are online, queue all our read requests
-                iotxn_t* req;
-                iotxn_t* prev;
-                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
+                usb_request_t* req;
+                usb_request_t* prev;
+                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, usb_request_t, node) {
                     list_delete(&req->node);
-                    iotxn_queue(eth->usb_device, req);
+                    usb_request_queue(&eth->usb, req);
                 }
             } else if (!online && was_online) {
                 if (eth->ifc) {
@@ -262,7 +267,7 @@ static zx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) 
         status = ZX_ERR_BUFFER_TOO_SMALL;
         goto out;
     }
-    iotxn_t* request = containerof(node, iotxn_t, node);
+    usb_request_t* request = containerof(node, usb_request_t, node);
 
     if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
         status = ZX_ERR_INVALID_ARGS;
@@ -278,10 +283,10 @@ static zx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) 
     header[2] = lo ^ 0xFF;
     header[3] = hi ^ 0xFF;
 
-    iotxn_copyto(request, header, ETH_HEADER_SIZE, 0);
-    iotxn_copyto(request, buffer, length, ETH_HEADER_SIZE);
-    request->length = length + ETH_HEADER_SIZE;
-    iotxn_queue(eth->usb_device, request);
+    usb_request_copyto(request, header, ETH_HEADER_SIZE, 0);
+    usb_request_copyto(request, buffer, length, ETH_HEADER_SIZE);
+    request->header.length = length + ETH_HEADER_SIZE;
+    usb_request_queue(&eth->usb, request);
 
 out:
     mtx_unlock(&eth->mutex);
@@ -300,15 +305,15 @@ static void ax88772b_unbind(void* ctx) {
 }
 
 static void ax88772b_free(ax88772b_t* eth) {
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    usb_request_t* req;
+    while ((req = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&eth->free_intr_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&eth->free_intr_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
     free(eth);
 }
@@ -544,34 +549,31 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device, void** cookie) 
 
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
-        if (!req) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        req->length = USB_BUF_SIZE;
         req->complete_cb = ax88772b_read_complete;
         req->cookie = eth;
         list_add_head(&eth->free_read_reqs, &req->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
-        if (!req) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        req->length = USB_BUF_SIZE;
         req->complete_cb = ax88772b_write_complete;
         req->cookie = eth;
         list_add_head(&eth->free_write_reqs, &req->node);
     }
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
-        if (!req) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        req->length = INTR_REQ_SIZE;
         req->complete_cb = ax88772b_interrupt_complete;
         req->cookie = eth;
         list_add_head(&eth->free_intr_reqs, &req->node);

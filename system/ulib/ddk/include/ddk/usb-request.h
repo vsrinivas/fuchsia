@@ -76,8 +76,9 @@ ssize_t usb_request_copyfrom(usb_request_t* req, void* data, size_t length, size
 // Out of range operations are ignored.
 ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, size_t offset);
 
-// usb_request_virt() returns the virtual address of the vm object.
-void* usb_request_virt(usb_request_t* req);
+// usb_request_mmap() maps the usb request's vm object. The 'data' field is set with the
+// mapped address if this function succeeds.
+zx_status_t usb_request_mmap(usb_request_t* req, void** data);
 
 // usb_request_release() frees the message data -- should be called only by the entity that allocated it
 void usb_request_release(usb_request_t* req);

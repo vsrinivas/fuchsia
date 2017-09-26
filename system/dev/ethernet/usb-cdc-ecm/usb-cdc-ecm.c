@@ -202,7 +202,13 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
 static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
     size_t len = request->response.actual;
 
-    uint8_t* read_data = usb_request_virt(request);
+    uint8_t* read_data;
+    zx_status_t status = usb_request_mmap(request, (void*)&read_data);
+    if (status != ZX_OK) {
+        xprintf("%s: usb_request_mmap failed with status %d\n",
+                module_name, status);
+        return;
+    }
 
     mtx_lock(&ctx->ethmac_mutex);
     if (ctx->ethmac_ifc) {

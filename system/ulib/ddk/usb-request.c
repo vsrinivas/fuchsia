@@ -56,8 +56,10 @@ ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, 
     return length;
 }
 
-void* usb_request_virt(usb_request_t* req) {
-    return io_buffer_virt(&req->buffer);
+zx_status_t usb_request_mmap(usb_request_t* req, void** data) {
+    *data = io_buffer_virt(&req->buffer);
+    // TODO(jocelyndang): modify this once we start passing usb requests across process boundaries.
+    return ZX_OK;
 }
 
 void usb_request_release(usb_request_t* req) {

@@ -8,6 +8,7 @@
 #include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/platform-device.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
@@ -261,20 +262,24 @@ zx_status_t lan9514_read_mac_address(lan9514_t* eth) {
 static void queue_interrupt_requests_locked(lan9514_t* eth) {
     list_node_t* node;
     while ((node = list_remove_head(&eth->free_intr_reqs)) != NULL) {
-        iotxn_t* req = containerof(node, iotxn_t, node);
-        iotxn_queue(eth->usb_device, req);
+        usb_request_t* req = containerof(node, usb_request_t, node);
+        usb_request_queue(&eth->usb, req);
     }
 }
 
-zx_status_t lan9514_recv(lan9514_t* eth, iotxn_t* request) {
+zx_status_t lan9514_recv(lan9514_t* eth, usb_request_t* request) {
     if (eth->dead) {
         printf("lan9514_recv dead\n");
         return ZX_ERR_PEER_CLOSED;
     }
 
-    size_t len = request->actual;
+    size_t len = request->response.actual;
     uint8_t* pkt;
-    iotxn_mmap(request, (void**) &pkt);
+    zx_status_t status = usb_request_mmap(request, (void*)&pkt);
+    if (status != ZX_OK) {
+        printf("usb_request_mmap failed: %d\n", status);
+        return status;
+    }
 
     uint32_t rx_status;
     if (len < sizeof(rx_status)) {
@@ -298,32 +303,32 @@ zx_status_t lan9514_recv(lan9514_t* eth, iotxn_t* request) {
 }
 
 
-static void lan9514_read_complete(iotxn_t* request, void* cookie) {
+static void lan9514_read_complete(usb_request_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
     //printf("lan9514 read complete\n");
 
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->status == ZX_OK) && eth->ifc) {
+    if ((request->response.status == ZX_OK) && eth->ifc) {
         lan9514_recv(eth, request);
     }
 
     if (eth->online) {
-        iotxn_queue(eth->usb_device, request);
+        usb_request_queue(&eth->usb, request);
     } else {
         list_add_head(&eth->free_read_reqs, &request->node);
     }
     mtx_unlock(&eth->mutex);
 }
 
-static void lan9514_write_complete(iotxn_t* request, void* cookie) {
+static void lan9514_write_complete(usb_request_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
@@ -332,17 +337,17 @@ static void lan9514_write_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static void lan9514_interrupt_complete(iotxn_t* request, void* cookie) {
+static void lan9514_interrupt_complete(usb_request_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
-    if ((request->status == ZX_ERR_IO_NOT_PRESENT) || (request->status == ZX_ERR_IO)) { // ZX_ERR_IO = NACK (no status change)
-        iotxn_release(request);
+    if ((request->response.status == ZX_ERR_IO_NOT_PRESENT) || (request->response.status == ZX_ERR_IO)) { // ZX_ERR_IO = NACK (no status change)
+        usb_request_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if (request->status == ZX_OK && request->actual == sizeof(eth->status)) {
+    if (request->response.status == ZX_OK && request->response.actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
-        iotxn_copyfrom(request, status, sizeof(status), 0);
+        usb_request_copyfrom(request, status, sizeof(status), 0);
         memcpy(eth->status, status, sizeof(eth->status));
         completion_signal(&eth->phy_state_completion);
     }
@@ -366,7 +371,7 @@ static void lan9514_send(void* ctx, uint32_t options, void* buffer, size_t lengt
     if (!node) {
         goto out;
     }
-    iotxn_t* request = containerof(node, iotxn_t, node);
+    usb_request_t* request = containerof(node, usb_request_t, node);
 
     if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
         goto out;
@@ -385,10 +390,10 @@ static void lan9514_send(void* ctx, uint32_t options, void* buffer, size_t lengt
     header[6] = (command_b >> 16) & 0xff;
     header[7] = (command_b >> 24) & 0xff;
 
-    iotxn_copyto(request, header, 8, 0);
-    iotxn_copyto(request, buffer, length, 8);
-    request->length = length + 8;
-    iotxn_queue(eth->usb_device, request);
+    usb_request_copyto(request, header, 8, 0);
+    usb_request_copyto(request, buffer, length, 8);
+    request->header.length = length + 8;
+    usb_request_queue(&eth->usb, request);
 
 out:
     mtx_unlock(&eth->mutex);
@@ -433,17 +438,17 @@ static zx_status_t lan9514_start_xcvr(lan9514_t* eth) {
 }
 
 static void lan9514_free(lan9514_t* eth) {
-    iotxn_t* txn;
+    usb_request_t* req;
 
     mtx_lock(&eth->mutex);
-    while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&eth->free_intr_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&eth->free_intr_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
     mtx_unlock(&eth->mutex);
 
@@ -707,11 +712,11 @@ static int lan9514_start_thread(void* arg) {
                 if (eth->ifc) {
                     eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
                 }
-                iotxn_t* req;
-                iotxn_t* prev;
-                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
+                usb_request_t* req;
+                usb_request_t* prev;
+                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, usb_request_t, node) {
                     list_delete(&req->node);
-                    iotxn_queue(eth->usb_device, req);
+                    usb_request_queue(&eth->usb, req);
                 }
                 mtx_unlock(&eth->mutex);
 
@@ -792,35 +797,32 @@ static zx_status_t lan9514_bind(void* ctx, zx_device_t* device, void** cookie) {
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
-        if (!req) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        req->length = USB_BUF_SIZE;
         req->complete_cb = lan9514_read_complete;
         req->cookie = eth;
         list_add_head(&eth->free_read_reqs, &req->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
-        if (!req) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        req->length = USB_BUF_SIZE;
         req->complete_cb = lan9514_write_complete;
         req->cookie = eth;
         list_add_head(&eth->free_write_reqs, &req->node);
     }
 
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
-        iotxn_t* req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
-        if (!req) {
-            status = ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        status = usb_request_alloc(&req, INTR_REQ_SIZE, intr_addr);
+        if (status != ZX_OK) {
             goto fail;
         }
-        req->length = INTR_REQ_SIZE;
         req->complete_cb = lan9514_interrupt_complete;
         req->cookie = eth;
         list_add_head(&eth->free_intr_reqs, &req->node);
