@@ -147,6 +147,8 @@ TEST(media_client, audio_device_descs_errors) {
 
   // get dev_desc with bad audio_manager
   fuchsia_audio_device_description dev_desc;
+  ::memset(&dev_desc, 0, sizeof(dev_desc));
+
   fuchsia_audio_manager* not_an_audio_manager =
       (fuchsia_audio_manager*)&dev_desc;
   ASSERT_EQ(ZX_ERR_BAD_HANDLE, fuchsia_audio_manager_get_output_devices(
