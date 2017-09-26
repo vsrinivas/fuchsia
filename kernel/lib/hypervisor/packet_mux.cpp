@@ -12,24 +12,20 @@
 
 __UNUSED static const size_t kMaxPacketsPerRange = 256;
 
-BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange - 1) {}
+BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
 
 zx_status_t BlockingPortAllocator::Init() {
     return arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
 }
 
 PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
-    PortPacket* port_packet = Alloc();
-    zx_status_t status = semaphore_.Wait(INFINITE_TIME);
-    // If port_packet is NULL, then Wait would have blocked. So we need to:
-    // reload our state, check the status of Wait, and Alloc again.
-    if (port_packet == nullptr) {
+    bool was_blocked;
+    zx_status_t status = semaphore_.Wait(INFINITE_TIME, &was_blocked);
+    if (status != ZX_OK)
+        return nullptr;
+    if (was_blocked)
         reloader->Reload();
-        if (status != ZX_OK)
-            return nullptr;
-        port_packet = Alloc();
-    }
-    return port_packet;
+    return Alloc();
 }
 
 PortPacket* BlockingPortAllocator::Alloc() {

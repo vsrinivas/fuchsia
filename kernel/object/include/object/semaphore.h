@@ -22,7 +22,9 @@ public:
     // Returns the number of ready threads. If it is bigger than 0
     // the caller must call thread_reschedule().
     __WARN_UNUSED_RESULT int Post();
-    zx_status_t Wait(lk_time_t deadline);
+
+    // Returns whether we blocked via |was_blocked|.
+    zx_status_t Wait(lk_time_t deadline, bool* was_blocked);
 
 private:
     int64_t count_;

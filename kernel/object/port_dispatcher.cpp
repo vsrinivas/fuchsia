@@ -274,7 +274,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
         return ZX_OK;
 
 wait:
-        zx_status_t st = sema_.Wait(deadline);
+        zx_status_t st = sema_.Wait(deadline, nullptr);
         if (st != ZX_OK)
             return st;
     }
