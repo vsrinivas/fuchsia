@@ -33,8 +33,12 @@ func (a *ToolApp) Scan(seconds uint8) {
 		fmt.Println("Error:", res.Error.Description)
 	} else {
 		for _, ap := range *res.Aps {
-			fmt.Printf("%x (RSSI: %d) %q\n",
-				ap.Bssid, int8(ap.LastRssi), ap.Ssid)
+			prot := " "
+			if ap.IsSecure {
+				prot = "*"
+			}
+			fmt.Printf("%x (RSSI: %d) %v %q\n",
+				ap.Bssid, int8(ap.LastRssi), prot, ap.Ssid)
 		}
 	}
 }

@@ -17,10 +17,11 @@ type AP struct {
 }
 
 func NewAP(bssDesc *mlme.BssDescription) *AP {
+	b := *bssDesc // make a copy.
 	return &AP{
 		BSSID:    bssDesc.Bssid,
 		SSID:     bssDesc.Ssid,
-		BSSDesc:  bssDesc,
+		BSSDesc:  &b,
 		LastRSSI: 0xff,
 	}
 }

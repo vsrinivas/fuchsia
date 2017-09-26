@@ -21,6 +21,7 @@ struct AP {
   array<uint8> bssid;
   string       ssid;
   uint8        last_rssi;
+  bool         is_secure;
 };
 
 struct ScanRequest {

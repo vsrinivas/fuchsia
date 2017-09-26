@@ -60,7 +60,10 @@ func (ws *Wlanstack) Scan(sr wlan_service.ScanRequest) (res wlan_service.ScanRes
 	for _, wap := range waps {
 		bssid := make([]uint8, len(wap.BSSID))
 		copy(bssid, wap.BSSID[:])
-		ap := wlan_service.Ap{bssid, wap.SSID, wap.LastRSSI}
+		// Currently we indicate the AP is secure if it supports RSN.
+		// TODO: Check if AP supports other types of security mechanism (e.g. WEP)
+		is_secure := wap.BSSDesc.Rsn != nil
+		ap := wlan_service.Ap{bssid, wap.SSID, wap.LastRSSI, is_secure}
 		aps = append(aps, ap)
 	}
 	return wlan_service.ScanResult{
