@@ -269,7 +269,7 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
     }
 
     if (animation_state_ == kTrackball) {
-      if (pointer->phase == mozart::PointerEvent::Phase::ADD) {
+      if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
         // If we're not already panning/rotating the camera, then start, but
         // only if the touch-down is in the bottom 10% of the screen.
         if (!trackball_pointer_down_ && pointer->y > 0.9f * logical_height_) {
