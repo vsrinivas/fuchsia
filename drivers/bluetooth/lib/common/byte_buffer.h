@@ -70,7 +70,7 @@ class ByteBuffer {
 
   // Read-only random access operator.
   inline const uint8_t& operator[](size_t pos) const {
-    FXL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
+    FXL_CHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
     return data()[pos];
   }
 
@@ -95,7 +95,7 @@ class MutableByteBuffer : public ByteBuffer {
 
   // Random access operator that allows mutations.
   inline uint8_t& operator[](size_t pos) {
-    FXL_DCHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
+    FXL_CHECK(pos < size()) << "Invalid offset (pos = " << pos << ")!";
     return mutable_data()[pos];
   }
 

@@ -68,8 +68,8 @@ class PacketView {
   // |payload_size| value of 0 indicates that the packet contains no payload.
   explicit PacketView(const ByteBuffer* buffer, size_t payload_size = 0u)
       : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
-    FXL_DCHECK(buffer_);
-    FXL_DCHECK(buffer_->size() >= size_);
+    FXL_CHECK(buffer_);
+    FXL_CHECK(buffer_->size() >= size_);
   }
 
   const BufferView data() const { return buffer_->view(0, size_); }
@@ -81,27 +81,32 @@ class PacketView {
   size_t payload_size() const { return size() - sizeof(HeaderType); }
 
   const uint8_t* payload_bytes() const {
+    FXL_CHECK(is_valid());
     return payload_size() ? buffer_->data() + sizeof(HeaderType) : nullptr;
   }
 
   const HeaderType& header() const {
+    FXL_CHECK(is_valid());
     return *reinterpret_cast<const HeaderType*>(buffer_->data());
   }
 
   template <typename PayloadType>
   const PayloadType& payload() const {
-    FXL_DCHECK(sizeof(PayloadType) <= payload_size());
+    FXL_CHECK(sizeof(PayloadType) <= payload_size());
     return *reinterpret_cast<const PayloadType*>(payload_bytes());
   }
 
-  // A PacketView that contains no backing buffer is considered invalid.
-  bool is_valid() const { return buffer_ && size_ >= sizeof(HeaderType); }
+  // A PacketView that contains no backing buffer is considered invalid. A
+  // PacketView that was initialized with a buffer that is too small is invalid.
+  bool is_valid() const {
+    return buffer_ && size_ >= sizeof(HeaderType);
+  }
 
  protected:
   void set_size(size_t size) {
-    FXL_DCHECK(buffer_);
-    FXL_DCHECK(buffer_->size() >= size);
-    FXL_DCHECK(size >= sizeof(HeaderType));
+    FXL_CHECK(buffer_);
+    FXL_CHECK(buffer_->size() >= size);
+    FXL_CHECK(size >= sizeof(HeaderType));
     size_ = size;
   }
 
@@ -142,7 +147,7 @@ class MutablePacketView : public PacketView<HeaderType> {
 
   template <typename PayloadType>
   PayloadType* mutable_payload() {
-    FXL_DCHECK(sizeof(PayloadType) <= this->payload_size());
+    FXL_CHECK(sizeof(PayloadType) <= this->payload_size());
     return reinterpret_cast<PayloadType*>(mutable_payload_bytes());
   }
 
