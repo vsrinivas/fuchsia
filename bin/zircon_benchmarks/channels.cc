@@ -189,7 +189,7 @@ class ChannelMultiProcess : public benchmark::Fixture {
     if (channel_for_process != ZX_HANDLE_INVALID) {
       zx_handle_close(channel_for_process);
     }
-    if (process < 0) {
+    if (process == ZX_HANDLE_INVALID) {
       return;
     }
     zx_status_t status = zx_object_wait_one(process, ZX_PROCESS_TERMINATED,
