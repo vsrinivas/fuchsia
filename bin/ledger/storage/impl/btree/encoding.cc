@@ -9,6 +9,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier.h"
 
 namespace storage {
 namespace btree {
@@ -33,7 +34,7 @@ KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
 
 Entry ToEntry(const EntryStorage* entry_storage) {
   return Entry{convert::ToString(entry_storage->key()),
-               convert::ToString(entry_storage->object_digest()),
+               ToObjectIdentifier(entry_storage->object_id()).object_digest,
                ToKeyPriority(entry_storage->priority())};
 }
 }  // namespace
@@ -92,7 +93,8 @@ std::string EncodeNode(uint8_t level,
             const auto& entry = entries[i];
             return CreateEntryStorage(
                 builder, convert::ToFlatBufferVector(&builder, entry.key),
-                convert::ToFlatBufferVector(&builder, entry.object_digest),
+                ToObjectIdentifierStorage(
+                    &builder, MakeDefaultObjectIdentifier(entry.object_digest)),
                 ToKeyPriorityStorage(entry.priority));
           }));
 
@@ -114,7 +116,8 @@ std::string EncodeNode(uint8_t level,
             ++current_index;
             return CreateChildStorage(
                 builder, index,
-                convert::ToFlatBufferVector(&builder, children[index]));
+                ToObjectIdentifierStorage(
+                    &builder, MakeDefaultObjectIdentifier(children[index])));
           }));
 
   builder.Finish(
@@ -143,7 +146,8 @@ bool DecodeNode(fxl::StringView data,
   res_children->reserve(tree_node->entries()->size() + 1);
   for (const auto* child_storage : *(tree_node->children())) {
     res_children->resize(child_storage->index());
-    res_children->push_back(convert::ToString(child_storage->object_digest()));
+    res_children->push_back(
+        convert::ToString(child_storage->object_id()->object_digest()));
   }
   res_children->resize(tree_node->entries()->size() + 1);
 

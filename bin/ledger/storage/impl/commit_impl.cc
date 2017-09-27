@@ -17,6 +17,8 @@
 #include "peridot/bin/ledger/glue/crypto/hash.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 #include "peridot/bin/ledger/storage/impl/commit_generated.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier_generated.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace storage {
@@ -53,9 +55,10 @@ std::string SerializeCommit(
             *child_storage = *convert::ToIdStorage(parent_commits[i]->GetId());
           }));
 
-  auto storage = CreateCommitStorage(
-      builder, timestamp, generation,
-      convert::ToFlatBufferVector(&builder, root_node_digest), parents_id);
+  auto root_node_storage = ToObjectIdentifierStorage(
+      &builder, MakeDefaultObjectIdentifier(root_node_digest.ToString()));
+  auto storage = CreateCommitStorage(builder, timestamp, generation,
+                                     root_node_storage, parents_id);
   builder.Finish(storage);
   return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
                      builder.GetSize());
@@ -96,7 +99,8 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
   const CommitStorage* commit_storage =
       GetCommitStorage(storage_ptr->bytes().data());
 
-  ObjectDigestView root_node_digest = commit_storage->root_node_digest();
+  ObjectDigestView root_node_digest =
+      commit_storage->root_node_id()->object_digest();
   std::vector<CommitIdView> parent_ids;
 
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {

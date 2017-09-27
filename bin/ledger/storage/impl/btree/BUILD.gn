@@ -39,6 +39,7 @@ source_set("lib") {
     "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/glue/crypto",
+    "//peridot/bin/ledger/storage/impl:object_identifier_lib",
     "//peridot/bin/ledger/storage/public",
     "//third_party/murmurhash",
   ]
@@ -49,6 +50,10 @@ source_set("lib") {
 flatbuffer("tree_node_storage") {
   sources = [
     "tree_node.fbs",
+  ]
+
+  public_deps = [
+    "//peridot/bin/ledger/storage/impl:object_identifier",
   ]
 
   extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
@@ -85,6 +90,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/fake:lib",
+    "//peridot/bin/ledger/storage/impl:object_identifier_lib",
     "//peridot/bin/ledger/storage/impl:test_utils",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",

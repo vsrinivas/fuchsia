@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/storage/impl/btree/tree_node_generated.h"
+#include "peridot/bin/ledger/storage/impl/object_identifier.h"
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
@@ -110,8 +111,9 @@ TEST(EncodingTest, Errors) {
     for (size_t i = 0; i < size; ++i) {
       children.push_back(CreateChildStorage(
           builder, 1,
-          convert::ToFlatBufferVector(
-              &builder, MakeObjectDigest(fxl::StringPrintf("c%lu", i)))));
+          ToObjectIdentifierStorage(
+              &builder, MakeDefaultObjectIdentifier(
+                            MakeObjectDigest(fxl::StringPrintf("c%lu", i))))));
     }
     return builder.CreateVector(children);
   };
@@ -144,8 +146,9 @@ TEST(EncodingTest, Errors) {
               [&](size_t i) {
                 return CreateEntryStorage(
                     builder, convert::ToFlatBufferVector(&builder, "hello"),
-                    convert::ToFlatBufferVector(&builder,
-                                                MakeObjectDigest("world")),
+                    ToObjectIdentifierStorage(
+                        &builder,
+                        MakeDefaultObjectIdentifier(MakeObjectDigest("world"))),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       create_children(2)));
@@ -161,8 +164,9 @@ TEST(EncodingTest, Errors) {
               [&](size_t i) {
                 return CreateEntryStorage(
                     builder, convert::ToFlatBufferVector(&builder, "hello"),
-                    convert::ToFlatBufferVector(&builder,
-                                                MakeObjectDigest("world")),
+                    ToObjectIdentifierStorage(
+                        &builder,
+                        MakeDefaultObjectIdentifier(MakeObjectDigest("world"))),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       create_children(0)));

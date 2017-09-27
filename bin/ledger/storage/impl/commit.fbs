@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 include "peridot/bin/ledger/convert/bytes.fbs";
+include "peridot/bin/ledger/storage/impl/object_identifier.fbs";
 
 namespace storage;
 
 table CommitStorage {
   timestamp: ulong;
   generation: ulong;
-  root_node_digest: [ubyte];
+  root_node_id: ObjectIdentifierStorage;
   parents: [convert.IdStorage];
 }
 

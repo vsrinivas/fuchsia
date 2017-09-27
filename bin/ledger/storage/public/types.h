@@ -28,6 +28,18 @@ enum class KeyPriority {
   LAZY,
 };
 
+// The identifier of an object. This contains the digest of the object, as well
+// as the information needed to hide its name and encrypt its content.
+struct ObjectIdentifier {
+  uint32_t key_index;
+  uint32_t deletion_scope_id;
+  ObjectDigest object_digest;
+};
+
+bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
+bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
+bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
+
 // An entry in a commit.
 struct Entry {
   std::string key;

@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+include "peridot/bin/ledger/storage/impl/object_identifier.fbs";
+
 namespace storage;
 
 enum KeyPriorityStorage : byte { EAGER = 0, LAZY = 1 }
 
 table EntryStorage {
   key: [ubyte];
-  object_digest: [ubyte];
+  object_id: ObjectIdentifierStorage;
   priority: KeyPriorityStorage;
 }
 
 table ChildStorage {
   index:  ushort (key);
-  object_digest: [ubyte];
+  object_id: ObjectIdentifierStorage;
 }
 
 table TreeNodeStorage {

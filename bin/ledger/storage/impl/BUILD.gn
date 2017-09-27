@@ -13,12 +13,21 @@ group("impl") {
   ]
 }
 
+flatbuffer("object_identifier") {
+  sources = [
+    "object_identifier.fbs",
+  ]
+
+  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
+}
+
 flatbuffer("commit_storage") {
   sources = [
     "commit.fbs",
   ]
 
   public_deps = [
+    ":object_identifier",
     "//peridot/bin/ledger/convert:byte_storage",
   ]
 
@@ -31,6 +40,22 @@ flatbuffer("file_index") {
   ]
 
   extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("object_identifier_lib") {
+  sources = [
+    "object_identifier.cc",
+    "object_identifier.h",
+  ]
+
+  deps = [
+    "//peridot/bin/ledger/convert",
+  ]
+
+  public_deps = [
+    ":object_identifier",
+    "//peridot/bin/ledger/storage/public",
+  ]
 }
 
 source_set("lib") {
@@ -70,6 +95,7 @@ source_set("lib") {
   deps = [
     ":commit_storage",
     ":file_index",
+    ":object_identifier_lib",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/callback",
@@ -81,6 +107,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":object_identifier_lib",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/third_party/bup",

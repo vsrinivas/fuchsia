@@ -6,6 +6,20 @@
 
 namespace storage {
 
+bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
+  return std::tie(lhs.key_index, lhs.deletion_scope_id, lhs.object_digest) ==
+         std::tie(rhs.key_index, rhs.deletion_scope_id, rhs.object_digest);
+}
+
+bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
+  return !(lhs == rhs);
+}
+
+bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
+  return std::tie(lhs.key_index, lhs.deletion_scope_id, lhs.object_digest) <
+         std::tie(rhs.key_index, rhs.deletion_scope_id, rhs.object_digest);
+}
+
 bool operator==(const Entry& lhs, const Entry& rhs) {
   return std::tie(lhs.key, lhs.object_digest, lhs.priority) ==
          std::tie(rhs.key, rhs.object_digest, rhs.priority);
