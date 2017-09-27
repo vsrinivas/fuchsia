@@ -39,9 +39,11 @@ SyncState ConvertToSyncState(cloud_sync::UploadSyncState upload) {
       return SyncState::PENDING;
     case cloud_sync::UPLOAD_WAIT_REMOTE_DOWNLOAD:
       return SyncState::PENDING;
+    case cloud_sync::UPLOAD_TEMPORARY_ERROR:
+      return SyncState::PENDING;
     case cloud_sync::UPLOAD_IN_PROGRESS:
       return SyncState::IN_PROGRESS;
-    case cloud_sync::UPLOAD_ERROR:
+    case cloud_sync::UPLOAD_PERMANENT_ERROR:
       return SyncState::ERROR;
   }
 }

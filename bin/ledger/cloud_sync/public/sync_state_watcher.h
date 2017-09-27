@@ -43,32 +43,37 @@ enum UploadSyncState {
   UPLOAD_STOPPED = 0,
   // Upload is started and being prepared.
   // Possible successor states: UPLOAD_IDLE, UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
-  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_PERMANENT_ERROR.
   UPLOAD_SETUP,
   // Upload is ready, but currently idle.
   // Possible successor states: UPLOAD_PENDING,
   // UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
-  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_PERMANENT_ERROR.
   UPLOAD_IDLE,
   // Upload has some contents to upload, but has to wait before proceeding.
   // Possible successor states: UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
-  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_PERMANENT_ERROR.
   UPLOAD_PENDING,
   // Upload cannot proceed as there are more than one local head commit.
   // Possible successor states: UPLOAD_IDLE, UPLOAD_IN_PROGRESS,
-  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_PERMANENT_ERROR.
   UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
   // Upload is waiting for a remote download to finish.
   // Possible successor states: UPLOAD_IDLE, UPLOAD_IN_PROGRESS,
-  // UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS, UPLOAD_ERROR.
+  // UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS, UPLOAD_PERMANENT_ERROR.
   UPLOAD_WAIT_REMOTE_DOWNLOAD,
+  // Upload experienced a temporary error and will attempt to recover
+  // automatically.
+  // Possible successor states: UPLOAD_IDLE, UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_IN_PROGRESS, UPLOAD_PERMANENT_ERROR.
+  UPLOAD_TEMPORARY_ERROR,
   // Upload is uploading a local commit and its contents.
   // Possible successor states: UPLOAD_IDLE, UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS,
-  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_ERROR.
+  // UPLOAD_WAIT_REMOTE_DOWNLOAD, UPLOAD_PERMANENT_ERROR.
   UPLOAD_IN_PROGRESS,
   // Upload has experienced an unrecoverable error and cannot continue.
   // Possible successor states: None.
-  UPLOAD_ERROR,
+  UPLOAD_PERMANENT_ERROR,
 };
 
 // Watcher interface for the current state of data synchronization

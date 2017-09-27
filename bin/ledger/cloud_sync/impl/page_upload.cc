@@ -44,6 +44,9 @@ void PageUpload::OnNewCommits(
     // If a commit batch is currently being downloaded, don't try to start the
     // upload.
     SetState(UPLOAD_WAIT_REMOTE_DOWNLOAD);
+  } else if (state_ == UPLOAD_TEMPORARY_ERROR) {
+    // Upload is already scheduled to retry uploading. No need to do anything
+    // here.
   } else {
     SetState(UPLOAD_PENDING);
     UploadUnsyncedCommits();
@@ -70,7 +73,7 @@ void PageUpload::UploadUnsyncedCommits() {
       [this](storage::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
         if (status != storage::Status::OK) {
-          SetState(UPLOAD_ERROR);
+          SetState(UPLOAD_PERMANENT_ERROR);
           HandleError("Failed to retrieve the unsynced commits");
           return;
         }
@@ -142,11 +145,9 @@ void PageUpload::HandleUnsyncedCommits(
             FXL_LOG(WARNING)
                 << log_prefix_
                 << "commit upload failed due to a connection error, retrying.";
-            SetState(UPLOAD_PENDING);
-            delegate_->Retry([this] {
-              batch_upload_.reset();
-              UploadUnsyncedCommits();
-            });
+            SetState(UPLOAD_TEMPORARY_ERROR);
+            batch_upload_.reset();
+            delegate_->Retry([this] { UploadUnsyncedCommits(); });
           });
   batch_upload_->Start();
 }
@@ -156,7 +157,7 @@ void PageUpload::HandleError(const char error_description[]) {
   if (state_ > UPLOAD_SETUP) {
     storage_->RemoveCommitWatcher(this);
   }
-  SetState(UPLOAD_ERROR);
+  SetState(UPLOAD_PERMANENT_ERROR);
 }
 
 void PageUpload::SetState(UploadSyncState new_state) {
@@ -172,12 +173,13 @@ bool PageUpload::IsIdle() {
     case UPLOAD_STOPPED:
     case UPLOAD_IDLE:
     case UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS:
-    case UPLOAD_ERROR:
+    case UPLOAD_PERMANENT_ERROR:
       return true;
       break;
     case UPLOAD_SETUP:
     case UPLOAD_PENDING:
     case UPLOAD_WAIT_REMOTE_DOWNLOAD:
+    case UPLOAD_TEMPORARY_ERROR:
     case UPLOAD_IN_PROGRESS:
       return false;
       break;

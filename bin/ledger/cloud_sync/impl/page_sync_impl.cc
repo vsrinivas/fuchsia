@@ -160,7 +160,7 @@ void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {
 }
 
 void PageSyncImpl::SetUploadState(UploadSyncState next_upload_state) {
-  if (next_upload_state == UPLOAD_ERROR) {
+  if (next_upload_state == UPLOAD_PERMANENT_ERROR) {
     HandleError();
   }
 

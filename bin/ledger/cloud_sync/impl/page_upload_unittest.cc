@@ -401,7 +401,7 @@ TEST_F(PageUploadTest, FailToListCommits) {
   int error_calls = 0;
   storage_.should_fail_get_unsynced_commits = true;
   SetOnNewStateCallback([this, &error_calls] {
-    if (states_.back() == UPLOAD_ERROR) {
+    if (states_.back() == UPLOAD_PERMANENT_ERROR) {
       error_calls++;
       message_loop_.PostQuitTask();
     }
