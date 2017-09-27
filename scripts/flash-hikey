@@ -29,7 +29,7 @@ function HELP {
     exit 1
 }
 
-while getopts "mf" FLAG; do
+while getopts "mh" FLAG; do
     case $FLAG in
         m) CMDLINE+=" netsvc.netboot=true";;
         h) HELP;;
