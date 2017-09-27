@@ -57,6 +57,27 @@ static bool test_physmap_clone(void) {
     END_TEST;
 }
 
+static bool test_physmap_clone_partial(void) {
+    BEGIN_TEST;
+    iotxn_t* txn;
+    ASSERT_EQ(iotxn_alloc(&txn, 0, PAGE_SIZE * 3), ZX_OK, "");
+    ASSERT_NONNULL(txn, "");
+    ASSERT_EQ(iotxn_physmap(txn), ZX_OK, "");
+    ASSERT_NONNULL(txn->phys, "expected phys to be set");
+    ASSERT_EQ(txn->phys_count, 3u, "unexpected phys_count");
+
+    iotxn_t* clone = NULL;
+    txn->length = PAGE_SIZE * 3;
+    ASSERT_EQ(iotxn_clone_partial(txn, PAGE_SIZE * 2, PAGE_SIZE * 2, &clone),
+              ZX_ERR_INVALID_ARGS, "expected vmo not to be large enough");
+    ASSERT_EQ(iotxn_clone_partial(txn, PAGE_SIZE * 2, PAGE_SIZE * 1, &clone),
+              ZX_OK, "");
+
+    ASSERT_NONNULL(clone->phys, "expected phys to be set");
+    ASSERT_EQ(clone->phys_count, 1u, "");
+    END_TEST;
+}
+
 static bool test_physmap_aligned_offset(void) {
     BEGIN_TEST;
     iotxn_t* txn;
@@ -425,6 +446,7 @@ BEGIN_TEST_CASE(iotxn_tests)
 RUN_TEST(test_physmap_simple)
 RUN_TEST(test_physmap_contiguous)
 RUN_TEST(test_physmap_clone)
+RUN_TEST(test_physmap_clone_partial)
 RUN_TEST(test_physmap_aligned_offset)
 RUN_TEST(test_physmap_unaligned_offset)
 RUN_TEST(test_physmap_unaligned_offset2)

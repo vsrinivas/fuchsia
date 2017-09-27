@@ -340,7 +340,7 @@ zx_status_t iotxn_clone_partial(iotxn_t* txn, uint64_t vmo_offset, zx_off_t leng
     if (length > txn->length) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if ((vmo_offset - txn->vmo_offset) > (length - txn->length)) {
+    if ((vmo_offset - txn->vmo_offset) > (txn->length - length)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
