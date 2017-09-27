@@ -16,6 +16,10 @@ import (
 	"encoding/hex"
 )
 
+// This is an implementation of the 4-Way Handshake used to exchange pair-wise and group keys.
+// The Handshake only supports the role of a Supplicant so far.
+// TODO(hahnr): Rename package to fourway.
+
 const debug = true
 
 type fourWayState interface {
@@ -92,6 +96,9 @@ func (hs *FourWay) HandleEAPOLKeyFrame(f *eapol.KeyFrame) error {
 	}
 
 	// Frames which made it this far are valid and must be processed.
+	// Note: Frame with an encrypted data field will be encrypted by the time of reaching this point.
+	// However, their data was not checked against any constraints or requirements, mostly because the
+	// data is often context specific and cannot be validated at such an early process.
 	return hs.state.handleEAPOLKeyFrame(hs, f)
 }
 
@@ -197,7 +204,24 @@ func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFram
 	// handshake's third message was received, it has a MIC set.
 	hs.keyReplayCounter = msg3.ReplayCounter
 
-	// TODO(hahnr): Implement KDE and Element reader to extract GTK and RSNE.
+	// Extract GTK and RSNE from message's data.
+	gtkKDE, rsne, err := extractInfoFromMessage3(msg3.Data)
+	if err != nil {
+		return err
+	}
+	if rsne == nil {
+		return fmt.Errorf("Message 3 does not hold an RSNE")
+	}
+	if gtkKDE == nil {
+		return fmt.Errorf("Message 3 does not hold a GTK")
+	}
+	if bytes.Compare(rsne.Raw, hs.config.AssocRSNE.Bytes()) != 0 {
+		return fmt.Errorf("Message 3 has a different RSNE from association.")
+	}
+	if debug {
+		log.Println("GTK: ", hex.EncodeToString(gtkKDE.GTK))
+	}
+
 	// TODO(hahnr): Configure Keys in STA via MLME-SETKEYS.request.
 	return nil
 }
@@ -246,13 +270,13 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 	// This will likely block association with incorrectly implemented APs which don't strictly
 	// follow specifications.
 
-	// IEEE Std 802.11-2016 12.7.2 b.1.ii)
+	// IEEE Std 802.11-2016, 12.7.2 b.1.ii)
 	// TODO(hahnr): Derive this value from the selected AKM.
 	if f.Info.Extract(eapol.KeyInfo_DescriptorVersion) != 2 {
 		return false, fmt.Errorf("unsupported DescriptorVersion for EAPOL Key frame")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 b.2)
+	// IEEE Std 802.11-2016, 12.7.2 b.2)
 	// TODO(hahnr): Add support for GTK exchange.
 	if !f.Info.IsSet(eapol.KeyInfo_Type) {
 		return false, fmt.Errorf("Group or SMK handshake is not supported")
@@ -265,43 +289,43 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 		return false, fmt.Errorf("unexpected secure state")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 b.4)
+	// IEEE Std 802.11-2016, 12.7.2 b.4)
 	// Only the third message can request to install a key.
 	if isFirstMsg == f.Info.IsSet(eapol.KeyInfo_Install) {
 		return false, fmt.Errorf("unexpected Install bit")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 b.5)
+	// IEEE Std 802.11-2016, 12.7.2 b.5)
 	// Every message of the handshake sent from the Authenticator requires a response. Hence, ACK must
 	// be set.
 	if !f.Info.IsSet(eapol.KeyInfo_ACK) {
 		return false, fmt.Errorf("expected response requirement")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 b.6)
+	// IEEE Std 802.11-2016, 12.7.2 b.6)
 	// Only the third message should have set a MIC.
 	if isFirstMsg == f.Info.IsSet(eapol.KeyInfo_MIC) {
 		return false, fmt.Errorf("unexpected MIC bit")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 b.8) & b.9)
+	// IEEE Std 802.11-2016, 12.7.2 b.8) & b.9)
 	// Must never be set from authenticator.
 	if f.Info.IsSet(eapol.KeyInfo_Error) || f.Info.IsSet(eapol.KeyInfo_Request) {
 		return false, fmt.Errorf("Error and request bits cannot be set by Authenticator")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 b.10)
+	// IEEE Std 802.11-2016, 12.7.2 b.10)
 	// First message must *not* be encrypted, third one must.
 	if isFirstMsg == f.Info.IsSet(eapol.KeyInfo_Encrypted_KeyData) {
 		return false, fmt.Errorf("unexpected encryption state of data")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 b.11)
+	// IEEE Std 802.11-2016, 12.7.2 b.11)
 	if f.Info.IsSet(eapol.KeyInfo_SMK_Message) {
 		return false, fmt.Errorf("SMK message cannot be set in non SMK handshake")
 	}
 
-	// IEEE Std 802.11-2016 12.7.2 c)
+	// IEEE Std 802.11-2016, 12.7.2 c)
 	// TODO(hahnr): Derive KeyLength from selected AKM.
 	if f.Length != 16 {
 		return false, fmt.Errorf("invalid KeyLength %u but expected %u", f.Length, 16)
@@ -385,6 +409,54 @@ func (hs *FourWay) isStateCompliant(f *eapol.KeyFrame) (bool, error) {
 	// Requires KDE & Element reader.
 
 	return true, nil
+}
+
+// Extracts GTK KDE and first RSNE from a given key data. Either can be nil if it was not specified.
+// Note: A second, optional RSNE is ignored so far.
+func extractInfoFromMessage3(keyData []byte) (*eapol.GTKKDE, *eapol.RSNElement, error) {
+	var gtkKDE *eapol.GTKKDE
+	var rsne *eapol.RSNElement
+
+	reader := eapol.NewKeyDataReader(keyData)
+	for reader.CanRead() {
+		switch reader.PeekType() {
+		case eapol.KeyDataItemType_KDE:
+			hdr := reader.PeekKDE()
+
+			// Skip unknown KDEs.
+			knownOUI := bytes.Compare(eapol.KDE_OUI[:], hdr.OUI[:]) == 0
+			if !knownOUI || hdr.DataType != eapol.KDEType_GTK {
+				// Read unknown KDE to progress reader.
+				reader.ReadKDE(nil)
+				break
+			}
+
+			gtkKDE = &eapol.GTKKDE{}
+			if err := reader.ReadKDE(gtkKDE); err != nil {
+				return nil, nil, err
+			}
+		case eapol.KeyDataItemType_Element:
+			elemHdr := reader.PeekElement()
+
+			// Skip unknown elements and an optional, second RSNE which the AP
+			// provided to change the selected ciphers.
+			// TODO(hahnr): Work with second optional cipher if one was specified.
+			if elemHdr.Id != eapol.ElementID_Rsn || rsne != nil {
+				// Read the element to progress the reader.
+				reader.ReadElement(nil)
+				break
+			}
+
+			rsne = &eapol.RSNElement{}
+			if err := reader.ReadElement(rsne); err != nil {
+				return nil, nil, err
+			}
+		default:
+			return nil, nil, fmt.Errorf("error while processing KeyData")
+		}
+	}
+
+	return gtkKDE, rsne, nil
 }
 
 // There is no general way of deriving the message's number from let's say a dedicated byte but
