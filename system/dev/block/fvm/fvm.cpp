@@ -148,48 +148,56 @@ zx_status_t VPartitionManager::Load() {
 
     metadata_size_ = fvm::MetadataSize(DiskSize(), SliceSize());
     // Now that the slice size is known, read the rest of the metadata
-    size_t dual_metadata_size = 2 * MetadataSize();
-    fbl::unique_ptr<MappedVmo> mvmo;
-    status = MappedVmo::Create(dual_metadata_size, "fvm-meta", &mvmo);
-    if (status != ZX_OK) {
-        return status;
-    }
+    auto make_metadata_vmo = [&](size_t offset, fbl::unique_ptr<MappedVmo>* out) {
+        fbl::unique_ptr<MappedVmo> mvmo;
+        zx_status_t status = MappedVmo::Create(MetadataSize(), "fvm-meta", &mvmo);
+        if (status != ZX_OK) {
+            return status;
+        }
 
-    // Read both copies of metadata, ensure at least one is valid
-    status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, mvmo->GetVmo(), 0, dual_metadata_size);
-    if (status != ZX_OK) {
-        return status;
-    }
-    txn->opcode = IOTXN_OP_READ;
-    txn->offset = 0;
-    txn->length = dual_metadata_size;
-    iotxn_synchronous_op(parent(), txn);
-    if (txn->status != ZX_OK) {
-        status = txn->status;
+        // Read both copies of metadata, ensure at least one is valid
+        status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, mvmo->GetVmo(), 0, MetadataSize());
+        if (status != ZX_OK) {
+            return status;
+        }
+        txn->opcode = IOTXN_OP_READ;
+        txn->offset = offset;
+        txn->length = MetadataSize();
+        iotxn_synchronous_op(parent(), txn);
+        if (txn->status != ZX_OK) {
+            status = txn->status;
+            iotxn_release(txn);
+            return status;
+        }
         iotxn_release(txn);
+        *out = fbl::move(mvmo);
+        return ZX_OK;
+    };
+
+    fbl::unique_ptr<MappedVmo> mvmo;
+    if ((status = make_metadata_vmo(0, &mvmo)) != ZX_OK) {
         return status;
     }
-    iotxn_release(txn);
-
-    const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mvmo->GetData()) +
-                                                 MetadataSize());
+    fbl::unique_ptr<MappedVmo> mvmo_backup;
+    if ((status = make_metadata_vmo(MetadataSize(), &mvmo_backup)) != ZX_OK) {
+        return status;
+    }
 
     const void* metadata;
-    if ((status = fvm_validate_header(mvmo->GetData(), backup, MetadataSize(),
-                                      &metadata)) != ZX_OK) {
+    if ((status = fvm_validate_header(mvmo->GetData(), mvmo_backup->GetData(),
+                                      MetadataSize(), &metadata)) != ZX_OK) {
         return status;
     }
-    // TODO(smklein): Compare the performance of the current reading behavior
-    // (read into VMO, map into VMAR, cut VMAR in half) with an alternative
-    // which waits to map the VMO by using zx_vmo_read twice beforehand instead.
-    first_metadata_is_primary_ = (metadata == mvmo->GetData());
-    if ((status = mvmo->Shrink(PrimaryOffsetLocked(), MetadataSize())) != ZX_OK) {
-        return status;
+
+    if (metadata == mvmo->GetData()) {
+        first_metadata_is_primary_ = true;
+        metadata_ = fbl::move(mvmo);
+    } else {
+        first_metadata_is_primary_ = false;
+        metadata_ = fbl::move(mvmo_backup);
     }
 
     // Begin initializing the underlying partitions
-    metadata_ = fbl::move(mvmo);
-
     if ((status = DdkAdd("fvm")) != ZX_OK) {
         return status;
     }
