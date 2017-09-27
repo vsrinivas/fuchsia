@@ -82,6 +82,10 @@
 // Content: bootdata_uart_t
 #define BOOTDATA_DEBUG_UART       (0x54524155) // UART
 
+// Platform ID Information
+// Content: bootdata_platform_id_t
+#define BOOTDATA_PLATFORM_ID      (0x44494C50) // PLID
+
 // Memory which will persist across warm boots
 // Content bootdata_lastlog_nvram_t
 #define BOOTDATA_LASTLOG_NVRAM    (0x4c4c564e) // NVLL
@@ -181,6 +185,12 @@ typedef struct {
     uint32_t type;
     uint32_t irq;
 } bootdata_uart_t;
+
+typedef struct {
+    uint32_t vid;
+    uint32_t pid;
+    char board_name[32];
+} bootdata_platform_id_t;
 
 /* EFI Variable for Crash Log */
 #define ZIRCON_VENDOR_GUID \

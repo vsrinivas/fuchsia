@@ -826,7 +826,7 @@ int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra
     return 0;
 }
 
-int write_bootdata(const char* fn, item_t* item, bool extra) {
+int write_bootdata(const char* fn, item_t* item, bool extra, bootdata_platform_id_t* platform_id) {
     //TODO: re-enable for debugging someday
     bool compressed = true;
 
@@ -873,6 +873,31 @@ int write_bootdata(const char* fn, item_t* item, bool extra) {
         item = item->next;
     }
 
+    if (platform_id) {
+         bootdata_t header = {
+            .type = BOOTDATA_PLATFORM_ID,
+            .length = sizeof(*platform_id),
+            .flags = (extra ? BOOTDATA_FLAG_EXTRA : 0),
+        };
+        if (writex(fd, &header, sizeof(header)) < 0) {
+            return -1;
+        }
+        if (extra) {
+            bootextra_t bootextra = {
+                .reserved0 = 0,
+                .reserved1 = 0,
+                .magic = BOOTITEM_MAGIC,
+                .crc32 = BOOTITEM_NO_CRC32,
+            };
+            if (writex(fd, &bootextra, sizeof(bootextra)) < 0) {
+                goto fail;
+            }
+        }
+        if (writex(fd, platform_id, sizeof(*platform_id)) < 0) {
+            return -1;
+        }
+    }
+
     off_t file_end = lseek(fd, 0, SEEK_CUR);
     if (file_end < 0) {
         fprintf(stderr, "error: couldn't seek\n");
@@ -897,7 +922,7 @@ int write_bootdata(const char* fn, item_t* item, bool extra) {
     if (extra) {
         bootextra_t fileextra = {
             .reserved0 = 0,
-            .reserved1 = 1,
+            .reserved1 = 0,
             .magic = BOOTITEM_MAGIC,
             .crc32 = BOOTITEM_NO_CRC32,
         };
@@ -1035,28 +1060,36 @@ void usage(void) {
     "       mkbootfs creates a bootdata image consisting of the inputs\n"
     "       provided in the specified order.\n"
     "\n"
-    "options: -o <filename>    output bootdata file name\n"
-    "         -k <filename>    include kernel (must be first)\n"
-    "         -C <filename>    include kernel command line\n"
-    "         -c               compress bootfs image (default)\n"
-    "         -v               verbose output\n"
-    "         -x               enable bootextra data (crc32)\n"
-    "         -t <filename>    dump bootdata contents\n"
-    "         -g <group>       select allowed groups for manifest items\n"
-    "                          (multiple groups may be comma separated)\n"
-    "                          (the value 'all' resets to include all groups)\n"
-    "         --uncompressed   don't compress bootfs image (debug only)\n"
-    "         --target=system  bootfs to be unpacked at /system\n"
-    "         --target=boot    bootfs to be unpacked at /boot\n"
+    "options: -o <filename>         output bootdata file name\n"
+    "         -k <filename>         include kernel (must be first)\n"
+    "         -C <filename>         include kernel command line\n"
+    "         -c                    compress bootfs image (default)\n"
+    "         -v                    verbose output\n"
+    "         -x                    enable bootextra data (crc32)\n"
+    "         -t <filename>         dump bootdata contents\n"
+    "         -g <group>            select allowed groups for manifest items\n"
+    "                               (multiple groups may be comma separated)\n"
+    "                               (the value 'all' resets to include all groups)\n"
+    "         --uncompressed        don't compress bootfs image (debug only)\n"
+    "         --target=system       bootfs to be unpacked at /system\n"
+    "         --target=boot         bootfs to be unpacked at /boot\n"
+    "         --vid <vid>           specify VID for platform ID record\n"
+    "         --pid <vid>           specify PID for platform ID record\n"
+    "         --board <board-name>  specify board name for platform ID record\n"
     "\n"
-    "inputs:  <filename>       file containing bootdata (binary)\n"
-    "                          or a manifest (target=srcpath lines)\n"
-    "         @<directory>     directory to recursively import\n"
+    "inputs:  <filename>            file containing bootdata (binary)\n"
+    "                               or a manifest (target=srcpath lines)\n"
+    "         @<directory>          directory to recursively import\n"
     "\n"
     "notes:   Each manifest or directory is imported as a distinct bootfs\n"
     "         section, tagged for unpacking at /boot or /system based on\n"
     "         the most recent --target= directive.\n"
     );
+}
+
+static bool parse_uint32(const char* string, uint32_t* out_value) {
+    return (sscanf(string, "0x%x", out_value) == 1 ||
+            sscanf(string, "%u", out_value) == 1);
 }
 
 int main(int argc, char **argv) {
@@ -1067,6 +1100,10 @@ int main(int argc, char **argv) {
     bool have_cmdline = false;
     bool extra = false;
     unsigned incount = 0;
+    const char* vid_arg = NULL;
+    const char* pid_arg = NULL;
+    const char* board_arg = NULL;
+    bootdata_platform_id_t platform_id = {};
 
     if (argc == 1) {
         usage();
@@ -1165,6 +1202,30 @@ int main(int argc, char **argv) {
             system = true;
         } else if (!strcmp(cmd,"--target=boot")) {
             system = false;
+        } else if (!strcmp(cmd,"--vid")) {
+            if (argc < 2) {
+                fprintf(stderr, "error: no value given for --vid\n");
+                return -1;
+            }
+            vid_arg = argv[1];
+            argc--;
+            argv++;
+        } else if (!strcmp(cmd,"--pid")) {
+            if (argc < 2) {
+                fprintf(stderr, "error: no value given for --pid\n");
+                return -1;
+            }
+            pid_arg = argv[1];
+            argc--;
+            argv++;
+        } else if (!strcmp(cmd,"--board")) {
+            if (argc < 2) {
+                fprintf(stderr, "error: no value given for --board\n");
+                return -1;
+            }
+            board_arg = argv[1];
+            argc--;
+            argv++;
         } else if (cmd[0] == '-') {
             fprintf(stderr, "unknown option: %s\n", cmd);
             return -1;
@@ -1196,6 +1257,27 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    if (vid_arg) {
+        if (!parse_uint32(vid_arg, &platform_id.vid)) {
+            fprintf(stderr, "error: could not parse --vid %s\n", vid_arg);
+            return -1;
+        }
+    }
+    if (pid_arg) {
+        if (!parse_uint32(pid_arg, &platform_id.pid)) {
+            fprintf(stderr, "error: could not parse --pid %s\n", pid_arg);
+            return -1;
+        }
+    }
+
+    if (board_arg) {
+        if (strlen(board_arg) >= sizeof(platform_id.board_name)) {
+            fprintf(stderr, "error: board name too long\n");
+            return -1;
+        }
+        strncpy(platform_id.board_name, board_arg, sizeof(platform_id.board_name));
+    }
+
     // preflight calculations for bootfs items
     for (item_t* item = first_item; item != NULL; item = item->next) {
         switch (item->type) {
@@ -1224,5 +1306,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    return write_bootdata(output_file, first_item, extra);
+    if (platform_id.vid || platform_id.pid || platform_id.board_name[0]) {
+        return write_bootdata(output_file, first_item, extra, &platform_id);
+    } else {
+        return write_bootdata(output_file, first_item, extra, NULL);
+    }
 }
