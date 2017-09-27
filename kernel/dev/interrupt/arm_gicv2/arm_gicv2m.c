@@ -12,6 +12,7 @@
 #include <err.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -69,7 +70,7 @@ void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, 
 
 }
 
-status_t arm_gicv2m_get_frame_info(const uint frame_ndx, arm_gicv2m_frame_info_t* out_info) {
+zx_status_t arm_gicv2m_get_frame_info(const uint frame_ndx, arm_gicv2m_frame_info_t* out_info) {
     if (!out_info)
         return ZX_ERR_INVALID_ARGS;
 

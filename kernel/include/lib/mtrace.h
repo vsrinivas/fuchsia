@@ -14,13 +14,14 @@
 
 #include <err.h>
 #include <lib/user_copy/user_ptr.h>
-#include <zircon/compiler.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
-status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
-                        user_ptr<void> arg, uint32_t size);
+zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
+                           user_ptr<void> arg, uint32_t size);
 
 #ifdef __x86_64__
-status_t mtrace_ipt_control(uint32_t action, uint32_t options,
-                            user_ptr<void> arg, uint32_t size);
+zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
+                               user_ptr<void> arg, uint32_t size);
 #endif

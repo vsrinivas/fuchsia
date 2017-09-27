@@ -62,14 +62,14 @@ void event_destroy(event_t*);
 status_t event_wait_deadline(event_t*, zx_time_t, bool interruptable);
 
 /* no deadline, non interruptable version of the above. */
-static inline status_t event_wait(event_t* e) {
+static inline zx_status_t event_wait(event_t* e) {
     return event_wait_deadline(e, ZX_TIME_INFINITE, false);
 }
 
-int event_signal_etc(event_t*, bool reschedule, status_t result);
+int event_signal_etc(event_t*, bool reschedule, zx_status_t result);
 int event_signal(event_t*, bool reschedule);
 int event_signal_thread_locked(event_t*);
-status_t event_unsignal(event_t*);
+zx_status_t event_unsignal(event_t*);
 
 static inline bool event_initialized(const event_t* e) {
     return e->magic == EVENT_MAGIC;
@@ -102,17 +102,17 @@ public:
     // ZX_ERR_TIMED_OUT - time out expired
     // ZX_ERR_INTERNAL_INTR_KILLED - thread killed
     // Or the |status| which the caller specified in Event::Signal(status)
-    status_t Wait(zx_time_t deadline) {
+    zx_status_t Wait(zx_time_t deadline) {
         return event_wait_deadline(&event_, deadline, true);
     }
 
     // Returns number of ready threads. If it is bigger than 0
     // the caller must call thread_reschedule().
-    __WARN_UNUSED_RESULT int Signal(status_t status = ZX_OK) {
+    __WARN_UNUSED_RESULT int Signal(zx_status_t status = ZX_OK) {
         return event_signal_etc(&event_, false, status);
     }
 
-    status_t Unsignal() {
+    zx_status_t Unsignal() {
         return event_unsignal(&event_);
     }
 

@@ -424,7 +424,7 @@ enum handler_return timer_tick(zx_time_t now) {
     return ret;
 }
 
-status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {
+zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {
     /* spin trylocking on the passed in spinlock either waiting for it
      * to grab or the passed in timer to be canceled.
      */

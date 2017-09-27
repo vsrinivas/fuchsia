@@ -8,7 +8,7 @@
 #pragma once
 
 #ifndef ASSEMBLY
-#include <sys/types.h> // for status_t
+#include <zircon/types.h> // for zx_status_t
 #endif
 
 #include <zircon/errors.h>

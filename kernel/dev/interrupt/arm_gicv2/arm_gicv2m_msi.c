@@ -20,12 +20,13 @@
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 p2ra_state_t g_32bit_targets;
 p2ra_state_t g_64bit_targets;
 
-status_t arm_gicv2m_msi_init(void) {
-    status_t ret;
+zx_status_t arm_gicv2m_msi_init(void) {
+    zx_status_t ret;
 
     ret = p2ra_init(&g_32bit_targets, PCIE_MAX_MSI_IRQS);
     if (ret != ZX_OK) {
@@ -73,10 +74,10 @@ finished:
     return ret;
 }
 
-status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
-                                    bool can_target_64bit,
-                                    bool is_msix,
-                                    pcie_msi_block_t* out_block) {
+zx_status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
+                                       bool can_target_64bit,
+                                       bool is_msix,
+                                       pcie_msi_block_t* out_block) {
     if (!out_block)
         return ZX_ERR_INVALID_ARGS;
 
@@ -86,7 +87,7 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
     if (!requested_irqs || (requested_irqs > PCIE_MAX_MSI_IRQS))
         return ZX_ERR_INVALID_ARGS;
 
-    status_t ret = ZX_ERR_INTERNAL;
+    zx_status_t ret = ZX_ERR_INTERNAL;
     bool is_32bit = false;
     uint alloc_size = 1u << log2_uint_ceil(requested_irqs);
     uint alloc_start;

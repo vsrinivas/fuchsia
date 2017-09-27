@@ -45,16 +45,16 @@ void wait_queue_destroy(wait_queue_t*);
  * a deadline other than ZX_TIME_INFINITE will abort at the specified time
  * and return ZX_ERR_TIMED_OUT. a deadline in the past will immediately return.
  */
-status_t wait_queue_block(wait_queue_t*, zx_time_t deadline);
+zx_status_t wait_queue_block(wait_queue_t*, zx_time_t deadline);
 
 /*
  * release one or more threads from the wait queue.
  * reschedule = should the system reschedule if any is released.
  * wait_queue_error = what wait_queue_block() should return for the blocking thread.
  */
-int wait_queue_wake_one(wait_queue_t*, bool reschedule, status_t wait_queue_error);
-int wait_queue_wake_all(wait_queue_t*, bool reschedule, status_t wait_queue_error);
-struct thread* wait_queue_dequeue_one(wait_queue_t* wait, status_t wait_queue_error);
+int wait_queue_wake_one(wait_queue_t*, bool reschedule, zx_status_t wait_queue_error);
+int wait_queue_wake_all(wait_queue_t*, bool reschedule, zx_status_t wait_queue_error);
+struct thread* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_error);
 
 /* is the wait queue currently empty */
 bool wait_queue_is_empty(wait_queue_t*);

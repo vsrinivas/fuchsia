@@ -9,8 +9,9 @@
 
 #if WITH_DEV_PCIE
 #include <dev/pcie_platform.h>
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -19,17 +20,17 @@ __BEGIN_CDECLS
  *
  * @return A status code indicating the success or failure of the initialization.
  */
-status_t arm_gicv2m_msi_init(void);
+zx_status_t arm_gicv2m_msi_init(void);
 
 /**
  * Implementation of the PCIe bus driver hooks.
  *
  * @see platform_alloc_msi_block_t in dev/pcie/pcie_irqs.h
  */
-status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
-                                    bool can_target_64bit,
-                                    bool is_msix,
-                                    pcie_msi_block_t* out_block);
+zx_status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
+                                       bool can_target_64bit,
+                                       bool is_msix,
+                                       pcie_msi_block_t* out_block);
 
 /**
  * @see platform_free_msi_block_t in dev/pcie/pcie_irqs.h

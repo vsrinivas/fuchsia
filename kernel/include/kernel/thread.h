@@ -118,7 +118,7 @@ typedef struct thread {
     struct wait_queue* blocking_wait_queue;
 
     /* return code if woken up abnormally from suspend, sleep, or block */
-    status_t blocked_status;
+    zx_status_t blocked_status;
 
     /* are we allowed to be interrupted on the current thing we're blocked/sleeping on */
     bool interruptable;
@@ -186,8 +186,8 @@ void thread_set_priority(int priority);
 void thread_set_user_callback(thread_t* t, thread_user_callback_t cb);
 thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority, size_t stack_size);
 thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine entry, void* arg, int priority, void* stack, void* unsafe_stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
-status_t thread_resume(thread_t*);
-status_t thread_suspend(thread_t*);
+zx_status_t thread_resume(thread_t*);
+zx_status_t thread_suspend(thread_t*);
 void thread_signal_policy_exception(void);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t*);
@@ -199,10 +199,10 @@ void thread_set_cpu_affinity(thread_t* t, cpu_mask_t mask);
 /* migrates the current thread to the CPU identified by target_cpu */
 void thread_migrate_to_cpu(cpu_num_t target_cpuid);
 
-status_t thread_detach(thread_t* t);
-status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline);
-status_t thread_detach_and_resume(thread_t* t);
-status_t thread_set_real_time(thread_t* t);
+zx_status_t thread_detach(thread_t* t);
+zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline);
+zx_status_t thread_detach_and_resume(thread_t* t);
+zx_status_t thread_set_real_time(thread_t* t);
 
 /* scheduler routines to be used by regular kernel code */
 void thread_yield(void);      /* give up the cpu and time slice voluntarily */
@@ -229,15 +229,15 @@ static inline bool thread_stopped_in_exception(const thread_t* thread) {
 /* wait until after the specified deadline. interruptable may return early with
  * ZX_ERR_INTERNAL_INTR_KILLED if thread is signaled for kill.
  */
-status_t thread_sleep_etc(zx_time_t deadline, bool interruptable);
+zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable);
 
 /* non interruptable version of thread_sleep_etc */
-static inline status_t thread_sleep(zx_time_t deadline) {
+static inline zx_status_t thread_sleep(zx_time_t deadline) {
     return thread_sleep_etc(deadline, false);
 }
 
 /* non-interruptable relative delay version of thread_sleep */
-status_t thread_sleep_relative(zx_duration_t delay);
+zx_status_t thread_sleep_relative(zx_duration_t delay);
 
 /* return the number of nanoseconds a thread has been running for */
 zx_duration_t thread_runtime(const thread_t* t);

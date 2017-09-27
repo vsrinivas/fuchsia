@@ -10,9 +10,10 @@
 #include <kernel/cpu.h>
 #include <kernel/mutex.h>
 #include <limits.h>
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -46,8 +47,8 @@ void mp_init(void);
 void mp_reschedule(mp_ipi_target_t, cpu_mask_t mask, uint flags);
 void mp_sync_exec(mp_ipi_target_t, cpu_mask_t mask, mp_sync_task_t task, void* context);
 
-status_t mp_hotplug_cpu(uint cpu_id);
-status_t mp_unplug_cpu(uint cpu_id);
+zx_status_t mp_hotplug_cpu(uint cpu_id);
+zx_status_t mp_unplug_cpu(uint cpu_id);
 
 /* called from arch code during reschedule irq */
 enum handler_return mp_mbx_reschedule_irq(void);

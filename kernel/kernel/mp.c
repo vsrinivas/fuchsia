@@ -20,6 +20,7 @@
 #include <kernel/timer.h>
 #include <stdlib.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 
@@ -148,7 +149,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     spin_unlock(&mp.ipi_task_lock);
 
     /* let CPUs know to begin executing */
-    __UNUSED status_t status = arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_GENERIC);
+    __UNUSED zx_status_t status = arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_GENERIC);
     DEBUG_ASSERT(status == ZX_OK);
 
     if (targetting_self) {
@@ -228,10 +229,10 @@ static void mp_unplug_trampoline(void) {
  *
  * This should be called in a thread context
  */
-status_t mp_hotplug_cpu(uint cpu_id) {
+zx_status_t mp_hotplug_cpu(uint cpu_id) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
-    status_t status = ZX_ERR_INTERNAL;
+    zx_status_t status = ZX_ERR_INTERNAL;
 
     mutex_acquire(&mp.hotplug_lock);
 
@@ -250,11 +251,11 @@ cleanup_mutex:
  *
  * This should be called in a thread context
  */
-status_t mp_unplug_cpu(uint cpu_id) {
+zx_status_t mp_unplug_cpu(uint cpu_id) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
     thread_t* t = NULL;
-    status_t status = ZX_ERR_INTERNAL;
+    zx_status_t status = ZX_ERR_INTERNAL;
 
     mutex_acquire(&mp.hotplug_lock);
 
@@ -375,21 +376,21 @@ enum handler_return mp_mbx_reschedule_irq(void) {
     return (mp.active_cpus & cpu_num_to_mask(cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
-__WEAK status_t arch_mp_cpu_hotplug(uint cpu_id) {
+__WEAK zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {
     return ZX_ERR_NOT_SUPPORTED;
 }
-__WEAK status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
+__WEAK zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
     return ZX_ERR_NOT_SUPPORTED;
 }
-__WEAK status_t arch_mp_cpu_unplug(uint cpu_id) {
+__WEAK zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
     return ZX_ERR_NOT_SUPPORTED;
 }
-__WEAK status_t platform_mp_cpu_hotplug(uint cpu_id) {
+__WEAK zx_status_t platform_mp_cpu_hotplug(uint cpu_id) {
     return arch_mp_cpu_hotplug(cpu_id);
 }
-__WEAK status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
+__WEAK zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
     return arch_mp_prep_cpu_unplug(cpu_id);
 }
-__WEAK status_t platform_mp_cpu_unplug(uint cpu_id) {
+__WEAK zx_status_t platform_mp_cpu_unplug(uint cpu_id) {
     return arch_mp_cpu_unplug(cpu_id);
 }

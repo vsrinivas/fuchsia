@@ -30,6 +30,7 @@
 #include <kernel/event.h>
 #include <kernel/thread.h>
 #include <sys/types.h>
+#include <zircon/types.h>
 
 /**
  * @brief  Initialize an event object
@@ -77,9 +78,9 @@ void event_destroy(event_t* e) {
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
-status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptable) {
+zx_status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptable) {
     thread_t* current_thread = get_current_thread();
-    status_t ret = ZX_OK;
+    zx_status_t ret = ZX_OK;
 
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
@@ -106,7 +107,7 @@ status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptable)
     return ret;
 }
 
-static int event_signal_internal(event_t* e, bool reschedule, status_t wait_result, bool thread_lock_held) {
+static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_result, bool thread_lock_held) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
     DEBUG_ASSERT(!reschedule || !arch_in_int_handler());
 
@@ -163,7 +164,7 @@ static int event_signal_internal(event_t* e, bool reschedule, status_t wait_resu
  *
  * @return  Returns the number of threads that have been unblocked.
  */
-int event_signal_etc(event_t* e, bool reschedule, status_t wait_result) {
+int event_signal_etc(event_t* e, bool reschedule, zx_status_t wait_result) {
     return event_signal_internal(e, reschedule, wait_result, false);
 }
 
@@ -208,7 +209,7 @@ int event_signal_thread_locked(event_t* e) {
  *
  * @return  Returns ZX_OK on success.
  */
-status_t event_unsignal(event_t* e) {
+zx_status_t event_unsignal(event_t* e) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
     e->signaled = false;

@@ -213,7 +213,7 @@ static enum handler_return platform_tick(void *arg)
     return timer_tick(current_time());
 }
 
-status_t platform_set_oneshot_timer(zx_time_t deadline)
+zx_status_t platform_set_oneshot_timer(zx_time_t deadline)
 {
     DEBUG_ASSERT(arch_ints_disabled());
 

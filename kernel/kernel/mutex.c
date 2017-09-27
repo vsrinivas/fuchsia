@@ -100,7 +100,7 @@ retry:
     }
 
     // we have signalled that we're blocking, so drop into the wait queue
-    status_t ret = wait_queue_block(&m->wait, ZX_TIME_INFINITE);
+    zx_status_t ret = wait_queue_block(&m->wait, ZX_TIME_INFINITE);
     if (unlikely(ret < ZX_OK)) {
         // mutexes are not interruptable and cannot time out, so it
         // is illegal to return with any error state.

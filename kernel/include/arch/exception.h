@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -17,14 +18,14 @@ typedef struct zx_exception_report zx_exception_report_t;
 // Called by arch code when it cannot handle an exception.
 // |context| is architecture-specific, and can be dumped to the console
 // using arch_dump_exception_context(). Implemented by non-arch code.
-status_t dispatch_user_exception(uint exception_type,
-                                 arch_exception_context_t* context);
+zx_status_t dispatch_user_exception(uint exception_type,
+                                    arch_exception_context_t* context);
 
 // Dispatches an exception that was raised by a syscall using
 // thread_signal_policy_exception() (see <kernel/thread.h>), causing
 // dispatch_user_exception() to be called with the current context.
 // Implemented by arch code.
-status_t arch_dispatch_user_policy_exception(void);
+zx_status_t arch_dispatch_user_policy_exception(void);
 
 // Dumps architecture-specific state to the console. |context| typically comes
 // from a call to dispatch_user_exception(). Implemented by arch code.

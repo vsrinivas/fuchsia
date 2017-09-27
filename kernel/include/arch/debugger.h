@@ -6,9 +6,10 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -21,7 +22,7 @@ struct thread;
 
 uint arch_num_regsets(void);
 
-status_t arch_get_regset(struct thread *thread, uint regset, void* regs, uint* buf_size);
-status_t arch_set_regset(struct thread *thread, uint regset, const void* regs, uint buf_size);
+zx_status_t arch_get_regset(struct thread *thread, uint regset, void* regs, uint* buf_size);
+zx_status_t arch_set_regset(struct thread *thread, uint regset, const void* regs, uint buf_size);
 
 __END_CDECLS

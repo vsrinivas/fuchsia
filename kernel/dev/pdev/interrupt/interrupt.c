@@ -7,6 +7,7 @@
 #include <err.h>
 #include <pdev/interrupt.h>
 #include <lk/init.h>
+#include <zircon/types.h>
 
 #define ARM_MAX_INT 1024
 
@@ -39,23 +40,23 @@ void register_int_handler(unsigned int vector, int_handler handler, void* arg)
     spin_unlock_restore(&lock, state, SPIN_LOCK_FLAG_INTERRUPTS);
 }
 
-static status_t default_mask(unsigned int vector) {
+static zx_status_t default_mask(unsigned int vector) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
-static status_t default_unmask(unsigned int vector) {
+static zx_status_t default_unmask(unsigned int vector) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
-static status_t default_configure(unsigned int vector,
-                          enum interrupt_trigger_mode tm,
-                          enum interrupt_polarity pol) {
+static zx_status_t default_configure(unsigned int vector,
+                                     enum interrupt_trigger_mode tm,
+                                     enum interrupt_polarity pol) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
-static status_t default_get_config(unsigned int vector,
-                           enum interrupt_trigger_mode* tm,
-                           enum interrupt_polarity* pol) {
+static zx_status_t default_get_config(unsigned int vector,
+                                      enum interrupt_trigger_mode* tm,
+                                      enum interrupt_polarity* pol) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
@@ -66,7 +67,7 @@ static unsigned int default_remap(unsigned int vector) {
     return 0;
 }
 
-static status_t default_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
+static zx_status_t default_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
@@ -104,21 +105,21 @@ static const struct pdev_interrupt_ops default_ops = {
 
 static const struct pdev_interrupt_ops* intr_ops = &default_ops;
 
-status_t mask_interrupt(unsigned int vector) {
+zx_status_t mask_interrupt(unsigned int vector) {
     return intr_ops->mask(vector);
 }
 
-status_t unmask_interrupt(unsigned int vector) {
+zx_status_t unmask_interrupt(unsigned int vector) {
     return intr_ops->unmask(vector);
 }
 
-status_t configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
-                             enum interrupt_polarity pol) {
+zx_status_t configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
+                                enum interrupt_polarity pol) {
     return intr_ops->configure(vector, tm, pol);
 }
 
-status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mode* tm,
-                              enum interrupt_polarity* pol) {
+zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mode* tm,
+                                 enum interrupt_polarity* pol) {
     return intr_ops->get_config(vector, tm, pol);
 }
 
@@ -130,7 +131,7 @@ unsigned int remap_interrupt(unsigned int vector) {
     return intr_ops->remap(vector);
 }
 
-status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
+zx_status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return intr_ops->send_ipi(target, ipi);
 }
 

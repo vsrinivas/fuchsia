@@ -225,7 +225,7 @@ static void free_thread_resources(thread_t* t) {
  *
  * @return ZX_OK on success
  */
-status_t thread_set_real_time(thread_t* t) {
+zx_status_t thread_set_real_time(thread_t* t) {
     if (!t)
         return ZX_ERR_INVALID_ARGS;
 
@@ -253,7 +253,7 @@ status_t thread_set_real_time(thread_t* t) {
  *
  * @return ZX_OK on success.
  */
-status_t thread_resume(thread_t* t) {
+zx_status_t thread_resume(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     bool ints_disabled = arch_ints_disabled();
@@ -285,8 +285,8 @@ status_t thread_resume(thread_t* t) {
     return ZX_OK;
 }
 
-status_t thread_detach_and_resume(thread_t* t) {
-    status_t err;
+zx_status_t thread_detach_and_resume(thread_t* t) {
+    zx_status_t err;
     err = thread_detach(t);
     if (err < 0)
         return err;
@@ -300,7 +300,7 @@ status_t thread_detach_and_resume(thread_t* t) {
  *
  * @return ZX_OK on success.
  */
-status_t thread_suspend(thread_t* t) {
+zx_status_t thread_suspend(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(!thread_is_idle(t));
 
@@ -365,7 +365,7 @@ void thread_signal_policy_exception(void) {
     THREAD_UNLOCK(state);
 }
 
-status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
+zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     THREAD_LOCK(state);
@@ -378,7 +378,7 @@ status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
 
     /* wait for the thread to die */
     if (t->state != THREAD_DEATH) {
-        status_t err = wait_queue_block(&t->retcode_wait_queue, deadline);
+        zx_status_t err = wait_queue_block(&t->retcode_wait_queue, deadline);
         if (err < 0) {
             THREAD_UNLOCK(state);
             return err;
@@ -407,7 +407,7 @@ status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
     return ZX_OK;
 }
 
-status_t thread_detach(thread_t* t) {
+zx_status_t thread_detach(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     THREAD_LOCK(state);
@@ -848,10 +848,10 @@ static uint64_t sleep_slack(zx_time_t deadline, zx_time_t now) {
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
-status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
+zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
     thread_t* current_thread = get_current_thread();
     zx_time_t now = current_time();
-    status_t blocked_status;
+    zx_status_t blocked_status;
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
@@ -895,7 +895,7 @@ out:
     return blocked_status;
 }
 
-status_t thread_sleep_relative(zx_duration_t delay) {
+zx_status_t thread_sleep_relative(zx_duration_t delay) {
     if (delay != ZX_TIME_INFINITE) {
         delay += current_time();
     }
@@ -1274,7 +1274,7 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t 
  * @return ZX_ERR_TIMED_OUT on timeout, else returns the return
  * value specified when the queue was woken by wait_queue_wake_one().
  */
-status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
+zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
     timer_t timer;
 
     thread_t* current_thread = get_current_thread();
@@ -1331,7 +1331,7 @@ status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
  *
  * @return  The number of threads woken (zero or one)
  */
-int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, status_t wait_queue_error) {
+int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_queue_error) {
     thread_t* t;
     int ret = 0;
 
@@ -1358,7 +1358,7 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, status_t wait_queue
     return ret;
 }
 
-thread_t* wait_queue_dequeue_one(wait_queue_t* wait, status_t wait_queue_error) {
+thread_t* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_error) {
     thread_t* t;
 
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
@@ -1390,7 +1390,7 @@ thread_t* wait_queue_dequeue_one(wait_queue_t* wait, status_t wait_queue_error) 
  *
  * @return  The number of threads woken
  */
-int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, status_t wait_queue_error) {
+int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_queue_error) {
     thread_t* t;
     int ret = 0;
 
@@ -1467,7 +1467,7 @@ void wait_queue_destroy(wait_queue_t* wait) {
  *
  * @return ZX_ERR_BAD_STATE if thread was not in any wait queue.
  */
-static status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_error, bool* local_resched) {
+static zx_status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_error, bool* local_resched) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -1490,7 +1490,7 @@ static status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_
 }
 
 #if WITH_PANIC_BACKTRACE
-static status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz) {
+static zx_status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz) {
     if (!is_kernel_address((uintptr_t)ptr) ||
         (ptr < t->stack) ||
         (ptr > (t->stack + t->stack_size - sizeof(void*)))) {

@@ -19,6 +19,7 @@
 #include <mdi/mdi-defs.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
+#include <zircon/types.h>
 
 class ArmGicV2PciePlatformSupport : public PciePlatformInterface {
 public:
@@ -26,10 +27,10 @@ public:
         : PciePlatformInterface(has_msi_gic ? MsiSupportLevel::MSI_WITH_MASKING
                                             : MsiSupportLevel::NONE) { }
 
-    status_t AllocMsiBlock(uint requested_irqs,
-                           bool can_target_64bit,
-                           bool is_msix,
-                           pcie_msi_block_t* out_block) override {
+    zx_status_t AllocMsiBlock(uint requested_irqs,
+                              bool can_target_64bit,
+                              bool is_msix,
+                              pcie_msi_block_t* out_block) override {
         return arm_gicv2m_alloc_msi_block(requested_irqs, can_target_64bit, is_msix, out_block);
     }
 
@@ -53,7 +54,7 @@ public:
 
 static void arm_gicv2_pcie_init(mdi_node_ref_t* node, uint level) {
     /* Initialize the MSI allocator */
-    status_t res = arm_gicv2m_msi_init();
+    zx_status_t res = arm_gicv2m_msi_init();
     if (res != ZX_OK)
         TRACEF("Failed to initialize MSI allocator (res = %d).  PCI will be "
                "restricted to legacy IRQ mode.\n", res);

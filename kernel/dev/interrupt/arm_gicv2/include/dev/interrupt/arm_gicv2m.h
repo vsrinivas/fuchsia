@@ -7,8 +7,9 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -47,6 +48,6 @@ void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, 
  *  ++ ZX_ERR_BAD_STATE The frame index exists, but the registers in the frame
  *     appear to be corrupt or invalid (internal error)
  */
-status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_info);
+zx_status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_info);
 
 __END_CDECLS

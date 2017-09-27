@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <inttypes.h>
+#include <zircon/types.h>
 
 // gfx library
 
@@ -104,12 +105,12 @@ static inline void gfx_clear(gfx_surface *surface, uint color)
 
 // surface setup
 gfx_surface *gfx_create_surface(void *ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags);
-status_t gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags);
+zx_status_t gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, uint stride, gfx_format format, uint32_t flags);
 
 // utility routine to make a surface out of a display info
 struct display_info;
 gfx_surface *gfx_create_surface_from_display(struct display_info *);
-status_t gfx_init_surface_from_display(gfx_surface *surface, struct display_info *);
+zx_status_t gfx_init_surface_from_display(gfx_surface *surface, struct display_info *);
 
 // free the surface
 // optionally frees the buffer if the free bit is set

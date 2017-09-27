@@ -22,6 +22,7 @@
 #include <arch/ops.h>
 #include <trace.h>
 #include <lib/ktrace.h>
+#include <zircon/types.h>
 
 #include <mdi/mdi.h>
 #include <mdi/mdi-defs.h>
@@ -47,9 +48,9 @@ uint max_irqs = 0;
 
 static void arm_gic_init(void);
 
-static status_t gic_configure_interrupt(unsigned int vector,
-                                        enum interrupt_trigger_mode tm,
-                                        enum interrupt_polarity pol);
+static zx_status_t gic_configure_interrupt(unsigned int vector,
+                                           enum interrupt_trigger_mode tm,
+                                           enum interrupt_polarity pol);
 
 static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd)
 {
@@ -144,7 +145,7 @@ static void arm_gic_init(void)
     gic_init_percpu_early();
 }
 
-static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
+static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
 {
     u_int val =
         ((flags & ARM_GIC_SGI_FLAG_TARGET_FILTER_MASK) << 24) |
@@ -162,7 +163,7 @@ static status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
     return ZX_OK;
 }
 
-static status_t gic_mask_interrupt(unsigned int vector)
+static zx_status_t gic_mask_interrupt(unsigned int vector)
 {
     if (vector >= max_irqs)
         return ZX_ERR_INVALID_ARGS;
@@ -172,7 +173,7 @@ static status_t gic_mask_interrupt(unsigned int vector)
     return ZX_OK;
 }
 
-static status_t gic_unmask_interrupt(unsigned int vector)
+static zx_status_t gic_unmask_interrupt(unsigned int vector)
 {
     if (vector >= max_irqs)
         return ZX_ERR_INVALID_ARGS;
@@ -182,9 +183,9 @@ static status_t gic_unmask_interrupt(unsigned int vector)
     return ZX_OK;
 }
 
-static status_t gic_configure_interrupt(unsigned int vector,
-                                        enum interrupt_trigger_mode tm,
-                                        enum interrupt_polarity pol)
+static zx_status_t gic_configure_interrupt(unsigned int vector,
+                                           enum interrupt_trigger_mode tm,
+                                           enum interrupt_polarity pol)
 {
     //Only configurable for SPI interrupts
     if ((vector >= max_irqs) || (vector < GIC_BASE_SPI))
@@ -208,9 +209,9 @@ static status_t gic_configure_interrupt(unsigned int vector,
     return ZX_OK;
 }
 
-static status_t gic_get_interrupt_config(unsigned int vector,
-                                         enum interrupt_trigger_mode* tm,
-                                         enum interrupt_polarity* pol)
+static zx_status_t gic_get_interrupt_config(unsigned int vector,
+                                            enum interrupt_trigger_mode* tm,
+                                            enum interrupt_polarity* pol)
 {
     if (vector >= max_irqs)
         return ZX_ERR_INVALID_ARGS;
@@ -272,7 +273,7 @@ static enum handler_return gic_handle_fiq(struct iframe *frame)
     PANIC_UNIMPLEMENTED;
 }
 
-static status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
+static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     uint gic_ipi_num = ipi + ipi_base;
 
     /* filter out targets outside of the range of cpus we care about */

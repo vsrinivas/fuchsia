@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <err.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -23,7 +24,7 @@ __BEGIN_CDECLS
  *
  * @return ZX_OK on success
  */
-status_t arch_copy_from_user(void *dst, const void *src, size_t len);
+zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
 
 /*
  * @brief Copy data from kernelspace into userspace
@@ -37,6 +38,6 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len);
  *
  * @return ZX_OK on success
  */
-status_t arch_copy_to_user(void *dst, const void *src, size_t len);
+zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len);
 
 __END_CDECLS
