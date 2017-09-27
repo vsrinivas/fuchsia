@@ -105,7 +105,7 @@ zx_status_t platform_enumerate_cpus(
 
     uintptr_t records_start, records_end;
     zx_status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
-    if (status != AE_OK) {
+    if (status != ZX_OK) {
         return status;
     }
     uint32_t count = 0;
@@ -159,7 +159,7 @@ zx_status_t platform_enumerate_io_apics(
 
     uintptr_t records_start, records_end;
     zx_status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
-    if (status != AE_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
@@ -212,7 +212,7 @@ zx_status_t platform_enumerate_interrupt_source_overrides(
 
     uintptr_t records_start, records_end;
     zx_status_t status = acpi_get_madt_record_limits(&records_start, &records_end);
-    if (status != AE_OK) {
+    if (status != ZX_OK) {
         return status;
     }
 
