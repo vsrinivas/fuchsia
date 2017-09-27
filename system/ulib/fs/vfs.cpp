@@ -133,11 +133,14 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
     if ((r = Vfs::Walk(vndir, &vndir, path, &path)) < 0) {
         return r;
     }
-    if (r > 0) {
+#ifdef __Fuchsia__
+    if (vndir->IsRemote()) {
         // remote filesystem, return handle and path through to caller
+        *out = fbl::move(vndir);
         *pathout = path;
-        return r;
+        return ZX_OK;
     }
+#endif
 
     fbl::RefPtr<Vnode> vn;
 
@@ -180,7 +183,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 
             if ((r = vn->GetRemote()) > 0) {
                 *out = fbl::move(vn);
-                return r;
+                return ZX_OK;
             }
         }
 
@@ -473,12 +476,6 @@ zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, s
     }
 }
 
-// Starting at vnode vn, walk the tree described by the path string,
-// until either there is only one path segment remaining in the string
-// or we encounter a vnode that represents a remote filesystem
-//
-// If a non-negative status is returned, the vnode at 'out' has been acquired.
-// Otherwise, no net deltas in acquires/releases occur.
 zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                       fbl::StringPiece pathStr, fbl::StringPiece* pathout) {
     zx_status_t r;
@@ -496,12 +493,9 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
 #ifdef __Fuchsia__
         if (vn->IsRemote()) {
             // remote filesystem mount, caller must resolve
-            if ((r = vn->GetRemote()) > 0) {
-                *out = fbl::move(vn);
-                pathout->set(path, pathStr.length() - (path - pathStr.data()));
-                return r;
-            }
-            return ZX_ERR_NOT_FOUND;
+            *out = fbl::move(vn);
+            pathout->set(path, pathStr.length() - (path - pathStr.data()));
+            return ZX_OK;
         }
 #endif
 

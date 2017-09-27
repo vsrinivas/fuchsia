@@ -111,6 +111,11 @@ public:
 
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
+    //
+    // If the node represented by |path| contains a remote node,
+    // set |pathout| to the remaining portion of the path yet to
+    // be traversed (or ".", if the endpoint of |path| is the mount point),
+    // and return the node containing the ndoe in |out|.
     zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      fbl::StringPiece path, fbl::StringPiece* pathout,
                      uint32_t flags, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
@@ -162,10 +167,16 @@ public:
 #endif
 
 private:
-    // Walk from vn --> out until either only one path segment remains or we
-    // encounter a remote filesystem.
+    // Starting at vnode |vn|, walk the tree described by the path string,
+    // until either there is only one path segment remaining in the string
+    // or we encounter a vnode that represents a remote filesystem
+    //
+    // On success,
+    // |out| is the vnode at which we stopped searching
+    // |pathout| is the reaminer of the path to search
     zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      fbl::StringPiece path, fbl::StringPiece* pathout) __TA_REQUIRES(vfs_lock_);
+
     zx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                            fbl::StringPiece path, fbl::StringPiece* pathout,
                            uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);

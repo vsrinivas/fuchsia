@@ -59,15 +59,16 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
 
     zxrio_object_t obj;
     memset(&obj, 0, sizeof(obj));
-    if (r < 0) {
+    if (r != ZX_OK) {
         xprintf("vfs: open: r=%d\n", r);
-    } else if (r > 0) {
+    } else if (!(open_flags & O_NOREMOTE) && vnode->IsRemote()) {
         // Remote handoff to a remote filesystem node.
         //
         // TODO(smklein): There exists a race between multiple threads
         // opening a "dead" connection, where the second thread may
         // try to send a txn_handoff_open to a closed handle.
-        r = HandoffOpenTransaction(r, fbl::move(channel), path, flags, mode);
+        // See ZX-1161 for more details.
+        r = HandoffOpenTransaction(vnode->GetRemote(), fbl::move(channel), path, flags, mode);
         if (r == ZX_ERR_PEER_CLOSED) {
             printf("VFS: Remote filesystem channel closed, unmounting\n");
             zx::channel c;
@@ -82,7 +83,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
         }
     }
 
-    // If r >= 0, then we hold a reference to vn from open.
+    // If r == ZX_OK, then we hold a reference to vn from open.
     // Otherwise, vn is closed, and we're simply responding to the client.
 
     if (pipeline && hcount > 0) {
