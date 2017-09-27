@@ -3,8 +3,7 @@
         "cpp"
     ],
     "imports": [
-        "garnet/packages/mozart",
-        "packages/gn/dart"
+        "garnet/packages/mozart"
     ],
     "packages": {
         "hello_scene_manager": "//garnet/examples/ui:hello_scene_manager",

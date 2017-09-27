@@ -1,7 +1,6 @@
 {
     "languages": [
-        "cpp",
-        "dart"
+        "cpp"
     ],
     "packages": {
         "media_examples": "//garnet/examples/media"

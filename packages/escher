@@ -1,7 +1,6 @@
 {
     "languages": [
-        "cpp",
-        "dart"
+        "cpp"
     ],
     "labels": [
         "//garnet/lib/escher:examples",

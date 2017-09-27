@@ -1,6 +1,6 @@
 {
     "languages": [
-        "dart"
+        "cpp"
     ],
     "packages": {
         "network_time": "//garnet/bin/network_time",
