@@ -45,7 +45,7 @@ flatbuffer("byte_storage_test") {
     "bytes_test.fbs",
   ]
 
-  deps = [
+  public_deps = [
     ":byte_storage",
   ]
 

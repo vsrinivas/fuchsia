@@ -18,7 +18,7 @@ flatbuffer("commit_storage") {
     "commit.fbs",
   ]
 
-  deps = [
+  public_deps = [
     "//peridot/bin/ledger/convert:byte_storage",
   ]
 

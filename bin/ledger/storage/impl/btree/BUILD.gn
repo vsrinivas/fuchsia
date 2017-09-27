@@ -51,10 +51,6 @@ flatbuffer("tree_node_storage") {
     "tree_node.fbs",
   ]
 
-  deps = [
-    "//peridot/bin/ledger/convert:byte_storage",
-  ]
-
   extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
 }
 
