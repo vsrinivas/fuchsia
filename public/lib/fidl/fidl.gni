@@ -601,10 +601,10 @@ template("fidl") {
       # up.
       disable_analysis = true
 
-      #analysis_options = "//garnet/public/lib/fidl/dart/analysis_options_fidl"
+      #analysis_options = "//topaz/public/lib/fidl/dart/analysis_options_fidl"
 
       deps = [
-        "//garnet/public/lib/fidl/dart",
+        "//topaz/public/lib/fidl/dart",
       ]
       fidl_deps = []
       if (defined(invoker.deps)) {

@@ -1,4 +1,0 @@
-{
-  "dart:fuchsia": "../../../../dart-pkg/fuchsia/lib/fuchsia.dart",
-  "dart:zircon": "../../../../dart-pkg/zircon/lib/zircon.dart"
-}

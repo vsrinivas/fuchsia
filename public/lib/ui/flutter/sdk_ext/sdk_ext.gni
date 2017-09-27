@@ -1,9 +1,0 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-mozart_dart_sdk_ext_lib = "//garnet/public/lib/ui/flutter/sdk_ext/mozart.dart"
-
-mozart_dart_sdk_ext_files = [
-  mozart_dart_sdk_ext_lib,
-]

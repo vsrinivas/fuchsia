@@ -1,7 +1,0 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# The dart .analysis_options file to be used for analyzing fidl-generated dart
-# packages. For now this file is empty, but relevant analysis options will be
-# added later.
