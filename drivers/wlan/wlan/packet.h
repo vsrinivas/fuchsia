@@ -66,6 +66,10 @@ template <size_t NumBuffers, size_t BufferSize>
 class SlabBuffer final : public internal::FixedBuffer<BufferSize>,
                          public fbl::SlabAllocated<SlabBufferTraits<NumBuffers, BufferSize>> {};
 
+// Huge buffers are used for sending lots of data between drivers and the wlanstack. They are not
+// (currently) intended for transmitting over-the-air.
+constexpr size_t kHugeBuffers = 8;
+constexpr size_t kHugeBufferSize = 16384;
 // Large buffers can hold the largest 802.11 MSDU or standard Ethernet MTU.
 constexpr size_t kLargeBuffers = 32;
 constexpr size_t kLargeBufferSize = 2560;
@@ -74,8 +78,10 @@ constexpr size_t kLargeBufferSize = 2560;
 constexpr size_t kSmallBuffers = 1024;
 constexpr size_t kSmallBufferSize = 64;
 
+using HugeBufferTraits = SlabBufferTraits<kHugeBuffers, kHugeBufferSize>;
 using LargeBufferTraits = SlabBufferTraits<kLargeBuffers, kLargeBufferSize>;
 using SmallBufferTraits = SlabBufferTraits<kSmallBuffers, kSmallBufferSize>;
+using HugeBufferAllocator = fbl::SlabAllocator<HugeBufferTraits>;
 using LargeBufferAllocator = fbl::SlabAllocator<LargeBufferTraits>;
 using SmallBufferAllocator = fbl::SlabAllocator<SmallBufferTraits>;
 

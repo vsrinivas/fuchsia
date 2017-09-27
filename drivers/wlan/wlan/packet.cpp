@@ -25,13 +25,23 @@ zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
 
 fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
     fbl::unique_ptr<Buffer> buffer;
-    if (len > kSmallBufferSize) {
+    // TODO(tkilbourn): implement a better fallback system here
+    if (len > kLargeBuffers) {
+        buffer = HugeBufferAllocator::New();
+    } else if (len > kSmallBufferSize) {
         buffer = LargeBufferAllocator::New();
+        if (buffer == nullptr) {
+            // Fallback to huge buffers.
+            buffer = HugeBufferAllocator::New();
+        }
     } else {
         buffer = SmallBufferAllocator::New();
         if (buffer == nullptr) {
             // Fall back to the large buffers if we're out of small buffers.
             buffer = LargeBufferAllocator::New();
+            if (buffer == nullptr) {
+                buffer = HugeBufferAllocator::New();
+            }
         }
     }
     return buffer;
@@ -42,5 +52,6 @@ fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
 // Definition of static slab allocators.
 // TODO(tkilbourn): tune how many slabs we are willing to grow up to. Reasonably large limits chosen
 // for now.
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::wlan::HugeBufferTraits, 2, true);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::wlan::LargeBufferTraits, 20, true);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::wlan::SmallBufferTraits, 80, true);
