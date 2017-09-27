@@ -1,12 +1,5 @@
 {
     "imports": [
-        "garnet/packages/escher",
-        "garnet/packages/fidl_examples",
-        "garnet/packages/media_audio",
-        "garnet/packages/media_examples",
-        "garnet/packages/media_tests",
-        "garnet/packages/media",
-        "garnet/packages/mozart_examples",
         "packages/gn/amber",
         "packages/gn/asio",
         "packages/gn/curl",
