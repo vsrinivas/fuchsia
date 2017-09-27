@@ -6,10 +6,6 @@ group("sketchy") {
   deps = [
     ":sketchy_demo",
   ]
-
-  if (is_fuchsia) {
-    deps += [ "ui" ]
-  }
 }
 
 executable("sketchy_demo") {
