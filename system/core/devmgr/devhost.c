@@ -686,7 +686,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child,
                          name, businfo)) < 0) {
         goto fail;
     }
-    msg.op = DC_OP_ADD_DEVICE;
+    msg.op = (child->flags & DEV_FLAG_INVISIBLE) ? DC_OP_ADD_DEVICE_INVISIBLE : DC_OP_ADD_DEVICE;
     msg.protocol_id = child->protocol_id;
 
     // handles: remote endpoint, resource (optional)
@@ -743,6 +743,11 @@ static zx_status_t devhost_rpc(zx_device_t* dev, uint32_t op,
         log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
     }
     return r;
+}
+
+void devhost_make_visible(zx_device_t* dev) {
+    dc_status_t rsp;
+    devhost_rpc(dev, DC_OP_MAKE_VISIBLE, NULL, "make-visible", &rsp, sizeof(rsp));
 }
 
 // Send message to devcoordinator informing it that this device

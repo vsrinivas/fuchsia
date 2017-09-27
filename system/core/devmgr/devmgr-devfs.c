@@ -284,6 +284,14 @@ static devnode_t* devfs_lookup(devnode_t* parent, const char* name) {
     return NULL;
 }
 
+void devfs_advertise(device_t* dev) {
+    if (dev->link) {
+        devnode_t* dir = proto_dir(dev->protocol_id);
+        devfs_notify(dir, dev->link->name, VFS_WATCH_EVT_ADDED);
+    }
+    devfs_notify(dev->parent->self, dev->self->name, VFS_WATCH_EVT_ADDED);
+}
+
 zx_status_t devfs_publish(device_t* parent, device_t* dev) {
     if ((parent->self == NULL) || (dev->self != NULL) || (dev->link != NULL)) {
         return ZX_ERR_INTERNAL;
@@ -337,14 +345,16 @@ got_name:
         // add link node to class directory
         list_add_tail(&dir->children, &dnlink->node);
         dev->link = dnlink;
-        devfs_notify(dir, dnlink->name, VFS_WATCH_EVT_ADDED);
     }
 
 done:
     // add self node to parent directory
     list_add_tail(&parent->self->children, &dnself->node);
     dev->self = dnself;
-    devfs_notify(parent->self, dnself->name, VFS_WATCH_EVT_ADDED);
+
+    if (!(dev->flags & DEV_CTX_INVISIBLE)) {
+        devfs_advertise(dev);
+    }
     return ZX_OK;
 }
 
@@ -372,7 +382,10 @@ static void _devfs_remove(devnode_t* dn) {
         ios->ph.handle = ZX_HANDLE_INVALID;
     }
 
-    devfs_notify(dn, "", VFS_WATCH_EVT_DELETED);
+    if ((dn->device == NULL) ||
+        !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+        devfs_notify(dn, "", VFS_WATCH_EVT_DELETED);
+    }
 
     // destroy all watchers
     watcher_t* watcher;
@@ -422,6 +435,9 @@ again:
     devnode_t* child;
     list_for_every_entry(&dn->children, child, devnode_t, node) {
         if (!strcmp(child->name, name)) {
+            if(child->device && (child->device->flags & DEV_CTX_INVISIBLE)) {
+                continue;
+            }
             dn = child;
             goto again;
         }
@@ -530,11 +546,18 @@ static zx_status_t devfs_readdir(devnode_t* dn, uint64_t* _ino, void* data, size
         if (child->ino <= ino) {
             continue;
         }
-        // "pure" directories (like /dev/class/$NAME) do not show up
-        // if they have no children, to avoid clutter and confusion.
-        // They remain openable, so they can be watched.
-        if ((child->device == NULL) && list_is_empty(&child->children)) {
-            continue;
+        if (child->device == NULL) {
+            // "pure" directories (like /dev/class/$NAME) do not show up
+            // if they have no children, to avoid clutter and confusion.
+            // They remain openable, so they can be watched.
+            if (list_is_empty(&child->children)) {
+                continue;
+            }
+        } else {
+            // invisible devices also do not show up
+            if (child->device->flags & DEV_CTX_INVISIBLE) {
+                continue;
+            }
         }
         ino = child->ino;
         zx_status_t r = fill_dirent(ptr, len, child->name, strlen(child->name),

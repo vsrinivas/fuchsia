@@ -185,6 +185,7 @@ static device_t root_device = {
 };
 
 static device_t misc_device = {
+    .parent = &root_device,
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
     .protocol_id = ZX_PROTOCOL_MISC_PARENT,
     .name = "misc",
@@ -196,6 +197,7 @@ static device_t misc_device = {
 };
 
 static device_t sys_device = {
+    .parent = &root_device,
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
     .name = "sys",
     .libname = "",
@@ -636,7 +638,8 @@ static void dc_release_device(device_t* dev) {
 static zx_status_t dc_add_device(device_t* parent,
                                  zx_handle_t* handle, size_t hcount,
                                  dc_msg_t* msg, const char* name,
-                                 const char* args, const void* data) {
+                                 const char* args, const void* data,
+                                 bool invisible) {
     if (hcount == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -696,6 +699,7 @@ static zx_status_t dc_add_device(device_t* parent,
     if (parent->flags & DEV_CTX_PROXY) {
         parent = parent->parent;
     }
+    dev->parent = parent;
 
     zx_status_t r;
     if ((r = devfs_publish(parent, dev)) < 0) {
@@ -718,7 +722,6 @@ static zx_status_t dc_add_device(device_t* parent,
         list_add_tail(&dev->host->devices, &dev->dhnode);
     }
     dev->refcount = 1;
-    dev->parent = parent;
     list_add_tail(&parent->children, &dev->node);
     parent->refcount++;
 
@@ -730,8 +733,25 @@ static zx_status_t dc_add_device(device_t* parent,
     log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n",
         dev, dev->name, dev->prop_count, dev->args, dev->parent);
 
-    dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
-    queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
+    if (invisible) {
+        dev->flags |= DEV_CTX_INVISIBLE;
+    } else {
+        dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
+        queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
+    }
+    return ZX_OK;
+}
+
+static zx_status_t dc_make_visible(device_t* dev) {
+    if (dev->flags & DEV_CTX_DEAD) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (dev->flags & DEV_CTX_INVISIBLE) {
+        dev->flags &= ~DEV_CTX_INVISIBLE;
+        devfs_advertise(dev);
+        dc_notify(dev, DEVMGR_OP_DEVICE_ADDED);
+        queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
+    }
     return ZX_OK;
 }
 
@@ -913,8 +933,10 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
 
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
+    case DC_OP_ADD_DEVICE_INVISIBLE:
         log(RPC_IN, "devcoord: rpc: add-device '%s' args='%s'\n", name, args);
-        if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data)) < 0) {
+        if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data,
+                               msg.op == DC_OP_ADD_DEVICE_INVISIBLE)) < 0) {
             while (hcount > 0) {
                 zx_handle_close(hin[--hcount]);
             }
@@ -928,6 +950,15 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         log(RPC_IN, "devcoord: rpc: remove-device '%s'\n", dev->name);
         dc_remove_device(dev, false);
         goto disconnect;
+
+    case DC_OP_MAKE_VISIBLE:
+        if (hcount != 0) {
+            goto fail_wrong_hcount;
+        }
+        log(RPC_IN, "devcoord: rpc: make-visible '%s'\n", dev->name);
+        dc_make_visible(dev);
+        r = ZX_OK;
+        break;
 
     case DC_OP_BIND_DEVICE:
         if (hcount != 0) {

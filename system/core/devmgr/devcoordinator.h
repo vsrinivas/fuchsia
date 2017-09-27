@@ -112,7 +112,14 @@ struct dc_device {
 // with the rpc channel, allowing complete destruction.
 #define DEV_CTX_ZOMBIE        0x20
 
+// Device is a proxy -- its "parent" is the device it's
+// a proxy to.
 #define DEV_CTX_PROXY         0x40
+
+// Device is not visible in devfs or bindable.
+// Devices may be created in this state, but may not
+// return to this state once made visible.
+#define DEV_CTX_INVISIBLE     0x80
 
 struct dc_driver {
     const char* name;
@@ -127,6 +134,7 @@ struct dc_driver {
 
 zx_status_t devfs_publish(device_t* parent, device_t* dev);
 void devfs_unpublish(device_t* dev);
+void devfs_advertise(device_t* dev);
 
 device_t* coordinator_init(zx_handle_t root_job);
 void coordinator(void);
@@ -167,22 +175,24 @@ typedef struct {
 } dc_status_t;
 
 // Coord->Host Ops
-#define DC_OP_CREATE_DEVICE_STUB 0x80000001
-#define DC_OP_CREATE_DEVICE      0x80000002
-#define DC_OP_BIND_DRIVER        0x80000003
-#define DC_OP_CONNECT_PROXY      0x80000004
+#define DC_OP_CREATE_DEVICE_STUB    0x80000001
+#define DC_OP_CREATE_DEVICE         0x80000002
+#define DC_OP_BIND_DRIVER           0x80000003
+#define DC_OP_CONNECT_PROXY         0x80000004
 
 // Host->Coord Ops
-#define DC_OP_STATUS             0x80000010
-#define DC_OP_ADD_DEVICE         0x80000011
-#define DC_OP_REMOVE_DEVICE      0x80000012
-#define DC_OP_BIND_DEVICE        0x80000013
-#define DC_OP_GET_TOPO_PATH      0x80000014
+#define DC_OP_STATUS                0x80000010
+#define DC_OP_ADD_DEVICE            0x80000011
+#define DC_OP_ADD_DEVICE_INVISIBLE  0x80000012
+#define DC_OP_REMOVE_DEVICE         0x80000013
+#define DC_OP_MAKE_VISIBLE          0x80000014
+#define DC_OP_BIND_DEVICE           0x80000015
+#define DC_OP_GET_TOPO_PATH         0x80000016
 
 // Host->Coord Ops for DmCtl
-#define DC_OP_DM_COMMAND         0x80000020
-#define DC_OP_DM_OPEN_VIRTCON    0x80000021
-#define DC_OP_DM_WATCH           0x80000022
+#define DC_OP_DM_COMMAND            0x80000020
+#define DC_OP_DM_OPEN_VIRTCON       0x80000021
+#define DC_OP_DM_WATCH              0x80000022
 #define DC_PATH_MAX 1024
 
 zx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,

@@ -80,6 +80,7 @@ zx_status_t devhost_add(zx_device_t* dev, zx_device_t* child,
                         const char* businfo, zx_handle_t resource,
                         const zx_device_prop_t* props, uint32_t prop_count);
 zx_status_t devhost_remove(zx_device_t* dev);
+void devhost_make_visible(zx_device_t* dev);
 
 
 // device refcounts

@@ -19,6 +19,10 @@
 
 // LibDriver Device Interface
 
+#define ALLOWED_FLAGS (\
+    DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE |\
+    DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE)
+
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
     zx_status_t r;
@@ -33,10 +37,11 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (!args->ops || args->ops->version != DEVICE_OPS_VERSION) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (args->flags & ~(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE)) {
+    if (args->flags & ~ALLOWED_FLAGS) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if ((args->flags & DEVICE_ADD_INSTANCE) && (args->flags & DEVICE_ADD_MUST_ISOLATE)) {
+    if ((args->flags & DEVICE_ADD_INSTANCE) &&
+        (args->flags & (DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE))) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -52,6 +57,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
     if (args->flags & DEVICE_ADD_NON_BINDABLE) {
         dev->flags |= DEV_FLAG_UNBINDABLE;
+    }
+    if (args->flags & DEVICE_ADD_INVISIBLE) {
+        dev->flags |= DEV_FLAG_INVISIBLE;
     }
 
     // out must be set before calling devhost_device_add().
@@ -101,6 +109,12 @@ __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
     r = devhost_device_rebind(dev);
     DM_UNLOCK();
     return r;
+}
+
+__EXPORT void device_make_visible(zx_device_t* dev) {
+    DM_LOCK();
+    devhost_make_visible(dev);
+    DM_UNLOCK();
 }
 
 

@@ -56,9 +56,19 @@ typedef struct zx_driver_ops {
 #define DEVICE_ADD_ARGS_VERSION 0x96a64134d56e88e3
 
 enum {
+    // Do not attempt to bind drivers to this device automatically
     DEVICE_ADD_NON_BINDABLE = (1 << 0),
+
+    // This is a device instance (not visible in devfs or eligible for binding)
     DEVICE_ADD_INSTANCE     = (1 << 1),
+
+    // Children of this device will be loaded in their own devhost process,
+    // behind a proxy of this device
     DEVICE_ADD_MUST_ISOLATE = (1 << 2),
+
+    // This device will not be visible in devfs or available for binding
+    // until device_make_visible() is called on it.
+    DEVICE_ADD_INVISIBLE    = (1 << 3),
 };
 
 // Device Manager API
@@ -114,6 +124,7 @@ static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* arg
 
 zx_status_t device_remove(zx_device_t* device);
 zx_status_t device_rebind(zx_device_t* device);
+void device_make_visible(zx_device_t* device);
 
 void device_unbind(zx_device_t* dev);
 
