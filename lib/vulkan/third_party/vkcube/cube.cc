@@ -2756,6 +2756,48 @@ void demo_init(struct demo* demo, int argc, char** argv)
 
 #if defined(CUBE_USE_IMAGE_PIPE)
 
+#if defined(CUBE_USE_MOZART)
+
+void demo_create_scene(struct demo* demo) {
+  auto session = demo->session.get();
+
+  // The top-level nesting for drawing anything is compositor -> layer-stack
+  // -> layer.  Layer content can come from an image, or by rendering a scene.
+  // In this case, we do the latter, so we nest layer -> renderer -> camera ->
+  // scene.
+  demo->compositor = std::make_unique<scenic_lib::DisplayCompositor>(session);
+  scenic_lib::LayerStack layer_stack(session);
+  scenic_lib::Layer layer(session);
+  scenic_lib::Renderer renderer(session);
+  scenic_lib::Scene scene(session);
+  demo->camera = std::make_unique<scenic_lib::Camera>(scene);
+
+  demo->compositor->SetLayerStack(layer_stack);
+  layer_stack.AddLayer(layer);
+  layer.SetSize(demo->width, demo->height);
+  layer.SetRenderer(renderer);
+  renderer.SetCamera(demo->camera->id());
+
+  scenic_lib::RoundedRectangle pane_shape(session, demo->width, demo->height, 0,
+                                          0, 0, 0);
+  scenic_lib::Material pane_material(session);
+
+  scenic_lib::ShapeNode pane_node(session);
+  pane_node.SetShape(pane_shape);
+  pane_node.SetMaterial(pane_material);
+  pane_node.SetTranslation(demo->width * 0.5, demo->height * 0.5, 0);
+
+  uint32_t image_pipe_id = session->AllocResourceId();
+  session->Enqueue(
+      scenic_lib::NewCreateImagePipeOp(image_pipe_id, demo->pipe.NewRequest()));
+  pane_material.SetTexture(image_pipe_id);
+  session->ReleaseResource(image_pipe_id);
+
+  scene.AddChild(pane_node);
+}
+
+#endif
+
 void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
 {
     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -2772,6 +2814,36 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
 
     auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
     app::ServiceProviderPtr services;
+
+#if defined(CUBE_USE_MOZART)
+    demo->scene_manager =
+        application_context_
+            ->ConnectToEnvironmentService<scenic::SceneManager>();
+    demo->scene_manager.set_connection_error_handler([&loop] {
+      FXL_LOG(INFO) << "Lost connection to SceneManager service.";
+      loop.QuitNow();
+    });
+
+    FXL_LOG(INFO) << "Creating new Session";
+    demo->session =
+        std::make_unique<scenic_lib::Session>(demo->scene_manager.get());
+    demo->session->set_connection_error_handler([&loop] {
+      FXL_LOG(INFO) << "Session terminated.";
+      loop.QuitNow();
+    });
+
+    demo_create_scene(demo);
+
+    demo->session->Present(0, [](scenic::PresentationInfoPtr info) {});
+
+    demo->image_pipe_handle =
+        demo->pipe.PassInterfaceHandle().PassHandle().release();
+
+    demo_init_vk_swapchain(demo);
+    demo_prepare(demo);
+    demo_run_magma(demo);
+    loop.QuitNow();
+#else
     demo->display =
         application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
 
@@ -2788,6 +2860,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
         demo_run_magma(demo);
         loop.QuitNow();
     });
+#endif
 
     loop.Run();
 }

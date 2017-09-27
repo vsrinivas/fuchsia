@@ -42,6 +42,14 @@
 #include "lib/fxl/logging.h"
 #include "garnet/lib/magma/src/display_pipe/client/buffer.h"
 #include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
+
+#include "garnet/public/lib/ui/scenic/fidl_helpers.h"
+#include "garnet/public/lib/ui/scenic/types.h"
+#include "garnet/public/lib/ui/scenic/fidl/ops.fidl.h"
+#include "garnet/public/lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "garnet/public/lib/ui/scenic/fidl/session.fidl.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
 #endif // defined(CUBE_USE_IMAGE_PIPE)
 
 #include "linmath.h"
@@ -89,6 +97,12 @@ struct demo {
     uint32_t image_pipe_handle;
     display_pipe::DisplayProviderPtr display;
     scenic::ImagePipePtr pipe;
+#if defined(CUBE_USE_MOZART)
+    scenic::SceneManagerPtr scene_manager;
+    std::unique_ptr<scenic_lib::Session> session;
+    std::unique_ptr<scenic_lib::DisplayCompositor> compositor;
+    std::unique_ptr<scenic_lib::Camera> camera;
+#endif
 #endif
     VkSurfaceKHR surface;
     bool prepared;

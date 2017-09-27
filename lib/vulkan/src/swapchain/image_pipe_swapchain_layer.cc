@@ -20,6 +20,11 @@
 
 namespace image_pipe_swapchain {
 
+// Zero is a invalid ID in the ImagePipe interface, so offset index by one
+static inline uint32_t ImageIdFromIndex(uint32_t index) {
+  return index + 1;
+}
+
 struct LayerData {
     VkInstance instance;
     VkLayerDispatchTable* device_dispatch_table;
@@ -111,6 +116,9 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
         }
     }
 
+    // TODO(MA-345) support display tiling on request
+    scanout_tiling_enabled = false;
+
     uint32_t num_images = pCreateInfo->minImageCount;
     assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
     for (uint32_t i = 0; i < num_images; i++) {
@@ -187,7 +195,8 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
         image_info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
         image_info->tiling = scenic::ImageInfo::Tiling::GPU_OPTIMAL;
 
-        image_pipe_->AddImage(i, std::move(image_info), std::move(vmo),
+        image_pipe_->AddImage(ImageIdFromIndex(i), std::move(image_info),
+                              std::move(vmo),
                               scenic::MemoryType::VK_DEVICE_MEMORY, 0);
 
         available_ids_.push_back(i);
@@ -344,7 +353,9 @@ VkResult ImagePipeSwapchain::Present(uint32_t index)
     pending_images_.push_back({std::move(image_release_fence), index});
 
     scenic::PresentationInfoPtr info;
-    image_pipe_->PresentImage(index, 0, std::move(acquire_fence), std::move(release_fence), &info);
+    image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
+                              std::move(acquire_fence),
+                              std::move(release_fence), &info);
 
     return VK_SUCCESS;
 }

@@ -4,6 +4,8 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+cube_use_mozart = true
+
 executable("vkcube_image_pipe_swapchain") {
   sources = [
     "main.cc",
@@ -32,13 +34,21 @@ source_set("vkcube_common") {
   ]
 
   deps = [
-    "//garnet/public/lib/vulkan",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//garnet/lib/magma/src/display_pipe",
     "//garnet/lib/magma/src/display_pipe/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/vulkan",
   ]
+
+  if (cube_use_mozart) {
+    defines += [ "CUBE_USE_MOZART" ]
+    deps += [
+      "//garnet/public/lib/ui/scenic",
+      "//garnet/public/lib/ui/scenic:client",
+    ]
+  }
 }
