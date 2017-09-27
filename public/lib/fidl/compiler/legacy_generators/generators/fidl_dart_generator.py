@@ -500,6 +500,7 @@ def ParseStringAttribute(attribute):
 _SDK_DIRS = [
   "garnet/public/",
   "peridot/public/",
+  "topaz/public/",
 ]
 
 # Strip the sdk dirs from the given label, if necessary.
