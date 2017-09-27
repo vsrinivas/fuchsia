@@ -28,16 +28,6 @@
 .section .text.el2,"ax",@progbits
 .align 12
 
-.macro exception_return literal
-    movlit x0, \literal
-    eret
-.endm
-
-.macro pop_return literal
-    add sp, sp, 16
-    exception_return \literal
-.endm
-
 .macro system_register inst, off, sysreg
 .ifc "\inst", "ldr"
     mov x11, \off
@@ -97,9 +87,56 @@
     \inst x29, x30, [x9, GS_R0 + 224]
 .endm
 
-.macro entry label
+.macro exception_return literal
+    movlit x0, \literal
+    eret
+.endm
+
+.macro pop_return literal
+    add sp, sp, 16
+    exception_return \literal
+.endm
+
+.macro entry_init
 .align 7
-    b \label
+    // Check ESR_EL2.EC to determine what caused the exception.
+    mrs x9, esr_el2
+    lsr x10, x9, #ESR_EL2_EC_SHIFT
+    cmp x10, #ESR_EL2_EC_HVC
+    b.ne invalid_exception
+
+    and x10, x9, #ESR_EL2_ISS_MASK
+    cmp x10, #0
+    b.ne invalid_exception
+
+    b el2_hvc_on
+
+invalid_exception:
+    exception_return ZX_ERR_INVALID_ARGS
+.endm
+
+.macro entry_exec
+.align 7
+    // We push X9 onto the stack so we have one scratch register. We only use
+    // X9 here, so that we don't accidentally trample the guest state.
+    stp x9, xzr, [sp, #-16]!
+
+    // Check ESR_EL2.EC to determine what caused the exception.
+    mrs x9, esr_el2
+    lsr x9, x9, #ESR_EL2_EC_SHIFT
+    cmp x9, #ESR_EL2_EC_HVC
+    b.eq el2_hvc_handler
+    cmp x9, #ESR_EL2_EC_SMC
+    b.eq el2_smc_handler
+
+    b el2_unknown_handler
+.endm
+
+.macro entry_invalid_exception
+.align 7
+    // TODO(abdulla): Check VMID from VTTBR_EL2. ERET to host with error. If
+    // VMID was not 0, terminate guest.
+    eret
 .endm
 
 // We have two vector tables that we switch between, init and exec. The reason
@@ -111,71 +148,53 @@
 
 FUNCTION_LABEL(arm64_el2_init_base)
     /* exceptions from current EL, using SP0 */
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
     /* exceptions from current EL, using SPx */
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
     /* exceptions from lower EL, running arm64 */
-    entry el2_init
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
+    entry_init
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
     /* exceptions from lower EL, running arm32 */
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
 FUNCTION_LABEL(arm64_el2_exec_base)
     /* exceptions from current EL, using SP0 */
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
     /* exceptions from current EL, using SPx */
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
     /* exceptions from lower EL, running arm64 */
-    entry el2_exec
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
+    entry_exec
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
     /* exceptions from lower EL, running arm32 */
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-    entry el2_invalid_exception
-
-FUNCTION_LABEL(el2_invalid_exception)
-    // TODO(abdulla): Check VMID from VTTBR_EL2. ERET to host with error. If
-    // VMID was not 0, terminate guest.
-    eret
-
-FUNCTION_LABEL(el2_init)
-    // Check ESR_EL2.EC to determine what caused the exception.
-    mrs x9, esr_el2
-    lsr x10, x9, #ESR_EL2_EC_SHIFT
-    cmp x10, #ESR_EL2_EC_HVC
-    b.ne el2_invalid_exception
-
-    and x10, x9, #ESR_EL2_ISS_MASK
-    cmp x10, #0
-    b.ne el2_invalid_exception
-
-    b el2_hvc_on
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
+    entry_invalid_exception
 
 // zx_status_t arm64_el2_on(zx_paddr_t stack_top);
 //
@@ -219,21 +238,6 @@ FUNCTION_LABEL(el2_hvc_on)
     isb
 
     exception_return ZX_OK
-
-FUNCTION_LABEL(el2_exec)
-    // We push X9 onto the stack so we have one scratch register. We only use
-    // X9 here, so that we don't accidentally trample the guest state.
-    stp x9, xzr, [sp, #-16]!
-
-    // Check ESR_EL2.EC to determine what caused the exception.
-    mrs x9, esr_el2
-    lsr x9, x9, #ESR_EL2_EC_SHIFT
-    cmp x9, #ESR_EL2_EC_HVC
-    b.eq el2_hvc_handler
-    cmp x9, #ESR_EL2_EC_SMC
-    b.eq el2_smc_handler
-
-    b el2_unknown_handler
 
 FUNCTION_LABEL(el2_hvc_handler)
     // Check VTTBR_EL2 to determine if the HVC came from the host.
