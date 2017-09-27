@@ -10,6 +10,7 @@ import sys
 _SDK_DIRS = [
   "garnet/public/",
   "peridot/public/",
+  "topaz/public/",
 ]
 
 
