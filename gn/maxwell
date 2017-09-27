@@ -62,8 +62,16 @@
             "bootfs_path": "apps/suggestion_engine"
         },
         {
-            "binary": "maxwell_test",
-            "bootfs_path": "test/maxwell/integration"
+            "binary": "context_engine_test",
+            "bootfs_path": "test/maxwell/context_engine_test"
+        },
+        {
+            "binary": "suggestion_engine_test",
+            "bootfs_path": "test/maxwell/suggestion_engine_test"
+        },
+        {
+            "binary": "resolver_test",
+            "bootfs_path": "test/maxwell/resolver_test"
         },
         {
             "binary": "context_index_unittest",
