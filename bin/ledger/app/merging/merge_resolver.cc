@@ -143,6 +143,13 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
         task_runner_.PostDelayedTask(
             [this] { CheckConflicts(DelayedStatus::DELAYED); },
             backoff_->GetNext());
+        cleanup.cancel();
+        merge_in_progress_ = false;
+        // We don't want to continue merging if nobody is interested (all
+        // clients disconnected).
+        if (on_empty_callback_) {
+          on_empty_callback_();
+        }
         return;
       }
       // If delayed_status is not intial, report the merge.

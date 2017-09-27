@@ -402,7 +402,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   };
 
   // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
-  // converged. There is no need for additional tests.
+  // converged.
   EXPECT_TRUE(RunLoopUntil(until, fxl::TimeDelta::FromSeconds(60),
                            // Checking every 10 milliseconds (the default at
                            // this time) is too short to catch merges.
@@ -413,8 +413,9 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   }
   EXPECT_GE(num_changes, 2 * num_ledgers_ - 1);
 
-  // All synchronization must be idle.
+  // All synchronization must still be idle.
   for (int i = 0; i < num_ledgers_; i++) {
+    EXPECT_FALSE(sync_watchers[i]->new_state);
     EXPECT_EQ(ledger::SyncState::IDLE, sync_watchers[i]->download);
     EXPECT_EQ(ledger::SyncState::IDLE, sync_watchers[i]->upload);
   }
