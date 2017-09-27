@@ -645,10 +645,6 @@ static void alloc_pages_greater_than(paddr_t lower_bound, size_t count, paddr_t*
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                     uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
 
-    // A hacky way to handle disabling all PCI devices until we have devhost
-    // lifecycles implemented
-    PcieBusDriver::GetDriver()->DisableBus();
-
     // This code only handles one L3 and one L4 page table for now. Fail if
     // there are more L2 page tables than can fit in one L3 page table.
     static_assert(kNumL2PageTables <= NO_OF_PT_ENTRIES,
