@@ -153,8 +153,8 @@ TEST_F(MergeResolverTest, Empty) {
   EXPECT_EQ(2u, ids.size());
 
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
 
-  EXPECT_TRUE(resolver.IsEmpty());
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(MakeQuitTask(), &status, &ids));
@@ -242,9 +242,9 @@ TEST_F(MergeResolverTest, CommonAncestor) {
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.QuitNow(); });
-  EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
 }
 
 TEST_F(MergeResolverTest, LastOneWins) {
@@ -282,8 +282,8 @@ TEST_F(MergeResolverTest, LastOneWins) {
   resolver.set_on_empty(MakeQuitTask());
 
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
 
-  EXPECT_TRUE(resolver.IsEmpty());
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(MakeQuitTask(), &status, &ids));
@@ -340,9 +340,7 @@ TEST_F(MergeResolverTest, None) {
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.set_on_empty(MakeQuitTask());
 
-  EXPECT_TRUE(RunLoopWithTimeout());
-
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(MakeQuitTask(), &status, &ids));
@@ -383,7 +381,7 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(MakeQuitTask(), &status, &ids));
@@ -426,8 +424,7 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
 
   EXPECT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(MakeQuitTask(), &status, &ids));
@@ -463,8 +460,7 @@ TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
   resolver.SetMergeStrategy(std::move(merge_strategy));
 
   EXPECT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(MakeQuitTask(), &status, &ids));
