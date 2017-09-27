@@ -9,6 +9,5 @@ group("examples") {
     "echo_server_cpp",
     "echo_server_go",
     "hello_fidl",
-    "hello_fidl_dart"
   ]
 }

@@ -6,8 +6,6 @@ import("//packages/package.gni")
 
 group("ui") {
   public_deps = [
-    "basic_wm",
-    "hello_material",
     "hello_scene_manager",
     "jank",
     "noodles",
@@ -19,32 +17,6 @@ group("ui") {
     "spinning_square",
     "tile",
   ]
-}
-
-package("basic_wm") {
-  app = true
-
-  deps = [
-    "basic_wm",
-  ]
-
-  binaries = [ {
-        name = "basic_wm"
-        source = "gen/garnet/examples/ui/basic_wm/basic_wm.flx"
-      } ]
-}
-
-package("hello_material") {
-  app = true
-
-  deps = [
-    "hello_material",
-  ]
-
-  binaries = [ {
-        name = "hello_material"
-        source = "gen/garnet/examples/ui/hello_material/hello_material.flx"
-      } ]
 }
 
 package("hello_scene_manager") {
