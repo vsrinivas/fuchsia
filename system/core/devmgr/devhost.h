@@ -43,7 +43,7 @@ zx_status_t devhost_device_unbind(zx_device_t* dev);
 
 zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
-                               const char* businfo, zx_handle_t resource);
+                               const char* proxy_args);
 zx_status_t devhost_device_install(zx_device_t* dev);
 zx_status_t devhost_device_remove(zx_device_t* dev);
 zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname);
@@ -76,8 +76,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie);
 zx_status_t devhost_start_iostate(devhost_iostate_t* ios, zx_handle_t h);
 
 // routines devhost uses to talk to dev coordinator
-zx_status_t devhost_add(zx_device_t* dev, zx_device_t* child,
-                        const char* businfo, zx_handle_t resource,
+zx_status_t devhost_add(zx_device_t* dev, zx_device_t* child, const char* proxy_args,
                         const zx_device_prop_t* props, uint32_t prop_count);
 zx_status_t devhost_remove(zx_device_t* dev);
 void devhost_make_visible(zx_device_t* dev);

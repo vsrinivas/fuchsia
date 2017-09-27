@@ -635,14 +635,10 @@ static void dc_release_device(device_t* dev) {
 // Add a new device to a parent device (same devhost)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
-static zx_status_t dc_add_device(device_t* parent,
-                                 zx_handle_t* handle, size_t hcount,
+static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
                                  dc_msg_t* msg, const char* name,
                                  const char* args, const void* data,
                                  bool invisible) {
-    if (hcount == 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
     if (msg->datalen % sizeof(zx_device_prop_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -655,8 +651,8 @@ static zx_status_t dc_add_device(device_t* parent,
     }
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
-    dev->hrpc = handle[0];
-    dev->hrsrc = (hcount > 1) ? handle[1] : ZX_HANDLE_INVALID;
+    dev->hrpc = hrpc;
+    dev->hrsrc = ZX_HANDLE_INVALID;
     dev->prop_count = msg->datalen / sizeof(zx_device_prop_t);
     dev->protocol_id = msg->protocol_id;
 
@@ -707,7 +703,7 @@ static zx_status_t dc_add_device(device_t* parent,
         return r;
     }
 
-    dev->ph.handle = handle[0];
+    dev->ph.handle = hrpc;
     dev->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
     if ((r = port_wait(&dc_port, &dev->ph)) < 0) {
@@ -934,12 +930,13 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
     case DC_OP_ADD_DEVICE_INVISIBLE:
+        if (hcount != 1) {
+            goto fail_wrong_hcount;
+        }
         log(RPC_IN, "devcoord: rpc: add-device '%s' args='%s'\n", name, args);
-        if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data,
+        if ((r = dc_add_device(dev, hin[0], &msg, name, args, data,
                                msg.op == DC_OP_ADD_DEVICE_INVISIBLE)) < 0) {
-            while (hcount > 0) {
-                zx_handle_close(hin[--hcount]);
-            }
+            zx_handle_close(hin[0]);
         }
         break;
 

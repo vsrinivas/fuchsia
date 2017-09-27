@@ -73,28 +73,38 @@ enum {
 
 // Device Manager API
 typedef struct device_add_args {
-    uint64_t version;   // DEVICE_ADD_ARGS_VERSION
-    // driver name is copied to internal structure
+    // DEVICE_ADD_ARGS_VERSION
+    uint64_t version;
+
+    // Driver name is copied to internal structure
     // max length is ZX_DEVICE_NAME_MAX
     const char* name;
-    // context pointer for use by the driver
+
+    // Context pointer for use by the driver
     // and passed to driver in all zx_protocol_device_t callbacks
     void* ctx;
-    // pointer to device's device protocol operations
+
+    // Pointer to device's device protocol operations
     zx_protocol_device_t* ops;
-    // optional list of device properties
+
+    // Optional list of device properties
     zx_device_prop_t* props;
-    // number of device properties
+
+    // Number of device properties
     uint32_t prop_count;
-    // optional custom protocol for this device
+
+    // Optional custom protocol for this device
     uint32_t proto_id;
-    // optional custom protocol operations for this device
+
+    // Optional custom protocol operations for this device
     void* proto_ops;
-    // arguments used with DEVICE_ADD_BUSDEV
-    const char* busdev_args;
-    // resource handle used with DEVICE_ADD_BUSDEV
-     zx_handle_t rsrc;
-    // one or more of DEVICE_ADD_*
+
+    // Arguments used with DEVICE_ADD_MUST_ISOLATE
+    // these will be passed to the create() driver op of
+    // the proxy device in the new devhost
+    const char* proxy_args;
+
+    // One or more of DEVICE_ADD_*
     uint32_t flags;
 } device_add_args_t;
 

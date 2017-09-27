@@ -660,8 +660,7 @@ static void devhost_io_init(void) {
 
 // Send message to devcoordinator asking to add child device to
 // parent device.  Called under devhost api lock.
-zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child,
-                        const char* businfo, zx_handle_t resource,
+zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* proxy_args,
                         const zx_device_prop_t* props, uint32_t prop_count) {
     char buffer[512];
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
@@ -683,23 +682,20 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child,
     uint32_t msglen;
     if ((r = dc_msg_pack(&msg, &msglen,
                          props, prop_count * sizeof(zx_device_prop_t),
-                         name, businfo)) < 0) {
+                         name, proxy_args)) < 0) {
         goto fail;
     }
     msg.op = (child->flags & DEV_FLAG_INVISIBLE) ? DC_OP_ADD_DEVICE_INVISIBLE : DC_OP_ADD_DEVICE;
     msg.protocol_id = child->protocol_id;
 
     // handles: remote endpoint, resource (optional)
-    zx_handle_t hrpc, handle[2];
-    if ((r = zx_channel_create(0, &hrpc, handle)) < 0) {
+    zx_handle_t hrpc, hsend;
+    if ((r = zx_channel_create(0, &hrpc, &hsend)) < 0) {
         goto fail;
     }
-    handle[1] = resource;
 
     dc_status_t rsp;
-    if ((r = dc_msg_rpc(parent->rpc, &msg, msglen,
-                        handle, (resource != ZX_HANDLE_INVALID) ? 2 : 1,
-                        &rsp, sizeof(rsp))) < 0) {
+    if ((r = dc_msg_rpc(parent->rpc, &msg, msglen, &hsend, 1, &rsp, sizeof(rsp))) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
         ios->dev = child;
@@ -718,9 +714,6 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child,
     return r;
 
 fail:
-    if (resource != ZX_HANDLE_INVALID) {
-        zx_handle_close(resource);
-    }
     free(ios);
     return r;
 }

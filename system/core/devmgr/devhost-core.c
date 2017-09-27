@@ -283,7 +283,7 @@ zx_status_t devhost_device_install(zx_device_t* dev) {
 
 zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
-                               const char* businfo, zx_handle_t resource) {
+                               const char* proxy_args) {
     zx_status_t status;
     if ((status = device_validate(dev)) < 0) {
         goto fail;
@@ -340,18 +340,12 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
 
     if (dev->flags & DEV_FLAG_INSTANCE) {
         list_add_tail(&parent->instances, &dev->node);
-
-        // instanced devices are not remoted and resources
-        // attached to them are discarded
-        if (resource != ZX_HANDLE_INVALID) {
-            zx_handle_close(resource);
-        }
     } else {
         // add to the device tree
         list_add_tail(&parent->children, &dev->node);
 
         // devhost_add always consumes the handle
-        status = devhost_add(parent, dev, businfo, resource, props, prop_count);
+        status = devhost_add(parent, dev, proxy_args, props, prop_count);
         if (status < 0) {
             printf("devhost: %p(%s): remote add failed %d\n",
                    dev, dev->name, status);
@@ -368,9 +362,6 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     return ZX_OK;
 
 fail:
-    if (resource != ZX_HANDLE_INVALID) {
-        zx_handle_close(resource);
-    }
     dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
     return status;
 }

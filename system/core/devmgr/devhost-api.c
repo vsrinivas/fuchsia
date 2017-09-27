@@ -70,13 +70,12 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
 
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-        r = devhost_device_add(dev, parent, args->props, args->prop_count, args->busdev_args,
-                               args->rsrc);
+        r = devhost_device_add(dev, parent, args->props, args->prop_count, args->proxy_args);
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
         dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
-        r = devhost_device_add(dev, parent, NULL, 0, NULL, ZX_HANDLE_INVALID);
+        r = devhost_device_add(dev, parent, NULL, 0, NULL);
     } else {
-        r = devhost_device_add(dev, parent, args->props, args->prop_count, NULL, ZX_HANDLE_INVALID);
+        r = devhost_device_add(dev, parent, args->props, args->prop_count, NULL);
     }
     if (r != ZX_OK) {
         if (out) {

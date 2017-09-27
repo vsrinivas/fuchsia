@@ -87,8 +87,8 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
     memcpy(device->props, device_props, sizeof(device->props));
 
     if (parent) {
-        char busdev_args[64];
-        snprintf(busdev_args, sizeof(busdev_args),
+        char argstr[64];
+        snprintf(argstr, sizeof(argstr),
                  "pci#%u:%04x:%04x,%u", index,
                  info.vendor_id, info.device_id, index);
 
@@ -101,8 +101,7 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
             .proto_ops = &_pci_protocol,
             .props = device->props,
             .prop_count = countof(device->props),
-            .busdev_args = busdev_args,
-            .rsrc = ZX_HANDLE_INVALID,
+            .proxy_args = argstr,
             .flags = DEVICE_ADD_MUST_ISOLATE,
         };
 
