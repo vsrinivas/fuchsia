@@ -90,7 +90,6 @@ zx_status_t launchpad_create_with_process(zx_handle_t proc,
 // and launchpad_abort() has not been called, this will attempt to complete
 // the launch of the process.
 //
-// This is launchpad_start() + launchpad_error_message() + launchpad_destroy()
 // If proc is NULL, the process handle is closed instead of returned.
 // If errmsg is non-NULL, the human readable status string is returned.
 //
@@ -152,9 +151,9 @@ zx_status_t launchpad_set_nametable(launchpad_t* lp,
 
 // Add one or more handles to be passed in the bootstrap message.
 // The launchpad takes ownership of the handles; they will be closed
-// by launchpad_destroy or transferred by launchpad_start.
+// by launchpad_destroy or transferred by launchpad_go.
 // Successive calls append more handles.  The list of handles to
-// send is cleared only by a successful launchpad_start call.
+// send is cleared only by a successful launchpad_go call.
 // It is an error to add a handle of 0 (ZX_HANDLE_INVALID)
 zx_status_t launchpad_add_handle(launchpad_t* lp, zx_handle_t h, uint32_t id);
 zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
@@ -257,7 +256,7 @@ zx_status_t launchpad_elf_load(launchpad_t* lp, zx_handle_t vmo);
 // object handle, does affect the state of the launchpad's
 // send_loader_message flag, and does not set the entrypoint
 // returned by launchpad_get_entry_address and used by
-// launchpad_start.  Instead, if base is not NULL, it's filled with
+// launchpad_go.  Instead, if base is not NULL, it's filled with
 // the address at which the image was loaded; if entry is not NULL,
 // it's filled with the image's entrypoint address.
 zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo,
@@ -285,7 +284,7 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo);
 
 // Discover the entry-point address after a successful call to
 // launchpad_elf_load or launchpad_elf_load_basic.  This can be used
-// in zx_process_start directly rather than calling launchpad_start,
+// in zx_process_start directly rather than calling launchpad_go,
 // to bypass sending the standard startup message.
 zx_status_t launchpad_get_entry_address(launchpad_t* lp, zx_vaddr_t* entry);
 
@@ -296,7 +295,7 @@ zx_status_t launchpad_get_base_address(launchpad_t* lp, zx_vaddr_t* base);
 // Set the flag saying whether to send an initial bootstrap message
 // for the dynamic linker, and return the old value of the flag.
 // This flag is always cleared by launchpad_elf_load_basic and by a
-// launchpad_start call that succeeds in sending the message (even
+// launchpad_go call that succeeds in sending the message (even
 // if it later fails to send the main bootstrap message or fails to
 // start the process).  It's set or cleared by launchpad_elf_load
 // depending on whether the file has a PT_INTERP program header.
@@ -339,7 +338,7 @@ zx_status_t launchpad_add_vdso_vmo(launchpad_t* lp);
 // given handle is not consumed.  If given ZX_HANDLE_INVALID, this
 // uses the VM object that launchpad_get_vdso_vmo would return
 // instead.  This just calls launchpad_elf_load_extra to do the
-// loading, and records the vDSO's base address for launchpad_start
+// loading, and records the vDSO's base address for launchpad_go
 // to pass to the new process's initial thread.
 zx_status_t launchpad_load_vdso(launchpad_t* lp, zx_handle_t vmo);
 
@@ -352,25 +351,10 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 
 
 
-// Start the process running.  If the send_loader_message flag is
-// set and this succeeds in sending the initial bootstrap message,
-// it clears the loader-service handle.  If this succeeds in sending
-// the main bootstrap message, it clears the list of handles to
-// transfer (after they've been transferred) as well as the process
-// handle.
-//
-// Returns the process handle on success, giving ownership to the
-// caller.  On failure, the return value doesn't distinguish failure
-// to send the first or second message from failure to start the
-// process, so on failure the loader-service handle might or might
-// not have been cleared and the handles to transfer might or might
-// not have been cleared.
-zx_handle_t launchpad_start(launchpad_t* lp);
-
 // Start a new thread in the process, assuming this was a launchpad
 // created with launchpad_create_with_process and the process has
 // already started.  The new thread runs the launchpad's entry point
-// just like the initial thread does in the launchpad_start case.
+// just like the initial thread does in the launchpad_go case.
 // The given handle is to a channel where the bootstrap
 // messages will be written; the caller retains ownership of this
 // handle.  The other end of this channel must already be

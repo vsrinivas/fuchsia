@@ -1182,7 +1182,20 @@ zx_handle_close failed on low address space reservation VMAR");
     return ZX_OK;
 }
 
-zx_handle_t launchpad_start(launchpad_t* lp) {
+// Start the process running.  If the send_loader_message flag is
+// set and this succeeds in sending the initial bootstrap message,
+// it clears the loader-service handle.  If this succeeds in sending
+// the main bootstrap message, it clears the list of handles to
+// transfer (after they've been transferred) as well as the process
+// handle.
+//
+// Returns the process handle via |process_out| on success, giving
+// ownership to the caller.  On failure, the return value doesn't
+// distinguish failure to send the first or second message from
+// failure to start the process, so on failure the loader-service
+// handle might or might not have been cleared and the handles to
+// transfer might or might not have been cleared.
+static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
     if (lp->error)
         return lp->error;
 
@@ -1216,8 +1229,10 @@ zx_handle_t launchpad_start(launchpad_t* lp) {
         zx_handle_close(thread);
     }
     // process_start consumed child_bootstrap if successful.
-    if (status == ZX_OK)
-        return proc;
+    if (status == ZX_OK) {
+        *process_out = proc;
+        return ZX_OK;
+    }
 
     zx_handle_close(proc);
     zx_handle_close(child_bootstrap);
@@ -1248,19 +1263,19 @@ zx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
 }
 
 zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg) {
-    zx_handle_t h = launchpad_start(lp);
+    zx_handle_t h = ZX_HANDLE_INVALID;
+    zx_status_t status = launchpad_start(lp, &h);
     if (errmsg)
         *errmsg = lp->errmsg;
-    if (h > 0) {
+    if (status == ZX_OK) {
         if (proc) {
             *proc = h;
         } else {
             zx_handle_close(h);
         }
-        h = ZX_OK;
     }
     launchpad_destroy(lp);
-    return h;
+    return status;
 }
 
 #include <launchpad/vmo.h>

@@ -285,8 +285,8 @@ int main(int argc, char** argv) {
     check("launchpad_get_process_handle", proc);
 
     // This gives us ownership of the process handle.
-    proc = launchpad_start(lp);
-    check("launchpad_start", proc);
+    status = launchpad_go(lp, &proc, NULL);
+    check("launchpad_go", status);
 
     // The launchpad is done.  Clean it up.
     launchpad_destroy(lp);

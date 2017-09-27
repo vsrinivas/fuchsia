@@ -343,9 +343,9 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inf
     tu_handle_get_basic_info(inferior, &process_info);
     unittest_printf("Inferior pid = %llu\n", (long long) process_info.koid);
 
-    // |inferior| is given to the child by launchpad_start.
-    // We need our own copy, and launchpad_start will give us one, but we need
-    // it before we call launchpad_start in order to attach to the debugging
+    // |inferior| is given to the child by launchpad_go.
+    // We need our own copy, and launchpad_go will give us one, but we need
+    // it before we call launchpad_go in order to attach to the debugging
     // exception port. We could leave this to our caller to do, but since every
     // caller needs this for convenience sake we do this here.
     status = zx_handle_duplicate(inferior, ZX_RIGHT_SAME_RIGHTS, &inferior);
@@ -374,7 +374,7 @@ bool start_inferior(launchpad_t* lp)
 {
     zx_handle_t dup_inferior = tu_launch_fdio_fini(lp);
     unittest_printf("Inferior started\n");
-    // launchpad_start returns a dup of |inferior|. The original inferior
+    // launchpad_go returns a dup of |inferior|. The original inferior
     // handle is given to the child. However we don't need it, we already
     // created one so that we could attach to the inferior before starting it.
     tu_handle_close(dup_inferior);
