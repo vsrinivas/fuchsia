@@ -1,6 +1,5 @@
 {
     "imports": [
-        "garnet/packages/bluetooth_examples",
         "garnet/packages/escher",
         "garnet/packages/fidl_examples",
         "garnet/packages/media_audio",
