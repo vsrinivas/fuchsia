@@ -37,7 +37,7 @@ fi
 DEFAULT_SIZE_SYSTEM=4
 DEFAULT_SIZE_EFI=1
 BLOCK_SIZE=1024
-STAGING_DIR="${FUCHSIA_OUT_DIR:-${script_dir}}/build-installer"
+STAGING_DIR="${script_dir}/../../out/build-installer"
 # TODO take a size for the zircon partition as well
 bytes_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024 * 1024))
 # FAT wants the sector count to be a multiple of 63 (for total sectors) and of
@@ -179,7 +179,7 @@ case $platform in
 esac
 
 echo "Building zircon for installer"
-"$script_dir/../build-zircon.sh" -t "$build_arch"
+"${script_dir}/../build-zircon.sh" -t "$build_arch"
 
 if [ "$build_arch" == "x86_64" ]; then
   build_arch="x86-64"
@@ -187,7 +187,7 @@ fi
 
 # if the build directory is not specified, infer it from other parameters
 if [ "$build_dir_fuchsia" = "" ]; then
-  build_dir_fuchsia=$script_dir/../../out/$build_variant-$build_arch
+  build_dir_fuchsia="${script_dir}/../../out/$build_variant-$build_arch"
 else
   if [ "$release" -ne 0 ] || [ "$debug" -ne 0 ]; then
     echo "build directory is specified release arg ignored"
@@ -272,7 +272,7 @@ echo "Building boot environment for installer"
 gn_gen_path="packages/gn/gen.py"
 ninja_path="buildtools/ninja"
 
-"$script_dir/../../$gn_gen_path" --outdir out/installer-system --target_cpu "$build_arch" --packages packages/gn/installer-system,packages/gn/install-fuchsia
+"${script_dir}/../../$gn_gen_path" --outdir out/installer-system --target_cpu "$build_arch" --packages packages/gn/installer-system,packages/gn/install-fuchsia
 
 sys_out="${script_dir}/../../out/installer-system-${build_arch}"
 "${script_dir}/../../${ninja_path}" -C "$sys_out"
