@@ -190,10 +190,11 @@ Status LevelDb::Init() {
   return Status::OK;
 }
 
-std::unique_ptr<Db::Batch> LevelDb::StartBatch(CoroutineHandler* handler) {
+Status LevelDb::StartBatch(CoroutineHandler* handler,
+                           std::unique_ptr<Db::Batch>* batch) {
   auto db_batch = std::make_unique<leveldb::WriteBatch>();
   active_batches_count_++;
-  return std::make_unique<BatchImpl>(
+  *batch = std::make_unique<BatchImpl>(
       std::move(db_batch), db_.get(),
       [this](std::unique_ptr<leveldb::WriteBatch> db_batch) {
         active_batches_count_--;
@@ -207,6 +208,7 @@ std::unique_ptr<Db::Batch> LevelDb::StartBatch(CoroutineHandler* handler) {
         }
         return Status::OK;
       });
+  return Status::OK;
 }
 
 Status LevelDb::Get(CoroutineHandler* /*handler*/,

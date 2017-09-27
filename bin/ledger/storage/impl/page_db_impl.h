@@ -26,8 +26,8 @@ class PageDbImpl : public PageDb {
   ~PageDbImpl() override;
 
   Status Init() override;
-  std::unique_ptr<PageDb::Batch> StartBatch(
-      coroutine::CoroutineHandler* handler) override;
+  Status StartBatch(coroutine::CoroutineHandler* handler,
+                    std::unique_ptr<PageDb::Batch>* batch) override;
   Status GetHeads(coroutine::CoroutineHandler* handler,
                   std::vector<CommitId>* heads) override;
   Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler,

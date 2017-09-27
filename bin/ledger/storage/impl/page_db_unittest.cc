@@ -328,7 +328,9 @@ TEST_F(PageDbTest, UnsyncedPieces) {
 
 TEST_F(PageDbTest, Batch) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
-    std::unique_ptr<PageDb::Batch> batch = page_db_.StartBatch(handler);
+    std::unique_ptr<PageDb::Batch> batch;
+    ASSERT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+    ASSERT_TRUE(batch);
 
     ObjectId object_id = RandomObjectId();
     EXPECT_EQ(Status::OK, batch->WriteObject(handler, object_id,

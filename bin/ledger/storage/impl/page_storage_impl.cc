@@ -628,10 +628,14 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
     object_ids.pop_back();
     const ObjectId& object_id = *(it.first);
     FXL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
-    batch->SetObjectStatus(handler, object_id, PageDbObjectStatus::LOCAL);
+    Status status =
+        batch->SetObjectStatus(handler, object_id, PageDbObjectStatus::LOCAL);
+    if (status != Status::OK) {
+      return status;
+    }
     if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
-      Status status = db_->ReadObject(handler, object_id, &object);
+      status = db_->ReadObject(handler, object_id, &object);
       if (status != Status::OK) {
         return status;
       }
@@ -1177,7 +1181,11 @@ Status PageStorageImpl::SynchronousAddCommits(
     ChangeSource source,
     std::vector<ObjectId> new_objects) {
   // Apply all changes atomically.
-  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch(handler);
+  std::unique_ptr<PageDb::Batch> batch;
+  Status status = db_->StartBatch(handler, &batch);
+  if (status != Status::OK) {
+    return status;
+  }
   std::set<const CommitId*, StringPointerComparator> added_commits;
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
@@ -1220,7 +1228,10 @@ Status PageStorageImpl::SynchronousAddCommits(
         // Remove the parent from the list of heads.
         if (!heads_to_add.erase(parent_id.ToString())) {
           // parent_id was not added in the batch: remove it from heads in Db.
-          batch->RemoveHead(handler, parent_id);
+          s = batch->RemoveHead(handler, parent_id);
+          if (s != Status::OK) {
+            return s;
+          }
         }
       }
 

@@ -155,10 +155,11 @@ class PageDb : public PageDbMutator {
   // Initializes PageDb or returns an |IO_ERROR| on failure.
   virtual Status Init() = 0;
 
-  // Starts a new batch. The batch will be written when the Execute is called on
-  // the returned object. The PageDb object must outlive the batch object.
-  virtual std::unique_ptr<Batch> StartBatch(
-      coroutine::CoroutineHandler* handler) = 0;
+  // Starts a new batch. The batch will be written when Execute is called on the
+  // returned object. The PageDb object must outlive the batch object. If the
+  // coroutine is interrupted, |INTERRUPTED| status is returned.
+  virtual Status StartBatch(coroutine::CoroutineHandler* handler,
+                            std::unique_ptr<Batch>* batch) = 0;
 
   // Heads.
   // Finds all head commits and replaces the contents of |heads| with their ids.

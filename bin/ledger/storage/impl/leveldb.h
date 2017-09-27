@@ -23,8 +23,8 @@ class LevelDb : public Db {
   Status Init();
 
   // Db:
-  std::unique_ptr<Batch> StartBatch(
-      coroutine::CoroutineHandler* handler) override;
+  Status StartBatch(coroutine::CoroutineHandler* handler,
+                    std::unique_ptr<Batch>* batch) override;
   Status Get(coroutine::CoroutineHandler* handler,
              convert::ExtendedStringView key,
              std::string* value) override;

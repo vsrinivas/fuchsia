@@ -119,9 +119,12 @@ Status PageDbImpl::Init() {
   return db_.Init();
 }
 
-std::unique_ptr<PageDb::Batch> PageDbImpl::StartBatch(
-    coroutine::CoroutineHandler* handler) {
-  return std::make_unique<PageDbBatchImpl>(db_.StartBatch(handler), this);
+Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
+                              std::unique_ptr<Batch>* batch) {
+  std::unique_ptr<Db::Batch> db_batch;
+  RETURN_ON_ERROR(db_.StartBatch(handler, &db_batch));
+  *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this);
+  return Status::OK;
 }
 
 Status PageDbImpl::GetHeads(CoroutineHandler* handler,
@@ -244,29 +247,34 @@ Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
 Status PageDbImpl::AddHead(CoroutineHandler* handler,
                            CommitIdView head,
                            int64_t timestamp) {
-  auto batch = StartBatch(handler);
-  batch->AddHead(handler, head, timestamp);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->AddHead(handler, head, timestamp));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::RemoveHead(CoroutineHandler* handler, CommitIdView head) {
-  auto batch = StartBatch(handler);
-  batch->RemoveHead(handler, head);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->RemoveHead(handler, head));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler,
                                          const CommitId& commit_id,
                                          fxl::StringView storage_bytes) {
-  auto batch = StartBatch(handler);
-  batch->AddCommitStorageBytes(handler, commit_id, storage_bytes);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(
+      batch->AddCommitStorageBytes(handler, commit_id, storage_bytes));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
                                 const CommitId& commit_id) {
-  auto batch = StartBatch(handler);
-  batch->RemoveCommit(handler, commit_id);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->RemoveCommit(handler, commit_id));
   return batch->Execute(handler);
 }
 
@@ -274,21 +282,25 @@ Status PageDbImpl::CreateJournalId(CoroutineHandler* handler,
                                    JournalType journal_type,
                                    const CommitId& base,
                                    JournalId* journal_id) {
-  auto batch = StartBatch(handler);
-  batch->CreateJournalId(handler, journal_type, base, journal_id);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(
+      batch->CreateJournalId(handler, journal_type, base, journal_id));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
-  auto batch = StartBatch(handler);
-  batch->RemoveExplicitJournals(handler);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->RemoveExplicitJournals(handler));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::RemoveJournal(CoroutineHandler* handler,
                                  const JournalId& journal_id) {
-  auto batch = StartBatch(handler);
-  batch->RemoveJournal(handler, journal_id);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->RemoveJournal(handler, journal_id));
   return batch->Execute(handler);
 }
 
@@ -297,16 +309,19 @@ Status PageDbImpl::AddJournalEntry(CoroutineHandler* handler,
                                    fxl::StringView key,
                                    fxl::StringView value,
                                    KeyPriority priority) {
-  auto batch = StartBatch(handler);
-  batch->AddJournalEntry(handler, journal_id, key, value, priority);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(
+      batch->AddJournalEntry(handler, journal_id, key, value, priority));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::RemoveJournalEntry(CoroutineHandler* handler,
                                       const JournalId& journal_id,
                                       convert::ExtendedStringView key) {
-  auto batch = StartBatch(handler);
-  batch->RemoveJournalEntry(handler, journal_id, key);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->RemoveJournalEntry(handler, journal_id, key));
   return batch->Execute(handler);
 }
 
@@ -314,46 +329,53 @@ Status PageDbImpl::WriteObject(CoroutineHandler* handler,
                                ObjectIdView object_id,
                                std::unique_ptr<DataSource::DataChunk> content,
                                PageDbObjectStatus object_status) {
-  auto batch = StartBatch(handler);
-  batch->WriteObject(handler, object_id, std::move(content), object_status);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->WriteObject(handler, object_id, std::move(content),
+                                     object_status));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::DeleteObject(CoroutineHandler* handler,
                                 ObjectIdView object_id) {
-  auto batch = StartBatch(handler);
-  batch->DeleteObject(handler, object_id);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->DeleteObject(handler, object_id));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::SetObjectStatus(CoroutineHandler* handler,
                                    ObjectIdView object_id,
                                    PageDbObjectStatus object_status) {
-  auto batch = StartBatch(handler);
-  batch->SetObjectStatus(handler, object_id, object_status);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->SetObjectStatus(handler, object_id, object_status));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::MarkCommitIdSynced(CoroutineHandler* handler,
                                       const CommitId& commit_id) {
-  auto batch = StartBatch(handler);
-  batch->MarkCommitIdSynced(handler, commit_id);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->MarkCommitIdSynced(handler, commit_id));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler,
                                         const CommitId& commit_id,
                                         uint64_t generation) {
-  auto batch = StartBatch(handler);
-  batch->MarkCommitIdUnsynced(handler, commit_id, generation);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->MarkCommitIdUnsynced(handler, commit_id, generation));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler,
                                    fxl::StringView key,
                                    fxl::StringView value) {
-  auto batch = StartBatch(handler);
-  batch->SetSyncMetadata(handler, key, value);
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->SetSyncMetadata(handler, key, value));
   return batch->Execute(handler);
 }
 

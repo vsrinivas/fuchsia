@@ -11,9 +11,9 @@ using coroutine::CoroutineHandler;
 Status PageDbEmptyImpl::Init() {
   return Status::NOT_IMPLEMENTED;
 }
-std::unique_ptr<PageDb::Batch> PageDbEmptyImpl::StartBatch(
-    CoroutineHandler* /*handler*/) {
-  return std::make_unique<PageDbEmptyImpl>();
+Status PageDbEmptyImpl::StartBatch(CoroutineHandler* /*handler*/,
+                                   std::unique_ptr<PageDb::Batch>* /*batch*/) {
+  return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetHeads(CoroutineHandler* /*handler*/,
                                  std::vector<CommitId>* /*heads*/) {
