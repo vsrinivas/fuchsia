@@ -39,9 +39,6 @@ class ProposalPublisherImpl : public ProposalPublisher {
 
   void Propose(ProposalPtr proposal) override;
   void Remove(const fidl::String& proposal_id) override;
-  void GetAll(const GetAllCallback& callback) override;
-  void RegisterAskHandler(
-      fidl::InterfaceHandle<AskHandler> ask_handler) override;
 
   const std::string component_url() { return component_url_; }
 

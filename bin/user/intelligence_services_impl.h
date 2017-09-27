@@ -31,6 +31,9 @@ class IntelligenceServicesImpl : public IntelligenceServices {
   void GetActionLog(
       fidl::InterfaceRequest<ComponentActionLog> request) override;
 
+  void RegisterQueryHandler(
+      fidl::InterfaceHandle<QueryHandler> query_handler) override;
+
  private:
   ComponentScopePtr scope_;
   ContextEngine* const context_engine_;        // Not owned.
