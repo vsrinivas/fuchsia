@@ -6,14 +6,15 @@
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "peridot/bin/acquirers/mock/mock_gps.h"
 #include "peridot/bin/agents/ideas.h"
-#include "peridot/tests/maxwell_integration/context_engine_test_base.h"
-#include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"
+#include "peridot/tests/maxwell_integration/context_engine_test_base.h"
+#include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
 
@@ -176,7 +177,11 @@ class NProposals : public Proposinator, public ContextListener {
 
 class SuggestionEngineTest : public ContextEngineTestBase {
  public:
-  SuggestionEngineTest() : story_provider_binding_(&story_provider_) {
+  SuggestionEngineTest() : story_provider_binding_(&story_provider_) {}
+
+  void SetUp() override {
+    ContextEngineTestBase::SetUp();
+
     app::ServiceProviderPtr suggestion_services =
         StartServiceProvider("suggestion_engine");
     suggestion_engine_ =
@@ -218,7 +223,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host =
-        std::make_unique<ApplicationEnvironmentHostImpl>(root_environment);
+        std::make_unique<ApplicationEnvironmentHostImpl>(root_environment());
     agent_host->AddService<ContextReader>(
         [this, url](fidl::InterfaceRequest<ContextReader> request) {
           auto scope = ComponentScope::New();
@@ -263,7 +268,11 @@ class AskTest : public virtual SuggestionEngineTest {
  public:
   AskTest()
       : listener_binding_(&listener_),
-        debug_listener_binding_(&debug_listener_) {
+        debug_listener_binding_(&debug_listener_) {}
+
+  void SetUp() override {
+    SuggestionEngineTest::SetUp();
+
     suggestion_debug()->WatchAskProposals(debug_listener_binding_.NewBinding());
   }
 
@@ -313,7 +322,11 @@ class InterruptionTest : public virtual SuggestionEngineTest {
  public:
   InterruptionTest()
       : listener_binding_(&listener_),
-        debug_listener_binding_(&debug_listener_) {
+        debug_listener_binding_(&debug_listener_) {}
+
+  void SetUp() override {
+    SuggestionEngineTest::SetUp();
+
     suggestion_provider()->SubscribeToInterruptions(
         listener_binding_.NewBinding());
     suggestion_debug()->WatchInterruptionProposals(
@@ -350,7 +363,11 @@ class NextTest : public virtual SuggestionEngineTest {
  public:
   NextTest()
       : listener_binding_(&listener_),
-        debug_listener_binding_(&debug_listener_) {
+        debug_listener_binding_(&debug_listener_) {}
+
+  void SetUp() override {
+    SuggestionEngineTest::SetUp();
+
     suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
                                            ctl_.NewRequest());
     suggestion_debug()->WatchNextProposals(
@@ -396,9 +413,12 @@ class NextTest : public virtual SuggestionEngineTest {
 
 class ResultCountTest : public NextTest {
  public:
-  ResultCountTest()
-      : pub_(new NWriter(context_engine())),
-        sub_(new NProposals(context_engine(), suggestion_engine())) {}
+  void SetUp() override {
+    NextTest::SetUp();
+
+    pub_.reset(new NWriter(context_engine()));
+    sub_.reset(new NProposals(context_engine(), suggestion_engine()));
+  }
 
  protected:
   // Publishes signals for n new suggestions to context.
@@ -946,3 +966,9 @@ TEST_F(InterruptionTest, RemovedInterruption) {
 }
 
 }  // namespace maxwell
+
+int main(int argc, char** argv) {
+  fsl::MessageLoop loop;
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

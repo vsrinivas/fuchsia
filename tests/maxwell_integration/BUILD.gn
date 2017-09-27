@@ -2,19 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("maxwell_integration") {
+group("maxwell_integration") {
   testonly = true
-
-  output_name = "maxwell_test"
 
   deps = [
     ":context_engine_test",
-    ":resolver_test",
     ":suggestion_engine_test",
+    ":resolver_test",
   ]
 }
 
-source_set("context_engine_test") {
+executable("context_engine_test") {
   testonly = true
 
   sources = [
@@ -34,7 +32,7 @@ source_set("context_engine_test") {
   ]
 }
 
-source_set("resolver_test") {
+executable("resolver_test") {
   testonly = true
 
   sources = [
@@ -47,7 +45,7 @@ source_set("resolver_test") {
   ]
 }
 
-source_set("suggestion_engine_test") {
+executable("suggestion_engine_test") {
   testonly = true
 
   sources = [

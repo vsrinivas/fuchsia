@@ -6,6 +6,7 @@
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/scope_utils.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 
@@ -55,7 +56,10 @@ class TestListener : public ContextListener {
 
 class ContextEngineTest : public ContextEngineTestBase {
  public:
-  ContextEngineTest() : ContextEngineTestBase() { InitAllGlobalScope(); }
+  void SetUp() override {
+    ContextEngineTestBase::SetUp();
+    InitAllGlobalScope();
+  }
 
  protected:
   void InitAllGlobalScope() {
@@ -175,3 +179,9 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
 }
 
 }  // namespace maxwell
+
+int main(int argc, char** argv) {
+  fsl::MessageLoop loop;
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

@@ -11,13 +11,14 @@ namespace maxwell {
 // Base fixture to support test cases requiring Context Engine.
 class ContextEngineTestBase : public MaxwellTestBase {
  public:
-  ContextEngineTestBase()
-      : context_engine_(ConnectToService<ContextEngine>("context_engine")) {}
+  void SetUp() override {
+    context_engine_ = ConnectToService<ContextEngine>("context_engine");
+  }
 
  protected:
   void StartContextAgent(const std::string& url) {
     auto agent_host =
-        std::make_unique<ApplicationEnvironmentHostImpl>(root_environment);
+        std::make_unique<ApplicationEnvironmentHostImpl>(root_environment());
     agent_host->AddService<ContextWriter>(
         [this, url](fidl::InterfaceRequest<ContextWriter> request) {
           auto scope = ComponentScope::New();
@@ -40,7 +41,7 @@ class ContextEngineTestBase : public MaxwellTestBase {
   ContextEngine* context_engine() { return context_engine_.get(); }
 
  private:
-  const ContextEnginePtr context_engine_;
+  ContextEnginePtr context_engine_;
 };
 
 }  // namespace maxwell

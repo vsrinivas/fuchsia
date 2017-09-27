@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 
 #include "peridot/tests/maxwell_integration/test.h"
 
+namespace maxwell {
 namespace {
 
 class ResolverTest : public MaxwellTestBase {
@@ -37,4 +39,12 @@ TEST_F(ResolverTest, ResolveWithInvalidData) {
       "foo contract", "not valid JSON",
       [&](fidl::Array<resolver::ModuleInfoPtr> modules_) { completed = true; });
   ASYNC_CHECK(completed);
+}
+
+}  // namespace maxwell
+
+int main(int argc, char** argv) {
+  fsl::MessageLoop loop;
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

@@ -63,12 +63,30 @@ void Sleep() {
   Sleep(fxl::TimeDelta::FromMilliseconds(1500));
 }
 
-MaxwellTestBase::MaxwellTestBase()
-    : test_environment_host_(root_environment),
-      test_environment_host_binding_(&test_environment_host_) {
+namespace maxwell {
+
+// Docs for app::ApplicationContext::CreateFromStartupInfo() say we should only
+// call it one time. Although things functioned fine calling it many times in a
+// test, for correctness we just keep a global around and initialize it once in
+// the MaxwellTestBase() constructor.
+std::unique_ptr<app::ApplicationContext> startup_context_;
+
+MaxwellTestBase::MaxwellTestBase() {
+  if (!startup_context_) {
+    startup_context_ = app::ApplicationContext::CreateFromStartupInfo();
+  }
+  auto root_environment = startup_context_->environment().get();
+  FXL_CHECK(root_environment != nullptr);
+
+  test_environment_host_.reset(
+      new ApplicationEnvironmentHostImpl(root_environment));
+  test_environment_host_binding_.reset(
+      new fidl::Binding<app::ApplicationEnvironmentHost>(
+          test_environment_host_.get()));
+
   fidl::InterfaceHandle<app::ApplicationEnvironmentHost>
       test_environment_host_handle;
-  test_environment_host_binding_.Bind(&test_environment_host_handle);
+  test_environment_host_binding_->Bind(&test_environment_host_handle);
   root_environment->CreateNestedEnvironment(
       std::move(test_environment_host_handle), test_environment_.NewRequest(),
       test_environment_controller_.NewRequest(), "maxwell-test");
@@ -88,12 +106,8 @@ app::ServiceProviderPtr MaxwellTestBase::StartServiceProvider(
   return services;
 }
 
-app::ApplicationEnvironment* root_environment;
-
-int main(int argc, char** argv) {
-  fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-  root_environment = app_context->environment().get();
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+app::ApplicationEnvironment* MaxwellTestBase::root_environment() {
+  return startup_context_->environment().get();
 }
+
+}  // namespace maxwell

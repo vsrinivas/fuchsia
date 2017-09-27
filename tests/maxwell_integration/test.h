@@ -87,7 +87,7 @@ void Sleep();
       (expected) == (actual),      \
       #actual " == " #expected "; last known value: " << (actual))
 
-extern app::ApplicationEnvironment* root_environment;
+namespace maxwell {
 
 class MaxwellTestBase : public ::testing::Test {
  protected:
@@ -107,12 +107,17 @@ class MaxwellTestBase : public ::testing::Test {
     return app::ConnectToService<Interface>(services.get());
   }
 
+  app::ApplicationEnvironment* root_environment();
+
  private:
-  maxwell::ApplicationEnvironmentHostImpl test_environment_host_;
-  fidl::Binding<app::ApplicationEnvironmentHost> test_environment_host_binding_;
+  std::unique_ptr<ApplicationEnvironmentHostImpl> test_environment_host_;
+  std::unique_ptr<fidl::Binding<app::ApplicationEnvironmentHost>>
+      test_environment_host_binding_;
   app::ApplicationEnvironmentPtr test_environment_;
   // Hold a controller so that we kill all children when we go out of scope.
   app::ApplicationEnvironmentControllerPtr test_environment_controller_;
   app::ApplicationLauncherPtr test_launcher_;
-  std::unique_ptr<maxwell::AgentLauncher> agent_launcher_;
+  std::unique_ptr<AgentLauncher> agent_launcher_;
 };
+
+}  // namespace maxwell
