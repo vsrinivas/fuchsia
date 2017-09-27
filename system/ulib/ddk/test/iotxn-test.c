@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/iotxn.h>
-#include <ddk/protocol/test.h>
-
 #include <unittest/unittest.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -458,50 +453,4 @@ RUN_TEST(test_phys_iter_tiny_aligned)
 RUN_TEST(test_phys_iter_tiny_unaligned)
 END_TEST_CASE(iotxn_tests)
 
-static void iotxn_test_output_func(const char* line, int len, void* arg) {
-    zx_handle_t h = *(zx_handle_t*)arg;
-    // len is not actually the number of bytes to output
-    zx_socket_write(h, 0u, line, strlen(line), NULL);
-}
-
-static zx_status_t iotxn_test_func(void* cookie, test_report_t* report, const void* arg, size_t arglen) {
-    zx_device_t* dev = (zx_device_t*)cookie;
-
-    test_protocol_t proto;
-    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_TEST, &proto);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    zx_handle_t output = proto.ops->get_output_socket(proto.ctx);
-    if (output != ZX_HANDLE_INVALID) {
-        unittest_set_output_function(iotxn_test_output_func, &output);
-    }
-
-    bool success = unittest_run_one_test(TEST_CASE_ELEMENT(iotxn_tests), TEST_ALL);
-    report->n_tests = 1;
-    report->n_success = success ? 1 : 0;
-    report->n_failed = success ? 0 : 1;
-    return success ? ZX_OK : ZX_ERR_INTERNAL;
-}
-
-static zx_status_t iotxn_test_bind(void* ctx, zx_device_t* dev, void** cookie) {
-    test_protocol_t proto;
-    zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_TEST, &proto);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    proto.ops->set_test_func(proto.ctx, iotxn_test_func, dev);
-    return ZX_OK;
-}
-
-static zx_driver_ops_t iotxn_test_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = iotxn_test_bind,
-};
-
-ZIRCON_DRIVER_BEGIN(iotxn_test, iotxn_test_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
-ZIRCON_DRIVER_END(iotxn_test)
+struct test_case_element* test_case_ddk_iotxn = TEST_CASE_ELEMENT(iotxn_tests);

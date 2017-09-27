@@ -21,17 +21,21 @@ include make/module.mk
 
 
 #
-# iotxn-test - iotxn tests
+# ddk-test
 #
-MODULE := $(LOCAL_DIR).iotxn-test
+MODULE := $(LOCAL_DIR).ddk-test
 
-MODULE_NAME := iotxn-test
+MODULE_NAME := ddk-test
 
 MODULE_TYPE := drivertest
 
 TEST_DIR := $(LOCAL_DIR)/test
 
-MODULE_SRCS := $(TEST_DIR)/iotxn-test.c
+MODULE_SRCS := \
+    $(TEST_DIR)/ddk-test.c \
+    $(TEST_DIR)/ddk-test-binding.c \
+    $(TEST_DIR)/iotxn-test.c \
+    $(TEST_DIR)/usb-request-test.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
