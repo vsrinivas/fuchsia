@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_FIDL_ARRAY_TO_STRING_H_
-#define APPS_MODULAR_LIB_FIDL_ARRAY_TO_STRING_H_
+#ifndef PERIDOT_LIB_FIDL_ARRAY_TO_STRING_H_
+#define PERIDOT_LIB_FIDL_ARRAY_TO_STRING_H_
 
 #include <string>
 #include <vector>

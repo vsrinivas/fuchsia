@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_H_
-#define APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_H_
+#ifndef PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_H_
+#define PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_H_
 
 #include <functional>
 #include <memory>
@@ -194,4 +194,4 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_H_
+#endif  // PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_EXAMPLES_TODO_CPP_GENERATOR_H_
-#define APPS_MODULAR_EXAMPLES_TODO_CPP_GENERATOR_H_
+#ifndef PERIDOT_EXAMPLES_TODO_CPP_GENERATOR_H_
+#define PERIDOT_EXAMPLES_TODO_CPP_GENERATOR_H_
 
 #include <random>
 #include <string>
@@ -33,4 +33,4 @@ class Generator {
 
 }  // namespace todo
 
-#endif  // APPS_MODULAR_EXAMPLES_TODO_CPP_GENERATOR_H_
+#endif  // PERIDOT_EXAMPLES_TODO_CPP_GENERATOR_H_

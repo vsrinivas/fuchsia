@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
-#define APPS_MODULAR_SRC_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
+#ifndef PERIDOT_BIN_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
+#define PERIDOT_BIN_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
 
 #include <functional>
 #include <memory>
@@ -132,4 +132,4 @@ class MessageQueueManager : PageClient {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
+#endif  // PERIDOT_BIN_COMPONENT_MESSAGE_QUEUE_MANAGER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_FIDL_CONTEXT_H_
-#define APPS_MODULAR_LIB_FIDL_CONTEXT_H_
+#ifndef PERIDOT_LIB_FIDL_CONTEXT_H_
+#define PERIDOT_LIB_FIDL_CONTEXT_H_
 
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
@@ -19,4 +19,4 @@ using ContextState = fidl::Map<fidl::String, fidl::String>;
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_FIDL_CONTEXT_H_
+#endif  // PERIDOT_LIB_FIDL_CONTEXT_H_

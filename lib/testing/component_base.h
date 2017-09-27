@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
-#define APPS_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
+#ifndef PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
+#define PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -109,4 +109,4 @@ class ComponentBase : protected SingleServiceApp<Component> {
 }  // namespace testing
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_TESTING_COMPONENT_BASE_H_
+#endif  // PERIDOT_LIB_TESTING_COMPONENT_BASE_H_

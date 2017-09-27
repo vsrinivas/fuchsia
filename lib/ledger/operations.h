@@ -4,8 +4,8 @@
 
 // The file defines Operations commonly executed on Ledger pages.
 
-#ifndef APPS_MODULAR_LIB_LEDGER_OPERATIONS_H_
-#define APPS_MODULAR_LIB_LEDGER_OPERATIONS_H_
+#ifndef PERIDOT_LIB_LEDGER_OPERATIONS_H_
+#define PERIDOT_LIB_LEDGER_OPERATIONS_H_
 
 #include <string>
 
@@ -232,4 +232,4 @@ class WriteDataCall : Operation<> {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_LEDGER_OPERATIONS_H_
+#endif  // PERIDOT_LIB_LEDGER_OPERATIONS_H_

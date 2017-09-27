@@ -5,8 +5,8 @@
 // TODO(alhaad): This file has been copied from Ledger and Mozart. Reconcile
 // all copies to a common place.
 
-#ifndef APPS_MODULAR_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_
-#define APPS_MODULAR_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_
+#ifndef PERIDOT_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_
+#define PERIDOT_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_
 
 #include <functional>
 
@@ -76,4 +76,4 @@ class TestWithMessageLoop : public ::testing::Test {
 }  // namespace testing
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_
+#endif  // PERIDOT_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_

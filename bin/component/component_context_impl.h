@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
-#define APPS_MODULAR_SRC_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
+#ifndef PERIDOT_BIN_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
+#define PERIDOT_BIN_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
 
 #include <string>
 
@@ -95,4 +95,4 @@ class ComponentContextImpl : public ComponentContext {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
+#endif  // PERIDOT_BIN_COMPONENT_COMPONENT_CONTEXT_IMPL_H_

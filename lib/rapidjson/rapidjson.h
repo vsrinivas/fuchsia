@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_LIB_RAPIDJSON_RAPIDJSON_H_
-#define APPLICATION_LIB_RAPIDJSON_RAPIDJSON_H_
+#ifndef PERIDOT_LIB_RAPIDJSON_RAPIDJSON_H_
+#define PERIDOT_LIB_RAPIDJSON_RAPIDJSON_H_
 
 #include <sstream>
 #include <string>
@@ -77,4 +77,4 @@ inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
 
 }  // namespace modular
 
-#endif  // APPLICATION_LIB_RAPIDJSON_RAPIDJSON_H_
+#endif  // PERIDOT_LIB_RAPIDJSON_RAPIDJSON_H_

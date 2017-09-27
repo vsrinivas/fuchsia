@@ -7,8 +7,8 @@
 // can start more modules. It also serves as the factory for Link
 // instances, which are used to share data between modules.
 
-#ifndef APPS_MODULAR_SRC_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
-#define APPS_MODULAR_SRC_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
+#ifndef PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
+#define PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -268,4 +268,4 @@ class StoryControllerImpl : StoryController, StoryContext {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
+#endif  // PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_

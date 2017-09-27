@@ -50,4 +50,4 @@ class FactoryImpl : public Factory {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // PERIDOT_BIN_CLOUD_CLOUD_PRFIREBASE_FACTORY_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FACTORY_IMPL_H_

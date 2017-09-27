@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_STORY_RUNNER_KEY_GENERATOR_H_
-#define APPS_MODULAR_SRC_STORY_RUNNER_KEY_GENERATOR_H_
+#ifndef PERIDOT_BIN_STORY_RUNNER_KEY_GENERATOR_H_
+#define PERIDOT_BIN_STORY_RUNNER_KEY_GENERATOR_H_
 
 #include <string>
 
@@ -63,4 +63,4 @@ class KeyGenerator {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_STORY_RUNNER_KEY_GENERATOR_H_
+#endif  // PERIDOT_BIN_STORY_RUNNER_KEY_GENERATOR_H_

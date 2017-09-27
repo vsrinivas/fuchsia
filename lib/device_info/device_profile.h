@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
-#define APPS_MODULAR_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
+#ifndef PERIDOT_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
+#define PERIDOT_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
 
 #include "peridot/lib/device_info/device_info.h"
 
@@ -31,4 +31,4 @@ class DeviceProfile {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_DEVICE_INFO_DEVICE_PROFILE_H_
+#endif  // PERIDOT_LIB_DEVICE_INFO_DEVICE_PROFILE_H_

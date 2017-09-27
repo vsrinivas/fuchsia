@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_APP_H_
-#define APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_APP_H_
+#ifndef PERIDOT_LIB_FIDL_SINGLE_SERVICE_APP_H_
+#define PERIDOT_LIB_FIDL_SINGLE_SERVICE_APP_H_
 
 #include <memory>
 
@@ -80,4 +80,4 @@ class SingleServiceApp : protected Service,
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_APP_H_
+#endif  // PERIDOT_LIB_FIDL_SINGLE_SERVICE_APP_H_

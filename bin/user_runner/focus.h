@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_USER_RUNNER_FOCUS_H_
-#define APPS_MODULAR_SRC_USER_RUNNER_FOCUS_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_FOCUS_H_
+#define PERIDOT_BIN_USER_RUNNER_FOCUS_H_
 
 #include <string>
 #include <vector>
@@ -96,4 +96,4 @@ class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_USER_RUNNER_FOCUS_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_FOCUS_H_

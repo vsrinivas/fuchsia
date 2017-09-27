@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MAXWELL_SRC_ACQUIRERS_STORY_INFO_LINK_WATCHER_IMPL_H_
-#define APPS_MAXWELL_SRC_ACQUIRERS_STORY_INFO_LINK_WATCHER_IMPL_H_
+#ifndef PERIDOT_BIN_ACQUIRERS_STORY_INFO_LINK_WATCHER_IMPL_H_
+#define PERIDOT_BIN_ACQUIRERS_STORY_INFO_LINK_WATCHER_IMPL_H_
 
 #include <map>
 #include <memory>
@@ -53,4 +53,4 @@ class LinkWatcherImpl : modular::LinkWatcher {
 
 }  // namespace maxwell
 
-#endif  // APPS_MAXWELL_SRC_ACQUIRERS_STORY_INFO_LINK_WATCHER_IMPL_H_
+#endif  // PERIDOT_BIN_ACQUIRERS_STORY_INFO_LINK_WATCHER_IMPL_H_

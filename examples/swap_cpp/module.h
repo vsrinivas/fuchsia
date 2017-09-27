@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
-#define APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
+#ifndef PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
+#define PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -58,4 +58,4 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
 
 }  // namespace modular_example
 
-#endif  // APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
+#endif  // PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_

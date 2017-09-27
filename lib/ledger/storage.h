@@ -4,8 +4,8 @@
 
 // This file is a description of the pages and keys used by the modular runtime.
 
-#ifndef APPS_MODULAR_LIB_LEDGER_STORAGE_H_
-#define APPS_MODULAR_LIB_LEDGER_STORAGE_H_
+#ifndef PERIDOT_LIB_LEDGER_STORAGE_H_
+#define PERIDOT_LIB_LEDGER_STORAGE_H_
 
 #include <string>
 
@@ -106,4 +106,4 @@ std::string EncodeModuleComponentNamespace(const std::string& story_id);
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_LEDGER_STORAGE_H_
+#endif  // PERIDOT_LIB_LEDGER_STORAGE_H_

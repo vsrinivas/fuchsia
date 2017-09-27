@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_TESTING_TESTING_H_
-#define APPS_MODULAR_LIB_TESTING_TESTING_H_
+#ifndef PERIDOT_LIB_TESTING_TESTING_H_
+#define PERIDOT_LIB_TESTING_TESTING_H_
 
 #include <string>
 
@@ -72,4 +72,4 @@ void PassTestPoint(const std::string& label);
 }  // namespace testing
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_TESTING_TESTING_H_
+#endif  // PERIDOT_LIB_TESTING_TESTING_H_

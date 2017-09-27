@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_USER_RUNNER_USER_RUNNER_IMPL_H_
-#define APPS_MODULAR_SRC_USER_RUNNER_USER_RUNNER_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_USER_RUNNER_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_USER_RUNNER_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -153,4 +153,4 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_USER_RUNNER_USER_RUNNER_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_USER_RUNNER_IMPL_H_

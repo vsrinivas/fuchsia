@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_STORY_RUNNER_CONTEXT_HANDLER_H_
-#define APPS_MODULAR_SRC_STORY_RUNNER_CONTEXT_HANDLER_H_
+#ifndef PERIDOT_BIN_STORY_RUNNER_CONTEXT_HANDLER_H_
+#define PERIDOT_BIN_STORY_RUNNER_CONTEXT_HANDLER_H_
 
 #include <string>
 #include <vector>
@@ -57,4 +57,4 @@ class ContextHandler : maxwell::ContextListener {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_STORY_RUNNER_CONTEXT_HANDLER_H_
+#endif  // PERIDOT_BIN_STORY_RUNNER_CONTEXT_HANDLER_H_

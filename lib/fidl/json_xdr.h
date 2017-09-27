@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_FIDL_JSON_XDR_H_
-#define APPS_MODULAR_LIB_FIDL_JSON_XDR_H_
+#ifndef PERIDOT_LIB_FIDL_JSON_XDR_H_
+#define PERIDOT_LIB_FIDL_JSON_XDR_H_
 
 #include <map>
 #include <string>
@@ -668,4 +668,4 @@ void XdrWrite(std::string* const json,
 
 }  // namespace modular
 
-#endif
+#endif  // PERIDOT_LIB_FIDL_JSON_XDR_H_

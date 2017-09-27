@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_TESTING_REPORTING_H_
-#define APPS_MODULAR_LIB_TESTING_REPORTING_H_
+#ifndef PERIDOT_LIB_TESTING_REPORTING_H_
+#define PERIDOT_LIB_TESTING_REPORTING_H_
 
 #include <iostream>
 
@@ -38,4 +38,4 @@ class TestPoint {
 }  // namespace testing
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_TESTING_REPORTING_H_
+#endif  // PERIDOT_LIB_TESTING_REPORTING_H_

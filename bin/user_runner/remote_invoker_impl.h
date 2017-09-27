@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
-#define APPS_MODULAR_SRC_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -41,4 +41,4 @@ class RemoteInvokerImpl : RemoteInvoker {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
