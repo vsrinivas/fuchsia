@@ -32,7 +32,7 @@ source_set("vkcube_common") {
   ]
 
   deps = [
-    "$magma_build_root:vulkan",
+    "//garnet/public/lib/vulkan",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
     "//garnet/public/lib/app/cpp",
