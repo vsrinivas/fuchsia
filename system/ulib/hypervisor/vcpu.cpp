@@ -187,7 +187,7 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
         status = vcpu_ctx->guest_ctx->io_port->Read(io->port, &vcpu_io);
         break;
     case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
-        status = uart_read(vcpu_ctx->guest_ctx->uart, io->port, &vcpu_io);
+        status = vcpu_ctx->guest_ctx->uart->Read(io->port, &vcpu_io);
         break;
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
@@ -239,7 +239,7 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         return vcpu_ctx->guest_ctx->pci_bus->WriteIoPort(io);
     case UART_INTERRUPT_ENABLE_PORT ... UART_SCR_SCRATCH_PORT:
-        return uart_write(vcpu_ctx->guest_ctx->uart, io);
+        return vcpu_ctx->guest_ctx->uart->Write(io);
     default: {
         uint8_t bar;
         uint16_t port_off;

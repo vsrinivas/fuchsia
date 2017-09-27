@@ -74,9 +74,8 @@ static bool handle_input_packet(void) {
     setup(&test);
 
     // Initialize the hosts register to an arbitrary non-zero value.
-    uart_t uart;
-    uart_init(&uart, ZX_HANDLE_INVALID, &test.io_apic);
-    uart.line_control = 0xfe;
+    Uart uart(&test.io_apic);
+    uart.set_line_control(0xfe);
     test.guest_ctx.uart = &uart;
 
     // Send a guest packet to to read the UART line control port.
@@ -87,7 +86,7 @@ static bool handle_input_packet(void) {
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK, "Failed to handle guest packet");
 
     // Verify result value was written to RAX.
-    EXPECT_EQ(test.vcpu_io.u8, uart.line_control, "RAX was not populated with expected value");
+    EXPECT_EQ(test.vcpu_io.u8, uart.line_control(), "RAX was not populated with expected value");
 
     END_TEST;
 }
@@ -103,8 +102,7 @@ static bool handle_output_packet(void) {
     zx_packet_guest_io_t io = {};
     setup(&test);
 
-    uart_t uart;
-    uart_init(&uart, ZX_HANDLE_INVALID, &test.io_apic);
+    Uart uart(&test.io_apic);
     test.guest_ctx.uart = &uart;
 
     // Send a guest packet to to write the UART line control port.
@@ -112,10 +110,10 @@ static bool handle_output_packet(void) {
     io.port = UART_LINE_CONTROL_PORT;
     io.access_size = 1;
     io.u8 = 0xaf;
-    EXPECT_EQ(uart_write(&uart, &io), ZX_OK, "Failed to handle UART IO packet");
+    EXPECT_EQ(uart.Write(&io), ZX_OK, "Failed to handle UART IO packet");
 
     // Verify packet value was saved to the host port state.
-    EXPECT_EQ(io.u8, uart.line_control, "UART was not populated with expected value");
+    EXPECT_EQ(io.u8, uart.line_control(), "UART was not populated with expected value");
 
     END_TEST;
 }

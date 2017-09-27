@@ -286,12 +286,12 @@ int main(int argc, char** argv) {
         return status;
     }
     // Setup UART.
-    uart_t uart;
+    Uart uart(&io_apic);
     guest_ctx.uart = &uart;
-    status = uart_init(&uart, guest, &io_apic);
+    status = uart.Init(guest);
     if (status != ZX_OK)
         return status;
-    status = uart_async(&uart, guest);
+    status = uart.StartAsync(guest);
     if (status != ZX_OK)
         return status;
     // Setup TPM.

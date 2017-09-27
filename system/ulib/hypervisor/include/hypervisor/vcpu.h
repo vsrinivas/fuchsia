@@ -12,17 +12,16 @@
 class IoApic;
 class IoPort;
 class PciBus;
+class Uart;
 
 typedef struct zx_port_packet zx_port_packet_t;
-typedef struct uart uart_t;
 
 /* Stores the state associated with the guest. */
 typedef struct guest_ctx {
     IoApic* io_apic;
     IoPort* io_port;
     PciBus* pci_bus;
-
-    uart_t* uart;
+    Uart* uart;
 } guest_ctx_t;
 
 /* Typedefs to abstract reading and writing VCPU state. */

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
@@ -13,29 +14,29 @@
 #include <hypervisor/vcpu.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
-#include <fbl/auto_lock.h>
 
 /* UART configuration masks. */
 static const uint8_t kUartInterruptIdNoFifoMask = bit_mask<uint8_t>(4);
 
-zx_status_t uart_init(uart_t* uart, zx_handle_t guest, const IoApic* io_apic) {
-    memset(uart, 0, sizeof(*uart));
-    cnd_init(&uart->rx_cnd);
-    cnd_init(&uart->tx_cnd);
-    uart->io_apic = io_apic;
-    uart->line_status = UART_LINE_STATUS_THR_EMPTY;
-    uart->interrupt_id = UART_INTERRUPT_ID_NONE;
-    uart->interrupt_enable = UART_INTERRUPT_ENABLE_NONE;
-    uart->raise_interrupt = zx_vcpu_interrupt;
+Uart::Uart(const IoApic* io_apic)
+    : Uart(io_apic, &zx_vcpu_interrupt) {}
+
+Uart::Uart(const IoApic* io_apic, InterruptFunc raise_interrupt)
+    : io_apic_(io_apic), raise_interrupt_(raise_interrupt) {
+    cnd_init(&rx_cnd_);
+    cnd_init(&tx_cnd_);
+}
+
+zx_status_t Uart::Init(zx_handle_t guest) {
     return zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, UART_INTERRUPT_ENABLE_PORT,
                              UART_SCR_SCRATCH_PORT - UART_INTERRUPT_ENABLE_PORT + 1,
                              ZX_HANDLE_INVALID, 0);
 }
 
-static zx_status_t try_raise_interrupt(uart_t* uart, uint8_t interrupt_id) {
+zx_status_t Uart::TryRaiseInterrupt(uint8_t interrupt_id) {
     uint8_t vector = 0;
     zx_handle_t vcpu;
-    zx_status_t status = uart->io_apic->Redirect(X86_INT_UART, &vector, &vcpu);
+    zx_status_t status = io_apic_->Redirect(X86_INT_UART, &vector, &vcpu);
     if (status != ZX_OK)
         return status;
 
@@ -45,36 +46,36 @@ static zx_status_t try_raise_interrupt(uart_t* uart, uint8_t interrupt_id) {
     if (vector == 0)
         return ZX_OK;
 
-    uart->interrupt_id = interrupt_id;
-    return uart->raise_interrupt(vcpu, vector);
+    interrupt_id_ = interrupt_id;
+    return raise_interrupt_(vcpu, vector);
 }
 
 // Checks whether an interrupt can successfully be raised. This is a
 // convenience for the input thread that allows it to delay processing until
-// the caller is ready. Others just always call try_raise_interrupt and hope.
-static bool can_raise_interrupt(uart_t* uart) {
+// the caller is ready. Others just always call TryRaiseInterrupt and hope.
+bool Uart::CanRaiseInterrupt() {
     uint8_t vector = 0;
     zx_handle_t vcpu;
-    zx_status_t status = uart->io_apic->Redirect(X86_INT_UART, &vector, &vcpu);
+    zx_status_t status = io_apic_->Redirect(X86_INT_UART, &vector, &vcpu);
     return status == ZX_OK && vector != 0;
 }
 
 // Determines whether an interrupt needs to be raised and does so if necessary.
 // Will not raise an interrupt if the interrupt_enable bit is not set.
-static zx_status_t raise_next_interrupt(uart_t* uart) {
-    if (uart->interrupt_id != UART_INTERRUPT_ID_NONE)
+zx_status_t Uart::RaiseNextInterrupt() {
+    if (interrupt_id_ != UART_INTERRUPT_ID_NONE)
         // Don't wipe out a pending interrupt, just wait.
         return ZX_OK;
-    if (uart->interrupt_enable & UART_INTERRUPT_ENABLE_RDA &&
-        uart->line_status & UART_LINE_STATUS_DATA_READY)
-        return try_raise_interrupt(uart, UART_INTERRUPT_ID_RDA);
-    if (uart->interrupt_enable & UART_INTERRUPT_ENABLE_THR_EMPTY &&
-        uart->line_status & UART_LINE_STATUS_THR_EMPTY)
-        return try_raise_interrupt(uart, UART_INTERRUPT_ID_THR_EMPTY);
+    if (interrupt_enable_ & UART_INTERRUPT_ENABLE_RDA &&
+        line_status_ & UART_LINE_STATUS_DATA_READY)
+        return TryRaiseInterrupt(UART_INTERRUPT_ID_RDA);
+    if (interrupt_enable_ & UART_INTERRUPT_ENABLE_THR_EMPTY &&
+        line_status_ & UART_LINE_STATUS_THR_EMPTY)
+        return TryRaiseInterrupt(UART_INTERRUPT_ID_THR_EMPTY);
     return ZX_OK;
 }
 
-zx_status_t uart_read(uart_t* uart, uint16_t port, zx_vcpu_io_t* vcpu_io) {
+zx_status_t Uart::Read(uint16_t port, zx_vcpu_io_t* vcpu_io) {
     switch (port) {
     case UART_MODEM_CONTROL_PORT:
     case UART_MODEM_STATUS_PORT:
@@ -84,44 +85,44 @@ zx_status_t uart_read(uart_t* uart, uint16_t port, zx_vcpu_io_t* vcpu_io) {
         break;
     case UART_RECEIVE_PORT: {
         vcpu_io->access_size = 1;
-        fbl::AutoLock lock(&uart->mutex);
-        vcpu_io->u8 = uart->rx_buffer;
-        uart->rx_buffer = 0;
-        uart->line_status = static_cast<uint8_t>(uart->line_status & ~UART_LINE_STATUS_DATA_READY);
+        fbl::AutoLock lock(&mutex_);
+        vcpu_io->u8 = rx_buffer_;
+        rx_buffer_ = 0;
+        line_status_ = static_cast<uint8_t>(line_status_ & ~UART_LINE_STATUS_DATA_READY);
 
         // Reset RDA interrupt on RBR read.
-        if (uart->interrupt_id & UART_INTERRUPT_ID_RDA)
-            uart->interrupt_id = UART_INTERRUPT_ID_NONE;
+        if (interrupt_id_ & UART_INTERRUPT_ID_RDA)
+            interrupt_id_ = UART_INTERRUPT_ID_NONE;
 
-        cnd_signal(&uart->rx_cnd);
-        return raise_next_interrupt(uart);
+        cnd_signal(&rx_cnd_);
+        return RaiseNextInterrupt();
     }
     case UART_INTERRUPT_ENABLE_PORT: {
         vcpu_io->access_size = 1;
-        fbl::AutoLock lock(&uart->mutex);
-        vcpu_io->u8 = uart->interrupt_enable;
+        fbl::AutoLock lock(&mutex_);
+        vcpu_io->u8 = interrupt_enable_;
         break;
     }
     case UART_INTERRUPT_ID_PORT: {
         vcpu_io->access_size = 1;
-        fbl::AutoLock lock(&uart->mutex);
-        vcpu_io->u8 = kUartInterruptIdNoFifoMask & uart->interrupt_id;
+        fbl::AutoLock lock(&mutex_);
+        vcpu_io->u8 = kUartInterruptIdNoFifoMask & interrupt_id_;
 
         // Reset THR empty interrupt on IIR read (or THR write).
-        if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
-            uart->interrupt_id = UART_INTERRUPT_ID_NONE;
+        if (interrupt_id_ & UART_INTERRUPT_ID_THR_EMPTY)
+            interrupt_id_ = UART_INTERRUPT_ID_NONE;
         break;
     }
     case UART_LINE_CONTROL_PORT: {
         vcpu_io->access_size = 1;
-        fbl::AutoLock lock(&uart->mutex);
-        vcpu_io->u8 = uart->line_control;
+        fbl::AutoLock lock(&mutex_);
+        vcpu_io->u8 = line_control_;
         break;
     }
     case UART_LINE_STATUS_PORT: {
         vcpu_io->access_size = 1;
-        fbl::AutoLock lock(&uart->mutex);
-        vcpu_io->u8 = uart->line_status;
+        fbl::AutoLock lock(&mutex_);
+        vcpu_io->u8 = line_status_;
         break;
     }
     default:
@@ -131,47 +132,47 @@ zx_status_t uart_read(uart_t* uart, uint16_t port, zx_vcpu_io_t* vcpu_io) {
     return ZX_OK;
 }
 
-zx_status_t uart_write(uart_t* uart, const zx_packet_guest_io_t* io) {
+zx_status_t Uart::Write(const zx_packet_guest_io_t* io) {
     switch (io->port) {
     case UART_TRANSMIT_PORT: {
-        fbl::AutoLock lock(&uart->mutex);
-        if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH)
+        fbl::AutoLock lock(&mutex_);
+        if (line_control_ & UART_LINE_CONTROL_DIV_LATCH)
             // Ignore writes when divisor latch is enabled.
             return (io->access_size != 1) ? ZX_ERR_IO_DATA_INTEGRITY : ZX_OK;
 
         for (int i = 0; i < io->access_size; i++) {
-            uart->tx_buffer[uart->tx_offset++] = io->data[i];
+            tx_buffer_[tx_offset_++] = io->data[i];
         }
 
-        uart->line_status |= UART_LINE_STATUS_THR_EMPTY;
+        line_status_ |= UART_LINE_STATUS_THR_EMPTY;
 
         // Reset THR empty interrupt on THR write.
-        if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
-            uart->interrupt_id = UART_INTERRUPT_ID_NONE;
+        if (interrupt_id_ & UART_INTERRUPT_ID_THR_EMPTY)
+            interrupt_id_ = UART_INTERRUPT_ID_NONE;
 
-        cnd_signal(&uart->tx_cnd);
-        return raise_next_interrupt(uart);
+        cnd_signal(&tx_cnd_);
+        return RaiseNextInterrupt();
     }
     case UART_INTERRUPT_ENABLE_PORT: {
         if (io->access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
-        fbl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&mutex_);
         // Ignore writes when divisor latch is enabled.
-        if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH)
+        if (line_control_ & UART_LINE_CONTROL_DIV_LATCH)
             return ZX_OK;
 
-        uart->interrupt_enable = io->u8;
-        return raise_next_interrupt(uart);
+        interrupt_enable_ = io->u8;
+        return RaiseNextInterrupt();
     }
     case UART_LINE_CONTROL_PORT: {
         if (io->access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
-        fbl::AutoLock lock(&uart->mutex);
-        uart->line_control = io->u8;
+        fbl::AutoLock lock(&mutex_);
+        line_control_ = io->u8;
         return ZX_OK;
     }
     case UART_INTERRUPT_ID_PORT:
-    case UART_MODEM_CONTROL_PORT ... UART_SCR_SCRATCH_PORT:
+    case UART_MODEM_CONTROL_PORT... UART_SCR_SCRATCH_PORT:
         return ZX_OK;
     default:
         return ZX_ERR_INTERNAL;
@@ -179,23 +180,24 @@ zx_status_t uart_write(uart_t* uart, const zx_packet_guest_io_t* io) {
 }
 
 static zx_status_t uart_handler(zx_port_packet_t* packet, void* ctx) {
-    uart_t* uart = static_cast<uart_t*>(ctx);
-    return uart_write(uart, &packet->guest_io);
+    return static_cast<Uart*>(ctx)->Write(&packet->guest_io);
 }
 
 static int uart_empty_tx(void* arg) {
-    uart_t* uart = reinterpret_cast<uart_t*>(arg);
+    return reinterpret_cast<Uart*>(arg)->EmptyTx();
+}
 
+zx_status_t Uart::EmptyTx() {
     while (true) {
         {
-            fbl::AutoLock lock(&uart->mutex);
-            cnd_wait(&uart->tx_cnd, &uart->mutex);
+            fbl::AutoLock lock(&mutex_);
+            cnd_wait(&tx_cnd_, mutex_.GetInternal());
 
-            if (!uart->tx_offset)
+            if (!tx_offset_)
                 continue;
 
-            printf("%.*s", uart->tx_offset, uart->tx_buffer);
-            uart->tx_offset = 0;
+            printf("%.*s", tx_offset_, tx_buffer_);
+            tx_offset_ = 0;
         }
 
         if (fflush(stdout) == EOF) {
@@ -207,16 +209,19 @@ static int uart_empty_tx(void* arg) {
 }
 
 static int uart_fill_rx(void* arg) {
-    uart_t* uart = reinterpret_cast<uart_t*>(arg);
+    return reinterpret_cast<Uart*>(arg)->FillRx();
+}
 
+zx_status_t Uart::FillRx() {
     zx_status_t status;
     do {
-        mtx_lock(&uart->mutex);
-        // Wait for a signal that the line is clear.
-        // The locking here is okay, because we yield when we wait.
-        while (!can_raise_interrupt(uart) && uart->line_status & UART_LINE_STATUS_DATA_READY)
-            cnd_wait(&uart->rx_cnd, &uart->mutex);
-        mtx_unlock(&uart->mutex);
+        {
+            fbl::AutoLock lock(&mutex_);
+            // Wait for a signal that the line is clear.
+            // The locking here is okay, because we yield when we wait.
+            while (!CanRaiseInterrupt() && line_status_ & UART_LINE_STATUS_DATA_READY)
+                cnd_wait(&rx_cnd_, mutex_.GetInternal());
+        }
 
         int pending_char = getchar();
         if (pending_char == '\b')
@@ -227,20 +232,19 @@ static int uart_fill_rx(void* arg) {
         if (pending_char == EOF)
             status = ZX_ERR_PEER_CLOSED;
         else {
-            mtx_lock(&uart->mutex);
-            uart->rx_buffer = static_cast<uint8_t>(pending_char);
-            uart->line_status |= UART_LINE_STATUS_DATA_READY;
-            status = raise_next_interrupt(uart);
-            mtx_unlock(&uart->mutex);
+            fbl::AutoLock lock(&mutex_);
+            rx_buffer_ = static_cast<uint8_t>(pending_char);
+            line_status_ |= UART_LINE_STATUS_DATA_READY;
+            status = RaiseNextInterrupt();
         }
     } while (status == ZX_OK);
     fprintf(stderr, "Stopped processing UART input (%d)\n", status);
     return status;
 }
 
-zx_status_t uart_async(uart_t* uart, zx_handle_t guest) {
+zx_status_t Uart::StartAsync(zx_handle_t guest) {
     thrd_t uart_input_thread;
-    int ret = thrd_create(&uart_input_thread, uart_fill_rx, uart);
+    int ret = thrd_create(&uart_input_thread, uart_fill_rx, this);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create UART input thread %d\n", ret);
         return ZX_ERR_INTERNAL;
@@ -252,7 +256,7 @@ zx_status_t uart_async(uart_t* uart, zx_handle_t guest) {
     }
 
     thrd_t uart_output_thread;
-    ret = thrd_create(&uart_output_thread, uart_empty_tx, uart);
+    ret = thrd_create(&uart_output_thread, uart_empty_tx, this);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create UART output thread %d\n", ret);
         return ZX_ERR_INTERNAL;
@@ -270,5 +274,5 @@ zx_status_t uart_async(uart_t* uart, zx_handle_t guest) {
         .key = 0,
         .use_port = true,
     };
-    return device_trap(guest, &trap, 1, uart_handler, uart);
+    return device_trap(guest, &trap, 1, uart_handler, this);
 }
