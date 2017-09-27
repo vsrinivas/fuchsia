@@ -30,7 +30,6 @@ executable("story_info") {
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/cpp:scoped_context_value",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/lifecycle/fidl",
     "//peridot/public/lib/story/fidl",
