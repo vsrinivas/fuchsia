@@ -1,7 +1,7 @@
 ---
 Checks:          'clang-diagnostic-*,-clang-diagnostic-unused-command-line-argument,clang-analyzer-*,-clang-analyzer-core.NullDereference,-clang-analyzer-unix.Malloc,google-*,misc-*,-misc-noexcept*,modernize-*,-modernize-deprecated-headers,-modernize-raw-string-literal,-modernize-return-braced-init-list,-modernize-use-auto,-modernize-use-equals-delete,-modernize-use-equals-default,performance-*,-performance-unnecessary-value-param,readability-*,-readability-implicit-bool-cast'
 WarningsAsErrors: false
-HeaderFilterRegex: '\.\./apps/ledger/(benchmark|cloud_provider_firebase|src/([^t].*|t[^h].*|th[^i].*))'
+HeaderFilterRegex: '\.\./peridot/bin/ledger/([^t].*|t[^h].*|th[^i].*)'
 AnalyzeTemporaryDtors: false
 FormatStyle:     file
 CheckOptions:
