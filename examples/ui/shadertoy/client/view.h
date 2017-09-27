@@ -22,6 +22,9 @@ class View : public mozart::BaseView {
 
   ~View() override;
 
+  // mozart::BaseView.
+  virtual bool OnInputEvent(mozart::InputEventPtr event) override;
+
  private:
   // |BaseView|.
   void OnSceneInvalidated(
@@ -35,7 +38,21 @@ class View : public mozart::BaseView {
 
   std::vector<scenic_lib::ShapeNode> nodes_;
 
+  enum AnimationState {
+    kFourCorners,
+    kSwirling,
+    kChangingToFourCorners,
+    kChangingToSwirling
+  };
+  AnimationState animation_state_ = kFourCorners;
+
+  // Output a parameter that represents the progress through the current
+  // transition state.  If transition is finished, set |animation_state_| to
+  // new value.
+  float UpdateTransition(zx_time_t presentation_time);
+
   const zx_time_t start_time_;
+  zx_time_t transition_start_time_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(View);
 };

@@ -4,10 +4,28 @@
 
 #include "garnet/examples/ui/shadertoy/client/view.h"
 
+#if defined(countof)
+// TODO(ZX-377): Workaround for compiler error due to Zircon defining countof()
+// as a macro.  Redefines countof() using GLM_COUNTOF(), which currently
+// provides a more sophisticated implementation anyway.
+#undef countof
+#include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
+#include <glm/gtc/type_ptr.hpp>
+
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 
 namespace shadertoy_client {
+
+namespace {
+constexpr uint32_t kShapeWidth = 480;
+constexpr uint32_t kShapeHeight = 360;
+}  // namespace
 
 View::View(app::ApplicationContext* application_context,
            mozart::ViewManagerPtr view_manager,
@@ -39,8 +57,7 @@ View::View(app::ApplicationContext* application_context,
   });
 
   // Set the GLSL source code for the Shadertoy.
-  constexpr uint32_t kShapeWidth = 384;
-  constexpr uint32_t kShapeHeight = 288;
+
   shadertoy_->SetResolution(kShapeWidth, kShapeHeight);
   shadertoy_->SetShaderCode(GetSeascapeSourceCode(), [this](bool success) {
     if (success) {
@@ -77,6 +94,32 @@ View::View(app::ApplicationContext* application_context,
 
 View::~View() = default;
 
+float View::UpdateTransition(zx_time_t presentation_time) {
+  double transition_elapsed_seconds =
+      static_cast<double>(presentation_time - transition_start_time_) /
+      1'000'000'000;
+  constexpr double kTransitionDuration = 0.5;
+
+  float transition_param = transition_elapsed_seconds / kTransitionDuration;
+
+  if (transition_param >= 1.f) {
+    if (animation_state_ == kChangingToFourCorners) {
+      animation_state_ = kFourCorners;
+    } else if (animation_state_ == kChangingToSwirling) {
+      animation_state_ = kSwirling;
+    }
+  }
+
+  if (animation_state_ == kFourCorners) {
+    transition_param = 1.f;
+  } else if (animation_state_ == kSwirling) {
+    transition_param = 0.f;
+  } else if (animation_state_ == kChangingToSwirling) {
+    transition_param = 1.f - transition_param;
+  }
+  return glm::smoothstep(0.f, 1.f, transition_param);
+}
+
 void View::OnSceneInvalidated(scenic::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
@@ -86,21 +129,78 @@ void View::OnSceneInvalidated(scenic::PresentationInfoPtr presentation_info) {
       static_cast<double>(presentation_info->presentation_time - start_time_) /
       1'000'000'000;
 
+  float transition_param =
+      UpdateTransition(presentation_info->presentation_time);
+
   const float kHalfWidth = logical_size().width * 0.5f;
   const float kHalfHeight = logical_size().height * 0.5f;
 
   for (size_t i = 0; i < nodes_.size(); ++i) {
+    // Compute the translation for kSwirling mode.
     // Each node has a slightly different speed.
     float animation_progress = seconds * (32 + i) / 32.f;
-    nodes_[i].SetTranslation(
+    glm::vec3 swirl_translation(
         kHalfWidth + sin(animation_progress * 0.8) * kHalfWidth * 1.1,
         kHalfHeight + sin(animation_progress * 0.6) * kHalfHeight * 1.2,
         50.0 + i);
+
+    // Compute the translation for kFourCorners mode.
+    int quadrant = (i / 4) % 4;
+    glm::vec3 quadrant_translation;
+    if (quadrant == 0) {
+      quadrant_translation =
+          glm::vec3(kHalfWidth * 0.5, kHalfHeight * 0.5, 50 + i);
+    } else if (quadrant == 1) {
+      quadrant_translation =
+          glm::vec3(kHalfWidth * 0.5, kHalfHeight * 1.5, 50 + i);
+    } else if (quadrant == 2) {
+      quadrant_translation =
+          glm::vec3(kHalfWidth * 1.5, kHalfHeight * 0.5, 50 + i);
+    } else if (quadrant == 3) {
+      quadrant_translation =
+          glm::vec3(kHalfWidth * 1.5, kHalfHeight * 1.5, 50 + i);
+    }
+
+    glm::vec3 translation =
+        glm::mix(swirl_translation, quadrant_translation, transition_param);
+    float scale = 0.8f + 0.5f * transition_param;
+
+    nodes_[i].SetTranslation(translation.x, translation.y, translation.z);
+    nodes_[i].SetScale(scale, scale, scale);
   }
 
   // The rounded-rectangles are constantly animating; invoke InvalidateScene()
   // to guarantee that OnSceneInvalidated() will be called again.
   InvalidateScene();
+}
+
+bool View::OnInputEvent(mozart::InputEventPtr event) {
+  if (animation_state_ == kChangingToFourCorners ||
+      animation_state_ == kChangingToSwirling) {
+    // Ignore input until transition is complete.
+    return false;
+  }
+
+  if (event->is_pointer()) {
+    const mozart::PointerEventPtr& pointer = event->get_pointer();
+    if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
+      switch (animation_state_) {
+        case kFourCorners:
+          animation_state_ = kChangingToSwirling;
+          transition_start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
+          return true;
+        case kSwirling:
+          animation_state_ = kChangingToFourCorners;
+          transition_start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC);
+          return true;
+        default:
+          // This will never happen, because we checked above that we're not
+          // in a transitional state.
+          FXL_DCHECK(false) << "already in transition.";
+      }
+    }
+  }
+  return false;
 }
 
 }  // namespace shadertoy_client
