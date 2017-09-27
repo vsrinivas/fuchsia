@@ -13,6 +13,16 @@ interface DeviceMap {
 
   // Returns the current device from the device map.
   GetCurrentDevice() => (DeviceMapEntry device);
+
+  // Sets the profile string for the current device.
+  // HACK(jimbe) This is a quick-and-dirty solution for FW-316. It needs to be
+  // completely redesigned once the Framework has a concept of profile (such
+  // as landscape/portrait.)
+  SetCurrentDeviceProfile(string profile);
+
+  // Requests a notification for each change to the DeviceMap. The given
+  // watcher will receive an initial notification for each existing device.
+  WatchDeviceMap(DeviceMapWatcher watcher);
 };
 
 struct DeviceMapEntry {
@@ -33,4 +43,16 @@ struct DeviceMapEntry {
   // HACK(zbowling): this is temporary to assist with matching devices in
   // netconnector RPC discovery.
   string hostname;
+
+  // The time that this DeviceMapEntry was last changed. Will never be zero.
+  // Measured in Unix time, seconds since the epoch. This is not a heartbeat.
+  // Intended to allow detection of stale device entries.
+  uint64 last_change_timestamp;
+};
+
+// Implemented by the client calling DeviceMap.Watch().
+interface DeviceMapWatcher {
+  // Called with the current state right after registration, and subsequently
+  // when the state changes.
+  OnDeviceMapChange(DeviceMapEntry entry);
 };

@@ -5,8 +5,11 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_DEVICE_MAP_IMPL_H_
 #define PERIDOT_BIN_USER_RUNNER_DEVICE_MAP_IMPL_H_
 
+#include <map>
+
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/user/fidl/device_map.fidl.h"
@@ -38,17 +41,36 @@ class DeviceMapImpl : DeviceMap, PageClient {
   // |DeviceMap|
   void GetCurrentDevice(const GetCurrentDeviceCallback& callback) override;
 
+  // |DeviceMap|
+  void SetCurrentDeviceProfile(const ::fidl::String& profile) override;
+
+  // |DeviceMap|
+  void WatchDeviceMap(fidl::InterfaceHandle<DeviceMapWatcher> watcher) override;
+
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
 
   // |PageClient|
   void OnPageDelete(const std::string& key) override;
 
+  // Update the timestamp for the current device and save it to the Ledger.
+  void SaveCurrentDevice();
+
+  // Notify all watchers that the given device has changed
+  void Notify(const std::string& device_id);
+
+  // Clients that have connected to this service.
   fidl::BindingSet<DeviceMap> bindings_;
 
-  DeviceMapEntry current_device_;
+  // All known devices from the Ledger page.
+  std::map<std::string, DeviceMapEntryPtr> devices_;
+
+  // The local device in the |devices_| map.
+  std::string current_device_id_;
 
   OperationQueue operation_queue_;
+
+  fidl::InterfacePtrSet<modular::DeviceMapWatcher> change_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
 };

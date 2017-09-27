@@ -34,10 +34,7 @@ namespace {
 // from JSON.
 
 void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
-  // TODO(jimbe) Remove error handler after 2017-08-01
-  xdr->ReadErrorHandler(
-         [&data] { data->last_focus_time = zx_time_get(ZX_CLOCK_UTC); })
-      ->Field("last_focus_time", &data->last_focus_time);
+  xdr->Field("last_focus_time", &data->last_focus_time);
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
   xdr->Field("extra", &data->extra);

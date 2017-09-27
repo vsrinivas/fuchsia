@@ -75,8 +75,7 @@ void FocusHandler::Set(const fidl::String& story_id) {
   FocusInfoPtr data = FocusInfo::New();
   data->device_id = device_id_;
   data->focused_story_id = story_id;
-  data->last_focus_change_timestamp =
-      fxl::TimePoint::Now().ToEpochDelta().ToSeconds();
+  data->last_focus_change_timestamp = time(nullptr);
 
   new WriteDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
       &operation_queue_, page(), MakeFocusKey(device_id_), XdrFocusInfo,

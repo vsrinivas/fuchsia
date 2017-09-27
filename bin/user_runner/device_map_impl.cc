@@ -7,14 +7,12 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fsl/vmo/strings.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/time/time_point.h"
-#include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
-#include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {
 
@@ -25,6 +23,11 @@ void XdrDeviceData(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("device_id", &data->device_id);
   xdr->Field("profile", &data->profile);
   xdr->Field("hostname", &data->hostname);
+
+  // TODO(jimbe) Remove error handler after 2017-12-01
+  // The time below is 26 Sep 2017 17:44:40 GMT, just to mark the entry as old.
+  xdr->ReadErrorHandler([data] { data->last_change_timestamp = 1506447879; })
+      ->Field("last_change_timestamp", &data->last_change_timestamp);
 }
 
 std::string LoadHostname() {
@@ -50,14 +53,17 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                  ledger_client,
                  std::move(page_id),
                  kDeviceKeyPrefix) {
-  current_device_.name = device_name;
-  current_device_.device_id = device_id;
-  current_device_.profile = device_profile;
-  current_device_.hostname = LoadHostname();
+  current_device_id_ = device_id;
 
-  new WriteDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
-      &operation_queue_, page(), MakeDeviceKey(device_id), XdrDeviceData,
-      current_device_.Clone(), [] {});
+  // TODO(jimbe) Load the DeviceMapEntry for the current device from the Ledger.
+  DeviceMapEntryPtr device = DeviceMapEntry::New();
+  device->name = device_name;
+  device->device_id = device_id;
+  device->profile = device_profile;
+  device->hostname = LoadHostname();
+
+  devices_[device_id] = std::move(device);
+  SaveCurrentDevice();
 }
 
 DeviceMapImpl::~DeviceMapImpl() = default;
@@ -67,21 +73,63 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 }
 
 void DeviceMapImpl::Query(const QueryCallback& callback) {
-  new ReadAllDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
+  new ReadAllDataCall<DeviceMapEntry>(
       &operation_queue_, page(), kDeviceKeyPrefix, XdrDeviceData, callback);
 }
 
 void DeviceMapImpl::GetCurrentDevice(const GetCurrentDeviceCallback& callback) {
-  callback(current_device_.Clone());
+  callback(devices_[current_device_id_].Clone());
+}
+
+void DeviceMapImpl::SetCurrentDeviceProfile(const ::fidl::String& profile) {
+  devices_[current_device_id_]->profile = profile;
+  Notify(current_device_id_);
+  SaveCurrentDevice();
+}
+
+void DeviceMapImpl::SaveCurrentDevice() {
+  auto& device = devices_[current_device_id_];
+  device->last_change_timestamp = time(nullptr);
+
+  new WriteDataCall<DeviceMapEntry>(&operation_queue_, page(),
+                                    MakeDeviceKey(current_device_id_),
+                                    XdrDeviceData, device->Clone(), [] {});
+}
+
+void DeviceMapImpl::WatchDeviceMap(
+    fidl::InterfaceHandle<DeviceMapWatcher> watcher) {
+  auto watcher_ptr = DeviceMapWatcherPtr::Create(std::move(watcher));
+  for (const auto& item : devices_) {
+    const auto& device = item.second;
+    watcher_ptr->OnDeviceMapChange(device->Clone());
+  }
+  change_watchers_.AddInterfacePtr(std::move(watcher_ptr));
+}
+
+void DeviceMapImpl::Notify(const std::string& device_id) {
+  const DeviceMapEntryPtr& device = devices_[current_device_id_];
+  change_watchers_.ForAllPtrs([&device](DeviceMapWatcher* watcher)
+                              { watcher->OnDeviceMapChange(device.Clone()); });
 }
 
 void DeviceMapImpl::OnPageChange(const std::string& key,
-                                 const std::string& /*value*/) {
-  FXL_LOG(INFO) << "New Device: " << key;
+                                 const std::string& value) {
+  FXL_LOG(INFO) << "Updated Device: " << key << " value=" << value;
+
+  auto device = DeviceMapEntry::New();
+  if (!XdrRead(value, &device, XdrDeviceData)) {
+    FXL_DCHECK(false);
+    return;
+  }
+
+  const fidl::String& device_id = device->device_id;
+  devices_[device_id] = std::move(device);
+  Notify(device_id);
 }
 
 void DeviceMapImpl::OnPageDelete(const std::string& key) {
-  FXL_LOG(INFO) << "Deleted Device: " << key;
+  // This shouldn't happen.
+  FXL_LOG(ERROR) << "Deleted Device: " << key;
 }
 
 }  // namespace modular

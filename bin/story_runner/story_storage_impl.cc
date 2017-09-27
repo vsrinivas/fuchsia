@@ -34,15 +34,8 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   // TODO(mesch): Rename the XDR field eventually.
   xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
-
-  // TODO(jimbe) Remove error handler after 2017-08-01
-  xdr->ReadErrorHandler(
-         [data] { data->surface_relation = SurfaceRelation::New(); })
-      ->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-
-  // TODO(jimbe) Remove error handler after 2017-08-01
-  xdr->ReadErrorHandler([data] { data->module_stopped = false; })
-      ->Field("module_stopped", &data->module_stopped);
+  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
+  xdr->Field("module_stopped", &data->module_stopped);
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,

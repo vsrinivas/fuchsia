@@ -130,6 +130,29 @@ class ModuleMonitor : modular::ModuleWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
+class DeviceMapMonitor : modular::DeviceMapWatcher {
+ public:
+  DeviceMapMonitor(modular::DeviceMap* const device_map,
+                   std::vector<modular::DeviceMapEntryPtr> devices)
+      : binding_(this), devices_(std::move(devices)) {
+    device_map->WatchDeviceMap(binding_.NewBinding());
+  }
+
+  void OnDeviceMapChange(modular::DeviceMapEntryPtr entry) override {
+    FXL_LOG(INFO) << "OnDeviceMapChange() " << entry->name << " "
+                  << entry->profile;
+    for (const auto& device : devices_) {
+      if (entry->device_id == device->device_id) return;
+    }
+    FXL_CHECK(false);
+  }
+
+ private:
+  fidl::Binding<DeviceMapWatcher> binding_;
+  std::vector<modular::DeviceMapEntryPtr> devices_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapMonitor);
+};
+
 class AdderImpl : public modular::examples::Adder {
  public:
   AdderImpl() = default;
@@ -307,11 +330,16 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
     device_map_ = application_context()
                       ->ConnectToEnvironmentService<modular::DeviceMap>();
 
-    device_map_->Query([](fidl::Array<modular::DeviceMapEntryPtr> devices) {
-      FXL_LOG(INFO) << "Known devices:";
+    device_map_->Query([this](fidl::Array<modular::DeviceMapEntryPtr> devices) {
+      FXL_LOG(INFO) << "Devices from device_map_->Query():";
       for (modular::DeviceMapEntryPtr& device : devices) {
         FXL_LOG(INFO) << " - " << device->name;
+        device_map_entries_.emplace_back(std::move(device));
       }
+
+      device_map_monitor_.reset(new DeviceMapMonitor(
+          device_map_.get(), std::move(device_map_entries_)));
+      device_map_->SetCurrentDeviceProfile("5");
     });
   }
 
@@ -352,6 +380,8 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
   modular::DeviceMapPtr device_map_;
+  std::vector<modular::DeviceMapEntryPtr> device_map_entries_;
+  std::unique_ptr<DeviceMapMonitor> device_map_monitor_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RecipeApp);
 };
