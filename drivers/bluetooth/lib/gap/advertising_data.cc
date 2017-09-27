@@ -425,7 +425,7 @@ common::Optional<uint16_t> AdvertisingData::appearance() const {
   return appearance_;
 }
 
-size_t AdvertisingData::block_size() const {
+size_t AdvertisingData::CalculateBlockSize() const {
   size_t len = 0;
   if (tx_power_) len += 3;
   if (appearance_) len += 4;
@@ -476,8 +476,10 @@ size_t AdvertisingData::block_size() const {
 }
 
 bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
-  if (buffer->size() < block_size())
+  FXL_DCHECK(buffer);
+  if (buffer->size() < CalculateBlockSize())
     return false;
+
   size_t pos = 0;
   if (tx_power_) {
     (*buffer)[pos++] = 2;
@@ -494,8 +496,8 @@ bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
   if (local_name_) {
     (*buffer)[pos++] = 1 + local_name_->size();
     (*buffer)[pos++] = static_cast<uint8_t>(DataType::kCompleteLocalName);
-    std::copy(local_name_->begin(), local_name_->end(),
-              buffer->mutable_data() + pos);
+    buffer->Write(reinterpret_cast<const uint8_t*>(local_name_->c_str()),
+                  local_name_->length(), pos);
     pos += local_name_->size();
   }
 
@@ -533,7 +535,7 @@ bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
     std::string s = EncodeUri(uri);
     (*buffer)[pos++] = 1 + s.size();
     (*buffer)[pos++] = static_cast<uint8_t>(DataType::kURI);
-    std::copy(s.begin(), s.end(), buffer->mutable_data() + pos);
+    buffer->Write(reinterpret_cast<const uint8_t*>(s.c_str()), s.length(), pos);
     pos += s.size();
   }
 

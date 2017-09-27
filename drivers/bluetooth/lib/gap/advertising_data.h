@@ -114,9 +114,9 @@ class AdvertisingData {
   // Get the appearance
   common::Optional<uint16_t> appearance() const;
 
-  // Returns the size of the current set of fields if they were to be written to
-  // a buffer using WriteBlock()
-  size_t block_size() const;
+  // Calculates the size of the current set of fields if they were to be written
+  // to a buffer using WriteBlock()
+  size_t CalculateBlockSize() const;
 
   // Writes the byte representation of this to |buffer|.
   // Returns false without modifying |buffer| if there is not enough space

@@ -29,7 +29,7 @@ TEST(AdvertisingDataTest, ReaderEmptyData) {
 TEST(AdvertisingDataTest, MakeEmpty) {
   AdvertisingData data;
 
-  EXPECT_EQ(0u, data.block_size());
+  EXPECT_EQ(0u, data.CalculateBlockSize());
 }
 
 TEST(AdvertisingDataTest, EncodeKnownURI) {
@@ -39,8 +39,8 @@ TEST(AdvertisingDataTest, EncodeKnownURI) {
   auto bytes = common::CreateStaticByteBuffer(0x0B, 0x24, 0x17, '/', '/', 'a',
                                               'b', 'c', '.', 'x', 'y', 'z');
 
-  EXPECT_EQ(bytes.size(), data.block_size());
-  common::DynamicByteBuffer block(data.block_size());
+  EXPECT_EQ(bytes.size(), data.CalculateBlockSize());
+  common::DynamicByteBuffer block(data.CalculateBlockSize());
   data.WriteBlock(&block);
   EXPECT_TRUE(ContainersEqual(bytes, block));
 }
@@ -52,8 +52,9 @@ TEST(AdvertisingDataTest, EncodeUnknownURI) {
   auto bytes = common::CreateStaticByteBuffer(0x0B, 0x24, 0x01, 'f', 'l', 'u',
                                               'b', 's', ':', 'x', 'y', 'z');
 
-  EXPECT_EQ(bytes.size(), data.block_size());
-  common::DynamicByteBuffer block(data.block_size());
+  size_t block_size = data.CalculateBlockSize();
+  EXPECT_EQ(bytes.size(), block_size);
+  common::DynamicByteBuffer block(block_size);
   data.WriteBlock(&block);
   EXPECT_TRUE(ContainersEqual(bytes, block));
 }
@@ -63,13 +64,14 @@ TEST(AdvertisingDataTest, CompressServiceUUIDs) {
   data.AddServiceUuid(common::UUID(kId1As16));
   data.AddServiceUuid(common::UUID(kId2As16));
 
-  EXPECT_EQ(1 + 1 + (sizeof(uint16_t) * 2), data.block_size());
+  EXPECT_EQ(1 + 1 + (sizeof(uint16_t) * 2), data.CalculateBlockSize());
 
   auto bytes =
       common::CreateStaticByteBuffer(0x05, 0x02, 0x12, 0x02, 0x22, 0x11);
 
-  EXPECT_EQ(bytes.size(), data.block_size());
-  common::DynamicByteBuffer block(data.block_size());
+  size_t block_size = data.CalculateBlockSize();
+  EXPECT_EQ(bytes.size(), block_size);
+  common::DynamicByteBuffer block(block_size);
   data.WriteBlock(&block);
 
   EXPECT_TRUE(ContainersEqual(bytes, block));
