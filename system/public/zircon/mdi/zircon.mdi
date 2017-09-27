@@ -3,7 +3,6 @@
 // Top level nodes
 list    kernel                            MDI_KERNEL                            1
 list    cpu-map                           MDI_CPU_MAP                           2
-list    platform                          MDI_PLATFORM                          3
 
 // Common definitions
 string  name                              MDI_NAME                              10
@@ -16,28 +15,6 @@ uint32  irq                               MDI_IRQ                               
 //string  cpu-map.clusters.name
 list    cpu-map.clusters                  MDI_CPU_CLUSTERS                      100
 uint8   cpu-map.clusters.cpu-count        MDI_CPU_COUNT                         101
-
-// platform-bus nodes
-uint32  platform.vid                      MDI_PLATFORM_VID                      200
-uint32  platform.pid                      MDI_PLATFORM_PID                      201
-list    platform.device                   MDI_PLATFORM_DEVICE                   202
-uint32  platform.device.vid               MDI_PLATFORM_DEVICE_VID               203
-uint32  platform.device.pid               MDI_PLATFORM_DEVICE_PID               204
-uint32  platform.device.did               MDI_PLATFORM_DEVICE_DID               205
-boolean platform.device.enabled           MDI_PLATFORM_DEVICE_ENABLED           206
-
-list    platform.bus                      MDI_PLATFORM_BUS                      210
-
-list    platform.bus.gpios                MDI_PLATFORM_BUS_GPIOS                211
-uint32  platform.bus.gpios.start          MDI_PLATFORM_BUS_GPIOS_START          212
-uint32  platform.bus.gpios.count          MDI_PLATFORM_BUS_GPIOS_COUNT          213
-uint32  platform.bus.gpios.mmio_index     MDI_PLATFORM_BUS_GPIOS_MMIO_INDEX     214
-
-// platform.*.mmios elements have base-phys and length
-list mmios                                MDI_PLATFORM_MMIOS                    220
-
-// list of IRQs for a platform device or bus
-array[uint32] irqs                        MDI_PLATFORM_IRQS                     221
 
 // Kernel Drivers
 
@@ -91,13 +68,3 @@ list    kernel.arm-gic-v2-pcie            MDI_ARM_GIC_V2_PCIE                   
 
 // AmLogic S905
 list    kernel.s905-uart                  MDI_S905_UART                         1090
-
-// VID and PID for generic platform devices (that is, devices that may be used by multiple vendors).
-const PDEV_VID_GENERIC = 0
-const PDEV_PID_GENERIC = 0
-
-// Platform device IDs for generic devices
-const PDEV_DID_USB_DWC3 = 1
-const PDEV_DID_USB_XHCI = 2
-const PDEV_DID_KPCI = 3
-const PDEV_DID_ARM_MALI = 4

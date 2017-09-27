@@ -38,10 +38,3 @@ kernel = {
         irq-virt = 27
     }
 }
-
-platform = {
-    vid = 0x12D1
-    pid = 0x0960
-
-    bus = {}
-}

@@ -31,10 +31,3 @@ kernel = {
     }
     arm-gic-v2-pcie = {}
 }
-
-platform = {
-    vid = 0x1234
-    pid = 1
-
-    bus = {}
-}

@@ -16,6 +16,10 @@ kernel = {
     }
 }
 
+/*
+TODO: This will need to be reimplemented in the bcm-mailbox driver
+for the rpi3 userspace drivers to work again
+
 platform = {
     vid = 0xBC
     pid = 1
@@ -103,3 +107,4 @@ platform = {
         did = 5
     }
 }
+*/
