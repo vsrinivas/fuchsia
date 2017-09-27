@@ -367,18 +367,18 @@ bool Process::Start() {
     return false;
   }
 
-  // launchpad_start returns a dup of the process handle (owned by
+  // launchpad_go returns a dup of the process handle (owned by
   // |launchpad_|), where the original handle is given to the child. We have to
   // close the dup handle to avoid leaking it.
-  zx_handle_t dup_handle = launchpad_start(launchpad_);
+  zx_handle_t dup_handle;
+  zx_status_t status = launchpad_go(launchpad_, &dup_handle, nullptr);
 
-  // Launchpad is no longer needed after launchpad_start returns.
-  launchpad_destroy(launchpad_);
+  // Launchpad is no longer needed after launchpad_go returns.
   launchpad_ = nullptr;
 
-  if (dup_handle < 0) {
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start inferior process: "
-                   << util::ZxErrorString(dup_handle);
+                   << util::ZxErrorString(status);
     return false;
   }
   zx_handle_close(dup_handle);

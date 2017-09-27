@@ -1298,7 +1298,7 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
   FXL_DCHECK(current_process->IsAttached());
 
   // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
-  // Zircon, calling zx_process_start (called by launchpad_start, which is
+  // Zircon, calling zx_process_start (called by launchpad_go, which is
   // called by Process::Start()) creates a synthetic exception of type
   // ZX_EXCP_START if a debugger is attached to the process and halts until a
   // call to zx_task_resume (i.e. called by Thread::Resume() in gdbserver).
