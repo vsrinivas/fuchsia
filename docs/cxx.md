@@ -12,7 +12,6 @@ allowed.
   - Exceptions
   - RTTI and `dynamic_cast`
   - Operator overloading
-  - Default parameters
   - Virtual inheritance
   - Statically constructed objects
   - Trailing return type syntax
@@ -26,6 +25,9 @@ allowed.
   - `nullptr`
   - `enum class`es
   - `template`s
+  - Default parameters
+    - But use judgment. One optional out parameter at the end is
+      probably fine. Four optional bool arguments, probably not.
   - Plain old classes
   - `auto`
   - Multiple implementation inheritance
