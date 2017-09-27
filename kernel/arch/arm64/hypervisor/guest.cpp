@@ -12,16 +12,19 @@
 
 // static
 zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out) {
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<Guest> guest(new (&ac) Guest);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
-
-    zx_status_t status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
+    uint8_t vmid;
+    zx_status_t status = alloc_vmid(&vmid);
     if (status != ZX_OK)
         return status;
 
-    status = alloc_vmid(&guest->vmid_);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Guest> guest(new (&ac) Guest(vmid));
+    if (!ac.check()) {
+        free_vmid(vmid);
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
     if (status != ZX_OK)
         return status;
 
@@ -29,9 +32,10 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     return ZX_OK;
 }
 
+Guest::Guest(uint8_t vmid) : vmid_(vmid) {}
+
 Guest::~Guest() {
-    if (vmid_ != 0)
-        free_vmid(vmid_);
+    free_vmid(vmid_);
 }
 
 zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,

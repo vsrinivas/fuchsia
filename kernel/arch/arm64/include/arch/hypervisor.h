@@ -33,10 +33,10 @@ public:
 private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     PacketMux mux_;
-    uint8_t vmid_ = 0;
+    const uint8_t vmid_;
     uint8_t next_vpid_ = 0;
 
-    Guest() = default;
+    explicit Guest(uint8_t vmid);
 };
 
 class Vcpu {
