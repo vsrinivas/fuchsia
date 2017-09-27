@@ -13,8 +13,8 @@ dart_app("mi_dashboard_dart") {
   source_dir = "."
 
   deps = [
-    "//garnet/public/lib/app/dart",
-    "//garnet/public/lib/fidl/dart",
+    "//topaz/public/lib/app/dart",
+    "//topaz/public/lib/fidl/dart",
     "//peridot/public/lib/context/dart",
     "//peridot/public/lib/context/fidl:fidl_dart",
     "//peridot/public/lib/suggestion/fidl:debug_dart",

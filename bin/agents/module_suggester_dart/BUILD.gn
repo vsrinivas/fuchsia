@@ -12,7 +12,7 @@ dart_app("module_suggester_dart") {
   source_dir = "."
 
   deps = [
-    "//garnet/public/lib/app/dart",
+    "//topaz/public/lib/app/dart",
     "//peridot/public/lib/decomposition/dart",
     "//peridot/public/lib/suggestion/fidl:fidl_dart",
     "//topaz/runtime/web_runner/lib/dart:web_view",

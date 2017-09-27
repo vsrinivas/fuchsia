@@ -103,11 +103,11 @@ import("//flutter/build/flutter_app.gni")
 flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
   deps = [
-    "//garnet/public/lib/app/dart",               # needed for ApplicationContext
+    "//topaz/public/lib/app/dart",               # needed for ApplicationContext
     "//peridot/public/lib/module/fidl:fidl_dart", # module fidl dart bindings
     "//peridot/public/lib/story/fidl:fidl_dart", # story fidl dart bindings
     "//garnet/public/lib/ui/views/fidl:fidl_dart",  # view fidl dart bindings
-    "//garnet/public/lib/fidl/dart",            # fidl dart libraries
+    "//topaz/public/lib/fidl/dart",            # fidl dart libraries
     "//lib/flutter/packages/flutter",           # flutter package
   ]
 }

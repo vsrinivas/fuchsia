@@ -16,9 +16,9 @@ flutter_app("example_flutter_photos") {
   source_dir = "lib"
 
   deps = [
-    "//garnet/public/lib/app/dart",
-    "//garnet/public/lib/fidl/dart",
-    "//garnet/public/lib/ui/flutter",
+    "//topaz/public/lib/app/dart",
+    "//topaz/public/lib/fidl/dart",
+    "//topaz/public/lib/ui/flutter",
     "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//lib/flutter/packages/flutter",
     "//peridot/public/lib/lifecycle/fidl:fidl_dart",

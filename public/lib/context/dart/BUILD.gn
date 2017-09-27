@@ -10,7 +10,7 @@ dart_package("dart") {
   source_dir = "."
 
   deps = [
-    "//garnet/public/lib/app/dart",
+    "//topaz/public/lib/app/dart",
     "//peridot/public/lib/context/fidl:fidl_dart",
   ]
 }

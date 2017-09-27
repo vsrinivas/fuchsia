@@ -13,8 +13,8 @@ group("hello_world_flutter") {
 flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
   deps = [
-    "//garnet/public/lib/app/dart",
-    "//garnet/public/lib/fidl/dart",
+    "//topaz/public/lib/app/dart",
+    "//topaz/public/lib/fidl/dart",
     "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//lib/flutter/packages/flutter",
     "//peridot/public/lib/lifecycle/fidl:fidl_dart",

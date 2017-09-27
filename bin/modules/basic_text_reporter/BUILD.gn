@@ -7,8 +7,8 @@ import("//flutter/build/flutter_app.gni")
 flutter_app("basic_text_reporter") {
   main_dart = "lib/main.dart"
   deps = [
-    "//garnet/public/lib/app/dart",
-    "//garnet/public/lib/fidl/dart",
+    "//topaz/public/lib/app/dart",
+    "//topaz/public/lib/fidl/dart",
     "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//lib/flutter/packages/flutter",
     "//peridot/public/lib/context/fidl:fidl_dart",
