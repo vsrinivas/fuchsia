@@ -21,14 +21,15 @@
 
 typedef struct test {
     vcpu_ctx_t vcpu_ctx;
-    guest_ctx_t guest_ctx;
     IoApic io_apic;
     IoPort io_port;
     PciBus pci_bus;
     zx_vcpu_io_t vcpu_io;
+    Guest guest;
 
     test()
-        : vcpu_ctx(ZX_HANDLE_INVALID, 0), pci_bus(ZX_HANDLE_INVALID, &io_apic) {}
+        : vcpu_ctx(ZX_HANDLE_INVALID, 0),
+          pci_bus(ZX_HANDLE_INVALID, &io_apic) {}
 } test_t;
 
 static zx_status_t vcpu_read_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
@@ -47,10 +48,10 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
 }
 
 static void setup(test_t* test) {
-    test->guest_ctx.io_apic = &test->io_apic;
-    test->guest_ctx.io_port = &test->io_port;
-    test->guest_ctx.pci_bus = &test->pci_bus;
-    test->vcpu_ctx.guest_ctx = &test->guest_ctx;
+    test->guest.io_apic = &test->io_apic;
+    test->guest.io_port = &test->io_port;
+    test->guest.pci_bus = &test->pci_bus;
+    test->vcpu_ctx.guest = &test->guest;
 
     // Redirect read/writes to the VCPU state to just access a field in the
     // test structure.
@@ -76,7 +77,7 @@ static bool handle_input_packet(void) {
     // Initialize the hosts register to an arbitrary non-zero value.
     Uart uart(&test.io_apic);
     uart.set_line_control(0xfe);
-    test.guest_ctx.uart = &uart;
+    test.guest.uart = &uart;
 
     // Send a guest packet to to read the UART line control port.
     packet.type = ZX_PKT_TYPE_GUEST_IO;
@@ -103,7 +104,7 @@ static bool handle_output_packet(void) {
     setup(&test);
 
     Uart uart(&test.io_apic);
-    test.guest_ctx.uart = &uart;
+    test.guest.uart = &uart;
 
     // Send a guest packet to to write the UART line control port.
     io.input = false;

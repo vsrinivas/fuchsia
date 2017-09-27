@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include <fbl/unique_ptr.h>
+#include <hypervisor/phys_mem.h>
 #include <zircon/types.h>
 
-typedef struct e820entry {
-    uint64_t addr;
-    uint64_t size;
-    uint32_t type;
-} __PACKED e820entry_t;
+class PciBus;
+class IoApic;
+class IoPort;
+class Uart;
 
 /**
  * Create an identity-mapped page table.
@@ -20,6 +21,38 @@ typedef struct e820entry {
  * @param end_off The offset to the end of the page table.
  */
 zx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off);
+
+class Guest {
+public:
+
+    ~Guest();
+
+    zx_status_t Init(size_t mem_size);
+
+    zx_status_t CreatePageTable(uintptr_t* end_off) {
+        return guest_create_page_table(phys_mem_.addr(), phys_mem_.size(), end_off);
+    }
+
+    const PhysMem& phys_mem() const { return phys_mem_; }
+    zx_handle_t handle() const { return guest_; }
+
+    // TODO: Replace these with an interface that allows devices to map
+    // callbacks to address ranges.
+    PciBus* pci_bus;
+    IoApic* io_apic;
+    IoPort* io_port;
+    Uart* uart;
+
+private:
+    zx_handle_t guest_ = ZX_HANDLE_INVALID;
+    PhysMem phys_mem_;
+};
+
+typedef struct e820entry {
+    uint64_t addr;
+    uint64_t size;
+    uint32_t type;
+} __PACKED e820entry_t;
 
 /**
  * Return the size in bytes of e820 memory map.
@@ -36,8 +69,3 @@ size_t guest_e820_size(size_t size);
  * @param e820_off The offset to the e820 memory map.
  */
 zx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off);
-
-/**
- * Get a hypervisor resource to create a guest.
- */
-zx_status_t guest_get_resource(zx_handle_t* resource);

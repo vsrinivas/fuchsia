@@ -2,12 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hypervisor/guest.h>
+
 #include <fcntl.h>
 #include <limits.h>
 #include <unistd.h>
 
-#include <hypervisor/guest.h>
+#include <fbl/alloc_checker.h>
 #include <zircon/device/sysinfo.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/hypervisor.h>
 
 static const char kResourcePath[] = "/dev/misc/sysinfo";
 
@@ -24,6 +29,43 @@ static const uint64_t kAddr64kb     = 0x0000000000010000;
 static const uint64_t kAddr1mb      = 0x0000000000100000;
 static const uint64_t kAddr3500mb   = 0x00000000e0000000;
 static const uint64_t kAddr4000mb   = 0x0000000100000000;
+
+static zx_status_t guest_get_resource(zx_handle_t* resource) {
+    int fd = open(kResourcePath, O_RDWR);
+    if (fd < 0)
+        return ZX_ERR_IO;
+    ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd, resource);
+    close(fd);
+    return n < 0 ? ZX_ERR_IO : ZX_OK;
+}
+
+zx_status_t Guest::Init(size_t mem_size) {
+    zx_status_t status = phys_mem_.Init(mem_size);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create guest physical memory.\n");
+        return status;
+    }
+
+    zx_handle_t resource;
+    status = guest_get_resource(&resource);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to get hypervisor resource.\n");
+        return status;
+    }
+
+    status = zx_guest_create(resource, 0, phys_mem_.vmo(), &guest_);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create guest.\n");
+        return status;
+    }
+    zx_handle_close(resource);
+
+    return ZX_OK;
+}
+
+Guest::~Guest() {
+    zx_handle_close(guest_);
+}
 
 #if __x86_64__
 enum {
@@ -130,13 +172,4 @@ zx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
     }
 
     return ZX_OK;
-}
-
-zx_status_t guest_get_resource(zx_handle_t* resource) {
-    int fd = open(kResourcePath, O_RDWR);
-    if (fd < 0)
-        return ZX_ERR_IO;
-    ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd, resource);
-    close(fd);
-    return n < 0 ? ZX_ERR_IO : ZX_OK;
 }

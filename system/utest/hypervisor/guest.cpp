@@ -16,7 +16,6 @@
 
 #include "constants_priv.h"
 
-static const uint32_t kMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
 static const uint64_t kTrapKey = 0x1234;
 
 extern const char vcpu_resume_start[];
@@ -31,11 +30,11 @@ extern const char guest_set_trap_with_port_end[];
 typedef struct test {
     bool supported;
 
-    zx_handle_t guest;
     zx_handle_t guest_physmem;
     uintptr_t guest_physaddr;
 
     zx_handle_t vcpu;
+    Guest guest;
 #if __x86_64__
     zx_handle_t vcpu_apicmem;
 #endif // __x86_64__
@@ -47,33 +46,20 @@ static bool teardown(test_t* test) {
     ASSERT_EQ(zx_handle_close(test->vcpu_apicmem), ZX_OK);
 #endif // __x86_64__
 
-    ASSERT_EQ(zx_handle_close(test->guest), ZX_OK);
-    ASSERT_EQ(zx_vmar_unmap(zx_vmar_root_self(), test->guest_physaddr, VMO_SIZE), ZX_OK);
-    ASSERT_EQ(zx_handle_close(test->guest_physmem), ZX_OK);
-
     return true;
 }
 
 static bool setup(test_t* test, const char* start, const char* end) {
     memset(test, 0, sizeof(*test));
 
-    ASSERT_EQ(zx_vmo_create(VMO_SIZE, 0, &test->guest_physmem), ZX_OK);
+    zx_status_t status = test->guest.Init(VMO_SIZE);
 
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), 0, test->guest_physmem, 0, VMO_SIZE, kMapFlags,
-                          &test->guest_physaddr),
-              ZX_OK);
-
-    zx_handle_t resource;
-    ASSERT_EQ(guest_get_resource(&resource), ZX_OK);
-
-    zx_status_t status = zx_guest_create(resource, 0, test->guest_physmem, &test->guest);
     test->supported = status != ZX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         fprintf(stderr, "Guest creation not supported\n");
         return teardown(test);
     }
     ASSERT_EQ(status, ZX_OK);
-    zx_handle_close(resource);
 
     // Setup the guest.
     uintptr_t guest_ip = 0;
@@ -81,11 +67,11 @@ static bool setup(test_t* test, const char* start, const char* end) {
 #if __x86_64__
     // TODO(abdulla): Convert test exits to ZX_GUEST_TRAP_BELL, so that they
     // work for both x86-64 and arm64.
-    ASSERT_EQ(zx_guest_set_trap(test->guest, ZX_GUEST_TRAP_IO, EXIT_TEST_PORT, 1, ZX_HANDLE_INVALID,
-                                0),
+    ASSERT_EQ(zx_guest_set_trap(test->guest.handle(), ZX_GUEST_TRAP_IO, EXIT_TEST_PORT, 1,
+                                ZX_HANDLE_INVALID, 0),
               ZX_OK);
-    ASSERT_EQ(guest_create_page_table(test->guest_physaddr, VMO_SIZE, &guest_ip), ZX_OK);
-    memcpy((void*)(test->guest_physaddr + guest_ip), start, end - start);
+    ASSERT_EQ(test->guest.CreatePageTable(&guest_ip), ZX_OK);
+    memcpy((void*)(test->guest.phys_mem().addr() + guest_ip), start, end - start);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), ZX_OK);
 #endif // __x86_64__
 
@@ -96,7 +82,7 @@ static bool setup(test_t* test, const char* start, const char* end) {
         test->vcpu_apicmem,
 #endif // __x86_64__
     };
-    status = zx_vcpu_create(test->guest, 0, &args, &test->vcpu);
+    status = zx_vcpu_create(test->guest.handle(), 0, &args, &test->vcpu);
     test->supported = status != ZX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         fprintf(stderr, "VCPU creation not supported\n");
@@ -118,7 +104,8 @@ static bool vcpu_resume(void) {
     }
 
     // Trap on writes to UART_PORT.
-    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_IO, UART_PORT, 1, ZX_HANDLE_INVALID, 0),
+    ASSERT_EQ(zx_guest_set_trap(test.guest.handle(), ZX_GUEST_TRAP_IO, UART_PORT, 1,
+                                ZX_HANDLE_INVALID, 0),
               ZX_OK);
 
     zx_port_packet_t packet = {};
@@ -221,8 +208,8 @@ static bool guest_set_trap(void) {
     }
 
     // Trap on access to the last page.
-    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_MEM, VMO_SIZE - PAGE_SIZE, PAGE_SIZE,
-                                ZX_HANDLE_INVALID, kTrapKey),
+    ASSERT_EQ(zx_guest_set_trap(test.guest.handle(), ZX_GUEST_TRAP_MEM, VMO_SIZE - PAGE_SIZE,
+                                PAGE_SIZE, ZX_HANDLE_INVALID, kTrapKey),
               ZX_OK);
 
     zx_port_packet_t packet = {};
@@ -262,7 +249,9 @@ static bool guest_set_trap_with_port(void) {
     ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
 
     // Trap on writes to TRAP_PORT.
-    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_IO, TRAP_PORT, 1, port, kTrapKey), ZX_OK);
+    ASSERT_EQ(
+        zx_guest_set_trap(test.guest.handle(), ZX_GUEST_TRAP_IO, TRAP_PORT, 1, port, kTrapKey),
+        ZX_OK);
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
@@ -294,8 +283,8 @@ static bool guest_set_trap_with_bell(void) {
     ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
 
     // Trap on access to the last page.
-    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_BELL, VMO_SIZE - PAGE_SIZE, PAGE_SIZE,
-                                port, kTrapKey),
+    ASSERT_EQ(zx_guest_set_trap(test.guest.handle(), ZX_GUEST_TRAP_BELL, VMO_SIZE - PAGE_SIZE,
+                                PAGE_SIZE, port, kTrapKey),
               ZX_OK);
 
     zx_port_packet_t packet = {};

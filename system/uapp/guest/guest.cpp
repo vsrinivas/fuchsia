@@ -32,7 +32,6 @@
 #include "zircon.h"
 
 static const uint64_t kVmoSize = 1u << 30;
-static const uint32_t kMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
 
 /* Unused memory above this threshold may be reclaimed by the balloon. */
 static uint32_t balloon_threshold_pages = 1024;
@@ -59,7 +58,8 @@ static zx_status_t create_vmo(uint64_t size, uintptr_t* addr, zx_handle_t* vmo) 
     zx_status_t status = zx_vmo_create(size, 0, vmo);
     if (status != ZX_OK)
         return status;
-    return zx_vmar_map(zx_vmar_root_self(), 0, *vmo, 0, size, kMapFlags, addr);
+    return zx_vmar_map(zx_vmar_root_self(), 0, *vmo, 0, size,
+                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, addr);
 }
 
 static void balloon_stats_handler(VirtioBalloon* balloon, const virtio_balloon_stat_t* stats,
@@ -171,37 +171,21 @@ int main(int argc, char** argv) {
     argc -= optind;
     argv += optind;
 
-    uintptr_t addr;
-    zx_handle_t physmem_vmo;
-    zx_status_t status = create_vmo(kVmoSize, &addr, &physmem_vmo);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create guest physical memory\n");
+    Guest guest;
+    zx_status_t status = guest.Init(kVmoSize);
+    if (status != ZX_OK)
         return status;
-    }
 
-    zx_handle_t resource;
-    status = guest_get_resource(&resource);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to get resource\n");
-        return status;
-    }
-
-    zx_handle_t guest;
-    status = zx_guest_create(resource, 0, physmem_vmo, &guest);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create guest\n");
-        return status;
-    }
-    zx_handle_close(resource);
-
+    uintptr_t physmem_addr = guest.phys_mem().addr();
+    size_t physmem_size = guest.phys_mem().size();
     uintptr_t pt_end_off;
-    status = guest_create_page_table(addr, kVmoSize, &pt_end_off);
+    status = guest.CreatePageTable(&pt_end_off);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create page table\n");
         return status;
     }
 
-    status = guest_create_acpi_table(addr, kVmoSize, pt_end_off);
+    status = guest_create_acpi_table(physmem_addr, physmem_size, pt_end_off);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create ACPI table\n");
         return status;
@@ -216,7 +200,7 @@ int main(int argc, char** argv) {
 
     // Load the first page in to allow OS detection without requiring
     // us to seek backwards later.
-    uintptr_t first_page = addr + kVmoSize - PAGE_SIZE;
+    uintptr_t first_page = physmem_addr + physmem_size - PAGE_SIZE;
     ssize_t ret = read(fd, (void*)first_page, PAGE_SIZE);
     if (ret != PAGE_SIZE) {
         fprintf(stderr, "Failed to read first page of kernel\n");
@@ -229,15 +213,15 @@ int main(int argc, char** argv) {
     char guest_cmdline[PATH_MAX];
     const char* zircon_fmt_string = "TERM=uart %s";
     snprintf(guest_cmdline, PATH_MAX, zircon_fmt_string, cmdline ? cmdline : "");
-    status = setup_zircon(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path,
+    status = setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off, fd, ramdisk_path,
                           guest_cmdline, &guest_ip, &bootdata_off);
 
     if (status == ZX_ERR_NOT_SUPPORTED) {
         const char* linux_fmt_string = "earlyprintk=serial,ttyS,115200 console=ttyS0,115200 "
                                        "io_delay=none acpi_rsdp=%#lx clocksource=tsc %s";
         snprintf(guest_cmdline, PATH_MAX, linux_fmt_string, pt_end_off, cmdline ? cmdline : "");
-        status = setup_linux(addr, kVmoSize, first_page, fd, ramdisk_path, guest_cmdline, &guest_ip,
-                             &bootdata_off);
+        status = setup_linux(physmem_addr, physmem_size, first_page, fd, ramdisk_path,
+                             guest_cmdline, &guest_ip, &bootdata_off);
     }
     if (status == ZX_ERR_NOT_SUPPORTED) {
         fprintf(stderr, "Unknown kernel\n");
@@ -266,26 +250,24 @@ int main(int argc, char** argv) {
 #endif // __x86_64__
     };
     zx_handle_t vcpu;
-    status = zx_vcpu_create(guest, 0, &args, &vcpu);
+    status = zx_vcpu_create(guest.handle(), 0, &args, &vcpu);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create VCPU\n");
         return status;
     }
 
-    guest_ctx_t guest_ctx;
-    memset(&guest_ctx, 0, sizeof(guest_ctx));
     // Setup IO APIC.
     IoApic io_apic;
-    guest_ctx.io_apic = &io_apic;
+    guest.io_apic = &io_apic;
     // Setup IO ports.
     IoPort io_port;
-    guest_ctx.io_port = &io_port;
-    status = io_port.Init(guest);
+    guest.io_port = &io_port;
+    status = io_port.Init(guest.handle());
     if (status != ZX_OK)
         return status;
     // Setup PCI.
-    PciBus bus(guest, &io_apic);
-    guest_ctx.pci_bus = &bus;
+    PciBus bus(guest.handle(), &io_apic);
+    guest.pci_bus = &bus;
     status = bus.Init();
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create PCI bus\n");
@@ -293,20 +275,20 @@ int main(int argc, char** argv) {
     }
     // Setup UART.
     Uart uart(&io_apic);
-    guest_ctx.uart = &uart;
-    status = uart.Init(guest);
+    guest.uart = &uart;
+    status = uart.Init(guest.handle());
     if (status != ZX_OK)
         return status;
-    status = uart.StartAsync(guest);
+    status = uart.StartAsync(guest.handle());
     if (status != ZX_OK)
         return status;
     // Setup TPM.
-    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_MEM, TPM_PHYS_BASE,
+    status = zx_guest_set_trap(guest.handle(), ZX_GUEST_TRAP_MEM, TPM_PHYS_BASE,
                                TPM_PHYS_TOP - TPM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
     if (status != ZX_OK)
         return status;
     // Setup block device.
-    VirtioBlock block(addr, kVmoSize);
+    VirtioBlock block(physmem_addr, physmem_size);
     PciDevice& virtio_block = block.pci_device();
     if (block_path != NULL) {
         status = block.Init(block_path);
@@ -318,7 +300,7 @@ int main(int argc, char** argv) {
             return status;
     }
     // Setup memory balloon.
-    VirtioBalloon balloon(addr, kVmoSize, physmem_vmo);
+    VirtioBalloon balloon(physmem_addr, physmem_size, guest.phys_mem().vmo());
     balloon.set_deflate_on_demand(balloon_deflate_on_demand);
     status = bus.Connect(&balloon.pci_device(), PCI_DEVICE_VIRTIO_BALLOON);
     if (status != ZX_OK)
@@ -327,7 +309,7 @@ int main(int argc, char** argv) {
         poll_balloon_stats(&balloon, balloon_poll_interval);
 
     // Setup Virtio GPU.
-    VirtioGpu gpu(addr, kVmoSize);
+    VirtioGpu gpu(physmem_addr, physmem_size);
     if (use_gpu) {
         status = gpu.Init("/dev/class/framebuffer/000");
         if (status != ZX_OK)
@@ -345,7 +327,7 @@ int main(int argc, char** argv) {
         , apic_addr
 #endif
     );
-    vcpu_ctx.guest_ctx = &guest_ctx;
+    vcpu_ctx.guest = &guest;
     // Setup Local APIC.
     status = io_apic.RegisterLocalApic(0, &vcpu_ctx.local_apic);
     if (status != ZX_OK) {

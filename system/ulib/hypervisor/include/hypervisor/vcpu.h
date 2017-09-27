@@ -6,23 +6,11 @@
 
 #include <threads.h>
 
+#include <hypervisor/guest.h>
 #include <hypervisor/local_apic.h>
 #include <zircon/syscalls/hypervisor.h>
 
-class IoApic;
-class IoPort;
-class PciBus;
-class Uart;
-
 typedef struct zx_port_packet zx_port_packet_t;
-
-/* Stores the state associated with the guest. */
-typedef struct guest_ctx {
-    IoApic* io_apic;
-    IoPort* io_port;
-    PciBus* pci_bus;
-    Uart* uart;
-} guest_ctx_t;
 
 /* Typedefs to abstract reading and writing VCPU state. */
 typedef struct vcpu_ctx vcpu_ctx_t;
@@ -40,7 +28,7 @@ typedef struct vcpu_ctx {
     write_state_fn_t write_state;
 
     LocalApic local_apic;
-    guest_ctx_t* guest_ctx = nullptr;
+    Guest* guest = nullptr;
 } vcpu_ctx_t;
 
 /* Controls execution of a VCPU context, providing the main logic. */
