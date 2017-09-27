@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 
+#include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/io_port.h>
 #include <zircon/syscalls.h>
@@ -42,9 +43,8 @@
 
 // clang-format on
 
-zx_status_t io_port_init(io_port_t* io_port, zx_handle_t guest) {
+zx_status_t IoPort::Init(zx_handle_t guest) {
 #if __x86_64__
-    memset(io_port, 0, sizeof(*io_port));
     // Setup PIC.
     zx_status_t status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIC1_COMMAND_PORT,
                                            PIC1_DATA_PORT - PIC1_COMMAND_PORT + 1,
@@ -131,22 +131,24 @@ static zx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     return ZX_OK;
 }
 
-zx_status_t io_port_read(const io_port_t* io_port, uint16_t port, zx_vcpu_io_t* vcpu_io) {
+zx_status_t IoPort::Read(uint16_t port, zx_vcpu_io_t* vcpu_io) const {
 #ifdef __x86_64__
     switch (port) {
     case RTC_DATA_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock((mtx_t*)&io_port->mutex);
-        uint8_t rtc_index = io_port->rtc_index;
-        mtx_unlock((mtx_t*)&io_port->mutex);
-        return handle_rtc(rtc_index, &vcpu_io->u8);
+        uint8_t index;
+        {
+            fbl::AutoLock lock(&mutex_);
+            index = rtc_index_;
+        }
+        return handle_rtc(index, &vcpu_io->u8);
     }
-    case I8042_DATA_PORT:
+    case I8042_DATA_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock((mtx_t*)&io_port->mutex);
-        vcpu_io->u8 = io_port->i8042_command == I8042_COMMAND_TEST ? I8042_DATA_TEST_RESPONSE : 0;
-        mtx_unlock((mtx_t*)&io_port->mutex);
+        fbl::AutoLock lock(&mutex_);
+        vcpu_io->u8 = i8042_command_ == I8042_COMMAND_TEST ? I8042_DATA_TEST_RESPONSE : 0;
         break;
+    }
     case I8042_COMMAND_PORT:
         vcpu_io->access_size = 1;
         vcpu_io->u8 = I8042_STATUS_OUTPUT_FULL;
@@ -155,12 +157,12 @@ zx_status_t io_port_read(const io_port_t* io_port, uint16_t port, zx_vcpu_io_t* 
         vcpu_io->access_size = 2;
         vcpu_io->u16 = 0;
         break;
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
+    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE: {
         vcpu_io->access_size = 2;
-        mtx_lock((mtx_t*)&io_port->mutex);
-        vcpu_io->u16 = io_port->pm1_enable;
-        mtx_unlock((mtx_t*)&io_port->mutex);
+        fbl::AutoLock lock(&mutex_);
+        vcpu_io->u16 = pm1_enable_;
         break;
+    }
     case PIC1_DATA_PORT:
         vcpu_io->access_size = 1;
         vcpu_io->u8 = PIC_INVALID;
@@ -169,47 +171,47 @@ zx_status_t io_port_read(const io_port_t* io_port, uint16_t port, zx_vcpu_io_t* 
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;
-#else // __x86_64__
+#else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 
-zx_status_t io_port_write(io_port_t* io_port, const zx_packet_guest_io_t* io) {
+zx_status_t IoPort::Write(const zx_packet_guest_io_t* io) {
 #ifdef __x86_64__
     switch (io->port) {
     case I8042_DATA_PORT:
     case PIT_CHANNEL_0:
     case PIT_CONTROL_PORT:
-    case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
-    case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
+    case PIC1_COMMAND_PORT... PIC1_DATA_PORT:
+    case PIC2_COMMAND_PORT... PIC2_DATA_PORT:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
         break;
-    case I8042_COMMAND_PORT:
+    case I8042_COMMAND_PORT: {
         if (io->access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
-        mtx_lock(&io_port->mutex);
-        io_port->i8042_command = io->u8;
-        mtx_unlock(&io_port->mutex);
+        fbl::AutoLock lock(&mutex_);
+        i8042_command_ = io->u8;
         break;
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
+    }
+    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE: {
         if (io->access_size != 2)
             return ZX_ERR_IO_DATA_INTEGRITY;
-        mtx_lock(&io_port->mutex);
-        io_port->pm1_enable = io->u16;
-        mtx_unlock(&io_port->mutex);
+        fbl::AutoLock lock(&mutex_);
+        pm1_enable_ = io->u16;
         break;
-    case RTC_INDEX_PORT:
+    }
+    case RTC_INDEX_PORT: {
         if (io->access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
-        mtx_lock(&io_port->mutex);
-        io_port->rtc_index = io->u8;
-        mtx_unlock(&io_port->mutex);
+        fbl::AutoLock lock(&mutex_);
+        rtc_index_ = io->u8;
         break;
+    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;
-#else // __x86_64__
+#else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }

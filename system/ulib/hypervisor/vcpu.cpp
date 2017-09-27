@@ -184,7 +184,7 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case RTC_DATA_PORT:
-        status = io_port_read(vcpu_ctx->guest_ctx->io_port, io->port, &vcpu_io);
+        status = vcpu_ctx->guest_ctx->io_port->Read(io->port, &vcpu_io);
         break;
     case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
         status = uart_read(vcpu_ctx->guest_ctx->uart, io->port, &vcpu_io);
@@ -234,7 +234,7 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case RTC_INDEX_PORT:
-        return io_port_write(vcpu_ctx->guest_ctx->io_port, io);
+        return vcpu_ctx->guest_ctx->io_port->Write(io);
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         return vcpu_ctx->guest_ctx->pci_bus->WriteIoPort(io);

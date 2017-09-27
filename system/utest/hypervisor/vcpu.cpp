@@ -23,7 +23,7 @@ typedef struct test {
     vcpu_ctx_t vcpu_ctx;
     guest_ctx_t guest_ctx;
     IoApic io_apic;
-    io_port_t io_port;
+    IoPort io_port;
     PciBus pci_bus;
     zx_vcpu_io_t vcpu_io;
 
@@ -47,8 +47,6 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
 }
 
 static void setup(test_t* test) {
-    io_port_init(&test->io_port, ZX_HANDLE_INVALID);
-
     test->guest_ctx.io_apic = &test->io_apic;
     test->guest_ctx.io_port = &test->io_port;
     test->guest_ctx.pci_bus = &test->pci_bus;
@@ -60,6 +58,7 @@ static void setup(test_t* test) {
     test->vcpu_ctx.write_state = vcpu_write_test_state;
 
     test->pci_bus.Init();
+    test->io_port.Init(ZX_HANDLE_INVALID);
 }
 
 /* Test handling of an IO packet for an input instruction.

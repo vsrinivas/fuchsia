@@ -272,9 +272,9 @@ int main(int argc, char** argv) {
     IoApic io_apic;
     guest_ctx.io_apic = &io_apic;
     // Setup IO ports.
-    io_port_t io_port;
+    IoPort io_port;
     guest_ctx.io_port = &io_port;
-    status = io_port_init(&io_port, guest);
+    status = io_port.Init(guest);
     if (status != ZX_OK)
         return status;
     // Setup PCI.

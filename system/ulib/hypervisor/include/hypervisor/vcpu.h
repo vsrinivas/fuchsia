@@ -10,16 +10,16 @@
 #include <zircon/syscalls/hypervisor.h>
 
 class IoApic;
+class IoPort;
 class PciBus;
 
-typedef struct io_port io_port_t;
 typedef struct zx_port_packet zx_port_packet_t;
 typedef struct uart uart_t;
 
 /* Stores the state associated with the guest. */
 typedef struct guest_ctx {
     IoApic* io_apic;
-    io_port_t* io_port;
+    IoPort* io_port;
     PciBus* pci_bus;
 
     uart_t* uart;
