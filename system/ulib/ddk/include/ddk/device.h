@@ -233,7 +233,7 @@ zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
                          void* out_buf, size_t out_len, size_t* out_actual);
 
 // return ZX_ERR_NOT_SUPPORTED if this device does not support the iotxn_queue op
-// otherwise returns ZX_OK aftering queuing the iotxn
+// otherwise returns ZX_OK after queuing the iotxn
 zx_status_t device_iotxn_queue(zx_device_t* dev, iotxn_t* txn);
 
 // Device State Change Functions
