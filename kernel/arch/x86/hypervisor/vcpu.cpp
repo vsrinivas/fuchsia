@@ -559,7 +559,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     zx_status_t status = alloc_vpid(&vpid);
     if (status != ZX_OK)
         return status;
-    auto auto_call = fbl::MakeAutoCall([=]() { free_vpid(vpid); });
+    auto auto_call = fbl::MakeAutoCall([vpid]() { free_vpid(vpid); });
 
     // When we create a VCPU, we bind it to the current thread and a CPU based
     // on the VPID. The VCPU must always be run on the current thread and the
