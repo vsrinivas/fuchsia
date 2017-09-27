@@ -13,6 +13,18 @@ source_set("context_metadata_builder") {
   ]
 }
 
+source_set("scoped_context_value") {
+  sources = [
+    "scoped_context_value.cc",
+    "scoped_context_value.h",
+  ]
+
+  deps = [
+    "//peridot/public/lib/async/cpp:future_value",
+    "//peridot/public/lib/context/fidl",
+  ]
+}
+
 source_set("formatting") {
   sources = [
     "formatting.cc",

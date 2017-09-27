@@ -40,6 +40,28 @@ class ContextWriterImpl : ContextWriter {
                    ContextValueType type) override;
 
   // |ContextWriter|
+  void AddValue(ContextValuePtr value, const AddValueCallback& done) override;
+
+  // |ContextWriter|
+  void AddChildValue(const fidl::String& parent_id,
+                     ContextValuePtr value,
+                     const AddChildValueCallback& done) override;
+
+  // |ContextWriter|
+  void UpdateMetadata(const fidl::String& id,
+                      ContextMetadataPtr metadata) override;
+
+  // |ContextWriter|
+  void UpdateContent(const fidl::String& id,
+                     const fidl::String& content) override;
+
+  // |ContextWriter|
+  void Update(const fidl::String& id, ContextValuePtr value) override;
+
+  // |ContextWriter|
+  void Remove(const fidl::String& id) override;
+
+  // |ContextWriter|
   void WriteEntityTopic(const fidl::String& topic,
                         const fidl::String& value) override;
 

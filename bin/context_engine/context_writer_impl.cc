@@ -127,6 +127,69 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
                  });
 }
 
+void ContextWriterImpl::AddValue(ContextValuePtr value,
+                                 const AddValueCallback& done) {
+  MaybeFillEntityMetadata(&value);
+  if (parent_value_selector_) {
+    ContextRepository::Id parent_id;
+    if (MaybeFindParentValueId(repository_, parent_value_selector_,
+                               &parent_id)) {
+      done(repository_->Add(parent_id, std::move(value)));
+      return;
+    }
+  }
+  done(repository_->Add(std::move(value)));
+}
+
+void ContextWriterImpl::AddChildValue(const fidl::String& parent_id,
+                                      ContextValuePtr value,
+                                      const AddChildValueCallback& done) {
+  MaybeFillEntityMetadata(&value);
+  // TODO(thatguy): Error handling when |parent_id| no longer exists.
+  auto id = repository_->Add(parent_id, std::move(value));
+  done(id);
+}
+
+void ContextWriterImpl::Update(const fidl::String& id,
+                               ContextValuePtr new_value) {
+  if (!repository_->Contains(id)) {
+    FXL_LOG(WARNING) << "Trying to update non-existent context value (" << id
+                     << "). New value: " << new_value;
+  }
+  MaybeFillEntityMetadata(&new_value);
+  repository_->Update(id, std::move(new_value));
+}
+
+void ContextWriterImpl::UpdateContent(const fidl::String& id,
+                                      const fidl::String& content) {
+  auto value = repository_->Get(id);
+  if (!value) {
+    FXL_LOG(WARNING)
+        << "Trying to update content on non-existent context value (" << id
+        << "). Content: " << content;
+  }
+
+  value->content = content;
+  Update(id, std::move(value));
+}
+
+void ContextWriterImpl::UpdateMetadata(const fidl::String& id,
+                                       ContextMetadataPtr metadata) {
+  auto value = repository_->Get(id);
+  if (!value) {
+    FXL_LOG(WARNING)
+        << "Trying to update metadata on non-existent context value (" << id
+        << "). Metadata: " << metadata;
+  }
+
+  value->meta = std::move(metadata);
+  Update(id, std::move(value));
+}
+
+void ContextWriterImpl::Remove(const fidl::String& id) {
+  repository_->Remove(id);
+}
+
 void ContextWriterImpl::WriteEntityTopic(const fidl::String& topic,
                                          const fidl::String& value) {
   if (!value) {

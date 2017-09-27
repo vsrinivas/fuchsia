@@ -16,6 +16,39 @@ interface ContextWriter {
   // a connection error occurs.
   CreateValue(ContextValueWriter& value_writer, ContextValueType type);
 
+  // Adds a new value to the Context service and returns the new value's ID.
+  // |value_id| can be used to perform updates and to remove the value.
+  //
+  // This is deprecated in favor of CreateValue() and usage of ContextValueWriter.
+  AddValue(ContextValue value) => (string value_id);
+
+  // Like AddValue(), but adds the new value as a child of an existing value.
+  // Causes |value| to inherit whatever metadata is set on the value referenced
+  // by |parent_id|.
+  //
+  // This is deprecated in favor of CreateValue() and usage of ContextValueWriter.
+  AddChildValue(string parent_id, ContextValue value) => (string value_id);
+
+  // Updates only the metadata for |value_id|.
+  //
+  // This is deprecated in favor of CreateValue() and usage of ContextValueWriter.
+  UpdateMetadata(string value_id, ContextMetadata metadata);
+
+  // Updates only the content for |value_id|.
+  //
+  // This is deprecated in favor of CreateValue() and usage of ContextValueWriter.
+  UpdateContent(string value_id, string content);
+
+  // Updates the value (both the content and the metadata) for |value_id|.
+  //
+  // This is deprecated in favor of CreateValue() and usage of ContextValueWriter.
+  Update(string value_id, ContextValue value);
+
+  // Removes the value specified by |value_id|.
+  //
+  // This is deprecated in favor of CreateValue() and usage of ContextValueWriter.
+  Remove(string value_id);
+
   // This method is here to make transitioning from topic-based context
   // publishing to CreateValue() easier and will be removed eventually.
   // Internally, calls AddValue() with value.type = ContextValueType.ENTITY,
