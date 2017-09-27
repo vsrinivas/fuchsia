@@ -343,6 +343,9 @@ EXTRA_BUILDRULES :=
 # any rules you put here will also be built by the system before considered being complete
 EXTRA_BUILDDEPS :=
 
+# any rules you put here will be built if the kernel is also being built
+EXTRA_KERNELDEPS :=
+
 # any rules you put here will be depended on in clean builds
 EXTRA_CLEANDEPS :=
 
@@ -595,10 +598,9 @@ tools:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 
 # meta rule for the kernel
 .PHONY: kernel
+kernel: $(OUTLKBIN) $(EXTRA_KERNELDEPS)
 ifeq ($(ENABLE_BUILD_LISTFILES),true)
-kernel: $(OUTLKBIN) $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
-else
-kernel: $(OUTLKBIN)
+kernel: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
 endif
 
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
