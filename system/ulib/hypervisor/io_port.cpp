@@ -7,6 +7,7 @@
 
 #include <hypervisor/address.h>
 #include <hypervisor/io_port.h>
+#include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 
@@ -41,8 +42,45 @@
 
 // clang-format on
 
-void io_port_init(io_port_t* io_port) {
+zx_status_t io_port_init(io_port_t* io_port, zx_handle_t guest) {
+#if __x86_64__
     memset(io_port, 0, sizeof(*io_port));
+    // Setup PIC.
+    zx_status_t status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIC1_COMMAND_PORT,
+                                           PIC1_DATA_PORT - PIC1_COMMAND_PORT + 1,
+                                           ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIC2_COMMAND_PORT,
+                               PIC2_DATA_PORT - PIC2_COMMAND_PORT + 1, ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    // Setup PIT.
+    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIT_CHANNEL_0, 1, ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIT_CONTROL_PORT, 1, ZX_HANDLE_INVALID,
+                               0);
+    if (status != ZX_OK)
+        return status;
+    // Setup PM1.
+    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PM1_EVENT_PORT, PM1A_REGISTER_ENABLE + 1,
+                               ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    // Setup RTC.
+    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, RTC_INDEX_PORT,
+                               RTC_DATA_PORT - RTC_INDEX_PORT + 1, ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    // Setup I8042.
+    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, I8042_DATA_PORT, 1, ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    return zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, I8042_COMMAND_PORT, 1, ZX_HANDLE_INVALID, 0);
+#else // __x86_64__
+    return ZX_ERR_NOT_SUPPORTED;
+#endif // __x86_64__
 }
 
 static uint8_t to_bcd(int binary) {
@@ -140,8 +178,8 @@ zx_status_t io_port_write(io_port_t* io_port, const zx_packet_guest_io_t* io) {
 #ifdef __x86_64__
     switch (io->port) {
     case I8042_DATA_PORT:
-    case I8253_CHANNEL_0:
-    case I8253_CONTROL_PORT:
+    case PIT_CHANNEL_0:
+    case PIT_CONTROL_PORT:
     case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
     case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:

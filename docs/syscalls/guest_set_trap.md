@@ -57,6 +57,8 @@ returned.
 **ZX_ERR_ACCESS_DENIED** *guest* or *port* do not have the *ZX_RIGHT_WRITE*
 right.
 
+**ZX_ERR_ALREADY_EXISTS** A trap with the same *kind* and *addr* already exists.
+
 **ZX_ERR_BAD_HANDLE** *guest* or *port* are invalid handles.
 
 **ZX_ERR_INVALID_ARGS** *kind* is not a valid address space, *addr* or *len*

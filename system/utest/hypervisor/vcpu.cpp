@@ -47,7 +47,7 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
 }
 
 static void setup(test_t* test) {
-    io_port_init(&test->io_port);
+    io_port_init(&test->io_port, ZX_HANDLE_INVALID);
 
     test->guest_ctx.io_apic = &test->io_apic;
     test->guest_ctx.io_port = &test->io_port;
@@ -76,7 +76,7 @@ static bool handle_input_packet(void) {
 
     // Initialize the hosts register to an arbitrary non-zero value.
     uart_t uart;
-    uart_init(&uart, &test.io_apic);
+    uart_init(&uart, ZX_HANDLE_INVALID, &test.io_apic);
     uart.line_control = 0xfe;
     test.guest_ctx.uart = &uart;
 
@@ -105,7 +105,7 @@ static bool handle_output_packet(void) {
     setup(&test);
 
     uart_t uart;
-    uart_init(&uart, &test.io_apic);
+    uart_init(&uart, ZX_HANDLE_INVALID, &test.io_apic);
     test.guest_ctx.uart = &uart;
 
     // Send a guest packet to to write the UART line control port.

@@ -274,7 +274,9 @@ int main(int argc, char** argv) {
     // Setup IO ports.
     io_port_t io_port;
     guest_ctx.io_port = &io_port;
-    io_port_init(&io_port);
+    status = io_port_init(&io_port, guest);
+    if (status != ZX_OK)
+        return status;
     // Setup PCI.
     PciBus bus(guest, &io_apic);
     guest_ctx.pci_bus = &bus;
@@ -286,13 +288,17 @@ int main(int argc, char** argv) {
     // Setup UART.
     uart_t uart;
     guest_ctx.uart = &uart;
-    uart_init(&uart, &io_apic);
+    status = uart_init(&uart, guest, &io_apic);
+    if (status != ZX_OK)
+        return status;
     status = uart_async(&uart, guest);
     if (status != ZX_OK)
         return status;
     // Setup TPM.
     status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_MEM, TPM_PHYS_BASE,
                                TPM_PHYS_TOP - TPM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
     // Setup block device.
     VirtioBlock block(addr, kVmoSize);
     PciDevice& virtio_block = block.pci_device();

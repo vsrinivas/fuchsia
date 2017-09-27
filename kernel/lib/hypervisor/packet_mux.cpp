@@ -68,6 +68,12 @@ zx_status_t PacketMux::AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
     PortTree* ports = TreeOf(kind);
     if (ports == nullptr)
         return ZX_ERR_INVALID_ARGS;
+    auto iter = ports->find(addr);
+    if (iter.IsValid()) {
+        dprintf(INFO, "Port range addr %#lx len %lu already exists with addr %#lx len %lu\n",
+                addr, len, iter->GetKey(), iter->Len());
+        return ZX_ERR_ALREADY_EXISTS;
+    }
     fbl::AllocChecker ac;
     fbl::unique_ptr<PortRange> range(new (&ac) PortRange(kind, addr, len, fbl::move(port), key));
     if (!ac.check())
@@ -96,17 +102,6 @@ zx_status_t PacketMux::FindPortRange(uint32_t kind, zx_vaddr_t addr, PortRange**
         return ZX_ERR_NOT_FOUND;
     *port_range = const_cast<PortRange*>(&*iter);
     return ZX_OK;
-}
-
-zx_status_t PacketMux::Queue(uint32_t kind, zx_vaddr_t addr, const zx_port_packet_t& packet,
-                             StateReloader* reloader) {
-    PortRange* port_range;
-    zx_status_t status = FindPortRange(kind, addr, &port_range);
-    if (status != ZX_OK)
-        return status;
-
-    DEBUG_ASSERT(port_range->HasPort());
-    return port_range->Queue(packet, reloader);
 }
 
 PacketMux::PortTree* PacketMux::TreeOf(uint32_t kind) {

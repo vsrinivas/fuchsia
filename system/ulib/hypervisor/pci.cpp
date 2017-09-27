@@ -80,8 +80,18 @@ zx_status_t PciBus::Init() {
     zx_status_t status = Connect(&root_complex_, PCI_DEVICE_ROOT_COMPLEX);
     if (status != ZX_OK)
         return status;
-    return zx_guest_set_trap(guest_, ZX_GUEST_TRAP_MEM, PCI_ECAM_PHYS_BASE,
-                             PCI_ECAM_PHYS_TOP - PCI_ECAM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
+    status = zx_guest_set_trap(guest_, ZX_GUEST_TRAP_MEM, PCI_ECAM_PHYS_BASE,
+                               PCI_ECAM_PHYS_TOP - PCI_ECAM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    status = zx_guest_set_trap(guest_, ZX_GUEST_TRAP_IO, PCI_CONFIG_ADDRESS_PORT_BASE,
+                               PCI_CONFIG_ADDRESS_PORT_TOP - PCI_CONFIG_ADDRESS_PORT_BASE + 1,
+                               ZX_HANDLE_INVALID, 0);
+    if (status != ZX_OK)
+        return status;
+    return zx_guest_set_trap(guest_, ZX_GUEST_TRAP_IO, PCI_CONFIG_DATA_PORT_BASE,
+                             PCI_CONFIG_DATA_PORT_TOP - PCI_CONFIG_DATA_PORT_BASE + 1,
+                             ZX_HANDLE_INVALID, 0);
 }
 
 uint32_t PciBus::config_addr() {

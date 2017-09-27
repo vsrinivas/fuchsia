@@ -227,8 +227,8 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     switch (io->port) {
     case I8042_COMMAND_PORT:
     case I8042_DATA_PORT:
-    case I8253_CHANNEL_0:
-    case I8253_CONTROL_PORT:
+    case PIT_CHANNEL_0:
+    case PIT_CONTROL_PORT:
     case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
     case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:

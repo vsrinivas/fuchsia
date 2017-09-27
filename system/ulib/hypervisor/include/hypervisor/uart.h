@@ -67,7 +67,7 @@ typedef struct uart {
     zx_status_t (*raise_interrupt)(zx_handle_t vcpu, uint32_t vector);
 } uart_t;
 
-void uart_init(uart_t* uart, const IoApic* io_apic);
+zx_status_t uart_init(uart_t* uart, zx_handle_t guest, const IoApic* io_apic);
 zx_status_t uart_read(uart_t* uart, uint16_t port, zx_vcpu_io_t* vcpu_io);
 zx_status_t uart_write(uart_t* uart, const zx_packet_guest_io_t* io);
 

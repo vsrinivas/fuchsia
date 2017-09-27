@@ -265,6 +265,11 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
     IoInfo io_info(exit_info.exit_qualification);
     if (io_info.string || io_info.repeat)
         return ZX_ERR_NOT_SUPPORTED;
+
+    PortRange* port_range;
+    zx_status_t status = mux.FindPortRange(ZX_GUEST_TRAP_IO, io_info.port, &port_range);
+    if (status != ZX_OK)
+        return status;
     next_rip(exit_info, vmcs);
 
     memset(packet, 0, sizeof(*packet));
@@ -280,11 +285,9 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
             guest_state->rax = 0;
     } else {
         memcpy(packet->guest_io.data, &guest_state->rax, io_info.access_size);
-        zx_status_t status = mux.Queue(ZX_GUEST_TRAP_IO, packet->guest_io.port, *packet, vmcs);
-        // If there was no FIFO to handle the trap, then we should return to
-        // user-space. Otherwise, return the status of the FIFO write.
-        if (status != ZX_ERR_NOT_FOUND)
-            return status;
+        if (port_range->HasPort())
+            return port_range->Queue(*packet, vmcs);
+        // If there was no port for the range, then return to user-space.
     }
 
     return ZX_ERR_NEXT;
@@ -481,18 +484,16 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
     zx_status_t status = mux.FindPortRange(ZX_GUEST_TRAP_BELL, guest_paddr, &port_range);
     if (status != ZX_OK)
         return status;
+    next_rip(exit_info, vmcs);
 
     switch (port_range->Kind()) {
     case ZX_GUEST_TRAP_BELL:
         memset(packet, 0, sizeof(*packet));
         packet->type = ZX_PKT_TYPE_GUEST_BELL;
         packet->guest_bell.addr = guest_paddr;
-        if (port_range->HasPort()) {
-            next_rip(exit_info, vmcs);
+        if (port_range->HasPort())
             return port_range->Queue(*packet, vmcs);
-        }
-        // If there is no port associated with the bell, we should break out
-        // of the switch statement and process this trap synchronously.
+        // If there was no port for the range, then return to user-space.
         break;
     case ZX_GUEST_TRAP_MEM:
         memset(packet, 0, sizeof(*packet));
@@ -508,7 +509,6 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
         return ZX_ERR_BAD_STATE;
     }
 
-    next_rip(exit_info, vmcs);
     return ZX_ERR_NEXT;
 }
 

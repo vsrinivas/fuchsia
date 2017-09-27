@@ -81,6 +81,11 @@ static bool setup(test_t* test, const char* start, const char* end) {
     uintptr_t guest_ip = 0;
 
 #if __x86_64__
+    // TODO(abdulla): Convert test exits to ZX_GUEST_TRAP_BELL, so that they
+    // work for both x86-64 and arm64.
+    ASSERT_EQ(zx_guest_set_trap(test->guest, ZX_GUEST_TRAP_IO, EXIT_TEST_PORT, 1, ZX_HANDLE_INVALID,
+                                0),
+              ZX_OK);
     ASSERT_EQ(guest_create_page_table(test->guest_physaddr, VMO_SIZE, &guest_ip), ZX_OK);
     memcpy((void*)(test->guest_physaddr + guest_ip), start, end - start);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), ZX_OK);
@@ -113,6 +118,10 @@ static bool vcpu_resume(void) {
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
+
+    // Trap on writes to UART_PORT.
+    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_IO, UART_PORT, 1, ZX_HANDLE_INVALID, 0),
+              ZX_OK);
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);

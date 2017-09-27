@@ -47,7 +47,7 @@ static bool irq_redirect(void) {
     {
         // Interrupts cannot be raised unless the UART IRQ redirect is in place.
         stub_io_apic(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.raise_interrupt = fail_raise_interrupt;
 
         zx_packet_guest_io_t guest_io = {};
@@ -62,7 +62,7 @@ static bool irq_redirect(void) {
     {
         // Interrupts can be raised after the UART IRQ redirect is in place.
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.raise_interrupt = ok_raise_interrupt;
 
         zx_packet_guest_io_t guest_io = {};
@@ -119,7 +119,7 @@ static bool read_rbr(void) {
         // Reads from RBR should unset UART_LINE_STATUS_DATA_READY,
         // clear interrupt status and trigger further interrupts if available.
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.raise_interrupt = ok_raise_interrupt;
         uart.line_status = UART_LINE_STATUS_THR_EMPTY | UART_LINE_STATUS_DATA_READY;
         uart.rx_buffer = 'a';
@@ -138,7 +138,7 @@ static bool read_rbr(void) {
     {
         // If interrupt_id was not RDA, it should not be cleared.
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.raise_interrupt = fail_raise_interrupt;
         uart.interrupt_id = UART_INTERRUPT_ID_THR_EMPTY;
         uart.interrupt_enable = UART_INTERRUPT_ENABLE_NONE;
@@ -160,7 +160,7 @@ static bool write_ier(void) {
     {
         // Setting IER when divisor latch is on should be a no-op
         stub_io_apic(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.line_control = UART_LINE_CONTROL_DIV_LATCH;
         uart.interrupt_enable = 0;
 
@@ -180,7 +180,7 @@ static bool write_ier(void) {
         // Only UART_INTERRUPT_ENABLE_THR_EMPTY should trigger interrupts on IER write.
         // Anything else should not.
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.raise_interrupt = fail_raise_interrupt;
 
         zx_packet_guest_io_t guest_io = {};
@@ -197,7 +197,7 @@ static bool write_ier(void) {
         // UART_INTERRUPT_ID_THR_EMPTY should not be raised if
         // line status is not UART_LINE_STATUS_THR_EMPTY.
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.line_status = UART_LINE_STATUS_DATA_READY;
         uart.raise_interrupt = fail_raise_interrupt;
 
@@ -216,7 +216,7 @@ static bool write_ier(void) {
         // Setting UART_INTERRUPT_ENABLE_THR_EMPTY should trigger UART_INTERRUPT_ID_THR_EMPTY
         // if line status is UART_LINE_STATUS_THR_EMPTY.
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.raise_interrupt = ok_raise_interrupt;
 
         zx_packet_guest_io_t guest_io = {};
@@ -242,7 +242,7 @@ static bool write_thr(void) {
     IoApic io_apic;
     {
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.line_status = UART_LINE_STATUS_DATA_READY;
         uart.interrupt_enable = UART_INTERRUPT_ENABLE_NONE;
         uart.raise_interrupt = fail_raise_interrupt;
@@ -262,7 +262,7 @@ static bool write_thr(void) {
     }
     {
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         // If this was responding to a THR empty interrupt, IIR should be reset
         // on THR write.
         uart.interrupt_id = UART_INTERRUPT_ID_THR_EMPTY;
@@ -284,7 +284,7 @@ static bool write_thr(void) {
     }
     {
         io_apic_init_with_vector(&io_apic);
-        uart_init(&uart, &io_apic);
+        uart_init(&uart, ZX_HANDLE_INVALID, &io_apic);
         uart.line_status = UART_LINE_STATUS_DATA_READY;
         uart.raise_interrupt = ok_raise_interrupt;
 

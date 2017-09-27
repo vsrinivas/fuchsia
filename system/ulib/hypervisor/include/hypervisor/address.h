@@ -64,8 +64,8 @@
 #define PIC2_DATA_PORT                  0xa1
 
 /* PIT ports. */
-#define I8253_CHANNEL_0                 0x40
-#define I8253_CONTROL_PORT              0x43
+#define PIT_CHANNEL_0                   0x40
+#define PIT_CONTROL_PORT                0x43
 
 /* PCI config ports. */
 #define PCI_CONFIG_ADDRESS_PORT_BASE    0xcf8

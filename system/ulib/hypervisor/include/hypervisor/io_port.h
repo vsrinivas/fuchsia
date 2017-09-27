@@ -22,6 +22,6 @@ typedef struct io_port {
     uint16_t pm1_enable;
 } io_port_t;
 
-void io_port_init(io_port_t* io_port);
+zx_status_t io_port_init(io_port_t* io_port, zx_handle_t guest);
 zx_status_t io_port_read(const io_port_t* io_port, uint16_t port, zx_vcpu_io_t* vcpu_io);
 zx_status_t io_port_write(io_port_t* io_port, const zx_packet_guest_io_t* io);
