@@ -80,7 +80,8 @@ class Presentation : private mozart::ViewTreeListener,
   void PresentScene();
   void Shutdown();
 
-  // Handle the Alt-PrtSc hotkey.  This cycles through the following modes:
+  // Handle the "Perspective Demo" hotkey.  This cycles through the following
+  // modes:
   // 1) default UI behavior
   // 2) disable clipping
   // 3) disable clipping + zoomed out perspective view w/ trackball
@@ -88,7 +89,7 @@ class Presentation : private mozart::ViewTreeListener,
   //
   // In mode 3), dragging along the bottom 10% of the screen causes the camera
   // to pan/rotate around the stage.
-  void HandleAltPrtSc();
+  void HandleAltBackspace();
   bool UpdateAnimation(uint64_t presentation_time);
 
   mozart::ViewManager* const view_manager_;

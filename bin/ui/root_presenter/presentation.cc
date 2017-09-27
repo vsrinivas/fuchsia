@@ -305,13 +305,13 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
       }
     }
   } else if (event->is_keyboard()) {
-    // Alt-PrtSc toggles between perspective and orthographic view of the stage.
+    // Alt-Backspace cycles through modes.
     const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
     if ((kbd->modifiers & mozart::kModifierAlt) &&
         kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == 0 && kbd->hid_usage == 70 &&
+        kbd->code_point == 0 && kbd->hid_usage == 42 &&
         !trackball_pointer_down_) {
-      HandleAltPrtSc();
+      HandleAltBackspace();
       invalidate = true;
     }
   }
@@ -324,7 +324,7 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
     input_dispatcher_->DispatchEvent(std::move(event));
 }
 
-void Presentation::HandleAltPrtSc() {
+void Presentation::HandleAltBackspace() {
   switch (animation_state_) {
     case kDefault:
       animation_state_ = kNoClipping;
