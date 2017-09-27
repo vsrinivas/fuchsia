@@ -27,7 +27,6 @@ typedef uintptr_t vaddr_t;
 typedef uintptr_t paddr_t;
 
 typedef uint64_t lk_time_t; // nanoseconds
-#define INFINITE_TIME UINT64_MAX
 #define LK_USEC(n) ((lk_time_t)(1000ULL * (n)))
 #define LK_MSEC(n) ((lk_time_t)(1000000ULL * (n)))
 #define LK_SEC(n)  ((lk_time_t)(1000000000ULL * (n)))
@@ -43,4 +42,3 @@ typedef intptr_t ssize_t;
 #define KB (1024UL)
 #define MB (1024UL * KB)
 #define GB (1024UL * MB)
-
