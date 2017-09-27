@@ -15,9 +15,9 @@ LpcmPayload::LpcmPayload(void* data, size_t size, std::shared_ptr<Owner> owner)
 }
 
 LpcmPayload::LpcmPayload(LpcmPayload&& other) {
+  owner_ = std::move(other.owner_);
   size_ = other.size_;
   data_ = other.release();
-  owner_ = std::move(other.owner_);
 }
 
 LpcmPayload::~LpcmPayload() {
@@ -25,13 +25,14 @@ LpcmPayload::~LpcmPayload() {
 }
 
 LpcmPayload& LpcmPayload::operator=(LpcmPayload&& other) {
+  std::shared_ptr<Owner> owner = std::move(other.owner_);
   size_t size = other.size();
-  reset(other.release(), size);
+  reset(other.release(), size, std::move(owner));
   return *this;
 }
 
 void LpcmPayload::reset() {
-  reset(nullptr, 0);
+  reset(nullptr, 0, nullptr);
 }
 
 void LpcmPayload::swap(LpcmPayload& other) {
@@ -48,22 +49,24 @@ void LpcmPayload::FillWithSilence() {
   }
 }
 
-void LpcmPayload::reset(void* data, size_t size) {
+void LpcmPayload::reset(void* data, size_t size, std::shared_ptr<Owner> owner) {
   FXL_DCHECK((data == nullptr) == (size == 0));
 
   if (data_) {
     FXL_DCHECK(owner_);
-    owner_->FreePayloadBuffer(data_);
+    owner_->ReleasePayloadBuffer(data_, size_);
   }
 
   data_ = data;
   size_ = size;
+  owner_ = std::move(owner);
 }
 
 void* LpcmPayload::release() {
   void* data = data_;
   data_ = nullptr;
   size_ = 0;
+  owner_.reset();
   return data;
 }
 
