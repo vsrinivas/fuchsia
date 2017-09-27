@@ -424,23 +424,6 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-zx_status_t devmgr_read_mdi(zx_handle_t vmo, zx_off_t offset, size_t length) {
-    zx_handle_t mdi_handle;
-    zx_status_t status = copy_vmo(vmo, offset, length, &mdi_handle);
-    if (status != ZX_OK) {
-        printf("devmgr_read_mdi failed to copy MDI data: %d\n", status);
-        return status;
-    }
-
-    devmgr_set_mdi(mdi_handle);
-    return ZX_OK;
-
-fail:
-    printf("devmgr_read_mdi failed %d\n", status);
-    zx_handle_close(mdi_handle);
-    return status;
-}
-
 #ifdef WITH_FSHOST
 static void devmgr_import_bootdata(zx_handle_t vmo) {
     bootdata_t bootdata;
@@ -477,8 +460,8 @@ static void devmgr_import_bootdata(zx_handle_t vmo) {
         case BOOTDATA_CONTAINER:
             printf("devmgr: unexpected bootdata container header\n");
             return;
-        case BOOTDATA_MDI:
-            devmgr_read_mdi(vmo, off, itemlen);
+        case BOOTDATA_PLATFORM_ID:
+                devmgr_set_platform_id(vmo, off, itemlen);
             break;
         default:
             break;

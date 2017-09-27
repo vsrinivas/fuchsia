@@ -17,8 +17,7 @@ void devfs_init(zx_handle_t root_job);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
-void devmgr_set_mdi(zx_handle_t mdi_handle);
-zx_status_t devmgr_read_mdi(zx_handle_t vmo, zx_off_t offset, size_t length);
+zx_status_t devmgr_set_platform_id(zx_handle_t vmo, zx_off_t offset, size_t length);
 
 zx_handle_t devmgr_load_file(const char* path);
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/resource.h>
 #include <stdlib.h>
@@ -23,20 +24,20 @@ zx_status_t platform_map_mmio(platform_dev_t* dev, uint32_t index, uint32_t cach
     zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, mmio->length,
                                                 &vmo_handle);
     if (status != ZX_OK) {
-        printf("platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
+        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
         return status;
     }
 
     size_t vmo_size;
     status = zx_vmo_get_size(vmo_handle, &vmo_size);
     if (status != ZX_OK) {
-        printf("platform_dev_map_mmio: zx_vmo_get_size failed %d\n", status);
+        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_get_size failed %d\n", status);
         goto fail;
     }
 
     status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
     if (status != ZX_OK) {
-        printf("platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
+        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
         goto fail;
     }
 
@@ -44,7 +45,7 @@ zx_status_t platform_map_mmio(platform_dev_t* dev, uint32_t index, uint32_t cach
                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
                          (uintptr_t*)vaddr);
     if (status != ZX_OK) {
-        printf("platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
+        dprintf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
         goto fail;
     }
 
@@ -95,7 +96,7 @@ zx_status_t platform_bus_add_mmios(platform_bus_t* bus, platform_resources_t* re
         size_t length = pbus_mmio->length;
 
         if (!base || !length) {
-            printf("platform_add_mmios: missing base or length\n");
+            dprintf(ERROR, "platform_add_mmios: missing base or length\n");
             return ZX_ERR_INVALID_ARGS;
         }
 

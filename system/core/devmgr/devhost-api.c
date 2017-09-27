@@ -130,13 +130,8 @@ __EXPORT zx_status_t device_get_protocol(zx_device_t* dev, uint32_t proto_id, vo
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-__EXPORT zx_handle_t device_get_resource(zx_device_t* dev) {
-    zx_handle_t h;
-    if (zx_handle_duplicate(dev->resource, ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
-        return ZX_HANDLE_INVALID;
-    } else {
-        return h;
-    }
+__EXPORT const char* device_get_args(zx_device_t* dev) {
+    return (dev->args ? dev->args : "");
 }
 
 __EXPORT void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {

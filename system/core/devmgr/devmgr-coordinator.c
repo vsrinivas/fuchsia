@@ -17,6 +17,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
 #include <zircon/device/dmctl.h>
+#include <zircon/boot/bootdata.h>
 #include <fdio/io.h>
 
 #include "acpi.h"
@@ -177,7 +178,7 @@ static device_t root_device = {
     .protocol_id = ZX_PROTOCOL_ROOT,
     .name = "root",
     .libname = "",
-    .args = "root,,",
+    .args = "root,",
     .children = LIST_INITIAL_VALUE(root_device.children),
     .pending = LIST_INITIAL_VALUE(root_device.pending),
     .refcount = 1,
@@ -188,7 +189,7 @@ static device_t misc_device = {
     .protocol_id = ZX_PROTOCOL_MISC_PARENT,
     .name = "misc",
     .libname = "",
-    .args = "misc,,",
+    .args = "misc,",
     .children = LIST_INITIAL_VALUE(misc_device.children),
     .pending = LIST_INITIAL_VALUE(misc_device.pending),
     .refcount = 1,
@@ -198,7 +199,7 @@ static device_t sys_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE,
     .name = "sys",
     .libname = "",
-    .args = "sys,,",
+    .args = "sys,",
     .children = LIST_INITIAL_VALUE(sys_device.children),
     .pending = LIST_INITIAL_VALUE(sys_device.pending),
     .refcount = 1,
@@ -206,11 +207,21 @@ static device_t sys_device = {
 
 static zx_handle_t acpi_rpc[2] = { ZX_HANDLE_INVALID, ZX_HANDLE_INVALID };
 
-void devmgr_set_mdi(zx_handle_t mdi_handle) {
-#if defined(__aarch64__)
-    // MDI VMO handle is passed via via the resource handle
-    sys_device.hrsrc = mdi_handle;
-#endif
+zx_status_t devmgr_set_platform_id(zx_handle_t vmo, zx_off_t offset, size_t length) {
+    bootdata_platform_id_t platform_id;
+    size_t actual;
+
+    zx_status_t status = zx_vmo_read(vmo, &platform_id, offset, sizeof(platform_id), &actual);
+    if ((status < 0) || (actual != sizeof(platform_id))) {
+        return status;
+    }
+
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "sys,vid=%u,pid=%u,board=%s,", platform_id.vid, platform_id.pid,
+             platform_id.board_name);
+    buffer[countof(buffer) - 1] = 0;
+    sys_device.args = strdup(buffer);
+    return ZX_OK;
 }
 
 static void dc_dump_device(device_t* dev, size_t indent) {
@@ -1394,7 +1405,7 @@ void dc_bind_driver(driver_t* drv) {
         dc_attempt_bind(drv, &sys_device);
 #endif
 #if defined(__aarch64__)
-    } else if (is_platform_bus_driver(drv) && (sys_device.hrsrc != ZX_HANDLE_INVALID)) {
+    } else if (is_platform_bus_driver(drv)) {
         dc_attempt_bind(drv, &sys_device);
 #endif
     } else if (dc_running) {

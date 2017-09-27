@@ -8,11 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <mdi/mdi.h>
-#include <mdi/mdi-defs.h>
 #include <zircon/process.h>
 
 #include "platform-bus.h"
@@ -68,59 +67,22 @@ static zx_protocol_device_t platform_bus_proto = {
 };
 
 static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    platform_bus_t* bus = NULL;
-
-    zx_handle_t mdi_handle = device_get_resource(parent);
-    if (mdi_handle == ZX_HANDLE_INVALID) {
-        printf("platform_bus_bind: mdi_handle invalid\n");
+    const char* args = device_get_args(parent);
+    if (!args) {
+        dprintf(ERROR, "platform_bus_bind: args missing\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    uintptr_t mdi_addr = 0;
-    size_t mdi_size = 0;
-    zx_status_t status = zx_vmo_get_size(mdi_handle, &mdi_size);
-    if (status != ZX_OK) {
-        printf("platform_bus_bind: zx_vmo_get_size failed %d\n", status);
-        goto fail;
+    uint32_t vid = 0;
+    uint32_t pid = 0;
+    if (sscanf(args, "vid=%u,pid=%u,", &vid, &pid) != 2) {
+        dprintf(ERROR, "platform_bus_bind: could not find vid or pid in args\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    status = zx_vmar_map(zx_vmar_root_self(), 0, mdi_handle, 0, mdi_size,
-                         ZX_VM_FLAG_PERM_READ, &mdi_addr);
-    if (status != ZX_OK) {
-        printf("platform_bus_bind: zx_vmar_map failed %d\n", status);
-        goto fail;
-    }
-
-    mdi_node_ref_t root_node;
-    status = mdi_init((void *)mdi_addr, mdi_size, &root_node);
-    if (status != ZX_OK) {
-        printf("platform_bus_bind: mdi_init failed %d\n", status);
-        goto fail;
-    }
-
-    mdi_node_ref_t  platform_node;
-    if (mdi_find_node(&root_node, MDI_PLATFORM, &platform_node) != ZX_OK) {
-        printf("platform_bus_bind: couldn't find MDI_PLATFORM\n");
-        goto fail;
-    }
-
-    mdi_node_ref_t  node;
-    uint32_t vid, pid;
-    if (mdi_find_node(&platform_node, MDI_PLATFORM_VID, &node) != ZX_OK) {
-        printf("platform_bus_bind: couldn't find MDI_PLATFORM_VID\n");
-        goto fail;
-    }
-    mdi_node_uint32(&node, &vid);
-    if (mdi_find_node(&platform_node, MDI_PLATFORM_PID, &node) != ZX_OK) {
-        printf("platform_bus_bind: couldn't find MDI_PLATFORM_PID\n");
-        goto fail;
-    }
-    mdi_node_uint32(&node, &pid);
-
-    bus = calloc(1, sizeof(platform_bus_t));
+    platform_bus_t* bus = calloc(1, sizeof(platform_bus_t));
     if (!bus) {
-        status = ZX_ERR_NO_MEMORY;
-        goto fail;
+        return  ZX_ERR_NO_MEMORY;
     }
 
     bus->resource = get_root_resource();
@@ -145,18 +107,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
         .prop_count = countof(props),
     };
 
-    status = device_add(parent, &add_args, &bus->zxdev);
-
-fail:
-    if (mdi_addr) {
-        zx_vmar_unmap(zx_vmar_root_self(), mdi_addr, mdi_size);
-    }
-    zx_handle_close(mdi_handle);
-    if (status != ZX_OK) {
-        free(bus);
-    }
-
-    return status;
+   return device_add(parent, &add_args, &bus->zxdev);
 }
 
 static zx_driver_ops_t platform_bus_driver_ops = {

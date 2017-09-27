@@ -158,6 +158,7 @@ void dev_ref_release(zx_device_t* dev) {
         zx_handle_close(dev->event);
         zx_handle_close(dev->local_event);
         zx_handle_close(dev->resource);
+        free((void *)dev->args);
         DM_UNLOCK();
         dev_op_release(dev);
         DM_LOCK();

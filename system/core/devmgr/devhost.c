@@ -287,6 +287,9 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         dev->ops = &device_default_ops;
         dev->rpc = hin[0];
         dev->resource = (hcount == 2 ? hin[1] : ZX_HANDLE_INVALID);
+        if (args && strlen(args)) {
+            dev->args = strdup(args);
+        }
         dev->refcount = 1;
         list_initialize(&dev->children);
         list_initialize(&dev->instances);

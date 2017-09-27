@@ -160,9 +160,10 @@ static void setup_bootfs(void) {
                 setup_last_crashlog(vmo, off + hdrsz, bootdata.length);
                 break;
 #ifndef WITH_FSHOST
-            case BOOTDATA_MDI:
-                devmgr_read_mdi(vmo, off, itemlen);
+            case BOOTDATA_PLATFORM_ID: {
+                devmgr_set_platform_id(vmo, off + hdrsz, itemlen);
                 break;
+            }
 #endif
             default:
                 break;
