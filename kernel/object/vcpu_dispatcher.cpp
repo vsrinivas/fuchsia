@@ -15,20 +15,28 @@
 #include <object/guest_dispatcher.h>
 
 zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t ip,
+#if ARCH_X86_64
                                    zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+#endif
                                    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
     GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
     if (ip >= gpas->size())
         return ZX_ERR_INVALID_ARGS;
-    if (cr3 >= gpas->size() - PAGE_SIZE)
-        return ZX_ERR_INVALID_ARGS;
 
     fbl::unique_ptr<Vcpu> vcpu;
-#if ARCH_X86_64
+#if ARCH_ARM64
+    uint8_t vpid;
+    zx_status_t status = guest->NextVpid(&vpid);
+    if (status != ZX_OK)
+        return status;
+    status = arm_vcpu_create(ip, vpid, gpas, &vcpu);
+#elif ARCH_X86_64
+    if (cr3 >= gpas->size() - PAGE_SIZE)
+        return ZX_ERR_INVALID_ARGS;
     zx_status_t status = x86_vcpu_create(ip, cr3, apic_vmo, guest->ApicAccessAddress(),
                                       guest->MsrBitmapsAddress(), gpas, guest->Mux(), &vcpu);
-#else // ARCH_X86_64
+#else
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 #endif
     if (status != ZX_OK)

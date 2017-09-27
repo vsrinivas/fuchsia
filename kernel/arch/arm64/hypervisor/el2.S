@@ -4,135 +4,178 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arm64/el2_state.h>
 #include <arch/arm64/mmu.h>
 #include <arch/asm_macros.h>
 #include <asm.h>
 #include <zircon/errors.h>
 
-#define ESR_EL2_EC_MASK     0xfc000000
+#define ESR_EL2_EC_WFI_WFE  0x01
+#define ESR_EL2_EC_HVC      0x16
+#define ESR_EL2_EC_SMC      0x17
+#define ESR_EL2_EC_SHIFT    26
 #define ESR_EL2_ISS_MASK    0x01ffffff
+
 #define SCTLR_EL2_M         (1 << 0)
+#define SCTLR_EL2_A         (1 << 1)
 #define SCTLR_EL2_C         (1 << 2)
+#define SCTLR_EL2_SA        (1 << 3)
 #define SCTLR_EL2_I         (1 << 12)
+
 #define HVC_MAX_INDEX       2
+#define VECTOR_TABLE_SIZE   0x800
 
 .section .text.el2,"ax",@progbits
 .align 12
 
-.macro invalid_exception
+.macro exception_return literal
+    movlit x0, \literal
+    eret
+.endm
+
+.macro pop_return literal
+    add sp, sp, 16
+    exception_return \literal
+.endm
+
+.macro system_register inst, off, sysreg
+.ifc "\inst", "ldr"
+    mov x11, \off
+    ldr x10, [x9, x11]
+    msr \sysreg, x10
+.else
+    mrs x10, \sysreg
+    mov x11, \off
+    str x10, [x9, x11]
+.endif
+.endm
+
+.macro system_state inst, off
+    system_register \inst, \off + SS_CNTKCTL_EL1, cntkctl_el1
+    system_register \inst, \off + SS_CONTEXTIDR_EL1, contextidr_el1
+    system_register \inst, \off + SS_CPACR_EL1, cpacr_el1
+    system_register \inst, \off + SS_CSSELR_EL1, csselr_el1
+    system_register \inst, \off + SS_ESR_EL1, esr_el1
+    system_register \inst, \off + SS_FAR_EL1, far_el1
+    system_register \inst, \off + SS_MAIR_EL1, mair_el1
+    system_register \inst, \off + SS_MDSCR_EL1, mdscr_el1
+    system_register \inst, \off + SS_SCTLR_EL1, sctlr_el1
+    system_register \inst, \off + SS_SP_EL1, sp_el1
+    system_register \inst, \off + SS_TPIDR_EL1, tpidr_el1
+    system_register \inst, \off + SS_TCR_EL1, tcr_el1
+    system_register \inst, \off + SS_TTBR0_EL1, ttbr0_el1
+    system_register \inst, \off + SS_TTBR1_EL1, ttbr1_el1
+    system_register \inst, \off + SS_VBAR_EL1, vbar_el1
+    system_register \inst, \off + SS_ELR_EL2, elr_el2
+    system_register \inst, \off + SS_SPSR_EL2, spsr_el2
+    system_register \inst, \off + SS_VMPIDR_EL2, vmpidr_el2
+.endm
+
+.macro host_state inst
+    \inst x19, x20, [x9, HS_R19]
+    \inst x21, x22, [x9, HS_R19 + 16]
+    \inst x23, x24, [x9, HS_R19 + 32]
+    \inst x25, x26, [x9, HS_R19 + 48]
+    \inst x27, x28, [x9, HS_R19 + 64]
+.endm
+
+.macro guest_state inst
+    \inst x0, x1, [x9, GS_R0]
+    \inst x2, x3, [x9, GS_R0 + 16]
+    \inst x4, x5, [x9, GS_R0 + 32]
+    \inst x6, x7, [x9, GS_R0 + 48]
+    \inst x8, x10, [x9, GS_R0 + 64]
+    \inst x11, x12, [x9, GS_R0 + 80]
+    \inst x13, x14, [x9, GS_R0 + 96]
+    \inst x15, x16, [x9, GS_R0 + 112]
+    \inst x17, x18, [x9, GS_R0 + 128]
+    \inst x19, x20, [x9, GS_R0 + 144]
+    \inst x21, x22, [x9, GS_R0 + 160]
+    \inst x23, x24, [x9, GS_R0 + 176]
+    \inst x25, x26, [x9, GS_R0 + 192]
+    \inst x27, x28, [x9, GS_R0 + 208]
+    \inst x29, x30, [x9, GS_R0 + 224]
+.endm
+
+.macro entry label
+.align 7
+    b \label
+.endm
+
+// We have two vector tables that we switch between, init and exec. The reason
+// is that we need to use the stack to temporarily save registers when we exit
+// from a guest. However, that stack may have not been set up, and therefore we
+// can not unconditionally use it. We use the init vector table to set up the
+// stack and hypervisor state, and we use the exec vector table to maintain
+// execution of the hypervisor.
+
+FUNCTION_LABEL(arm64_el2_init_base)
+    /* exceptions from current EL, using SP0 */
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+    /* exceptions from current EL, using SPx */
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+    /* exceptions from lower EL, running arm64 */
+    entry el2_init
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+    /* exceptions from lower EL, running arm32 */
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+FUNCTION_LABEL(arm64_el2_exec_base)
+    /* exceptions from current EL, using SP0 */
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+    /* exceptions from current EL, using SPx */
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+    /* exceptions from lower EL, running arm64 */
+    entry el2_exec
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+    /* exceptions from lower EL, running arm32 */
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+    entry el2_invalid_exception
+
+FUNCTION_LABEL(el2_invalid_exception)
     // TODO(abdulla): Check VMID from VTTBR_EL2. ERET to host with error. If
     // VMID was not 0, terminate guest.
-    //
-    // In the meantime, generate a breakpoint exception.
-    brk #0
     eret
-.endm
 
-.macro sync_exception
-    mrs x10, esr_el2
-    and x10, x10, #ESR_EL2_ISS_MASK
-    cmp x10, #HVC_MAX_INDEX
-    b.ge out_of_range
+FUNCTION_LABEL(el2_init)
+    // Check ESR_EL2.EC to determine what caused the exception.
+    mrs x9, esr_el2
+    lsr x10, x9, #ESR_EL2_EC_SHIFT
+    cmp x10, #ESR_EL2_EC_HVC
+    b.ne el2_invalid_exception
 
-    lsl x10, x10, #2
-    adr x9, table
-    add x9, x9, x10
-    br x9
+    and x10, x9, #ESR_EL2_ISS_MASK
+    cmp x10, #0
+    b.ne el2_invalid_exception
 
-table:
-    b el2_on
-    b el2_off
-
-out_of_range:
-    movlit x0, ZX_ERR_OUT_OF_RANGE
-    eret
-.endm
-
-FUNCTION_LABEL(arm64_el2_exception_base)
-
-/* exceptions from current EL, using SP0 */
-.org 0x000
-LOCAL_FUNCTION(arm64_el2_sync_exc_current_el_SP0)
-    invalid_exception
-END_FUNCTION(arm64_el2_sync_exc_current_el_SP0)
-
-.org 0x080
-LOCAL_FUNCTION(arm64_el2_irq_current_el_SP0)
-    invalid_exception
-END_FUNCTION(arm64_el2_irq_current_el_SP0)
-
-.org 0x100
-LOCAL_FUNCTION(arm64_el2_fiq_current_el_SP0)
-    invalid_exception
-END_FUNCTION(arm64_el2_fiq_current_el_SP0)
-
-.org 0x180
-LOCAL_FUNCTION(arm64_el2_err_exc_current_el_SP0)
-    invalid_exception
-END_FUNCTION(arm64_el2_err_exc_current_el_SP0)
-
-/* exceptions from current EL, using SPx */
-.org 0x200
-LOCAL_FUNCTION(arm64_el2_sync_exc_current_el_SPx)
-    invalid_exception
-END_FUNCTION(arm64_el2_sync_exc_current_el_SPx)
-
-.org 0x280
-LOCAL_FUNCTION(arm64_el2_irq_current_el_SPx)
-    invalid_exception
-END_FUNCTION(arm64_el2_irq_current_el_SPx)
-
-.org 0x300
-LOCAL_FUNCTION(arm64_el2_fiq_current_el_SPx)
-    invalid_exception
-END_FUNCTION(arm64_el2_fiq_current_el_SPx)
-
-.org 0x380
-LOCAL_FUNCTION(arm64_el2_err_exc_current_el_SPx)
-    invalid_exception
-END_FUNCTION(arm64_el2_err_exc_current_el_SPx)
-
-/* exceptions from lower EL, running arm64 */
-.org 0x400
-LOCAL_FUNCTION(arm64_el2_sync_exc_lower_el_64)
-    sync_exception
-END_FUNCTION(arm64_el2_sync_exc_lower_el_64)
-
-.org 0x480
-LOCAL_FUNCTION(arm64_el2_irq_lower_el_64)
-    invalid_exception
-END_FUNCTION(arm64_el2_irq_lower_el_64)
-
-.org 0x500
-LOCAL_FUNCTION(arm64_el2_fiq_lower_el_64)
-    invalid_exception
-END_FUNCTION(arm64_el2_fiq_lower_el_64)
-
-.org 0x580
-LOCAL_FUNCTION(arm64_el2_err_exc_lower_el_64)
-    invalid_exception
-END_FUNCTION(arm64_el2_err_exc_lower_el_64)
-
-/* exceptions from lower EL, running arm32 */
-.org 0x600
-LOCAL_FUNCTION(arm64_el2_sync_exc_lower_el_32)
-    invalid_exception
-END_FUNCTION(arm64_el2_sync_exc_lower_el_32)
-
-.org 0x680
-LOCAL_FUNCTION(arm64_el2_irq_lower_el_32)
-    invalid_exception
-END_FUNCTION(arm64_el2_irq_lower_el_32)
-
-.org 0x700
-LOCAL_FUNCTION(arm64_el2_fiq_lower_el_32)
-    invalid_exception
-END_FUNCTION(arm64_el2_fiq_lower_el_32)
-
-.org 0x780
-LOCAL_FUNCTION(arm64_el2_err_exc_lower_el_32)
-    invalid_exception
-END_FUNCTION(arm64_el2_err_exc_lower_el_32)
+    b el2_hvc_on
 
 // zx_status_t arm64_el2_on(zx_paddr_t stack_top);
 //
@@ -141,7 +184,7 @@ FUNCTION(arm64_el2_on)
     hvc #0
     ret
 END_FUNCTION(arm64_el2_on)
-LOCAL_FUNCTION(el2_on)
+FUNCTION_LABEL(el2_hvc_on)
     mov sp, x0
 
     // Setup memory attributes and translation controls.
@@ -157,34 +200,118 @@ LOCAL_FUNCTION(el2_on)
     msr ttbr0_el2, x9
     isb
 
-    // Invalidate all EL2 TLB entries and flush I-cache and D-cache.
+    // Invalidate all EL2 TLB entries and synchronize I-cache and D-cache.
     tlbi alle2
     isb
     dsb sy
 
     // Enable the MMU for EL2, with I-cache and D-cache.
     mrs x9, sctlr_el2
-    movlit x10, SCTLR_EL2_M | SCTLR_EL2_C | SCTLR_EL2_I
+    movlit x10, SCTLR_EL2_M | SCTLR_EL2_A | SCTLR_EL2_C | SCTLR_EL2_SA | SCTLR_EL2_I
     orr x9, x9, x10
     msr sctlr_el2, x9
     isb
 
-    mov x0, #ZX_OK
-    eret
-END_FUNCTION(el2_on)
+    // Set the exec vector base for EL2.
+    mrs x9, vbar_el2
+    add x9, x9, #VECTOR_TABLE_SIZE
+    msr vbar_el2, x9
+    isb
+
+    exception_return ZX_OK
+
+FUNCTION_LABEL(el2_exec)
+    // We push X9 onto the stack so we have one scratch register. We only use
+    // X9 here, so that we don't accidentally trample the guest state.
+    stp x9, xzr, [sp, #-16]!
+
+    // Check ESR_EL2.EC to determine what caused the exception.
+    mrs x9, esr_el2
+    lsr x9, x9, #ESR_EL2_EC_SHIFT
+    cmp x9, #ESR_EL2_EC_HVC
+    b.eq el2_hvc_handler
+    cmp x9, #ESR_EL2_EC_SMC
+    b.eq el2_smc_handler
+
+    b el2_unknown_handler
+
+FUNCTION_LABEL(el2_hvc_handler)
+    // Check VTTBR_EL2 to determine if the HVC came from the host.
+    mrs x9, vttbr_el2
+    cmp x9, xzr
+    b.ne el2_unknown_handler
+
+    // Check ESR_EL2.ICC to determine whether the HVC index is in range.
+    mrs x10, esr_el2
+    and x10, x10, #ESR_EL2_ISS_MASK
+    cmp x10, #HVC_MAX_INDEX
+    b.ge out_of_range
+
+    // Branch to the jump table.
+    lsl x10, x10, #2
+    adr x9, table
+    add x9, x9, x10
+    br x9
+
+table:
+    b el2_hvc_off
+    b el2_hvc_resume
+
+out_of_range:
+    pop_return ZX_ERR_OUT_OF_RANGE
 
 // zx_status_t arm64_el2_off();
 FUNCTION(arm64_el2_off)
-    hvc #1
+    hvc #0
     ret
 END_FUNCTION(arm64_el2_off)
-LOCAL_FUNCTION(el2_off)
+FUNCTION_LABEL(el2_hvc_off)
     // Disable the MMU for EL2.
     mrs x9, sctlr_el2
     bic x9, x9, #SCTLR_EL2_M
     msr sctlr_el2, x9
     isb
 
-    mov x0, #ZX_OK
-    eret
-END_FUNCTION(el2_off)
+    // Set the exec vector base for EL2.
+    mrs x9, vbar_el2
+    sub x9, x9, #VECTOR_TABLE_SIZE
+    msr vbar_el2, x9
+    isb
+
+    pop_return ZX_OK
+
+// zx_status_t arm64_el2_resume(zx_paddr_t el2_state);
+FUNCTION(arm64_el2_resume)
+    hvc #1
+    ret
+END_FUNCTION(arm64_el2_resume)
+FUNCTION_LABEL(el2_hvc_resume)
+    // Save El2State into tpidr_el2.
+    msr tpidr_el2, x0
+    mov x9, x0
+
+    host_state stp
+    system_state str, HS_SYSTEM_STATE
+    guest_state ldp
+    system_state ldr, GS_SYSTEM_STATE
+
+    pop_return ZX_OK
+
+FUNCTION_LABEL(el2_smc_handler)
+    pop_return ZX_ERR_NOT_SUPPORTED
+
+FUNCTION_LABEL(el2_unknown_handler)
+    // Load El2State from tpidr_el2.
+    mrs x9, tpidr_el2
+
+    guest_state stp
+    system_state str, GS_SYSTEM_STATE
+    host_state ldp
+    system_state ldr, HS_SYSTEM_STATE
+
+    // Save X9 to El2State.
+    ldr x0, [sp]
+    str x0, [x9, GS_R0 + 240]
+
+    // Restore host state.
+    pop_return ZX_ERR_INTERNAL

@@ -132,12 +132,10 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
         return status;
 
     instruction_t inst;
-#if __aarch64__
-    status = ZX_ERR_NOT_SUPPORTED;
-#elif __x86_64__
+#if __x86_64__
     status = inst_decode(mem->inst_buf, mem->inst_len, &vcpu_state, &inst);
 #else
-#error Unsupported architecture
+    status = ZX_ERR_NOT_SUPPORTED;
 #endif
 
     if (status != ZX_OK) {

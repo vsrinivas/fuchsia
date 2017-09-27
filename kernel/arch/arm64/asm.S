@@ -75,8 +75,8 @@ FUNCTION(arm64_elX_to_el1)
     b   .confEL1
 
 .inEL2:
-    /* Set the vector base for EL2 */
-    adr_global x9, arm64_el2_exception_base
+    /* Set the init vector base for EL2 */
+    adr_global x9, arm64_el2_init_base
     msr vbar_el2, x9
 
     /* Ensure EL1 timers are properly configured, disable EL2 trapping of

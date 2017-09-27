@@ -78,10 +78,10 @@ static bool setup(test_t* test, const char* start, const char* end) {
     zx_handle_close(resource);
 
     // Setup the guest.
-    uintptr_t guest_ip;
-    ASSERT_EQ(guest_create_page_table(test->guest_physaddr, VMO_SIZE, &guest_ip), ZX_OK);
+    uintptr_t guest_ip = 0;
 
 #if __x86_64__
+    ASSERT_EQ(guest_create_page_table(test->guest_physaddr, VMO_SIZE, &guest_ip), ZX_OK);
     memcpy((void*)(test->guest_physaddr + guest_ip), start, end - start);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), ZX_OK);
 #endif // __x86_64__

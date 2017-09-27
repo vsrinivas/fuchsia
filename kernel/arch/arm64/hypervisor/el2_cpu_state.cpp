@@ -6,6 +6,7 @@
 
 #include "el2_cpu_state_priv.h"
 
+#include <arch/arm64/el2_state.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <vm/pmm.h>
@@ -13,11 +14,6 @@
 static fbl::Mutex el2_mutex;
 static size_t num_guests TA_GUARDED(el2_mutex) = 0;
 static fbl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(el2_mutex);
-
-__BEGIN_CDECLS
-extern zx_status_t arm64_el2_on(zx_paddr_t stack_top);
-extern zx_status_t arm64_el2_off();
-__END_CDECLS
 
 El2Stack::~El2Stack() {
     if (stack_paddr_ != 0)

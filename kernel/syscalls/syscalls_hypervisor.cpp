@@ -87,7 +87,13 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
-#if ARCH_X86_64
+#if ARCH_ARM64
+    fbl::RefPtr<Dispatcher> dispatcher;
+    zx_rights_t rights;
+    status = VcpuDispatcher::Create(guest, args.ip, &dispatcher, &rights);
+    if (status != ZX_OK)
+        return status;
+#elif ARCH_X86_64
     fbl::RefPtr<VmObjectDispatcher> apic;
     status = up->GetDispatcherWithRights(args.apic_vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &apic);
     if (status != ZX_OK)
@@ -98,6 +104,9 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     status = VcpuDispatcher::Create(guest, args.ip, args.cr3, apic->vmo(), &dispatcher, &rights);
     if (status != ZX_OK)
         return status;
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
 
     HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
@@ -108,9 +117,6 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
 
     up->AddHandle(fbl::move(handle));
     return ZX_OK;
-#else // ARCH_X86_64
-    return ZX_ERR_NOT_SUPPORTED;
-#endif
 }
 
 zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_ptr<zx_port_packet_t> _packet) {

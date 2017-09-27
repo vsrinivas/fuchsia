@@ -26,9 +26,7 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
         return status;
 
     *out = fbl::move(guest);
-    // TODO(abdulla): We intentionally return ZX_ERR_NOT_SUPPORTED, as the guest
-    // physical address space has not been wired up yet.
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_OK;
 }
 
 Guest::~Guest() {
@@ -58,6 +56,11 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     if (status != ZX_OK)
         return status;
     return mux_.AddPortRange(kind, addr, len, fbl::move(port), key);
+}
+
+zx_status_t Guest::NextVpid(uint8_t* vpid) {
+    *vpid = next_vpid_++;
+    return next_vpid_ == 0 ? ZX_ERR_NO_RESOURCES : ZX_OK;
 }
 
 zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {
