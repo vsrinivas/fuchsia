@@ -297,7 +297,7 @@ class Resumable : public internal::base_mixin {
 template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
-    zx_status_t DdkAdd(const char* name) {
+    zx_status_t DdkAdd(const char* name, uint32_t flags = 0) {
         if (zxdev_ != nullptr) {
             return ZX_ERR_BAD_STATE;
         }
@@ -309,9 +309,14 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         // the callback functions and cast it directly to a D*.
         args.ctx = static_cast<D*>(this);
         args.ops = &ddk_device_proto_;
+        args.flags = flags;
         AddProtocol(&args);
 
         return device_add(parent_, &args, &zxdev_);
+    }
+
+    void DdkMakeVisible() {
+        device_make_visible(zxdev());
     }
 
     zx_status_t DdkRemove() {
