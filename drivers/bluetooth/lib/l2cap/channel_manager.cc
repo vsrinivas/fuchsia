@@ -34,38 +34,21 @@ void ChannelManager::Register(hci::ConnectionHandle handle,
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   std::lock_guard<std::mutex> lock(mtx_);
+  RegisterInternalLocked(handle, ll_type, role);
+}
 
-  auto iter = ll_map_.find(handle);
-  FXL_DCHECK(iter == ll_map_.end()) << fxl::StringPrintf(
-      "l2cap: Connection registered more than once! (handle=0x%04x)", handle);
+void ChannelManager::RegisterLE(
+    hci::ConnectionHandle handle,
+    hci::Connection::Role role,
+    const LEConnectionParameterUpdateCallback& callback,
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
-  ll_map_[handle] =
-      std::make_unique<internal::LogicalLink>(handle, ll_type, role, hci_);
-
-  // Handle pending packets on the link, if any.
-  auto pp_iter = pending_packets_.find(handle);
-  if (pp_iter == pending_packets_.end())
-    return;
-
-  hci_->io_task_runner()->PostTask(
-      cancelable_callback_factory_.MakeTask([this, handle] {
-        std::lock_guard<std::mutex> lock(mtx_);
-
-        // First check that |handle| is still there
-        auto iter = ll_map_.find(handle);
-        if (iter == ll_map_.end())
-          return;
-
-        auto pp_iter = pending_packets_.find(handle);
-        FXL_DCHECK(pp_iter != pending_packets_.end());
-
-        auto& ll = iter->second;
-        auto& packets = pp_iter->second;
-        while (!packets.is_empty()) {
-          ll->HandleRxPacket(packets.pop_front());
-        }
-        pending_packets_.erase(pp_iter);
-      }));
+  std::lock_guard<std::mutex> lock(mtx_);
+  auto* ll =
+      RegisterInternalLocked(handle, hci::Connection::LinkType::kLE, role);
+  ll->le_signaling_channel()->set_conn_param_update_callback(callback,
+                                                             task_runner);
 }
 
 void ChannelManager::Unregister(hci::ConnectionHandle handle) {
@@ -81,17 +64,17 @@ void ChannelManager::Unregister(hci::ConnectionHandle handle) {
 }
 
 std::unique_ptr<Channel> ChannelManager::OpenFixedChannel(
-    hci::ConnectionHandle connection_handle,
+    hci::ConnectionHandle handle,
     ChannelId channel_id) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   std::lock_guard<std::mutex> lock(mtx_);
 
-  auto iter = ll_map_.find(connection_handle);
+  auto iter = ll_map_.find(handle);
   if (iter == ll_map_.end()) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "l2cap: Cannot open fixed channel on unknown connection handle: 0x%04x",
-        connection_handle);
+        handle);
     return nullptr;
   }
 
@@ -148,6 +131,48 @@ void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
   // TODO(armansito): It's probably OK to keep shared_ptrs to LogicalLink and to
   // temporarily add a ref before calling HandleRxPacket on it. Revisit later.
   iter->second->HandleRxPacket(std::move(packet));
+}
+
+internal::LogicalLink* ChannelManager::RegisterInternalLocked(
+    hci::ConnectionHandle handle,
+    hci::Connection::LinkType ll_type,
+    hci::Connection::Role role) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+
+  auto iter = ll_map_.find(handle);
+  FXL_DCHECK(iter == ll_map_.end()) << fxl::StringPrintf(
+      "l2cap: Connection registered more than once! (handle=0x%04x)", handle);
+
+  auto ll =
+      std::make_unique<internal::LogicalLink>(handle, ll_type, role, hci_);
+  auto* ret = ll.get();
+  ll_map_[handle] = std::move(ll);
+
+  // Handle pending packets on the link, if any.
+  auto pp_iter = pending_packets_.find(handle);
+  if (pp_iter != pending_packets_.end()) {
+    hci_->io_task_runner()->PostTask(
+        cancelable_callback_factory_.MakeTask([this, handle] {
+          std::lock_guard<std::mutex> lock(mtx_);
+
+          // First check that |handle| is still there
+          auto iter = ll_map_.find(handle);
+          if (iter == ll_map_.end())
+            return;
+
+          auto pp_iter = pending_packets_.find(handle);
+          FXL_DCHECK(pp_iter != pending_packets_.end());
+
+          auto& ll = iter->second;
+          auto& packets = pp_iter->second;
+          while (!packets.is_empty()) {
+            ll->HandleRxPacket(packets.pop_front());
+          }
+          pending_packets_.erase(pp_iter);
+        }));
+  }
+
+  return ret;
 }
 
 }  // namespace l2cap

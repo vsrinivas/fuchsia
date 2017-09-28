@@ -158,17 +158,10 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
   bool smp_closed = false;
   auto smp_closed_cb = [&smp_closed] { smp_closed = true; };
 
-  bool sig_closed = false;
-  auto sig_closed_cb = [&sig_closed] { sig_closed = true; };
-
   auto att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, att_closed_cb);
   ASSERT_TRUE(att_chan);
 
   auto smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, smp_closed_cb);
-  ASSERT_TRUE(smp_chan);
-
-  auto sig_chan =
-      OpenFixedChannel(kLESignalingChannelId, kTestHandle1, sig_closed_cb);
   ASSERT_TRUE(smp_chan);
 
   smp_chan = nullptr;
@@ -176,7 +169,6 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
 
   EXPECT_TRUE(att_closed);
   EXPECT_FALSE(smp_closed);
-  EXPECT_TRUE(sig_closed);
 }
 
 TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
@@ -650,6 +642,47 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
 
   EXPECT_TRUE(common::ContainersEqual(expected_acl_0, *acl_fragments[0]));
   EXPECT_TRUE(common::ContainersEqual(expected_acl_1, *acl_fragments[1]));
+}
+
+TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
+  bool conn_param_cb_called = false;
+  auto conn_param_cb = [&conn_param_cb_called, this](
+                           uint16_t interval_min, uint16_t interval_max,
+                           uint16_t slave_latency, uint16_t supv_timeout) {
+    // The parameters should match the payload of the HCI packet seen below.
+    EXPECT_EQ(0x0006, interval_min);
+    EXPECT_EQ(0x0C80, interval_max);
+    EXPECT_EQ(0x01F3, slave_latency);
+    EXPECT_EQ(0x0C80, supv_timeout);
+    conn_param_cb_called = true;
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
+                        conn_param_cb, message_loop()->task_runner());
+
+  // clang-format off
+  test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(
+      // ACL data header (handle: 0x0001, length: 16 bytes)
+      0x01, 0x00, 0x10, 0x00,
+
+      // L2CAP B-frame header (length: 12 bytes, channel-id: 0x0005 (LE sig))
+      0x0C, 0x00, 0x05, 0x00,
+
+      // L2CAP C-frame header
+      // (LE conn. param. update request, id: 1, length: 8 bytes)
+      0x12, 0x01, 0x08, 0x00,
+
+      // Connection parameters (hardcoded to match the expections in
+      // |conn_param_cb|).
+      0x06, 0x00,
+      0x80, 0x0C,
+      0xF3, 0x01,
+      0x80, 0x0C));
+  // clang-format on
+
+  RunMessageLoop(5);
+  EXPECT_TRUE(conn_param_cb_called);
 }
 
 }  // namespace

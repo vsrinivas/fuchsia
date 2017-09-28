@@ -35,6 +35,8 @@ class ChannelManager;
 namespace internal {
 
 class ChannelImpl;
+class LESignalingChannel;
+class SignalingChannel;
 
 // Represents a controller logical link. Each instance aids in mapping L2CAP
 // channels to their corresponding controller logical link and vice versa.
@@ -71,6 +73,11 @@ class LogicalLink final {
   }
 
   hci::Connection::LinkType type() const { return type_; }
+  hci::Connection::Role role() const { return role_; }
+
+  // Returns the LE signaling channel implementation or nullptr if this is not a
+  // LE-U link.
+  LESignalingChannel* le_signaling_channel() const;
 
  private:
   friend class ChannelImpl;
@@ -95,8 +102,10 @@ class LogicalLink final {
   hci::Connection::LinkType type_;
   hci::Connection::Role role_;
 
-  // TODO(armansito): Store a signaling channel implementation separately from
-  // other fixed channels.
+  // Owns and manages the L2CAP signaling channel on this logical link.
+  // Depending on |type_| this will either implement the LE or BR/EDR signaling
+  // commands.
+  std::unique_ptr<SignalingChannel> signaling_channel_;
 
   // Fragmenter and Recombiner should always be accessed on the HCI I/O thread.
   Fragmenter fragmenter_;

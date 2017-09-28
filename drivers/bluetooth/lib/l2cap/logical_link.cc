@@ -9,6 +9,7 @@
 #include "lib/fxl/strings/string_printf.h"
 
 #include "channel.h"
+#include "le_signaling_channel.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -63,6 +64,15 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
     fragmenter_.set_max_acl_payload_size(
         hci_->acl_data_channel()->GetBufferInfo().max_data_length());
   }
+
+  // Set up the signaling channel.
+  if (type_ == hci::Connection::LinkType::kLE) {
+    signaling_channel_ = std::make_unique<LESignalingChannel>(
+        OpenFixedChannel(kLESignalingChannelId), role_);
+  } else {
+    FXL_LOG(WARNING)
+        << "l2cap: BR/EDR signaling channel currently not supported";
+  }
 }
 
 LogicalLink::~LogicalLink() {
@@ -83,7 +93,6 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
   std::lock_guard<std::mutex> lock(mtx_);
 
   auto iter = channels_.find(id);
-
   if (iter != channels_.end()) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "l2cap: Channel is already open! (id: 0x%04x, handle: 0x%04x)", id,
@@ -203,6 +212,12 @@ void LogicalLink::SendBasicFrame(ChannelId id,
 
   FXL_DCHECK(!fragments.is_empty());
   hci_->acl_data_channel()->SendPackets(std::move(fragments), type_);
+}
+
+LESignalingChannel* LogicalLink::le_signaling_channel() const {
+  return (type_ == hci::Connection::LinkType::kLE)
+             ? static_cast<LESignalingChannel*>(signaling_channel_.get())
+             : nullptr;
 }
 
 bool LogicalLink::AllowsFixedChannel(ChannelId id) {

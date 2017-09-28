@@ -15,6 +15,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/le_signaling_channel.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -57,9 +58,25 @@ class ChannelManager final {
   //
   // It is an error to register the same |handle| value more than once without
   // first unregistering it (this is asserted in debug builds).
+  //
+  // TODO(armansito): Make this private.
   void Register(hci::ConnectionHandle handle,
                 hci::Connection::LinkType ll_type,
                 hci::Connection::Role role);
+
+  // Registers a LE connection with the L2CAP layer. L2CAP chanels can be
+  // opened on the logical link represented by |handle| after a call to this
+  // method.
+  //
+  // |callback| will be used to notify the caller if new connection parameters
+  // were accepted from the remote end of the link. |callback| will be posted on
+  // |task_runner|.
+  using LEConnectionParameterUpdateCallback =
+      internal::LESignalingChannel::ConnectionParameterUpdateCallback;
+  void RegisterLE(hci::ConnectionHandle handle,
+                  hci::Connection::Role role,
+                  const LEConnectionParameterUpdateCallback& callback,
+                  fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Removes a previously registered connection. All corresponding Channels will
   // be closed and all incoming data packets on this link will be dropped.
@@ -85,6 +102,13 @@ class ChannelManager final {
   // Called when an ACL data packet is received from the controller. This method
   // is responsible for routing the packet to the corresponding LogicalLink.
   void OnACLDataReceived(hci::ACLDataPacketPtr data_packet);
+
+  // Called by the various Register functions. The caller must hold |mtx_|.
+  // Returns a pointer to the newly added link.
+  internal::LogicalLink* RegisterInternalLocked(
+      hci::ConnectionHandle handle,
+      hci::Connection::LinkType ll_type,
+      hci::Connection::Role role) __TA_REQUIRES(mtx_);
 
   fxl::RefPtr<hci::Transport> hci_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
