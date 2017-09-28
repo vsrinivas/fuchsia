@@ -12,6 +12,7 @@
 
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit.h"
 #include "peridot/bin/ledger/cloud_provider/public/types.h"
@@ -32,7 +33,8 @@ BatchUpload::BatchUpload(
       commits_(std::move(commits)),
       on_done_(std::move(on_done)),
       on_error_(std::move(on_error)),
-      max_concurrent_uploads_(max_concurrent_uploads) {
+      max_concurrent_uploads_(max_concurrent_uploads),
+      weak_ptr_factory_(this) {
   TRACE_ASYNC_BEGIN("ledger", "batch_upload",
                     reinterpret_cast<uintptr_t>(this));
   FXL_DCHECK(storage_);
@@ -49,7 +51,8 @@ void BatchUpload::Start() {
   FXL_DCHECK(!errored_);
   started_ = true;
   RefreshAuthToken([this] {
-    storage_->GetUnsyncedPieces(
+    storage_->GetUnsyncedPieces(callback::MakeScoped(
+        weak_ptr_factory_.GetWeakPtr(),
         [this](storage::Status status,
                std::vector<storage::ObjectId> object_ids) {
           FXL_DCHECK(status == storage::Status::OK);
@@ -57,7 +60,7 @@ void BatchUpload::Start() {
             remaining_object_ids_.push(std::move(object_id));
           }
           StartObjectUpload();
-        });
+        }));
   });
 }
 
@@ -90,11 +93,13 @@ void BatchUpload::UploadNextObject() {
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
   remaining_object_ids_.pop();
   storage_->GetPiece(object_id_to_send,
-                     [this](storage::Status storage_status,
-                            std::unique_ptr<const storage::Object> object) {
-                       FXL_DCHECK(storage_status == storage::Status::OK);
-                       UploadObject(std::move(object));
-                     });
+                     callback::MakeScoped(
+                         weak_ptr_factory_.GetWeakPtr(),
+                         [this](storage::Status storage_status,
+                                std::unique_ptr<const storage::Object> object) {
+                           FXL_DCHECK(storage_status == storage::Status::OK);
+                           UploadObject(std::move(object));
+                         }));
 }
 
 void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
@@ -122,26 +127,29 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
     }
 
     // Uploading the object succeeded.
-    storage_->MarkPieceSynced(id, [this](storage::Status status) {
-      FXL_DCHECK(status == storage::Status::OK);
+    storage_->MarkPieceSynced(
+        id, callback::MakeScoped(
+                weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
+                  FXL_DCHECK(status == storage::Status::OK);
 
-      // Notify the user about the error once all pending uploads of the
-      // recent retry complete.
-      if (errored_ && current_uploads_ == 0u) {
-        on_error_();
-        return;
-      }
+                  // Notify the user about the error once all pending uploads of
+                  // the recent retry complete.
+                  if (errored_ && current_uploads_ == 0u) {
+                    on_error_();
+                    return;
+                  }
 
-      if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
-        // All the referenced objects are uploaded, upload the commits.
-        FilterAndUploadCommits();
-        return;
-      }
+                  if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
+                    // All the referenced objects are uploaded, upload the
+                    // commits.
+                    FilterAndUploadCommits();
+                    return;
+                  }
 
-      if (!errored_ && !remaining_object_ids_.empty()) {
-        UploadNextObject();
-      }
-    });
+                  if (!errored_ && !remaining_object_ids_.empty()) {
+                    UploadNextObject();
+                  }
+                }));
   });
 }
 
@@ -149,7 +157,8 @@ void BatchUpload::FilterAndUploadCommits() {
   // Remove all commits that have been synced since this upload object was
   // created. This will happen if a merge is executed on multiple devices at the
   // same time.
-  storage_->GetUnsyncedCommits(
+  storage_->GetUnsyncedCommits(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(),
       [this](storage::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
         std::unordered_set<storage::CommitId> commit_ids;
@@ -169,9 +178,8 @@ void BatchUpload::FilterAndUploadCommits() {
                   return commit_ids.count(commit->GetId()) == 0;
                 }),
             commits_.end());
-
         UploadCommits();
-      });
+      }));
 }
 
 void BatchUpload::UploadCommits() {
@@ -202,13 +210,14 @@ void BatchUpload::UploadCommits() {
     for (auto& id : commit_ids) {
       storage_->MarkCommitSynced(id, waiter->NewCallback());
     }
-    waiter->Finalize([this](storage::Status status) {
-      // TODO(nellyv): Handle IO errors. See LE-225.
-      FXL_DCHECK(status == storage::Status::OK);
-      // This object can be deleted in the on_done_() callback, don't do
-      // anything after the call.
-      on_done_();
-    });
+    waiter->Finalize(callback::MakeScoped(
+        weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
+          // TODO(nellyv): Handle IO errors. See LE-225.
+          FXL_DCHECK(status == storage::Status::OK);
+          // This object can be deleted in the on_done_() callback, don't do
+          // anything after the call.
+          on_done_();
+        }));
   });
 }
 

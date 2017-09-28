@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
@@ -76,6 +77,9 @@ class PageUpload : public storage::CommitWatcher {
 
   // Internal state.
   UploadSyncState state_ = UPLOAD_STOPPED;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<PageUpload> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageUpload);
 };

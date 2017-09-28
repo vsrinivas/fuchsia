@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/page_upload.h"
 
 #include "lib/fxl/functional/make_copyable.h"
+#include "peridot/bin/ledger/callback/scoped_callback.h"
 
 namespace cloud_sync {
 PageUpload::PageUpload(
@@ -17,7 +18,8 @@ PageUpload::PageUpload(
       auth_provider_(auth_provider),
       delegate_(delegate),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) +
-                  " upload sync: ") {}
+                  " upload sync: "),
+      weak_ptr_factory_(this) {}
 
 PageUpload::~PageUpload() {}
 
@@ -69,7 +71,8 @@ void PageUpload::UploadUnsyncedCommits() {
   // TODO(ppi): either switch to a paginating API or (better?) ensure that long
   // backlogs of local commits are squashed in storage, as otherwise the list of
   // commits can be possibly very big.
-  storage_->GetUnsyncedCommits(
+  storage_->GetUnsyncedCommits(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(),
       [this](storage::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
         if (status != storage::Status::OK) {
@@ -84,7 +87,7 @@ void PageUpload::UploadUnsyncedCommits() {
         }
 
         VerifyUnsyncedCommits(std::move(commits));
-      });
+      }));
 }
 
 void PageUpload::VerifyUnsyncedCommits(
@@ -96,35 +99,36 @@ void PageUpload::VerifyUnsyncedCommits(
     return;
   }
 
-  storage_->GetHeadCommitIds(fxl::MakeCopyable([
-    this, commits = std::move(commits)
-  ](storage::Status status, std::vector<storage::CommitId> heads) mutable {
-    if (status != storage::Status::OK) {
-      HandleError("Failed to retrieve the current heads");
-      return;
-    }
-    if (batch_upload_) {
-      // If we are already uploading a commit batch, return early.
-      return;
-    }
-    FXL_DCHECK(!heads.empty());
+  storage_->GetHeadCommitIds(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(), fxl::MakeCopyable([
+        this, commits = std::move(commits)
+      ](storage::Status status, std::vector<storage::CommitId> heads) mutable {
+        if (status != storage::Status::OK) {
+          HandleError("Failed to retrieve the current heads");
+          return;
+        }
+        if (batch_upload_) {
+          // If we are already uploading a commit batch, return early.
+          return;
+        }
+        FXL_DCHECK(!heads.empty());
 
-    if (!delegate_->IsDownloadIdle()) {
-      // If a commit batch is currently being downloaded, don't try to start the
-      // upload.
-      SetState(UPLOAD_WAIT_REMOTE_DOWNLOAD);
-      return;
-    }
+        if (!delegate_->IsDownloadIdle()) {
+          // If a commit batch is currently being downloaded, don't try to start
+          // the upload.
+          SetState(UPLOAD_WAIT_REMOTE_DOWNLOAD);
+          return;
+        }
 
-    if (heads.size() > 1u) {
-      // Too many local heads.
-      commits_to_upload_ = false;
-      SetState(UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS);
-      return;
-    }
+        if (heads.size() > 1u) {
+          // Too many local heads.
+          commits_to_upload_ = false;
+          SetState(UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS);
+          return;
+        }
 
-    HandleUnsyncedCommits(std::move(commits));
-  }));
+        HandleUnsyncedCommits(std::move(commits));
+      })));
 }
 
 void PageUpload::HandleUnsyncedCommits(

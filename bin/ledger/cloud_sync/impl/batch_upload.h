@@ -11,6 +11,7 @@
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
@@ -97,6 +98,9 @@ class BatchUpload {
 
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<BatchUpload> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchUpload);
 };
