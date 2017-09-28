@@ -11,6 +11,10 @@
     ],
     "binaries": [
         {
+            "binary": "components_query",
+            "bootfs_path": "bin/components"
+        },
+        {
             "binary": "gen/peridot/examples/counter_flutter/child/example_flutter_counter_child.flx",
             "bootfs_path": "apps/example_flutter_counter_child"
         },
@@ -27,6 +31,14 @@
             "bootfs_path": "apps/example_flutter_story_shell"
         },
         {
+            "binary": "hello_app_child",
+            "bootfs_path": "apps/hello_app_child"
+        },
+        {
+            "binary": "hello_app_parent",
+            "bootfs_path": "apps/hello_app_parent"
+        },
+        {
             "binary": "example_module1",
             "bootfs_path": "apps/example_module1"
         },
@@ -41,6 +53,22 @@
         {
             "binary": "example_todo_headless",
             "bootfs_path": "apps/example_todo_headless"
+        },
+        {
+            "binary": "swap_module1",
+            "bootfs_path": "apps/swap_module1"
+        },
+        {
+            "binary": "swap_module2",
+            "bootfs_path": "apps/swap_module2"
+        },
+        {
+            "binary": "swap_recipe",
+            "bootfs_path": "apps/swap_recipe"
+        },
+        {
+            "binary": "suggest_shell_controller",
+            "bootfs_path": "apps/suggest_shell_controller"
         },
         {
             "binary": "gen/peridot/examples/todo_story/example_todo_story.flx",

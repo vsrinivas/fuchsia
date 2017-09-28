@@ -47,10 +47,6 @@
             "bootfs_path": "apps/component_manager"
         },
         {
-            "binary": "components_query",
-            "bootfs_path": "bin/components"
-        },
-        {
             "binary": "dev_user_shell",
             "bootfs_path": "apps/dev_user_shell"
         },
@@ -73,14 +69,6 @@
         {
             "binary": "gen/component_index.json",
             "bootfs_path": "components/index.json"
-        },
-        {
-            "binary": "hello_app_child",
-            "bootfs_path": "apps/hello_app_child"
-        },
-        {
-            "binary": "hello_app_parent",
-            "bootfs_path": "apps/hello_app_parent"
         },
         {
             "binary": "modular_tests.json",
@@ -111,28 +99,12 @@
             "bootfs_path": "apps/modular_tests/null_module"
         },
         {
-            "binary": "swap_module1",
-            "bootfs_path": "apps/swap_module1"
-        },
-        {
-            "binary": "suggest_shell_controller",
-            "bootfs_path": "apps/suggest_shell_controller"
-        },
-        {
             "binary": "suggestion_proposal_test_module",
             "bootfs_path": "apps/modular_tests/suggestion_proposal_test_module"
         },
         {
             "binary": "suggestion_test_user_shell",
             "bootfs_path": "apps/suggestion_test_user_shell"
-        },
-        {
-            "binary": "swap_module2",
-            "bootfs_path": "apps/swap_module2"
-        },
-        {
-            "binary": "swap_recipe",
-            "bootfs_path": "apps/swap_recipe"
         },
         {
             "binary": "test_last_focus_time",
