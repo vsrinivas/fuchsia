@@ -22,7 +22,6 @@ struct zx_device {
     zx_handle_t event;
     zx_handle_t local_event;
     zx_handle_t rpc;
-    zx_handle_t resource;
     const char* args;
 
     // most devices implement a single

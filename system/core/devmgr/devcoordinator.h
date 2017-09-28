@@ -51,14 +51,15 @@ struct dc_devhost {
 
 struct dc_device {
     zx_handle_t hrpc;
-    zx_handle_t hrsrc;
+    uint32_t flags;
+
     port_handler_t ph;
+
     devhost_t* host;
     const char* name;
     const char* libname;
     const char* args;
     work_t work;
-    uint32_t flags;
     int32_t refcount;
     uint32_t protocol_id;
     uint32_t prop_count;

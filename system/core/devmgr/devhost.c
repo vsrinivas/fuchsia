@@ -263,8 +263,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
     switch (msg.op) {
     case DC_OP_CREATE_DEVICE_STUB:
         log(RPC_IN, "devhost[%s] create device stub drv='%s'\n", path, name);
-        if (hcount < 1 || hcount > 2) {
-            printf("HCOUNT %d\n", hcount);
+        if (hcount != 1) {
             r = ZX_ERR_INVALID_ARGS;
             goto fail;
         }
@@ -286,7 +285,6 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         dev->protocol_id = msg.protocol_id;
         dev->ops = &device_default_ops;
         dev->rpc = hin[0];
-        dev->resource = (hcount == 2 ? hin[1] : ZX_HANDLE_INVALID);
         if (args && strlen(args)) {
             dev->args = strdup(args);
         }

@@ -620,10 +620,6 @@ static void dc_release_device(device_t* dev) {
         dev->hrpc = ZX_HANDLE_INVALID;
         dev->ph.handle = ZX_HANDLE_INVALID;
     }
-    if (dev->hrsrc != ZX_HANDLE_INVALID) {
-        zx_handle_close(dev->hrsrc);
-        dev->hrsrc = ZX_HANDLE_INVALID;
-    }
     dev->host = NULL;
 
     cancel_work(&dev->work);
@@ -652,7 +648,6 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
     dev->hrpc = hrpc;
-    dev->hrsrc = ZX_HANDLE_INVALID;
     dev->prop_count = msg->datalen / sizeof(zx_device_prop_t);
     dev->protocol_id = msg->protocol_id;
 
@@ -680,9 +675,9 @@ static zx_status_t dc_add_device(device_t* parent, zx_handle_t hrpc,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // If we have bus device args or resource handle
-    // we are, by definition a bus device.
-    if (args[0] || (dev->hrsrc != ZX_HANDLE_INVALID)) {
+    // If we have bus device args we are,
+    // by definition, a bus device.
+    if (args[0]) {
         dev->flags |= DEV_CTX_MUST_ISOLATE;
     }
 
@@ -1131,14 +1126,6 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
 
     if (rpc_proxy) {
         handle[hcount++] = rpc_proxy;
-        if (info->hrsrc) {
-            log(ERROR, "devcoord: proxy device has a resource?!\n");
-        }
-    } else if (info->hrsrc != ZX_HANDLE_INVALID) {
-        if ((r = zx_handle_duplicate(info->hrsrc, ZX_RIGHT_SAME_RIGHTS, handle + hcount)) < 0) {
-            goto fail;
-        }
-        hcount++;
     }
 
     msg.txid = 0;
