@@ -4,7 +4,7 @@
         "dart"
     ],
     "labels": [
-        "//examples",
+        "//examples"
     ],
     "components": [
         "peridot/examples/hello_component/hello_component.json"
