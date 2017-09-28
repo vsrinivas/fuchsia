@@ -110,15 +110,26 @@ where
     }
 }
 
+// TODO(raggi): when const fn is stable, replace the macro with const fn.
+macro_rules! make_ioctl {
+    ($kind:expr, $family:expr, $number:expr) => {
+        (((($kind) & 0xF) << 20) | ((($family) & 0xFF) << 8) | (($number) & 0xFF))
+    };
+}
 /// Calculates an IOCTL value from kind, family and number.
 pub fn make_ioctl(kind: i32, family: i32, number: i32) -> i32 {
-    ((((kind) & 0xF) << 20) | (((family) & 0xFF) << 8) | ((number) & 0xFF))
+    make_ioctl!(kind, family, number)
 }
 
 pub const IOCTL_KIND_DEFAULT: i32 = 0;
 pub const IOCTL_KIND_GET_HANDLE: i32 = 0x1;
+pub const IOCTL_KIND_SET_HANDLE: i32 = 0x3;
 
 pub const IOCTL_FAMILY_DEVICE: i32 = 0x01;
+pub const IOCTL_FAMILY_VFS: i32 = 0x2;
 pub const IOCTL_FAMILY_CONSOLE: i32 = 0x10;
 pub const IOCTL_FAMILY_INPUT: i32 = 0x11;
 pub const IOCTL_FAMILY_DISPLAY: i32 = 0x12;
+
+pub const IOCTL_VFS_MOUNT_FS: i32 = make_ioctl!(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 0);
+pub const IOCTL_VFS_UNMOUNT_NODE: i32 = make_ioctl!(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_VFS, 2);
