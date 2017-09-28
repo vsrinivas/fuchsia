@@ -41,15 +41,12 @@ typedef struct test {
 } test_t;
 
 static bool teardown(test_t* test) {
-    if (test->vcpu != ZX_HANDLE_INVALID)
-        ASSERT_EQ(zx_handle_close(test->vcpu), ZX_OK);
+    ASSERT_EQ(zx_handle_close(test->vcpu), ZX_OK);
 #if __x86_64__
-    if (test->vcpu_apicmem != ZX_HANDLE_INVALID)
-        ASSERT_EQ(zx_handle_close(test->vcpu_apicmem), ZX_OK);
+    ASSERT_EQ(zx_handle_close(test->vcpu_apicmem), ZX_OK);
 #endif // __x86_64__
 
-    if (test->guest != ZX_HANDLE_INVALID)
-        ASSERT_EQ(zx_handle_close(test->guest), ZX_OK);
+    ASSERT_EQ(zx_handle_close(test->guest), ZX_OK);
     ASSERT_EQ(zx_vmar_unmap(zx_vmar_root_self(), test->guest_physaddr, VMO_SIZE), ZX_OK);
     ASSERT_EQ(zx_handle_close(test->guest_physmem), ZX_OK);
 
