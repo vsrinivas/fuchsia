@@ -13,6 +13,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/callback/scoped_callback.h"
+#include "peridot/bin/ledger/callback/trace_callback.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit.h"
 #include "peridot/bin/ledger/cloud_provider/public/types.h"
@@ -222,8 +223,10 @@ void BatchUpload::UploadCommits() {
 }
 
 void BatchUpload::RefreshAuthToken(fxl::Closure on_refreshed) {
+  auto traced_callback = TRACE_CALLBACK(std::move(on_refreshed), "ledger",
+                                        "batch_upload_refresh_auth_token");
   auth_token_requests_.emplace(auth_provider_->GetFirebaseToken([
-    this, on_refreshed = std::move(on_refreshed)
+    this, on_refreshed = std::move(traced_callback)
   ](auth_provider::AuthStatus auth_status, std::string auth_token) {
     if (auth_status != auth_provider::AuthStatus::OK) {
       FXL_LOG(ERROR) << "Failed to retrieve the auth token for upload.";

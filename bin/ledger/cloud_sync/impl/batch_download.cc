@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <trace/event.h>
+
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 
@@ -22,9 +24,14 @@ BatchDownload::BatchDownload(
       on_error_(std::move(on_error)),
       weak_ptr_factory_(this) {
   FXL_DCHECK(storage);
+  TRACE_ASYNC_BEGIN("ledger", "batch_download",
+                    reinterpret_cast<uintptr_t>(this));
 }
 
-BatchDownload::~BatchDownload() {}
+BatchDownload::~BatchDownload() {
+  TRACE_ASYNC_END("ledger", "batch_download",
+                  reinterpret_cast<uintptr_t>(this));
+}
 
 void BatchDownload::Start() {
   FXL_DCHECK(!started_);

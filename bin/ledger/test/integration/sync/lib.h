@@ -8,6 +8,8 @@
 #include <functional>
 #include <memory>
 
+#include <trace-provider/provider.h>
+
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -37,6 +39,7 @@ class SyncTest : public ::test::TestWithMessageLoop {
   void SetUp() override;
 
  private:
+  std::unique_ptr<trace::TraceProvider> trace_provider_;
   std::unique_ptr<LedgerAppInstanceFactory> app_factory_;
 };
 

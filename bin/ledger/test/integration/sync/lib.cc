@@ -28,6 +28,8 @@ SyncTest::~SyncTest() {}
 
 void SyncTest::SetUp() {
   ::testing::Test::SetUp();
+  trace_provider_ =
+      std::make_unique<trace::TraceProvider>(message_loop_.async());
   app_factory_ = GetLedgerAppInstanceFactory();
   if (server_id) {
     app_factory_->SetServerId(*server_id);
