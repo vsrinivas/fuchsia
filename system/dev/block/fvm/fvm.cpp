@@ -404,7 +404,7 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
             }
 
             // Remove device, VPartition if this was a request to free all slices.
-            device_remove(zxdev());
+            device_remove(vp->zxdev());
             auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
             entry->clear();
             vp->KillLocked();
