@@ -23,9 +23,9 @@ import paths
 
 clang_os = "linux"
 if platform.platform().startswith("Darwin"):
-    clang_os = "darwin"
-CLANG_TIDY_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
-                               "clang+llvm-x86_64-%s" % clang_os, "bin",
+    clang_os = "mac"
+CLANG_TIDY_TOOL = os.path.join(paths.BUILDTOOLS_ROOT,
+                               "%s-x64" % clang_os, "clang", "bin",
                                "clang-tidy")
 NINJA_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "ninja")
 
