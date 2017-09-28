@@ -31,7 +31,6 @@ struct GenerationComparator {
 // set, i.e. the commits with the highest generation. The recursion stops when
 // only one commit is left in the set, which is the lowest common ancestor.
 void FindCommonAncestorInGeneration(
-    const fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* storage,
     std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>*
         commits,
@@ -66,10 +65,9 @@ void FindCommonAncestorInGeneration(
   }
   // Once the parents have been retrieved, recursively try to find the common
   // ancestor in that generation.
-  waiter->Finalize([
-    task_runner, storage, commits, callback = std::move(callback)
-  ](storage::Status status,
-    std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
+  waiter->Finalize([ storage, commits, callback = std::move(callback) ](
+      storage::Status status,
+      std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status), nullptr);
       return;
@@ -78,19 +76,13 @@ void FindCommonAncestorInGeneration(
     for (auto& parent : parents) {
       commits->insert(std::move(parent));
     }
-    task_runner->PostTask([
-      task_runner, storage, commits, callback = std::move(callback)
-    ]() mutable {
-      FindCommonAncestorInGeneration(task_runner, storage, commits,
-                                     std::move(callback));
-    });
+    FindCommonAncestorInGeneration(storage, commits, std::move(callback));
   });
 }
 
 }  // namespace
 
 void FindCommonAncestor(
-    const fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* const storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
@@ -111,7 +103,7 @@ void FindCommonAncestor(
   commits->emplace(std::move(head1));
   commits->emplace(std::move(head2));
   FindCommonAncestorInGeneration(
-      task_runner, storage, commits.get(), fxl::MakeCopyable([
+      storage, commits.get(), fxl::MakeCopyable([
         commits = std::move(commits), callback = std::move(callback)
       ](Status status, std::unique_ptr<const storage::Commit> ancestor) {
         callback(status, std::move(ancestor));

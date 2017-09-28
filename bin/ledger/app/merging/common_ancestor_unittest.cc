@@ -101,8 +101,7 @@ TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
 
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
-                     std::move(commit_1), std::move(commit_2),
+  FindCommonAncestor(storage_.get(), std::move(commit_1), std::move(commit_2),
                      callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
@@ -117,8 +116,7 @@ TEST_F(CommonAncestorTest, RootAndChild) {
 
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
-                     std::move(root), std::move(child),
+  FindCommonAncestor(storage_.get(), std::move(root), std::move(child),
                      callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
@@ -148,16 +146,15 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
   // Ancestor of (1) and (merge) needs to be (root).
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
-                     std::move(commit_1), std::move(commit_merge),
+  FindCommonAncestor(storage_.get(), std::move(commit_1),
+                     std::move(commit_merge),
                      callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(storage::kFirstPageCommitId, result->GetId());
 
   // Ancestor of (2) and (A).
-  FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
-                     std::move(commit_2), std::move(commit_a),
+  FindCommonAncestor(storage_.get(), std::move(commit_2), std::move(commit_a),
                      callback::Capture(MakeQuitTask(), &status, &result));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
@@ -182,8 +179,8 @@ TEST_F(CommonAncestorTest, LongChain) {
   // Ancestor of (last commit) and (b) needs to be (root).
   Status status;
   std::unique_ptr<const storage::Commit> result;
-  FindCommonAncestor(message_loop_.task_runner(), storage_.get(),
-                     std::move(last_commit), std::move(commit_b),
+  FindCommonAncestor(storage_.get(), std::move(last_commit),
+                     std::move(commit_b),
                      callback::Capture(MakeQuitTask(), &status, &result));
   // This test lasts ~2.5s on x86+qemu+kvm.
   EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));

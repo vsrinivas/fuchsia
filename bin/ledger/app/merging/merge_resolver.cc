@@ -28,8 +28,7 @@ MergeResolver::MergeResolver(fxl::Closure on_destroyed,
                              Environment* environment,
                              storage::PageStorage* storage,
                              std::unique_ptr<backoff::Backoff> backoff)
-    : environment_(environment),
-      storage_(storage),
+    : storage_(storage),
       backoff_(std::move(backoff)),
       on_destroyed_(std::move(on_destroyed)),
       task_runner_(environment->main_runner()) {
@@ -199,7 +198,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     auto head1 = std::move(commits[0]);
     auto head2 = std::move(commits[1]);
     FindCommonAncestor(
-        environment_->main_runner(), storage_, head1->Clone(), head2->Clone(),
+        storage_, head1->Clone(), head2->Clone(),
         task_runner_.MakeScoped(fxl::MakeCopyable([
           this, head1 = std::move(head1), head2 = std::move(head2),
           cleanup = std::move(cleanup)

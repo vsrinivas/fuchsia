@@ -56,7 +56,6 @@ class MergeResolver : public storage::CommitWatcher {
   void ResolveConflicts(DelayedStatus delayed_status,
                         std::vector<storage::CommitId> heads);
 
-  Environment* const environment_;
   storage::PageStorage* const storage_;
   std::unique_ptr<backoff::Backoff> backoff_;
   PageManager* page_manager_ = nullptr;

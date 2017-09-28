@@ -9,14 +9,12 @@
 #include <memory>
 
 #include "lib/fxl/memory/ref_counted.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {
 
 void FindCommonAncestor(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,

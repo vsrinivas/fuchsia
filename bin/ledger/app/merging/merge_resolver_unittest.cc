@@ -379,7 +379,6 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   });
 
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
   ids.clear();
