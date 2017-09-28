@@ -765,6 +765,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
             }
             return true;
           });
+      EXPECT_FALSE(RunLoopWithTimeout());
       EXPECT_EQ(IterationStatus::DONE, iteration_status);
       for (const auto& id : sub_ids) {
         EXPECT_EQ(1u, unsynced_ids.count(id));
