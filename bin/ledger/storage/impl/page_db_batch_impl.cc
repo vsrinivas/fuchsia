@@ -11,6 +11,14 @@
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
+#define RETURN_ON_ERROR(expr)   \
+  do {                          \
+    Status status = (expr);     \
+    if (status != Status::OK) { \
+      return status;            \
+    }                           \
+  } while (0)
+
 namespace storage {
 
 using coroutine::CoroutineHandler;
@@ -70,11 +78,8 @@ Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
 Status PageDbBatchImpl::RemoveJournal(CoroutineHandler* handler,
                                       const JournalId& journal_id) {
   if (journal_id[0] == JournalEntryRow::kImplicitPrefix) {
-    Status status =
-        batch_->Delete(handler, ImplicitJournalMetaRow::GetKeyFor(journal_id));
-    if (status != Status::OK) {
-      return status;
-    }
+    RETURN_ON_ERROR(
+        batch_->Delete(handler, ImplicitJournalMetaRow::GetKeyFor(journal_id)));
   }
   return batch_->DeleteByPrefix(handler,
                                 JournalEntryRow::GetPrefixFor(journal_id));
@@ -105,25 +110,20 @@ Status PageDbBatchImpl::WriteObject(
 
   auto object_key = ObjectRow::GetKeyFor(object_id);
   bool has_key;
-  Status status = db_->HasObject(handler, object_id, &has_key);
-  if (status != Status::OK) {
-    return status;
-  }
+  RETURN_ON_ERROR(db_->HasObject(handler, object_id, &has_key));
   if (has_key && object_status > PageDbObjectStatus::TRANSIENT) {
     return SetObjectStatus(handler, object_id, object_status);
   }
 
-  batch_->Put(handler, object_key, content->Get());
+  RETURN_ON_ERROR(batch_->Put(handler, object_key, content->Get()));
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:
       FXL_NOTREACHED();
       break;
     case PageDbObjectStatus::TRANSIENT:
-      batch_->Put(handler, TransientObjectRow::GetKeyFor(object_id), "");
-      break;
+      return batch_->Put(handler, TransientObjectRow::GetKeyFor(object_id), "");
     case PageDbObjectStatus::LOCAL:
-      batch_->Put(handler, LocalObjectRow::GetKeyFor(object_id), "");
-      break;
+      return batch_->Put(handler, LocalObjectRow::GetKeyFor(object_id), "");
     case PageDbObjectStatus::SYNCED:
       // Nothing to do.
       break;
@@ -133,10 +133,10 @@ Status PageDbBatchImpl::WriteObject(
 
 Status PageDbBatchImpl::DeleteObject(CoroutineHandler* handler,
                                      ObjectIdView object_id) {
-  batch_->Delete(handler, ObjectRow::GetKeyFor(object_id));
-  batch_->Delete(handler, TransientObjectRow::GetKeyFor(object_id));
-  batch_->Delete(handler, LocalObjectRow::GetKeyFor(object_id));
-  return Status::OK;
+  RETURN_ON_ERROR(batch_->Delete(handler, ObjectRow::GetKeyFor(object_id)));
+  RETURN_ON_ERROR(
+      batch_->Delete(handler, TransientObjectRow::GetKeyFor(object_id)));
+  return batch_->Delete(handler, LocalObjectRow::GetKeyFor(object_id));
 }
 
 Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
@@ -157,21 +157,17 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
     }
     case PageDbObjectStatus::LOCAL: {
       PageDbObjectStatus previous_object_status;
-      Status status =
-          db_->GetObjectStatus(handler, object_id, &previous_object_status);
-      if (status != Status::OK) {
-        return status;
-      }
+      RETURN_ON_ERROR(
+          db_->GetObjectStatus(handler, object_id, &previous_object_status));
       if (previous_object_status == PageDbObjectStatus::TRANSIENT) {
-        batch_->Delete(handler, transient_key);
-        batch_->Put(handler, local_key, "");
+        RETURN_ON_ERROR(batch_->Delete(handler, transient_key));
+        return batch_->Put(handler, local_key, "");
       }
       break;
     }
     case PageDbObjectStatus::SYNCED: {
-      batch_->Delete(handler, local_key);
-      batch_->Delete(handler, transient_key);
-      break;
+      RETURN_ON_ERROR(batch_->Delete(handler, local_key));
+      return batch_->Delete(handler, transient_key);
     }
   }
 
