@@ -31,9 +31,6 @@ pub enum zx_driver_t {
 }
 
 pub const ZX_DEVICE_NAME_MAX: usize = 31;
-pub const DEVICE_OPS_VERSION: u64 = 0xc9410d2a24f57424;
-const DRIVER_OPS_VERSION: u64 = 0x2b3490fa40d9f452;
-const DEVICE_ADD_ARGS_VERSION: u64 = 0x96a64134d56e88e3;
 
 #[repr(C)]
 pub struct list_node_t {
@@ -50,6 +47,8 @@ impl Default for list_node_t {
     }
 }
 
+pub const DRIVER_OPS_VERSION: u64 = 0x2b3490fa40d9f452;
+
 #[repr(C)]
 pub struct zx_driver_ops_t {
     version: u64,
@@ -63,16 +62,16 @@ pub struct zx_driver_ops_t {
 
 // References to Zircon DDK's iotxn.h
 
-const IOTXN_OP_READ: u8 = 1;
-const IOTXN_OP_WRITE: u8 = 2;
+pub const IOTXN_OP_READ: u8 = 1;
+pub const IOTXN_OP_WRITE: u8 = 2;
 
-const IOTXN_CACHE_INVALIDATE: u32 = sys::ZX_VMO_OP_CACHE_INVALIDATE;
-const IOTXN_CACHE_CLEAN: u32 = sys::ZX_VMO_OP_CACHE_CLEAN;
-const IOTXN_CACHE_CLEAN_INVALIDATE: u32 = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
-const IOTXN_CACHE_SYNC: u32 = sys::ZX_VMO_OP_CACHE_SYNC;
+pub const IOTXN_CACHE_INVALIDATE: u32 = sys::ZX_VMO_OP_CACHE_INVALIDATE;
+pub const IOTXN_CACHE_CLEAN: u32 = sys::ZX_VMO_OP_CACHE_CLEAN;
+pub const IOTXN_CACHE_CLEAN_INVALIDATE: u32 = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
+pub const IOTXN_CACHE_SYNC: u32 = sys::ZX_VMO_OP_CACHE_SYNC;
 
-const IOTXN_SYNC_BEFORE: u8 = 1;
-const IOTXN_SYNC_AFTER: u8 = 2;
+pub const IOTXN_SYNC_BEFORE: u8 = 1;
+pub const IOTXN_SYNC_AFTER: u8 = 2;
 
 pub type iotxn_proto_data_t = [u64; 6];
 pub type iotxn_extra_data_t = [u64; 6];
@@ -103,6 +102,8 @@ pub struct iotxn_t {
     pub phys_inline: [zx_paddr_t; 3],
 }
 
+pub const DEVICE_OPS_VERSION: u64 = 0xc9410d2a24f57424;
+
 #[repr(C)]
 pub struct zx_protocol_device_t {
     pub version: u64,
@@ -132,9 +133,11 @@ bitflags! {
 }
 
 // Device Manager API
+const DEVICE_ADD_ARGS_VERSION: u64 = 0x96a64134d56e88e3;
+
 #[repr(C)]
 pub struct device_add_args_t {
-    pub version: u64,
+    version: u64,
     pub name: *const c_char,
     pub ctx: *mut u8,
     pub ops: *mut zx_protocol_device_t,
