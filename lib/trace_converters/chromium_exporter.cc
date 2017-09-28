@@ -8,6 +8,8 @@
 
 #include <utility>
 
+#include <trace-reader/reader.h>
+
 #include "lib/fxl/strings/string_printf.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
@@ -17,18 +19,18 @@ namespace {
 constexpr char kProcessArgKey[] = "process";
 constexpr zx_koid_t kNoProcess = 0u;
 
-bool IsEventTypeSupported(EventType type) {
+bool IsEventTypeSupported(trace::EventType type) {
   switch (type) {
-    case EventType::kInstant:
-    case EventType::kCounter:
-    case EventType::kDurationBegin:
-    case EventType::kDurationEnd:
-    case EventType::kAsyncStart:
-    case EventType::kAsyncInstant:
-    case EventType::kAsyncEnd:
-    case EventType::kFlowBegin:
-    case EventType::kFlowStep:
-    case EventType::kFlowEnd:
+    case trace::EventType::kInstant:
+    case trace::EventType::kCounter:
+    case trace::EventType::kDurationBegin:
+    case trace::EventType::kDurationEnd:
+    case trace::EventType::kAsyncBegin:
+    case trace::EventType::kAsyncInstant:
+    case trace::EventType::kAsyncEnd:
+    case trace::EventType::kFlowBegin:
+    case trace::EventType::kFlowStep:
+    case trace::EventType::kFlowEnd:
       return true;
     default:
       break;
@@ -37,12 +39,12 @@ bool IsEventTypeSupported(EventType type) {
   return false;
 }
 
-const reader::ArgumentValue* GetArgumentValue(
-    const std::vector<reader::Argument>& arguments,
+const trace::ArgumentValue* GetArgumentValue(
+    const fbl::Vector<trace::Argument>& arguments,
     const char* name) {
   for (const auto& arg : arguments) {
-    if (arg.name == name)
-      return &arg.value;
+    if (arg.name() == name)
+      return &arg.value();
   }
   return nullptr;
 }
@@ -82,7 +84,7 @@ void ChromiumExporter::Stop() {
 
   for (const auto& pair : processes_) {
     const zx_koid_t process_koid = pair.first;
-    const std::string& name = pair.second;
+    const fbl::String& name = pair.second;
 
     writer_.StartObject();
     writer_.Key("ph");
@@ -102,7 +104,7 @@ void ChromiumExporter::Stop() {
   for (const auto& pair : threads_) {
     const zx_koid_t thread_koid = pair.first;
     const zx_koid_t process_koid = std::get<0>(pair.second);
-    const std::string& name = std::get<1>(pair.second);
+    const fbl::String& name = std::get<1>(pair.second);
 
     writer_.StartObject();
     writer_.Key("ph");
@@ -125,23 +127,23 @@ void ChromiumExporter::Stop() {
   writer_.EndObject();
 }
 
-void ChromiumExporter::ExportRecord(const reader::Record& record) {
+void ChromiumExporter::ExportRecord(const trace::Record& record) {
   switch (record.type()) {
-    case RecordType::kInitialization:
+    case trace::RecordType::kInitialization:
       // Compute scale factor for ticks to microseconds.
       // Microseconds is the unit for the "ts" field.
       tick_scale_ = 1'000'000.0 / record.GetInitialization().ticks_per_second;
       break;
-    case RecordType::kEvent:
+    case trace::RecordType::kEvent:
       ExportEvent(record.GetEvent());
       break;
-    case RecordType::kKernelObject:
+    case trace::RecordType::kKernelObject:
       ExportKernelObject(record.GetKernelObject());
       break;
-    case RecordType::kLog:
+    case trace::RecordType::kLog:
       ExportLog(record.GetLog());
       break;
-    case RecordType::kContextSwitch:
+    case trace::RecordType::kContextSwitch:
       // We can't emit these into the regular stream, save them for later.
       context_switch_records_.push_back(record.GetContextSwitch());
       break;
@@ -150,7 +152,7 @@ void ChromiumExporter::ExportRecord(const reader::Record& record) {
   }
 }
 
-void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
+void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
   if (!IsEventTypeSupported(event.type()))
     return;
 
@@ -163,29 +165,29 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
   writer_.Key("ts");
   writer_.Double(event.timestamp * tick_scale_);
   writer_.Key("pid");
-  writer_.Uint64(event.process_thread.process_koid);
+  writer_.Uint64(event.process_thread.process_koid());
   writer_.Key("tid");
-  writer_.Uint64(event.process_thread.thread_koid);
+  writer_.Uint64(event.process_thread.thread_koid());
 
   switch (event.type()) {
-    case EventType::kInstant:
+    case trace::EventType::kInstant:
       writer_.Key("ph");
       writer_.String("i");
       writer_.Key("s");
       switch (event.data.GetInstant().scope) {
-        case EventScope::kGlobal:
+        case trace::EventScope::kGlobal:
           writer_.String("g");
           break;
-        case EventScope::kProcess:
+        case trace::EventScope::kProcess:
           writer_.String("p");
           break;
-        case EventScope::kThread:
+        case trace::EventScope::kThread:
         default:
           writer_.String("t");
           break;
       }
       break;
-    case EventType::kCounter:
+    case trace::EventType::kCounter:
       writer_.Key("ph");
       writer_.String("C");
       if (event.data.GetCounter().id) {
@@ -195,45 +197,45 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
                 .c_str());
       }
       break;
-    case EventType::kDurationBegin:
+    case trace::EventType::kDurationBegin:
       writer_.Key("ph");
       writer_.String("B");
       break;
-    case EventType::kDurationEnd:
+    case trace::EventType::kDurationEnd:
       writer_.Key("ph");
       writer_.String("E");
       break;
-    case EventType::kAsyncStart:
+    case trace::EventType::kAsyncBegin:
       writer_.Key("ph");
       writer_.String("b");
       writer_.Key("id");
       writer_.Uint64(event.data.GetAsyncBegin().id);
       break;
-    case EventType::kAsyncInstant:
+    case trace::EventType::kAsyncInstant:
       writer_.Key("ph");
       writer_.String("n");
       writer_.Key("id");
       writer_.Uint64(event.data.GetAsyncInstant().id);
       break;
-    case EventType::kAsyncEnd:
+    case trace::EventType::kAsyncEnd:
       writer_.Key("ph");
       writer_.String("e");
       writer_.Key("id");
       writer_.Uint64(event.data.GetAsyncEnd().id);
       break;
-    case EventType::kFlowBegin:
+    case trace::EventType::kFlowBegin:
       writer_.Key("ph");
       writer_.String("s");
       writer_.Key("id");
       writer_.Uint64(event.data.GetFlowBegin().id);
       break;
-    case EventType::kFlowStep:
+    case trace::EventType::kFlowStep:
       writer_.Key("ph");
       writer_.String("t");
       writer_.Key("id");
       writer_.Uint64(event.data.GetFlowStep().id);
       break;
-    case EventType::kFlowEnd:
+    case trace::EventType::kFlowEnd:
       writer_.Key("ph");
       writer_.String("f");
       writer_.Key("bp");
@@ -249,41 +251,41 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
     writer_.Key("args");
     writer_.StartObject();
     for (const auto& arg : event.arguments) {
-      switch (arg.value.type()) {
-        case ArgumentType::kInt32:
-          writer_.Key(arg.name.data(), arg.name.size());
-          writer_.Int(arg.value.GetInt32());
+      switch (arg.value().type()) {
+        case trace::ArgumentType::kInt32:
+          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Int(arg.value().GetInt32());
           break;
-        case ArgumentType::kUint32:
-          writer_.Key(arg.name.data(), arg.name.size());
-          writer_.Uint(arg.value.GetUint32());
+        case trace::ArgumentType::kUint32:
+          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Uint(arg.value().GetUint32());
           break;
-        case ArgumentType::kInt64:
-          writer_.Key(arg.name.data(), arg.name.size());
-          writer_.Int64(arg.value.GetInt64());
+        case trace::ArgumentType::kInt64:
+          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Int64(arg.value().GetInt64());
           break;
-        case ArgumentType::kUint64:
-          writer_.Key(arg.name.data(), arg.name.size());
-          writer_.Uint64(arg.value.GetUint64());
+        case trace::ArgumentType::kUint64:
+          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Uint64(arg.value().GetUint64());
           break;
-        case ArgumentType::kDouble:
-          writer_.Key(arg.name.data(), arg.name.size());
-          writer_.Double(arg.value.GetDouble());
+        case trace::ArgumentType::kDouble:
+          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.Double(arg.value().GetDouble());
           break;
-        case ArgumentType::kString:
-          writer_.Key(arg.name.data(), arg.name.size());
-          writer_.String(arg.value.GetString().data(),
-                         arg.value.GetString().size());
+        case trace::ArgumentType::kString:
+          writer_.Key(arg.name().data(), arg.name().size());
+          writer_.String(arg.value().GetString().data(),
+                         arg.value().GetString().size());
           break;
-        case ArgumentType::kPointer:
-          writer_.Key(arg.name.data(), arg.name.size());
+        case trace::ArgumentType::kPointer:
+          writer_.Key(arg.name().data(), arg.name().size());
           writer_.String(
-              fxl::StringPrintf("0x%" PRIx64, arg.value.GetPointer()).c_str());
+              fxl::StringPrintf("0x%" PRIx64, arg.value().GetPointer()).c_str());
           break;
-        case ArgumentType::kKoid:
-          writer_.Key(arg.name.data(), arg.name.size());
+        case trace::ArgumentType::kKoid:
+          writer_.Key(arg.name().data(), arg.name().size());
           writer_.String(
-              fxl::StringPrintf("#%" PRIu64, arg.value.GetKoid()).c_str());
+              fxl::StringPrintf("#%" PRIu64, arg.value().GetKoid()).c_str());
           break;
         default:
           break;
@@ -296,7 +298,7 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
 }
 
 void ChromiumExporter::ExportKernelObject(
-    const reader::Record::KernelObject& kernel_object) {
+    const trace::Record::KernelObject& kernel_object) {
   // The same kernel objects may appear repeatedly within the trace as
   // they are logged by multiple trace providers.  Stash the best quality
   // information to be output at the end of the trace.  In particular, note
@@ -313,9 +315,9 @@ void ChromiumExporter::ExportKernelObject(
       break;
     }
     case ZX_OBJ_TYPE_THREAD: {
-      const reader::ArgumentValue* process_arg =
+      const trace::ArgumentValue* process_arg =
           GetArgumentValue(kernel_object.arguments, kProcessArgKey);
-      if (!process_arg || process_arg->type() != ArgumentType::kKoid)
+      if (!process_arg || process_arg->type() != trace::ArgumentType::kKoid)
         break;
       zx_koid_t process_koid = process_arg->GetKoid();
       auto it = threads_.find(kernel_object.koid);
@@ -332,7 +334,7 @@ void ChromiumExporter::ExportKernelObject(
   }
 }
 
-void ChromiumExporter::ExportLog(const reader::Record::Log& log) {
+void ChromiumExporter::ExportLog(const trace::Record::Log& log) {
   writer_.StartObject();
   writer_.Key("name");
   writer_.String("log");
@@ -341,9 +343,9 @@ void ChromiumExporter::ExportLog(const reader::Record::Log& log) {
   writer_.Key("ts");
   writer_.Double(log.timestamp * tick_scale_);
   writer_.Key("pid");
-  writer_.Uint64(log.process_thread.process_koid);
+  writer_.Uint64(log.process_thread.process_koid());
   writer_.Key("tid");
-  writer_.Uint64(log.process_thread.thread_koid);
+  writer_.Uint64(log.process_thread.thread_koid());
   writer_.Key("s");
   writer_.String("g");
   writer_.Key("args");
@@ -355,7 +357,7 @@ void ChromiumExporter::ExportLog(const reader::Record::Log& log) {
 }
 
 void ChromiumExporter::ExportContextSwitch(
-    const reader::Record::ContextSwitch& context_switch) {
+    const trace::Record::ContextSwitch& context_switch) {
   writer_.StartObject();
   writer_.Key("ph");
   writer_.String("k");
@@ -366,18 +368,18 @@ void ChromiumExporter::ExportContextSwitch(
   writer_.Key("out");
   writer_.StartObject();
   writer_.Key("pid");
-  writer_.Uint64(context_switch.outgoing_thread.process_koid);
+  writer_.Uint64(context_switch.outgoing_thread.process_koid());
   writer_.Key("tid");
-  writer_.Uint64(context_switch.outgoing_thread.thread_koid);
+  writer_.Uint64(context_switch.outgoing_thread.thread_koid());
   writer_.Key("state");
   writer_.Uint(static_cast<uint32_t>(context_switch.outgoing_thread_state));
   writer_.EndObject();
   writer_.Key("in");
   writer_.StartObject();
   writer_.Key("pid");
-  writer_.Uint64(context_switch.incoming_thread.process_koid);
+  writer_.Uint64(context_switch.incoming_thread.process_koid());
   writer_.Key("tid");
-  writer_.Uint64(context_switch.incoming_thread.thread_koid);
+  writer_.Uint64(context_switch.incoming_thread.thread_koid());
   writer_.EndObject();
   writer_.EndObject();
 }

@@ -8,28 +8,28 @@ namespace tracing {
 namespace measure {
 namespace {
 
-bool IsOfSupportedType(const reader::Record::Event& event) {
-  return event.type() == EventType::kInstant ||
-         event.type() == EventType::kAsyncStart ||
-         event.type() == EventType::kDurationBegin ||
-         event.type() == EventType::kAsyncEnd ||
-         event.type() == EventType::kDurationEnd;
+bool IsOfSupportedType(const trace::Record::Event& event) {
+  return event.type() == trace::EventType::kInstant ||
+         event.type() == trace::EventType::kAsyncBegin ||
+         event.type() == trace::EventType::kDurationBegin ||
+         event.type() == trace::EventType::kAsyncEnd ||
+         event.type() == trace::EventType::kDurationEnd;
 }
 
-bool EventMatchesSpecWithAnchor(const reader::Record::Event& event,
+bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
                                 EventSpec spec,
                                 Anchor anchor) {
   if (!EventMatchesSpec(event, spec)) {
     return false;
   }
 
-  if (event.type() == EventType::kInstant) {
+  if (event.type() == trace::EventType::kInstant) {
     return true;
-  } else if (event.type() == EventType::kAsyncStart ||
-             event.type() == EventType::kDurationBegin) {
+  } else if (event.type() == trace::EventType::kAsyncBegin ||
+             event.type() == trace::EventType::kDurationBegin) {
     return anchor == Anchor::Begin;
-  } else if (event.type() == EventType::kAsyncEnd ||
-             event.type() == EventType::kDurationEnd) {
+  } else if (event.type() == trace::EventType::kAsyncEnd ||
+             event.type() == trace::EventType::kDurationEnd) {
     return anchor == Anchor::End;
   } else {
     return false;
@@ -41,7 +41,7 @@ bool EventMatchesSpecWithAnchor(const reader::Record::Event& event,
 MeasureTimeBetween::MeasureTimeBetween(std::vector<TimeBetweenSpec> specs)
     : specs_(std::move(specs)) {}
 
-bool MeasureTimeBetween::Process(const reader::Record::Event& event) {
+bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
   if (!IsOfSupportedType(event)) {
     return true;
   }
@@ -64,7 +64,7 @@ bool MeasureTimeBetween::Process(const reader::Record::Event& event) {
   return true;
 }
 
-void MeasureTimeBetween::AddResult(uint64_t spec_id, Ticks from, Ticks to) {
+void MeasureTimeBetween::AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to) {
   results_[spec_id].push_back(to - from);
 }
 

@@ -13,14 +13,16 @@ namespace {
 
 std::string GetLabel(const measure::DurationSpec& spec) {
   std::ostringstream os;
-  os << spec.event.name << " (" << spec.event.category << ")";
+  os << spec.event.name.c_str() << " (" << spec.event.category.c_str() << ")";
   return os.str();
 }
 
 std::string GetLabel(const measure::TimeBetweenSpec& spec) {
   std::ostringstream os;
-  os << spec.first_event.name << " (" << spec.first_event.category << ") to ";
-  os << spec.second_event.name << " (" << spec.second_event.category << ")";
+  os << spec.first_event.name.c_str()
+     << " (" << spec.first_event.category.c_str() << ") to ";
+  os << spec.second_event.name.c_str()
+     << " (" << spec.second_event.category.c_str() << ")";
   return os.str();
 }
 
@@ -32,7 +34,7 @@ std::string GetSampleGroupLabel(size_t begin, size_t end) {
 
 template <typename Spec>
 Result ComputeSingle(Spec spec,
-                     const std::vector<Ticks>& ticks,
+                     const std::vector<trace_ticks_t>& ticks,
                      std::vector<size_t> split_samples_at,
                      uint64_t ticks_per_second) {
   Result result;
@@ -81,10 +83,10 @@ const T& get_or_default(const std::unordered_map<uint64_t, T>& dictionary,
 
 std::vector<Result> ComputeResults(
     const Measurements& measurements,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>& ticks,
+    const std::unordered_map<uint64_t, std::vector<trace_ticks_t>>& ticks,
     uint64_t ticks_per_second) {
   std::vector<Result> results;
-  const std::vector<Ticks> no_ticks;
+  const std::vector<trace_ticks_t> no_ticks;
   const std::vector<size_t> no_split;
 
   for (auto& measure_spec : measurements.duration) {

@@ -5,32 +5,32 @@
 #ifndef GARNET_LIB_MEASURE_TEST_EVENTS_H_
 #define GARNET_LIB_MEASURE_TEST_EVENTS_H_
 
-#include "garnet/lib/trace/reader.h"
+#include <trace-reader/reader.h>
 
 namespace tracing {
 namespace measure {
 namespace test {
 
-reader::Record::Event DurationBegin(std::string name,
-                                    std::string category,
+trace::Record::Event DurationBegin(fbl::String name,
+                                    fbl::String category,
                                     uint64_t timestamp);
 
-reader::Record::Event DurationEnd(std::string name,
-                                  std::string category,
+trace::Record::Event DurationEnd(fbl::String name,
+                                  fbl::String category,
                                   uint64_t timestamp);
 
-reader::Record::Event AsyncBegin(uint64_t id,
-                                 std::string name,
-                                 std::string category,
+trace::Record::Event AsyncBegin(uint64_t id,
+                                 fbl::String name,
+                                 fbl::String category,
                                  uint64_t timestamp);
 
-reader::Record::Event AsyncEnd(uint64_t id,
-                               std::string name,
-                               std::string category,
+trace::Record::Event AsyncEnd(uint64_t id,
+                               fbl::String name,
+                               fbl::String category,
                                uint64_t timestamp);
 
-reader::Record::Event Instant(std::string name,
-                              std::string category,
+trace::Record::Event Instant(fbl::String name,
+                              fbl::String category,
                               uint64_t timestamp);
 }  // namespace test
 

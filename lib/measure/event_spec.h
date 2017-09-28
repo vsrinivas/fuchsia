@@ -7,18 +7,18 @@
 
 #include <string>
 
-#include "garnet/lib/trace/reader.h"
+#include "zircon/system/ulib/trace-reader/include/trace-reader/reader.h"
 
 namespace tracing {
 namespace measure {
 
 // Specifies a trace event.
 struct EventSpec {
-  std::string name;
-  std::string category;
+  fbl::String name;
+  fbl::String category;
 };
 
-bool EventMatchesSpec(const reader::Record::Event& event,
+bool EventMatchesSpec(const trace::Record::Event& event,
                       const EventSpec& spec);
 
 std::ostream& operator<<(std::ostream& os, EventSpec event_spec);

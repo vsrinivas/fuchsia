@@ -16,7 +16,7 @@ source_set("measure") {
   ]
 
   public_deps = [
-    "//garnet/lib/trace:reader",
+    "//zircon/system/ulib/trace-reader",
     "//garnet/public/lib/fxl",
   ]
 }

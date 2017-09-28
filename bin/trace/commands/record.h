@@ -60,7 +60,10 @@ class Record : public CommandWithTraceController {
   // Aggregate events if there are any measurements to be performed, so that we
   // can sort them by timestamp and process in order.
   bool aggregate_events_ = false;
-  std::vector<reader::Record::Event> events_;
+  // This is actually a vector of trace::Record::Event, but it isn't
+  // copyable so we record the entire Record here (which also isn't copyable
+  // but it is movable).
+  std::vector<trace::Record> events_;
   std::unique_ptr<measure::MeasureDuration> measure_duration_;
   std::unique_ptr<measure::MeasureTimeBetween> measure_time_between_;
   bool tracing_ = false;

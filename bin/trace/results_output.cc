@@ -8,6 +8,8 @@
 #include <limits>
 #include <numeric>
 
+#include "garnet/public/lib/fxl/logging.h"
+
 namespace tracing {
 
 namespace {

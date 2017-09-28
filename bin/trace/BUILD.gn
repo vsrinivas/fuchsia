@@ -44,12 +44,11 @@ source_set("trace_app") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/network/fidl",
     "//garnet/lib/measure",
-    "//garnet/lib/trace:internal_fields",
-    "//garnet/lib/trace:reader",
     "//garnet/lib/trace_converters:chromium",
     "//garnet/public/lib/tracing/fidl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//zircon/system/ulib/trace-reader",
   ]
 
   deps = [
@@ -95,7 +94,6 @@ executable("trace_tests_bin") {
 
   deps = [
     "//garnet/lib/measure:unittests",
-    "//garnet/lib/trace:unittests",
     "//garnet/bin/trace:unittests",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
@@ -106,8 +104,6 @@ package("trace_tests") {
 
   deps = [
     ":trace_tests_bin",
-    "//garnet/lib/trace:ctrace_stub_tests",
-    "//garnet/lib/trace:trace_stub_tests",
   ]
 
   tests = [
@@ -116,12 +112,6 @@ package("trace_tests") {
 
       # Disabled because several tests are crashing on release builds.
       disabled = true
-    },
-    {
-      name = "trace_stub_tests"
-    },
-    {
-      name = "ctrace_stub_tests"
     },
   ]
 }

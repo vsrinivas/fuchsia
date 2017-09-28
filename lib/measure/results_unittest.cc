@@ -30,7 +30,7 @@ TEST(Results, Duration) {
   Measurements measurements;
   measurements.duration = {{42u, {"foo", "bar"}}};
 
-  std::unordered_map<uint64_t, std::vector<Ticks>> ticks;
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
@@ -45,7 +45,7 @@ TEST(Results, TimeBetween) {
       42u, {"foo1", "bar1"}, Anchor::Begin, {"foo2", "bar2"}, Anchor::Begin,
   }};
 
-  std::unordered_map<uint64_t, std::vector<Ticks>> ticks;
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
@@ -61,7 +61,7 @@ TEST(Results, SplitSamples) {
   measurements.duration = {{42u, {"foo", "bar"}}};
   measurements.split_samples_at[42u] = {1u, 2u};
 
-  std::unordered_map<uint64_t, std::vector<Ticks>> ticks;
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   ticks[42u] = {1u, 2u, 3u, 4u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);

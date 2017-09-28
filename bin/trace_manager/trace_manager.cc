@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <iostream>
 
-#include "garnet/lib/trace/internal/fields.h"
 #include "garnet/bin/trace_manager/trace_manager.h"
 #include "lib/fsl/tasks/message_loop.h"
 

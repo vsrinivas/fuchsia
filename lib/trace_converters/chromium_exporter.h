@@ -8,8 +8,10 @@
 #include <fstream>
 #include <tuple>
 #include <unordered_map>
+#include <vector>
 
-#include "garnet/lib/trace/reader.h"
+#include <trace-reader/reader.h>
+
 #include "third_party/rapidjson/rapidjson/ostreamwrapper.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
@@ -21,15 +23,15 @@ class ChromiumExporter {
   explicit ChromiumExporter(std::ostream& out);
   ~ChromiumExporter();
 
-  void ExportRecord(const reader::Record& record);
+  void ExportRecord(const trace::Record& record);
 
  private:
   void Start();
   void Stop();
-  void ExportEvent(const reader::Record::Event& event);
-  void ExportKernelObject(const reader::Record::KernelObject& kernel_object);
-  void ExportLog(const reader::Record::Log& log);
-  void ExportContextSwitch(const reader::Record::ContextSwitch& context_switch);
+  void ExportEvent(const trace::Record::Event& event);
+  void ExportKernelObject(const trace::Record::KernelObject& kernel_object);
+  void ExportLog(const trace::Record::Log& log);
+  void ExportContextSwitch(const trace::Record::ContextSwitch& context_switch);
 
   std::ofstream file_out_;
   rapidjson::OStreamWrapper wrapper_;
@@ -39,13 +41,13 @@ class ChromiumExporter {
   // By default ticks are in nanoseconds.
   double tick_scale_ = 0.001;
 
-  std::unordered_map<zx_koid_t, std::string> processes_;
-  std::unordered_map<zx_koid_t, std::tuple<zx_koid_t, std::string>> threads_;
+  std::unordered_map<zx_koid_t, fbl::String> processes_;
+  std::unordered_map<zx_koid_t, std::tuple<zx_koid_t, fbl::String>> threads_;
 
   // The chromium/catapult trace file format doesn't support context switch
   // records, so we can't emit them inline. Save them for later emission to
   // the systemTraceEvents section.
-  std::vector<reader::Record::ContextSwitch> context_switch_records_;
+  std::vector<trace::Record::ContextSwitch> context_switch_records_;
 };
 
 }  // namespace tracing

@@ -6,8 +6,10 @@
 
 #include <utility>
 
-#include "garnet/lib/trace/internal/fields.h"
-#include "garnet/lib/trace/reader.h"
+#include <fbl/type_support.h>
+#include <trace-engine/fields.h>
+#include <trace-reader/reader.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
 
@@ -17,7 +19,7 @@ namespace tracing {
 namespace {
 
 // Note: Buffer needs to be big enough to store records of maximum size.
-constexpr size_t kReadBufferSize = RecordFields::kMaxRecordSizeBytes * 4;
+constexpr size_t kReadBufferSize = trace::RecordFields::kMaxRecordSizeBytes * 4;
 
 }  // namespace
 
@@ -52,7 +54,8 @@ void Tracer::Start(TraceOptionsPtr options,
                             [this]() { start_callback_(); });
 
   buffer_.reserve(kReadBufferSize);
-  reader_.reset(new reader::TraceReader(record_consumer, error_handler));
+  reader_.reset(new trace::TraceReader(fbl::move(record_consumer),
+                                       fbl::move(error_handler)));
 
   handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
@@ -101,8 +104,8 @@ void Tracer::DrainSocket() {
     size_t bytes_available = buffer_end_;
     FXL_DCHECK(bytes_available > 0);
 
-    reader::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
-                        BytesToWords(bytes_available));
+    trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
+                        trace::BytesToWords(bytes_available));
     if (!reader_->ReadRecords(chunk)) {
       FXL_LOG(ERROR) << "Trace stream is corrupted";
       Done();
@@ -110,7 +113,7 @@ void Tracer::DrainSocket() {
     }
 
     size_t bytes_consumed =
-        bytes_available - WordsToBytes(chunk.remaining_words());
+        bytes_available - trace::WordsToBytes(chunk.remaining_words());
     bytes_available -= bytes_consumed;
     memmove(buffer_.data(), buffer_.data() + bytes_consumed, bytes_available);
     buffer_end_ = bytes_available;

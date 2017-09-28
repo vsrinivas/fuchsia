@@ -8,46 +8,46 @@ namespace tracing {
 namespace measure {
 namespace test {
 
-reader::Record::Event DurationBegin(std::string name,
-                                    std::string category,
+trace::Record::Event DurationBegin(fbl::String name,
+                                    fbl::String category,
                                     uint64_t timestamp) {
-  return reader::Record::Event{
+  return trace::Record::Event{
       timestamp, {}, category,
-      name,      {}, reader::EventData(reader::EventData::DurationBegin{})};
+      name,      {}, trace::EventData(trace::EventData::DurationBegin{})};
 }
 
-reader::Record::Event DurationEnd(std::string name,
-                                  std::string category,
+trace::Record::Event DurationEnd(fbl::String name,
+                                  fbl::String category,
                                   uint64_t timestamp) {
-  return reader::Record::Event{
+  return trace::Record::Event{
       timestamp, {}, category,
-      name,      {}, reader::EventData(reader::EventData::DurationEnd{})};
+      name,      {}, trace::EventData(trace::EventData::DurationEnd{})};
 }
 
-reader::Record::Event AsyncBegin(uint64_t id,
-                                 std::string name,
-                                 std::string category,
+trace::Record::Event AsyncBegin(uint64_t id,
+                                 fbl::String name,
+                                 fbl::String category,
                                  uint64_t timestamp) {
-  return reader::Record::Event{
+  return trace::Record::Event{
       timestamp, {}, category,
-      name,      {}, reader::EventData(reader::EventData::AsyncBegin{id})};
+      name,      {}, trace::EventData(trace::EventData::AsyncBegin{id})};
 }
 
-reader::Record::Event AsyncEnd(uint64_t id,
-                               std::string name,
-                               std::string category,
+trace::Record::Event AsyncEnd(uint64_t id,
+                               fbl::String name,
+                               fbl::String category,
                                uint64_t timestamp) {
-  return reader::Record::Event{
+  return trace::Record::Event{
       timestamp, {}, category,
-      name,      {}, reader::EventData(reader::EventData::AsyncEnd{id})};
+      name,      {}, trace::EventData(trace::EventData::AsyncEnd{id})};
 }
 
-reader::Record::Event Instant(std::string name,
-                              std::string category,
+trace::Record::Event Instant(fbl::String name,
+                              fbl::String category,
                               uint64_t timestamp) {
-  return reader::Record::Event{
+  return trace::Record::Event{
       timestamp, {}, category,
-      name,      {}, reader::EventData(reader::EventData::Instant{})};
+      name,      {}, trace::EventData(trace::EventData::Instant{})};
 }
 }  // namespace test
 

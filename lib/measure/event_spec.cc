@@ -4,16 +4,19 @@
 
 #include "garnet/lib/measure/event_spec.h"
 
+#include <ostream>
+#include <string>
+
 namespace tracing {
 namespace measure {
 
-bool EventMatchesSpec(const reader::Record::Event& event,
+bool EventMatchesSpec(const trace::Record::Event& event,
                       const EventSpec& spec) {
   return event.name == spec.name && event.category == spec.category;
 }
 
 std::ostream& operator<<(std::ostream& os, EventSpec event_spec) {
-  return os << event_spec.category << ":" << event_spec.name;
+  return os << event_spec.category.c_str() << ":" << event_spec.name.c_str();
 }
 
 }  // namespace measure

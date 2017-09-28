@@ -23,7 +23,6 @@ executable("bin") {
     "tracee.h",
   ]
   deps = [
-    "//garnet/lib/trace:internal_fields",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/tracing/fidl",
     "//garnet/public/lib/fxl",

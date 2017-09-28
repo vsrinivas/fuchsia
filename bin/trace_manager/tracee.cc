@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/trace_manager/tracee.h"
-#include "garnet/lib/trace/internal/fields.h"
+
+#include <trace-engine/fields.h>
+
 #include "lib/fxl/logging.h"
 
 namespace tracing {
@@ -197,11 +199,11 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
 
   const uint64_t* start = reinterpret_cast<const uint64_t*>(buffer.data());
   const uint64_t* current = start;
-  const uint64_t* end = start + internal::BytesToWords(buffer.size());
+  const uint64_t* end = start + trace::BytesToWords(buffer.size());
 
   while (current < end) {
-    auto length = internal::RecordFields::RecordSize::Get<uint16_t>(*current);
-    if (length == 0 || length > internal::RecordFields::kMaxRecordSizeBytes ||
+    auto length = trace::RecordFields::RecordSize::Get<uint16_t>(*current);
+    if (length == 0 || length > trace::RecordFields::kMaxRecordSizeBytes ||
         current + length >= end) {
       break;
     }
@@ -209,29 +211,29 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
   }
 
   return WriteBufferToSocket(buffer.data(),
-                             internal::WordsToBytes(current - start), socket);
+                             trace::WordsToBytes(current - start), socket);
 }
 
 Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
     const zx::socket& socket) const {
   FXL_DCHECK(bundle_->label.size() <=
-             internal::ProviderInfoMetadataRecordFields::kMaxNameLength);
+             trace::ProviderInfoMetadataRecordFields::kMaxNameLength);
 
   size_t num_words =
-      1u + internal::BytesToWords(internal::Pad(bundle_->label.size()));
+      1u + trace::BytesToWords(trace::Pad(bundle_->label.size()));
   std::vector<uint64_t> record(num_words);
   record[0] =
-      internal::ProviderInfoMetadataRecordFields::Type::Make(
-          internal::ToUnderlyingType(RecordType::kMetadata)) |
-      internal::ProviderInfoMetadataRecordFields::RecordSize::Make(num_words) |
-      internal::ProviderInfoMetadataRecordFields::MetadataType::Make(
-          internal::ToUnderlyingType(MetadataType::kProviderInfo)) |
-      internal::ProviderInfoMetadataRecordFields::Id::Make(bundle_->id) |
-      internal::ProviderInfoMetadataRecordFields::NameLength::Make(
+      trace::ProviderInfoMetadataRecordFields::Type::Make(
+          trace::ToUnderlyingType(trace::RecordType::kMetadata)) |
+      trace::ProviderInfoMetadataRecordFields::RecordSize::Make(num_words) |
+      trace::ProviderInfoMetadataRecordFields::MetadataType::Make(
+          trace::ToUnderlyingType(trace::MetadataType::kProviderInfo)) |
+      trace::ProviderInfoMetadataRecordFields::Id::Make(bundle_->id) |
+      trace::ProviderInfoMetadataRecordFields::NameLength::Make(
           bundle_->label.size());
   memcpy(&record[1], bundle_->label.c_str(), bundle_->label.size());
   return WriteBufferToSocket(reinterpret_cast<uint8_t*>(record.data()),
-                             internal::WordsToBytes(num_words), socket);
+                             trace::WordsToBytes(num_words), socket);
 }
 
 std::ostream& operator<<(std::ostream& out, Tracee::State state) {

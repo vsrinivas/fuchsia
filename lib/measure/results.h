@@ -9,8 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <trace-engine/types.h>
+
 #include "garnet/lib/measure/measurements.h"
-#include "garnet/lib/trace/ticks.h"
 
 namespace tracing {
 namespace measure {
@@ -32,7 +33,7 @@ struct Result {
 // ticks.
 std::vector<Result> ComputeResults(
     const Measurements& measurements,
-    const std::unordered_map<uint64_t, std::vector<Ticks>>& ticks,
+    const std::unordered_map<uint64_t, std::vector<trace_ticks_t>>& ticks,
     uint64_t ticks_per_second);
 
 }  // namespace measure

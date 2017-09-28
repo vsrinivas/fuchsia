@@ -11,7 +11,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/trace/reader.h"
+#include <trace-reader/reader.h>
+
 #include "lib/tracing/fidl/trace_controller.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -23,8 +24,8 @@ namespace tracing {
 // Runs traces.
 class Tracer : private fsl::MessageLoopHandler {
  public:
-  using RecordConsumer = reader::RecordConsumer;
-  using ErrorHandler = reader::ErrorHandler;
+  using RecordConsumer = trace::TraceReader::RecordConsumer;
+  using ErrorHandler = trace::TraceReader::ErrorHandler;
 
   explicit Tracer(TraceController* controller);
   ~Tracer() override;
@@ -61,7 +62,7 @@ class Tracer : private fsl::MessageLoopHandler {
   fxl::Closure done_callback_;
   zx::socket socket_;
   fsl::MessageLoop::HandlerKey handler_key_;
-  std::unique_ptr<reader::TraceReader> reader_;
+  std::unique_ptr<trace::TraceReader> reader_;
   std::vector<uint8_t> buffer_;
   size_t buffer_end_ = 0u;
 

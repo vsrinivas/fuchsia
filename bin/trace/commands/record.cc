@@ -285,14 +285,14 @@ void Record::Run(const fxl::CommandLine& command_line) {
 
   tracer_->Start(
       std::move(trace_options),
-      [this](const reader::Record& record) {
+      [this](trace::Record record) {
         exporter_->ExportRecord(record);
 
-        if (aggregate_events_ && record.type() == RecordType::kEvent) {
-          events_.push_back(record.GetEvent());
+        if (aggregate_events_ && record.type() == trace::RecordType::kEvent) {
+          events_.push_back(fbl::move(record));
         }
       },
-      [](std::string error) { err() << error << std::endl; },
+      [](fbl::String error) { err() << error.c_str() << std::endl; },
       [this] {
         if (!options_.app.empty())
           LaunchApp();
@@ -313,21 +313,21 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
   if (!events_.empty()) {
     std::sort(
         std::begin(events_), std::end(events_),
-        [](const reader::Record::Event& e1, const reader::Record::Event& e2) {
-          return e1.timestamp < e2.timestamp;
+        [](const trace::Record& e1, const trace::Record& e2) {
+          return e1.GetEvent().timestamp < e2.GetEvent().timestamp;
         });
   }
 
   for (const auto& event : events_) {
     if (measure_duration_) {
-      measure_duration_->Process(event);
+      measure_duration_->Process(event.GetEvent());
     }
     if (measure_time_between_) {
-      measure_time_between_->Process(event);
+      measure_time_between_->Process(event.GetEvent());
     }
   }
 
-  std::unordered_map<uint64_t, std::vector<Ticks>> ticks;
+  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
   if (measure_duration_) {
     ticks.insert(measure_duration_->results().begin(),
                  measure_duration_->results().end());
@@ -337,7 +337,7 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
                  measure_time_between_->results().end());
   }
 
-  uint64_t ticks_per_second = GetTicksPerSecond();
+  uint64_t ticks_per_second = zx_ticks_per_second();
   FXL_DCHECK(ticks_per_second);
   std::vector<measure::Result> results =
       measure::ComputeResults(options_.measurements, ticks, ticks_per_second);
