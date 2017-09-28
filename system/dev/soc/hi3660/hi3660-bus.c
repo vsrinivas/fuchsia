@@ -240,7 +240,7 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
         printf("hi3660_bind: hi3360_add_devices failed!\n");;
     }
 
-#if 1
+#if 0
     thrd_t thrd;
     thrd_create_with_name(&thrd, led_test_thread, bus, "led_test_thread");
 #endif
