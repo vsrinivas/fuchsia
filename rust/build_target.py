@@ -293,24 +293,32 @@ def main():
                     return 1
 
         # Add or edit dependency sections for local deps.
+        def adjust_dependencies(dependencies):
+          for dep in dependencies:
+              if "git" in dependencies[dep]:
+                  print("Detected git dependency on %s" % dep)
+                  print("These are not supported, use explicit versions instead")
+                  return 1
+          for info in dependency_infos:
+              if not info["has_generated_code"]:
+                  # This is a third-party dependency, cargo already knows how to
+                  # find it.
+                  continue
+              artifact_name = info["name"]
+              base_path = info["base_path"]
+              dependencies[artifact_name] = {
+                  "path": os.path.relpath(base_path, args.gen_dir),
+              }
         if "dependencies" not in config:
             config["dependencies"] = {}
-        dependencies = config["dependencies"]
-        for dep in dependencies:
-            if "git" in dependencies[dep]:
-                print("Detected git dependency on %s" % dep)
-                print("These are not supported, use explicit versions instead")
-                return 1
-        for info in dependency_infos:
-            if not info["has_generated_code"]:
-                # This is a third-party dependency, cargo already knows how to
-                # find it.
-                continue
-            artifact_name = info["name"]
-            base_path = info["base_path"]
-            dependencies[artifact_name] = {
-                "path": os.path.relpath(base_path, args.gen_dir),
-            }
+        adjust_dependencies(config["dependencies"])
+        # The conditional dependency sections also need to be adjusted.
+        if "target" in config:
+          for key in config["target"]:
+            target = config["target"][key]
+            if "dependencies" in target:
+              adjust_dependencies(target["dependencies"])
+
 
         # Create replace section with mirrors and local crates.
         # This intentionally erases any existing replace section which could
