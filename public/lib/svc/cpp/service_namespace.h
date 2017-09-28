@@ -110,7 +110,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
 
  private:
   // Overridden from |svcfs::ServiceProvider|:
-  void Connect(const char* name, size_t len, zx::channel channel) override;
+  void Connect(fbl::StringPiece name, zx::channel channel) override;
 
   // Overridden from |app::ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,

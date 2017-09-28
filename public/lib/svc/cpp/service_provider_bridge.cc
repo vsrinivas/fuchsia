@@ -59,10 +59,9 @@ int ServiceProviderBridge::OpenAsFileDescriptor() {
   return fdio_bind_to_fd(io, -1, 0);
 }
 
-void ServiceProviderBridge::Connect(const char* name,
-                                    size_t len,
+void ServiceProviderBridge::Connect(fbl::StringPiece name,
                                     zx::channel channel) {
-  ConnectToService(fidl::String(name, len), std::move(channel));
+  ConnectToService(fidl::String(name.data(), name.length()), std::move(channel));
 }
 
 void ServiceProviderBridge::ConnectToService(const fidl::String& service_name,
