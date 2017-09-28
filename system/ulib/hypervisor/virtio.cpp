@@ -255,6 +255,8 @@ zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
     uint16_t desc_index = head;
     volatile const struct vring_desc* desc;
     do {
+        if (desc_index >= queue->size)
+            return ZX_ERR_OUT_OF_RANGE;
         desc = &queue->desc[desc_index];
 
         const uint64_t end = desc->addr + desc->len;

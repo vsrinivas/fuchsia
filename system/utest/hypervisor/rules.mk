@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/guest.cpp \
+    $(LOCAL_DIR)/virtio_queue_fake.cpp \
 
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \
