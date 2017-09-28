@@ -1,5 +1,5 @@
 {
     "imports": [
-        "packages/gn/default"
+        "topaz/packages/default"
     ]
 }
