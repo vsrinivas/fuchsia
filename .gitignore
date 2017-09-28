@@ -14,7 +14,6 @@
 .pub
 .pydevproject
 .vscode
-packages
 .packages
 **/.atom/
 **/.idea/

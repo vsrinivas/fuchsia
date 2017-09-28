@@ -1,0 +1,85 @@
+{
+    "languages": [
+        "cpp",
+        "dart"
+    ],
+    "labels": [
+        "//peridot/maxwell_legacy:all",
+        "//peridot/maxwell_legacy:integration_tests",
+        "//peridot/maxwell_legacy:unittests"
+    ],
+    "packages": {
+        "maxwell": "//peridot/maxwell_legacy:maxwell",
+        "usage_log": "//peridot/bin/agents/usage_log"
+    },
+    "binaries": [
+        {
+            "binary": "acquirers/story_info_main",
+            "bootfs_path": "apps/acquirers/story_info_main"
+        },
+        {
+            "binary": "action_log",
+            "bootfs_path": "apps/action_log"
+        },
+        {
+            "binary": "agents/carmen_sandiego",
+            "bootfs_path": "apps/agents/carmen_sandiego"
+        },
+        {
+            "binary": "agents/ideas",
+            "bootfs_path": "apps/agents/ideas"
+        },
+        {
+            "binary": "agents/module_suggester.dartx",
+            "bootfs_path": "apps/agents/module_suggester.dartx"
+        },
+        {
+            "binary": "gen/peridot/bin/modules/basic_text_reporter/basic_text_reporter.flx",
+            "bootfs_path": "apps/maxwell_btr"
+        },
+        {
+            "binary": "agents/basic_text_listener",
+            "bootfs_path": "apps/agents/maxwell_btl"
+        },
+        {
+            "binary": "agents/maxwell_entity_selector",
+            "bootfs_path": "apps/agents/maxwell_entity_selector"
+        },
+        {
+            "binary": "agents/maxwell_proposal_maker",
+            "bootfs_path": "apps/agents/maxwell_proposal_maker"
+        },
+        {
+            "binary": "context_engine",
+            "bootfs_path": "apps/context_engine"
+        },
+        {
+            "binary": "resolver",
+            "bootfs_path": "apps/resolver"
+        },
+        {
+            "binary": "suggestion_engine",
+            "bootfs_path": "apps/suggestion_engine"
+        },
+        {
+            "binary": "context_engine_test",
+            "bootfs_path": "test/maxwell/context_engine_test"
+        },
+        {
+            "binary": "suggestion_engine_test",
+            "bootfs_path": "test/maxwell/suggestion_engine_test"
+        },
+        {
+            "binary": "resolver_test",
+            "bootfs_path": "test/maxwell/resolver_test"
+        },
+        {
+            "binary": "context_index_unittest",
+            "bootfs_path": "test/maxwell/context_index_unittest"
+        },
+        {
+            "binary": "context_repository_unittest",
+            "bootfs_path": "test/maxwell/context_repository_unittest"
+        }
+    ]
+}

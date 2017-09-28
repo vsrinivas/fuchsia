@@ -1,0 +1,218 @@
+{
+    "languages": [
+        "cpp",
+        "dart"
+    ],
+    "labels": [
+        "//peridot:modular",
+        "//peridot:modular_unittests"
+    ],
+    "components": [
+        "peridot/bin/component_manager/component_manager.json",
+        "peridot/examples/hello_component/hello_component.json"
+    ],
+    "binaries": [
+        {
+            "binary": "agent_trigger_test",
+            "bootfs_path": "apps/modular_tests/agent_trigger_test"
+        },
+        {
+            "binary": "child_module",
+            "bootfs_path": "apps/modular_tests/child_module"
+        },
+        {
+            "binary": "context_link_module",
+            "bootfs_path": "apps/modular_tests/context_link_module"
+        },
+        {
+            "binary": "context_link_user_shell",
+            "bootfs_path": "apps/modular_tests/context_link_user_shell"
+        },
+        {
+            "binary": "component_context_test",
+            "bootfs_path": "apps/modular_tests/component_context_test"
+        },
+        {
+            "binary": "component_context_test_agent1",
+            "bootfs_path": "apps/modular_tests/component_context_test_agent1"
+        },
+        {
+            "binary": "component_context_test_agent2",
+            "bootfs_path": "apps/modular_tests/component_context_test_agent2"
+        },
+        {
+            "binary": "component_context_unstoppable_agent",
+            "bootfs_path": "apps/modular_tests/component_context_unstoppable_agent"
+        },
+        {
+            "binary": "component_manager_main",
+            "bootfs_path": "apps/component_manager"
+        },
+        {
+            "binary": "components_query",
+            "bootfs_path": "bin/components"
+        },
+        {
+            "binary": "dev_user_shell",
+            "bootfs_path": "apps/dev_user_shell"
+        },
+        {
+            "binary": "device_runner",
+            "bootfs_path": "apps/device_runner"
+        },
+        {
+            "binary": "device_runner_monitor",
+            "bootfs_path": "apps/device_runner_monitor"
+        },
+        {
+            "binary": "dev_device_shell",
+            "bootfs_path": "apps/dev_device_shell"
+        },
+        {
+            "binary": "dev_story_shell",
+            "bootfs_path": "apps/dev_story_shell"
+        },
+        {
+            "binary": "gen/peridot/examples/counter_flutter/child/example_flutter_counter_child.flx",
+            "bootfs_path": "apps/example_flutter_counter_child"
+        },
+        {
+            "binary": "gen/peridot/examples/counter_flutter/parent/example_flutter_counter_parent.flx",
+            "bootfs_path": "apps/example_flutter_counter_parent"
+        },
+        {
+            "binary": "gen/peridot/examples/hello_world_flutter/example_flutter_hello_world.flx",
+            "bootfs_path": "apps/example_flutter_hello_world"
+        },
+        {
+            "binary": "gen/peridot/examples/story_shell_flutter/example_flutter_story_shell.flx",
+            "bootfs_path": "apps/example_flutter_story_shell"
+        },
+        {
+            "binary": "example_module1",
+            "bootfs_path": "apps/example_module1"
+        },
+        {
+            "binary": "example_module2",
+            "bootfs_path": "apps/example_module2"
+        },
+        {
+            "binary": "example_recipe",
+            "bootfs_path": "apps/example_recipe"
+        },
+        {
+            "binary": "example_todo_headless",
+            "bootfs_path": "apps/example_todo_headless"
+        },
+        {
+            "binary": "gen/peridot/examples/todo_story/example_todo_story.flx",
+            "bootfs_path": "apps/example_todo_story"
+        },
+        {
+            "binary": "gen/component_index.json",
+            "bootfs_path": "components/index.json"
+        },
+        {
+            "binary": "hello_app_child",
+            "bootfs_path": "apps/hello_app_child"
+        },
+        {
+            "binary": "hello_app_parent",
+            "bootfs_path": "apps/hello_app_parent"
+        },
+        {
+            "binary": "modular_tests.json",
+            "bootfs_path": "apps/modular_tests/modular_tests.json"
+        },
+        {
+            "binary": "oauth_token_manager",
+            "bootfs_path": "apps/oauth_token_manager"
+        },
+        {
+            "binary": "parent_module",
+            "bootfs_path": "apps/modular_tests/parent_module"
+        },
+        {
+            "binary": "queue_persistence_test_agent",
+            "bootfs_path": "apps/modular_tests/queue_persistence_test_agent"
+        },
+        {
+            "binary": "queue_persistence_test_module",
+            "bootfs_path": "apps/modular_tests/queue_persistence_test_module"
+        },
+        {
+            "binary": "remote_invoker_test",
+            "bootfs_path": "apps/modular_tests/remote_invoker_test"
+        },
+        {
+            "binary": "modular_unittests",
+            "bootfs_path": "test/modular_unittests"
+        },
+        {
+            "binary": "null_module",
+            "bootfs_path": "apps/modular_tests/null_module"
+        },
+        {
+            "binary": "swap_module1",
+            "bootfs_path": "apps/swap_module1"
+        },
+        {
+            "binary": "suggest_shell_controller",
+            "bootfs_path": "apps/suggest_shell_controller"
+        },
+        {
+            "binary": "gen/peridot/examples/suggest_shell/view/suggest_shell_view.flx",
+            "bootfs_path": "apps/suggest_shell_view"
+        },
+        {
+            "binary": "suggestion_proposal_test_module",
+            "bootfs_path": "apps/modular_tests/suggestion_proposal_test_module"
+        },
+        {
+            "binary": "suggestion_test_user_shell",
+            "bootfs_path": "apps/suggestion_test_user_shell"
+        },
+        {
+            "binary": "swap_module2",
+            "bootfs_path": "apps/swap_module2"
+        },
+        {
+            "binary": "swap_recipe",
+            "bootfs_path": "apps/swap_recipe"
+        },
+        {
+            "binary": "test_last_focus_time",
+            "bootfs_path": "apps/test_last_focus_time"
+        },
+        {
+            "binary": "test_link_data",
+            "bootfs_path": "apps/test_link_data"
+        },
+        {
+            "binary": "test_link_update",
+            "bootfs_path": "apps/test_link_update"
+        },
+        {
+            "binary": "test_story_importance",
+            "bootfs_path": "apps/test_story_importance"
+        },
+        {
+            "binary": "test_user_shell",
+            "bootfs_path": "apps/test_user_shell"
+        },
+        {
+            "binary": "trigger_test_agent",
+            "bootfs_path": "apps/modular_tests/trigger_test_agent"
+        },
+        {
+            "binary": "user_runner",
+            "bootfs_path": "apps/user_runner"
+        }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "test/run_modular_tests.sh",
+            "file": "peridot/tests/run_modular_tests.sh"
+        }
+    ]
+}
