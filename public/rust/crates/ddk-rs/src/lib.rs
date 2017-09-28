@@ -35,12 +35,12 @@ impl Device {
 pub trait DeviceOps {
     fn name(&self) -> String;
 
-    fn open(&mut self, flags: u32) -> Status {
-        Status::NoError
+    fn open(&mut self, flags: u32) -> Result<Option<Device>, Status> {
+        Ok(None)
     }
 
-    fn open_at(&mut self, path: &str, flags: u32) -> Status {
-        Status::ErrNotSupported
+    fn open_at(&mut self, path: &str, flags: u32) -> Result<Option<Device>, Status> {
+        Err(Status::ErrNotSupported)
     }
 
     fn close(&mut self, flags: u32) -> Status {
@@ -65,7 +65,9 @@ pub trait DeviceOps {
 
 }
 
-pub fn add_device(device_ops: Box<DeviceOps>) -> Result<Device, Status> {
+pub type AddDeviceFlags = ddk_sys::device_add_flags_t;
+
+pub fn add_device(device_ops: Box<DeviceOps>, flags: AddDeviceFlags) -> Result<Device, Status> {
     let device_name = device_ops.name();
     if device_name.len() > ddk_sys::ZX_DEVICE_NAME_MAX {
         return Err(Status::ErrInvalidArgs)
@@ -75,6 +77,7 @@ pub fn add_device(device_ops: Box<DeviceOps>) -> Result<Device, Status> {
     // TODO(stange): See if it's necessary to double Box device_ops.
     device_add_args.ctx = Box::into_raw(Box::new(device_ops)) as *mut u8;
     device_add_args.name = CString::new(device_name).unwrap().as_ptr();
+    device_add_args.flags = flags;
     unsafe {
         device_add_args.ops = &mut DEVICE_OPS;
         let mut ddk_device: *mut ddk_sys::zx_device_t = std::ptr::null_mut();
@@ -99,19 +102,32 @@ extern fn ddk_get_protocol(ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sy
     sys::ZX_ERR_NOT_SUPPORTED
 }
 
-extern fn ddk_open(ctx: *mut u8, mut dev_out: *mut *mut ddk_sys::zx_device_t, flags: u32) -> sys::zx_status_t {
+fn open_result(ret: Result<Option<Device>, Status>, dev_out: *mut *mut ddk_sys::zx_device_t) -> sys::zx_status_t {
+    match ret {
+      Err(status) => status as sys::zx_status_t,
+      Ok(None) => sys::ZX_OK,
+      Ok(Some(new_device)) => {
+        // TODO(qwandor): This assumes that the implementor of DeviceOps.open has already called
+        // add_device with the DEVICE_ADD_INSTANCE flag. Would it be better to call it here instead?
+        unsafe { *dev_out = new_device.device };
+        sys::ZX_OK
+      }
+    }
+}
+
+extern fn ddk_open(ctx: *mut u8, dev_out: *mut *mut ddk_sys::zx_device_t, flags: u32) -> sys::zx_status_t {
     let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
     let ret = device.open(flags);
     let _ = Box::into_raw(device);
-    ret as sys::zx_status_t
+    open_result(ret, dev_out)
 }
 
-extern fn ddk_open_at(ctx: *mut u8, mut dev_out: *mut *mut ddk_sys::zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t {
+extern fn ddk_open_at(ctx: *mut u8, dev_out: *mut *mut ddk_sys::zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t {
     let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
     let path = unsafe { CStr::from_ptr(path).to_str().unwrap() };
     let ret = device.open_at(path, flags);
     let _ = Box::into_raw(device);
-    ret as sys::zx_status_t
+    open_result(ret, dev_out)
 }
 
 extern fn ddk_close(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
