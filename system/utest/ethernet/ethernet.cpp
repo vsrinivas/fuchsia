@@ -303,7 +303,7 @@ static bool EthernetStartTest() {
     sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
 
     EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::deadline_after(ZX_MSEC(10)), &obs));
+            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::deadline_after(ZX_MSEC(100)), &obs));
     EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
@@ -349,7 +349,7 @@ static bool EthernetLinkStatusTest() {
     // Verify the link status
     zx_signals_t obs;
     EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::deadline_after(ZX_MSEC(10)), &obs));
+            client.rx_fifo()->wait_one(ETH_SIGNAL_STATUS, zx::deadline_after(ZX_MSEC(100)), &obs));
     EXPECT_TRUE(obs & ETH_SIGNAL_STATUS);
 
     EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
@@ -401,7 +401,7 @@ static bool EthernetDataTest_Send() {
     EXPECT_EQ(1u, actual);
 
     // The socket should be readable
-    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_READABLE, zx::deadline_after(ZX_MSEC(10)), &obs));
+    EXPECT_EQ(ZX_OK, sock.wait_one(ZX_SOCKET_READABLE, zx::deadline_after(ZX_MSEC(100)), &obs));
     ASSERT_TRUE(obs & ZX_SOCKET_READABLE);
 
     // Read the data from the socket, which should match what was written to the fifo
@@ -413,7 +413,7 @@ static bool EthernetDataTest_Send() {
 
     // Now the TX completion entry should be available to read from the TX fifo
     EXPECT_EQ(ZX_OK,
-            client.tx_fifo()->wait_one(ZX_FIFO_READABLE, zx::deadline_after(ZX_MSEC(10)), &obs));
+            client.tx_fifo()->wait_one(ZX_FIFO_READABLE, zx::deadline_after(ZX_MSEC(100)), &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     eth_fifo_entry_t return_entry;
@@ -471,7 +471,7 @@ static bool EthernetDataTest_Recv() {
 
     // The fifo should be readable
     EXPECT_EQ(ZX_OK,
-            client.rx_fifo()->wait_one(ZX_FIFO_READABLE, zx::deadline_after(ZX_MSEC(10)), &obs));
+            client.rx_fifo()->wait_one(ZX_FIFO_READABLE, zx::deadline_after(ZX_MSEC(100)), &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     // Read the RX fifo
