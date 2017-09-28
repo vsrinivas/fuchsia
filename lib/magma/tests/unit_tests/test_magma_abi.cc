@@ -15,35 +15,36 @@ extern "C" {
 #include "test_magma_abi.h"
 }
 
-class TestBase {
+class TestConnection {
 public:
-    TestBase() { fd_ = open("/dev/class/display/000", O_RDONLY); }
+    TestConnection() : TestConnection(MAGMA_CAPABILITY_RENDERING) {}
+
+    TestConnection(uint32_t capability)
+    {
+        if (capability == MAGMA_CAPABILITY_RENDERING)
+            fd_ = open("/dev/class/gpu/000", O_RDONLY);
+        else if (capability == MAGMA_CAPABILITY_DISPLAY)
+            fd_ = open("/dev/class/display/000", O_RDONLY);
+
+        DASSERT(fd_ >= 0);
+        connection_ = magma_create_connection(fd(), capability);
+    }
+
+    ~TestConnection()
+    {
+        if (connection_)
+            magma_release_connection(connection_);
+
+        close(fd_);
+    }
 
     int fd() { return fd_; }
-
-    ~TestBase() { close(fd_); }
 
     void GetDeviceId()
     {
         uint64_t device_id = 0;
         EXPECT_EQ(MAGMA_STATUS_OK, magma_query(fd_, MAGMA_QUERY_DEVICE_ID, &device_id));
         EXPECT_NE(0u, device_id);
-    }
-
-private:
-    int fd_;
-};
-
-class TestConnection : public TestBase {
-public:
-    TestConnection() : TestConnection(MAGMA_CAPABILITY_RENDERING) {}
-
-    TestConnection(uint32_t capability) { connection_ = magma_create_connection(fd(), capability); }
-
-    ~TestConnection()
-    {
-        if (connection_)
-            magma_release_connection(connection_);
     }
 
     magma_connection_t* connection() { return connection_; }
@@ -225,6 +226,7 @@ public:
     }
 
 private:
+    int fd_ = -1;
     magma_connection_t* connection_;
 };
 
@@ -305,7 +307,7 @@ public:
 
 TEST(MagmaAbi, DeviceId)
 {
-    TestBase test;
+    TestConnection test;
     test.GetDeviceId();
 }
 

@@ -12,7 +12,7 @@ bool test_magma_abi_from_c(void)
 {
     bool result = true;
 
-    int fd = open("/dev/class/display/000", O_RDONLY);
+    int fd = open("/dev/class/gpu/000", O_RDONLY);
     if (fd < 0) {
         printf("%s:%d open returned %d\n", __FILE__, __LINE__, fd);
         result = false;

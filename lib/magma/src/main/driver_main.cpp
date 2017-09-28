@@ -33,9 +33,10 @@ void magma_indriver_test(zx_device_t* device);
 
 #define INTEL_I915_VID (0x8086)
 
-struct intel_i915_device_t {
-    zx_device_t* mxdev;
+struct intel_gen_device_t {
     zx_device_t* parent_device;
+    zx_device_t* zx_device_display;
+    zx_device_t* zx_device_gpu;
 
     void* framebuffer_addr;
     uint64_t framebuffer_size;
@@ -58,53 +59,48 @@ struct intel_i915_device_t {
 
 static magma::CacheFlush g_cache_flush;
 
-static int magma_start(intel_i915_device_t* dev);
-static int magma_stop(intel_i915_device_t* dev);
+static int magma_start(intel_gen_device_t* dev);
 
-intel_i915_device_t* get_i915_device(void* context)
-{
-    return static_cast<intel_i915_device_t*>(context);
-}
+#if MAGMA_TEST_DRIVER
+static int magma_stop(intel_gen_device_t* dev);
+#endif
 
-static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable)
-{
-    // Take action on backlight here for certain platforms as necessary.
-}
+intel_gen_device_t* get_device(void* context) { return static_cast<intel_gen_device_t*>(context); }
 
 // implement display protocol
 
-static zx_status_t intel_i915_set_mode(void* ctx, zx_display_info_t* info)
+static zx_status_t intel_display_set_mode(void* ctx, zx_display_info_t* info)
 {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t intel_i915_get_mode(void* ctx, zx_display_info_t* info)
+static zx_status_t intel_display_get_mode(void* ctx, zx_display_info_t* info)
 {
     assert(info);
-    intel_i915_device_t* device = get_i915_device(ctx);
+    intel_gen_device_t* device = get_device(ctx);
     memcpy(info, &device->info, sizeof(zx_display_info_t));
     return ZX_OK;
 }
 
-static zx_status_t intel_i915_get_framebuffer(void* ctx, void** framebuffer)
+static zx_status_t intel_display_get_framebuffer(void* ctx, void** framebuffer)
 {
     assert(framebuffer);
-    intel_i915_device_t* device = get_i915_device(ctx);
+    intel_gen_device_t* device = get_device(ctx);
     (*framebuffer) = device->framebuffer_addr;
     return ZX_OK;
 }
 
-static void intel_i915_flush(void* ctx)
+static void intel_display_flush(void* ctx)
 {
-    intel_i915_device_t* device = get_i915_device(ctx);
+    intel_gen_device_t* device = get_device(ctx);
     // Don't incur overhead of flushing when console's not visible
     if (device->console_visible)
         g_cache_flush.clflush_range(device->framebuffer_addr, device->framebuffer_size);
 }
 
-static void intel_i915_acquire_or_release_display(void* ctx, bool acquire)
+static void intel_display_acquire_or_release_display(void* ctx, bool acquire)
 {
-    intel_i915_device_t* device = get_i915_device(ctx);
+    intel_gen_device_t* device = get_device(ctx);
     DLOG("intel_i915_acquire_or_release_display");
 
     std::unique_lock<std::mutex> lock(device->magma_mutex);
@@ -138,59 +134,30 @@ static void intel_i915_acquire_or_release_display(void* ctx, bool acquire)
     }
 }
 
-static void intel_i915_set_ownership_change_callback(void* ctx, zx_display_cb_t callback, void* cookie)
+static void intel_display_set_ownership_change_callback(void* ctx, zx_display_cb_t callback,
+                                                        void* cookie)
 {
-    intel_i915_device_t* device = get_i915_device(ctx);
+    intel_gen_device_t* device = get_device(ctx);
     std::unique_lock<std::mutex> lock(device->magma_mutex);
     device->ownership_change_callback = callback;
     device->ownership_change_cookie = cookie;
 }
 
-static display_protocol_ops_t intel_i915_display_proto = {
-    .set_mode = intel_i915_set_mode,
-    .get_mode = intel_i915_get_mode,
-    .get_framebuffer = intel_i915_get_framebuffer,
-    .acquire_or_release_display = intel_i915_acquire_or_release_display,
-    .set_ownership_change_callback = intel_i915_set_ownership_change_callback,
-    .flush = intel_i915_flush,
+static display_protocol_ops_t intel_gen_display_proto = {
+    .set_mode = intel_display_set_mode,
+    .get_mode = intel_display_get_mode,
+    .get_framebuffer = intel_display_get_framebuffer,
+    .acquire_or_release_display = intel_display_acquire_or_release_display,
+    .set_ownership_change_callback = intel_display_set_ownership_change_callback,
+    .flush = intel_display_flush,
 };
 
 // implement device protocol
 
-static zx_status_t intel_i915_open(void* ctx, zx_device_t** out, uint32_t flags)
+static zx_status_t intel_common_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                      void* out_buf, size_t out_len, size_t* out_actual)
 {
-    intel_i915_device_t* device = get_i915_device(ctx);
-    intel_i915_enable_backlight(device, true);
-    return ZX_OK;
-}
-
-static zx_status_t intel_i915_close(void* ctx, uint32_t flags) { return ZX_OK; }
-
-static int reset_placeholder(intel_i915_device_t* device)
-{
-    void* addr;
-    if (device->placeholder_buffer->MapCpu(&addr)) {
-        memset(addr, 0, device->placeholder_buffer->size());
-        g_cache_flush.clflush_range(addr, device->placeholder_buffer->size());
-        device->placeholder_buffer->UnmapCpu();
-    }
-
-    uint32_t buffer_handle;
-    if (!device->placeholder_buffer->duplicate_handle(&buffer_handle))
-        return DRET_MSG(ZX_ERR_NO_RESOURCES, "duplicate_handle failed");
-
-    device->placeholder_framebuffer =
-        MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
-    if (!device->placeholder_framebuffer)
-        return DRET_MSG(ZX_ERR_NO_MEMORY, "failed to created magma system buffer");
-
-    return ZX_OK;
-}
-
-static zx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                    void* out_buf, size_t out_len, size_t* out_actual)
-{
-    intel_i915_device_t* device = get_i915_device(ctx);
+    intel_gen_device_t* device = get_device(ctx);
 
     DASSERT(device->magma_system_device);
 
@@ -219,60 +186,13 @@ static zx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             result = ZX_OK;
             break;
         }
-        case IOCTL_MAGMA_CONNECT: {
-            DLOG("IOCTL_MAGMA_CONNECT");
-            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
-            if (!in_buf || in_len < sizeof(*request))
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
-            if (!out_buf || out_len < sizeof(*device_handle_out))
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            // Override console for new display connections
-            if (request->capabilities & MAGMA_CAPABILITY_DISPLAY) {
-                reset_placeholder(device);
-                magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
-                device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer,
-                                                               &image_desc, true);
-                device->console_visible = false;
-                if (device->ownership_change_callback)
-                    device->ownership_change_callback(false, device->ownership_change_cookie);
-            }
-
-            auto connection = MagmaSystemDevice::Open(device->magma_system_device,
-                                                      request->client_id, request->capabilities);
-            if (!connection)
-                return DRET(ZX_ERR_INVALID_ARGS);
-
-            *device_handle_out = connection->GetHandle();
-            *out_actual = sizeof(*device_handle_out);
-            result = ZX_OK;
-
-            device->magma_system_device->StartConnectionThread(std::move(connection));
-
-            break;
-        }
 
         case IOCTL_MAGMA_DUMP_STATUS: {
             DLOG("IOCTL_MAGMA_DUMP_STATUS");
             std::unique_lock<std::mutex> lock(device->magma_mutex);
-            intel_i915_device_t* device = get_i915_device(ctx);
+            intel_gen_device_t* device = get_device(ctx);
             if (device->magma_system_device)
                 device->magma_system_device->DumpStatus();
-            result = ZX_OK;
-            break;
-        }
-
-        case IOCTL_DISPLAY_GET_FB: {
-            DLOG("MAGMA IOCTL_DISPLAY_GET_FB");
-            if (out_len < sizeof(ioctl_display_get_fb_t))
-                return DRET(ZX_ERR_INVALID_ARGS);
-            ioctl_display_get_fb_t* description = static_cast<ioctl_display_get_fb_t*>(out_buf);
-            device->console_buffer->duplicate_handle(
-                reinterpret_cast<uint32_t*>(&description->vmo));
-            description->info = device->info;
-            *out_actual = sizeof(ioctl_display_get_fb_t);
             result = ZX_OK;
             break;
         }
@@ -288,6 +208,109 @@ static zx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             break;
         }
 #endif
+    }
+
+    return result;
+}
+
+static zx_status_t intel_gpu_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                   void* out_buf, size_t out_len, size_t* out_actual)
+{
+    DLOG("intel_gpu_ioctl");
+    zx_status_t result = intel_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
+    if (result == ZX_OK)
+        return ZX_OK;
+
+    if (result != ZX_ERR_NOT_SUPPORTED)
+        return result;
+
+    intel_gen_device_t* device = get_device(ctx);
+    DASSERT(device->magma_system_device);
+
+    switch (op) {
+        case IOCTL_MAGMA_CONNECT: {
+            DLOG("IOCTL_MAGMA_CONNECT");
+            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
+            if (!in_buf || in_len < sizeof(*request))
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*device_handle_out))
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            if ((request->capabilities & MAGMA_CAPABILITY_DISPLAY) ||
+                (request->capabilities & MAGMA_CAPABILITY_RENDERING) == 0)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            auto connection = MagmaSystemDevice::Open(
+                device->magma_system_device, request->client_id, MAGMA_CAPABILITY_RENDERING);
+            if (!connection)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            *device_handle_out = connection->GetHandle();
+            *out_actual = sizeof(*device_handle_out);
+            result = ZX_OK;
+
+            device->magma_system_device->StartConnectionThread(std::move(connection));
+
+            break;
+        }
+
+        default:
+            DLOG("intel_gpu_ioctl unhandled op 0x%x", op);
+    }
+
+    return result;
+}
+
+static int reset_placeholder(intel_gen_device_t* device)
+{
+    void* addr;
+    if (device->placeholder_buffer->MapCpu(&addr)) {
+        memset(addr, 0, device->placeholder_buffer->size());
+        g_cache_flush.clflush_range(addr, device->placeholder_buffer->size());
+        device->placeholder_buffer->UnmapCpu();
+    }
+
+    uint32_t buffer_handle;
+    if (!device->placeholder_buffer->duplicate_handle(&buffer_handle))
+        return DRET_MSG(ZX_ERR_NO_RESOURCES, "duplicate_handle failed");
+
+    device->placeholder_framebuffer =
+        MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
+    if (!device->placeholder_framebuffer)
+        return DRET_MSG(ZX_ERR_NO_MEMORY, "failed to created magma system buffer");
+
+    return ZX_OK;
+}
+
+static zx_status_t intel_display_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                       void* out_buf, size_t out_len, size_t* out_actual)
+{
+    DLOG("intel_display_ioctl");
+    zx_status_t result = intel_common_ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
+    if (result == ZX_OK)
+        return ZX_OK;
+
+    if (result != ZX_ERR_NOT_SUPPORTED)
+        return result;
+
+    intel_gen_device_t* device = get_device(ctx);
+    DASSERT(device->magma_system_device);
+
+    switch (op) {
+        case IOCTL_DISPLAY_GET_FB: {
+            DLOG("MAGMA IOCTL_DISPLAY_GET_FB");
+            if (out_len < sizeof(ioctl_display_get_fb_t))
+                return DRET(ZX_ERR_INVALID_ARGS);
+            ioctl_display_get_fb_t* description = static_cast<ioctl_display_get_fb_t*>(out_buf);
+            device->console_buffer->duplicate_handle(
+                reinterpret_cast<uint32_t*>(&description->vmo));
+            description->info = device->info;
+            *out_actual = sizeof(ioctl_display_get_fb_t);
+            result = ZX_OK;
+            break;
+        }
 
         case IOCTL_MAGMA_DISPLAY_GET_SIZE: {
             DLOG("IOCTL_MAGMA_DISPLAY_GET_SIZE");
@@ -307,47 +330,84 @@ static zx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
             break;
         }
 
+        case IOCTL_MAGMA_CONNECT: {
+            DLOG("IOCTL_MAGMA_CONNECT");
+            auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
+            if (!in_buf || in_len < sizeof(*request))
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
+            if (!out_buf || out_len < sizeof(*device_handle_out))
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            if ((request->capabilities & MAGMA_CAPABILITY_RENDERING) ||
+                (request->capabilities & MAGMA_CAPABILITY_DISPLAY) == 0)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            reset_placeholder(device);
+            magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
+            device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer,
+                                                           &image_desc, true);
+            device->console_visible = false;
+            if (device->ownership_change_callback)
+                device->ownership_change_callback(false, device->ownership_change_cookie);
+
+            auto connection = MagmaSystemDevice::Open(device->magma_system_device,
+                                                      request->client_id, MAGMA_CAPABILITY_DISPLAY);
+            if (!connection)
+                return DRET(ZX_ERR_INVALID_ARGS);
+
+            *device_handle_out = connection->GetHandle();
+            *out_actual = sizeof(*device_handle_out);
+            result = ZX_OK;
+
+            device->magma_system_device->StartConnectionThread(std::move(connection));
+
+            break;
+        }
+
         default:
-            DLOG("intel_i915_ioctl unhandled op 0x%x", op);
+            DLOG("intel_display_ioctl unhandled op 0x%x", op);
     }
 
     return result;
 }
 
-static void intel_i915_release(void* ctx)
+static void intel_display_release(void* ctx)
 {
-    DLOG("intel_i915_release");
-    intel_i915_device_t* device = get_i915_device(ctx);
-
-    std::unique_lock<std::mutex> lock(device->magma_mutex);
-
-    intel_i915_enable_backlight(device, false);
-
-    magma_stop(device);
-
-    delete (device);
+    // TODO(ZX-1170) - when testable:
+    // Perform magma_stop but don't free the context unless intel_gpu_release has already been
+    // called
+    DASSERT(false);
 }
 
-static zx_protocol_device_t intel_i915_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = intel_i915_open,
-    .close = intel_i915_close,
-    .ioctl = intel_i915_ioctl,
-    .release = intel_i915_release,
+static zx_protocol_device_t intel_display_device_proto = {
+    .version = DEVICE_OPS_VERSION, .ioctl = intel_display_ioctl, .release = intel_display_release,
+};
+
+static void intel_gpu_release(void* ctx)
+{
+    // TODO(ZX-1170) - when testable:
+    // Free context if intel_display_release has already been called
+    DASSERT(false);
+}
+
+static zx_protocol_device_t intel_gpu_device_proto = {
+    .version = DEVICE_OPS_VERSION, .ioctl = intel_gpu_ioctl, .release = intel_gpu_release,
 };
 
 // implement driver object:
 
-static zx_status_t intel_i915_bind(void* ctx, zx_device_t* zx_device, void** cookie)
+static zx_status_t intel_gen_bind(void* ctx, zx_device_t* zx_device, void** cookie)
 {
-    DLOG("intel_i915_bind start zx_device %p", zx_device);
+    DLOG("intel_gen_bind start zx_device %p", zx_device);
 
     pci_protocol_t pci;
     if (device_get_protocol(zx_device, ZX_PROTOCOL_PCI, (void*)&pci))
         return DRET_MSG(ZX_ERR_NOT_SUPPORTED, "device_get_protocol failed");
 
     // map resources and initialize the device
-    auto device = std::make_unique<intel_i915_device_t>();
+    auto device = std::make_unique<intel_gen_device_t>();
 
     zx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
@@ -390,9 +450,12 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* zx_device, void** coo
 
     di->flags = ZX_DISPLAY_FLAG_HW_FRAMEBUFFER;
 
-    // Tell the kernel about the console framebuffer so it can display a kernel panic screen.
-    // If other display clients come along and change the scanout address, then the panic
-    // won't be visible; however the plan is to move away from onscreen panics, instead
+    // Tell the kernel about the console framebuffer so it can display a kernel
+    // panic screen.
+    // If other display clients come along and change the scanout address, then
+    // the panic
+    // won't be visible; however the plan is to move away from onscreen panics,
+    // instead
     // writing the log somewhere it can be recovered then triggering a reboot.
     uint32_t handle;
     if (!device->console_buffer->duplicate_handle(&handle))
@@ -402,9 +465,6 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* zx_device, void** coo
                                     width, height, stride);
     if (status != ZX_OK)
         magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to zircon: %d", status);
-
-    // TODO remove when the gfxconsole moves to user space
-    intel_i915_enable_backlight(device.get(), true);
 
     magma::PlatformTrace::Initialize();
 
@@ -425,36 +485,48 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* zx_device, void** coo
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "intel_i915_disp";
+    args.name = "intel_gen_display";
     args.ctx = device.get();
-    args.ops = &intel_i915_device_proto;
+    args.ops = &intel_display_device_proto;
     args.proto_id = ZX_PROTOCOL_DISPLAY;
-    args.proto_ops = &intel_i915_display_proto;
+    args.proto_ops = &intel_gen_display_proto;
 
-    status = device_add(zx_device, &args, &device->mxdev);
+    status = device_add(zx_device, &args, &device->zx_device_display);
     if (status != ZX_OK)
-        return DRET_MSG(status, "device_add failed");
+        return DRET_MSG(status, "display device_add failed: %d", status);
+
+    args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "intel_gen_gpu";
+    args.ctx = device.get();
+    args.ops = &intel_gpu_device_proto;
+    args.proto_id = ZX_PROTOCOL_GPU;
+    args.proto_ops = nullptr;
+
+    status = device_add(zx_device, &args, &device->zx_device_gpu);
+    if (status != ZX_OK)
+        return DRET_MSG(status, "gpu device_add failed: %d", status);
 
     device.release();
 
-    DLOG("initialized magma intel display driver");
+    DLOG("initialized magma intel driver");
 
     return ZX_OK;
 }
 
-static zx_driver_ops_t intel_gen_gpu_driver_ops = {
-    .version = DRIVER_OPS_VERSION, .bind = intel_i915_bind,
+static zx_driver_ops_t intel_gen_driver_ops = {
+    .version = DRIVER_OPS_VERSION, .bind = intel_gen_bind,
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(intel_gen_gpu, intel_gen_gpu_driver_ops, "zircon", "!0.1", 5)
+ZIRCON_DRIVER_BEGIN(intel_gen_gpu, intel_gen_driver_ops, "zircon", "!0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
     BI_MATCH_IF(EQ, BIND_PCI_CLASS, 0x3), // Display class
 ZIRCON_DRIVER_END(intel_gen_gpu)
     // clang-format on
 
-    static int magma_start(intel_i915_device_t* device)
+    static int magma_start(intel_gen_device_t* device)
 {
     DLOG("magma_start");
 
@@ -487,7 +559,8 @@ ZIRCON_DRIVER_END(intel_gen_gpu)
     return ZX_OK;
 }
 
-static int magma_stop(intel_i915_device_t* device)
+#if MAGMA_TEST_DRIVER
+static int magma_stop(intel_gen_device_t* device)
 {
     DLOG("magma_stop");
 
@@ -499,3 +572,4 @@ static int magma_stop(intel_i915_device_t* device)
 
     return ZX_OK;
 }
+#endif

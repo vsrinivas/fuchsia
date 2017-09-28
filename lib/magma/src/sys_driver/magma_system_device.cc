@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define MAGMA_DLOG_ENABLE 1
+
 #include "magma_system_device.h"
 #include "magma_system_connection.h"
 #include "magma_util/macros.h"

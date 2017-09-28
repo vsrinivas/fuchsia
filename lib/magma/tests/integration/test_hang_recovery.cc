@@ -19,7 +19,7 @@ constexpr uint32_t kValue = 0xabcddcba;
 
 class TestBase {
 public:
-    TestBase() { fd_ = open("/dev/class/display/000", O_RDONLY); }
+    TestBase() { fd_ = open("/dev/class/gpu/000", O_RDONLY); }
 
     int fd() { return fd_; }
 
