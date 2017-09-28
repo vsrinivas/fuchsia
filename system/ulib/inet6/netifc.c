@@ -118,14 +118,35 @@ static void check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
 
 static eth_buffer_t* eth_buffers = NULL;
 
+static void eth_put_buffer_locked(eth_buffer_t* buf, uint32_t state) {
+    check_ethbuf(buf, state);
+    buf->state = ETH_BUFFER_FREE;
+    buf->next = eth_buffers;
+    eth_buffers = buf;
+}
+
+void eth_put_buffer(eth_buffer_t* ethbuf) {
+    mtx_lock(&eth_lock);
+    eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
+    mtx_unlock(&eth_lock);
+}
+
+static void tx_complete(void* ctx, void* cookie) {
+    eth_put_buffer_locked(cookie, ETH_BUFFER_TX);
+}
+
 static int eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** out, uint32_t newstate) {
     eth_buffer_t* buf;
     if (sz > NET_BUFFERSZ) {
         return -1;
     }
     if (eth_buffers == NULL) {
-        printf("eth: get_buffer: out of buffers\n");
-        return -1;
+        // Reap used tx buffers
+        eth_complete_tx(eth, NULL, tx_complete);
+        if (eth_buffers == NULL) {
+            printf("eth: get_buffer: out of buffers\n");
+            return -1;
+        }
     }
     buf = eth_buffers;
     eth_buffers = buf->next;
@@ -144,23 +165,6 @@ int eth_get_buffer(size_t sz, void** data, eth_buffer_t** out) {
     int r = eth_get_buffer_locked(sz, data, out, ETH_BUFFER_CLIENT);
     mtx_unlock(&eth_lock);
     return r;
-}
-
-static void eth_put_buffer_locked(eth_buffer_t* buf, uint32_t state) {
-    check_ethbuf(buf, state);
-    buf->state = ETH_BUFFER_FREE;
-    buf->next = eth_buffers;
-    eth_buffers = buf;
-}
-
-void eth_put_buffer(eth_buffer_t* ethbuf) {
-    mtx_lock(&eth_lock);
-    eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
-    mtx_unlock(&eth_lock);
-}
-
-static void tx_complete(void* ctx, void* cookie) {
-    eth_put_buffer_locked(cookie, ETH_BUFFER_TX);
 }
 
 int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
@@ -182,8 +186,6 @@ int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
         eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
         goto fail;
     }
-
-    eth_complete_tx(eth, NULL, tx_complete);
 
     ethbuf->state = ETH_BUFFER_TX;
     zx_status_t status = eth_queue_tx(eth, ethbuf, ethbuf->data + skip, len, 0);
