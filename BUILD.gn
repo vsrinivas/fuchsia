@@ -14,8 +14,7 @@ group("modular") {
 
   deps = [
     ":modular_unittests",
-    "bin:src",
-    "examples",
+    "bin",
     "public/lib:services",
     "tests",
   ]

@@ -1,0 +1,54 @@
+{
+    "languages": [
+        "cpp",
+        "dart"
+    ],
+    "labels": [
+        "//examples",
+    ],
+    "components": [
+        "peridot/examples/hello_component/hello_component.json"
+    ],
+    "binaries": [
+        {
+            "binary": "gen/peridot/examples/counter_flutter/child/example_flutter_counter_child.flx",
+            "bootfs_path": "apps/example_flutter_counter_child"
+        },
+        {
+            "binary": "gen/peridot/examples/counter_flutter/parent/example_flutter_counter_parent.flx",
+            "bootfs_path": "apps/example_flutter_counter_parent"
+        },
+        {
+            "binary": "gen/peridot/examples/hello_world_flutter/example_flutter_hello_world.flx",
+            "bootfs_path": "apps/example_flutter_hello_world"
+        },
+        {
+            "binary": "gen/peridot/examples/story_shell_flutter/example_flutter_story_shell.flx",
+            "bootfs_path": "apps/example_flutter_story_shell"
+        },
+        {
+            "binary": "example_module1",
+            "bootfs_path": "apps/example_module1"
+        },
+        {
+            "binary": "example_module2",
+            "bootfs_path": "apps/example_module2"
+        },
+        {
+            "binary": "example_recipe",
+            "bootfs_path": "apps/example_recipe"
+        },
+        {
+            "binary": "example_todo_headless",
+            "bootfs_path": "apps/example_todo_headless"
+        },
+        {
+            "binary": "gen/peridot/examples/todo_story/example_todo_story.flx",
+            "bootfs_path": "apps/example_todo_story"
+        },
+        {
+            "binary": "gen/peridot/examples/suggest_shell/view/suggest_shell_view.flx",
+            "bootfs_path": "apps/suggest_shell_view"
+        }
+    ]
+}

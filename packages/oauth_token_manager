@@ -1,0 +1,14 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//peridot/bin/oauth_token_manager:all"
+    ],
+    "binaries": [
+        {
+            "binary": "oauth_token_manager",
+            "bootfs_path": "apps/oauth_token_manager"
+        }
+    ]
+}
