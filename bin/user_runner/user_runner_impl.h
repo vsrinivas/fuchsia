@@ -80,6 +80,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   void GetFocusController(
       fidl::InterfaceRequest<FocusController> request) override;
   void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
+  void GetIntelligenceServices(
+      fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
   void GetLink(fidl::InterfaceRequest<Link> request) override;
   void GetProposalPublisher(
       fidl::InterfaceRequest<maxwell::ProposalPublisher> request) override;

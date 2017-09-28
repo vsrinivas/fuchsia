@@ -8,6 +8,7 @@ import "lib/context/fidl/context_writer.fidl";
 import "lib/context/fidl/context_reader.fidl";
 import "lib/suggestion/fidl/proposal_publisher.fidl";
 import "lib/suggestion/fidl/suggestion_provider.fidl";
+import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/agent/fidl/agent_provider.fidl";
 import "lib/auth/fidl/account/account.fidl";
 import "lib/story/fidl/link.fidl";
@@ -25,9 +26,9 @@ interface UserShell {
   Terminate();
 };
 
-// TODO(alhaad): There are some intelligence services that are individually
-// provided to user shell like ContextReader, SuggestionProvider. Consider
-// giving user shell access to raw |maxwell.IntelligenceServices|.
+// TODO(jwnichols): This includes both |maxwell.IntelligenceServices| and
+// access to the services that it provides. Consider removing the direct
+// access to the contained services.
 interface UserShellContext {
   // The account associated with the currently logged-in user. It's NULL if
   // logged into GUEST mode.
@@ -38,6 +39,7 @@ interface UserShellContext {
   GetDeviceName() => (string device_name);
   GetFocusController(FocusController& request);
   GetFocusProvider(FocusProvider& request);
+  GetIntelligenceServices(maxwell.IntelligenceServices& request);
   GetLink(Link& request);
   GetProposalPublisher(maxwell.ProposalPublisher& request);
   GetStoryProvider(StoryProvider& request);

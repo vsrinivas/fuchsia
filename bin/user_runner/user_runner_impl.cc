@@ -388,6 +388,14 @@ void UserRunnerImpl::GetFocusProvider(
   focus_handler_->AddProviderBinding(std::move(request));
 }
 
+void UserRunnerImpl::GetIntelligenceServices(
+    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+  auto component_scope = maxwell::ComponentScope::New();
+  component_scope->set_global_scope(maxwell::GlobalScope::New());
+  user_intelligence_provider_->GetComponentIntelligenceServices(
+      std::move(component_scope), std::move(request));
+}
+
 void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   if (user_shell_link_) {
     user_shell_link_->Connect(std::move(request));
