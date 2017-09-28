@@ -41,9 +41,27 @@ class MergeResolver : public storage::CommitWatcher {
   void SetPageManager(PageManager* page_manager);
 
  private:
+  // DelayedStatus allows us to avoid merge storms (several devices battling
+  // to merge branches but not agreeing). We use the following algorithm:
+  // - Old (local or originally remote) changes are always merged right away.
+  // Local changes do not pose any risk risk of storm, as you cannot storm with
+  // yourself.
+  // - When a remote change arrives, that is a merge of two merges, then we are
+  // at risk of a merge storm. In that case, we delay.
+  // - If we receive any new commit while we are delaying, these are not merged
+  // right away; they are only merged after the delay.
+  // - Once the delay is finished, we merge everything we know. Upload will not
+  // happen until we finish merging all branches, so we don't risk amplifying a
+  // storm while merging.
+  // - If, after that, we still need to do a merge of a merge from remote
+  // commits, then we delay again, but more (exponential backoff).
+  // - We reset this backoff delay to its initial value once we see a non
+  // merge-of-a-merge commit.
   enum class DelayedStatus {
-    INITIAL,
-    DELAYED,
+    // Whatever the commits, we won't delay merging. Used for local commits.
+    DONT_DELAY,
+    // May delay
+    MAY_DELAY,
   };
 
   // storage::CommitWatcher:
@@ -51,7 +69,7 @@ class MergeResolver : public storage::CommitWatcher {
       const std::vector<std::unique_ptr<const storage::Commit>>& commits,
       storage::ChangeSource source) override;
 
-  void PostCheckConflicts();
+  void PostCheckConflicts(DelayedStatus delayed_status);
   void CheckConflicts(DelayedStatus delayed_status);
   void ResolveConflicts(DelayedStatus delayed_status,
                         std::vector<storage::CommitId> heads);
@@ -63,6 +81,7 @@ class MergeResolver : public storage::CommitWatcher {
   std::unique_ptr<MergeStrategy> next_strategy_;
   bool has_next_strategy_ = false;
   bool merge_in_progress_ = false;
+  bool in_delay_ = false;
   fxl::Closure on_empty_callback_;
   fxl::Closure on_destroyed_;
 

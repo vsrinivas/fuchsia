@@ -14,10 +14,12 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"
+#include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/callback/cancellable_helper.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
+#include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -33,6 +35,8 @@ class RecordingTestStrategy : public MergeStrategy {
     this->on_error = std::move(on_error);
   }
 
+  void SetOnMerge(fxl::Closure on_merge) { on_merge_ = on_merge; }
+
   void Merge(storage::PageStorage* /*storage*/,
              PageManager* /*page_manager*/,
              std::unique_ptr<const storage::Commit> /*head_1*/,
@@ -41,14 +45,21 @@ class RecordingTestStrategy : public MergeStrategy {
              std::function<void(Status)> callback) override {
     this->callback = std::move(callback);
     merge_calls++;
+    if (on_merge_) {
+      on_merge_();
+    }
   }
 
   void Cancel() override { cancel_calls++; }
 
   fxl::Closure on_error;
+
   std::function<void(Status)> callback;
   uint32_t merge_calls = 0;
   uint32_t cancel_calls = 0;
+
+ private:
+  fxl::Closure on_merge_;
 };
 
 class MergeResolverTest : public test::TestWithPageStorage {
@@ -70,19 +81,24 @@ class MergeResolverTest : public test::TestWithPageStorage {
   storage::CommitId CreateCommit(
       storage::CommitIdView parent_id,
       std::function<void(storage::Journal*)> contents) {
+    return CreateCommit(page_storage_.get(), parent_id, std::move(contents));
+  }
+
+  storage::CommitId CreateCommit(
+      storage::PageStorage* storage,
+      storage::CommitIdView parent_id,
+      std::function<void(storage::Journal*)> contents) {
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
-    page_storage_->StartCommit(
-        parent_id.ToString(), storage::JournalType::IMPLICIT,
-        callback::Capture(MakeQuitTask(), &status, &journal));
+    storage->StartCommit(parent_id.ToString(), storage::JournalType::IMPLICIT,
+                         callback::Capture(MakeQuitTask(), &status, &journal));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
 
     contents(journal.get());
     std::unique_ptr<const storage::Commit> commit;
-    page_storage_->CommitJournal(
-        std::move(journal),
-        callback::Capture(MakeQuitTask(), &status, &commit));
+    storage->CommitJournal(std::move(journal),
+                           callback::Capture(MakeQuitTask(), &status, &commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return commit->GetId();
@@ -92,9 +108,18 @@ class MergeResolverTest : public test::TestWithPageStorage {
       storage::CommitIdView parent_id1,
       storage::CommitIdView parent_id2,
       std::function<void(storage::Journal*)> contents) {
+    return CreateMergeCommit(page_storage_.get(), parent_id1, parent_id2,
+                             std::move(contents));
+  }
+
+  storage::CommitId CreateMergeCommit(
+      storage::PageStorage* storage,
+      storage::CommitIdView parent_id1,
+      storage::CommitIdView parent_id2,
+      std::function<void(storage::Journal*)> contents) {
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
-    page_storage_->StartMergeCommit(
+    storage->StartMergeCommit(
         parent_id1.ToString(), parent_id2.ToString(),
         callback::Capture(MakeQuitTask(), &status, &journal));
     EXPECT_FALSE(RunLoopWithTimeout());
@@ -102,7 +127,7 @@ class MergeResolverTest : public test::TestWithPageStorage {
     contents(journal.get());
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
-    page_storage_->CommitJournal(
+    storage->CommitJournal(
         std::move(journal),
         callback::Capture(MakeQuitTask(), &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
@@ -389,26 +414,55 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
   EXPECT_EQ(1u, ids.size());
 }
 
+// Merge of merges backoff is only triggered when commits are coming from sync.
+// To test this, we need to create conflicts and make it as if they are not
+// created locally. This is done by preventing commit notifications for new
+// commits, then issuing manually a commit notification "from sync". As this
+// implies using a fake PageStorage, we don't test the resolution itself, only
+// that backoff is triggered correctly.
 TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
+  storage::fake::FakePageStorage page_storage(&message_loop_, "page_id");
+
+  int get_next_count = 0;
+  MergeResolver resolver([] {}, &environment_, &page_storage,
+                         std::make_unique<test::TestBackoff>(&get_next_count));
+  resolver.set_on_empty(MakeQuitTask());
+  auto strategy = std::make_unique<RecordingTestStrategy>();
+  strategy->SetOnMerge(MakeQuitTask());
+  resolver.SetMergeStrategy(std::move(strategy));
+
+  // A check for conflict is posted on the run loop at the creation of the
+  // resolver, and when the resolver changes strategy. Hence we need to wait
+  // twice for the run loop to quit before we know it is empty.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  page_storage.SetDropCommitNotifications(true);
+
   // Set up conflict
+  storage::CommitId commit_0 = CreateCommit(
+      &page_storage, storage::kFirstPageCommitId, [](storage::Journal*) {});
+
   storage::CommitId commit_1 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+      &page_storage, commit_0, AddKeyValueToJournal("key1", "val1.0"));
 
   storage::CommitId commit_2 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+      &page_storage, commit_0, AddKeyValueToJournal("key1", "val1.0"));
 
   storage::CommitId commit_3 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key2", "val2.0"));
+      &page_storage, commit_0, AddKeyValueToJournal("key2", "val2.0"));
 
-  storage::CommitId merge_1 = CreateMergeCommit(
-      commit_1, commit_3, AddKeyValueToJournal("key3", "val3.0"));
+  storage::CommitId merge_1 =
+      CreateMergeCommit(&page_storage, commit_1, commit_3,
+                        AddKeyValueToJournal("key3", "val3.0"));
 
-  storage::CommitId merge_2 = CreateMergeCommit(
-      commit_2, commit_3, AddKeyValueToJournal("key3", "val3.0"));
+  storage::CommitId merge_2 =
+      CreateMergeCommit(&page_storage, commit_2, commit_3,
+                        AddKeyValueToJournal("key3", "val3.0"));
 
   storage::Status status;
   std::vector<storage::CommitId> ids;
-  page_storage_->GetHeadCommitIds(
+  page_storage.GetHeadCommitIds(
       callback::Capture(MakeQuitTask(), &status, &ids));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(storage::Status::OK, status);
@@ -416,20 +470,13 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), merge_1));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), merge_2));
 
-  int get_next_count = 0;
-  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
-                         std::make_unique<test::TestBackoff>(&get_next_count));
-  resolver.set_on_empty(MakeQuitTask());
-  resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
+  page_storage.SetDropCommitNotifications(false);
+
+  storage::CommitWatcher* watcher = &resolver;
+  watcher->OnNewCommits({}, storage::ChangeSource::SYNC);
 
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
-  ids.clear();
-  page_storage_->GetHeadCommitIds(
-      callback::Capture(MakeQuitTask(), &status, &ids));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(1u, ids.size());
+
   EXPECT_GT(get_next_count, 0);
 }
 

@@ -34,7 +34,7 @@ MergeResolver::MergeResolver(fxl::Closure on_destroyed,
       on_destroyed_(std::move(on_destroyed)),
       task_runner_(environment->main_runner()) {
   storage_->AddCommitWatcher(this);
-  PostCheckConflicts();
+  PostCheckConflicts(DelayedStatus::DONT_DELAY);
 }
 
 MergeResolver::~MergeResolver() {
@@ -62,7 +62,7 @@ void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   }
   strategy_.swap(strategy);
   if (strategy_) {
-    PostCheckConflicts();
+    PostCheckConflicts(DelayedStatus::DONT_DELAY);
   }
 }
 
@@ -73,16 +73,20 @@ void MergeResolver::SetPageManager(PageManager* page_manager) {
 
 void MergeResolver::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
-    storage::ChangeSource /*source*/) {
-  PostCheckConflicts();
+    storage::ChangeSource source) {
+  PostCheckConflicts(source == storage::ChangeSource::LOCAL
+                         ? DelayedStatus::DONT_DELAY
+                         // We delay remote commits.
+                         : DelayedStatus::MAY_DELAY);
 }
 
-void MergeResolver::PostCheckConflicts() {
-  task_runner_.PostTask([this] { CheckConflicts(DelayedStatus::INITIAL); });
+void MergeResolver::PostCheckConflicts(DelayedStatus delayed_status) {
+  task_runner_.PostTask(
+      [this, delayed_status] { CheckConflicts(delayed_status); });
 }
 
 void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
-  if (!strategy_ || merge_in_progress_) {
+  if (!strategy_ || merge_in_progress_ || in_delay_) {
     // No strategy, or a merge already in progress. Let's bail out early.
     return;
   }
@@ -94,6 +98,9 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
         if (heads.size() == 1) {
           // No conflict.
           merge_in_progress_ = false;
+          if (on_empty_callback_) {
+            on_empty_callback_();
+          }
           return;
         }
         heads.resize(2);
@@ -105,21 +112,23 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                      std::vector<storage::CommitId> heads) {
   FXL_DCHECK(heads.size() == 2);
 
-  auto cleanup = fxl::MakeAutoCall(task_runner_.MakeScoped([this] {
-    // |merge_in_progress_| must be reset before calling |on_empty_callback_|.
-    merge_in_progress_ = false;
+  auto cleanup =
+      fxl::MakeAutoCall(task_runner_.MakeScoped([this, delayed_status] {
+        // |merge_in_progress_| must be reset before calling
+        // |on_empty_callback_|.
+        merge_in_progress_ = false;
 
-    if (has_next_strategy_) {
-      strategy_ = std::move(next_strategy_);
-      next_strategy_.reset();
-      has_next_strategy_ = false;
-    }
-    PostCheckConflicts();
-    // Call on_empty_callback_ at the very end as this might delete this.
-    if (on_empty_callback_) {
-      on_empty_callback_();
-    }
-  }));
+        if (has_next_strategy_) {
+          strategy_ = std::move(next_strategy_);
+          next_strategy_.reset();
+          has_next_strategy_ = false;
+        }
+        PostCheckConflicts(delayed_status);
+        // Call on_empty_callback_ at the very end as this might delete this.
+        if (on_empty_callback_) {
+          on_empty_callback_();
+        }
+      }));
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("ledger", "merge", id);
   auto tracing =
@@ -131,8 +140,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   for (const storage::CommitId& id : heads) {
     storage_->GetCommit(id, waiter->NewCallback());
   }
-  waiter->Finalize(
-    TRACE_CALLBACK(
+  waiter->Finalize(TRACE_CALLBACK(
       std::function<void(storage::Status,
                          std::vector<std::unique_ptr<const storage::Commit>>)>(
           task_runner_.MakeScoped(fxl::MakeCopyable([
@@ -146,16 +154,18 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                        commits[1]->GetTimestamp());
 
             if (commits[0]->GetParentIds().size() == 2 &&
-                commits[1]->GetParentIds().size() == 2 &&
-                commits[0]->GetRootDigest() == commits[1]->GetRootDigest()) {
-              if (delayed_status == DelayedStatus::INITIAL) {
+                commits[1]->GetParentIds().size() == 2) {
+              if (delayed_status == DelayedStatus::MAY_DELAY) {
                 // If trying to merge 2 merge commits, add some delay with
                 // exponential backoff.
+                auto delay_callback = [this] {
+                  in_delay_ = false;
+                  CheckConflicts(DelayedStatus::DONT_DELAY);
+                };
+                in_delay_ = true;
                 task_runner_.PostDelayedTask(
-                    TRACE_CALLBACK(fxl::Closure([this] {
-                                     CheckConflicts(DelayedStatus::DELAYED);
-                                   }),
-                                   "ledger", "merge_delay"),
+                    TRACE_CALLBACK(std::move(delay_callback), "ledger",
+                                   "merge_delay"),
                     backoff_->GetNext());
                 cleanup.cancel();
                 merge_in_progress_ = false;

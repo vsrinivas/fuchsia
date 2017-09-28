@@ -7,9 +7,11 @@
 
 #include <map>
 #include <random>
+#include <set>
 #include <string>
 #include <vector>
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -23,6 +25,7 @@ namespace fake {
 class FakePageStorage : public test::PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(PageId page_id);
+  FakePageStorage(fsl::MessageLoop* message_loop, PageId page_id);
   ~FakePageStorage() override;
 
   // PageStorage:
@@ -35,6 +38,10 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   void StartCommit(
       const CommitId& commit_id,
       JournalType journal_type,
+      std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
+  void StartMergeCommit(
+      const CommitId& left,
+      const CommitId& right,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void CommitJournal(
       std::unique_ptr<Journal> journal,
@@ -70,17 +77,23 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   GetObjects() const;
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
-  void DeleteObjectFromLocal(const ObjectDigest& object_digest);
+  void DeleteObjectFromLocal(const ObjectDigest& object_id);
+  // If set to true, no commit notification is sent to the commit watchers.
+  void SetDropCommitNotifications(bool drop);
 
  private:
   void SendNextObject();
 
   bool autocommit_ = true;
+  bool drop_commit_notifications_ = false;
 
   std::default_random_engine rng_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectDigest, std::string, convert::StringViewComparator> objects_;
+  std::set<CommitId> heads_;
+  std::set<CommitWatcher*> watchers_;
   std::vector<fxl::Closure> object_requests_;
+  fsl::MessageLoop* message_loop_;
   PageId page_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);

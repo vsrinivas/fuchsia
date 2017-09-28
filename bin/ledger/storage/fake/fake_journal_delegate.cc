@@ -23,10 +23,23 @@ storage::CommitId RandomCommitId() {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id, bool autocommit)
+FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id,
+                                         bool autocommit,
+                                         uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId()),
-      parent_id_(std::move(parent_id)) {}
+      parent_id_(std::move(parent_id)),
+      generation_(generation) {}
+
+FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id,
+                                         CommitId other_id,
+                                         bool autocommit,
+                                         uint64_t generation = 0)
+    : autocommit_(autocommit),
+      id_(RandomCommitId()),
+      parent_id_(std::move(parent_id)),
+      other_id_(std::move(other_id)),
+      generation_(generation) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
@@ -78,6 +91,14 @@ Status FakeJournalDelegate::Rollback() {
 
 bool FakeJournalDelegate::IsRolledBack() const {
   return is_rolled_back_;
+}
+
+std::vector<CommitIdView> FakeJournalDelegate::GetParentIds() const {
+  if (other_id_.empty()) {
+    return {parent_id_};
+  } else {
+    return {parent_id_, other_id_};
+  }
 }
 
 bool FakeJournalDelegate::IsPendingCommit() {

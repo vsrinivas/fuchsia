@@ -26,7 +26,13 @@ class FakeJournalDelegate {
     KeyPriority priority;
   };
 
-  FakeJournalDelegate(CommitId parent_id, bool autocommit);
+  // Regular commit.
+  FakeJournalDelegate(CommitId parent_id, bool autocommit, uint64_t generation);
+  // Merge commit.
+  FakeJournalDelegate(CommitId parent_id,
+                      CommitId other_id,
+                      bool autocommit,
+                      uint64_t generation);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }
@@ -44,7 +50,9 @@ class FakeJournalDelegate {
   Status Rollback();
   bool IsRolledBack() const;
 
-  const CommitId& GetParentId() const { return parent_id_; }
+  uint64_t GetGeneration() const { return generation_; }
+
+  std::vector<CommitIdView> GetParentIds() const;
 
   bool IsPendingCommit();
   void ResolvePendingCommit(Status status);
@@ -59,7 +67,9 @@ class FakeJournalDelegate {
 
   const CommitId id_;
   const CommitId parent_id_;
+  const CommitId other_id_;
   std::map<std::string, Entry, convert::StringViewComparator> data_;
+  uint64_t generation_;
 
   bool is_committed_ = false;
   bool is_rolled_back_ = false;

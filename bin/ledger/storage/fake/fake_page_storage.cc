@@ -45,7 +45,12 @@ storage::ObjectDigest ComputeObjectDigest(fxl::StringView value) {
 }  // namespace
 
 FakePageStorage::FakePageStorage(PageId page_id)
-    : rng_(0), page_id_(std::move(page_id)) {}
+    : rng_(0),
+      message_loop_(fsl::MessageLoop::GetCurrent()),
+      page_id_(std::move(page_id)) {}
+
+FakePageStorage::FakePageStorage(fsl::MessageLoop* message_loop, PageId page_id)
+    : rng_(0), message_loop_(message_loop), page_id_(std::move(page_id)) {}
 
 FakePageStorage::~FakePageStorage() {}
 
@@ -55,13 +60,7 @@ PageId FakePageStorage::GetId() {
 
 void FakePageStorage::GetHeadCommitIds(
     std::function<void(Status, std::vector<CommitId>)> callback) {
-  std::vector<CommitId> commit_ids;
-  for (auto it = journals_.rbegin(); it != journals_.rend(); ++it) {
-    if (it->second->IsCommitted()) {
-      commit_ids.push_back(it->second->GetId());
-      break;
-    }
-  }
+  std::vector<CommitId> commit_ids(heads_.begin(), heads_.end());
   if (commit_ids.empty()) {
     commit_ids.emplace_back();
   }
@@ -77,7 +76,7 @@ void FakePageStorage::GetCommit(
     return;
   }
 
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  message_loop_->task_runner()->PostDelayedTask(
       [
         this, commit_id = commit_id.ToString(), callback = std::move(callback)
       ] {
@@ -91,7 +90,25 @@ void FakePageStorage::StartCommit(
     const CommitId& commit_id,
     JournalType /*journal_type*/,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
-  auto delegate = std::make_unique<FakeJournalDelegate>(commit_id, autocommit_);
+  uint64_t next_generation = 0;
+  if (journals_.find(commit_id) != journals_.end()) {
+    next_generation = journals_[commit_id].get()->GetGeneration() + 1;
+  }
+  auto delegate = std::make_unique<FakeJournalDelegate>(commit_id, autocommit_,
+                                                        next_generation);
+  auto journal = std::make_unique<FakeJournal>(delegate.get());
+  journals_[delegate->GetId()] = std::move(delegate);
+  callback(Status::OK, std::move(journal));
+}
+
+void FakePageStorage::StartMergeCommit(
+    const CommitId& left,
+    const CommitId& right,
+    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+  auto delegate = std::make_unique<FakeJournalDelegate>(
+      left, right, autocommit_,
+      std::max(journals_[left].get()->GetGeneration(),
+               journals_[right].get()->GetGeneration()));
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   callback(Status::OK, std::move(journal));
@@ -101,7 +118,28 @@ void FakePageStorage::CommitJournal(
     std::unique_ptr<Journal> journal,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  static_cast<FakeJournal*>(journal.get())->Commit(std::move(callback));
+  static_cast<FakeJournal*>(journal.get())->Commit([
+    this, callback = std::move(callback)
+  ](Status status, std::unique_ptr<const storage::Commit> commit) {
+    for (storage::CommitIdView parent_id : commit->GetParentIds()) {
+      auto it = heads_.find(parent_id.ToString());
+      if (it != heads_.end()) {
+        heads_.erase(it);
+      }
+    }
+    heads_.emplace(commit->GetId());
+    if (!drop_commit_notifications_) {
+      for (CommitWatcher* watcher : watchers_) {
+        message_loop_->task_runner()->PostTask(
+            fxl::MakeCopyable([ watcher, commit = commit->Clone() ]() mutable {
+              std::vector<std::unique_ptr<const Commit>> commits;
+              commits.push_back(std::move(commit));
+              watcher->OnNewCommits(std::move(commits), ChangeSource::LOCAL);
+            }));
+      }
+    }
+    callback(status, std::move(commit));
+  });
 }
 
 void FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal,
@@ -109,11 +147,16 @@ void FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal,
   callback(static_cast<FakeJournal*>(journal.get())->Rollback());
 }
 
-Status FakePageStorage::AddCommitWatcher(CommitWatcher* /*watcher*/) {
+Status FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
+  watchers_.emplace(watcher);
   return Status::OK;
 }
 
-Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
+Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
+  auto it = watchers_.find(watcher);
+  if (it != watchers_.end()) {
+    watchers_.erase(it);
+  }
   return Status::OK;
 }
 
@@ -164,7 +207,7 @@ void FakePageStorage::GetPiece(
     callback(Status::OK,
              std::make_unique<FakeObject>(object_digest, it->second));
   });
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  message_loop_->task_runner()->PostDelayedTask(
       [this] { SendNextObject(); }, fxl::TimeDelta::FromMilliseconds(5));
 }
 
@@ -188,8 +231,8 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
         data[entry.first] = entry.second;
       }
     }
-    // FakeJournal currently only supports simple commits.
-    journal = journals_[journal->GetParentId()].get();
+    // This only works with simple commits, not merge commits.
+    journal = journals_[journal->GetParentIds()[0].ToString()].get();
   }
 
   for (const auto& entry : data) {
@@ -243,6 +286,10 @@ void FakePageStorage::SendNextObject() {
 
 void FakePageStorage::DeleteObjectFromLocal(const ObjectDigest& object_digest) {
   objects_.erase(object_digest);
+}
+
+void FakePageStorage::SetDropCommitNotifications(bool drop) {
+  drop_commit_notifications_ = drop;
 }
 
 }  // namespace fake

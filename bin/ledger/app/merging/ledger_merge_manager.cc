@@ -12,6 +12,7 @@
 #include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/backoff/exponential_backoff.h"
+#include "peridot/bin/ledger/glue/crypto/rand.h"
 
 namespace ledger {
 LedgerMergeManager::LedgerMergeManager(Environment* environment)
@@ -44,7 +45,9 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
   storage::PageId page_id = storage->GetId();
   std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
       [this, page_id]() { RemoveResolver(page_id); }, environment_, storage,
-      std::make_unique<backoff::ExponentialBackoff>());
+      std::make_unique<backoff::ExponentialBackoff>(
+          fxl::TimeDelta::FromMilliseconds(10), 2u,
+          fxl::TimeDelta::FromSeconds(60 * 60), glue::RandUint64));
   resolvers_[page_id] = resolver.get();
   GetResolverStrategyForPage(
       page_id,
