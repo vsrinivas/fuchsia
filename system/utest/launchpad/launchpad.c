@@ -115,7 +115,7 @@ static bool run_one_argument_size_test(size_t size) {
 
 static bool argument_size_test(void) {
     bool ok = true;
-    for (size_t size = 0; size < 2 * PAGE_SIZE; size += 16) {
+    for (size_t size = 0; size < 2 * PAGE_SIZE; size += 1024) {
         if (!run_one_argument_size_test(size)) {
             ok = false;
             unittest_printf_critical(
