@@ -203,15 +203,8 @@ static void vmxoff_task(void* arg) {
 
 // static
 zx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<VmxCpuState> cpu_state(new (&ac) VmxCpuState);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
-    zx_status_t status = cpu_state->Init();
-    if (status != ZX_OK)
-        return status;
-
     // Allocate a VMXON page for each CPU.
+    fbl::AllocChecker ac;
     size_t num_cpus = arch_max_num_cpus();
     VmxPage* pages = new (&ac) VmxPage[num_cpus];
     if (!ac.check())
@@ -230,6 +223,15 @@ zx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
         mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, vmxoff_task, nullptr);
         return ZX_ERR_NOT_SUPPORTED;
     }
+
+    fbl::unique_ptr<VmxCpuState> cpu_state(new (&ac) VmxCpuState);
+    if (!ac.check()) {
+        mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
+        return ZX_ERR_NO_MEMORY;
+    }
+    zx_status_t status = cpu_state->Init();
+    if (status != ZX_OK)
+        return status;
 
     cpu_state->vmxon_pages_ = fbl::move(vmxon_pages);
     *out = fbl::move(cpu_state);
