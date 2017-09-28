@@ -31,6 +31,10 @@ go_binary("amber") {
     {
       source = "//third_party/golibs/github.com/golang/snappy"
       package = "github.com/golang/snappy"
+    },
+    {
+      source = "//garnet/go/src/netstack"
+      package = "fuchsia.googlesource.com/netstack"
     }
   ]
 }
