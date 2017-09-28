@@ -808,7 +808,9 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
 		return zx.ErrBadState
 	}
 	if opt := val.Unpack(); opt != nil {
-		ios.ep.SetSockOpt(opt)
+		if err := ios.ep.SetSockOpt(opt); err != nil {
+			return mxNetError(err)
+		}
 	}
 	msg.Datalen = 0
 	msg.SetOff(0)

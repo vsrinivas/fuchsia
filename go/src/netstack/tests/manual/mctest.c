@@ -125,6 +125,11 @@ int server(const char* if_address,
     return -1;
   }
 
+  if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mc_req, sizeof(mc_req)) ==
+      0) {
+    printf("setsockopt: duplicate IP_ADD_MEMBERSHIP succeeded when it should have failed\n");
+  }
+
 #define NTIMES 4
 
   for (int i = 0; i < NTIMES; i++) {
@@ -146,11 +151,15 @@ int server(const char* if_address,
 
   if (setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mc_req, sizeof(mc_req)) <
       0) {
-    printf("setsockopt: IP_ADD_MEMBERSHIP failed (errno = %d)\n", errno);
+    printf("setsockopt: IP_DROP_MEMBERSHIP failed (errno = %d)\n", errno);
     close(s);
     return -1;
   }
 
+  if (setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mc_req, sizeof(mc_req)) ==
+      0) {
+    printf("setsockopt: duplicate IP_DROP_MEMBERSHIP succeeded when it should have failed\n");
+  }
   close(s);
 
   return 0;
