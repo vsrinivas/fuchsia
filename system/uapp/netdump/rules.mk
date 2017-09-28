@@ -11,7 +11,7 @@ MODULE_GROUP := core
 
 MODULE_SRCS += $(LOCAL_DIR)/netdump.c
 
-MODULE_STATIC_LIBS := system/ulib/pretty
+MODULE_STATIC_LIBS := system/ulib/pretty system/ulib/inet6
 
 MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
 
