@@ -1,5 +1,5 @@
 {
     "imports": [
-        "packages/gn/default"
+        "peridot/packages/default"
     ]
 }
