@@ -44,10 +44,16 @@ static zx_status_t platform_bus_device_enable(void* ctx, uint32_t vid, uint32_t 
     return ZX_ERR_NOT_FOUND;
 }
 
+static const char* platform_bus_get_board_name(void* ctx) {
+    platform_bus_t* bus = ctx;
+    return bus->board_name;
+}
+
 static platform_bus_protocol_ops_t platform_bus_proto_ops = {
     .set_interface = platform_bus_set_interface,
     .device_add = platform_bus_device_add,
     .device_enable = platform_bus_device_enable,
+    .get_board_name = platform_bus_get_board_name,
 };
 
 static void platform_bus_release(void* ctx) {
@@ -75,7 +81,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
 
     uint32_t vid = 0;
     uint32_t pid = 0;
-    if (sscanf(args, "vid=%u,pid=%u,", &vid, &pid) != 2) {
+    if (sscanf(args, "vid=%u,pid=%u", &vid, &pid) != 2) {
         dprintf(ERROR, "platform_bus_bind: could not find vid or pid in args\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -83,6 +89,17 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
     platform_bus_t* bus = calloc(1, sizeof(platform_bus_t));
     if (!bus) {
         return  ZX_ERR_NO_MEMORY;
+    }
+
+    char* board_name = strstr(args, "board=");
+    if (board_name) {
+        board_name += strlen("board=");
+        strncpy(bus->board_name, board_name, sizeof(bus->board_name));
+        bus->board_name[sizeof(bus->board_name) - 1] = 0;
+        char* comma = strchr(bus->board_name, ',');
+        if (comma) {
+            *comma = 0;
+        }
     }
 
     bus->resource = get_root_resource();

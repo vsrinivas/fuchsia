@@ -39,6 +39,7 @@ typedef struct {
     uint32_t pid;
 
     list_node_t devices;    // list of platform_dev_t
+    char board_name[ZX_DEVICE_NAME_MAX + 1];
 } platform_bus_t;
 
 // context structure for a platform device
