@@ -6,8 +6,9 @@ import("//packages/package.gni")
 
 package("auth") {
   deps = [
-    "//garnet/bin/auth/store",
     "//garnet/public/lib/auth/fidl",
+    "//garnet/bin/auth/cache",
+    "//garnet/bin/auth/store",
   ]
 }
 
@@ -17,10 +18,16 @@ package("tests") {
   package_name = "auth_tests"
 
   deps = [
+    "//garnet/bin/auth/cache:auth_cache_unittests",
     "//garnet/bin/auth/store:auth_store_unittests",
   ]
 
-  tests = [ {
-        name = "auth_store_unittests"
-      } ]
+  tests = [
+    {
+      name = "auth_cache_unittests"
+    },
+    {
+      name = "auth_store_unittests"
+    },
+  ]
 }

@@ -1,0 +1,36 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lib") {
+  sources = [
+    "token_cache.h",
+    "token_cache.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("auth_cache_unittests") {
+  testonly = true
+
+  sources = [
+    "token_cache_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/fxl",
+    "//third_party/gtest",
+  ]
+}
+
+group("cache") {
+  deps = [
+    ":lib",
+  ]
+}
