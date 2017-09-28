@@ -22,13 +22,10 @@ public:
             DASSERT(false);
         }
         DASSERT(magma::is_pow2(cacheline_size_));
-        printf("got cacheline_size %u\n", cacheline_size_);
     }
 
     inline void clflush_range(void* start, size_t size)
     {
-        DLOG("clflush_range");
-
         const uint64_t mask = cacheline_size_ - 1;
         uint8_t* p = reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(start) & ~mask);
         uint8_t* end = reinterpret_cast<uint8_t*>(start) + size;
