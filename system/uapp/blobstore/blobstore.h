@@ -80,7 +80,7 @@ constexpr uint64_t BlockMapStartBlock(const blobstore_info_t& info) {
 }
 
 constexpr uint64_t BlockMapBlocks(const blobstore_info_t& info) {
-    return fbl::roundup(info.block_count, kBlobstoreBlockBits) / kBlobstoreBlockBits;
+    return fbl::round_up(info.block_count, kBlobstoreBlockBits) / kBlobstoreBlockBits;
 }
 
 constexpr uint64_t NodeMapStartBlock(const blobstore_info_t& info) {
@@ -93,7 +93,7 @@ constexpr uint64_t NodeMapStartBlock(const blobstore_info_t& info) {
 }
 
 constexpr uint64_t NodeMapBlocks(const blobstore_info_t& info) {
-    return fbl::roundup(info.inode_count, kBlobstoreInodesPerBlock) / kBlobstoreInodesPerBlock;
+    return fbl::round_up(info.inode_count, kBlobstoreInodesPerBlock) / kBlobstoreInodesPerBlock;
 }
 
 constexpr uint64_t DataStartBlock(const blobstore_info_t& info) {
@@ -134,7 +134,7 @@ static_assert(kBlobstoreBlockSize % kBlobstoreInodeSize == 0,
 
 // Number of blocks reserved for the blob itself
 constexpr uint64_t BlobDataBlocks(const blobstore_inode_t& blobNode) {
-    return fbl::roundup(blobNode.blob_size, kBlobstoreBlockSize) / kBlobstoreBlockSize;
+    return fbl::round_up(blobNode.blob_size, kBlobstoreBlockSize) / kBlobstoreBlockSize;
 }
 
 void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);

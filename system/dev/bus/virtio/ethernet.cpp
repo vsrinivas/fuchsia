@@ -45,7 +45,7 @@ const size_t kL1EthHdrLen = 26;
 // The goal here is to allocate single-page I/O buffers.
 const size_t kFrameSize = sizeof(virtio_net_hdr_t) + kL1EthHdrLen + kVirtioMtu;
 const size_t kFramesInBuf = PAGE_SIZE / kFrameSize;
-const size_t kNumIoBufs = fbl::roundup(kBacklog * 2, kFramesInBuf) / kFramesInBuf;
+const size_t kNumIoBufs = fbl::round_up(kBacklog * 2, kFramesInBuf) / kFramesInBuf;
 
 const uint16_t kRxId = 0u;
 const uint16_t kTxId = 1u;

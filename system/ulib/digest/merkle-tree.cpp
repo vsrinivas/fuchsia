@@ -81,7 +81,7 @@ void DigestFinal(Digest* digest, size_t offset) {
 // next level up.
 size_t NextLength(size_t length) {
     if (length > MerkleTree::kNodeSize) {
-        return fbl::roundup(length, MerkleTree::kNodeSize) / kDigestsPerNode;
+        return fbl::round_up(length, MerkleTree::kNodeSize) / kDigestsPerNode;
     } else {
         return 0;
     }
@@ -90,7 +90,7 @@ size_t NextLength(size_t length) {
 // Helper function to transform a length in the current level to a node-aligned
 // length in the next level up.
 size_t NextAligned(size_t length) {
-    return fbl::roundup(NextLength(length), MerkleTree::kNodeSize);
+    return fbl::round_up(NextLength(length), MerkleTree::kNodeSize);
 }
 
 } // namespace
@@ -299,7 +299,7 @@ zx_status_t MerkleTree::VerifyLevel(const void* data, size_t data_len,
     }
     // Align parameters to node boundaries, but don't exceed data_len
     offset -= offset % kNodeSize;
-    size_t finish = fbl::roundup(offset + length, kNodeSize);
+    size_t finish = fbl::round_up(offset + length, kNodeSize);
     length = fbl::min(finish, data_len) - offset;
     const uint8_t* in = static_cast<const uint8_t*>(data) + offset;
     // The digests are in the next level up.

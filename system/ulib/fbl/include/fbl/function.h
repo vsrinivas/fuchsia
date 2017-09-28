@@ -162,7 +162,7 @@ class Function;
 template <size_t inline_callable_size, bool require_inline, typename Result, typename... Args>
 class Function<inline_callable_size, require_inline, Result(Args...)> {
     struct FakeCallable {
-        alignas(max_align_t) char bits[fbl::roundup(inline_callable_size, sizeof(void*))];
+        alignas(max_align_t) char bits[fbl::round_up(inline_callable_size, sizeof(void*))];
     };
     static constexpr size_t inline_target_size =
         sizeof(InlineFunctionTarget<FakeCallable, Result, Args...>);

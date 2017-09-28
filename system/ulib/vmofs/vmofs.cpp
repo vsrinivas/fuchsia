@@ -82,7 +82,7 @@ zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
     attr->blksize = kVmofsBlksize;
-    attr->blkcount = fbl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::round_up(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
     return ZX_OK;
 }
@@ -152,7 +152,7 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->blksize = kVmofsBlksize;
-    attr->blkcount = fbl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::round_up(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
     return ZX_OK;
 }

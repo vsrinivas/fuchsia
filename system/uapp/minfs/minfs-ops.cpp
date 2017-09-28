@@ -344,7 +344,7 @@ zx_status_t VnodeMinfs::InitVmo() {
     }
 
     zx_status_t status;
-    if ((status = zx::vmo::create(fbl::roundup(inode_.size, kMinfsBlockSize),
+    if ((status = zx::vmo::create(fbl::round_up(inode_.size, kMinfsBlockSize),
                                   0, &vmo_)) != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
@@ -1204,7 +1204,7 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         size_t xfer_off = n * kMinfsBlockSize + adjust;
         if ((xfer_off + xfer) > inode_.size) {
             size_t new_size = xfer_off + xfer;
-            if ((status = vmo_.set_size(fbl::roundup(new_size, kMinfsBlockSize))) != ZX_OK) {
+            if ((status = vmo_.set_size(fbl::round_up(new_size, kMinfsBlockSize))) != ZX_OK) {
                 goto done;
             }
         }
@@ -1637,7 +1637,7 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
 
     inode_.size = static_cast<uint32_t>(len);
 #ifdef __Fuchsia__
-    if ((r = vmo_.set_size(fbl::roundup(len, kMinfsBlockSize))) != ZX_OK) {
+    if ((r = vmo_.set_size(fbl::round_up(len, kMinfsBlockSize))) != ZX_OK) {
         return r;
     }
 #endif

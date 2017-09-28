@@ -73,7 +73,7 @@ public:
 
     zx_status_t Allocate(size_t size) {
         Release();
-        size_ = fbl::roundup(size, static_cast<size_t>(PAGE_SIZE));
+        size_ = fbl::round_up(size, static_cast<size_t>(PAGE_SIZE));
         zx_status_t status;
         if ((status = zx::vmo::create(size_, 0, &vmo_)) != ZX_OK) {
             return status;
@@ -91,7 +91,7 @@ public:
             return ZX_OK;
         }
 
-        size = fbl::roundup(size, static_cast<size_t>(PAGE_SIZE));
+        size = fbl::round_up(size, static_cast<size_t>(PAGE_SIZE));
         zx_status_t status;
         if ((status = vmo_.set_size(size)) != ZX_OK) {
             return status;

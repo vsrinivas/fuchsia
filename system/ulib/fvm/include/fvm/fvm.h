@@ -86,7 +86,7 @@ constexpr size_t kVPartTableLength = (sizeof(vpart_entry_t) * FVM_MAX_ENTRIES);
 constexpr size_t kAllocTableOffset = kVPartTableOffset + kVPartTableLength;
 
 constexpr size_t AllocTableLength(size_t total_size, size_t slice_size) {
-    return fbl::roundup(sizeof(slice_entry_t) * (total_size / slice_size),
+    return fbl::round_up(sizeof(slice_entry_t) * (total_size / slice_size),
                          FVM_BLOCK_SIZE);
 }
 

@@ -75,7 +75,7 @@ zx_status_t MappedVmo::Grow(size_t len) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    len = fbl::roundup(len, static_cast<size_t>(PAGE_SIZE));
+    len = fbl::round_up(len, static_cast<size_t>(PAGE_SIZE));
     zx_status_t status;
     uintptr_t addr;
 

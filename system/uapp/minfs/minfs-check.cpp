@@ -356,7 +356,7 @@ zx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
         n = next_n;
     }
     if (next_blk) {
-        unsigned max_blocks = fbl::roundup(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
+        unsigned max_blocks = fbl::round_up(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
         if (next_blk > max_blocks) {
             FS_TRACE_WARN("check: ino#%u: filesize too small\n", ino);
             conforming_ = false;

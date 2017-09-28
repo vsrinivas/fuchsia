@@ -188,14 +188,14 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
     zx_status_t status;
     size_t newlen = offset + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
-    size_t alignedLen = fbl::roundup(newlen, static_cast<size_t>(PAGE_SIZE));
+    size_t alignedLen = fbl::round_up(newlen, static_cast<size_t>(PAGE_SIZE));
 
     if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
         if ((status = zx_vmo_create(alignedLen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
-    } else if (newlen > fbl::roundup(length_, static_cast<size_t>(PAGE_SIZE))) {
+    } else if (newlen > fbl::round_up(length_, static_cast<size_t>(PAGE_SIZE))) {
         // Accessing beyond the end of the file? Extend it.
         if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
             return status;
@@ -280,7 +280,7 @@ zx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
     attr->size = length_;
     attr->blksize = kMemfsBlksize;
-    attr->blkcount = fbl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::round_up(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -293,7 +293,7 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->size = 0;
     attr->blksize = kMemfsBlksize;
-    attr->blkcount = fbl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::round_up(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -306,7 +306,7 @@ zx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
     attr->blksize = kMemfsBlksize;
-    attr->blkcount = fbl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::round_up(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -390,7 +390,7 @@ zx_status_t VnodeFile::Truncate(size_t len) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    size_t alignedLen = fbl::roundup(len, static_cast<size_t>(PAGE_SIZE));
+    size_t alignedLen = fbl::round_up(len, static_cast<size_t>(PAGE_SIZE));
 
     if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.

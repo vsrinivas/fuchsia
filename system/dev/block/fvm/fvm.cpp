@@ -911,7 +911,7 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
         uint64_t vmo_offset;
         zx_off_t length;
         if (vslice == vslice_start) {
-            length = fbl::roundup(txn->offset + 1, slice_size) - txn->offset;
+            length = fbl::round_up(txn->offset + 1, slice_size) - txn->offset;
             vmo_offset = 0;
         } else if (vslice == vslice_end) {
             length = length_remaining;

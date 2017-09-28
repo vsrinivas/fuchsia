@@ -29,7 +29,7 @@ namespace blobstore {
 // Number of blocks reserved for the Merkle Tree
 uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode) {
     uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
-    return fbl::roundup(size_merkle, kBlobstoreBlockSize) / kBlobstoreBlockSize;
+    return fbl::round_up(size_merkle, kBlobstoreBlockSize) / kBlobstoreBlockSize;
 }
 
 // Sanity check the metadata for the blobstore, given a maximum number of

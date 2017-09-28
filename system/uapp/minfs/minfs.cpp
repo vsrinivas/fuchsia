@@ -302,7 +302,7 @@ zx_status_t Minfs::AddInodes() {
 
     // Update the inode bitmap, write the new blocks back to disk
     // as "zero".
-    if (inode_map_.Grow(fbl::roundup(inodes, kMinfsBlockBits)) != ZX_OK) {
+    if (inode_map_.Grow(fbl::round_up(inodes, kMinfsBlockBits)) != ZX_OK) {
         return ZX_ERR_NO_SPACE;
     }
     // Grow before shrinking to ensure the underlying storage is a multiple
@@ -365,7 +365,7 @@ zx_status_t Minfs::AddBlocks() {
 
     // Update the block bitmap, write the new blocks back to disk
     // as "zero".
-    if (block_map_.Grow(fbl::roundup(blocks, kMinfsBlockBits)) != ZX_OK) {
+    if (block_map_.Grow(fbl::round_up(blocks, kMinfsBlockBits)) != ZX_OK) {
         return ZX_ERR_NO_SPACE;
     }
     // Grow before shrinking to ensure the underlying storage is a multiple
@@ -835,7 +835,7 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     info.alloc_inode_count = 0;
     if ((info.flags & kMinfsFlagFVM) == 0) {
         // Aligning distinct data areas to 8 block groups.
-        uint32_t non_dat_blocks = (8 + fbl::roundup(ibmblks, 8u) + inoblks);
+        uint32_t non_dat_blocks = (8 + fbl::round_up(ibmblks, 8u) + inoblks);
         if (non_dat_blocks >= blocks) {
             fprintf(stderr, "mkfs: Partition size (%" PRIu64 " bytes) is too small\n",
                     static_cast<uint64_t>(blocks) * kMinfsBlockSize);
@@ -844,10 +844,10 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
 
         uint32_t dat_block_count = blocks - non_dat_blocks;
         abmblks = (dat_block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
-        info.block_count = dat_block_count - fbl::roundup(abmblks, 8u);
+        info.block_count = dat_block_count - fbl::round_up(abmblks, 8u);
         info.ibm_block = 8;
-        info.abm_block = info.ibm_block + fbl::roundup(ibmblks, 8u);
-        info.ino_block = info.abm_block + fbl::roundup(abmblks, 8u);
+        info.abm_block = info.ibm_block + fbl::round_up(ibmblks, 8u);
+        info.ino_block = info.abm_block + fbl::round_up(abmblks, 8u);
         info.dat_block = info.ino_block + inoblks;
     } else {
         info.block_count = blocks;
@@ -867,12 +867,12 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     // storage a block multiple but ensure we can't allocate beyond the last
     // real block or inode.
     zx_status_t status;
-    if ((status = abm.Reset(fbl::roundup(info.block_count, kMinfsBlockBits))) < 0) {
+    if ((status = abm.Reset(fbl::round_up(info.block_count, kMinfsBlockBits))) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to allocate block bitmap\n");
         minfs_free_slices(bc.get(), &info);
         return status;
     }
-    if ((status = ibm.Reset(fbl::roundup(info.inode_count, kMinfsBlockBits))) < 0) {
+    if ((status = ibm.Reset(fbl::round_up(info.inode_count, kMinfsBlockBits))) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to allocate inode bitmap\n");
         minfs_free_slices(bc.get(), &info);
         return status;

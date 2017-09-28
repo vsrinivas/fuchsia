@@ -454,7 +454,7 @@ zx_status_t Blobstore::Unmount() {
 
 zx_status_t Blobstore::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
     uint64_t bbm_start_block = (start_block - DataStartBlock(info_)) / kBlobstoreBlockBits;
-    uint64_t bbm_end_block = fbl::roundup(start_block - DataStartBlock(info_) + nblocks,
+    uint64_t bbm_end_block = fbl::round_up(start_block - DataStartBlock(info_) + nblocks,
                                            kBlobstoreBlockBits) / kBlobstoreBlockBits;
 
     // Write back the block allocation bitmap
@@ -693,7 +693,7 @@ zx_status_t Blobstore::AddBlocks(size_t nblocks) {
     }
 
     // Grow the block bitmap to hold new number of blocks
-    if (block_map_.Grow(fbl::roundup(blocks, kBlobstoreBlockBits)) != ZX_OK) {
+    if (block_map_.Grow(fbl::round_up(blocks, kBlobstoreBlockBits)) != ZX_OK) {
         return ZX_ERR_NO_SPACE;
     }
     // Grow before shrinking to ensure the underlying storage is a multiple
@@ -765,7 +765,7 @@ zx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, fbl::RefPtr<
     }
 
     size_t nodemap_size = kBlobstoreInodeSize * fs->info_.inode_count;
-    ZX_DEBUG_ASSERT(fbl::roundup(nodemap_size, kBlobstoreBlockSize) == nodemap_size);
+    ZX_DEBUG_ASSERT(fbl::round_up(nodemap_size, kBlobstoreBlockSize) == nodemap_size);
     ZX_DEBUG_ASSERT(nodemap_size / kBlobstoreBlockSize == NodeMapBlocks(fs->info_));
     if ((status = MappedVmo::Create(nodemap_size, "nodemap", &fs->node_map_)) != ZX_OK) {
         return status;
