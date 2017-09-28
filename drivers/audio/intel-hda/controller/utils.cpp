@@ -144,7 +144,7 @@ zx_status_t ContigPhysMem::Allocate(size_t size) {
     ZX_DEBUG_ASSERT(!phys_);
 
     size_ = size;
-    actual_size_ = fbl::roundup(size_, IHDA_PAGE_SIZE);
+    actual_size_ = fbl::round_up(size_, IHDA_PAGE_SIZE);
 
     // Allocate a page aligned contiguous buffer.
     zx::vmo     vmo;
