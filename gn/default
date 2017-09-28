@@ -21,6 +21,9 @@
         "packages/gn/re2",
         "packages/gn/web_view",
         "peridot/packages/default",
+        "peridot/packages/maxwell",
+        "peridot/packages/modular_examples",
+        "peridot/packages/oauth_token_manager",
         "topaz/packages/default"
     ]
 }
