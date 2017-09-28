@@ -4,6 +4,8 @@
 
 source_set("audio") {
   sources = [
+    "lpcm_output_stream.cc",
+    "lpcm_output_stream.h",
     "lpcm_payload.cc",
     "lpcm_payload.h",
     "perceived_level.cc",
@@ -12,8 +14,13 @@ source_set("audio") {
     "types.h",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/media/transport",
+  ]
+
   deps = [
     "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/fxl",
   ]
 }

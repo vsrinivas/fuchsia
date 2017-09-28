@@ -8,7 +8,7 @@ namespace media {
 
 LpcmPayload::LpcmPayload() : data_(nullptr), size_(0), owner_(nullptr) {}
 
-LpcmPayload::LpcmPayload(void* data, size_t size, std::shared_ptr<Owner> owner)
+LpcmPayload::LpcmPayload(void* data, size_t size, fxl::RefPtr<Owner> owner)
     : data_(data), size_(size), owner_(owner) {
   FXL_DCHECK((data == nullptr) == (size == 0));
   FXL_DCHECK(owner);
@@ -25,7 +25,7 @@ LpcmPayload::~LpcmPayload() {
 }
 
 LpcmPayload& LpcmPayload::operator=(LpcmPayload&& other) {
-  std::shared_ptr<Owner> owner = std::move(other.owner_);
+  fxl::RefPtr<Owner> owner = std::move(other.owner_);
   size_t size = other.size();
   reset(other.release(), size, std::move(owner));
   return *this;
@@ -49,7 +49,7 @@ void LpcmPayload::FillWithSilence() {
   }
 }
 
-void LpcmPayload::reset(void* data, size_t size, std::shared_ptr<Owner> owner) {
+void LpcmPayload::reset(void* data, size_t size, fxl::RefPtr<Owner> owner) {
   FXL_DCHECK((data == nullptr) == (size == 0));
 
   if (data_) {
@@ -66,7 +66,7 @@ void* LpcmPayload::release() {
   void* data = data_;
   data_ = nullptr;
   size_ = 0;
-  owner_.reset();
+  owner_ = nullptr;
   return data;
 }
 

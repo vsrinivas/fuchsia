@@ -63,6 +63,9 @@ class TimelineFunction {
       TimelineRate rate)  // subject_delta / reference_delta
       : reference_time_(0), subject_time_(0), rate_(rate) {}
 
+  // Determines whether this |TimelineFunction| is invertable.
+  bool invertable() const { return rate_.invertable(); }
+
   // Applies the function. Returns TimelineRate::kOverflow on overflow.
   int64_t Apply(int64_t reference_input) const {
     return Apply(reference_time_, subject_time_, rate_, reference_input);

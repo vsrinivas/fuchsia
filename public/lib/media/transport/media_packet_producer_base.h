@@ -26,6 +26,10 @@ class MediaPacketProducerBase {
 
   virtual ~MediaPacketProducerBase();
 
+  // Allocates a single vmo of the specified size for all buffer allocations.
+  // Must be called before the first call to |AllocatePayloadBuffer|.
+  void SetFixedBufferSize(uint64_t size);
+
   // Connects to the indicated consumer.
   void Connect(MediaPacketConsumerPtr consumer,
                const MediaPacketProducer::ConnectCallback& callback);

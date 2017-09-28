@@ -9,6 +9,8 @@
 #include "lib/fxl/compiler_specific.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/media/audio/types.h"
 
 namespace media {
@@ -47,7 +49,7 @@ class LpcmPayload {
 
   // Returns the number of bytes per frame for this |LpcmPayload|.
   uint32_t bytes_per_frame() const {
-    return owner_ ? owner_->channel_count() * owner_->bytes_per_sample() : 0;
+    return owner_ ? owner_->bytes_per_frame() : 0;
   }
 
   // Returns a pointer to the data owned by this |LpcmPayload|.
@@ -95,7 +97,7 @@ class LpcmPayload {
 
   // Owner class referenced by |LpcmPayload|s, providing media type information
   // and the ability to release a payload buffer.
-  class Owner {
+  class Owner : public fxl::RefCountedThreadSafe<Owner> {
    public:
     virtual ~Owner() {}
 
@@ -105,6 +107,10 @@ class LpcmPayload {
 
     uint32_t bytes_per_sample() const { return bytes_per_sample_; }
 
+    uint32_t bytes_per_frame() const {
+      return channel_count_ * bytes_per_sample_;
+    }
+
     virtual void ReleasePayloadBuffer(void* buffer, size_t size) = 0;
 
    protected:
@@ -113,6 +119,12 @@ class LpcmPayload {
           channel_count_(channel_count),
           bytes_per_sample_(BytesPerSample(sample_format)) {}
 
+    virtual void Reset() {
+      sample_format_ = AudioSampleFormat::NONE;
+      channel_count_ = 0;
+      bytes_per_sample_ = 0;
+    }
+
    private:
     AudioSampleFormat sample_format_;
     uint32_t channel_count_;
@@ -120,11 +132,11 @@ class LpcmPayload {
   };
 
   // Constructs a |LpcmPayload|. |data| must be null if and only if |size| is 0.
-  LpcmPayload(void* data, size_t size, std::shared_ptr<Owner> owner);
+  LpcmPayload(void* data, size_t size, fxl::RefPtr<Owner> owner);
 
   // Replaces the data owned by this |LpcmPayload| after freeing it. |data| must
   // be null if and only if |size| is 0.
-  void reset(void* data, size_t size, std::shared_ptr<Owner> owner);
+  void reset(void* data, size_t size, fxl::RefPtr<Owner> owner);
 
   // Releases ownership of the data owned by this |LpcmPayload|, if any,
   // and returns a pointer to it.
@@ -132,7 +144,7 @@ class LpcmPayload {
 
   void* data_;
   size_t size_;
-  std::shared_ptr<Owner> owner_;
+  fxl::RefPtr<Owner> owner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LpcmPayload);
 };

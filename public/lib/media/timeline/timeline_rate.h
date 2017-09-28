@@ -91,6 +91,9 @@ class TimelineRate {
     Reduce(&subject_delta_, &reference_delta_);
   }
 
+  // Determines whether this |TimelineRate| is invertable.
+  bool invertable() const { return subject_delta_ != 0; }
+
   // Returns the inverse of the rate. DCHECKs if the subject_delta of this
   // rate is zero.
   TimelineRate Inverse() const {

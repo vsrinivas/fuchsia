@@ -23,6 +23,11 @@ MediaPacketProducerBase::~MediaPacketProducerBase() {
   consumer_ = nullptr;
 }
 
+void MediaPacketProducerBase::SetFixedBufferSize(uint64_t size) {
+  FXL_DCHECK(size > 0);
+  allocator_.SetFixedBufferSize(size);
+}
+
 void MediaPacketProducerBase::Connect(
     MediaPacketConsumerPtr consumer,
     const MediaPacketProducer::ConnectCallback& callback) {
