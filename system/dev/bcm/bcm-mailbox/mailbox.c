@@ -310,14 +310,8 @@ static zx_status_t mailbox_get_protocol(void* ctx, uint32_t proto_id, void* out)
     }
 }
 
-static zx_status_t mailbox_add_gpios(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
-                                     const uint32_t* irqs, uint32_t irq_count) {
-        return ZX_ERR_NOT_SUPPORTED;
-}
-
 static pbus_interface_ops_t mailbox_bus_ops = {
     .get_protocol = mailbox_get_protocol,
-    .add_gpios = mailbox_add_gpios,
 };
 
 static zx_status_t mailbox_bind(void* ctx, zx_device_t* parent, void** cookie) {

@@ -81,15 +81,8 @@ static zx_status_t qemu_bus_get_protocol(void* ctx, uint32_t proto_id, void* out
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t qemu_bus_add_gpios(void* ctx, uint32_t start, uint32_t count,
-                                      uint32_t mmio_index, const uint32_t* irqs,
-                                      uint32_t irq_count) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static pbus_interface_ops_t qemu_bus_bus_ops = {
     .get_protocol = qemu_bus_get_protocol,
-    .add_gpios = qemu_bus_add_gpios,
 };
 
 static void qemu_bus_release(void* ctx) {

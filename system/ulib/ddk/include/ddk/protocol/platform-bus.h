@@ -43,10 +43,6 @@ enum {
 // interface registered by the platform bus implementation driver
 typedef struct {
     zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* out);
-    zx_status_t (*add_gpios)(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
-                             const uint32_t* irqs, uint32_t irq_count);
-
-    // TODO(voydanoff) Add APIs for GPIOs, clocks I2C, etc
 } pbus_interface_ops_t;
 
 typedef struct {
@@ -57,12 +53,6 @@ typedef struct {
 static inline zx_status_t pbus_interface_get_protocol(pbus_interface_t* intf, uint32_t proto_id,
                                                       void* out) {
     return intf->ops->get_protocol(intf->ctx, proto_id, out);
-}
-
-static inline zx_status_t pbus_interface_add_gpios(pbus_interface_t* intf, uint32_t start,
-                                                   uint32_t count, uint32_t mmio_index,
-                                                   const uint32_t* irqs, uint32_t irq_count) {
-    return intf->ops->add_gpios(intf->ctx, start, count, mmio_index, irqs, irq_count);
 }
 
 typedef struct {

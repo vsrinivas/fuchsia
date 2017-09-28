@@ -135,14 +135,8 @@ static zx_status_t hi3660_get_protocol(void* ctx, uint32_t proto_id, void* out) 
     }
 }
 
-static zx_status_t hi3660_add_gpios(void* ctx, uint32_t start, uint32_t count, uint32_t mmio_index,
-                                    const uint32_t* irqs, uint32_t irq_count) {
-    return ZX_OK;
-}
-
 static pbus_interface_ops_t hi3660_bus_ops = {
     .get_protocol = hi3660_get_protocol,
-    .add_gpios = hi3660_add_gpios,
 };
 
 static void hi3660_release(void* ctx) {
