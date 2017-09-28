@@ -172,9 +172,9 @@ void tftp_timeout_expired(void) {
         netfile_abort_write();
     } else {
         if (last_msg_size > 0) {
-            if (transport_send(tftp_out_scratch, last_msg_size, &transport_info) <
-                (tftp_status) last_msg_size) {
-                printf("netsvc: failed to send message\n");
+            int send_result = transport_send(tftp_out_scratch, last_msg_size, &transport_info);
+            if (send_result != 0) {
+                printf("netsvc: failed to send tftp timeout response (err = %d)\n", send_result);
             }
         }
     }
