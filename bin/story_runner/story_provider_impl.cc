@@ -22,8 +22,8 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/proxy.h"
-#include "peridot/lib/ledger/operations.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/operations.h"
+#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {

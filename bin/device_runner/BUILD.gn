@@ -36,7 +36,7 @@ executable("device_runner") {
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:scope",
-    "//peridot/lib/ledger:constants",
+    "//peridot/lib/ledger_client:constants",
     "//peridot/lib/util:filesystem",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/config/fidl",

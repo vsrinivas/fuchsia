@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_PAGE_CLIENT_H_
-#define PERIDOT_LIB_LEDGER_PAGE_CLIENT_H_
+#ifndef PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
+#define PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
 
 #include <string>
 
@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/lib/ledger/types.h"
+#include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
 
@@ -157,4 +157,4 @@ void GetEntries(ledger::PageSnapshot* snapshot,
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_PAGE_CLIENT_H_
+#endif  // PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_

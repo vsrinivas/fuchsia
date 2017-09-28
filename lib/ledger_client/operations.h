@@ -4,8 +4,8 @@
 
 // The file defines Operations commonly executed on Ledger pages.
 
-#ifndef PERIDOT_LIB_LEDGER_OPERATIONS_H_
-#define PERIDOT_LIB_LEDGER_OPERATIONS_H_
+#ifndef PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_
+#define PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_
 
 #include <string>
 
@@ -16,7 +16,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/ledger/page_client.h"
+#include "peridot/lib/ledger_client/page_client.h"
 
 namespace modular {
 
@@ -232,4 +232,4 @@ class WriteDataCall : Operation<> {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_OPERATIONS_H_
+#endif  // PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_

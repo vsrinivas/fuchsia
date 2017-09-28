@@ -14,9 +14,9 @@
 #include "lib/story/fidl/story_data.fidl.h"
 #include "lib/surface/fidl/surface.fidl.h"
 #include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/ledger/ledger_client.h"
-#include "peridot/lib/ledger/page_client.h"
-#include "peridot/lib/ledger/types.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/page_client.h"
+#include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
 

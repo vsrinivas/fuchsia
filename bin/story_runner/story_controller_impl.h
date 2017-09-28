@@ -38,8 +38,8 @@
 #include "peridot/lib/fidl/context.h"
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/fidl/scope.h"
-#include "peridot/lib/ledger/ledger_client.h"
-#include "peridot/lib/ledger/types.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
 

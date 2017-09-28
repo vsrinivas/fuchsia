@@ -9,7 +9,7 @@
 #include "lib/config/fidl/config.fidl.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/ledger/constants.h"
+#include "peridot/lib/ledger_client/constants.h"
 
 namespace modular {
 

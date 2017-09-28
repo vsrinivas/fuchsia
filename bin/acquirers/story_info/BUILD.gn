@@ -26,7 +26,7 @@ executable("story_info") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/lib/ledger:storage",
+    "//peridot/lib/ledger_client:storage",
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",

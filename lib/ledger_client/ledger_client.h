@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_LEDGER_CLIENT_H_
-#define PERIDOT_LIB_LEDGER_LEDGER_CLIENT_H_
+#ifndef PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_
+#define PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_
 
 #include <functional>
 #include <memory>
@@ -16,7 +16,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/ledger/types.h"
+#include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
 
@@ -138,4 +138,4 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_LEDGER_CLIENT_H_
+#endif  // PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_

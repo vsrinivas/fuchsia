@@ -14,7 +14,7 @@
 #include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

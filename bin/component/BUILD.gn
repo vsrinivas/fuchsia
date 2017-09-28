@@ -22,9 +22,9 @@ source_set("component") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/fidl:operation",
-    "//peridot/lib/ledger:page_client",
-    "//peridot/lib/ledger:storage",
-    "//peridot/lib/ledger:types",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:storage",
+    "//peridot/lib/ledger_client:types",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/ledger/fidl",
   ]

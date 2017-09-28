@@ -10,7 +10,7 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

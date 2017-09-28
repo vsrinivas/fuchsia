@@ -15,9 +15,9 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 #include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/ledger/ledger_client.h"
-#include "peridot/lib/ledger/page_client.h"
-#include "peridot/lib/ledger/types.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/page_client.h"
+#include "peridot/lib/ledger_client/types.h"
 
 // See services/user/focus.fidl for details.
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/ledger/status.h"
+#include "peridot/lib/ledger_client/status.h"
 
 #include <string>
 

@@ -7,7 +7,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/bin/story_runner/story_storage_impl.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_message_loop.h"

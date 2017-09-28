@@ -108,7 +108,7 @@ source_set("ledger_repository_for_testing") {
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
-    "//peridot/lib/ledger:constants",
+    "//peridot/lib/ledger_client:constants",
     "//peridot/public/lib/ledger/fidl",
   ]
 

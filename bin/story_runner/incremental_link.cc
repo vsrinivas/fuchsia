@@ -12,8 +12,8 @@
 #include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger/operations.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/operations.h"
+#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/util/debug.h"
 
 namespace modular {

@@ -29,7 +29,7 @@
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/util/debug.h"
 

@@ -37,10 +37,10 @@
 #include "peridot/lib/device_info/device_info.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/scope.h"
-#include "peridot/lib/ledger/constants.h"
-#include "peridot/lib/ledger/ledger_client.h"
-#include "peridot/lib/ledger/status.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/constants.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/status.h"
+#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

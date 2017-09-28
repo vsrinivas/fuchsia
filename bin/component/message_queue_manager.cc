@@ -15,8 +15,8 @@
 #include "peridot/bin/component/persistent_queue.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger/page_client.h"
-#include "peridot/lib/ledger/storage.h"
+#include "peridot/lib/ledger_client/page_client.h"
+#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 

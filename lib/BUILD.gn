@@ -7,7 +7,7 @@ group("unittests") {
 
   deps = [
     "//peridot/lib/fidl:unittests",
-    "//peridot/lib/ledger:unittests",
+    "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/testing:unittests",
     "//peridot/lib/util:unittests",
   ]

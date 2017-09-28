@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_STATUS_H_
-#define PERIDOT_LIB_LEDGER_STATUS_H_
+#ifndef PERIDOT_LIB_LEDGER_CLIENT_STATUS_H_
+#define PERIDOT_LIB_LEDGER_CLIENT_STATUS_H_
 
 #include <string>
 
@@ -15,4 +15,4 @@ std::string LedgerStatusToString(ledger::Status status);
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_STATUS_H_
+#endif  // PERIDOT_LIB_LEDGER_CLIENT_STATUS_H_

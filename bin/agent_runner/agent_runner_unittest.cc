@@ -17,7 +17,7 @@
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_repository.h"
 #include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/ledger/ledger_client.h"
+#include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
 #include "peridot/lib/testing/mock_base.h"
