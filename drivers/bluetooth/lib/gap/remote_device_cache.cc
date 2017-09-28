@@ -50,10 +50,7 @@ RemoteDevice* RemoteDeviceCache::StoreLowEnergyScanResult(
 
 RemoteDevice* RemoteDeviceCache::StoreLowEnergyConnection(
     const common::DeviceAddress& peer_address,
-    hci::Connection::LinkType ll_type,
-    const hci::Connection::LowEnergyParameters& le_params) {
-  FXL_DCHECK(ll_type == hci::Connection::LinkType::kLE);
-
+    const hci::LEConnectionParameters& le_params) {
   RemoteDevice* device = FindDeviceByAddress(peer_address);
   if (!device) {
     device = NewDevice(peer_address, TechnologyType::kLowEnergy,

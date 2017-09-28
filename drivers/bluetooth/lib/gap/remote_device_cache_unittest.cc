@@ -13,6 +13,9 @@ namespace bluetooth {
 namespace gap {
 namespace {
 
+// All fields are initialized to zero as they are unused in these tests.
+const hci::LEConnectionParameters kTestParams;
+
 TEST(RemoteDeviceCacheTest, StoreLowEnergyScanResult) {
   const common::DeviceAddress kAddress0(common::DeviceAddress::Type::kLEPublic,
                                         "01:02:03:04:05:06");
@@ -74,12 +77,8 @@ TEST(RemoteDeviceCacheTest, StoreLowEnergyScanResult) {
 TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionNewDevice) {
   const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic,
                                        "01:02:03:04:05:06");
-  hci::Connection::LowEnergyParameters params;
-
   RemoteDeviceCache cache;
-
-  auto device = cache.StoreLowEnergyConnection(
-      kAddress, hci::Connection::LinkType::kLE, params);
+  auto device = cache.StoreLowEnergyConnection(kAddress, kTestParams);
   ASSERT_TRUE(device);
 
   EXPECT_EQ(kAddress, device->address());
@@ -90,8 +89,6 @@ TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionNewDevice) {
 TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionExisting) {
   const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic,
                                        "01:02:03:04:05:06");
-  hci::Connection::LowEnergyParameters params;
-
   RemoteDeviceCache cache;
 
   auto device =
@@ -99,8 +96,7 @@ TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionExisting) {
   ASSERT_TRUE(device);
   ASSERT_TRUE(device->temporary());
 
-  auto updated = cache.StoreLowEnergyConnection(
-      kAddress, hci::Connection::LinkType::kLE, params);
+  auto updated = cache.StoreLowEnergyConnection(kAddress, kTestParams);
   ASSERT_TRUE(updated);
   EXPECT_EQ(device, updated);
   EXPECT_FALSE(device->temporary());

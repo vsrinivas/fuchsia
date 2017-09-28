@@ -16,7 +16,7 @@ namespace {
 
 constexpr ConnectionHandle kTestHandle = 0x0001;
 constexpr Connection::Role kTestRole = Connection::Role::kMaster;
-const Connection::LowEnergyParameters kTestParams(1, 2, 1, 1, 1);
+const LEConnectionParameters kTestParams(1, 1, 1);
 const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
                                          "00:00:00:00:00:01");
 

@@ -34,39 +34,10 @@ std::string LinkTypeToString(Connection::LinkType type) {
 
 }  // namespace
 
-Connection::LowEnergyParameters::LowEnergyParameters(
-    uint16_t interval_min,
-    uint16_t interval_max,
-    uint16_t interval,
-    uint16_t latency,
-    uint16_t supervision_timeout)
-    : interval_min_(interval_min),
-      interval_max_(interval_max),
-      interval_(interval),
-      latency_(latency),
-      supervision_timeout_(supervision_timeout) {
-  FXL_DCHECK(interval_min_ <= interval_max_);
-}
-
-Connection::LowEnergyParameters::LowEnergyParameters()
-    : interval_min_(defaults::kLEConnectionIntervalMin),
-      interval_max_(defaults::kLEConnectionIntervalMax),
-      interval_(0x0000),
-      latency_(0x0000),
-      supervision_timeout_(defaults::kLESupervisionTimeout) {}
-
-bool Connection::LowEnergyParameters::operator==(
-    const LowEnergyParameters& other) const {
-  return other.interval_min_ == interval_min_ &&
-         other.interval_max_ == interval_max_ && other.interval_ == interval_ &&
-         other.latency_ == latency_ &&
-         other.supervision_timeout_ == supervision_timeout_;
-}
-
 Connection::Connection(ConnectionHandle handle,
                        Role role,
                        const common::DeviceAddress& peer_address,
-                       const LowEnergyParameters& params,
+                       const LEConnectionParameters& params,
                        fxl::RefPtr<Transport> hci)
     : ll_type_(LinkType::kLE),
       handle_(handle),

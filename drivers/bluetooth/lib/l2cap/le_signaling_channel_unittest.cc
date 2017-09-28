@@ -242,13 +242,11 @@ TEST_F(L2CAP_LESignalingChannelTest, ConnParamUpdateAccept) {
   };
 
   bool conn_param_cb_called = false;
-  auto conn_param_cb = [&conn_param_cb_called, this](
-                           uint16_t interval_min, uint16_t interval_max,
-                           uint16_t slave_latency, uint16_t supv_timeout) {
-    EXPECT_EQ(0x0006, interval_min);
-    EXPECT_EQ(0x0C80, interval_max);
-    EXPECT_EQ(0x01F3, slave_latency);
-    EXPECT_EQ(0x0C80, supv_timeout);
+  auto conn_param_cb = [&conn_param_cb_called, this](const auto& params) {
+    EXPECT_EQ(0x0006, params.min_interval());
+    EXPECT_EQ(0x0C80, params.max_interval());
+    EXPECT_EQ(0x01F3, params.max_latency());
+    EXPECT_EQ(0x0C80, params.supervision_timeout());
     conn_param_cb_called = true;
     fsl::MessageLoop::GetCurrent()->QuitNow();
   };

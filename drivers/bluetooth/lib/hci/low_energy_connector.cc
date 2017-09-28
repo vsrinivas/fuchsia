@@ -18,14 +18,10 @@ namespace hci {
 
 LowEnergyConnector::PendingRequest::PendingRequest(
     const common::DeviceAddress& peer_address,
-    uint16_t interval_min,
-    uint16_t interval_max,
     const ResultCallback& result_callback)
     : canceled(false),
       timed_out(false),
       peer_address(peer_address),
-      interval_min(interval_min),
-      interval_max(interval_max),
       result_callback(result_callback) {}
 
 LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
@@ -61,7 +57,7 @@ bool LowEnergyConnector::CreateConnection(
     const common::DeviceAddress& peer_address,
     uint16_t scan_interval,
     uint16_t scan_window,
-    const Connection::LowEnergyParameters& initial_parameters,
+    const LEPreferredConnectionParameters& initial_parameters,
     const ResultCallback& result_callback,
     int64_t timeout_ms) {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
@@ -73,9 +69,7 @@ bool LowEnergyConnector::CreateConnection(
     return false;
 
   FXL_DCHECK(request_timeout_cb_.IsCanceled());
-  pending_request_ =
-      PendingRequest(peer_address, initial_parameters.interval_min(),
-                     initial_parameters.interval_max(), result_callback);
+  pending_request_ = PendingRequest(peer_address, result_callback);
 
   auto request = CommandPacket::New(kLECreateConnection,
                                     sizeof(LECreateConnectionCommandParams));
@@ -95,9 +89,9 @@ bool LowEnergyConnector::CreateConnection(
 
   params->peer_address = peer_address.value();
   params->own_address_type = own_address_type;
-  params->conn_interval_min = htole16(initial_parameters.interval_min());
-  params->conn_interval_max = htole16(initial_parameters.interval_max());
-  params->conn_latency = htole16(initial_parameters.latency());
+  params->conn_interval_min = htole16(initial_parameters.min_interval());
+  params->conn_interval_max = htole16(initial_parameters.max_interval());
+  params->conn_latency = htole16(initial_parameters.max_latency());
   params->supervision_timeout =
       htole16(initial_parameters.supervision_timeout());
   params->minimum_ce_length = 0x0000;
@@ -205,23 +199,11 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
     return;
   }
 
-  // Use the pending request to populate the min/max interval parameters. If
-  // this connection was not due to a pending request we assign the default
-  // values.
-  uint16_t interval_min, interval_max;
-  if (matches_pending_request) {
-    interval_min = pending_request_->interval_min;
-    interval_max = pending_request_->interval_max;
-  } else {
-    interval_min = defaults::kLEConnectionIntervalMin;
-    interval_max = defaults::kLEConnectionIntervalMax;
-  }
-
   // A new link layer connection was created. Create an object to track this
   // connection.
-  Connection::LowEnergyParameters connection_params(
-      interval_min, interval_max, le16toh(params->conn_interval),
-      le16toh(params->conn_latency), le16toh(params->supervision_timeout));
+  LEConnectionParameters connection_params(
+      le16toh(params->conn_interval), le16toh(params->conn_latency),
+      le16toh(params->supervision_timeout));
 
   auto connection = std::make_unique<Connection>(
       le16toh(params->connection_handle),

@@ -53,8 +53,16 @@ class RemoteDevice final {
 
   // Returns the most recently used connection parameters for this device.
   // Returns nullptr if these values are unknown.
-  const hci::Connection::LowEnergyParameters* le_connection_params() const {
+  const hci::LEConnectionParameters* le_connection_params() const {
     return le_conn_params_.value();
+  }
+
+  // Returns this device's preferred connection parameters, if known. LE
+  // peripherals report their preferred connection parameters using one of the
+  // GAP Connection Parameter Update procedures (e.g. L2CAP, Advertising, LL).
+  const hci::LEPreferredConnectionParameters* le_preferred_connection_params()
+      const {
+    return le_preferred_conn_params_.value();
   }
 
   // Returns true if this device has not been connected to.
@@ -81,8 +89,7 @@ class RemoteDevice final {
 
   // Called by RemoteDeviceCache to update the contents of a LE device after a
   // connection is established.
-  void SetLowEnergyConnectionData(
-      const hci::Connection::LowEnergyParameters& params);
+  void SetLowEnergyConnectionData(const hci::LEConnectionParameters& params);
 
   // Called by RemoteDeviceCache
   void set_connectable(bool value) { connectable_ = value; }
@@ -104,7 +111,13 @@ class RemoteDevice final {
 
   // Most recently used LE connection parameters. Has no value if this device
   // has never been connected.
-  common::Optional<hci::Connection::LowEnergyParameters> le_conn_params_;
+  common::Optional<hci::LEConnectionParameters> le_conn_params_;
+
+  // Preferred LE connection parameters as reported by this device. Has no value
+  // if this parameter is unknown.
+  // TODO(armansito): Add a method for storing the preferred parameters.
+  common::Optional<hci::LEPreferredConnectionParameters>
+      le_preferred_conn_params_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDevice);
 };

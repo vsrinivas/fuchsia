@@ -10,6 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "lib/fxl/functional/cancelable_callback.h"
@@ -87,7 +88,7 @@ class LowEnergyConnector {
       const common::DeviceAddress& peer_address,
       uint16_t scan_interval,
       uint16_t scan_window,
-      const Connection::LowEnergyParameters& initial_parameters,
+      const LEPreferredConnectionParameters& initial_parameters,
       const ResultCallback& result_callback,
       int64_t timeout_ms);
 
@@ -101,15 +102,11 @@ class LowEnergyConnector {
   struct PendingRequest {
     PendingRequest() = default;
     PendingRequest(const common::DeviceAddress& peer_address,
-                   uint16_t interval_min,
-                   uint16_t interval_max,
                    const ResultCallback& result_callback);
 
     bool canceled;
     bool timed_out;
     common::DeviceAddress peer_address;
-    uint16_t interval_min;
-    uint16_t interval_max;
     ResultCallback result_callback;
   };
 

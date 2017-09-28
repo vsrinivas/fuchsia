@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/signaling_channel.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -25,10 +26,7 @@ class LESignalingChannel : public SignalingChannel {
   //
   // This task will be posted onto the given |task_runner|.
   using ConnectionParameterUpdateCallback =
-      std::function<void(uint16_t interval_min,
-                         uint16_t interval_max,
-                         uint16_t slave_latency,
-                         uint16_t timeout_multiplier)>;
+      std::function<void(const hci::LEPreferredConnectionParameters& params)>;
   void set_conn_param_update_callback(
       const ConnectionParameterUpdateCallback& callback,
       fxl::RefPtr<fxl::TaskRunner> task_runner) {

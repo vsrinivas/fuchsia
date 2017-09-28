@@ -347,9 +347,8 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
   // TODO(armansito): For a device that was previously connected/bonded we
   // should use the preferred parameters right away.
   auto* cached_params = peer->le_connection_params();
-  hci::Connection::LowEnergyParameters initial_params(
+  hci::LEPreferredConnectionParameters initial_params(
       kLEInitialConnIntervalMin, kLEInitialConnIntervalMax,
-      cached_params ? cached_params->interval() : 0,
       cached_params ? cached_params->latency() : 0,
       cached_params ? cached_params->supervision_timeout()
                     : hci::defaults::kLESupervisionTimeout);
@@ -427,8 +426,7 @@ void LowEnergyConnectionManager::OnConnectionCreated(
                 << connection->ToString();
 
   RemoteDevice* peer = device_cache_->StoreLowEnergyConnection(
-      connection->peer_address(), connection->ll_type(),
-      connection->low_energy_parameters());
+      connection->peer_address(), connection->low_energy_parameters());
 
   // Add the connection to the connection map and obtain the initial reference.
   // This reference lasts until this method returns to prevent it from dropping

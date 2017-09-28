@@ -24,6 +24,7 @@ using TestingBase = ::bluetooth::testing::FakeControllerTest<FakeController>;
 
 const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
                                          "00:00:00:00:00:01");
+const hci::LEPreferredConnectionParameters kTestParams(1, 1, 1, 1);
 constexpr int64_t kTestTimeoutMs = 2000;
 
 class LowEnergyConnectorTest : public TestingBase {
@@ -111,18 +112,17 @@ TEST_F(LowEnergyConnectorTest, CreateConnection) {
     message_loop()->PostQuitTask();
   };
 
-  hci::Connection::LowEnergyParameters params;
   bool ret = connector()->CreateConnection(
       hci::LEOwnAddressType::kPublic, false, kTestAddress,
-      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, kTestParams, callback,
       kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
   ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false,
                                       kTestAddress, defaults::kLEScanInterval,
-                                      defaults::kLEScanWindow, params, callback,
-                                      kTestTimeoutMs);
+                                      defaults::kLEScanWindow, kTestParams,
+                                      callback, kTestTimeoutMs);
   EXPECT_FALSE(ret);
 
   RunMessageLoop();
@@ -160,10 +160,9 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionStatusError) {
     message_loop()->PostQuitTask();
   };
 
-  hci::Connection::LowEnergyParameters params;
   bool ret = connector()->CreateConnection(
       hci::LEOwnAddressType::kPublic, false, kTestAddress,
-      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, kTestParams, callback,
       kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
@@ -197,10 +196,9 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionEventError) {
     message_loop()->PostQuitTask();
   };
 
-  hci::Connection::LowEnergyParameters params;
   bool ret = connector()->CreateConnection(
       hci::LEOwnAddressType::kPublic, false, kTestAddress,
-      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, kTestParams, callback,
       kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
@@ -231,10 +229,9 @@ TEST_F(LowEnergyConnectorTest, Cancel) {
     message_loop()->PostQuitTask();
   };
 
-  hci::Connection::LowEnergyParameters params;
   bool ret = connector()->CreateConnection(
       hci::LEOwnAddressType::kPublic, false, kTestAddress,
-      defaults::kLEScanInterval, defaults::kLEScanWindow, params, callback,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, kTestParams, callback,
       kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
@@ -303,10 +300,9 @@ TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
     message_loop()->PostQuitTask();
   };
 
-  hci::Connection::LowEnergyParameters params;
   connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false,
                                 kTestAddress, defaults::kLEScanInterval,
-                                defaults::kLEScanWindow, params, callback,
+                                defaults::kLEScanWindow, kTestParams, callback,
                                 kTestTimeoutMs);
 
   message_loop()->task_runner()->PostTask([kIncomingAddress, this] {
@@ -357,10 +353,9 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionTimeout) {
     message_loop()->PostQuitTask();
   };
 
-  hci::Connection::LowEnergyParameters params;
   connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false,
                                 kTestAddress, defaults::kLEScanInterval,
-                                defaults::kLEScanWindow, params, callback,
+                                defaults::kLEScanWindow, kTestParams, callback,
                                 kShortTimeoutMs);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -380,10 +375,9 @@ TEST_F(LowEnergyConnectorTest, SendRequestAndDelete) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));
 
-  hci::Connection::LowEnergyParameters params;
   bool ret = connector()->CreateConnection(
       hci::LEOwnAddressType::kPublic, false, kTestAddress,
-      defaults::kLEScanInterval, defaults::kLEScanWindow, params,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, kTestParams,
       [](auto, auto) {}, kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
@@ -404,10 +398,9 @@ TEST_F(LowEnergyConnectorTest, SendRequestDeleteAndWaitForTimeout) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));
 
-  hci::Connection::LowEnergyParameters params;
   bool ret = connector()->CreateConnection(
       hci::LEOwnAddressType::kPublic, false, kTestAddress,
-      defaults::kLEScanInterval, defaults::kLEScanWindow, params,
+      defaults::kLEScanInterval, defaults::kLEScanWindow, kTestParams,
       [](auto, auto) {}, kShortTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());

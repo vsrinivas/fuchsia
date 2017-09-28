@@ -46,35 +46,35 @@ void LESignalingChannel::OnConnParamUpdateReceived(
   // Reject the connection parameters if they are outside the ranges allowed by
   // the HCI specification (see HCI_LE_Connection_Update command - v5.0, Vol 2,
   // Part E, Section 7.8.18).
-  uint16_t interval_min = le16toh(payload.interval_min);
-  uint16_t interval_max = le16toh(payload.interval_max);
-  uint16_t slave_latency = le16toh(payload.slave_latency);
-  uint16_t supv_timeout = le16toh(payload.timeout_multiplier);
-
   bool reject = false;
+  hci::LEPreferredConnectionParameters params(
+      le16toh(payload.interval_min), le16toh(payload.interval_max),
+      le16toh(payload.slave_latency), le16toh(payload.timeout_multiplier));
 
-  if (interval_min > interval_max) {
+  if (params.min_interval() > params.max_interval()) {
     FXL_VLOG(1) << "l2cap: LE conn. min interval larger than max";
     reject = true;
-  } else if (interval_min < hci::kLEConnectionIntervalMin) {
+  } else if (params.min_interval() < hci::kLEConnectionIntervalMin) {
     FXL_VLOG(1) << fxl::StringPrintf(
         "l2cap: LE conn. min. interval outside allowed range: 0x%04x",
-        interval_min);
+        params.min_interval());
     reject = true;
-  } else if (interval_max > hci::kLEConnectionIntervalMax) {
+  } else if (params.max_interval() > hci::kLEConnectionIntervalMax) {
     FXL_VLOG(1) << fxl::StringPrintf(
         "l2cap: LE conn. max. interval outside allowed range: 0x%04x",
-        interval_max);
+        params.max_interval());
     reject = true;
-  } else if (slave_latency > hci::kLEConnectionLatencyMax) {
+  } else if (params.max_latency() > hci::kLEConnectionLatencyMax) {
     FXL_VLOG(1) << fxl::StringPrintf(
-        "l2cap: LE conn slave latency too big: 0x%04x", slave_latency);
+        "l2cap: LE conn slave latency too big: 0x%04x", params.max_latency());
     reject = true;
-  } else if (supv_timeout < hci::kLEConnectionSupervisionTimeoutMin ||
-             supv_timeout > hci::kLEConnectionSupervisionTimeoutMax) {
+  } else if (params.supervision_timeout() <
+                 hci::kLEConnectionSupervisionTimeoutMin ||
+             params.supervision_timeout() >
+                 hci::kLEConnectionSupervisionTimeoutMax) {
     FXL_VLOG(1) << fxl::StringPrintf(
         "l2cap: LE conn supv. timeout outside allowed range: 0x%04x",
-        supv_timeout);
+        params.supervision_timeout());
     reject = true;
   }
 
@@ -88,9 +88,7 @@ void LESignalingChannel::OnConnParamUpdateReceived(
 
   if (!reject && conn_param_update_runner_) {
     conn_param_update_runner_->PostTask(
-        std::bind(conn_param_update_cb_, le16toh(payload.interval_min),
-                  le16toh(payload.interval_max), le16toh(payload.slave_latency),
-                  le16toh(payload.timeout_multiplier)));
+        std::bind(conn_param_update_cb_, params));
   }
 }
 

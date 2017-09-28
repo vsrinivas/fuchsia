@@ -45,7 +45,7 @@ void RemoteDevice::SetLowEnergyData(
 }
 
 void RemoteDevice::SetLowEnergyConnectionData(
-    const hci::Connection::LowEnergyParameters& params) {
+    const hci::LEConnectionParameters& params) {
   FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
   FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
   FXL_DCHECK(connectable());

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -43,57 +44,11 @@ class Connection final {
     kSlave,
   };
 
-  // Connection parameters for a LE connection.
-  class LowEnergyParameters {
-   public:
-    LowEnergyParameters(uint16_t interval_min,
-                        uint16_t interval_max,
-                        uint16_t interval,
-                        uint16_t latency,
-                        uint16_t supervision_timeout);
-
-    // Default constructor initializes values to HCI defaults. This is intended
-    // for unit tests.
-    LowEnergyParameters();
-
-    // The minimum and maximum allowed connection intervals. The connection
-    // interval indicates the frequency of link layer connection events over
-    // which data channel PDUs can be transmitted. See Core Spec v5.0, Vol 6,
-    // Part B, Section 4.5.1 for more information on the link layer connection
-    // events.
-    uint16_t interval_min() const { return interval_min_; }
-    uint16_t interval_max() const { return interval_max_; }
-
-    // The actual connection interval used for a connection. This parameter is
-    // only valid for an active connection and will be set to 0 when an instance
-    // of this class is used during a connection request.
-    uint16_t interval() const { return interval_; }
-
-    // The maximum allowed connection latency. See Core Spec v5.0, Vol 6, Part
-    // B, Section 4.5.2.
-    uint16_t latency() const { return latency_; }
-
-    // This defines the maximum time between two received data packet PDUs
-    // before the connection is considered lost. See Core Spec v5.0, Vol 6, Part
-    // B, Section 4.5.2. This value is given in centiseconds and must be within
-    // the range 100 ms - 32 s (10 cs - 3200 cs).
-    uint16_t supervision_timeout() const { return supervision_timeout_; }
-
-    bool operator==(const LowEnergyParameters& other) const;
-
-   private:
-    uint16_t interval_min_;
-    uint16_t interval_max_;
-    uint16_t interval_;
-    uint16_t latency_;
-    uint16_t supervision_timeout_;
-  };
-
   // Initializes this as a LE ACL connection.
   Connection(ConnectionHandle handle,
              Role role,
              const common::DeviceAddress& peer_address,
-             const LowEnergyParameters& params,
+             const LEConnectionParameters& params,
              fxl::RefPtr<Transport> hci);
 
   // The destructor closes this connection.
@@ -109,9 +64,9 @@ class Connection final {
   // Returns the role of the local device in the established connection.
   Role role() const { return role_; }
 
-  // The LE connection parameters of this connection. Must only be called on a
-  // Connection with a link type LinkType::kLE.
-  const LowEnergyParameters& low_energy_parameters() const {
+  // The active LE connection parameters of this connection. Must only be called
+  // on a Connection with a link type LinkType::kLE.
+  const LEConnectionParameters& low_energy_parameters() const {
     FXL_DCHECK(ll_type_ == LinkType::kLE);
     return le_params_;
   }
@@ -143,7 +98,7 @@ class Connection final {
   common::DeviceAddress peer_address_;
 
   // Connection parameters for a LE link. Not nullptr if the link type is LE.
-  LowEnergyParameters le_params_;
+  LEConnectionParameters le_params_;
 
   // The underlying HCI transport. We use this to terminate the connection by
   // sending the HCI_Disconnect command.

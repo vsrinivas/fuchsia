@@ -9,6 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "lib/fxl/macros.h"
 
@@ -70,10 +71,8 @@ class FakeDevice {
   bool connected() const { return connected_; }
   void set_connected(bool connected) { connected_ = connected; }
 
-  const hci::Connection::LowEnergyParameters& le_params() const {
-    return le_params_;
-  }
-  void set_le_params(const hci::Connection::LowEnergyParameters& value) {
+  const hci::LEConnectionParameters& le_params() const { return le_params_; }
+  void set_le_params(const hci::LEConnectionParameters& value) {
     le_params_ = value;
   }
 
@@ -117,7 +116,7 @@ class FakeDevice {
   hci::Status connect_response_;
   int64_t connect_rsp_ms_;
 
-  hci::Connection::LowEnergyParameters le_params_;
+  hci::LEConnectionParameters le_params_;
 
   bool should_batch_reports_;
   common::DynamicByteBuffer adv_data_;

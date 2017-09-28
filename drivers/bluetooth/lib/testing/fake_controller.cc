@@ -280,8 +280,7 @@ void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr) {
     auto interval_min = hci::defaults::kLEConnectionIntervalMin;
     auto interval_max = hci::defaults::kLEConnectionIntervalMax;
 
-    hci::Connection::LowEnergyParameters conn_params(
-        interval_min, interval_max,
+    hci::LEConnectionParameters conn_params(
         interval_min + ((interval_max - interval_min) / 2), 0,
         hci::defaults::kLESupervisionTimeout);
     dev->set_le_params(conn_params);
@@ -446,8 +445,8 @@ void FakeController::OnLECreateConnectionCommandReceived(
     uint16_t interval_max = le16toh(params.conn_interval_max);
     uint16_t interval = interval_min + ((interval_max - interval_min) / 2);
 
-    hci::Connection::LowEnergyParameters conn_params(
-        interval_min, interval_max, interval, le16toh(params.conn_latency),
+    hci::LEConnectionParameters conn_params(
+        interval, le16toh(params.conn_latency),
         le16toh(params.supervision_timeout));
     device->set_le_params(conn_params);
 

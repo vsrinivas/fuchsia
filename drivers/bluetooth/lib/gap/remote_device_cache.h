@@ -45,8 +45,7 @@ class RemoteDeviceCache final {
   // Creates or updates a RemoteDevice entry based on a new connection.
   RemoteDevice* StoreLowEnergyConnection(
       const common::DeviceAddress& peer_address,
-      hci::Connection::LinkType ll_type,
-      const hci::Connection::LowEnergyParameters& le_params);
+      const hci::LEConnectionParameters& le_params);
 
   // Creates a new device entry using the given parameters.
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
