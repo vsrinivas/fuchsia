@@ -41,6 +41,13 @@ magma_status_t msd_device_display_get_size(struct msd_device_t* dev,
 // Closes the given connection to the device.
 void msd_connection_close(struct msd_connection_t* connection);
 
+void msd_connection_map_buffer_gpu(struct msd_connection_t* connection, struct msd_buffer_t* buffer,
+                                   uint64_t gpu_va, uint64_t flags);
+void msd_connection_unmap_buffer_gpu(struct msd_connection_t* connection,
+                                     struct msd_buffer_t* buffer, uint64_t gpu_va);
+void msd_connection_commit_buffer(struct msd_connection_t* connection, struct msd_buffer_t* buffer,
+                                  uint64_t page_offset, uint64_t page_count);
+
 // Creates a context for the given connection. returns null on failure.
 struct msd_context_t* msd_connection_create_context(struct msd_connection_t* connection);
 

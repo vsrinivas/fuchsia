@@ -106,6 +106,17 @@ public:
         test_complete = true;
     }
 
+    void TestMapUnmapBuffer()
+    {
+        auto buf = magma::PlatformBuffer::Create(1, "test");
+        test_buffer_id = buf->id();
+        EXPECT_EQ(ipc_connection_->ImportBuffer(buf.get()), 0);
+        EXPECT_EQ(ipc_connection_->MapBufferGpu(buf->id(), PAGE_SIZE * 1000, 5), 0);
+        EXPECT_EQ(ipc_connection_->UnmapBufferGpu(buf->id(), PAGE_SIZE * 1000), 0);
+        EXPECT_EQ(ipc_connection_->CommitBuffer(buf->id(), 1000, 2000), 0);
+        EXPECT_EQ(ipc_connection_->GetError(), 0);
+    }
+
     static uint64_t test_buffer_id;
     static uint32_t test_context_id;
     static uint64_t test_semaphore_id;
@@ -204,6 +215,29 @@ public:
         TestPlatformConnection::test_complete = true;
         return MAGMA_STATUS_OK;
     }
+
+    bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t flags) override
+    {
+        EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
+        EXPECT_EQ(PAGE_SIZE * 1000lu, gpu_va);
+        EXPECT_EQ(5u, flags);
+        return true;
+    }
+
+    bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override
+    {
+        EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
+        EXPECT_EQ(PAGE_SIZE * 1000lu, gpu_va);
+        return true;
+    }
+
+    bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override
+    {
+        EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
+        EXPECT_EQ(1000lu, page_offset);
+        EXPECT_EQ(2000lu, page_count);
+        return true;
+    }
 };
 
 std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
@@ -296,4 +330,11 @@ TEST(PlatformConnection, PageFlip)
     auto Test = TestPlatformConnection::Create();
     ASSERT_NE(Test, nullptr);
     Test->TestPageFlip();
+}
+
+TEST(PlatformConnection, MapUnmapBuffer)
+{
+    auto Test = TestPlatformConnection::Create();
+    ASSERT_NE(Test, nullptr);
+    Test->TestMapUnmapBuffer();
 }

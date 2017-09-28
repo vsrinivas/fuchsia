@@ -64,6 +64,21 @@ magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, m
     return MAGMA_STATUS_OK;
 }
 
+void msd_connection_map_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,
+                                   uint64_t gpu_va, uint64_t flags)
+{
+}
+
+void msd_connection_unmap_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,
+                                     uint64_t gpu_va)
+{
+}
+
+void msd_connection_commit_buffer(msd_connection_t* connection, msd_buffer_t* buffer,
+                                  uint64_t page_offset, uint64_t page_count)
+{
+}
+
 std::unique_ptr<MsdIntelConnection>
 MsdIntelConnection::Create(Owner* owner, std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
                            msd_client_id_t client_id)

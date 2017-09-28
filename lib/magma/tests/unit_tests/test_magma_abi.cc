@@ -105,6 +105,24 @@ public:
         EXPECT_EQ(magma_get_error(connection_), 0);
     }
 
+    void BufferMap()
+    {
+        ASSERT_NE(connection_, nullptr);
+
+        uint64_t size = PAGE_SIZE;
+        uint64_t actual_size;
+        uint64_t id;
+
+        EXPECT_EQ(magma_create_buffer(connection_, size, &actual_size, &id), 0);
+        EXPECT_NE(id, 0u);
+
+        magma_map_buffer_gpu(connection_, id, 1024, MAGMA_GPU_MAP_FLAG_READ);
+        magma_unmap_buffer_gpu(connection_, id, 2048);
+        magma_commit_buffer(connection_, id, 100, 100);
+
+        magma_release_buffer(connection_, id);
+    }
+
     void BufferExport(uint32_t* handle_out, uint64_t* id_out)
     {
         ASSERT_NE(connection_, nullptr);
@@ -333,6 +351,12 @@ TEST(MagmaAbi, WaitRendering)
 {
     TestConnection test;
     test.WaitRendering();
+}
+
+TEST(MagmaAbi, BufferMap)
+{
+    TestConnection test;
+    test.BufferMap();
 }
 
 TEST(MagmaAbi, BufferImportExport)

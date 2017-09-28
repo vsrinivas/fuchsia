@@ -23,6 +23,9 @@ enum OpCode {
     WaitRendering,
     PageFlip,
     GetError,
+    MapBufferGpu,
+    UnmapBufferGpu,
+    CommitBuffer,
 };
 
 struct ImportBufferOp {
@@ -93,6 +96,29 @@ struct PageFlipOp {
 struct GetErrorOp {
     const OpCode opcode = GetError;
     static constexpr uint32_t kNumHandles = 0;
+} __attribute__((packed));
+
+struct MapBufferGpuOp {
+    const OpCode opcode = MapBufferGpu;
+    static constexpr uint32_t kNumHandles = 0;
+    uint64_t buffer_id;
+    uint64_t gpu_va;
+    uint64_t flags;
+} __attribute__((packed));
+
+struct UnmapBufferGpuOp {
+    const OpCode opcode = UnmapBufferGpu;
+    static constexpr uint32_t kNumHandles = 0;
+    uint64_t buffer_id;
+    uint64_t gpu_va;
+} __attribute__((packed));
+
+struct CommitBufferOp {
+    const OpCode opcode = CommitBuffer;
+    static constexpr uint32_t kNumHandles = 0;
+    uint64_t buffer_id;
+    uint64_t page_offset;
+    uint64_t page_count;
 } __attribute__((packed));
 
 template <typename T>
@@ -222,7 +248,17 @@ public:
                     success =
                         GetError(OpCast<GetErrorOp>(bytes, actual_bytes, handles, actual_handles));
                     break;
-                default:
+                case OpCode::MapBufferGpu:
+                    success = MapBufferGpu(
+                        OpCast<MapBufferGpuOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::UnmapBufferGpu:
+                    success = UnmapBufferGpu(
+                        OpCast<UnmapBufferGpuOp>(bytes, actual_bytes, handles, actual_handles));
+                    break;
+                case OpCode::CommitBuffer:
+                    success = CommitBuffer(
+                        OpCast<CommitBufferOp>(bytes, actual_bytes, handles, actual_handles));
                     break;
             }
 
@@ -361,6 +397,36 @@ private:
         error_ = 0;
         if (!WriteError(result))
             return false;
+        return true;
+    }
+
+    bool MapBufferGpu(MapBufferGpuOp* op)
+    {
+        DLOG("Operation: MapBufferGpu");
+        if (!op)
+            return DRETF(false, "malformed message");
+        if (!delegate_->MapBufferGpu(op->buffer_id, op->gpu_va, op->flags))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+        return true;
+    }
+
+    bool UnmapBufferGpu(UnmapBufferGpuOp* op)
+    {
+        DLOG("Operation: UnmapBufferGpu");
+        if (!op)
+            return DRETF(false, "malformed message");
+        if (!delegate_->UnmapBufferGpu(op->buffer_id, op->gpu_va))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
+        return true;
+    }
+
+    bool CommitBuffer(CommitBufferOp* op)
+    {
+        DLOG("Operation: CommitBuffer");
+        if (!op)
+            return DRETF(false, "malformed message");
+        if (!delegate_->CommitBuffer(op->buffer_id, op->page_offset, op->page_count))
+            SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
     }
 
@@ -548,6 +614,45 @@ public:
             return result;
 
         return error;
+    }
+
+    magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t flags) override
+    {
+        MapBufferGpuOp op;
+        op.buffer_id = buffer_id;
+        op.gpu_va = gpu_va;
+        op.flags = flags;
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
+            return DRET_MSG(result, "failed to write to channel");
+
+        return MAGMA_STATUS_OK;
+    }
+
+    magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override
+    {
+        UnmapBufferGpuOp op;
+        op.buffer_id = buffer_id;
+        op.gpu_va = gpu_va;
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
+            return DRET_MSG(result, "failed to write to channel");
+
+        return MAGMA_STATUS_OK;
+    }
+
+    magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
+                                uint64_t page_count) override
+    {
+        CommitBufferOp op;
+        op.buffer_id = buffer_id;
+        op.page_offset = page_offset;
+        op.page_count = page_count;
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
+            return DRET_MSG(result, "failed to write to channel");
+
+        return MAGMA_STATUS_OK;
     }
 
     void SetError(magma_status_t error)

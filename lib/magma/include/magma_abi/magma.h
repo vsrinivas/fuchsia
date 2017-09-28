@@ -47,6 +47,21 @@ magma_status_t magma_map(struct magma_connection_t* connection, magma_buffer_t b
                          void** addr_out);
 magma_status_t magma_unmap(struct magma_connection_t* connection, magma_buffer_t buffer);
 
+// Maps the buffer onto the GPU in the connection's address space at |gpu_va|. |map_flags| is a set
+// of flags from MAGMA_GPU_MAP_FLAGS that specify how the GPU can access the buffer.
+void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
+                          uint64_t gpu_va, uint64_t map_flags);
+
+// Unmaps the mapping at |gpu_va| from the GPU. Buffers will also be implicitly
+// unmapped if they're released.
+void magma_unmap_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
+                            uint64_t gpu_va);
+
+// Ensures the the |page_count| pages starting at |page_offset| from the
+// beginning of the buffer are backed by physical memory.
+void magma_commit_buffer(struct magma_connection_t* connection, magma_buffer_t buffer,
+                         uint64_t page_offset, uint64_t page_count);
+
 magma_status_t magma_create_command_buffer(struct magma_connection_t* connection, uint64_t size,
                                            magma_buffer_t* buffer_out);
 void magma_release_command_buffer(struct magma_connection_t* connection,

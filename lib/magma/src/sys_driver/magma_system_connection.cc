@@ -164,6 +164,37 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
     return true;
 }
 
+bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t flags)
+{
+    auto iter = buffer_map_.find(id);
+    if (iter == buffer_map_.end())
+        return DRETF(false, "Attempting to gpu map invalid buffer id");
+    msd_connection_map_buffer_gpu(msd_connection(), iter->second->msd_buf(), gpu_va, flags);
+
+    return true;
+}
+
+bool MagmaSystemConnection::UnmapBufferGpu(uint64_t id, uint64_t gpu_va)
+{
+    auto iter = buffer_map_.find(id);
+    if (iter == buffer_map_.end())
+        return DRETF(false, "Attempting to gpu unmap invalid buffer id");
+    msd_connection_unmap_buffer_gpu(msd_connection(), iter->second->msd_buf(), gpu_va);
+
+    return true;
+}
+
+bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint64_t page_count)
+{
+    auto iter = buffer_map_.find(id);
+    if (iter == buffer_map_.end())
+        return DRETF(false, "Attempting to commit invalid buffer id");
+    msd_connection_commit_buffer(msd_connection(), iter->second->msd_buf(), page_offset,
+                                 page_count);
+
+    return true;
+}
+
 bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject::Type object_type)
 {
     auto device = device_.lock();

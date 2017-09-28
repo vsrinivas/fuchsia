@@ -45,3 +45,16 @@ std::unique_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t clien
 {
     return std::make_unique<MsdArmConnection>(client_id);
 }
+
+void msd_connection_map_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,
+                                   uint64_t gpu_va, uint64_t flags)
+{
+}
+void msd_connection_unmap_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,
+                                     uint64_t gpu_va)
+{
+}
+void msd_connection_commit_buffer(msd_connection_t* connection, msd_buffer_t* buffer,
+                                  uint64_t page_offset, uint64_t page_count)
+{
+}

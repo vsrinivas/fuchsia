@@ -94,6 +94,14 @@ struct magma_display_size {
     uint32_t height;
 };
 
+enum MAGMA_GPU_MAP_FLAGS {
+    MAGMA_GPU_MAP_FLAG_NONE = 0,
+    MAGMA_GPU_MAP_FLAG_READ = (1 << 0),
+    MAGMA_GPU_MAP_FLAG_WRITE = (1 << 1),
+    MAGMA_GPU_MAP_FLAG_EXECUTE = (1 << 2),
+    MAGMA_GPU_MAP_FLAG_GROWABLE = (1 << 3),
+};
+
 #if defined(__cplusplus)
 }
 #endif
