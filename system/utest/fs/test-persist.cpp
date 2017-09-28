@@ -264,16 +264,16 @@ RUN_FOR_ALL_FILESYSTEMS(persistence_tests,
     RUN_TEST_LARGE(test_persist_rapid_remount)
     RUN_TEST_MEDIUM((test_persist_with_data<1>))
     RUN_TEST_MEDIUM((test_persist_with_data<100>))
-    RUN_TEST_MEDIUM((test_persist_with_data<8192 - 1>))
-    RUN_TEST_MEDIUM((test_persist_with_data<8192>))
-    RUN_TEST_MEDIUM((test_persist_with_data<8192 + 1>))
+    RUN_TEST_LARGE((test_persist_with_data<8192 - 1>))
+    RUN_TEST_LARGE((test_persist_with_data<8192>))
+    RUN_TEST_LARGE((test_persist_with_data<8192 + 1>))
     RUN_TEST_LARGE((test_persist_with_data<8192 * 128>))
     RUN_TEST_MEDIUM((test_rename_loop<false, 2, 2>));
-    RUN_TEST_MEDIUM((test_rename_loop<false, 2, 100>));
+    RUN_TEST_LARGE((test_rename_loop<false, 2, 100>));
     RUN_TEST_LARGE((test_rename_loop<false, 15, 100>));
     RUN_TEST_LARGE((test_rename_loop<false, 25, 500>));
     RUN_TEST_MEDIUM((test_rename_loop<true, 2, 2>));
-    RUN_TEST_MEDIUM((test_rename_loop<true, 2, 100>));
-    RUN_TEST_MEDIUM((test_rename_loop<true, 15, 100>));
+    RUN_TEST_LARGE((test_rename_loop<true, 2, 100>));
+    RUN_TEST_LARGE((test_rename_loop<true, 15, 100>));
     RUN_TEST_LARGE((test_rename_loop<true, 25, 500>));
 )

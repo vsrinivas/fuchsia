@@ -244,11 +244,11 @@ bool test_link_exclusive(void) {
 }
 
 RUN_FOR_ALL_FILESYSTEMS(threading_tests,
-    RUN_TEST_MEDIUM((test_inode_reuse<false>))
-    RUN_TEST_MEDIUM((test_inode_reuse<true>))
+    RUN_TEST_LARGE((test_inode_reuse<false>))
+    RUN_TEST_LARGE((test_inode_reuse<true>))
     RUN_TEST_MEDIUM(test_create_unlink_exclusive)
     RUN_TEST_MEDIUM(test_mkdir_rmdir_exclusive)
-    RUN_TEST_MEDIUM(test_rename_exclusive)
-    RUN_TEST_MEDIUM(test_rename_overwrite)
-    RUN_TEST_MEDIUM(test_link_exclusive)
+    RUN_TEST_LARGE(test_rename_exclusive)
+    RUN_TEST_LARGE(test_rename_overwrite)
+    RUN_TEST_LARGE(test_link_exclusive)
 )

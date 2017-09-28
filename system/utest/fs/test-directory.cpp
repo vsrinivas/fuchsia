@@ -459,7 +459,7 @@ RUN_FOR_ALL_FILESYSTEMS(directory_tests,
     RUN_TEST_LARGE(test_directory_large)
     RUN_TEST_MEDIUM(test_directory_trailing_slash)
     RUN_TEST_MEDIUM(test_directory_readdir)
-    RUN_TEST_MEDIUM(test_directory_readdir_rm_all)
+    RUN_TEST_LARGE(test_directory_readdir_rm_all)
     RUN_TEST_MEDIUM(test_directory_rewind)
     RUN_TEST_MEDIUM(test_directory_after_rmdir)
 )
