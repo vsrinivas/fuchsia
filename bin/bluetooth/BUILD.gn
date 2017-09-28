@@ -76,13 +76,6 @@ package("bluetooth_tests") {
 
   deps = [
     ":bluetooth_unittests",
-    "//garnet/bin/bluetooth_tools/hci_acl_test",
-  ]
-
-  binaries = [
-    {
-      name = "bluetooth_hci_acl_test"
-    },
   ]
 
   tests = [
