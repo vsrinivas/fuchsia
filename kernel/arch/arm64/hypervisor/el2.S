@@ -22,6 +22,8 @@
 #define SCTLR_EL2_SA        (1 << 3)
 #define SCTLR_EL2_I         (1 << 12)
 
+#define HVC_PSCI_INDEX      0
+#define HVC_ON_INDEX        1
 #define HVC_MAX_INDEX       2
 #define VECTOR_TABLE_SIZE   0x800
 
@@ -92,8 +94,12 @@
     eret
 .endm
 
-.macro pop_return literal
+.macro pop_stack
     add sp, sp, 16
+.endm
+
+.macro pop_return literal
+    pop_stack
     exception_return \literal
 .endm
 
@@ -106,7 +112,9 @@
     b.ne invalid_exception
 
     and x10, x9, #ESR_EL2_ISS_MASK
-    cmp x10, #0
+    cmp x10, #HVC_PSCI_INDEX
+    b.eq smc_psci
+    cmp x10, #HVC_ON_INDEX
     b.ne invalid_exception
 
     b el2_hvc_on
@@ -200,7 +208,7 @@ FUNCTION_LABEL(arm64_el2_exec_base)
 //
 // |stack_top| must point to the physical address of a contiguous stack.
 FUNCTION(arm64_el2_on)
-    hvc #0
+    hvc #1
     ret
 END_FUNCTION(arm64_el2_on)
 FUNCTION_LABEL(el2_hvc_on)
@@ -242,14 +250,13 @@ FUNCTION_LABEL(el2_hvc_on)
 FUNCTION_LABEL(el2_hvc_handler)
     // Check VTTBR_EL2 to determine if the HVC came from the host.
     mrs x9, vttbr_el2
-    cmp x9, xzr
-    b.ne el2_unknown_handler
+    cbnz x9, el2_unknown_handler
 
     // Check ESR_EL2.ICC to determine whether the HVC index is in range.
     mrs x10, esr_el2
     and x10, x10, #ESR_EL2_ISS_MASK
     cmp x10, #HVC_MAX_INDEX
-    b.ge out_of_range
+    b.gt out_of_range
 
     // Branch to the jump table.
     lsl x10, x10, #2
@@ -258,15 +265,22 @@ FUNCTION_LABEL(el2_hvc_handler)
     br x9
 
 table:
+    b el2_hvc_psci
     b el2_hvc_off
     b el2_hvc_resume
 
 out_of_range:
     pop_return ZX_ERR_OUT_OF_RANGE
 
+FUNCTION_LABEL(el2_hvc_psci)
+    pop_stack
+smc_psci:
+    smc #0
+    eret
+
 // zx_status_t arm64_el2_off();
 FUNCTION(arm64_el2_off)
-    hvc #0
+    hvc #1
     ret
 END_FUNCTION(arm64_el2_off)
 FUNCTION_LABEL(el2_hvc_off)
@@ -286,7 +300,7 @@ FUNCTION_LABEL(el2_hvc_off)
 
 // zx_status_t arm64_el2_resume(zx_paddr_t el2_state);
 FUNCTION(arm64_el2_resume)
-    hvc #1
+    hvc #2
     ret
 END_FUNCTION(arm64_el2_resume)
 FUNCTION_LABEL(el2_hvc_resume)

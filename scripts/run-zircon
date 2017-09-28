@@ -315,7 +315,7 @@ case $ARCH in
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
         else
-          ARGS+=" -cpu cortex-a53"
+          ARGS+=" -machine virtualization=true -cpu cortex-a53"
         fi
         ;;
     x86-64)
