@@ -20,14 +20,8 @@
 
 #include "pl061.h"
 #include "hi3660-bus.h"
-#include "hi3660-regs.h"
+#include "hi3660-hw.h"
 #include "hikey960-hw.h"
-
-// MMIO addresses
-// TODO(voydanoff) move to a header file
-#define MMIO_USB3OTG_BC 0xff200000
-#define MMIO_PERI_CRG   0xfff35000
-#define MMIO_PCTRL      0xe8a09000
 
 static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, unsigned pin) {
     pl061_gpios_t* gpios;
@@ -199,12 +193,13 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     // TODO(voydanoff) get from platform bus driver somehow
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
-    if ((status = io_buffer_init_physical(&bus->usb3otg_bc, MMIO_USB3OTG_BC, PAGE_SIZE, resource,
+    if ((status = io_buffer_init_physical(&bus->usb3otg_bc, MMIO_USB3OTG_BC_BASE,
+                                          MMIO_USB3OTG_BC_LENGTH, resource,
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical(&bus->peri_crg, MMIO_PERI_CRG, PAGE_SIZE, resource,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical(&bus->pctrl, MMIO_PCTRL, PAGE_SIZE, resource,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
+         (status = io_buffer_init_physical(&bus->peri_crg, MMIO_PERI_CRG_BASE, MMIO_PERI_CRG_LENGTH,
+                                           resource, ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
+         (status = io_buffer_init_physical(&bus->pctrl, MMIO_PCTRL_BASE, MMIO_PCTRL_LENGTH,
+                                           resource, ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
         goto fail;
     }
 

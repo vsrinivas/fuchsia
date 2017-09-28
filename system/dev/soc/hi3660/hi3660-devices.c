@@ -7,20 +7,20 @@
 #include <stdio.h>
 
 #include "hi3660-bus.h"
+#include "hi3660-hw.h"
 
-// TODO(voydanoff) Move hard coded values to a header file
 // TODO(voydanoff) Assign IDs to the mmios and irqs
 
 static const pbus_mmio_t dwc3_mmios[] = {
     {
-        .base = 0xFF100000, // USB3OTG
-        .length = 0x100000,
+        .base = MMIO_USB3OTG_BASE,
+        .length = MMIO_USB3OTG_LENGTH,
     },
 };
 
 static const pbus_irq_t dwc3_irqs[] = {
     {
-        .irq = 191,
+        .irq = IRQ_USB3,
     },
 };
 
@@ -37,14 +37,14 @@ static const pbus_dev_t dwc3_dev = {
 
 static const pbus_mmio_t xhci_mmios[] = {
     {
-        .base = 0xFF100000, // USB3OTG
-        .length = 0x100000,
+        .base = MMIO_USB3OTG_BASE,
+        .length = MMIO_USB3OTG_LENGTH,
     },
 };
 
 static const pbus_irq_t xhci_irqs[] = {
     {
-        .irq = 191,
+        .irq = IRQ_USB3,
     },
 };
 
@@ -61,20 +61,20 @@ static const pbus_dev_t xhci_dev = {
 
 static const pbus_mmio_t mali_mmios[] = {
     {
-        .base = 0xE82C0000, // G3D
-        .length = 0x4000,
+        .base = MMIO_G3D_BASE,
+        .length = MMIO_G3D_LENGTH,
     },
 };
 
 static const pbus_irq_t mali_irqs[] = {
     {
-        .irq = 290, // JOB
+        .irq = IRQ_G3D_JOB,
     },
     {
-        .irq = 291, // MMU
+        .irq = IRQ_G3D_MMU,
     },
     {
-        .irq = 292, // GPU
+        .irq = IRQ_G3D_GPU,
     },
 };
 
