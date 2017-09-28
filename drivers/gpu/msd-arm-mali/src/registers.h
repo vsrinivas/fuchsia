@@ -65,6 +65,62 @@ public:
     static auto GetStatus() { return RegisterAddr<JobIrqFlags>(0x100c); }
 };
 
+class CoreReadyState {
+public:
+    enum class CoreType {
+        kShader = 0x100,
+        kL2 = 0x120,
+        kTiler = 0x110,
+        kCoreStack = 0xe00,
+    };
+
+    enum class StatusType {
+        // Read-only: the set of cores that are physically present in the
+        // device.
+        kPresent = 0,
+
+        // Read-only: the set of cores that are powered on and ready to do
+        // work.
+        kReady = 0x40,
+
+        // Read-only: the set of cores that are changing power states.
+        kPowerTransitioning = 0x100,
+
+        // Read-only: the set of cores that are currently executing work.
+        kPowerActive = 0x100,
+    };
+
+    enum class ActionType {
+        // Write-only: power on the specified set of cores.
+        kActionPowerOn = 0x80,
+
+        // Write-only: power off the specified set of cores.
+        kActionPowerOff = 0xc0,
+    };
+
+    // Returns a bitmask of the cores in a specified state.
+    static uint64_t ReadBitmask(RegisterIo* register_io, CoreType core_type, StatusType action_type)
+    {
+        DASSERT(core_type != CoreType::kCoreStack);
+
+        uint32_t offset = static_cast<uint32_t>(core_type) + static_cast<uint32_t>(action_type);
+        return register_io->Read32(offset) |
+               (static_cast<uint64_t>(register_io->Read32(offset + 4)) << 32);
+    }
+
+    static void WriteState(RegisterIo* register_io, enum CoreType core_type,
+                           enum ActionType action_type, uint64_t value)
+    {
+        uint32_t offset = static_cast<uint32_t>(core_type) + static_cast<uint32_t>(action_type);
+        uint32_t value_low = value & 0xffffffff;
+        uint32_t value_high = (value >> 32) & 0xffffffff;
+        if (value_low)
+            register_io->Write32(offset, value_low);
+        if (value_high)
+            register_io->Write32(offset + 4, value_high);
+    }
+};
+
 } // namespace registers
 
 #endif // REGISTERS_H

@@ -10,6 +10,7 @@
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/platform-device.h>
 
+#include "device_request.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
@@ -22,6 +23,7 @@
 #include <list>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 class MsdArmDevice : public msd_device_t {
 public:
@@ -44,6 +46,20 @@ public:
     bool Init(void* device_handle);
     std::unique_ptr<MsdArmConnection> Open(msd_client_id_t client_id);
 
+    struct DumpState {
+        struct CorePowerState {
+            const char* core_type;
+            const char* status_type;
+            uint64_t bitmask;
+        };
+        std::vector<CorePowerState> power_states;
+    };
+    static void DumpRegisters(RegisterIo* io, DumpState* dump_state);
+    void Dump(DumpState* dump_state);
+    void DumpToString(std::string& dump_string);
+    void FormatDump(DumpState& dump_state, std::string& dump_string);
+    void DumpStatusToLog();
+
 private:
 #define CHECK_THREAD_IS_CURRENT(x)                                                                 \
     if (x)                                                                                         \
@@ -52,6 +68,8 @@ private:
 #define CHECK_THREAD_NOT_CURRENT(x)                                                                \
     if (x)                                                                                         \
     DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
+
+    class DumpRequest;
 
     RegisterIo* register_io()
     {
@@ -68,6 +86,8 @@ private:
     bool InitializeInterrupts();
     void EnableInterrupts();
     void DisableInterrupts();
+    void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
+    magma::Status ProcessDumpStatusToLog();
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
@@ -82,6 +102,7 @@ private:
 
     std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
     std::mutex device_request_mutex_;
+    std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;

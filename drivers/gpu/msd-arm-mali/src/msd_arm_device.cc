@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "msd_arm_device.h"
+#include "lib/fxl/arraysize.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include <bitset>
@@ -21,6 +23,17 @@ enum InterruptIndex {
     kInterruptIndexJob = 0,
     kInterruptIndexMmu = 1,
     kInterruptIndexGpu = 2,
+};
+
+class MsdArmDevice::DumpRequest : public DeviceRequest {
+public:
+    DumpRequest() {}
+
+protected:
+    magma::Status Process(MsdArmDevice* device) override
+    {
+        return device->ProcessDumpStatusToLog();
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,6 +127,8 @@ std::unique_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id)
     return MsdArmConnection::Create(client_id);
 }
 
+void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
+
 int MsdArmDevice::DeviceThreadLoop()
 {
     magma::PlatformThreadHelper::SetCurrentThreadName("DeviceThread");
@@ -127,6 +142,17 @@ int MsdArmDevice::DeviceThreadLoop()
 
     while (true) {
         device_request_semaphore_->Wait();
+
+        while (true) {
+            lock.lock();
+            if (!device_request_list_.size())
+                break;
+            auto request = std::move(device_request_list_.front());
+            device_request_list_.pop_front();
+            lock.unlock();
+            request->ProcessAndReply(this);
+        }
+        lock.unlock();
 
         if (device_thread_quit_flag_)
             break;
@@ -270,6 +296,70 @@ void MsdArmDevice::DisableInterrupts()
     job_flags.WriteTo(register_io_.get());
 }
 
+void MsdArmDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front)
+{
+    std::unique_lock<std::mutex> lock(device_request_mutex_);
+    if (enqueue_front) {
+        device_request_list_.emplace_front(std::move(request));
+    } else {
+        device_request_list_.emplace_back(std::move(request));
+    }
+    device_request_semaphore_->Signal();
+}
+
+void MsdArmDevice::DumpRegisters(RegisterIo* io, DumpState* dump_state)
+{
+    static struct {
+        const char* name;
+        registers::CoreReadyState::CoreType type;
+    } core_types[] = {{"L2 Cache", registers::CoreReadyState::CoreType::kL2},
+                      {"Shader", registers::CoreReadyState::CoreType::kShader},
+                      {"Tiler", registers::CoreReadyState::CoreType::kTiler}};
+
+    static struct {
+        const char* name;
+        registers::CoreReadyState::StatusType type;
+    } status_types[] = {
+        {"Present", registers::CoreReadyState::StatusType::kPresent},
+        {"Ready", registers::CoreReadyState::StatusType::kReady},
+        {"Transitioning", registers::CoreReadyState::StatusType::kPowerTransitioning},
+        {"Power active", registers::CoreReadyState::StatusType::kPowerActive}};
+    for (size_t i = 0; i < arraysize(core_types); i++) {
+        for (size_t j = 0; j < arraysize(status_types); j++) {
+            uint64_t bitmask = registers::CoreReadyState::ReadBitmask(io, core_types[i].type,
+                                                                      status_types[j].type);
+            dump_state->power_states.push_back({core_types[i].name, status_types[j].name, bitmask});
+        }
+    }
+}
+
+void MsdArmDevice::Dump(DumpState* dump_state) { DumpRegisters(register_io_.get(), dump_state); }
+
+void MsdArmDevice::DumpToString(std::string& dump_string)
+{
+    DumpState dump_state;
+    Dump(&dump_state);
+
+    FormatDump(dump_state, dump_string);
+}
+
+void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
+{
+    dump_string.append("Core power states\n");
+    for (auto& state : dump_state.power_states) {
+        fxl::StringAppendf(&dump_string, "Core type %s state %s bitmap: 0x%lx\n", state.core_type,
+                           state.status_type, state.bitmask);
+    }
+}
+
+magma::Status MsdArmDevice::ProcessDumpStatusToLog()
+{
+    std::string dump;
+    DumpToString(dump);
+    magma::log(magma::LOG_INFO, "%s", dump.c_str());
+    return MAGMA_STATUS_OK;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
@@ -289,7 +379,7 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }
 
-void msd_device_dump_status(msd_device_t* device) {}
+void msd_device_dump_status(msd_device_t* device) { MsdArmDevice::cast(device)->DumpStatusToLog(); }
 
 magma_status_t msd_device_display_get_size(msd_device_t* dev, magma_display_size* size_out)
 {

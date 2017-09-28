@@ -25,7 +25,16 @@ driver_module("msd_arm_test") {
   deps = [
     "src",
     "src:test_driver",
+    "tests:gtest",
   ]
 
   ldflags = [ shared_ldflags ]
+}
+
+config("msd_tests_include_config") {
+  include_dirs = [ "tests" ]
+}
+
+config("msd_src_include_config") {
+  include_dirs = [ "src" ]
 }

@@ -5,7 +5,9 @@
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 source_set("src") {
+  public_configs = [ "..:msd_src_include_config" ]
   sources = [
+    "device_request.h",
     "entry_stubs.cc",
     "msd_arm_buffer.cc",
     "msd_arm_buffer.h",
@@ -24,6 +26,7 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util:registers",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
+    "//garnet/public/lib/fxl"
   ]
 }
 

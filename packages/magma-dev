@@ -3,6 +3,7 @@
         "cpp"
     ],
     "imports": [
+        "garnet/packages/fxl",
         "garnet/packages/sbase"
     ],
     "packages": {

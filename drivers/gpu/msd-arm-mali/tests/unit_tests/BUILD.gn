@@ -1,0 +1,32 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+# These tests require ARM Mali graphics hardware to run.  They can be
+# run inside the test build of the driver.
+source_set("tests_requiring_hardware") {
+  testonly = true
+
+  sources = [
+    "test_device.cc",
+  ]
+
+  deps = [
+    ":test_deps",
+  ]
+}
+
+group("test_deps") {
+  testonly = true
+
+  public_deps = [
+    "//garnet/drivers/gpu/msd-arm-mali/src",
+    "//garnet/lib/magma/include:msd_abi",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/tests/helper:command_buffer_helper",
+    "//garnet/lib/magma/tests/helper:platform_device_helper",
+    "//third_party/gtest",
+  ]
+}
