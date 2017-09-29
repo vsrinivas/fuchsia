@@ -109,6 +109,7 @@ private:
 
     fbl::Mutex lock_;
     MessageList messages_ TA_GUARDED(lock_);
+    uint64_t message_count_ TA_GUARDED(lock_) = 0;
     WaiterList waiters_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
     fbl::RefPtr<ChannelDispatcher> other_ TA_GUARDED(lock_);

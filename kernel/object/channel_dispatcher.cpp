@@ -70,6 +70,7 @@ ChannelDispatcher::~ChannelDispatcher() {
     // It's not possible to do this safely in on_zero_handles()
 
     messages_.clear();
+    message_count_ = 0;
 }
 
 zx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
@@ -77,7 +78,7 @@ zx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
 
     AutoLock lock(&lock_);
     StateObserver::CountInfo cinfo =
-        {{{messages_.size_slow(), ZX_CHANNEL_READABLE}, {0u, 0u}}};
+        {{{message_count_, ZX_CHANNEL_READABLE}, {0u, 0u}}};
     state_tracker_.AddObserver(observer, &cinfo);
     return ZX_OK;
 }
@@ -154,6 +155,7 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
     }
 
     *msg = messages_.pop_front();
+    message_count_--;
 
     if (messages_.is_empty())
         state_tracker_.UpdateState(ZX_CHANNEL_READABLE, 0u);
@@ -278,6 +280,7 @@ int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
         }
     }
     messages_.push_back(fbl::move(msg));
+    message_count_++;
 
     state_tracker_.UpdateState(0u, ZX_CHANNEL_READABLE);
     return 0;
