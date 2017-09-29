@@ -6,7 +6,7 @@
 
 #include <array>
 
-#include "inferior-control/io-loop.h"
+#include "garnet/lib/inferior_control/io_loop.h"
 
 namespace debugserver {
 

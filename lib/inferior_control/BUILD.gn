@@ -4,20 +4,17 @@
 
 # A framework for running subprocesses ("inferiors") under debugger-like
 # control.
-# This library is "public" in the sense that it's available to be used
-# by anyone outside of this directory.
-# TODO(dje): Living in bin/foo is suboptimal.
-static_library("inferior-control") {
+static_library("inferior_control") {
   sources = [
     "arch.h",
     "breakpoint.cc",
     "breakpoint.h",
-    "exception-port.cc",
-    "exception-port.h",
-    "io-loop.cc",
-    "io-loop.h",
-    "memory-process.cc",
-    "memory-process.h",
+    "exception_port.cc",
+    "exception_port.h",
+    "io_loop.cc",
+    "io_loop.h",
+    "memory_process.cc",
+    "memory_process.h",
     "process.cc",
     "process.h",
     "registers.cc",
@@ -30,24 +27,24 @@ static_library("inferior-control") {
 
   if (current_cpu == "x64") {
     sources += [
-      "arch-amd64.cc",
-      "arch-x86.h",
-      "breakpoint-amd64.cc",
-      "registers-amd64.cc",
-      "registers-amd64.h",
+      "arch_amd64.cc",
+      "arch_x86.h",
+      "breakpoint_amd64.cc",
+      "registers_amd64.cc",
+      "registers_amd64.h",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
-      "arch-arm64.cc",
-      "breakpoint-arm64.cc",
-      "registers-arm64.cc",
-      "registers-arm64.h",
+      "arch_arm64.cc",
+      "breakpoint_arm64.cc",
+      "registers_arm64.cc",
+      "registers_arm64.h",
     ]
   } else {
     sources += [
-      "arch-default.cc",
-      "breakpoint-default.cc",
-      "registers-default.cc",
+      "arch_default.cc",
+      "breakpoint_default.cc",
+      "registers_default.cc",
     ]
   }
 

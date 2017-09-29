@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "inferior-control/process.h"
+#include "garnet/lib/inferior_control/process.h"
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"

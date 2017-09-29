@@ -13,10 +13,10 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 
-#include "inferior-control/exception-port.h"
-#include "inferior-control/process.h"
-#include "inferior-control/server.h"
-#include "inferior-control/thread.h"
+#include "garnet/lib/inferior_control/exception_port.h"
+#include "garnet/lib/inferior_control/process.h"
+#include "garnet/lib/inferior_control/server.h"
+#include "garnet/lib/inferior_control/thread.h"
 
 namespace debugserver {
 

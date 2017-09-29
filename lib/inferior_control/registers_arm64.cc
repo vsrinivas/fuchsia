@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "registers.h"
-#include "registers-arm64.h"
+#include "registers_arm64.h"
 
 #include <cinttypes>
 #include <cstring>

@@ -13,8 +13,8 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-#include "exception-port.h"
-#include "io-loop.h"
+#include "exception_port.h"
+#include "io_loop.h"
 #include "process.h"
 #include "thread.h"
 

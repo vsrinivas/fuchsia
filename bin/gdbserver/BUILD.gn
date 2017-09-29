@@ -11,7 +11,7 @@ group("gdbserver") {
     "bin/ipt",
     "bin/ipt-dump($host_toolchain)",
     "//garnet/lib/debugger_utils",
-    "lib/inferior-control",
+    "//garnet/lib/inferior_control",
   ]
 }
 

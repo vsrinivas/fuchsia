@@ -10,8 +10,8 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "inferior-control/registers.h"
-#include "inferior-control/thread.h"
+#include "garnet/lib/inferior_control/registers.h"
+#include "garnet/lib/inferior_control/thread.h"
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"

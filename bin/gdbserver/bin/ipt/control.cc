@@ -31,8 +31,8 @@
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
 
-#include "inferior-control/arch.h"
-#include "inferior-control/arch-x86.h"
+#include "garnet/lib/inferior_control/arch.h"
+#include "garnet/lib/inferior_control/arch_x86.h"
 
 #include "server.h"
 

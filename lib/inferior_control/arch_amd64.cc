@@ -10,7 +10,7 @@
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
 
-#include "arch-x86.h"
+#include "arch_x86.h"
 #include "thread.h"
 
 namespace debugserver {

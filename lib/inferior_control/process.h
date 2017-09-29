@@ -19,8 +19,8 @@
 #include "garnet/lib/debugger_utils/util.h"
 
 #include "breakpoint.h"
-#include "exception-port.h"
-#include "memory-process.h"
+#include "exception_port.h"
+#include "memory_process.h"
 #include "thread.h"
 
 namespace debugserver {

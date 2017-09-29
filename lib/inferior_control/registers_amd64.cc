@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "registers.h"
-#include "registers-amd64.h"
+#include "registers_amd64.h"
 
 #include <cinttypes>
 #include <cstring>
@@ -16,7 +16,7 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "arch-x86.h"
+#include "arch_x86.h"
 #include "thread.h"
 
 namespace debugserver {
