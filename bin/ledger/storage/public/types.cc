@@ -7,8 +7,8 @@
 namespace storage {
 
 bool operator==(const Entry& lhs, const Entry& rhs) {
-  return lhs.key == rhs.key && lhs.object_id == rhs.object_id &&
-         lhs.priority == rhs.priority;
+  return std::tie(lhs.key, lhs.object_id, lhs.priority) ==
+         std::tie(rhs.key, rhs.object_id, rhs.priority);
 }
 
 bool operator!=(const Entry& lhs, const Entry& rhs) {

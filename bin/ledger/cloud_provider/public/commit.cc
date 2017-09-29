@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/cloud_provider/public/commit.h"
 
+#include <tuple>
 #include <utility>
 
 namespace cloud_provider_firebase {
@@ -20,7 +21,7 @@ Commit::Commit(Commit&& other) = default;
 Commit& Commit::operator=(Commit&& other) = default;
 
 bool Commit::operator==(const Commit& other) const {
-  return id == other.id && content == other.content;
+  return std::tie(id, content) == std::tie(other.id, other.content);
 }
 
 Commit Commit::Clone() const {

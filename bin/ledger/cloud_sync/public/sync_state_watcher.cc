@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 
+#include <tuple>
+
 namespace cloud_sync {
 
 SyncStateWatcher::SyncStateContainer::SyncStateContainer(
@@ -29,7 +31,7 @@ void SyncStateWatcher::Notify(DownloadSyncState download,
 
 bool operator==(const SyncStateWatcher::SyncStateContainer& lhs,
                 const SyncStateWatcher::SyncStateContainer& rhs) {
-  return lhs.download == rhs.download && lhs.upload == rhs.upload;
+  return std::tie(lhs.download, lhs.upload) == std::tie(rhs.download, rhs.upload);
 }
 
 bool operator!=(const SyncStateWatcher::SyncStateContainer& lhs,
