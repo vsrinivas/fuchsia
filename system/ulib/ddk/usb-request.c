@@ -11,6 +11,17 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+// Frees any resources allocated by the usb request, but not the usb request itself.
+static void usb_request_release_static(usb_request_t* req) {
+    io_buffer_release(&req->buffer);
+}
+
+// Frees any resources allocated by the usb request, as well as the usb request itself.
+static void usb_request_release_free(usb_request_t* req) {
+    usb_request_release_static(req);
+    free(req);
+}
+
 zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address) {
     usb_request_t* req = calloc(1, sizeof(usb_request_t));
     if (!req) {
@@ -23,6 +34,7 @@ zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, uint8_t e
     }
     req->header.ep_address = ep_address;
     req->header.length = data_size;
+    req->release_cb = usb_request_release_free;
     *out = req;
     return ZX_OK;
 }
@@ -33,14 +45,29 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle,
     if (!req) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = io_buffer_init_vmo(&req->buffer, vmo_handle, 0, IO_BUFFER_RW);
+    zx_status_t status = io_buffer_init_vmo(&req->buffer, vmo_handle, vmo_offset, IO_BUFFER_RW);
     if (status != ZX_OK) {
         free(req);
         return status;
     }
     req->header.ep_address = ep_address;
     req->header.length = length;
+    req->release_cb = usb_request_release_free;
     *out = req;
+    return ZX_OK;
+}
+
+zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle, uint64_t vmo_offset,
+                             uint64_t length, uint8_t ep_address) {
+    memset(req, 0, sizeof(*req));
+
+    zx_status_t status = io_buffer_init_vmo(&req->buffer, vmo_handle, vmo_offset, IO_BUFFER_RW);
+    if (status != ZX_OK) {
+        return status;
+    }
+    req->header.ep_address = ep_address;
+    req->header.length = length;
+    req->release_cb = usb_request_release_static;
     return ZX_OK;
 }
 
@@ -63,8 +90,9 @@ zx_status_t usb_request_mmap(usb_request_t* req, void** data) {
 }
 
 void usb_request_release(usb_request_t* req) {
-    io_buffer_release(&req->buffer);
-    free(req);
+    if (req->release_cb) {
+        req->release_cb(req);
+    }
 }
 
 void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual) {

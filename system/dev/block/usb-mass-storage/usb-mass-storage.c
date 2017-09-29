@@ -4,6 +4,7 @@
 
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
@@ -23,7 +24,7 @@
 # define DEBUG_PRINT(x) do {} while (0)
 #endif
 
-static csw_status_t ums_verify_csw(ums_t* ums, iotxn_t* csw_request, uint32_t* out_residue);
+static csw_status_t ums_verify_csw(ums_t* ums, usb_request_t* csw_request, uint32_t* out_residue);
 
 
 static zx_status_t ums_reset(ums_t* ums) {
@@ -42,11 +43,7 @@ static zx_status_t ums_reset(ums_t* ums) {
     return status;
 }
 
-static void ums_queue_request(ums_t* ums, iotxn_t* txn) {
-    iotxn_queue(ums->usb_zxdev, txn);
-}
-
-static void ums_txn_complete(iotxn_t* txn, void* cookie) {
+static void ums_req_complete(usb_request_t* req, void* cookie) {
     if (cookie) {
         completion_signal((completion_t *)cookie);
     }
@@ -54,10 +51,14 @@ static void ums_txn_complete(iotxn_t* txn, void* cookie) {
 
 static void ums_send_cbw(ums_t* ums, uint8_t lun, uint32_t transfer_length, uint8_t flags,
                          uint8_t command_len, void* command) {
-    iotxn_t* txn = ums->cbw_iotxn;
+    usb_request_t* req = ums->cbw_req;
 
     ums_cbw_t* cbw;
-    iotxn_mmap(txn, (void **)&cbw);
+    zx_status_t status = usb_request_mmap(req, (void **)&cbw);
+    if (status != ZX_OK) {
+        DEBUG_PRINT(("UMS: usb request mmap failed: %d\n", status));
+        return;
+    }
 
     memset(cbw, 0, sizeof(*cbw));
     cbw->dCBWSignature = htole32(CBW_SIGNATURE);
@@ -71,16 +72,16 @@ static void ums_send_cbw(ums_t* ums, uint8_t lun, uint32_t transfer_length, uint
     memcpy(cbw->CBWCB, command, command_len);
 
     completion_t completion = COMPLETION_INIT;
-    txn->cookie = &completion;
-    ums_queue_request(ums, txn);
+    req->cookie = &completion;
+    usb_request_queue(&ums->usb, req);
     completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
 static zx_status_t ums_read_csw(ums_t* ums, uint32_t* out_residue) {
     completion_t completion = COMPLETION_INIT;
-    iotxn_t* csw_request = ums->csw_iotxn;
+    usb_request_t* csw_request = ums->csw_req;
     csw_request->cookie = &completion;
-    ums_queue_request(ums, csw_request);
+    usb_request_queue(&ums->usb, csw_request);
     completion_wait(&completion, ZX_TIME_INFINITE);
 
     csw_status_t csw_error = ums_verify_csw(ums, csw_request, out_residue);
@@ -98,9 +99,9 @@ static zx_status_t ums_read_csw(ums_t* ums, uint32_t* out_residue) {
     }
 }
 
-static csw_status_t ums_verify_csw(ums_t* ums, iotxn_t* csw_request, uint32_t* out_residue) {
+static csw_status_t ums_verify_csw(ums_t* ums, usb_request_t* csw_request, uint32_t* out_residue) {
     ums_csw_t csw;
-    iotxn_copyfrom(csw_request, &csw, sizeof(csw), 0);
+    usb_request_copyfrom(csw_request, &csw, sizeof(csw), 0);
 
     // check signature is "USBS"
     if (letoh32(csw.dCSWSignature) != CSW_SIGNATURE) {
@@ -128,10 +129,10 @@ static csw_status_t ums_verify_csw(ums_t* ums, iotxn_t* csw_request, uint32_t* o
 
 static void ums_queue_read(ums_t* ums, uint16_t transfer_length) {
     // read request sense response
-    iotxn_t* read_request = ums->data_iotxn;
-    read_request->length = transfer_length;
+    usb_request_t* read_request = ums->data_req;
+    read_request->header.length = transfer_length;
     read_request->cookie = NULL;
-    ums_queue_request(ums, read_request);
+    usb_request_queue(&ums->usb, read_request);
 }
 
 static zx_status_t ums_inquiry(ums_t* ums, uint8_t lun, uint8_t* out_data) {
@@ -148,7 +149,7 @@ static zx_status_t ums_inquiry(ums_t* ums, uint8_t lun, uint8_t* out_data) {
     // wait for CSW
     zx_status_t status = ums_read_csw(ums, NULL);
     if (status == ZX_OK) {
-        iotxn_copyfrom(ums->data_iotxn, out_data, UMS_INQUIRY_TRANSFER_LENGTH, 0);
+        usb_request_copyfrom(ums->data_req, out_data, UMS_INQUIRY_TRANSFER_LENGTH, 0);
     }
     return status;
 }
@@ -178,7 +179,7 @@ static zx_status_t ums_request_sense(ums_t* ums, uint8_t lun, uint8_t* out_data)
     // wait for CSW
     zx_status_t status = ums_read_csw(ums, NULL);
     if (status == ZX_OK) {
-        iotxn_copyfrom(ums->data_iotxn, out_data, UMS_REQUEST_SENSE_TRANSFER_LENGTH, 0);
+        usb_request_copyfrom(ums->data_req, out_data, UMS_REQUEST_SENSE_TRANSFER_LENGTH, 0);
     }
     return status;
 }
@@ -195,7 +196,7 @@ static zx_status_t ums_read_capacity10(ums_t* ums, uint8_t lun, scsi_read_capaci
 
     zx_status_t status = ums_read_csw(ums, NULL);
     if (status == ZX_OK) {
-        iotxn_copyfrom(ums->data_iotxn, out_data, sizeof(*out_data), 0);
+        usb_request_copyfrom(ums->data_req, out_data, sizeof(*out_data), 0);
     }
     return status;
 }
@@ -215,7 +216,7 @@ static zx_status_t ums_read_capacity16(ums_t* ums, uint8_t lun, scsi_read_capaci
 
     zx_status_t status = ums_read_csw(ums, NULL);
     if (status == ZX_OK) {
-        iotxn_copyfrom(ums->data_iotxn, out_data, sizeof(*out_data), 0);
+        usb_request_copyfrom(ums->data_req, out_data, sizeof(*out_data), 0);
     }
     return status;
 }
@@ -235,36 +236,34 @@ static zx_status_t ums_mode_sense6(ums_t* ums, uint8_t lun, scsi_mode_sense_6_da
 
     zx_status_t status = ums_read_csw(ums, NULL);
     if (status == ZX_OK) {
-        iotxn_copyfrom(ums->data_iotxn, out_data, sizeof(*out_data), 0);
+        usb_request_copyfrom(ums->data_req, out_data, sizeof(*out_data), 0);
     }
     return status;
 }
 
 static zx_status_t ums_data_transfer(ums_t* ums, iotxn_t* txn, zx_off_t offset, size_t length,
                                      uint8_t ep_address) {
-    iotxn_t* clone = NULL;
-    zx_status_t status = iotxn_clone_partial(txn, txn->vmo_offset + offset, length, &clone);
+    usb_request_t* req = &ums->data_transfer_req;
+
+    zx_status_t status = usb_request_init(req, txn->vmo_handle,
+                                          txn->vmo_offset + offset,
+                                          length, ep_address);
     if (status != ZX_OK) {
         return status;
     }
-    clone->complete_cb = ums_txn_complete;
-
-    usb_protocol_data_t* pdata = iotxn_pdata(clone, usb_protocol_data_t);
-    memset(pdata, 0, sizeof(*pdata));
-    pdata->ep_address = ep_address;
+    req->complete_cb = ums_req_complete;
 
     completion_t completion = COMPLETION_INIT;
-    clone->cookie = &completion;
-    clone->protocol = ZX_PROTOCOL_USB;
-    ums_queue_request(ums, clone);
+    req->cookie = &completion;
+    usb_request_queue(&ums->usb, req);
     completion_wait(&completion, ZX_TIME_INFINITE);
 
-    status = clone->status;
-    if (status == ZX_OK && clone->actual != length) {
+    status = req->response.status;
+    if (status == ZX_OK && req->response.actual != length) {
         status = ZX_ERR_IO;
     }
 
-    iotxn_release(clone);
+    usb_request_release(req);
     return status;
 }
 
@@ -438,14 +437,14 @@ static void ums_unbind(void* ctx) {
 static void ums_release(void* ctx) {
     ums_t* ums = ctx;
 
-    if (ums->cbw_iotxn) {
-        iotxn_release(ums->cbw_iotxn);
+    if (ums->cbw_req) {
+        usb_request_release(ums->cbw_req);
     }
-    if (ums->data_iotxn) {
-        iotxn_release(ums->data_iotxn);
+    if (ums->data_req) {
+        usb_request_release(ums->data_req);
     }
-    if (ums->csw_iotxn) {
-        iotxn_release(ums->csw_iotxn);
+    if (ums->csw_req) {
+        usb_request_release(ums->csw_req);
     }
 
     free(ums);
@@ -747,27 +746,22 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device, void** cookie) {
     size_t max_out = usb_get_max_transfer_size(&usb, bulk_out_addr);
     ums->max_transfer = (max_in < max_out ? max_in : max_out);
 
-    ums->cbw_iotxn = usb_alloc_iotxn(bulk_out_addr, sizeof(ums_cbw_t));
-    if (!ums->cbw_iotxn) {
-        status = ZX_ERR_NO_MEMORY;
+    status = usb_request_alloc(&ums->cbw_req, sizeof(ums_cbw_t), bulk_out_addr);
+    if (status != ZX_OK) {
         goto fail;
     }
-    ums->data_iotxn = usb_alloc_iotxn(bulk_in_addr, PAGE_SIZE);
-    if (!ums->data_iotxn) {
-        status = ZX_ERR_NO_MEMORY;
+    status = usb_request_alloc(&ums->data_req, PAGE_SIZE, bulk_in_addr);
+    if (status != ZX_OK) {
         goto fail;
     }
-    ums->csw_iotxn = usb_alloc_iotxn(bulk_in_addr, sizeof(ums_csw_t));
-    if (!ums->csw_iotxn) {
-        status = ZX_ERR_NO_MEMORY;
+    status = usb_request_alloc(&ums->csw_req, sizeof(ums_csw_t), bulk_in_addr);
+    if (status != ZX_OK) {
         goto fail;
     }
 
-    ums->cbw_iotxn->length = sizeof(ums_cbw_t);
-    ums->csw_iotxn->length = sizeof(ums_csw_t);
-    ums->cbw_iotxn->complete_cb = ums_txn_complete;
-    ums->data_iotxn->complete_cb = ums_txn_complete;
-    ums->csw_iotxn->complete_cb = ums_txn_complete;
+    ums->cbw_req->complete_cb = ums_req_complete;
+    ums->data_req->complete_cb = ums_req_complete;
+    ums->csw_req->complete_cb = ums_req_complete;
 
     ums->tag_send = ums->tag_receive = 8;
 

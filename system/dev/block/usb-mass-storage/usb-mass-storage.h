@@ -51,9 +51,11 @@ typedef struct {
     size_t bulk_in_max_packet;
     size_t bulk_out_max_packet;
 
-    iotxn_t* cbw_iotxn;
-    iotxn_t* data_iotxn;
-    iotxn_t* csw_iotxn;
+    usb_request_t* cbw_req;
+    usb_request_t* data_req;
+    usb_request_t* csw_req;
+
+    usb_request_t data_transfer_req;  // for use in ums_data_transfer
 
     thrd_t worker_thread;
     bool dead;
