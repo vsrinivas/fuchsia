@@ -86,14 +86,34 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    ":key_generator_unittest",
+    ":link_impl_unittest",
+  ]
+}
+
+source_set("key_generator_unittest") {
+  testonly = true
+
+  sources = [
     "key_generator_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("link_impl_unittest") {
+  testonly = true
+
+  sources = [
     "link_impl_unittest.cc",
   ]
 
   deps = [
     ":story_runner",
-    "//peridot/lib/testing:ledger_repository_for_testing",
-    "//peridot/lib/testing:test_with_message_loop",
+    "//peridot/lib/testing:test_with_ledger",
     "//third_party/gtest",
   ]
 }

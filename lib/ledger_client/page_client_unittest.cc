@@ -7,8 +7,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/testing/ledger_repository_for_testing.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
+#include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace testing {
@@ -58,33 +57,27 @@ class PageClientImpl : PageClient {
   int conflict_count_{};
 };
 
-class PageClientTest : public TestWithMessageLoop {
+class PageClientTest : public TestWithLedger {
  public:
   PageClientTest() : page_id_(to_array("0123456789123456")) {}
 
   ~PageClientTest() = default;
 
   void SetUp() override {
-    ledger_repository_app_ =
-        std::make_unique<LedgerRepositoryForTesting>("page_client_unittest");
-
-    ledger_client_.reset(
-        new LedgerClient(ledger_repository_app_->ledger_repository(), __FILE__,
-                         [] { ASSERT_TRUE(false); }));
-
+    TestWithLedger::SetUp();
     // We only handle one conflict resolution per test case for now.
-    ledger_client_->add_watcher([this] { resolved_ = true; });
+    ledger_client()->add_watcher([this] { resolved_ = true; });
 
     // TODO(mesch): Registration order matters for overlapping prefixes. This
     // should not be like that.
     page_client_a_.reset(
-        new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "a/"));
+        new PageClientImpl(ledger_client(), page_id_.Clone(), "a/"));
     page_client_b_.reset(
-        new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "b/"));
+        new PageClientImpl(ledger_client(), page_id_.Clone(), "b/"));
     page_client_.reset(
-        new PageClientImpl(ledger_client_.get(), page_id_.Clone()));
+        new PageClientImpl(ledger_client(), page_id_.Clone()));
 
-    ledger_client_->ledger()->GetPage(
+    ledger_client()->ledger()->GetPage(
         page_id_.Clone(), page_.NewRequest(),
         [](ledger::Status status) { ASSERT_EQ(ledger::Status::OK, status); });
   }
@@ -93,21 +86,8 @@ class PageClientTest : public TestWithMessageLoop {
     page_client_.reset();
     page_client_a_.reset();
     page_client_b_.reset();
-    ledger_client_.reset();
 
-    bool repo_deleted = false;
-    ledger_repository_app_->Reset([&repo_deleted] { repo_deleted = true; });
-    if (!repo_deleted) {
-      RunLoopUntil([&repo_deleted] { return repo_deleted; });
-    }
-
-    bool terminated = false;
-    ledger_repository_app_->Terminate([&terminated] { terminated = true; });
-    if (!terminated) {
-      RunLoopUntil([&terminated] { return terminated; });
-    }
-
-    ledger_repository_app_.reset();
+    TestWithLedger::TearDown();
   }
 
   PageClientImpl* page_client() { return page_client_.get(); }
@@ -168,10 +148,6 @@ class PageClientTest : public TestWithMessageLoop {
 
  private:
   const LedgerPageId page_id_;
-
-  std::unique_ptr<LedgerRepositoryForTesting> ledger_repository_app_;
-
-  std::unique_ptr<LedgerClient> ledger_client_;
 
   // Separate page clients for different prefixes all for the same page. They
   // share the same page connection since they are created on the same ledger

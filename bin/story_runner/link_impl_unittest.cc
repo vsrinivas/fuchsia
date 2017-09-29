@@ -13,8 +13,7 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/ledger_repository_for_testing.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
+#include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {
 
@@ -69,67 +68,47 @@ class PageClientPeer : modular::PageClient {
   std::string expected_prefix_;
 };
 
-// TODO(mesch): Factor setup and teardown of ledger repository for testing out
-// into a common fixture class, e.g. testing::TestWithLedger.
-class LinkImplTest : public testing::TestWithMessageLoop, modular::LinkWatcher {
+class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
  public:
   LinkImplTest() : watcher_binding_(this) {}
 
   void SetUp() override {
+    TestWithLedger::SetUp();
+
     OperationBase::set_observer([this](const char* const operation_name) {
         FXL_LOG(INFO) << "Operation " << operation_name;
         operations_[operation_name]++;
       });
 
-    ledger_repo_app_ =
-      std::make_unique<modular::testing::LedgerRepositoryForTesting>("link_impl_unittest");
-
-    ledger_client_.reset(new LedgerClient(ledger_repo_app_->ledger_repository(),
-                                          __FILE__,
-                                          [] { ASSERT_TRUE(false); }));
-
     auto page_id = to_array("0123456789123456");
     auto link_path = GetTestLinkPath();
 
-    link_impl_ = std::make_unique<LinkImpl>(ledger_client_.get(),
+    link_impl_ = std::make_unique<LinkImpl>(ledger_client(),
                                             page_id.Clone(),
                                             link_path->Clone());
 
     link_impl_->Connect(link_.NewRequest());
 
-    ledger_client_peer_ = ledger_client_->GetLedgerClientPeer();
+    ledger_client_peer_ = ledger_client()->GetLedgerClientPeer();
     page_client_peer_ =  std::make_unique<PageClientPeer>(ledger_client_peer_.get(),
                                                           page_id.Clone(),
                                                           MakeLinkKey(link_path));
   }
 
   void TearDown() override {
-    OperationBase::set_observer(nullptr);
-
     if (watcher_binding_.is_bound()) {
       watcher_binding_.Close();
     }
 
     link_impl_.reset();
     link_.reset();
-    ledger_client_.reset();
 
     page_client_peer_.reset();
     ledger_client_peer_.reset();
 
-    bool repo_deleted = false;
-    ledger_repo_app_->Reset([&repo_deleted] { repo_deleted = true; });
-    if (!repo_deleted) {
-      RunLoopUntil([&repo_deleted] { return repo_deleted; });
-    }
+    OperationBase::set_observer(nullptr);
 
-    bool terminated = false;
-    ledger_repo_app_->Terminate([&terminated] { terminated = true; });
-    if (!terminated) {
-      RunLoopUntil([&terminated] { return terminated; });
-    }
-
-    ledger_repo_app_.reset();
+    TestWithLedger::TearDown();
   }
 
   int ledger_change_count() const {
@@ -162,10 +141,9 @@ class LinkImplTest : public testing::TestWithMessageLoop, modular::LinkWatcher {
     continue_();
   };
 
-  std::unique_ptr<modular::testing::LedgerRepositoryForTesting> ledger_repo_app_;
-  std::unique_ptr<LedgerClient> ledger_client_;
   std::unique_ptr<LinkImpl> link_impl_;
   LinkPtr link_;
+
   std::unique_ptr<LedgerClient> ledger_client_peer_;
   std::unique_ptr<PageClientPeer> page_client_peer_;
 

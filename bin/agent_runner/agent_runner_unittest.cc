@@ -17,11 +17,9 @@
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_repository.h"
 #include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
-#include "peridot/lib/testing/ledger_repository_for_testing.h"
 #include "peridot/lib/testing/mock_base.h"
-#include "peridot/lib/testing/test_with_message_loop.h"
+#include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace testing {
@@ -54,24 +52,19 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeAgentRunnerStorage);
 };
 
-class AgentRunnerTest : public TestWithMessageLoop {
+class AgentRunnerTest : public TestWithLedger {
  public:
   AgentRunnerTest() = default;
 
   void SetUp() override {
-    ledger_repo_app_ =
-        std::make_unique<LedgerRepositoryForTesting>("agent_runner_unittest");
+    TestWithLedger::SetUp();
 
-    ledger_client_.reset(new LedgerClient(ledger_repo_app_->ledger_repository(),
-                                          __FILE__,
-                                          [] { ASSERT_TRUE(false); }));
-
-    mqm_.reset(new MessageQueueManager(ledger_client_.get(),
+    mqm_.reset(new MessageQueueManager(ledger_client(),
                                        to_array("0123456789123456"),
                                        "/tmp/test_mq_data"));
 
     agent_runner_.reset(new AgentRunner(
-        &launcher_, mqm_.get(), ledger_repo_app_->ledger_repository(),
+        &launcher_, mqm_.get(), ledger_repository(),
         &agent_runner_storage_, token_provider_factory_.get(),
         ui_provider_.get(), &entity_repository_));
   }
@@ -79,21 +72,8 @@ class AgentRunnerTest : public TestWithMessageLoop {
   void TearDown() override {
     agent_runner_.reset();
     mqm_.reset();
-    ledger_client_.reset();
 
-    bool repo_deleted = false;
-    ledger_repo_app_->Reset([&repo_deleted] { repo_deleted = true; });
-    if (!repo_deleted) {
-      RunLoopUntil([&repo_deleted] { return repo_deleted; });
-    }
-
-    bool terminated = false;
-    ledger_repo_app_->Terminate([&terminated] { terminated = true; });
-    if (!terminated) {
-      RunLoopUntil([&terminated] { return terminated; });
-    }
-
-    ledger_repo_app_.reset();
+    TestWithLedger::TearDown();
   }
 
   MessageQueueManager* message_queue_manager() { return mqm_.get(); }
@@ -103,11 +83,8 @@ class AgentRunnerTest : public TestWithMessageLoop {
   FakeApplicationLauncher* launcher() { return &launcher_; }
 
  private:
-  std::unique_ptr<LedgerRepositoryForTesting> ledger_repo_app_;
-
   FakeApplicationLauncher launcher_;
 
-  std::unique_ptr<LedgerClient> ledger_client_;
   std::unique_ptr<MessageQueueManager> mqm_;
   FakeAgentRunnerStorage agent_runner_storage_;
   std::unique_ptr<AgentRunner> agent_runner_;

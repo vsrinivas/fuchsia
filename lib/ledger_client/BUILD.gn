@@ -117,8 +117,7 @@ source_set("page_client_unittest") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:operation",
-    "//peridot/lib/testing:ledger_repository_for_testing",
-    "//peridot/lib/testing:test_with_message_loop",
+    "//peridot/lib/testing:test_with_ledger",
     "//third_party/gtest",
   ]
 }
