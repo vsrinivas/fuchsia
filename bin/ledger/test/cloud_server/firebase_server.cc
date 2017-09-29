@@ -6,9 +6,7 @@
 
 #include <algorithm>
 #include <deque>
-#include <map>
 #include <sstream>
-#include <unordered_map>
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -196,7 +194,7 @@ std::unique_ptr<Filter> ExtractFilter(const url::GURL& url) {
   }
 
   std::string query_string = url.query();
-  std::unordered_map<std::string, std::string> queries;
+  std::map<std::string, std::string> queries;
   for (const auto& query : fxl::SplitString(
            query_string, "&", fxl::WhiteSpaceHandling::kKeepWhitespace,
            fxl::SplitResult::kSplitWantAll)) {
@@ -316,7 +314,7 @@ class FirebaseServer::Listeners {
                  rapidjson::Value* value);
 
  private:
-  std::unordered_map<std::string, Listeners> children_;
+  std::map<std::string, Listeners> children_;
   callback::AutoCleanableSet<ListenerContainer> listeners_;
 };
 

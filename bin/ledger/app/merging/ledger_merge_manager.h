@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 #define PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 
+#include <map>
 #include <memory>
-#include <unordered_map>
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
@@ -39,7 +39,7 @@ class LedgerMergeManager {
   Environment* const environment_;
   ConflictResolverFactoryPtr conflict_resolver_factory_;
 
-  std::unordered_map<storage::PageId, MergeResolver*> resolvers_;
+  std::map<storage::PageId, MergeResolver*> resolvers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerMergeManager);
 };

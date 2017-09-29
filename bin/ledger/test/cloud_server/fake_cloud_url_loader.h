@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_URL_LOADER_H_
 #define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_URL_LOADER_H_
 
-#include <unordered_map>
+#include <map>
 
 #include "lib/fxl/macros.h"
 #include "lib/network/fidl/network_service.fidl.h"
@@ -28,8 +28,8 @@ class FakeCloudURLLoader : public network::URLLoader {
   void QueryStatus(const QueryStatusCallback& callback) override;
 
  private:
-  std::unordered_map<std::string, FirebaseServer> firebase_servers_;
-  std::unordered_map<std::string, GcsServer> gcs_servers_;
+  std::map<std::string, FirebaseServer> firebase_servers_;
+  std::map<std::string, GcsServer> gcs_servers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudURLLoader);
 };

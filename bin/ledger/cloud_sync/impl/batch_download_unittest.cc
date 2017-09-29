@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 
-#include <unordered_map>
+#include <map>
 
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -53,8 +53,8 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   }
 
   bool should_fail_add_commit_from_sync = false;
-  std::unordered_map<storage::CommitId, std::string> received_commits;
-  std::unordered_map<std::string, std::string> sync_metadata;
+  std::map<storage::CommitId, std::string> received_commits;
+  std::map<std::string, std::string> sync_metadata;
 
  private:
   fsl::MessageLoop* message_loop_;

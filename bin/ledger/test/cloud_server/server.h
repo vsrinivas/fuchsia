@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_SERVER_H_
 #define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_SERVER_H_
 
-#include <unordered_map>
+#include <map>
 
 #include "lib/fxl/macros.h"
 #include "lib/network/fidl/network_service.fidl.h"
@@ -43,7 +43,7 @@ class Server {
       const std::string& url,
       ResponseCode code,
       zx::socket body,
-      const std::unordered_map<std::string, std::string>& headers);
+      const std::map<std::string, std::string>& headers);
 
   network::URLResponsePtr BuildResponse(const std::string& url,
                                         ResponseCode code,

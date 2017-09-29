@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unordered_map>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -291,7 +291,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
         response_delay_(response_delay) {}
 
   uint get_policy_calls = 0;
-  std::unordered_map<storage::PageId, ConflictResolverImpl> resolvers;
+  std::map<storage::PageId, ConflictResolverImpl> resolvers;
 
  private:
   // ConflictResolverFactory:

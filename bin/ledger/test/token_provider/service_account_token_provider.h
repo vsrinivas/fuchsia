@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
 #define PERIDOT_BIN_LEDGER_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
 
-#include <unordered_map>
+#include <map>
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
@@ -55,8 +55,8 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
   ledger::NetworkService* network_service_;
   const std::string user_id_;
   std::unique_ptr<Credentials> credentials_;
-  std::unordered_map<std::string, std::unique_ptr<CachedToken>> cached_tokens_;
-  std::unordered_map<std::string, std::vector<GetFirebaseAuthTokenCallback>>
+  std::map<std::string, std::unique_ptr<CachedToken>> cached_tokens_;
+  std::map<std::string, std::vector<GetFirebaseAuthTokenCallback>>
       in_progress_callbacks_;
   callback::CancellableContainer in_progress_requests_;
 

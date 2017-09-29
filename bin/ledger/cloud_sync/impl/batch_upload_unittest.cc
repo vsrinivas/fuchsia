@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 
 #include <functional>
-#include <unordered_map>
+#include <map>
 #include <utility>
 
 #include "gtest/gtest.h"
@@ -140,7 +140,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return commit;
   }
 
-  std::unordered_map<storage::ObjectId, std::unique_ptr<const TestObject>>
+  std::map<storage::ObjectId, std::unique_ptr<const TestObject>>
       unsynced_objects_to_return;
   std::set<storage::ObjectId> objects_marked_as_synced;
   std::set<storage::CommitId> commits_marked_as_synced;

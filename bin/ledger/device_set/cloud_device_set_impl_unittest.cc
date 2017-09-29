@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 
-#include <unordered_map>
+#include <map>
 
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
@@ -69,7 +69,7 @@ class FakeFirebase : public firebase::Firebase {
 
   firebase::Status returned_status = firebase::Status::OK;
   std::string returned_value;
-  std::unordered_map<std::string, std::string> values;
+  std::map<std::string, std::string> values;
   std::vector<std::vector<std::string>> get_query_params;
   std::vector<std::vector<std::string>> put_query_params;
   std::vector<std::string> put_data;

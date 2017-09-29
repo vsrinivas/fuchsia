@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_STORAGE_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TEST_TEST_PAGE_STORAGE_H_
 
+#include <map>
 #include <memory>
 #include <set>
-#include <unordered_map>
 #include <vector>
 
 #include "lib/fsl/socket/strings.h"
@@ -79,7 +79,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       unsynced_commits_to_return;
   size_t head_count = 1;
   // Commits to be returned from GetCommit() calls.
-  std::unordered_map<storage::CommitId, std::unique_ptr<const storage::Commit>>
+  std::map<storage::CommitId, std::unique_ptr<const storage::Commit>>
       new_commits_to_return;
   bool should_fail_get_unsynced_commits = false;
   bool should_fail_get_commit = false;
@@ -93,8 +93,8 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   storage::CommitWatcher* watcher_;
   bool watcher_set = false;
   bool watcher_removed = false;
-  std::unordered_map<storage::CommitId, std::string> received_commits;
-  std::unordered_map<std::string, std::string> sync_metadata;
+  std::map<storage::CommitId, std::string> received_commits;
+  std::map<std::string, std::string> sync_metadata;
 
  private:
   fsl::MessageLoop* message_loop_;

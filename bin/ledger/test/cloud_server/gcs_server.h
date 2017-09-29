@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_GCS_SERVER_H_
 
 #include <functional>
-#include <unordered_map>
+#include <map>
 
 #include "lib/network/fidl/network_service.fidl.h"
 #include "peridot/bin/ledger/test/cloud_server/server.h"
@@ -29,7 +29,7 @@ class GcsServer : public Server {
       network::URLRequestPtr request,
       std::function<void(network::URLResponsePtr)> callback) override;
 
-  std::unordered_map<std::string, std::string> data_;
+  std::map<std::string, std::string> data_;
 };
 
 }  // namespace ledger

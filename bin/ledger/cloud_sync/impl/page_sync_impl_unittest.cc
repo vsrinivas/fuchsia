@@ -5,7 +5,6 @@
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
 
 #include <memory>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 

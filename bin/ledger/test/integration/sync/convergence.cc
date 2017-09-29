@@ -212,8 +212,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
                       std::forward_as_tuple(std::move(resolver)));
   }
 
-  std::unordered_map<storage::PageId, NonAssociativeConflictResolverImpl>
-      resolvers;
+  std::map<storage::PageId, NonAssociativeConflictResolverImpl> resolvers;
 
   fidl::Binding<ledger::ConflictResolverFactory> binding_;
 };

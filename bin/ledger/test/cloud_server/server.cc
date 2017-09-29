@@ -92,7 +92,7 @@ network::URLResponsePtr Server::BuildResponse(
     const std::string& url,
     ResponseCode code,
     zx::socket body,
-    const std::unordered_map<std::string, std::string>& headers) {
+    const std::map<std::string, std::string>& headers) {
   network::URLResponsePtr response = network::URLResponse::New();
   response->url = url;
   response->status_code = static_cast<uint32_t>(code);
@@ -128,7 +128,7 @@ network::URLResponsePtr Server::BuildResponse(const std::string& url,
   glue::SocketPair sockets;
   auto* writer = new glue::StringSocketWriter();
   writer->Start(body, std::move(sockets.socket2));
-  std::unordered_map<std::string, std::string> headers;
+  std::map<std::string, std::string> headers;
   headers["content-length"] = fxl::NumberToString(body.size());
   return BuildResponse(url, code, std::move(sockets.socket1), headers);
 }
