@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-ENABLE_FSHOST := $(call TOBOOL,$(ENABLE_FSHOST))
+ENABLE_FSHOST := true
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
