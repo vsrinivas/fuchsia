@@ -17,8 +17,8 @@
 #include "garnet/lib/inferior_control/server.h"
 #include "garnet/lib/inferior_control/thread.h"
 
-#include "cmd-handler.h"
-#include "io-loop.h"
+#include "cmd_handler.h"
+#include "io_loop.h"
 
 namespace debugserver {
 

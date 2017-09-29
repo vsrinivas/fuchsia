@@ -8,17 +8,17 @@ executable("debugserver") {
   # debuggers, e.g., lldb.
 
   sources = [
-    "cmd-handler.cc",
-    "cmd-handler.h",
-    "io-loop.cc",
-    "io-loop.h",
+    "cmd_handler.cc",
+    "cmd_handler.h",
+    "io_loop.cc",
+    "io_loop.h",
     "main.cc",
     "server.cc",
     "server.h",
-    "stop-reply-packet.cc",
-    "stop-reply-packet.h",
-    "thread-action-list.cc",
-    "thread-action-list.h",
+    "stop_reply_packet.cc",
+    "stop_reply_packet.h",
+    "thread_action_list.cc",
+    "thread_action_list.h",
     "util.cc",
     "util.h",
   ]
@@ -31,8 +31,6 @@ executable("debugserver") {
     "//zircon/system/ulib/zx",
   ]
 
-  include_dirs = [ "../../lib" ]
-
   libs = [
     "launchpad",
     "zircon",
@@ -44,6 +42,7 @@ group("tests") {
 
   deps = [
     ":debugserver-unittests",
+    "test_apps",
   ]
 }
 
@@ -51,14 +50,14 @@ executable("debugserver-unittests") {
   testonly = true
 
   sources = [
-    "../../test/run-all-unittests.cc",
-    "stop-reply-packet-unittest.cc",
-    "stop-reply-packet.cc",
-    "stop-reply-packet.h",
-    "thread-action-list-unittest.cc",
-    "thread-action-list.cc",
-    "thread-action-list.h",
-    "util-unittest.cc",
+    "run_all_unittests.cc",
+    "stop_reply_packet_unittest.cc",
+    "stop_reply_packet.cc",
+    "stop_reply_packet.h",
+    "thread_action_list_unittest.cc",
+    "thread_action_list.cc",
+    "thread_action_list.h",
+    "util_unittest.cc",
     "util.cc",
     "util.h",
   ]
@@ -68,8 +67,6 @@ executable("debugserver-unittests") {
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]
-
-  include_dirs = [ "../../lib" ]
 
   libs = [ "zircon" ]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "cmd-handler.h"
+#include "cmd_handler.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -19,7 +19,7 @@
 #include "lib/fxl/strings/string_printf.h"
 
 #include "server.h"
-#include "thread-action-list.h"
+#include "thread_action_list.h"
 #include "util.h"
 
 namespace debugserver {

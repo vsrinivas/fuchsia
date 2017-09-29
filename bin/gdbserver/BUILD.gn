@@ -7,19 +7,9 @@
 # TODO(dje): TO-127: Move this entire directory to better location.
 group("gdbserver") {
   deps = [
-    "bin/debugserver",
     "bin/ipt",
     "bin/ipt-dump($host_toolchain)",
     "//garnet/lib/debugger_utils",
     "//garnet/lib/inferior_control",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "bin/debugserver:debugserver-unittests",
-    "test-apps",
   ]
 }

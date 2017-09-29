@@ -22,7 +22,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/string_view.h"
 
-#include "stop-reply-packet.h"
+#include "stop_reply_packet.h"
 #include "util.h"
 
 namespace debugserver {

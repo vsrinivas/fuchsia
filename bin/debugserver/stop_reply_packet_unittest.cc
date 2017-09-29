@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "stop-reply-packet.h"
+#include "stop_reply_packet.h"
 
 #include "gtest/gtest.h"
 

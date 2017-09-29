@@ -5,6 +5,7 @@
         "garnet/packages/boringssl",
         "garnet/packages/cmdutils",
         "garnet/packages/cobalt_client",
+        "garnet/packages/debugserver",
         "garnet/packages/drivers",
         "garnet/packages/escher",
         "garnet/packages/fidl_examples",
