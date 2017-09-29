@@ -11,7 +11,6 @@ executable("vkext") {
 
   sources = [
     "main.cc",
-    "vk_external_semaphore_fd.cc",
     "vk_external_semaphore_fuchsia.cc",
     "vk_ext_tiling.cc",
   ]
