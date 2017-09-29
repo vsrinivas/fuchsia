@@ -8,7 +8,8 @@ use {DecodeBuf, EncodeBuf, Error, FidlService, Result, MsgType};
 
 use std::io;
 
-use futures::{Async, Future, Poll};
+use futures::{Async, Future, Poll, Stream};
+use futures::stream::FuturesUnordered;
 use tokio_core::reactor::Handle;
 
 use zircon::Channel;
@@ -30,6 +31,25 @@ pub trait Stub {
     fn dispatch(&mut self, request: &mut DecodeBuf) -> Result<()>;
 }
 
+#[must_use = "futures do nothing unless polled"]
+struct DispatchFuture<S: Stub> {
+    id: u64,
+    future: S::DispatchFuture,
+}
+
+impl<S: Stub> Future for DispatchFuture<S> {
+    type Item = (u64, EncodeBuf);
+    type Error = Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        match self.future.poll() {
+            Ok(Async::Ready(buf)) => Ok(Async::Ready((self.id, buf))),
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 /// FIDL server which processes requests from a channel and runs them through a `Stub`.
 ///
 /// This type is a future which must be polled by an executor.
@@ -38,9 +58,7 @@ pub struct Server<S: Stub> {
     channel: tokio_fuchsia::Channel,
     stub: S,
     buf: DecodeBuf,
-    // TODO(cramertj): consider spawning these separately or keeping them in a
-    // map (rather than a vec) to improve performance
-    dispatch_futures: Vec<(u64, S::DispatchFuture)>,
+    dispatch_futures: FuturesUnordered<DispatchFuture<S>>,
 }
 
 impl<S: Stub> Server<S> {
@@ -50,7 +68,7 @@ impl<S: Stub> Server<S> {
             stub: stub,
             channel: tokio_fuchsia::Channel::from_channel(channel, handle)?,
             buf: DecodeBuf::new(),
-            dispatch_futures: Vec::new(),
+            dispatch_futures: FuturesUnordered::new(),
         })
     }
 }
@@ -61,38 +79,42 @@ impl<S: Stub> Future for Server<S> {
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
-            // Handle one dispatch_future at a time if any are available
-            let item = self.dispatch_futures.iter_mut().enumerate()
-                           .filter_map(|(i, &mut (id, ref mut f))|
-            {
-                match f.poll() {
-                    Ok(Async::NotReady) => None,
-                    Ok(Async::Ready(e)) => Some((i, Ok((id, e)))),
-                    Err(e) => Some((i, Err(e))),
-                }
-            }).next();
+            let made_progress_this_loop_iter;
 
-            if let Some((idx, res)) = item {
-                self.dispatch_futures.remove(idx);
-                let (id, mut encode_buf) = res?;
+            // Handle one dispatch_future at a time if any are available
+            let item = self.dispatch_futures.poll()?;
+            if let Async::Ready(Some((id, mut encode_buf))) = item {
                 encode_buf.set_message_id(id);
                 let (out_buf, handles) = encode_buf.get_mut_content();
                 self.channel.write(out_buf, handles, 0)?;
+                made_progress_this_loop_iter = true;
+            } else {
+                made_progress_this_loop_iter = false;
             }
 
             // Now process incoming requests
-            try_nb!(self.channel.recv_from(0, self.buf.get_mut_buf()));
-
-            match self.buf.decode_message_header() {
-                Some(MsgType::Request) => {
-                    self.stub.dispatch(&mut self.buf)?;
+            match self.channel.recv_from(0, self.buf.get_mut_buf()) {
+                Ok(()) => {
+                    match self.buf.decode_message_header() {
+                        Some(MsgType::Request) => {
+                            self.stub.dispatch(&mut self.buf)?;
+                        }
+                        Some(MsgType::RequestExpectsResponse) => {
+                            let id = self.buf.get_message_id();
+                            let future = self.stub.dispatch_with_response(&mut self.buf);
+                            self.dispatch_futures.push(DispatchFuture { id, future });
+                        }
+                        None | Some(MsgType::Response) => {
+                            return Err(Error::InvalidHeader);
+                        }
+                    }
                 }
-                Some(MsgType::RequestExpectsResponse) => {
-                    let id = self.buf.get_message_id();
-                    let dispatch_future = self.stub.dispatch_with_response(&mut self.buf);
-                    self.dispatch_futures.push((id, dispatch_future));
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    if !made_progress_this_loop_iter {
+                        return Ok(Async::NotReady);
+                    }
                 }
-                None | Some(MsgType::Response) => return Err(Error::InvalidHeader),
+                Err(e) => Err(e)?,
             }
         }
     }

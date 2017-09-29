@@ -5,11 +5,11 @@
 //! Library and runtime for fidl bindings.
 
 #![deny(missing_docs)]
+#![deny(warnings)]
 
 extern crate fuchsia_zircon as zircon;
 extern crate byteorder;
 extern crate futures;
-#[macro_use]
 extern crate tokio_core;
 extern crate tokio_fuchsia;
 

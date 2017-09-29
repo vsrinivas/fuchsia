@@ -316,7 +316,7 @@ mod tests {
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()|{
             let mut req = EncodeBuf::new_request(42);
-            client.send_msg(&mut req);
+            client.send_msg(&mut req).unwrap();
         });
 
         let done = receiver.join(sender);
