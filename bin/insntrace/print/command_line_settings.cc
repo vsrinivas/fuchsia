@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "command-line-settings.h"
+#include "command_line_settings.h"
 
 namespace intel_processor_trace {
 

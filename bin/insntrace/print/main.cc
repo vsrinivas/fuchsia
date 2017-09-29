@@ -20,12 +20,12 @@
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
-#include "command-line-settings.h"
+#include "command_line_settings.h"
 
 using namespace intel_processor_trace;
 
 static constexpr char kUsageString[] =
-    "ipt-dump [options]\n"
+    "insntrace_print [options]\n"
     "\n"
     "These options are required:\n"
     "--pt=FILE           PT input file\n"

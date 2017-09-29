@@ -2,23 +2,23 @@
 # this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Note: ipt-dump can run on the build host (e.g., linux or macos).
+# Note: insntrace_print can run on the build host (e.g., linux or macos).
 # TODO(dje): At the moment it only runs on linux or macos.
 
-executable("ipt-dump") {
+executable("insntrace_print") {
   sources = [
-    "command-line-settings.cc",
-    "command-line-settings.h",
+    "command_line_settings.cc",
+    "command_line_settings.h",
     "main.cc",
-    "printer-config.h",
-    "raw-printer.cc",
-    "raw-printer.h",
+    "printer_config.h",
+    "raw_printer.cc",
+    "raw_printer.h",
   ]
 
   deps = [
+    "third_party/simple-pt:printer",
     "//garnet/lib/debugger_utils",
     "//garnet/lib/intel_pt_decode",
-    "//garnet/bin/gdbserver/third_party/simple-pt:printer",
     "//garnet/public/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]

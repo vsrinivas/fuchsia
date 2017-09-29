@@ -45,8 +45,8 @@ static constexpr uint32_t kCr3MatchReservedMask = 0x1f;
 
 // TODO(dje): Split up into topics, output is long and can scroll off screen.
 constexpr char kUsageString[] =
-  "Usage: ipt [options] program [args...]\n"
-  "       ipt [options] --control action1 [action2 ...]\n"
+  "Usage: insntrace [options] program [args...]\n"
+  "       insntrace [options] --control action1 [action2 ...]\n"
   "\n"
   "  program - the path to the executable to run\n"
   "\n"
@@ -68,7 +68,7 @@ constexpr char kUsageString[] =
   "  --quiet[=level]    set quietness level (opposite of verbose)\n"
   "  --verbose[=level]  set debug verbosity level\n"
   "\n"
-  "IPT configuration options:\n"
+  "Configuration options:\n"
   "  --buffer-order=N   set buffer size, in pages, as a power of 2\n"
   "                       The default is 2: 16KB buffers.\n"
   "  --circular         use a circular trace buffer\n"
@@ -80,7 +80,7 @@ constexpr char kUsageString[] =
   "  --num-buffers=N    set number of buffers\n"
   "                       The default is 16.\n"
   "\n"
-  "IPT Control configuration options (IA32_RTIT_CTL MSR):\n"
+  "Control configuration options (IA32_RTIT_CTL MSR):\n"
   "  --config=option1;option2;...\n"
   "\n"
   "  --config may be specified any number of times.\n"
@@ -482,7 +482,7 @@ int main(int argc, char* argv[]) {
 
   debugserver::IptConfig config = GetIptConfig(cl);
 
-  FXL_LOG(INFO) << "ipt control program starting";
+  FXL_LOG(INFO) << "insntrace control program starting";
 
   bool success;
   if (cl.HasOption("control", nullptr)) {
@@ -492,18 +492,18 @@ int main(int argc, char* argv[]) {
   }
 
   if (!success) {
-    FXL_LOG(INFO) << "ipt exited with error";
+    FXL_LOG(INFO) << "insntrace exited with error";
     return EXIT_FAILURE;
   }
 
-  FXL_LOG(INFO) << "ipt control program exiting";
+  FXL_LOG(INFO) << "insntrace control program exiting";
   return EXIT_SUCCESS;
 }
 
 #else  // !__x86_64
 
 int main(int argc, char* argv[]) {
-  FXL_LOG(ERROR) << "ipt is for x86_64 only";
+  FXL_LOG(ERROR) << "insntrace is currently for x86_64 only";
   return EXIT_FAILURE;
 }
 

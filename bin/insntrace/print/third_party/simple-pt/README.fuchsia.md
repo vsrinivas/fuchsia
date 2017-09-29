@@ -4,4 +4,4 @@ taken at commit 3f375f1bfc6e87e19a610cff2b75b57f75cd275b
 and then heavily rewritten.
 
 Most of simple-pt has been discarded, leaving behind the pieces
-used by bin/gdbserver/bin/ipt-dump.
+used by bin/insntrace/print.

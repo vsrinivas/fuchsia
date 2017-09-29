@@ -6,10 +6,10 @@
 
 #include <string>
 
-#include "garnet/bin/gdbserver/third_party/simple-pt/call-printer.h"
+#include "third_party/simple-pt/call-printer.h"
 
-#include "printer-config.h"
-#include "raw-printer.h"
+#include "printer_config.h"
+#include "raw_printer.h"
 
 namespace intel_processor_trace {
 

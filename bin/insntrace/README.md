@@ -4,7 +4,7 @@ Intel Processor Tracing is a h/w based instruction tracing capability
 provided by newer Intel chips (skylake and onward). See Chapter 36 of
 Intel Volume 3 for architectural details.
 
-Tracing is controlled with the "ipt" program on the target.
+Tracing is controlled with the "insntrace" program on the target.
 
 Two modes of operation are supported: CPU and thread.
 In CPU-based tracing, each CPU is traced regardless of what is executing
@@ -42,7 +42,7 @@ To time the starting and stopping of tracing around one program run it
 as follows:
 
 ```
-$ ipt [options] /path/to/program [program arguments ...]
+$ insntrace [options] /path/to/program [program arguments ...]
 ```
 
 This will:
@@ -53,7 +53,7 @@ This will:
 ### Starting/Stopping Tracing Separately
 
 CPU-based tracing can be controlled with the "--control"
-option to the "ipt" program.
+option to the "insntrace" program.
 
 For flexibility "--control" takes several individual commands:
 
@@ -65,7 +65,7 @@ For flexibility "--control" takes several individual commands:
 
 CPU-based tracing is generally started with the following command:
 
-$ ipt [options] --control init start
+$ insntrace [options] --control init start
 
 This, obviously, combines both initialization and starting of the trace,
 but they don't have to be done together.
@@ -74,7 +74,7 @@ While tracing is enabled you can run whatever you like.
 
 CPU-based tracing is generally stopped with the following command:
 
-$ ipt --control stop dump reset
+$ insntrace --control stop dump reset
 
 This command also writes the trace to files (with the dump command)
 and then resets tracing, releasing all buffers (with the reset command).
@@ -83,7 +83,7 @@ This is for simplicity, but the steps don't have to be done together.
 ## Thread-based Tracing
 
 Thread-based tracing is currently only supported by passing the program
-to trace, and its arguments, to the "ipt" program. A new process is started
+to trace, and its arguments, to the "insntrace" program. A new process is started
 and tracing stops when the program exits.
 
 This mode is not supported quite yet.
@@ -118,14 +118,14 @@ hosts. A script is provided to copy the needed files from the target
 to the host:
 
 ```
-$ sh bin/gdbserver/bin/ipt-dump/ipt-copy-ptout.sh \
+$ sh garnet/bin/insntrace/copy_ptout.sh \
   <zircon-hostname> <input-path-prefix> <output-path-prefix>
 ```
 
 Example:
 
 ```
-$ sh bin/gdbserver/bin/ipt-dump/ipt-copy-ptout.sh \
+$ sh garnet/bin/insntrace/copy_ptout.sh \
   "" /tmp/ptout ./ptout
 ```
 
@@ -135,7 +135,7 @@ This will copy files from the default zircon host ("") with prefix
 Example session:
 
 ```
-zircon$ ipt --num-buffers=256 --config="'cyc;cyc-thresh=2'" \
+zircon$ insntrace --num-buffers=256 --config="'cyc;cyc-thresh=2'" \
   /system/test/debugserver/syscall-test 1000
 zircon$ ls -l /tmp/ptout.*
 -rw-------    1 0        0            621984 Jul 11 13:08 ptout.cpu0.pt
@@ -145,7 +145,7 @@ zircon$ ls -l /tmp/ptout.*
 -rw-------    1 0        0              5472 Jul 11 13:08 ptout.ktrace
 -rw-------    1 0        0                84 Jul 11 13:08 ptout.ptlist
 
-linux$ sh bin/gdbserver/bin/ipt-dump/ipt-copy-ptout.sh "" /tmp/ptout ./ptout
+linux$ sh garnet/bin/insntrace/copy_ptout.sh "" /tmp/ptout ./ptout
 linux$ ls -l ptout.*
 -rw-r----- 1 dje eng   621984 Jul 10 22:16 ptout.cpu0.pt
 -rw-r----- 1 dje eng    10080 Jul 10 22:16 ptout.cpu1.pt
@@ -173,11 +173,11 @@ executed. The "calls" format prints a trace of function calls
 formatted to show subroutine call and return.
 
 There are a lot of inputs in order to get usable output.
-The "ipt-dump" program currently requires one to specify them all.
+The "insntrace_print" program currently requires one to specify them all.
 
-To see a list of all options run "ipt-dump --help".
+To see a list of all options run "insntrace_print --help".
 
-Note: An early development version of "ipt-dump" included a disassembler
+Note: An early development version of "insntrace_print" included a disassembler
 which was handy. However, the disassembler used wasn't the LLVM disassembler
 and so was never checked in. It's still a work-in-progress to add this feature.
 
@@ -188,7 +188,7 @@ To obtain a dump of raw output:
 ```
 linux$ ZIRCON_BUILDROOT=out/build-zircon/build-zircon-pc-x86-64
 linux$ FUCHSIA_BUILDROOT=out/debug-x86-64
-linux$ $FUCHSIA_BUILDROOT/host_x64/ipt-dump \
+linux$ $FUCHSIA_BUILDROOT/host_x64/insntrace_print \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
   --map=loglistener.log \
@@ -244,7 +244,7 @@ To obtain a dump of calls output:
 ```
 linux$ ZIRCON_BUILDROOT=out/build-zircon/build-zircon-pc-x86-64
 linux$ FUCHSIA_BUILDROOT=out/debug-x86-64
-linux$ $FUCHSIA_BUILDROOT/host_x64/ipt-dump \
+linux$ $FUCHSIA_BUILDROOT/host_x64/insntrace_print \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
   --map=loglistener.log \
@@ -389,7 +389,7 @@ ldso.trace=true
 ```
 
 Also, one must save "loglistener" output to a file and pass the
-PATH of this file to "ipt-dump". The author runs loglistener thusly:
+path of this file to "insntrace_print". The author runs loglistener thusly:
 
 ```
 $ TOOLSDIR="out/build-zircon/build-zircon-pc-x86-64/tools"
@@ -399,6 +399,6 @@ $ $TOOLSDIR/loglistener 2>&1 | tee loglistener.log
 The path to the log file is passed with the "--map=PATH" option.
 Think of the needed data as being the "load map".
 
-Ipt-dump is smart enough to recognize reboots in the loglistener output
+Insntrace_print is smart enough to recognize reboots in the loglistener output
 and discard all preceding trace data so there is no need to restart
 loglistener for each reboot.

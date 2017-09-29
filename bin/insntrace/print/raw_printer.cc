@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "raw-printer.h"
+#include "raw_printer.h"
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -14,7 +14,7 @@
 
 #include "garnet/lib/intel_pt_decode/decoder.h"
 
-#include "garnet/bin/gdbserver/third_party/simple-pt/printer-util.h"
+#include "third_party/simple-pt/printer-util.h"
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"

@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# There's no way to specify in packages/gn/gdbserver that the ipt only exists
-# for x64, so we build it even for arm64, but it's just a stub.
+import("//build/host.gni")
 
-executable("ipt") {
+executable("insntrace") {
   if (current_cpu == "x64") {
     sources = [
       "control.cc",
@@ -27,10 +26,17 @@ executable("ipt") {
     "//garnet/public/lib/fsl",
   ]
 
-  include_dirs = [ "../../lib" ]
-
   libs = [
     "launchpad",
     "zircon",
+  ]
+}
+
+install_host_tools("host_insntrace_print") {
+  deps = [
+    "print:insntrace_print",
+  ]
+  outputs = [
+    "insntrace_print",
   ]
 }
