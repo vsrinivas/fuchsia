@@ -158,7 +158,9 @@ void MediaPacketProducerBase::ProducePacket(
         }
 
         FLOG(log_channel_, RetiringPacket(label, packets_outstanding));
-        (void)packets_outstanding;  // Avoids 'unused' error in release builds.
+        // Avoids 'unused' error in release builds.
+        (void)label;
+        (void)packets_outstanding;
 
         if (demand) {
           UpdateDemand(*demand);
