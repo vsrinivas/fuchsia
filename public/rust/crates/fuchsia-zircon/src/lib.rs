@@ -212,7 +212,7 @@ impl From<Status> for io::ErrorKind {
             ErrPeerClosed => ConnectionAborted,
             ErrNotFound => NotFound,
             ErrAlreadyExists => AlreadyExists,
-            ErrAlreadybound => AlreadyExists,
+            ErrAlreadyBound => AlreadyExists,
             ErrUnavailable => AddrNotAvailable,
             ErrAccessDenied => PermissionDenied,
             ErrIoRefused => ConnectionRefused,
