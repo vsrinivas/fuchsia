@@ -301,8 +301,8 @@ struct InterfaceDeclaration {
 
 struct StructMember {
     StructMember(std::unique_ptr<Type> type,
-                      std::unique_ptr<Identifier> identifier,
-                      std::unique_ptr<Constant> maybe_default_value)
+                 std::unique_ptr<Identifier> identifier,
+                 std::unique_ptr<Constant> maybe_default_value)
         : type(std::move(type)),
           identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)) {}
