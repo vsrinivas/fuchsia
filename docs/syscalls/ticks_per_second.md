@@ -20,6 +20,9 @@ second.
 This can be used together with **zx_ticks_get**() to calculate the amount of
 time elapsed between two subsequent calls to **zx_ticks_get**().
 
+This value can vary from boot to boot of a given system. Once booted,
+this value is guaranteed not to change.
+
 ## RETURN VALUE
 
 **zx_ticks_per_second**() returns the number of high-precision timer ticks in a
