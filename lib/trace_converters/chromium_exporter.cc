@@ -116,9 +116,8 @@ void ChromiumExporter::Stop() {
     writer_.EndObject();
   }
 
-  for (const auto& record : fuchsia_records_) {
-    // Only context switch records are processed right now.
-    ExportContextSwitch(record.GetContextSwitch());
+  for (const auto& record : context_switch_records_) {
+    ExportContextSwitch(record);
   }
 
   writer_.EndArray();
@@ -143,7 +142,9 @@ void ChromiumExporter::ExportRecord(const reader::Record& record) {
       ExportLog(record.GetLog());
       break;
     case RecordType::kContextSwitch:
-      fuchsia_records_.push_back(record);
+      // We can't emit these into the regular stream, save them for later.
+      context_switch_records_.push_back(record.GetContextSwitch());
+      break;
     default:
       break;
   }
@@ -380,4 +381,5 @@ void ChromiumExporter::ExportContextSwitch(
   writer_.EndObject();
   writer_.EndObject();
 }
+
 }  // namespace tracing

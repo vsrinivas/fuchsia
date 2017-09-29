@@ -42,9 +42,10 @@ class ChromiumExporter {
   std::unordered_map<zx_koid_t, std::string> processes_;
   std::unordered_map<zx_koid_t, std::tuple<zx_koid_t, std::string>> threads_;
 
-  // We need to cache fuchsia records so they can be written to a different
-  // section.
-  std::vector<reader::Record> fuchsia_records_;
+  // The chromium/catapult trace file format doesn't support context switch
+  // records, so we can't emit them inline. Save them for later emission to
+  // the systemTraceEvents section.
+  std::vector<reader::Record::ContextSwitch> context_switch_records_;
 };
 
 }  // namespace tracing
