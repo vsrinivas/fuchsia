@@ -237,29 +237,15 @@ void JobDispatcher::Kill() {
 
         state_ = State::KILLING;
 
-        // Convert our raw pointers into refcounted. We will do the killing
-        // outside the lock.  This is tricky and requires special logic on
-        // the RefPtr class to handle a refcount that can be zero.
-        //
-        // The main requirement is that |lock_| is both controlling child
-        // list lookup and also making sure that the child destructor cannot
-        // make progress when doing so.  In other words, when inspecting
-        // the |jobs_| or |procs_| list we can be sure that a given child
-        // process or child job is either
-        //   - alive, with refcount > 0
-        //   - in destruction process but blocked, refcount == 0
-        //
-        for (auto& j : jobs_) {
-            auto jd = ::fbl::internal::MakeRefPtrUpgradeFromRaw(&j, lock_);
-            if (jd)
-                jobs_to_kill.push_front(fbl::move(jd));
-        }
-
-        for (auto& p : procs_) {
-            auto pd = ::fbl::internal::MakeRefPtrUpgradeFromRaw(&p, lock_);
-            if (pd)
-                procs_to_kill.push_front(fbl::move(pd));
-        }
+        // Safely gather refs to the children.
+        ForEachChildInLocked(jobs_, [&](fbl::RefPtr<JobDispatcher> job) {
+            jobs_to_kill.push_front(fbl::move(job));
+            return ZX_OK;
+        });
+        ForEachChildInLocked(procs_, [&](fbl::RefPtr<ProcessDispatcher> proc) {
+            procs_to_kill.push_front(fbl::move(proc));
+            return ZX_OK;
+        });
     }
 
     // Since we kill the child jobs first we have a depth-first massacre.
@@ -297,47 +283,58 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
 
     AutoLock lock(&lock_);
 
-    for (auto& proc : procs_) {
-        if (!je->OnProcess(&proc)) {
-            return false;
-        }
+    zx_status_t s = ForEachChildInLocked(
+        procs_, [&](fbl::RefPtr<ProcessDispatcher> proc) {
+            return je->OnProcess(proc.get()) ? ZX_OK : ZX_ERR_STOP;
+        });
+    if (s != ZX_OK) {
+        return false;
     }
-
-    for (auto& job : jobs_) {
-        if (!je->OnJob(&job)) {
-            return false;
+    s = ForEachChildInLocked(jobs_, [&](fbl::RefPtr<JobDispatcher> job) {
+        if (!je->OnJob(job.get())) {
+            return ZX_ERR_STOP;
         }
         if (recurse) {
             // TODO(kulakowski): This recursive call can overflow the stack.
-            if (!job.EnumerateChildren(je, /* recurse */ true)) {
-                return false;
-            }
+            return job->EnumerateChildren(je, /* recurse */ true)
+                       ? ZX_OK
+                       : ZX_ERR_STOP;
         }
-    }
-    return true;
+        return ZX_OK;
+    });
+    return s == ZX_OK;
 }
 
-fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(zx_koid_t koid) {
+fbl::RefPtr<ProcessDispatcher>
+JobDispatcher::LookupProcessById(zx_koid_t koid) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
-    for (auto& proc : procs_) {
-        if (proc.get_koid() == koid)
-            return fbl::RefPtr<ProcessDispatcher>(&proc);
-    }
-    return nullptr;
+    fbl::RefPtr<ProcessDispatcher> found_proc;
+    ForEachChildInLocked(procs_, [&](fbl::RefPtr<ProcessDispatcher> proc) {
+        if (proc->get_koid() == koid) {
+            found_proc = fbl::move(proc);
+            return ZX_ERR_STOP;
+        }
+        return ZX_OK;
+    });
+    return found_proc; // Null if not found.
 }
 
-fbl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(zx_koid_t koid) {
+fbl::RefPtr<JobDispatcher>
+JobDispatcher::LookupJobById(zx_koid_t koid) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
-    for (auto& job : jobs_) {
-        if (job.get_koid() == koid) {
-            return fbl::RefPtr<JobDispatcher>(&job);
+    fbl::RefPtr<JobDispatcher> found_job;
+    ForEachChildInLocked(jobs_, [&](fbl::RefPtr<JobDispatcher> job) {
+        if (job->get_koid() == koid) {
+            found_job = fbl::move(job);
+            return ZX_ERR_STOP;
         }
-    }
-    return nullptr;
+        return ZX_OK;
+    });
+    return found_job; // Null if not found.
 }
 
 void JobDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
