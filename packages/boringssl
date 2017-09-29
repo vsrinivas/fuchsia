@@ -3,8 +3,8 @@
         "cpp"
     ],
     "imports": [
-        "packages/gn/boringssl_libcrypto",
-        "packages/gn/boringssl_libssl"
+        "garnet/packages/boringssl_libcrypto",
+        "garnet/packages/boringssl_libssl"
     ],
     "packages": {
         "boringssl": "//third_party/boringssl",
