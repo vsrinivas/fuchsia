@@ -32,10 +32,12 @@ struct ContextDebugValue {
   ContextValue? value;
 };
 
-// If |query| is omitted, this subscription was removed.
 struct ContextDebugSubscription {
   string id;
-  SubscriptionDebugInfo debug_info;
+
+  // These are null when describing a subscription that was removed, although
+  // it's safe to condition only on |query|.
+  SubscriptionDebugInfo? debug_info;
   ContextQuery? query;
 };
 
