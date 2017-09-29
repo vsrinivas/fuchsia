@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
+#include "garnet/lib/intel_pt_decode/decoder.h"
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"

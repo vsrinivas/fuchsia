@@ -34,7 +34,7 @@
 #include <memory>
 #include <string>
 
-#include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
+#include "garnet/lib/intel_pt_decode/decoder.h"
 
 #include "lib/fxl/macros.h"
 

@@ -13,9 +13,10 @@
 #include "garnet/lib/debugger_utils/elf_symtab.h"
 #include "garnet/lib/debugger_utils/ktrace_reader.h"
 #include "garnet/lib/debugger_utils/load_maps.h"
-#include "garnet/bin/gdbserver/third_party/simple-pt/symtab.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
+
+#include "third_party/simple-pt/symtab.h"
 
 namespace intel_processor_trace {
 

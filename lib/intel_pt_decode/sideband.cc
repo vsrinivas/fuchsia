@@ -13,14 +13,15 @@
 
 #include "garnet/lib/debugger_utils/ktrace_reader.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "garnet/bin/gdbserver/third_party/simple-pt/elf.h"
-#include "garnet/bin/gdbserver/third_party/simple-pt/symtab.h"
 
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+
+#include "third_party/simple-pt/elf.h"
+#include "third_party/simple-pt/symtab.h"
 
 namespace intel_processor_trace {
 

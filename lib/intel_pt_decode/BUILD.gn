@@ -2,7 +2,7 @@
 # this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("intel-pt-decode") {
+source_set("intel_pt_decode") {
   sources = [
     "decoder.cc",
     "decoder.h",
@@ -10,8 +10,8 @@ source_set("intel-pt-decode") {
   ]
 
   deps = [
+    "third_party/simple-pt:reader",
     "//garnet/lib/debugger_utils",
-    "//garnet/bin/gdbserver/third_party/simple-pt:reader",
     "//garnet/public/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]

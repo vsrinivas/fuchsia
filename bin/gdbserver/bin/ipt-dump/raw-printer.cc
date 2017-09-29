@@ -12,7 +12,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
+#include "garnet/lib/intel_pt_decode/decoder.h"
+
 #include "garnet/bin/gdbserver/third_party/simple-pt/printer-util.h"
 
 #include "lib/fxl/command_line.h"
