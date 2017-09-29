@@ -40,7 +40,9 @@ class ACLDataChannelTest : public TestingBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannelTest);
 };
 
-TEST_F(ACLDataChannelTest, VerifyMTUs) {
+using HCI_ACLDataChannelTest = ACLDataChannelTest;
+
+TEST_F(HCI_ACLDataChannelTest, VerifyMTUs) {
   const DataBufferInfo kBREDRBufferInfo(1024, 50);
   const DataBufferInfo kLEBufferInfo(64, 16);
 
@@ -67,7 +69,7 @@ TEST_F(ACLDataChannelTest, VerifyMTUs) {
 }
 
 // Test that SendPacket works using only the BR/EDR buffer.
-TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
+TEST_F(HCI_ACLDataChannelTest, SendPacketBREDRBuffer) {
   constexpr size_t kMaxMTU = 5;
   constexpr size_t kMaxNumPackets = 5;
   constexpr ConnectionHandle kHandle0 = 0x0001;
@@ -138,7 +140,7 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
 
 // Test that SendPacket works using the LE buffer when no BR/EDR buffer is
 // available.
-TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
+TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
   constexpr size_t kMaxMTU = 5;
   constexpr size_t kTotalAttempts = 12;
   constexpr size_t kTotalExpected = 6;
@@ -224,7 +226,7 @@ TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
 
 // Test that SendPacket works for LE packets when both buffer types are
 // available.
-TEST_F(ACLDataChannelTest, SendLEPacketBothBuffers) {
+TEST_F(HCI_ACLDataChannelTest, SendLEPacketBothBuffers) {
   constexpr size_t kMaxMTU = 200;
   constexpr size_t kMaxNumPackets = 50;
   constexpr size_t kLEMaxMTU = 5;
@@ -302,7 +304,7 @@ TEST_F(ACLDataChannelTest, SendLEPacketBothBuffers) {
 
 // Test that SendPacket works for BR/EDR packets when both buffer types are
 // available.
-TEST_F(ACLDataChannelTest, SendBREDRPacketBothBuffers) {
+TEST_F(HCI_ACLDataChannelTest, SendBREDRPacketBothBuffers) {
   constexpr size_t kLEMaxMTU = 200;
   constexpr size_t kLEMaxNumPackets = 50;
   constexpr size_t kMaxMTU = 5;
@@ -378,7 +380,7 @@ TEST_F(ACLDataChannelTest, SendBREDRPacketBothBuffers) {
   EXPECT_EQ(5, handle1_packet_count);
 }
 
-TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
+TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
   constexpr size_t kMaxMTU = 1;
   constexpr size_t kMaxNumPackets = 1;
   constexpr size_t kLEMaxMTU = 5;
@@ -482,7 +484,7 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
   EXPECT_EQ(kExpectedTotalPacketCount, total_packet_count);
 }
 
-TEST_F(ACLDataChannelTest, SendPacketsFailure) {
+TEST_F(HCI_ACLDataChannelTest, SendPacketsFailure) {
   constexpr size_t kMaxMTU = 5;
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, 100), DataBufferInfo());
 
@@ -500,7 +502,7 @@ TEST_F(ACLDataChannelTest, SendPacketsFailure) {
 }
 
 // Tests sending multiple packets in a single call.
-TEST_F(ACLDataChannelTest, SendPackets) {
+TEST_F(HCI_ACLDataChannelTest, SendPackets) {
   constexpr int kExpectedPacketCount = 5;
   InitializeACLDataChannel(DataBufferInfo(1024, 100), DataBufferInfo());
 
@@ -547,7 +549,7 @@ TEST_F(ACLDataChannelTest, SendPackets) {
 }
 
 // Test sending batches of packets atomically across multiple threads.
-TEST_F(ACLDataChannelTest, SendPacketsAtomically) {
+TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
   constexpr size_t kThreadCount = 10;
   constexpr size_t kPacketsPerThread = 10;
   constexpr size_t kExpectedPacketCount = kThreadCount * kPacketsPerThread;
@@ -608,7 +610,7 @@ TEST_F(ACLDataChannelTest, SendPacketsAtomically) {
   }
 }
 
-TEST_F(ACLDataChannelTest, ReceiveData) {
+TEST_F(HCI_ACLDataChannelTest, ReceiveData) {
   constexpr size_t kMaxMTU = 5;
   constexpr size_t kMaxNumPackets = 5;
 
@@ -662,7 +664,7 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
   EXPECT_EQ(0x0002, packet1_handle);
 }
 
-TEST_F(ACLDataChannelTest, TransportClosedCallback) {
+TEST_F(HCI_ACLDataChannelTest, TransportClosedCallback) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
 
   bool closed_cb_called = false;
@@ -679,7 +681,7 @@ TEST_F(ACLDataChannelTest, TransportClosedCallback) {
   EXPECT_TRUE(closed_cb_called);
 }
 
-TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
+TEST_F(HCI_ACLDataChannelTest, TransportClosedCallbackBothChannels) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
 
   int closed_cb_count = 0;

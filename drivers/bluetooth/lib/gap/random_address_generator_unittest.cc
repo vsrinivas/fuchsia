@@ -12,9 +12,9 @@ namespace bluetooth {
 namespace gap {
 namespace {
 
-using RandomAddressTest = ::testing::Test;
+using GAP_RandomAddressGeneratorTest = ::testing::Test;
 
-TEST_F(RandomAddressTest, StaticAddressFormat) {
+TEST_F(GAP_RandomAddressGeneratorTest, StaticAddressFormat) {
   RandomAddressGenerator r;
 
   common::DeviceAddress s1 = r.StaticAddress();
@@ -29,7 +29,7 @@ TEST_F(RandomAddressTest, StaticAddressFormat) {
   EXPECT_TRUE(a <= 'F');
 }
 
-TEST_F(RandomAddressTest, StaticAddressPersistence) {
+TEST_F(GAP_RandomAddressGeneratorTest, StaticAddressPersistence) {
   RandomAddressGenerator r;
 
   common::DeviceAddress s1 = r.StaticAddress();
@@ -42,7 +42,7 @@ TEST_F(RandomAddressTest, StaticAddressPersistence) {
   EXPECT_NE(s1, r2.StaticAddress());
 }
 
-TEST_F(RandomAddressTest, PrivateAddressFormat) {
+TEST_F(GAP_RandomAddressGeneratorTest, PrivateAddressFormat) {
   common::DeviceAddress s1 = RandomAddressGenerator::PrivateAddress();
 
   // They should have the two most significant bytes unset
@@ -55,7 +55,7 @@ TEST_F(RandomAddressTest, PrivateAddressFormat) {
   EXPECT_TRUE(a >= '0');
 }
 
-TEST_F(RandomAddressTest, PrivateAddressRandomness) {
+TEST_F(GAP_RandomAddressGeneratorTest, PrivateAddressRandomness) {
   RandomAddressGenerator r;
 
   common::DeviceAddress s1 = RandomAddressGenerator::PrivateAddress();

@@ -15,7 +15,7 @@ namespace hci {
 namespace test {
 namespace {
 
-TEST(AdvertisingReportParserTest, EmptyReport) {
+TEST(HCI_AdvertisingReportParserTest, EmptyReport) {
   auto bytes = common::CreateStaticByteBuffer(0x3E, 0x02, 0x02, 0x00);
 
   auto event = EventPacket::New(bytes.size() - sizeof(EventHeader));
@@ -30,7 +30,7 @@ TEST(AdvertisingReportParserTest, EmptyReport) {
   EXPECT_FALSE(parser.GetNextReport(&data, &rssi));
 }
 
-TEST(AdvertisingReportParserTest, SingleReportMalformed) {
+TEST(HCI_AdvertisingReportParserTest, SingleReportMalformed) {
   // clang-format off
 
   auto bytes = common::CreateStaticByteBuffer(
@@ -56,7 +56,7 @@ TEST(AdvertisingReportParserTest, SingleReportMalformed) {
   EXPECT_TRUE(parser.encountered_error());
 }
 
-TEST(AdvertisingReportParserTest, SingleReportNoData) {
+TEST(HCI_AdvertisingReportParserTest, SingleReportNoData) {
   // clang-format off
 
   auto bytes = common::CreateStaticByteBuffer(
@@ -91,7 +91,7 @@ TEST(AdvertisingReportParserTest, SingleReportNoData) {
   EXPECT_FALSE(parser.encountered_error());
 }
 
-TEST(AdvertisingReportParserTest, ReportsValidInvalid) {
+TEST(HCI_AdvertisingReportParserTest, ReportsValidInvalid) {
   // clang-format off
 
   auto bytes = common::CreateStaticByteBuffer(
@@ -132,7 +132,7 @@ TEST(AdvertisingReportParserTest, ReportsValidInvalid) {
   EXPECT_TRUE(parser.encountered_error());
 }
 
-TEST(AdvertisingReportParserTest, ReportsAllValid) {
+TEST(HCI_AdvertisingReportParserTest, ReportsAllValid) {
   // clang-format off
 
   auto bytes = common::CreateStaticByteBuffer(
@@ -200,7 +200,7 @@ TEST(AdvertisingReportParserTest, ReportsAllValid) {
   EXPECT_FALSE(parser.encountered_error());
 }
 
-TEST(AdvertisingReportParserTest, ReportCountLessThanPayloadSize) {
+TEST(HCI_AdvertisingReportParserTest, ReportCountLessThanPayloadSize) {
   // clang-format off
 
   auto bytes = common::CreateStaticByteBuffer(
@@ -249,7 +249,7 @@ TEST(AdvertisingReportParserTest, ReportCountLessThanPayloadSize) {
   EXPECT_TRUE(parser.encountered_error());
 }
 
-TEST(AdvertisingReportParserTest, ReportCountGreaterThanPayloadSize) {
+TEST(HCI_AdvertisingReportParserTest, ReportCountGreaterThanPayloadSize) {
   // clang-format off
 
   auto bytes = common::CreateStaticByteBuffer(

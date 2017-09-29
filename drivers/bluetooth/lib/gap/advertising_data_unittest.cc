@@ -26,20 +26,20 @@ constexpr char kId3AsString[] = "12341234-0000-1000-8000-00805f9b34fb";
 
 constexpr size_t kRandomDataSize = 100;
 
-TEST(AdvertisingDataTest, ReaderEmptyData) {
+TEST(GAP_AdvertisingDataTest, ReaderEmptyData) {
   common::BufferView empty;
   AdvertisingDataReader reader(empty);
   EXPECT_FALSE(reader.is_valid());
   EXPECT_FALSE(reader.HasMoreData());
 }
 
-TEST(AdvertisingDataTest, MakeEmpty) {
+TEST(GAP_AdvertisingDataTest, MakeEmpty) {
   AdvertisingData data;
 
   EXPECT_EQ(0u, data.CalculateBlockSize());
 }
 
-TEST(AdvertisingDataTest, EncodeKnownURI) {
+TEST(GAP_AdvertisingDataTest, EncodeKnownURI) {
   AdvertisingData data;
   data.AddURI("https://abc.xyz");
 
@@ -52,7 +52,7 @@ TEST(AdvertisingDataTest, EncodeKnownURI) {
   EXPECT_TRUE(ContainersEqual(bytes, block));
 }
 
-TEST(AdvertisingDataTest, EncodeUnknownURI) {
+TEST(GAP_AdvertisingDataTest, EncodeUnknownURI) {
   AdvertisingData data;
   data.AddURI("flubs:xyz");
 
@@ -66,7 +66,7 @@ TEST(AdvertisingDataTest, EncodeUnknownURI) {
   EXPECT_TRUE(ContainersEqual(bytes, block));
 }
 
-TEST(AdvertisingDataTest, CompressServiceUUIDs) {
+TEST(GAP_AdvertisingDataTest, CompressServiceUUIDs) {
   AdvertisingData data;
   data.AddServiceUuid(common::UUID(kId1As16));
   data.AddServiceUuid(common::UUID(kId2As16));
@@ -84,7 +84,7 @@ TEST(AdvertisingDataTest, CompressServiceUUIDs) {
   EXPECT_TRUE(ContainersEqual(bytes, block));
 }
 
-TEST(AdvertisingDataTest, ParseBlock) {
+TEST(GAP_AdvertisingDataTest, ParseBlock) {
   auto bytes = common::CreateStaticByteBuffer(
       // Complete 16-bit UUIDs
       0x05, 0x03, 0x12, 0x02, 0x22, 0x11,
@@ -106,7 +106,7 @@ TEST(AdvertisingDataTest, ParseBlock) {
   EXPECT_EQ(-113, *(data.tx_power()));
 }
 
-TEST(AdvertisingDataTest, ParseFIDL) {
+TEST(GAP_AdvertisingDataTest, ParseFIDL) {
   auto fidl_ad = ::btfidl::low_energy::AdvertisingData::New();
 
   // Confirming UTF-8 codepoints are working as well.
@@ -135,7 +135,7 @@ TEST(AdvertisingDataTest, ParseFIDL) {
   EXPECT_FALSE(data.tx_power());
 }
 
-TEST(AdvertisingDataTest, ManufacturerZeroLength) {
+TEST(GAP_AdvertisingDataTest, ManufacturerZeroLength) {
   auto bytes = common::CreateStaticByteBuffer(
       // Complete 16-bit UUIDs
       0x05, 0x03, 0x12, 0x02, 0x22, 0x11,
@@ -152,7 +152,7 @@ TEST(AdvertisingDataTest, ManufacturerZeroLength) {
   EXPECT_EQ(0u, data.manufacturer_data(0x1234).size());
 }
 
-TEST(AdvertisingDataTest, ServiceData) {
+TEST(GAP_AdvertisingDataTest, ServiceData) {
   // A typical Eddystone-URL beacon advertisement
   // to "https://fuchsia.cl"
   auto bytes = common::CreateStaticByteBuffer(
@@ -178,7 +178,7 @@ TEST(AdvertisingDataTest, ServiceData) {
   EXPECT_TRUE(ContainersEqual(bytes.view(8), data.service_data(eddystone)));
 }
 
-TEST(AdvertisingDataTest, Equality) {
+TEST(GAP_AdvertisingDataTest, Equality) {
   AdvertisingData one, two;
 
   common::UUID gatt(kGattUuid);
@@ -218,7 +218,7 @@ TEST(AdvertisingDataTest, Equality) {
   EXPECT_EQ(three, four);
 }
 
-TEST(AdvertisingDataTest, Copy) {
+TEST(GAP_AdvertisingDataTest, Copy) {
   common::UUID gatt(kGattUuid);
   common::UUID eddy(kEddystoneUuid);
   auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
@@ -246,7 +246,7 @@ TEST(AdvertisingDataTest, Copy) {
       common::ContainersEqual(rand_data, dest.manufacturer_data(0x0123)));
 }
 
-TEST(AdvertisingDataTest, Move) {
+TEST(GAP_AdvertisingDataTest, Move) {
   common::UUID gatt(kGattUuid);
   common::UUID eddy(kEddystoneUuid);
   auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
@@ -274,7 +274,7 @@ TEST(AdvertisingDataTest, Move) {
             dest.service_uuids());
 }
 
-TEST(AdvertisingDataTest, Uris) {
+TEST(GAP_AdvertisingDataTest, Uris) {
   auto bytes = common::CreateStaticByteBuffer(
       // Uri: "https://abc.xyz"
       0x0B, 0x24, 0x17, '/', '/', 'a', 'b', 'c', '.', 'x', 'y', 'z',
@@ -291,7 +291,7 @@ TEST(AdvertisingDataTest, Uris) {
   EXPECT_TRUE(std::find(uris.begin(), uris.end(), "flubs:abc") != uris.end());
 }
 
-TEST(AdvertisingDataTest, ReaderMalformedData) {
+TEST(GAP_AdvertisingDataTest, ReaderMalformedData) {
   // TLV length exceeds the size of the payload
   auto bytes0 = common::CreateStaticByteBuffer(0x01);
   AdvertisingDataReader reader(bytes0);
@@ -329,7 +329,7 @@ TEST(AdvertisingDataTest, ReaderMalformedData) {
   EXPECT_FALSE(reader.GetNextField(&type, &data));
 }
 
-TEST(AdvertisingDataTest, ReaderParseFields) {
+TEST(GAP_AdvertisingDataTest, ReaderParseFields) {
   auto bytes = common::CreateStaticByteBuffer(
       0x02, 0x01, 0x00,
       0x05, 0x09, 'T', 'e', 's', 't');
@@ -362,7 +362,7 @@ constexpr size_t StringSize(char const (&str)[N]) {
   return N - 1;
 }
 
-TEST(AdvertisingDataTest, WriteField) {
+TEST(GAP_AdvertisingDataTest, WriteField) {
   constexpr char kValue0[] = "value zero";
   constexpr char kValue1[] = "value one";
   constexpr char kValue2[] = "value two";

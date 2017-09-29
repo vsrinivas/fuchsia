@@ -17,7 +17,7 @@ namespace {
 
 constexpr OpCode kTestOpCode = 0xFFFF;
 
-TEST(SlabAllocatorsTest, CommandPacket) {
+TEST(HCI_SlabAllocatorsTest, CommandPacket) {
   auto packet = CommandPacket::New(kTestOpCode, 5);
   EXPECT_TRUE(packet);
   EXPECT_EQ(5u + sizeof(CommandHeader), packet->view().size());
@@ -31,7 +31,7 @@ TEST(SlabAllocatorsTest, CommandPacket) {
   EXPECT_EQ(kSmallControlPacketSize + 1, packet->view().size());
 }
 
-TEST(SlabAllocatorsTest, CommandPacketFallBack) {
+TEST(HCI_SlabAllocatorsTest, CommandPacketFallBack) {
   size_t num_packets = 0;
   fbl::DoublyLinkedList<std::unique_ptr<Packet<CommandHeader>>> packets;
 
@@ -47,7 +47,7 @@ TEST(SlabAllocatorsTest, CommandPacketFallBack) {
             num_packets);
 }
 
-TEST(SlabAllocatorsTest, ACLDataPacket) {
+TEST(HCI_SlabAllocatorsTest, ACLDataPacket) {
   auto packet = ACLDataPacket::New(5);
   EXPECT_TRUE(packet);
   EXPECT_EQ(packet->view().size(), 5u + sizeof(ACLDataHeader));
@@ -64,7 +64,7 @@ TEST(SlabAllocatorsTest, ACLDataPacket) {
   EXPECT_EQ(kMediumACLDataPacketSize + 1, packet->view().size());
 }
 
-TEST(SlabAllocatorsTest, ACLDataPacketFallBack) {
+TEST(HCI_SlabAllocatorsTest, ACLDataPacketFallBack) {
   size_t num_packets = 0;
   fbl::DoublyLinkedList<std::unique_ptr<Packet<ACLDataHeader>>> packets;
 

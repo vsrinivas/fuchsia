@@ -25,7 +25,9 @@ class SequentialCommandRunnerTest : public TestingBase {
   ~SequentialCommandRunnerTest() override = default;
 };
 
-TEST_F(SequentialCommandRunnerTest, SequentialCommandRunner) {
+using HCI_SequentialCommandRunnerTest = SequentialCommandRunnerTest;
+
+TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   // HCI command with custom opcode FFFF.
   auto command_bytes = common::CreateStaticByteBuffer(0xFF, 0xFF, 0x00);
 
@@ -187,7 +189,7 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_TRUE(result);
 }
 
-TEST_F(SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
+TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   auto command_bytes = common::CreateStaticByteBuffer(0xFF, 0xFF, 0x00);
 
   auto command_cmpl_error_bytes = common::CreateStaticByteBuffer(

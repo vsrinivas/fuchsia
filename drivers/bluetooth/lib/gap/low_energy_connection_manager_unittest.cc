@@ -126,22 +126,24 @@ class LowEnergyConnectionManagerTest : public TestingBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnectionManagerTest);
 };
 
-TEST_F(LowEnergyConnectionManagerTest, ConnectUnknownDevice) {
+using GAP_LowEnergyConnectionManagerTest = LowEnergyConnectionManagerTest;
+
+TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectUnknownDevice) {
   EXPECT_FALSE(conn_mgr()->Connect("nope", {}));
 }
 
-TEST_F(LowEnergyConnectionManagerTest, ConnectClassicDevice) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectClassicDevice) {
   auto* dev = dev_cache()->NewDevice(kAddress2, true);
   EXPECT_FALSE(conn_mgr()->Connect(dev->identifier(), {}));
 }
 
-TEST_F(LowEnergyConnectionManagerTest, ConnectNonConnectableDevice) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectNonConnectableDevice) {
   auto* dev = dev_cache()->NewDevice(kAddress0, false);
   EXPECT_FALSE(conn_mgr()->Connect(dev->identifier(), {}));
 }
 
 // An error is received via the HCI Command cb_status event
-TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
   fake_dev->set_connect_status(hci::Status::kConnectionFailedToBeEstablished);
@@ -163,7 +165,7 @@ TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
 }
 
 // LE Connection Complete event reports error
-TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
   fake_dev->set_connect_response(hci::Status::kConnectionFailedToBeEstablished);
@@ -184,7 +186,7 @@ TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
 }
 
-TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
 
   // We add no fake devices to cause the request to time out.
@@ -206,7 +208,7 @@ TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
 }
 
 // Successful connection to single device
-TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDevice) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   EXPECT_TRUE(dev->temporary());
 
@@ -240,7 +242,7 @@ TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   EXPECT_FALSE(dev->temporary());
 }
 
-TEST_F(LowEnergyConnectionManagerTest, ReleaseRef) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
   test_device()->AddLEDevice(std::move(fake_dev));
@@ -273,7 +275,8 @@ TEST_F(LowEnergyConnectionManagerTest, ReleaseRef) {
   EXPECT_TRUE(connected_devices().empty());
 }
 
-TEST_F(LowEnergyConnectionManagerTest, OneDeviceTwoPendingRequestsBothFail) {
+TEST_F(GAP_LowEnergyConnectionManagerTest,
+       OneDeviceTwoPendingRequestsBothFail) {
   constexpr int kRequestCount = 2;
 
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
@@ -307,7 +310,7 @@ TEST_F(LowEnergyConnectionManagerTest, OneDeviceTwoPendingRequestsBothFail) {
   }
 }
 
-TEST_F(LowEnergyConnectionManagerTest, OneDeviceManyPendingRequests) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, OneDeviceManyPendingRequests) {
   constexpr size_t kRequestCount = 50;
 
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
@@ -360,7 +363,7 @@ TEST_F(LowEnergyConnectionManagerTest, OneDeviceManyPendingRequests) {
   EXPECT_TRUE(connected_devices().empty());
 }
 
-TEST_F(LowEnergyConnectionManagerTest, AddRefAfterConnection) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, AddRefAfterConnection) {
   constexpr size_t kRefCount = 50;
 
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
@@ -404,7 +407,7 @@ TEST_F(LowEnergyConnectionManagerTest, AddRefAfterConnection) {
   EXPECT_TRUE(connected_devices().empty());
 }
 
-TEST_F(LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevices) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevices) {
   auto* dev0 = dev_cache()->NewDevice(kAddress0, true);
   auto* dev1 = dev_cache()->NewDevice(kAddress1, true);
 
@@ -451,7 +454,8 @@ TEST_F(LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevices) {
   EXPECT_TRUE(connected_devices().empty());
 }
 
-TEST_F(LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevicesOneFails) {
+TEST_F(GAP_LowEnergyConnectionManagerTest,
+       PendingRequestsOnTwoDevicesOneFails) {
   auto* dev0 = dev_cache()->NewDevice(kAddress0, true);
   auto* dev1 = dev_cache()->NewDevice(kAddress1, true);
 
@@ -492,7 +496,7 @@ TEST_F(LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevicesOneFails) {
   EXPECT_TRUE(connected_devices().empty());
 }
 
-TEST_F(LowEnergyConnectionManagerTest, Destructor) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, Destructor) {
   auto* dev0 = dev_cache()->NewDevice(kAddress0, true);
   auto* dev1 = dev_cache()->NewDevice(kAddress1, true);
 
@@ -546,7 +550,7 @@ TEST_F(LowEnergyConnectionManagerTest, Destructor) {
   EXPECT_EQ(1u, canceled_devices().count(kAddress1));
 }
 
-TEST_F(LowEnergyConnectionManagerTest, DisconnectError) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectError) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -554,7 +558,7 @@ TEST_F(LowEnergyConnectionManagerTest, DisconnectError) {
   EXPECT_FALSE(conn_mgr()->Disconnect(dev->identifier()));
 }
 
-TEST_F(LowEnergyConnectionManagerTest, Disconnect) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, Disconnect) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -589,7 +593,7 @@ TEST_F(LowEnergyConnectionManagerTest, Disconnect) {
 }
 
 // Tests when a link is lost without explicitly disconnecting
-TEST_F(LowEnergyConnectionManagerTest, DisconnectEvent) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEvent) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
 
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
@@ -627,7 +631,7 @@ TEST_F(LowEnergyConnectionManagerTest, DisconnectEvent) {
   EXPECT_EQ(2, closed_count);
 }
 
-TEST_F(LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -662,7 +666,7 @@ TEST_F(LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
 // This tests that a connection reference callback returns nullptr if a HCI
 // Disconnection Complete event is received for the corresponding ACL link
 // BEFORE the callback gets run.
-TEST_F(LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -701,7 +705,7 @@ TEST_F(LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
 }
 
 // Listener receives local initiated connection ref.
-TEST_F(LowEnergyConnectionManagerTest, Listener) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, Listener) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -728,7 +732,7 @@ TEST_F(LowEnergyConnectionManagerTest, Listener) {
 
 // Listener receives local initiated connection ref but does not take its
 // ownership.
-TEST_F(LowEnergyConnectionManagerTest, ListenerRefUnclaimed) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ListenerRefUnclaimed) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -754,7 +758,7 @@ TEST_F(LowEnergyConnectionManagerTest, ListenerRefUnclaimed) {
 }
 
 // Listener receives remote initiated connection ref.
-TEST_F(LowEnergyConnectionManagerTest, ListenerRemoteInitiated) {
+TEST_F(GAP_LowEnergyConnectionManagerTest, ListenerRemoteInitiated) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -782,7 +786,8 @@ TEST_F(LowEnergyConnectionManagerTest, ListenerRemoteInitiated) {
 
 // Listener receives remote initiated connection ref but does not take its
 // ownership.
-TEST_F(LowEnergyConnectionManagerTest, ListenerRemoteInitiatedRefUnclaimed) {
+TEST_F(GAP_LowEnergyConnectionManagerTest,
+       ListenerRemoteInitiatedRefUnclaimed) {
   dev_cache()->NewDevice(kAddress0, true);
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
 
@@ -811,7 +816,7 @@ TEST_F(LowEnergyConnectionManagerTest, ListenerRemoteInitiatedRefUnclaimed) {
 
 // Listener receives remote initiated connection ref from a peer that was not
 // seen before.
-TEST_F(LowEnergyConnectionManagerTest,
+TEST_F(GAP_LowEnergyConnectionManagerTest,
        ListenerRemoteInitiatedFromUnknownDevice) {
   // Set up a fake device but don't add it to the device cache.
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));

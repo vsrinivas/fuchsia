@@ -51,7 +51,9 @@ class CommandChannelTest : public TestingBase {
   ~CommandChannelTest() override = default;
 };
 
-TEST_F(CommandChannelTest, CommandTimeout) {
+using HCI_CommandChannelTest = CommandChannelTest;
+
+TEST_F(HCI_CommandChannelTest, CommandTimeout) {
   // Set up expectations:
   // clang-format off
   // HCI_Reset
@@ -84,7 +86,7 @@ TEST_F(CommandChannelTest, CommandTimeout) {
   EXPECT_EQ(Status::kCommandTimeout, last_status);
 }
 
-TEST_F(CommandChannelTest, SingleRequestResponse) {
+TEST_F(HCI_CommandChannelTest, SingleRequestResponse) {
   // Set up expectations:
   // clang-format off
   // HCI_Reset
@@ -141,7 +143,7 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
   EXPECT_TRUE(test_obj_deleted);
 }
 
-TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
+TEST_F(HCI_CommandChannelTest, SingleRequestWithStatusResponse) {
   // Set up expectations:
   // clang-format off
   // HCI_Reset
@@ -196,7 +198,7 @@ TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {
   EXPECT_EQ(1, status_cb_count);
 }
 
-TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
+TEST_F(HCI_CommandChannelTest, SingleRequestWithCustomResponse) {
   // Set up expectations
   // clang-format off
   // HCI_Reset for the sake of testing
@@ -249,7 +251,7 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
   EXPECT_EQ(0, status_cb_count);
 }
 
-TEST_F(CommandChannelTest, SingleRequestWithCustomResponseAndMatcher) {
+TEST_F(HCI_CommandChannelTest, SingleRequestWithCustomResponseAndMatcher) {
   constexpr EventCode kTestEventCode = 0xFF;
   constexpr size_t kExpectedEventCount = 3;
   constexpr size_t kExpectedCommandCompleteCount = 1;
@@ -334,7 +336,7 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponseAndMatcher) {
   cmd_channel()->RemoveEventHandler(event_handler_id);
 }
 
-TEST_F(CommandChannelTest, MultipleQueuedRequests) {
+TEST_F(HCI_CommandChannelTest, MultipleQueuedRequests) {
   // Set up expectations:
   // clang-format off
   // Transaction 1:
@@ -420,7 +422,7 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
   EXPECT_EQ(1, complete_cb_count);
 }
 
-TEST_F(CommandChannelTest, EventHandlerBasic) {
+TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   constexpr EventCode kTestEventCode0 = 0xFE;
   constexpr EventCode kTestEventCode1 = 0xFF;
   auto cmd_status = common::CreateStaticByteBuffer(
@@ -499,7 +501,7 @@ TEST_F(CommandChannelTest, EventHandlerBasic) {
   EXPECT_EQ(2, event_count1);
 }
 
-TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
+TEST_F(HCI_CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   // clang-format off
   // HCI_Reset
   auto req = common::CreateStaticByteBuffer(
@@ -551,7 +553,7 @@ TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   EXPECT_EQ(1, event_count);
 }
 
-TEST_F(CommandChannelTest, LEMetaEventHandler) {
+TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
   constexpr EventCode kTestSubeventCode0 = 0xFE;
   constexpr EventCode kTestSubeventCode1 = 0xFF;
   auto le_meta_event_bytes0 = common::CreateStaticByteBuffer(
@@ -619,7 +621,7 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
   EXPECT_EQ(2, event_count1);
 }
 
-TEST_F(CommandChannelTest, EventHandlerIdsDontCollide) {
+TEST_F(HCI_CommandChannelTest, EventHandlerIdsDontCollide) {
   // Add a LE Meta event handler and a event handler and make sure that IDs are
   // generated correctly across the two methods.
   EXPECT_EQ(1u, cmd_channel()->AddLEMetaEventHandler(
@@ -630,7 +632,7 @@ TEST_F(CommandChannelTest, EventHandlerIdsDontCollide) {
                     message_loop()->task_runner()));
 }
 
-TEST_F(CommandChannelTest, TransportClosedCallback) {
+TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
   test_device()->Start();
 
   bool closed_cb_called = false;

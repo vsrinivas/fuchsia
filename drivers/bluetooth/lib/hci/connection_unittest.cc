@@ -31,7 +31,9 @@ class ConnectionTest : public TestingBase {
   ~ConnectionTest() override = default;
 };
 
-TEST_F(ConnectionTest, TestGetters) {
+using HCI_ConnectionTest = ConnectionTest;
+
+TEST_F(HCI_ConnectionTest, TestGetters) {
   Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams,
                         transport());
 
@@ -43,7 +45,7 @@ TEST_F(ConnectionTest, TestGetters) {
   EXPECT_TRUE(connection.is_open());
 }
 
-TEST_F(ConnectionTest, Close) {
+TEST_F(HCI_ConnectionTest, Close) {
   // clang-format off
 
   // HCI_Disconnect (handle: 0x0001, reason: RemoteUserTerminatedConnection)
@@ -83,7 +85,7 @@ TEST_F(ConnectionTest, Close) {
   EXPECT_TRUE(callback_called);
 }
 
-TEST_F(ConnectionTest, CloseError) {
+TEST_F(HCI_ConnectionTest, CloseError) {
   // clang-format off
 
   // HCI_Disconnect (handle: 0x0001, reason: RemoteUserTerminatedConnection)

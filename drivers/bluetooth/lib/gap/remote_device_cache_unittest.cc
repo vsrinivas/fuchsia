@@ -27,7 +27,7 @@ const common::DeviceAddress kAddrRandom(common::DeviceAddress::Type::kLERandom,
 const common::DeviceAddress kAddrAnon(common::DeviceAddress::Type::kLEAnonymous,
                                       "06:05:04:03:02:01");
 
-TEST(RemoteDeviceCacheTest, LookUp) {
+TEST(GAP_RemoteDeviceCacheTest, LookUp) {
   auto kAdvData0 =
       common::CreateStaticByteBuffer(0x05, 0x09, 'T', 'e', 's', 't');
   auto kAdvData1 = common::CreateStaticByteBuffer(
@@ -63,7 +63,7 @@ TEST(RemoteDeviceCacheTest, LookUp) {
   EXPECT_EQ(kTestRSSI, device->rssi());
 }
 
-TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryNonConn) {
+TEST(GAP_RemoteDeviceCacheTest, TryMakeNonTemporaryNonConn) {
   RemoteDeviceCache cache;
   auto device = cache.NewDevice(kAddrPublic, false);
   EXPECT_TRUE(device->temporary());
@@ -71,7 +71,7 @@ TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryNonConn) {
   EXPECT_TRUE(device->temporary());
 }
 
-TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryRandomAddr) {
+TEST(GAP_RemoteDeviceCacheTest, TryMakeNonTemporaryRandomAddr) {
   RemoteDeviceCache cache;
   auto device = cache.NewDevice(kAddrRandom, true);
   EXPECT_TRUE(device->temporary());
@@ -79,7 +79,7 @@ TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryRandomAddr) {
   EXPECT_TRUE(device->temporary());
 }
 
-TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryAnonAddr) {
+TEST(GAP_RemoteDeviceCacheTest, TryMakeNonTemporaryAnonAddr) {
   RemoteDeviceCache cache;
   auto device = cache.NewDevice(kAddrAnon, true);
   EXPECT_TRUE(device->temporary());
@@ -87,7 +87,7 @@ TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryAnonAddr) {
   EXPECT_TRUE(device->temporary());
 }
 
-TEST(RemoteDeviceCacheTest, TryMakeNonTemporarySuccess) {
+TEST(GAP_RemoteDeviceCacheTest, TryMakeNonTemporarySuccess) {
   RemoteDeviceCache cache;
   auto device = cache.NewDevice(kAddrPublic, true);
   EXPECT_TRUE(device->temporary());

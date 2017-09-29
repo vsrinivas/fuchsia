@@ -30,7 +30,7 @@ struct TestPayload {
   uint8_t foo;
 } __PACKED;
 
-TEST(HCIPacketTest, CommandPacket) {
+TEST(HCI_PacketTest, CommandPacket) {
   constexpr size_t kPayloadSize = sizeof(TestPayload);
   auto packet = CommandPacket::New(kTestOpCode, kPayloadSize);
 
@@ -52,7 +52,7 @@ TEST(HCIPacketTest, CommandPacket) {
   EXPECT_TRUE(ContainersEqual(kExpected, packet->view().data()));
 }
 
-TEST(HCIPacketTest, EventPacket) {
+TEST(HCI_PacketTest, EventPacket) {
   constexpr size_t kPayloadSize = sizeof(TestPayload);
   auto packet = EventPacket::New(kPayloadSize);
 
@@ -73,7 +73,7 @@ TEST(HCIPacketTest, EventPacket) {
   EXPECT_EQ(127, packet->view().payload<TestPayload>().foo);
 }
 
-TEST(HCIPacketTest, EventPacketReturnParams) {
+TEST(HCI_PacketTest, EventPacketReturnParams) {
   // clang-format off
 
   auto correct_size_bad_event_code = common::CreateStaticByteBuffer(
@@ -126,7 +126,7 @@ TEST(HCIPacketTest, EventPacketReturnParams) {
   EXPECT_EQ(127, packet->return_params<TestPayload>()->foo);
 }
 
-TEST(HCIPacketTest, LEEventParams) {
+TEST(HCI_PacketTest, LEEventParams) {
   // clang-format off
 
   auto correct_size_bad_event_code = common::CreateStaticByteBuffer(
@@ -176,7 +176,7 @@ TEST(HCIPacketTest, LEEventParams) {
   EXPECT_EQ(127, packet->le_event_params<TestPayload>()->foo);
 }
 
-TEST(HCIPacketTest, ACLDataPacketFromFields) {
+TEST(HCI_PacketTest, ACLDataPacketFromFields) {
   constexpr size_t kLargeDataLength = 10;
   constexpr size_t kSmallDataLength = 1;
 
@@ -215,7 +215,7 @@ TEST(HCIPacketTest, ACLDataPacketFromFields) {
                                0x00, 0x00, 0x00, 0x00, 0x00}}));
 }
 
-TEST(HCIPacketTest, ACLDataPacketFromBuffer) {
+TEST(HCI_PacketTest, ACLDataPacketFromBuffer) {
   constexpr size_t kLargeDataLength = 256;
   constexpr size_t kSmallDataLength = 1;
 

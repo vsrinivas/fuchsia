@@ -94,7 +94,9 @@ class LowEnergyConnectorTest : public TestingBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyConnectorTest);
 };
 
-TEST_F(LowEnergyConnectorTest, CreateConnection) {
+using HCI_LowEnergyConnectorTest = LowEnergyConnectorTest;
+
+TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));
 
@@ -141,7 +143,7 @@ TEST_F(LowEnergyConnectorTest, CreateConnection) {
 }
 
 // Controller reports error from HCI Command Status event.
-TEST_F(LowEnergyConnectorTest, CreateConnectionStatusError) {
+TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   fake_device->set_connect_status(hci::Status::kCommandDisallowed);
   test_device()->AddLEDevice(std::move(fake_device));
@@ -177,7 +179,7 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionStatusError) {
 }
 
 // Controller reports error from HCI LE Connection Complete event
-TEST_F(LowEnergyConnectorTest, CreateConnectionEventError) {
+TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionEventError) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   fake_device->set_connect_response(hci::Status::kConnectionRejectedSecurity);
   test_device()->AddLEDevice(std::move(fake_device));
@@ -213,7 +215,7 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionEventError) {
 }
 
 // Controller reports error from HCI LE Connection Complete event
-TEST_F(LowEnergyConnectorTest, Cancel) {
+TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));
 
@@ -250,7 +252,7 @@ TEST_F(LowEnergyConnectorTest, Cancel) {
   EXPECT_TRUE(connections().empty());
 }
 
-TEST_F(LowEnergyConnectorTest, IncomingConnect) {
+TEST_F(HCI_LowEnergyConnectorTest, IncomingConnect) {
   EXPECT_TRUE(connections().empty());
   EXPECT_FALSE(connector()->request_pending());
 
@@ -278,7 +280,7 @@ TEST_F(LowEnergyConnectorTest, IncomingConnect) {
   conn->set_closed();
 }
 
-TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
+TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
   const common::DeviceAddress kIncomingAddress(
       common::DeviceAddress::Type::kLEPublic, "00:00:00:00:00:02");
 
@@ -335,7 +337,7 @@ TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
   }
 }
 
-TEST_F(LowEnergyConnectorTest, CreateConnectionTimeout) {
+TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionTimeout) {
   constexpr int64_t kShortTimeoutMs = 10;
 
   // We do not set up any fake devices. This will cause the request to time out.
@@ -371,7 +373,7 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionTimeout) {
   EXPECT_TRUE(connections().empty());
 }
 
-TEST_F(LowEnergyConnectorTest, SendRequestAndDelete) {
+TEST_F(HCI_LowEnergyConnectorTest, SendRequestAndDelete) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));
 
@@ -393,7 +395,7 @@ TEST_F(LowEnergyConnectorTest, SendRequestAndDelete) {
 
 // This test is identical to SendRequestAndDelete except that this waits for the
 // connection request timeout to finish.
-TEST_F(LowEnergyConnectorTest, SendRequestDeleteAndWaitForTimeout) {
+TEST_F(HCI_LowEnergyConnectorTest, SendRequestDeleteAndWaitForTimeout) {
   constexpr int64_t kShortTimeoutMs = 100;
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));

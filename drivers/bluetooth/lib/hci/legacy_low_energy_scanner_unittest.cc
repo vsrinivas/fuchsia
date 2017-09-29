@@ -133,7 +133,9 @@ class LegacyLowEnergyScannerTest : public TestingBase,
   FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyScannerTest);
 };
 
-TEST_F(LegacyLowEnergyScannerTest, StartScanHCIErrors) {
+using HCI_LegacyLowEnergyScannerTest = LegacyLowEnergyScannerTest;
+
+TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
@@ -194,7 +196,7 @@ TEST_F(LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   EXPECT_FALSE(scanner()->IsScanning());
 }
 
-TEST_F(LegacyLowEnergyScannerTest, StartScan) {
+TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
@@ -241,7 +243,7 @@ TEST_F(LegacyLowEnergyScannerTest, StartScan) {
   EXPECT_FALSE(scanner()->IsScanning());
 }
 
-TEST_F(LegacyLowEnergyScannerTest, StopScan) {
+TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
@@ -282,7 +284,7 @@ TEST_F(LegacyLowEnergyScannerTest, StopScan) {
   EXPECT_FALSE(scanner()->IsScanning());
 }
 
-TEST_F(LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
+TEST_F(HCI_LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
@@ -312,7 +314,7 @@ TEST_F(LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
   EXPECT_FALSE(scanner()->IsScanning());
 }
 
-TEST_F(LegacyLowEnergyScannerTest, ActiveScanResults) {
+TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   AddFakeDevices();
 
   LowEnergyScanner::Status status;
@@ -405,7 +407,7 @@ TEST_F(LegacyLowEnergyScannerTest, ActiveScanResults) {
   EXPECT_TRUE(results.empty());
 }
 
-TEST_F(LegacyLowEnergyScannerTest, StopDuringActiveScan) {
+TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
   AddFakeDevices();
 
   LowEnergyScanner::Status status;
@@ -458,7 +460,7 @@ TEST_F(LegacyLowEnergyScannerTest, StopDuringActiveScan) {
   EXPECT_EQ(results.find(kAddress4), results.end());
 }
 
-TEST_F(LegacyLowEnergyScannerTest, PassiveScanResults) {
+TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   AddFakeDevices();
 
   LowEnergyScanner::Status status;

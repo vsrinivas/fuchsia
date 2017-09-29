@@ -29,10 +29,10 @@ constexpr size_t kDefaultAdSize = 20;
 
 constexpr fxl::TimeDelta kStopAdvWait = fxl::TimeDelta::FromMilliseconds(5);
 
-class LegacyLowEnergyAdvertiserTest : public TestingBase {
+class GAP_LegacyLowEnergyAdvertiserTest : public TestingBase {
  public:
-  LegacyLowEnergyAdvertiserTest() = default;
-  ~LegacyLowEnergyAdvertiserTest() override = default;
+  GAP_LegacyLowEnergyAdvertiserTest() = default;
+  ~GAP_LegacyLowEnergyAdvertiserTest() override = default;
 
  protected:
   // TestingBase overrides:
@@ -107,13 +107,13 @@ class LegacyLowEnergyAdvertiserTest : public TestingBase {
 
   common::Optional<hci::Status> last_status_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(LegacyLowEnergyAdvertiserTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GAP_LegacyLowEnergyAdvertiserTest);
 };
 
 // TODO(jamuraa): Use typed tests to test LowEnergyAdvertiser common properties
 
 // - Error when the advertisement data is too large
-TEST_F(LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
   AdvertisingData ad, scan_data;
 
   // 4 bytes long (adv length: 7 bytes)
@@ -147,7 +147,7 @@ TEST_F(LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
 
 // - Stops the advertisement when an incoming connection comes
 // - Calls the connectioncallback correctly when it's setup
-TEST_F(LegacyLowEnergyAdvertiserTest, ConnectionTest) {
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
@@ -173,7 +173,7 @@ TEST_F(LegacyLowEnergyAdvertiserTest, ConnectionTest) {
 // - Starts the advertisement when asked
 // - Stops advertisement
 // - Uses the random address given and sets it.
-TEST_F(LegacyLowEnergyAdvertiserTest, StartAndStop) {
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StartAndStop) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
@@ -203,7 +203,7 @@ TEST_F(LegacyLowEnergyAdvertiserTest, StartAndStop) {
 // - StopAdvertisement noops when the advertisement address is wrong
 // - Sets the advertisement data to null when stopped to prevent data leakage
 //   (re-enable advertising without changing data, intercept)
-TEST_F(LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
@@ -249,7 +249,7 @@ TEST_F(LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
 }
 
 // - Rejects StartAdvertising when Advertising already
-TEST_F(LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 
@@ -271,7 +271,7 @@ TEST_F(LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
 }
 
 // - Rejects anonymous advertisement (unsupported)
-TEST_F(LegacyLowEnergyAdvertiserTest, NoAnonymous) {
+TEST_F(GAP_LegacyLowEnergyAdvertiserTest, NoAnonymous) {
   AdvertisingData ad = GetExampleData();
   AdvertisingData scan_data;
 

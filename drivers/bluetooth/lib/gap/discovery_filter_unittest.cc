@@ -12,7 +12,7 @@ namespace bluetooth {
 namespace gap {
 namespace {
 
-TEST(DiscoveryFilterTest, Flags) {
+TEST(GAP_DiscoveryFilterTest, Flags) {
   const common::BufferView kEmptyData;
   const auto kInvalidFlagsData = common::CreateStaticByteBuffer(0x01, 0x01);
   const auto kValidFlagsData =
@@ -113,7 +113,7 @@ TEST(DiscoveryFilterTest, Flags) {
       filter.MatchLowEnergyResult(kValidFlagsData, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, Connectable) {
+TEST(GAP_DiscoveryFilterTest, Connectable) {
   common::BufferView empty;
   DiscoveryFilter filter;
 
@@ -132,7 +132,7 @@ TEST(DiscoveryFilterTest, Connectable) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(empty, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, 16BitServiceUuids) {
+TEST(GAP_DiscoveryFilterTest, 16BitServiceUuids) {
   constexpr uint16_t kUuid0 = 0x180d;
   constexpr uint16_t kUuid1 = 0x1800;
 
@@ -203,7 +203,7 @@ TEST(DiscoveryFilterTest, 16BitServiceUuids) {
       filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, 32BitServiceUuids) {
+TEST(GAP_DiscoveryFilterTest, 32BitServiceUuids) {
   constexpr uint16_t kUuid0 = 0x180d;
   constexpr uint16_t kUuid1 = 0x1800;
 
@@ -274,7 +274,7 @@ TEST(DiscoveryFilterTest, 32BitServiceUuids) {
       filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, 128BitServiceUuids) {
+TEST(GAP_DiscoveryFilterTest, 128BitServiceUuids) {
   constexpr uint16_t kUuid0 = 0x180d;
   constexpr uint16_t kUuid1 = 0x1800;
 
@@ -385,7 +385,7 @@ TEST(DiscoveryFilterTest, 128BitServiceUuids) {
       filter.MatchLowEnergyResult(kCompleteMatch2, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, NameSubstring) {
+TEST(GAP_DiscoveryFilterTest, NameSubstring) {
   const common::BufferView kEmptyData;
   const auto kShortenedName =
       common::CreateStaticByteBuffer(0x05, 0x08, 'T', 'e', 's', 't');
@@ -438,7 +438,7 @@ TEST(DiscoveryFilterTest, NameSubstring) {
       filter.MatchLowEnergyResult(kCompleteName, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, RSSI) {
+TEST(GAP_DiscoveryFilterTest, RSSI) {
   constexpr int8_t kRSSIThreshold = 60;
   const common::BufferView kEmptyData;
 
@@ -472,7 +472,7 @@ TEST(DiscoveryFilterTest, RSSI) {
       filter.MatchLowEnergyResult(kEmptyData, true, kRSSIThreshold + 1));
 }
 
-TEST(DiscoveryFilterTest, Pathloss) {
+TEST(GAP_DiscoveryFilterTest, Pathloss) {
   constexpr int8_t kPathlossThreshold = 70;
   constexpr int8_t kTxPower = 5;
   constexpr int8_t kMatchingRSSI = -65;
@@ -523,7 +523,7 @@ TEST(DiscoveryFilterTest, Pathloss) {
       filter.MatchLowEnergyResult(kDataWithTxPower, true, kNotMatchingRSSI));
 }
 
-TEST(DiscoveryFilterTest, ManufacturerCode) {
+TEST(GAP_DiscoveryFilterTest, ManufacturerCode) {
   const common::BufferView kEmptyData;
   const auto kValidData0 =
       common::CreateStaticByteBuffer(0x03, 0xFF, 0xE0, 0x00);
@@ -560,7 +560,7 @@ TEST(DiscoveryFilterTest, ManufacturerCode) {
       filter.MatchLowEnergyResult(kInvalidData1, false, hci::kRSSIInvalid));
 }
 
-TEST(DiscoveryFilterTest, Combined) {
+TEST(GAP_DiscoveryFilterTest, Combined) {
   constexpr int8_t kMatchingPathlossThreshold = 70;
   constexpr int8_t kNotMatchingPathlossThreshold = 69;
   constexpr int8_t kTxPower = 5;

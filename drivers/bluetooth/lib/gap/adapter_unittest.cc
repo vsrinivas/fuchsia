@@ -62,7 +62,9 @@ class AdapterTest : public TestingBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(AdapterTest);
 };
 
-TEST_F(AdapterTest, InitializeFailureNoFeaturesSupported) {
+using GAP_AdapterTest = AdapterTest;
+
+TEST_F(GAP_AdapterTest, InitializeFailureNoFeaturesSupported) {
   bool success;
   int init_cb_count = 0;
   auto init_cb = [&, this](bool cb_success) {
@@ -79,7 +81,7 @@ TEST_F(AdapterTest, InitializeFailureNoFeaturesSupported) {
   EXPECT_FALSE(transport_closed_called());
 }
 
-TEST_F(AdapterTest, InitializeFailureNoBufferInfo) {
+TEST_F(GAP_AdapterTest, InitializeFailureNoBufferInfo) {
   bool success;
   int init_cb_count = 0;
   auto init_cb = [&, this](bool cb_success) {
@@ -101,7 +103,7 @@ TEST_F(AdapterTest, InitializeFailureNoBufferInfo) {
   EXPECT_FALSE(transport_closed_called());
 }
 
-TEST_F(AdapterTest, InitializeSuccess) {
+TEST_F(GAP_AdapterTest, InitializeSuccess) {
   bool success;
   int init_cb_count = 0;
   auto init_cb = [&, this](bool cb_success) {
@@ -127,7 +129,7 @@ TEST_F(AdapterTest, InitializeSuccess) {
   EXPECT_FALSE(transport_closed_called());
 }
 
-TEST_F(AdapterTest, InitializeFailureHCICommandError) {
+TEST_F(GAP_AdapterTest, InitializeFailureHCICommandError) {
   bool success;
   int init_cb_count = 0;
   auto init_cb = [&, this](bool cb_success) {
@@ -151,7 +153,7 @@ TEST_F(AdapterTest, InitializeFailureHCICommandError) {
   EXPECT_FALSE(transport_closed_called());
 }
 
-TEST_F(AdapterTest, TransportClosedCallback) {
+TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   bool success;
   int init_cb_count = 0;
   auto init_cb = [&, this](bool cb_success) {

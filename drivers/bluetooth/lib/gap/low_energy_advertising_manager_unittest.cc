@@ -113,10 +113,10 @@ class FakeLowEnergyAdvertiser final : public LowEnergyAdvertiser {
 
 using TestingBase = ::bluetooth::testing::TestBase;
 
-class AdvertisingManagerTest : public TestingBase {
+class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
  public:
-  AdvertisingManagerTest() = default;
-  ~AdvertisingManagerTest() override = default;
+  GAP_LowEnergyAdvertisingManagerTest() = default;
+  ~GAP_LowEnergyAdvertisingManagerTest() override = default;
 
  protected:
   void SetUp() override {}
@@ -183,13 +183,13 @@ class AdvertisingManagerTest : public TestingBase {
   std::string last_ad_id_;
   common::Optional<hci::Status> last_status_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(AdvertisingManagerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GAP_LowEnergyAdvertisingManagerTest);
 };
 
 // Tests:
 //  - Can't advertise more than the advertiser says there are slots
 //  - When the advertiser succeeds, the callback is called with the success
-TEST_F(AdvertisingManagerTest, AvailableAdCount) {
+TEST_F(GAP_LowEnergyAdvertisingManagerTest, AvailableAdCount) {
   LowEnergyAdvertisingManager am(MakeFakeAdvertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
@@ -211,7 +211,7 @@ TEST_F(AdvertisingManagerTest, AvailableAdCount) {
   EXPECT_EQ(1u, ad_store().size());
 }
 
-TEST_F(AdvertisingManagerTest, DataSize) {
+TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   LowEnergyAdvertisingManager am(MakeFakeAdvertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
@@ -238,7 +238,7 @@ TEST_F(AdvertisingManagerTest, DataSize) {
 //  - Stopping one that is registered stops it in the advertiser
 //    (and stops the right address)
 //  - Stopping an advertisement that isn't registered retuns false
-TEST_F(AdvertisingManagerTest, RegisterUnregister) {
+TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   LowEnergyAdvertisingManager am(MakeFakeAdvertiser(2 /* ads available */));
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
@@ -275,7 +275,7 @@ TEST_F(AdvertisingManagerTest, RegisterUnregister) {
 }
 
 //  - When the advertiser returns an error, we return an error
-TEST_F(AdvertisingManagerTest, AdvertiserError) {
+TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
   auto advertiser = MakeFakeAdvertiser();
   advertiser->ErrorOnNext(hci::kInvalidHCICommandParameters);
   LowEnergyAdvertisingManager am(std::move(advertiser));
@@ -291,7 +291,7 @@ TEST_F(AdvertisingManagerTest, AdvertiserError) {
 }
 
 //  - It calls the connectable callback correctly when connected to
-TEST_F(AdvertisingManagerTest, ConnectCallback) {
+TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
   auto advertiser = MakeFakeAdvertiser();
   auto incoming_conn_cb = fbl::BindMember(
       advertiser.get(), &FakeLowEnergyAdvertiser::OnIncomingConnection);
@@ -326,7 +326,7 @@ TEST_F(AdvertisingManagerTest, ConnectCallback) {
 }
 
 //  - Error: Connectable and Anonymous at the same time
-TEST_F(AdvertisingManagerTest, ConnectAdvertiseError) {
+TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectAdvertiseError) {
   LowEnergyAdvertisingManager am(MakeFakeAdvertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
@@ -346,7 +346,7 @@ TEST_F(AdvertisingManagerTest, ConnectAdvertiseError) {
 
 //  - Passes the values for the data on. (anonymous, data, scan_rsp,
 //  interval_ms)
-TEST_F(AdvertisingManagerTest, SendsCorrectData) {
+TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
   auto advertiser = MakeFakeAdvertiser();
   LowEnergyAdvertisingManager am(std::move(advertiser));
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
