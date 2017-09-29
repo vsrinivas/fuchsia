@@ -39,7 +39,7 @@ pub trait DeviceOps {
         Status::NoError
     }
 
-    fn openat(&mut self, path: &str, flags: u32) -> Status {
+    fn open_at(&mut self, path: &str, flags: u32) -> Status {
         Status::ErrNotSupported
     }
 
@@ -62,6 +62,7 @@ pub trait DeviceOps {
     fn write(&mut self, buf: &[u8], offset: u64) -> Result<usize, Status> {
         Err(Status::ErrNotSupported)
     }
+
 }
 
 pub fn add_device(device_ops: Box<DeviceOps>) -> Result<Device, Status> {
@@ -86,21 +87,29 @@ pub fn add_device(device_ops: Box<DeviceOps>) -> Result<Device, Status> {
     }
 }
 
+// Should be called after unbind() has been called on the device and the driver is
+// ready remove the device.
+pub fn remove_device(device: Device) -> Status {
+    unsafe {
+        Status::from_raw(ddk_sys::device_remove(device.device))
+    }
+}
+
 extern fn ddk_get_protocol(ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sys::zx_status_t {
     sys::ZX_ERR_NOT_SUPPORTED
 }
 
-extern fn ddk_open(ctx: *mut u8, dev_out: *mut *mut ddk_sys::zx_device_t, flags: u32) -> sys::zx_status_t {
+extern fn ddk_open(ctx: *mut u8, mut dev_out: *mut *mut ddk_sys::zx_device_t, flags: u32) -> sys::zx_status_t {
     let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
     let ret = device.open(flags);
     let _ = Box::into_raw(device);
     ret as sys::zx_status_t
 }
 
-extern fn ddk_open_at(ctx: *mut u8, dev_out: *mut *mut ddk_sys::zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t {
+extern fn ddk_open_at(ctx: *mut u8, mut dev_out: *mut *mut ddk_sys::zx_device_t, path: *const c_char, flags: u32) -> sys::zx_status_t {
     let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
     let path = unsafe { CStr::from_ptr(path).to_str().unwrap() };
-    let ret = device.openat(path, flags);
+    let ret = device.open_at(path, flags);
     let _ = Box::into_raw(device);
     ret as sys::zx_status_t
 }

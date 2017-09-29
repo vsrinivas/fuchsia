@@ -1,0 +1,17 @@
+[package]
+name = "ddk_toy"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Andrew Walbran <qwandor@google.com>", "Anthony Stange <stange@google.com>"]
+description = "Sample app for interacting with the Rust DDK for the Zircon kernel"
+repository = "https://fuchsia.googlesource.com/ddk-rs/"
+build = "build.rs"
+
+[dependencies]
+ddk-rs = { path = "../../../ddk-rs", version = "0.1.0" }
+ddk-sys = { path = "../../ddk-sys", version = "0.1.0" }
+fuchsia-zircon = { path = "../../../fuchsia-zircon", version = "0.2" }
+fuchsia-zircon-sys = { path = "../../../fuchsia-zircon/fuchsia-zircon-sys", version = "0.2" }
+
+[build-dependencies]
+gcc = "0.3"

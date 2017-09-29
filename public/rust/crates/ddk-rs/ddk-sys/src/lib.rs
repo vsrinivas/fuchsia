@@ -19,12 +19,19 @@ use std::os::raw::c_char;
 pub enum zx_device_t {
     variant1,
 }
+
 #[repr(u8)]
 pub enum zx_device_prop_t {
     variant1,
 }
 
+#[repr(u8)]
+pub enum zx_driver_t {
+    variant1,
+}
+
 pub const ZX_DEVICE_NAME_MAX: usize = 31;
+pub const DEVICE_OPS_VERSION: u64 = 0xc9410d2a24f57424;
 const DRIVER_OPS_VERSION: u64 = 0x2b3490fa40d9f452;
 const DEVICE_ADD_ARGS_VERSION: u64 = 0x96a64134d56e88e3;
 
@@ -52,16 +59,6 @@ pub struct zx_driver_ops_t {
     pub unbind: Option<extern "C" fn (ctx: *mut u8, device: *mut zx_device_t, cookie: *mut u8)>,
     pub create: Option<extern "C" fn (ctx: *mut u8, parent: *mut zx_device_t, name: *const c_char, args: *const c_char, resource: zx_handle_t) -> zx_status_t>,
     pub release: Option<extern "C" fn (ctx: *mut u8)>,
-}
-
-#[repr(C)]
-pub struct zx_driver_t {
-    pub name: *const c_char,
-    pub ops: *const zx_driver_ops_t,
-    pub ctx: *mut u8,
-    pub libname: *const c_char,
-    pub node: list_node_t,
-    pub status: zx_status_t,
 }
 
 // References to Zircon DDK's iotxn.h
@@ -105,8 +102,6 @@ pub struct iotxn_t {
     pub release_cb: Option<extern "C" fn (txn: *mut iotxn_t)>,
     pub phys_inline: [zx_paddr_t; 3],
 }
-
-pub const DEVICE_OPS_VERSION: u64 = 0xc9410d2a24f57424;
 
 #[repr(C)]
 pub struct zx_protocol_device_t {
