@@ -108,11 +108,11 @@ static void file_close(void* cookie) {
     }
 }
 
-static int transport_send(void* data, size_t len, void* transport_cookie) {
+static tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = transport_cookie;
-    int bytes_sent = udp6_send(data, len, &transport_info->dest_addr,
-                               transport_info->dest_port, NB_TFTP_OUTGOING_PORT);
-    if (bytes_sent < 0) {
+    zx_status_t status = udp6_send(data, len, &transport_info->dest_addr,
+                                   transport_info->dest_port, NB_TFTP_OUTGOING_PORT);
+    if (status != ZX_OK) {
         return TFTP_ERR_IO;
     }
 
@@ -121,7 +121,7 @@ static int transport_send(void* data, size_t len, void* transport_cookie) {
     if (transport_info->timeout_ms != 0) {
         tftp_next_timeout = zx_deadline_after(ZX_MSEC(transport_info->timeout_ms));
     }
-    return bytes_sent;
+    return TFTP_NO_ERROR;
 }
 
 static int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
@@ -172,8 +172,8 @@ void tftp_timeout_expired(void) {
         netfile_abort_write();
     } else {
         if (last_msg_size > 0) {
-            int send_result = transport_send(tftp_out_scratch, last_msg_size, &transport_info);
-            if (send_result != 0) {
+            tftp_status send_result = transport_send(tftp_out_scratch, last_msg_size, &transport_info);
+            if (send_result != TFTP_NO_ERROR) {
                 printf("netsvc: failed to send tftp timeout response (err = %d)\n", send_result);
             }
         }

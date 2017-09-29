@@ -212,16 +212,18 @@ static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* daddr, size_t length, uint8
 
 #define UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
 
-int udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, uint16_t dport, uint16_t sport) {
+zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, uint16_t dport, uint16_t sport) {
     if (dlen > UDP6_MAX_PAYLOAD)
-        return -1;
+        return ZX_ERR_INVALID_ARGS;
     size_t length = dlen + UDP_HDR_LEN;
     udp_pkt_t* p;
     eth_buffer_t* ethbuf;
     if (eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf))
-        return -1;
-    if (ip6_setup((void*)p, daddr, length, HDR_UDP))
-        goto fail;
+        return ZX_ERR_SHOULD_WAIT;
+    if (ip6_setup((void*)p, daddr, length, HDR_UDP)) {
+        eth_put_buffer(ethbuf);
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     // udp header
     p->udp.src_port = htons(sport);
@@ -232,34 +234,28 @@ int udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, uint16_t d
     memcpy(p->data, data, dlen);
     p->udp.checksum = ip6_checksum(&p->ip6, HDR_UDP, length);
     return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
-
-fail:
-    eth_put_buffer(ethbuf);
-    return -1;
 }
 
 #define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
 
-static int icmp6_send(const void* data, size_t length, const ip6_addr_t* daddr) {
+static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* daddr) {
     if (length > ICMP6_MAX_PAYLOAD)
-        return -1;
+        return ZX_ERR_INVALID_ARGS;
     eth_buffer_t* ethbuf;
     ip6_pkt_t* p;
     icmp6_hdr_t* icmp;
 
     if (eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf))
-        return -1;
-    if (ip6_setup(p, daddr, length, HDR_ICMP6))
-        goto fail;
+        return ZX_ERR_SHOULD_WAIT;
+    if (ip6_setup(p, daddr, length, HDR_ICMP6)) {
+        eth_put_buffer(ethbuf);
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     icmp = (void*)p->data;
     memcpy(icmp, data, length);
     icmp->checksum = ip6_checksum(&p->ip6, HDR_ICMP6, length);
     return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
-
-fail:
-    eth_put_buffer(ethbuf);
-    return -1;
 }
 
 void _udp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {

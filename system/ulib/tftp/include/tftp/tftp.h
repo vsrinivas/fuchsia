@@ -146,12 +146,10 @@ typedef struct {
 } tftp_file_interface;
 
 // tftp_transport_send_cb is called by the library to send |len| bytes from
-// |data| over a previously-established connection. On success, the function
-// should return the number of bytes sent. On error, it should return a
-// tftp_status error code.
-typedef int (*tftp_transport_send_cb)(void* data,
-                                      size_t len,
-                                      void* transport_cookie);
+// |data| over a previously-established connection.
+typedef tftp_status (*tftp_transport_send_cb)(void* data,
+                                              size_t len,
+                                              void* transport_cookie);
 
 // tftp_transport_recv_cb is called by the library to read from the transport
 // interface. It will read values into |data|, up to |len| bytes. If |block| is

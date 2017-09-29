@@ -999,13 +999,13 @@ tftp_status tftp_push_file(tftp_session* session,
         return TFTP_ERR_INTERNAL;
     }
 
-    int n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
-    if (n < 0) {
+    tftp_status send_status = session->transport_interface.send(outgoing, out_sz, transport_cookie);
+    if (send_status != TFTP_NO_ERROR) {
         REPORT_ERR(opts, "failed during transport send callback");
-        return (tftp_status)n;
+        return send_status;
     }
 
-    int ret;
+    int ret, n;
     bool pending = false;
     do {
         ret = session->transport_interface.timeout_set(timeout_ms, transport_cookie);
@@ -1024,10 +1024,11 @@ tftp_status tftp_push_file(tftp_session* session,
                                         &timeout_ms,
                                         file_cookie);
                 if (out_sz) {
-                    n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
-                    if (n < 0) {
+                    send_status = session->transport_interface.send(outgoing, out_sz,
+                                                                    transport_cookie);
+                    if (send_status != TFTP_NO_ERROR) {
                         REPORT_ERR(opts, "failed during transport send callback");
-                        return n;
+                        return send_status;
                     }
                 }
                 if (ret < 0) {
@@ -1056,8 +1057,9 @@ tftp_status tftp_push_file(tftp_session* session,
                     return ret;
                 }
                 if (out_sz) {
-                    n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
-                    if (n < 0) {
+                    send_status = session->transport_interface.send(outgoing, out_sz,
+                                                                    transport_cookie);
+                    if (send_status != TFTP_NO_ERROR) {
                         REPORT_ERR(opts, "failed during transport send callback");
                         return n;
                     }
@@ -1077,10 +1079,10 @@ tftp_status tftp_push_file(tftp_session* session,
                                &timeout_ms,
                                file_cookie);
         if (out_sz) {
-            n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
-            if (n < 0) {
+            send_status = session->transport_interface.send(outgoing, out_sz, transport_cookie);
+            if (send_status != TFTP_NO_ERROR) {
                 REPORT_ERR(opts, "failed during transport send callback");
-                return n;
+                return send_status;
             }
         }
         if (ret < 0) {
@@ -1108,10 +1110,12 @@ tftp_status tftp_handle_request(tftp_session* session,
     void* outgoing = (void*)opts->outbuf;
     size_t out_sz = 0;
 
-    int n, ret;
+    int ret;
+    tftp_status status;
     bool transfer_in_progress = false;
     do {
         size_t in_sz = in_buf_sz;
+        int n;
         n = session->transport_interface.recv(incoming, in_sz, true, transport_cookie);
         if (n < 0) {
             if (n == TFTP_ERR_TIMED_OUT) {
@@ -1133,10 +1137,11 @@ tftp_status tftp_handle_request(tftp_session* session,
                         return ret;
                     }
                     if (out_sz) {
-                        n = session->transport_interface.send(outgoing, out_sz, transport_cookie);
-                        if (n < 0) {
+                        status = session->transport_interface.send(outgoing, out_sz,
+                                                                   transport_cookie);
+                        if (status != TFTP_NO_ERROR) {
                             REPORT_ERR(opts, "failed during transport send callback");
-                            return (tftp_status)n;
+                            return status;
                         }
                     }
                 }
@@ -1154,8 +1159,7 @@ tftp_status tftp_handle_request(tftp_session* session,
         send_opts.inbuf_sz = in_sz;
         out_sz = out_buf_sz;
         send_opts.outbuf_sz = &out_sz;
-        tftp_status status = tftp_handle_msg(session, transport_cookie,
-                                             file_cookie, &send_opts);
+        status = tftp_handle_msg(session, transport_cookie, file_cookie, &send_opts);
         if (status != TFTP_NO_ERROR) {
             return status;
         }
@@ -1176,10 +1180,11 @@ tftp_status tftp_handle_msg(tftp_session* session,
     ret = tftp_process_msg(session, opts->inbuf, opts->inbuf_sz,
                            opts->outbuf, opts->outbuf_sz, &timeout_ms, file_cookie);
     if (*opts->outbuf_sz) {
-        int n = session->transport_interface.send(opts->outbuf, *opts->outbuf_sz, transport_cookie);
-        if (n < 0) {
+        tftp_status send_status = session->transport_interface.send(opts->outbuf, *opts->outbuf_sz,
+                                                                    transport_cookie);
+        if (send_status != TFTP_NO_ERROR) {
             REPORT_ERR(opts, "failed during transport send callback");
-            return n;
+            return send_status;
         }
     }
     if (ret < 0) {

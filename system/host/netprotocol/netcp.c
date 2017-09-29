@@ -178,7 +178,7 @@ static void file_close(void* file_cookie) {
 // Longest time we will wait for a send operation to succeed
 #define MAX_SEND_TIME_MS 1000
 
-static int transport_send(void* data, size_t len, void* transport_cookie) {
+static tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = transport_cookie;
     ssize_t send_result;
     do {
@@ -204,7 +204,7 @@ static int transport_send(void* data, size_t len, void* transport_cookie) {
     if (send_result < 0) {
         return TFTP_ERR_IO;
     }
-    return (int)send_result;
+    return TFTP_NO_ERROR;
 }
 
 static int transport_recv(void* data, size_t len, bool block, void* transport_cookie) {

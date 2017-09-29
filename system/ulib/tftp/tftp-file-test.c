@@ -166,7 +166,7 @@ void write_to_buf(fake_socket_t* sock, void* data, size_t size) {
 
 // Send a message. Note that the buffer's read_ndx and write_ndx don't wrap,
 // which makes it easier to recognize underflow.
-int transport_send(void* data, size_t len, void* transport_cookie) {
+tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = transport_cookie;
     fake_socket_t* sock = transport_info->out_sock;
     while ((sock->write_ndx + sizeof(len) + len - sock->read_ndx)
@@ -176,7 +176,7 @@ int transport_send(void* data, size_t len, void* transport_cookie) {
     }
     write_to_buf(sock, &len, sizeof(len));
     write_to_buf(sock, data, len);
-    return 0;
+    return TFTP_NO_ERROR;
 }
 
 // Read from our circular message buffer. If |move_ptr| is false, just peeks at

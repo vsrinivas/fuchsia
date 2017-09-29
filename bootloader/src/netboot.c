@@ -229,11 +229,11 @@ static void buffer_close(void* cookie) {
     printf("Done\n");
 }
 
-static int udp_send(void* data, size_t len, void* cookie) {
+static tftp_status udp_send(void* data, size_t len, void* cookie) {
     transport_info_t* transport_info = cookie;
     int bytes_sent = udp6_send(data, len, &transport_info->dest_addr, transport_info->dest_port,
                                NB_TFTP_OUTGOING_PORT);
-    return bytes_sent < 0 ? TFTP_ERR_IO : bytes_sent;
+    return bytes_sent < 0 ? TFTP_ERR_IO : TFTP_NO_ERROR;
 }
 
 static int udp_timeout_set(uint32_t timeout_ms, void* cookie) {

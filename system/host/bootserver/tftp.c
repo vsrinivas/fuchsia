@@ -99,7 +99,7 @@ typedef struct {
 
 #define SEND_TIMEOUT_US 1000
 
-int transport_send(void* data, size_t len, void* cookie) {
+tftp_status transport_send(void* data, size_t len, void* cookie) {
     transport_state* state = cookie;
     ssize_t send_result;
     do {
@@ -123,7 +123,7 @@ int transport_send(void* data, size_t len, void* cookie) {
         fprintf(stderr, "\n%s: Send failed with errno = %d\n", appname, (int)errno);
         return TFTP_ERR_IO;
     }
-    return (int)send_result;
+    return TFTP_NO_ERROR;
 }
 
 int transport_recv(void* data, size_t len, bool block, void* cookie) {

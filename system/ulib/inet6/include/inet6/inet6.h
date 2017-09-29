@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <zircon/types.h>
+
 typedef struct mac_addr mac_addr_t;
 typedef union ip6_addr ip6_addr_t;
 typedef struct ip6_hdr ip6_hdr_t;
@@ -139,14 +141,14 @@ typedef struct eth_buffer eth_buffer_t;
 int eth_get_buffer(size_t len, void** data, eth_buffer_t** out);
 void eth_put_buffer(eth_buffer_t* ethbuf);
 
-int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len);
+zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len);
 
 int eth_add_mcast_filter(const mac_addr_t* addr);
 
 // call to transmit a UDP packet
-int udp6_send(const void* data, size_t len,
-              const ip6_addr_t* daddr, uint16_t dport,
-              uint16_t sport);
+zx_status_t udp6_send(const void* data, size_t len,
+                      const ip6_addr_t* daddr, uint16_t dport,
+                      uint16_t sport);
 
 // implement to recive UDP packets
 void udp6_recv(void* data, size_t len,

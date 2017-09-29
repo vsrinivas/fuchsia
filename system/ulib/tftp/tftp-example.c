@@ -47,7 +47,7 @@ struct connection {
     uint32_t previous_timeout_ms;
 };
 
-int connection_send(void* data, size_t len, void* transport_cookie) {
+tftp_status connection_send(void* data, size_t len, void* transport_cookie) {
     connection_t* connection = (connection_t*)transport_cookie;
 #if DROPRATE != 0
     if (rand() % DROPRATE == 0) {
@@ -58,8 +58,12 @@ int connection_send(void* data, size_t len, void* transport_cookie) {
     uint8_t* msg = data;
     uint16_t opcode = ntohs(*(uint16_t*)msg);
     fprintf(stderr, "sending opcode=%u\n", opcode);
-    return sendto(connection->socket, data, len, 0, (struct sockaddr*)&connection->out_addr,
-            sizeof(struct sockaddr_in));
+    ssize_t send_result = sendto(connection->socket, data, len, 0, (struct sockaddr*)&connection->out_addr,
+                                 sizeof(struct sockaddr_in));
+    if (send_result != len) {
+        return TFTP_ERR_IO;
+    }
+    return TFTP_NO_ERROR;
 }
 
 int connection_receive(void* data, size_t len, bool block, void* transport_cookie) {

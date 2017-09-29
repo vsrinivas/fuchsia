@@ -167,7 +167,8 @@ int eth_get_buffer(size_t sz, void** data, eth_buffer_t** out) {
     return r;
 }
 
-int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
+zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
+    zx_status_t status;
     mtx_lock(&eth_lock);
 
     check_ethbuf(ethbuf, ETH_BUFFER_CLIENT);
@@ -177,6 +178,7 @@ int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
     if ((random() % DROP_PACKETS) == 0) {
         printf("tx drop %d\n", txc);
         eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
+        status = ZX_ERR_INTERNAL;
         goto fail;
     }
 #endif
@@ -184,11 +186,12 @@ int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
     if (eth == NULL) {
         printf("eth_fifo_send: not connected\n");
         eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
+        status = ZX_ERR_ADDRESS_UNREACHABLE;
         goto fail;
     }
 
     ethbuf->state = ETH_BUFFER_TX;
-    zx_status_t status = eth_queue_tx(eth, ethbuf, ethbuf->data + skip, len, 0);
+    status = eth_queue_tx(eth, ethbuf, ethbuf->data + skip, len, 0);
     if (status < 0) {
         printf("eth_fifo_send: queue tx failed: %d\n", status);
         eth_put_buffer_locked(ethbuf, ETH_BUFFER_TX);
@@ -196,11 +199,11 @@ int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
     }
 
     mtx_unlock(&eth_lock);
-    return 0;
+    return ZX_OK;
 
 fail:
     mtx_unlock(&eth_lock);
-    return -1;
+    return status;
 }
 
 //TODO: expose ethbuf to netifc clients, avoid a copy here
