@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"app/context"
 	"fidl/bindings"
@@ -26,21 +27,36 @@ type ToolApp struct {
 }
 
 func (a *ToolApp) Scan(seconds uint8) {
-	res, err := a.wlan.Scan(wlan_service.ScanRequest{seconds})
-	if err != nil {
-		fmt.Println("Error:", err)
-	} else if res.Error.Code != wlan_service.ErrCode_Ok {
-		fmt.Println("Error:", res.Error.Description)
-	} else {
-		for _, ap := range *res.Aps {
-			prot := " "
-			if ap.IsSecure {
-				prot = "*"
+	expiry := (time.Duration(seconds) + 5) * time.Second
+	t := time.NewTimer(expiry)
+
+	rxed := make(chan struct{})
+	go func() {
+		res, err := a.wlan.Scan(wlan_service.ScanRequest{seconds})
+		if err != nil {
+			fmt.Println("Error:", err)
+		} else if res.Error.Code != wlan_service.ErrCode_Ok {
+			fmt.Println("Error:", res.Error.Description)
+		} else {
+			for _, ap := range *res.Aps {
+				prot := " "
+				if ap.IsSecure {
+					prot = "*"
+				}
+				fmt.Printf("%x (RSSI: %d) %v %q\n",
+					ap.Bssid, ap.LastRssi, prot, ap.Ssid)
 			}
-			fmt.Printf("%x (RSSI: %d) %v %q\n",
-				ap.Bssid, ap.LastRssi, prot, ap.Ssid)
 		}
+		rxed <- struct{}{}
+	}()
+
+	select {
+	case <-rxed:
+	// Received scan results.
+	case <-t.C:
+		fmt.Printf("Scan timed out; aborting.\n")
 	}
+
 }
 
 func (a *ToolApp) Connect(ssid string, seconds uint8) {
@@ -65,41 +81,42 @@ func main() {
 	a := &ToolApp{ctx: context.CreateFromStartupInfo()}
 	r, p := a.wlan.NewRequest(bindings.GetAsyncWaiter())
 	a.wlan = p
+	defer a.wlan.Close()
 	a.ctx.ConnectToEnvService(r)
 
 	if len(os.Args) < 2 {
 		usage(os.Args[0])
-	} else {
-		switch os.Args[1] {
-		case cmdScan:
-			if len(os.Args) == 3 {
-				i, err := strconv.ParseInt(os.Args[2], 10, 8)
-				if err != nil {
-					fmt.Println("Error:", err)
-				} else {
-					a.Scan(uint8(i))
-				}
-			} else {
-				a.Scan(0)
-			}
-		case cmdConnect:
-			if len(os.Args) == 4 {
-				i, err := strconv.ParseInt(os.Args[3], 10, 8)
-				if err != nil {
-					fmt.Println("Error:", err)
-					return
-				} else {
-					a.Connect(os.Args[2], uint8(i))
-				}
-			} else if len(os.Args) == 3 {
-				a.Connect(os.Args[2], 0)
-			} else {
-				usage(os.Args[0])
-			}
-		default:
-			usage(os.Args[0])
-		}
+		return
 	}
 
-	a.wlan.Close()
+	cmd := os.Args[1]
+	switch cmd {
+	case cmdScan:
+		if len(os.Args) == 3 {
+			i, err := strconv.ParseInt(os.Args[2], 10, 8)
+			if err != nil {
+				fmt.Println("Error:", err)
+			} else {
+				a.Scan(uint8(i))
+			}
+		} else {
+			a.Scan(0)
+		}
+	case cmdConnect:
+		if len(os.Args) == 4 {
+			i, err := strconv.ParseInt(os.Args[3], 10, 8)
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			} else {
+				a.Connect(os.Args[2], uint8(i))
+			}
+		} else if len(os.Args) == 3 {
+			a.Connect(os.Args[2], 0)
+		} else {
+			usage(os.Args[0])
+		}
+	default:
+		usage(os.Args[0])
+	}
 }
