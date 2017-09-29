@@ -19,7 +19,6 @@
         "packages/gn/pmd",
         "packages/gn/pmd_tests",
         "packages/gn/re2",
-        "packages/gn/web_view",
         "peridot/packages/default",
         "peridot/packages/maxwell",
         "peridot/packages/modular_examples",
