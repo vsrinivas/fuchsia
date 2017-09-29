@@ -13,7 +13,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#include "byte-block.h"
+#include "byte_block.h"
 
 namespace debugserver {
 namespace util {

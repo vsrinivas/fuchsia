@@ -24,7 +24,7 @@ executable("debugserver") {
   ]
 
   deps = [
-    "../../lib/debugger-utils",
+    "//garnet/lib/debugger_utils",
     "../../lib/inferior-control",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
@@ -64,7 +64,7 @@ executable("debugserver-unittests") {
   ]
 
   deps = [
-    "../../lib/debugger-utils",
+    "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]

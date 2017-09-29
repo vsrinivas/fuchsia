@@ -11,7 +11,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 namespace debugserver {
 

@@ -15,8 +15,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/tasks/message_loop_handler.h"
 
-#include "debugger-utils/dso-list.h"
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/dso_list.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "breakpoint.h"
 #include "exception-port.h"

@@ -13,8 +13,8 @@
 
 #include <zircon/types.h>
 
-#include "byte-block.h"
-#include "elf-reader.h"
+#include "byte_block.h"
+#include "elf_reader.h"
 
 namespace debugserver {
 namespace util {

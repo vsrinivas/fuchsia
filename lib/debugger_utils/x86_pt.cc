@@ -4,13 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "x86-pt.h"
+#include "x86_pt.h"
 
 #include <atomic>
 #include <cpuid.h>
 #include <mutex>
 
-#include "x86-cpuid.h"
+#include "x86_cpuid.h"
 
 namespace debugserver {
 namespace arch {

@@ -28,8 +28,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#include "debugger-utils/util.h"
-#include "debugger-utils/x86-pt.h"
+#include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/debugger_utils/x86_pt.h"
 
 #include "inferior-control/arch.h"
 #include "inferior-control/arch-x86.h"

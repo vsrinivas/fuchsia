@@ -11,8 +11,8 @@
 
 #include <map>
 
-#include "garnet/bin/gdbserver/lib/debugger-utils/ktrace-reader.h"
-#include "garnet/bin/gdbserver/lib/debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/ktrace_reader.h"
+#include "garnet/lib/debugger_utils/util.h"
 #include "garnet/bin/gdbserver/third_party/simple-pt/elf.h"
 #include "garnet/bin/gdbserver/third_party/simple-pt/symtab.h"
 

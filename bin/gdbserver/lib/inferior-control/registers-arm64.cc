@@ -15,7 +15,7 @@
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 //#include "arch-arm64.h"
 //#include "thread.h"

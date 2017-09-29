@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "byte-block-file.h"
+#include "byte_block_file.h"
 
 #include <cinttypes>
 #include <unistd.h>

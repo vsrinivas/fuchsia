@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "gtest/gtest.h"
 

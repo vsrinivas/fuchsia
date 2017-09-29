@@ -16,7 +16,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#include "dso-list.h"
+#include "dso_list.h"
 #include "util.h"
 
 namespace debugserver {

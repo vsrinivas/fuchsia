@@ -35,9 +35,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "garnet/bin/gdbserver/lib/debugger-utils/elf-reader.h"
-#include "garnet/bin/gdbserver/lib/debugger-utils/elf-symtab.h"
-#include "garnet/bin/gdbserver/lib/debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/elf_reader.h"
+#include "garnet/lib/debugger_utils/elf_symtab.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "lib/fxl/logging.h"
 

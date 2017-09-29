@@ -6,9 +6,9 @@
 
 #include "lib/fxl/logging.h"
 
-#include "debugger-utils/util.h"
-#include "debugger-utils/x86-cpuid.h"
-#include "debugger-utils/x86-pt.h"
+#include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/debugger_utils/x86_cpuid.h"
+#include "garnet/lib/debugger_utils/x86_pt.h"
 
 #include "arch-x86.h"
 #include "thread.h"

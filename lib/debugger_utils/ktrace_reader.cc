@@ -15,7 +15,7 @@
 
 #include <zircon/ktrace.h>
 
-#include "ktrace-reader.h"
+#include "ktrace_reader.h"
 
 namespace debugserver {
 namespace ktrace {

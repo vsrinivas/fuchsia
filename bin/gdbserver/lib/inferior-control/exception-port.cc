@@ -14,7 +14,7 @@
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "process.h"
 

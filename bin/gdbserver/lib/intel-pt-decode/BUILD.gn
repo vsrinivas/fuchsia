@@ -10,7 +10,7 @@ source_set("intel-pt-decode") {
   ]
 
   deps = [
-    "//garnet/bin/gdbserver/lib/debugger-utils",
+    "//garnet/lib/debugger_utils",
     "//garnet/bin/gdbserver/third_party/simple-pt:reader",
     "//garnet/public/lib/fxl",
     "//third_party/processor-trace/libipt",

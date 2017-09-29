@@ -8,7 +8,7 @@
 // TODO(dje): As with generic elf, dwarf, et.al, move to application
 // independent library.
 
-#include "x86-cpuid.h"
+#include "x86_cpuid.h"
 
 #include <atomic>
 #include <cpuid.h>

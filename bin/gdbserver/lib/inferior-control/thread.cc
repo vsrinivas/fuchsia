@@ -13,7 +13,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "arch.h"
 #include "process.h"

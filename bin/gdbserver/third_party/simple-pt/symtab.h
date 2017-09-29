@@ -33,7 +33,7 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/gdbserver/lib/debugger-utils/elf-symtab.h"
+#include "garnet/lib/debugger_utils/elf_symtab.h"
 
 namespace simple_pt {
 

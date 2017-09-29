@@ -4,7 +4,7 @@
 
 #include "stop-reply-packet.h"
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "lib/fxl/logging.h"
 

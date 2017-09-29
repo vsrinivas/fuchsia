@@ -3,42 +3,40 @@
 # found in the LICENSE file.
 
 # A collection of utilities useful to debuggers and similar programs.
-# This library is "public" in the sense that it's available to be used
-# by anyone outside of this directory.
-# TODO(dje): Living in bin/foo is suboptimal.
-static_library("debugger-utils") {
+
+static_library("debugger_utils") {
   sources = [
-    "build-ids.cc",
-    "build-ids.h",
-    "byte-block-file.cc",
-    "byte-block-file.h",
-    "byte-block.h",
-    "elf-reader.cc",
-    "elf-reader.h",
-    "elf-symtab.cc",
-    "elf-symtab.h",
-    "ktrace-reader.cc",
-    "ktrace-reader.h",
-    "load-maps.cc",
-    "load-maps.h",
+    "build_ids.cc",
+    "build_ids.h",
+    "byte_block_file.cc",
+    "byte_block_file.h",
+    "byte_block.h",
+    "elf_reader.cc",
+    "elf_reader.h",
+    "elf_symtab.cc",
+    "elf_symtab.h",
+    "ktrace_reader.cc",
+    "ktrace_reader.h",
+    "load_maps.cc",
+    "load_maps.h",
     "util.cc",
     "util.h",
   ]
 
   if (is_fuchsia) {
     sources += [
-      "dso-list.cc",
-      "dso-list.h",
-      "util-zx.cc",
+      "dso_list.cc",
+      "dso_list.h",
+      "util_zx.cc",
     ]
   }
 
   if (current_cpu == "x64") {
     sources += [
-      "x86-cpuid.cc",
-      "x86-cpuid.h",
-      "x86-pt.cc",
-      "x86-pt.h",
+      "x86_cpuid.cc",
+      "x86_cpuid.h",
+      "x86_pt.cc",
+      "x86_pt.h",
     ]
   }
 
@@ -65,9 +63,9 @@ executable("util-unittests") {
   testonly = true
 
   sources = [
-    "../../test/run-all-unittests.cc",
-    "util-zx.cc",
-    "util-unittest.cc",
+    "run_all_unittests.cc",
+    "util_zx.cc",
+    "util_unittest.cc",
     "util.cc",
     "util.h",
   ]

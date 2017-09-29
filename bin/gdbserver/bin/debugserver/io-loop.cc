@@ -6,7 +6,7 @@
 
 #include <unistd.h>
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"

@@ -16,7 +16,7 @@ executable("ipt-dump") {
   ]
 
   deps = [
-    "//garnet/bin/gdbserver/lib/debugger-utils",
+    "//garnet/lib/debugger_utils",
     "//garnet/bin/gdbserver/lib/intel-pt-decode",
     "//garnet/bin/gdbserver/third_party/simple-pt:printer",
     "//garnet/public/lib/fxl",

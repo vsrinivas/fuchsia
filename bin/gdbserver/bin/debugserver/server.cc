@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "debugger-utils/util.h"
+#include "garnet/lib/debugger_utils/util.h"
 
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/log_settings.h"

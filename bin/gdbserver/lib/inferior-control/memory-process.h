@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "debugger-utils/byte-block.h"
+#include "garnet/lib/debugger_utils/byte_block.h"
 
 namespace debugserver {
 

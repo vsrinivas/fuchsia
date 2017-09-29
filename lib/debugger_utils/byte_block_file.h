@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "byte-block.h"
+#include "byte_block.h"
 
 namespace debugserver {
 namespace util {

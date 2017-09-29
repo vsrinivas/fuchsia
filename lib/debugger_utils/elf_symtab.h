@@ -11,7 +11,7 @@
 
 #include "lib/fxl/macros.h"
 
-#include "elf-reader.h"
+#include "elf_reader.h"
 
 namespace debugserver {
 namespace elf {

@@ -16,7 +16,7 @@
 #include <memory>
 #include <string>
 
-#include "byte-block.h"
+#include "byte_block.h"
 
 namespace debugserver {
 namespace elf {
