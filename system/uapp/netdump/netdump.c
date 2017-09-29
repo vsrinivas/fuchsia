@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define BUFSIZE 2048
 
@@ -28,7 +29,36 @@ typedef struct {
     bool link_level;
     size_t packet_count;
     size_t verbose_level;
+    int dumpfile;
 } netdump_options_t;
+
+typedef struct {
+    uint32_t type;
+    uint32_t blk_tot_len;
+    uint32_t magic;
+    uint16_t major;
+    uint16_t minor;
+    uint64_t section_len;
+    // TODO(smklein): Add options here
+    uint32_t blk_tot_len2;
+} __attribute__((packed)) pcap_shb_t;
+
+typedef struct {
+    uint32_t type;
+    uint32_t blk_tot_len;
+    uint16_t linktype;
+    uint16_t reserved;
+    uint32_t snaplen;
+    uint32_t blk_tot_len2;
+} __attribute__((packed)) pcap_idb_t;
+
+typedef struct {
+    uint32_t type;
+    uint32_t blk_tot_len;
+    uint32_t pkt_len;
+} __attribute__((packed)) simple_pkt_t;
+
+#define SIMPLE_PKT_MIN_SIZE (sizeof(simple_pkt_t) + sizeof(uint32_t))
 
 inline void print_mac(const uint8_t mac[ETH_ALEN]) {
     printf("%02x:%02x:%02x:%02x:%02x:%02x",
@@ -156,8 +186,82 @@ void parse_packet(void* packet, size_t length, netdump_options_t* options) {
     printf("\n");
 }
 
+int write_shb(int fd) {
+    if (fd == -1) {
+        return 0;
+    }
+    pcap_shb_t shb = {
+        .type = 0x0A0D0D0A,
+        .blk_tot_len = sizeof(pcap_shb_t),
+        .magic = 0x1A2B3C4D,
+        .major = 1,
+        .minor = 0,
+        .section_len = 0xFFFFFFFFFFFFFFFF,
+        .blk_tot_len2 = sizeof(pcap_shb_t),
+    };
+
+    if (write(fd, &shb, sizeof(shb)) != sizeof(shb)) {
+        fprintf(stderr, "Couldn't write PCAP Section Header block\n");
+        return -1;
+    }
+    return 0;
+}
+
+int write_idb(int fd) {
+    if (fd == -1) {
+        return 0;
+    }
+    pcap_idb_t idb = {
+        .type = 0x00000001,
+        .blk_tot_len = sizeof(pcap_idb_t),
+        .linktype = 1,
+        .reserved = 0,
+        .snaplen = 0xFFFFFFFF,
+        .blk_tot_len2 = sizeof(pcap_idb_t),
+    };
+
+    if (write(fd, &idb, sizeof(idb)) != sizeof(idb)) {
+        fprintf(stderr, "Couldn't write PCAP Interface Description Block\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int write_packet(int fd, void* data, size_t len) {
+    if (fd == -1) {
+        return 0;
+    }
+
+    simple_pkt_t pkt = {
+        .type = 0x00000003,
+        .blk_tot_len = SIMPLE_PKT_MIN_SIZE + len,
+        .pkt_len = len,
+    };
+
+    if (write(fd, &pkt, sizeof(pkt)) != sizeof(pkt)) {
+        fprintf(stderr, "Couldn't write packet header\n");
+        return -1;
+    } else if (write(fd, data, len) != (ssize_t) len) {
+        fprintf(stderr, "Couldn't write packet\n");
+        return -1;
+    } else if (write(fd, &pkt.blk_tot_len, sizeof(pkt.blk_tot_len)) != sizeof(pkt.blk_tot_len)) {
+        fprintf(stderr, "Couldn't write packet footer\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options_t* options) {
     eth_fifo_entry_t entries[count];
+
+    if (write_shb(options->dumpfile)) {
+        return;
+    }
+    if (write_idb(options->dumpfile)) {
+        return;
+    }
 
     for (;;) {
         uint32_t n;
@@ -180,6 +284,11 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
                 } else {
                     parse_packet(iobuf + e->offset, e->length, options);
                 }
+
+                if (write_packet(options->dumpfile, iobuf + e->offset, e->length)) {
+                    return;
+                }
+
                 options->packet_count--;
                 if (options->packet_count == 0) {
                     return;
@@ -199,6 +308,7 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
 
 int usage(void) {
     fprintf(stderr, "usage: netdump [ <option>* ] <network-device>\n");
+    fprintf(stderr, " -w file : Write packet output to file in pcapng format\n");
     fprintf(stderr, " -c count: Exit after receiving count packets\n");
     fprintf(stderr, " -e      : Print link-level header information\n");
     fprintf(stderr, " -v      : Print verbose output\n");
@@ -227,6 +337,19 @@ int parse_args(int argc, const char** argv, netdump_options_t* options) {
             argv++;
             argc--;
             options->link_level = true;
+        } else if (!strcmp(argv[0], "-w")) {
+            argv++;
+            argc--;
+            if (argc < 1 || options->dumpfile != -1) {
+                return usage();
+            }
+            options->dumpfile = open(argv[0], O_WRONLY | O_CREAT);
+            if (options->dumpfile < 0) {
+                fprintf(stderr, "Error: Could not output to file: %s\n", argv[0]);
+                return usage();
+            }
+            argv++;
+            argc--;
         } else if (!strcmp(argv[0], "-v")) {
             argv++;
             argc--;
@@ -258,6 +381,7 @@ int parse_args(int argc, const char** argv, netdump_options_t* options) {
 int main(int argc, const char** argv) {
     netdump_options_t options;
     memset(&options, 0, sizeof(options));
+    options.dumpfile = -1;
     if (parse_args(argc - 1, argv + 1, &options)) {
         return -1;
     }
@@ -326,6 +450,10 @@ int main(int argc, const char** argv) {
     }
 
     handle_rx(fifos.rx_fifo, iobuf, count, &options);
+
     zx_handle_close(fifos.rx_fifo);
+    if (options.dumpfile != -1) {
+        close(options.dumpfile);
+    }
     return 0;
 }
