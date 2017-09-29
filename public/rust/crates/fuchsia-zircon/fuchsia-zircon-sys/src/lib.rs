@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![allow(non_camel_case_types)]
+#![deny(warnings)]
 
 #[macro_use]
 extern crate bitflags;

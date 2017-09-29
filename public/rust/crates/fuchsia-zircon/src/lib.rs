@@ -5,6 +5,7 @@
 //! Type-safe bindings for Zircon kernel
 //! [syscalls](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md).
 
+#![deny(warnings)]
 extern crate fuchsia_zircon_sys as zircon_sys;
 
 use std::io;

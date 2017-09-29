@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "rust"
+    ],
+    "packages": {
+        "rust-crates-tests": "//garnet/public/rust/crates:tests"
+    }
+}
