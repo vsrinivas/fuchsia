@@ -3,8 +3,6 @@
         "garnet/packages/default",
         "packages/gn/amber",
         "packages/gn/asio",
-        "packages/gn/dart",
-        "packages/gn/flutter",
         "packages/gn/go_stdlib_tests",
         "packages/gn/install-fuchsia",
         "packages/gn/iperf",
