@@ -160,8 +160,11 @@ void LowEnergyDiscoveryManager::OnDeviceFound(
     const common::ByteBuffer& data) {
   FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
-  auto device = device_cache_->StoreLowEnergyScanResult(result, data);
-  FXL_DCHECK(device);
+  auto device = device_cache_->FindDeviceByAddress(result.address);
+  if (!device) {
+    device = device_cache_->NewDevice(result.address, result.connectable);
+  }
+  device->SetLEAdvertisingData(result.rssi, data);
 
   cached_scan_results_.insert(device->identifier());
 

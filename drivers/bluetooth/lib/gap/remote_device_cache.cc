@@ -14,54 +14,13 @@ namespace bluetooth {
 namespace gap {
 
 RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
-                                           TechnologyType technology,
-                                           bool connectable,
-                                           bool temporary) {
-  auto* device = new RemoteDevice(fxl::GenerateUUID(), technology, address,
-                                  connectable, temporary);
+                                           bool connectable) {
+  if (address_map_.find(address) != address_map_.end())
+    return nullptr;
+
+  auto* device = new RemoteDevice(fxl::GenerateUUID(), address, connectable);
   devices_[device->identifier()] = std::unique_ptr<RemoteDevice>(device);
   address_map_[device->address()] = device->identifier();
-  return device;
-}
-
-RemoteDevice* RemoteDeviceCache::StoreLowEnergyScanResult(
-    const hci::LowEnergyScanResult& scan_result,
-    const common::ByteBuffer& advertising_data) {
-  // If the device already exists then update its contents.
-  RemoteDevice* device = FindDeviceByAddress(scan_result.address);
-  if (device) {
-    if (device->connectable() != scan_result.connectable) {
-      FXL_VLOG(1) << "gap: RemoteDeviceCache: device (id: "
-                  << device->identifier() << ") now "
-                  << (scan_result.connectable ? "connectable"
-                                              : "non-connectable");
-      device->set_connectable(scan_result.connectable);
-    }
-    device->SetLowEnergyData(scan_result.rssi, advertising_data);
-    return device;
-  }
-
-  device = NewDevice(scan_result.address, TechnologyType::kLowEnergy,
-                     scan_result.connectable, true /* temporary */);
-  device->SetLowEnergyData(scan_result.rssi, advertising_data);
-
-  return device;
-}
-
-RemoteDevice* RemoteDeviceCache::StoreLowEnergyConnection(
-    const common::DeviceAddress& peer_address,
-    const hci::LEConnectionParameters& le_params) {
-  RemoteDevice* device = FindDeviceByAddress(peer_address);
-  if (!device) {
-    device = NewDevice(peer_address, TechnologyType::kLowEnergy,
-                       true /* connectable */, false /* temporary */);
-    device->SetLowEnergyData(hci::kRSSIInvalid, common::BufferView());
-  }
-
-  FXL_DCHECK(device->connectable());
-  device->SetLowEnergyConnectionData(le_params);
-  device->set_temporary(false);
-
   return device;
 }
 
@@ -77,7 +36,10 @@ RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(
   if (iter == address_map_.end())
     return nullptr;
 
-  return FindDeviceById(iter->second);
+  auto* dev = FindDeviceById(iter->second);
+  FXL_DCHECK(dev);
+
+  return dev;
 }
 
 }  // namespace gap

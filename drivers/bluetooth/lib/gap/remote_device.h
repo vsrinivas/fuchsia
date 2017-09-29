@@ -51,10 +51,19 @@ class RemoteDevice final {
   // hci::kRSSIInvalid if the value is unknown.
   int8_t rssi() const { return rssi_; }
 
+  // Updates the advertising and scan response data for this device.
+  // |rssi| corresponds to the most recent advertisement RSSI.
+  // |advertising_data| should include any scan response data.
+  void SetLEAdvertisingData(int8_t rssi,
+                            const common::ByteBuffer& advertising_data);
+
   // Returns the most recently used connection parameters for this device.
   // Returns nullptr if these values are unknown.
   const hci::LEConnectionParameters* le_connection_params() const {
     return le_conn_params_.value();
+  }
+  void set_le_connection_params(const hci::LEConnectionParameters& params) {
+    le_conn_params_ = params;
   }
 
   // Returns this device's preferred connection parameters, if known. LE
@@ -64,9 +73,28 @@ class RemoteDevice final {
       const {
     return le_preferred_conn_params_.value();
   }
+  void set_le_preferred_connection_params(
+      const hci::LEPreferredConnectionParameters& params) {
+    le_preferred_conn_params_ = params;
+  }
 
-  // Returns true if this device has not been connected to.
+  // A temporary device is one that is never persisted, such as
+  //
+  //   1. A device that has never been connected to;
+  //   2. A device that was connected but uses a Non-resolvable Private Address.
+  //   3. A device that was connected, uses a Resolvable Private Address, but
+  //      the local host has no Identity Resolving Key for it.
+  //
+  // All other devices can be considered bonded.
   bool temporary() const { return temporary_; }
+
+  // Marks this device as non-temporary. This operation may fail due to one of
+  // the conditions described above the |temporary()| method.
+  //
+  // TODO(armansito): Replace this with something more sophisticated when we
+  // implement bonding procedures. This method is here to remind us that these
+  // conditions are subtle and not fully supported yet.
+  bool TryMakeNonTemporary();
 
   // Returns a string representation of this device.
   std::string ToString() const;
@@ -74,26 +102,11 @@ class RemoteDevice final {
  private:
   friend class RemoteDeviceCache;
 
-  // TODO(armansito): Add a constructor for classic devices.
   // TODO(armansito): Add constructor from persistent storage format.
 
   RemoteDevice(const std::string& identifier,
-               TechnologyType technology,
                const common::DeviceAddress& address,
-               bool connectable,
-               bool temporary);
-
-  // Called by RemoteDeviceCache to update the contents of a LE device.
-  void SetLowEnergyData(int8_t rssi,
-                        const common::ByteBuffer& advertising_data);
-
-  // Called by RemoteDeviceCache to update the contents of a LE device after a
-  // connection is established.
-  void SetLowEnergyConnectionData(const hci::LEConnectionParameters& params);
-
-  // Called by RemoteDeviceCache
-  void set_connectable(bool value) { connectable_ = value; }
-  void set_temporary(bool value) { temporary_ = value; }
+               bool connectable);
 
   std::string identifier_;
   TechnologyType technology_;

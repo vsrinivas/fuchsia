@@ -7,7 +7,6 @@
 #include <unordered_map>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "lib/fxl/macros.h"
 
@@ -36,22 +35,10 @@ class RemoteDeviceCache final {
 
   RemoteDeviceCache() = default;
 
-  // Creates or updates a Remote Device based on LE scan results. Creates a new
-  // RemoteDevice entry if the device does not exist.
-  RemoteDevice* StoreLowEnergyScanResult(
-      const hci::LowEnergyScanResult& scan_result,
-      const common::ByteBuffer& advertising_data);
-
-  // Creates or updates a RemoteDevice entry based on a new connection.
-  RemoteDevice* StoreLowEnergyConnection(
-      const common::DeviceAddress& peer_address,
-      const hci::LEConnectionParameters& le_params);
-
-  // Creates a new device entry using the given parameters.
+  // Creates a new device entry using the given parameters. Returns nullptr if
+  // an entry matching |address| already exists in the cache.
   RemoteDevice* NewDevice(const common::DeviceAddress& address,
-                          TechnologyType technology,
-                          bool connectable,
-                          bool temporary);
+                          bool connectable);
 
   // Returns the remote device with identifier |identifier|. Returns nullptr if
   // |identifier| is not recognized.

@@ -16,89 +16,82 @@ namespace {
 // All fields are initialized to zero as they are unused in these tests.
 const hci::LEConnectionParameters kTestParams;
 
-TEST(RemoteDeviceCacheTest, StoreLowEnergyScanResult) {
-  const common::DeviceAddress kAddress0(common::DeviceAddress::Type::kLEPublic,
+constexpr int8_t kTestRSSI = 10;
+
+const common::DeviceAddress kAddrPublic(common::DeviceAddress::Type::kLEPublic,
                                         "01:02:03:04:05:06");
-  const common::DeviceAddress kAddress1(common::DeviceAddress::Type::kLERandom,
+
+// TODO(armansito): Make these adhere to privacy specfication.
+const common::DeviceAddress kAddrRandom(common::DeviceAddress::Type::kLERandom,
                                         "06:05:04:03:02:01");
+const common::DeviceAddress kAddrAnon(common::DeviceAddress::Type::kLEAnonymous,
+                                      "06:05:04:03:02:01");
+
+TEST(RemoteDeviceCacheTest, LookUp) {
   auto kAdvData0 =
       common::CreateStaticByteBuffer(0x05, 0x09, 'T', 'e', 's', 't');
   auto kAdvData1 = common::CreateStaticByteBuffer(
       0x0C, 0x09, 'T', 'e', 's', 't', ' ', 'D', 'e', 'v', 'i', 'c', 'e');
 
-  const hci::LowEnergyScanResult kScanResult0(kAddress0, true,
-                                              hci::kRSSIInvalid);
-  const hci::LowEnergyScanResult kScanResult1(kAddress1, false,
-                                              hci::kRSSIInvalid);
-
   RemoteDeviceCache cache;
 
-  EXPECT_FALSE(cache.FindDeviceByAddress(kAddress0));
+  EXPECT_FALSE(cache.FindDeviceByAddress(kAddrPublic));
   EXPECT_FALSE(cache.FindDeviceById("foo"));
 
-  auto device = cache.StoreLowEnergyScanResult(kScanResult0, kAdvData0);
-
+  auto device = cache.NewDevice(kAddrPublic, true);
   ASSERT_TRUE(device);
   EXPECT_EQ(TechnologyType::kLowEnergy, device->technology());
   EXPECT_TRUE(device->connectable());
   EXPECT_TRUE(device->temporary());
-  EXPECT_EQ(kAddress0, device->address());
-  EXPECT_TRUE(common::ContainersEqual(kAdvData0, device->advertising_data()));
+  EXPECT_EQ(kAddrPublic, device->address());
+  EXPECT_EQ(0u, device->advertising_data().size());
+  EXPECT_EQ(hci::kRSSIInvalid, device->rssi());
 
   // A look up should return the same instance.
   EXPECT_EQ(device, cache.FindDeviceById(device->identifier()));
   EXPECT_EQ(device, cache.FindDeviceByAddress(device->address()));
 
-  // Adding a device with the same address should return the same instance.
-  EXPECT_EQ(device, cache.StoreLowEnergyScanResult(kScanResult0, kAdvData1));
-  EXPECT_EQ(TechnologyType::kLowEnergy, device->technology());
-  EXPECT_TRUE(device->connectable());
-  EXPECT_TRUE(device->temporary());
-  EXPECT_EQ(kAddress0, device->address());
+  // Adding a device with the same address should return nullptr.
+  EXPECT_FALSE(cache.NewDevice(kAddrPublic, true));
+
+  device->SetLEAdvertisingData(kTestRSSI, kAdvData1);
   EXPECT_TRUE(common::ContainersEqual(kAdvData1, device->advertising_data()));
+  EXPECT_EQ(kTestRSSI, device->rssi());
 
-  // Setting a shorter advertising data should work without making
-  // reallocations.
-  cache.StoreLowEnergyScanResult(kScanResult0, kAdvData0);
+  device->SetLEAdvertisingData(kTestRSSI, kAdvData0);
   EXPECT_TRUE(common::ContainersEqual(kAdvData0, device->advertising_data()));
+  EXPECT_EQ(kTestRSSI, device->rssi());
+}
 
-  // Insert an entry with a different address.
-  auto device1 = cache.StoreLowEnergyScanResult(kScanResult1, kAdvData1);
-  EXPECT_NE(device1, device);
-  EXPECT_EQ(TechnologyType::kLowEnergy, device1->technology());
-  EXPECT_FALSE(device1->connectable());
+TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryNonConn) {
+  RemoteDeviceCache cache;
+  auto device = cache.NewDevice(kAddrPublic, false);
   EXPECT_TRUE(device->temporary());
-  EXPECT_EQ(kAddress1, device1->address());
-  EXPECT_TRUE(common::ContainersEqual(kAdvData1, device1->advertising_data()));
-
-  EXPECT_EQ(device1, cache.FindDeviceById(device1->identifier()));
+  EXPECT_FALSE(device->TryMakeNonTemporary());
+  EXPECT_TRUE(device->temporary());
 }
 
-TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionNewDevice) {
-  const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic,
-                                       "01:02:03:04:05:06");
+TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryRandomAddr) {
   RemoteDeviceCache cache;
-  auto device = cache.StoreLowEnergyConnection(kAddress, kTestParams);
-  ASSERT_TRUE(device);
-
-  EXPECT_EQ(kAddress, device->address());
-  EXPECT_TRUE(device->connectable());
-  EXPECT_FALSE(device->temporary());
+  auto device = cache.NewDevice(kAddrRandom, true);
+  EXPECT_TRUE(device->temporary());
+  EXPECT_FALSE(device->TryMakeNonTemporary());
+  EXPECT_TRUE(device->temporary());
 }
 
-TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionExisting) {
-  const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic,
-                                       "01:02:03:04:05:06");
+TEST(RemoteDeviceCacheTest, TryMakeNonTemporaryAnonAddr) {
   RemoteDeviceCache cache;
+  auto device = cache.NewDevice(kAddrAnon, true);
+  EXPECT_TRUE(device->temporary());
+  EXPECT_FALSE(device->TryMakeNonTemporary());
+  EXPECT_TRUE(device->temporary());
+}
 
-  auto device =
-      cache.NewDevice(kAddress, TechnologyType::kLowEnergy, true, true);
-  ASSERT_TRUE(device);
-  ASSERT_TRUE(device->temporary());
-
-  auto updated = cache.StoreLowEnergyConnection(kAddress, kTestParams);
-  ASSERT_TRUE(updated);
-  EXPECT_EQ(device, updated);
+TEST(RemoteDeviceCacheTest, TryMakeNonTemporarySuccess) {
+  RemoteDeviceCache cache;
+  auto device = cache.NewDevice(kAddrPublic, true);
+  EXPECT_TRUE(device->temporary());
+  EXPECT_TRUE(device->TryMakeNonTemporary());
   EXPECT_FALSE(device->temporary());
 }
 

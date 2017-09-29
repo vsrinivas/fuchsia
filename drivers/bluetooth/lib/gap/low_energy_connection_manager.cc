@@ -425,8 +425,14 @@ void LowEnergyConnectionManager::OnConnectionCreated(
   FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: new connection: "
                 << connection->ToString();
 
-  RemoteDevice* peer = device_cache_->StoreLowEnergyConnection(
-      connection->peer_address(), connection->low_energy_parameters());
+  RemoteDevice* peer =
+      device_cache_->FindDeviceByAddress(connection->peer_address());
+  if (!peer) {
+    peer = device_cache_->NewDevice(connection->peer_address(), true);
+  }
+
+  peer->TryMakeNonTemporary();
+  peer->set_le_connection_params(connection->low_energy_parameters());
 
   // Add the connection to the connection map and obtain the initial reference.
   // This reference lasts until this method returns to prevent it from dropping
