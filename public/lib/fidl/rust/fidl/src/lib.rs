@@ -4,6 +4,8 @@
 
 //! Library and runtime for fidl bindings.
 
+#![deny(missing_docs)]
+
 extern crate fuchsia_zircon as zircon;
 extern crate byteorder;
 extern crate futures;
@@ -30,4 +32,8 @@ pub use server::{Stub, Server};
 pub use interface::InterfacePtr;
 pub use client::{Client, FidlService};
 pub use endpoints::{ClientEnd, ServerEnd};
+
+/// A specialized `Box<Future<...>>` type for FIDL.
+/// This is mostly as a convenience to avoid writing
+/// `Box<Future<Item = I, Error = fidl::Error> + Send>`.
 pub type BoxFuture<Item> = Box<futures::Future<Item = Item, Error = Error> + Send>;

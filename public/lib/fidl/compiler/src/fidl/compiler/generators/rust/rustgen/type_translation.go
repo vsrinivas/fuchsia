@@ -380,9 +380,9 @@ func userDefinedTypeToRustType(t *fidl_types.UserDefinedType, context *Context, 
 	case *fidl_types.UserDefinedTypeInterfaceType:
 		full_name := fidlToRustName((*t).Interface().(fidl_types.FidlInterface).DeclData, context, ident)
 		if interfaceRequest {
-			return "::fidl::ServerEnd<" + full_name + "::Service>"
+			return "::fidl::ServerEnd<" + full_name + "Service>"
 		}
-		return "::fidl::InterfacePtr<::fidl::ClientEnd<" + full_name + "::Service>>"
+		return "::fidl::InterfacePtr<::fidl::ClientEnd<" + full_name + "Service>>"
 	}
 	log.Fatal("Unknown UserDefinedType", t)
 	return ""

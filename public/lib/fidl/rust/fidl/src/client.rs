@@ -9,20 +9,71 @@ use cookiemap::CookieMap;
 
 use tokio_core::reactor::Handle;
 use tokio_fuchsia;
-use futures::{Async, Future, Poll, future};
+use futures::{Async, Future, Poll, future, task};
 use std::collections::btree_map::Entry;
-use std::io;
+use std::{io, mem};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// A FIDL service.
+///
+/// Implementations of this trait can be used to manufacture instances of a FIDL service
+/// and get metadata about a particular service.
 pub trait FidlService: Sized {
+    /// The type of the structure against which FIDL requests are made.
+    /// Queries made against the proxy are sent to the paired `ServerEnd`.
     type Proxy;
+
+    /// Create a new proxy from a `ClientEnd`.
     fn new_proxy(client_end: ClientEnd<Self>, handle: &Handle) -> Result<Self::Proxy, Error>;
+
+    /// Create a new `Proxy`/`ServerEnd` pair.
     fn new_pair(handle: &Handle) -> Result<(Self::Proxy, ServerEnd<Self>), Error>;
-    fn name() -> &'static str;
+
+    /// The name of the service.
+    const NAME: &'static str;
+
+    /// The version of the service.
+    const VERSION: u32;
+}
+
+/// An enum reprenting either a resolved message interest or a task on which to alert
+/// that a response message has arrived.
+#[derive(Debug)]
+enum MessageInterest {
+    WillPoll,
+    Waiting(task::Task),
+    Received(DecodeBuf),
+    Done,
+}
+
+impl MessageInterest {
+    /// Check if a message has been received.
+    fn is_received(&self) -> bool {
+        if let MessageInterest::Received(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get the received buffer if one exists.
+    fn take_buf(&mut self) -> Option<DecodeBuf> {
+        if !self.is_received() {
+            // Keep waiting.
+            return None;
+        }
+        let old_self = mem::replace(self, MessageInterest::Done);
+        if let MessageInterest::Received(buf) = old_self {
+            Some(buf)
+        } else {
+            None
+        }
+    }
 }
 
 /// A shared client channel which tracks expected and received responses
+#[derive(Debug)]
 struct ClientInner {
     channel: tokio_fuchsia::Channel,
 
@@ -35,7 +86,7 @@ struct ClientInner {
     /// An interest is registered with `register_msg_interest` and deregistered
     /// by either receiving a message via a call to `poll_recv` or manually
     /// deregistering with `deregister_msg_interest`
-    message_interests: Mutex<CookieMap<Option<DecodeBuf>>>,
+    message_interests: Mutex<CookieMap<MessageInterest>>,
 }
 
 impl ClientInner {
@@ -44,11 +95,12 @@ impl ClientInner {
     /// This function returns a `u64` ID which should be used to send a message
     /// via the channel. Responses are then received using `poll_recv`.
     fn register_msg_interest(&self) -> u64 {
-        self.message_interests.lock().unwrap().insert(None)
+        self.message_interests.lock().unwrap().insert(
+            MessageInterest::WillPoll)
     }
 
     /// Check for receipt of a message with a given ID.
-    fn poll_recv(&self, id: u64) -> Poll<DecodeBuf, Error> {
+    fn poll_recv(&self, id: u64, has_set_task: bool) -> Poll<DecodeBuf, Error> {
         // Look to see if there are messages available
         if self.received_messages_count.load(Ordering::SeqCst) > 0 {
            if let Entry::Occupied(mut entry) =
@@ -56,7 +108,7 @@ impl ClientInner {
            {
                // If a message was received for the ID in question,
                // remove the message interest entry and return the response.
-               if let Some(buf) = entry.get_mut().take() {
+               if let Some(buf) = entry.get_mut().take_buf() {
                    entry.remove_entry();
                    self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
                    return Ok(Async::Ready(buf));
@@ -72,6 +124,23 @@ impl ClientInner {
                 Ok(()) => {},
                 Err(e) => {
                     if e.kind() == io::ErrorKind::WouldBlock {
+                        // Set the current task to be notified if a response is seen
+                        if !has_set_task {
+                            if let Entry::Occupied(mut entry) =
+                                self.message_interests.lock().unwrap().inner_map().entry(id)
+                            {
+                                if let Some(buf) = entry.get_mut().take_buf() {
+                                    // If, by happy accident, we just raced to getting the result,
+                                    // then yay! Return success.
+                                    entry.remove_entry();
+                                    self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
+                                    return Ok(Async::Ready(buf));
+                                } else {
+                                    // Set the current task to be notified when a response arrives.
+                                    *entry.get_mut() = MessageInterest::Waiting(task::current());
+                                }
+                            }
+                        }
                         return Ok(Async::NotReady);
                     } else {
                         return Err(e.into());
@@ -95,7 +164,11 @@ impl ClientInner {
                     if let Entry::Occupied(mut entry) =
                         self.message_interests.lock().unwrap().inner_map().entry(id)
                     {
-                        *entry.get_mut() = Some(buf);
+                        if let MessageInterest::Waiting(ref task) = *entry.get() {
+                            // Wake up the task to let them know a message has arrived.
+                            task.notify();
+                        }
+                        *entry.get_mut() = MessageInterest::Received(buf);
                         self.received_messages_count.fetch_add(1, Ordering::SeqCst);
                     }
                 }
@@ -112,23 +185,26 @@ impl ClientInner {
         if self.message_interests
                .lock().unwrap().remove(id)
                .expect("attempted to deregister unregistered message interest")
-               .is_some()
+               .is_received()
         {
             self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
         }
     }
 }
 
+/// A FIDL client which can be used to send buffers and receive responses via a channel.
+#[derive(Debug, Clone)]
 pub struct Client {
     inner: Arc<ClientInner>,
 }
 
-// TODO: someday impl Trait
-type SendMessageExpectResponseFuture = future::Either<
+/// A future representing the response to a FIDL message.
+pub type SendMessageExpectResponseFuture = future::Either<
         future::FutureResult<DecodeBuf, Error>,
         MessageResponse>;
 
 impl Client {
+    /// Create a new client.
     pub fn new(channel: tokio_fuchsia::Channel, handle: &Handle) -> Client {
         // Unused for now-- left in public API to allow for future backwards
         // compatibility and to allow for future changes to spawn futures.
@@ -142,11 +218,13 @@ impl Client {
         }
     }
 
+    /// Send a message without expecting a response.
     pub fn send_msg(&self, buf: &mut EncodeBuf) -> Result<(), Error> {
         let (out_buf, handles) = buf.get_mut_content();
         Ok(self.inner.channel.write(out_buf, handles, 0)?)
     }
 
+    /// Send a message and receive a response future.
     pub fn send_msg_expect_response(&self, buf: &mut EncodeBuf)
             -> SendMessageExpectResponseFuture
     {
@@ -160,15 +238,19 @@ impl Client {
         future::Either::B(MessageResponse {
             id: id,
             client: Some(self.inner.clone()),
+            has_polled: false,
         })
     }
 }
 
 #[must_use]
+/// A future which polls for the response to a client message.
+#[derive(Debug)]
 pub struct MessageResponse {
     id: u64,
     // `None` if the message response has been recieved
     client: Option<Arc<ClientInner>>,
+    has_polled: bool,
 }
 
 impl Future for MessageResponse {
@@ -176,7 +258,7 @@ impl Future for MessageResponse {
     type Error = Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let res = if let Some(ref client) = self.client {
-            client.poll_recv(self.id)
+            client.poll_recv(self.id, self.has_polled)
         } else {
             return Err(Error::PollAfterCompletion)
         };
@@ -185,6 +267,8 @@ impl Future for MessageResponse {
         if let Ok(Async::Ready(_)) = res {
             self.client.take();
         }
+
+        self.has_polled = true;
 
         res
     }

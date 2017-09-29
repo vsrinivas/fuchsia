@@ -6,10 +6,10 @@
 
 // Implementation is currently a counter and a BTreeMap, but that could change.
 
-use std::collections::btree_map;
 use std::collections::BTreeMap;
 
-pub struct CookieMap<T> {
+#[derive(Debug)]
+pub(crate) struct CookieMap<T> {
     counter: u64,
     inner: BTreeMap<u64, T>,
 }
@@ -22,10 +22,7 @@ impl<T> CookieMap<T> {
         }
     }
 
-    // Allow inspecting the inner BTree directly in order to use e.g. the `Entry`
-    // API. The privacy is limited to `pub(crate)` to prevent external types from
-    // relying on the concrete type of the map.
-    pub(crate) fn inner_map(&mut self) -> &mut BTreeMap<u64, T> {
+    pub fn inner_map(&mut self) -> &mut BTreeMap<u64, T> {
         &mut self.inner
     }
 
@@ -38,17 +35,5 @@ impl<T> CookieMap<T> {
 
     pub fn remove(&mut self, key: u64) -> Option<T> {
         self.inner.remove(&key)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
-    }
-}
-
-impl<T> IntoIterator for CookieMap<T> {
-    type Item = (u64, T);
-    type IntoIter = btree_map::IntoIter<u64, T>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.inner.into_iter()
     }
 }

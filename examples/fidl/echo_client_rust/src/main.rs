@@ -4,12 +4,11 @@
 
 extern crate fidl;
 extern crate fuchsia_app;
-extern crate futures;
 extern crate tokio_core;
 
 // This is the generated crate containing FIDL bindings for the Echo service.
 extern crate garnet_examples_fidl_services;
-use garnet_examples_fidl_services::Echo::{self, I};
+use garnet_examples_fidl_services::{Echo, EchoService};
 
 // The fuchsia_app crate allows us to start up applications.
 use fuchsia_app::client::{ApplicationContext, Launcher};
@@ -34,7 +33,7 @@ fn main_res() -> Result<(), fidl::Error> {
     // Launch the server and connect to the echo service.
     let echo_url = String::from("file://system/apps/echo_server_rust");
     let mut app = launcher.launch(echo_url, None, &handle)?;
-    let mut echo = app.connect_to_service::<Echo::Service>(&handle)?;
+    let mut echo = app.connect_to_service::<EchoService>(&handle)?;
 
     // Send "echo msg" to the server.
     // `response_fut` is a `Future` which returns `Option<String>`.

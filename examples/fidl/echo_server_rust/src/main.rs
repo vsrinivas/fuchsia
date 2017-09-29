@@ -16,10 +16,9 @@ use futures::{future, Future};
 use tokio_core::reactor;
 
 // `EchoServer` is a zero-sized type that implements the `Echo::I` trait.
-// It can be paired with the `Echo::Dispatcher` to serve echo-service requests.
 struct EchoServer;
 
-impl Echo::I for EchoServer {
+impl Echo for EchoServer {
     fn echo_string(&mut self, value: Option<String>)
         -> fidl::BoxFuture<Option<String>>
     {
@@ -36,7 +35,7 @@ fn main() {
     // instance upon receiving a `connect_to_service` request.
     let service_provider =
         ServiceProviderServer::new(&handle)
-            .add_service(|| Echo::Dispatcher(EchoServer));
+            .add_service(|| EchoServer.dispatch());
 
     let server = Server::new_outgoing(service_provider, &handle)
                     .expect("Unable to create FIDL service");

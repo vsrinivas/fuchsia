@@ -4,6 +4,8 @@
 
 //! A wrapper to expose Zircon kernel objects for use in tokio.
 
+#![deny(missing_docs)]
+
 #[macro_use]
 extern crate futures;
 #[macro_use]

@@ -15,17 +15,25 @@ use zircon::Channel;
 
 use tokio_fuchsia;
 
+/// The "stub" which handles raw FIDL buffer requests.
 pub trait Stub {
+    /// The FIDL service type that the stub provides.
     type Service: FidlService;
 
+    /// The type of the future that is resolved to a response.
     type DispatchFuture: Future<Item = EncodeBuf, Error = Error>;
 
+    /// Dispatches a request and returns a future for the response.
     fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture;
 
+    /// Dispatches a request that doesn't have a response.
     fn dispatch(&mut self, request: &mut DecodeBuf) -> Result<()>;
 }
 
-/// Allows repeatedly listening for messages while re-using the message buffer.
+/// FIDL server which processes requests from a channel and runs them through a `Stub`.
+///
+/// This type is a future which must be polled by an executor.
+#[must_use = "futures do nothing unless polled"]
 pub struct Server<S: Stub> {
     channel: tokio_fuchsia::Channel,
     stub: S,
@@ -36,6 +44,7 @@ pub struct Server<S: Stub> {
 }
 
 impl<S: Stub> Server<S> {
+    /// Create a new FIDL server on the given channel.
     pub fn new(stub: S, channel: Channel, handle: &Handle) -> io::Result<Self> {
         Ok(Server {
             stub: stub,
@@ -111,9 +120,8 @@ mod tests {
         fn new_pair(_: &Handle) -> Result<(Self::Proxy, ServerEnd<Self>)> {
             unimplemented!()
         }
-        fn name() -> &'static str {
-            "DUMMY_SERVICE"
-        }
+        const NAME: &'static str = "DUMMY_SERVICE";
+        const VERSION: u32 = 0;
     }
 
     impl Stub for DummyDispatcher {

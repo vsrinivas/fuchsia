@@ -17,14 +17,22 @@ extern crate garnet_public_lib_app_fidl;
 
 use garnet_public_lib_app_fidl::{
     ApplicationController,
-    ApplicationController_I,
+    ApplicationControllerProxy,
+    ApplicationControllerService,
     ApplicationEnvironment,
-    ApplicationEnvironment_I,
+    ApplicationEnvironmentProxy,
+    ApplicationEnvironmentService,
     ApplicationLauncher,
-    ApplicationLauncher_I,
+    ApplicationLauncherProxy,
+    ApplicationLauncherService,
     ApplicationLaunchInfo,
 };
-use garnet_public_lib_app_fidl_service_provider::{ServiceProvider, ServiceProvider_I};
+use garnet_public_lib_app_fidl_service_provider::{
+    ServiceProvider,
+    ServiceProviderProxy,
+    ServiceProviderService,
+    ServiceProviderDispatcher,
+};
 use fidl::FidlService;
 use zircon::{Channel, HandleBased};
 use std::io;
@@ -37,19 +45,19 @@ pub mod client {
     #[inline]
     /// Connect to a FIDL service on the given `service_provider`.
     pub fn connect_to_service<Service: FidlService>(
-        service_provider: &mut ServiceProvider::Proxy,
+        service_provider: &mut ServiceProviderProxy,
         handle: &TokioHandle
     ) -> Result<Service::Proxy, fidl::Error>
     {
         let (proxy, server_end) = Service::new_pair(handle)?;
-        service_provider.connect_to_service(String::from(Service::name()), server_end.into_channel());
+        service_provider.connect_to_service(String::from(Service::NAME), server_end.into_channel());
         Ok(proxy)
     }
 
     /// ApplicationContext provides access to the environment of the currently-running application.
     pub struct ApplicationContext {
-        app_env: ApplicationEnvironment::Proxy,
-        service_provider: ServiceProvider::Proxy,
+        app_env: ApplicationEnvironmentProxy,
+        service_provider: ServiceProviderProxy,
     }
 
     impl ApplicationContext {
@@ -59,11 +67,11 @@ pub mod client {
             let app_env_channel =
                 mxruntime::connect_to_environment_service(
                     service_root,
-                    ApplicationEnvironment::Service::name())?;
+                    ApplicationEnvironmentService::NAME)?;
 
             let app_env_client = fidl::ClientEnd::new(app_env_channel);
-            let mut app_env = ApplicationEnvironment::new_proxy(app_env_client, handle)?;
-            let (service_provider, service_provider_server_end) = ServiceProvider::new_pair(handle)?;
+            let mut app_env = ApplicationEnvironmentService::new_proxy(app_env_client, handle)?;
+            let (service_provider, service_provider_server_end) = ServiceProviderService::new_pair(handle)?;
             app_env.get_services(service_provider_server_end);
 
             Ok(ApplicationContext {
@@ -85,7 +93,7 @@ pub mod client {
 
     /// Launcher launches Fuchsia applications.
     pub struct Launcher {
-        app_launcher: ApplicationLauncher::Proxy,
+        app_launcher: ApplicationLauncherProxy,
     }
 
     impl Launcher {
@@ -95,7 +103,7 @@ pub mod client {
             context: &mut ApplicationContext,
             handle: &TokioHandle) -> Result<Self, fidl::Error>
         {
-            let app_launcher = context.connect_to_service::<ApplicationLauncher::Service>(handle)?;
+            let app_launcher = context.connect_to_service::<ApplicationLauncherService>(handle)?;
             Ok(Launcher { app_launcher })
         }
 
@@ -107,8 +115,8 @@ pub mod client {
             handle: &TokioHandle
         ) -> Result<App, fidl::Error>
         {
-            let (service_provider, service_provider_server_end) = ServiceProvider::new_pair(handle)?;
-            let (app_controller, controller_server_end) = ApplicationController::new_pair(handle)?;
+            let (service_provider, service_provider_server_end) = ServiceProviderService::new_pair(handle)?;
+            let (app_controller, controller_server_end) = ApplicationControllerService::new_pair(handle)?;
 
             let launch_info = ApplicationLaunchInfo {
                 url,
@@ -125,8 +133,8 @@ pub mod client {
 
     /// `App` represents a launched application.
     pub struct App {
-        service_provider: ServiceProvider::Proxy,
-        app_controller: ApplicationController::Proxy,
+        service_provider: ServiceProviderProxy,
+        app_controller: ApplicationControllerProxy,
     }
 
     impl App {
@@ -146,7 +154,7 @@ pub mod server {
     use futures::{Future, Poll};
 
     type ServerInner<Services> =
-        fidl::Server<ServiceProvider::Dispatcher<ServiceProviderServer<Services>>>;
+        fidl::Server<ServiceProviderDispatcher<ServiceProviderServer<Services>>>;
 
     #[must_use = "futures do nothing unless polled"]
     /// `Server` is a future which, when polled, launches Fuchsia services upon request.
@@ -156,7 +164,7 @@ pub mod server {
         /// Create a new `Server` to serve service connection requests on the specified channel.
         pub fn new(services: ServiceProviderServer<Services>, channel: zircon::Channel, handle: &TokioHandle) -> Result<Self, fidl::Error> {
             Ok(Server(fidl::Server::new(
-                ServiceProvider::Dispatcher(services),
+                ServiceProviderDispatcher(services),
                 channel,
                 handle
             )?))
@@ -234,7 +242,7 @@ pub mod server {
     {
         #[inline]
         fn spawn_service(&mut self, service_name: String, channel: Channel, handle: &TokioHandle) {
-            if service_name == <Factory::Stub as fidl::Stub>::Service::name() {
+            if service_name == <Factory::Stub as fidl::Stub>::Service::NAME {
                 match fidl::Server::new(self.head.create(), channel, handle) {
                     Ok(server) => {
                         handle.spawn(server.map_err(|e|
@@ -283,7 +291,7 @@ pub mod server {
         }
     }
 
-    impl<Services: ServiceFactories> ServiceProvider::I for ServiceProviderServer<Services> {
+    impl<Services: ServiceFactories> ServiceProvider for ServiceProviderServer<Services> {
         fn connect_to_service(&mut self, service_name: String, channel: Channel) {
             self.services.spawn_service(service_name, channel, &self.handle);
         }

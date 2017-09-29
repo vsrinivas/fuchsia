@@ -27,9 +27,9 @@ impl AsHandleRef for Channel {
     }
 }
 
-impl Into<zircon::Channel> for Channel {
-    fn into(self) -> zircon::Channel {
-        self.channel
+impl From<Channel> for zircon::Channel {
+    fn from(channel: Channel) -> zircon::Channel {
+        channel.channel
     }
 }
 

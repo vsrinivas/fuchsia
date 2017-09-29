@@ -9,14 +9,19 @@ use zircon::{Channel, HandleBased};
 use {Encodable, Decodable, EncodeBuf, DecodeBuf, EncodableType, Result};
 use {EncodableNullable, DecodableNullable};
 
+/// A FIDL endpoint.
 pub trait Endpoint: HandleBased {
+    /// Convert the endpoint into a channel.
     fn into_channel(self) -> Channel {
         Channel::from(self.into())
     }
 }
 
+/// FIDL pointer to a type that implements a given interface.
 pub struct InterfacePtr<E> {
+    /// The inner type that implements the interface.
     pub inner: E,
+    /// Which version of the interface is present.
     pub version: u32,
 }
 

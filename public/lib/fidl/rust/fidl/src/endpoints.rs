@@ -10,14 +10,21 @@ use zircon;
 use {Encodable, Decodable, EncodableNullable, DecodableNullable, encode_handle, decode_handle,
     EncodeBuf, DecodeBuf, EncodableType, Result};
 
+/// The `Client` end of a FIDL connection.
 pub struct ClientEnd<T> {
     inner: zircon::Channel,
     phantom: PhantomData<T>,
 }
 
 impl<T> ClientEnd<T> {
+    /// Create a new client from the provided channel.
     pub fn new(inner: zircon::Channel) -> Self {
         ClientEnd { inner, phantom: PhantomData }
+    }
+
+    /// Extract the inner channel.
+    pub fn into_channel(self) -> zircon::Channel {
+        self.inner
     }
 }
 
@@ -27,9 +34,9 @@ impl<T> zircon::AsHandleRef for ClientEnd<T> {
     }
 }
 
-impl<T> Into<zircon::Handle> for ClientEnd<T> {
-    fn into(self) -> zircon::Handle {
-        self.inner.into()
+impl<T> From<ClientEnd<T>> for zircon::Handle {
+    fn from(client: ClientEnd<T>) -> zircon::Handle {
+        client.into_channel().into()
     }
 }
 
@@ -70,16 +77,19 @@ impl<T> Decodable for ClientEnd<T> {
 impl<T> DecodableNullable for ClientEnd<T> {}
 
 
+/// The `Server` end of a FIDL connection.
 pub struct ServerEnd<T> {
     inner: zircon::Channel,
     phantom: PhantomData<T>,
 }
 
 impl<T> ServerEnd<T> {
+    /// Create a new `ServerEnd` from the provided channel.
     pub fn new(inner: zircon::Channel) -> ServerEnd<T> {
         ServerEnd { inner, phantom: PhantomData }
     }
 
+    /// Extract the inner channel.
     pub fn into_channel(self) -> ::zircon::Channel {
         self.inner
     }
@@ -91,9 +101,9 @@ impl<T> zircon::AsHandleRef for ServerEnd<T> {
     }
 }
 
-impl<T> Into<zircon::Handle> for ServerEnd<T> {
-    fn into(self) -> zircon::Handle {
-        self.inner.into()
+impl<T> From<ServerEnd<T>> for zircon::Handle {
+    fn from(server: ServerEnd<T>) -> zircon::Handle {
+        server.into_channel().into()
     }
 }
 

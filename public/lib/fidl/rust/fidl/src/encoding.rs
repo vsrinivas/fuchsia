@@ -18,30 +18,38 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use zircon::Handle;
 
+/// A "type" of encodable message.
 #[derive(PartialEq)]
 pub enum EncodableType {
+    /// A boolean value.
     Bool,
+    /// A number.
     Num,
+    /// A pointer.
     Pointer,
+    /// A union of different types.
     Union,
+    /// A Fuchsia handle.
     Handle,  // also includes InterfaceRequest
+    /// A pointer to a type which implements some interface.
     InterfacePtr,
 }
 
+/// A type which can be encoded into a FIDL buffer.
 pub trait Encodable {
     /// Write the value into the buf buffer at the given offset.
     /// The `base` index is always in units of bytes. The `offset` argument is usually
     /// bytes, but has a special interpretation for booleans, where it's bits.
     fn encode(self, buf: &mut EncodeBuf, base: usize, offset: usize);
 
-    // This method may be removed, it seems not to be needed
+    /// This method may be removed, it seems not to be needed
     fn encodable_type() -> EncodableType;
 
-    // Size of inline encoding, in the same units as `offset` param to `encode`.
+    /// Size of inline encoding, in the same units as `offset` param to `encode`.
     fn size() -> usize;
 
-    // Size of a vector, in bytes. This is a trait method because its implemention is special
-    // for bool.
+    /// Size of a vector of this type, in bytes.
+    /// This is a trait method because vector representation is specialized for bool.
     fn vec_size(len: usize) -> usize {
         Self::size() * len
     }
@@ -82,12 +90,11 @@ macro_rules! impl_encodable {
     };
 }
 
-// Decoding
-
-// Decodable is a subtrait of Encodable because there are strictly more types that
-// can implement the latter; Encodable supports encoding from both owned and borrowed
-// types, while Decodable requires ownership of the result.
-
+/// Types which may be decoded from a FIDL buffer.
+///
+/// Decodable is a subtrait of Encodable because there are strictly more types that
+/// can implement the latter; Encodable supports encoding from both owned and borrowed
+/// types, while Decodable requires ownership of the result.
 pub trait Decodable: Encodable + Sized {
     /// Read the value from the buf buffer at the given offset.
     /// The `base` index is always in units of bytes. The `offset` argument is usually
@@ -144,26 +151,31 @@ impl Decodable for bool {
     }
 }
 
-// Numeric types
-
+/// Trait for FIDL-encodable numeric types.
 trait CodableNum: Sized {
+    /// Write the numeric value into a buffer.
     fn write(self, buf: &mut [u8]);
 
+    /// Read the numeric value from a buffer.
     fn read(&[u8]) -> Self;
 
+    /// Encode the numeric value into a buffer.
     fn encode_impl(self, buf: &mut EncodeBuf, base: usize, offset: usize) {
         self.write(buf.get_mut_slice(base + offset, Self::size_impl()));
     }
 
+    /// Decode the numeric value from a buffer.
     fn decode_impl(buf: &mut DecodeBuf, base: usize, offset: usize) -> Result<Self> {
         let start = base + offset;
         Ok(Self::read(&buf.get_bytes()[start .. start + Self::size_impl()]))
     }
 
+    /// The kind of encodable type.
     fn type_impl() -> EncodableType {
         EncodableType::Num
     }
 
+    /// The size of the encoded type.
     fn size_impl() -> usize {
         mem::size_of::<Self>()
     }
@@ -223,13 +235,16 @@ impl CodableNum for i8 {
 impl_encodable!(u8, i8);
 impl_decodable!(u8, i8);
 
-// Option types, which are considered "nullable" in fidl
-
+/// Option types, which are considered "nullable" in FIDL.
 pub trait EncodableNullable : Encodable {
+    /// The type of the null value;
     type NullType;
+
+    /// Get a null value of the given nullable-encodable value.
     fn null_value() -> Self::NullType;
 }
 
+/// Option types which can be decoded.
 pub trait DecodableNullable : EncodableNullable + Decodable {}
 
 impl<T: EncodableNullable> Encodable for Option<T>
@@ -270,22 +285,24 @@ impl<T: DecodableNullable> Decodable for Option<T>
     }
 }
 
-// Pointer types (structs, arrays, strings)
-
+/// FIDL Pointer types (structs, arrays, strings)
 pub trait EncodablePtr: Sized {
-    // size of body including header, does not need to be aligned
+    /// Size of body including header, does not need to be aligned
     fn body_size(&self) -> usize;
 
-    // value for second word of header
+    /// Value for second word of header
     fn header_data(&self) -> u32;
 
+    /// Encode the body of the pointer-based value.
     fn encode_body(self, buf: &mut EncodeBuf, base: usize);
 
+    /// Encode the body of the pointer-based value at the provided offset.
     fn encode_impl(self, buf: &mut EncodeBuf, base: usize, offset: usize) {
         buf.encode_pointer(base + offset);
         self.encode_obj(buf);
     }
 
+    /// Encode the object into an n `EncodeBuf`.
     fn encode_obj(self, buf: &mut EncodeBuf) {
         let total_size = self.body_size();
         let body_offset = buf.claim(total_size);
@@ -333,17 +350,22 @@ fn decode_obj_header(buf: &mut DecodeBuf, base: usize) -> Result<(u32, u32, usiz
     Ok((size, val, body_start))
 }
 
+/// A decodable pointer-based type.
 pub trait DecodablePtr: EncodablePtr + Sized {
-    // size and val are the data header, base points past header. The callee can
-    // assume that at least `size` bytes are available in the buffer. That said,
-    // callee should check that the size is valid.
+    /// Decode this pointer-based type from the provided buffer.
+    ///
+    /// size and val are the data header, base points past header. The callee can
+    /// assume that at least `size` bytes are available in the buffer. That said,
+    /// callee should check that the size is valid.
     fn decode_body(buf: &mut DecodeBuf, size: u32, val: u32, base: usize) -> Result<Self>;
 
+    /// Decode this pointer-based type from the provided buffer.
     fn decode_obj(buf: &mut DecodeBuf, base: usize) -> Result<Self> {
         let (size, val, body_start) = try!(decode_obj_header(buf, base));
         Self::decode_body(buf, size, val, body_start)
     }
 
+    /// Decode this pointer-based type from the provided buffer at the apppropriate `base` and `offset`.
     fn decode_impl(buf: &mut DecodeBuf, base: usize, offset: usize) -> Result<Self> {
         let (size, val, body_start) = try!(decode_ptr_header(buf, base, offset));
         // TODO: maybe delegate to decode_obj to reduce code duplication?
@@ -673,11 +695,13 @@ impl<T: DecodableNullable> DecodableNullable for Box<T> {
 impl<T: CodableUnion> CodableUnion for Box<T> {
 }
 
+/// Encode a handle into a buffer at the provided base and offset.
 pub fn encode_handle(handle: Handle, buf: &mut EncodeBuf, base: usize, offset: usize) {
     let index = buf.encode_handle(handle);
     index.encode(buf, base, offset)
 }
 
+/// Decode a handle from a buffer at the provided base and offset.
 pub fn decode_handle(buf: &mut DecodeBuf, base: usize, offset: usize) -> Result<Handle> {
     let index = try!(u32::decode(buf, base, offset));
     buf.get_mut_buf().take_handle(index as usize).ok_or(Error::InvalidHandle)
@@ -725,15 +749,16 @@ impl_codable_handle!(::zircon::Socket);
 impl_codable_handle!(::zircon::Thread);
 impl_codable_handle!(::zircon::Vmo);
 
+/// A FIDL-encodeable and decodable union type.
 pub trait CodableUnion : Encodable + Decodable {
-    // Encode the object as a pointer reference. Primarily used for nested unions.
+    /// Encode the object as a pointer reference. Primarily used for nested unions.
     fn encode_as_ptr(self, buf: &mut EncodeBuf, base: usize) {
         buf.encode_pointer(base);
         let obj_offset = buf.claim(Self::size());
         self.encode(buf, obj_offset, 0);
     }
 
-    // Decode the object as pointer reference. Primarily used for nested unions.
+    /// Decode the object as pointer reference. Primarily used for nested unions.
     fn decode_as_ptr(buf: &mut DecodeBuf, start: usize) -> Result<Self> {
         let rel_ptr = u64::decode(buf, start, 0).unwrap() as usize;
         if rel_ptr < 8 {
@@ -748,6 +773,7 @@ pub trait CodableUnion : Encodable + Decodable {
         Self::decode(buf, start + rel_ptr, 0)
     }
 
+    /// Encode the optional object as a pointer.
     fn encode_opt_as_ptr(opt: Option<Self>, buf: &mut EncodeBuf, base: usize) {
         match opt {
             None => 0u64.encode(buf, base, 0),
@@ -755,6 +781,7 @@ pub trait CodableUnion : Encodable + Decodable {
         }
     }
 
+    /// Dencode the optional object as a pointer.
     fn decode_opt_as_ptr(buf: &mut DecodeBuf, start: usize) -> Result<Option<Self>> {
         let rel_ptr = u64::decode(buf, start, 0).unwrap();
         if rel_ptr == 0 {

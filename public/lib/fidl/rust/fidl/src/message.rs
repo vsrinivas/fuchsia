@@ -11,12 +11,14 @@ use byteorder::{ByteOrder, LittleEndian};
 use zircon::{Handle, MessageBuf};
 
 /// A buffer for encoding messages.
+#[derive(Debug)]
 pub struct EncodeBuf {
     buf: Vec<u8>,
     handles: Vec<Handle>,
 }
 
 impl EncodeBuf {
+    /// Create a new `EncodeBuf`.
     pub fn new() -> Self {
         EncodeBuf {
             buf: Vec::new(),
@@ -24,37 +26,29 @@ impl EncodeBuf {
         }
     }
 
-    // Right now, it just allocates, but the thinking is to have a per-thread pool to
-    // reduce the number of allocations.
-    pub fn obtain() -> Self {
-        Self::new()
-    }
-
-    pub fn reset(&mut self) {
+    /// Clear the buffer, removing all values.
+    pub fn clear(&mut self) {
         self.buf.clear();
     }
 
-    // Another possibility is to implement this as the Drop trait, so clients don't need
-    // to do this explicitly.
-    pub fn recycle(self) {
-        // TODO: return to pool
-    }
-
+    /// Extracts a slice containing all of the bytes in the buffer.
     pub fn get_bytes(&self) -> &[u8] {
         &self.buf
     }
 
+    /// Returns a mutable reference to a vector of bytes.
     pub fn get_mut_bytes(&mut self) -> &mut Vec<u8> {
         &mut self.buf
     }
 
-    // Get the content, in a form suitable for sending to a channel.
+    /// Get the content, in a form suitable for sending to a channel.
     pub fn get_mut_content(&mut self) -> (&[u8], &mut Vec<Handle>) {
         (&self.buf, &mut self.handles)
     }
 
+    /// Create a new request buffer.
     pub fn new_request(ordinal: u32) -> Self {
-        let mut buf = Self::obtain();
+        let mut buf = Self::new();
         let _ = buf.claim(16);
         LittleEndian::write_u32(buf.get_mut_slice(0, 4), 16);  // size
         LittleEndian::write_u32(buf.get_mut_slice(4, 4), 0);  // version
@@ -63,8 +57,9 @@ impl EncodeBuf {
         buf
     }
 
+    /// Create a new request buffer for a protocol which expects a response.
     pub fn new_request_expecting_response(ordinal: u32) -> Self {
-        let mut buf = Self::obtain();
+        let mut buf = Self::new();
         let _ = buf.claim(24);
         LittleEndian::write_u32(buf.get_mut_slice(0, 4), 24);  // size
         LittleEndian::write_u32(buf.get_mut_slice(4, 4), 1);  // version
@@ -73,8 +68,9 @@ impl EncodeBuf {
         buf
     }
 
+    /// Create a new response buffer.
     pub fn new_response(ordinal: u32) -> Self {
-        let mut buf = Self::obtain();
+        let mut buf = Self::new();
         let _ = buf.claim(24);
         LittleEndian::write_u32(buf.get_mut_slice(0, 4), 24);  // size
         LittleEndian::write_u32(buf.get_mut_slice(4, 4), 1);  // version
@@ -83,7 +79,8 @@ impl EncodeBuf {
         buf
     }
 
-    // Can panic if the buffer isn't already a proper response message.
+    /// Set the id of the current message in the buffer.
+    /// This method could panic if the buffer isn't already a proper response message.
     pub fn set_message_id(&mut self, id: u64) {
         LittleEndian::write_u64(self.get_mut_slice(16, 8), id);
     }
@@ -121,39 +118,49 @@ impl EncodeBuf {
 // We _might_ consider making Decoder a trait so we can use different buffers for it;
 // it should be possible to impl Decoder for MessageBuf.
 
+/// A buffer from which fidl messages can be decoded.
+#[derive(Debug)]
 pub struct DecodeBuf {
     inner: MessageBuf,
     // TODO: state for validation
 }
 
+/// The type of the FIDL message.
 #[derive(PartialEq, Eq)]
 pub enum MsgType {
+    /// A request with no response.
     Request = 0,
+    /// A request which expects a response.
     RequestExpectsResponse = 1,
+    /// A response.
     Response = 2,
 }
 
 impl DecodeBuf {
+    /// Create a new `DecodeBuf`.
     pub fn new() -> Self {
         DecodeBuf {
             inner: MessageBuf::new(),
         }
     }
 
+    /// Extracts a reference to the inner message buffer.
     pub fn get_buf(&self) -> &MessageBuf {
         &self.inner
     }
 
+    /// Extracts a mutable reference to the inner message buffer.
     pub fn get_mut_buf(&mut self) -> &mut MessageBuf {
         &mut self.inner
     }
 
+    /// Extracts a slice containing all of the bytes in the buffer. 
     pub fn get_bytes(&self) -> &[u8] {
         self.inner.bytes()
     }
 
     // TODO: ordinal also?
-    // Validate and decode the header of a message
+    /// Validate and decode the header of a message
     pub fn decode_message_header(&self) -> Option<MsgType> {
         let buf = self.get_bytes();
         if buf.len() < 16 {
@@ -173,8 +180,9 @@ impl DecodeBuf {
         }
     }
 
-    // Can panic if buffer is not a valid message. Ok if message type is
-    // RequestExpectsResponse or Response.
+    /// Get the ID of the current message in the buffer.
+    /// This method may panic if buffer is not a valid message.
+    /// Ok if message type is RequestExpectsResponse or Response.
     pub fn get_message_id(&self) -> u64 {
         LittleEndian::read_u64(&self.get_bytes()[16..24])
     }
