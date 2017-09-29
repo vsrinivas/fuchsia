@@ -46,12 +46,17 @@ typedef struct i2c_hid_desc {
 typedef struct i2c_hid_device {
     zx_device_t* i2cdev;
 
-    mtx_t lock;
+    mtx_t ifc_lock;
     hidbus_ifc_t* ifc;
     void* cookie;
 
     i2c_hid_desc_t* hiddesc;
+
+    mtx_t i2c_lock;
+    cnd_t i2c_reset_cnd; // Signaled when reset received
+    bool i2c_pending_reset; // True if reset-in-progress
     thrd_t irq_thread;
+    zx_handle_t irq;
 } i2c_hid_device_t;
 
 static uint8_t* i2c_hid_prepare_write_read_buffer(uint8_t* buf, int wlen, int rlen) {
@@ -63,6 +68,45 @@ static uint8_t* i2c_hid_prepare_write_read_buffer(uint8_t* buf, int wlen, int rl
     segments[2].type = I2C_SEGMENT_TYPE_END;
     segments[2].len = 0;
     return buf + 3 * sizeof(i2c_slave_ioctl_segment_t);
+}
+
+// Send the device a HOST initiated RESET.  Caller must call
+// i2c_wait_for_ready_locked() afterwards to guarantee completion.
+// If |force| is false, do not issue a reset if there is one outstanding.
+static zx_status_t i2c_hid_reset(i2c_hid_device_t* dev, bool force) {
+    uint16_t cmd_reg = letoh16(dev->hiddesc->wCommandRegister);
+    uint8_t buf[4] = { cmd_reg & 0xff, cmd_reg >> 8, 0x00, 0x01 };
+    size_t actual;
+
+    mtx_lock(&dev->i2c_lock);
+
+    if (!force && dev->i2c_pending_reset) {
+        mtx_unlock(&dev->i2c_lock);
+        return ZX_OK;
+    }
+
+    dev->i2c_pending_reset = true;
+    zx_status_t status = device_write(dev->i2cdev, buf, sizeof(buf), 0, &actual);
+
+    mtx_unlock(&dev->i2c_lock);
+
+    if (status != ZX_OK) {
+        dprintf(ERROR, "i2c-hid: could not issue reset: %d\n", status);
+        return status;
+    }
+    if (actual != sizeof(buf)) {
+        dprintf(ERROR, "i2c-hid: could not issue reset: short write?\n");
+        return ZX_ERR_IO;
+    }
+
+    return ZX_OK;
+}
+
+// Must be called with i2c_lock held.
+static void i2c_wait_for_ready_locked(i2c_hid_device_t* dev) {
+    while (dev->i2c_pending_reset) {
+        cnd_wait(&dev->i2c_reset_cnd, &dev->i2c_lock);
+    }
 }
 
 static zx_status_t i2c_hid_query(void* ctx, uint32_t options, hid_info_t* info) {
@@ -77,23 +121,23 @@ static zx_status_t i2c_hid_query(void* ctx, uint32_t options, hid_info_t* info) 
 
 static zx_status_t i2c_hid_start(void* ctx, hidbus_ifc_t* ifc, void* cookie) {
     i2c_hid_device_t* hid = ctx;
-    mtx_lock(&hid->lock);
+    mtx_lock(&hid->ifc_lock);
     if (hid->ifc) {
-        mtx_unlock(&hid->lock);
+        mtx_unlock(&hid->ifc_lock);
         return ZX_ERR_ALREADY_BOUND;
     }
     hid->ifc = ifc;
     hid->cookie = cookie;
-    mtx_unlock(&hid->lock);
+    mtx_unlock(&hid->ifc_lock);
     return ZX_OK;
 }
 
 static void i2c_hid_stop(void* ctx) {
     i2c_hid_device_t* hid = ctx;
-    mtx_lock(&hid->lock);
+    mtx_lock(&hid->ifc_lock);
     hid->ifc = NULL;
     hid->cookie = NULL;
-    mtx_unlock(&hid->lock);
+    mtx_unlock(&hid->ifc_lock);
 }
 
 static zx_status_t i2c_hid_get_descriptor(void* ctx, uint8_t desc_type,
@@ -116,8 +160,11 @@ static zx_status_t i2c_hid_get_descriptor(void* ctx, uint8_t desc_type,
         return ZX_ERR_NO_MEMORY;
     }
     size_t actual = 0;
+    mtx_lock(&hid->i2c_lock);
+    i2c_wait_for_ready_locked(hid);
     zx_status_t status = device_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
                                       buf, sizeof(buf), out, desc_len, &actual);
+    mtx_unlock(&hid->i2c_lock);
     if (status < 0) {
         dprintf(ERROR, "i2c-hid: could not read HID report descriptor: %d\n", status);
         free(out);
@@ -183,8 +230,18 @@ static inline size_t bcdtoa(uint16_t val, char str[static 6], bool pad) {
     return idx;
 }
 
-static int i2c_hid_irq_thread(void* arg) {
+// TODO(teisenbe/tkilbourn): Remove this once we pipe IRQs from ACPI
+static int i2c_hid_noirq_thread(void* arg) {
+    dprintf(INFO, "i2c-hid: using noirq\n");
+
     i2c_hid_device_t* dev = (i2c_hid_device_t*)arg;
+
+    zx_status_t status = i2c_hid_reset(dev, true);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "i2c-hid: failed to reset i2c device\n");
+        return 0;
+    }
+
     uint16_t len = letoh16(dev->hiddesc->wMaxInputLength);
     uint8_t* buf = malloc(len);
 
@@ -202,6 +259,7 @@ static int i2c_hid_irq_thread(void* arg) {
     while (true) {
         usleep(I2C_POLL_INTERVAL_USEC);
         size_t actual = 0;
+        mtx_lock(&dev->i2c_lock);
         zx_status_t status = device_read(dev->i2cdev, buf, len, 0, &actual);
         if (status != ZX_OK) {
             if (status == ZX_ERR_TIMED_OUT) {
@@ -210,18 +268,33 @@ static int i2c_hid_irq_thread(void* arg) {
                     dprintf(TRACE, "i2c-hid: device_read timed out\n");
                     last_timeout_warning = now;
                 }
+                mtx_unlock(&dev->i2c_lock);
                 continue;
             }
             dprintf(ERROR, "i2c-hid: fatal device_read failure %d\n", status);
+            mtx_unlock(&dev->i2c_lock);
             break;
         }
         if (actual < 2) {
             dprintf(ERROR, "i2c-hid: short read (%zd < 2)!!!\n", actual);
+            mtx_unlock(&dev->i2c_lock);
             continue;
         }
 
         uint16_t report_len = letoh16(*(uint16_t*)buf);
-        if ((report_len == 0xffff) || (report_len == 0x3fff) || (report_len == 0x0)) {
+        if (report_len == 0x0) {
+            dev->i2c_pending_reset = false;
+            cnd_broadcast(&dev->i2c_reset_cnd);
+            mtx_unlock(&dev->i2c_lock);
+            continue;
+        }
+        mtx_unlock(&dev->i2c_lock);
+
+        if (dev->i2c_pending_reset) {
+            dprintf(INFO, "i2c-hid: received event while waiting for reset? %u\n", report_len);
+            continue;
+        }
+        if ((report_len == 0xffff) || (report_len == 0x3fff)) {
             // nothing to read
             continue;
         }
@@ -236,11 +309,11 @@ static int i2c_hid_irq_thread(void* arg) {
             continue;
         }
 
-        mtx_lock(&dev->lock);
+        mtx_lock(&dev->ifc_lock);
         if (dev->ifc) {
             dev->ifc->io_queue(dev->cookie, buf + 2, report_len - 2);
         }
-        mtx_unlock(&dev->lock);
+        mtx_unlock(&dev->ifc_lock);
 
         last_report_len = report_len;
 
@@ -253,6 +326,99 @@ static int i2c_hid_irq_thread(void* arg) {
     // TODO: figure out how to clean up
     free(buf);
     free(last_report);
+    return 0;
+}
+
+static int i2c_hid_irq_thread(void* arg) {
+    dprintf(TRACE, "i2c-hid: using irq\n");
+
+    i2c_hid_device_t* dev = (i2c_hid_device_t*)arg;
+
+    zx_status_t status = i2c_hid_reset(dev, true);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "i2c-hid: failed to reset i2c device\n");
+        return 0;
+    }
+
+    uint16_t len = letoh16(dev->hiddesc->wMaxInputLength);
+    uint8_t* buf = malloc(len);
+
+    zx_time_t last_timeout_warning = 0;
+    const zx_duration_t kMinTimeBetweenWarnings = ZX_SEC(10);
+
+    while (true) {
+        zx_status_t status = zx_interrupt_wait(dev->irq);
+        if (status != ZX_OK) {
+            dprintf(ERROR, "i2c-hid: interrupt wait failed %d\n", status);
+            break;
+        }
+
+        mtx_lock(&dev->i2c_lock);
+
+        size_t actual = 0;
+        status = device_read(dev->i2cdev, buf, len, 0, &actual);
+        if (status != ZX_OK) {
+            if (status == ZX_ERR_TIMED_OUT) {
+                zx_time_t now = zx_time_get(ZX_CLOCK_MONOTONIC);
+                if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
+                    dprintf(TRACE, "i2c-hid: device_read timed out\n");
+                    last_timeout_warning = now;
+                }
+                mtx_unlock(&dev->i2c_lock);
+                goto complete_irq;
+            }
+            dprintf(ERROR, "i2c-hid: fatal device_read failure %d\n", status);
+            mtx_unlock(&dev->i2c_lock);
+            goto complete_irq;
+        }
+        if (actual < 2) {
+            dprintf(ERROR, "i2c-hid: short read (%zd < 2)!!!\n", actual);
+            mtx_unlock(&dev->i2c_lock);
+            goto complete_irq;
+        }
+
+        uint16_t report_len = letoh16(*(uint16_t*)buf);
+        if (report_len == 0x0) {
+            dprintf(INFO, "i2c-hid reset detected\n");
+            // Either host or device reset.
+            dev->i2c_pending_reset = false;
+            cnd_broadcast(&dev->i2c_reset_cnd);
+            mtx_unlock(&dev->i2c_lock);
+            goto complete_irq;
+        }
+
+        if (dev->i2c_pending_reset) {
+            dprintf(INFO, "i2c-hid: received event while waiting for reset? %u\n", report_len);
+            mtx_unlock(&dev->i2c_lock);
+            goto complete_irq;
+        }
+
+        if ((report_len > actual) || (report_len < 2)) {
+            dprintf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %zd)!!!\n",
+                    report_len, actual);
+            mtx_unlock(&dev->i2c_lock);
+            goto complete_irq;
+        }
+
+        mtx_unlock(&dev->i2c_lock);
+
+        mtx_lock(&dev->ifc_lock);
+        if (dev->ifc) {
+            dev->ifc->io_queue(dev->cookie, buf + 2, report_len - 2);
+        }
+        mtx_unlock(&dev->ifc_lock);
+
+complete_irq:
+        status = zx_interrupt_complete(dev->irq);
+        if (status != ZX_OK) {
+            // TODO: what to do here
+            dprintf(ERROR, "i2c-hid: zx_interrupt_complete failed: %d\n", status);
+            break;
+        }
+    }
+
+    // TODO: figure out how to clean up
+    free(buf);
     return 0;
 }
 
@@ -288,8 +454,14 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
     if (i2chid == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
+    mtx_init(&i2chid->ifc_lock, mtx_plain);
+    mtx_init(&i2chid->i2c_lock, mtx_plain);
+    cnd_init(&i2chid->i2c_reset_cnd);
     i2chid->i2cdev = dev;
     i2chid->hiddesc = malloc(desc_len);
+    // Mark as pending reset, so no external requests will complete until we
+    // reset the device in the IRQ thread.
+    i2chid->i2c_pending_reset = true;
 
     i2c_hid_prepare_write_read_buffer(buf, 2, desc_len);
     actual = 0;
@@ -331,7 +503,18 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
         return status;
     }
 
-    ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
+    zx_handle_t irq;
+    status = device_ioctl(dev, IOCTL_I2C_SLAVE_IRQ, NULL, 0, &irq, sizeof(irq), &actual);
+    if (status == ZX_OK && actual == sizeof(irq)) {
+        i2chid->irq = irq;
+    }
+
+    if (i2chid->irq) {
+        ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
+    } else {
+        ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_noirq_thread, i2chid,
+                                    "i2c-hid-irq");
+    }
     if (ret != thrd_success) {
         dprintf(ERROR, "i2c-hid: could not create irq thread: %d\n", ret);
         free(i2chid->hiddesc);
