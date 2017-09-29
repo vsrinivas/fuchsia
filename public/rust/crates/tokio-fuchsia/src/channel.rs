@@ -13,7 +13,7 @@ use zircon::{self, AsHandleRef, MessageBuf};
 
 use tokio_core::reactor::{Handle, PollEvented};
 
-use super::{would_block, status_to_io_err};
+use super::would_block;
 
 /// An I/O object representing a `Channel`.
 pub struct Channel {
@@ -64,7 +64,7 @@ impl Channel {
         if res == Err(zircon::Status::ErrShouldWait) {
             self.evented.need_read();
         }
-        res.map_err(status_to_io_err)
+        res.map_err(io::Error::from)
     }
 
     /// Creates a future that receive a message to be written to the buffer
@@ -121,7 +121,7 @@ impl Channel {
                  opts: u32
                 ) -> io::Result<()>
     {
-        self.channel.write(bytes, handles, opts).map_err(status_to_io_err)
+        self.channel.write(bytes, handles, opts).map_err(io::Error::from)
     }
 }
 

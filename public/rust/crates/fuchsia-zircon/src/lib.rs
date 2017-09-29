@@ -7,6 +7,7 @@
 
 extern crate fuchsia_zircon_sys as zircon_sys;
 
+use std::io;
 use std::marker::PhantomData;
 
 macro_rules! impl_handle_based {
@@ -23,9 +24,9 @@ macro_rules! impl_handle_based {
             }
         }
 
-        impl Into<Handle> for $type_name {
-            fn into(self) -> Handle {
-                self.0
+        impl From<$type_name> for Handle {
+            fn from(x: $type_name) -> Handle {
+                x.0
             }
         }
 
@@ -114,6 +115,10 @@ pub enum Status {
 
     /// Any zx_status_t not in the set above will map to the following:
     UnknownOther = -32768,
+
+    // used to prevent exhaustive matching
+    #[doc(hidden)]
+    __Nonexhaustive = -32787,
 }
 
 impl Status {
@@ -158,8 +163,100 @@ impl Status {
         }
     }
 
+    pub fn into_io_err(self) -> io::Error {
+        self.into()
+    }
+
     // Note: no to_raw, even though it's easy to implement, partly because
     // handling of UnknownOther would be tricky.
+}
+
+impl From<io::ErrorKind> for Status {
+    fn from(kind: io::ErrorKind) -> Self {
+        use io::ErrorKind::*;
+        use Status::*;
+
+        match kind {
+            NotFound => ErrNotFound,
+            PermissionDenied => ErrAccessDenied,
+            ConnectionRefused => ErrIoRefused,
+            ConnectionAborted => ErrPeerClosed,
+            AddrInUse => ErrAlreadyBound,
+            AddrNotAvailable => ErrUnavailable,
+            BrokenPipe => ErrPeerClosed,
+            AlreadyExists => ErrAlreadyExists,
+            WouldBlock => ErrShouldWait,
+            InvalidInput => ErrInvalidArgs,
+            TimedOut => ErrTimedOut,
+            Interrupted => ErrInterruptedRetry,
+
+            UnexpectedEof |
+            WriteZero |
+            ConnectionReset |
+            NotConnected |
+            Other | _ => ErrIo,
+        }
+    }
+}
+
+impl From<Status> for io::ErrorKind {
+    fn from(status: Status) -> io::ErrorKind {
+        use io::ErrorKind::*;
+        use Status::*;
+
+        match status {
+            ErrInterruptedRetry => Interrupted,
+            ErrBadHandle => BrokenPipe,
+            ErrTimedOut => TimedOut,
+            ErrShouldWait => WouldBlock,
+            ErrPeerClosed => ConnectionAborted,
+            ErrNotFound => NotFound,
+            ErrAlreadyExists => AlreadyExists,
+            ErrAlreadybound => AlreadyExists,
+            ErrUnavailable => AddrNotAvailable,
+            ErrAccessDenied => PermissionDenied,
+            ErrIoRefused => ConnectionRefused,
+            ErrIoDataIntegrity => InvalidData,
+
+            ErrBadPath |
+            ErrInvalidArgs |
+            ErrOutOfRange |
+            ErrWrongType => InvalidInput,
+
+            Status::__Nonexhaustive |
+            UnknownOther |
+            NoError |
+            ErrNext |
+            ErrStop |
+            ErrNoSpace |
+            ErrFileBig |
+            ErrNotFile |
+            ErrNotDir |
+            ErrIoDataLoss |
+            ErrIo |
+            ErrCanceled |
+            ErrBadState |
+            ErrBufferTooSmall |
+            ErrBadSyscall |
+            ErrInternal |
+            ErrNotSupported |
+            ErrNoResources |
+            ErrNoMemory |
+            ErrCallFailed => Other,
+        }
+    }
+}
+
+impl From<io::Error> for Status {
+    fn from(err: io::Error) -> Status {
+        err.kind().into()
+    }
+}
+
+impl From<Status> for io::Error {
+    fn from(status: Status) -> io::Error {
+        io::Error::from(io::ErrorKind::from(status))
+    }
 }
 
 /// Rights associated with a handle.

@@ -6,6 +6,7 @@
 
 use std::io;
 use std::result;
+use zircon;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -30,5 +31,11 @@ pub enum Error {
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Error {
         Error::IoError(error)
+    }
+}
+
+impl From<zircon::Status> for Error {
+    fn from(status: zircon::Status) -> Error {
+        Error::from(io::Error::from(status))
     }
 }

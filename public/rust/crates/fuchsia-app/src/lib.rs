@@ -55,12 +55,12 @@ pub mod client {
     impl ApplicationContext {
         /// Initialize the context for the currently-running application.
         pub fn new(handle: &TokioHandle) -> Result<Self, fidl::Error> {
-            let service_root = mxruntime::get_service_root().map_err(status_to_io_err)?;
+            let service_root = mxruntime::get_service_root()?;
             let app_env_channel =
                 mxruntime::connect_to_environment_service(
                     service_root,
-                    ApplicationEnvironment::Service::name()
-                ).map_err(status_to_io_err)?;
+                    ApplicationEnvironment::Service::name())?;
+
             let app_env_client = fidl::ClientEnd::new(app_env_channel);
             let mut app_env = ApplicationEnvironment::new_proxy(app_env_client, handle)?;
             let (service_provider, service_provider_server_end) = ServiceProvider::new_pair(handle)?;
@@ -288,56 +288,4 @@ pub mod server {
             self.services.spawn_service(service_name, channel, &self.handle);
         }
     }
-}
-
-//------- TODO: add this as an `Into` impl in zircon
-/// Convert from zircon::Status to io::Error
-///
-/// Note: these conversions are done on a "best-effort" basis and may not necessarily reflect
-/// exactly equivalent error types.
-fn status_to_io_err(status: zircon::Status) -> io::Error {
-    use zircon::Status;
-
-    let err_kind: io::ErrorKind = match status {
-        Status::ErrInterruptedRetry => io::ErrorKind::Interrupted,
-        Status::ErrBadHandle => io::ErrorKind::BrokenPipe,
-        Status::ErrTimedOut => io::ErrorKind::TimedOut,
-        Status::ErrShouldWait => io::ErrorKind::WouldBlock,
-        Status::ErrPeerClosed => io::ErrorKind::ConnectionAborted,
-        Status::ErrNotFound => io::ErrorKind::NotFound,
-        Status::ErrAlreadyExists => io::ErrorKind::AlreadyExists,
-        Status::ErrAlreadyBound => io::ErrorKind::AddrInUse,
-        Status::ErrUnavailable => io::ErrorKind::AddrNotAvailable,
-        Status::ErrAccessDenied => io::ErrorKind::PermissionDenied,
-        Status::ErrIoRefused => io::ErrorKind::ConnectionRefused,
-        Status::ErrIoDataIntegrity => io::ErrorKind::InvalidData,
-
-        Status::ErrBadPath |
-        Status::ErrInvalidArgs |
-        Status::ErrOutOfRange |
-        Status::ErrWrongType => io::ErrorKind::InvalidInput,
-
-        Status::UnknownOther |
-        Status::ErrNext |
-        Status::ErrStop |
-        Status::ErrNoSpace |
-        Status::ErrFileBig |
-        Status::ErrNotFile |
-        Status::ErrNotDir |
-        Status::ErrIoDataLoss |
-        Status::ErrIo |
-        Status::ErrCanceled |
-        Status::ErrBadState |
-        Status::ErrBufferTooSmall |
-        Status::ErrBadSyscall |
-        Status::NoError |
-        Status::ErrInternal |
-        Status::ErrNotSupported |
-        Status::ErrNoResources |
-        Status::ErrNoMemory |
-        Status::ErrCallFailed
-        => io::ErrorKind::Other
-    }.into();
-
-    err_kind.into()
 }
