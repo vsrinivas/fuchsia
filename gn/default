@@ -3,7 +3,6 @@
         "garnet/packages/default",
         "packages/gn/amber",
         "packages/gn/asio",
-        "packages/gn/curl",
         "packages/gn/dart",
         "packages/gn/dart_runner",
         "packages/gn/flutter",
