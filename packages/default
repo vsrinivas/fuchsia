@@ -1,6 +1,7 @@
 {
     "imports": [
         "peridot/packages/ledger",
-        "peridot/packages/modular"
+        "peridot/packages/modular",
+        "peridot/packages/modular_examples"
     ]
 }

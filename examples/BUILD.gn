@@ -6,16 +6,10 @@ group("examples") {
   deps = [
     "components_query",
     "counter_cpp",
-    "counter_flutter",
     "hello_component",
     "hello_world_cpp",
-    "hello_world_flutter",
-    "photos_flutter",
     "request_components",
-    "story_shell_flutter",
-    "suggest_shell",
     "swap_cpp",
     "todo_cpp",
-    "todo_story",
   ]
 }
