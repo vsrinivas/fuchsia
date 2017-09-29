@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_CALLBACK_TRACE_CALLBACK_H_
 #define PERIDOT_BIN_LEDGER_CALLBACK_TRACE_CALLBACK_H_
 
+#include <cstring>
 #include <functional>
 #include <utility>
 
@@ -20,10 +21,15 @@ namespace internal {
 template <typename C>
 class TracingLambda {
  public:
-  TracingLambda(C callback, uint64_t id, const char* category, const char* name)
+  TracingLambda(C callback,
+                uint64_t id,
+                const char* category,
+                const char* name,
+                const char* callback_name)
       : id_(id),
         category_(category),
         name_(name),
+        callback_name_(callback_name),
         callback_(std::move(callback)),
         did_run_or_moved_out_(false),
         trace_enabled_(true) {}
@@ -32,6 +38,7 @@ class TracingLambda {
       : id_(0u),
         category_(nullptr),
         name_(nullptr),
+        callback_name_(nullptr),
         callback_(std::move(callback)),
         did_run_or_moved_out_(false),
         trace_enabled_(false) {}
@@ -42,6 +49,7 @@ class TracingLambda {
       : id_(other.id_),
         category_(other.category_),
         name_(other.name_),
+        callback_name_(other.callback_name_),
         callback_(std::move(other.callback_)),
         did_run_or_moved_out_(other.did_run_or_moved_out_),
         trace_enabled_(other.trace_enabled_) {
@@ -59,13 +67,16 @@ class TracingLambda {
   auto operator()(ArgType&&... args) const {
     FXL_DCHECK(!did_run_or_moved_out_);
     did_run_or_moved_out_ = true;
-
+    if (trace_enabled_) {
+      TRACE_ASYNC_END(category_, name_, id_);
+      TRACE_ASYNC_BEGIN(category_, callback_name_, id_);
+    }
     auto guard = fxl::MakeAutoCall([
       trace_enabled = trace_enabled_, id = id_, category = category_,
-      name = name_
+      callback_name = callback_name_
     ] {
       if (trace_enabled) {
-        TRACE_ASYNC_END(category, name, id);
+        TRACE_ASYNC_END(category, callback_name, id);
       }
     });
 
@@ -76,6 +87,7 @@ class TracingLambda {
   const uint64_t id_;
   const char* const category_;
   const char* const name_;
+  const char* const callback_name_;
   const C callback_;
   mutable bool did_run_or_moved_out_;
   bool trace_enabled_;
@@ -89,11 +101,12 @@ template <typename C, typename... ArgType>
 auto TraceCallback(C callback,
                    const char* category,
                    const char* name,
+                   const char* callback_name,
                    ArgType... args) {  // NOLINT
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN(category, name, id, std::forward<ArgType>(args)...);
   return fxl::MakeCopyable(
-      TracingLambda<C>(std::move(callback), id, category, name));
+      TracingLambda<C>(std::move(callback), id, category, name, callback_name));
 }
 
 template <typename C>
@@ -122,7 +135,7 @@ constexpr const char* CheckConstantCString(const char* value) {
                  category)>(category),                                    \
              ::callback::internal::CheckConstantCString<__builtin_strlen( \
                  name)>(name),                                            \
-             ##args)                                                      \
+             name "_callback", ##args)                                    \
        : ::callback::internal::TraceCallback(cb))
 
 #endif  // PERIDOT_BIN_LEDGER_CALLBACK_TRACE_CALLBACK_H_
