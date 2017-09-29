@@ -98,9 +98,11 @@ void VirtioQueueFake::WriteToAvail(uint16_t desc) {
     queue_->avail->ring[queue_->avail->idx++ % queue_size_] = desc;
 }
 
-zx_status_t DescBuilder::Build() {
+zx_status_t DescBuilder::Build(uint16_t* desc) {
     if (status_ == ZX_OK) {
         queue_->WriteToAvail(head_desc_);
+        if (desc != nullptr)
+            *desc = head_desc_;
         head_desc_ = 0;
         prev_desc_ = 0;
         len_ = 0;

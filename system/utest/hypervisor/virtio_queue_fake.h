@@ -32,7 +32,10 @@ public:
 
     // Make this descriptor chain visible to the device by writing the head
     // index to the available ring and incrementing the available index.
-    zx_status_t Build();
+    //
+    // The index of the head descriptor is written to |desc| if it is non-null.
+    zx_status_t Build(uint16_t* desc);
+    zx_status_t Build() { return Build(nullptr); }
 
 private:
     friend class VirtioQueueFake;

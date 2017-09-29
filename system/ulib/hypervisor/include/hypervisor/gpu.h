@@ -28,16 +28,42 @@ using ScanoutId = uint32_t;
  *
  * Each scanout will own a single device under /dev/class/framebuffer/
  */
-struct GpuScanout {
+class GpuScanout {
+public:
+    GpuScanout(uint32_t width, uint32_t height, uint32_t format, uint8_t* buffer)
+        : width_(width), height_(height), format_(format), buffer_(buffer) {}
+
+    virtual ~GpuScanout() = default;
+
+    uint32_t width() const { return width_; }
+    uint32_t height() const { return height_; }
+    uint32_t format() const { return format_; }
+    uint8_t* buffer() const { return buffer_; }
+
+    virtual void FlushRegion(const virtio_gpu_rect_t& rect) {}
+
+private:
+    uint32_t width_;
+    uint32_t height_;
+    uint32_t format_;
+    uint8_t* buffer_;
+};
+
+class FramebufferScanout : public GpuScanout {
+public:
     static zx_status_t Create(const char* framebuffer, fbl::unique_ptr<GpuScanout>* out);
 
-    uint32_t height() { return fb.info.height; }
-    uint32_t width() { return fb.info.width; }
+    FramebufferScanout(int fd, const ioctl_display_get_fb_t& fb, uint8_t* buffer)
+        : GpuScanout(fb.info.width, fb.info.height, VirtioPixelFormat(fb.info.format), buffer),
+          fd_(fd) {}
 
-    int fd = 0;
-    ioctl_display_get_fb_t fb = {};
-    uint8_t* buffer = nullptr;
-    size_t buffer_len = 0;
+    virtual ~FramebufferScanout();
+
+    void FlushRegion(const virtio_gpu_rect_t& rect) override;
+
+private:
+    static uint32_t VirtioPixelFormat(uint32_t zx_format);
+    int fd_ = 0;
 };
 
 /* A resource corresponds to a single display buffer. */
@@ -53,9 +79,20 @@ public:
             : addr(addr_), length(length_) {}
     };
 
-    using HashTable = fbl::HashTable<ResourceId, fbl::unique_ptr<GpuResource>>;
+    // Fix the number of hash table buckets to 1 because linux and zircon
+    // virtcons only use a single resource.
+    static constexpr size_t kNumHashTableBuckets = 1;
+    using HashTable = fbl::HashTable<ResourceId,
+                                     fbl::unique_ptr<GpuResource>,
+                                     fbl::SinglyLinkedList<fbl::unique_ptr<GpuResource>>,
+                                     size_t,
+                                     kNumHashTableBuckets>;
 
     GpuResource(VirtioGpu* gpu, const virtio_gpu_resource_create_2d_t* args);
+
+    uint32_t width() const { return width_; }
+    uint32_t height() const { return height_; }
+    uint32_t format() const { return format_; }
 
     virtio_gpu_ctrl_type SetScanout(GpuScanout* scanout);
 
@@ -92,28 +129,39 @@ private:
     VirtioGpu* gpu_;
     GpuScanout* scanout_;
     ResourceId res_id_;
+    uint32_t width_;
+    uint32_t height_;
     uint32_t format_;
-    bool pixel_format_warning_ = false;
     fbl::SinglyLinkedList<fbl::unique_ptr<BackingPages>> backing_;
 };
 
 /* Virtio 2D GPU device. */
 class VirtioGpu : public VirtioDevice {
 public:
+    static constexpr uint8_t kBytesPerPixel = 4;
+
     VirtioGpu(uintptr_t guest_physmem_addr, size_t guest_physmem_size);
     ~VirtioGpu() override = default;
 
+    virtio_queue_t& control_queue() { return queues_[VIRTIO_GPU_Q_CONTROLQ]; }
+    virtio_queue_t& cursor_queue() { return queues_[VIRTIO_GPU_Q_CURSORQ]; }
+
     // Opens the framebuffer device located at |path| and starts processing
     // any descriptors that become available in the queues.
-    //
-    // Currently only a single framebuffer is supported.
     zx_status_t Init(const char* path);
 
+
+    // Adds a scanout to the GPU.
+    //
+    // Currently only a single scanout is supported. ZX_ERR_ALREADY_EXISTS will
+    // be returned if this method is called multiple times.
+    zx_status_t AddScanout(fbl::unique_ptr<GpuScanout> scanout);
+
+
+    zx_status_t HandleGpuCommand(virtio_queue_t* queue, uint16_t head, uint32_t* used);
 protected:
     static zx_status_t QueueHandler(virtio_queue_t* queue, uint16_t head, uint32_t* used,
                                     void* ctx);
-
-    zx_status_t HandleGpuCommand(virtio_queue_t* queue, uint16_t head, uint32_t* used);
 
     // VIRTIO_GPU_CMD_GET_DISPLAY_INFO
     void GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,

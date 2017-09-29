@@ -102,7 +102,7 @@ typedef struct virtio_gpu_resource_unref {
 } __PACKED virtio_gpu_resource_unref_t;
 
 typedef struct virtio_gpu_set_scanout {
-    virtio_gpu_ctrl_hdr_t hdr_t;
+    virtio_gpu_ctrl_hdr_t hdr;
     virtio_gpu_rect_t r;
     uint32_t scanout_id;
     uint32_t resource_id;

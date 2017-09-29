@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
@@ -22,29 +23,20 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-// Convert virtio gpu formats to zircon formats.
-static uint32_t guest_pixel_format(uint32_t format) {
-    switch (format) {
-    case VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM:
-        return ZX_PIXEL_FORMAT_ARGB_8888;
-    case VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM:
-        return ZX_PIXEL_FORMAT_RGB_x888;
-    default:
-        fprintf(stderr, "virtio format %#x not known\n", format);
-        return ZX_PIXEL_FORMAT_NONE;
-    }
-}
-
 VirtioGpu::VirtioGpu(uintptr_t guest_physmem_addr, size_t guest_physmem_size)
     : VirtioDevice(VIRTIO_ID_GPU, &config_, sizeof(config_), queues_, VIRTIO_GPU_Q_COUNT,
                    guest_physmem_addr, guest_physmem_size) {
 }
 
 zx_status_t VirtioGpu::Init(const char* path) {
-    zx_status_t status = GpuScanout::Create(path, &scanout_);
+    fbl::unique_ptr<GpuScanout> gpu_scanout;
+    zx_status_t status = FramebufferScanout::Create(path, &gpu_scanout);
     if (status != ZX_OK)
         return status;
-    config_.num_scanouts = 1;
+
+    status = AddScanout(fbl::move(gpu_scanout));
+    if (status != ZX_OK)
+        return status;
 
     status = virtio_queue_poll(&queues_[VIRTIO_GPU_Q_CONTROLQ], &VirtioGpu::QueueHandler, this);
     if (status != ZX_OK)
@@ -54,6 +46,15 @@ zx_status_t VirtioGpu::Init(const char* path) {
     if (status != ZX_OK)
         return status;
 
+    return ZX_OK;
+}
+
+zx_status_t VirtioGpu::AddScanout(fbl::unique_ptr<GpuScanout> scanout) {
+    if (scanout_ != nullptr)
+        return ZX_ERR_ALREADY_EXISTS;
+
+    config_.num_scanouts = 1;
+    scanout_ = fbl::move(scanout);
     return ZX_OK;
 }
 
@@ -206,7 +207,7 @@ void VirtioGpu::SetScanout(const virtio_gpu_set_scanout_t* request,
         response->type = VIRTIO_GPU_RESP_OK_NODATA;
         return;
     }
-    if (request->scanout_id != 0) {
+    if (request->scanout_id != 0 || scanout_ == nullptr) {
         // Only a single scanout is supported.
         response->type = VIRTIO_GPU_RESP_ERR_INVALID_SCANOUT_ID;
         return;
@@ -215,6 +216,27 @@ void VirtioGpu::SetScanout(const virtio_gpu_set_scanout_t* request,
     auto it = resources_.find(request->resource_id);
     if (it == resources_.end()) {
         response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
+        return;
+    }
+
+    // Only support a simple scanout where resource/scanout coordinates map
+    // 1:1. This is currently what linux and zircon virtcons do but this
+    // assumption will likely break down with a more advanced driver.
+    if (scanout_->width() != it->width() || scanout_->height() != it->height()) {
+        fprintf(stderr, "virtio-gpu: resource/scanout size mismatch not supported.\n");
+        response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
+        return;
+    }
+    if (request->r.x != 0 || request->r.y != 0 || request->r.width != it->width() ||
+        request->r.height != it->height()) {
+        fprintf(stderr, "virtio-gpu: partial scanout not supported.\n");
+        response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
+        return;
+
+    }
+    if (it->format() != scanout_->format()) {
+        fprintf(stderr, "virtio-gpu: resource/scanout pixel format mismatch not supported.\n");
+        response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
         return;
     }
 
@@ -262,39 +284,79 @@ void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
     response->type = it->Flush(request);
 }
 
-zx_status_t GpuScanout::Create(const char* path, fbl::unique_ptr<GpuScanout>* out) {
+// Convert virtio gpu formats to zircon formats.
+uint32_t FramebufferScanout::VirtioPixelFormat(uint32_t zx_format) {
+    switch (zx_format) {
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+        return VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
+    case ZX_PIXEL_FORMAT_RGB_x888:
+        return VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM;
+    default:
+        fprintf(stderr, "zircon format %#x not known\n", zx_format);
+        return 0;
+    }
+}
+
+zx_status_t FramebufferScanout::Create(const char* path, fbl::unique_ptr<GpuScanout>* out) {
     // Open framebuffer and get display info.
     int vfd = open(path, O_RDWR);
     if (vfd < 0)
         return ZX_ERR_NOT_FOUND;
-    auto scanout = fbl::make_unique<GpuScanout>();
 
-    scanout->fd = vfd;
-    if (ioctl_display_get_fb(scanout->fd, &scanout->fb) != sizeof(scanout->fb))
+    ioctl_display_get_fb_t fb;
+    if (ioctl_display_get_fb(vfd, &fb) != sizeof(fb)) {
+        close(vfd);
         return ZX_ERR_NOT_FOUND;
+    }
 
     // Map framebuffer VMO.
     uintptr_t fbo;
-    size_t size = scanout->fb.info.stride * scanout->fb.info.pixelsize * scanout->fb.info.height;
-    zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, scanout->fb.vmo, 0, size,
+    size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
+    zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, fb.vmo, 0, size,
                                      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &fbo);
-    if (status != ZX_OK)
-        return ZX_ERR_NOT_FOUND;
+    if (status != ZX_OK) {
+        close(vfd);
+        return status;
+    }
 
-    scanout->buffer = reinterpret_cast<uint8_t*>(fbo);
-    scanout->buffer_len = size;
+    auto scanout = fbl::make_unique<FramebufferScanout>(vfd, fb, reinterpret_cast<uint8_t*>(fbo));
     *out = fbl::move(scanout);
     return ZX_OK;
 }
 
+FramebufferScanout::~FramebufferScanout() {
+    if (fd_ > 0)
+        close(fd_);
+}
+
+void FramebufferScanout::FlushRegion(const virtio_gpu_rect_t& r) {
+    ioctl_display_region_t fb_region = {
+        .x = r.x,
+        .y = r.y,
+        .width = r.width,
+        .height = r.height,
+    };
+    ioctl_display_flush_fb_region(fd_, &fb_region);
+
+}
+
 GpuResource::GpuResource(VirtioGpu* gpu, const virtio_gpu_resource_create_2d_t* args)
-    : gpu_(gpu), res_id_(args->resource_id), format_(guest_pixel_format(args->format)) {}
+    : gpu_(gpu), res_id_(args->resource_id), width_(args->width), height_(args->height),
+      format_(args->format) {}
 
 virtio_gpu_ctrl_type GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* mem_entries,
                                                 uint32_t num_entries) {
+    const size_t required_bytes = width() * height() * VirtioGpu::kBytesPerPixel;
+    size_t backing_size = 0;
     for (int i = num_entries - 1; i >= 0; --i) {
         const virtio_gpu_mem_entry_t* entry = &mem_entries[i];
         backing_.push_front(fbl::make_unique<BackingPages>(entry->addr, entry->length));
+        backing_size += entry->length;
+    }
+    if (backing_size < required_bytes) {
+        fprintf(stderr, "virtio-gpu: attach backing command provided buffer is too small.\n");
+        backing_.clear();
+        return VIRTIO_GPU_RESP_ERR_UNSPEC;;
     }
     return VIRTIO_GPU_RESP_OK_NODATA;
 }
@@ -307,21 +369,14 @@ virtio_gpu_ctrl_type GpuResource::DetachBacking() {
 virtio_gpu_ctrl_type GpuResource::TransferToHost2D(const virtio_gpu_transfer_to_host_2d_t* request) {
     if (scanout_ == nullptr)
         return VIRTIO_GPU_RESP_ERR_UNSPEC;
-
-    // No transposition is currently supported.
-    if (format_ != scanout_->fb.info.format && !pixel_format_warning_) {
-        pixel_format_warning_ = true;
-        fprintf(stderr, "virtio-gpu: Guest/Host pixel format mismatch. (%#x vs %#x)\n",
-                format_, scanout_->fb.info.format);
+    if (backing_.is_empty())
         return VIRTIO_GPU_RESP_ERR_UNSPEC;
-    }
 
-    const uint8_t bpp = 4;
     // Optimize for copying a contiguous region.
-    uint32_t stride = scanout_->width() * bpp;
+    uint32_t stride = scanout_->width() * VirtioGpu::kBytesPerPixel;
     if (request->offset == 0 && request->r.x == 0 && request->r.y == 0 &&
-        request->r.width == scanout_->height()) {
-        CopyBytes(0, scanout_->buffer, stride * scanout_->height());
+        request->r.width == scanout_->width()) {
+        CopyBytes(0, scanout_->buffer(), stride * scanout_->height());
         return VIRTIO_GPU_RESP_OK_NODATA;
     }
 
@@ -329,9 +384,9 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2D(const virtio_gpu_transfer_to_
     uint32_t linesize = request->r.width * 4;
     for (uint32_t line = 0; line < request->r.height; ++line) {
         uint64_t src_offset = request->offset + stride * line;
-        size_t size = ((request->r.y + line) * stride) + (request->r.x * bpp);
+        size_t size = ((request->r.y + line) * stride) + (request->r.x * VirtioGpu::kBytesPerPixel);
 
-        CopyBytes(src_offset, scanout_->buffer + size, linesize);
+        CopyBytes(src_offset, scanout_->buffer() + size, linesize);
     }
     return VIRTIO_GPU_RESP_OK_NODATA;
 }
@@ -340,13 +395,7 @@ virtio_gpu_ctrl_type GpuResource::Flush(const virtio_gpu_resource_flush_t* reque
     if (scanout_ == nullptr)
         return VIRTIO_GPU_RESP_ERR_UNSPEC;
 
-    ioctl_display_region_t fb_region = {
-        .x = request->r.x,
-        .y = request->r.y,
-        .width = request->r.width,
-        .height = request->r.height,
-    };
-    ioctl_display_flush_fb_region(scanout_->fd, &fb_region);
+    scanout_->FlushRegion(request->r);
     return VIRTIO_GPU_RESP_OK_NODATA;
 }
 
