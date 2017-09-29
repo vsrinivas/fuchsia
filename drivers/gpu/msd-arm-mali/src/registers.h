@@ -175,6 +175,193 @@ public:
     }
 };
 
+class AsTranslationTable : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x0;
+};
+
+class AsMemoryAttributes : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x8;
+};
+
+class AsLockAddress : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x10;
+};
+
+class AsCommand : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x18;
+};
+
+class AsFaultStatus : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x1c;
+};
+
+class AsFaultAddress : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x20;
+};
+
+class AsStatus : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x28;
+};
+
+class AsTransConfig : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x30;
+};
+
+class AsFaultExtra : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x30;
+};
+
+class AsRegisters {
+public:
+    static constexpr uint32_t kBaseAddr = 0x2400;
+    static constexpr uint32_t kAsStride = 0x40;
+
+    // Maximum registers.
+    static constexpr uint32_t kAddressSpacesCount = 16;
+
+    AsRegisters(uint32_t address_space) : address_space_(address_space)
+    {
+        DASSERT(address_space < kAddressSpacesCount);
+    }
+
+    auto TranslationTable() { return GetReg<registers::AsTranslationTable>(); }
+    auto MemoryAttributes() { return GetReg<registers::AsMemoryAttributes>(); }
+    auto LockAddress() { return GetReg<registers::AsLockAddress>(); }
+    auto Command() { return GetReg<registers::AsCommand>(); }
+    auto FaultStatus() { return GetReg<registers::AsFaultStatus>(); }
+    auto FaultAddress() { return GetReg<registers::AsFaultAddress>(); }
+    auto Status() { return GetReg<registers::AsStatus>(); }
+    auto TransConfig() { return GetReg<registers::AsTransConfig>(); }
+    auto FaultExtra() { return GetReg<registers::AsFaultExtra>(); }
+
+private:
+    template <class RegType> RegisterAddr<RegType> GetReg()
+    {
+        return RegisterAddr<RegType>(RegType::kBaseAddr + kBaseAddr + kAsStride * address_space_);
+    }
+
+    uint32_t address_space_;
+};
+
+class JobSlotConfig : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x18;
+    static constexpr uint32_t kBaseAddrNext = 0x58;
+
+    DEF_FIELD(7, 0, address_space);
+    DEF_BIT(8, start_flush_clean);
+    DEF_BIT(9, start_flush_invalidate);
+    DEF_BIT(10, start_mmu);
+    DEF_BIT(11, job_chain_flag);
+    DEF_BIT(12, end_flush_clean);
+    DEF_BIT(13, end_flush_invalidate);
+    DEF_BIT(14, enable_flush_reduction);
+    DEF_BIT(15, disable_descriptor_write_back);
+    DEF_FIELD(23, 16, thread_priority);
+};
+
+class JobSlotHead : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x00;
+    static constexpr uint32_t kBaseAddrNext = 0x40;
+};
+
+class JobSlotAffinity : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x10;
+    static constexpr uint32_t kBaseAddrNext = 0x50;
+};
+
+class JobSlotXAffinity : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x1c;
+    static constexpr uint32_t kBaseAddrNext = 0x5c;
+};
+
+class JobSlotCommand : public RegisterBase {
+public:
+    static constexpr uint32_t kCommandNop = 0x0;
+    static constexpr uint32_t kCommandStart = 0x1;
+    static constexpr uint32_t kCommandSoftStop = 0x2;
+    static constexpr uint32_t kCommandHardStop = 0x3;
+    static constexpr uint32_t kCommandSoftStop_0 = 0x4;
+    static constexpr uint32_t kCommandHardStop_0 = 0x5;
+    static constexpr uint32_t kCommandStopStop_1 = 0x6;
+    static constexpr uint32_t kCommandHardStop_1 = 0x7;
+
+    static constexpr uint32_t kBaseAddr = 0x20;
+    static constexpr uint32_t kBaseAddrNext = 0x60;
+};
+
+class JobSlotStatus : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x24;
+};
+
+class JobSlotTail : public RegisterPairBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x08;
+};
+
+class JobSlotFlushId : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddrNext = 0x70;
+};
+
+class JobSlotRegisters {
+public:
+    static constexpr uint32_t kBaseAddr = 0x1000 + 0x800;
+    static constexpr uint32_t kJobSlotStride = 0x80;
+
+    // Maximum registers - actual hardware provides fewer.
+    static constexpr uint32_t kJobSlotsCount = 16;
+
+    JobSlotRegisters(uint32_t job_slot) : job_slot_(job_slot)
+    {
+        DASSERT(job_slot < kJobSlotsCount);
+    }
+
+    // These registers are for the currently executing job.
+    auto Head() { return GetReg<registers::JobSlotHead>(); }
+    auto Tail() { return GetReg<registers::JobSlotTail>(); }
+    auto Status() { return GetReg<registers::JobSlotStatus>(); }
+    auto Config() { return GetReg<registers::JobSlotConfig>(); }
+    auto Affinity() { return GetReg<registers::JobSlotAffinity>(); }
+    auto XAffinity() { return GetReg<registers::JobSlotXAffinity>(); }
+    auto Command() { return GetReg<registers::JobSlotCommand>(); }
+
+    // These registers are for the next job to execute. It can start executing
+    // once the start command is sent.
+    auto HeadNext() { return GetRegNext<registers::JobSlotHead>(); }
+    auto ConfigNext() { return GetRegNext<registers::JobSlotConfig>(); }
+    auto AffinityNext() { return GetRegNext<registers::JobSlotAffinity>(); }
+    auto XAffinityNext() { return GetRegNext<registers::JobSlotXAffinity>(); }
+    auto CommandNext() { return GetRegNext<registers::JobSlotCommand>(); }
+
+private:
+    template <class RegType> RegisterAddr<RegType> GetRegNext()
+    {
+        return RegisterAddr<RegType>(RegType::kBaseAddrNext + kBaseAddr +
+                                     kJobSlotStride * job_slot_);
+    }
+
+    template <class RegType> RegisterAddr<RegType> GetReg()
+    {
+        return RegisterAddr<RegType>(RegType::kBaseAddr + kBaseAddr + kJobSlotStride * job_slot_);
+    }
+
+    uint32_t job_slot_;
+};
+
 } // namespace registers
 
 #endif // REGISTERS_H

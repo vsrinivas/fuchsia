@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "helper/platform_device_helper.h"
+#include "lib/fxl/arraysize.h"
 #include "mock/mock_mmio.h"
 #include "msd_arm_device.h"
 #include "registers.h"
@@ -30,10 +31,18 @@ public:
         EXPECT_EQ(std::string("Present"), dump_state.power_states[0].status_type);
         EXPECT_EQ(1lu, dump_state.power_states[0].bitmask);
 
+        for (size_t i = 0; i < arraysize(dump_state.job_slot_status); i++)
+            EXPECT_EQ(0u, dump_state.job_slot_status[i]);
+
+        for (size_t i = 0; i < arraysize(dump_state.address_space_status); i++)
+            EXPECT_EQ(0u, dump_state.address_space_status[i]);
+
         std::string dump_string;
         device->FormatDump(dump_state, dump_string);
         EXPECT_NE(nullptr,
                   strstr(dump_string.c_str(), "Core type L2 Cache state Present bitmap: 0x1"));
+        EXPECT_NE(nullptr, strstr(dump_string.c_str(), "Job slot 5 status 0"));
+        EXPECT_NE(nullptr, strstr(dump_string.c_str(), "AS 10 status 0"));
     }
 
     void MockDump()
@@ -45,6 +54,9 @@ public:
         reg_io->Write32(offset, 2);
         reg_io->Write32(offset + 4, 5);
 
+        registers::AsRegisters(7).Status().FromValue(5).WriteTo(reg_io.get());
+        registers::JobSlotRegisters(2).Status().FromValue(10).WriteTo(reg_io.get());
+
         MsdArmDevice::DumpState dump_state;
         MsdArmDevice::DumpRegisters(reg_io.get(), &dump_state);
         bool found = false;
@@ -55,6 +67,8 @@ public:
                 found = true;
             }
         }
+        EXPECT_EQ(5u, dump_state.address_space_status[7]);
+        EXPECT_EQ(10u, dump_state.job_slot_status[2]);
         EXPECT_TRUE(found);
     }
 

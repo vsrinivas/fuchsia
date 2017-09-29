@@ -77,6 +77,7 @@ namespace registers {
 // have to declare constructors.
 class RegisterBase {
 public:
+    using ValueType = uint32_t;
     uint32_t reg_addr() { return reg_addr_; }
     void set_reg_addr(uint32_t addr) { reg_addr_ = addr; }
 
@@ -95,6 +96,49 @@ private:
     uint32_t reg_value_ = 0;
 };
 
+// This is similar to a RegisterBase, but represents two registers which
+// together hold a 64-bit value. The first contains the low 32 bits, and the
+// second (offset 4) contains the high 32 bits.
+class RegisterPairBase {
+public:
+    using ValueType = uint64_t;
+    uint32_t reg_addr() { return reg_addr_; }
+    void set_reg_addr(uint32_t addr) { reg_addr_ = addr; }
+
+    uint64_t reg_value() { return reg_value_; }
+    uint64_t* reg_value_ptr() { return &reg_value_; }
+    void set_reg_value(uint64_t value) { reg_value_ = value; }
+
+    void ReadFrom(RegisterIo* reg_io)
+    {
+        uint64_t value_high = reg_io->Read32(reg_addr_ + 4);
+        uint64_t value_low = reg_io->Read32(reg_addr_);
+        reg_value_ = (value_high << 32) | value_low;
+    }
+    void WriteTo(RegisterIo* reg_io)
+    {
+        reg_io->Write32(reg_addr_, reg_value_ & 0xffffffff);
+        reg_io->Write32(reg_addr_ + 4, reg_value_ >> 32);
+    }
+
+    void ReadFrom(magma::PlatformMmio* reg_io)
+    {
+        uint64_t value_high = reg_io->Read32(reg_addr_ + 4);
+        uint64_t value_low = reg_io->Read32(reg_addr_);
+        reg_value_ = (value_high << 32) | value_low;
+    }
+    void WriteTo(magma::PlatformMmio* reg_io)
+    {
+        reg_io->Write32(reg_addr_, reg_value_ & 0xffffffff);
+        reg_io->Write32(reg_addr_ + 4, reg_value_ >> 32);
+    }
+
+private:
+    // Points to the low half of the register.
+    uint32_t reg_addr_ = 0;
+    uint64_t reg_value_ = 0;
+};
+
 // An instance of RegisterAddr represents a typed register address: It
 // knows the address of the register (within the MMIO address space) and
 // the type of its contents, RegType.  RegType represents the register's
@@ -103,7 +147,8 @@ template <class RegType> class RegisterAddr {
 public:
     RegisterAddr(uint32_t reg_addr) : reg_addr_(reg_addr) {}
 
-    static_assert(std::is_base_of<RegisterBase, RegType>::value,
+    static_assert(std::is_base_of<RegisterBase, RegType>::value ||
+                      std::is_base_of<RegisterPairBase, RegType>::value,
                   "Parameter of RegisterAddr<> should derive from RegisterBase");
 
     // Instantiate a RegisterBase using the value of the register read from
@@ -125,7 +170,7 @@ public:
     }
 
     // Instantiate a RegisterBase using the given value for the register.
-    RegType FromValue(uint32_t value)
+    RegType FromValue(typename RegType::ValueType value)
     {
         RegType reg;
         reg.set_reg_addr(reg_addr_);

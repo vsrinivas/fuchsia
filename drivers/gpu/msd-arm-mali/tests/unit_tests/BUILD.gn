@@ -28,5 +28,6 @@ group("test_deps") {
     "//garnet/lib/magma/tests/helper:command_buffer_helper",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
     "//third_party/gtest",
+    "//garnet/public/lib/fxl"
   ]
 }

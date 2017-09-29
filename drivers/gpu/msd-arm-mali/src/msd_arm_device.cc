@@ -334,6 +334,16 @@ void MsdArmDevice::DumpRegisters(RegisterIo* io, DumpState* dump_state)
             dump_state->power_states.push_back({core_types[i].name, status_types[j].name, bitmask});
         }
     }
+
+    for (size_t i = 0; i < arraysize(dump_state->job_slot_status); i++) {
+        dump_state->job_slot_status[i] =
+            registers::JobSlotRegisters(i).Status().ReadFrom(io).reg_value();
+    }
+
+    for (size_t i = 0; i < arraysize(dump_state->address_space_status); i++) {
+        dump_state->address_space_status[i] =
+            registers::AsRegisters(i).Status().ReadFrom(io).reg_value();
+    }
 }
 
 void MsdArmDevice::Dump(DumpState* dump_state) { DumpRegisters(register_io_.get(), dump_state); }
@@ -352,6 +362,14 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
     for (auto& state : dump_state.power_states) {
         fxl::StringAppendf(&dump_string, "Core type %s state %s bitmap: 0x%lx\n", state.core_type,
                            state.status_type, state.bitmask);
+    }
+    for (size_t i = 0; i < arraysize(dump_state.job_slot_status); i++) {
+        fxl::StringAppendf(&dump_string, "Job slot %zu status %x\n", i,
+                           dump_state.job_slot_status[i]);
+    }
+    for (size_t i = 0; i < arraysize(dump_state.address_space_status); i++) {
+        fxl::StringAppendf(&dump_string, "AS %zu status %x\n", i,
+                           dump_state.address_space_status[i]);
     }
 }
 
