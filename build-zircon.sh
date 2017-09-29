@@ -31,7 +31,7 @@ build() {
   fi
 
   case "${target}" in
-    "x86_64") local zircon_target="zircon-pc-x86-64" ;;
+    "x86_64"|"x86-64") local zircon_target="zircon-pc-x86-64" ;;
     "aarch64"|"arm64") local zircon_target="zircon-qemu-arm64" ;;
     "rpi3") local zircon_target="zircon-rpi3-arm64" ;;
     "odroidc2") local zircon_target="zircon-odroidc2-arm64" ;;
