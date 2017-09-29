@@ -27,22 +27,23 @@ RUST_CRATES = {
             "path": "garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
             "target": "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
         },
-        # TODO(pylaligand): move mio back to the mirrors group once
-        # fuchsia-zircon is published.
+        # TODO(pylaligand): move mio and tokio-core back to the mirrors group
+        # once fuchsia-zircon is published.
         "mio": {
             "version": "0.6.10",
             "path": "third_party/rust-mirrors/mio",
             "target": "//third_party/rust-mirrors/mio",
+        },
+        "tokio-core": {
+            "version": "0.1.9",
+            "path": "third_party/rust-mirrors/tokio-core",
+            "target": "//third_party/rust-mirrors/tokio-core",
         },
     },
     # Third-party crates whose sources are mirrored.
     # The GN target for these will be automatically generated under
     # //third_party/rust-crates.
     "mirrors": {
-        "tokio-core": {
-            "version": "0.1.9",
-            "path": "third_party/rust-mirrors/tokio-core",
-        },
     },
 }
 
