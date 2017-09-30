@@ -114,7 +114,6 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             .props = props,
             .prop_count = countof(props),
         };
-
         // add PCI root at top level
         zx_device_t* parent = dev->bus->zxdev;
         if (dev->did == PDEV_DID_KPCI) {

@@ -204,7 +204,6 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         // Publish PCI root as top level
         // Only publish one PCI root device for all PCI roots
         // TODO: store context for PCI root protocol
-        parent = device_get_parent(parent);
         zx_device_t* pcidev = publish_device(parent, object, info, "pci",
                 ZX_PROTOCOL_PCIROOT, &pciroot_proto);
         ctx->found_pci = (pcidev != NULL);
@@ -245,7 +244,8 @@ static zx_status_t publish_acpi_devices(zx_device_t* parent) {
     }
 }
 
-static zx_status_t acpi_drv_bind(void* ctx, zx_device_t* parent, void** cookie) {
+static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* name,
+                                   const char* _args, zx_handle_t rpc_channel) {
     // ACPI is the root driver for its devhost so run init in the bind thread.
     dprintf(TRACE, "acpi-bus: bind to %s %p\n", device_get_name(parent), parent);
     root_resource_handle = get_root_resource();
@@ -305,7 +305,7 @@ static zx_status_t acpi_drv_bind(void* ctx, zx_device_t* parent, void** cookie) 
     // publish acpi root
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "acpi",
+        .name = name,
         .ops = &acpi_root_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
@@ -325,7 +325,7 @@ static zx_status_t acpi_drv_bind(void* ctx, zx_device_t* parent, void** cookie) 
 
 static zx_driver_ops_t acpi_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = acpi_drv_bind,
+    .create = acpi_drv_create,
 };
 
 ZIRCON_DRIVER_BEGIN(acpi, acpi_driver_ops, "zircon", "0.1", 1)

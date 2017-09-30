@@ -1240,20 +1240,7 @@ static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
     return r;
 }
 
-static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
-    // cannot bind driver to already bound device
-    if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
-        return ZX_ERR_BAD_STATE;
-    }
-    if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
-        // non-busdev is pretty simple
-        if (dev->host == NULL) {
-            log(ERROR, "devcoord: can't bind to device without devhost\n");
-            return ZX_ERR_BAD_STATE;
-        }
-        return dh_bind_driver(dev, drv->libname);
-    }
-
+static zx_status_t dc_prepare_proxy(device_t* dev) {
     // busdev args are "processname,args"
     const char* arg0 = (dev->flags & DEV_CTX_PROXY) ? dev->parent->args : dev->args;
     const char* arg1 = strchr(arg0, ',');
@@ -1304,6 +1291,28 @@ static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
         }
     }
 
+    return ZX_OK;
+}
+
+static zx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
+    // cannot bind driver to already bound device
+    if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
+        // non-busdev is pretty simple
+        if (dev->host == NULL) {
+            log(ERROR, "devcoord: can't bind to device without devhost\n");
+            return ZX_ERR_BAD_STATE;
+        }
+        return dh_bind_driver(dev, drv->libname);
+    }
+
+    zx_status_t r;
+    if ((r = dc_prepare_proxy(dev)) < 0) {
+        return r;
+    }
+
     return dh_bind_driver(dev->proxy, drv->libname);
 }
 
@@ -1342,18 +1351,6 @@ static struct zx_bind_inst root_device_binding =
 static bool is_root_driver(driver_t* drv) {
     return (drv->binding_size == sizeof(root_device_binding)) &&
         (memcmp(&root_device_binding, drv->binding, sizeof(root_device_binding)) == 0);
-}
-
-static bool is_acpi_bus_driver(driver_t* drv) {
-    // only our built-in acpi driver should bind as acpi bus
-    // so compare library path instead of binding program
-    return !strcmp(drv->libname, "/boot/driver/bus-acpi.so");
-}
-
-static bool is_platform_bus_driver(driver_t* drv) {
-    // only our built-in platform-bus driver should bind as platform bus
-    // so compare library path instead of binding program
-    return !strcmp(drv->libname, "/boot/driver/platform-bus.so");
 }
 
 static work_t new_driver_work;
@@ -1415,14 +1412,6 @@ void dc_bind_driver(driver_t* drv) {
         dc_attempt_bind(drv, &root_device);
     } else if (is_misc_driver(drv)) {
         dc_attempt_bind(drv, &misc_device);
-#if defined(__x86_64__)
-    } else if (is_acpi_bus_driver(drv)) {
-        dc_attempt_bind(drv, &sys_device);
-#endif
-#if defined(__aarch64__)
-    } else if (is_platform_bus_driver(drv)) {
-        dc_attempt_bind(drv, &sys_device);
-#endif
     } else if (dc_running) {
         device_t* dev;
         list_for_every_entry(&list_devices, dev, device_t, anode) {
@@ -1504,6 +1493,15 @@ void coordinator(void) {
     if (system_available) {
         dc_control_event(&control_handler, 0, CTL_SCAN_SYSTEM);
     }
+
+    // x86 platforms use acpi as the system device
+    // all other platforms use the platform bus
+#if defined(__x86_64__)
+    sys_device.libname = "/boot/driver/bus-acpi.so";
+#else
+    sys_device.libname = "/boot/driver/platform-bus.so";
+#endif
+    dc_prepare_proxy(&sys_device);
 
     driver_t* drv;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {

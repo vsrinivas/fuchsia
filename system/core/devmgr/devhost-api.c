@@ -143,10 +143,6 @@ __EXPORT zx_status_t device_get_protocol(zx_device_t* dev, uint32_t proto_id, vo
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-__EXPORT const char* device_get_args(zx_device_t* dev) {
-    return (dev->args ? dev->args : "");
-}
-
 __EXPORT void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
     zx_object_signal(dev->event, clearflag, setflag);
 }

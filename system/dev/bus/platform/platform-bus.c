@@ -72,17 +72,21 @@ static zx_protocol_device_t platform_bus_proto = {
     .release = platform_bus_release,
 };
 
-static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    const char* args = device_get_args(parent);
+static zx_protocol_device_t no_ops = {
+    .version = DEVICE_OPS_VERSION,
+};
+
+static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
+                                       const char* args, zx_handle_t rpc_channel) {
     if (!args) {
-        dprintf(ERROR, "platform_bus_bind: args missing\n");
+        dprintf(ERROR, "platform_bus_create: args missing\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     uint32_t vid = 0;
     uint32_t pid = 0;
     if (sscanf(args, "vid=%u,pid=%u", &vid, &pid) != 2) {
-        dprintf(ERROR, "platform_bus_bind: could not find vid or pid in args\n");
+        dprintf(ERROR, "platform_bus_create: could not find vid or pid in args\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -102,6 +106,20 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
         }
     }
 
+    // This creates the "sys" device
+    device_add_args_t self_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ops = &no_ops,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
+
+    zx_status_t r = device_add(parent, &self_args, &parent);
+    if (r != ZX_OK) {
+        return r;
+    }
+
+    // Then we attach the platform-bus device below it
     bus->resource = get_root_resource();
     bus->vid = vid;
     bus->pid = pid;
@@ -129,7 +147,7 @@ static zx_status_t platform_bus_bind(void* ctx, zx_device_t* parent, void** cook
 
 static zx_driver_ops_t platform_bus_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = platform_bus_bind,
+    .create = platform_bus_create,
 };
 
 ZIRCON_DRIVER_BEGIN(platform_bus, platform_bus_driver_ops, "zircon", "0.1", 1)

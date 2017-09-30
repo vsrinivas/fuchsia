@@ -209,8 +209,6 @@ const char* device_get_name(zx_device_t* dev);
 
 zx_device_t* device_get_parent(zx_device_t* dev);
 
-const char* device_get_args(zx_device_t* dev);
-
 // protocols look like:
 // typedef struct {
 //     protocol_xyz_ops_t* ops;
