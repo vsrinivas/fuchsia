@@ -49,4 +49,38 @@ static void arm_psci_init(mdi_node_ref_t* node, uint level) {
 }
 
 LK_PDEV_INIT(arm_psci_init, MDI_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+
+#if WITH_LIB_CONSOLE
+#include <lib/console.h>
+
+static int cmd_psci(int argc, const cmd_args *argv, uint32_t flags) {
+    ulong arg0, arg1 = 0, arg2 = 0, arg3 = 0;
+
+    if (argc < 2) {
+        printf("not enough arguments\n");
+        printf("%s arg0 [arg1] [arg2] [arg3]\n", argv[0].str);
+        return -1;
+    }
+
+    arg0 = argv[1].u;
+    if (argc >= 3) {
+        arg1 = argv[2].u;
+        if (argc >= 4) {
+            arg2 = argv[3].u;
+            if (argc >= 5) {
+                arg3 = argv[4].u;
+            }
+        }
+    }
+
+    uint32_t ret = do_psci_call(arg0, arg1, arg2, arg3);
+    printf("do_psci_call returned %u\n", ret);
+    return 0;
+}
+#endif // WITH_LIB_CONSOLE
+
+STATIC_COMMAND_START
+STATIC_COMMAND_MASKED("psci", "execute PSCI command", &cmd_psci, CMD_AVAIL_ALWAYS)
+STATIC_COMMAND_END(psci);
+
 #endif // WITH_DEV_PDEV
