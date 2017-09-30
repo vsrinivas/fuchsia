@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/midi.h>
 #include <stdlib.h>
@@ -49,20 +50,20 @@ static void update_signals(usb_midi_source_t* source) {
     }
 }
 
-static void usb_midi_source_read_complete(iotxn_t* txn, void* cookie) {
+static void usb_midi_source_read_complete(usb_request_t* req, void* cookie) {
     usb_midi_source_t* source = (usb_midi_source_t*)cookie;
 
-    if (txn->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(txn);
+    if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(req);
         return;
     }
 
     mtx_lock(&source->mutex);
 
-    if (txn->status == ZX_OK && txn->actual > 0) {
-        list_add_tail(&source->completed_reads, &txn->node);
+    if (req->response.status == ZX_OK && req->response.actual > 0) {
+        list_add_tail(&source->completed_reads, &req->node);
     } else {
-        iotxn_queue(source->usb_mxdev, txn);
+        usb_request_queue(&source->usb, req);
     }
     update_signals(source);
     mtx_unlock(&source->mutex);
@@ -76,12 +77,12 @@ static void usb_midi_source_unbind(void* ctx) {
 }
 
 static void usb_midi_source_free(usb_midi_source_t* source) {
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&source->free_read_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    usb_request_t* req;
+    while ((req = list_remove_head_type(&source->free_read_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&source->completed_reads, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&source->completed_reads, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
     free(source);
 }
@@ -104,12 +105,12 @@ static zx_status_t usb_midi_source_open(void* ctx, zx_device_t** dev_out, uint32
     }
 
     // queue up reads, including stale completed reads
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&source->completed_reads, iotxn_t, node)) != NULL) {
-        iotxn_queue(source->usb_mxdev, txn);
+    usb_request_t* req;
+    while ((req = list_remove_head_type(&source->completed_reads, usb_request_t, node)) != NULL) {
+        usb_request_queue(&source->usb, req);
     }
-    while ((txn = list_remove_head_type(&source->free_read_reqs, iotxn_t, node)) != NULL) {
-        iotxn_queue(source->usb_mxdev, txn);
+    while ((req = list_remove_head_type(&source->free_read_reqs, usb_request_t, node)) != NULL) {
+        usb_request_queue(&source->usb, req);
     }
     mtx_unlock(&source->mutex);
 
@@ -144,16 +145,16 @@ static zx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, zx_of
         status = ZX_ERR_SHOULD_WAIT;
         goto out;
     }
-    iotxn_t* txn = containerof(node, iotxn_t, node);
+    usb_request_t* req = containerof(node, usb_request_t, node);
 
     // MIDI events are 4 bytes. We can ignore the zeroth byte
-    iotxn_copyfrom(txn, data, 3, 1);
+    usb_request_copyfrom(req, data, 3, 1);
     *actual = get_midi_message_length(*((uint8_t *)data));
     list_remove_head(&source->completed_reads);
-    list_add_head(&source->free_read_reqs, &txn->node);
+    list_add_head(&source->free_read_reqs, &req->node);
     while ((node = list_remove_head(&source->free_read_reqs)) != NULL) {
-        iotxn_t* req = containerof(node, iotxn_t, node);
-        iotxn_queue(source->usb_mxdev, req);
+        usb_request_t* req = containerof(node, usb_request_t, node);
+        usb_request_queue(&source->usb, req);
     }
 
 out:
@@ -206,15 +207,16 @@ zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int
         usb_set_interface(usb, intf->bInterfaceNumber, intf->bAlternateSetting);
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, packet_size);
-        if (!txn) {
+        usb_request_t* req;
+        zx_status_t status = usb_request_alloc(&req, packet_size, ep->bEndpointAddress);
+        if (status != ZX_OK) {
             usb_midi_source_free(source);
             return ZX_ERR_NO_MEMORY;
         }
-        txn->length = packet_size;
-        txn->complete_cb = usb_midi_source_read_complete;
-        txn->cookie = source;
-        list_add_head(&source->free_read_reqs, &txn->node);
+        req->header.length = packet_size;
+        req->complete_cb = usb_midi_source_read_complete;
+        req->cookie = source;
+        list_add_head(&source->free_read_reqs, &req->node);
     }
 
     char name[ZX_DEVICE_NAME_MAX];
