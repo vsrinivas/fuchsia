@@ -60,6 +60,8 @@ VideoRendererImpl::View::View(
 
   FXL_DCHECK(video_frame_source_);
   video_frame_source_->RegisterView(this);
+
+  SetReleaseHandler([this]() { delete this; });
 }
 
 VideoRendererImpl::View::~View() {
