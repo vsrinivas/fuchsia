@@ -61,7 +61,7 @@ zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> out) {
     return ZX_OK;
 }
 
-zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const void> packet_in, size_t size) {
+zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const zx_port_packet_t> packet_in, size_t size) {
     LTRACEF("handle %x\n", handle);
 
     if (size != 0u)
@@ -75,14 +75,14 @@ zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const void> packet_in, s
         return status;
 
     zx_port_packet_t packet;
-    if (packet_in.copy_array_from_user(&packet, sizeof(packet)) != ZX_OK)
+    if (packet_in.copy_from_user(&packet) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return port->QueueUser(packet);
 }
 
 zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
-                          user_ptr<void> packet_out, size_t size) {
+                          user_ptr<zx_port_packet_t> packet_out, size_t size) {
     LTRACEF("handle %x\n", handle);
 
     if (size != 0u)
@@ -105,7 +105,7 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
     if (st != ZX_OK)
         return st;
 
-    if (packet_out.copy_array_to_user(&pp, sizeof(pp)) != ZX_OK)
+    if (packet_out.copy_to_user(pp) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return ZX_OK;

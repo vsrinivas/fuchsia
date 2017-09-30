@@ -28,11 +28,11 @@ public:
 
     static zx_status_t create(uint32_t options, port* result);
 
-    zx_status_t queue(const void* packet, size_t size) const {
+    zx_status_t queue(const zx_port_packet_t* packet, size_t size) const {
         return zx_port_queue(get(), packet, size);
     }
 
-    zx_status_t wait(zx_time_t deadline, void* packet, size_t size) const {
+    zx_status_t wait(zx_time_t deadline, zx_port_packet_t* packet, size_t size) const {
         return zx_port_wait(get(), deadline, packet, size);
     }
 

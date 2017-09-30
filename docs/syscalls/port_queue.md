@@ -10,15 +10,14 @@ port_queue - queue a packet to an port
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-zx_status_t zx_port_queue(zx_handle_t handle, const void* packet, size_t size);
+zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet, size_t size);
 
 ```
 
 ## DESCRIPTION
 
 **port_queue**() queues a *packet* to the port specified
-by *handle*. The *packet* must be of type **zx_port_packet** and
-*size* should be set to zero.
+by *handle*. *size* should be set to zero.
 
 ```
 typedef struct zx_port_packet {

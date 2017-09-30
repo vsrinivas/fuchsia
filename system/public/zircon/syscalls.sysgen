@@ -322,11 +322,11 @@ syscall port_create
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall port_queue
-    (handle: zx_handle_t, packet: any[size] IN, size: size_t)
+    (handle: zx_handle_t, packet: zx_port_packet_t[1] IN, size: size_t)
     returns (zx_status_t);
 
 syscall port_wait blocking
-    (handle: zx_handle_t, deadline: zx_time_t, packet: any[size] OUT, size: size_t)
+    (handle: zx_handle_t, deadline: zx_time_t, packet: zx_port_packet_t[1] OUT, size: size_t)
     returns (zx_status_t);
 
 syscall port_cancel
