@@ -28,9 +28,10 @@
 #include "peridot/bin/story_runner/module_context_impl.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
-#include "peridot/bin/story_runner/story_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
+#include "peridot/lib/ledger_client/operations.h"
 
 namespace modular {
 
@@ -40,6 +41,42 @@ namespace {
 
 fidl::String PathString(const fidl::Array<fidl::String>& module_path) {
   return fxl::JoinStrings(module_path, ":");
+}
+
+void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
+  xdr->Field("module_path", &data->module_path);
+  xdr->Field("link_name", &data->link_name);
+}
+
+void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
+  xdr->Field("arrangement", &data->arrangement);
+  xdr->Field("dependency", &data->dependency);
+  xdr->Field("emphasis", &data->emphasis);
+}
+
+void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
+  xdr->Field("url", &data->module_url);
+  xdr->Field("module_path", &data->module_path);
+  // TODO(mesch): Rename the XDR field eventually.
+  xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
+  xdr->Field("module_source", &data->module_source);
+  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
+  xdr->Field("module_stopped", &data->module_stopped);
+}
+
+void XdrPerDeviceStoryInfo(XdrContext* const xdr,
+                           PerDeviceStoryInfo* const info) {
+  xdr->Field("device", &info->device_id);
+  xdr->Field("id", &info->story_id);
+  xdr->Field("time", &info->timestamp);
+  xdr->Field("state", &info->state);
+}
+
+void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
+  xdr->Field("context", &data->context);
+  xdr->Field("device_id", &data->device_id);
+  xdr->Field("time", &data->time);
+  xdr->Field("signal", &data->signal);
 }
 
 }  // namespace
@@ -115,23 +152,41 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    auto module_path = parent_module_path_.Clone();
-    module_path.push_back(module_name_);
-    auto link_path = LinkPath::New();
-    link_path->module_path = parent_module_path_.Clone();
-    link_path->link_name = link_name_;
+    module_path_ = parent_module_path_.Clone();
+    module_path_.push_back(module_name_);
+    link_path_ = LinkPath::New();
+    link_path_->module_path = parent_module_path_.Clone();
+    link_path_->link_name = link_name_;
 
-    story_controller_impl_->story_storage_impl_->WriteModuleData(
-        module_path, module_url_, link_path, ModuleSource::EXTERNAL,
-        surface_relation_, false, [this, flow] {
-          if (story_controller_impl_->IsRunning()) {
-            story_controller_impl_->StartModuleInShell(
-                parent_module_path_, module_name_, module_url_, link_name_,
-                nullptr, nullptr, nullptr, std::move(surface_relation_), true,
-                ModuleSource::EXTERNAL);
-          }
-        });
-  };
+    WriteModuleData(flow);
+  }
+
+  void WriteModuleData(FlowToken flow) {
+    ModuleDataPtr data = ModuleData::New();
+    data->module_url = module_url_;
+    data->module_path = std::move(module_path_);
+    data->link_path = std::move(link_path_);
+    data->module_source = ModuleSource::EXTERNAL;
+    data->surface_relation = surface_relation_.Clone();
+    data->module_stopped = false;
+
+    const std::string key{MakeModuleKey(module_path_)};
+    new WriteDataCall<ModuleData>(
+        &operation_queue_,
+        story_controller_impl_->page(),
+        key, XdrModuleData,
+        std::move(data),
+        [this, flow] { Cont(flow); });
+  }
+
+  void Cont(FlowToken flow) {
+    if (story_controller_impl_->IsRunning()) {
+      story_controller_impl_->StartModuleInShell(
+          parent_module_path_, module_name_, module_url_, link_name_,
+          nullptr, nullptr, nullptr, std::move(surface_relation_), true,
+          ModuleSource::EXTERNAL);
+    }
+  }
 
   StoryControllerImpl* const story_controller_impl_;
   const fidl::Array<fidl::String> parent_module_path_;
@@ -140,36 +195,12 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   const fidl::String link_name_;
   SurfaceRelationPtr surface_relation_;
 
+  fidl::Array<fidl::String> module_path_;
+  LinkPathPtr link_path_;
+
+  OperationQueue operation_queue_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
-};
-
-// TODO(mesch): Merge the StoryStorageImpl operations into the
-// StoryControllerImpl operations. This Operation exists only to align the
-// operation queues of StoryControllerImpl and StoryStorageImpl.
-class StoryControllerImpl::GetModulesCall
-    : Operation<fidl::Array<ModuleDataPtr>> {
- public:
-  GetModulesCall(OperationContainer* const container,
-                 StoryControllerImpl* const story_controller_impl,
-                 const ResultCall& callback)
-      : Operation("StoryControllerImpl::GetModulesCall", container, callback),
-        story_controller_impl_(story_controller_impl) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow(this, &result_);
-
-    story_controller_impl_->story_storage_impl_->ReadAllModuleData(
-        [this, flow](fidl::Array<ModuleDataPtr> result) {
-          result_ = std::move(result);
-        });
-  }
-
-  StoryControllerImpl* const story_controller_impl_;
-  fidl::Array<ModuleDataPtr> result_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
 };
 
 class StoryControllerImpl::AddForCreateCall : Operation<> {
@@ -261,7 +292,10 @@ class StoryControllerImpl::StartCall : Operation<> {
 
     // Start *all* the root modules, not just the first one, with their
     // respective links.
-    story_controller_impl_->story_storage_impl_->ReadAllModuleData(
+    new ReadAllDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(),
+        kModuleKeyPrefix,
+        XdrModuleData,
         [this, flow](fidl::Array<ModuleDataPtr> data) {
           for (auto& module_data : data) {
             if (module_data->module_source == ModuleSource::EXTERNAL &&
@@ -285,6 +319,8 @@ class StoryControllerImpl::StartCall : Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fidl::InterfaceRequest<mozart::ViewOwner> request_;
+
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
@@ -370,8 +406,6 @@ class StoryControllerImpl::StopCall : Operation<> {
     // The links don't need to be written now, because they all were written
     // when they were last changed, but we need to wait for the last write
     // request to finish, which is done with the Sync() request below.
-    //
-    // TODO(mesch): We really only need to Sync() on story_storage_impl_.
     for (auto& link : story_controller_impl_->links_) {
       link->Sync([this] { LinkDown(); });
     }
@@ -430,8 +464,10 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
     FlowToken flow{this};
 
     // Read the module data.
-    story_controller_impl_->story_storage_impl_->ReadModuleData(
-        module_path_, [this, flow](ModuleDataPtr data) {
+    new ReadDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(), MakeModuleKey(module_path_),
+        false /* not_found_is_ok */, XdrModuleData,
+        [this, flow](ModuleDataPtr data) {
           module_data_ = std::move(data);
           Cont1(flow);
         });
@@ -456,7 +492,12 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
     // global state shared between machines to track when the module is
     // explicitly stopped.
     module_data_->module_stopped = true;
-    story_controller_impl_->story_storage_impl_->WriteModuleData(
+
+    const std::string key{MakeModuleKey(module_data_->module_path)};
+    new WriteDataCall<ModuleData>(
+        &operation_queue_,
+        story_controller_impl_->page(),
+        key, XdrModuleData,
         module_data_->Clone(), [this, flow] { Cont3(flow); });
   }
 
@@ -505,6 +546,8 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::Array<fidl::String> module_path_;
   ModuleDataPtr module_data_;
+
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
 };
@@ -588,23 +631,38 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       link_path_ = LinkPath::New();
       link_path_->module_path = parent_module_path_.Clone();
       link_path_->link_name = link_name_;
-
-      story_controller_impl_->story_storage_impl_->WriteModuleData(
-          module_path_, module_url_, link_path_, module_source_,
-          surface_relation_.Clone(), false, [this, flow] { Cont(flow); });
+      WriteModuleData(flow);
 
     } else {
       // If the link name is null, this module receives the default link of its
       // parent module. We need to retrieve which one it is from story storage.
-      story_controller_impl_->story_storage_impl_->ReadModuleData(
-          parent_module_path_, [this, flow](ModuleDataPtr module_data) {
+      new ReadDataCall<ModuleData>(
+          &operation_queue_, story_controller_impl_->page(),
+          MakeModuleKey(parent_module_path_),
+          false /* not_found_is_ok */, XdrModuleData,
+          [this, flow](ModuleDataPtr module_data) {
             FXL_DCHECK(module_data);
             link_path_ = module_data->link_path.Clone();
-            story_controller_impl_->story_storage_impl_->WriteModuleData(
-                module_path_, module_url_, link_path_, module_source_,
-                surface_relation_.Clone(), false, [this, flow] { Cont(flow); });
+            WriteModuleData(flow);
           });
     }
+  }
+
+  void WriteModuleData(FlowToken flow) {
+    ModuleDataPtr data = ModuleData::New();
+    data->module_url = module_url_;
+    data->module_path = module_path_.Clone();
+    data->link_path = link_path_.Clone();
+    data->module_source = module_source_;
+    data->surface_relation = surface_relation_.Clone();
+    data->module_stopped = false;
+
+    const std::string key{MakeModuleKey(module_path_)};
+    new WriteDataCall<ModuleData>(&operation_queue_,
+                                  story_controller_impl_->page(),
+                                  key, XdrModuleData,
+                                  std::move(data),
+                                  [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -716,6 +774,8 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   LinkPathPtr link_path_;
   ModuleDataPtr module_data_;
 
+  OperationQueue operation_queue_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
 };
 
@@ -737,7 +797,10 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    story_controller_impl_->story_storage_impl_->ReadLog(
+    new ReadAllDataCall<StoryContextLog>(
+        &operation_queue_, story_controller_impl_->page(),
+        kStoryContextLogKeyPrefix,
+        XdrStoryContextLog,
         [this, flow](fidl::Array<StoryContextLogPtr> log) {
           log_ = std::move(log);
           Cont(flow);
@@ -788,6 +851,8 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
 
   float result_{0.0};
 
+  OperationQueue operation_queue_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
 };
 
@@ -796,12 +861,14 @@ StoryControllerImpl::StoryControllerImpl(
     LedgerClient* const ledger_client,
     LedgerPageId story_page_id,
     StoryProviderImpl* const story_provider_impl)
-    : story_id_(story_id),
+    : PageClient(MakeStoryKey(story_id),
+                 ledger_client,
+                 story_page_id.Clone(),
+                 kModuleKeyPrefix),
+      story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       ledger_client_(ledger_client),
       story_page_id_(std::move(story_page_id)),
-      story_storage_impl_(
-          new StoryStorageImpl(ledger_client_, story_page_id_.Clone())),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this),
@@ -867,11 +934,14 @@ StoryState StoryControllerImpl::GetStoryState() const {
 }
 
 void StoryControllerImpl::Log(StoryContextLogPtr log_entry) {
-  story_storage_impl_->Log(std::move(log_entry));
+  new WriteDataCall<StoryContextLog>(
+      &operation_queue_, page(),
+      MakeStoryContextLogKey(log_entry->signal, log_entry->time),
+      XdrStoryContextLog, std::move(log_entry), [] {});
 }
 
 void StoryControllerImpl::Sync(const std::function<void()>& done) {
-  story_storage_impl_->Sync(done);
+  new SyncCall(&operation_queue_, done);
 }
 
 void StoryControllerImpl::GetImportance(
@@ -1030,6 +1100,13 @@ void StoryControllerImpl::StartModuleInShell(
   }
 }
 
+void StoryControllerImpl::OnPageChange(const std::string& key, const std::string& value) {
+  // TODO(mesch): Possibly do something real here. This is for module instances
+  // started in the same story on another device.
+  FXL_LOG(INFO) << "StoryControllerImpl::OnPageChange "
+                << key << " " << value;
+}
+
 // |StoryController|
 void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
   // Synced such that if GetInfo() is called after Start() or Stop(), the state
@@ -1126,7 +1203,8 @@ void StoryControllerImpl::GetActiveModules(
 
 // |StoryController|
 void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
-  new GetModulesCall(&operation_queue_, this, callback);
+  new ReadAllDataCall<ModuleData>(&operation_queue_, page(), kModuleKeyPrefix,
+                                  XdrModuleData, callback);
 }
 
 // |StoryController|
@@ -1203,23 +1281,23 @@ void StoryControllerImpl::NotifyStateChange() {
 
   story_provider_impl_->NotifyStoryStateChange(story_id_, state_);
 
-  // NOTE(mesch): This gets scheduled on the StoryProviderImpl Operation
+  // NOTE(mesch): This gets scheduled on the StoryControllerImpl Operation
   // queue. If the current StoryControllerImpl Operation is part of a
   // DeleteStory Operation of the StoryProviderImpl, then the SetStoryState
   // Operation gets scheduled after the delete of the story is completed, and it
-  // will not write anything. The Operation on the other queue is not part of
-  // this Operation, so not subject to locking if it travels in wrong direction
-  // of the hierarchy (the principle we follow is that an Operation in one
-  // container may sync on the operation queue of something inside the
-  // container, but not something outside the container; this way we prevent
-  // lock cycles).
+  // will not execute because its queue is deleted beforehand.
   //
-  // TODO(mesch): It would still be nicer if we could complete the State writing
-  // while this Operation is executing so that it stays on our queue and there's
-  // no race condition. We need our own copy of the Page* for that.
+  // TODO(mesch): Maybe we should execute this inside the containing Operation.
 
-  story_storage_impl_->WriteDeviceData(
-      story_id_, story_provider_impl_->device_id(), state_, [] {});
+  PerDeviceStoryInfoPtr data = PerDeviceStoryInfo::New();
+  data->device_id = story_provider_impl_->device_id();
+  data->story_id = story_id_;
+  data->timestamp = time(nullptr);
+  data->state = state_;
+
+  new WriteDataCall<PerDeviceStoryInfo, PerDeviceStoryInfoPtr>(
+      &operation_queue_, page(), MakePerDeviceKey(data->device_id),
+      XdrPerDeviceStoryInfo, std::move(data), []{});
 }
 
 void StoryControllerImpl::DisposeLink(LinkImpl* const link) {

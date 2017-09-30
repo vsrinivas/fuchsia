@@ -39,6 +39,7 @@
 #include "peridot/lib/fidl/operation.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
@@ -47,7 +48,6 @@ class LinkImpl;
 class ModuleControllerImpl;
 class ModuleContextImpl;
 class StoryProviderImpl;
-class StoryStorageImpl;
 
 constexpr char kRootLink[] = "root";
 constexpr char kRootModuleName[] = "root";
@@ -60,7 +60,7 @@ constexpr char kStoryImportanceContext[] = "location/home_work";
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
 // clients control over the story.
-class StoryControllerImpl : StoryController, StoryContext {
+class StoryControllerImpl : PageClient, StoryController, StoryContext {
  public:
   StoryControllerImpl(const fidl::String& story_id,
                       LedgerClient* ledger_client,
@@ -157,6 +157,9 @@ class StoryControllerImpl : StoryController, StoryContext {
  private:
   class ModuleWatcherImpl;
 
+  // |PageClient|
+  void OnPageChange(const std::string& key, const std::string& value) override;
+
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
   void SetInfoExtra(const fidl::String& name,
@@ -204,7 +207,6 @@ class StoryControllerImpl : StoryController, StoryContext {
 
   LedgerClient* const ledger_client_;
   const LedgerPageId story_page_id_;
-  std::unique_ptr<StoryStorageImpl> story_storage_impl_;
 
   // The scope in which the modules within this story run.
   Scope story_scope_;
@@ -262,7 +264,6 @@ class StoryControllerImpl : StoryController, StoryContext {
   class StopCall;
   class StopModuleCall;
   class DeleteCall;
-  class GetModulesCall;
   class GetImportanceCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);

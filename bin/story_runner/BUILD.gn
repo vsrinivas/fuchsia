@@ -26,8 +26,6 @@ source_set("story_runner") {
     "story_controller_impl.h",
     "story_provider_impl.cc",
     "story_provider_impl.h",
-    "story_storage_impl.cc",
-    "story_storage_impl.h",
   ]
 
   public_deps = [
