@@ -9,9 +9,12 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include "element_id.h"
 #include "garnet/drivers/wlan/common/bitfield.h"
+#include "logging.h"
 
 #include <cstdint>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -25,7 +28,21 @@ struct ElementHeader {
 
 template <typename E, uint8_t ID> struct Element {
     static constexpr uint8_t element_id() { return ID; }
-    size_t len() const { return sizeof(ElementHeader) + static_cast<E*>(this)->hdr.len; }
+    size_t body_len() const { return static_cast<const E*>(this)->hdr.len; }
+    size_t len() const { return sizeof(ElementHeader) + body_len(); }
+
+    bool is_len_valid() const {
+        // E::kMinLen and E::kMaxLen captures the range of the IE body length,
+        // excluding the IE header whose size is fixed to 2 octets.
+        if (body_len() >= E::kMinLen && body_len() <= E::kMaxLen) return true;
+
+        // Crush dark arts.
+        debugbcn("rxed Invalid IE: ID %2d elem_len %2zu body_len %3zu (not in range [%3zu:%3zu]\n",
+                 E::element_id(), len(), body_len(), E::kMinLen, E::kMaxLen);
+        return false;
+    }
+
+    bool is_valid() const { return is_len_valid(); }
 };
 
 // An ElementReader can be used to retrieve Elements from a Management frame. The peek() method
@@ -46,10 +63,25 @@ class ElementReader {
     template <typename E> const E* read() {
         static_assert(fbl::is_base_of<Element<E, E::element_id()>, E>::value,
                       "Only Elements may be retrieved.");
-        if (!is_valid()) return nullptr;
-        if (offset_ + sizeof(E) > len_) return nullptr;
+        if (!is_valid()) {
+            debugbcn("IE validity test failed: ID %3u len_ %3zu offset_ %3zu elem_len %3zu\n",
+                     E::element_id(), len_, offset_, NextElementLen());
+
+            return nullptr;
+        }
+
+        if (offset_ + sizeof(E) > len_) {
+            debugbcn(
+                "IE validity test failed: ID %3u len_ %3zu offset_ %3zu elem_len %3zu sizeof(E) "
+                "%3zu\n",
+                E::element_id(), len_, offset_, NextElementLen(), sizeof(E));
+            return nullptr;
+        }
+
         const E* elt = reinterpret_cast<const E*>(buf_ + offset_);
         ZX_DEBUG_ASSERT(elt->hdr.id == E::element_id());
+        if (!elt->is_valid()) return nullptr;
+
         offset_ += sizeof(ElementHeader) + elt->hdr.len;
         return elt;
     }
@@ -62,8 +94,8 @@ class ElementReader {
     size_t offset_ = 0;
 };
 
-// An ElementWriter will serialize Elements into a buffer. The size() method will return the total
-// length of the buffer.
+// An ElementWriter will serialize Elements into a buffer. The size() method will return the
+// total length of the buffer.
 class ElementWriter {
    public:
     ElementWriter(uint8_t* buf, size_t len);
@@ -77,6 +109,13 @@ class ElementWriter {
         bool success =
             E::Create(buf_ + offset_, len_ - offset_, &actual, std::forward<Args>(args)...);
         if (!success) return false;
+
+        auto elem = reinterpret_cast<const E*>(buf_ + offset_);
+        if (!elem->is_valid()) {
+            warnf("ElementWriter: IE %3u has invalid body length: %3u\n", E::element_id(),
+                  elem->hdr.len);
+        }
+
         offset_ += actual;
         ZX_DEBUG_ASSERT(offset_ <= len_);
         return true;
@@ -90,213 +129,10 @@ class ElementWriter {
     size_t offset_ = 0;
 };
 
-// IEEE Std 802.11-2016, 9.4.2.1 Table 9-77
-namespace element_id {
-enum ElementId : uint8_t {
-    kSsid = 0,
-    kSuppRates = 1,
-    // 2 Reserved
-    kDsssParamSet = 3,
-    kCfParamSet = 4,
-    kTim = 5,
-    kIbssParamSet = 6,
-    kCountry = 7,
-    // 8-9 Reserved
-    kRequest = 10,
-    kBssLoad = 11,
-    kEdcaParamSet = 12,
-    kTspec = 13,
-    kTclas = 14,
-    kSchedule = 15,
-    kChallengeText = 16,
-    // 17-31 Reserved
-    kPowerConstraint = 32,
-    kPowerCapability = 33,
-    kTpcRequest = 34,
-    kTpcReport = 35,
-    kSupportedChannels = 36,
-    kChannelSwitchAnn = 37,
-    kMeasurementRequest = 38,
-    kMeasurementReport = 39,
-    kQuiet = 40,
-    kIbssDfs = 41,
-    kErp = 42,
-    kTsDelay = 43,
-    kTclasProcessing = 44,
-    kHtCapabilities = 45,
-    kQosCapability = 46,
-    // 47 Reserved
-    kRsn = 48,
-    // 49 Reserved
-    kExtSuppRates = 50,
-    kApChannelReport = 51,
-    kNeighborReport = 52,
-    kRcpi = 53,
-    kMobilityDomain = 54,
-    kFastBssTransition = 55,
-    kTimeoutInterval = 56,
-    kRicData = 57,
-    kDseRegisteredLocation = 58,
-    kSuppOperatingClasses = 59,
-    kExtChannelSwitchAnn = 60,
-    kHtOperation = 61,
-    kSecondaryChannelOffset = 62,
-    kBssAvgAccessDelay = 63,
-    kAntenna = 64,
-    kRsni = 65,
-    kMeasurementPilotTrans = 66,
-    kBssAvailAdmissionCapacity = 67,
-    kBssAcAccessDelay = 68,
-    kTimeAdvertisement = 69,
-    kRmEnabledCapabilities = 70,
-    kMultipleBssid = 71,
-    k2040BssCoex = 72,
-    k2040BssIntolerantChanReport = 73,
-    kOverlappingBssScanParams = 74,
-    kRicDescriptor = 75,
-    kManagementMic = 76,
-    // 77 not defined
-    kEventRequest = 78,
-    kEventReport = 79,
-    kDiagnosticRequest = 80,
-    kDiagnosticReport = 81,
-    kLocationParams = 82,
-    kNontransmittedBssidCapability = 83,
-    kSsidList = 84,
-    kMultipleBssidIndex = 85,
-    kFmsDescriptor = 86,
-    kFmsRequest = 87,
-    kFmsResponse = 88,
-    kQosTrafficCapability = 89,
-    kBssMaxIdlePeriod = 90,
-    kTfsRequest = 91,
-    kTfsResponse = 92,
-    kWnmSleepMode = 93,
-    kTimBroadcastRequest = 94,
-    kTimBroadcastResponse = 95,
-    kCollocatedInterferenceReport = 96,
-    kChannelUsage = 97,
-    kTimeZone = 98,
-    kDmsRequest = 99,
-    kDmsResponse = 100,
-    kLinkIdentifier = 101,
-    kWakeupSchedule = 102,
-    // 103 not defined
-    kChannelSwitchTiming = 104,
-    kPtiControl = 105,
-    kTpuBufferStatus = 106,
-    kInterworking = 107,
-    kAdvertisementProtocol = 108,
-    kExpeditedBandwidthRequest = 109,
-    kQosMap = 110,
-    kRoamingConsortium = 111,
-    kEmergencyAlertId = 112,
-    kMeshConfiguration = 113,
-    kMeshId = 114,
-    kMeshLinkMetricReport = 115,
-    kCongestionNotification = 116,
-    kMeshPeeringManagement = 117,
-    kMeshChannelSwitchParams = 118,
-    kMeshAwakeWindow = 119,
-    kBeaconTiming = 120,
-    kMccaopSetupRequest = 121,
-    kMccaopSetupReply = 122,
-    kMccaopAdvertisement = 123,
-    kMccaopTeardown = 124,
-    kGann = 125,
-    kRann = 126,
-    kExtCapabilities = 127,
-    // 128-129 Reserved
-    kPreq = 130,
-    kPrep = 131,
-    kPerr = 132,
-    // 133-136 Reserved
-    kPxu = 137,
-    kPxuc = 138,
-    kAuthenticatedMeshPeeringExchg = 139,
-    kMic = 140,
-    kDestinationUri = 141,
-    kUapsdCoex = 142,
-    kDmgWakeupSchedule = 143,
-    kExtSchedule = 144,
-    kStaAvailability = 145,
-    kDmgTspec = 146,
-    kNextDmgAti = 147,
-    kDmgCapabilities = 148,
-    // 149-150 Reserved
-    kDmgOperation = 151,
-    kDmgBssParamChange = 152,
-    kDmgBeamRefinement = 153,
-    kChannelMeasurementFeedback = 154,
-    // 155-156 Reserved
-    kAwakeWindow = 157,
-    kMultiband = 158,
-    kAddbaExtension = 159,
-    kNextPcpList = 160,
-    kPcpHandover = 161,
-    kDmgLinkMargin = 162,
-    kSwitchingStream = 163,
-    kSessionTransition = 164,
-    kDynamicTonePairingReport = 165,
-    kClusterReport = 166,
-    kRelayCapabilities = 167,
-    kRelayTransferParamSet = 168,
-    kBeamLinkMaintenance = 169,
-    kMultipleMacSublayers = 170,
-    kUpid = 171,
-    kDmgLinkAdaptationAck = 172,
-    // 173 Reserved
-    kMccaopAdvertisementOverview = 174,
-    kQuietPeriodRequest = 175,
-    // 176 Reserved
-    kQuietPeriodResponse = 177,
-    // 178-180 Reserved
-    kQmfPolicy = 181,
-    kEcapcPolicy = 182,
-    kClusterTimeOffset = 183,
-    kIntraAccessCategoryPriority = 184,
-    kScsDescriptor = 185,
-    kQloadReport = 186,
-    kHccaTxopUpdateCount = 187,
-    kHigherLayerStreamId = 188,
-    kGcrGroupAddres = 189,
-    kAntennaSectorIdPattern = 190,
-    kVhtCapabilities = 191,
-    kVhtOperation = 192,
-    kExtBssLoad = 193,
-    kWideBandwidthChannelSwitch = 194,
-    kTransmitPowerEnvelope = 195,
-    kChannelSwitchWrapper = 196,
-    kAid = 197,
-    kQuietChannel = 198,
-    kOperatingModeNotification = 199,
-    kUpsim = 200,
-    kReducedNeighborReport = 201,
-    kTvhtOperation = 202,
-    // 203 Reserved
-    kDeviceLocation = 204,
-    kWhiteSpaceMap = 205,
-    kFineTimingMeasurementParams = 206,
-    // 207-220 Reserved
-    kVendorSpecific = 221,
-    // 222-254 Reserved
-    kElementWithExtension = 255,
-};
-}  // namespace element_id
-
-enum ElementIdExtension : uint8_t {
-    // 0-8 Reserved
-    kFtmSynchronizationInformation = 9,
-    kExtRequest = 10,
-    kEstimatedServiceParams = 11,
-    // 12-13 not defined
-    kFutureChannelGuidance = 14,
-    // 15-255 Reserved
-};
-
 // IEEE Std 802.11-2016, 9.4.2.2
 struct SsidElement : public Element<SsidElement, element_id::kSsid> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* ssid);
+    static const size_t kMinLen = 0;
     static const size_t kMaxLen = 32;
 
     ElementHeader hdr;
@@ -306,6 +142,7 @@ struct SsidElement : public Element<SsidElement, element_id::kSsid> {
 // IEEE Std 802.11-2016, 9.4.2.3
 struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
+    static const size_t kMinLen = 1;
     static const size_t kMaxLen = 8;
 
     ElementHeader hdr;
@@ -315,6 +152,8 @@ struct SupportedRatesElement : public Element<SupportedRatesElement, element_id:
 // IEEE Std 802.11-2016, 9.4.2.4
 struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDsssParamSet> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t chan);
+    static const size_t kMinLen = 1;
+    static const size_t kMaxLen = 1;
 
     ElementHeader hdr;
     uint8_t current_chan;
@@ -324,6 +163,8 @@ struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDs
 struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfParamSet> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t count, uint8_t period,
                        uint16_t max_duration, uint16_t dur_remaining);
+    static const size_t kMinLen = 6;
+    static const size_t kMaxLen = 6;
 
     ElementHeader hdr;
     uint8_t count;
@@ -344,12 +185,20 @@ struct TimElement : public Element<TimElement, element_id::kTim> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
                        uint8_t dtim_period, BitmapControl bmp_ctrl,
                        const std::vector<uint8_t>& bmp);
-    static const size_t kMaxLen = 251;
+    static const size_t kMinLenBmp = 1;
+    static const size_t kMaxLenBmp = 251;
+    static const size_t kFixedLenBody = 3;
+    static const size_t kMinLen = kFixedLenBody + kMinLenBmp;
+    static const size_t kMaxLen = kFixedLenBody + kMaxLenBmp;
 
     ElementHeader hdr;
+
+    // body: fixed 3 bytes
     uint8_t dtim_count;
     uint8_t dtim_period;
     BitmapControl bmp_ctrl;
+
+    // body: variable length 1-251 bytes.
     uint8_t bmp[];
 
     bool traffic_buffered(uint16_t aid) const;
@@ -359,6 +208,8 @@ struct TimElement : public Element<TimElement, element_id::kTim> {
 struct CountryElement : public Element<CountryElement, element_id::kCountry> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* country);
     static const size_t kCountryLen = 3;
+    static const size_t kMinLen = 3;  // TODO(porce): revisit the spec.
+    static const size_t kMaxLen = 255;
 
     ElementHeader hdr;
     char country[kCountryLen];
@@ -369,6 +220,7 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
 struct ExtendedSupportedRatesElement
     : public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
+    static const size_t kMinLen = 1;
     static const size_t kMaxLen = 255;
 
     ElementHeader hdr;
@@ -382,6 +234,7 @@ const uint16_t kEapolProtocolId = 0x888E;
 // Hence, support for accessing optional fields is left out and implemented only by the SME.
 struct RsnElement : public Element<RsnElement, element_id::kRsn> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t* raw, size_t raw_len);
+    static const size_t kMinLen = 2;
     static const size_t kMaxLen = 255;
 
     ElementHeader hdr;

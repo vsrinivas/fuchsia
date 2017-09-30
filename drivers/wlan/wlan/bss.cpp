@@ -129,12 +129,6 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 return ZX_ERR_INTERNAL;
             }
 
-            if (ie->hdr.len > SsidElement::kMaxLen) {
-                // Crush dark arts.
-                debugbcn("%s Illegal len\n", dbgmsghdr);
-                return ZX_ERR_INTERNAL;
-            }
-
             ssid_len_ = ie->hdr.len;
             memcpy(ssid_, ie->ssid, ssid_len_);
 
@@ -145,11 +139,6 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             auto ie = reader.read<SupportedRatesElement>();
             if (ie == nullptr) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
-                return ZX_ERR_INTERNAL;
-            }
-
-            if (ie->hdr.len < 1 || ie->hdr.len > SupportedRatesElement::kMaxLen) {
-                debugbcn("%s Illegal len\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
 
@@ -165,10 +154,7 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
-            if (ie->hdr.len != 1) {
-                debugbcn("%s Illegal len\n", dbgmsghdr);
-                return ZX_ERR_INTERNAL;
-            }
+
             current_chan_.primary20 = ie->current_chan;
             debugbcn("%s Current channel: %u\n", dbgmsghdr, ie->current_chan);
             break;
@@ -178,11 +164,6 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
             auto ie = reader.read<CountryElement>();
             if (ie == nullptr) {
                 debugbcn("%s Failed to parse\n", dbgmsghdr);
-                return ZX_ERR_INTERNAL;
-            }
-
-            if (ie->hdr.len < CountryElement::kCountryLen) {
-                debugbcn("%s Illegal len\n", dbgmsghdr);
                 return ZX_ERR_INTERNAL;
             }
 

@@ -19,6 +19,7 @@ source_set("mlme") {
     "device_interface.h",
     "element.cpp",
     "element.h",
+    "element_id.h",
     "logging.h",
     "mac_frame.cpp",
     "mac_frame.h",

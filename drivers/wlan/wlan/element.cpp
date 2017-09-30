@@ -9,8 +9,16 @@ namespace wlan {
 ElementReader::ElementReader(const uint8_t* buf, size_t len) : buf_(buf), len_(len) {}
 
 bool ElementReader::is_valid() const {
-    // offset_ + 1 is the length field of the next element.
-    return offset_ + 1 < len_ && offset_ + NextElementLen() <= len_;
+    // Test in order.
+    // Test 1. If at least ElementHeader can be safely read: 2 bytes test.
+    if (len_ < offset_ + sizeof(ElementHeader)) return false;
+
+    // Test 2. If the full element can be safely read.
+    // NextElementLen() needs pass from Test 1.
+    if (len_ < offset_ + NextElementLen()) return false;
+
+    // Add more test here.
+    return true;
 }
 
 const ElementHeader* ElementReader::peek() const {
@@ -19,7 +27,8 @@ const ElementHeader* ElementReader::peek() const {
 }
 
 size_t ElementReader::NextElementLen() const {
-    return sizeof(ElementHeader) + buf_[offset_ + 1];
+    auto hdr = reinterpret_cast<const ElementHeader*>(buf_ + offset_);
+    return sizeof(ElementHeader) + hdr->len;
 }
 
 ElementWriter::ElementWriter(uint8_t* buf, size_t len) : buf_(buf), len_(len) {}
@@ -106,13 +115,13 @@ bool TimElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_c
 // TODO(hahnr): Support dot11MultiBSSIDActivated is true.
 bool TimElement::traffic_buffered(uint16_t aid) const {
     // Illegal arguments or no partial virtual bitmap. No traffic buffered.
-    if (aid >= kMaxLen * 8 || hdr.len < 4) return false;
-    if (!bmp_ctrl.offset() && hdr.len == 4) return false;
+    if (aid >= kMaxLenBmp * 8 || hdr.len < kMinLen) return false;
+    if (!bmp_ctrl.offset() && hdr.len == kMinLen) return false;
 
     // Safe to use uint8 since offset is 7 bits.
     uint8_t n1 = bmp_ctrl.offset() << 1;
-    uint16_t n2 = (hdr.len - 4) + n1;
-    if (n2 > static_cast<uint16_t>(kMaxLen)) return false;
+    uint16_t n2 = (hdr.len - kMinLen) + n1;
+    if (n2 > static_cast<uint16_t>(kMaxLenBmp)) return false;
 
     // No traffic buffered for aid.
     uint8_t octet = aid / 8;
