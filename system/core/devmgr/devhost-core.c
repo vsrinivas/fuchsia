@@ -43,16 +43,13 @@
 bool __dm_locked = false;
 mtx_t __devhost_api_lock = MTX_INIT;
 
-static zx_device_t* dev_create_parent;
-static zx_device_t* dev_create_device;
+static thread_local creation_context_t* creation_ctx;
 
-zx_device_t* device_create_setup(zx_device_t* parent) {
-    DM_LOCK();
-    zx_device_t* dev = dev_create_device;
-    dev_create_parent = parent;
-    dev_create_device = NULL;
-    DM_UNLOCK();
-    return dev;
+// The creation context is setup before the bind() or create() ops are
+// invoked to provide the ability to sanity check the required device_add()
+// operations these hooks should be making.
+void devhost_set_creation_context(creation_context_t* ctx) {
+    creation_ctx = ctx;
 }
 
 static zx_status_t default_open(void* ctx, zx_device_t** out, uint32_t flags) {
@@ -287,26 +284,34 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     if ((status = device_validate(dev)) < 0) {
         goto fail;
     }
-    if (parent == dev_create_parent) {
-        // check for magic parent value indicating
-        // proxy device creation, and if so, ensure
-        // we don't add more than one proxy device
-        // per create() op...
-        if (dev_create_device != NULL) {
-            return ZX_ERR_BAD_STATE;
-        }
-    } else {
-        if (parent == NULL) {
-            printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
-            status = ZX_ERR_NOT_SUPPORTED;
-            goto fail;
-        }
-        if (parent->flags & DEV_FLAG_DEAD) {
-            printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-            status = ZX_ERR_BAD_STATE;
-            goto fail;
+    if (parent == NULL) {
+        printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
+        status = ZX_ERR_NOT_SUPPORTED;
+        goto fail;
+    }
+    if (parent->flags & DEV_FLAG_DEAD) {
+        printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
+        status = ZX_ERR_BAD_STATE;
+        goto fail;
+    }
+
+    creation_context_t* ctx = NULL;
+
+    // if creation ctx (thread local) is set, we are in a thread
+    // that is handling a bind() or create() callback and if that
+    // ctx's parent matches the one provided to add we need to do
+    // some additional checking...
+    if ((creation_ctx != NULL) && (creation_ctx->parent == parent)) {
+        ctx = creation_ctx;
+        if (ctx->rpc != ZX_HANDLE_INVALID) {
+            // create() must create only one child
+            if (ctx->child != NULL) {
+                printf("devhost: driver attempted to create multiple proxy devices!\n");
+                return ZX_ERR_BAD_STATE;
+            }
         }
     }
+
 #if TRACE_ADD_REMOVE
     printf("devhost: device add: %p(%s) parent=%p(%s)\n",
             dev, dev->name, parent, parent->name);
@@ -327,10 +332,11 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     dev_ref_acquire(dev);
 
     // proxy devices are created through this handshake process
-    if (parent == dev_create_parent) {
-        dev_create_device = dev;
+    if (ctx && (ctx->rpc != ZX_HANDLE_INVALID)) {
         dev->flags |= DEV_FLAG_ADDED;
         dev->flags &= (~DEV_FLAG_BUSY);
+        dev->rpc = ctx->rpc;
+        ctx->child = dev;
         return ZX_OK;
     }
 
@@ -358,6 +364,11 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     }
     dev->flags |= DEV_FLAG_ADDED;
     dev->flags &= (~DEV_FLAG_BUSY);
+
+    // record this device in the creation context if there is one
+    if (ctx && (ctx->child == NULL)) {
+        ctx->child = dev;
+    }
     return ZX_OK;
 
 fail:

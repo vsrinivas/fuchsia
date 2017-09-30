@@ -336,13 +336,21 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
                 .name = "device_create dummy",
                 .owner = drv,
             };
-            device_create_setup(&parent);
-            if ((r = drv->ops->create(drv->ctx, &parent, "proxy", args, hin[2])) < 0) {
+
+            creation_context_t ctx = {
+                .parent = &parent,
+                .child = NULL,
+                .rpc = hin[0],
+            };
+            devhost_set_creation_context(&ctx);
+            r = drv->ops->create(drv->ctx, &parent, "proxy", args, hin[2]);
+            devhost_set_creation_context(NULL);
+
+            if (r < 0) {
                 log(ERROR, "devhost[%s] driver create() failed: %d\n", path, r);
-                device_create_setup(NULL);
                 break;
             }
-            if ((newios->dev = device_create_setup(NULL)) == NULL) {
+            if ((newios->dev = ctx.child) == NULL) {
                 log(ERROR, "devhost[%s] driver create() failed to create a device!", path);
                 r = ZX_ERR_BAD_STATE;
                 break;
@@ -354,7 +362,6 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         }
         //TODO: inform devcoord
 
-        newios->dev->rpc = hin[0];
         newios->ph.handle = hin[0];
         newios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         newios->ph.func = dh_handle_dc_rpc;
@@ -382,7 +389,18 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         } else {
             void* cookie = NULL;
             if (drv->ops->bind) {
+                creation_context_t ctx = {
+                    .parent = ios->dev,
+                    .child = NULL,
+                    .rpc = ZX_HANDLE_INVALID,
+                };
+                devhost_set_creation_context(&ctx);
                 r = drv->ops->bind(drv->ctx, ios->dev, &cookie);
+                devhost_set_creation_context(NULL);
+
+                if ((r == ZX_OK) && (ctx.child == NULL)) {
+                    printf("devhost: WARNING: driver '%s' did not add device in bind()\n", name);
+                }
             } else {
                 r = ZX_ERR_NOT_SUPPORTED;
             }

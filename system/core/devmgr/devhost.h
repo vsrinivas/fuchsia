@@ -90,7 +90,13 @@ static inline void dev_ref_acquire(zx_device_t* dev) {
 
 zx_handle_t get_root_resource(void);
 
-zx_device_t* device_create_setup(zx_device_t* parent);
+typedef struct {
+    zx_device_t* parent;
+    zx_device_t* child;
+    zx_handle_t rpc;
+} creation_context_t;
+
+void devhost_set_creation_context(creation_context_t* ctx);
 
 // locking and lock debugging
 extern mtx_t __devhost_api_lock;
