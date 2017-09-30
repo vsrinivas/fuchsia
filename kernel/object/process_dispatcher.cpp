@@ -680,6 +680,23 @@ void ProcessDispatcher::OnExceptionPortRemoval(
     }
 }
 
+uint32_t ProcessDispatcher::ThreadCount() const {
+    canary_.Assert();
+
+    fbl::AutoLock lock(&state_lock_);
+    return static_cast<uint32_t>(thread_list_.size_slow());
+}
+
+size_t ProcessDispatcher::PageCount() const {
+    canary_.Assert();
+
+    AutoLock lock(&state_lock_);
+    if (state_ != State::RUNNING) {
+        return 0;
+    }
+    return aspace_->AllocatedPages();
+}
+
 class FindProcessByKoid final : public JobEnumerator {
 public:
     FindProcessByKoid(zx_koid_t koid) : koid_(koid) {}

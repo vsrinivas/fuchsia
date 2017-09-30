@@ -105,15 +105,6 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
     return total;
 }
 
-uint32_t ProcessDispatcher::ThreadCount() const {
-    fbl::AutoLock lock(&state_lock_);
-    return static_cast<uint32_t>(thread_list_.size_slow());
-}
-
-size_t ProcessDispatcher::PageCount() const {
-    return aspace_->AllocatedPages();
-}
-
 // Counts the process's handles by type and formats them into the provided
 // buffer as strings.
 static void FormatHandleTypeCount(const ProcessDispatcher& pd,
