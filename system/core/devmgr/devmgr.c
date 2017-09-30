@@ -461,7 +461,7 @@ static void devmgr_import_bootdata(zx_handle_t vmo) {
             printf("devmgr: unexpected bootdata container header\n");
             return;
         case BOOTDATA_PLATFORM_ID:
-                devmgr_set_platform_id(vmo, off, itemlen);
+            devmgr_set_platform_id(vmo, off + hdrsz, itemlen);
             break;
         default:
             break;
