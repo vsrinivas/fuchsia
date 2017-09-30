@@ -4,7 +4,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
 #![deny(missing_docs)]
+
 extern crate fuchsia_zircon as zircon;
 extern crate mxruntime;
 extern crate fidl;
@@ -17,47 +19,39 @@ extern crate garnet_public_lib_app_fidl;
 
 use garnet_public_lib_app_fidl::{
     ApplicationController,
-    ApplicationControllerProxy,
-    ApplicationControllerService,
     ApplicationEnvironment,
-    ApplicationEnvironmentProxy,
-    ApplicationEnvironmentService,
     ApplicationLauncher,
-    ApplicationLauncherProxy,
-    ApplicationLauncherService,
     ApplicationLaunchInfo,
 };
-use garnet_public_lib_app_fidl_service_provider::{
-    ServiceProvider,
-    ServiceProviderProxy,
-    ServiceProviderService,
-    ServiceProviderDispatcher,
-};
+use garnet_public_lib_app_fidl_service_provider::ServiceProvider;
 use fidl::FidlService;
-use zircon::{Channel, HandleBased};
+use zircon::Channel;
 use std::io;
 use tokio_core::reactor::Handle as TokioHandle;
 
-/// Tools for starting or connecting to existing Fuchsia appications and services.
+/// Tools for starting or connecting to existing Fuchsia applications and services.
 pub mod client {
     use super::*;
 
     #[inline]
     /// Connect to a FIDL service on the given `service_provider`.
     pub fn connect_to_service<Service: FidlService>(
-        service_provider: &mut ServiceProviderProxy,
+        service_provider: &mut ServiceProvider::Proxy,
         handle: &TokioHandle
     ) -> Result<Service::Proxy, fidl::Error>
     {
         let (proxy, server_end) = Service::new_pair(handle)?;
-        service_provider.connect_to_service(String::from(Service::NAME), server_end.into_channel());
+        service_provider.connect_to_service(String::from(Service::NAME), server_end.into_channel())?;
         Ok(proxy)
     }
 
     /// ApplicationContext provides access to the environment of the currently-running application.
     pub struct ApplicationContext {
-        app_env: ApplicationEnvironmentProxy,
-        service_provider: ServiceProviderProxy,
+        // TODO: use somehow?
+        #[allow(dead_code)]
+        app_env: ApplicationEnvironment::Proxy,
+
+        service_provider: ServiceProvider::Proxy,
     }
 
     impl ApplicationContext {
@@ -67,12 +61,12 @@ pub mod client {
             let app_env_channel =
                 mxruntime::connect_to_environment_service(
                     service_root,
-                    ApplicationEnvironmentService::NAME)?;
+                    ApplicationEnvironment::Service::NAME)?;
 
             let app_env_client = fidl::ClientEnd::new(app_env_channel);
-            let mut app_env = ApplicationEnvironmentService::new_proxy(app_env_client, handle)?;
-            let (service_provider, service_provider_server_end) = ServiceProviderService::new_pair(handle)?;
-            app_env.get_services(service_provider_server_end);
+            let mut app_env = ApplicationEnvironment::new_proxy(app_env_client, handle)?;
+            let (service_provider, service_provider_server_end) = ServiceProvider::new_pair(handle)?;
+            app_env.get_services(service_provider_server_end)?;
 
             Ok(ApplicationContext {
                 app_env,
@@ -93,7 +87,7 @@ pub mod client {
 
     /// Launcher launches Fuchsia applications.
     pub struct Launcher {
-        app_launcher: ApplicationLauncherProxy,
+        app_launcher: ApplicationLauncher::Proxy,
     }
 
     impl Launcher {
@@ -103,7 +97,7 @@ pub mod client {
             context: &mut ApplicationContext,
             handle: &TokioHandle) -> Result<Self, fidl::Error>
         {
-            let app_launcher = context.connect_to_service::<ApplicationLauncherService>(handle)?;
+            let app_launcher = context.connect_to_service::<ApplicationLauncher::Service>(handle)?;
             Ok(Launcher { app_launcher })
         }
 
@@ -115,8 +109,8 @@ pub mod client {
             handle: &TokioHandle
         ) -> Result<App, fidl::Error>
         {
-            let (service_provider, service_provider_server_end) = ServiceProviderService::new_pair(handle)?;
-            let (app_controller, controller_server_end) = ApplicationControllerService::new_pair(handle)?;
+            let (service_provider, service_provider_server_end) = ServiceProvider::Service::new_pair(handle)?;
+            let (app_controller, controller_server_end) = ApplicationController::Service::new_pair(handle)?;
 
             let launch_info = ApplicationLaunchInfo {
                 url,
@@ -126,15 +120,18 @@ pub mod client {
                 services: Some(service_provider_server_end),
             };
 
-            self.app_launcher.create_application(launch_info, Some(controller_server_end));
+            self.app_launcher.create_application(launch_info, Some(controller_server_end))?;
             Ok(App { service_provider, app_controller })
         }
     }
 
     /// `App` represents a launched application.
     pub struct App {
-        service_provider: ServiceProviderProxy,
-        app_controller: ApplicationControllerProxy,
+        service_provider: ServiceProvider::Proxy,
+
+        // TODO: use somehow?
+        #[allow(dead_code)]
+        app_controller: ApplicationController::Proxy,
     }
 
     impl App {
@@ -154,7 +151,7 @@ pub mod server {
     use futures::{Future, Poll};
 
     type ServerInner<Services> =
-        fidl::Server<ServiceProviderDispatcher<ServiceProviderServer<Services>>>;
+        fidl::Server<ServiceProvider::Dispatcher<ServiceProviderServer<Services>>>;
 
     #[must_use = "futures do nothing unless polled"]
     /// `Server` is a future which, when polled, launches Fuchsia services upon request.
@@ -164,7 +161,7 @@ pub mod server {
         /// Create a new `Server` to serve service connection requests on the specified channel.
         pub fn new(services: ServiceProviderServer<Services>, channel: zircon::Channel, handle: &TokioHandle) -> Result<Self, fidl::Error> {
             Ok(Server(fidl::Server::new(
-                ServiceProviderDispatcher(services),
+                ServiceProvider::Dispatcher(services),
                 channel,
                 handle
             )?))
@@ -172,7 +169,7 @@ pub mod server {
 
         /// Create a `Server` which serves serves connection requests on the outgoing service channel.
         pub fn new_outgoing(services: ServiceProviderServer<Services>, handle: &TokioHandle) -> Result<Self, fidl::Error> {
-            let channel = zircon::Channel::from_handle(
+            let channel = zircon::Channel::from(
                 mxruntime::get_startup_handle(mxruntime::HandleType::OutgoingServices)
                     .ok_or(io::Error::new(io::ErrorKind::NotFound, "No OutgoingServices handle found"))?);
 
@@ -291,9 +288,12 @@ pub mod server {
         }
     }
 
-    impl<Services: ServiceFactories> ServiceProvider for ServiceProviderServer<Services> {
-        fn connect_to_service(&mut self, service_name: String, channel: Channel) {
+    impl<Services: ServiceFactories> ServiceProvider::Server for ServiceProviderServer<Services> {
+        fn connect_to_service(&mut self, service_name: String, channel: Channel)
+            -> Result<(), fidl::CloseChannel>
+        {
             self.services.spawn_service(service_name, channel, &self.handle);
+            Ok(())
         }
     }
 }

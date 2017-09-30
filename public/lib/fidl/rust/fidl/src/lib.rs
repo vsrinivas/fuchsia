@@ -28,12 +28,21 @@ pub use encoding::{CodableUnion, EncodableNullable, DecodableNullable};
 pub use encoding::{encode_handle, decode_handle};
 pub use message::{EncodeBuf, DecodeBuf, MsgType};
 pub use error::{Error, Result};
-pub use server::{Stub, Server};
+pub use server::{CloseChannel, Stub, Server};
 pub use interface::InterfacePtr;
 pub use client::{Client, FidlService};
 pub use endpoints::{ClientEnd, ServerEnd};
 
+/// A specialized `Box<Future<...>>` type for FIDL server implementations.
+/// This is a convenience to avoid writing
+/// `Box<Future<Item = I, Error = CloseChannel> + Send>`.
+/// Errors in this `Future` should require no extra handling, and upon error the type should
+/// be dropped.
+pub type ServerFuture<Item> = Box<futures::Future<Item = Item, Error = CloseChannel> + Send>;
+
 /// A specialized `Box<Future<...>>` type for FIDL.
-/// This is mostly as a convenience to avoid writing
-/// `Box<Future<Item = I, Error = fidl::Error> + Send>`.
+/// This is a convenience to avoid writing
+/// `Box<Future<Item = I, Error = CloseChannel> + Send>`.
+/// The error type indicates various FIDL protocol errors, as well as general-purpose IO
+/// errors such as a closed channel.
 pub type BoxFuture<Item> = Box<futures::Future<Item = Item, Error = Error> + Send>;

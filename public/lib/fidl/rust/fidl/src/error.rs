@@ -46,6 +46,9 @@ pub enum Error {
     /// A client future was polled after it had already completed.
     PollAfterCompletion,
 
+    /// An error was encountered during the execution of the server-side handler.
+    ServerExecution,
+
     /// An IO error.
     IoError(io::Error),
 

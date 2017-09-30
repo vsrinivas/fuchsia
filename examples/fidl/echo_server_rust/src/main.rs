@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 extern crate fidl;
 extern crate fuchsia_app;
 extern crate futures;
@@ -12,15 +14,15 @@ extern crate garnet_examples_fidl_services;
 use garnet_examples_fidl_services::Echo;
 
 use fuchsia_app::server::{Server, ServiceProviderServer};
-use futures::{future, Future};
+use futures::future;
 use tokio_core::reactor;
 
-// `EchoServer` is a zero-sized type that implements the `Echo::I` trait.
+// `EchoServer` is a zero-sized type that implements the `Echo::Server` trait.
 struct EchoServer;
 
-impl Echo for EchoServer {
+impl Echo::Server for EchoServer {
     fn echo_string(&mut self, value: Option<String>)
-        -> fidl::BoxFuture<Option<String>>
+        -> fidl::ServerFuture<Option<String>>
     {
         Box::new(future::ok(value))
     }
@@ -35,7 +37,7 @@ fn main() {
     // instance upon receiving a `connect_to_service` request.
     let service_provider =
         ServiceProviderServer::new(&handle)
-            .add_service(|| EchoServer.dispatch());
+            .add_service(|| Echo::Dispatcher(EchoServer));
 
     let server = Server::new_outgoing(service_provider, &handle)
                     .expect("Unable to create FIDL service");

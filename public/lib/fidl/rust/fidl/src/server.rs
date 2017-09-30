@@ -16,6 +16,9 @@ use zircon::Channel;
 
 use tokio_fuchsia;
 
+/// A value indicating that the current channel should be closed.
+pub struct CloseChannel;
+
 /// The "stub" which handles raw FIDL buffer requests.
 pub trait Stub {
     /// The FIDL service type that the stub provides.

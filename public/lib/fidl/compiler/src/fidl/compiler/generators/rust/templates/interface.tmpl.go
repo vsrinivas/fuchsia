@@ -46,12 +46,30 @@ const GenerateInterface = `
 {{- $interface := . -}}
 // --- {{$interface.Name}} ---
 
-use fidl::{self, DecodeBuf, EncodeBuf, EncodablePtr, DecodablePtr, Stub};
+pub mod {{$interface.Name}} {
+
+use fidl::{self, DecodeBuf, DecodablePtr, EncodeBuf, EncodablePtr, FidlService, Stub};
 use futures::{Future, future};
 use zircon;
 use tokio_core::reactor;
+use super::*;
 
-pub trait {{$interface.Name}} {
+pub trait Server {
+    {{range $message := $interface.Messages}}
+        fn {{$message.Name}}(&mut self
+            {{- range $index, $field := $message.RequestStruct.Fields -}}
+                , {{$field.Name}}: {{$field.Type}}
+            {{- end -}}
+        )
+        {{- if ne $message.ResponseStruct.Name "" }}
+            -> fidl::ServerFuture<{{template "GenerateResponseType" $message.ResponseStruct}}>
+        {{- else}}
+            -> Result<(), fidl::CloseChannel>
+        {{end}};
+    {{end}}
+}
+
+pub trait Client {
     {{range $message := $interface.Messages}}
         fn {{$message.Name}}(&mut self
             {{- range $index, $field := $message.RequestStruct.Fields -}}
@@ -60,20 +78,16 @@ pub trait {{$interface.Name}} {
         )
         {{- if ne $message.ResponseStruct.Name "" }}
             -> fidl::BoxFuture<{{template "GenerateResponseType" $message.ResponseStruct}}>
+        {{- else}}
+            -> fidl::Result<()>
         {{end}};
     {{end}}
-
-    /// Create a FIDL dispatcher from this service implementation.
-    #[inline]
-    fn dispatch(self) -> {{$interface.Name}}Dispatcher<Self> where Self: Sized {
-        {{$interface.Name}}Dispatcher(self)
-    }
 }
 
-pub struct {{$interface.Name}}Dispatcher<T: {{$interface.Name}}>(pub T);
+pub struct Dispatcher<T: Server>(pub T);
 
-impl<T: {{$interface.Name}}> Stub for {{$interface.Name}}Dispatcher<T> {
-    type Service = {{$interface.Name}}Service;
+impl<T: Server> Stub for Dispatcher<T> {
+    type Service = Service;
 
     // TODO(cramertj): consider optimizing with an enum to avoid unnecessary boxing
     type DispatchFuture = fidl::BoxFuture<EncodeBuf>;
@@ -98,7 +112,8 @@ impl<T: {{$interface.Name}}> Stub for {{$interface.Name}}Dispatcher<T> {
         match name {
             {{range $message := $interface.Messages}}
                 {{if eq $message.ResponseStruct.Name ""}}
-                    {{$message.MessageOrdinal}} => self.{{- $message.RawName}}(request),
+                    {{$message.MessageOrdinal}} =>
+                        self.{{- $message.RawName}}(request),
                 {{end}}
             {{end}}
             _ => Err(::fidl::Error::UnknownOrdinal)
@@ -106,7 +121,7 @@ impl<T: {{$interface.Name}}> Stub for {{$interface.Name}}Dispatcher<T> {
     }
 }
 
-impl<T: {{$interface.Name}}> {{$interface.Name}}Dispatcher<T> {
+impl<T: Server> Dispatcher<T> {
     {{- range $message := $interface.Messages}}
         #[inline]
         fn {{$message.RawName}}(&mut self, request: &mut fidl::DecodeBuf)
@@ -119,19 +134,22 @@ impl<T: {{$interface.Name}}> {{$interface.Name}}Dispatcher<T> {
                         {{- if $index}}, {{end -}}
                         request.{{- $field.Name -}}
                         {{- end -}}
-                    );
-                    Ok(())
+                    ).map_err(|fidl::CloseChannel| fidl::Error::ServerExecution)
                 }
             {{- else}}
                 -> Box<Future<Item = EncodeBuf, Error = fidl::Error> + Send>
                 {
                     let r: ::fidl::Result<{{$message.RequestStruct.Name}}> = ::fidl::DecodablePtr::decode_obj(request, 24);
-                    match r {
-                        Ok(request) => Box::new(self.0.{{$message.Name}}(
-                            {{- range $index, $field := $message.RequestStruct.Fields -}}
-                                {{- if $index}}, {{end -}}
-                                request.{{- $field.Name -}}
-                            {{- end -}}
+                    let request = match r {
+                        Ok(request) => request,
+                        Err(error) => return Box::new(future::err(error)),
+                    };
+
+                    Box::new(self.0.{{$message.Name}}(
+                        {{- range $index, $field := $message.RequestStruct.Fields -}}
+                            {{- if $index}}, {{end -}}
+                            request.{{- $field.Name -}}
+                        {{- end -}}
                     ).map(|
                         {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ( {{- end -}}
                         {{- range $index, $field := $message.ResponseStruct.Fields -}}
@@ -139,27 +157,26 @@ impl<T: {{$interface.Name}}> {{$interface.Name}}Dispatcher<T> {
                             {{- $field.Name -}}
                         {{- end -}}
                         {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ) {{- end -}}
-                        | {
-                            let response = {{$message.ResponseStruct.Name}} {
-                                {{range $field := $message.ResponseStruct.Fields}}
-                                    {{$field.Name}}: {{$field.Name}},
-                                {{end}}
-                            };
-                            let mut encode_buf = ::fidl::EncodeBuf::new_response({{$message.MessageOrdinal}});
-                            ::fidl::EncodablePtr::encode_obj(response, &mut encode_buf);
-                            encode_buf
-                        })),
-                        Err(error) => Box::new(future::err(error))
-                    }
+                        |
+                    {
+                        let response = {{$message.ResponseStruct.Name}} {
+                            {{range $field := $message.ResponseStruct.Fields}}
+                                {{$field.Name}}: {{$field.Name}},
+                            {{end}}
+                        };
+                        let mut encode_buf = ::fidl::EncodeBuf::new_response({{$message.MessageOrdinal}});
+                        ::fidl::EncodablePtr::encode_obj(response, &mut encode_buf);
+                        encode_buf
+                    }).map_err(|fidl::CloseChannel| fidl::Error::ServerExecution))
                 }
             {{end}}
     {{end}}
 }
 
 
-pub struct {{$interface.Name}}Proxy(fidl::Client);
+pub struct Proxy(fidl::Client);
 
-impl {{$interface.Name}} for {{$interface.Name}}Proxy {
+impl Client for Proxy {
     {{- range $message := $interface.Messages}}
         #[inline]
         fn {{$message.Name}}(&mut self
@@ -168,7 +185,9 @@ impl {{$interface.Name}} for {{$interface.Name}}Proxy {
             {{- end -}} )
             {{- if ne $message.ResponseStruct.Name "" }}
                 -> fidl::BoxFuture<{{template "GenerateResponseType" $message.ResponseStruct}}>
-            {{- end}}
+            {{- else}}
+                -> fidl::Result<()>
+            {{end}}
         {
             let request = {{$message.RequestStruct.Name}} {
                 {{range $field := $message.RequestStruct.Fields}}
@@ -180,11 +199,9 @@ impl {{$interface.Name}} for {{$interface.Name}}Proxy {
                 new_request{{if ne $message.ResponseStruct.Name "" -}}_expecting_response{{- end}}
                 ({{$message.MessageOrdinal}});
 
-            // TODO(cramertj) handle the failure case of the send_msg call below
-
             ::fidl::EncodablePtr::encode_obj(request, &mut encode_buf);
             {{if eq $message.ResponseStruct.Name ""}}
-                self.0.send_msg(&mut encode_buf);
+                self.0.send_msg(&mut encode_buf)
             {{else}}
                 Box::new(self.0.send_msg_expect_response(&mut encode_buf).and_then(|mut decode_buf| {
                     let r: {{$message.ResponseStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(&mut decode_buf, 24));
@@ -203,14 +220,37 @@ impl {{$interface.Name}} for {{$interface.Name}}Proxy {
     {{end}}
 }
 
-pub struct {{$interface.Name}}Service;
-impl fidl::FidlService for {{$interface.Name}}Service {
-    type Proxy = {{$interface.Name}}Proxy;
+// Duplicate client methods as inherent impls so users don't have to import the trait
+impl Proxy {
+    {{- range $message := $interface.Messages}}
+        #[inline]
+        pub fn {{$message.Name}}(&mut self
+            {{- range $field := $message.RequestStruct.Fields}}
+                , {{$field.Name}}: {{$field.Type}}
+            {{- end -}} )
+            {{- if ne $message.ResponseStruct.Name "" }}
+                -> fidl::BoxFuture<{{template "GenerateResponseType" $message.ResponseStruct}}>
+            {{- else}}
+                -> fidl::Result<()>
+            {{- end}}
+        {
+            <Proxy as Client>::{{$message.Name}}(self
+                {{- range $field := $message.RequestStruct.Fields}}
+                    , {{$field.Name}}
+                {{- end -}}
+            )
+        }
+    {{end}}
+}
+
+pub struct Service;
+impl fidl::FidlService for Service {
+    type Proxy = Proxy;
 
     #[inline]
     fn new_proxy(client_end: fidl::ClientEnd<Self>, handle: &reactor::Handle) -> Result<Self::Proxy, fidl::Error> {
         let channel = ::tokio_fuchsia::Channel::from_channel(client_end.into_channel(), handle)?;
-        Ok({{$interface.Name}}Proxy(fidl::Client::new(channel, handle)))
+        Ok(Proxy(fidl::Client::new(channel, handle)))
     }
 
     #[inline]
@@ -221,9 +261,26 @@ impl fidl::FidlService for {{$interface.Name}}Service {
         Ok((Self::new_proxy(client_end, handle)?, server_end))
     }
 
-    const NAME: &'static str = "{{$interface.ServiceName}}";
-    const VERSION: u32 = {{$interface.Version}};
+    const NAME: &'static str = NAME;
+    const VERSION: u32 = VERSION;
 }
+
+// Duplicate SERVICE trait members at the module level
+
+#[inline]
+pub fn new_proxy(client_end: fidl::ClientEnd<Service>, handle: &reactor::Handle) -> Result<Proxy, fidl::Error> {
+    Service::new_proxy(client_end, handle)
+}
+
+#[inline]
+pub fn new_pair(handle: &reactor::Handle) -> Result<(Proxy, fidl::ServerEnd<Service>), fidl::Error> {
+    Service::new_pair(handle)
+}
+
+pub const NAME: &'static str = "{{$interface.ServiceName}}";
+pub const VERSION: u32 = {{$interface.Version}};
+
+} // End of mod
 
 // Enums
 {{range $enum := $interface.Enums -}}
