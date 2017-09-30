@@ -35,6 +35,8 @@ information, see `docs/getting_started.md`:
 ## Setup
 Periodically check this file as the setup workflow will change/improve.
 
+To interact with the board over serial, use a baud rate of 115200.
+
 If using the mezzanine board, follow the instructions included with the board.
 
 If using a FTDI style serial adapter:
