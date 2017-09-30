@@ -6,18 +6,25 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/type_support.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/threads.h>
 
 static const char kResourcePath[] = "/dev/misc/sysinfo";
 
 static const uint32_t kE820Ram = 1;
 static const uint32_t kE820Reserved = 2;
+
+// Number of threads reading from the async device port.
+static const size_t kNumAsyncWorkers = 1;
 
 static const size_t kMaxSize = 512ull << 30;
 static const size_t kMinSize = 4 * (4 << 10);
@@ -29,6 +36,8 @@ static const uint64_t kAddr64kb     = 0x0000000000010000;
 static const uint64_t kAddr1mb      = 0x0000000000100000;
 static const uint64_t kAddr3500mb   = 0x00000000e0000000;
 static const uint64_t kAddr4000mb   = 0x0000000100000000;
+
+// clang-format on
 
 static zx_status_t guest_get_resource(zx_handle_t* resource) {
     int fd = open(kResourcePath, O_RDWR);
@@ -60,6 +69,28 @@ zx_status_t Guest::Init(size_t mem_size) {
     }
     zx_handle_close(resource);
 
+    status = zx::port::create(0, &port_);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create port.\n");
+        return status;
+    }
+
+    for (size_t i = 0; i < kNumAsyncWorkers; ++i) {
+        thrd_t thread;
+        auto thread_func = +[](void* arg) { return static_cast<Guest*>(arg)->IoThread(); };
+        int ret = thrd_create_with_name(&thread, thread_func, this, "io-handler");
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to create io handler thread: %d\n", ret);
+            return ZX_ERR_INTERNAL;
+        }
+
+        ret = thrd_detach(thread);
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to detach io handler thread: %d\n", ret);
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
     return ZX_OK;
 }
 
@@ -67,14 +98,104 @@ Guest::~Guest() {
     zx_handle_close(guest_);
 }
 
+zx_status_t Guest::IoThread() {
+    while (true) {
+        zx_port_packet_t packet;
+        zx_status_t status = port_.wait(ZX_TIME_INFINITE, &packet, 0);
+        if (status != ZX_OK) {
+            fprintf(stderr, "Failed to wait for device port %d\n", status);
+            break;
+        }
+
+        IoMapping& mapping = trap_key_to_mapping(packet.key);
+
+        uint64_t addr;
+        IoValue value;
+        switch (packet.type) {
+        case ZX_PKT_TYPE_GUEST_IO:
+            addr = packet.guest_io.port;
+            value.access_size = packet.guest_io.access_size;
+            static_assert(sizeof(value.data) >= sizeof(packet.guest_io.data),
+                          "IoValue too small to contain zx_packet_guest_io_t.");
+            memcpy(value.data, packet.guest_io.data, sizeof(packet.guest_io.data));
+            break;
+        case ZX_PKT_TYPE_GUEST_BELL:
+            addr = packet.guest_bell.addr;
+            value.access_size = 0;
+            value.u32 = 0;
+            break;
+        default:
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        status = mapping.Write(addr, value);
+        if (status != ZX_OK) {
+            fprintf(stderr, "Unable to handle packet for device %d\n", status);
+            break;
+        }
+    }
+
+    return ZX_ERR_INTERNAL;
+}
+
+static constexpr uint32_t trap_kind(TrapType type) {
+    switch (type) {
+    case TrapType::MMIO_SYNC:
+        return ZX_GUEST_TRAP_MEM;
+    case TrapType::MMIO_BELL:
+        return ZX_GUEST_TRAP_BELL;
+    case TrapType::PIO_SYNC:
+    case TrapType::PIO_ASYNC:
+        return ZX_GUEST_TRAP_IO;
+    default:
+        ZX_PANIC("Unhandled TrapType %d.\n",
+                 static_cast<fbl::underlying_type<TrapType>::type>(type));
+        return 0;
+    }
+}
+
+static constexpr zx_handle_t get_trap_port(TrapType type, zx_handle_t port) {
+    switch (type) {
+    case TrapType::PIO_ASYNC:
+    case TrapType::MMIO_BELL:
+        return port;
+    case TrapType::PIO_SYNC:
+    case TrapType::MMIO_SYNC:
+        return ZX_HANDLE_INVALID;
+    default:
+        ZX_PANIC("Unhandled TrapType %d.\n",
+                 static_cast<fbl::underlying_type<TrapType>::type>(type));
+        return ZX_HANDLE_INVALID;
+    }
+}
+
+zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size, uint64_t offset,
+                                 IoHandler* handler) {
+    fbl::AllocChecker ac;
+    auto mapping = fbl::make_unique_checked<IoMapping>(&ac, addr, size, offset, handler);
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+
+    // Set a trap for the IO region. We set the 'key' to be the address of the
+    // mapping so that we get the pointer to the mapping provided to us in port
+    // packets.
+    zx_handle_t port = get_trap_port(type, port_.get());
+    uint32_t kind = trap_kind(type);
+    uint64_t key = reinterpret_cast<uintptr_t>(mapping.get());
+    zx_status_t status = zx_guest_set_trap(guest_, kind, addr, size, port, key);
+    if (status != ZX_OK)
+        return status;
+
+    mappings_.push_front(fbl::move(mapping));
+    return ZX_OK;
+}
+
 #if __x86_64__
 enum {
-    X86_PTE_P   = 0x01, /* P    Valid           */
-    X86_PTE_RW  = 0x02, /* R/W  Read/Write      */
-    X86_PTE_PS  = 0x80, /* PS   Page size       */
+    X86_PTE_P = 0x01,  /* P    Valid           */
+    X86_PTE_RW = 0x02, /* R/W  Read/Write      */
+    X86_PTE_PS = 0x80, /* PS   Page size       */
 };
-
-// clang-format on
 
 static const size_t kPml4PageSize = 512ull << 30;
 static const size_t kPdpPageSize = 1 << 30;
@@ -130,7 +251,7 @@ zx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_
     *end_off = page_table(addr, size - aspace_off, kPdPageSize, *end_off, &aspace_off, true, X86_PTE_PS);
     *end_off = page_table(addr, size - aspace_off, kPtPageSize, *end_off, &aspace_off, true, 0);
     return ZX_OK;
-#else // __x86_64__
+#else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }

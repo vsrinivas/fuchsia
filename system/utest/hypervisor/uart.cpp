@@ -48,12 +48,11 @@ static bool irq_redirect(void) {
         // Interrupts cannot be raised unless the UART IRQ redirect is in place.
         stub_io_apic(&io_apic);
 
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
-        guest_io.access_size = 1;
-        guest_io.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
+        IoValue io_value = {};
+        io_value.access_size = 1;
+        io_value.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
 
-        zx_status_t status = uart.Write(&guest_io);
+        zx_status_t status = uart.Write(UART_INTERRUPT_ENABLE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK, "");
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_NONE, "");
     }
@@ -63,12 +62,11 @@ static bool irq_redirect(void) {
         // Interrupts can be raised after the UART IRQ redirect is in place.
         io_apic_init_with_vector(&io_apic);
 
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
-        guest_io.access_size = 1;
-        guest_io.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
+        IoValue io_value = {};
+        io_value.access_size = 1;
+        io_value.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
 
-        zx_status_t status = uart.Write(&guest_io);
+        zx_status_t status = uart.Write(UART_INTERRUPT_ENABLE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK, "");
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_THR_EMPTY, "");
     }
@@ -84,11 +82,11 @@ static bool read_iir(void) {
         // If interrupt id is thr, it should be cleared to none
         uart.set_interrupt_id(UART_INTERRUPT_ID_THR_EMPTY);
 
-        zx_vcpu_io_t vcpu_io;
-        zx_status_t status = uart.Read(UART_INTERRUPT_ID_PORT, &vcpu_io);
+        IoValue io_value = {};
+        zx_status_t status = uart.Read(UART_INTERRUPT_ID_PORT, &io_value);
         ASSERT_EQ(status, ZX_OK);
-        ASSERT_EQ(vcpu_io.access_size, 1);
-        ASSERT_EQ(vcpu_io.u8, UART_INTERRUPT_ID_THR_EMPTY);
+        ASSERT_EQ(io_value.access_size, 1);
+        ASSERT_EQ(io_value.u8, UART_INTERRUPT_ID_THR_EMPTY);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_NONE);
     }
     {
@@ -97,11 +95,11 @@ static bool read_iir(void) {
         // If interrupt id is not thr, it should be left alone.
         uart.set_interrupt_id(UART_INTERRUPT_ID_RDA);
 
-        zx_vcpu_io_t vcpu_io;
-        zx_status_t status = uart.Read(UART_INTERRUPT_ID_PORT, &vcpu_io);
+        IoValue io_value = {};
+        zx_status_t status = uart.Read(UART_INTERRUPT_ID_PORT, &io_value);
         ASSERT_EQ(status, ZX_OK);
-        ASSERT_EQ(vcpu_io.access_size, 1);
-        ASSERT_EQ(vcpu_io.u8, UART_INTERRUPT_ID_RDA);
+        ASSERT_EQ(io_value.access_size, 1);
+        ASSERT_EQ(io_value.u8, UART_INTERRUPT_ID_RDA);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_RDA);
     }
     END_TEST;
@@ -121,12 +119,12 @@ static bool read_rbr(void) {
         uart.set_rx_buffer('a');
         uart.set_interrupt_id(UART_INTERRUPT_ID_RDA);
         uart.set_interrupt_enable(UART_INTERRUPT_ENABLE_THR_EMPTY);
-        zx_vcpu_io_t vcpu_io;
 
-        zx_status_t status = uart.Read(UART_RECEIVE_PORT, &vcpu_io);
+        IoValue io_value = {};
+        zx_status_t status = uart.Read(UART_RECEIVE_PORT, &io_value);
         ASSERT_EQ(status, ZX_OK);
-        ASSERT_EQ(vcpu_io.access_size, 1);
-        ASSERT_EQ(vcpu_io.u8, 'a');
+        ASSERT_EQ(io_value.access_size, 1);
+        ASSERT_EQ(io_value.u8, 'a');
         ASSERT_EQ(uart.rx_buffer(), 0);
         ASSERT_EQ(uart.line_status(), UART_LINE_STATUS_THR_EMPTY);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_THR_EMPTY);
@@ -137,9 +135,9 @@ static bool read_rbr(void) {
         Uart uart(&io_apic, &fail_raise_interrupt);
         uart.set_interrupt_id(UART_INTERRUPT_ID_THR_EMPTY);
         uart.set_interrupt_enable(UART_INTERRUPT_ENABLE_NONE);
-        zx_vcpu_io_t vcpu_io;
 
-        zx_status_t status = uart.Read(UART_RECEIVE_PORT, &vcpu_io);
+        IoValue io_value = {};
+        zx_status_t status = uart.Read(UART_RECEIVE_PORT, &io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_THR_EMPTY);
     }
@@ -158,12 +156,11 @@ static bool write_ier(void) {
         uart.set_line_control(UART_LINE_CONTROL_DIV_LATCH);
         uart.set_interrupt_enable(0);
 
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
-        guest_io.access_size = 1;
-        guest_io.u8 = UART_INTERRUPT_ENABLE_RDA;
+        IoValue io_value = {};
+        io_value.access_size = 1;
+        io_value.u8 = UART_INTERRUPT_ENABLE_RDA;
 
-        zx_status_t status = uart.Write(&guest_io);
+        zx_status_t status = uart.Write(UART_INTERRUPT_ENABLE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.interrupt_enable(), 0);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_NONE); // should be untouched
@@ -177,12 +174,11 @@ static bool write_ier(void) {
         // Anything else should not.
         io_apic_init_with_vector(&io_apic);
 
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
-        guest_io.access_size = 1;
-        guest_io.u8 = UART_INTERRUPT_ENABLE_RDA;
+        IoValue io_value = {};
+        io_value.access_size = 1;
+        io_value.u8 = UART_INTERRUPT_ENABLE_RDA;
 
-        zx_status_t status = uart.Write(&guest_io);
+        zx_status_t status = uart.Write(UART_INTERRUPT_ENABLE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.interrupt_enable(), UART_INTERRUPT_ENABLE_RDA);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_NONE); // should be untouched
@@ -195,13 +191,12 @@ static bool write_ier(void) {
         io_apic_init_with_vector(&io_apic);
         uart.set_line_status(UART_LINE_STATUS_DATA_READY);
 
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
-        guest_io.access_size = 1;
+        IoValue io_value = {};
+        io_value.access_size = 1;
         // THR enable should trigger a THR interrupt
-        guest_io.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
+        io_value.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
 
-        zx_status_t status = uart.Write(&guest_io);
+        zx_status_t status = uart.Write(UART_INTERRUPT_ENABLE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.interrupt_enable(), UART_INTERRUPT_ENABLE_THR_EMPTY);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_NONE); // should be untouched
@@ -213,13 +208,12 @@ static bool write_ier(void) {
         // if line status is UART_LINE_STATUS_THR_EMPTY.
         io_apic_init_with_vector(&io_apic);
 
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
-        guest_io.access_size = 1;
+        IoValue io_value = {};
+        io_value.access_size = 1;
         // THR enable should trigger a THR interrupt
-        guest_io.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
+        io_value.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
 
-        zx_status_t status = uart.Write(&guest_io);
+        zx_status_t status = uart.Write(UART_INTERRUPT_ENABLE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.interrupt_enable(), UART_INTERRUPT_ENABLE_THR_EMPTY);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_THR_EMPTY);
@@ -243,12 +237,12 @@ static bool write_thr(void) {
         // should remain the same.
         uart.set_line_control(UART_LINE_CONTROL_DIV_LATCH);
         uart.set_interrupt_id(UART_INTERRUPT_ID_THR_EMPTY);
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_RECEIVE_PORT;
-        guest_io.u8 = 0x1;
-        guest_io.access_size = 1;
 
-        zx_status_t status = uart.Write(&guest_io);
+        IoValue io_value;
+        io_value.u8 = 0x1;
+        io_value.access_size = 1;
+
+        zx_status_t status = uart.Write(UART_RECEIVE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_THR_EMPTY);
     }
@@ -262,14 +256,13 @@ static bool write_thr(void) {
         uart.set_line_status(UART_LINE_STATUS_DATA_READY);
         uart.set_interrupt_enable(UART_INTERRUPT_ENABLE_NONE);
 
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_RECEIVE_PORT;
-        guest_io.access_size = 3;
-        guest_io.data[0] = 0x75;
-        guest_io.data[1] = 0x61;
-        guest_io.data[2] = 0x0d;
+        IoValue io_value;
+        io_value.access_size = 3;
+        io_value.data[0] = 0x75;
+        io_value.data[1] = 0x61;
+        io_value.data[2] = 0x0d;
 
-        zx_status_t status = uart.Write(&guest_io);
+        zx_status_t status = uart.Write(UART_RECEIVE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.line_status(), UART_LINE_STATUS_THR_EMPTY | UART_LINE_STATUS_DATA_READY);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_NONE);
@@ -283,14 +276,14 @@ static bool write_thr(void) {
         // If THR empty interrupts are enabled, an interrupt should be raised.
         uart.set_interrupt_enable(UART_INTERRUPT_ENABLE_THR_EMPTY);
         uart.set_interrupt_id(UART_INTERRUPT_ID_NONE);
-        zx_packet_guest_io_t guest_io = {};
-        guest_io.port = UART_RECEIVE_PORT;
-        guest_io.access_size = 3;
-        guest_io.data[0] = 0x72;
-        guest_io.data[1] = 0x74;
-        guest_io.data[2] = 0x0d;
 
-        zx_status_t status = uart.Write(&guest_io);
+        IoValue io_value;
+        io_value.access_size = 3;
+        io_value.data[0] = 0x72;
+        io_value.data[1] = 0x74;
+        io_value.data[2] = 0x0d;
+
+        zx_status_t status = uart.Write(UART_RECEIVE_PORT, io_value);
         ASSERT_EQ(status, ZX_OK);
         ASSERT_EQ(uart.line_status(), UART_LINE_STATUS_THR_EMPTY | UART_LINE_STATUS_DATA_READY);
         ASSERT_EQ(uart.interrupt_id(), UART_INTERRUPT_ID_THR_EMPTY);

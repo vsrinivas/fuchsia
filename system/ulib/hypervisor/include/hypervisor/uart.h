@@ -8,10 +8,24 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <hypervisor/guest.h>
+#include <hypervisor/io.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 // clang-format off
+
+/* UART ports. */
+#define UART_RECEIVE_PORT               0x0
+#define UART_TRANSMIT_PORT              0x0
+#define UART_INTERRUPT_ENABLE_PORT      0x1
+#define UART_INTERRUPT_ID_PORT          0x2
+#define UART_LINE_CONTROL_PORT          0x3
+#define UART_MODEM_CONTROL_PORT         0x4
+#define UART_LINE_STATUS_PORT           0x5
+#define UART_MODEM_STATUS_PORT          0x6
+#define UART_SCR_SCRATCH_PORT           0x7
+#define UART_SIZE                       0x8
 
 /* UART state flags. */
 #define UART_INTERRUPT_ENABLE_NONE      0
@@ -40,7 +54,7 @@ typedef struct zx_packet_guest_io zx_packet_guest_io_t;
 typedef struct zx_vcpu_io zx_vcpu_io_t;
 
 /* Stores the state of a UART. */
-class Uart {
+class Uart : public IoHandler {
 public:
     using InterruptFunc = zx_status_t (*)(zx_handle_t vcpu, uint32_t vector);
 
@@ -49,11 +63,11 @@ public:
 
     zx_status_t Init(zx_handle_t guest);
 
-    // Start asynchronous handling of UART.
-    zx_status_t StartAsync(zx_handle_t guest);
+    zx_status_t Start(Guest* guest);
 
-    zx_status_t Read(uint16_t port, zx_vcpu_io_t* vcpu_io);
-    zx_status_t Write(const zx_packet_guest_io_t* io);
+    // IoHandler interface.
+    zx_status_t Read(uint64_t port, IoValue* io) override;
+    zx_status_t Write(uint64_t port, const IoValue& io) override;
 
     zx_status_t FillRx();
     zx_status_t EmptyTx();

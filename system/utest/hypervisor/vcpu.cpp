@@ -62,63 +62,6 @@ static void setup(test_t* test) {
     test->io_port.Init(ZX_HANDLE_INVALID);
 }
 
-/* Test handling of an IO packet for an input instruction.
- *
- * Expected behavior is to read the value at the provided port address and
- * write the result to RAX.
- */
-static bool handle_input_packet(void) {
-    BEGIN_TEST;
-
-    test_t test;
-    zx_port_packet_t packet = {};
-    setup(&test);
-
-    // Initialize the hosts register to an arbitrary non-zero value.
-    Uart uart(&test.io_apic);
-    uart.set_line_control(0xfe);
-    test.guest.uart = &uart;
-
-    // Send a guest packet to to read the UART line control port.
-    packet.type = ZX_PKT_TYPE_GUEST_IO;
-    packet.guest_io.input = true;
-    packet.guest_io.port = UART_LINE_CONTROL_PORT;
-    packet.guest_io.access_size = 1;
-    EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), ZX_OK, "Failed to handle guest packet");
-
-    // Verify result value was written to RAX.
-    EXPECT_EQ(test.vcpu_io.u8, uart.line_control(), "RAX was not populated with expected value");
-
-    END_TEST;
-}
-
-/* Test handling of an IO packet for an out instruction.
- *
- * Expected behavior is for the value to be saved into a host data structure.
- */
-static bool handle_output_packet(void) {
-    BEGIN_TEST;
-
-    test_t test;
-    zx_packet_guest_io_t io = {};
-    setup(&test);
-
-    Uart uart(&test.io_apic);
-    test.guest.uart = &uart;
-
-    // Send a guest packet to to write the UART line control port.
-    io.input = false;
-    io.port = UART_LINE_CONTROL_PORT;
-    io.access_size = 1;
-    io.u8 = 0xaf;
-    EXPECT_EQ(uart.Write(&io), ZX_OK, "Failed to handle UART IO packet");
-
-    // Verify packet value was saved to the host port state.
-    EXPECT_EQ(io.u8, uart.line_control(), "UART was not populated with expected value");
-
-    END_TEST;
-}
-
 /* Test accesses to the PCI config address ports.
  *
  * Access to the 32-bit PCI config address port is provided by the IO ports
@@ -266,8 +209,6 @@ static bool read_pci_config_data_port(void) {
 }
 
 BEGIN_TEST_CASE(vcpu)
-RUN_TEST(handle_input_packet);
-RUN_TEST(handle_output_packet);
 RUN_TEST(read_pci_config_addr_port)
 RUN_TEST(write_pci_config_addr_port)
 RUN_TEST(read_pci_config_data_port)

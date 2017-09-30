@@ -276,13 +276,10 @@ int main(int argc, char** argv) {
     }
     // Setup UART.
     Uart uart(&io_apic);
-    guest.uart = &uart;
-    status = uart.Init(guest.handle());
+    status = uart.Start(&guest);
     if (status != ZX_OK)
         return status;
-    status = uart.StartAsync(guest.handle());
-    if (status != ZX_OK)
-        return status;
+
     // Setup TPM.
     status = zx_guest_set_trap(guest.handle(), ZX_GUEST_TRAP_MEM, TPM_PHYS_BASE,
                                TPM_PHYS_TOP - TPM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);

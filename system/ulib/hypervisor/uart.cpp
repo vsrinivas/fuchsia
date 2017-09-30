@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hypervisor/uart.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +12,6 @@
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
-#include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -25,12 +26,6 @@ Uart::Uart(const IoApic* io_apic, InterruptFunc raise_interrupt)
     : io_apic_(io_apic), raise_interrupt_(raise_interrupt) {
     cnd_init(&rx_cnd_);
     cnd_init(&tx_cnd_);
-}
-
-zx_status_t Uart::Init(zx_handle_t guest) {
-    return zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, UART_INTERRUPT_ENABLE_PORT,
-                             UART_SCR_SCRATCH_PORT - UART_INTERRUPT_ENABLE_PORT + 1,
-                             ZX_HANDLE_INVALID, 0);
 }
 
 zx_status_t Uart::TryRaiseInterrupt(uint8_t interrupt_id) {
@@ -75,18 +70,18 @@ zx_status_t Uart::RaiseNextInterrupt() {
     return ZX_OK;
 }
 
-zx_status_t Uart::Read(uint16_t port, zx_vcpu_io_t* vcpu_io) {
+zx_status_t Uart::Read(uint64_t port, IoValue* io) {
     switch (port) {
     case UART_MODEM_CONTROL_PORT:
     case UART_MODEM_STATUS_PORT:
     case UART_SCR_SCRATCH_PORT:
-        vcpu_io->access_size = 1;
-        vcpu_io->u8 = 0;
+        io->access_size = 1;
+        io->u8 = 0;
         break;
     case UART_RECEIVE_PORT: {
-        vcpu_io->access_size = 1;
+        io->access_size = 1;
         fbl::AutoLock lock(&mutex_);
-        vcpu_io->u8 = rx_buffer_;
+        io->u8 = rx_buffer_;
         rx_buffer_ = 0;
         line_status_ = static_cast<uint8_t>(line_status_ & ~UART_LINE_STATUS_DATA_READY);
 
@@ -98,15 +93,15 @@ zx_status_t Uart::Read(uint16_t port, zx_vcpu_io_t* vcpu_io) {
         return RaiseNextInterrupt();
     }
     case UART_INTERRUPT_ENABLE_PORT: {
-        vcpu_io->access_size = 1;
+        io->access_size = 1;
         fbl::AutoLock lock(&mutex_);
-        vcpu_io->u8 = interrupt_enable_;
+        io->u8 = interrupt_enable_;
         break;
     }
     case UART_INTERRUPT_ID_PORT: {
-        vcpu_io->access_size = 1;
+        io->access_size = 1;
         fbl::AutoLock lock(&mutex_);
-        vcpu_io->u8 = kUartInterruptIdNoFifoMask & interrupt_id_;
+        io->u8 = kUartInterruptIdNoFifoMask & interrupt_id_;
 
         // Reset THR empty interrupt on IIR read (or THR write).
         if (interrupt_id_ & UART_INTERRUPT_ID_THR_EMPTY)
@@ -114,15 +109,15 @@ zx_status_t Uart::Read(uint16_t port, zx_vcpu_io_t* vcpu_io) {
         break;
     }
     case UART_LINE_CONTROL_PORT: {
-        vcpu_io->access_size = 1;
+        io->access_size = 1;
         fbl::AutoLock lock(&mutex_);
-        vcpu_io->u8 = line_control_;
+        io->u8 = line_control_;
         break;
     }
     case UART_LINE_STATUS_PORT: {
-        vcpu_io->access_size = 1;
+        io->access_size = 1;
         fbl::AutoLock lock(&mutex_);
-        vcpu_io->u8 = line_status_;
+        io->u8 = line_status_;
         break;
     }
     default:
@@ -132,19 +127,19 @@ zx_status_t Uart::Read(uint16_t port, zx_vcpu_io_t* vcpu_io) {
     return ZX_OK;
 }
 
-zx_status_t Uart::Write(const zx_packet_guest_io_t* io) {
-    switch (io->port) {
+zx_status_t Uart::Write(uint64_t port, const IoValue& io) {
+    switch (port) {
     case UART_TRANSMIT_PORT: {
         fbl::AutoLock lock(&mutex_);
         if (line_control_ & UART_LINE_CONTROL_DIV_LATCH)
             // Ignore writes when divisor latch is enabled.
-            return (io->access_size != 1) ? ZX_ERR_IO_DATA_INTEGRITY : ZX_OK;
+            return (io.access_size != 1) ? ZX_ERR_IO_DATA_INTEGRITY : ZX_OK;
 
-        for (int i = 0; i < io->access_size; i++) {
+        for (int i = 0; i < io.access_size; i++) {
             while (tx_offset_ >= sizeof(tx_buffer_)) {
                 cnd_wait(&tx_empty_cnd_, mutex_.GetInternal());
             }
-            tx_buffer_[tx_offset_++] = io->data[i];
+            tx_buffer_[tx_offset_++] = io.data[i];
         }
 
         line_status_ |= UART_LINE_STATUS_THR_EMPTY;
@@ -157,21 +152,21 @@ zx_status_t Uart::Write(const zx_packet_guest_io_t* io) {
         return RaiseNextInterrupt();
     }
     case UART_INTERRUPT_ENABLE_PORT: {
-        if (io->access_size != 1)
+        if (io.access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
         fbl::AutoLock lock(&mutex_);
         // Ignore writes when divisor latch is enabled.
         if (line_control_ & UART_LINE_CONTROL_DIV_LATCH)
             return ZX_OK;
 
-        interrupt_enable_ = io->u8;
+        interrupt_enable_ = io.u8;
         return RaiseNextInterrupt();
     }
     case UART_LINE_CONTROL_PORT: {
-        if (io->access_size != 1)
+        if (io.access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
         fbl::AutoLock lock(&mutex_);
-        line_control_ = io->u8;
+        line_control_ = io.u8;
         return ZX_OK;
     }
     case UART_INTERRUPT_ID_PORT:
@@ -183,7 +178,9 @@ zx_status_t Uart::Write(const zx_packet_guest_io_t* io) {
 }
 
 static zx_status_t uart_handler(zx_port_packet_t* packet, void* ctx) {
-    return static_cast<Uart*>(ctx)->Write(&packet->guest_io);
+    IoValue io;
+    io.u32 = packet->guest_io.u32;
+    return static_cast<Uart*>(ctx)->Write(packet->guest_io.port, io);
 }
 
 static int uart_empty_tx(void* arg) {
@@ -245,7 +242,17 @@ zx_status_t Uart::FillRx() {
     return status;
 }
 
-zx_status_t Uart::StartAsync(zx_handle_t guest) {
+zx_status_t Uart::Start(Guest* guest) {
+    zx_status_t status;
+    status = guest->CreateMapping(TrapType::PIO_ASYNC, UART_ASYNC_BASE, UART_ASYNC_SIZE,
+                                  UART_ASYNC_OFFSET, this);
+    if (status != ZX_OK)
+        return status;
+    status = guest->CreateMapping(TrapType::PIO_SYNC, UART_SYNC_BASE, UART_SYNC_SIZE,
+                                  UART_SYNC_OFFSET, this);
+    if (status != ZX_OK)
+        return status;
+
     thrd_t uart_input_thread;
     int ret = thrd_create(&uart_input_thread, uart_fill_rx, this);
     if (ret != thrd_success) {
@@ -264,18 +271,12 @@ zx_status_t Uart::StartAsync(zx_handle_t guest) {
         fprintf(stderr, "Failed to create UART output thread %d\n", ret);
         return ZX_ERR_INTERNAL;
     }
+
     ret = thrd_detach(uart_output_thread);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to detach UART output thread %d\n", ret);
         return ZX_ERR_INTERNAL;
     }
 
-    const trap_args_t trap = {
-        .kind = ZX_GUEST_TRAP_IO,
-        .addr = UART_RECEIVE_PORT,
-        .len = 1,
-        .key = 0,
-        .use_port = true,
-    };
-    return device_trap(guest, &trap, 1, uart_handler, this);
+    return ZX_OK;
 }

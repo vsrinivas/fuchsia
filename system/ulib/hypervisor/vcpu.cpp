@@ -14,7 +14,6 @@
 #include <hypervisor/io_apic.h>
 #include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
-#include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -172,7 +171,8 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
     return status;
 }
 
-static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io) {
+static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
+                                uint64_t key) {
 #if __x86_64__
     zx_status_t status = ZX_OK;
     zx_vcpu_io_t vcpu_io;
@@ -185,9 +185,6 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case RTC_DATA_PORT:
         status = vcpu_ctx->guest->io_port->Read(io->port, &vcpu_io);
-        break;
-    case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
-        status = vcpu_ctx->guest->uart->Read(io->port, &vcpu_io);
         break;
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
@@ -204,7 +201,13 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
             status = pci_device->ReadBar(bar, port_off, io->access_size, &vcpu_io);
             break;
         }
-        status = ZX_ERR_NOT_SUPPORTED;
+
+        IoMapping& mapping = trap_key_to_mapping(key);
+        IoValue value = {};
+        value.access_size = io->access_size;
+        status = mapping.Read(io->port, &value);
+        vcpu_io.access_size = value.access_size;
+        vcpu_io.u32 = value.u32;
     }
     }
     if (status != ZX_OK) {
@@ -222,7 +225,8 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
 #endif // __x86_64__
 }
 
-static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io) {
+static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
+                                 uint64_t key) {
 #if __x86_64__
     switch (io->port) {
     case I8042_COMMAND_PORT:
@@ -238,8 +242,6 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         return vcpu_ctx->guest->pci_bus->WriteIoPort(io);
-    case UART_INTERRUPT_ENABLE_PORT ... UART_SCR_SCRATCH_PORT:
-        return vcpu_ctx->guest->uart->Write(io);
     default: {
         uint8_t bar;
         uint16_t port_off;
@@ -256,6 +258,11 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
             vcpu_io.access_size = io->access_size;
             return pci_device->WriteBar(bar, port_off, &vcpu_io);
         }
+        IoMapping& mapping = trap_key_to_mapping(key);
+        IoValue value;
+        value.access_size = io->access_size;
+        value.u32 = io->u32;
+        return mapping.Write(io->port, value);
     }
     }
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
@@ -265,8 +272,8 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
 #endif // __x86_64__
 }
 
-static zx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io) {
-    return io->input ? handle_input(vcpu_ctx, io) : handle_output(vcpu_ctx, io);
+static zx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io, uint64_t key) {
+    return io->input ? handle_input(vcpu_ctx, io, key) : handle_output(vcpu_ctx, io, key);
 }
 
 static zx_status_t vcpu_state_read(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
@@ -304,7 +311,7 @@ zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet) 
     case ZX_PKT_TYPE_GUEST_MEM:
         return handle_mem(vcpu_ctx, &packet->guest_mem);
     case ZX_PKT_TYPE_GUEST_IO:
-        return handle_io(vcpu_ctx, &packet->guest_io);
+        return handle_io(vcpu_ctx, &packet->guest_io, packet->key);
     default:
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
         return ZX_ERR_NOT_SUPPORTED;

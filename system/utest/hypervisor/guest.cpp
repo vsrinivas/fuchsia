@@ -26,15 +26,12 @@ extern const char guest_set_trap_with_io_start[];
 extern const char guest_set_trap_with_io_end[];
 
 typedef struct test {
-    bool supported;
+    bool supported = false;
 
-    zx_handle_t guest_physmem;
-    uintptr_t guest_physaddr;
-
-    zx_handle_t vcpu;
+    zx_handle_t vcpu = ZX_HANDLE_INVALID;
     Guest guest;
 #if __x86_64__
-    zx_handle_t vcpu_apicmem;
+    zx_handle_t vcpu_apicmem = ZX_HANDLE_INVALID;
 #endif // __x86_64__
 } test_t;
 
@@ -48,8 +45,6 @@ static bool teardown(test_t* test) {
 }
 
 static bool setup(test_t* test, const char* start, const char* end) {
-    memset(test, 0, sizeof(*test));
-
     zx_status_t status = test->guest.Init(VMO_SIZE);
 
     test->supported = status != ZX_ERR_NOT_SUPPORTED;

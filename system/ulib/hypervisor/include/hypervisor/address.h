@@ -35,15 +35,18 @@
 #define TPM_PHYS_TOP                    TPM_PHYS_BASE + 0x5000 - 1
 
 /* UART ports. */
-#define UART_RECEIVE_PORT               0x3f8
-#define UART_TRANSMIT_PORT              0x3f8
-#define UART_INTERRUPT_ENABLE_PORT      0x3f9
-#define UART_INTERRUPT_ID_PORT          0x3fa
-#define UART_LINE_CONTROL_PORT          0x3fb
-#define UART_MODEM_CONTROL_PORT         0x3fc
-#define UART_LINE_STATUS_PORT           0x3fd
-#define UART_MODEM_STATUS_PORT          0x3fe
-#define UART_SCR_SCRATCH_PORT           0x3ff
+#define UART_BASE                       0x3f8
+#define UART_SIZE                       0x8
+
+/* Use an async trap for the first port (TX port) only. */
+#define UART_ASYNC_BASE                 UART_BASE
+#define UART_ASYNC_SIZE                 1
+#define UART_ASYNC_OFFSET               0
+
+/* Use an async trap for the first port (TX port) only. */
+#define UART_SYNC_BASE                  (UART_BASE + UART_ASYNC_SIZE)
+#define UART_SYNC_SIZE                  (UART_SIZE - UART_ASYNC_SIZE)
+#define UART_SYNC_OFFSET                UART_ASYNC_SIZE
 
 /* RTC ports. */
 #define RTC_INDEX_PORT                  0x70
