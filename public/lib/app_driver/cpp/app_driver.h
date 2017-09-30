@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_PUBLIC_LIB_APP_DRIVER_CPP_APP_DRIVER_H_
-#define PERIDOT_PUBLIC_LIB_APP_DRIVER_CPP_APP_DRIVER_H_
+#ifndef LIB_APP_DRIVER_CPP_APP_DRIVER_H_
+#define LIB_APP_DRIVER_CPP_APP_DRIVER_H_
 
 #include <functional>
 #include <memory>
@@ -15,7 +15,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/public/lib/lifecycle/cpp/lifecycle_impl.h"
+#include "lib/lifecycle/cpp/lifecycle_impl.h"
 
 namespace modular {
 
@@ -48,12 +48,12 @@ namespace modular {
 template <typename Impl>
 class AppDriver : LifecycleImpl::Delegate {
  public:
-  AppDriver(app::ServiceNamespace* outgoing_services,
+  AppDriver(app::ServiceNamespace* const outgoing_services,
             std::unique_ptr<Impl> impl,
             std::function<void()> on_terminated)
       : lifecycle_impl_(outgoing_services, this),
         impl_(std::move(impl)),
-        on_terminated_(on_terminated) {}
+        on_terminated_(std::move(on_terminated)) {}
 
  private:
   // |LifecycleImpl::Delegate|
@@ -73,4 +73,4 @@ class AppDriver : LifecycleImpl::Delegate {
 
 }  // namespace modular
 
-#endif  // PERIDOT_PUBLIC_LIB_APP_DRIVER_CPP_APP_DRIVER_H_
+#endif  // LIB_APP_DRIVER_CPP_APP_DRIVER_H_

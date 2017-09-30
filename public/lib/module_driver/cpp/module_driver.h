@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_PUBLIC_LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
-#define PERIDOT_PUBLIC_LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
+#ifndef LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
+#define LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
 
 #include <memory>
 
@@ -11,10 +11,10 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/logging.h"
-#include "peridot/public/lib/lifecycle/cpp/lifecycle_impl.h"
-#include "peridot/public/lib/module/cpp/module_impl.h"
-#include "peridot/public/lib/module/fidl/module.fidl.h"
-#include "peridot/public/lib/module/fidl/module_context.fidl.h"
+#include "lib/lifecycle/cpp/lifecycle_impl.h"
+#include "lib/module/cpp/module_impl.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
 
 namespace modular {
 
@@ -47,14 +47,14 @@ class ModuleHost {
 template <typename Impl>
 class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
  public:
-  ModuleDriver(app::ApplicationContext* app_context,
+  ModuleDriver(app::ApplicationContext* const app_context,
                std::function<void()> on_terminated)
       : app_context_(app_context),
         lifecycle_impl_(app_context->outgoing_services(), this),
         module_impl_(std::make_unique<ModuleImpl>(
             app_context->outgoing_services(),
             static_cast<ModuleImpl::Delegate*>(this))),
-        on_terminated_(on_terminated) {}
+        on_terminated_(std::move(on_terminated)) {}
 
  private:
   // |ModuleHost|
@@ -99,4 +99,4 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
 
 }  // namespace modular
 
-#endif  // PERIDOT_PUBLIC_LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
+#endif  // LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
