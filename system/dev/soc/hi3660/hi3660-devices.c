@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-devices.h>
+#include <ddk/protocol/platform-defs.h>
 #include <stdio.h>
 
 #include "hi3660-bus.h"

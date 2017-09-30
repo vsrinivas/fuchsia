@@ -10,9 +10,10 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
+#include <ddk/protocol/platform-defs.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -259,9 +260,8 @@ static zx_driver_ops_t hi3660_driver_ops = {
     .bind = hi3660_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(hi3660, hi3660_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(hi3660, hi3660_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, 0x12D1),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, 0x0960),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_HI_SILICON),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_HI3660),
 ZIRCON_DRIVER_END(hi3660)

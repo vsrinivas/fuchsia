@@ -6,7 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/platform-devices.h>
+#include <ddk/protocol/platform-defs.h>
 
 #include <hw/pci.h>
 #include <zircon/syscalls.h>

@@ -5,8 +5,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/platform-devices.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

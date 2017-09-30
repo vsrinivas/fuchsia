@@ -15,7 +15,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-bus.h>
-#include <ddk/protocol/platform-devices.h>
+#include <ddk/protocol/platform-defs.h>
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -154,9 +154,8 @@ static zx_driver_ops_t qemu_bus_driver_ops = {
     .bind = qemu_bus_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(qemu_bus, qemu_bus_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(qemu_bus, qemu_bus_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, 0x1234),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, 1),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_BUS_IMPLEMENTOR_DID),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QEMU),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_QEMU),
 ZIRCON_DRIVER_END(qemu_bus)

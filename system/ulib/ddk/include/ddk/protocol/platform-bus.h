@@ -37,9 +37,6 @@ enum {
     PDEV_ADD_DISABLED = (1 << 0),
 };
 
-// DID reserved for the platform bus implementation driver
-#define PDEV_BUS_IMPLEMENTOR_DID    0
-
 // interface registered by the platform bus implementation driver
 typedef struct {
     zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* out);

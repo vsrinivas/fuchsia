@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform-devices.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>

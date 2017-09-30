@@ -4,7 +4,7 @@
 
 #include <ddk/driver.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform-devices.h>
+#include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 #include <stdio.h>
 

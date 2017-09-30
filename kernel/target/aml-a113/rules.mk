@@ -33,8 +33,10 @@ KERNEL_DEFINES += \
 
 include make/kernel_images.mk
 
+PLATFORM_VID := 3   # PDEV_VID_AMLOGIC
+PLATFORM_PID := 2   # PDEV_PID_AMLOGIC_A113
+PLATFORM_BOARD_NAME := a113
+
 # build MDI
 MDI_SRCS := \
     $(LOCAL_DIR)/aml-a113.mdi \
-
-include make/mdi.mk

@@ -8,10 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
+#include <ddk/protocol/platform-defs.h>
 #include <zircon/process.h>
 
 #include "platform-bus.h"
@@ -128,7 +129,6 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, bus->vid},
         {BIND_PLATFORM_DEV_PID, 0, bus->pid},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_BUS_IMPLEMENTOR_DID},
     };
 
     device_add_args_t add_args = {
