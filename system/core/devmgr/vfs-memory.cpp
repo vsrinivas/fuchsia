@@ -585,9 +585,10 @@ zx_status_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
 
         // Ensure this is the last handle to this VMO; otherwise, the size
         // may change from underneath us.
-        zx_signals_t observed;
-        zx_status_t status = zx_object_wait_one(config->vmo, ZX_SIGNAL_LAST_HANDLE, 0u, &observed);
-        if ((status != ZX_OK) || (observed != ZX_SIGNAL_LAST_HANDLE)) {
+        zx_info_handle_count_t info;
+        zx_status_t status = zx_object_get_info(config->vmo, ZX_INFO_HANDLE_COUNT,
+                                                &info, sizeof(info), nullptr, nullptr);
+        if (status != ZX_OK || info.handle_count != 1) {
             zx_handle_close(config->vmo);
             return ZX_ERR_INVALID_ARGS;
         }
