@@ -121,13 +121,13 @@ private:
     zx_status_t OnStopLocked(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
         __TA_REQUIRES(lock_);
 
-    void IotxnComplete(iotxn_t* txn);
-    void QueueIotxnLocked() __TA_REQUIRES(txn_lock_);
-    void CompleteIotxnLocked(iotxn_t* txn) __TA_REQUIRES(txn_lock_);
+    void RequestComplete(usb_request_t* req);
+    void QueueRequestLocked() __TA_REQUIRES(req_lock_);
+    void CompleteRequestLocked(usb_request_t* req) __TA_REQUIRES(req_lock_);
 
     usb_protocol_t usb_;
     fbl::Mutex lock_;
-    fbl::Mutex txn_lock_ __TA_ACQUIRED_AFTER(lock_);
+    fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
 
     // Dispatcher framework state
     fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
@@ -144,29 +144,29 @@ private:
     uint32_t bytes_per_packet_;
     uint32_t fifo_bytes_;
     uint32_t fractional_bpp_inc_;
-    uint32_t fractional_bpp_acc_ __TA_GUARDED(txn_lock_);
-    uint32_t ring_buffer_offset_ __TA_GUARDED(txn_lock_);
-    uint64_t usb_frame_num_ __TA_GUARDED(txn_lock_);
+    uint32_t fractional_bpp_acc_ __TA_GUARDED(req_lock_);
+    uint32_t ring_buffer_offset_ __TA_GUARDED(req_lock_);
+    uint64_t usb_frame_num_ __TA_GUARDED(req_lock_);
 
     uint32_t bytes_per_notification_ = 0;
-    uint32_t notification_acc_ __TA_GUARDED(txn_lock_);
+    uint32_t notification_acc_ __TA_GUARDED(req_lock_);
 
     zx::vmo  ring_buffer_vmo_;
     void*    ring_buffer_virt_  = nullptr;
     uint32_t ring_buffer_size_  = 0;
-    uint32_t ring_buffer_pos_ __TA_GUARDED(txn_lock_);
+    uint32_t ring_buffer_pos_ __TA_GUARDED(req_lock_);
     volatile RingBufferState ring_buffer_state_
-        __TA_GUARDED(txn_lock_) = RingBufferState::STOPPED;
+        __TA_GUARDED(req_lock_) = RingBufferState::STOPPED;
 
     union {
         audio_proto::RingBufStopResp  stop;
         audio_proto::RingBufStartResp start;
-    } pending_job_resp_ __TA_GUARDED(txn_lock_);
+    } pending_job_resp_ __TA_GUARDED(req_lock_);
 
-    list_node_t     free_iotxn_ __TA_GUARDED(txn_lock_);
-    uint32_t        free_iotxn_cnt_ __TA_GUARDED(txn_lock_);
-    uint32_t        allocated_iotxn_cnt_;
-    uint32_t        max_iotxn_size_;
+    list_node_t     free_req_ __TA_GUARDED(req_lock_);
+    uint32_t        free_req_cnt_ __TA_GUARDED(req_lock_);
+    uint32_t        allocated_req_cnt_;
+    uint32_t        max_req_size_;
 
     uint8_t         iface_num_   = 0;
     uint8_t         alt_setting_ = 0;
@@ -177,7 +177,7 @@ private:
     const uint64_t  ticks_per_msec_ = zx_ticks_per_second() / 1000u;
 
     // TODO(johngro) : See MG-940.  eliminate this ASAP
-    bool iotxn_complete_prio_bumped_ = false;
+    bool req_complete_prio_bumped_ = false;
 };
 
 }  // namespace usb

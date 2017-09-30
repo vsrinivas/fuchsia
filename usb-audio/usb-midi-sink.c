@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
+#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/device/midi.h>
 #include <sync/completion.h>
@@ -50,16 +51,16 @@ static void update_signals(usb_midi_sink_t* sink) {
     }
 }
 
-static void usb_midi_sink_write_complete(iotxn_t* txn, void* cookie) {
-    if (txn->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(txn);
+static void usb_midi_sink_write_complete(usb_request_t* req, void* cookie) {
+    if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(req);
         return;
     }
 
     usb_midi_sink_t* sink = (usb_midi_sink_t*)cookie;
     // FIXME what to do with error here?
     mtx_lock(&sink->mutex);
-    list_add_tail(&sink->free_write_reqs, &txn->node);
+    list_add_tail(&sink->free_write_reqs, &req->node);
     completion_signal(&sink->free_write_completion);
     update_signals(sink);
     mtx_unlock(&sink->mutex);
@@ -74,9 +75,9 @@ static void usb_midi_sink_unbind(void* ctx) {
 }
 
 static void usb_midi_sink_free(usb_midi_sink_t* sink) {
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&sink->free_write_reqs, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    usb_request_t* req;
+    while ((req = list_remove_head_type(&sink->free_write_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
     free(sink);
 }
@@ -141,7 +142,7 @@ static zx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
             status = ZX_ERR_INTERNAL;
             goto out;
         }
-        iotxn_t* txn = containerof(node, iotxn_t, node);
+        usb_request_t* req = containerof(node, usb_request_t, node);
 
         size_t message_length = get_midi_message_length(*src);
         if (message_length < 1 || message_length > length) return ZX_ERR_INVALID_ARGS;
@@ -152,9 +153,9 @@ static zx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t lengt
         buffer[2] = (message_length > 1 ? src[1] : 0);
         buffer[3] = (message_length > 2 ? src[2] : 0);
 
-        iotxn_copyto(txn, buffer, 4, 0);
-        txn->length = 4;
-        iotxn_queue(sink->usb_mxdev, txn);
+        usb_request_copyto(req, buffer, 4, 0);
+        req->header.length = 4;
+        usb_request_queue(&sink->usb, req);
 
         src += message_length;
         length -= message_length;
@@ -211,15 +212,16 @@ zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int i
         usb_set_interface(usb, intf->bInterfaceNumber, intf->bAlternateSetting);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, usb_ep_max_packet(ep));
-        if (!txn) {
+        usb_request_t* req;
+        zx_status_t status = usb_request_alloc(&req, usb_ep_max_packet(ep), ep->bEndpointAddress);
+        if (status != ZX_OK) {
             usb_midi_sink_free(sink);
             return ZX_ERR_NO_MEMORY;
         }
-        txn->length = packet_size;
-        txn->complete_cb = usb_midi_sink_write_complete;
-        txn->cookie = sink;
-        list_add_head(&sink->free_write_reqs, &txn->node);
+        req->header.length = packet_size;
+        req->complete_cb = usb_midi_sink_write_complete;
+        req->cookie = sink;
+        list_add_head(&sink->free_write_reqs, &req->node);
     }
     completion_signal(&sink->free_write_completion);
 
@@ -242,4 +244,3 @@ zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int i
 
     return status;
 }
-

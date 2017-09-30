@@ -23,7 +23,7 @@
 namespace audio {
 namespace usb {
 
-static constexpr uint32_t MAX_OUTSTANDING_IOTXN = 8;
+static constexpr uint32_t MAX_OUTSTANDING_REQ = 8;
 
 static constexpr uint32_t ExtractSampleRate(const usb_audio_ac_samp_freq& sr) {
     return static_cast<uint32_t>(sr.freq[0])
@@ -32,11 +32,11 @@ static constexpr uint32_t ExtractSampleRate(const usb_audio_ac_samp_freq& sr) {
 }
 
 UsbAudioStream::~UsbAudioStream() {
-    // We destructing.  All of our iotxns should be sitting in the free list.
-    ZX_DEBUG_ASSERT(allocated_iotxn_cnt_ == free_iotxn_cnt_);
+    // We destructing.  All of our requests should be sitting in the free list.
+    ZX_DEBUG_ASSERT(allocated_req_cnt_ == free_req_cnt_);
 
-    while (!list_is_empty(&free_iotxn_)) {
-        iotxn_release(list_remove_head_type(&free_iotxn_, iotxn_t, node));
+    while (!list_is_empty(&free_req_)) {
+        usb_request_release(list_remove_head_type(&free_req_, usb_request_t, node));
     }
 }
 
@@ -95,31 +95,32 @@ zx_status_t UsbAudioStream::Bind(const char* devname,
     // transactions to a USB isochronous endpoint and can have the bus driver
     // DMA directly from the ring buffer we have set up with our user.
     {
-        fbl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock req_lock(&req_lock_);
 
-        list_initialize(&free_iotxn_);
-        free_iotxn_cnt_ = 0;
-        allocated_iotxn_cnt_ = 0;
-        max_iotxn_size_ = usb_ep_max_packet(usb_endpoint);
+        list_initialize(&free_req_);
+        free_req_cnt_ = 0;
+        allocated_req_cnt_ = 0;
+        max_req_size_ = usb_ep_max_packet(usb_endpoint);
 
-        for (uint32_t i = 0; i < MAX_OUTSTANDING_IOTXN; ++i) {
-            iotxn_t* txn = usb_alloc_iotxn(usb_endpoint->bEndpointAddress, max_iotxn_size_);
-
-            if (!txn) {
-                LOG("Failed to allocate iotxn %u/%u (size %u)\n",
-                    i + 1, MAX_OUTSTANDING_IOTXN, max_iotxn_size_);
-                return ZX_ERR_NO_MEMORY;
+        for (uint32_t i = 0; i < MAX_OUTSTANDING_REQ; ++i) {
+            usb_request_t* req;
+            zx_status_t status = usb_request_alloc(&req, max_req_size_,
+                                                   usb_endpoint->bEndpointAddress);
+            if (status != ZX_OK) {
+                LOG("Failed to allocate usb request %u/%u (size %u): %d\n",
+                    i + 1, MAX_OUTSTANDING_REQ, max_req_size_, status);
+                return status;
             }
 
-            txn->cookie = this;
-            txn->complete_cb = [](iotxn_t* txn, void* cookie) -> void {
+            req->cookie = this;
+            req->complete_cb = [](usb_request_t* req, void* cookie) -> void {
                 ZX_DEBUG_ASSERT(cookie != nullptr);
-                reinterpret_cast<UsbAudioStream*>(cookie)->IotxnComplete(txn);
+                reinterpret_cast<UsbAudioStream*>(cookie)->RequestComplete(req);
             };
 
-            list_add_head(&free_iotxn_, &txn->node);
-            ++free_iotxn_cnt_;
-            ++allocated_iotxn_cnt_;
+            list_add_head(&free_req_, &req->node);
+            ++free_req_cnt_;
+            ++allocated_req_cnt_;
         }
     }
 
@@ -504,7 +505,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     {
         // TODO(johngro) : If the ring buffer is running, should we automatically
         // stop it instead of returning bad state?
-        fbl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock req_lock(&req_lock_);
         if (ring_buffer_state_ != RingBufferState::STOPPED) {
             resp.result = ZX_ERR_BAD_STATE;
             goto finished;
@@ -524,7 +525,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     // at a 1mSec isochronous rate.
     //
     // Make sure that we can fit our longest payload length into one of our
-    // iotxns.
+    // usb requests.
     //
     // TODO(johngro) : Unless/until we can find some way to set the USB bus
     // driver to perform direct DMA to/from the Ring Buffer VMO without the need
@@ -536,7 +537,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     bytes_per_packet_   = (req.frames_per_second / iso_packet_rate_) * frame_size_;
     fractional_bpp_inc_ = (req.frames_per_second % iso_packet_rate_);
     long_payload_len    = bytes_per_packet_ + (fractional_bpp_inc_ ? frame_size_ : 0);
-    if (long_payload_len > max_iotxn_size_) {
+    if (long_payload_len > max_req_size_) {
         resp.result = ZX_ERR_INVALID_ARGS;
         goto finished;
     }
@@ -561,7 +562,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     // order to report this accurately.
     //
     // Right now, we assume that the controller will never get farther ahead
-    // than two isochronous iotxns, so we report this the worst case fifo_depth.
+    // than two isochronous usb requests, so we report this the worst case fifo_depth.
     fifo_bytes_ = bytes_per_packet_ << 1;
 
     // If we have no fractional portion to accumulate, we always send
@@ -692,7 +693,7 @@ zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
 
     {
         // We cannot create a new ring buffer if we are not currently stopped.
-        fbl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock req_lock(&req_lock_);
         if (ring_buffer_state_ != RingBufferState::STOPPED) {
             resp.result = ZX_ERR_BAD_STATE;
             goto finished;
@@ -774,18 +775,18 @@ zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
     resp.hdr = req.hdr;
     resp.start_ticks = 0;
 
-    fbl::AutoLock txn_lock(&txn_lock_);
+    fbl::AutoLock req_lock(&req_lock_);
 
     if (ring_buffer_state_ != RingBufferState::STOPPED) {
         // The ring buffer is running, do not linger in the lock while we send
         // the error code back to the user.
-        txn_lock.release();
+        req_lock.release();
         resp.result = ZX_ERR_BAD_STATE;
         return channel->Write(&resp, sizeof(resp));
     }
 
-    // We are idle, all of our iotxns should be sitting in the free list.
-    ZX_DEBUG_ASSERT(allocated_iotxn_cnt_ == free_iotxn_cnt_);
+    // We are idle, all of our usb requests should be sitting in the free list.
+    ZX_DEBUG_ASSERT(allocated_req_cnt_ == free_req_cnt_);
 
     // switch to alternate interface if necessary
     if (alt_setting_ != 0) {
@@ -831,8 +832,8 @@ zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
     // Flag ourselves as being in the starting state, then queue up all of our
     // transactions.
     ring_buffer_state_ = RingBufferState::STARTING;
-    while (!list_is_empty(&free_iotxn_))
-        QueueIotxnLocked();
+    while (!list_is_empty(&free_req_))
+        QueueRequestLocked();
 
     // Record the transaction ID we will send back to our client when we have
     // successfully started, then get out.
@@ -842,16 +843,16 @@ zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
 
 zx_status_t UsbAudioStream::OnStopLocked(dispatcher::Channel* channel,
                                          const audio_proto::RingBufStopReq& req) {
-    fbl::AutoLock txn_lock(&txn_lock_);
+    fbl::AutoLock req_lock(&req_lock_);
 
     // TODO(johngro): We currently cannot cancel USB transactions once queued.
     // When we can, we can come back and simply cancel the in-flight
     // transactions instead of having an intermediate STOPPING state we use to
-    // wait for the transactions in flight to finish via IotxnComplete.
+    // wait for the transactions in flight to finish via RequestComplete.
     if (ring_buffer_state_ != RingBufferState::STARTED) {
         audio_proto::RingBufStopResp resp;
 
-        txn_lock.release();
+        req_lock.release();
         resp.hdr = req.hdr;
         resp.result = ZX_ERR_BAD_STATE;
 
@@ -864,7 +865,7 @@ zx_status_t UsbAudioStream::OnStopLocked(dispatcher::Channel* channel,
     return ZX_OK;
 }
 
-void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
+void UsbAudioStream::RequestComplete(usb_request_t* req) {
     enum class Action {
         NONE,
         SIGNAL_STARTED,
@@ -890,35 +891,35 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
     // better ways of refining this estimate than bumping the thread prio before
     // the first transaction gets queued.  Therefor, we just have a poor
     // estimate for now and will need to live with the consequences.
-    if (!iotxn_complete_prio_bumped_) {
+    if (!req_complete_prio_bumped_) {
         zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-        iotxn_complete_prio_bumped_ = true;
+        req_complete_prio_bumped_ = true;
     }
 
     {
-        fbl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock req_lock(&req_lock_);
 
-        // Cache the status and lenght of this io transaction.
-        zx_status_t txn_status = txn->status;
-        uint32_t txn_length = txn->length;
+        // Cache the status and length of this usb request.
+        zx_status_t req_status = req->response.status;
+        uint32_t req_length = req->header.length;
 
-        // Complete the iotxn.  This will return the transaction to the free
+        // Complete the usb request.  This will return the transaction to the free
         // list and (in the case of an input stream) copy the payload to the
         // ring buffer, and update the ring buffer position.
         //
         // TODO(johngro): copying the payload out of the ring buffer is an
         // operation which goes away when we get to the zero copy world.
-        CompleteIotxnLocked(txn);
+        CompleteRequestLocked(req);
 
         // Did the transaction fail because the device was unplugged?  If so,
         // enter the stopping state and close the connections to our clients.
-        if (txn_status == ZX_ERR_IO_NOT_PRESENT) {
+        if (req_status == ZX_ERR_IO_NOT_PRESENT) {
             ring_buffer_state_ = RingBufferState::STOPPING_AFTER_UNPLUG;
         } else {
             // If we are supposed to be delivering notifications, check to see
             // if it is time to do so.
             if (bytes_per_notification_) {
-                notification_acc_ += txn_length;
+                notification_acc_ += req_length;
 
                 if ((ring_buffer_state_ == RingBufferState::STARTED) &&
                     (notification_acc_ >= bytes_per_notification_)) {
@@ -931,14 +932,14 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
 
         switch (ring_buffer_state_) {
         case RingBufferState::STOPPING:
-            if (free_iotxn_cnt_ == allocated_iotxn_cnt_) {
+            if (free_req_cnt_ == allocated_req_cnt_) {
                 resp.stop = pending_job_resp_.stop;
                 when_finished = Action::SIGNAL_STOPPED;
             }
             break;
 
         case RingBufferState::STOPPING_AFTER_UNPLUG:
-            if (free_iotxn_cnt_ == allocated_iotxn_cnt_) {
+            if (free_req_cnt_ == allocated_req_cnt_) {
                 resp.stop = pending_job_resp_.stop;
                 when_finished = Action::HANDLE_UNPLUG;
             }
@@ -950,7 +951,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
             break;
 
         case RingBufferState::STARTED:
-            QueueIotxnLocked();
+            QueueRequestLocked();
             break;
 
         case RingBufferState::STOPPED:
@@ -979,7 +980,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
                 rb_channel_->Write(&resp.start, sizeof(resp.start));
             }
             {
-                fbl::AutoLock txn_lock(&txn_lock_);
+                fbl::AutoLock req_lock(&req_lock_);
                 ring_buffer_state_ = RingBufferState::STARTED;
             }
             break;
@@ -996,7 +997,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
             }
 
             {
-                fbl::AutoLock txn_lock(&txn_lock_);
+                fbl::AutoLock req_lock(&req_lock_);
                 ring_buffer_state_ = RingBufferState::STOPPED;
             }
             break;
@@ -1007,7 +1008,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
                 rb_channel_->Write(&resp.stop, sizeof(resp.stop));
             }
             {
-                fbl::AutoLock txn_lock(&txn_lock_);
+                fbl::AutoLock req_lock(&req_lock_);
                 ring_buffer_state_ = RingBufferState::STOPPED;
             }
             break;
@@ -1025,10 +1026,10 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
     }
 }
 
-void UsbAudioStream::QueueIotxnLocked() {
+void UsbAudioStream::QueueRequestLocked() {
     ZX_DEBUG_ASSERT((ring_buffer_state_ == RingBufferState::STARTING) ||
                     (ring_buffer_state_ == RingBufferState::STARTED));
-    ZX_DEBUG_ASSERT(!list_is_empty(&free_iotxn_));
+    ZX_DEBUG_ASSERT(!list_is_empty(&free_req_));
 
     // Figure out how much we want to send or receive this time (short or long
     // packet)
@@ -1040,13 +1041,13 @@ void UsbAudioStream::QueueIotxnLocked() {
         ZX_DEBUG_ASSERT(fractional_bpp_acc_ < iso_packet_rate_);
     }
 
-    // Grab a free iotxn.
-    auto txn = list_remove_head_type(&free_iotxn_, iotxn_t, node);
-    ZX_DEBUG_ASSERT(txn != nullptr);
-    ZX_DEBUG_ASSERT(free_iotxn_cnt_ > 0);
-    --free_iotxn_cnt_;
+    // Grab a free usb request.
+    auto req = list_remove_head_type(&free_req_, usb_request_t, node);
+    ZX_DEBUG_ASSERT(req != nullptr);
+    ZX_DEBUG_ASSERT(free_req_cnt_ > 0);
+    --free_req_cnt_;
 
-    // If this is an output stream, copy our data into the iotxn.
+    // If this is an output stream, copy our data into the usb request.
     // TODO(johngro): eliminate this when we can get to a zero-copy world.
     if (!is_input()) {
         uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
@@ -1055,28 +1056,28 @@ void UsbAudioStream::QueueIotxnLocked() {
         uint32_t amt = fbl::min(avail, todo);
 
         const uint8_t* src = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
-        iotxn_copyto(txn, src, amt, 0);
+        usb_request_copyto(req, src, amt, 0);
         if (amt == avail) {
             ring_buffer_offset_ = todo - amt;
             if (ring_buffer_offset_ > 0) {
-                iotxn_copyto(txn, ring_buffer_virt_, ring_buffer_offset_, amt);
+                usb_request_copyto(req, ring_buffer_virt_, ring_buffer_offset_, amt);
             }
         } else {
             ring_buffer_offset_ += amt;
         }
     }
 
-    usb_iotxn_set_frame(txn, usb_frame_num_++);
-    txn->length = todo;
-    iotxn_queue(parent_, txn);
+    req->header.frame = usb_frame_num_++;
+    req->header.length = todo;
+    usb_request_queue(&usb_, req);
 }
 
-void UsbAudioStream::CompleteIotxnLocked(iotxn_t* txn) {
-    ZX_DEBUG_ASSERT(txn);
+void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
+    ZX_DEBUG_ASSERT(req);
 
     // If we are an input stream, copy the payload into the ring buffer.
     if (is_input()) {
-        uint32_t todo = txn->length;
+        uint32_t todo = req->header.length;
 
         uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
         ZX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
@@ -1085,10 +1086,10 @@ void UsbAudioStream::CompleteIotxnLocked(iotxn_t* txn) {
         uint32_t amt = fbl::min(avail, todo);
         uint8_t* dst = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
 
-        if (txn->status == ZX_OK) {
-            iotxn_copyfrom(txn, dst, amt, 0);
+        if (req->response.status == ZX_OK) {
+            usb_request_copyfrom(req, dst, amt, 0);
             if (amt < todo) {
-                iotxn_copyfrom(txn, ring_buffer_virt_, todo - amt, amt);
+                usb_request_copyfrom(req, ring_buffer_virt_, todo - amt, amt);
             }
         } else {
             // TODO(johngro): filling with zeros is only the proper thing to do
@@ -1103,7 +1104,7 @@ void UsbAudioStream::CompleteIotxnLocked(iotxn_t* txn) {
     }
 
     // Update the ring buffer position.
-    ring_buffer_pos_ += txn->length;
+    ring_buffer_pos_ += req->header.length;
     if (ring_buffer_pos_ >= ring_buffer_size_) {
         ring_buffer_pos_ -= ring_buffer_size_;
         ZX_DEBUG_ASSERT(ring_buffer_pos_ < ring_buffer_size_);
@@ -1116,9 +1117,9 @@ void UsbAudioStream::CompleteIotxnLocked(iotxn_t* txn) {
     }
 
     // Return the transaction to the free list.
-    list_add_head(&free_iotxn_, &txn->node);
-    ++free_iotxn_cnt_;
-    ZX_DEBUG_ASSERT(free_iotxn_cnt_ <= allocated_iotxn_cnt_);
+    list_add_head(&free_req_, &req->node);
+    ++free_req_cnt_;
+    ZX_DEBUG_ASSERT(free_req_cnt_ <= allocated_req_cnt_);
 }
 
 void UsbAudioStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
@@ -1136,7 +1137,7 @@ void UsbAudioStream::DeactivateRingBufferChannel(const dispatcher::Channel* chan
     ZX_DEBUG_ASSERT(rb_channel_.get() == channel);
 
     {
-        fbl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock req_lock(&req_lock_);
         if (ring_buffer_state_ != RingBufferState::STOPPED) {
             ring_buffer_state_ = RingBufferState::STOPPING;
         }
