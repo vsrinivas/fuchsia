@@ -9,7 +9,8 @@ use cookiemap::CookieMap;
 
 use tokio_core::reactor::Handle;
 use tokio_fuchsia;
-use futures::{Async, Future, Poll, future, task};
+use futures::{Async, Future, Poll, future};
+use futures::task::{self, Task};
 use std::collections::btree_map::Entry;
 use std::{io, mem};
 use std::sync::{Arc, Mutex};
@@ -42,7 +43,7 @@ pub trait FidlService: Sized {
 #[derive(Debug)]
 enum MessageInterest {
     WillPoll,
-    Waiting(task::Task),
+    Waiting(Task),
     Received(DecodeBuf),
     Done,
 }
@@ -100,7 +101,7 @@ impl ClientInner {
     }
 
     /// Check for receipt of a message with a given ID.
-    fn poll_recv(&self, id: u64, has_set_task: bool) -> Poll<DecodeBuf, Error> {
+    fn poll_recv(&self, id: u64, task_to_register_opt: Option<&Task>) -> Poll<DecodeBuf, Error> {
         // Look to see if there are messages available
         if self.received_messages_count.load(Ordering::SeqCst) > 0 {
            if let Entry::Occupied(mut entry) =
@@ -125,7 +126,7 @@ impl ClientInner {
                 Err(e) => {
                     if e.kind() == io::ErrorKind::WouldBlock {
                         // Set the current task to be notified if a response is seen
-                        if !has_set_task {
+                        if let Some(task_to_register) = task_to_register_opt {
                             if let Entry::Occupied(mut entry) =
                                 self.message_interests.lock().unwrap().inner_map().entry(id)
                             {
@@ -137,7 +138,7 @@ impl ClientInner {
                                     return Ok(Async::Ready(buf));
                                 } else {
                                     // Set the current task to be notified when a response arrives.
-                                    *entry.get_mut() = MessageInterest::Waiting(task::current());
+                                    *entry.get_mut() = MessageInterest::Waiting(task_to_register.clone());
                                 }
                             }
                         }
@@ -238,7 +239,7 @@ impl Client {
         future::Either::B(MessageResponse {
             id: id,
             client: Some(self.inner.clone()),
-            has_polled: false,
+            last_registered_task: None,
         })
     }
 }
@@ -250,25 +251,35 @@ pub struct MessageResponse {
     id: u64,
     // `None` if the message response has been recieved
     client: Option<Arc<ClientInner>>,
-    has_polled: bool,
+    last_registered_task: Option<Task>,
 }
 
 impl Future for MessageResponse {
     type Item = DecodeBuf;
     type Error = Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let res = if let Some(ref client) = self.client {
-            client.poll_recv(self.id, self.has_polled)
-        } else {
-            return Err(Error::PollAfterCompletion)
-        };
+        let res;
+        {
+            let client = self.client.as_ref().ok_or(Error::PollAfterCompletion)?;
+
+            let current_task_is_registered =
+                self.last_registered_task
+                    .as_ref()
+                    .map_or(false, |task| task.will_notify_current());
+
+            if !current_task_is_registered {
+                let current = task::current();
+                res = client.poll_recv(self.id, Some(&current));
+                self.last_registered_task = Some(current);
+            } else {
+                res = client.poll_recv(self.id, None);
+            }
+        }
 
         // Drop the client reference if the response has been received
         if let Ok(Async::Ready(_)) = res {
             self.client.take();
         }
-
-        self.has_polled = true;
 
         res
     }
