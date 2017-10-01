@@ -28,6 +28,7 @@
 #include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
 #include <zx/vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -1894,24 +1895,24 @@ struct fvm_test_state_t {
     fvm_thread_state_t thread_states[ThreadCount];
 
     fbl::Mutex lock;
-    size_t slices_left;
-    size_t thread_count;
+    size_t slices_left TA_GUARDED(lock);
+};
+
+template <size_t ThreadCount>
+struct thrd_args_t {
+    size_t tid;
+    fvm_test_state_t<ThreadCount>* st;
 };
 
 template <size_t ThreadCount>
 int random_access_thread(void* arg) {
-    auto st = static_cast<fvm_test_state_t<ThreadCount>*>(arg);
+    auto ta = static_cast<thrd_args_t<ThreadCount>*>(arg);
+    uint8_t color = static_cast<uint8_t>(ta->tid);
+    auto st = ta->st;
+    auto self = &st->thread_states[color];
+
     unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
     unittest_printf("random_access_thread using seed: %u\n", seed);
-
-    uint8_t color = 0;
-    fvm_thread_state_t* self;
-    {
-        fbl::AutoLock al(&st->lock);
-        self = &st->thread_states[st->thread_count];
-        color = (uint8_t)st->thread_count;
-        st->thread_count++;
-    }
 
     // Before we begin, color our first slice.
     // We'll identify our own slices by the "color", which
@@ -2104,8 +2105,11 @@ static bool TestRandomOpMultithreaded(void) {
     fvm_test_state_t<ThreadCount> s{};
     s.block_size = kBlockSize;
     s.slice_size = kSliceSize;
-    s.slices_left = kSlicesCount;
-    s.slices_total = kSlicesCount;
+    {
+        fbl::AutoLock al(&s.lock);
+        s.slices_left = kSlicesCount - ThreadCount;
+        s.slices_total = kSlicesCount;
+    }
 
     int fd = open(fvm_driver, O_RDWR);
     ASSERT_GT(fd, 0);
@@ -2124,10 +2128,13 @@ static bool TestRandomOpMultithreaded(void) {
         ASSERT_GT(s.thread_states[i].vp_fd, 0);
     }
 
-    s.slices_left -= ThreadCount;
+    thrd_args_t<ThreadCount> ta[ThreadCount];
 
     // Initialize and launch all threads
     for (size_t i = 0; i < ThreadCount; i++) {
+        ta[i].tid = i;
+        ta[i].st = &s;
+
         EXPECT_EQ(s.thread_states[i].extents.size(), 0);
         fvm_extent_t extent;
         extent.start = 0;
@@ -2137,7 +2144,7 @@ static bool TestRandomOpMultithreaded(void) {
         EXPECT_TRUE(ac.check());
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice));
         EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
-                              random_access_thread<ThreadCount>, &s),
+                              random_access_thread<ThreadCount>, &ta[i]),
                   thrd_success);
     }
 
@@ -2157,7 +2164,6 @@ static bool TestRandomOpMultithreaded(void) {
         // Rebind the FVM (simulating rebooting)
         fd = FVMRebind(fd, ramdisk_path, entries, fbl::count_of(entries));
         ASSERT_GT(fd, 0);
-        s.thread_count = 0;
 
         // Re-open all partitions, re-launch the worker threads
         for (size_t i = 0; i < ThreadCount; i++) {
@@ -2166,7 +2172,7 @@ static bool TestRandomOpMultithreaded(void) {
             ASSERT_GT(vp_fd, 0);
             s.thread_states[i].vp_fd = vp_fd;
             EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
-                                  random_access_thread<ThreadCount>, &s),
+                                  random_access_thread<ThreadCount>, &ta[i]),
                       thrd_success);
         }
     }
