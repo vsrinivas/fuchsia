@@ -33,7 +33,7 @@ fuchsia$ jiri update
 fuchsia$ sh scripts/gdb/build-gdb.sh
 ```
 
-The gdb binary can be found in `out/toolchain/gdb-x86_64-linux/bin/gdb`.
+The gdb binary can be found in `out/toolchain/x86_64-linux/gdb/bin/gdb`.
 
 ### On the target machine running Fuchsia
 
@@ -75,7 +75,7 @@ This example uses the debugger unit test program, passing "segfault" as
 an argument to trigger a segfault (to help exercise the debugger).
 
 ```
-debugserver --verbose=2 7000 /boot/test/debugger-test segfault
+debugserver --verbose=2 7000 /boot/test/sys/debugger-test segfault
 ```
 
 ### On the host machine
@@ -84,7 +84,7 @@ Use the `target extended-remote` command to connect to the IP
 and port number that stub acquired earlier:
 
 ```
-fuchsia$ out/toolchain/gdb-x86_64-linux/bin/gdb
+fuchsia$ out/toolchain/x86_64-linux/gdb/bin/gdb
 GNU gdb (GDB) <version>
 ...
 Hi, this is fuchsia.py. Adding Fuchsia support.
@@ -96,7 +96,7 @@ Remote debugging using 192.168.3.53:7000
 From here we can use gdb as usual:
 
 ```
-(gdb) file out/build-zircon/build-zircon-pc-x86-64/utest/debugger/debugger.elf
+(gdb) file out/build-zircon/build-zircon-pc-x86-64/system/utest/debugger/debugger.elf
 (gdb) break main
 (gdb) run
 Starting program: ...
@@ -150,10 +150,10 @@ $ debugserver 7000
 On Linux:
 
 ```
-fuchsia$ out/toolchain/gdb-x86_64-linux/bin/gdb
-(gdb) file out/build-zircon/build-zircon-pc-x86-64/utest/debugger/debugger.elf
+fuchsia$ out/toolchain/x86_64-linux/gdb/bin/gdb
+(gdb) file out/build-zircon/build-zircon-pc-x86-64/system/utest/debugger/debugger.elf
 (gdb) tar ext 192.168.3.53:7000
-(gdb) set remote exec-file /boot/test/debugger-test
+(gdb) set remote exec-file /boot/test/sys/debugger-test
 (gdb) r segfault
 ...
 Program received signal SIGSEGV, Segmentation fault.
@@ -172,6 +172,11 @@ Debugserver recognizes the gdb "monitor" command:
 help - print this help
 exit - quit debugserver
 quit - quit debugserver
+set <parameter> <value>
+show <parameter>
+
+Parameters:
+  verbosity - useful range is -2 to 3 (-2 is most verbose)
 ```
 
 ## Notes
@@ -216,9 +221,9 @@ place to look.
 Do both of these files exist?
 
 ```
-fuchsia$ ls -l out/sysroot/x86_64-fuchsia/debug-info/{libc.so,ld.so.1}
-lrwxrwxrwx 1 dje eng       7 Dec 19 13:16 out/sysroot/x86_64-fuchsia/debug-info/ld.so.1 -> libc.so
--rwxr-x--- 1 dje eng 3435712 Dec 19 13:16 out/sysroot/x86_64-fuchsia/debug-info/libc.so
+fuchsia$ ls -l out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/{libc.so,ld.so.1}
+lrwxrwxrwx 1 dje eng       7 Oct  1 12:53 out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/ld.so.1 -> libc.so
+-rwxr-x--- 2 dje eng 4934096 Oct  1 12:53 out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/libc.so
 ```
 
 Does libc.so have debug information?
@@ -235,8 +240,8 @@ of the program is known. One issue is "How much later?" There is a
 special function in the dynamic linker, `dl_debug_state()`, that the
 dynamic linker calls when the main executable, and any shared libraries
 it uses, have been loaded into memory. GDB sets a breakpoint on this
-function and when the program gets here GDB can know where the program has
-been loaded. But what's the address of `dl_debug_state`? This is why
+function and when the program gets here GDB can then know where the program
+has been loaded. But what's the address of `dl_debug_state`? This is why
 GDB needs the symbols of the dynamic linker: to determine the address
 of `dl_debug_state`. [There are other ways to make this work. Maybe
 in time GDB will use one of them.]
