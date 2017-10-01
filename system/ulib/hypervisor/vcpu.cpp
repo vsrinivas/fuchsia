@@ -365,15 +365,11 @@ zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_
 
     for (size_t i = 0; i < num_traps; ++i) {
         const trap_args_t* trap = &traps[i];
-
         zx_handle_t port = trap->use_port ? device->port : ZX_HANDLE_INVALID;
-        uint64_t key = trap->use_port ? trap->key : 0;
-
-        zx_status_t status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, port, key);
-        if (status != ZX_OK) {
-            fprintf(stderr, "Failed to set trap for device port %d\n", status);
+        zx_status_t status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, port,
+                                               trap->key);
+        if (status != ZX_OK)
             return ZX_ERR_INTERNAL;
-        }
     }
 
     if (create_port) {

@@ -56,7 +56,6 @@ zx_status_t PortRange::Queue(const zx_port_packet_t& packet, StateReloader* relo
     if (port_packet == nullptr)
         return ZX_ERR_NO_MEMORY;
     port_packet->packet = packet;
-    port_packet->packet.key = key_;
     zx_status_t status = port_->Queue(port_packet, ZX_SIGNAL_NONE, 0);
     if (status != ZX_OK)
         port_allocator_.Free(port_packet);
@@ -70,8 +69,9 @@ zx_status_t PacketMux::AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
         return ZX_ERR_INVALID_ARGS;
     auto iter = ports->find(addr);
     if (iter.IsValid()) {
-        dprintf(INFO, "Port range addr %#lx len %lu already exists with addr %#lx len %lu\n",
-                addr, len, iter->GetKey(), iter->Len());
+        dprintf(INFO, "Port range for kind %u (addr %#lx len %lu key %lu) already exists "
+                "(addr %#lx len %lu key %lu)\n", kind, addr, len, key, iter->addr(), iter->len(),
+                iter->key());
         return ZX_ERR_ALREADY_EXISTS;
     }
     fbl::AllocChecker ac;

@@ -17,6 +17,7 @@
 #include "constants_priv.h"
 
 static const uint32_t kMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+static const uint64_t kTrapKey = 0x1234;
 
 extern const char vcpu_resume_start[];
 extern const char vcpu_resume_end[];
@@ -122,14 +123,16 @@ static bool vcpu_resume(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.key, 0);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
     EXPECT_EQ(packet.guest_io.port, UART_PORT);
     EXPECT_EQ(packet.guest_io.access_size, 1u);
     EXPECT_EQ(packet.guest_io.data[0], 'm');
 
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.guest_io.port, UART_PORT);
+    EXPECT_EQ(packet.key, 0);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
+    EXPECT_EQ(packet.guest_io.port, UART_PORT);
     EXPECT_EQ(packet.guest_io.access_size, 1u);
     EXPECT_EQ(packet.guest_io.data[0], 'x');
 
@@ -219,11 +222,12 @@ static bool guest_set_trap(void) {
 
     // Trap on access to the last page.
     ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_MEM, VMO_SIZE - PAGE_SIZE, PAGE_SIZE,
-                                ZX_HANDLE_INVALID, 0),
+                                ZX_HANDLE_INVALID, kTrapKey),
               ZX_OK);
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    ASSERT_EQ(packet.key, kTrapKey);
     ASSERT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
 
 #if __x86_64__
@@ -258,7 +262,7 @@ static bool guest_set_trap_with_port(void) {
     ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
 
     // Trap on writes to TRAP_PORT.
-    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_IO, TRAP_PORT, 1, port, 0), ZX_OK);
+    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_IO, TRAP_PORT, 1, port, kTrapKey), ZX_OK);
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
@@ -266,6 +270,7 @@ static bool guest_set_trap_with_port(void) {
     EXPECT_EQ(packet.guest_io.port, EXIT_TEST_PORT);
 
     ASSERT_EQ(zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0), ZX_OK);
+    ASSERT_EQ(packet.key, kTrapKey);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
     EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
 
@@ -290,7 +295,7 @@ static bool guest_set_trap_with_bell(void) {
 
     // Trap on access to the last page.
     ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_BELL, VMO_SIZE - PAGE_SIZE, PAGE_SIZE,
-                                port, 0),
+                                port, kTrapKey),
               ZX_OK);
 
     zx_port_packet_t packet = {};
@@ -299,6 +304,7 @@ static bool guest_set_trap_with_bell(void) {
     EXPECT_EQ(packet.guest_io.port, EXIT_TEST_PORT);
 
     ASSERT_EQ(zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0), ZX_OK);
+    ASSERT_EQ(packet.key, kTrapKey);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
     EXPECT_EQ(packet.guest_bell.addr, VMO_SIZE - PAGE_SIZE);
 

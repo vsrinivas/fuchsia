@@ -20,19 +20,20 @@ zx_status_t zx_guest_set_trap(zx_handle_t guest, uint32_t kind, zx_vaddr_t addr,
 there is an access by a VCPU within the address range defined by *addr* and
 *len*, within the address space defined by *kind*.
 
-If *port* is specified, a packet with a *key* for the trap will be delivered
-through the port each time it is triggered, otherwise if *ZX_HANDLE_INVALID* is
-given, the packet will be delivered through **vcpu_resume**() and a key of 0
-will be set. This provides control over whether the packet is delivered
-asynchronously or synchronously, and provides the ability to distinguish packets
-multiplexed onto the same port.
+If *port* is specified, a packet for the trap will be delivered through *port*
+each time the trap is triggered, otherwise if *ZX_HANDLE_INVALID* is given, a
+packet will be delivered through **vcpu_resume**(). This provides control over
+whether the packet is delivered asynchronously or synchronously.
 
 When *port* is specified, a fixed number of packets are pre-allocated per trap.
 If all the packets are exhausted, execution of the VCPU that caused the trap
 will be paused. When at least one packet is dequeued, execution of the VCPU will
-resume. To dequeue a packet from *port*, use *port_wait*(). Multiple threads may
-use *port_wait*() to dequeue packets, enabling the use of a thread pool to
+resume. To dequeue a packet from *port*, use **port_wait**(). Multiple threads
+may use **port_wait**() to dequeue packets, enabling the use of a thread pool to
 handle traps.
+
+*key* is used to set the key field within *zx_port_packet_t*, and can be used to
+distinguish between packets for different traps.
 
 *kind* may be either *ZX_GUEST_TRAP_BELL*, *ZX_GUEST_TRAP_MEM*, or
 *ZX_GUEST_TRAP_IO*. If *ZX_GUEST_TRAP_BELL* or *ZX_GUEST_TRAP_MEM* is specified,

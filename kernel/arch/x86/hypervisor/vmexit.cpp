@@ -273,6 +273,7 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
     next_rip(exit_info, vmcs);
 
     memset(packet, 0, sizeof(*packet));
+    packet->key = port_range->key();
     packet->type = ZX_PKT_TYPE_GUEST_IO;
     packet->guest_io.port = io_info.port;
     packet->guest_io.access_size = io_info.access_size;
@@ -486,9 +487,10 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
         return status;
     next_rip(exit_info, vmcs);
 
-    switch (port_range->Kind()) {
+    switch (port_range->kind()) {
     case ZX_GUEST_TRAP_BELL:
         memset(packet, 0, sizeof(*packet));
+        packet->key = port_range->key();
         packet->type = ZX_PKT_TYPE_GUEST_BELL;
         packet->guest_bell.addr = guest_paddr;
         if (port_range->HasPort())
@@ -497,6 +499,7 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
         break;
     case ZX_GUEST_TRAP_MEM:
         memset(packet, 0, sizeof(*packet));
+        packet->key = port_range->key();
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
         packet->guest_mem.inst_len = exit_info.instruction_length & UINT8_MAX;
@@ -539,16 +542,6 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
                                         GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                                         zx_port_packet_t* packet) {
     vaddr_t guest_paddr = exit_info.guest_physical_address;
-    EptViolationInfo ept_violation_info(exit_info.exit_qualification);
-
-    uint pf_flags = VMM_PF_FLAG_HW_FAULT;
-    if (ept_violation_info.write)
-        pf_flags |= VMM_PF_FLAG_WRITE;
-    if (ept_violation_info.instruction)
-        pf_flags |= VMM_PF_FLAG_INSTRUCTION;
-    if (!ept_violation_info.present)
-        pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
-
     zx_status_t status = handle_memory(exit_info, vmcs, guest_paddr, gpas, mux, packet);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
@@ -558,6 +551,14 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
         return status;
     }
 
+    EptViolationInfo ept_violation_info(exit_info.exit_qualification);
+    uint pf_flags = VMM_PF_FLAG_HW_FAULT;
+    if (ept_violation_info.write)
+        pf_flags |= VMM_PF_FLAG_WRITE;
+    if (ept_violation_info.instruction)
+        pf_flags |= VMM_PF_FLAG_INSTRUCTION;
+    if (!ept_violation_info.present)
+        pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
     return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 

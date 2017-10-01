@@ -43,11 +43,14 @@ public:
     zx_status_t Init();
     zx_status_t Queue(const zx_port_packet_t& packet, StateReloader* reloader);
 
-    uint32_t Kind() const { return kind_; }
     zx_vaddr_t GetKey() const { return addr_; }
-    size_t Len() const { return len_; }
     bool InRange(zx_vaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
     bool HasPort() const { return !!port_; }
+
+    uint32_t kind() const { return kind_; }
+    zx_vaddr_t addr() const { return addr_; }
+    size_t len() const { return len_; }
+    uint64_t key() const { return key_; }
 
 private:
     const uint32_t kind_;
