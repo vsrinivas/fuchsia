@@ -5,6 +5,7 @@
 """Initialize gdb for debugging Fuchsia code."""
 
 import gdb
+import glob
 import os
 
 
@@ -30,6 +31,11 @@ if len(_GDB_DASH_VERSION) >= 2:
         except ValueError:
             pass
 
+# The top level zircon build directory
+_TOP_ZIRCON_BUILD_DIR = "out/build-zircon"
+
+# Prefix of zircon build directories within _TOP_ZIRCON_BUILD_DIR.
+_ZIRCON_BUILD_SUBDIR_PREFIX = "build-zircon-"
 
 # True if fuchsia support has been initialized.
 _INITIALIZED_FUCHSIA_SUPPORT = False
@@ -113,6 +119,22 @@ def _ClearObjfilesHandler(event):
     event.progspace.seen_exec = False
 
 
+def _FindSysroot(arch):
+    """Return the path to the sysroot for arch."""
+    if arch == "x86-64":
+        suffix = "-x86-64"
+    elif arch == "arm64":
+        suffix = "-arm64"
+    else:
+        assert(False)
+    print ("TRYING: %s/%s*%s" % (
+        _TOP_ZIRCON_BUILD_DIR, _ZIRCON_BUILD_SUBDIR_PREFIX, suffix))
+    for filename in glob.iglob("%s/%s*%s" % (
+            _TOP_ZIRCON_BUILD_DIR, _ZIRCON_BUILD_SUBDIR_PREFIX, suffix)):
+        return "%s/sysroot" % (filename)
+    return None
+
+
 def _NewObjfileHandler(event):
     """Handle new objfiles being loaded."""
     # TODO(dje): Use this hook to automagically fetch debug info.
@@ -152,12 +174,16 @@ def _NewObjfileHandler(event):
         return
 
     # The sysroot to use is dependent on the architecture of the program.
+    # This is needed to find ld.so debug info.
+    # TODO(dje): IWBN to not need ld.so debug info.
     # TODO(dje): IWBN if objfiles exposed their arch field.
     arch_string = gdb.execute("show arch", to_string=True)
     if arch_string.find("aarch64") >= 0:
-        sysroot_dir = "out/sysroot/aarch64-fuchsia"
+        # Alas there are different directories for different arm64 builds
+        # (qemu, rpi3, etc.). Pick something, hopefully this can go away soon.
+        sysroot_dir = _FindSysroot("arm64")
     elif arch_string.find("x86-64") >= 0:
-        sysroot_dir = "out/sysroot/x86_64-fuchsia"
+        sysroot_dir = _FindSysroot("x86-64")
     else:
         print "WARNING: unsupported architecture\n%s" % (arch_string)
         return
@@ -166,9 +192,12 @@ def _NewObjfileHandler(event):
     # have a path on Fuchsia. Plus files in Fuchsia are intended to be
     # "ephemeral" by nature. So we punt on setting sysroot for now, even
     # though IWBN if we could use it.
-    solib_search_path = "%s/debug-info" % (sysroot_dir)
-    print "Note: Setting solib-search-path to %s" % (solib_search_path)
-    gdb.execute("set solib-search-path %s" % (solib_search_path))
+    if sysroot_dir:
+        solib_search_path = "%s/debug-info" % (sysroot_dir)
+        print "Note: Setting solib-search-path to %s" % (solib_search_path)
+        gdb.execute("set solib-search-path %s" % (solib_search_path))
+    else:
+        print "WARNING: could not find sysroot directory"
 
 
 def _InitializeFuchsiaObjfileTracking():
