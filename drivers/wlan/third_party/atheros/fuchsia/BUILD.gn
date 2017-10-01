@@ -41,6 +41,8 @@ driver_module("ath10k_driver") {
     "ddk",
     "driver",
   ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 # TODO(tkilbourn): copy firmware

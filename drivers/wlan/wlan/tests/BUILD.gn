@@ -79,6 +79,8 @@ executable("common_tests") {
     "//garnet/drivers/wlan/common",
     "//third_party/gtest",
   ]
+
+  configs += [ "//garnet/drivers/wlan/wlan:wlan_config" ]
 }
 
 package("wlan_tests") {

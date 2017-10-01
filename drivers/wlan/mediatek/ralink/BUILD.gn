@@ -29,6 +29,8 @@ driver_module("ralink_driver") {
     "driver",
     "sync",
   ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 copy("ralink-firmware") {

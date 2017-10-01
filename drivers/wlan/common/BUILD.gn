@@ -8,4 +8,6 @@ source_set("common") {
     "moving_average.h",
     "cipher.h",
   ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }

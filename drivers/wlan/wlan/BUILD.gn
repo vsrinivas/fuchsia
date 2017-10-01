@@ -48,6 +48,7 @@ source_set("mlme") {
   ]
 
   public_configs = [ ":wlan_config" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 driver_module("wlan_driver") {
@@ -68,6 +69,7 @@ driver_module("wlan_driver") {
   ]
 
   libs = [ "driver" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 package("wlan") {
