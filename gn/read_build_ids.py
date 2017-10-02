@@ -44,7 +44,7 @@ def main():
             # if it exists and matches the buildid.
             path_dir = os.path.dirname(path)
             path_base = os.path.basename(path)
-            unstripped_locations = ['exe.unstripped', 'lib.unstripped']
+            unstripped_locations = ['exe.unstripped', 'lib.unstripped', 'x64-shared/lib.unstripped', 'arm64-shared/lib.unstripped']
             for location in unstripped_locations:
                 unstripped_path = os.path.join(path_dir,
                                                location,
