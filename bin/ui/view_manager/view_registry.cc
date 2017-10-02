@@ -163,6 +163,10 @@ void ViewRegistry::CreateView(
   view_state->top_node().Export(std::move(parent_export_token));
   view_state->top_node().SetTag(view_state->view_token()->value);
   view_state->top_node().SetLabel(view_state->FormattedLabel());
+
+  // TODO(MZ-371): Avoid Z-fighting by introducing a smidgen of elevation
+  // between each view and its embedded sub-views.  This is not a long-term fix.
+  view_state->top_node().SetTranslation(0.f, 0.f, 0.1f);
   SchedulePresentSession();
 
   // Add to registry and return token.
