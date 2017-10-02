@@ -1080,9 +1080,15 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(
     CoroutineHandler* handler,
     std::unique_ptr<const Commit> commit,
     std::vector<ObjectDigest> new_objects) {
+  Status status = ContainsCommit(handler, commit->GetId());
+
   // If the commit is already present, do nothing.
-  if (ContainsCommit(handler, commit->GetId()) == Status::OK) {
+  if (status == Status::OK) {
     return Status::OK;
+  }
+
+  if (status != Status::NOT_FOUND) {
+    return status;
   }
 
   std::vector<std::unique_ptr<const Commit>> commits;
@@ -1104,12 +1110,17 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   for (auto& id_and_bytes : ids_and_bytes) {
     CommitId id = std::move(id_and_bytes.id);
     std::string storage_bytes = std::move(id_and_bytes.bytes);
-    if (ContainsCommit(handler, id) == Status::OK) {
+    Status status = ContainsCommit(handler, id);
+    if (status == Status::OK) {
       Status status = SynchronousMarkCommitSynced(handler, id);
       if (status != Status::OK) {
         return status;
       }
       continue;
+    }
+
+    if (status != Status::NOT_FOUND) {
+      return status;
     }
 
     std::unique_ptr<const Commit> commit =
