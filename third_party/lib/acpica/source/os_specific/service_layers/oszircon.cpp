@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <trace.h>
 #include <vm/vm_aspace.h>
+#include <zircon/types.h>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
@@ -141,7 +142,7 @@ void *AcpiOsMapMemory(
     ACPI_PHYSICAL_ADDRESS end = ROUNDUP(PhysicalAddress + Length, PAGE_SIZE);
 
     void *vaddr = NULL;
-    status_t status = VmAspace::kernel_aspace()->AllocPhysical(
+    zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
             "acpi_mapping",
             end - aligned_address,
             &vaddr,
@@ -166,7 +167,7 @@ void *AcpiOsMapMemory(
  *        identical to the value used in the call to AcpiOsMapMemory.
  */
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    status_t status = VmAspace::kernel_aspace()->FreeRegion(
+    zx_status_t status = VmAspace::kernel_aspace()->FreeRegion(
             reinterpret_cast<vaddr_t>(LogicalAddress));
     if (status != ZX_OK) {
         TRACEF("WARNING: ACPI failed to free region %p, size %" PRIu64 "\n",

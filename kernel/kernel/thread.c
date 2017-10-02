@@ -49,7 +49,7 @@ spin_lock_t thread_lock = SPIN_LOCK_INITIAL_VALUE;
 static int idle_thread_routine(void*) __NO_RETURN;
 static void thread_exit_locked(thread_t* current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend(void);
-static status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_error, bool* local_resched);
+static zx_status_t thread_unblock_from_wait_queue(thread_t* t, zx_status_t wait_queue_error, bool* local_resched);
 
 static void init_thread_struct(thread_t* t, const char* name) {
     memset(t, 0, sizeof(thread_t));
@@ -1467,7 +1467,7 @@ void wait_queue_destroy(wait_queue_t* wait) {
  *
  * @return ZX_ERR_BAD_STATE if thread was not in any wait queue.
  */
-static zx_status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_error, bool* local_resched) {
+static zx_status_t thread_unblock_from_wait_queue(thread_t* t, zx_status_t wait_queue_error, bool* local_resched) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));

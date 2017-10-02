@@ -59,7 +59,7 @@ void event_destroy(event_t*);
  * Interruptable arg allows it to return early with ZX_ERR_INTERNAL_INTR_KILLED if thread
  * is signaled for kill.
  */
-status_t event_wait_deadline(event_t*, zx_time_t, bool interruptable);
+zx_status_t event_wait_deadline(event_t*, zx_time_t, bool interruptable);
 
 /* no deadline, non interruptable version of the above. */
 static inline zx_status_t event_wait(event_t* e) {

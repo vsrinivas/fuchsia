@@ -20,8 +20,6 @@ typedef unsigned short u_short;
 typedef unsigned int u_int;
 typedef unsigned long u_long;
 
-typedef int status_t;
-
 typedef uintptr_t addr_t;
 typedef uintptr_t vaddr_t;
 typedef uintptr_t paddr_t;
