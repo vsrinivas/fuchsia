@@ -9,7 +9,6 @@
         "packages/gn/leveldb",
         "packages/gn/libc-tests",
         "packages/gn/make-fuchsia-vol",
-        "packages/gn/mi_dashboard",
         "packages/gn/pm",
         "packages/gn/pmd",
         "packages/gn/pmd_tests",

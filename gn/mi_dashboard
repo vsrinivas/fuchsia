@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "dart"
-    ],
-    "packages": {
-        "mi_dashboard": "//peridot/bin/agents/mi_dashboard"
-    }
-}
