@@ -65,7 +65,7 @@ build_toybox() {
 
   LDFLAGS="--static" make -C "$toybox_src" -j100
 
-  mkdir -p "$sysroot_dir"/{bin,sbin,etc,proc,sys,usr/{bin,sbin}}
+  mkdir -p "$sysroot_dir"/{bin,sbin,etc,proc,sys,usr/{bin,sbin},dev,tmp}
   PREFIX=$sysroot_dir make -C "$toybox_src" install
 }
 
@@ -107,6 +107,7 @@ generate_init() {
 #!/bin/sh
 mount -t proc none /proc
 mount -t sysfs none /sys
+mount -t devtmpfs none /dev
 echo Launched toybox
 /bin/sh
 _EOF
