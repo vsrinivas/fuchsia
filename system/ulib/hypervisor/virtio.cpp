@@ -42,10 +42,10 @@ static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
     return index % queue->size;
 }
 
-static int ring_avail_count(virtio_queue_t* queue) {
-    if (queue->avail == NULL)
+static bool ring_has_avail(virtio_queue_t* queue) {
+    if (queue->avail == nullptr)
         return 0;
-    return queue->avail->idx - queue->index;
+    return queue->avail->idx != queue->index;
 }
 
 static bool validate_queue_range(VirtioDevice* device, zx_vaddr_t addr, size_t size) {
@@ -95,7 +95,7 @@ void virtio_queue_set_used_addr(virtio_queue_t* queue, uint64_t used_paddr) {
 
 void virtio_queue_signal(virtio_queue_t* queue) {
     mtx_lock(&queue->mutex);
-    if (ring_avail_count(queue) > 0)
+    if (ring_has_avail(queue))
         cnd_signal(&queue->avail_ring_cnd);
     mtx_unlock(&queue->mutex);
 }
@@ -128,7 +128,7 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
 
 // This must not return any errors besides ZX_ERR_NOT_FOUND.
 static zx_status_t virtio_queue_next_avail_locked(virtio_queue_t* queue, uint16_t* index) {
-    if (ring_avail_count(queue) < 1)
+    if (!ring_has_avail(queue))
         return ZX_ERR_NOT_FOUND;
 
     *index = queue->avail->ring[ring_index(queue, queue->index++)];
@@ -275,7 +275,7 @@ zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
 
     virtio_queue_return(queue, head, used_len);
 
-    return ring_avail_count(queue) > 0 ? ZX_ERR_NEXT : ZX_OK;
+    return ring_has_avail(queue) ? ZX_ERR_NEXT : ZX_OK;
 }
 
 zx_status_t VirtioDevice::ReadConfig(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
