@@ -18,6 +18,7 @@ package("media") {
     "simple_sine",
     "simple_sine_sync",
     "tones",
+    "tts",
     "vu_meter",
     "wav_record",
   ]
@@ -47,6 +48,10 @@ package("media") {
     {
       name = "tones"
     },
+    {
+      name = "tts"
+    },
+
     {
       name = "vu_meter"
     },
