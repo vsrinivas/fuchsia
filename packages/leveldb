@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "leveldb_tests": "//third_party/leveldb:leveldb_tests"
+    }
+}
