@@ -9,6 +9,7 @@
 #include "lib/fxl/strings/ascii.h"
 #include "peridot/bin/ledger/callback/cancellable_helper.h"
 #include "peridot/bin/ledger/callback/destruction_sentinel.h"
+#include "peridot/bin/ledger/callback/to_function.h"
 #include "peridot/bin/ledger/callback/trace_callback.h"
 
 namespace ledger {
@@ -83,7 +84,7 @@ class NetworkServiceImpl::RunningRequest {
     const std::string& method = request->method.get();
     url_loader_->Start(
         std::move(request),
-        TRACE_CALLBACK(std::function<void(network::URLResponsePtr)>(
+        TRACE_CALLBACK(callback::ToStdFunction(
                            [this](network::URLResponsePtr response) {
                              url_loader_.reset();
 
