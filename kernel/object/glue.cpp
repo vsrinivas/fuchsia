@@ -25,7 +25,6 @@
 #include <object/policy_manager.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <object/resource_dispatcher.h>
 
 #include <fbl/function.h>
 
@@ -55,43 +54,6 @@ fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
 
 PolicyManager* GetSystemPolicyManager() {
     return policy_manager;
-}
-
-zx_status_t validate_resource(zx_handle_t handle, uint32_t kind) {
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<ResourceDispatcher> resource;
-    auto status = up->GetDispatcher(handle, &resource);
-    if (status != ZX_OK) {
-        return status;
-    }
-    uint32_t rkind = resource->get_kind();
-    if ((rkind == ZX_RSRC_KIND_ROOT) || (rkind == kind)) {
-        return ZX_OK;
-    }
-    return ZX_ERR_ACCESS_DENIED;
-}
-
-zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uint64_t low,
-                                     uint64_t high) {
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<ResourceDispatcher> resource;
-    auto status = up->GetDispatcher(handle, &resource);
-    if (status != ZX_OK) {
-        return status;
-    }
-    uint32_t rsrc_kind = resource->get_kind();
-    if (rsrc_kind == ZX_RSRC_KIND_ROOT) {
-        // root resource is valid for everything
-        return ZX_OK;
-    } else if (rsrc_kind == kind) {
-        uint64_t rsrc_low, rsrc_high;
-        resource->get_range(&rsrc_low, &rsrc_high);
-        if (low >= rsrc_low && high <= rsrc_high) {
-            return ZX_OK;
-        }
-    }
-
-    return ZX_ERR_ACCESS_DENIED;
 }
 
 // Counts and optionally prints all job/process descendants of a job.
