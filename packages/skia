@@ -1,0 +1,18 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/vulkan",
+        "garnet/packages/zlib"
+    ],
+    "labels": [
+        "//third_party/skia"
+    ],
+    "binaries": [
+        {
+            "binary": "dm",
+            "bootfs_path": "tests/dm"
+        }
+    ]
+}

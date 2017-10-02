@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "libc-tests": "//third_party/libc-tests"
+    }
+}
