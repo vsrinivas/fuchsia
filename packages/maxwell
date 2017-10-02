@@ -1,7 +1,6 @@
 {
     "languages": [
-        "cpp",
-        "dart"
+        "cpp"
     ],
     "labels": [
         "//peridot/maxwell_legacy:all",
@@ -9,8 +8,7 @@
         "//peridot/maxwell_legacy:unittests"
     ],
     "packages": {
-        "maxwell": "//peridot/maxwell_legacy:maxwell",
-        "usage_log": "//peridot/bin/agents/usage_log"
+        "maxwell": "//peridot/maxwell_legacy:maxwell"
     },
     "binaries": [
         {
@@ -28,14 +26,6 @@
         {
             "binary": "agents/ideas",
             "bootfs_path": "apps/agents/ideas"
-        },
-        {
-            "binary": "agents/module_suggester.dartx",
-            "bootfs_path": "apps/agents/module_suggester.dartx"
-        },
-        {
-            "binary": "gen/peridot/bin/modules/basic_text_reporter/basic_text_reporter.flx",
-            "bootfs_path": "apps/maxwell_btr"
         },
         {
             "binary": "agents/basic_text_listener",

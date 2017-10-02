@@ -9,10 +9,7 @@ group("agents") {
     # changes.
     "//peridot/bin/agents/basic_text_listener",
     "//peridot/bin/agents/entity_selector",
-    "//peridot/bin/agents/mi_dashboard",
-    "//peridot/bin/agents/module_suggester_dart",
     "//peridot/bin/agents/proposal_maker",
-    "//peridot/bin/agents/usage_log",
   ]
 }
 

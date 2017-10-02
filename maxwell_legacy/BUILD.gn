@@ -36,7 +36,6 @@ group("all") {
     "//peridot/bin/action_log",
     "//peridot/bin/agents",
     "//peridot/bin/context_engine",
-    "//peridot/bin/modules",
     "//peridot/bin/resolver",
     "//peridot/bin/suggestion_engine",
     "//peridot/bin/user",
