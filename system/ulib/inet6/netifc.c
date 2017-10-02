@@ -135,17 +135,17 @@ static void tx_complete(void* ctx, void* cookie) {
     eth_put_buffer_locked(cookie, ETH_BUFFER_TX);
 }
 
-static int eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** out, uint32_t newstate) {
+static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** out,
+                                         uint32_t newstate) {
     eth_buffer_t* buf;
     if (sz > NET_BUFFERSZ) {
-        return -1;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (eth_buffers == NULL) {
         // Reap used tx buffers
         eth_complete_tx(eth, NULL, tx_complete);
         if (eth_buffers == NULL) {
-            printf("eth: get_buffer: out of buffers\n");
-            return -1;
+            return ZX_ERR_SHOULD_WAIT;
         }
     }
     buf = eth_buffers;
@@ -157,12 +157,12 @@ static int eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** out, uin
     buf->state = newstate;
     *data = buf->data;
     *out = buf;
-    return 0;
+    return ZX_OK;
 }
 
-int eth_get_buffer(size_t sz, void** data, eth_buffer_t** out) {
+zx_status_t eth_get_buffer(size_t sz, void** data, eth_buffer_t** out) {
     mtx_lock(&eth_lock);
-    int r = eth_get_buffer_locked(sz, data, out, ETH_BUFFER_CLIENT);
+    zx_status_t r = eth_get_buffer_locked(sz, data, out, ETH_BUFFER_CLIENT);
     mtx_unlock(&eth_lock);
     return r;
 }
@@ -204,16 +204,6 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
 fail:
     mtx_unlock(&eth_lock);
     return status;
-}
-
-//TODO: expose ethbuf to netifc clients, avoid a copy here
-void netifc_send(const void* _data, size_t len) {
-    void* data;
-    eth_buffer_t* ethbuf;
-    if (eth_get_buffer(len, &data, &ethbuf) == 0) {
-        memcpy(data, _data, len);
-        eth_send(ethbuf, 0, len);
-    }
 }
 
 int eth_add_mcast_filter(const mac_addr_t* addr) {

@@ -218,8 +218,10 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
     size_t length = dlen + UDP_HDR_LEN;
     udp_pkt_t* p;
     eth_buffer_t* ethbuf;
-    if (eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf))
-        return ZX_ERR_SHOULD_WAIT;
+    zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf);
+    if (status != ZX_OK) {
+        return status;
+    }
     if (ip6_setup((void*)p, daddr, length, HDR_UDP)) {
         eth_put_buffer(ethbuf);
         return ZX_ERR_INVALID_ARGS;
@@ -245,8 +247,10 @@ static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t*
     ip6_pkt_t* p;
     icmp6_hdr_t* icmp;
 
-    if (eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf))
-        return ZX_ERR_SHOULD_WAIT;
+    zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf);
+    if (status != ZX_OK) {
+        return status;
+    }
     if (ip6_setup(p, daddr, length, HDR_ICMP6)) {
         eth_put_buffer(ethbuf);
         return ZX_ERR_INVALID_ARGS;

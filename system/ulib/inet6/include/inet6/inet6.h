@@ -138,7 +138,7 @@ void eth_recv(void* data, size_t len);
 typedef struct eth_buffer eth_buffer_t;
 
 // provided by interface driver
-int eth_get_buffer(size_t len, void** data, eth_buffer_t** out);
+zx_status_t eth_get_buffer(size_t len, void** data, eth_buffer_t** out);
 void eth_put_buffer(eth_buffer_t* ethbuf);
 
 zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len);
