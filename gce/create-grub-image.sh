@@ -21,6 +21,6 @@ trap "rm -rf '$tmp'" EXIT
 mv "$grubdisk" "$tmp/disk.raw"
 cd "$tmp"
 tar -Sczf "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_GRUB.tar.gz" disk.raw
-gsutil cp "$FUCHSIA_GCE_GRUB.tar.gz" "gs://$FUCHSIA_GCE_PROJECT/$FUCHSIA_GCE_USER/$FUCHSIA_GCE_GRUB.tar.gz"
+gsutil cp "$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_GRUB.tar.gz" "gs://$FUCHSIA_GCE_PROJECT/$FUCHSIA_GCE_USER/$FUCHSIA_GCE_GRUB.tar.gz" || exit 1
 gcloud -q compute images delete "$FUCHSIA_GCE_GRUB"
 gcloud -q compute images create "$FUCHSIA_GCE_GRUB" --source-uri "gs://$FUCHSIA_GCE_PROJECT/$FUCHSIA_GCE_USER/$FUCHSIA_GCE_GRUB.tar.gz"

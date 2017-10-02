@@ -33,6 +33,6 @@ if [[ ! -f $disk ]]; then
   esac
 fi
 
-"$FUCHSIA_GRUB_SCRIPTS_DIR/install.sh" "$disk"
+"$FUCHSIA_GRUB_SCRIPTS_DIR/install.sh" "$disk" || exit 1
 
 echo "Grub installed to $disk"

@@ -5,4 +5,5 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 
+export GOPATH=$GOPATH:$FUCHSIA_ROOT/garnet/go
 exec go run "$FUCHSIA_GRUB_SCRIPTS_DIR/install.go" "$@"
