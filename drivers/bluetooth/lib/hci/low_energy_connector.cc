@@ -174,6 +174,7 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
              kLEConnectionCompleteSubeventCode);
 
   auto params = event.le_event_params<LEConnectionCompleteSubeventParams>();
+  FXL_CHECK(params);
 
   // First check if this event is related to the currently pending request.
   const common::DeviceAddress peer_address(

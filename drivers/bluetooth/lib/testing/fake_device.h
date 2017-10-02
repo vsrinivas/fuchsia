@@ -99,6 +99,7 @@ class FakeDevice {
   bool HasLink(hci::ConnectionHandle handle) const;
 
   using HandleSet = std::unordered_set<hci::ConnectionHandle>;
+  const HandleSet& logical_links() const { return logical_links_; }
 
   // Marks this device as disconnected. Clears and returns all logical link
   // handles.

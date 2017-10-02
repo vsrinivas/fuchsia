@@ -10,8 +10,10 @@
 #include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/logging.h"
@@ -134,19 +136,51 @@ class FakeController : public FakeControllerBase {
   void SetConnectionStateCallback(const ConnectionStateCallback& callback,
                                   fxl::RefPtr<fxl::TaskRunner> task_runner);
 
+  // Sets a callback to be invoked when LE connection parameters are updated for
+  // a fake device.
+  using LEConnectionParametersCallback =
+      std::function<void(const common::DeviceAddress&,
+                         const hci::LEConnectionParameters&)>;
+  void SetLEConnectionParametersCallback(
+      const LEConnectionParametersCallback& callback,
+      fxl::RefPtr<fxl::TaskRunner> task_runner);
+
   // Sends a HCI event with the given parameters.
-  void SendEvent(hci::EventCode event_code,
-                 const void* params,
-                 uint8_t params_size);
+  void SendEvent(hci::EventCode event_code, const common::ByteBuffer& payload);
 
   // Sends a LE Meta event with the given parameters.
   void SendLEMetaEvent(hci::EventCode subevent_code,
-                       const void* params,
-                       uint8_t params_size);
+                       const common::ByteBuffer& payload);
 
-  // Used to simulate a remote-initiated connection request. FakeController will
-  // pretend to create a LE link in the slave role.
-  void ConnectLowEnergy(const common::DeviceAddress& addr);
+  // Sends an ACL data packet with the given parameters.
+  void SendACLPacket(hci::ConnectionHandle handle,
+                     const common::ByteBuffer& payload);
+
+  // Sends a L2CAP basic frame.
+  void SendL2CAPBFrame(hci::ConnectionHandle handle,
+                       l2cap::ChannelId channel_id,
+                       const common::ByteBuffer& payload);
+
+  // Sends a L2CAP control frame over a signaling channel. If |is_le| is true,
+  // then the LE signaling channel will be used.
+  void SendL2CAPCFrame(hci::ConnectionHandle handle,
+                       bool is_le,
+                       l2cap::CommandCode code,
+                       uint8_t id,
+                       const common::ByteBuffer& payload);
+
+  // Sets up a LE link to the device with the given |addr|. FakeController will
+  // report a connection event in which it is in the given |role|.
+  void ConnectLowEnergy(
+      const common::DeviceAddress& addr,
+      hci::LEConnectionRole role = hci::LEConnectionRole::kSlave);
+
+  // Tells a fake device to initiate the L2CAP Connection Parameter Update
+  // procedure using the given |params|. Has no effect if a connected fake
+  // device with the given |addr| is not found.
+  void L2CAPConnectionParameterUpdate(
+      const common::DeviceAddress& addr,
+      const hci::LEPreferredConnectionParameters& params);
 
   // Marks the FakeDevice with address |address| as disconnected and sends a HCI
   // Disconnection Complete event for all of its links.
@@ -158,11 +192,13 @@ class FakeController : public FakeControllerBase {
   FakeDevice* FindDeviceByAddress(const common::DeviceAddress& addr);
   FakeDevice* FindDeviceByConnHandle(hci::ConnectionHandle handle);
 
+  // Returns the next available L2CAP signaling channel command ID.
+  uint8_t NextL2CAPCommandId();
+
   // Sends a HCI_Command_Complete event in response to the command with |opcode|
   // and using the given data as the parameter payload.
   void RespondWithCommandComplete(hci::OpCode opcode,
-                                  const void* return_params,
-                                  uint8_t return_params_size);
+                                  const common::ByteBuffer& params);
 
   // Sends a HCI_Command_Complete event with "Success" status in response to the
   // command with |opcode|.
@@ -185,9 +221,17 @@ class FakeController : public FakeControllerBase {
                              bool connected,
                              bool canceled = false);
 
+  // Notifies |le_conn_params_cb_|
+  void NotifyLEConnectionParameters(const common::DeviceAddress& addr,
+                                    const hci::LEConnectionParameters& params);
+
   // Called when a HCI_LE_Create_Connection command is received.
   void OnLECreateConnectionCommandReceived(
       const hci::LECreateConnectionCommandParams& params);
+
+  // Called when a HCI_LE_Connection_Update command is received.
+  void OnLEConnectionUpdateCommandReceived(
+      const hci::LEConnectionUpdateCommandParams& params);
 
   // Called when a HCI_Disconnect command is received.
   void OnDisconnectCommandReceived(const hci::DisconnectCommandParams& params);
@@ -213,6 +257,9 @@ class FakeController : public FakeControllerBase {
   common::DeviceAddress pending_le_connect_addr_;
   bool le_connect_pending_;
 
+  // ID used for L2CAP LE signaling channel commands.
+  uint8_t next_le_sig_id_;
+
   std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
   std::vector<std::unique_ptr<FakeDevice>> le_devices_;
 
@@ -221,6 +268,9 @@ class FakeController : public FakeControllerBase {
 
   ConnectionStateCallback conn_state_cb_;
   fxl::RefPtr<fxl::TaskRunner> conn_state_cb_runner_;
+
+  LEConnectionParametersCallback le_conn_params_cb_;
+  fxl::RefPtr<fxl::TaskRunner> le_conn_params_cb_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };

@@ -265,8 +265,8 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnect) {
   event.conn_interval = defaults::kLEConnectionIntervalMin;
   event.connection_handle = 1;
 
-  test_device()->SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &event,
-                                 sizeof(event));
+  test_device()->SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode,
+                                 common::BufferView(&event, sizeof(event)));
 
   quit_loop_on_new_connection = true;
   RunMessageLoop();
@@ -318,7 +318,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
     event.connection_handle = 2;
 
     test_device()->SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode,
-                                   &event, sizeof(event));
+                                   common::BufferView(&event, sizeof(event)));
   });
 
   RunMessageLoop();

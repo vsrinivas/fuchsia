@@ -39,6 +39,8 @@ source_set("testing") {
     # Library dependencies are for the protocol headers only. FakeController
     # does not depend on any logic from these libraries.
     "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+
     "//third_party/gtest",
   ]
 }
