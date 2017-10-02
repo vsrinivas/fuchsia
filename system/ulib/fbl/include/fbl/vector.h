@@ -6,11 +6,11 @@
 
 #include <string.h>
 
-#include <zircon/assert.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/new.h>
 #include <fbl/type_support.h>
+#include <zircon/assert.h>
 
 namespace fbl {
 
@@ -19,7 +19,7 @@ namespace internal {
 template <typename U>
 using remove_cv_ref = typename remove_cv<typename remove_reference<U>::type>::type;
 
-}  // namespace internal
+} // namespace internal
 
 struct DefaultAllocatorTraits {
     // Allocate receives a request for "size" contiguous bytes.
@@ -63,9 +63,11 @@ public:
     // move semantics only
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Vector);
 
-    constexpr Vector() : ptr_(nullptr), size_(0U), capacity_(0U) {}
+    constexpr Vector()
+        : ptr_(nullptr), size_(0U), capacity_(0U) {}
 
-    Vector(Vector&& other) : ptr_(nullptr), size_(other.size_), capacity_(other.capacity_) {
+    Vector(Vector&& other)
+        : ptr_(nullptr), size_(other.size_), capacity_(other.capacity_) {
         ptr_ = other.release();
     }
 
@@ -319,8 +321,9 @@ private:
     bool grow_for_new_element(AllocChecker* ac) {
         ZX_DEBUG_ASSERT(size_ <= capacity_);
         if (size_ == capacity_) {
-            size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
-                    capacity_ * kCapacityGrowthFactor;
+            size_t newCapacity = capacity_ < kCapacityMinimum
+                                     ? kCapacityMinimum
+                                     : capacity_ * kCapacityGrowthFactor;
             if (!reallocate(newCapacity, ac)) {
                 return false;
             }
@@ -333,8 +336,9 @@ private:
     void grow_for_new_element() {
         ZX_DEBUG_ASSERT(size_ <= capacity_);
         if (size_ == capacity_) {
-            size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
-                    capacity_ * kCapacityGrowthFactor;
+            size_t newCapacity = capacity_ < kCapacityMinimum
+                                     ? kCapacityMinimum
+                                     : capacity_ * kCapacityGrowthFactor;
             reallocate(newCapacity);
         }
     }
@@ -413,4 +417,4 @@ private:
     static constexpr size_t kCapacityShrinkFactor = 4;
 };
 
-}  // namespace fbl
+} // namespace fbl
