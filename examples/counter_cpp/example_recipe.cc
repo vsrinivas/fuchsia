@@ -142,7 +142,8 @@ class DeviceMapMonitor : modular::DeviceMapWatcher {
     FXL_LOG(INFO) << "OnDeviceMapChange() " << entry->name << " "
                   << entry->profile;
     for (const auto& device : devices_) {
-      if (entry->device_id == device->device_id) return;
+      if (entry->device_id == device->device_id)
+        return;
     }
     FXL_CHECK(false);
   }

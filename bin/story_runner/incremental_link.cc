@@ -42,7 +42,8 @@ std::string MakeSequencedLinkKey(const LinkPathPtr& link_path,
 class LinkImpl::ReloadCall : Operation<> {
  public:
   ReloadCall(OperationContainer* const container,
-             LinkImpl* const impl, ResultCall result_call)
+             LinkImpl* const impl,
+             ResultCall result_call)
       : Operation("LinkImpl::ReloadCall", container, result_call), impl_(impl) {
     Ready();
   }
@@ -51,11 +52,8 @@ class LinkImpl::ReloadCall : Operation<> {
   void Run() {
     FlowToken flow{this};
     new ReadAllDataCall<LinkChange>(
-        &operation_queue_,
-        impl_->page(),
-        MakeLinkKey(impl_->link_path_),
-        XdrLinkChange,
-        [this, flow](fidl::Array<LinkChangePtr> changes) {
+        &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
+        XdrLinkChange, [this, flow](fidl::Array<LinkChangePtr> changes) {
           impl_->Replay(std::move(changes));
         });
   }
@@ -68,10 +66,12 @@ class LinkImpl::ReloadCall : Operation<> {
 
 class LinkImpl::IncrementalWriteCall : Operation<> {
  public:
-  IncrementalWriteCall(
-      OperationContainer* const container, LinkImpl* const impl,
-      LinkChangePtr data, ResultCall result_call)
-      : Operation("LinkImpl::IncrementalWriteCall", container,
+  IncrementalWriteCall(OperationContainer* const container,
+                       LinkImpl* const impl,
+                       LinkChangePtr data,
+                       ResultCall result_call)
+      : Operation("LinkImpl::IncrementalWriteCall",
+                  container,
                   std::move(result_call)),
         impl_(impl),
         data_(std::move(data)) {
@@ -85,10 +85,9 @@ class LinkImpl::IncrementalWriteCall : Operation<> {
   void Run() {
     FlowToken flow{this};
     new WriteDataCall<LinkChange>(
-        &operation_queue_,
-        impl_->page(),
-        MakeSequencedLinkKey(impl_->link_path_, data_->key),
-        XdrLinkChange, std::move(data_), [this, flow] {});
+        &operation_queue_, impl_->page(),
+        MakeSequencedLinkKey(impl_->link_path_, data_->key), XdrLinkChange,
+        std::move(data_), [this, flow] {});
   }
 
   LinkImpl* const impl_;  // not owned
@@ -100,9 +99,10 @@ class LinkImpl::IncrementalWriteCall : Operation<> {
 
 class LinkImpl::IncrementalChangeCall : Operation<> {
  public:
-  IncrementalChangeCall(
-      OperationContainer* const container, LinkImpl* const impl,
-      LinkChangePtr data, uint32_t src)
+  IncrementalChangeCall(OperationContainer* const container,
+                        LinkImpl* const impl,
+                        LinkChangePtr data,
+                        uint32_t src)
       : Operation("LinkImpl::IncrementalChangeCall", container, [] {}),
         impl_(impl),
         data_(std::move(data)),
@@ -144,7 +144,8 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
 
       data_->key = impl_->key_generator_.Create();
       impl_->pending_ops_.push_back(data_.Clone());
-      new IncrementalWriteCall(&operation_queue_, impl_, data_.Clone(), [flow] {});
+      new IncrementalWriteCall(&operation_queue_, impl_, data_.Clone(),
+                               [flow] {});
     }
 
     const bool reload = data_->key < impl_->latest_key_;
@@ -159,7 +160,8 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
         impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
                               data_->json);
       } else {
-        FXL_LOG(WARNING) << "IncrementalChangeCall::Run - ApplyChange() failed ";
+        FXL_LOG(WARNING)
+            << "IncrementalChangeCall::Run - ApplyChange() failed ";
       }
       impl_->latest_key_ = data_->key;
       Cont1(flow, src_);
@@ -256,8 +258,10 @@ void LinkImpl::MakeReloadCall(std::function<void()> done) {
   new ReloadCall(&operation_queue_, this, std::move(done));
 }
 
-void LinkImpl::MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()> done) {
-  new IncrementalWriteCall(&operation_queue_, this, std::move(data), std::move(done));
+void LinkImpl::MakeIncrementalWriteCall(LinkChangePtr data,
+                                        std::function<void()> done) {
+  new IncrementalWriteCall(&operation_queue_, this, std::move(data),
+                           std::move(done));
 }
 
 void LinkImpl::MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src) {
@@ -268,8 +272,8 @@ void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
   LinkChangePtr data;
   if (!XdrRead(value, &data, XdrLinkChange)) {
     FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
-                   << "LinkImpl::OnChange() XdrRead failed: "
-                   << key << " " << value;
+                   << "LinkImpl::OnChange() XdrRead failed: " << key << " "
+                   << value;
     return;
   }
 

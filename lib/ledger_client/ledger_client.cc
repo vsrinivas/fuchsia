@@ -289,10 +289,10 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
 LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
                            const std::string& name,
-                           std::function<void()> error) : ledger_name_(name) {
+                           std::function<void()> error)
+    : ledger_name_(name) {
   ledger_repository->Duplicate(
-      ledger_repository_.NewRequest(),
-      [error](ledger::Status status) {
+      ledger_repository_.NewRequest(), [error](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR) << "LedgerRepository::Duplicate() failed: "
                          << LedgerStatusToString(status);
@@ -302,8 +302,7 @@ LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
 
   // Open Ledger.
   ledger_repository->GetLedger(
-      to_array(name), ledger_.NewRequest(),
-      [error](ledger::Status status) {
+      to_array(name), ledger_.NewRequest(), [error](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR) << "LedgerRepository.GetLedger() failed: "
                          << LedgerStatusToString(status);
@@ -314,8 +313,7 @@ LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
   // This must be the first call after GetLedger, otherwise the Ledger
   // starts with one reconciliation strategy, then switches to another.
   ledger_->SetConflictResolverFactory(
-      bindings_.AddBinding(this),
-      [error](ledger::Status status) {
+      bindings_.AddBinding(this), [error](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
                          << LedgerStatusToString(status);
@@ -325,27 +323,24 @@ LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
 }
 
 LedgerClient::LedgerClient(ledger::LedgerRepository* const ledger_repository,
-                           const std::string& name) : ledger_name_(name) {
+                           const std::string& name)
+    : ledger_name_(name) {
   ledger_repository->Duplicate(
-      ledger_repository_.NewRequest(),
-      [](ledger::Status status) {
+      ledger_repository_.NewRequest(), [](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR)
-              << "LedgerRepository.Duplicate() failed: "
-              << LedgerStatusToString(status);
+          FXL_LOG(ERROR) << "LedgerRepository.Duplicate() failed: "
+                         << LedgerStatusToString(status);
 
           // No further error reporting, as this is used only in tests.
         }
-    });
+      });
 
   // Open Ledger.
   ledger_repository->GetLedger(
-      to_array(name), ledger_.NewRequest(),
-      [](ledger::Status status) {
+      to_array(name), ledger_.NewRequest(), [](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR)
-              << "LedgerRepository.GetLedger() failed: "
-              << LedgerStatusToString(status);
+          FXL_LOG(ERROR) << "LedgerRepository.GetLedger() failed: "
+                         << LedgerStatusToString(status);
 
           // No further error reporting, as this is used only in tests.
         }

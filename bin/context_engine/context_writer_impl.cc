@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/context_engine/context_writer_impl.h"
-#include "lib/context/cpp/formatting.h"
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
+#include "lib/context/cpp/formatting.h"
 #include "rapidjson/document.h"
 
 namespace maxwell {

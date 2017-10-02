@@ -47,8 +47,8 @@ class TestWithLedger : public testing::TestWithMessageLoop {
   // Occasionally, however, they take much longer, presumably because of load on
   // shared machines. With the default timeout of TestWithMessageLoop of 1s, we
   // see flakiness. Cf. FW-287.
-  bool RunLoopWithTimeout(fxl::TimeDelta timeout =
-                          fxl::TimeDelta::FromSeconds(10));
+  bool RunLoopWithTimeout(
+      fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
   bool RunLoopUntil(std::function<bool()> condition,
                     fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
 

@@ -84,29 +84,29 @@ class NetworkServiceImpl::RunningRequest {
     const std::string& method = request->method.get();
     url_loader_->Start(
         std::move(request),
-        TRACE_CALLBACK(callback::ToStdFunction(
-                           [this](network::URLResponsePtr response) {
-                             url_loader_.reset();
+        TRACE_CALLBACK(
+            callback::ToStdFunction([this](network::URLResponsePtr response) {
+              url_loader_.reset();
 
-                             if (response->error) {
-                               callback_(std::move(response));
-                               return;
-                             }
+              if (response->error) {
+                callback_(std::move(response));
+                return;
+              }
 
-                             // 307 and 308 are redirects for which the HTTP
-                             // method must not
-                             // change.
-                             if (response->status_code == 307 ||
-                                 response->status_code == 308) {
-                               HandleRedirect(std::move(response));
-                               return;
-                             }
+              // 307 and 308 are redirects for which the HTTP
+              // method must not
+              // change.
+              if (response->status_code == 307 ||
+                  response->status_code == 308) {
+                HandleRedirect(std::move(response));
+                return;
+              }
 
-                             callback_(std::move(response));
-                             return;
-                           }),
-                       "ledger", "network_url_loader_start", "url", url,
-                       "method", method));
+              callback_(std::move(response));
+              return;
+            }),
+            "ledger", "network_url_loader_start", "url", url, "method",
+            method));
 
     url_loader_.set_connection_error_handler([this]() {
       // If the connection to the url loader failed, restart the request.

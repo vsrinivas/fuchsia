@@ -108,8 +108,9 @@ void DeviceMapImpl::WatchDeviceMap(
 
 void DeviceMapImpl::Notify(const std::string& device_id) {
   const DeviceMapEntryPtr& device = devices_[current_device_id_];
-  change_watchers_.ForAllPtrs([&device](DeviceMapWatcher* watcher)
-                              { watcher->OnDeviceMapChange(device.Clone()); });
+  change_watchers_.ForAllPtrs([&device](DeviceMapWatcher* watcher) {
+    watcher->OnDeviceMapChange(device.Clone());
+  });
 }
 
 void DeviceMapImpl::OnPageChange(const std::string& key,

@@ -16,12 +16,11 @@ TestWithLedger::~TestWithLedger() = default;
 void TestWithLedger::SetUp() {
   TestWithMessageLoop::SetUp();
 
-  ledger_app_ =
-    std::make_unique<modular::testing::LedgerRepositoryForTesting>("test_with_ledger");
+  ledger_app_ = std::make_unique<modular::testing::LedgerRepositoryForTesting>(
+      "test_with_ledger");
 
   ledger_client_.reset(new LedgerClient(ledger_app_->ledger_repository(),
-                                        __FILE__,
-                                        [] { ASSERT_TRUE(false); }));
+                                        __FILE__, [] { ASSERT_TRUE(false); }));
 }
 
 void TestWithLedger::TearDown() {

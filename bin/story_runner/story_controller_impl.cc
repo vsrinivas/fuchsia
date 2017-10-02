@@ -30,8 +30,8 @@
 #include "peridot/bin/story_runner/story_provider_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/ledger_client/operations.h"
+#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 
@@ -172,18 +172,15 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
 
     const std::string key{MakeModuleKey(module_path_)};
     new WriteDataCall<ModuleData>(
-        &operation_queue_,
-        story_controller_impl_->page(),
-        key, XdrModuleData,
-        std::move(data),
-        [this, flow] { Cont(flow); });
+        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
+        std::move(data), [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
       story_controller_impl_->StartModuleInShell(
-          parent_module_path_, module_name_, module_url_, link_name_,
-          nullptr, nullptr, nullptr, std::move(surface_relation_), true,
+          parent_module_path_, module_name_, module_url_, link_name_, nullptr,
+          nullptr, nullptr, std::move(surface_relation_), true,
           ModuleSource::EXTERNAL);
     }
   }
@@ -293,10 +290,8 @@ class StoryControllerImpl::StartCall : Operation<> {
     // Start *all* the root modules, not just the first one, with their
     // respective links.
     new ReadAllDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(),
-        kModuleKeyPrefix,
-        XdrModuleData,
-        [this, flow](fidl::Array<ModuleDataPtr> data) {
+        &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
+        XdrModuleData, [this, flow](fidl::Array<ModuleDataPtr> data) {
           for (auto& module_data : data) {
             if (module_data->module_source == ModuleSource::EXTERNAL &&
                 !module_data->module_stopped) {
@@ -465,8 +460,8 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
 
     // Read the module data.
     new ReadDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), MakeModuleKey(module_path_),
-        false /* not_found_is_ok */, XdrModuleData,
+        &operation_queue_, story_controller_impl_->page(),
+        MakeModuleKey(module_path_), false /* not_found_is_ok */, XdrModuleData,
         [this, flow](ModuleDataPtr data) {
           module_data_ = std::move(data);
           Cont1(flow);
@@ -495,9 +490,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
 
     const std::string key{MakeModuleKey(module_data_->module_path)};
     new WriteDataCall<ModuleData>(
-        &operation_queue_,
-        story_controller_impl_->page(),
-        key, XdrModuleData,
+        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
         module_data_->Clone(), [this, flow] { Cont3(flow); });
   }
 
@@ -638,9 +631,8 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       // parent module. We need to retrieve which one it is from story storage.
       new ReadDataCall<ModuleData>(
           &operation_queue_, story_controller_impl_->page(),
-          MakeModuleKey(parent_module_path_),
-          false /* not_found_is_ok */, XdrModuleData,
-          [this, flow](ModuleDataPtr module_data) {
+          MakeModuleKey(parent_module_path_), false /* not_found_is_ok */,
+          XdrModuleData, [this, flow](ModuleDataPtr module_data) {
             FXL_DCHECK(module_data);
             link_path_ = module_data->link_path.Clone();
             WriteModuleData(flow);
@@ -658,11 +650,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     data->module_stopped = false;
 
     const std::string key{MakeModuleKey(module_path_)};
-    new WriteDataCall<ModuleData>(&operation_queue_,
-                                  story_controller_impl_->page(),
-                                  key, XdrModuleData,
-                                  std::move(data),
-                                  [this, flow] { Cont(flow); });
+    new WriteDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
+        std::move(data), [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -799,8 +789,7 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
 
     new ReadAllDataCall<StoryContextLog>(
         &operation_queue_, story_controller_impl_->page(),
-        kStoryContextLogKeyPrefix,
-        XdrStoryContextLog,
+        kStoryContextLogKeyPrefix, XdrStoryContextLog,
         [this, flow](fidl::Array<StoryContextLogPtr> log) {
           log_ = std::move(log);
           Cont(flow);
@@ -1013,8 +1002,8 @@ void StoryControllerImpl::ConnectLinkPath(
     return;
   }
 
-  LinkImpl* const link_impl =
-      new LinkImpl(ledger_client_, story_page_id_.Clone(), std::move(link_path));
+  LinkImpl* const link_impl = new LinkImpl(
+      ledger_client_, story_page_id_.Clone(), std::move(link_path));
   link_impl->Connect(std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
@@ -1100,11 +1089,11 @@ void StoryControllerImpl::StartModuleInShell(
   }
 }
 
-void StoryControllerImpl::OnPageChange(const std::string& key, const std::string& value) {
+void StoryControllerImpl::OnPageChange(const std::string& key,
+                                       const std::string& value) {
   // TODO(mesch): Possibly do something real here. This is for module instances
   // started in the same story on another device.
-  FXL_LOG(INFO) << "StoryControllerImpl::OnPageChange "
-                << key << " " << value;
+  FXL_LOG(INFO) << "StoryControllerImpl::OnPageChange " << key << " " << value;
 }
 
 // |StoryController|
@@ -1297,7 +1286,7 @@ void StoryControllerImpl::NotifyStateChange() {
 
   new WriteDataCall<PerDeviceStoryInfo, PerDeviceStoryInfoPtr>(
       &operation_queue_, page(), MakePerDeviceKey(data->device_id),
-      XdrPerDeviceStoryInfo, std::move(data), []{});
+      XdrPerDeviceStoryInfo, std::move(data), [] {});
 }
 
 void StoryControllerImpl::DisposeLink(LinkImpl* const link) {

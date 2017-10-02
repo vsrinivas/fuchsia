@@ -74,8 +74,7 @@ class PageClientTest : public TestWithLedger {
         new PageClientImpl(ledger_client(), page_id_.Clone(), "a/"));
     page_client_b_.reset(
         new PageClientImpl(ledger_client(), page_id_.Clone(), "b/"));
-    page_client_.reset(
-        new PageClientImpl(ledger_client(), page_id_.Clone()));
+    page_client_.reset(new PageClientImpl(ledger_client(), page_id_.Clone()));
 
     ledger_client()->ledger()->GetPage(
         page_id_.Clone(), page_.NewRequest(),

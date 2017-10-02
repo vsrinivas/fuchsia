@@ -88,7 +88,9 @@ class LinkImpl : PageClient {
  public:
   // The |link_path| contains the series of module names (where the last element
   // is the module that created this Link) that this Link is namespaced under.
-  LinkImpl(LedgerClient* ledger_client, LedgerPageId page_id, LinkPathPtr link_path);
+  LinkImpl(LedgerClient* ledger_client,
+           LedgerPageId page_id,
+           LinkPathPtr link_path);
 
   ~LinkImpl();
 

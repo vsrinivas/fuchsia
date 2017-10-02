@@ -483,8 +483,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
     link_path->link_name = link_name_;
 
     link_peer->link = std::make_unique<LinkImpl>(
-        link_peer->ledger.get(),
-        story_data_->story_page_id.Clone(),
+        link_peer->ledger.get(), story_data_->story_page_id.Clone(),
         std::move(link_path));
 
     link_peer->link->Connect(std::move(request_));

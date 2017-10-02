@@ -13,7 +13,7 @@ class TestWithMessageLoopTest : public TestWithMessageLoop {};
 TEST_F(TestWithMessageLoopTest, Timeout) {
   bool called = false;
   message_loop_.task_runner()->PostDelayedTask([&called] { called = true; },
-                                                fxl::TimeDelta::FromSeconds(1));
+                                               fxl::TimeDelta::FromSeconds(1));
   EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10)));
 }
 

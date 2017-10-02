@@ -31,7 +31,8 @@ void SyncStateWatcher::Notify(DownloadSyncState download,
 
 bool operator==(const SyncStateWatcher::SyncStateContainer& lhs,
                 const SyncStateWatcher::SyncStateContainer& rhs) {
-  return std::tie(lhs.download, lhs.upload) == std::tie(rhs.download, rhs.upload);
+  return std::tie(lhs.download, lhs.upload) ==
+         std::tie(rhs.download, rhs.upload);
 }
 
 bool operator!=(const SyncStateWatcher::SyncStateContainer& lhs,

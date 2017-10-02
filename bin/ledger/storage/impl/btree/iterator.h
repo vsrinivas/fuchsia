@@ -22,7 +22,7 @@ namespace btree {
 
 // An entry and the id of the tree node in which it is stored.
 struct EntryAndNodeDigest {
-  const Entry& entry;       // NOLINT
+  const Entry& entry;               // NOLINT
   const ObjectDigest& node_digest;  // NOLINT
 };
 

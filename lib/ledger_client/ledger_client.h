@@ -55,7 +55,8 @@ class LedgerClient : ledger::ConflictResolverFactory {
 
  private:
   // Supports GetLedgerClientPeer().
-  LedgerClient(ledger::LedgerRepository* ledger_repository, const std::string& name);
+  LedgerClient(ledger::LedgerRepository* ledger_repository,
+               const std::string& name);
 
   friend class PageClient;
   class ConflictResolverImpl;

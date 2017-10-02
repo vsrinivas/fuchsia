@@ -176,9 +176,7 @@ class LinkImpl::ReadCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    new ReadLinkDataCall(&operation_queue_,
-                         impl_->page(),
-                         impl_->link_path_,
+    new ReadLinkDataCall(&operation_queue_, impl_->page(), impl_->link_path_,
                          [this, flow](const fidl::String& json) {
                            if (!json.is_null()) {
                              impl_->doc_.Parse(json.get());
@@ -207,16 +205,13 @@ class LinkImpl::WriteCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    new WriteLinkDataCall(&operation_queue_,
-                          impl_->page(),
-                          impl_->link_path_,
+    new WriteLinkDataCall(&operation_queue_, impl_->page(), impl_->link_path_,
                           JsonValueToString(impl_->doc_),
                           [this, flow] { Cont1(flow); });
   }
 
   void Cont1(FlowToken flow) {
-    new FlushWatchersCall(&operation_queue_,
-                          impl_->page(),
+    new FlushWatchersCall(&operation_queue_, impl_->page(),
                           [this, flow] { Cont2(flow); });
   }
 
@@ -492,9 +487,12 @@ class LinkImpl::ChangeCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
 };
 
-LinkImpl::LinkImpl(LedgerClient* const ledger_client, LedgerPageId page_id,
+LinkImpl::LinkImpl(LedgerClient* const ledger_client,
+                   LedgerPageId page_id,
                    LinkPathPtr link_path)
-    : PageClient(MakeLinkKey(link_path), ledger_client, std::move(page_id),
+    : PageClient(MakeLinkKey(link_path),
+                 ledger_client,
+                 std::move(page_id),
                  MakeLinkKey(link_path)),
       link_path_(std::move(link_path)) {
   MakeReloadCall([this] {

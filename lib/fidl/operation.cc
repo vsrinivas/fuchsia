@@ -120,7 +120,7 @@ void OperationBase::Schedule() {
   TraceAsyncBegin();
 
   fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-      [this, weak = weak_ptr_factory_.GetWeakPtr()] {
+      [ this, weak = weak_ptr_factory_.GetWeakPtr() ] {
         if (weak) {
           Run();
         }
@@ -132,8 +132,8 @@ void OperationBase::InvalidateWeakPtrs() {
 }
 
 void OperationBase::TraceAsyncBegin() {
-  TRACE_ASYNC_BEGIN(kModularTraceCategory, trace_name_, trace_id_,
-                    kTraceIdKey, trace_id_, kTraceInfoKey, trace_info_);
+  TRACE_ASYNC_BEGIN(kModularTraceCategory, trace_name_, trace_id_, kTraceIdKey,
+                    trace_id_, kTraceInfoKey, trace_info_);
 
   // NOTE(mesch): This is used for testing. The usual setup is that the observer
   // counts invocations of Operations that affect the ledger, and a page client

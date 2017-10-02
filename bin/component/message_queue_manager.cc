@@ -631,9 +631,7 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
 MessageQueueManager::MessageQueueManager(LedgerClient* const ledger_client,
                                          LedgerPageId page_id,
                                          std::string local_path)
-    : PageClient("MessageQueueManager",
-                 ledger_client,
-                 std::move(page_id)),
+    : PageClient("MessageQueueManager", ledger_client, std::move(page_id)),
       local_path_(std::move(local_path)) {}
 
 MessageQueueManager::~MessageQueueManager() = default;

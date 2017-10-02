@@ -62,11 +62,13 @@ void StoryWatcherImpl::OnStateChange(modular::StoryState new_state) {
 // |StoryWatcher|
 void StoryWatcherImpl::OnModuleAdded(modular::ModuleDataPtr module_data) {
   ContextValueWriterPtr module_value;
-  context_value_->CreateChildValue(module_value.NewRequest(), ContextValueType::MODULE);
-  module_value->Set(nullptr /* content */, ContextMetadataBuilder()
-                    .SetModuleUrl(module_data->module_url)
-                    .SetModulePath(module_data->module_path.Clone())
-                    .Build());
+  context_value_->CreateChildValue(module_value.NewRequest(),
+                                   ContextValueType::MODULE);
+  module_value->Set(nullptr /* content */,
+                    ContextMetadataBuilder()
+                        .SetModuleUrl(module_data->module_url)
+                        .SetModulePath(module_data->module_path.Clone())
+                        .Build());
 
   auto path = modular::EncodeModulePath(module_data->module_path);
   module_values_.emplace(path, std::move(module_value));

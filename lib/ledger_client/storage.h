@@ -55,7 +55,8 @@ constexpr char kMessageQueueTokenKeyPrefix[] = "MessageQueueToken/";
 constexpr char kTriggerKeyPrefix[] = "Trigger/";
 //
 //    Story page:
-constexpr char kLinkKeyPrefix[] = "Link|2/";  // version 2: kEnableIncrementalLinks
+constexpr char kLinkKeyPrefix[] =
+    "Link|2/";  // version 2: kEnableIncrementalLinks
 constexpr char kModuleKeyPrefix[] = "Module/";
 constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 constexpr char kStoryContextLogKeyPrefix[] = "StoryContextLog/";

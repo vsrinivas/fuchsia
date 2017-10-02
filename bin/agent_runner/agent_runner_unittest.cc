@@ -59,14 +59,13 @@ class AgentRunnerTest : public TestWithLedger {
   void SetUp() override {
     TestWithLedger::SetUp();
 
-    mqm_.reset(new MessageQueueManager(ledger_client(),
-                                       to_array("0123456789123456"),
-                                       "/tmp/test_mq_data"));
+    mqm_.reset(new MessageQueueManager(
+        ledger_client(), to_array("0123456789123456"), "/tmp/test_mq_data"));
 
-    agent_runner_.reset(new AgentRunner(
-        &launcher_, mqm_.get(), ledger_repository(),
-        &agent_runner_storage_, token_provider_factory_.get(),
-        ui_provider_.get(), &entity_repository_));
+    agent_runner_.reset(
+        new AgentRunner(&launcher_, mqm_.get(), ledger_repository(),
+                        &agent_runner_storage_, token_provider_factory_.get(),
+                        ui_provider_.get(), &entity_repository_));
   }
 
   void TearDown() override {

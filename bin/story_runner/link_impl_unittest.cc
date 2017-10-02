@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/story_runner/link_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/story/fidl/link_change.fidl.h"
-#include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/operation.h"
@@ -54,14 +54,15 @@ class PageClientPeer : modular::PageClient {
         expected_prefix_(std::move(expected_prefix)) {}
 
   void OnPageChange(const std::string& key, const std::string& value) {
-    EXPECT_TRUE(HasPrefix(key, expected_prefix_)) << " key=" << key
-                                                  << " expected_prefix=" << expected_prefix_;
+    EXPECT_TRUE(HasPrefix(key, expected_prefix_))
+        << " key=" << key << " expected_prefix=" << expected_prefix_;
     changes.push_back(std::make_pair(key, value));
-    EXPECT_TRUE(XdrRead(value, &last_change, XdrLinkChange)) << key << " " << value;
+    EXPECT_TRUE(XdrRead(value, &last_change, XdrLinkChange))
+        << key << " " << value;
     FXL_LOG(INFO) << "PageChange " << key << " = " << value;
   };
 
-  std::vector<std::pair<std::string,std::string>> changes;
+  std::vector<std::pair<std::string, std::string>> changes;
   LinkChangePtr last_change;
 
  private:
@@ -76,23 +77,21 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
     TestWithLedger::SetUp();
 
     OperationBase::set_observer([this](const char* const operation_name) {
-        FXL_LOG(INFO) << "Operation " << operation_name;
-        operations_[operation_name]++;
-      });
+      FXL_LOG(INFO) << "Operation " << operation_name;
+      operations_[operation_name]++;
+    });
 
     auto page_id = to_array("0123456789123456");
     auto link_path = GetTestLinkPath();
 
-    link_impl_ = std::make_unique<LinkImpl>(ledger_client(),
-                                            page_id.Clone(),
+    link_impl_ = std::make_unique<LinkImpl>(ledger_client(), page_id.Clone(),
                                             link_path->Clone());
 
     link_impl_->Connect(link_.NewRequest());
 
     ledger_client_peer_ = ledger_client()->GetLedgerClientPeer();
-    page_client_peer_ =  std::make_unique<PageClientPeer>(ledger_client_peer_.get(),
-                                                          page_id.Clone(),
-                                                          MakeLinkKey(link_path));
+    page_client_peer_ = std::make_unique<PageClientPeer>(
+        ledger_client_peer_.get(), page_id.Clone(), MakeLinkKey(link_path));
   }
 
   void TearDown() override {
@@ -111,13 +110,9 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
     TestWithLedger::TearDown();
   }
 
-  int ledger_change_count() const {
-    return page_client_peer_->changes.size();
-  }
+  int ledger_change_count() const { return page_client_peer_->changes.size(); }
 
-  LinkChangePtr& last_change() {
-    return page_client_peer_->last_change;
-  }
+  LinkChangePtr& last_change() { return page_client_peer_->last_change; }
 
   void ExpectOneCall(const std::string& operation_name) {
     EXPECT_EQ(1u, operations_.count(operation_name)) << operation_name;
@@ -131,9 +126,7 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
     }
   }
 
-  void ClearCalls() {
-    operations_.clear();
-  }
+  void ClearCalls() { operations_.clear(); }
 
   void Notify(const fidl::String& json) override {
     step_++;
@@ -157,9 +150,7 @@ class LinkImplTest : public testing::TestWithLedger, modular::LinkWatcher {
 
 TEST_F(LinkImplTest, Constructor) {
   bool finished{};
-  continue_ = [this, &finished] {
-    finished = true;
-  };
+  continue_ = [this, &finished] { finished = true; };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
@@ -172,9 +163,7 @@ TEST_F(LinkImplTest, Constructor) {
 }
 
 TEST_F(LinkImplTest, Set) {
-  continue_ = [this] {
-    EXPECT_TRUE(step_ <= 2);
-  };
+  continue_ = [this] { EXPECT_TRUE(step_ <= 2); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
   link_->Set(nullptr, "{ \"value\": 7 }");
@@ -193,9 +182,7 @@ TEST_F(LinkImplTest, Set) {
 }
 
 TEST_F(LinkImplTest, Update) {
-  continue_ = [this] {
-    EXPECT_TRUE(step_ <= 3);
-  };
+  continue_ = [this] { EXPECT_TRUE(step_ <= 3); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
@@ -208,9 +195,7 @@ TEST_F(LinkImplTest, Update) {
 }
 
 TEST_F(LinkImplTest, UpdateNewKey) {
-  continue_ = [this] {
-    EXPECT_TRUE(step_ <= 3);
-  };
+  continue_ = [this] { EXPECT_TRUE(step_ <= 3); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 
@@ -223,9 +208,7 @@ TEST_F(LinkImplTest, UpdateNewKey) {
 }
 
 TEST_F(LinkImplTest, Erase) {
-  continue_ = [this] {
-    EXPECT_TRUE(step_ <= 3);
-  };
+  continue_ = [this] { EXPECT_TRUE(step_ <= 3); };
 
   link_->WatchAll(watcher_binding_.NewBinding());
 

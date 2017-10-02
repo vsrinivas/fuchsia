@@ -404,10 +404,9 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = fidl::Array<fidl::String>::New(0);
   link_path->link_name = kUserShellLinkName;
-  user_shell_link_ =
-      std::make_unique<LinkImpl>(
-          ledger_client_.get(), fidl::Array<uint8_t>::New(16),
-          std::move(link_path));
+  user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
+                                                fidl::Array<uint8_t>::New(16),
+                                                std::move(link_path));
   user_shell_link_->Connect(std::move(request));
 }
 
