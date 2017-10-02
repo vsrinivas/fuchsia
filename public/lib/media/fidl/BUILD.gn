@@ -36,6 +36,7 @@ fidl("fidl") {
     "seeking_reader.fidl",
     "timeline_controller.fidl",
     "timelines.fidl",
+    "tts_service.fidl",
     "video_renderer.fidl",
   ]
 

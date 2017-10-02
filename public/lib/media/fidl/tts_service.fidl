@@ -1,0 +1,12 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+[ServiceName="media::TtsService"]
+interface TtsService {
+  // Speak the string of words provided.  Return the provided token to the
+  // caller when the speaking has finished.
+  Say(string words, uint64 token) => (uint64 token);
+};

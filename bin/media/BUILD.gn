@@ -33,6 +33,16 @@ package("audio_server") {
       } ]
 }
 
+package("tts_service") {
+  app = true
+
+  deps = [
+    "//garnet/bin/media/tts_service",
+  ]
+
+  binary = "tts_service"
+}
+
 package("media_client") {
   system_image = true
 

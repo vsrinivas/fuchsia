@@ -4,6 +4,7 @@
     ],
     "packages": {
         "audio_server": "//garnet/bin/media:audio_server",
-        "media_client": "//garnet/bin/media:media_client"
+        "media_client": "//garnet/bin/media:media_client",
+        "tts_service": "//garnet/bin/media:tts_service"
     }
 }
