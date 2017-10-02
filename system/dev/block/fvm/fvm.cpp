@@ -218,7 +218,7 @@ zx_status_t VPartitionManager::Load() {
 
     // Iterate through the Slice Allocation table, filling the slice maps
     // of VPartitions.
-    for (uint32_t i = 1; i < GetFvmLocked()->pslice_count; i++) {
+    for (uint32_t i = 1; i <= GetFvmLocked()->pslice_count; i++) {
         const slice_entry_t* entry = GetSliceEntryLocked(i);
         if (entry->vpart == FVM_SLICE_FREE) {
             continue;

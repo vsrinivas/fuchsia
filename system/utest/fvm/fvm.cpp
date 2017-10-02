@@ -1523,7 +1523,15 @@ static bool TestPersistenceSimple(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
-    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
+    constexpr uint64_t kBlkSize = 512;
+    constexpr uint64_t kBlkCount = 1 << 20;
+    constexpr uint64_t kSliceSize = 64 * (1 << 20);
+    ASSERT_EQ(StartFVMTest(kBlkSize, kBlkCount, kSliceSize, ramdisk_path,
+                           fvm_driver), 0, "error mounting FVM");
+
+    constexpr uint64_t kDiskSize = kBlkSize * kBlkCount;
+    size_t slices_left = fvm::UsableSlicesCount(kDiskSize, kSliceSize);
+    const uint64_t kSliceCount = slices_left;
 
     int fd = open(fvm_driver, O_RDWR);
     ASSERT_GT(fd, 0);
@@ -1539,6 +1547,7 @@ static bool TestPersistenceSimple(void) {
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
     ASSERT_GT(vp_fd, 0);
+    slices_left--;
 
     // Check that the name matches what we provided
     char name[FVM_NAME_LEN + 1];
@@ -1579,6 +1588,7 @@ static bool TestPersistenceSimple(void) {
     erequest.offset = 1;
     erequest.length = 1;
     ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Couldn't extend VPartition");
+    slices_left--;
 
     // Rebind the FVM driver, check the extension has succeeded.
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
@@ -1599,6 +1609,26 @@ static bool TestPersistenceSimple(void) {
     ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block,
                           info.block_size * 2, &buf[0]),
                 "");
+
+    // Try allocating the rest of the slices, rebinding, and ensuring
+    // that the size stays updated.
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, kSliceSize * 2);
+    erequest.offset = 2;
+    erequest.length = slices_left;
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Couldn't extend VPartition");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, kSliceSize * kSliceCount);
+
+    ASSERT_EQ(close(vp_fd), 0);
+    fd = FVMRebind(fd, ramdisk_path, entries, 1);
+    ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
+
+    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
+
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, kSliceSize * kSliceCount);
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
