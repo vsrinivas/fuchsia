@@ -24,6 +24,7 @@ void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids,
 void ContextDebugImpl::OnValueRemoved(const Id& id) {
   auto update = ContextDebugValue::New();
   update->id = id;
+  update->parent_ids = fidl::Array<fidl::String>::New(0);
   DispatchOneValue(std::move(update));
 }
 
