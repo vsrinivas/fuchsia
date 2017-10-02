@@ -51,6 +51,7 @@ typedef int (*thread_start_routine)(void* arg);
 typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
 typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
                                        void* user_thread);
+typedef void (*thread_tls_callback_t)(void* tls_value);
 
 // clang-format off
 #define THREAD_FLAG_DETACHED                 (1 << 0)
@@ -147,6 +148,9 @@ typedef struct thread {
 
     /* thread local storage, intialized to zero */
     void* tls[THREAD_MAX_TLS_ENTRY];
+
+    /* callback for cleanup of tls slots */
+    thread_tls_callback_t tls_callback[THREAD_MAX_TLS_ENTRY];
 
     char name[THREAD_NAME_LENGTH];
 #if WITH_DEBUG_LINEBUFFER
@@ -297,6 +301,11 @@ static inline void* tls_set(uint entry, void* val) {
     void* oldval = curr_thread->tls[entry];
     curr_thread->tls[entry] = val;
     return oldval;
+}
+
+/* set the callback that is issued when the thread exits */
+static inline void tls_set_callback(uint entry, thread_tls_callback_t cb) {
+    get_current_thread()->tls_callback[entry] = cb;
 }
 
 __END_CDECLS

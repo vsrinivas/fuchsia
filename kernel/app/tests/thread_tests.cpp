@@ -663,6 +663,36 @@ __NO_INLINE static void affinity_test() {
     printf("done with affinity test\n");
 }
 
+#define TLS_TEST_TAGV   ((void*)0x666)
+
+static void tls_test_callback(void *tls) {
+    ASSERT(tls == TLS_TEST_TAGV);
+    atomic_add(&atomic_count, 1);
+}
+
+static int tls_test_thread(void* arg) {
+    tls_set(0u, TLS_TEST_TAGV);
+    tls_set_callback(0u, &tls_test_callback);
+    tls_set(1u, TLS_TEST_TAGV);
+    tls_set_callback(1u, &tls_test_callback);
+    return 0;
+}
+
+static void tls_tests() {
+    printf("starting tls tests\n");
+    atomic_count = 0;
+
+    thread_t* t = thread_create("tls-test", tls_test_thread, 0, LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_resume(t);
+    thread_sleep_relative(ZX_MSEC(200));
+    thread_join(t, nullptr, ZX_TIME_INFINITE);
+
+    ASSERT(atomic_count == 2);
+    atomic_count = 0;
+
+    printf("done with tls tests\n");
+}
+
 int thread_tests(void) {
     kill_tests();
 
@@ -680,6 +710,8 @@ int thread_tests(void) {
     join_test();
 
     affinity_test();
+
+    tls_tests();
 
     return 0;
 }

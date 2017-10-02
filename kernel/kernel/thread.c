@@ -213,6 +213,13 @@ static void free_thread_resources(thread_t* t) {
 #endif
     }
 
+    /* call the tls callback for each slot as long there is one */
+    for (uint ix = 0; ix != THREAD_MAX_TLS_ENTRY; ++ix) {
+        if (t->tls_callback[ix]) {
+            t->tls_callback[ix](t->tls[ix]);
+        }
+    }
+
     t->magic = 0;
     if (t->flags & THREAD_FLAG_FREE_STRUCT)
         free(t);
