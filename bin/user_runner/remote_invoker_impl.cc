@@ -51,7 +51,13 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
     FlowToken flow{this, &page_id_};
 
     // TODO(planders) Use Zac's function to generate page id (once it's ready)
-    ledger_->GetPage(to_array(device_id_), device_page_.NewRequest(),
+    fidl::Array<uint8_t> page_id = to_array(device_id_);
+    if (page_id.size() != 16) {
+      // WARNING: HACK! Ledger page ids are 16 bytes but often we use non-16
+      // byte page ids. This makes sure that the page id will be 16 bytes.
+      page_id.resize(16);
+    }
+    ledger_->GetPage(std::move(page_id), device_page_.NewRequest(),
                      [this, flow](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FXL_LOG(ERROR) << "Ledger.GetPage() status=" << status;
