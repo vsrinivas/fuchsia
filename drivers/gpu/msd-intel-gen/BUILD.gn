@@ -11,7 +11,7 @@ driver_module("msd_intel") {
   output_name = "libmsd_intel"
 
   deps = [
-    "$magma_build_root/src/main",
+    "src:main",
     "src",
   ]
 
@@ -24,7 +24,7 @@ driver_module("msd_intel_test") {
   output_name = "libmsd_intel_test"
 
   deps = [
-    "$magma_build_root/src/main:test_driver",
+    "src:test_driver",
     "src",
   ]
 
