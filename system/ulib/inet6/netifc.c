@@ -64,7 +64,7 @@ static size_t netmtu;
 static zx_handle_t iovmo;
 static void* iobuf;
 
-#define NET_BUFFERS 64
+#define NET_BUFFERS 256
 #define NET_BUFFERSZ 2048
 
 #define ETH_BUFFER_MAGIC 0x424201020304A7A7UL
