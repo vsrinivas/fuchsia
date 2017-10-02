@@ -65,6 +65,7 @@ typedef struct {
     mtx_t tx_mutex;
     ecm_endpoint_t tx_endpoint;
     list_node_t tx_txn_bufs;
+    uint64_t tx_drop_notice_ticks;
 
     // Receive context
     ecm_endpoint_t rx_endpoint;
@@ -240,6 +241,19 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     usb_request_queue(&ctx->usb, request);
 }
 
+// Give a dropped packet notification, but limit ourselves to no more than 1 message/second.
+static void dropped_packet_notification(ecm_ctx_t* ctx) {
+    static uint64_t ticks_per_second = 0;
+    uint64_t now_ticks = zx_ticks_get();
+    if (ticks_per_second == 0) {
+        ticks_per_second = zx_ticks_per_second();
+    }
+    if (now_ticks - ctx->tx_drop_notice_ticks >= ticks_per_second) {
+        printf("%s: no free write txns, dropping packets\n", module_name);
+        ctx->tx_drop_notice_ticks = now_ticks;
+    }
+}
+
 static void ethmac_send(void* cookie, uint32_t options, void* data, size_t length) {
     ecm_ctx_t* ctx = cookie;
     uint8_t* byte_data = data;
@@ -260,14 +274,14 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
     // Make sure that we can get all of the tx buffers we need to use
     usb_request_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
     if (tx_req == NULL) {
-        printf("%s: no free write txns, dropping packet\n", module_name);
+        dropped_packet_notification(ctx);
         goto done;
     }
     usb_request_t* tx_req2;
     if (send_terminal_packet) {
         tx_req2 = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
         if (tx_req2 == NULL) {
-            printf("%s: no free write txns, dropping packet\n", module_name);
+            dropped_packet_notification(ctx);
             list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
             goto done;
         }
