@@ -33,10 +33,10 @@ func main() {
 
 	stk := stack.New([]string{
 		ipv4.ProtocolName,
-		ipv4.PingProtocolName,
 		ipv6.ProtocolName,
 		arp.ProtocolName,
 	}, []string{
+		ipv4.PingProtocolName,
 		tcp.ProtocolName,
 		udp.ProtocolName,
 	})

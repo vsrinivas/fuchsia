@@ -468,7 +468,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 		}
 		if ep != nil {
 			switch transProto {
-			case tcp.ProtocolNumber, udp.ProtocolNumber:
+			case tcp.ProtocolNumber, udp.ProtocolNumber, ipv4.PingProtocolNumber:
 				var t uint32
 				if transProto == tcp.ProtocolNumber {
 					t = zx.SocketStream
@@ -550,7 +550,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 			go ios.loopSocketRead(s.stack)
 			go ios.loopSocketWrite(s.stack)
 		}
-	case udp.ProtocolNumber:
+	case udp.ProtocolNumber, ipv4.PingProtocolNumber:
 		go ios.loopDgramRead(s.stack)
 		go ios.loopDgramWrite(s.stack)
 	}
@@ -627,6 +627,8 @@ func sockProto(typ, protocol int) (t tcpip.TransportProtocolNumber, err error) {
 		switch protocol {
 		case IPPROTO_IP, IPPROTO_UDP:
 			return udp.ProtocolNumber, nil
+		case IPPROTO_ICMP:
+			return ipv4.PingProtocolNumber, nil
 		default:
 			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
 		}
