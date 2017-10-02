@@ -70,7 +70,9 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
     // We assume that the device is an Acer Switch 12 Alpha.  Assuming a 12.246
     // inch screen with square pixels, this gives a device-pixel ratio of 1.330.
     FXL_LOG(INFO) << "SceneManager: treating device as an Acer Switch 12.";
-    device_pixel_ratio = 1.329916454;
+    // TODO(MZ-16): We've been asked to temporarily revert the DP-ratio to 2.0.
+    // device_pixel_ratio = 1.329916454;
+    device_pixel_ratio = 2.0;
   }
 
   // Invoke the callback, passing the display attributes.
