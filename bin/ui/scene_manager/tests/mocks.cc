@@ -7,6 +7,16 @@
 namespace scene_manager {
 namespace test {
 
+SessionForTest::SessionForTest(SessionId id,
+                               Engine* engine,
+                               EventReporter* event_reporter,
+                               ErrorReporter* error_reporter)
+    : Session(id, engine, event_reporter, error_reporter) {}
+
+void SessionForTest::TearDown() {
+  Session::TearDown();
+}
+
 SessionHandlerForTest::SessionHandlerForTest(
     Engine* engine,
     SessionId session_id,

@@ -42,7 +42,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
           Engine* engine,
           EventReporter* event_reporter = nullptr,
           ErrorReporter* error_reporter = ErrorReporter::Default());
-  ~Session();
+  virtual ~Session();
 
   // Apply the operation to the current session state.  Return true if
   // successful, and false if the op is somehow invalid.  In the latter case,
@@ -61,10 +61,6 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // applied.  However, the resource may continue to exist if it is referenced
   // by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
-
-  // Called only by Engine. Use BeginTearDown() instead when you need to
-  // teardown from within Session.
-  void TearDown();
 
   // Session becomes invalid once TearDown is called.
   bool is_valid() const { return is_valid_; }
@@ -102,6 +98,21 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                scenic::vec3Ptr ray_origin,
                scenic::vec3Ptr ray_direction,
                const scenic::Session::HitTestCallback& callback);
+
+ protected:
+  friend class SessionHandler;
+  // Called only by SessionHandler. Use BeginTearDown() instead when you need to
+  // teardown from within Session. Virtual to allow test subclasses to override.
+  //
+  // The chain of events is:
+  // Session::BeginTearDown or SessionHandler::BeginTearDown
+  // => Engine::TearDownSession
+  // => SessionHandler::TearDown
+  // => Session::TearDown
+  //
+  // We are guaranteed that by the time TearDown() is closed, SessionHandler
+  // has destroyed the channel to this session.
+  virtual void TearDown();
 
  private:
   // Called internally to initiate teardown.

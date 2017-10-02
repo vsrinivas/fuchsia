@@ -6,9 +6,10 @@
 
 #include "garnet/bin/ui/scene_manager/engine/engine.h"
 #include "garnet/bin/ui/scene_manager/engine/session.h"
+#include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/fsl/threading/thread.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 
 namespace scene_manager {
 namespace test {
@@ -54,7 +55,7 @@ class SessionTest : public ::testing::Test,
 
   DisplayManager display_manager_;
   std::unique_ptr<Engine> engine_;
-  SessionPtr session_;
+  fxl::RefPtr<SessionForTest> session_;
   std::vector<std::string> reported_errors_;
   std::vector<scenic::EventPtr> events_;
 };

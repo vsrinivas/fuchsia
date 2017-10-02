@@ -4,8 +4,8 @@
 
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
 
-#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/synchronization/waitable_event.h"
 
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
 
@@ -14,7 +14,7 @@ namespace test {
 
 void SessionTest::SetUp() {
   engine_ = std::unique_ptr<Engine>(CreateEngine());
-  session_ = fxl::MakeRefCounted<Session>(1, engine_.get(), this, this);
+  session_ = fxl::MakeRefCounted<SessionForTest>(1, engine_.get(), this, this);
 }
 
 // ::testing::Test virtual method.

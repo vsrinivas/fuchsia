@@ -910,6 +910,15 @@ void Session::TearDown() {
   }
   is_valid_ = false;
   resources_.Clear();
+  scheduled_image_pipe_updates_ = {};
+
+  // We assume the channel for the associated scenic::Session is closed because
+  // SessionHandler closes it before calling this method.
+  // The channel *must* be closed before we clear |scheduled_updates_|, since it
+  // contains pending callbacks to scenic::Session::Present(); if it were not
+  // closed, we would have to invoke those callbacks before destroying them.
+  scheduled_updates_ = {};
+  fences_to_release_on_next_update_.reset();
 
   if (resource_count_ != 0) {
     auto exported_count =

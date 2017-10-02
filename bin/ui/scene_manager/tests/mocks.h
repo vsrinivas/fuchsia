@@ -6,6 +6,7 @@
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/engine/engine.h"
+#include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
 #include "garnet/bin/ui/scene_manager/sync/release_fence_signaller.h"
@@ -13,7 +14,16 @@
 namespace scene_manager {
 namespace test {
 
-// Subclass SessionHandler to make testing easier.
+class SessionForTest : public Session {
+ public:
+  SessionForTest(SessionId id,
+                 Engine* engine,
+                 scene_manager::EventReporter* event_reporter,
+                 scene_manager::ErrorReporter* error_reporter);
+
+  virtual void TearDown() override;
+};
+
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
