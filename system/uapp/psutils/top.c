@@ -284,6 +284,7 @@ int main(int argc, char** argv) {
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
     int ret = 0;
+    bool first_run = true;
     for (;;) {
         zx_time_t next_deadline = zx_deadline_after(delay);
 
@@ -309,6 +310,13 @@ int main(int argc, char** argv) {
                 list_delete(&e->node);
                 free(e);
             }
+        }
+
+        if (first_run) {
+            // We don't have data until after we scan twice, since we're
+            // computing deltas.
+            first_run = false;
+            continue;
         }
 
         // sort the list
