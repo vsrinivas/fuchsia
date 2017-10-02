@@ -63,6 +63,17 @@ pub trait DeviceOps {
         Err(Status::ErrNotSupported)
     }
 
+    fn get_size(&mut self) -> u64 {
+        0
+    }
+
+    fn suspend(&mut self, _flags: u32) -> Status {
+        Status::ErrNotSupported
+    }
+
+    fn resume(&mut self, _flags: u32) -> Status {
+        Status::ErrNotSupported
+    }
 }
 
 pub type AddDeviceFlags = ddk_sys::device_add_flags_t;
@@ -182,7 +193,10 @@ extern fn ddk_iotxn_queue(ctx: *mut u8, txn: *mut ddk_sys::iotxn_t) {
 }
 
 extern fn ddk_get_size(ctx: *mut u8) -> u64 {
-    0
+    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let size = device.get_size();
+    let _ = Box::into_raw(device);
+    size
 }
 
 extern fn ddk_ioctl(ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t {
@@ -190,11 +204,17 @@ extern fn ddk_ioctl(ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out
 }
 
 extern fn ddk_suspend(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
-    sys::ZX_ERR_NOT_SUPPORTED
+    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let status = device.suspend(flags);
+    let _ = Box::into_raw(device);
+    status as sys::zx_status_t
 }
 
 extern fn ddk_resume(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
-    sys::ZX_ERR_NOT_SUPPORTED
+    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let status = device.resume(flags);
+    let _ = Box::into_raw(device);
+    status as sys::zx_status_t
 }
 
 static mut DEVICE_OPS: ddk_sys::zx_protocol_device_t = ddk_sys::zx_protocol_device_t {
