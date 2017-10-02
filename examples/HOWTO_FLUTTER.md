@@ -183,7 +183,7 @@ the corresponding fidl file path. (e.g. `module.fidl.dart`)
 # Using FIDL Dart Bindings
 
 The best place to start is the dartdoc comments in this file:
-https://fuchsia.googlesource.com/fidl/+/master/dart/src/bindings/interface.dart
+https://fuchsia.googlesource.com/topaz/public/+/master/lib/fidl/dart/lib/src/bindings/interface.dart
 
 Also, refer to the example flutter module code to see how the
 `InterfaceHandle<Foo>`, `InterfaceRequest<Foo>`, `InterfacePair<Foo>`,
