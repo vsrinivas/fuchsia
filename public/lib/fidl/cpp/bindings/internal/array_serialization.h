@@ -175,7 +175,7 @@ struct ArraySerializer<H,
       output->at(i) = WrappedHandle{it->release()};
       if (!validate_params->element_is_nullable &&
           output->at(i).value == ZX_HANDLE_INVALID) {
-        FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
+        FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid handle in array expecting valid handles", num_elements,
@@ -219,7 +219,7 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
       output->at(i) = WrappedHandle{it->PassChannel().release()};
       if (!validate_params->element_is_nullable &&
           output->at(i).value == ZX_HANDLE_INVALID) {
-        FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
+        FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid channel handle in array expecting valid handles",
@@ -265,7 +265,7 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
       internal::InterfaceHandleToData(std::move(*it), &output->at(i));
       if (!validate_params->element_is_nullable &&
           output->at(i).handle.value == ZX_HANDLE_INVALID) {
-        FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
+        FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid handle in array expecting valid handles", num_elements,
@@ -324,7 +324,7 @@ struct ArraySerializer<
 
       output->at(i) = element;
       if (!validate_params->element_is_nullable && !element) {
-        FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
+        FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
             ValidationError::UNEXPECTED_NULL_POINTER,
             MakeMessageWithArrayIndex("null in array expecting valid pointers",
                                       num_elements, i));
@@ -451,7 +451,7 @@ struct ArraySerializer<U, U_Data, true> {
       if (retval != ValidationError::NONE)
         return retval;
       if (!validate_params->element_is_nullable && output->at(i).is_null()) {
-        FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
+        FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
 
             ValidationError::UNEXPECTED_NULL_POINTER,
             MakeMessageWithArrayIndex("null in array expecting valid unions",
@@ -507,7 +507,7 @@ inline internal::ValidationError SerializeArray_(
 
   if (validate_params->expected_num_elements != 0 &&
       input->size() != validate_params->expected_num_elements) {
-    FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
+    FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
         internal::ValidationError::UNEXPECTED_ARRAY_HEADER,
         internal::MakeMessageWithExpectedArraySize(
             "fixed-size array has wrong number of elements", input->size(),

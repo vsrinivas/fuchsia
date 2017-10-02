@@ -75,6 +75,7 @@ TEST_F(StructSerializationAPITest, GetSerializedSize) {
 
 // This tests serialization of handles -- These should be deaths or
 TEST_F(StructSerializationAPITest, HandlesSerialization) {
+#ifdef NDEBUG // In debug builds serialization failures abort
   {
     SCOPED_TRACE("Uninitialized Array");
     HandleStruct handle_struct;
@@ -100,6 +101,7 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
     SerializeAndDeserialize(&handle_struct,
                             fidl::internal::ValidationError::ILLEGAL_HANDLE);
   }
+#endif
 
   // We shouldn't be able to serialize a valid handle.
   {

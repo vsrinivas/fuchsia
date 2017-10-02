@@ -403,6 +403,7 @@ TEST(ValidationTest, RunValidatorsOnMessageTest) {
   EXPECT_EQ(ValidationError::NONE,
             RunValidatorsOnMessage(validators, &msg, nullptr));
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   validators.push_back(std::unique_ptr<MessageValidator>(
       new FailingValidator(ValidationError::MESSAGE_HEADER_INVALID_FLAGS)));
   EXPECT_EQ(ValidationError::MESSAGE_HEADER_INVALID_FLAGS,
@@ -413,6 +414,7 @@ TEST(ValidationTest, RunValidatorsOnMessageTest) {
                         new FailingValidator(ValidationError::ILLEGAL_HANDLE)));
   EXPECT_EQ(ValidationError::ILLEGAL_HANDLE,
             RunValidatorsOnMessage(validators, &msg, nullptr));
+#endif
 }
 
 // Tests the IsValidValue() function generated for BasicEnum.

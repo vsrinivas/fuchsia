@@ -78,8 +78,10 @@ TEST_F(SerializationWarningTest, HandleInStruct) {
   Struct2Ptr test_struct(Struct2::New());
   EXPECT_FALSE(test_struct->hdl);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
               fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE);
+#endif
 
   test_struct = Struct2::New();
   zx::channel handle0, handle1;
@@ -93,8 +95,10 @@ TEST_F(SerializationWarningTest, StructInStruct) {
   Struct3Ptr test_struct(Struct3::New());
   EXPECT_TRUE(!test_struct->struct_1);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
               fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
+#endif
 
   test_struct = Struct3::New();
   test_struct->struct_1 = Struct1::New();
@@ -106,6 +110,7 @@ TEST_F(SerializationWarningTest, ArrayOfStructsInStruct) {
   Struct4Ptr test_struct(Struct4::New());
   EXPECT_TRUE(!test_struct->data);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
               fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
 
@@ -114,6 +119,7 @@ TEST_F(SerializationWarningTest, ArrayOfStructsInStruct) {
 
   TestWarning(std::move(test_struct),
               fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
+#endif
 
   test_struct = Struct4::New();
   test_struct->data.resize(0);
@@ -131,6 +137,7 @@ TEST_F(SerializationWarningTest, FixedArrayOfStructsInStruct) {
   Struct5Ptr test_struct(Struct5::New());
   EXPECT_TRUE(!test_struct->pair);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
               fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
 
@@ -140,6 +147,7 @@ TEST_F(SerializationWarningTest, FixedArrayOfStructsInStruct) {
 
   TestWarning(std::move(test_struct),
               fidl::internal::ValidationError::UNEXPECTED_ARRAY_HEADER);
+#endif
 
   test_struct = Struct5::New();
   test_struct->pair.resize(2);
@@ -153,9 +161,11 @@ TEST_F(SerializationWarningTest, StringInStruct) {
   Struct6Ptr test_struct(Struct6::New());
   EXPECT_TRUE(!test_struct->str);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   TestWarning(std::move(test_struct),
               fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER);
-
+#endif
+  
   test_struct = Struct6::New();
   test_struct->str = "hello world";
 
@@ -172,6 +182,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
   TestArrayWarning(std::move(test_array), fidl::internal::ValidationError::NONE,
                    &validate_params_0);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   test_array = CreateTestNestedHandleArray();
   test_array[0] = Array<zx::handle>();
   ArrayValidateParams validate_params_1(
@@ -187,6 +198,7 @@ TEST_F(SerializationWarningTest, ArrayOfArraysOfHandles) {
   TestArrayWarning(std::move(test_array),
                    fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
                    &validate_params_2);
+#endif
 }
 
 TEST_F(SerializationWarningTest, ArrayOfStrings) {
@@ -199,6 +211,7 @@ TEST_F(SerializationWarningTest, ArrayOfStrings) {
   TestArrayWarning(std::move(test_array), fidl::internal::ValidationError::NONE,
                    &validate_params_0);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   test_array = Array<String>::New(3);
   ArrayValidateParams validate_params_1(
       0, false, new ArrayValidateParams(0, false, nullptr));
@@ -212,6 +225,7 @@ TEST_F(SerializationWarningTest, ArrayOfStrings) {
   TestArrayWarning(std::move(test_array),
                    fidl::internal::ValidationError::UNEXPECTED_ARRAY_HEADER,
                    &validate_params_2);
+#endif
 }
 
 }  // namespace

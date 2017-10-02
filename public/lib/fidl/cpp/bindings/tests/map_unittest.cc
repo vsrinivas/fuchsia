@@ -426,6 +426,7 @@ TEST(MapTest, Serialization_MapOfNullableStructs) {
                  (8u + 8U + 4 * 4U)),  // 1 Rect value
             size);
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   // 1. Should not be able to serialize null elements.
   {
     FixedBufferForTesting buf(size);
@@ -433,6 +434,7 @@ TEST(MapTest, Serialization_MapOfNullableStructs) {
     EXPECT_EQ(ValidationError::UNEXPECTED_NULL_POINTER,
               SerializeMap_(&map, &buf, &data, &validate_non_nullable));
   }
+#endif
 
   // 2. Successfully serialize null elements.
   FixedBufferForTesting buf(size);

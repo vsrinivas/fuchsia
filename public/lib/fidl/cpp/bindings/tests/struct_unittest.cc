@@ -264,9 +264,11 @@ TEST(StructTest, Serialization_InterfaceRequest) {
   fidl::internal::FixedBufferForTesting buf(size * 2);
   ContainsInterfaceRequest::Data_* data;
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   // Test failure when non-nullable interface request is null.
   EXPECT_EQ(fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
             Serialize_(&iface_req_struct, &buf, &data));
+#endif
 
   SomeInterfacePtr i_ptr;
   iface_req_struct.req = i_ptr.NewRequest();

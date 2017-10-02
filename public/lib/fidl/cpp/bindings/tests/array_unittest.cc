@@ -360,6 +360,7 @@ TEST(ArrayTest, Serialization_ArrayOfHandle) {
   FixedBufferForTesting buf(size * 3);
   Array_Data<fidl::internal::WrappedHandle>* data = nullptr;
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   // 1.  Serialization should fail on non-nullable invalid Handle.
   ArrayValidateParams validate_params(4, false, nullptr);
   EXPECT_EQ(fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
@@ -370,6 +371,7 @@ TEST(ArrayTest, Serialization_ArrayOfHandle) {
   EXPECT_TRUE(array[1]);
   EXPECT_TRUE(array[2]);
   EXPECT_TRUE(array[3]);
+#endif
 
   // 2.  Serialization should pass on nullable invalid Handle.
   ArrayValidateParams validate_params_nullable(4, true, nullptr);
@@ -401,10 +403,12 @@ TEST(ArrayTest, Serialization_ArrayOfInterfacePtr) {
 
   // 1.  Invalid InterfacePtr should fail serialization.
   ArrayValidateParams validate_non_nullable(1, false, nullptr);
+#ifdef NDEBUG // In debug builds serialization failures abort
   EXPECT_EQ(
       fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
       SerializeArray_(&iface_array, &buf, &output, &validate_non_nullable));
   EXPECT_FALSE(iface_array[0]);
+#endif
 
   // 2.  Invalid InterfacePtr should pass if array elements are nullable.
   ArrayValidateParams validate_nullable(1, true, nullptr);
@@ -465,10 +469,12 @@ TEST(ArrayTest, Serialization_StructWithArrayOfInterfacePtr) {
 
   FixedBufferForTesting buf(size * 2);
   StructWithInterfaceArray::Data_* struct_arr_iface_data = nullptr;
+#ifdef NDEBUG // In debug builds serialization failures abort
   //  1. This should fail because |structs_array| has an invalid InterfacePtr<>
   //     and it is not nullable.
   EXPECT_EQ(fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER,
             Serialize_(&struct_arr_iface, &buf, &struct_arr_iface_data));
+#endif
 
   //  2. Adding in a struct with a valid InterfacePtr<> will let it serialize.
   TestInterfacePtr iface_ptr;
@@ -513,11 +519,13 @@ TEST(ArrayTest, Serialization_StructWithArrayOfIntefaceRequest) {
 
   FixedBufferForTesting buf(size * 2);
   StructWithInterfaceRequests::Data_* struct_arr_iface_req_data;
+#ifdef NDEBUG // In debug builds serialization failures abort
   //  1. This should fail because |req_array| has an invalid InterfaceRequest<>
   //     and it is not nullable.
   EXPECT_EQ(
       fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
       Serialize_(&struct_arr_iface_req, &buf, &struct_arr_iface_req_data));
+#endif
 
   //  2. Adding in a valid InterfacePtr<> will let it serialize.
   TestInterfacePtr iface_ptr;
@@ -776,6 +784,7 @@ TEST(ArrayTest, Serialization_ArrayOfStructPtr) {
             size_with_null);
   Array_Data<Rect::Data_*>* output_with_null = nullptr;
 
+#ifdef NDEBUG // In debug builds serialization failures abort
   // 1. Array with non-nullable structs should fail serialization due to
   // the null first element.
   {
@@ -784,6 +793,7 @@ TEST(ArrayTest, Serialization_ArrayOfStructPtr) {
               SerializeArray_(&array, &buf_with_null, &output_with_null,
                               &validate_non_nullable));
   }
+#endif
 
   // 2. Array with nullable structs should succeed.
   {

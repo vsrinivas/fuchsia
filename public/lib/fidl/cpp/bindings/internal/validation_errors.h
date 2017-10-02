@@ -102,12 +102,12 @@ class ValidationErrorStringStream {
 }  // namespace internal
 }  // namespace fidl
 
-// In a debug build, logs a serialization warning.
+// In a debug build, logs a serialization warning and aborts.
 // TODO(vardhan): Make this work like an ostream.
-#define FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(error, description) \
-  FXL_DLOG(WARNING) << "The outgoing message will trigger "          \
-                    << ValidationErrorToString(error)                \
-                    << " at the receiving side (" << description << ")."
+#define FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(error, description) \
+  FXL_DLOG(FATAL) << "Could not validate serialization: "            \
+                  << ValidationErrorToString(error)                  \
+                  << " (" << description << ")."
 
 // In a debug build, this will use |ValidationErrorStringStream::stream()| and
 // write to the supplied string if it is not null. In a non-debug + optimized

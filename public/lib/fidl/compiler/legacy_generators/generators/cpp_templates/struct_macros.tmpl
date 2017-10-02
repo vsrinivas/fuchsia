@@ -30,7 +30,7 @@
    macro, and conditionally returns if |should_return_errors| #}
 {%- macro _validation_check_macro(condition, error_code, error_msg, should_return_errors=false) -%}
   if ({{condition}}) {
-    FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING({{error_code}}, "{{error_msg}}");
+    FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE({{error_code}}, "{{error_msg}}");
   {%- if should_return_errors %}
     return {{error_code}};
   {%- endif %}
