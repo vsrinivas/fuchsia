@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
-#include <ddk/iotxn.h>
+#include <ddk/usb-request.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlan.h>
 #include <driver/usb.h>
@@ -151,11 +151,11 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t BusyWait(R* reg, Predicate pred,
             zx_duration_t delay = kDefaultBusyWait);
 
-    void HandleRxComplete(iotxn_t* request);
-    void HandleTxComplete(iotxn_t* request);
+    void HandleRxComplete(usb_request_t* request);
+    void HandleTxComplete(usb_request_t* request);
 
-    static void ReadIotxnComplete(iotxn_t* request, void* cookie);
-    static void WriteIotxnComplete(iotxn_t* request, void* cookie);
+    static void ReadRequestComplete(usb_request_t* request, void* cookie);
+    static void WriteRequestComplete(usb_request_t* request, void* cookie);
 
     usb_protocol_t usb_;
     fbl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
@@ -189,7 +189,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     uint8_t bg_rssi_offset_[3] = {};
 
     std::mutex lock_;
-    std::vector<iotxn_t*> free_write_reqs_ __TA_GUARDED(lock_);
+    std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
 };
 
 }  // namespace ralink

@@ -78,8 +78,8 @@ Device::Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
 
 Device::~Device() {
     debugfn();
-    for (auto txn : free_write_reqs_) {
-        iotxn_release(txn);
+    for (auto req : free_write_reqs_) {
+        usb_request_release(req);
     }
 }
 
@@ -2833,13 +2833,13 @@ zx_status_t Device::BusyWait(R* reg, Predicate pred, zx_duration_t delay) {
     return ZX_OK;
 }
 
-static void dump_rx(iotxn_t* request, RxInfo rx_info, RxDesc rx_desc,
+static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc,
         Rxwi0 rxwi0, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3) {
 #if RALINK_DUMP_RX
     uint8_t* data;
-    iotxn_mmap(request, reinterpret_cast<void**>(&data));
+    usb_request_mmap(request, reinterpret_cast<void**>(&data));
     debugf("dumping received packet\n");
-    debugf("rx len=%" PRIu64 "\n", request->actual);
+    debugf("rx len=%" PRIu64 "\n", request->response.actual);
     debugf("rxinfo usb_dma_rx_pkt_len=%u\n", rx_info.usb_dma_rx_pkt_len());
     debugf("rxdesc ba=%u data=%u nulldata=%u frag=%u unicast_to_me=%u multicast=%u\n",
             rx_desc.ba(), rx_desc.data(), rx_desc.nulldata(), rx_desc.frag(),
@@ -2864,7 +2864,7 @@ static void dump_rx(iotxn_t* request, RxInfo rx_info, RxDesc rx_desc,
             rxwi3.snr0(), rxwi3.snr1());
 
     size_t i = 0;
-    for (; i < request->actual; i++) {
+    for (; i < request->response.actual; i++) {
         std::printf("0x%02x ", data[i]);
         if (i % 8 == 7) std::printf("\n");
     }
@@ -2955,28 +2955,28 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
     }
 }
 
-void Device::HandleRxComplete(iotxn_t* request) {
-    if (request->status == ZX_ERR_IO_REFUSED) {
+void Device::HandleRxComplete(usb_request_t* request) {
+    if (request->response.status == ZX_ERR_IO_REFUSED) {
         debugf("usb_reset_endpoint\n");
         usb_reset_endpoint(&usb_, rx_endpt_);
     }
     std::lock_guard<std::mutex> guard(lock_);
-    auto ac = fbl::MakeAutoCall([&]() { iotxn_queue(parent(), request); });
+    auto ac = fbl::MakeAutoCall([&]() { usb_request_queue(&usb_, request); });
 
-    if (request->status == ZX_OK) {
+    if (request->response.status == ZX_OK) {
         size_t rx_hdr_size = (rt_type_ == RT5592) ? 28 : 20;
 
         // Handle completed rx
-        if (request->actual < rx_hdr_size + 4) {
+        if (request->response.actual < rx_hdr_size + 4) {
             errorf("short read\n");
             return;
         }
         uint8_t* data;
-        iotxn_mmap(request, reinterpret_cast<void**>(&data));
+        usb_request_mmap(request, reinterpret_cast<void**>(&data));
 
         uint32_t* data32 = reinterpret_cast<uint32_t*>(data);
         RxInfo rx_info(letoh32(data32[RxInfo::addr()]));
-        if (request->actual < 4 + rx_info.usb_dma_rx_pkt_len()) {
+        if (request->response.actual < 4 + rx_info.usb_dma_rx_pkt_len()) {
             errorf("short read\n");
             return;
         }
@@ -2998,14 +2998,14 @@ void Device::HandleRxComplete(iotxn_t* request) {
 
         dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
     } else {
-        if (request->status != ZX_ERR_IO_REFUSED) {
-            errorf("rx txn status %d\n", request->status);
+        if (request->response.status != ZX_ERR_IO_REFUSED) {
+            errorf("rx req status %d\n", request->response.status);
         }
     }
 }
 
-void Device::HandleTxComplete(iotxn_t* request) {
-    if (request->status == ZX_ERR_IO_REFUSED) {
+void Device::HandleTxComplete(usb_request_t* request) {
+    if (request->response.status == ZX_ERR_IO_REFUSED) {
         debugf("usb_reset_endpoint\n");
         usb_reset_endpoint(&usb_, tx_endpts_.front());
     }
@@ -3047,26 +3047,26 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
 
     // Initialize queues
     for (size_t i = 0; i < kReadReqCount; i++) {
-        auto* req = usb_alloc_iotxn(rx_endpt_, kReadBufSize);
-        if (req == nullptr) {
-            errorf("failed to allocate rx iotxn\n");
-            return ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        zx_status_t status = usb_request_alloc(&req, kReadBufSize, rx_endpt_);
+        if (status != ZX_OK) {
+            errorf("failed to allocate rx usb request\n");
+            return status;
         }
-        req->length = kReadBufSize;
-        req->complete_cb = &Device::ReadIotxnComplete;
+        req->complete_cb = &Device::ReadRequestComplete;
         req->cookie = this;
-        iotxn_queue(parent(), req);
+        usb_request_queue(&usb_, req);
     }
     // Only one TX queue for now
     auto tx_endpt = tx_endpts_.front();
     for (size_t i = 0; i < kWriteReqCount; i++) {
-        auto* req = usb_alloc_iotxn(tx_endpt, kWriteBufSize);
-        if (req == nullptr) {
-            errorf("failed to allocate tx iotxn\n");
-            return ZX_ERR_NO_MEMORY;
+        usb_request_t* req;
+        zx_status_t status = usb_request_alloc(&req, kWriteBufSize, tx_endpt);
+        if (status != ZX_OK) {
+            errorf("failed to allocate tx usb request\n");
+            return status;
         }
-        req->length = kWriteBufSize;
-        req->complete_cb = &Device::WriteIotxnComplete;
+        req->complete_cb = &Device::WriteRequestComplete;
         req->cookie = this;
         free_write_reqs_.push_back(req);
     }
@@ -3172,21 +3172,21 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     size_t txwi_len = (rt_type_ == RT5592) ? 20 : 16;
     size_t align_pad_len = ((len + 3) & ~3) - len;
     size_t terminal_pad_len = 4;
-    size_t iotxn_len = sizeof(TxInfo) + txwi_len + len + align_pad_len + terminal_pad_len;
+    size_t req_len = sizeof(TxInfo) + txwi_len + len + align_pad_len + terminal_pad_len;
 
-    if (iotxn_len > kWriteBufSize) {
-        errorf("iotxn buffer size insufficient for tx packet -- %zu bytes needed\n", iotxn_len);
+    if (req_len > kWriteBufSize) {
+        errorf("usb request buffer size insufficient for tx packet -- %zu bytes needed\n", req_len);
         return;
     }
 
-    iotxn_t* req = nullptr;
+    usb_request_t* req = nullptr;
     {
         std::lock_guard<std::mutex> guard(lock_);
         if (free_write_reqs_.empty()) {
             // No free write requests! Drop the packet.
             static int failed_writes = 0;
             if (failed_writes++ % 50 == 0) {
-                warnf("dropping tx; no free iotxns\n");
+                warnf("dropping tx; no free usb requests\n");
             }
             return;
         }
@@ -3196,9 +3196,9 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     ZX_DEBUG_ASSERT(req != nullptr);
 
     TxPacket* packet;
-    zx_status_t status = iotxn_mmap(req, reinterpret_cast<void**>(&packet));
+    zx_status_t status = usb_request_mmap(req, reinterpret_cast<void**>(&packet));
     if (status != ZX_OK) {
-        errorf("could not map iotxn: %d\n", status);
+        errorf("could not map usb request: %d\n", status);
         std::lock_guard<std::mutex> guard(lock_);
         free_write_reqs_.push_back(req);
         return;
@@ -3229,8 +3229,8 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     std::memset(&payload_ptr[len], 0, align_pad_len + terminal_pad_len);
 
     // Send the whole thing
-    req->length = iotxn_len;
-    iotxn_queue(parent(), req);
+    req->header.length = req_len;
+    usb_request_queue(&usb_, req);
 }
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
@@ -3264,9 +3264,9 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     return ZX_OK;
 }
 
-void Device::ReadIotxnComplete(iotxn_t* request, void* cookie) {
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
@@ -3274,9 +3274,9 @@ void Device::ReadIotxnComplete(iotxn_t* request, void* cookie) {
     dev->HandleRxComplete(request);
 }
 
-void Device::WriteIotxnComplete(iotxn_t* request, void* cookie) {
-    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
+void Device::WriteRequestComplete(usb_request_t* request, void* cookie) {
+    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
+        usb_request_release(request);
         return;
     }
 
