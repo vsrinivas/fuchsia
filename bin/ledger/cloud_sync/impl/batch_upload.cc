@@ -110,26 +110,29 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   FXL_DCHECK(status == storage::Status::OK);
 
   storage::ObjectId id = object->GetId();
-  cloud_provider_->AddObject(auth_token_, object->GetId(), std::move(data), [
-    this, id = std::move(id)
-  ](cloud_provider_firebase::Status status) mutable {
-    FXL_DCHECK(current_uploads_ > 0);
-    current_uploads_--;
+  cloud_provider_->AddObject(
+      auth_token_, object->GetId(), std::move(data),
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [
+        this, id = std::move(id)
+      ](cloud_provider_firebase::Status status) {
+        FXL_DCHECK(current_uploads_ > 0);
+        current_uploads_--;
 
-    if (status != cloud_provider_firebase::Status::OK) {
-      errored_ = true;
-      // Re-enqueue the object for another upload attempt.
-      remaining_object_ids_.push(std::move(id));
+        if (status != cloud_provider_firebase::Status::OK) {
+          errored_ = true;
+          // Re-enqueue the object for another upload attempt.
+          remaining_object_ids_.push(std::move(id));
 
-      if (current_uploads_ == 0u) {
-        on_error_();
-      }
-      return;
-    }
+          if (current_uploads_ == 0u) {
+            on_error_();
+          }
+          return;
+        }
 
-    // Uploading the object succeeded.
-    storage_->MarkPieceSynced(
-        id, callback::MakeScoped(
+        // Uploading the object succeeded.
+        storage_->MarkPieceSynced(
+            id,
+            callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
                   FXL_DCHECK(status == storage::Status::OK);
 
@@ -151,7 +154,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
                     UploadNextObject();
                   }
                 }));
-  });
+      }));
 }
 
 void BatchUpload::FilterAndUploadCommits() {
@@ -194,32 +197,34 @@ void BatchUpload::UploadCommits() {
     commits.push_back(std::move(commit));
     ids.push_back(std::move(id));
   }
-  cloud_provider_->AddCommits(auth_token_, std::move(commits), [
-    this, commit_ids = std::move(ids)
-  ](cloud_provider_firebase::Status status) {
-    // UploadCommit() is called as a last step of a so-far-successful upload
-    // attempt, so we couldn't have failed before.
-    FXL_DCHECK(!errored_);
-    if (status != cloud_provider_firebase::Status::OK) {
-      errored_ = true;
-      on_error_();
-      return;
-    }
-    auto waiter =
-        callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
+  cloud_provider_->AddCommits(
+      auth_token_, std::move(commits),
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [
+        this, commit_ids = std::move(ids)
+      ](cloud_provider_firebase::Status status) {
+        // UploadCommit() is called as a last step of a so-far-successful upload
+        // attempt, so we couldn't have failed before.
+        FXL_DCHECK(!errored_);
+        if (status != cloud_provider_firebase::Status::OK) {
+          errored_ = true;
+          on_error_();
+          return;
+        }
+        auto waiter = callback::StatusWaiter<storage::Status>::Create(
+            storage::Status::OK);
 
-    for (auto& id : commit_ids) {
-      storage_->MarkCommitSynced(id, waiter->NewCallback());
-    }
-    waiter->Finalize(callback::MakeScoped(
-        weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
-          // TODO(nellyv): Handle IO errors. See LE-225.
-          FXL_DCHECK(status == storage::Status::OK);
-          // This object can be deleted in the on_done_() callback, don't do
-          // anything after the call.
-          on_done_();
-        }));
-  });
+        for (auto& id : commit_ids) {
+          storage_->MarkCommitSynced(id, waiter->NewCallback());
+        }
+        waiter->Finalize(callback::MakeScoped(
+            weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
+              // TODO(nellyv): Handle IO errors. See LE-225.
+              FXL_DCHECK(status == storage::Status::OK);
+              // This object can be deleted in the on_done_() callback, don't do
+              // anything after the call.
+              on_done_();
+            }));
+      }));
 }
 
 void BatchUpload::RefreshAuthToken(fxl::Closure on_refreshed) {
