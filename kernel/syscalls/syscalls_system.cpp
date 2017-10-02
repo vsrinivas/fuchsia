@@ -199,7 +199,7 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
     return ZX_OK;
 }
 
-static zx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
+static zx_status_t bootdata_append_cmdline(user_ptr<const char> cmdlinebuf,
                                            const size_t cmdlinebuf_size,
                                            uint8_t* bootimage_buffer,
                                            const size_t bootimage_buflen) {
@@ -228,7 +228,7 @@ static zx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
     }
 
     // Copy contents from the user buffer to the local kernel buffer.
-    _cmdlinebuf.copy_array_from_user(buffer, cmdlinebuf_size);
+    cmdlinebuf.copy_array_from_user(buffer, cmdlinebuf_size);
 
     // Ensure that the user provided string buffer is either already null
     // terminated or that it can be null terminated without blowing the buffer.
@@ -246,7 +246,7 @@ static zx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
 }
 
 zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
-                             user_ptr<const char> _cmdline, uint32_t cmdline_len) {
+                             user_ptr<const char> cmdline, uint32_t cmdline_len) {
     zx_status_t result;
 
     paddr_t new_kernel_addr;
@@ -267,7 +267,7 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
         return result;
     }
 
-    result = bootdata_append_cmdline(_cmdline, cmdline_len, bootimage_buffer, new_bootimage_len);
+    result = bootdata_append_cmdline(cmdline, cmdline_len, bootimage_buffer, new_bootimage_len);
     if (result != ZX_OK) {
         return result;
     }

@@ -32,7 +32,7 @@ zx_status_t sys_handle_close(zx_handle_t handle_value) {
 }
 
 static zx_status_t handle_dup_replace(
-    bool is_replace, zx_handle_t handle_value, zx_rights_t rights, user_ptr<zx_handle_t> _out) {
+    bool is_replace, zx_handle_t handle_value, zx_rights_t rights, user_ptr<zx_handle_t> out) {
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -58,7 +58,7 @@ static zx_status_t handle_dup_replace(
         if (!dest)
             return ZX_ERR_NO_MEMORY;
 
-        if (_out.copy_to_user(up->MapHandleToValue(dest)) != ZX_OK)
+        if (out.copy_to_user(up->MapHandleToValue(dest)) != ZX_OK)
             return ZX_ERR_INVALID_ARGS;
 
         if (is_replace)
@@ -71,11 +71,11 @@ static zx_status_t handle_dup_replace(
 }
 
 zx_status_t sys_handle_duplicate(
-    zx_handle_t handle_value, zx_rights_t rights, user_ptr<zx_handle_t> _out) {
-    return handle_dup_replace(false, handle_value, rights, _out);
+    zx_handle_t handle_value, zx_rights_t rights, user_ptr<zx_handle_t> out) {
+    return handle_dup_replace(false, handle_value, rights, out);
 }
 
 zx_status_t sys_handle_replace(
-    zx_handle_t handle_value, zx_rights_t rights, user_ptr<zx_handle_t> _out) {
-    return handle_dup_replace(true, handle_value, rights, _out);
+    zx_handle_t handle_value, zx_rights_t rights, user_ptr<zx_handle_t> out) {
+    return handle_dup_replace(true, handle_value, rights, out);
 }

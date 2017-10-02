@@ -25,7 +25,7 @@
 #define LOCAL_TRACE 0
 
 zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
-                            user_ptr<zx_handle_t> _out0, user_ptr<zx_handle_t> _out1) {
+                            user_ptr<zx_handle_t> out0, user_ptr<zx_handle_t> out1) {
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_FIFO);
     if (res != ZX_OK)
@@ -46,9 +46,9 @@ zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
     if (!handle1)
         return ZX_ERR_NO_MEMORY;
 
-    if (_out0.copy_to_user(up->MapHandleToValue(handle0)) != ZX_OK)
+    if (out0.copy_to_user(up->MapHandleToValue(handle0)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
-    if (_out1.copy_to_user(up->MapHandleToValue(handle1)) != ZX_OK)
+    if (out1.copy_to_user(up->MapHandleToValue(handle1)) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     up->AddHandle(fbl::move(handle0));
@@ -58,7 +58,7 @@ zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
 }
 
 zx_status_t sys_fifo_write(zx_handle_t handle, user_ptr<const void> entries,
-        size_t len, user_ptr<uint32_t> _actual) {
+        size_t len, user_ptr<uint32_t> actual_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<FifoDispatcher> fifo;
@@ -71,13 +71,13 @@ zx_status_t sys_fifo_write(zx_handle_t handle, user_ptr<const void> entries,
     if (status != ZX_OK)
         return status;
 
-    if (_actual.copy_to_user(actual) != ZX_OK)
+    if (actual_out.copy_to_user(actual) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return ZX_OK;
 }
 
-zx_status_t sys_fifo_read(zx_handle_t handle, user_ptr<void> entries, size_t len, user_ptr<uint32_t> _actual) {
+zx_status_t sys_fifo_read(zx_handle_t handle, user_ptr<void> entries, size_t len, user_ptr<uint32_t> actual_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<FifoDispatcher> fifo;
@@ -90,7 +90,7 @@ zx_status_t sys_fifo_read(zx_handle_t handle, user_ptr<void> entries, size_t len
     if (status != ZX_OK)
         return status;
 
-    if (_actual.copy_to_user(actual) != ZX_OK)
+    if (actual_out.copy_to_user(actual) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     return ZX_OK;
