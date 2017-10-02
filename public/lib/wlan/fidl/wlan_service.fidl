@@ -20,7 +20,7 @@ struct Error {
 struct AP {
   array<uint8> bssid;
   string       ssid;
-  uint8        last_rssi;
+  int32        last_rssi; // dBm (some vendors may not support dBm)
   bool         is_secure;
 };
 

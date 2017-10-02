@@ -63,7 +63,9 @@ func (ws *Wlanstack) Scan(sr wlan_service.ScanRequest) (res wlan_service.ScanRes
 		// Currently we indicate the AP is secure if it supports RSN.
 		// TODO: Check if AP supports other types of security mechanism (e.g. WEP)
 		is_secure := wap.BSSDesc.Rsn != nil
-		ap := wlan_service.Ap{bssid, wap.SSID, wap.LastRSSI, is_secure}
+		// TODO: Revisit this RSSI conversion.
+		last_rssi := int8(wap.LastRSSI)
+		ap := wlan_service.Ap{bssid, wap.SSID, int32(last_rssi), is_secure}
 		aps = append(aps, ap)
 	}
 	return wlan_service.ScanResult{

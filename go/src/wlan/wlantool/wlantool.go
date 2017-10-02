@@ -38,7 +38,7 @@ func (a *ToolApp) Scan(seconds uint8) {
 				prot = "*"
 			}
 			fmt.Printf("%x (RSSI: %d) %v %q\n",
-				ap.Bssid, int8(ap.LastRssi), prot, ap.Ssid)
+				ap.Bssid, ap.LastRssi, prot, ap.Ssid)
 		}
 	}
 }
