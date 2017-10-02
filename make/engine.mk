@@ -159,7 +159,7 @@ endif
 
 # Kernel compile flags
 KERNEL_INCLUDES := $(BUILDDIR) kernel/include
-KERNEL_COMPILEFLAGS := -fno-pic -ffreestanding -include $(KERNEL_CONFIG_HEADER)
+KERNEL_COMPILEFLAGS := -ffreestanding -include $(KERNEL_CONFIG_HEADER)
 KERNEL_COMPILEFLAGS += -Wformat=2 -Wvla
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -Wformat-signedness

@@ -129,6 +129,9 @@ KERNEL_COMPILEFLAGS += -mno-80387 -mno-fp-ret-in-387
 endif
 KERNEL_DEFINES += WITH_NO_FP=1
 
+# Use -fno-pic on x86_64 as it was default everywhere before arm64 enabled PIE
+KERNEL_COMPILEFLAGS += -fno-pic
+
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 KERNEL_COMPILEFLAGS += -mno-red-zone
 

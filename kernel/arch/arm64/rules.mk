@@ -102,8 +102,12 @@ KERNEL_DEFINES += WITH_NO_FP=1
 # See engine.mk.
 KEEP_FRAME_POINTER_COMPILEFLAGS += -mno-omit-leaf-frame-pointer
 
+KERNEL_COMPILEFLAGS += -fPIE -include kernel/include/hidden.h
+
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 
+# Clang needs -mcmodel=kernel to tell it to use the right safe-stack ABI for
+# the kernel.
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 
 # Clang now supports -fsanitize=safe-stack with -mcmodel=kernel.
