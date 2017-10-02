@@ -44,85 +44,99 @@ class PageDbMutator {
 
   // Heads.
   // Adds the given |head| in the set of commit heads.
-  virtual Status AddHead(coroutine::CoroutineHandler* handler,
-                         CommitIdView head,
-                         int64_t timestamp) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status AddHead(
+      coroutine::CoroutineHandler* handler,
+      CommitIdView head,
+      int64_t timestamp) = 0;
 
   // Removes the given |head| from the head commits.
-  virtual Status RemoveHead(coroutine::CoroutineHandler* handler,
-                            CommitIdView head) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status RemoveHead(
+      coroutine::CoroutineHandler* handler,
+      CommitIdView head) = 0;
 
   // Commits.
   // Adds the given |commit| in the database.
-  virtual Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
-                                       const CommitId& commit_id,
-                                       fxl::StringView storage_bytes) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status AddCommitStorageBytes(
+      coroutine::CoroutineHandler* handler,
+      const CommitId& commit_id,
+      fxl::StringView storage_bytes) = 0;
 
   // Removes the commit with the given |commit_id| from the commits.
-  virtual Status RemoveCommit(coroutine::CoroutineHandler* handler,
-                              const CommitId& commit_id) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status RemoveCommit(
+      coroutine::CoroutineHandler* handler,
+      const CommitId& commit_id) = 0;
 
   // Journals.
   // Creates a new id for a journal with the given type and base commit. In a
   // merge journal, the base commit is always the left one.
-  virtual Status CreateJournalId(coroutine::CoroutineHandler* handler,
-                                 JournalType journal_type,
-                                 const CommitId& base,
-                                 JournalId* journal_id) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status CreateJournalId(
+      coroutine::CoroutineHandler* handler,
+      JournalType journal_type,
+      const CommitId& base,
+      JournalId* journal_id) = 0;
 
   // Removes all information on explicit journals from the database.
-  virtual Status RemoveExplicitJournals(
+  FXL_WARN_UNUSED_RESULT virtual Status RemoveExplicitJournals(
       coroutine::CoroutineHandler* handler) = 0;
 
   // Removes all information on the journal with the given |journal_id| from the
   // database.
-  virtual Status RemoveJournal(coroutine::CoroutineHandler* handler,
-                               const JournalId& journal_id) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status RemoveJournal(
+      coroutine::CoroutineHandler* handler,
+      const JournalId& journal_id) = 0;
 
   // Adds a new |key|-|value| pair with the given |priority| to the journal with
   // the given |journal_id|.
-  virtual Status AddJournalEntry(coroutine::CoroutineHandler* handler,
-                                 const JournalId& journal_id,
-                                 fxl::StringView key,
-                                 fxl::StringView value,
-                                 KeyPriority priority) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status AddJournalEntry(
+      coroutine::CoroutineHandler* handler,
+      const JournalId& journal_id,
+      fxl::StringView key,
+      fxl::StringView value,
+      KeyPriority priority) = 0;
 
   // Removes the given key from the journal with the given |journal_id|.
-  virtual Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
-                                    const JournalId& journal_id,
-                                    convert::ExtendedStringView key) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status RemoveJournalEntry(
+      coroutine::CoroutineHandler* handler,
+      const JournalId& journal_id,
+      convert::ExtendedStringView key) = 0;
 
   // Object data.
   // Writes the content of the given object.
-  virtual Status WriteObject(coroutine::CoroutineHandler* handler,
-                             ObjectDigestView object_digest,
-                             std::unique_ptr<DataSource::DataChunk> content,
-                             PageDbObjectStatus object_status) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status WriteObject(
+      coroutine::CoroutineHandler* handler,
+      ObjectDigestView object_digest,
+      std::unique_ptr<DataSource::DataChunk> content,
+      PageDbObjectStatus object_status) = 0;
 
   // Deletes the object with the given identifier.
-  virtual Status DeleteObject(coroutine::CoroutineHandler* handler,
-                              ObjectDigestView object_digest) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status DeleteObject(
+      coroutine::CoroutineHandler* handler,
+      ObjectDigestView object_digest) = 0;
 
   // Object sync metadata.
   // Sets the status of the object with the given id.
-  virtual Status SetObjectStatus(coroutine::CoroutineHandler* handler,
-                                 ObjectDigestView object_digest,
-                                 PageDbObjectStatus object_status) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status SetObjectStatus(
+      coroutine::CoroutineHandler* handler,
+      ObjectDigestView object_digest,
+      PageDbObjectStatus object_status) = 0;
 
   // Commit sync metadata.
   // Marks the given |commit_id| as synced.
-  virtual Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
-                                    const CommitId& commit_id) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status MarkCommitIdSynced(
+      coroutine::CoroutineHandler* handler,
+      const CommitId& commit_id) = 0;
 
   // Marks the given |commit_id| as unsynced.
-  virtual Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
-                                      const CommitId& commit_id,
-                                      uint64_t generation) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status MarkCommitIdUnsynced(
+      coroutine::CoroutineHandler* handler,
+      const CommitId& commit_id,
+      uint64_t generation) = 0;
 
   // Sets the opaque sync metadata associated with this page for the given key.
-  virtual Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                                 fxl::StringView key,
-                                 fxl::StringView value) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status SetSyncMetadata(
+      coroutine::CoroutineHandler* handler,
+      fxl::StringView key,
+      fxl::StringView value) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
@@ -143,7 +157,8 @@ class PageDb : public PageDbMutator {
 
     // Executes this batch. No further operations in this batch are supported
     // after a successful execution.
-    virtual Status Execute(coroutine::CoroutineHandler* handler) = 0;
+    FXL_WARN_UNUSED_RESULT virtual Status Execute(
+        coroutine::CoroutineHandler* handler) = 0;
 
    private:
     FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
@@ -153,13 +168,14 @@ class PageDb : public PageDbMutator {
   ~PageDb() override {}
 
   // Initializes PageDb or returns an |IO_ERROR| on failure.
-  virtual Status Init() = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status Init() = 0;
 
   // Starts a new batch. The batch will be written when Execute is called on the
   // returned object. The PageDb object must outlive the batch object. If the
   // coroutine is interrupted, |INTERRUPTED| status is returned.
-  virtual Status StartBatch(coroutine::CoroutineHandler* handler,
-                            std::unique_ptr<Batch>* batch) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status StartBatch(
+      coroutine::CoroutineHandler* handler,
+      std::unique_ptr<Batch>* batch) = 0;
 
   // Heads.
   // Finds all head commits and replaces the contents of |heads| with their ids.
@@ -167,31 +183,35 @@ class PageDb : public PageDbMutator {
   // values. It is not an error if no heads are found. The resulting |heads| are
   // ordered by the timestamp given at their insertion and if identical, by
   // their id.
-  virtual Status GetHeads(coroutine::CoroutineHandler* handler,
-                          std::vector<CommitId>* heads) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetHeads(
+      coroutine::CoroutineHandler* handler,
+      std::vector<CommitId>* heads) = 0;
 
   // Commits.
   // Finds the commit with the given |commit_id| and stores its represenation in
   // storage bytes in the |storage_bytes| string.
-  virtual Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler,
-                                       CommitIdView commit_id,
-                                       std::string* storage_bytes) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetCommitStorageBytes(
+      coroutine::CoroutineHandler* handler,
+      CommitIdView commit_id,
+      std::string* storage_bytes) = 0;
 
   // Journals.
   // Finds all implicit journal ids and replaces the contents of |journal_ids|
   // with their ids.
-  virtual Status GetImplicitJournalIds(coroutine::CoroutineHandler* handler,
-                                       std::vector<JournalId>* journal_ids) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetImplicitJournalIds(
+      coroutine::CoroutineHandler* handler,
+      std::vector<JournalId>* journal_ids) = 0;
 
   // Stores the id of the base commit for the journal with the given |base|
   // parameter.
-  virtual Status GetBaseCommitForJournal(coroutine::CoroutineHandler* handler,
-                                         const JournalId& journal_id,
-                                         CommitId* base) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetBaseCommitForJournal(
+      coroutine::CoroutineHandler* handler,
+      const JournalId& journal_id,
+      CommitId* base) = 0;
 
   // Finds all the entries of the journal with the given |journal_id| and stores
   // an interator over the results on |entires|.
-  virtual Status GetJournalEntries(
+  FXL_WARN_UNUSED_RESULT virtual Status GetJournalEntries(
       coroutine::CoroutineHandler* handler,
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) = 0;
@@ -200,47 +220,53 @@ class PageDb : public PageDbMutator {
   // Reads the content of the given object. To check whether an object is stored
   // in the PageDb without retrieving its value, |nullptr| can be given for the
   // |object| argument.
-  virtual Status ReadObject(coroutine::CoroutineHandler* handler,
-                            ObjectDigest object_digest,
-                            std::unique_ptr<const Object>* object) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status ReadObject(
+      coroutine::CoroutineHandler* handler,
+      ObjectDigest object_digest,
+      std::unique_ptr<const Object>* object) = 0;
 
   // Checks whether the object with the given |object_digest| is stored in the
   // database.
-  virtual Status HasObject(coroutine::CoroutineHandler* handler,
-                           ObjectDigestView object_digest,
-                           bool* has_object) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status HasObject(
+      coroutine::CoroutineHandler* handler,
+      ObjectDigestView object_digest,
+      bool* has_object) = 0;
 
   // Returns the status of the object with the given id.
-  virtual Status GetObjectStatus(coroutine::CoroutineHandler* handler,
-                                 ObjectDigestView object_digest,
-                                 PageDbObjectStatus* object_status) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetObjectStatus(
+      coroutine::CoroutineHandler* handler,
+      ObjectDigestView object_digest,
+      PageDbObjectStatus* object_status) = 0;
 
   // Commit sync metadata.
   // Finds the set of unsynced commits and replaces the contents of |commit_ids|
   // with their ids. The result is ordered by the timestamps given when calling
   // |MarkCommitIdUnsynced|.
-  virtual Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,
-                                      std::vector<CommitId>* commit_ids) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetUnsyncedCommitIds(
+      coroutine::CoroutineHandler* handler,
+      std::vector<CommitId>* commit_ids) = 0;
 
   // Checks if the commit with the given |commit_id| is synced.
-  virtual Status IsCommitSynced(coroutine::CoroutineHandler* handler,
-                                const CommitId& commit_id,
-                                bool* is_synced) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status IsCommitSynced(
+      coroutine::CoroutineHandler* handler,
+      const CommitId& commit_id,
+      bool* is_synced) = 0;
 
   // Object sync metadata.
   // Finds the set of unsynced pieces and replaces the contents of
   // |object_digests| with their digests. |object_digests| will be
   // lexicographically sorted.
-  virtual Status GetUnsyncedPieces(
+  FXL_WARN_UNUSED_RESULT virtual Status GetUnsyncedPieces(
       coroutine::CoroutineHandler* handler,
       std::vector<ObjectDigest>* object_digests) = 0;
 
   // Sync metadata.
   // Retrieves the opaque sync metadata associated with this page for the given
   // key.
-  virtual Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
-                                 fxl::StringView key,
-                                 std::string* value) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetSyncMetadata(
+      coroutine::CoroutineHandler* handler,
+      fxl::StringView key,
+      std::string* value) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDb);

@@ -21,21 +21,25 @@ class Db {
     virtual ~Batch() {}
 
     // Inserts the given key-value pair in the database.
-    virtual Status Put(coroutine::CoroutineHandler* handler,
-                       convert::ExtendedStringView key,
-                       fxl::StringView value) = 0;
+    FXL_WARN_UNUSED_RESULT virtual Status Put(
+        coroutine::CoroutineHandler* handler,
+        convert::ExtendedStringView key,
+        fxl::StringView value) = 0;
 
     // Deletes the entry in the database with the given |key|.
-    virtual Status Delete(coroutine::CoroutineHandler* handler,
-                          convert::ExtendedStringView key) = 0;
+    FXL_WARN_UNUSED_RESULT virtual Status Delete(
+        coroutine::CoroutineHandler* handler,
+        convert::ExtendedStringView key) = 0;
 
     // Deletes all entries whose keys match the given |prefix|.
-    virtual Status DeleteByPrefix(coroutine::CoroutineHandler* handler,
-                                  convert::ExtendedStringView prefix) = 0;
+    FXL_WARN_UNUSED_RESULT virtual Status DeleteByPrefix(
+        coroutine::CoroutineHandler* handler,
+        convert::ExtendedStringView prefix) = 0;
 
     // Executes this batch. No further operations in this batch are supported
     // after a successful execution.
-    virtual Status Execute(coroutine::CoroutineHandler* handler) = 0;
+    FXL_WARN_UNUSED_RESULT virtual Status Execute(
+        coroutine::CoroutineHandler* handler) = 0;
 
    private:
     FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
@@ -49,42 +53,47 @@ class Db {
   // The handler (and the corresponding coroutine) only need to remain active
   // until the result is returned. If the coroutine is interrupted,
   // |INTERRUPTED| status is returned.
-  virtual Status StartBatch(coroutine::CoroutineHandler* handler,
-                            std::unique_ptr<Batch>* batch) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status StartBatch(
+      coroutine::CoroutineHandler* handler,
+      std::unique_ptr<Batch>* batch) = 0;
 
   // Retrieves the value corresponding to |key|.
-  virtual Status Get(coroutine::CoroutineHandler* handler,
-                     convert::ExtendedStringView key,
-                     std::string* value) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status Get(
+      coroutine::CoroutineHandler* handler,
+      convert::ExtendedStringView key,
+      std::string* value) = 0;
 
   // Checks whether |key| is stored in this database.
-  virtual Status HasKey(coroutine::CoroutineHandler* handler,
-                        convert::ExtendedStringView key,
-                        bool* has_key) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status HasKey(
+      coroutine::CoroutineHandler* handler,
+      convert::ExtendedStringView key,
+      bool* has_key) = 0;
 
   // Retrieves the value for the given |key| as an Object with the provided
   // |object_digest|.
-  virtual Status GetObject(coroutine::CoroutineHandler* handler,
-                           convert::ExtendedStringView key,
-                           ObjectDigest object_digest,
-                           std::unique_ptr<const Object>* object) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetObject(
+      coroutine::CoroutineHandler* handler,
+      convert::ExtendedStringView key,
+      ObjectDigest object_digest,
+      std::unique_ptr<const Object>* object) = 0;
 
   // Retrieves all keys matching the given |prefix|. |key_suffixes| will be
   // updated to contain the suffixes of corresponding keys.
-  virtual Status GetByPrefix(coroutine::CoroutineHandler* handler,
-                             convert::ExtendedStringView prefix,
-                             std::vector<std::string>* key_suffixes) = 0;
+  FXL_WARN_UNUSED_RESULT virtual Status GetByPrefix(
+      coroutine::CoroutineHandler* handler,
+      convert::ExtendedStringView prefix,
+      std::vector<std::string>* key_suffixes) = 0;
 
   // Retrieves all entries matching the given |prefix|. The keys of the
   // returned entries will be updated not to contain the |prefix|.
-  virtual Status GetEntriesByPrefix(
+  FXL_WARN_UNUSED_RESULT virtual Status GetEntriesByPrefix(
       coroutine::CoroutineHandler* handler,
       convert::ExtendedStringView prefix,
       std::vector<std::pair<std::string, std::string>>* entries) = 0;
 
   // Retrieves an entry iterator over the entries whose keys start with
   // |prefix|.
-  virtual Status GetIteratorAtPrefix(
+  FXL_WARN_UNUSED_RESULT virtual Status GetIteratorAtPrefix(
       coroutine::CoroutineHandler* handler,
       convert::ExtendedStringView prefix,
       std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,

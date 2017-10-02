@@ -31,7 +31,7 @@ class CoroutineHandler {
   // Yield the current coroutine. This must only be called from inside the
   // coroutine associated with this handler. If Yield returns |true|, the
   // coroutine must unwind its stack and terminate.
-  virtual bool Yield() = 0;
+  FXL_WARN_UNUSED_RESULT virtual bool Yield() = 0;
 
   // Restarts the computation of the coroutine associated with this handler.
   // This must only be called outside of the coroutine when it is yielded. If
@@ -61,9 +61,9 @@ class CoroutineService {
 // |async_call| will be never be called after this method returns. As such, it
 // can capture local variables by reference.
 template <typename A, typename... Args>
-bool SyncCall(CoroutineHandler* handler,
-              const A& async_call,
-              Args*... parameters) {
+FXL_WARN_UNUSED_RESULT bool SyncCall(CoroutineHandler* handler,
+                                     const A& async_call,
+                                     Args*... parameters) {
   class TerminationSentinel
       : public fxl::RefCountedThreadSafe<TerminationSentinel> {
    public:

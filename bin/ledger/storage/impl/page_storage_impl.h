@@ -140,12 +140,16 @@ class PageStorageImpl : public PageStorage {
                   PageId page_id);
 
   // Marks all pieces needed for the given objects as local.
-  Status MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
-                            PageDb::Batch* batch,
-                            std::vector<ObjectDigest> object_digests);
+  FXL_WARN_UNUSED_RESULT Status
+  MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
+                     PageDb::Batch* batch,
+                     std::vector<ObjectDigest> object_digests);
 
-  Status ContainsCommit(coroutine::CoroutineHandler* handler, CommitIdView id);
+  FXL_WARN_UNUSED_RESULT Status
+  ContainsCommit(coroutine::CoroutineHandler* handler, CommitIdView id);
+
   bool IsFirstCommit(CommitIdView id);
+
   // Adds the given synced object. |object_digest| will be validated against the
   // expected one based on the |data| and an |OBJECT_DIGEST_MISSMATCH| error
   // will be returned in case of missmatch.
@@ -153,17 +157,21 @@ class PageStorageImpl : public PageStorage {
                 std::unique_ptr<DataSource::DataChunk> data,
                 ChangeSource source,
                 std::function<void(Status)> callback);
+
   // Download all the chunks of the object with the given id.
   void DownloadFullObject(ObjectDigestView object_digest,
                           std::function<void(Status)> callback);
+
   void GetObjectFromSync(
       ObjectDigestView object_digest,
       std::function<void(Status, std::unique_ptr<const Object>)> callback);
+
   void FillBufferWithObjectContent(ObjectDigestView object_digest,
                                    zx::vmo vmo,
                                    size_t offset,
                                    size_t size,
                                    std::function<void(Status)> callback);
+
   void ReadDataSource(
       std::unique_ptr<DataSource> data_source,
       std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
@@ -190,37 +198,42 @@ class PageStorageImpl : public PageStorage {
   }
 
   // Synchronous versions of API methods using coroutines.
-  Status SynchronousInit(coroutine::CoroutineHandler* handler);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousInit(coroutine::CoroutineHandler* handler);
 
-  Status SynchronousGetCommit(coroutine::CoroutineHandler* handler,
-                              CommitId commit_id,
-                              std::unique_ptr<const Commit>* commit);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousGetCommit(coroutine::CoroutineHandler* handler,
+                       CommitId commit_id,
+                       std::unique_ptr<const Commit>* commit);
 
-  Status SynchronousAddCommitFromLocal(coroutine::CoroutineHandler* handler,
-                                       std::unique_ptr<const Commit> commit,
-                                       std::vector<ObjectDigest> new_objects);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousAddCommitFromLocal(coroutine::CoroutineHandler* handler,
+                                std::unique_ptr<const Commit> commit,
+                                std::vector<ObjectDigest> new_objects);
 
-  Status SynchronousAddCommitsFromSync(
-      coroutine::CoroutineHandler* handler,
-      std::vector<CommitIdAndBytes> ids_and_bytes);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousAddCommitsFromSync(coroutine::CoroutineHandler* handler,
+                                std::vector<CommitIdAndBytes> ids_and_bytes);
 
-  Status SynchronousGetUnsyncedCommits(
+  FXL_WARN_UNUSED_RESULT Status SynchronousGetUnsyncedCommits(
       coroutine::CoroutineHandler* handler,
       std::vector<std::unique_ptr<const Commit>>* unsynced_commits);
 
-  Status SynchronousMarkCommitSynced(coroutine::CoroutineHandler* handler,
-                                     const CommitId& commit_id);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousMarkCommitSynced(coroutine::CoroutineHandler* handler,
+                              const CommitId& commit_id);
 
-  Status SynchronousAddCommits(
-      coroutine::CoroutineHandler* handler,
-      std::vector<std::unique_ptr<const Commit>> commits,
-      ChangeSource source,
-      std::vector<ObjectDigest> new_objects);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousAddCommits(coroutine::CoroutineHandler* handler,
+                        std::vector<std::unique_ptr<const Commit>> commits,
+                        ChangeSource source,
+                        std::vector<ObjectDigest> new_objects);
 
-  Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
-                             ObjectDigest object_digest,
-                             std::unique_ptr<DataSource::DataChunk> data,
-                             ChangeSource source);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousAddPiece(coroutine::CoroutineHandler* handler,
+                      ObjectDigest object_digest,
+                      std::unique_ptr<DataSource::DataChunk> data,
+                      ChangeSource source);
 
   coroutine::CoroutineService* const coroutine_service_;
   const PageId page_id_;
