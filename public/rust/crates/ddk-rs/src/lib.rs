@@ -35,15 +35,15 @@ impl Device {
 pub trait DeviceOps {
     fn name(&self) -> String;
 
-    fn open(&mut self, flags: u32) -> Result<Option<Device>, Status> {
+    fn open(&mut self, _flags: u32) -> Result<Option<Device>, Status> {
         Ok(None)
     }
 
-    fn open_at(&mut self, path: &str, flags: u32) -> Result<Option<Device>, Status> {
+    fn open_at(&mut self, _path: &str, _flags: u32) -> Result<Option<Device>, Status> {
         Err(Status::ErrNotSupported)
     }
 
-    fn close(&mut self, flags: u32) -> Status {
+    fn close(&mut self, _flags: u32) -> Status {
         Status::NoError
     }
 
@@ -55,11 +55,11 @@ pub trait DeviceOps {
         Status::ErrNotSupported
     }
 
-    fn read(&mut self, buf: &mut [u8], offset: u64) -> Result<usize, Status> {
+    fn read(&mut self, _buf: &mut [u8], _offset: u64) -> Result<usize, Status> {
         Err(Status::ErrNotSupported)
     }
 
-    fn write(&mut self, buf: &[u8], offset: u64) -> Result<usize, Status> {
+    fn write(&mut self, _buf: &[u8], _offset: u64) -> Result<usize, Status> {
         Err(Status::ErrNotSupported)
     }
 
