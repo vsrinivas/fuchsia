@@ -38,13 +38,14 @@ class PageStorageImpl : public PageStorage {
 
   // Adds the given locally created |commit| in this |PageStorage|.
   void AddCommitFromLocal(std::unique_ptr<const Commit> commit,
-                          std::vector<ObjectId> new_objects,
+                          std::vector<ObjectDigest> new_objects,
                           std::function<void(Status)> callback);
 
-  // Checks whether the given |object_id| is untracked, i.e. has been created
-  // using |AddObjectFromLocal()|, but is not yet part of any commit. Untracked
-  // objects are invalid after the PageStorageImpl object is destroyed.
-  void ObjectIsUntracked(ObjectIdView object_id,
+  // Checks whether the given |object_digest| is untracked, i.e. has been
+  // created using |AddObjectFromLocal()|, but is not yet part of any commit.
+  // Untracked objects are invalid after the PageStorageImpl object is
+  // destroyed.
+  void ObjectIsUntracked(ObjectDigestView object_digest,
                          std::function<void(Status, bool)> callback);
 
   // PageStorage:
@@ -78,17 +79,17 @@ class PageStorageImpl : public PageStorage {
   void MarkCommitSynced(const CommitId& commit_id,
                         std::function<void(Status)> callback) override;
   void GetUnsyncedPieces(
-      std::function<void(Status, std::vector<ObjectId>)> callback) override;
-  void MarkPieceSynced(ObjectIdView object_id,
+      std::function<void(Status, std::vector<ObjectDigest>)> callback) override;
+  void MarkPieceSynced(ObjectDigestView object_digest,
                        std::function<void(Status)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectId)> callback) override;
-  void GetObject(ObjectIdView object_id,
+      std::function<void(Status, ObjectDigest)> callback) override;
+  void GetObject(ObjectDigestView object_digest,
                  Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
-  void GetPiece(ObjectIdView object_id,
+  void GetPiece(ObjectDigestView object_digest,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
   void SetSyncMetadata(fxl::StringView key,
@@ -141,24 +142,24 @@ class PageStorageImpl : public PageStorage {
   // Marks all pieces needed for the given objects as local.
   Status MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
                             PageDb::Batch* batch,
-                            std::vector<ObjectId> object_ids);
+                            std::vector<ObjectDigest> object_digests);
 
   Status ContainsCommit(coroutine::CoroutineHandler* handler, CommitIdView id);
   bool IsFirstCommit(CommitIdView id);
-  // Adds the given synced object. |object_id| will be validated against the
-  // expected one based on the |data| and an |OBJECT_ID_MISSMATCH| error will be
-  // returned in case of missmatch.
-  void AddPiece(ObjectId object_id,
+  // Adds the given synced object. |object_digest| will be validated against the
+  // expected one based on the |data| and an |OBJECT_DIGEST_MISSMATCH| error
+  // will be returned in case of missmatch.
+  void AddPiece(ObjectDigest object_digest,
                 std::unique_ptr<DataSource::DataChunk> data,
                 ChangeSource source,
                 std::function<void(Status)> callback);
   // Download all the chunks of the object with the given id.
-  void DownloadFullObject(ObjectIdView object_id,
+  void DownloadFullObject(ObjectDigestView object_digest,
                           std::function<void(Status)> callback);
   void GetObjectFromSync(
-      ObjectIdView object_id,
+      ObjectDigestView object_digest,
       std::function<void(Status, std::unique_ptr<const Object>)> callback);
-  void FillBufferWithObjectContent(ObjectIdView object_id,
+  void FillBufferWithObjectContent(ObjectDigestView object_digest,
                                    zx::vmo vmo,
                                    size_t offset,
                                    size_t size,
@@ -197,7 +198,7 @@ class PageStorageImpl : public PageStorage {
 
   Status SynchronousAddCommitFromLocal(coroutine::CoroutineHandler* handler,
                                        std::unique_ptr<const Commit> commit,
-                                       std::vector<ObjectId> new_objects);
+                                       std::vector<ObjectDigest> new_objects);
 
   Status SynchronousAddCommitsFromSync(
       coroutine::CoroutineHandler* handler,
@@ -214,10 +215,10 @@ class PageStorageImpl : public PageStorage {
       coroutine::CoroutineHandler* handler,
       std::vector<std::unique_ptr<const Commit>> commits,
       ChangeSource source,
-      std::vector<ObjectId> new_objects);
+      std::vector<ObjectDigest> new_objects);
 
   Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
-                             ObjectId object_id,
+                             ObjectDigest object_digest,
                              std::unique_ptr<DataSource::DataChunk> data,
                              ChangeSource source);
 

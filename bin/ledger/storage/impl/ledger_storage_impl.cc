@@ -30,7 +30,7 @@ std::string GetDirectoryName(fxl::StringView bytes) {
 
 // Decodes opaque bytes used as a directory names into an id. This is the
 // opposite transformation of GetDirectoryName.
-std::string GetObjectId(fxl::StringView bytes) {
+std::string GetId(fxl::StringView bytes) {
   std::string decoded;
   bool result = glue::Base64UrlDecode(bytes, &decoded);
   FXL_DCHECK(result);
@@ -113,7 +113,7 @@ std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
   std::vector<PageId> local_pages;
   DirectoryReader::GetDirectoryEntries(
       storage_dir_, [&local_pages](fxl::StringView encoded_page_id) {
-        local_pages.emplace_back(GetObjectId(encoded_page_id));
+        local_pages.emplace_back(GetId(encoded_page_id));
         return true;
       });
   return local_pages;

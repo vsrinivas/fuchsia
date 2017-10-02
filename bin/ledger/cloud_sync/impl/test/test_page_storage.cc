@@ -110,10 +110,10 @@ void TestPageStorage::AddCommitsFromSync(
 }
 
 void TestPageStorage::GetUnsyncedPieces(
-    std::function<void(storage::Status, std::vector<storage::ObjectId>)>
+    std::function<void(storage::Status, std::vector<storage::ObjectDigest>)>
         callback) {
   message_loop_->task_runner()->PostTask([callback = std::move(callback)] {
-    callback(storage::Status::OK, std::vector<storage::ObjectId>());
+    callback(storage::Status::OK, std::vector<storage::ObjectDigest>());
   });
 }
 

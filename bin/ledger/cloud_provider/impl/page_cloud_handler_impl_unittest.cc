@@ -640,14 +640,15 @@ TEST_F(PageCloudHandlerImplTest, AddObject) {
   ASSERT_TRUE(fsl::VmoFromString("bazinga", &data));
 
   Status status;
-  cloud_provider_->AddObject("this-is-a-token", "object_id", std::move(data),
+  cloud_provider_->AddObject("this-is-a-token", "object_digest",
+                             std::move(data),
                              callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(upload_keys_.size(), upload_data_.size());
   EXPECT_EQ(std::vector<std::string>{"this-is-a-token"}, upload_auth_tokens_);
-  EXPECT_EQ(std::vector<std::string>{"object_idV"}, upload_keys_);
+  EXPECT_EQ(std::vector<std::string>{"object_digestV"}, upload_keys_);
 
   std::string uploaded_content;
   ASSERT_TRUE(fsl::StringFromVmo(upload_data_[0], &uploaded_content));
@@ -663,7 +664,7 @@ TEST_F(PageCloudHandlerImplTest, GetObject) {
   uint64_t size;
   zx::socket data;
   cloud_provider_->GetObject(
-      "this-is-a-token", "object_id",
+      "this-is-a-token", "object_digest",
       callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -675,7 +676,7 @@ TEST_F(PageCloudHandlerImplTest, GetObject) {
   EXPECT_EQ(7u, size);
 
   EXPECT_EQ(std::vector<std::string>{"this-is-a-token"}, download_auth_tokens_);
-  EXPECT_EQ(std::vector<std::string>{"object_idV"}, download_keys_);
+  EXPECT_EQ(std::vector<std::string>{"object_digestV"}, download_keys_);
 }
 
 TEST_F(PageCloudHandlerImplTest, GetObjectNotFound) {
@@ -686,7 +687,7 @@ TEST_F(PageCloudHandlerImplTest, GetObjectNotFound) {
   uint64_t size;
   zx::socket data;
   cloud_provider_->GetObject(
-      "", "object_id",
+      "", "object_digest",
       callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 

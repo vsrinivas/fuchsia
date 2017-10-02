@@ -23,17 +23,18 @@ Status FileIndexSerialization::ParseFileIndex(fxl::StringView content,
 }
 
 void FileIndexSerialization::BuildFileIndex(
-    const std::vector<ObjectIdAndSize>& children,
+    const std::vector<ObjectDigestAndSize>& children,
     std::unique_ptr<DataSource::DataChunk>* output,
     size_t* total_size) {
   auto builder = std::make_unique<flatbuffers::FlatBufferBuilder>();
   size_t local_total_size = 0u;
 
   std::vector<flatbuffers::Offset<ObjectChild>> object_children;
-  for (const auto& id : children) {
-    local_total_size += id.size;
+  for (const auto& digest_and_size : children) {
+    local_total_size += digest_and_size.size;
     object_children.push_back(CreateObjectChild(
-        *builder, id.size, convert::ToFlatBufferVector(builder.get(), id.id)));
+        *builder, digest_and_size.size,
+        convert::ToFlatBufferVector(builder.get(), digest_and_size.digest)));
   }
   FinishFileIndexBuffer(
       *builder, CreateFileIndex(*builder, local_total_size,

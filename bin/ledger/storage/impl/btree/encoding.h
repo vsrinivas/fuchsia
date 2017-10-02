@@ -17,12 +17,12 @@ bool CheckValidTreeNodeSerialization(fxl::StringView data);
 
 std::string EncodeNode(uint8_t level,
                        const std::vector<Entry>& entries,
-                       const std::vector<ObjectId>& children);
+                       const std::vector<ObjectDigest>& children);
 
 bool DecodeNode(fxl::StringView data,
                 uint8_t* level,
                 std::vector<Entry>* res_entries,
-                std::vector<ObjectId>* res_children);
+                std::vector<ObjectDigest>* res_children);
 
 }  // namespace btree
 }  // namespace storage

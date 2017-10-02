@@ -15,16 +15,16 @@ namespace {
 
 Status ForEachEntryInternal(
     SynchronousStorage* storage,
-    ObjectIdView root_id,
+    ObjectDigestView root_digest,
     fxl::StringView min_key,
-    const std::function<bool(EntryAndNodeId)>& on_next) {
+    const std::function<bool(EntryAndNodeDigest)>& on_next) {
   BTreeIterator iterator(storage);
-  RETURN_ON_ERROR(iterator.Init(root_id));
+  RETURN_ON_ERROR(iterator.Init(root_digest));
   RETURN_ON_ERROR(iterator.SkipTo(min_key));
   while (!iterator.Finished()) {
     RETURN_ON_ERROR(iterator.AdvanceToValue());
     if (iterator.HasValue()) {
-      if (!on_next({iterator.CurrentEntry(), iterator.GetNodeId()})) {
+      if (!on_next({iterator.CurrentEntry(), iterator.GetDigest()})) {
         return Status::OK;
       }
       RETURN_ON_ERROR(iterator.Advance());
@@ -41,8 +41,8 @@ BTreeIterator::BTreeIterator(BTreeIterator&& other) = default;
 
 BTreeIterator& BTreeIterator::operator=(BTreeIterator&& other) = default;
 
-Status BTreeIterator::Init(ObjectIdView node_id) {
-  return Descend(node_id);
+Status BTreeIterator::Init(ObjectDigestView node_digest) {
+  return Descend(node_digest);
 }
 
 Status BTreeIterator::SkipTo(fxl::StringView min_key) {
@@ -75,12 +75,12 @@ bool BTreeIterator::SkipToIndex(fxl::StringView key) {
 
 fxl::StringView BTreeIterator::GetNextChild() const {
   auto index = CurrentIndex();
-  auto& children_ids = CurrentNode().children_ids();
+  auto& children_digests = CurrentNode().children_digests();
   if (descending_) {
-    return children_ids[index];
+    return children_digests[index];
   }
-  if (index + 1 < children_ids.size()) {
-    return children_ids[index + 1];
+  if (index + 1 < children_digests.size()) {
+    return children_digests[index + 1];
   }
   return "";
 }
@@ -99,8 +99,8 @@ const Entry& BTreeIterator::CurrentEntry() const {
   return CurrentNode().entries()[CurrentIndex()];
 }
 
-const std::string& BTreeIterator::GetNodeId() const {
-  return CurrentNode().GetId();
+const ObjectDigest& BTreeIterator::GetDigest() const {
+  return CurrentNode().GetDigest();
 }
 
 uint8_t BTreeIterator::GetLevel() const {
@@ -114,7 +114,7 @@ Status BTreeIterator::Advance() {
 
   auto& index = CurrentIndex();
   ++index;
-  if (index < CurrentNode().children_ids().size()) {
+  if (index < CurrentNode().children_digests().size()) {
     descending_ = true;
   } else {
     stack_.pop_back();
@@ -150,55 +150,57 @@ const TreeNode& BTreeIterator::CurrentNode() const {
   return *stack_.back().first;
 }
 
-Status BTreeIterator::Descend(fxl::StringView node_id) {
+Status BTreeIterator::Descend(fxl::StringView node_digest) {
   FXL_DCHECK(descending_);
-  if (node_id.empty()) {
+  if (node_digest.empty()) {
     descending_ = false;
     return Status::OK;
   }
 
   std::unique_ptr<const TreeNode> node;
-  RETURN_ON_ERROR(storage_->TreeNodeFromId(node_id, &node));
+  RETURN_ON_ERROR(storage_->TreeNodeFromDigest(node_digest, &node));
   stack_.emplace_back(std::move(node), 0);
   return Status::OK;
 }
 
-void GetObjectIds(coroutine::CoroutineService* coroutine_service,
-                  PageStorage* page_storage,
-                  ObjectIdView root_id,
-                  std::function<void(Status, std::set<ObjectId>)> callback) {
-  FXL_DCHECK(!root_id.empty());
-  auto object_ids = std::make_unique<std::set<ObjectId>>();
-  object_ids->insert(root_id.ToString());
+void GetObjectDigests(
+    coroutine::CoroutineService* coroutine_service,
+    PageStorage* page_storage,
+    ObjectDigestView root_digest,
+    std::function<void(Status, std::set<ObjectDigest>)> callback) {
+  FXL_DCHECK(!root_digest.empty());
+  auto object_digests = std::make_unique<std::set<ObjectDigest>>();
+  object_digests->insert(root_digest.ToString());
 
-  auto on_next = [object_ids = object_ids.get()](EntryAndNodeId e) {
-    object_ids->insert(e.entry.object_id);
-    object_ids->insert(e.node_id);
+  auto on_next = [object_digests = object_digests.get()](EntryAndNodeDigest e) {
+    object_digests->insert(e.entry.object_digest);
+    object_digests->insert(e.node_digest);
     return true;
   };
   auto on_done = fxl::MakeCopyable([
-    object_ids = std::move(object_ids), callback = std::move(callback)
+    object_digests = std::move(object_digests), callback = std::move(callback)
   ](Status status) {
     if (status != Status::OK) {
-      callback(status, std::set<ObjectId>());
+      callback(status, std::set<ObjectDigest>());
       return;
     }
-    callback(status, std::move(*object_ids));
+    callback(status, std::move(*object_digests));
   });
-  ForEachEntry(coroutine_service, page_storage, root_id, "", std::move(on_next),
-               std::move(on_done));
+  ForEachEntry(coroutine_service, page_storage, root_digest, "",
+               std::move(on_next), std::move(on_done));
 }
 
 void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
-                        ObjectIdView root_id,
+                        ObjectDigestView root_digest,
                         std::function<void(Status)> callback) {
   fxl::RefPtr<callback::Waiter<Status, std::unique_ptr<const Object>>> waiter_ =
       callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
           Status::OK);
-  auto on_next = [page_storage, waiter_](EntryAndNodeId e) {
+  auto on_next = [page_storage, waiter_](EntryAndNodeDigest e) {
     if (e.entry.priority == KeyPriority::EAGER) {
-      page_storage->GetObject(e.entry.object_id, PageStorage::Location::NETWORK,
+      page_storage->GetObject(e.entry.object_digest,
+                              PageStorage::Location::NETWORK,
                               waiter_->NewCallback());
     }
     return true;
@@ -214,24 +216,24 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
       callback(s);
     });
   };
-  ForEachEntry(coroutine_service, page_storage, root_id, "", std::move(on_next),
-               std::move(on_done));
+  ForEachEntry(coroutine_service, page_storage, root_digest, "",
+               std::move(on_next), std::move(on_done));
 }
 
 void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   PageStorage* page_storage,
-                  ObjectIdView root_id,
+                  ObjectDigestView root_digest,
                   std::string min_key,
-                  std::function<bool(EntryAndNodeId)> on_next,
+                  std::function<bool(EntryAndNodeDigest)> on_next,
                   std::function<void(Status)> on_done) {
-  FXL_DCHECK(!root_id.empty());
+  FXL_DCHECK(!root_digest.empty());
   coroutine_service->StartCoroutine([
-    page_storage, root_id, min_key = std::move(min_key),
+    page_storage, root_digest, min_key = std::move(min_key),
     on_next = std::move(on_next), on_done = std::move(on_done)
   ](coroutine::CoroutineHandler * handler) {
     SynchronousStorage storage(page_storage, handler);
 
-    on_done(ForEachEntryInternal(&storage, root_id, min_key, on_next));
+    on_done(ForEachEntryInternal(&storage, root_digest, min_key, on_next));
   });
 }
 

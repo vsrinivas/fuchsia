@@ -35,10 +35,10 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
 
   // PageDb and PageDb::Batch:
   Status ReadObject(coroutine::CoroutineHandler* handler,
-                    ObjectId object_id,
+                    ObjectDigest object_digest,
                     std::unique_ptr<const Object>* object) override;
   Status HasObject(coroutine::CoroutineHandler* handler,
-                   ObjectIdView object_id,
+                   ObjectDigestView object_digest,
                    bool* has_object) override;
   Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,
                               std::vector<CommitId>* commit_ids) override;
@@ -46,9 +46,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                         const CommitId& commit_id,
                         bool* is_synced) override;
   Status GetUnsyncedPieces(coroutine::CoroutineHandler* handler,
-                           std::vector<ObjectId>* object_ids) override;
+                           std::vector<ObjectDigest>* object_digests) override;
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
-                         ObjectIdView object_id,
+                         ObjectDigestView object_digest,
                          PageDbObjectStatus* object_status) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key,
@@ -80,18 +80,18 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                             const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
   Status WriteObject(coroutine::CoroutineHandler* handler,
-                     ObjectIdView object_id,
+                     ObjectDigestView object_digest,
                      std::unique_ptr<DataSource::DataChunk> content,
                      PageDbObjectStatus object_status) override;
   Status DeleteObject(coroutine::CoroutineHandler* handler,
-                      ObjectIdView object_id) override;
+                      ObjectDigestView object_digest) override;
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
                             const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
                               const CommitId& commit_id,
                               uint64_t generation) override;
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,
-                         ObjectIdView object_id,
+                         ObjectDigestView object_digest,
                          PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key,

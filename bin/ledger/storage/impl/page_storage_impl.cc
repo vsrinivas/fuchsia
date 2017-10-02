@@ -39,7 +39,7 @@
 #include "peridot/bin/ledger/storage/impl/file_index.h"
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
-#include "peridot/bin/ledger/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
@@ -153,7 +153,7 @@ void PageStorageImpl::GetCommit(
 }
 
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
-                                         std::vector<ObjectId> new_objects,
+                                         std::vector<ObjectDigest> new_objects,
                                          std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine(fxl::MakeCopyable([
     this, commit = std::move(commit), new_objects = std::move(new_objects),
@@ -304,35 +304,36 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
 }
 
 void PageStorageImpl::GetUnsyncedPieces(
-    std::function<void(Status, std::vector<ObjectId>)> callback) {
+    std::function<void(Status, std::vector<ObjectDigest>)> callback) {
   coroutine_service_->StartCoroutine([
     this, final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    std::vector<ObjectId> unsynced_object_ids;
-    Status s = db_->GetUnsyncedPieces(handler, &unsynced_object_ids);
-    callback(s, unsynced_object_ids);
+    std::vector<ObjectDigest> unsynced_object_digests;
+    Status s = db_->GetUnsyncedPieces(handler, &unsynced_object_digests);
+    callback(s, unsynced_object_digests);
   });
 }
 
-void PageStorageImpl::MarkPieceSynced(ObjectIdView object_id,
+void PageStorageImpl::MarkPieceSynced(ObjectDigestView object_digest,
                                       std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
-    this, object_id = object_id.ToString(), final_callback = std::move(callback)
+    this, object_digest = object_digest.ToString(),
+    final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    callback(
-        db_->SetObjectStatus(handler, object_id, PageDbObjectStatus::SYNCED));
+    callback(db_->SetObjectStatus(handler, object_digest,
+                                  PageDbObjectStatus::SYNCED));
   });
 }
 
 void PageStorageImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    std::function<void(Status, ObjectId)> callback) {
+    std::function<void(Status, ObjectDigest)> callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
@@ -343,7 +344,7 @@ void PageStorageImpl::AddObjectFromLocal(
       fxl::MakeCopyable([
         this, waiter, managed_data_source = std::move(managed_data_source),
         callback = std::move(traced_callback)
-      ](IterationStatus status, ObjectId object_id,
+      ](IterationStatus status, ObjectDigest object_digest,
         std::unique_ptr<DataSource::DataChunk> chunk) mutable {
         if (status == IterationStatus::ERROR) {
           callback(Status::IO_ERROR, "");
@@ -352,8 +353,8 @@ void PageStorageImpl::AddObjectFromLocal(
         if (chunk) {
           FXL_DCHECK(status == IterationStatus::IN_PROGRESS);
 
-          if (GetObjectIdType(object_id) != ObjectIdType::INLINE) {
-            AddPiece(std::move(object_id), std::move(chunk),
+          if (GetObjectDigestType(object_digest) != ObjectDigestType::INLINE) {
+            AddPiece(std::move(object_digest), std::move(chunk),
                      ChangeSource::LOCAL, waiter->NewCallback());
           }
           return;
@@ -361,22 +362,25 @@ void PageStorageImpl::AddObjectFromLocal(
 
         FXL_DCHECK(status == IterationStatus::DONE);
         waiter->Finalize([
-          object_id = std::move(object_id), callback = std::move(callback)
-        ](Status status) mutable { callback(status, std::move(object_id)); });
+          object_digest = std::move(object_digest),
+          callback = std::move(callback)
+        ](Status status) mutable {
+          callback(status, std::move(object_digest));
+        });
       }));
 }
 
 void PageStorageImpl::GetObject(
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     Location location,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  GetPiece(object_id, [
-    this, object_id = object_id.ToString(), location,
+  GetPiece(object_digest, [
+    this, object_digest = object_digest.ToString(), location,
     callback = std::move(callback)
   ](Status status, std::unique_ptr<const Object> object) mutable {
     if (status == Status::NOT_FOUND) {
       if (location == Location::NETWORK) {
-        GetObjectFromSync(object_id, std::move(callback));
+        GetObjectFromSync(object_digest, std::move(callback));
       } else {
         callback(Status::NOT_FOUND, nullptr);
       }
@@ -389,15 +393,15 @@ void PageStorageImpl::GetObject(
     }
 
     FXL_DCHECK(object);
-    ObjectIdType id_type = GetObjectIdType(object_id);
+    ObjectDigestType digest_type = GetObjectDigestType(object_digest);
 
-    if (id_type == ObjectIdType::INLINE ||
-        id_type == ObjectIdType::VALUE_HASH) {
+    if (digest_type == ObjectDigestType::INLINE ||
+        digest_type == ObjectDigestType::VALUE_HASH) {
       callback(status, std::move(object));
       return;
     }
 
-    FXL_DCHECK(id_type == ObjectIdType::INDEX_HASH);
+    FXL_DCHECK(digest_type == ObjectDigestType::INDEX_HASH);
 
     fxl::StringView content;
     status = object->GetData(&content);
@@ -434,7 +438,7 @@ void PageStorageImpl::GetObject(
         callback(Status::INTERNAL_IO_ERROR, nullptr);
         return;
       }
-      FillBufferWithObjectContent(child->object_id(), std::move(vmo_copy),
+      FillBufferWithObjectContent(child->object_digest(), std::move(vmo_copy),
                                   offset, child->size(), waiter->NewCallback());
       offset += child->size();
     }
@@ -445,7 +449,7 @@ void PageStorageImpl::GetObject(
     }
 
     auto final_object =
-        std::make_unique<VmoObject>(std::move(object_id), std::move(vmo));
+        std::make_unique<VmoObject>(std::move(object_digest), std::move(vmo));
 
     waiter->Finalize(fxl::MakeCopyable([
       object = std::move(final_object), callback = std::move(callback)
@@ -454,22 +458,24 @@ void PageStorageImpl::GetObject(
 }
 
 void PageStorageImpl::GetPiece(
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  ObjectIdType id_type = GetObjectIdType(object_id);
-  if (id_type == ObjectIdType::INLINE) {
-    callback(Status::OK, std::make_unique<InlinedObject>(object_id.ToString()));
+  ObjectDigestType digest_type = GetObjectDigestType(object_digest);
+  if (digest_type == ObjectDigestType::INLINE) {
+    callback(Status::OK,
+             std::make_unique<InlinedObject>(object_digest.ToString()));
     return;
   }
 
   coroutine_service_->StartCoroutine([
-    this, object_id = object_id.ToString(), final_callback = std::move(callback)
+    this, object_digest = object_digest.ToString(),
+    final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
     std::unique_ptr<const Object> object;
-    Status status = db_->ReadObject(handler, std::move(object_id), &object);
+    Status status = db_->ReadObject(handler, std::move(object_digest), &object);
     callback(status, std::move(object));
   });
 }
@@ -508,8 +514,8 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
                                         std::function<bool(Entry)> on_next,
                                         std::function<void(Status)> on_done) {
   btree::ForEachEntry(
-      coroutine_service_, this, commit.GetRootId(), min_key,
-      [on_next = std::move(on_next)](btree::EntryAndNodeId next) {
+      coroutine_service_, this, commit.GetRootDigest(), min_key,
+      [on_next = std::move(on_next)](btree::EntryAndNodeDigest next) {
         return on_next(next.entry);
       },
       std::move(on_done));
@@ -521,7 +527,7 @@ void PageStorageImpl::GetEntryFromCommit(
     std::function<void(Status, Entry)> callback) {
   std::unique_ptr<bool> key_found = std::make_unique<bool>(false);
   auto on_next = [ key, key_found = key_found.get(),
-                   callback ](btree::EntryAndNodeId next) {
+                   callback ](btree::EntryAndNodeDigest next) {
     if (next.entry.key == key) {
       *key_found = true;
       callback(Status::OK, next.entry);
@@ -541,7 +547,7 @@ void PageStorageImpl::GetEntryFromCommit(
     }
     callback(s, Entry());
   });
-  btree::ForEachEntry(coroutine_service_, this, commit.GetRootId(),
+  btree::ForEachEntry(coroutine_service_, this, commit.GetRootDigest(),
                       std::move(key), std::move(on_next), std::move(on_done));
 }
 
@@ -551,8 +557,8 @@ void PageStorageImpl::GetCommitContentsDiff(
     std::string min_key,
     std::function<bool(EntryChange)> on_next_diff,
     std::function<void(Status)> on_done) {
-  btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootId(),
-                     other_commit.GetRootId(), std::move(min_key),
+  btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootDigest(),
+                     other_commit.GetRootDigest(), std::move(min_key),
                      std::move(on_next_diff), std::move(on_done));
 }
 
@@ -623,23 +629,24 @@ void PageStorageImpl::NotifyWatchers() {
   }
 }
 
-Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
-                                           PageDb::Batch* batch,
-                                           std::vector<ObjectId> object_ids) {
-  std::unordered_set<ObjectId> seen_ids;
-  while (!object_ids.empty()) {
-    auto it = seen_ids.insert(std::move(object_ids.back()));
-    object_ids.pop_back();
-    const ObjectId& object_id = *(it.first);
-    FXL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
-    Status status =
-        batch->SetObjectStatus(handler, object_id, PageDbObjectStatus::LOCAL);
+Status PageStorageImpl::MarkAllPiecesLocal(
+    CoroutineHandler* handler,
+    PageDb::Batch* batch,
+    std::vector<ObjectDigest> object_digests) {
+  std::unordered_set<ObjectDigest> seen_digests;
+  while (!object_digests.empty()) {
+    auto it = seen_digests.insert(std::move(object_digests.back()));
+    object_digests.pop_back();
+    const ObjectDigest& object_digest = *(it.first);
+    FXL_DCHECK(GetObjectDigestType(object_digest) != ObjectDigestType::INLINE);
+    Status status = batch->SetObjectStatus(handler, object_digest,
+                                           PageDbObjectStatus::LOCAL);
     if (status != Status::OK) {
       return status;
     }
-    if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
+    if (GetObjectDigestType(object_digest) == ObjectDigestType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
-      status = db_->ReadObject(handler, object_id, &object);
+      status = db_->ReadObject(handler, object_digest, &object);
       if (status != Status::OK) {
         return status;
       }
@@ -656,12 +663,15 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler,
         return status;
       }
 
-      object_ids.reserve(object_ids.size() + file_index->children()->size());
+      object_digests.reserve(object_digests.size() +
+                             file_index->children()->size());
       for (const auto* child : *file_index->children()) {
-        if (GetObjectIdType(child->object_id()) != ObjectIdType::INLINE) {
-          std::string new_object_id = convert::ToString(child->object_id());
-          if (!seen_ids.count(new_object_id)) {
-            object_ids.push_back(std::move(new_object_id));
+        if (GetObjectDigestType(child->object_digest()) !=
+            ObjectDigestType::INLINE) {
+          std::string new_object_digest =
+              convert::ToString(child->object_digest());
+          if (!seen_digests.count(new_object_digest)) {
+            object_digests.push_back(std::move(new_object_digest));
           }
         }
       }
@@ -683,93 +693,97 @@ bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
   return id == kFirstPageCommitId;
 }
 
-void PageStorageImpl::AddPiece(ObjectId object_id,
+void PageStorageImpl::AddPiece(ObjectDigest object_digest,
                                std::unique_ptr<DataSource::DataChunk> data,
                                ChangeSource source,
                                std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine(fxl::MakeCopyable([
-    this, object_id = std::move(object_id), data = std::move(data), source,
-    final_callback = std::move(callback)
+    this, object_digest = std::move(object_digest), data = std::move(data),
+    source, final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
-    callback(SynchronousAddPiece(handler, std::move(object_id), std::move(data),
-                                 source));
+    callback(SynchronousAddPiece(handler, std::move(object_digest),
+                                 std::move(data), source));
   }));
 }
 
-void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
+void PageStorageImpl::DownloadFullObject(ObjectDigestView object_digest,
                                          std::function<void(Status)> callback) {
   FXL_DCHECK(page_sync_);
-  FXL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+  FXL_DCHECK(GetObjectDigestType(object_digest) != ObjectDigestType::INLINE);
 
-  page_sync_->GetObject(object_id, [
-    this, callback = std::move(callback), object_id = object_id.ToString()
+  page_sync_->GetObject(object_digest, [
+    this, callback = std::move(callback),
+    object_digest = object_digest.ToString()
   ](Status status, uint64_t size, zx::socket data) mutable {
     if (status != Status::OK) {
       callback(status);
       return;
     }
     ReadDataSource(DataSource::Create(std::move(data), size), [
-      this, callback = std::move(callback), object_id = std::move(object_id)
+      this, callback = std::move(callback),
+      object_digest = std::move(object_digest)
     ](Status status, std::unique_ptr<DataSource::DataChunk> chunk) mutable {
       if (status != Status::OK) {
         callback(status);
         return;
       }
       coroutine_service_->StartCoroutine(fxl::MakeCopyable([
-        this, object_id = std::move(object_id), chunk = std::move(chunk),
-        final_callback = std::move(callback)
+        this, object_digest = std::move(object_digest),
+        chunk = std::move(chunk), final_callback = std::move(callback)
       ](CoroutineHandler * handler) mutable {
         auto callback =
             UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-        auto object_id_type = GetObjectIdType(object_id);
-        FXL_DCHECK(object_id_type == ObjectIdType::VALUE_HASH ||
-                   object_id_type == ObjectIdType::INDEX_HASH);
+        auto object_digest_type = GetObjectDigestType(object_digest);
+        FXL_DCHECK(object_digest_type == ObjectDigestType::VALUE_HASH ||
+                   object_digest_type == ObjectDigestType::INDEX_HASH);
 
-        if (object_id !=
-            ComputeObjectId(GetObjectType(object_id_type), chunk->Get())) {
-          callback(Status::OBJECT_ID_MISMATCH);
+        if (object_digest !=
+            ComputeObjectDigest(GetObjectType(object_digest_type),
+                                chunk->Get())) {
+          callback(Status::OBJECT_DIGEST_MISMATCH);
           return;
         }
 
-        if (object_id_type == ObjectIdType::VALUE_HASH) {
-          AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
-                   std::move(callback));
+        if (object_digest_type == ObjectDigestType::VALUE_HASH) {
+          AddPiece(std::move(object_digest), std::move(chunk),
+                   ChangeSource::SYNC, std::move(callback));
           return;
         }
 
         auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
-        Status status = ForEachPiece(chunk->Get(), [&](ObjectIdView id) {
-          if (GetObjectIdType(id) == ObjectIdType::INLINE) {
-            return Status::OK;
-          }
+        Status status =
+            ForEachPiece(chunk->Get(), [&](ObjectDigestView digest) {
+              if (GetObjectDigestType(digest) == ObjectDigestType::INLINE) {
+                return Status::OK;
+              }
 
-          auto id_string = id.ToString();
-          Status status = db_->ReadObject(handler, id_string, nullptr);
-          if (status == Status::NOT_FOUND) {
-            DownloadFullObject(id_string, waiter->NewCallback());
-            return Status::OK;
-          }
-          return status;
-        });
+              auto digest_string = digest.ToString();
+              Status status = db_->ReadObject(handler, digest_string, nullptr);
+              if (status == Status::NOT_FOUND) {
+                DownloadFullObject(digest_string, waiter->NewCallback());
+                return Status::OK;
+              }
+              return status;
+            });
         if (status != Status::OK) {
           callback(status);
           return;
         }
 
         waiter->Finalize(fxl::MakeCopyable([
-          this, object_id = std::move(object_id), chunk = std::move(chunk),
-          callback = std::move(callback)
+          this, object_digest = std::move(object_digest),
+          chunk = std::move(chunk), callback = std::move(callback)
         ](Status status) mutable {
           if (status != Status::OK) {
             callback(status);
             return;
           }
 
-          AddPiece(std::move(object_id), std::move(chunk), ChangeSource::SYNC,
-                   std::move(callback));
+          AddPiece(std::move(object_digest), std::move(chunk),
+                   ChangeSource::SYNC, std::move(callback));
         }));
       }));
     });
@@ -777,52 +791,55 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
 }
 
 void PageStorageImpl::GetObjectFromSync(
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   if (!page_sync_) {
     callback(Status::NOT_CONNECTED_ERROR, nullptr);
     return;
   }
 
-  DownloadFullObject(object_id, [
-    this, object_id = object_id.ToString(), callback = std::move(callback)
+  DownloadFullObject(object_digest, [
+    this, object_digest = object_digest.ToString(),
+    callback = std::move(callback)
   ](Status status) mutable {
     if (status != Status::OK) {
       callback(status, nullptr);
       return;
     }
 
-    GetObject(object_id, Location::LOCAL, std::move(callback));
+    GetObject(object_digest, Location::LOCAL, std::move(callback));
   });
 }
 
 void PageStorageImpl::ObjectIsUntracked(
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     std::function<void(Status, bool)> callback) {
   coroutine_service_->StartCoroutine([
-    this, object_id = std::move(object_id), final_callback = std::move(callback)
+    this, object_digest = std::move(object_digest),
+    final_callback = std::move(callback)
   ](CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-    if (GetObjectIdType(object_id) == ObjectIdType::INLINE) {
+    if (GetObjectDigestType(object_digest) == ObjectDigestType::INLINE) {
       callback(Status::OK, false);
       return;
     }
 
     PageDbObjectStatus object_status;
-    Status status = db_->GetObjectStatus(handler, object_id, &object_status);
+    Status status =
+        db_->GetObjectStatus(handler, object_digest, &object_status);
     callback(status, object_status == PageDbObjectStatus::TRANSIENT);
   });
 }
 
 void PageStorageImpl::FillBufferWithObjectContent(
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     zx::vmo vmo,
     size_t offset,
     size_t size,
     std::function<void(Status)> callback) {
-  GetPiece(object_id, fxl::MakeCopyable([
+  GetPiece(object_digest, fxl::MakeCopyable([
              this, vmo = std::move(vmo), offset, size,
              callback = std::move(callback)
            ](Status status, std::unique_ptr<const Object> object) mutable {
@@ -839,13 +856,14 @@ void PageStorageImpl::FillBufferWithObjectContent(
                return;
              }
 
-             ObjectIdType id_type = GetObjectIdType(object->GetId());
-             if (id_type == ObjectIdType::INLINE ||
-                 id_type == ObjectIdType::VALUE_HASH) {
+             ObjectDigestType digest_type =
+                 GetObjectDigestType(object->GetDigest());
+             if (digest_type == ObjectDigestType::INLINE ||
+                 digest_type == ObjectDigestType::VALUE_HASH) {
                if (size != content.size()) {
                  FXL_LOG(ERROR)
                      << "Error in serialization format. Expecting object: "
-                     << convert::ToHex(object->GetId())
+                     << convert::ToHex(object->GetDigest())
                      << " to have size: " << size
                      << ", but found an object of size: " << content.size();
                  callback(Status::FORMAT_ERROR);
@@ -881,7 +899,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
              if (file_index->size() != size) {
                FXL_LOG(ERROR)
                    << "Error in serialization format. Expecting object: "
-                   << convert::ToHex(object->GetId())
+                   << convert::ToHex(object->GetDigest())
                    << " to have size: " << size
                    << ", but found an index object of size: "
                    << file_index->size();
@@ -906,8 +924,8 @@ void PageStorageImpl::FillBufferWithObjectContent(
                  return;
                }
                FillBufferWithObjectContent(
-                   child->object_id(), std::move(vmo_copy), offset + sub_offset,
-                   child->size(), waiter->NewCallback());
+                   child->object_digest(), std::move(vmo_copy),
+                   offset + sub_offset, child->size(), waiter->NewCallback());
                sub_offset += child->size();
              }
              waiter->Finalize(std::move(callback));
@@ -1066,7 +1084,7 @@ Status PageStorageImpl::SynchronousGetCommit(
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
     CoroutineHandler* handler,
     std::unique_ptr<const Commit> commit,
-    std::vector<ObjectId> new_objects) {
+    std::vector<ObjectDigest> new_objects) {
   // If the commit is already present, do nothing.
   if (ContainsCommit(handler, commit->GetId()) == Status::OK) {
     return Status::OK;
@@ -1089,7 +1107,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   commits.reserve(ids_and_bytes.size());
 
   for (auto& id_and_bytes : ids_and_bytes) {
-    ObjectId id = std::move(id_and_bytes.id);
+    CommitId id = std::move(id_and_bytes.id);
     std::string storage_bytes = std::move(id_and_bytes.bytes);
     if (ContainsCommit(handler, id) == Status::OK) {
       SynchronousMarkCommitSynced(handler, id);
@@ -1122,7 +1140,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
     btree::GetObjectsFromSync(coroutine_service_, this,
-                              leaf.second->GetRootId(), waiter->NewCallback());
+                              leaf.second->GetRootDigest(),
+                              waiter->NewCallback());
   }
 
   Status waiter_status;
@@ -1139,7 +1158,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
   }
 
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
-                               std::vector<ObjectId>());
+                               std::vector<ObjectDigest>());
 }
 
 Status PageStorageImpl::SynchronousGetUnsyncedCommits(
@@ -1183,7 +1202,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
-    std::vector<ObjectId> new_objects) {
+    std::vector<ObjectDigest> new_objects) {
   // Apply all changes atomically.
   std::unique_ptr<PageDb::Batch> batch;
   Status status = db_->StartBatch(handler, &batch);
@@ -1333,21 +1352,23 @@ Status PageStorageImpl::SynchronousAddCommits(
 
 Status PageStorageImpl::SynchronousAddPiece(
     CoroutineHandler* handler,
-    ObjectId object_id,
+    ObjectDigest object_digest,
     std::unique_ptr<DataSource::DataChunk> data,
     ChangeSource source) {
-  FXL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+  FXL_DCHECK(GetObjectDigestType(object_digest) != ObjectDigestType::INLINE);
   FXL_DCHECK(
-      object_id ==
-      ComputeObjectId(GetObjectType(GetObjectIdType(object_id)), data->Get()));
+      object_digest ==
+      ComputeObjectDigest(GetObjectType(GetObjectDigestType(object_digest)),
+                          data->Get()));
 
   std::unique_ptr<const Object> object;
-  Status status = db_->ReadObject(handler, object_id, &object);
+  Status status = db_->ReadObject(handler, object_digest, &object);
   if (status == Status::NOT_FOUND) {
     PageDbObjectStatus object_status =
         (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
                                        : PageDbObjectStatus::SYNCED);
-    return db_->WriteObject(handler, object_id, std::move(data), object_status);
+    return db_->WriteObject(handler, object_digest, std::move(data),
+                            object_status);
   }
   return status;
 }

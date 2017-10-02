@@ -21,9 +21,9 @@ namespace storage {
 namespace btree {
 
 // An entry and the id of the tree node in which it is stored.
-struct EntryAndNodeId {
+struct EntryAndNodeDigest {
   const Entry& entry;       // NOLINT
-  const ObjectId& node_id;  // NOLINT
+  const ObjectDigest& node_digest;  // NOLINT
 };
 
 // Iterator over a B-Tree. This iterator exposes the internal of the iteration
@@ -36,7 +36,7 @@ class BTreeIterator {
   BTreeIterator& operator=(BTreeIterator&& other);
 
   // Initializes the iterator with the root node of the tree.
-  Status Init(ObjectIdView node_id);
+  Status Init(ObjectDigestView node_digest);
 
   // Skips the iteration until the first key that is greater than or equal to
   // |min_key|.
@@ -62,8 +62,8 @@ class BTreeIterator {
   // |HasValue| is true.
   const Entry& CurrentEntry() const;
 
-  // Returns the identifier of the node at the top of the stack.
-  const std::string& GetNodeId() const;
+  // Returns the digest of the node at the top of the stack.
+  const storage::ObjectDigest& GetDigest() const;
 
   // Returns the level of the node at the top of the stack.
   uint8_t GetLevel() const;
@@ -81,7 +81,7 @@ class BTreeIterator {
   size_t& CurrentIndex();
   size_t CurrentIndex() const;
   const TreeNode& CurrentNode() const;
-  Status Descend(fxl::StringView node_id);
+  Status Descend(fxl::StringView node_digest);
 
   SynchronousStorage* storage_;
   // Stack representing the current iteration state. Each level represents the
@@ -97,17 +97,18 @@ class BTreeIterator {
 // Retrieves the ids of all objects in the B-Tree, i.e tree nodes and values of
 // entries in the tree. After a successfull call, |callback| will be called
 // with the set of results.
-void GetObjectIds(coroutine::CoroutineService* coroutine_service,
-                  PageStorage* page_storage,
-                  ObjectIdView root_id,
-                  std::function<void(Status, std::set<ObjectId>)> callback);
+void GetObjectDigests(
+    coroutine::CoroutineService* coroutine_service,
+    PageStorage* page_storage,
+    ObjectDigestView root_digest,
+    std::function<void(Status, std::set<ObjectDigest>)> callback);
 
 // Tries to download all tree nodes and values with |EAGER| priority that are
 // not locally available from sync. To do this |PageStorage::GetObject| is
 // called for all corresponding objects.
 void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
                         PageStorage* page_storage,
-                        ObjectIdView root_id,
+                        ObjectDigestView root_digest,
                         std::function<void(Status)> callback);
 
 // Iterates through the nodes of the tree with the given root and calls
@@ -118,9 +119,9 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
 // are no more elements or iteration was interrupted, or if an error occurs.
 void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   PageStorage* page_storage,
-                  ObjectIdView root_id,
+                  ObjectDigestView root_digest,
                   std::string min_key,
-                  std::function<bool(EntryAndNodeId)> on_next,
+                  std::function<bool(EntryAndNodeDigest)> on_next,
                   std::function<void(Status)> on_done);
 
 }  // namespace btree

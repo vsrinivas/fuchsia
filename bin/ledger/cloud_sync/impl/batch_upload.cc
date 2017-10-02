@@ -55,10 +55,10 @@ void BatchUpload::Start() {
     storage_->GetUnsyncedPieces(callback::MakeScoped(
         weak_ptr_factory_.GetWeakPtr(),
         [this](storage::Status status,
-               std::vector<storage::ObjectId> object_ids) {
+               std::vector<storage::ObjectDigest> object_digests) {
           FXL_DCHECK(status == storage::Status::OK);
-          for (auto& object_id : object_ids) {
-            remaining_object_ids_.push(std::move(object_id));
+          for (auto& object_digest : object_digests) {
+            remaining_object_digests_.push(std::move(object_digest));
           }
           StartObjectUpload();
         }));
@@ -75,25 +75,25 @@ void BatchUpload::Retry() {
 void BatchUpload::StartObjectUpload() {
   FXL_DCHECK(current_uploads_ == 0u);
   // If there are no unsynced objects left, upload the commits.
-  if (remaining_object_ids_.empty()) {
+  if (remaining_object_digests_.empty()) {
     FilterAndUploadCommits();
     return;
   }
 
   while (current_uploads_ < max_concurrent_uploads_ &&
-         !remaining_object_ids_.empty()) {
+         !remaining_object_digests_.empty()) {
     UploadNextObject();
   }
 }
 
 void BatchUpload::UploadNextObject() {
-  FXL_DCHECK(!remaining_object_ids_.empty());
+  FXL_DCHECK(!remaining_object_digests_.empty());
   FXL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
-  auto object_id_to_send = std::move(remaining_object_ids_.front());
+  auto object_digest_to_send = std::move(remaining_object_digests_.front());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
-  remaining_object_ids_.pop();
-  storage_->GetPiece(object_id_to_send,
+  remaining_object_digests_.pop();
+  storage_->GetPiece(object_digest_to_send,
                      callback::MakeScoped(
                          weak_ptr_factory_.GetWeakPtr(),
                          [this](storage::Status storage_status,
@@ -109,11 +109,11 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   // TODO(ppi): LE-225 Handle disk IO errors.
   FXL_DCHECK(status == storage::Status::OK);
 
-  storage::ObjectId id = object->GetId();
+  storage::ObjectDigest digest = object->GetDigest();
   cloud_provider_->AddObject(
-      auth_token_, object->GetId(), std::move(data),
+      auth_token_, object->GetDigest(), std::move(data),
       callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [
-        this, id = std::move(id)
+        this, digest = std::move(digest)
       ](cloud_provider_firebase::Status status) {
         FXL_DCHECK(current_uploads_ > 0);
         current_uploads_--;
@@ -121,7 +121,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
         if (status != cloud_provider_firebase::Status::OK) {
           errored_ = true;
           // Re-enqueue the object for another upload attempt.
-          remaining_object_ids_.push(std::move(id));
+          remaining_object_digests_.push(std::move(digest));
 
           if (current_uploads_ == 0u) {
             on_error_();
@@ -131,7 +131,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
         // Uploading the object succeeded.
         storage_->MarkPieceSynced(
-            id,
+            digest,
             callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
                   FXL_DCHECK(status == storage::Status::OK);
@@ -143,14 +143,15 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
                     return;
                   }
 
-                  if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
+                  if (current_uploads_ == 0 &&
+                      remaining_object_digests_.empty()) {
                     // All the referenced objects are uploaded, upload the
                     // commits.
                     FilterAndUploadCommits();
                     return;
                   }
 
-                  if (!errored_ && !remaining_object_ids_.empty()) {
+                  if (!errored_ && !remaining_object_digests_.empty()) {
                     UploadNextObject();
                   }
                 }));

@@ -65,7 +65,7 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
                      fxl::Closure on_done);
 
   // storage::PageSyncDelegate:
-  void GetObject(storage::ObjectIdView object_id,
+  void GetObject(storage::ObjectDigestView object_digest,
                  std::function<void(storage::Status status,
                                     uint64_t size,
                                     zx::socket data)> callback) override;

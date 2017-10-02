@@ -9,7 +9,7 @@ namespace storage;
 table CommitStorage {
   timestamp: ulong;
   generation: ulong;
-  root_node_id: [ubyte];
+  root_node_digest: [ubyte];
   parents: [convert.IdStorage];
 }
 

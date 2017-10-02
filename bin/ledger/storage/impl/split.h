@@ -29,22 +29,22 @@ enum class IterationStatus {
 void SplitDataSource(
     DataSource* source,
     std::function<void(IterationStatus,
-                       ObjectId,
+                       ObjectDigest,
                        std::unique_ptr<DataSource::DataChunk>)> callback);
 
 // Recurse over all pieces of an index object.
 Status ForEachPiece(fxl::StringView index_content,
-                    std::function<Status(ObjectIdView)> callback);
+                    std::function<Status(ObjectDigestView)> callback);
 
 // Collects all pieces ids needed to build the object with id |root|. This
 // returns the id of the object itself, and recurse inside any index if the
 // |callback| returned true for the given id.
 void CollectPieces(
-    ObjectIdView root,
-    std::function<void(ObjectIdView,
+    ObjectDigestView root,
+    std::function<void(ObjectDigestView,
                        std::function<void(Status, fxl::StringView)>)>
         data_accessor,
-    std::function<bool(IterationStatus, ObjectIdView)> callback);
+    std::function<bool(IterationStatus, ObjectDigestView)> callback);
 
 }  // namespace storage
 

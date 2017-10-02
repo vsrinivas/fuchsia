@@ -21,8 +21,8 @@ namespace btree {
 // differences or iteration was interrupted, or if an error occurs.
 void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
-                 ObjectIdView base_root_id,
-                 ObjectIdView other_root_id,
+                 ObjectDigestView base_root_digest,
+                 ObjectDigestView other_root_digest,
                  std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done);

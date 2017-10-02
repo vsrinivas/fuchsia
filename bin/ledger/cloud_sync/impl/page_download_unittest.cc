@@ -368,7 +368,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
 // Verifies that sync correctly fetches objects from the cloud provider.
 TEST_F(PageDownloadTest, GetObject) {
-  cloud_provider_.objects_to_return["object_id"] = "content";
+  cloud_provider_.objects_to_return["object_digest"] = "content";
   auth_provider_.token_to_return = "some-token";
   page_download_->StartDownload();
 
@@ -376,7 +376,7 @@ TEST_F(PageDownloadTest, GetObject) {
   uint64_t size;
   zx::socket data;
   storage_.page_sync_delegate_->GetObject(
-      storage::ObjectIdView("object_id"),
+      storage::ObjectDigestView("object_digest"),
       callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -392,7 +392,7 @@ TEST_F(PageDownloadTest, GetObject) {
 // Verifies that if auth provider fails to provide the auth token, GetObject()
 // returns an error, but the sync is not stopped.
 TEST_F(PageDownloadTest, GetObjectAuthError) {
-  cloud_provider_.objects_to_return["object_id"] = "content";
+  cloud_provider_.objects_to_return["object_digest"] = "content";
   auth_provider_.token_to_return = "some-token";
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_IDLE) {
@@ -408,7 +408,7 @@ TEST_F(PageDownloadTest, GetObjectAuthError) {
   uint64_t size;
   zx::socket data;
   storage_.page_sync_delegate_->GetObject(
-      storage::ObjectIdView("object_id"),
+      storage::ObjectDigestView("object_digest"),
       callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -434,14 +434,14 @@ TEST_F(PageDownloadTest, RetryGetObject) {
     // Allow the operation to succeed after looping through five attempts.
     if (cloud_provider_.get_object_calls == 5u) {
       cloud_provider_.status_to_return = cloud_provider_firebase::Status::OK;
-      cloud_provider_.objects_to_return["object_id"] = "content";
+      cloud_provider_.objects_to_return["object_digest"] = "content";
     }
   });
   storage::Status status;
   uint64_t size;
   zx::socket data;
   storage_.page_sync_delegate_->GetObject(
-      storage::ObjectIdView("object_id"),
+      storage::ObjectDigestView("object_digest"),
       callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 

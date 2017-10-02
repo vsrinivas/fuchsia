@@ -41,17 +41,17 @@ Status PageDbEmptyImpl::GetJournalEntries(
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
-                                   ObjectId /*object_id*/,
+                                   ObjectDigest /*object_digest*/,
                                    std::unique_ptr<const Object>* /*object*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
-                                  ObjectIdView /*object_id*/,
+                                  ObjectDigestView /*object_digest*/,
                                   bool* /*has_object*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
-                                        ObjectIdView /*object_id*/,
+                                        ObjectDigestView /*object_digest*/,
                                         PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -67,7 +67,7 @@ Status PageDbEmptyImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
 }
 Status PageDbEmptyImpl::GetUnsyncedPieces(
     CoroutineHandler* /*handler*/,
-    std::vector<ObjectId>* /*object_ids*/) {
+    std::vector<ObjectDigest>* /*object_digests*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
@@ -122,17 +122,17 @@ Status PageDbEmptyImpl::RemoveJournalEntry(
 }
 Status PageDbEmptyImpl::WriteObject(
     CoroutineHandler* /*handler*/,
-    ObjectIdView /*object_id*/,
+    ObjectDigestView /*object_digest*/,
     std::unique_ptr<DataSource::DataChunk> /*content*/,
     PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::DeleteObject(CoroutineHandler* /*handler*/,
-                                     ObjectIdView /*object_id*/) {
+                                     ObjectDigestView /*object_digest*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
-                                        ObjectIdView /*object_id*/,
+                                        ObjectDigestView /*object_digest*/,
                                         PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }

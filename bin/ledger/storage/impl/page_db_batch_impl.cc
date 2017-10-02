@@ -103,16 +103,16 @@ Status PageDbBatchImpl::RemoveJournalEntry(coroutine::CoroutineHandler* handler,
 
 Status PageDbBatchImpl::WriteObject(
     CoroutineHandler* handler,
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     std::unique_ptr<DataSource::DataChunk> content,
     PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
-  auto object_key = ObjectRow::GetKeyFor(object_id);
+  auto object_key = ObjectRow::GetKeyFor(object_digest);
   bool has_key;
-  RETURN_ON_ERROR(db_->HasObject(handler, object_id, &has_key));
+  RETURN_ON_ERROR(db_->HasObject(handler, object_digest, &has_key));
   if (has_key && object_status > PageDbObjectStatus::TRANSIENT) {
-    return SetObjectStatus(handler, object_id, object_status);
+    return SetObjectStatus(handler, object_digest, object_status);
   }
 
   RETURN_ON_ERROR(batch_->Put(handler, object_key, content->Get()));
@@ -121,9 +121,10 @@ Status PageDbBatchImpl::WriteObject(
       FXL_NOTREACHED();
       break;
     case PageDbObjectStatus::TRANSIENT:
-      return batch_->Put(handler, TransientObjectRow::GetKeyFor(object_id), "");
+      return batch_->Put(handler, TransientObjectRow::GetKeyFor(object_digest),
+                         "");
     case PageDbObjectStatus::LOCAL:
-      return batch_->Put(handler, LocalObjectRow::GetKeyFor(object_id), "");
+      return batch_->Put(handler, LocalObjectRow::GetKeyFor(object_digest), "");
     case PageDbObjectStatus::SYNCED:
       // Nothing to do.
       break;
@@ -132,22 +133,22 @@ Status PageDbBatchImpl::WriteObject(
 }
 
 Status PageDbBatchImpl::DeleteObject(CoroutineHandler* handler,
-                                     ObjectIdView object_id) {
-  RETURN_ON_ERROR(batch_->Delete(handler, ObjectRow::GetKeyFor(object_id)));
+                                     ObjectDigestView object_digest) {
+  RETURN_ON_ERROR(batch_->Delete(handler, ObjectRow::GetKeyFor(object_digest)));
   RETURN_ON_ERROR(
-      batch_->Delete(handler, TransientObjectRow::GetKeyFor(object_id)));
-  return batch_->Delete(handler, LocalObjectRow::GetKeyFor(object_id));
+      batch_->Delete(handler, TransientObjectRow::GetKeyFor(object_digest)));
+  return batch_->Delete(handler, LocalObjectRow::GetKeyFor(object_digest));
 }
 
 Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
-                                        ObjectIdView object_id,
+                                        ObjectDigestView object_digest,
                                         PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
-  FXL_DCHECK(CheckHasObject(handler, object_id))
-      << "Unknown object: " << convert::ToHex(object_id);
+  FXL_DCHECK(CheckHasObject(handler, object_digest))
+      << "Unknown object: " << convert::ToHex(object_digest);
 
-  auto transient_key = TransientObjectRow::GetKeyFor(object_id);
-  auto local_key = LocalObjectRow::GetKeyFor(object_id);
+  auto transient_key = TransientObjectRow::GetKeyFor(object_digest);
+  auto local_key = LocalObjectRow::GetKeyFor(object_digest);
 
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:
@@ -157,8 +158,8 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
     }
     case PageDbObjectStatus::LOCAL: {
       PageDbObjectStatus previous_object_status;
-      RETURN_ON_ERROR(
-          db_->GetObjectStatus(handler, object_id, &previous_object_status));
+      RETURN_ON_ERROR(db_->GetObjectStatus(handler, object_digest,
+                                           &previous_object_status));
       if (previous_object_status == PageDbObjectStatus::TRANSIENT) {
         RETURN_ON_ERROR(batch_->Delete(handler, transient_key));
         return batch_->Put(handler, local_key, "");

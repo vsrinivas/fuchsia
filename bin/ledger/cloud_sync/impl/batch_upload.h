@@ -88,7 +88,7 @@ class BatchUpload {
   std::string auth_token_;
 
   // All remaining object ids to be uploaded along with this batch of commits.
-  std::queue<storage::ObjectId> remaining_object_ids_;
+  std::queue<storage::ObjectDigest> remaining_object_digests_;
 
   // Number of object uploads currently in progress.
   unsigned int current_uploads_ = 0u;

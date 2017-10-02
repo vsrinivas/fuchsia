@@ -95,18 +95,18 @@ class PageDbMutator {
   // Object data.
   // Writes the content of the given object.
   virtual Status WriteObject(coroutine::CoroutineHandler* handler,
-                             ObjectIdView object_id,
+                             ObjectDigestView object_digest,
                              std::unique_ptr<DataSource::DataChunk> content,
                              PageDbObjectStatus object_status) = 0;
 
   // Deletes the object with the given identifier.
   virtual Status DeleteObject(coroutine::CoroutineHandler* handler,
-                              ObjectIdView object_id) = 0;
+                              ObjectDigestView object_digest) = 0;
 
   // Object sync metadata.
   // Sets the status of the object with the given id.
   virtual Status SetObjectStatus(coroutine::CoroutineHandler* handler,
-                                 ObjectIdView object_id,
+                                 ObjectDigestView object_digest,
                                  PageDbObjectStatus object_status) = 0;
 
   // Commit sync metadata.
@@ -201,18 +201,18 @@ class PageDb : public PageDbMutator {
   // in the PageDb without retrieving its value, |nullptr| can be given for the
   // |object| argument.
   virtual Status ReadObject(coroutine::CoroutineHandler* handler,
-                            ObjectId object_id,
+                            ObjectDigest object_digest,
                             std::unique_ptr<const Object>* object) = 0;
 
-  // Checks whether the object with the given |object_id| is stored in the
+  // Checks whether the object with the given |object_digest| is stored in the
   // database.
   virtual Status HasObject(coroutine::CoroutineHandler* handler,
-                           ObjectIdView object_id,
+                           ObjectDigestView object_digest,
                            bool* has_object) = 0;
 
   // Returns the status of the object with the given id.
   virtual Status GetObjectStatus(coroutine::CoroutineHandler* handler,
-                                 ObjectIdView object_id,
+                                 ObjectDigestView object_digest,
                                  PageDbObjectStatus* object_status) = 0;
 
   // Commit sync metadata.
@@ -228,10 +228,12 @@ class PageDb : public PageDbMutator {
                                 bool* is_synced) = 0;
 
   // Object sync metadata.
-  // Finds the set of unsynced pieces and replaces the contents of |object_ids|
-  // with their ids. |object_ids| will be lexicographically sorted.
-  virtual Status GetUnsyncedPieces(coroutine::CoroutineHandler* handler,
-                                   std::vector<ObjectId>* object_ids) = 0;
+  // Finds the set of unsynced pieces and replaces the contents of
+  // |object_digests| with their digests. |object_digests| will be
+  // lexicographically sorted.
+  virtual Status GetUnsyncedPieces(
+      coroutine::CoroutineHandler* handler,
+      std::vector<ObjectDigest>* object_digests) = 0;
 
   // Sync metadata.
   // Retrieves the opaque sync metadata associated with this page for the given

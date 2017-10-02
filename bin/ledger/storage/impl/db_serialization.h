@@ -28,7 +28,7 @@ class ObjectRow {
  public:
   static constexpr fxl::StringView kPrefix = "objects/";
 
-  static std::string GetKeyFor(ObjectIdView object_id);
+  static std::string GetKeyFor(ObjectDigestView object_digest);
 };
 
 class UnsyncedCommitRow {
@@ -40,16 +40,16 @@ class UnsyncedCommitRow {
 
 class TransientObjectRow {
  public:
-  static constexpr fxl::StringView kPrefix = "transient/object_ids/";
+  static constexpr fxl::StringView kPrefix = "transient/object_digests/";
 
-  static std::string GetKeyFor(ObjectIdView object_id);
+  static std::string GetKeyFor(ObjectDigestView object_digest);
 };
 
 class LocalObjectRow {
  public:
-  static constexpr fxl::StringView kPrefix = "local/object_ids/";
+  static constexpr fxl::StringView kPrefix = "local/object_digests/";
 
-  static std::string GetKeyFor(ObjectIdView object_id);
+  static std::string GetKeyFor(ObjectDigestView object_digest);
 };
 
 class ImplicitJournalMetaRow {
@@ -93,7 +93,8 @@ class JournalEntryRow {
 
   static std::string GetValueFor(fxl::StringView value, KeyPriority priority);
 
-  static Status ExtractObjectId(fxl::StringView db_value, ObjectId* id);
+  static Status ExtractObjectDigest(fxl::StringView db_value,
+                                    ObjectDigest* digest);
 };
 
 }  // namespace storage

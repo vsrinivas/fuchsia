@@ -147,7 +147,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
 
             if (commits[0]->GetParentIds().size() == 2 &&
                 commits[1]->GetParentIds().size() == 2 &&
-                commits[0]->GetRootId() == commits[1]->GetRootId()) {
+                commits[0]->GetRootDigest() == commits[1]->GetRootDigest()) {
               if (delayed_status == DelayedStatus::INITIAL) {
                 // If trying to merge 2 merge commits, add some delay with
                 // exponential backoff.
@@ -175,7 +175,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
             }
 
             // Check if the 2 parents have the same content.
-            if (commits[0]->GetRootId() == commits[1]->GetRootId()) {
+            if (commits[0]->GetRootDigest() == commits[1]->GetRootDigest()) {
               // In that case, the result must be a commit with the same
               // content.
               storage_->StartMergeCommit(

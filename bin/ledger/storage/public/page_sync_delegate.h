@@ -25,7 +25,7 @@ class PageSyncDelegate {
   // is passed to the callback along with the socket handle, so that the
   // client can verify that all data was streamed when draining the socket.
   virtual void GetObject(
-      ObjectIdView object_id,
+      ObjectDigestView object_digest,
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) = 0;
 

@@ -90,7 +90,7 @@ class PageDelegate {
   const storage::CommitId& GetCurrentCommitId();
 
   void PutInCommit(fidl::Array<uint8_t> key,
-                   storage::ObjectId value,
+                   storage::ObjectDigest value,
                    storage::KeyPriority priority,
                    StatusCallback callback);
 

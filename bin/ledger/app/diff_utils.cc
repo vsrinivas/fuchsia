@@ -88,7 +88,7 @@ void ComputePageChange(
                           : Priority::LAZY;
     context->page_change->changes.push_back(std::move(entry));
     PageUtils::GetPartialReferenceAsBuffer(
-        storage, change.entry.object_id, 0u,
+        storage, change.entry.object_digest, 0u,
         std::numeric_limits<int64_t>::max(),
         storage::PageStorage::Location::LOCAL, Status::OK,
         waiter->NewCallback());

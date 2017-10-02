@@ -17,8 +17,8 @@ using PageId = std::string;
 using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
 using CommitIdView = convert::ExtendedStringView;
-using ObjectId = std::string;
-using ObjectIdView = convert::ExtendedStringView;
+using ObjectDigest = std::string;
+using ObjectDigestView = convert::ExtendedStringView;
 using JournalId = std::string;
 using JournalIdView = convert::ExtendedStringView;
 
@@ -31,7 +31,7 @@ enum class KeyPriority {
 // An entry in a commit.
 struct Entry {
   std::string key;
-  ObjectId object_id;
+  ObjectDigest object_digest;
   KeyPriority priority;
 };
 
@@ -64,7 +64,7 @@ enum class Status {
   INTERRUPTED,
   NOT_CONNECTED_ERROR,
   NO_SUCH_CHILD,
-  OBJECT_ID_MISMATCH,
+  OBJECT_DIGEST_MISMATCH,
 
   // Temporary status or status for tests.
   NOT_IMPLEMENTED,

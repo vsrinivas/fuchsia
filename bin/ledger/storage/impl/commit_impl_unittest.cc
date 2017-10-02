@@ -28,7 +28,7 @@ class CommitImplTest : public StorageTest {
     return (expected.GetId() == commit.GetId()) &&
            (expected.GetTimestamp() == commit.GetTimestamp()) &&
            (expected.GetParentIds() == commit.GetParentIds()) &&
-           (expected.GetRootId() == commit.GetRootId());
+           (expected.GetRootDigest() == commit.GetRootDigest());
   }
 
   bool CheckCommitStorageBytes(const std::unique_ptr<Commit>& commit) {
@@ -45,14 +45,14 @@ class CommitImplTest : public StorageTest {
 };
 
 TEST_F(CommitImplTest, CommitStorageBytes) {
-  ObjectId root_node_id = RandomObjectId();
+  ObjectDigest root_node_digest = RandomObjectDigest();
 
   std::vector<std::unique_ptr<const Commit>> parents;
 
   // A commit with one parent.
   parents.emplace_back(new test::CommitRandomImpl());
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_id, std::move(parents));
+      &page_storage_, root_node_digest, std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit));
 
   // A commit with two parents.
@@ -60,17 +60,17 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
   parents.emplace_back(new test::CommitRandomImpl());
   parents.emplace_back(new test::CommitRandomImpl());
   std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_id, std::move(parents));
+      &page_storage_, root_node_digest, std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit2));
 }
 
 TEST_F(CommitImplTest, CloneCommit) {
-  ObjectId root_node_id = RandomObjectId();
+  ObjectDigest root_node_digest = RandomObjectDigest();
 
   std::vector<std::unique_ptr<const Commit>> parents;
   parents.emplace_back(new test::CommitRandomImpl());
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_id, std::move(parents));
+      &page_storage_, root_node_digest, std::move(parents));
   std::unique_ptr<Commit> copy = CommitImpl::FromStorageBytes(
       &page_storage_, commit->GetId(), commit->GetStorageBytes().ToString());
   std::unique_ptr<Commit> clone = commit->Clone();
@@ -78,7 +78,7 @@ TEST_F(CommitImplTest, CloneCommit) {
 }
 
 TEST_F(CommitImplTest, MergeCommitTimestamp) {
-  ObjectId root_node_id = RandomObjectId();
+  ObjectDigest root_node_digest = RandomObjectDigest();
 
   std::vector<std::unique_ptr<const Commit>> parents;
   parents.emplace_back(new test::CommitRandomImpl());
@@ -87,7 +87,7 @@ TEST_F(CommitImplTest, MergeCommitTimestamp) {
   auto max_timestamp =
       std::max(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_id, std::move(parents));
+      &page_storage_, root_node_digest, std::move(parents));
 
   EXPECT_EQ(max_timestamp, commit->GetTimestamp());
 }

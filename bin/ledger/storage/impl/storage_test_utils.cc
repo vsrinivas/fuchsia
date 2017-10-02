@@ -12,7 +12,7 @@
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
-#include "peridot/bin/ledger/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
@@ -37,14 +37,14 @@ std::string ResizeForBehavior(std::string value,
   return value;
 }
 
-std::string GetObjectId(std::string value) {
+std::string GetObjectDigest(std::string value) {
   std::string result;
   auto data_source = DataSource::Create(std::move(value));
   SplitDataSource(data_source.get(),
-                  [&result](IterationStatus status, ObjectId object_id,
+                  [&result](IterationStatus status, ObjectDigest object_digest,
                             std::unique_ptr<DataSource::DataChunk> chunk) {
                     if (status == IterationStatus::DONE) {
-                      result = object_id;
+                      result = object_digest;
                     }
                   });
   return result;
@@ -55,7 +55,7 @@ std::string GetObjectId(std::string value) {
 ObjectData::ObjectData(std::string value, InlineBehavior inline_behavior)
     : value(ResizeForBehavior(std::move(value), inline_behavior)),
       size(this->value.size()),
-      object_id(GetObjectId(this->value)) {}
+      object_digest(GetObjectDigest(this->value)) {}
 
 std::unique_ptr<DataSource> ObjectData::ToDataSource() {
   return DataSource::Create(value);
@@ -65,9 +65,10 @@ std::unique_ptr<DataSource::DataChunk> ObjectData::ToChunk() {
   return DataSource::DataChunk::Create(value);
 }
 
-ObjectId MakeObjectId(std::string content, InlineBehavior inline_behavior) {
+ObjectDigest MakeObjectDigest(std::string content,
+                              InlineBehavior inline_behavior) {
   ObjectData data(std::move(content), inline_behavior);
-  return data.object_id;
+  return data.object_digest;
 }
 
 std::string RandomString(size_t size) {
@@ -81,15 +82,15 @@ CommitId RandomCommitId() {
   return RandomString(kCommitIdSize);
 }
 
-ObjectId RandomObjectId() {
+ObjectDigest RandomObjectDigest() {
   ObjectData data(RandomString(16), InlineBehavior::PREVENT);
-  return data.object_id;
+  return data.object_digest;
 }
 
 EntryChange NewEntryChange(std::string key,
-                           std::string object_id,
+                           std::string object_digest,
                            KeyPriority priority) {
-  return EntryChange{Entry{std::move(key), std::move(object_id), priority},
+  return EntryChange{Entry{std::move(key), std::move(object_digest), priority},
                      false};
 }
 
@@ -105,10 +106,10 @@ StorageTest::~StorageTest(){};
     std::string value,
     std::unique_ptr<const Object>* object) {
   Status status;
-  ObjectId object_id;
+  ObjectDigest object_digest;
   GetStorage()->AddObjectFromLocal(
       DataSource::Create(value),
-      callback::Capture(MakeQuitTask(), &status, &object_id));
+      callback::Capture(MakeQuitTask(), &status, &object_digest));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "AddObjectFromLocal callback was not executed. value: " << value;
@@ -120,17 +121,17 @@ StorageTest::~StorageTest(){};
   }
 
   std::unique_ptr<const Object> result;
-  GetStorage()->GetObject(object_id, PageStorage::Location::LOCAL,
+  GetStorage()->GetObject(object_digest, PageStorage::Location::LOCAL,
                           callback::Capture(MakeQuitTask(), &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "GetObject callback was not executed. value: " << value
-           << ", object_id: " << object_id;
+           << ", object_digest: " << object_digest;
   }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "GetObject failed with status " << status << ". value: " << value
-           << ", object_id: " << object_id;
+           << ", object_digest: " << object_digest;
   }
   object->swap(result);
   return ::testing::AssertionSuccess();
@@ -155,7 +156,7 @@ StorageTest::~StorageTest(){};
       return assertion_result;
     }
     result.push_back(Entry{fxl::StringPrintf("key%02" PRIuMAX, i),
-                           object->GetId(), KeyPriority::EAGER});
+                           object->GetDigest(), KeyPriority::EAGER});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();
@@ -187,12 +188,12 @@ StorageTest::~StorageTest(){};
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult StorageTest::GetEmptyNodeId(
-    ObjectId* empty_node_id) {
+::testing::AssertionResult StorageTest::GetEmptyNodeDigest(
+    ObjectDigest* empty_node_digest) {
   Status status;
-  ObjectId id;
+  ObjectDigest digest;
   btree::TreeNode::Empty(GetStorage(),
-                         callback::Capture(MakeQuitTask(), &status, &id));
+                         callback::Capture(MakeQuitTask(), &status, &digest));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty callback was not executed.";
@@ -201,24 +202,25 @@ StorageTest::~StorageTest(){};
     return ::testing::AssertionFailure()
            << "TreeNode::Empty failed with status " << status;
   }
-  empty_node_id->swap(id);
+  empty_node_digest->swap(digest);
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult StorageTest::CreateNodeFromId(
-    ObjectIdView id,
+::testing::AssertionResult StorageTest::CreateNodeFromDigest(
+    ObjectDigestView digest,
     std::unique_ptr<const btree::TreeNode>* node) {
   Status status;
   std::unique_ptr<const btree::TreeNode> result;
-  btree::TreeNode::FromId(GetStorage(), id,
-                          callback::Capture(MakeQuitTask(), &status, &result));
+  btree::TreeNode::FromDigest(
+      GetStorage(), digest,
+      callback::Capture(MakeQuitTask(), &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
-           << "TreeNode::FromId callback was not executed.";
+           << "TreeNode::FromDigest callback was not executed.";
   }
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
-           << "TreeNode::FromId failed with status " << status;
+           << "TreeNode::FromDigest failed with status " << status;
   }
   node->swap(result);
   return ::testing::AssertionSuccess();
@@ -226,12 +228,13 @@ StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::CreateNodeFromEntries(
     const std::vector<Entry>& entries,
-    const std::vector<ObjectId>& children,
+    const std::vector<ObjectDigest>& children,
     std::unique_ptr<const btree::TreeNode>* node) {
   Status status;
-  ObjectId id;
-  btree::TreeNode::FromEntries(GetStorage(), 0u, entries, children,
-                               callback::Capture(MakeQuitTask(), &status, &id));
+  ObjectDigest digest;
+  btree::TreeNode::FromEntries(
+      GetStorage(), 0u, entries, children,
+      callback::Capture(MakeQuitTask(), &status, &digest));
 
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
@@ -241,7 +244,7 @@ StorageTest::~StorageTest(){};
     return ::testing::AssertionFailure()
            << "TreeNode::FromEntries failed with status " << status;
   }
-  return CreateNodeFromId(id, node);
+  return CreateNodeFromDigest(digest, node);
 }
 
 }  // namespace storage

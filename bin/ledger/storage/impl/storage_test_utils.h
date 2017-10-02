@@ -32,13 +32,14 @@ class ObjectData {
 
   const std::string value;
   const size_t size;
-  const std::string object_id;
+  const std::string object_digest;
 };
 
 // Builder the object id for the given content. If |inline_behavior| is
 // InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
-ObjectId MakeObjectId(std::string content,
-                      InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+ObjectDigest MakeObjectDigest(
+    std::string content,
+    InlineBehavior inline_behavior = InlineBehavior::ALLOW);
 
 // Returns a random string of the given length.
 std::string RandomString(size_t size);
@@ -47,12 +48,12 @@ std::string RandomString(size_t size);
 CommitId RandomCommitId();
 
 // Create a new random object id.
-ObjectId RandomObjectId();
+ObjectDigest RandomObjectDigest();
 
 // Creates and returns a new EntryChange adding or updating the entry with the
 // given information.
 EntryChange NewEntryChange(std::string key,
-                           std::string object_id,
+                           std::string object_digest,
                            KeyPriority priority);
 
 // Creates and returns a new EntryChange removing the entry with the given key.
@@ -81,15 +82,15 @@ class StorageTest : public ::test::TestWithCoroutines {
 
   // Creates a vector of entries, each of which has a key from "key00" to
   // "keyXX" where XX is |size-1|. A new value is created for each entry and the
-  // corresponding object_id is set on the entry. |entries| vector will be
+  // corresponding object_digest is set on the entry. |entries| vector will be
   // swapped with the result.
   ::testing::AssertionResult CreateEntries(size_t size,
                                            std::vector<Entry>* entries);
 
   // Creates a vector of entries, each of which has a key "keyXX", were "XX" is
   // taken from the |values| vector. A new value is created for each entry and
-  // the corresponding object_id is set on the entry. |entries| vector will be
-  // swapped with the result.
+  // the corresponding object_digest is set on the entry. |entries| vector will
+  // be swapped with the result.
   ::testing::AssertionResult CreateEntries(std::vector<size_t> values,
                                            std::vector<Entry>* entries);
 
@@ -109,19 +110,20 @@ class StorageTest : public ::test::TestWithCoroutines {
       std::vector<EntryChange>* changes,
       bool deletion = false);
 
-  // Creates an empty tree node and updates |empty_node_id| with the result.
-  ::testing::AssertionResult GetEmptyNodeId(ObjectId* empty_node_id);
+  // Creates an empty tree node and updates |empty_node_digest| with the result.
+  ::testing::AssertionResult GetEmptyNodeDigest(
+      ObjectDigest* empty_node_digest);
 
   // Returns the tree node corresponding to the given id.
-  ::testing::AssertionResult CreateNodeFromId(
-      ObjectIdView id,
+  ::testing::AssertionResult CreateNodeFromDigest(
+      ObjectDigestView digest,
       std::unique_ptr<const btree::TreeNode>* node);
 
   // Creates a new tree node from the given entries and children and updates
   // |node| with the result.
   ::testing::AssertionResult CreateNodeFromEntries(
       const std::vector<Entry>& entries,
-      const std::vector<ObjectId>& children,
+      const std::vector<ObjectDigest>& children,
       std::unique_ptr<const btree::TreeNode>* node);
 
  private:

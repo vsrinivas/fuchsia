@@ -20,55 +20,56 @@ namespace storage {
 // Object whose data is equal to its id.
 class InlinedObject : public Object {
  public:
-  explicit InlinedObject(ObjectId id);
+  explicit InlinedObject(ObjectDigest digest);
   ~InlinedObject() override;
 
   // Object:
-  ObjectId GetId() const override;
+  ObjectDigest GetDigest() const override;
   Status GetData(fxl::StringView* data) const override;
 
  private:
-  const ObjectId id_;
+  const ObjectDigest digest_;
 };
 
 // Object whose data is backed by a string.
 class StringObject : public Object {
  public:
-  StringObject(ObjectId id, std::string content);
+  StringObject(ObjectDigest digest, std::string content);
   ~StringObject() override;
 
   // Object:
-  ObjectId GetId() const override;
+  ObjectDigest GetDigest() const override;
   Status GetData(fxl::StringView* data) const override;
 
  private:
-  const ObjectId id_;
+  const ObjectDigest digest_;
   std::string content_;
 };
 
 // Object whose data is backed by a value in LevelDB.
 class LevelDBObject : public Object {
  public:
-  LevelDBObject(ObjectId id, std::unique_ptr<leveldb::Iterator> iterator);
+  LevelDBObject(ObjectDigest digest,
+                std::unique_ptr<leveldb::Iterator> iterator);
   ~LevelDBObject() override;
 
   // Object:
-  ObjectId GetId() const override;
+  ObjectDigest GetDigest() const override;
   Status GetData(fxl::StringView* data) const override;
 
  private:
-  const ObjectId id_;
+  const ObjectDigest digest_;
   std::unique_ptr<leveldb::Iterator> iterator_;
 };
 
 // Object whose data is backed by a VMO.
 class VmoObject : public Object {
  public:
-  VmoObject(ObjectId id, zx::vmo vmo);
+  VmoObject(ObjectDigest digest, zx::vmo vmo);
   ~VmoObject() override;
 
   // Object:
-  ObjectId GetId() const override;
+  ObjectDigest GetDigest() const override;
   Status GetData(fxl::StringView* data) const override;
   Status GetVmo(zx::vmo* vmo) const override;
 
@@ -76,7 +77,7 @@ class VmoObject : public Object {
   Status Initialize() const;
 
   mutable bool initialized_ = false;
-  const ObjectId id_;
+  const ObjectDigest digest_;
   zx::vmo vmo_;
   mutable zx::vmar vmar_;
   mutable fxl::StringView data_;

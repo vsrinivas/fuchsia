@@ -33,7 +33,7 @@ KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
 
 Entry ToEntry(const EntryStorage* entry_storage) {
   return Entry{convert::ToString(entry_storage->key()),
-               convert::ToString(entry_storage->object()),
+               convert::ToString(entry_storage->object_digest()),
                ToKeyPriority(entry_storage->priority())};
 }
 }  // namespace
@@ -82,7 +82,7 @@ bool CheckValidTreeNodeSerialization(fxl::StringView data) {
 
 std::string EncodeNode(uint8_t level,
                        const std::vector<Entry>& entries,
-                       const std::vector<ObjectId>& children) {
+                       const std::vector<ObjectDigest>& children) {
   flatbuffers::FlatBufferBuilder builder;
 
   auto entries_offsets = builder.CreateVector(
@@ -92,7 +92,7 @@ std::string EncodeNode(uint8_t level,
             const auto& entry = entries[i];
             return CreateEntryStorage(
                 builder, convert::ToFlatBufferVector(&builder, entry.key),
-                convert::ToFlatBufferVector(&builder, entry.object_id),
+                convert::ToFlatBufferVector(&builder, entry.object_digest),
                 ToKeyPriorityStorage(entry.priority));
           }));
 
@@ -127,7 +127,7 @@ std::string EncodeNode(uint8_t level,
 bool DecodeNode(fxl::StringView data,
                 uint8_t* level,
                 std::vector<Entry>* res_entries,
-                std::vector<ObjectId>* res_children) {
+                std::vector<ObjectDigest>* res_children) {
   FXL_DCHECK(CheckValidTreeNodeSerialization(data));
 
   const TreeNodeStorage* tree_node =
@@ -143,7 +143,7 @@ bool DecodeNode(fxl::StringView data,
   res_children->reserve(tree_node->entries()->size() + 1);
   for (const auto* child_storage : *(tree_node->children())) {
     res_children->resize(child_storage->index());
-    res_children->push_back(convert::ToString(child_storage->object_id()));
+    res_children->push_back(convert::ToString(child_storage->object_digest()));
   }
   res_children->resize(tree_node->entries()->size() + 1);
 

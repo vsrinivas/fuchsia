@@ -16,8 +16,8 @@ namespace cloud_provider_firebase {
 using AppId = std::string;
 using PageId = std::string;
 using CommitId = std::string;
-using ObjectId = std::string;
-using ObjectIdView = fxl::StringView;
+using ObjectDigest = std::string;
+using ObjectDigestView = fxl::StringView;
 using Data = std::string;
 
 enum class Status {

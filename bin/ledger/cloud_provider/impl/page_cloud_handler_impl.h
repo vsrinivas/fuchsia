@@ -43,13 +43,13 @@ class PageCloudHandlerImpl : public PageCloudHandler {
       std::function<void(Status, std::vector<Record>)> callback) override;
 
   void AddObject(const std::string& auth_token,
-                 ObjectIdView object_id,
+                 ObjectDigestView object_digest,
                  zx::vmo data,
                  std::function<void(Status)> callback) override;
 
   void GetObject(
       const std::string& auth_token,
-      ObjectIdView object_id,
+      ObjectDigestView object_digest,
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) override;
 

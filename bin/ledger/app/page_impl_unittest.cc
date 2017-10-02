@@ -81,24 +81,24 @@ class PageImplTest : public test::TestWithMessageLoop {
     }
   }
 
-  storage::ObjectId AddObjectToStorage(std::string value_string) {
+  storage::ObjectDigest AddObjectToStorage(std::string value_string) {
     storage::Status status;
-    storage::ObjectId object_id;
+    storage::ObjectDigest object_digest;
     fake_storage_->AddObjectFromLocal(
         storage::DataSource::Create(std::move(value_string)),
-        callback::Capture(MakeQuitTask(), &status, &object_id));
+        callback::Capture(MakeQuitTask(), &status, &object_digest));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
-    return object_id;
+    return object_digest;
   }
 
   std::unique_ptr<const storage::Object> AddObject(const std::string& value) {
-    storage::ObjectId object_id = AddObjectToStorage(value);
+    storage::ObjectDigest object_digest = AddObjectToStorage(value);
 
     storage::Status status;
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
-        object_id, storage::PageStorage::Location::LOCAL,
+        object_digest, storage::PageStorage::Location::LOCAL,
         callback::Capture(MakeQuitTask(), &status, &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
@@ -176,7 +176,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
     EXPECT_EQ(1u, objects.size());
-    storage::ObjectId object_id = objects.begin()->first;
+    storage::ObjectDigest object_digest = objects.begin()->first;
     std::string actual_value = objects.begin()->second;
     EXPECT_EQ(value, actual_value);
 
@@ -189,7 +189,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key);
-    EXPECT_EQ(object_id, entry.value);
+    EXPECT_EQ(object_digest, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
     message_loop_.PostQuitTask();
@@ -203,11 +203,11 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   std::string object_data("some_data");
   std::unique_ptr<const storage::Object> object = AddObject(object_data);
 
-  storage::ObjectId object_id = object->GetId();
+  storage::ObjectDigest object_digest = object->GetDigest();
   ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
+  reference->opaque_id = convert::ToArray(object_digest);
 
-  auto callback = [this, &key, &object_id](Status status) {
+  auto callback = [this, &key, &object_digest](Status status) {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
     // No object should have been added.
@@ -222,7 +222,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key);
-    EXPECT_EQ(object_id, entry.value);
+    EXPECT_EQ(object_digest, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
     message_loop_.PostQuitTask();
@@ -234,9 +234,9 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
 
 TEST_F(PageImplTest, PutUnknownReference) {
   std::string key("some_key");
-  storage::ObjectId object_id("unknown_id");
+  storage::ObjectDigest object_digest("unknown_digest");
   ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
+  reference->opaque_id = convert::ToArray(object_digest);
 
   auto callback = [this](Status status) {
     EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
@@ -281,16 +281,16 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
 
 TEST_F(PageImplTest, TransactionCommit) {
   std::string key1("some_key1");
-  storage::ObjectId object_id1;
+  storage::ObjectDigest object_digest1;
   std::string value("a small value");
 
   std::string key2("some_key2");
   std::string value2("another value");
   std::unique_ptr<const storage::Object> object2 = AddObject(value2);
-  storage::ObjectId object_id2 = object2->GetId();
+  storage::ObjectDigest object_digest2 = object2->GetDigest();
 
   ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id2);
+  reference->opaque_id = convert::ToArray(object_digest2);
 
   // Sequence of operations:
   //  - StartTransaction
@@ -304,7 +304,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   });
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  auto put_callback = [this, &key1, &value, &object_id1](Status status) {
+  auto put_callback = [this, &key1, &value, &object_digest1](Status status) {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
     EXPECT_EQ(2u, objects.size());
@@ -314,7 +314,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     for (auto object : objects) {
       if (object.second == value) {
         object_found = true;
-        object_id1 = object.first;
+        object_digest1 = object.first;
         break;
       }
     }
@@ -330,7 +330,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key1);
-    EXPECT_EQ(object_id1, entry.value);
+    EXPECT_EQ(object_digest1, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
     message_loop_.PostQuitTask();
@@ -339,7 +339,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value), put_callback);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  auto put_reference_callback = [this, &key2, &object_id2](Status status) {
+  auto put_reference_callback = [this, &key2, &object_digest2](Status status) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(2u, fake_storage_->GetObjects().size());
 
@@ -353,7 +353,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(2u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key2);
-    EXPECT_EQ(object_id2, entry.value);
+    EXPECT_EQ(object_digest2, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
     message_loop_.PostQuitTask();
@@ -731,13 +731,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
-  storage::ObjectId lazy_object_id = fake_storage_->GetObjects().begin()->first;
+  storage::ObjectDigest lazy_object_digest =
+      fake_storage_->GetObjects().begin()->first;
 
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback_statusok);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  fake_storage_->DeleteObjectFromLocal(lazy_object_id);
+  fake_storage_->DeleteObjectFromLocal(lazy_object_digest);
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1070,11 +1071,11 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
 
 TEST_F(PageImplTest, SnapshotGetLarge) {
   std::string value_string(fidl_serialization::kMaxInlineDataSize + 1, 'a');
-  storage::ObjectId object_id = AddObjectToStorage(value_string);
+  storage::ObjectDigest object_digest = AddObjectToStorage(value_string);
 
   std::string key("some_key");
   ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
+  reference->opaque_id = convert::ToArray(object_digest);
 
   auto callback_put = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -1117,8 +1118,9 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
-  storage::ObjectId lazy_object_id = fake_storage_->GetObjects().begin()->first;
-  fake_storage_->DeleteObjectFromLocal(lazy_object_id);
+  storage::ObjectDigest lazy_object_digest =
+      fake_storage_->GetObjects().begin()->first;
+  fake_storage_->DeleteObjectFromLocal(lazy_object_digest);
 
   PageSnapshotPtr snapshot = GetSnapshot();
 

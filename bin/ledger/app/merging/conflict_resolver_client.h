@@ -39,8 +39,8 @@ class ConflictResolverClient : public MergeResultProvider {
  private:
   void OnNextMergeResult(
       const MergedValuePtr& merged_value,
-      const fxl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
-          waiter);
+      const fxl::RefPtr<
+          callback::Waiter<storage::Status, storage::ObjectDigest>>& waiter);
   void Finalize(Status status);
 
   void GetDiff(

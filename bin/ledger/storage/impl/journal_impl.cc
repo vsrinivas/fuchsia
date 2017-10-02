@@ -110,18 +110,19 @@ void JournalImpl::Rollback(std::function<void(Status)> callback) {
 }
 
 void JournalImpl::Put(convert::ExtendedStringView key,
-                      ObjectIdView object_id,
+                      ObjectDigestView object_digest,
                       KeyPriority priority,
                       std::function<void(Status)> callback) {
   serializer_.Serialize<Status>(std::move(callback), [
-    this, key = key.ToString(), object_id = object_id.ToString(), priority
+    this, key = key.ToString(), object_digest = object_digest.ToString(),
+    priority
   ](std::function<void(Status)> callback) {
     if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
       callback(Status::ILLEGAL_STATE);
       return;
     }
     page_storage_->AddJournalEntry(
-        id_, key, object_id, priority,
+        id_, key, object_digest, priority,
         [ this, callback = std::move(callback) ](Status s) {
           if (s != Status::OK) {
             failed_operation_ = true;
@@ -171,18 +172,19 @@ void JournalImpl::CreateCommitFromChanges(
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   btree::ApplyChanges(
-      coroutine_service_, page_storage_, parents[0]->GetRootId(),
+      coroutine_service_, page_storage_, parents[0]->GetRootDigest(),
       std::move(changes),
       fxl::MakeCopyable([
         this, parents = std::move(parents), callback = std::move(callback)
-      ](Status status, ObjectId object_id,
-        std::unordered_set<ObjectId> new_nodes) mutable {
+      ](Status status, ObjectDigest object_digest,
+        std::unordered_set<ObjectDigest> new_nodes) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
           return;
         }
         // If the commit is a no-op, return early.
-        if (parents.size() == 1 && parents.front()->GetRootId() == object_id) {
+        if (parents.size() == 1 &&
+            parents.front()->GetRootDigest() == object_digest) {
           FXL_DCHECK(new_nodes.empty());
           // We are in an operation from the serializer: make sure not to sent
           // the rollback operation in the serializer as well, or a deadlock
@@ -193,12 +195,12 @@ void JournalImpl::CreateCommitFromChanges(
           return;
         }
         std::unique_ptr<storage::Commit> commit =
-            CommitImpl::FromContentAndParents(page_storage_, object_id,
+            CommitImpl::FromContentAndParents(page_storage_, object_digest,
                                               std::move(parents));
         GetObjectsToSync(fxl::MakeCopyable([
           this, new_nodes = std::move(new_nodes), commit = std::move(commit),
           callback = std::move(callback)
-        ](Status status, std::vector<ObjectId> objects_to_sync) mutable {
+        ](Status status, std::vector<ObjectDigest> objects_to_sync) mutable {
           if (status != Status::OK) {
             callback(status, nullptr);
             return;
@@ -234,8 +236,8 @@ void JournalImpl::CreateCommitFromChanges(
 }
 
 void JournalImpl::GetObjectsToSync(
-    std::function<void(Status status, std::vector<ObjectId> objects_to_sync)>
-        callback) {
+    std::function<void(Status status,
+                       std::vector<ObjectDigest> objects_to_sync)> callback) {
   page_storage_->GetJournalEntries(
       id_, fxl::MakeCopyable([ this, callback = std::move(callback) ](
                Status s, std::unique_ptr<Iterator<const EntryChange>> entries) {
@@ -244,13 +246,13 @@ void JournalImpl::GetObjectsToSync(
           return;
         }
         // Compute the key-value pairs added in this journal.
-        std::map<std::string, ObjectId> key_values;
+        std::map<std::string, ObjectDigest> key_values;
         while (entries->Valid()) {
           const Entry& entry = (*entries)->entry;
           if ((*entries)->deleted) {
             key_values.erase(entry.key);
           } else {
-            key_values[entry.key] = entry.object_id;
+            key_values[entry.key] = entry.object_digest;
           }
           entries->Next();
         }
@@ -267,7 +269,7 @@ void JournalImpl::GetObjectsToSync(
             return;
           }
           // Compute the set of values.
-          std::set<ObjectId> result_set;
+          std::set<ObjectDigest> result_set;
           size_t i = 0;
           for (const auto& key_value : key_values) {
             // Only untracked objects should be synced.
@@ -275,7 +277,7 @@ void JournalImpl::GetObjectsToSync(
               result_set.insert(key_value.second);
             }
           }
-          std::vector<ObjectId> objects_to_sync;
+          std::vector<ObjectDigest> objects_to_sync;
           std::copy(result_set.begin(), result_set.end(),
                     std::back_inserter(objects_to_sync));
           callback(Status::OK, std::move(objects_to_sync));

@@ -24,21 +24,21 @@ namespace {
 
 class FakeObject : public Object {
  public:
-  FakeObject(ObjectIdView id, fxl::StringView content)
-      : id_(id.ToString()), content_(content.ToString()) {}
+  FakeObject(ObjectDigestView digest, fxl::StringView content)
+      : digest_(digest.ToString()), content_(content.ToString()) {}
   ~FakeObject() override {}
-  ObjectId GetId() const override { return id_; }
+  ObjectDigest GetDigest() const override { return digest_; }
   Status GetData(fxl::StringView* data) const override {
     *data = content_;
     return Status::OK;
   }
 
  private:
-  ObjectId id_;
+  ObjectDigest digest_;
   std::string content_;
 };
 
-storage::ObjectId ComputeObjectId(fxl::StringView value) {
+storage::ObjectDigest ComputeObjectDigest(fxl::StringView value) {
   return glue::SHA256Hash(value);
 }
 
@@ -119,7 +119,7 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
 
 void FakePageStorage::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    std::function<void(Status, ObjectId)> callback) {
+    std::function<void(Status, ObjectDigest)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
   data_source_ptr->Get(fxl::MakeCopyable([
@@ -134,33 +134,35 @@ void FakePageStorage::AddObjectFromLocal(
     auto view = chunk->Get();
     value->append(view.data(), view.size());
     if (status == DataSource::Status::DONE) {
-      std::string object_id = ComputeObjectId(*value);
-      objects_[object_id] = std::move(*value);
-      callback(Status::OK, std::move(object_id));
+      std::string object_digest = ComputeObjectDigest(*value);
+      objects_[object_digest] = std::move(*value);
+      callback(Status::OK, std::move(object_digest));
     }
   }));
 }
 
 void FakePageStorage::GetObject(
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     Location /*location*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  GetPiece(object_id, std::move(callback));
+  GetPiece(object_digest, std::move(callback));
 }
 
 void FakePageStorage::GetPiece(
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   object_requests_.emplace_back([
-    this, object_id = object_id.ToString(), callback = std::move(callback)
+    this, object_digest = object_digest.ToString(),
+    callback = std::move(callback)
   ] {
-    auto it = objects_.find(object_id);
+    auto it = objects_.find(object_digest);
     if (it == objects_.end()) {
       callback(Status::NOT_FOUND, nullptr);
       return;
     }
 
-    callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
+    callback(Status::OK,
+             std::make_unique<FakeObject>(object_digest, it->second));
   });
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [this] { SendNextObject(); }, fxl::TimeDelta::FromMilliseconds(5));
@@ -225,7 +227,7 @@ FakePageStorage::GetJournals() const {
   return journals_;
 }
 
-const std::map<ObjectId, std::string, convert::StringViewComparator>&
+const std::map<ObjectDigest, std::string, convert::StringViewComparator>&
 FakePageStorage::GetObjects() const {
   return objects_;
 }
@@ -239,8 +241,8 @@ void FakePageStorage::SendNextObject() {
   closure();
 }
 
-void FakePageStorage::DeleteObjectFromLocal(const ObjectId& object_id) {
-  objects_.erase(object_id);
+void FakePageStorage::DeleteObjectFromLocal(const ObjectDigest& object_digest) {
+  objects_.erase(object_digest);
 }
 
 }  // namespace fake

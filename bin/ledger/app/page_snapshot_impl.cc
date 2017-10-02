@@ -139,7 +139,7 @@ void FillEntries(
     }
     context->entries.push_back(CreateEntry<EntryType>(entry));
     page_storage->GetObject(
-        entry.object_id, storage::PageStorage::Location::LOCAL,
+        entry.object_digest, storage::PageStorage::Location::LOCAL,
         [ priority = entry.priority, waiter_callback = waiter->NewCallback() ](
             storage::Status status,
             std::unique_ptr<const storage::Object> object) {
@@ -319,7 +319,8 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
       return;
     }
     PageUtils::GetPartialReferenceAsBuffer(
-        page_storage_, entry.object_id, 0u, std::numeric_limits<int64_t>::max(),
+        page_storage_, entry.object_digest, 0u,
+        std::numeric_limits<int64_t>::max(),
         storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
         std::move(callback));
   });
@@ -339,8 +340,8 @@ void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
       return;
     }
     PageUtils::GetReferenceAsStringView(
-        page_storage_, entry.object_id, storage::PageStorage::Location::LOCAL,
-        Status::NEEDS_FETCH,
+        page_storage_, entry.object_digest,
+        storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
         [callback = std::move(callback)](Status status,
                                          fxl::StringView data_view) {
           if (fidl_serialization::GetByteArraySize(data_view.size()) +
@@ -368,7 +369,8 @@ void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
       return;
     }
     PageUtils::GetPartialReferenceAsBuffer(
-        page_storage_, entry.object_id, 0u, std::numeric_limits<int64_t>::max(),
+        page_storage_, entry.object_digest, 0u,
+        std::numeric_limits<int64_t>::max(),
         storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
         callback);
   });
@@ -391,7 +393,7 @@ void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
     }
 
     PageUtils::GetPartialReferenceAsBuffer(
-        page_storage_, entry.object_id, offset, max_size,
+        page_storage_, entry.object_digest, offset, max_size,
         storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
         callback);
   });

@@ -31,7 +31,7 @@ class CommitRandomImpl : public Commit {
 
   uint64_t GetGeneration() const override;
 
-  ObjectIdView GetRootId() const override;
+  ObjectDigestView GetRootDigest() const override;
 
   fxl::StringView GetStorageBytes() const override;
 
@@ -41,7 +41,7 @@ class CommitRandomImpl : public Commit {
   CommitId id_;
   int64_t timestamp_;
   uint64_t generation_;
-  ObjectId root_node_id_;
+  ObjectDigest root_node_digest_;
   std::vector<CommitId> parent_ids_;
   std::vector<CommitIdView> parent_ids_views_;
   std::string storage_bytes_;

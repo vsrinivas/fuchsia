@@ -110,12 +110,12 @@ class PageStorage {
                                 std::function<void(Status)> callback) = 0;
 
   // Finds all objects in the storage that are not yet synced, and calls
-  // |callback| with the operation status and the corresponding |ObjectId|s
+  // |callback| with the operation status and the corresponding |ObjectDigest|s
   // vector.
   virtual void GetUnsyncedPieces(
-      std::function<void(Status, std::vector<ObjectId>)> callback) = 0;
-  // Marks the object with the given |object_id| as synced.
-  virtual void MarkPieceSynced(ObjectIdView object_id,
+      std::function<void(Status, std::vector<ObjectDigest>)> callback) = 0;
+  // Marks the object with the given |object_digest| as synced.
+  virtual void MarkPieceSynced(ObjectDigestView object_digest,
                                std::function<void(Status)> callback) = 0;
   // Adds the given local object and passes the new object's id to the callback.
   // If |size| is not negative, the content size must be equal to |size|,
@@ -123,22 +123,22 @@ class PageStorage {
   // |size| is negative, no validation is done.
   virtual void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectId)> callback) = 0;
-  // Finds the Object associated with the given |object_id|. The result or an
-  // an error will be returned through the given |callback|. If |location| is
+      std::function<void(Status, ObjectDigest)> callback) = 0;
+  // Finds the Object associated with the given |object_digest|. The result or
+  // an an error will be returned through the given |callback|. If |location| is
   // LOCAL, only local storage will be checked. If |location| is NETWORK, then
   // a network request may be made if the requested object is not present
   // locally.
   virtual void GetObject(
-      ObjectIdView object_id,
+      ObjectDigestView object_digest,
       Location location,
       std::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
-  // Finds the piece associated with the given |object_id|. The result or an an
-  // error will be returned through the given |callback|. Only local storage is
-  // checked, and if the object is an index, is it returned as is, and not
+  // Finds the piece associated with the given |object_digest|. The result or an
+  // an error will be returned through the given |callback|. Only local storage
+  // is checked, and if the object is an index, is it returned as is, and not
   // expanded.
   virtual void GetPiece(
-      ObjectIdView object_id,
+      ObjectDigestView object_digest,
       std::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
 
   // Sets the opaque sync metadata associated with this page associated with the

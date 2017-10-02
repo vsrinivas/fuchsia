@@ -31,7 +31,7 @@ FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id, bool autocommit)
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
 Status FakeJournalDelegate::SetValue(convert::ExtendedStringView key,
-                                     ObjectIdView value,
+                                     ObjectDigestView value,
                                      KeyPriority priority) {
   if (is_committed_ || is_rolled_back_) {
     return Status::ILLEGAL_STATE;

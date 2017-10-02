@@ -18,10 +18,11 @@ TEST(FileIndexSerialization, CheckInvalid) {
 }
 
 TEST(FileIndexSerialization, SerializationDeserialization) {
-  const std::vector<FileIndexSerialization::ObjectIdAndSize> elements = {
-      {RandomObjectId(), 1}, {RandomObjectId(), 2}, {RandomObjectId(), 3},
-      {RandomObjectId(), 4}, {RandomObjectId(), 3}, {RandomObjectId(), 2},
-      {RandomObjectId(), 1},
+  const std::vector<FileIndexSerialization::ObjectDigestAndSize> elements = {
+      {RandomObjectDigest(), 1}, {RandomObjectDigest(), 2},
+      {RandomObjectDigest(), 3}, {RandomObjectDigest(), 4},
+      {RandomObjectDigest(), 3}, {RandomObjectDigest(), 2},
+      {RandomObjectDigest(), 1},
   };
 
   constexpr size_t expected_total_size = 16;
@@ -42,7 +43,8 @@ TEST(FileIndexSerialization, SerializationDeserialization) {
   const auto& children = *(file_index->children());
   for (size_t i = 0; i < elements.size(); ++i) {
     EXPECT_EQ(elements[i].size, children[i]->size());
-    EXPECT_EQ(elements[i].id, convert::ToString(children[i]->object_id()));
+    EXPECT_EQ(elements[i].digest,
+              convert::ToString(children[i]->object_digest()));
   }
 }
 

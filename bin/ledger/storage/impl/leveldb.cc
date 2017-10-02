@@ -229,7 +229,7 @@ Status LevelDb::HasKey(CoroutineHandler* /*handler*/,
 
 Status LevelDb::GetObject(CoroutineHandler* /*handler*/,
                           convert::ExtendedStringView key,
-                          ObjectId object_id,
+                          ObjectDigest object_digest,
                           std::unique_ptr<const Object>* object) {
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
@@ -239,7 +239,7 @@ Status LevelDb::GetObject(CoroutineHandler* /*handler*/,
   }
 
   if (object) {
-    *object = std::make_unique<LevelDBObject>(std::move(object_id),
+    *object = std::make_unique<LevelDBObject>(std::move(object_digest),
                                               std::move(iterator));
   }
   return Status::OK;

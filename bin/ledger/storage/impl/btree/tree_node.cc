@@ -21,12 +21,12 @@ namespace storage {
 namespace btree {
 
 TreeNode::TreeNode(PageStorage* page_storage,
-                   std::string id,
+                   std::string digest,
                    uint8_t level,
                    std::vector<Entry> entries,
-                   std::vector<ObjectId> children)
+                   std::vector<ObjectDigest> children)
     : page_storage_(page_storage),
-      id_(std::move(id)),
+      digest_(std::move(digest)),
       level_(level),
       entries_(std::move(entries)),
       children_(std::move(children)) {
@@ -35,12 +35,12 @@ TreeNode::TreeNode(PageStorage* page_storage,
 
 TreeNode::~TreeNode() {}
 
-void TreeNode::FromId(
+void TreeNode::FromDigest(
     PageStorage* page_storage,
-    ObjectIdView id,
+    ObjectDigestView digest,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   std::unique_ptr<const Object> object;
-  page_storage->GetObject(id, PageStorage::Location::NETWORK, [
+  page_storage->GetObject(digest, PageStorage::Location::NETWORK, [
     page_storage, callback = std::move(callback)
   ](Status status, std::unique_ptr<const Object> object) {
     if (status != Status::OK) {
@@ -54,16 +54,16 @@ void TreeNode::FromId(
 }
 
 void TreeNode::Empty(PageStorage* page_storage,
-                     std::function<void(Status, ObjectId)> callback) {
-  FromEntries(page_storage, 0u, std::vector<Entry>(), std::vector<ObjectId>(1),
-              std::move(callback));
+                     std::function<void(Status, ObjectDigest)> callback) {
+  FromEntries(page_storage, 0u, std::vector<Entry>(),
+              std::vector<ObjectDigest>(1), std::move(callback));
 }
 
 void TreeNode::FromEntries(PageStorage* page_storage,
                            uint8_t level,
                            const std::vector<Entry>& entries,
-                           const std::vector<ObjectId>& children,
-                           std::function<void(Status, ObjectId)> callback) {
+                           const std::vector<ObjectDigest>& children,
+                           std::function<void(Status, ObjectDigest)> callback) {
   FXL_DCHECK(entries.size() + 1 == children.size());
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
@@ -89,10 +89,10 @@ void TreeNode::GetChild(
     callback(Status::NO_SUCH_CHILD, nullptr);
     return;
   }
-  return FromId(page_storage_, children_[index], std::move(callback));
+  return FromDigest(page_storage_, children_[index], std::move(callback));
 }
 
-ObjectIdView TreeNode::GetChildId(int index) const {
+ObjectDigestView TreeNode::GetChildDigest(int index) const {
   FXL_DCHECK(index >= 0 && index <= GetKeyCount());
   return children_[index];
 }
@@ -120,8 +120,8 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
   return Status::NOT_FOUND;
 }
 
-const ObjectId& TreeNode::GetId() const {
-  return id_;
+const ObjectDigest& TreeNode::GetDigest() const {
+  return digest_;
 }
 
 Status TreeNode::FromObject(PageStorage* page_storage,
@@ -134,11 +134,11 @@ Status TreeNode::FromObject(PageStorage* page_storage,
   }
   uint8_t level;
   std::vector<Entry> entries;
-  std::vector<ObjectId> children;
+  std::vector<ObjectDigest> children;
   if (!DecodeNode(data, &level, &entries, &children)) {
     return Status::FORMAT_ERROR;
   }
-  node->reset(new TreeNode(page_storage, object->GetId(), level,
+  node->reset(new TreeNode(page_storage, object->GetDigest(), level,
                            std::move(entries), std::move(children)));
   return Status::OK;
 }

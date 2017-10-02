@@ -34,8 +34,8 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   EXPECT_EQ(expected.deleted, found.deleted);
   EXPECT_EQ(expected.entry.key, found.entry.key);
   if (!expected.deleted) {
-    // If the entry is deleted, object_id and priority are not valid.
-    EXPECT_EQ(expected.entry.object_id, found.entry.object_id);
+    // If the entry is deleted, object_digest and priority are not valid.
+    EXPECT_EQ(expected.entry.object_digest, found.entry.object_digest);
     EXPECT_EQ(expected.entry.priority, found.entry.priority);
   }
 }
@@ -131,7 +131,7 @@ TEST_F(PageDbTest, Commits) {
     std::unique_ptr<Commit> stored_commit;
     std::string storage_bytes;
     std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-        &page_storage_, RandomObjectId(), std::move(parents));
+        &page_storage_, RandomObjectDigest(), std::move(parents));
 
     EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
                                      handler, commit->GetId(), &storage_bytes));
@@ -225,26 +225,26 @@ TEST_F(PageDbTest, JournalEntries) {
 
 TEST_F(PageDbTest, ObjectStorage) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectId object_id = RandomObjectId();
+    ObjectDigest object_digest = RandomObjectDigest();
     std::string content = RandomString(32 * 1024);
     std::unique_ptr<const Object> object;
     PageDbObjectStatus object_status;
 
     EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.ReadObject(handler, object_id, &object));
+              page_db_.ReadObject(handler, object_digest, &object));
     ASSERT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_id,
+              page_db_.WriteObject(handler, object_digest,
                                    DataSource::DataChunk::Create(content),
                                    PageDbObjectStatus::TRANSIENT));
-    page_db_.GetObjectStatus(handler, object_id, &object_status);
+    page_db_.GetObjectStatus(handler, object_digest, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
-    ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_id, &object));
+    ASSERT_EQ(Status::OK, page_db_.ReadObject(handler, object_digest, &object));
     fxl::StringView object_content;
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
-    EXPECT_EQ(Status::OK, page_db_.DeleteObject(handler, object_id));
+    EXPECT_EQ(Status::OK, page_db_.DeleteObject(handler, object_digest));
     EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.ReadObject(handler, object_id, &object));
+              page_db_.ReadObject(handler, object_digest, &object));
   }));
 }
 
@@ -297,31 +297,31 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
 
 TEST_F(PageDbTest, UnsyncedPieces) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectId object_id = RandomObjectId();
-    std::vector<ObjectId> object_ids;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
-    EXPECT_TRUE(object_ids.empty());
+    ObjectDigest object_digest = RandomObjectDigest();
+    std::vector<ObjectDigest> object_digests;
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
+    EXPECT_TRUE(object_digests.empty());
 
     EXPECT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_id,
+              page_db_.WriteObject(handler, object_digest,
                                    DataSource::DataChunk::Create(""),
                                    PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_id,
+    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
                                                    PageDbObjectStatus::LOCAL));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
-    EXPECT_EQ(1u, object_ids.size());
-    EXPECT_EQ(object_id, object_ids[0]);
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
+    EXPECT_EQ(1u, object_digests.size());
+    EXPECT_EQ(object_digest, object_digests[0]);
     PageDbObjectStatus object_status;
     EXPECT_EQ(Status::OK,
-              page_db_.GetObjectStatus(handler, object_id, &object_status));
+              page_db_.GetObjectStatus(handler, object_digest, &object_status));
     EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
 
-    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_id,
+    EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
                                                    PageDbObjectStatus::SYNCED));
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
-    EXPECT_TRUE(object_ids.empty());
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
+    EXPECT_TRUE(object_digests.empty());
     EXPECT_EQ(Status::OK,
-              page_db_.GetObjectStatus(handler, object_id, &object_status));
+              page_db_.GetObjectStatus(handler, object_digest, &object_status));
     EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
   }));
 }
@@ -332,30 +332,30 @@ TEST_F(PageDbTest, Batch) {
     ASSERT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
     ASSERT_TRUE(batch);
 
-    ObjectId object_id = RandomObjectId();
-    EXPECT_EQ(Status::OK, batch->WriteObject(handler, object_id,
+    ObjectDigest object_digest = RandomObjectDigest();
+    EXPECT_EQ(Status::OK, batch->WriteObject(handler, object_digest,
                                              DataSource::DataChunk::Create(""),
                                              PageDbObjectStatus::LOCAL));
 
-    std::vector<ObjectId> object_ids;
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
-    EXPECT_TRUE(object_ids.empty());
+    std::vector<ObjectDigest> object_digests;
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
+    EXPECT_TRUE(object_digests.empty());
 
     EXPECT_EQ(Status::OK, batch->Execute(handler));
 
-    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_ids));
-    EXPECT_EQ(1u, object_ids.size());
-    EXPECT_EQ(object_id, object_ids[0]);
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(handler, &object_digests));
+    EXPECT_EQ(1u, object_digests.size());
+    EXPECT_EQ(object_digest, object_digests[0]);
   }));
 }
 
 TEST_F(PageDbTest, PageDbObjectStatus) {
   EXPECT_TRUE(RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectId object_id = RandomObjectId();
+    ObjectDigest object_digest = RandomObjectDigest();
     PageDbObjectStatus object_status;
 
     ASSERT_EQ(Status::OK,
-              page_db_.GetObjectStatus(handler, object_id, &object_status));
+              page_db_.GetObjectStatus(handler, object_digest, &object_status));
     EXPECT_EQ(PageDbObjectStatus::UNKNOWN, object_status);
 
     PageDbObjectStatus initial_statuses[] = {PageDbObjectStatus::TRANSIENT,
@@ -365,21 +365,21 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
                                           PageDbObjectStatus::SYNCED};
     for (auto initial_status : initial_statuses) {
       for (auto next_status : next_statuses) {
-        ASSERT_EQ(Status::OK, page_db_.DeleteObject(handler, object_id));
+        ASSERT_EQ(Status::OK, page_db_.DeleteObject(handler, object_digest));
         ASSERT_EQ(Status::OK,
-                  page_db_.WriteObject(handler, object_id,
+                  page_db_.WriteObject(handler, object_digest,
                                        DataSource::DataChunk::Create(""),
                                        initial_status));
-        ASSERT_EQ(Status::OK,
-                  page_db_.GetObjectStatus(handler, object_id, &object_status));
+        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_digest,
+                                                       &object_status));
         EXPECT_EQ(initial_status, object_status);
-        ASSERT_EQ(Status::OK,
-                  page_db_.SetObjectStatus(handler, object_id, next_status));
+        ASSERT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_digest,
+                                                       next_status));
 
         PageDbObjectStatus expected_status =
             std::max(initial_status, next_status);
-        ASSERT_EQ(Status::OK,
-                  page_db_.GetObjectStatus(handler, object_id, &object_status));
+        ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(handler, object_digest,
+                                                       &object_status));
         EXPECT_EQ(expected_status, object_status);
       }
     }

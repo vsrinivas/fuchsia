@@ -66,7 +66,7 @@ void TestPageCloudHandler::GetCommits(
 }
 
 void TestPageCloudHandler::AddObject(const std::string& auth_token,
-                                     ObjectIdView object_id,
+                                     ObjectDigestView object_digest,
                                      zx::vmo data,
                                      std::function<void(Status)> callback) {
   std::string data_str;
@@ -75,7 +75,7 @@ void TestPageCloudHandler::AddObject(const std::string& auth_token,
         [callback = std::move(callback)] { callback(Status::INTERNAL_ERROR); });
     return;
   }
-  added_objects[object_id.ToString()] = data_str;
+  added_objects[object_digest.ToString()] = data_str;
   task_runner_->PostTask([
     status = status_to_return, callback = std::move(callback)
   ] { callback(status); });
@@ -83,7 +83,7 @@ void TestPageCloudHandler::AddObject(const std::string& auth_token,
 
 void TestPageCloudHandler::GetObject(
     const std::string& auth_token,
-    ObjectIdView object_id,
+    ObjectDigestView object_digest,
     std::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
   get_object_calls++;
@@ -96,9 +96,9 @@ void TestPageCloudHandler::GetObject(
   }
 
   task_runner_->PostTask(
-      [ this, object_id = object_id.ToString(), callback ]() {
-        callback(Status::OK, objects_to_return[object_id].size(),
-                 fsl::WriteStringToSocket(objects_to_return[object_id]));
+      [ this, object_digest = object_digest.ToString(), callback ]() {
+        callback(Status::OK, objects_to_return[object_digest].size(),
+                 fsl::WriteStringToSocket(objects_to_return[object_digest]));
       });
 }
 

@@ -95,7 +95,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
               ? KeyPriority::LAZY
               : KeyPriority::EAGER;
 
-      change_->entry.object_id =
+      change_->entry.object_digest =
           key_value.second.substr(JournalEntryRow::kAddPrefixSize).ToString();
     } else {
       change_->deleted = true;
@@ -171,39 +171,39 @@ Status PageDbImpl::GetJournalEntries(
 }
 
 Status PageDbImpl::ReadObject(CoroutineHandler* handler,
-                              ObjectId object_id,
+                              ObjectDigest object_digest,
                               std::unique_ptr<const Object>* object) {
-  return db_.GetObject(handler, ObjectRow::GetKeyFor(object_id), object_id,
-                       object);
+  return db_.GetObject(handler, ObjectRow::GetKeyFor(object_digest),
+                       object_digest, object);
 }
 
 Status PageDbImpl::HasObject(CoroutineHandler* handler,
-                             ObjectIdView object_id,
+                             ObjectDigestView object_digest,
                              bool* has_object) {
-  return db_.HasKey(handler, ObjectRow::GetKeyFor(object_id), has_object);
+  return db_.HasKey(handler, ObjectRow::GetKeyFor(object_digest), has_object);
 }
 
 Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
-                                   ObjectIdView object_id,
+                                   ObjectDigestView object_digest,
                                    PageDbObjectStatus* object_status) {
   bool has_key;
 
   RETURN_ON_ERROR(
-      db_.HasKey(handler, LocalObjectRow::GetKeyFor(object_id), &has_key));
+      db_.HasKey(handler, LocalObjectRow::GetKeyFor(object_digest), &has_key));
   if (has_key) {
     *object_status = PageDbObjectStatus::LOCAL;
     return Status::OK;
   }
 
-  RETURN_ON_ERROR(
-      db_.HasKey(handler, TransientObjectRow::GetKeyFor(object_id), &has_key));
+  RETURN_ON_ERROR(db_.HasKey(
+      handler, TransientObjectRow::GetKeyFor(object_digest), &has_key));
   if (has_key) {
     *object_status = PageDbObjectStatus::TRANSIENT;
     return Status::OK;
   }
 
   RETURN_ON_ERROR(
-      db_.HasKey(handler, ObjectRow::GetKeyFor(object_id), &has_key));
+      db_.HasKey(handler, ObjectRow::GetKeyFor(object_digest), &has_key));
   if (!has_key) {
     *object_status = PageDbObjectStatus::UNKNOWN;
     return Status::OK;
@@ -232,10 +232,11 @@ Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* handler,
-                                     std::vector<ObjectId>* object_ids) {
+Status PageDbImpl::GetUnsyncedPieces(
+    CoroutineHandler* handler,
+    std::vector<ObjectDigest>* object_digests) {
   return db_.GetByPrefix(handler, convert::ToSlice(LocalObjectRow::kPrefix),
-                         object_ids);
+                         object_digests);
 }
 
 Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
@@ -326,30 +327,31 @@ Status PageDbImpl::RemoveJournalEntry(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::WriteObject(CoroutineHandler* handler,
-                               ObjectIdView object_id,
+                               ObjectDigestView object_digest,
                                std::unique_ptr<DataSource::DataChunk> content,
                                PageDbObjectStatus object_status) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->WriteObject(handler, object_id, std::move(content),
+  RETURN_ON_ERROR(batch->WriteObject(handler, object_digest, std::move(content),
                                      object_status));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::DeleteObject(CoroutineHandler* handler,
-                                ObjectIdView object_id) {
+                                ObjectDigestView object_digest) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->DeleteObject(handler, object_id));
+  RETURN_ON_ERROR(batch->DeleteObject(handler, object_digest));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::SetObjectStatus(CoroutineHandler* handler,
-                                   ObjectIdView object_id,
+                                   ObjectDigestView object_digest,
                                    PageDbObjectStatus object_status) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->SetObjectStatus(handler, object_id, object_status));
+  RETURN_ON_ERROR(
+      batch->SetObjectStatus(handler, object_digest, object_status));
   return batch->Execute(handler);
 }
 

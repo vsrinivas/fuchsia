@@ -7,7 +7,7 @@ namespace storage;
 // An entry for the identifier of a part of a file.
 table ObjectChild {
   size: ulong;
-  object_id: [ubyte];
+  object_digest: [ubyte];
 }
 
 // The index of a chunked file.

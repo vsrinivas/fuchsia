@@ -14,25 +14,26 @@ uint64_t ToFullPages(uint64_t value) {
 }
 }  // namespace
 
-InlinedObject::InlinedObject(ObjectId id) : id_(std::move(id)) {}
+InlinedObject::InlinedObject(ObjectDigest digest)
+    : digest_(std::move(digest)) {}
 InlinedObject::~InlinedObject() {}
 
-ObjectId InlinedObject::GetId() const {
-  return id_;
+ObjectDigest InlinedObject::GetDigest() const {
+  return digest_;
 }
 
 Status InlinedObject::GetData(fxl::StringView* data) const {
-  *data = id_;
+  *data = digest_;
   return Status::OK;
 }
 
-StringObject::StringObject(ObjectId id, std::string content)
-    : id_(std::move(id)), content_(std::move(content)) {}
+StringObject::StringObject(ObjectDigest digest, std::string content)
+    : digest_(std::move(digest)), content_(std::move(content)) {}
 
 StringObject::~StringObject() {}
 
-ObjectId StringObject::GetId() const {
-  return id_;
+ObjectDigest StringObject::GetDigest() const {
+  return digest_;
 }
 
 Status StringObject::GetData(fxl::StringView* data) const {
@@ -40,14 +41,14 @@ Status StringObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-LevelDBObject::LevelDBObject(ObjectId id,
+LevelDBObject::LevelDBObject(ObjectDigest digest,
                              std::unique_ptr<leveldb::Iterator> iterator)
-    : id_(std::move(id)), iterator_(std::move(iterator)) {}
+    : digest_(std::move(digest)), iterator_(std::move(iterator)) {}
 
 LevelDBObject::~LevelDBObject() {}
 
-ObjectId LevelDBObject::GetId() const {
-  return id_;
+ObjectDigest LevelDBObject::GetDigest() const {
+  return digest_;
 }
 
 Status LevelDBObject::GetData(fxl::StringView* data) const {
@@ -55,8 +56,8 @@ Status LevelDBObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-VmoObject::VmoObject(ObjectId id, zx::vmo vmo)
-    : id_(std::move(id)), vmo_(std::move(vmo)) {}
+VmoObject::VmoObject(ObjectDigest digest, zx::vmo vmo)
+    : digest_(std::move(digest)), vmo_(std::move(vmo)) {}
 
 VmoObject::~VmoObject() {
   if (vmar_) {
@@ -64,8 +65,8 @@ VmoObject::~VmoObject() {
   }
 }
 
-ObjectId VmoObject::GetId() const {
-  return id_;
+ObjectDigest VmoObject::GetDigest() const {
+  return digest_;
 }
 
 Status VmoObject::GetData(fxl::StringView* data) const {

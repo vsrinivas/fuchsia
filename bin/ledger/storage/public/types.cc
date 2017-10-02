@@ -7,8 +7,8 @@
 namespace storage {
 
 bool operator==(const Entry& lhs, const Entry& rhs) {
-  return std::tie(lhs.key, lhs.object_id, lhs.priority) ==
-         std::tie(rhs.key, rhs.object_id, rhs.priority);
+  return std::tie(lhs.key, lhs.object_digest, lhs.priority) ==
+         std::tie(rhs.key, rhs.object_digest, rhs.priority);
 }
 
 bool operator!=(const Entry& lhs, const Entry& rhs) {
@@ -45,8 +45,8 @@ fxl::StringView StatusToString(Status status) {
       return "NOT_CONNECTED_ERROR";
     case Status::NO_SUCH_CHILD:
       return "NO_SUCH_CHILD";
-    case Status::OBJECT_ID_MISMATCH:
-      return "OBJECT_ID_MISMATCH";
+    case Status::OBJECT_DIGEST_MISMATCH:
+      return "OBJECT_DIGEST_MISMATCH";
     case Status::NOT_IMPLEMENTED:
       return "NOT_IMPLEMENTED";
   }

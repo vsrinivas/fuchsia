@@ -21,7 +21,7 @@ namespace fake {
 class FakeJournalDelegate {
  public:
   struct Entry {
-    ObjectId value;
+    ObjectDigest value;
     bool deleted;
     KeyPriority priority;
   };
@@ -32,7 +32,7 @@ class FakeJournalDelegate {
   const CommitId& GetId() const { return id_; }
 
   Status SetValue(convert::ExtendedStringView key,
-                  ObjectIdView value,
+                  ObjectDigestView value,
                   KeyPriority priority);
   Status Delete(convert::ExtendedStringView key);
 

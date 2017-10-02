@@ -177,9 +177,9 @@ class CompletionAccumulator {
 // callback. A typical usage example would be:
 // auto waiter = callback::Waiter<Status,
 //                                std::unique_ptr<Object>>::Create(Status::OK);
-// storage->GetObject(object_id1, waiter->NewCallback());
-// storage->GetObject(object_id2, waiter->NewCallback());
-// storage->GetObject(object_id3, waiter->NewCallback());
+// storage->GetObject(object_digest1, waiter->NewCallback());
+// storage->GetObject(object_digest2, waiter->NewCallback());
+// storage->GetObject(object_digest3, waiter->NewCallback());
 // ...
 // waiter->Finalize([](Status s, std::vector<std::unique_ptr<Object>> v) {
 //   do something with the returned objects
@@ -235,7 +235,7 @@ class StatusWaiter
 // auto promise =
 //     callback::Promise<Status, std::unique_ptr<Object>>::Create(
 //         Status::ILLEGAL_STATE);
-// storage->GetObject(object_id1, promise->NewCallback());
+// storage->GetObject(object_digest1, promise->NewCallback());
 // ...
 //
 // promise->Finalize([](Status s, std::unique_ptr<Object> o) {

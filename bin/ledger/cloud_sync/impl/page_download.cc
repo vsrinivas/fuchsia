@@ -220,16 +220,16 @@ void PageDownload::DownloadBatch(
 }
 
 void PageDownload::GetObject(
-    storage::ObjectIdView object_id,
+    storage::ObjectDigestView object_digest,
     std::function<void(storage::Status status, uint64_t size, zx::socket data)>
         callback) {
   current_get_object_calls_++;
   delegate_->GetAuthToken(
-      [ this, object_id = object_id.ToString(),
+      [ this, object_digest = object_digest.ToString(),
         callback ](std::string auth_token) mutable {
         cloud_provider_->GetObject(
-            auth_token, object_id,
-            [ this, object_id, callback = std::move(callback) ](
+            auth_token, object_digest,
+            [ this, object_digest, callback = std::move(callback) ](
                 cloud_provider_firebase::Status status, uint64_t size,
                 zx::socket data) mutable {
               if (status == cloud_provider_firebase::Status::NETWORK_ERROR) {
@@ -238,9 +238,9 @@ void PageDownload::GetObject(
                                     "error, retrying.";
                 current_get_object_calls_--;
                 delegate_->Retry([
-                  this, object_id = std::move(object_id),
+                  this, object_digest = std::move(object_digest),
                   callback = std::move(callback)
-                ] { GetObject(object_id, callback); });
+                ] { GetObject(object_digest, callback); });
                 return;
               }
 

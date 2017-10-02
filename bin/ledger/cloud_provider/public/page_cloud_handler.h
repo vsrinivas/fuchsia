@@ -79,7 +79,7 @@ class PageCloudHandler {
 
   // Uploads the given object to the cloud under the given id.
   virtual void AddObject(const std::string& auth_token,
-                         ObjectIdView object_id,
+                         ObjectDigestView object_digest,
                          zx::vmo data,
                          std::function<void(Status)> callback) = 0;
 
@@ -88,7 +88,7 @@ class PageCloudHandler {
   // can verify that all data was streamed when draining the socket.
   virtual void GetObject(
       const std::string& auth_token,
-      ObjectIdView object_id,
+      ObjectDigestView object_digest,
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback) = 0;
 

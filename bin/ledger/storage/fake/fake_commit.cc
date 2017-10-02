@@ -37,7 +37,7 @@ uint64_t FakeCommit::GetGeneration() const {
   return 0;
 }
 
-ObjectIdView FakeCommit::GetRootId() const {
+ObjectDigestView FakeCommit::GetRootDigest() const {
   return journal_->GetId();
 }
 

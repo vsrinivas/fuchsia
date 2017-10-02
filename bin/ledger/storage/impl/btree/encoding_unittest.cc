@@ -23,13 +23,13 @@ std::string operator"" _s(const char* str, size_t size) {
 TEST(EncodingTest, EmptyData) {
   uint8_t level = 0u;
   std::vector<Entry> entries;
-  std::vector<ObjectId> children{""};
+  std::vector<ObjectDigest> children{""};
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectId> res_children;
+  std::vector<ObjectDigest> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(entries, res_entries);
@@ -39,15 +39,15 @@ TEST(EncodingTest, EmptyData) {
 TEST(EncodingTest, SingleEntry) {
   uint8_t level = 1u;
   std::vector<Entry> entries = {
-      {"key", MakeObjectId("object_id"), KeyPriority::EAGER}};
-  std::vector<ObjectId> children = {MakeObjectId("child_1"),
-                                    MakeObjectId("child_2")};
+      {"key", MakeObjectDigest("object_digest"), KeyPriority::EAGER}};
+  std::vector<ObjectDigest> children = {MakeObjectDigest("child_1"),
+                                        MakeObjectDigest("child_2")};
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectId> res_children;
+  std::vector<ObjectDigest> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(entries, res_entries);
@@ -57,19 +57,20 @@ TEST(EncodingTest, SingleEntry) {
 TEST(EncodingTest, MoreEntries) {
   uint8_t level = 5;
   std::vector<Entry> entries = {
-      {"key1", MakeObjectId("abc"), KeyPriority::EAGER},
-      {"key2", MakeObjectId("def"), KeyPriority::LAZY},
-      {"key3", MakeObjectId("geh"), KeyPriority::EAGER},
-      {"key4", MakeObjectId("ijk"), KeyPriority::LAZY}};
-  std::vector<ObjectId> children = {
-      MakeObjectId("child_1"), MakeObjectId("child_2"), MakeObjectId("child_3"),
-      MakeObjectId("child_4"), MakeObjectId("child_5")};
+      {"key1", MakeObjectDigest("abc"), KeyPriority::EAGER},
+      {"key2", MakeObjectDigest("def"), KeyPriority::LAZY},
+      {"key3", MakeObjectDigest("geh"), KeyPriority::EAGER},
+      {"key4", MakeObjectDigest("ijk"), KeyPriority::LAZY}};
+  std::vector<ObjectDigest> children = {
+      MakeObjectDigest("child_1"), MakeObjectDigest("child_2"),
+      MakeObjectDigest("child_3"), MakeObjectDigest("child_4"),
+      MakeObjectDigest("child_5")};
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectId> res_children;
+  std::vector<ObjectDigest> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(level, res_level);
@@ -80,15 +81,15 @@ TEST(EncodingTest, MoreEntries) {
 TEST(EncodingTest, ZeroByte) {
   uint8_t level = 13;
   std::vector<Entry> entries = {
-      {"k\0ey"_s, MakeObjectId("\0a\0\0"_s), KeyPriority::EAGER}};
-  std::vector<ObjectId> children = {MakeObjectId("ch\0ld_1"_s),
-                                    MakeObjectId("child_\0"_s)};
+      {"k\0ey"_s, MakeObjectDigest("\0a\0\0"_s), KeyPriority::EAGER}};
+  std::vector<ObjectDigest> children = {MakeObjectDigest("ch\0ld_1"_s),
+                                        MakeObjectDigest("child_\0"_s)};
 
   std::string bytes = EncodeNode(level, entries, children);
 
   uint8_t res_level;
   std::vector<Entry> res_entries;
-  std::vector<ObjectId> res_children;
+  std::vector<ObjectDigest> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &res_level, &res_entries, &res_children));
   EXPECT_EQ(level, res_level);
   EXPECT_EQ(entries, res_entries);
@@ -110,7 +111,7 @@ TEST(EncodingTest, Errors) {
       children.push_back(CreateChildStorage(
           builder, 1,
           convert::ToFlatBufferVector(
-              &builder, MakeObjectId(fxl::StringPrintf("c%lu", i)))));
+              &builder, MakeObjectDigest(fxl::StringPrintf("c%lu", i)))));
     }
     return builder.CreateVector(children);
   };
@@ -144,7 +145,7 @@ TEST(EncodingTest, Errors) {
                 return CreateEntryStorage(
                     builder, convert::ToFlatBufferVector(&builder, "hello"),
                     convert::ToFlatBufferVector(&builder,
-                                                MakeObjectId("world")),
+                                                MakeObjectDigest("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       create_children(2)));
@@ -161,7 +162,7 @@ TEST(EncodingTest, Errors) {
                 return CreateEntryStorage(
                     builder, convert::ToFlatBufferVector(&builder, "hello"),
                     convert::ToFlatBufferVector(&builder,
-                                                MakeObjectId("world")),
+                                                MakeObjectDigest("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       create_children(0)));

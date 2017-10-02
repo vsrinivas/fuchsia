@@ -30,7 +30,7 @@ class FakeJournal : public Journal {
 
   // Journal:
   void Put(convert::ExtendedStringView key,
-           ObjectIdView object_id,
+           ObjectDigestView object_digest,
            KeyPriority priority,
            std::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,

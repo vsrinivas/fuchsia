@@ -51,13 +51,13 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   // Object data.
   Status WriteObject(coroutine::CoroutineHandler* handler,
-                     ObjectIdView object_id,
+                     ObjectDigestView object_digest,
                      std::unique_ptr<DataSource::DataChunk> content,
                      PageDbObjectStatus object_status) override;
   Status DeleteObject(coroutine::CoroutineHandler* handler,
-                      ObjectIdView object_id) override;
+                      ObjectDigestView object_digest) override;
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,
-                         ObjectIdView object_id,
+                         ObjectDigestView object_digest,
                          PageDbObjectStatus object_status) override;
 
   // Commit sync metadata.

@@ -8,7 +8,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
-#include "peridot/bin/ledger/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 
 namespace storage {
@@ -22,12 +22,12 @@ std::string RandomString(size_t size) {
 }
 
 ::testing::AssertionResult CheckObjectValue(const Object& object,
-                                            fxl::StringView id,
+                                            fxl::StringView digest,
                                             fxl::StringView data) {
-  if (object.GetId() != id) {
+  if (object.GetDigest() != digest) {
     return ::testing::AssertionFailure()
-           << "Expected id: " << convert::ToHex(id)
-           << ", but got: " << convert::ToHex(object.GetId());
+           << "Expected id: " << convert::ToHex(digest)
+           << ", but got: " << convert::ToHex(object.GetDigest());
   }
 
   fxl::StringView found_data;
@@ -66,18 +66,18 @@ std::string RandomString(size_t size) {
 
 TEST(ObjectImplTest, InlinedObject) {
   std::string data = RandomString(12);
-  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
 
-  InlinedObject object(id);
-  EXPECT_TRUE(CheckObjectValue(object, id, data));
+  InlinedObject object(digest);
+  EXPECT_TRUE(CheckObjectValue(object, digest, data));
 }
 
 TEST(ObjectImplTest, StringObject) {
   std::string data = RandomString(256);
-  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
 
-  StringObject object(id, data);
-  EXPECT_TRUE(CheckObjectValue(object, id, data));
+  StringObject object(digest, data);
+  EXPECT_TRUE(CheckObjectValue(object, digest, data));
 }
 
 TEST(ObjectImplTest, LevelDBObject) {
@@ -95,7 +95,7 @@ TEST(ObjectImplTest, LevelDBObject) {
   leveldb::ReadOptions read_options_;
 
   std::string data = RandomString(256);
-  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
 
   status = db_ptr->Put(write_options_, "", data);
   ASSERT_TRUE(status.ok());
@@ -105,19 +105,19 @@ TEST(ObjectImplTest, LevelDBObject) {
   ASSERT_TRUE(iterator->Valid());
   ASSERT_TRUE(iterator->key() == "");
 
-  LevelDBObject object(id, std::move(iterator));
-  EXPECT_TRUE(CheckObjectValue(object, id, data));
+  LevelDBObject object(digest, std::move(iterator));
+  EXPECT_TRUE(CheckObjectValue(object, digest, data));
 }
 
 TEST(ObjectImplTest, VmoObject) {
   std::string data = RandomString(256);
-  std::string id = ComputeObjectId(ObjectType::VALUE, data);
+  std::string digest = ComputeObjectDigest(ObjectType::VALUE, data);
 
   zx::vmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(data, &vmo));
 
-  VmoObject object(id, std::move(vmo));
-  EXPECT_TRUE(CheckObjectValue(object, id, data));
+  VmoObject object(digest, std::move(vmo));
+  EXPECT_TRUE(CheckObjectValue(object, digest, data));
 }
 
 }  // namespace

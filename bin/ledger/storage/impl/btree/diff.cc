@@ -21,11 +21,11 @@ class IteratorPair {
       : on_next_(on_next), left_(storage), right_(storage) {}
 
   // Initialize the pair with the ids of both roots.
-  Status Init(ObjectIdView left_node_id,
-              ObjectIdView right_node_id,
+  Status Init(ObjectDigestView left_node_digest,
+              ObjectDigestView right_node_digest,
               fxl::StringView min_key) {
-    RETURN_ON_ERROR(left_.Init(left_node_id));
-    RETURN_ON_ERROR(right_.Init(right_node_id));
+    RETURN_ON_ERROR(left_.Init(left_node_digest));
+    RETURN_ON_ERROR(right_.Init(right_node_digest));
     if (!min_key.empty()) {
       RETURN_ON_ERROR(SkipIteratorsTo(min_key));
     }
@@ -271,16 +271,16 @@ class IteratorPair {
 };
 
 Status ForEachDiffInternal(SynchronousStorage* storage,
-                           ObjectIdView left_node_id,
-                           ObjectIdView right_node_id,
+                           ObjectDigestView left_node_digest,
+                           ObjectDigestView right_node_digest,
                            std::string min_key,
                            const std::function<bool(EntryChange)>& on_next) {
-  if (left_node_id == right_node_id) {
+  if (left_node_digest == right_node_digest) {
     return Status::OK;
   }
 
   IteratorPair iterators(storage, on_next);
-  RETURN_ON_ERROR(iterators.Init(left_node_id, right_node_id, min_key));
+  RETURN_ON_ERROR(iterators.Init(left_node_digest, right_node_digest, min_key));
 
   while (!iterators.Finished()) {
     if (!iterators.SendDiff()) {
@@ -296,18 +296,19 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
 
 void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
-                 ObjectIdView base_root_id,
-                 ObjectIdView other_root_id,
+                 ObjectDigestView base_root_digest,
+                 ObjectDigestView other_root_digest,
                  std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done) {
   coroutine_service->StartCoroutine([
-    page_storage, base_root_id, other_root_id, on_next = std::move(on_next),
-    min_key = std::move(min_key), on_done = std::move(on_done)
+    page_storage, base_root_digest, other_root_digest,
+    on_next = std::move(on_next), min_key = std::move(min_key),
+    on_done = std::move(on_done)
   ](coroutine::CoroutineHandler * handler) mutable {
     SynchronousStorage storage(page_storage, handler);
 
-    on_done(ForEachDiffInternal(&storage, base_root_id, other_root_id,
+    on_done(ForEachDiffInternal(&storage, base_root_digest, other_root_digest,
                                 std::move(min_key), on_next));
   });
 }

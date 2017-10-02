@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/storage/impl/object_id.h"
+#include "peridot/bin/ledger/storage/impl/object_digest.h"
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/glue/crypto/hash.h"
@@ -25,44 +25,45 @@ std::string AddPrefix(char c, convert::ExtendedStringView data) {
 
 }  // namespace
 
-ObjectIdType GetObjectIdType(ObjectIdView object_id) {
-  if (object_id.size() <= kStorageHashSize) {
-    return ObjectIdType::INLINE;
+ObjectDigestType GetObjectDigestType(ObjectDigestView object_digest) {
+  if (object_digest.size() <= kStorageHashSize) {
+    return ObjectDigestType::INLINE;
   }
 
-  switch (object_id[0]) {
+  switch (object_digest[0]) {
     case kValueHashPrefix:
-      return ObjectIdType::VALUE_HASH;
+      return ObjectDigestType::VALUE_HASH;
     case kIndexHashPrefix:
-      return ObjectIdType::INDEX_HASH;
+      return ObjectDigestType::INDEX_HASH;
   }
 
   FXL_NOTREACHED();
-  return ObjectIdType::VALUE_HASH;
+  return ObjectDigestType::VALUE_HASH;
 }
 
-ObjectType GetObjectType(ObjectIdType id_type) {
-  switch (id_type) {
-    case ObjectIdType::INLINE:
-    case ObjectIdType::VALUE_HASH:
+ObjectType GetObjectType(ObjectDigestType digest_type) {
+  switch (digest_type) {
+    case ObjectDigestType::INLINE:
+    case ObjectDigestType::VALUE_HASH:
       return ObjectType::VALUE;
-    case ObjectIdType::INDEX_HASH:
+    case ObjectDigestType::INDEX_HASH:
       return ObjectType::INDEX;
   }
 }
 
-fxl::StringView ExtractObjectIdData(ObjectIdView object_id) {
-  if (object_id.size() <= kStorageHashSize) {
-    return object_id;
+fxl::StringView ExtractObjectDigestData(ObjectDigestView object_digest) {
+  if (object_digest.size() <= kStorageHashSize) {
+    return object_digest;
   }
 
-  FXL_DCHECK(object_id[0] == kValueHashPrefix ||
-             object_id[0] == kIndexHashPrefix);
+  FXL_DCHECK(object_digest[0] == kValueHashPrefix ||
+             object_digest[0] == kIndexHashPrefix);
 
-  return object_id.substr(1);
+  return object_digest.substr(1);
 }
 
-ObjectId ComputeObjectId(ObjectType type, convert::ExtendedStringView content) {
+ObjectDigest ComputeObjectDigest(ObjectType type,
+                                 convert::ExtendedStringView content) {
   switch (type) {
     case ObjectType::VALUE:
       if (content.size() <= kStorageHashSize) {

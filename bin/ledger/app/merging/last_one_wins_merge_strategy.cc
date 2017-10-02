@@ -109,7 +109,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
     if (change.deleted) {
       weak_this->journal_->Delete(key, waiter->NewCallback());
     } else {
-      weak_this->journal_->Put(key, change.entry.object_id,
+      weak_this->journal_->Put(key, change.entry.object_digest,
                                change.entry.priority, waiter->NewCallback());
     }
     return true;

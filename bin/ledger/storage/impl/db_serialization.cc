@@ -30,8 +30,8 @@ std::string CommitRow::GetKeyFor(CommitIdView commit_id) {
 
 constexpr fxl::StringView ObjectRow::kPrefix;
 
-std::string ObjectRow::GetKeyFor(ObjectIdView object_id) {
-  return fxl::Concatenate({kPrefix, object_id});
+std::string ObjectRow::GetKeyFor(ObjectDigestView object_digest) {
+  return fxl::Concatenate({kPrefix, object_digest});
 }
 
 // UnsyncedCommitRow.
@@ -46,16 +46,16 @@ std::string UnsyncedCommitRow::GetKeyFor(const CommitId& commit_id) {
 
 constexpr fxl::StringView TransientObjectRow::kPrefix;
 
-std::string TransientObjectRow::GetKeyFor(ObjectIdView object_id) {
-  return fxl::Concatenate({kPrefix, object_id});
+std::string TransientObjectRow::GetKeyFor(ObjectDigestView object_digest) {
+  return fxl::Concatenate({kPrefix, object_digest});
 }
 
 // LocalObjectRow.
 
 constexpr fxl::StringView LocalObjectRow::kPrefix;
 
-std::string LocalObjectRow::GetKeyFor(ObjectIdView object_id) {
-  return fxl::Concatenate({kPrefix, object_id});
+std::string LocalObjectRow::GetKeyFor(ObjectDigestView object_digest) {
+  return fxl::Concatenate({kPrefix, object_digest});
 }
 
 // ImplicitJournalMetaRow.
@@ -107,12 +107,12 @@ std::string JournalEntryRow::GetValueFor(fxl::StringView value,
   return fxl::Concatenate({{&kAddPrefix, 1}, {&priority_byte, 1}, value});
 }
 
-Status JournalEntryRow::ExtractObjectId(fxl::StringView db_value,
-                                        ObjectId* id) {
+Status JournalEntryRow::ExtractObjectDigest(fxl::StringView db_value,
+                                            ObjectDigest* digest) {
   if (db_value[0] == kDeletePrefix[0]) {
     return Status::NOT_FOUND;
   }
-  *id = db_value.substr(kAddPrefixSize).ToString();
+  *digest = db_value.substr(kAddPrefixSize).ToString();
   return Status::OK;
 }
 

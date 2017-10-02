@@ -32,7 +32,7 @@ class CommitEmptyImpl : public Commit {
 
   uint64_t GetGeneration() const override;
 
-  ObjectIdView GetRootId() const override;
+  ObjectDigestView GetRootDigest() const override;
 
   fxl::StringView GetStorageBytes() const override;
 };

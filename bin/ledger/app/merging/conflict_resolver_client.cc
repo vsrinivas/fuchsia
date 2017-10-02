@@ -93,7 +93,7 @@ void ConflictResolverClient::Cancel() {
 
 void ConflictResolverClient::OnNextMergeResult(
     const MergedValuePtr& merged_value,
-    const fxl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>>&
+    const fxl::RefPtr<callback::Waiter<storage::Status, storage::ObjectDigest>>&
         waiter) {
   switch (merged_value->source) {
     case ValueSource::RIGHT: {
@@ -108,10 +108,10 @@ void ConflictResolverClient::OnNextMergeResult(
                     << "Key " << key
                     << " is not present in the right change. Unable to proceed";
               }
-              callback(status, storage::ObjectId());
+              callback(status, storage::ObjectDigest());
               return;
             }
-            callback(storage::Status::OK, entry.object_id);
+            callback(storage::Status::OK, entry.object_digest);
           });
       break;
     }
@@ -121,8 +121,8 @@ void ConflictResolverClient::OnNextMergeResult(
             storage::DataSource::Create(
                 std::move(merged_value->new_value->get_bytes())),
             fxl::MakeCopyable([callback = waiter->NewCallback()](
-                storage::Status status, storage::ObjectId object_id) {
-              callback(status, std::move(object_id));
+                storage::Status status, storage::ObjectDigest object_digest) {
+              callback(status, std::move(object_digest));
             }));
       } else {
         waiter->NewCallback()(
@@ -135,7 +135,7 @@ void ConflictResolverClient::OnNextMergeResult(
     case ValueSource::DELETE: {
       journal_->Delete(merged_value->key, [callback = waiter->NewCallback()](
                                               storage::Status status) {
-        callback(status, storage::ObjectId());
+        callback(status, storage::ObjectDigest());
       });
       break;
     }
@@ -214,7 +214,7 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
           return;
         }
         auto waiter =
-            callback::Waiter<storage::Status, storage::ObjectId>::Create(
+            callback::Waiter<storage::Status, storage::ObjectDigest>::Create(
                 storage::Status::OK);
         for (const MergedValuePtr& merged_value : merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
@@ -222,7 +222,8 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
         waiter->Finalize(fxl::MakeCopyable(fxl::MakeCopyable([
           weak_this, merged_values = std::move(merged_values),
           callback = std::move(callback)
-        ](storage::Status status, std::vector<storage::ObjectId> object_ids) {
+        ](storage::Status status,
+          std::vector<storage::ObjectDigest> object_digests) {
           if (!weak_this) {
             callback(Status::INTERNAL_ERROR);
             return;
@@ -245,12 +246,12 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
 
           auto waiter = callback::StatusWaiter<storage::Status>::Create(
               storage::Status::OK);
-          for (size_t i = 0; i < object_ids.size(); ++i) {
-            if (object_ids[i].empty()) {
+          for (size_t i = 0; i < object_digests.size(); ++i) {
+            if (object_digests[i].empty()) {
               continue;
             }
             weak_this->journal_->Put(
-                merged_values[i]->key, object_ids[i],
+                merged_values[i]->key, object_digests[i],
                 merged_values[i]->priority == Priority::EAGER
                     ? storage::KeyPriority::EAGER
                     : storage::KeyPriority::LAZY,

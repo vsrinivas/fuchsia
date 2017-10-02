@@ -46,12 +46,12 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      std::function<void(Status, ObjectId)> callback) override;
-  void GetObject(ObjectIdView object_id,
+      std::function<void(Status, ObjectDigest)> callback) override;
+  void GetObject(ObjectDigestView object_digest,
                  Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
-  void GetPiece(ObjectIdView object_id,
+  void GetPiece(ObjectDigestView object_digest,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
   void GetCommitContents(const Commit& commit,
@@ -66,11 +66,11 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   void set_autocommit(bool autocommit) { autocommit_ = autocommit; }
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
   GetJournals() const;
-  const std::map<ObjectId, std::string, convert::StringViewComparator>&
+  const std::map<ObjectDigest, std::string, convert::StringViewComparator>&
   GetObjects() const;
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
-  void DeleteObjectFromLocal(const ObjectId& object_id);
+  void DeleteObjectFromLocal(const ObjectDigest& object_digest);
 
  private:
   void SendNextObject();
@@ -79,7 +79,7 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
 
   std::default_random_engine rng_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
-  std::map<ObjectId, std::string, convert::StringViewComparator> objects_;
+  std::map<ObjectDigest, std::string, convert::StringViewComparator> objects_;
   std::vector<fxl::Closure> object_requests_;
   PageId page_id_;
 

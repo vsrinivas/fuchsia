@@ -24,9 +24,9 @@ class TreeNode {
 
   // Creates a |TreeNode| object for an existing node and calls the given
   // |callback| with the returned status and node.
-  static void FromId(
+  static void FromDigest(
       PageStorage* page_storage,
-      ObjectIdView id,
+      ObjectDigestView digest,
       std::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
   // Creates a |TreeNode| object with the given entries and children. An empty
@@ -36,13 +36,13 @@ class TreeNode {
   static void FromEntries(PageStorage* page_storage,
                           uint8_t level,
                           const std::vector<Entry>& entries,
-                          const std::vector<ObjectId>& children,
-                          std::function<void(Status, ObjectId)> callback);
+                          const std::vector<ObjectDigest>& children,
+                          std::function<void(Status, ObjectDigest)> callback);
 
   // Creates an empty node, i.e. a TreeNode with no entries and an empty child
   // at index 0 and calls the callback with the result.
   static void Empty(PageStorage* page_storage,
-                    std::function<void(Status, ObjectId)> callback);
+                    std::function<void(Status, ObjectDigest)> callback);
 
   // Returns the number of entries stored in this tree node.
   int GetKeyCount() const;
@@ -62,7 +62,7 @@ class TreeNode {
   // Returns the id of the child node at position |index|. If the child at the
   // given index is empty, an empty string is returned. |index| has to be in [0,
   // GetKeyCount()].
-  ObjectIdView GetChildId(int index) const;
+  ObjectDigestView GetChildDigest(int index) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
   // returned and index contains the index of the entry. If not, |NOT_FOUND|
@@ -70,20 +70,22 @@ class TreeNode {
   // might be found.
   Status FindKeyOrChild(convert::ExtendedStringView key, int* index) const;
 
-  const ObjectId& GetId() const;
+  const ObjectDigest& GetDigest() const;
 
   uint8_t level() const { return level_; }
 
   const std::vector<Entry>& entries() const { return entries_; }
 
-  const std::vector<ObjectId>& children_ids() const { return children_; }
+  const std::vector<ObjectDigest>& children_digests() const {
+    return children_;
+  }
 
  private:
   TreeNode(PageStorage* page_storage,
            std::string id,
            uint8_t level,
            std::vector<Entry> entries,
-           std::vector<ObjectId> children);
+           std::vector<ObjectDigest> children);
 
   // Creates a |TreeNode| object for an existing |object| and stores it in the
   // given |node|.
@@ -92,10 +94,10 @@ class TreeNode {
                            std::unique_ptr<const TreeNode>* node);
 
   PageStorage* page_storage_;
-  ObjectId id_;
+  ObjectDigest digest_;
   const uint8_t level_;
   const std::vector<Entry> entries_;
-  const std::vector<ObjectId> children_;
+  const std::vector<ObjectDigest> children_;
 };
 
 }  // namespace btree

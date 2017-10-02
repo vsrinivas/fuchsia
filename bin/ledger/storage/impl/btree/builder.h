@@ -32,9 +32,9 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 void ApplyChanges(
     coroutine::CoroutineService* coroutine_service,
     PageStorage* page_storage,
-    ObjectIdView root_id,
+    ObjectDigestView root_digest,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
+    std::function<void(Status, ObjectDigest, std::unordered_set<ObjectDigest>)>
         callback,
     const NodeLevelCalculator* node_level_calculator =
         GetDefaultNodeLevelCalculator());

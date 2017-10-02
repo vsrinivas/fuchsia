@@ -94,13 +94,13 @@ void PageStorageEmptyImpl::MarkCommitSynced(
 }
 
 void PageStorageEmptyImpl::GetUnsyncedPieces(
-    std::function<void(Status, std::vector<ObjectId>)> callback) {
+    std::function<void(Status, std::vector<ObjectDigest>)> callback) {
   FXL_NOTIMPLEMENTED();
-  callback(Status::NOT_IMPLEMENTED, std::vector<ObjectId>());
+  callback(Status::NOT_IMPLEMENTED, std::vector<ObjectDigest>());
 }
 
 void PageStorageEmptyImpl::MarkPieceSynced(
-    ObjectIdView /*object_id*/,
+    ObjectDigestView /*object_digest*/,
     std::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
@@ -108,13 +108,13 @@ void PageStorageEmptyImpl::MarkPieceSynced(
 
 void PageStorageEmptyImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> /*data_source*/,
-    std::function<void(Status, ObjectId)> callback) {
+    std::function<void(Status, ObjectDigest)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "NOT_IMPLEMENTED");
 }
 
 void PageStorageEmptyImpl::GetObject(
-    ObjectIdView /*object_id*/,
+    ObjectDigestView /*object_digest*/,
     Location /*location*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   FXL_NOTIMPLEMENTED();
@@ -122,7 +122,7 @@ void PageStorageEmptyImpl::GetObject(
 }
 
 void PageStorageEmptyImpl::GetPiece(
-    ObjectIdView /*object_id*/,
+    ObjectDigestView /*object_digest*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }

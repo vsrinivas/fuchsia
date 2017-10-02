@@ -50,18 +50,18 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 class TestObject : public storage::Object {
  public:
   TestObject() = default;
-  TestObject(storage::ObjectId id, std::string data)
-      : id(std::move(id)), data(std::move(data)) {}
+  TestObject(storage::ObjectDigest digest, std::string data)
+      : digest(std::move(digest)), data(std::move(data)) {}
   ~TestObject() override = default;
 
-  storage::ObjectId GetId() const override { return id; };
+  storage::ObjectDigest GetDigest() const override { return digest; };
 
   storage::Status GetData(fxl::StringView* result) const override {
     *result = fxl::StringView(data);
     return storage::Status::OK;
   }
 
-  storage::ObjectId id;
+  storage::ObjectDigest digest;
   std::string data;
 };
 
@@ -88,34 +88,34 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   }
 
   void GetUnsyncedPieces(
-      std::function<void(storage::Status, std::vector<storage::ObjectId>)>
+      std::function<void(storage::Status, std::vector<storage::ObjectDigest>)>
           callback) override {
-    std::vector<storage::ObjectId> object_ids;
-    for (auto& id_object_pair : unsynced_objects_to_return) {
-      object_ids.push_back(id_object_pair.first);
+    std::vector<storage::ObjectDigest> object_digests;
+    for (auto& digest_object_pair : unsynced_objects_to_return) {
+      object_digests.push_back(digest_object_pair.first);
     }
-    callback(storage::Status::OK, std::move(object_ids));
+    callback(storage::Status::OK, std::move(object_digests));
   }
 
-  void GetObject(storage::ObjectIdView object_id,
+  void GetObject(storage::ObjectDigestView object_digest,
                  Location /*location*/,
                  std::function<void(storage::Status,
                                     std::unique_ptr<const storage::Object>)>
                      callback) override {
-    GetPiece(object_id, callback);
+    GetPiece(object_digest, callback);
   }
 
-  void GetPiece(storage::ObjectIdView object_id,
+  void GetPiece(storage::ObjectDigestView object_digest,
                 std::function<void(storage::Status,
                                    std::unique_ptr<const storage::Object>)>
                     callback) override {
     callback(storage::Status::OK,
-             std::move(unsynced_objects_to_return[object_id.ToString()]));
+             std::move(unsynced_objects_to_return[object_digest.ToString()]));
   }
 
-  void MarkPieceSynced(storage::ObjectIdView object_id,
+  void MarkPieceSynced(storage::ObjectDigestView object_digest,
                        std::function<void(storage::Status)> callback) override {
-    objects_marked_as_synced.insert(object_id.ToString());
+    objects_marked_as_synced.insert(object_digest.ToString());
     callback(storage::Status::OK);
   }
 
@@ -140,9 +140,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return commit;
   }
 
-  std::map<storage::ObjectId, std::unique_ptr<const TestObject>>
+  std::map<storage::ObjectDigest, std::unique_ptr<const TestObject>>
       unsynced_objects_to_return;
-  std::set<storage::ObjectId> objects_marked_as_synced;
+  std::set<storage::ObjectDigest> objects_marked_as_synced;
   std::set<storage::CommitId> commits_marked_as_synced;
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
 };
@@ -174,7 +174,7 @@ class TestPageCloudHandler
 
   void AddObject(
       const std::string& auth_token,
-      cloud_provider_firebase::ObjectIdView object_id,
+      cloud_provider_firebase::ObjectDigestView object_digest,
       zx::vmo data,
       std::function<void(cloud_provider_firebase::Status)> callback) override {
     add_object_calls++;
@@ -182,7 +182,7 @@ class TestPageCloudHandler
     std::string received_data;
     ASSERT_TRUE(fsl::StringFromVmo(data, &received_data));
     received_objects.insert(
-        std::make_pair(object_id.ToString(), received_data));
+        std::make_pair(object_digest.ToString(), received_data));
     fxl::Closure report_result =
         [ callback, status = object_status_to_return ] {
       callback(status);
@@ -217,7 +217,7 @@ class TestPageCloudHandler
   std::vector<std::string> received_commit_tokens;
   std::vector<cloud_provider_firebase::Commit> received_commits;
   std::vector<std::string> received_object_tokens;
-  std::map<cloud_provider_firebase::ObjectId, std::string> received_objects;
+  std::map<cloud_provider_firebase::ObjectDigest, std::string> received_objects;
 
  private:
   fsl::MessageLoop* message_loop_;
@@ -313,10 +313,10 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -330,15 +330,15 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   EXPECT_EQ("id", cloud_provider_.received_commits.front().id);
   EXPECT_EQ("content", cloud_provider_.received_commits.front().content);
   EXPECT_EQ(2u, cloud_provider_.received_objects.size());
-  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_id1"]);
-  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_id2"]);
+  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_digest1"]);
+  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_digest2"]);
 
   // Verify the sync status in storage.
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
 }
 
 // Verifies that auth tokens from auth provider are correctly passed to
@@ -347,10 +347,10 @@ TEST_F(BatchUploadTest, AuthTokens) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   auth_provider_.token_to_return = "some-token";
 
@@ -369,10 +369,10 @@ TEST_F(BatchUploadTest, AuthError) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
   auth_provider_.token_to_return = "";
@@ -390,12 +390,12 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id0"] =
-      std::make_unique<TestObject>("obj_id0", "obj_data0");
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest0"] =
+      std::make_unique<TestObject>("obj_digest0", "obj_data0");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   // Create the commit upload with |max_concurrent_uploads| = 2.
   auto batch_upload = MakeBatchUpload(std::move(commits), 2);
@@ -414,15 +414,15 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   EXPECT_EQ(0u, error_calls_);
   EXPECT_EQ(3u, cloud_provider_.add_object_calls);
   EXPECT_EQ(3u, cloud_provider_.received_objects.size());
-  EXPECT_EQ("obj_data0", cloud_provider_.received_objects["obj_id0"]);
-  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_id1"]);
-  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_id2"]);
+  EXPECT_EQ("obj_data0", cloud_provider_.received_objects["obj_digest0"]);
+  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_digest1"]);
+  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_digest2"]);
 
   // Verify the sync status in storage.
   EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id0"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest0"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
 }
 
 // Test un upload that fails on uploading objects.
@@ -430,10 +430,10 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -457,10 +457,10 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -474,11 +474,11 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   // Verify that the objects were uploaded to cloud provider and marked as
   // synced.
   EXPECT_EQ(2u, cloud_provider_.received_objects.size());
-  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_id1"]);
-  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_id2"]);
+  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_digest1"]);
+  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_digest2"]);
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
 
   // Verify that neither the commit wasn't marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
@@ -489,10 +489,10 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -508,10 +508,10 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
 
   // TestStorage moved the objects to be returned out, need to add them again
   // before retry.
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
   cloud_provider_.object_status_to_return = cloud_provider_firebase::Status::OK;
   batch_upload->Retry();
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -521,15 +521,15 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   EXPECT_EQ("id", cloud_provider_.received_commits.front().id);
   EXPECT_EQ("content", cloud_provider_.received_commits.front().content);
   EXPECT_EQ(2u, cloud_provider_.received_objects.size());
-  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_id1"]);
-  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_id2"]);
+  EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_digest1"]);
+  EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_digest2"]);
 
   // Verify the sync status in storage.
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id"));
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id1"));
-  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id2"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
+  EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
 }
 
 // Verifies that if only one of many uploads fails, we still stop and notify the
@@ -538,12 +538,12 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
-  storage_.unsynced_objects_to_return["obj_id0"] =
-      std::make_unique<TestObject>("obj_id0", "obj_data0");
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest0"] =
+      std::make_unique<TestObject>("obj_digest0", "obj_data0");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -562,12 +562,12 @@ TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
 
   // TestStorage moved the objects to be returned out, need to add them again
   // before retry.
-  storage_.unsynced_objects_to_return["obj_id0"] =
-      std::make_unique<TestObject>("obj_id0", "obj_data0");
-  storage_.unsynced_objects_to_return["obj_id1"] =
-      std::make_unique<TestObject>("obj_id1", "obj_data1");
-  storage_.unsynced_objects_to_return["obj_id2"] =
-      std::make_unique<TestObject>("obj_id2", "obj_data2");
+  storage_.unsynced_objects_to_return["obj_digest0"] =
+      std::make_unique<TestObject>("obj_digest0", "obj_data0");
+  storage_.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
 
   // Try upload again.
   batch_upload->Retry();

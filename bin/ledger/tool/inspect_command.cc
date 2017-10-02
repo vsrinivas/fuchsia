@@ -205,7 +205,7 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
                       std::function<void(
                           storage::Status,
                           std::unique_ptr<const storage::Object>)> callback) {
-                    storage_->GetObject(entry.object_id,
+                    storage_->GetObject(entry.object_digest,
                                         storage::PageStorage::Location::LOCAL,
                                         std::move(callback));
                   },
@@ -345,7 +345,8 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
     }
     writer << "tooltip=\"timestamp="
            << fxl::NumberToString(commit->GetTimestamp())
-           << " root_id=" << convert::ToHex(commit->GetRootId()) << "\"];\n";
+           << " root_id=" << convert::ToHex(commit->GetRootDigest())
+           << "\"];\n";
   }
   writer << "}\n";
   std::cout << "Graph of commits stored in file " << file_path << std::endl;

@@ -16,8 +16,8 @@ CommitRandomImpl::CommitRandomImpl()
     : id_(RandomCommitId()),
       timestamp_(glue::RandUint64()),
       generation_(glue::RandUint64()),
-      root_node_id_(RandomObjectId()),
-      parent_ids_{RandomObjectId()},
+      root_node_digest_(RandomObjectDigest()),
+      parent_ids_{RandomObjectDigest()},
       parent_ids_views_{parent_ids_[0]},
       storage_bytes_(RandomString(64)) {}
 
@@ -25,7 +25,7 @@ CommitRandomImpl::CommitRandomImpl(const CommitRandomImpl& other)
     : id_(other.id_),
       timestamp_(other.timestamp_),
       generation_(other.generation_),
-      root_node_id_(other.root_node_id_),
+      root_node_digest_(other.root_node_digest_),
       parent_ids_(other.parent_ids_),
       storage_bytes_(other.storage_bytes_) {}
 
@@ -49,8 +49,8 @@ uint64_t CommitRandomImpl::GetGeneration() const {
   return generation_;
 }
 
-ObjectIdView CommitRandomImpl::GetRootId() const {
-  return root_node_id_;
+ObjectDigestView CommitRandomImpl::GetRootDigest() const {
+  return root_node_digest_;
 }
 
 fxl::StringView CommitRandomImpl::GetStorageBytes() const {

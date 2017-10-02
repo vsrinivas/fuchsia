@@ -63,10 +63,10 @@ class Db {
                         bool* has_key) = 0;
 
   // Retrieves the value for the given |key| as an Object with the provided
-  // |object_id|.
+  // |object_digest|.
   virtual Status GetObject(coroutine::CoroutineHandler* handler,
                            convert::ExtendedStringView key,
-                           ObjectId object_id,
+                           ObjectDigest object_digest,
                            std::unique_ptr<const Object>* object) = 0;
 
   // Retrieves all keys matching the given |prefix|. |key_suffixes| will be
