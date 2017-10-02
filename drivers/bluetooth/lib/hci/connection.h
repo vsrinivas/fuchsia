@@ -65,10 +65,17 @@ class Connection final {
   Role role() const { return role_; }
 
   // The active LE connection parameters of this connection. Must only be called
-  // on a Connection with a link type LinkType::kLE.
+  // on a Connection with the LE link type.
   const LEConnectionParameters& low_energy_parameters() const {
     FXL_DCHECK(ll_type_ == LinkType::kLE);
     return le_params_;
+  }
+
+  // Sets the active LE parameters of this connection. Must only be called on a
+  // Connection with the LE link type.
+  void set_low_energy_parameters(const LEConnectionParameters& params) {
+    FXL_DCHECK(ll_type_ == LinkType::kLE);
+    le_params_ = params;
   }
 
   // The identity address of the peer device.

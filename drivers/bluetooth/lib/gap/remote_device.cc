@@ -10,6 +10,27 @@
 
 namespace bluetooth {
 namespace gap {
+namespace {
+
+std::string ConnectionStateToString(RemoteDevice::ConnectionState state) {
+  switch (state) {
+    case RemoteDevice::ConnectionState::kNotConnected:
+      return "not connected";
+    case RemoteDevice::ConnectionState::kInitializing:
+      return "initializing";
+    case RemoteDevice::ConnectionState::kConnected:
+      return "initialized";
+    case RemoteDevice::ConnectionState::kBonding:
+      return "bonding";
+    case RemoteDevice::ConnectionState::kBonded:
+      return "bonded";
+  }
+
+  FXL_NOTREACHED();
+  return "(unknown)";
+}
+
+}  // namespace
 
 RemoteDevice::RemoteDevice(const std::string& identifier,
                            const common::DeviceAddress& address,
@@ -18,6 +39,7 @@ RemoteDevice::RemoteDevice(const std::string& identifier,
       technology_((address.type() == common::DeviceAddress::Type::kBREDR)
                       ? TechnologyType::kClassic
                       : TechnologyType::kLowEnergy),
+      connection_state_(ConnectionState::kNotConnected),
       address_(address),
       connectable_(connectable),
       temporary_(true),
@@ -25,6 +47,17 @@ RemoteDevice::RemoteDevice(const std::string& identifier,
       advertising_data_length_(0u) {
   FXL_DCHECK(!identifier_.empty());
   // TODO(armansito): Add a mechanism for assigning "dual-mode" for technology.
+}
+
+void RemoteDevice::set_connection_state(ConnectionState state) {
+  FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
+  FXL_VLOG(1) << "gap: RemoteDevice connection_state changed from \""
+              << ConnectionStateToString(connection_state_) << "\" to \""
+              << ConnectionStateToString(state) << "\"";
+
+  // TODO(armansito): This should notify observers once there is an Observer
+  // interface for state updates.
+  connection_state_ = state;
 }
 
 void RemoteDevice::SetLEAdvertisingData(

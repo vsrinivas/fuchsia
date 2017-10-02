@@ -462,6 +462,8 @@ uint64_t Adapter::BuildLEEventMask() {
 
   event_mask |= static_cast<uint64_t>(hci::LEEventMask::kLEConnectionComplete);
   event_mask |= static_cast<uint64_t>(hci::LEEventMask::kLEAdvertisingReport);
+  event_mask |=
+      static_cast<uint64_t>(hci::LEEventMask::kLEConnectionUpdateComplete);
 
   return event_mask;
 }

@@ -24,6 +24,26 @@ namespace gap {
 // RemoteDeviceCache.
 class RemoteDevice final {
  public:
+  // TODO(armansito): Probably keep separate states for LE and BR/EDR.
+  enum class ConnectionState {
+    // No link exists between the local adapter and this device.
+    kNotConnected,
+
+    // The device is currently establishing a link or performing service
+    // discovery or encryption setup. In this state, a link may have been
+    // established but it is not ready to use yet.
+    kInitializing,
+
+    // Link setup, service discovery, and any encryption setup has completed
+    kConnected,
+
+    // Bonding procedures are in progress
+    kBonding,
+
+    // Bonded
+    kBonded
+  };
+
   // 128-bit UUID that uniquely identifies this device on this system.
   const std::string& identifier() const { return identifier_; }
 
@@ -78,6 +98,10 @@ class RemoteDevice final {
     le_preferred_conn_params_ = params;
   }
 
+  // The current connection state of this RemoteDevice.
+  ConnectionState connection_state() const { return connection_state_; }
+  void set_connection_state(ConnectionState state);
+
   // A temporary device is one that is never persisted, such as
   //
   //   1. A device that has never been connected to;
@@ -110,6 +134,7 @@ class RemoteDevice final {
 
   std::string identifier_;
   TechnologyType technology_;
+  ConnectionState connection_state_;
   common::DeviceAddress address_;
   bool connectable_;
   bool temporary_;

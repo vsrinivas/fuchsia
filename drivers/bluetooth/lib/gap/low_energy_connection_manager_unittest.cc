@@ -9,6 +9,7 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
@@ -149,6 +150,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   fake_dev->set_connect_status(hci::Status::kConnectionFailedToBeEstablished);
   test_device()->AddLEDevice(std::move(fake_dev));
 
+  EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
+            dev->connection_state());
+
   hci::Status status = hci::Status::kSuccess;
   auto callback = [&status](auto cb_status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
@@ -158,10 +162,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   };
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
+  EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
+            dev->connection_state());
 
   RunMessageLoop();
 
   EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+  EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
+            dev->connection_state());
 }
 
 // LE Connection Complete event reports error
@@ -180,10 +188,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   };
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
+  EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
+            dev->connection_state());
 
   RunMessageLoop();
 
   EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+  EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
+            dev->connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
@@ -201,10 +213,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
 
   conn_mgr()->set_request_timeout_for_testing(kTestRequestTimeoutMs);
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
+  EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
+            dev->connection_state());
 
   RunMessageLoop();
 
   EXPECT_EQ(hci::Status::kCommandTimeout, status);
+  EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
+            dev->connection_state());
 }
 
 // Successful connection to single device
@@ -229,6 +245,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
 
   EXPECT_TRUE(connected_devices().empty());
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
+  EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
+            dev->connection_state());
 
   RunMessageLoop();
 
@@ -240,6 +258,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   EXPECT_TRUE(conn_ref->active());
   EXPECT_EQ(dev->identifier(), conn_ref->device_identifier());
   EXPECT_FALSE(dev->temporary());
+  EXPECT_EQ(RemoteDevice::ConnectionState::kConnected, dev->connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
@@ -265,6 +284,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
 
   EXPECT_EQ(hci::Status::kSuccess, status);
   EXPECT_EQ(1u, connected_devices().size());
+  EXPECT_EQ(RemoteDevice::ConnectionState::kConnected, dev->connection_state());
 
   ASSERT_TRUE(conn_ref);
   conn_ref = nullptr;
@@ -273,6 +293,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
   RunMessageLoop();
 
   EXPECT_TRUE(connected_devices().empty());
+  EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
+            dev->connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest,
@@ -847,6 +869,69 @@ TEST_F(GAP_LowEnergyConnectionManagerTest,
   set_quit_message_loop_on_state_change(true);
   RunMessageLoop();
   EXPECT_TRUE(connected_devices().empty());
+}
+
+// Quits the current thread's message loop if |condition| returns true.
+void QuitMessageLoopIf(const std::function<bool()>& cond) {
+  FXL_DCHECK(cond);
+  if (cond())
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+}
+
+// Tests that the master accepts the connection parameters that are sent from
+// a fake slave and eventually applies them to the link.
+TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  LowEnergyConnectionRefPtr conn_ref;
+  conn_mgr()->AddListener([&conn_ref](auto cr) {
+    conn_ref = std::move(cr);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  });
+  test_device()->ConnectLowEnergy(kAddress0, hci::LEConnectionRole::kMaster);
+
+  RunMessageLoop();
+  ASSERT_TRUE(conn_ref);
+
+  hci::LEPreferredConnectionParameters preferred(
+      hci::kLEConnectionIntervalMin, hci::kLEConnectionIntervalMax,
+      hci::kLEConnectionLatencyMax, hci::kLEConnectionSupervisionTimeoutMax);
+
+  hci::LEConnectionParameters actual;
+  bool fake_dev_cb_called = false;
+  bool conn_params_cb_called = false;
+  auto cond = [&fake_dev_cb_called, &conn_params_cb_called]() -> bool {
+    return fake_dev_cb_called && conn_params_cb_called;
+  };
+
+  auto fake_dev_cb = [&actual, &fake_dev_cb_called, &cond](const auto& addr,
+                                                           const auto& params) {
+    fake_dev_cb_called = true;
+    actual = params;
+    QuitMessageLoopIf(cond);
+  };
+  test_device()->SetLEConnectionParametersCallback(
+      fake_dev_cb, message_loop()->task_runner());
+
+  auto conn_params_cb = [&conn_params_cb_called, &conn_ref,
+                         &cond](const auto& dev) {
+    EXPECT_EQ(conn_ref->device_identifier(), dev.identifier());
+    conn_params_cb_called = true;
+    QuitMessageLoopIf(cond);
+  };
+  conn_mgr()->SetConnectionParametersCallbackForTesting(conn_params_cb);
+
+  test_device()->L2CAPConnectionParameterUpdate(kAddress0, preferred);
+
+  RunMessageLoop(5);
+
+  EXPECT_TRUE(fake_dev_cb_called);
+  ASSERT_TRUE(conn_params_cb_called);
+
+  auto dev = dev_cache()->FindDeviceById(conn_ref->device_identifier());
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(preferred, *dev->le_preferred_connection_params());
+  EXPECT_EQ(actual, *dev->le_connection_params());
 }
 
 }  // namespace

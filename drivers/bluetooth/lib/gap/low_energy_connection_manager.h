@@ -93,18 +93,16 @@ class LowEnergyConnectionManager final {
   // false, if |device_identifier| is not recognized, otherwise:
   //
   //   * If the requested device is already connected, this method
-  //   asynchronously returns a
-  //     LowEnergyConnectionRef without sending any requests to the controller.
-  //     This is done for both local and remote initiated connections (i.e. the
-  //     local adapter can either be in the LE central or peripheral roles).
-  //     |callback| always succeeds.
+  //     asynchronously returns a LowEnergyConnectionRef without sending any
+  //     requests to the controller. This is done for both local and remote
+  //     initiated connections (i.e. the local adapter can either be in the LE
+  //     central or peripheral roles). |callback| always succeeds.
   //
   //   * If the requested device is NOT connected, then this method initiates a
-  //   connection to the
-  //     requested device using one of the GAP central role connection
-  //     establishment procedures described in Core Spec v5.0, Vol 3, Part C,
-  //     Section 9.3. A LowEnergyConnectionRef is asynchronously returned to the
-  //     caller once the connection has been set up.
+  //     connection to the requested device using one of the GAP central role
+  //     connection establishment procedures described in Core Spec v5.0, Vol 3,
+  //     Part C, Section 9.3. A LowEnergyConnectionRef is asynchronously
+  //     returned to the caller once the connection has been set up.
   //
   //     The status of the procedure is reported in |callback| in the case of an
   //     error.
@@ -128,6 +126,14 @@ class LowEnergyConnectionManager final {
   using ConnectionCallback = std::function<void(LowEnergyConnectionRefPtr)>;
   ListenerId AddListener(const ConnectionCallback& callback);
   void RemoveListener(ListenerId id);
+
+  // TODO(armansito): Add a RemoteDeviceCache::Observer interface and move these
+  // callbacks there.
+
+  // Called when the connection parameters on a link have been updated.
+  using ConnectionParametersCallback = std::function<void(const RemoteDevice&)>;
+  void SetConnectionParametersCallbackForTesting(
+      const ConnectionParametersCallback& callback);
 
   // Called when a link with the given handle gets disconnected. This event is
   // guaranteed to be called before invalidating connection references.
@@ -155,6 +161,7 @@ class LowEnergyConnectionManager final {
     ConnectionState(ConnectionState&&) = default;
     ConnectionState& operator=(ConnectionState&&) = default;
 
+    std::string device_id;
     std::unique_ptr<hci::Connection> conn;
     std::unordered_set<LowEnergyConnectionRef*> refs;
 
@@ -164,6 +171,9 @@ class LowEnergyConnectionManager final {
    private:
     FXL_DISALLOW_COPY_AND_ASSIGN(ConnectionState);
   };
+
+  // Mapping from device identifiers to open LE connections.
+  using ConnectionStateMap = std::unordered_map<std::string, ConnectionState>;
 
   class PendingRequestData {
    public:
@@ -236,6 +246,48 @@ class LowEnergyConnectionManager final {
   // connection managers, so this handler should be moved elsewhere.
   void OnDisconnectionComplete(const hci::EventPacket& event);
 
+  // Event handler for the HCI LE Connection Update Complete event.
+  void OnLEConnectionUpdateComplete(const hci::EventPacket& event);
+
+  // Called when the preferred connection parameters have been received for a LE
+  // peripheral. This can happen in the form of:
+  //
+  //   1. <<Slave Connection Interval Range>> advertising data field
+  //   2. "Peripheral Preferred Connection Parameters" GATT characteristic
+  //      (under "GAP" service)
+  //   3. HCI LE Remote Connection Parameter Request Event
+  //   4. L2CAP Connection Parameter Update request
+  //
+  // TODO(armansito): Support #1, #2, and #3 above.
+  //
+  // This method caches |params| for later connection attempts and sends the
+  // parameters to the controller if the initializing procedures are complete
+  // (since we use more agressing initial parameters for pairing and service
+  // discovery, as recommended by the specification in v5.0, Vol 3, Part C,
+  // Section 9.3.12.1).
+  //
+  // |device_identifier| uniquely identifies the peer. |handle| represents the
+  // the logical link that |params| should be applied to.
+  void OnNewLEConnectionParams(
+      const std::string& device_identifier,
+      hci::ConnectionHandle handle,
+      const hci::LEPreferredConnectionParameters& params);
+
+  // Tells the controller to use the given connection |params| on the given
+  // logical link |handle|.
+  void UpdateConnectionParams(
+      hci::ConnectionHandle handle,
+      const hci::LEPreferredConnectionParameters& params);
+
+  // Returns an interator into |connections_| if a ConnectionState is found that
+  // matches the given logical link |handle|. Otherwise, returns an iterator
+  // that is equal to |connections_.end()|.
+  //
+  // The general rules of validity around std::unordered_map::iterator apply to
+  // the returned value.
+  ConnectionStateMap::iterator FindConnectionStateIter(
+      hci::ConnectionHandle handle);
+
   fxl::RefPtr<hci::Transport> hci_;
 
   // Time after which a connection attempt is considered to have timed out. This
@@ -254,13 +306,14 @@ class LowEnergyConnectionManager final {
   // it is expected to out-live both. Expected to outlive this instance.
   l2cap::ChannelManager* l2cap_;  // weak
 
-  // Event handler ID for the Disconnection Complete event.
-  hci::CommandChannel::EventHandlerId event_handler_id_;
+  // Event handler ID for the HCI Disconnection Complete event.
+  hci::CommandChannel::EventHandlerId disconn_cmpl_handler_id_;
 
-  // Callback used by unit tests to observe disconnection events. This is needed
-  // to drive certain async scenarios that need to occur after a HCI
-  // Disconnection Complete is received but BEFORE connection references are
-  // invalidated.
+  // Event handler ID for the HCI LE Connection Update Complete event.
+  hci::CommandChannel::EventHandlerId conn_update_cmpl_handler_id_;
+
+  // Callbacks used by unit tests to observe connection state events.
+  ConnectionParametersCallback test_conn_params_cb_;
   DisconnectCallback test_disconn_cb_;
 
   ListenerId next_listener_id_;
@@ -270,7 +323,7 @@ class LowEnergyConnectionManager final {
   std::unordered_map<std::string, PendingRequestData> pending_requests_;
 
   // Mapping from device identifiers to currently open LE connections.
-  std::unordered_map<std::string, ConnectionState> connections_;
+  ConnectionStateMap connections_;
 
   // Performs the Direct Connection Establishment procedure.
   std::unique_ptr<hci::LowEnergyConnector> connector_;
