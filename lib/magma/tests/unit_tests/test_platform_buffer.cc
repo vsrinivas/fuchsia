@@ -53,14 +53,13 @@ public:
 
         // now go page-by-page...
         EXPECT_TRUE(buffer->PinPages(0, num_pages));
-        EXPECT_TRUE(buffer->MapPageCpu(0, &virt_addr));
+        EXPECT_TRUE(buffer->MapCpu(&virt_addr));
         EXPECT_EQ(first_word, *reinterpret_cast<uint32_t*>(virt_addr));
 
         // pin again
         EXPECT_TRUE(buffer->PinPages(0, num_pages));
-        EXPECT_TRUE(buffer->MapPageCpu(num_pages - 1, &virt_addr));
         EXPECT_EQ(last_word, *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) +
-                                                          PAGE_SIZE - 4));
+                                                          buffer->size() - 4));
 
         // unpin once
         EXPECT_TRUE(buffer->UnpinPages(0, num_pages));
@@ -69,13 +68,11 @@ public:
         EXPECT_TRUE(buffer->MapPageRangeBus(0, 1, &bus_addr));
         EXPECT_TRUE(buffer->MapPageRangeBus(num_pages - 1, 1, &bus_addr));
 
-        EXPECT_TRUE(buffer->UnmapPageCpu(0));
+        EXPECT_TRUE(buffer->UnmapCpu());
         EXPECT_TRUE(buffer->UnmapPageRangeBus(0, 1));
 
-        if (size > PAGE_SIZE) {
-            EXPECT_TRUE(buffer->UnmapPageCpu(num_pages - 1));
+        if (size > PAGE_SIZE)
             EXPECT_TRUE(buffer->UnmapPageRangeBus(num_pages - 1, 1));
-        }
 
         // unpin last
         EXPECT_TRUE(buffer->UnpinPages(0, num_pages));

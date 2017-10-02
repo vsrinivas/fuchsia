@@ -142,8 +142,6 @@ public:
         if (map_count_ > 0)
             vmar_unmap();
         ReleasePages();
-        if (paged_vmar_.get())
-            paged_vmar_.destroy();
     }
 
     // PlatformBuffer implementation
@@ -171,9 +169,6 @@ public:
     bool PinPages(uint32_t start_page_index, uint32_t page_count) override;
     bool UnpinPages(uint32_t start_page_index, uint32_t page_count) override;
 
-    bool MapPageCpu(uint32_t page_index, void** addr_out) override;
-    bool UnmapPageCpu(uint32_t page_index) override;
-
     bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                          uint64_t addr_out[]) override;
     bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) override;
@@ -198,8 +193,6 @@ private:
     void* virt_addr_{};
     uint32_t map_count_ = 0;
     std::unique_ptr<PinCountSparseArray> pin_count_array_;
-    std::map<uint32_t, void*> mapped_pages_;
-    zx::vmar paged_vmar_;
 };
 
 bool ZirconPlatformBuffer::GetFd(int* fd_out) const
@@ -362,58 +355,6 @@ void ZirconPlatformBuffer::ReleasePages()
         if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED)
             DLOG("failed to unlock pages: %d", status);
     }
-
-    for (auto& pair : mapped_pages_) {
-        UnmapPageCpu(pair.first);
-    }
-}
-
-bool ZirconPlatformBuffer::MapPageCpu(uint32_t page_index, void** addr_out)
-{
-    auto iter = mapped_pages_.find(page_index);
-    if (iter != mapped_pages_.end()) {
-        *addr_out = iter->second;
-        return true;
-    }
-
-    if (!paged_vmar_.get()) {
-        uintptr_t addr;
-        zx_status_t status = zx::vmar::root_self().allocate(
-            0, size_,
-            ZX_VM_FLAG_CAN_MAP_SPECIFIC | ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE,
-            &paged_vmar_, &addr);
-        if (status != ZX_OK)
-            return DRETF(false, "vmar allocate failed: %d", status);
-    }
-    DASSERT(paged_vmar_.get());
-
-    uintptr_t ptr;
-    zx_status_t status =
-        paged_vmar_.map(page_index * PAGE_SIZE, vmo_, page_index * PAGE_SIZE, PAGE_SIZE,
-                        ZX_VM_FLAG_SPECIFIC | ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ptr);
-    if (status != ZX_OK)
-        return DRETF(false, "vmar map failed: %d", status);
-
-    *addr_out = reinterpret_cast<void*>(ptr);
-    mapped_pages_.insert(std::make_pair(page_index, *addr_out));
-    return true;
-}
-
-bool ZirconPlatformBuffer::UnmapPageCpu(uint32_t page_index)
-{
-    auto iter = mapped_pages_.find(page_index);
-    if (iter == mapped_pages_.end()) {
-        return DRETF(false, "page_index %u not mapped", page_index);
-    }
-
-    uintptr_t addr = reinterpret_cast<uintptr_t>(iter->second);
-    mapped_pages_.erase(iter);
-
-    zx_status_t status = paged_vmar_.unmap(addr, PAGE_SIZE);
-    if (status != ZX_OK)
-        return DRETF(false, "failed to unmap vmo page %d", page_index);
-
-    return true;
 }
 
 bool ZirconPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,

@@ -43,9 +43,6 @@ public:
     virtual bool PinPages(uint32_t start_page_index, uint32_t page_count) = 0;
     virtual bool UnpinPages(uint32_t start_page_index, uint32_t page_count) = 0;
 
-    virtual bool MapPageCpu(uint32_t page_index, void** addr_out) = 0;
-    virtual bool UnmapPageCpu(uint32_t page_index) = 0;
-
     virtual bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                                  uint64_t addr_out[]) = 0;
     virtual bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) = 0;
