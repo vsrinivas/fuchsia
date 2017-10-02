@@ -29,7 +29,7 @@ seed values in the `Link` that is provided to the running Module.
 ## What makes a Daisy
 
 For the baremetal details, see the [FIDL struct
-definition](../services/story/daisy.fidl).
+definition](../../public/lib/story/fidl/daisy.fidl).
 
 The basic Daisy captures either or both of a **verb** and **nouns**:
 
