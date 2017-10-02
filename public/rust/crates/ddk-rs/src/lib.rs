@@ -67,6 +67,10 @@ pub trait DeviceOps {
         0
     }
 
+    fn ioctl(&mut self, _op: u32, _in_buf: &[u8], _out_buf: &mut [u8]) -> Result<usize, Status> {
+        Err(Status::ErrNotSupported)
+    }
+
     fn suspend(&mut self, _flags: u32) -> Status {
         Status::ErrNotSupported
     }
@@ -200,7 +204,18 @@ extern fn ddk_get_size(ctx: *mut u8) -> u64 {
 }
 
 extern fn ddk_ioctl(ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t {
-    sys::ZX_ERR_NOT_SUPPORTED
+    let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
+    let rust_in_buf = unsafe { slice::from_raw_parts(in_buf, in_len) };
+    let rust_out_buf = unsafe { slice::from_raw_parts_mut(out_buf, out_len) };
+    let status = match device.ioctl(op, rust_in_buf, rust_out_buf) {
+        Ok(bytes_written) => {
+            unsafe { *out_actual = bytes_written };
+            sys::ZX_OK
+        }
+        Err(status) => status as sys::zx_status_t
+    };
+    let _ = Box::into_raw(device);
+    status
 }
 
 extern fn ddk_suspend(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
