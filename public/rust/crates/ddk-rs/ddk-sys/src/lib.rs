@@ -128,7 +128,8 @@ bitflags! {
     pub flags device_add_flags_t: u32 {
         const DEVICE_ADD_NON_BINDABLE = 1 << 0,
         const DEVICE_ADD_INSTANCE     = 1 << 1,
-        const DEVICE_ADD_BUSDEV       = 1 << 2,
+        const DEVICE_ADD_MUST_ISOLATE = 1 << 2,
+        const DEVICE_ADD_INVISIBLE    = 1 << 3,
     }
 }
 
@@ -145,8 +146,7 @@ pub struct device_add_args_t {
     pub prop_count: u32,
     pub proto_id: u32,
     pub proto_ops: *mut u8,
-    pub busdev_args: *const c_char,
-    pub rsrc: sys::zx_handle_t,
+    pub proxy_args: *const c_char,
     pub flags: device_add_flags_t,
 }
 
