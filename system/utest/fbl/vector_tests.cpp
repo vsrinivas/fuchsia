@@ -747,6 +747,47 @@ bool vector_test_no_alloc_check() {
     END_TEST;
 }
 
+template <typename ItemTraits>
+bool vector_test_initializer_list() {
+    using ItemType = typename ItemTraits::ItemType;
+
+    BEGIN_TEST;
+
+    Generator<ItemTraits> gen;
+
+    CountedAllocatorTraits::allocation_count = 0;
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
+    ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
+
+    // empty
+    {
+        fbl::Vector<ItemType, CountedAllocatorTraits> vector{};
+        ASSERT_EQ(CountedAllocatorTraits::allocation_count, 0);
+        ASSERT_EQ(0, vector.size());
+        ASSERT_EQ(0, vector.capacity());
+    }
+
+    // 5 items
+    {
+        fbl::Vector<ItemType, CountedAllocatorTraits> vector{
+            gen.NextItem(), gen.NextItem(), gen.NextItem(),
+            gen.NextItem(), gen.NextItem()};
+        ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1);
+        ASSERT_EQ(5, vector.size());
+        ASSERT_EQ(5, vector.capacity());
+
+        gen.Reset();
+        for (size_t i = 0; i < 5; i++) {
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue());
+        }
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(5));
+    }
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
+    ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
+
+    END_TEST;
+}
+
 bool vector_test_implicit_conversion() {
     BEGIN_TEST;
 
@@ -813,6 +854,8 @@ RUN_FOR_ALL(vector_test_swap)
 RUN_FOR_ALL(vector_test_iterator)
 RUN_FOR_ALL(vector_test_insert_delete)
 RUN_FOR_ALL(vector_test_no_alloc_check)
+RUN_TEST(vector_test_initializer_list<ValueTypeTraits>)
+RUN_TEST(vector_test_initializer_list<RefPtrTraits>)
 RUN_TEST(vector_test_implicit_conversion)
 END_TEST_CASE(vector_tests)
 

@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/initializer_list.h>
 #include <fbl/macros.h>
 #include <fbl/new.h>
 #include <fbl/type_support.h>
@@ -69,6 +70,18 @@ public:
     Vector(Vector&& other)
         : ptr_(nullptr), size_(other.size_), capacity_(other.capacity_) {
         ptr_ = other.release();
+    }
+
+    Vector(fbl::initializer_list<T> init)
+        : ptr_(init.size() != 0u ? reinterpret_cast<T*>(AllocatorTraits::Allocate(
+                                       init.size() * sizeof(T)))
+                                 : nullptr),
+          size_(init.size()),
+          capacity_(size_) {
+        T* out = ptr_;
+        for (const T* in = init.begin(); in != init.end(); ++in, ++out) {
+            new (out) T(*in);
+        }
     }
 
     Vector& operator=(Vector&& o) {
