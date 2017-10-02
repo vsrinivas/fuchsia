@@ -15,6 +15,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_USB_XHCI           2   // XHCI USB Controller
 #define PDEV_DID_KPCI               3   // Syscall based PCI driver
 #define PDEV_DID_ARM_MALI           4   // ARM MALI GPU
+#define PDEV_DID_USB_DWC2           5   // DWC2 USB Controller
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

@@ -13,6 +13,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
@@ -23,10 +24,7 @@
 #include <zircon/hw/usb.h>
 #include <sync/completion.h>
 
-// BCM28xx Specific Includes
-#include <bcm/bcm28xx.h>
-#include <bcm/ioctl.h>
-#include <bcm28xx/usb_dwc_regs.h>
+#include <dwc2/usb_dwc_regs.h>
 
 #include <zircon/process.h>
 
@@ -1261,7 +1259,8 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
 
     assert(IS_WORD_ALIGNED(data));
     data = data ? data : (void*)0xffffff00;
-    data += BCM_SDRAM_BUS_ADDR_BASE;
+//TODO(gkalsi) what to do here?
+//    data += BCM_SDRAM_BUS_ADDR_BASE;
     chanptr->dma_address = (uint32_t)(((uintptr_t)data) & 0xffffffff);
     assert(IS_WORD_ALIGNED(chanptr->dma_address));
 
@@ -1828,7 +1827,8 @@ static zx_driver_ops_t usb_dwc_driver_ops = {
 // The formatter does not play nice with these macros.
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bcm_usb_dwc, usb_dwc_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BROADCOMM_USB),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 ZIRCON_DRIVER_END(bcm_usb_dwc)
 // clang-format on
