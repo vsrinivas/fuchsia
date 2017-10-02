@@ -35,7 +35,7 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
     if (cr3 >= gpas->size() - PAGE_SIZE)
         return ZX_ERR_INVALID_ARGS;
     zx_status_t status = x86_vcpu_create(ip, cr3, apic_vmo, guest->ApicAccessAddress(),
-                                      guest->MsrBitmapsAddress(), gpas, guest->Mux(), &vcpu);
+                                      guest->MsrBitmapsAddress(), gpas, guest->Traps(), &vcpu);
 #else
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 #endif

@@ -59,7 +59,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     zx_status_t status = gpas_->UnmapRange(addr, len);
     if (status != ZX_OK)
         return status;
-    return mux_.AddPortRange(kind, addr, len, fbl::move(port), key);
+    return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
 }
 
 zx_status_t Guest::NextVpid(uint8_t* vpid) {

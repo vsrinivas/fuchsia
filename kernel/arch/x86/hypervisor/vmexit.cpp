@@ -260,20 +260,20 @@ static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                         GuestState* guest_state, PacketMux& mux,
+                                         GuestState* guest_state, TrapMap& traps,
                                          zx_port_packet_t* packet) {
     IoInfo io_info(exit_info.exit_qualification);
     if (io_info.string || io_info.repeat)
         return ZX_ERR_NOT_SUPPORTED;
 
-    PortRange* port_range;
-    zx_status_t status = mux.FindPortRange(ZX_GUEST_TRAP_IO, io_info.port, &port_range);
+    Trap* trap;
+    zx_status_t status = traps.FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
     if (status != ZX_OK)
         return status;
     next_rip(exit_info, vmcs);
 
     memset(packet, 0, sizeof(*packet));
-    packet->key = port_range->key();
+    packet->key = trap->key();
     packet->type = ZX_PKT_TYPE_GUEST_IO;
     packet->guest_io.port = io_info.port;
     packet->guest_io.access_size = io_info.access_size;
@@ -286,8 +286,8 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
             guest_state->rax = 0;
     } else {
         memcpy(packet->guest_io.data, &guest_state->rax, io_info.access_size);
-        if (port_range->HasPort())
-            return port_range->Queue(*packet, vmcs);
+        if (trap->HasPort())
+            return trap->Queue(*packet, vmcs);
         // If there was no port for the range, then return to user-space.
     }
 
@@ -476,30 +476,30 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
 }
 
 static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vaddr_t guest_paddr,
-                                 GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                                 GuestPhysicalAddressSpace* gpas, TrapMap& traps,
                                  zx_port_packet_t* packet) {
     if (exit_info.instruction_length > X86_MAX_INST_LEN)
         return ZX_ERR_INTERNAL;
 
-    PortRange* port_range;
-    zx_status_t status = mux.FindPortRange(ZX_GUEST_TRAP_BELL, guest_paddr, &port_range);
+    Trap* trap;
+    zx_status_t status = traps.FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
     if (status != ZX_OK)
         return status;
     next_rip(exit_info, vmcs);
 
-    switch (port_range->kind()) {
+    switch (trap->kind()) {
     case ZX_GUEST_TRAP_BELL:
         memset(packet, 0, sizeof(*packet));
-        packet->key = port_range->key();
+        packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_BELL;
         packet->guest_bell.addr = guest_paddr;
-        if (port_range->HasPort())
-            return port_range->Queue(*packet, vmcs);
+        if (trap->HasPort())
+            return trap->Queue(*packet, vmcs);
         // If there was no port for the range, then return to user-space.
         break;
     case ZX_GUEST_TRAP_MEM:
         memset(packet, 0, sizeof(*packet));
-        packet->key = port_range->key();
+        packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
         packet->guest_mem.inst_len = exit_info.instruction_length & UINT8_MAX;
@@ -517,7 +517,7 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
 
 static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                       LocalApicState* local_apic_state,
-                                      GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                                      GuestPhysicalAddressSpace* gpas, TrapMap& traps,
                                       zx_port_packet_t* packet) {
     ApicAccessInfo apic_access_info(exit_info.exit_qualification);
     switch (apic_access_info.access_type) {
@@ -534,15 +534,15 @@ static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
     /* fallthrough */
     case ApicAccessType::LINEAR_ACCESS_READ:
         vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
-        return handle_memory(exit_info, vmcs, guest_paddr, gpas, mux, packet);
+        return handle_memory(exit_info, vmcs, guest_paddr, gpas, traps, packet);
     }
 }
 
 static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                        GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                                        GuestPhysicalAddressSpace* gpas, TrapMap& traps,
                                         zx_port_packet_t* packet) {
     vaddr_t guest_paddr = exit_info.guest_physical_address;
-    zx_status_t status = handle_memory(exit_info, vmcs, guest_paddr, gpas, mux, packet);
+    zx_status_t status = handle_memory(exit_info, vmcs, guest_paddr, gpas, traps, packet);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
         break;
@@ -593,7 +593,7 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                           PacketMux& mux, zx_port_packet_t* packet) {
+                           TrapMap& traps, zx_port_packet_t* packet) {
     ExitInfo exit_info(*vmcs);
 
     switch (exit_info.exit_reason) {
@@ -609,7 +609,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         LTRACEF("handling HLT instruction\n\n");
         return handle_hlt(exit_info, vmcs, local_apic_state);
     case ExitReason::IO_INSTRUCTION:
-        return handle_io_instruction(exit_info, vmcs, guest_state, mux, packet);
+        return handle_io_instruction(exit_info, vmcs, guest_state, traps, packet);
     case ExitReason::RDMSR:
         LTRACEF("handling RDMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
         return handle_rdmsr(exit_info, vmcs, guest_state);
@@ -622,10 +622,10 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         return ZX_ERR_BAD_STATE;
     case ExitReason::APIC_ACCESS:
         LTRACEF("handling APIC access\n\n");
-        return handle_apic_access(exit_info, vmcs, local_apic_state, gpas, mux, packet);
+        return handle_apic_access(exit_info, vmcs, local_apic_state, gpas, traps, packet);
     case ExitReason::EPT_VIOLATION:
         LTRACEF("handling EPT violation\n\n");
-        return handle_ept_violation(exit_info, vmcs, gpas, mux, packet);
+        return handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
     case ExitReason::XSETBV:
         LTRACEF("handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, vmcs, guest_state);

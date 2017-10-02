@@ -10,7 +10,7 @@
 #include <arch/x86/vmx_state.h>
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <hypervisor/packet_mux.h>
+#include <hypervisor/trap_map.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
@@ -59,13 +59,13 @@ public:
                         fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
-    PacketMux& Mux() { return mux_; }
+    TrapMap& Traps() { return traps_; }
     zx_paddr_t ApicAccessAddress() const { return apic_access_page_.PhysicalAddress(); }
     zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
 private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
-    PacketMux mux_;
+    TrapMap traps_;
     VmxPage apic_access_page_;
     VmxPage msr_bitmaps_page_;
 
@@ -91,7 +91,7 @@ class Vcpu {
 public:
     static zx_status_t Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                               zx_paddr_t apic_access_address, zx_paddr_t msr_bitmaps_address,
-                              GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                              GuestPhysicalAddressSpace* gpas, TrapMap& traps,
                               fbl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
@@ -107,14 +107,14 @@ private:
     fbl::RefPtr<VmObject> apic_vmo_;
     LocalApicState local_apic_state_;
     GuestPhysicalAddressSpace* gpas_;
-    PacketMux& mux_;
+    TrapMap& traps_;
     VmxState vmx_state_;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
     VmxPage vmcs_page_;
 
     Vcpu(const thread_t* thread, uint16_t vpid, fbl::RefPtr<VmObject> apic_vmo,
-         GuestPhysicalAddressSpace* gpas, PacketMux& mux);
+         GuestPhysicalAddressSpace* gpas, TrapMap& traps);
 };
 
 /* Create a guest. */
@@ -127,7 +127,7 @@ zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, si
 /* Create a VCPU. */
 zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                             zx_paddr_t apic_access_address, zx_paddr_t msr_bitmaps_address,
-                            GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                            GuestPhysicalAddressSpace* gpas, TrapMap& traps,
                             fbl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */

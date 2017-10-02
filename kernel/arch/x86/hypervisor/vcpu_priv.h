@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <hypervisor/packet_mux.h>
+#include <hypervisor/trap_map.h>
 
 // clang-format off
 

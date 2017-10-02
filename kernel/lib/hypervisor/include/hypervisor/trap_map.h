@@ -23,7 +23,7 @@ public:
     BlockingPortAllocator();
 
     zx_status_t Init() TA_NO_THREAD_SAFETY_ANALYSIS;
-    PortPacket* Alloc(StateReloader* reloader);
+    PortPacket* BlockingAlloc(StateReloader* reloader);
     virtual void Free(PortPacket* port_packet) override;
 
 private:
@@ -33,18 +33,17 @@ private:
     PortPacket* Alloc() override;
 };
 
-/* Specifies an address range to associate with a port. */
-class PortRange : public fbl::WAVLTreeContainable<fbl::unique_ptr<PortRange>> {
+/* Describes a single trap within a guest. */
+class Trap : public fbl::WAVLTreeContainable<fbl::unique_ptr<Trap>> {
 public:
-    PortRange(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
-              uint64_t key);
-    virtual ~PortRange(){};
+    Trap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
+         uint64_t key);
 
     zx_status_t Init();
     zx_status_t Queue(const zx_port_packet_t& packet, StateReloader* reloader);
 
     zx_vaddr_t GetKey() const { return addr_; }
-    bool InRange(zx_vaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
+    bool Contains(zx_vaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
     bool HasPort() const { return !!port_; }
 
     uint32_t kind() const { return kind_; }
@@ -61,19 +60,19 @@ private:
     BlockingPortAllocator port_allocator_;
 };
 
-/* Demultiplexes packets onto ports. */
-class PacketMux {
+/* Contains all the traps within a guest. */
+class TrapMap {
 public:
-    zx_status_t AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
-                             fbl::RefPtr<PortDispatcher> port, uint64_t key);
-    zx_status_t FindPortRange(uint32_t kind, zx_vaddr_t addr, PortRange** port_range);
+    zx_status_t InsertTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
+                           fbl::RefPtr<PortDispatcher> port, uint64_t key);
+    zx_status_t FindTrap(uint32_t kind, zx_vaddr_t addr, Trap** trap);
 
 private:
-    using PortTree = fbl::WAVLTree<zx_vaddr_t, fbl::unique_ptr<PortRange>>;
+    using TrapTree = fbl::WAVLTree<zx_vaddr_t, fbl::unique_ptr<Trap>>;
 
     fbl::Mutex mutex_;
-    PortTree mem_ports_ TA_GUARDED(mutex_);
-    PortTree io_ports_ TA_GUARDED(mutex_);
+    TrapTree mem_traps_ TA_GUARDED(mutex_);
+    TrapTree io_traps_ TA_GUARDED(mutex_);
 
-    PortTree* TreeOf(uint32_t kind);
+    TrapTree* TreeOf(uint32_t kind);
 };

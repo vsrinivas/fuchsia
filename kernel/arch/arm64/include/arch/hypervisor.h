@@ -9,7 +9,7 @@
 #include <arch/arm64/el2_state.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <hypervisor/packet_mux.h>
+#include <hypervisor/trap_map.h>
 #include <zircon/types.h>
 
 class GuestPhysicalAddressSpace;
@@ -32,7 +32,7 @@ public:
 
 private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
-    PacketMux mux_;
+    TrapMap traps_;
     const uint8_t vmid_;
     uint8_t next_vpid_ = 0;
 

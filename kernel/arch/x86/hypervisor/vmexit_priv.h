@@ -45,7 +45,7 @@ class GuestPhysicalAddressSpace;
 struct GuestState;
 struct IoApicState;
 struct LocalApicState;
-class PacketMux;
+class TrapMap;
 struct VmxState;
 
 /* Stores VM exit info from VMCS fields. */
@@ -92,4 +92,4 @@ bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vect
                                  bool reschedule);
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                           PacketMux& mux, zx_port_packet_t* packet);
+                           TrapMap& traps, zx_port_packet_t* packet);

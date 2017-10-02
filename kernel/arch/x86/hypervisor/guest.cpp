@@ -48,7 +48,7 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
-    status = guest->mux_.AddPortRange(ZX_GUEST_TRAP_MEM, kIoApicPhysBase, PAGE_SIZE, nullptr, 0);
+    status = guest->traps_.InsertTrap(ZX_GUEST_TRAP_MEM, kIoApicPhysBase, PAGE_SIZE, nullptr, 0);
     if (status != ZX_OK)
         return status;
 
@@ -58,12 +58,11 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
-    status = guest->gpas_->MapApicPage(APIC_PHYS_BASE,
-                                       guest->apic_access_page_.PhysicalAddress());
+    status = guest->gpas_->MapApicPage(APIC_PHYS_BASE, guest->apic_access_page_.PhysicalAddress());
     if (status != ZX_OK)
         return status;
 
-    status = guest->mux_.AddPortRange(ZX_GUEST_TRAP_MEM, APIC_PHYS_BASE, PAGE_SIZE, nullptr, 0);
+    status = guest->traps_.InsertTrap(ZX_GUEST_TRAP_MEM, APIC_PHYS_BASE, PAGE_SIZE, nullptr, 0);
     if (status != ZX_OK)
         return status;
 
@@ -118,7 +117,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     default:
         return ZX_ERR_INVALID_ARGS;
     }
-    return mux_.AddPortRange(kind, addr, len, fbl::move(port), key);
+    return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
 }
 
 zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {

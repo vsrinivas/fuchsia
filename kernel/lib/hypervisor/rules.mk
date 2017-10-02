@@ -13,7 +13,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/fault.cpp \
 	$(LOCAL_DIR)/guest_physical_address_space.cpp \
 	$(LOCAL_DIR)/hypervisor_unittest.cpp \
-	$(LOCAL_DIR)/packet_mux.cpp \
+	$(LOCAL_DIR)/trap_map.cpp \
 
 MODULE_DEPS := \
 	kernel/arch/$(ARCH)/hypervisor \

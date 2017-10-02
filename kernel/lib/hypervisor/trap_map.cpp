@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <hypervisor/packet_mux.h>
+#include <hypervisor/trap_map.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -19,7 +19,7 @@ zx_status_t BlockingPortAllocator::Init() {
     return arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
 }
 
-PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
+PortPacket* BlockingPortAllocator::BlockingAlloc(StateReloader* reloader) {
     bool was_blocked;
     zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE, &was_blocked);
     if (status != ZX_OK)
@@ -39,20 +39,20 @@ void BlockingPortAllocator::Free(PortPacket* port_packet) {
         thread_reschedule();
 }
 
-PortRange::PortRange(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
+Trap::Trap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                      uint64_t key)
     : kind_(kind), addr_(addr), len_(len), port_(fbl::move(port)), key_(key) {
     (void) key_;
 }
 
-zx_status_t PortRange::Init() {
+zx_status_t Trap::Init() {
     return port_allocator_.Init();
 }
 
-zx_status_t PortRange::Queue(const zx_port_packet_t& packet, StateReloader* reloader) {
+zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateReloader* reloader) {
     if (port_ == nullptr)
         return ZX_ERR_NOT_FOUND;
-    PortPacket* port_packet = port_allocator_.Alloc(reloader);
+    PortPacket* port_packet = port_allocator_.BlockingAlloc(reloader);
     if (port_packet == nullptr)
         return ZX_ERR_NO_MEMORY;
     port_packet->packet = packet;
@@ -62,12 +62,12 @@ zx_status_t PortRange::Queue(const zx_port_packet_t& packet, StateReloader* relo
     return status;
 }
 
-zx_status_t PacketMux::AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
-                                    fbl::RefPtr<PortDispatcher> port, uint64_t key) {
-    PortTree* ports = TreeOf(kind);
-    if (ports == nullptr)
+zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
+                                fbl::RefPtr<PortDispatcher> port, uint64_t key) {
+    TrapTree* traps = TreeOf(kind);
+    if (traps == nullptr)
         return ZX_ERR_INVALID_ARGS;
-    auto iter = ports->find(addr);
+    auto iter = traps->find(addr);
     if (iter.IsValid()) {
         dprintf(INFO, "Port range for kind %u (addr %#lx len %lu key %lu) already exists "
                 "(addr %#lx len %lu key %lu)\n", kind, addr, len, key, iter->addr(), iter->len(),
@@ -75,7 +75,7 @@ zx_status_t PacketMux::AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
         return ZX_ERR_ALREADY_EXISTS;
     }
     fbl::AllocChecker ac;
-    fbl::unique_ptr<PortRange> range(new (&ac) PortRange(kind, addr, len, fbl::move(port), key));
+    fbl::unique_ptr<Trap> range(new (&ac) Trap(kind, addr, len, fbl::move(port), key));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
     zx_status_t status = range->Init();
@@ -83,34 +83,34 @@ zx_status_t PacketMux::AddPortRange(uint32_t kind, zx_vaddr_t addr, size_t len,
         return status;
     {
         fbl::AutoLock lock(&mutex_);
-        ports->insert(fbl::move(range));
+        traps->insert(fbl::move(range));
     }
     return ZX_OK;
 }
 
-zx_status_t PacketMux::FindPortRange(uint32_t kind, zx_vaddr_t addr, PortRange** port_range) {
-    PortTree* ports = TreeOf(kind);
-    if (ports == nullptr)
+zx_status_t TrapMap::FindTrap(uint32_t kind, zx_vaddr_t addr, Trap** trap) {
+    TrapTree* traps = TreeOf(kind);
+    if (traps == nullptr)
         return ZX_ERR_INVALID_ARGS;
-    PortTree::iterator iter;
+    TrapTree::iterator iter;
     {
         fbl::AutoLock lock(&mutex_);
-        iter = ports->upper_bound(addr);
+        iter = traps->upper_bound(addr);
     }
     --iter;
-    if (!iter.IsValid() || !iter->InRange(addr))
+    if (!iter.IsValid() || !iter->Contains(addr))
         return ZX_ERR_NOT_FOUND;
-    *port_range = const_cast<PortRange*>(&*iter);
+    *trap = const_cast<Trap*>(&*iter);
     return ZX_OK;
 }
 
-PacketMux::PortTree* PacketMux::TreeOf(uint32_t kind) {
+TrapMap::TrapTree* TrapMap::TreeOf(uint32_t kind) {
     switch (kind) {
     case ZX_GUEST_TRAP_BELL:
     case ZX_GUEST_TRAP_MEM:
-        return &mem_ports_;
+        return &mem_traps_;
     case ZX_GUEST_TRAP_IO:
-        return &io_ports_;
+        return &io_traps_;
     default:
         return nullptr;
     }
