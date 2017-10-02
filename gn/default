@@ -1,22 +1,22 @@
 {
     "imports": [
         "garnet/packages/default",
+        "garnet/packages/go_stdlib_tests",
+        "garnet/packages/iperf",
+        "garnet/packages/libc-tests",
         "packages/gn/amber",
         "packages/gn/asio",
-        "packages/gn/go_stdlib_tests",
         "packages/gn/install-fuchsia",
-        "packages/gn/iperf",
-        "packages/gn/leveldb",
-        "packages/gn/libc-tests",
         "packages/gn/make-fuchsia-vol",
         "packages/gn/pm",
         "packages/gn/pmd",
         "packages/gn/pmd_tests",
-        "packages/gn/re2",
         "peridot/packages/default",
+        "peridot/packages/leveldb",
         "peridot/packages/maxwell",
         "peridot/packages/modular_examples",
         "peridot/packages/oauth_token_manager",
+        "peridot/packages/re2",
         "topaz/packages/default"
     ]
 }
