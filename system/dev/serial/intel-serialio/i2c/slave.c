@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <threads.h>
 
 #include "controller.h"
@@ -382,6 +383,43 @@ slave_transfer_ioctl_finish_2:
     return status;
 }
 
+static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
+    intel_serialio_i2c_slave_device_t* slave, uint32_t op, const void* in_buf, size_t in_len,
+    void* out_buf, size_t out_len, size_t* out_actual) {
+
+    if (out_len < sizeof(zx_handle_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    // This IOCTL is a hack to get interrupts to the right devices.
+    // TODO(teisenbe): Remove this when we discover interrupts via ACPI and
+    // route more appropriately.
+    if (slave->chip_address == 0xa) {
+        zx_handle_t irq;
+        zx_status_t status = zx_interrupt_create(get_root_resource(), 0x1f,
+                                                 ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
+        if (status != ZX_OK) {
+            return status;
+        }
+        memcpy(out_buf, &irq, sizeof(irq));
+        *out_actual = sizeof(irq);
+        return ZX_OK;
+    } else if (slave->chip_address == 0x49) {
+        zx_handle_t irq;
+        zx_status_t status = zx_interrupt_create(get_root_resource(), 0x33,
+                                                 ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
+
+        if (status != ZX_OK) {
+            return status;
+        }
+        memcpy(out_buf, &irq, sizeof(irq));
+        *out_actual = sizeof(irq);
+        return ZX_OK;
+    }
+
+    return ZX_ERR_NOT_FOUND;
+}
+
 static zx_status_t intel_serialio_i2c_slave_ioctl(
     void* ctx, uint32_t op, const void* in_buf, size_t in_len,
     void* out_buf, size_t out_len, size_t* out_actual) {
@@ -391,6 +429,9 @@ static zx_status_t intel_serialio_i2c_slave_ioctl(
         return intel_serialio_i2c_slave_transfer_ioctl(
             slave, op, in_buf, in_len, out_buf, out_len, out_actual);
         break;
+    case IOCTL_I2C_SLAVE_IRQ:
+        return intel_serialio_i2c_slave_irq_ioctl(
+            slave, op, in_buf, in_len, out_buf, out_len, out_actual);
     default:
         return ZX_ERR_INVALID_ARGS;
     }

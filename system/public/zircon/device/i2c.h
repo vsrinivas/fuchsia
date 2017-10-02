@@ -8,6 +8,7 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
@@ -19,6 +20,8 @@ __BEGIN_CDECLS;
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_I2C, 2)
 #define IOCTL_I2C_SLAVE_TRANSFER \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_I2C, 3)
+#define IOCTL_I2C_SLAVE_IRQ \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_I2C, 4)
 
 enum {
     I2C_7BIT_ADDRESS = 7,
@@ -65,5 +68,8 @@ IOCTL_WRAPPER_IN(ioctl_i2c_bus_set_frequency, IOCTL_I2C_BUS_SET_FREQUENCY, i2c_i
 // ssize_t ioctl_i2c_slave_transfer(int fd, const i2c_slave_ioctl_segment_t* in, size_t in_len,
 //                                  void* out, size_t out_len);
 IOCTL_WRAPPER_VARIN_VAROUT(ioctl_i2c_slave_transfer, IOCTL_I2C_SLAVE_TRANSFER, i2c_slave_ioctl_segment_t, void);
+
+// ssize_t ioctl_i2c_slave_irq(int fd, zx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_i2c_slave_irq, IOCTL_I2C_SLAVE_IRQ, zx_handle_t);
 
 __END_CDECLS;
