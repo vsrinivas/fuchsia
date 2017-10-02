@@ -10,7 +10,7 @@ use fuchsia_zircon::Status;
 use fuchsia_zircon_sys as sys;
 use ddk_rs as ddk;
 
-// This is n non-bindable device that can be read from and written to.
+// This is a non-bindable device that can be read from and written to.
 struct SimpleDevice {
     // Returned then incremented during each read. Reset to 0 if greater than `limit`
     val: u64,
