@@ -1780,7 +1780,7 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "bcm-usb-dwc",
+        .name = "dwc2",
         .ctx = usb_dwc,
         .ops = &dwc_device_proto,
         .proto_id = ZX_PROTOCOL_USB_HCI,
@@ -1826,9 +1826,9 @@ static zx_driver_ops_t usb_dwc_driver_ops = {
 
 // The formatter does not play nice with these macros.
 // clang-format off
-ZIRCON_DRIVER_BEGIN(bcm_usb_dwc, usb_dwc_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(dwc2, usb_dwc_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
-ZIRCON_DRIVER_END(bcm_usb_dwc)
+ZIRCON_DRIVER_END(dwc2)
 // clang-format on
