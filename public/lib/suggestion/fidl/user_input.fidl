@@ -4,6 +4,19 @@
 
 module maxwell;
 
+// TODO(rosswang): To me it makes sense to add a media.MediaCapturer
+// speech_capturer here so that SysUI can request spoken input using the same
+// interface as text, passing in a MediaCapturer (over which it has control in a
+// pinch). However, for now this level of control from SysUI is not necessary,
+// and since we have one speech to text provider but many ask handlers and since
+// ask handlers currently forward UserInput but media capturers aren't cloneable
+// and in any case ask handlers would not be passed the media capturer but
+// rather the recognized text, let's keep this text-only for now. This does
+// raise questions about whether we still want to diverge the inbound and
+// outbound user input forms, and about how we want to handle more sophisticated
+// media formats in the future. I believe eventually we'll want a processing
+// pipeline so that agents can be as powerful or as basic as they want while
+// leveraging the power of other agents known to the system.
 union UserInput {
   string text;
   // Picture

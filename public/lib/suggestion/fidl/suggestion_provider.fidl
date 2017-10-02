@@ -38,6 +38,9 @@ interface SuggestionProvider {
   // has been completed or canceled.
   InitiateAsk(SuggestionListener listener, AskController& controller);
 
+  // TODO(rosswang): remove this if/when SpeechListener is merged into Ask.
+  RegisterSpeechListener(SpeechListener speech_listener);
+
   // Notifies the suggestion engine that the user has interacted with the given
   // Suggestion in the manner described in |interaction|.
   NotifyInteraction(string suggestion_uuid, Interaction interaction);
@@ -50,6 +53,15 @@ interface AskController {
   // Use this to signal to the service that the user input has changed, and
   // results should be updated to reflect it.
   SetUserInput(UserInput input);
+
+  // Transitions to |SpeechStatus.LISTENING|.
+  // TODO(rosswang): consider whether this should be folded into |SetUserInput|
+  // (see comments in |user_input.fidl|) or moved to SysUI. It is conceivable
+  // that SysUI should use |SpeechToText| itself and send only the recognized
+  // text (and any markup/alternative interpretations) to Suggestion Engine.
+  // However, it's worth it to also consider the implications for any other
+  // input modalities we might like to support.
+  BeginSpeechCapture();
 
   // Sets the number of desired results. If the new count is larger than the
   // previous value, the corresponding listener will get one or more |OnAdd()|
@@ -80,6 +92,41 @@ interface SuggestionListener {
 
 interface AskSuggestionListener {
   OnAskResults(UserInput query, array<Suggestion> suggestions);
+};
+
+// TODO(rosswang): The |PROCESSING| and |RESPONDING| states might be pertinent
+// to non-speech flows as well.
+enum SpeechStatus {
+  // Exchange complete or not started
+  IDLE,
+  // Mic open, user speaking
+  LISTENING,
+  // Mic closed, awaiting results
+  PROCESSING,
+  // System speaking
+  RESPONDING
+};
+
+// TODO(rosswang): possibly merge this into AskSuggestionListener once the dust
+// settles
+interface SpeechListener {
+  // Convenience method that receives status updates for the conversational
+  // exchange.
+  OnStatusChanged(SpeechStatus status);
+
+  // Receives the recognition result from the user's spoken input. This method
+  // may be called multiple times during the LISTENING phase.
+  OnTextRecognized(string recognized_text);
+
+  // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
+  // once it becomes trivial for SysUI to implement it. This would allow SysUI
+  // to make a determination as to whether playback is warranted. For now, let
+  // Suggestion Engine handle the playback. A possible next step could be to add
+  // OnAudioResponse with a method to start playback.
+
+  // Receives a text representation of the spoken response. This method is
+  // called at the beginning of the RESPONDING phase.
+  OnTextResponse(string response_text);
 };
 
 enum InteractionType {
