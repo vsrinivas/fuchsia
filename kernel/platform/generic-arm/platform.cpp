@@ -25,7 +25,6 @@
 
 #include <platform.h>
 #include <mexec.h>
-#include <dev/bcm28xx.h>
 
 #include <target.h>
 
@@ -275,116 +274,9 @@ static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
     arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
 }
 
-
-#if BCM2837
-
-#define BCM2837_CPU_SPIN_TABLE_ADDR   0xd8
-
-// Make sure that the KERNEL_SPIN_OFFSET is completely clear of the Spin table
-// since we don't want to overwrite the spin vectors.
-#define KERNEL_SPIN_OFFSET (ROUNDUP(BCM2837_CPU_SPIN_TABLE_ADDR +              \
-                            (sizeof(uintptr_t) * SMP_MAX_CPUS), CACHE_LINE))
-
-// Prototype of assembly function where the CPU will be parked.
-typedef void (*park_cpu)(uint32_t cpuid, uintptr_t spin_table_addr);
-
-// Implemented in Assembly.
-__BEGIN_CDECLS
-extern void bcm28xx_park_cpu(void);
-extern void bcm28xx_park_cpu_end(void);
-__END_CDECLS
-
-// The first CPU to halt will setup the halt_aspace and map a WFE spin loop into
-// the halt aspace.
-// Subsequent CPUs will reuse this aspace and mapping.
-static fbl::Mutex cpu_halt_lock;
-static fbl::RefPtr<VmAspace> halt_aspace = nullptr;
-static bool mapped_boot_pages = false;
-
-void platform_halt_cpu(void) {
-    zx_status_t result;
-    park_cpu park = (park_cpu)KERNEL_SPIN_OFFSET;
-    thread_t *self = get_current_thread();
-    const cpu_num_t cpuid = self->last_cpu;
-
-    fbl::AutoLock lock(&cpu_halt_lock);
-    // If we're the first CPU to halt then we need to create an address space to
-    // park the CPUs in. Any subsequent calls to platform_halt_cpu will also
-    // share this address space.
-    if (!halt_aspace) {
-        halt_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "halt_cpu");
-        if (!halt_aspace) {
-            printf("failed to create halt_cpu vm aspace\n");
-            return;
-        }
-    }
-
-    // Create an identity mapped page at the base of RAM. This is where the
-    // BCM28xx puts its bootcode.
-    if (!mapped_boot_pages) {
-        paddr_t pa = 0;
-        void* base_of_ram = nullptr;
-        const uint perm_flags_rwx = ARCH_MMU_FLAG_PERM_READ  |
-                                    ARCH_MMU_FLAG_PERM_WRITE |
-                                    ARCH_MMU_FLAG_PERM_EXECUTE;
-
-        // Map a page in this ASpace at address 0, where we'll be parking
-        // the core after it halts.
-        result = halt_aspace->AllocPhysical("halt_mapping", PAGE_SIZE,
-                                            &base_of_ram, 0, pa,
-                                            VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
-                                            perm_flags_rwx);
-
-        if (result != ZX_OK) {
-            printf("Unable to allocate physical at vaddr = %p, paddr = %p\n",
-                   base_of_ram, (void*)pa);
-            return;
-        }
-
-        // Copy the spin loop into the base of RAM. This is where we will park
-        // the CPU.
-        size_t bcm28xx_park_cpu_length = (uintptr_t)bcm28xx_park_cpu_end -
-                                         (uintptr_t)bcm28xx_park_cpu;
-
-        // Make sure the assembly for the CPU spin loop fits within the
-        // page that we allocated.
-        DEBUG_ASSERT((bcm28xx_park_cpu_length + KERNEL_SPIN_OFFSET) < PAGE_SIZE);
-
-        memcpy((void*)(KERNEL_ASPACE_BASE + KERNEL_SPIN_OFFSET),
-               reinterpret_cast<const void*>(bcm28xx_park_cpu),
-               bcm28xx_park_cpu_length);
-
-        fbl::atomic_signal_fence();
-        arch_clean_cache_range(KERNEL_ASPACE_BASE, 4096);     // clean out all the VC bootstrap area
-        arch_sync_cache_range(KERNEL_ASPACE_BASE, 4096);     // clean out all the VC bootstrap area
-
-
-        // Only the first core that calls this method needs to setup the address
-        // space and load the bootcode into the base of RAM so once this call
-        // succeeds all subsequent cores can simply use what was provided by
-        // the first core.
-        mapped_boot_pages = true;
-    }
-
-    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(halt_aspace.get()));
-
-    lock.release();
-
-    mp_set_curr_cpu_active(false);
-    mp_set_curr_cpu_online(false);
-
-    park(cpuid, 0xd8);
-
-    panic("control should never reach here");
-}
-
-#else
-
 void platform_halt_cpu(void) {
     psci_cpu_off();
 }
-
-#endif
 
 // One of these threads is spun up per CPU and calls halt which does not return.
 static int park_cpu_thread(void* arg) {
@@ -428,19 +320,10 @@ void platform_halt_secondary_cpus(void) {
 }
 
 static void platform_start_cpu(uint cluster, uint cpu) {
-#if BCM2837
-    uintptr_t sec_entry = reinterpret_cast<uintptr_t>(&arm_reset) - KERNEL_ASPACE_BASE;
-    unsigned long long *spin_table =
-        reinterpret_cast<unsigned long long *>(KERNEL_ASPACE_BASE + 0xd8);
-
-    spin_table[cpu] = sec_entry;
-    __asm__ __volatile__ ("" : : : "memory");
-    arch_clean_cache_range(0xffff000000000000,256);     // clean out all the VC bootstrap area
-    __asm__ __volatile__("sev");                        //  where the entry vectors live.
-#else
-      if (cluster==0)
-          printf("Trying to start cpu%u returned: %x\n",cpu, psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET));
-#endif
+    if (cluster == 0) {
+        uint32_t ret = psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+        printf("Trying to start cpu%u returned: %x\n", cpu, ret);
+    }
 }
 
 static void* allocate_one_stack(void) {
@@ -713,19 +596,10 @@ zx_status_t display_get_info(struct display_info *info) {
 }
 
 static void reboot() {
-#if BCM2837
-#define PM_PASSWORD 0x5a000000
-#define PM_RSTC_WRCFG_FULL_RESET 0x00000020
-        *REG32(PM_WDOG) =  PM_PASSWORD | 1; // timeout = 1/16th of a second? (whatever)
-        *REG32(PM_RSTC) =  PM_PASSWORD | PM_RSTC_WRCFG_FULL_RESET;
-        while(1){
-        }
-#else
         psci_system_reset();
 #ifdef MSM8998_PSHOLD_PHYS
         // Deassert PSHold
         *REG32(paddr_to_kvaddr(MSM8998_PSHOLD_PHYS)) = 0;
-#endif
 #endif
 }
 
@@ -739,11 +613,7 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         // XXX shutdown seem to not work through psci
         // implement shutdown via pmic
-#if BCM2837
-        printf("shutdown is unsupported\n");
-#else
         psci_system_off();
-#endif
     }
 
 #if WITH_LIB_DEBUGLOG

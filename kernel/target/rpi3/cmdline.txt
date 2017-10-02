@@ -1,3 +1,0 @@
-TERM=uart
-
-### Note: omit TERM=uart if not using serial console ###
