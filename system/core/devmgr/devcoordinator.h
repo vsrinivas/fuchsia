@@ -162,6 +162,7 @@ typedef struct {
     union {
         zx_status_t status;
         uint32_t protocol_id;
+        uint32_t value;
     };
     uint32_t datalen;
     uint32_t namelen;
@@ -180,6 +181,7 @@ typedef struct {
 #define DC_OP_CREATE_DEVICE         0x80000002
 #define DC_OP_BIND_DRIVER           0x80000003
 #define DC_OP_CONNECT_PROXY         0x80000004
+#define DC_OP_SUSPEND               0x80000005
 
 // Host->Coord Ops
 #define DC_OP_STATUS                0x80000010

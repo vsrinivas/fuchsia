@@ -35,7 +35,6 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/acpi.c \
     $(LOCAL_DIR)/devhost-shared.c \
     $(LOCAL_DIR)/devmgr.c \
     $(LOCAL_DIR)/devmgr-binding.c \
@@ -57,7 +56,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/bootdata \
     third_party/ulib/lz4 \
     system/ulib/port \
-    system/ulib/acpisvc-client \
     system/ulib/driver-info \
 
 MODULE_LIBS := \

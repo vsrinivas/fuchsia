@@ -73,7 +73,7 @@ static zx_protocol_device_t platform_bus_proto = {
     .release = platform_bus_release,
 };
 
-static zx_protocol_device_t no_ops = {
+static zx_protocol_device_t sys_device_proto = {
     .version = DEVICE_OPS_VERSION,
 };
 
@@ -111,7 +111,7 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
     device_add_args_t self_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
-        .ops = &no_ops,
+        .ops = &sys_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 

@@ -20,8 +20,6 @@
 #include <zircon/boot/bootdata.h>
 #include <fdio/io.h>
 
-#include "acpi.h"
-
 #include "devcoordinator.h"
 #include "devmgr.h"
 #include "log.h"
@@ -36,6 +34,10 @@ bool dc_asan_drivers = false;
 static void dc_dump_state(void);
 static void dc_dump_devprops(void);
 static void dc_dump_drivers(void);
+
+static zx_status_t dh_suspend(device_t* dev, uint32_t flags);
+
+static device_t sys_device;
 
 static zx_handle_t dmctl_socket;
 
@@ -77,7 +79,8 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     }
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
         devmgr_vfs_exit();
-        devhost_acpi_reboot();
+        dh_suspend(&sys_device, DEVICE_SUSPEND_FLAG_REBOOT);
+        zx_debug_send_command(get_root_resource(), "reboot", sizeof("reboot"));
         return ZX_OK;
     }
     if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
@@ -87,7 +90,8 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if (len == 8) {
         if (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8)) {
             devmgr_vfs_exit();
-            devhost_acpi_poweroff();
+            dh_suspend(&sys_device, DEVICE_SUSPEND_FLAG_POWEROFF);
+            zx_debug_send_command(get_root_resource(), "poweroff", sizeof("poweroff"));
             return ZX_OK;
         }
         if (!memcmp(cmd, "ktraceon", 8)) {
@@ -206,8 +210,6 @@ static device_t sys_device = {
     .pending = LIST_INITIAL_VALUE(sys_device.pending),
     .refcount = 1,
 };
-
-static zx_handle_t acpi_rpc[2] = { ZX_HANDLE_INVALID, ZX_HANDLE_INVALID };
 
 zx_status_t devmgr_set_platform_id(zx_handle_t vmo, zx_off_t offset, size_t length) {
     bootdata_platform_id_t platform_id;
@@ -531,15 +533,6 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     //TODO: limit root job access to root devhost only
     launchpad_add_handle(lp, get_sysinfo_job_root(),
                          PA_HND(PA_USER0, ID_HJOBROOT));
-
-    //TODO: pass a channel to the acpi devhost to rpc with
-    //      devcoordinator, so it can call reboot/poweroff/ps0.
-    //      come up with a better way to wire this up.
-#if defined(__x86_64__)
-    if (!strcmp(name, "devhost:sys")) {
-        launchpad_add_handle(lp, acpi_rpc[1], PA_HND(PA_USER0, 10));
-    }
-#endif
 
     const char* errmsg;
     zx_status_t status = launchpad_go(lp, &host->proc, &errmsg);
@@ -1240,6 +1233,21 @@ static zx_status_t dh_connect_proxy(device_t* dev, zx_handle_t h) {
     return r;
 }
 
+static zx_status_t dh_suspend(device_t* dev, uint32_t flags) {
+    dc_msg_t msg;
+    uint32_t mlen;
+    zx_status_t r;
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, NULL, NULL)) < 0) {
+        return r;
+    }
+    msg.txid = 0;
+    msg.op = DC_OP_SUSPEND;
+    msg.value = flags;
+    uint32_t rpc = dev->proxy ? dev->proxy->hrpc : dev->hrpc;
+    r = zx_channel_write(rpc, 0, &msg, mlen, NULL, 0);
+    return r;
+}
+
 static zx_status_t dc_prepare_proxy(device_t* dev) {
     // busdev args are "processname,args"
     const char* arg0 = (dev->flags & DEV_CTX_PROXY) ? dev->parent->args : dev->args;
@@ -1394,16 +1402,6 @@ device_t* coordinator_init(zx_handle_t root_job) {
     return &root_device;
 }
 
-//TODO: The acpisvc needs to become the acpi bus device
-//      For now, we launch it manually here so PCI can work
-static void acpi_init(void) {
-    zx_status_t status = zx_channel_create(0, &acpi_rpc[0], &acpi_rpc[1]);
-    if (status != ZX_OK) {
-        return;
-    }
-    devhost_acpi_set_rpc(acpi_rpc[0]);
-}
-
 void dc_bind_driver(driver_t* drv) {
     if (dc_running) {
         printf("devcoord: driver '%s' added\n", drv->name);
@@ -1472,11 +1470,6 @@ void coordinator(void) {
     if (getenv_bool("devmgr.verbose", false)) {
         log_flags |= LOG_DEVLC;
     }
-
-// TODO(ZX-1074): Conditionally initialize ACPI if it is present.
-#if defined(__x86_64__)
-    acpi_init();
-#endif
 
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &sys_device);

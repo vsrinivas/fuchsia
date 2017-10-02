@@ -46,14 +46,6 @@ typedef struct {
 } publish_acpi_device_ctx_t;
 
 zx_handle_t root_resource_handle;
-zx_handle_t rpc_handle;
-
-static int acpi_rpc_thread(void* arg) {
-    dprintf(TRACE, "bus-acpi: rpc thread starting\n");
-    zx_status_t status = begin_processing(rpc_handle);
-    dprintf(TRACE, "bus-acpi: rpc thread returned %d\n", status);
-    return (status == ZX_OK) ? 0 : -1;
-}
 
 static void acpi_device_release(void* ctx) {
     acpi_device_t* dev = (acpi_device_t*)ctx;
@@ -70,6 +62,22 @@ static pciroot_protocol_ops_t pciroot_proto = {
 
 static zx_protocol_device_t acpi_root_device_proto = {
     .version = DEVICE_OPS_VERSION,
+};
+
+static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
+    switch (flags) {
+    case DEVICE_SUSPEND_FLAG_REBOOT:
+        reboot();
+    case DEVICE_SUSPEND_FLAG_POWEROFF:
+        poweroff();
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    };
+}
+
+static zx_protocol_device_t sys_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .suspend = sys_device_suspend,
 };
 
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
@@ -204,6 +212,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         // Publish PCI root as top level
         // Only publish one PCI root device for all PCI roots
         // TODO: store context for PCI root protocol
+        parent = device_get_parent(parent);
         zx_device_t* pcidev = publish_device(parent, object, info, "pci",
                 ZX_PROTOCOL_PCIROOT, &pciroot_proto);
         ctx->found_pci = (pcidev != NULL);
@@ -250,13 +259,6 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     dprintf(TRACE, "acpi-bus: bind to %s %p\n", device_get_name(parent), parent);
     root_resource_handle = get_root_resource();
 
-    // Get RPC channel
-    rpc_handle = zx_get_startup_handle(PA_HND(PA_USER0, 10));
-    if (rpc_handle == ZX_HANDLE_INVALID) {
-        dprintf(ERROR, "acpi-bus: no acpi rpc handle\n");
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     if (init() != ZX_OK) {
         dprintf(ERROR, "acpi-bus: failed to initialize ACPI\n");
         return ZX_ERR_INTERNAL;
@@ -293,31 +295,37 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
 
     free(arg);
 
-    // start rpc thread
-    // TODO: probably will be replaced with devmgr rpc mechanism
-    thrd_t rpc_thrd;
-    int rc = thrd_create_with_name(&rpc_thrd, acpi_rpc_thread, NULL, "acpi-rpc");
-    if (rc != thrd_success) {
-        dprintf(ERROR, "acpi-bus: error %d in rpc thrd_create\n", rc);
-        return ZX_ERR_INTERNAL;
-    }
-
-    // publish acpi root
+    // publish sys root
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
+        .ops = &sys_device_proto,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
+
+    zx_device_t* sys_root = NULL;
+    status = device_add(parent, &args, &sys_root);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "acpi-bus: error %d in device_add(sys)\n", status);
+        return status;
+    }
+
+    // publish acpi root
+    device_add_args_t args2 = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "acpi",
         .ops = &acpi_root_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
     zx_device_t* acpi_root = NULL;
-    status = device_add(parent, &args, &acpi_root);
+    status = device_add(sys_root, &args2, &acpi_root);
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: error %d in device_add(acpi)\n", status);
+        dprintf(ERROR, "acpi-bus: error %d in device_add(sys/acpi)\n", status);
+        device_remove(sys_root);
         return status;
     }
 
-    // only publish the pci root. ACPI devices are managed by this driver.
     publish_acpi_devices(acpi_root);
 
     return ZX_OK;

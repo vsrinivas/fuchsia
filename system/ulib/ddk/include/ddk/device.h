@@ -24,6 +24,11 @@ typedef struct zx_protocol_device zx_protocol_device_t;
 // echo -n "zx_device_ops_v0.5" | sha256sum | cut -c1-16
 #define DEVICE_OPS_VERSION 0Xc9410d2a24f57424
 
+// TODO: temporary flags used by devcoord to communicate
+// with the system bus device.
+#define DEVICE_SUSPEND_FLAG_REBOOT      0xdcdc0001
+#define DEVICE_SUSPEND_FLAG_POWEROFF    0xdcdc0002
+
 //@doc(docs/ddk/device-ops.md)
 
 //@ # The Device Protocol

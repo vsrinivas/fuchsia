@@ -440,6 +440,14 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         proxy_ios_create(ios->dev, hin[0]);
         return ZX_OK;
 
+    case DC_OP_SUSPEND:
+        if (hcount != 0) {
+            r = ZX_ERR_INVALID_ARGS;
+            break;
+        }
+        ios->dev->ops->suspend(ios->dev->ctx, msg.value);
+        return ZX_OK;
+
     default:
         log(ERROR, "devhost[%s] invalid rpc op %08x\n", path, msg.op);
         r = ZX_ERR_NOT_SUPPORTED;
