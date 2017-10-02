@@ -25,7 +25,7 @@ zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
                                              fbl::RefPtr<Dispatcher>* dispatcher,
                                              zx_rights_t* rights) {
     // Remap the vector if we have been asked to do so.
-    if (flags & ZX_FLAG_REMAP_IRQ)
+    if (flags & ZX_INTERRUPT_REMAP_IRQ)
         vector = remap_interrupt(vector);
 
     // If this is not a valid interrupt vector, fail.

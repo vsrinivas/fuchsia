@@ -247,7 +247,7 @@ typedef int64_t zx_rel_off_t;
 #define ZX_CPRNG_ADD_ENTROPY_MAX_LEN 256
 
 // interrupt flags
-#define ZX_FLAG_REMAP_IRQ  0x1
+#define ZX_INTERRUPT_REMAP_IRQ  0x1
 
 // Channel options and limits.
 #define ZX_CHANNEL_READ_MAY_DISCARD         1u

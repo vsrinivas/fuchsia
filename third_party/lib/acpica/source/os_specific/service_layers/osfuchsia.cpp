@@ -756,7 +756,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
 
     zx_handle_t handle;
     zx_status_t status = zx_interrupt_create(root_resource_handle, InterruptLevel,
-                                             ZX_FLAG_REMAP_IRQ, &handle);
+                                             ZX_INTERRUPT_REMAP_IRQ, &handle);
     if (status != ZX_OK) {
         free(arg);
         return AE_ERROR;

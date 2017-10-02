@@ -181,7 +181,7 @@ zx_status_t tpm_bind(void* ctx, zx_device_t* parent, void** cookie) {
         goto cleanup_device;
     }
 
-    status = zx_interrupt_create(get_root_resource(), 10, ZX_FLAG_REMAP_IRQ, &irq_handle);
+    status = zx_interrupt_create(get_root_resource(), 10, ZX_INTERRUPT_REMAP_IRQ, &irq_handle);
     if (status != ZX_OK) {
         goto cleanup_device;
     }

@@ -66,7 +66,7 @@ zx_status_t platform_map_interrupt(platform_dev_t* dev, uint32_t index, zx_handl
     }
     platform_irq_t* irq = &resources->irqs[index];
 
-    return zx_interrupt_create(dev->bus->resource, irq->irq, ZX_FLAG_REMAP_IRQ, out_handle);
+    return zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ, out_handle);
 }
 
 void platform_init_resources(platform_resources_t* resources, uint32_t mmio_count,

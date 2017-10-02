@@ -738,7 +738,7 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
 
     uint32_t interrupt = dev->type == INPUT_PROTO_KBD ?
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
-    zx_status_t status = zx_interrupt_create(get_root_resource(), interrupt, ZX_FLAG_REMAP_IRQ,
+    zx_status_t status = zx_interrupt_create(get_root_resource(), interrupt, ZX_INTERRUPT_REMAP_IRQ,
                                              &(dev->irq));
     if (status != ZX_OK) {
         return status;
