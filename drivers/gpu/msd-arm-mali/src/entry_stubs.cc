@@ -4,8 +4,6 @@
 
 #include "msd.h"
 
-void msd_context_destroy(msd_context_t* ctx) {}
-
 magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer_t* cmd_buf,
                                                   msd_buffer_t** exec_resources,
                                                   msd_semaphore_t** wait_semaphores,

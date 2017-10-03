@@ -14,6 +14,7 @@ source_set("src") {
     "msd_arm_buffer.h",
     "msd_arm_connection.cc",
     "msd_arm_connection.h",
+    "msd_arm_context.h",
     "msd_arm_device.cc",
     "msd_arm_device.h",
     "msd_arm_driver.cc",

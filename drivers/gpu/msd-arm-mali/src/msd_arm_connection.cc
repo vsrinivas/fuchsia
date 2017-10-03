@@ -4,6 +4,7 @@
 
 #include "msd_arm_connection.h"
 #include "magma_util/dlog.h"
+#include "msd_arm_context.h"
 #include "platform_semaphore.h"
 
 #include <vector>
@@ -13,7 +14,18 @@ void msd_connection_close(msd_connection_t* connection)
     delete MsdArmAbiConnection::cast(connection);
 }
 
-msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection) { return nullptr; }
+msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection)
+{
+    auto connection = MsdArmAbiConnection::cast(abi_connection);
+    auto context = std::make_unique<MsdArmContext>(connection->ptr());
+
+    return context.release();
+}
+
+void msd_context_destroy(struct msd_context_t* ctx)
+{
+    delete static_cast<MsdArmContext*>(ctx);
+}
 
 void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
                                    magma_system_image_descriptor* image_desc,
