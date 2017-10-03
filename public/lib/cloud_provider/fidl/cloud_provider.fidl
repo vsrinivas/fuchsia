@@ -139,9 +139,10 @@ interface PageCloud {
   // is set, only the one set most recently is notified when the fingerprint is
   // erased.
   //
-  // This method returns only push notifications not older than
-  // |min_position_token|.
-  SetWatcher(array<uint8> min_position_token, PageCloudWatcher watcher)
+  // Only notifications for commits not earlier than |min_position_token| are
+  // delivered to |watcher|. If |min_position_token| is null, notifications
+  // for all commits are delivered.
+  SetWatcher(array<uint8>? min_position_token, PageCloudWatcher watcher)
       => (Status status);
 };
 

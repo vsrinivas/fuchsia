@@ -161,6 +161,23 @@ TEST_F(PageCloudImplTest, GetCommitsEmpty) {
   EXPECT_TRUE(token.is_null());
 }
 
+TEST_F(PageCloudImplTest, GetCommitsNullToken) {
+  handler_->records_to_return.emplace_back(
+      cloud_provider_firebase::Commit("id_0", "data_0"), "42");
+
+  cloud_provider::Status status;
+  fidl::Array<cloud_provider::CommitPtr> commits;
+  fidl::Array<uint8_t> token;
+  page_cloud_->GetCommits(
+      nullptr, callback::Capture(MakeQuitTask(), &status, &commits, &token));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+  EXPECT_EQ(1u, commits.size());
+  EXPECT_EQ("id_0", convert::ToString(commits[0]->id));
+  EXPECT_EQ("data_0", convert::ToString(commits[0]->data));
+  EXPECT_EQ("42", convert::ToString(token));
+}
+
 TEST_F(PageCloudImplTest, GetCommitsNetworkError) {
   handler_->status_to_return = cloud_provider_firebase::Status::NETWORK_ERROR;
   cloud_provider::Status status;
@@ -253,6 +270,18 @@ TEST_F(PageCloudImplTest, SetWatcher) {
   EXPECT_EQ("data_1", convert::ToString(on_new_commits_commits_[1]->data));
   EXPECT_EQ("43", convert::ToString(on_new_commits_position_token_));
   on_new_commits_commits_callback_();
+}
+
+TEST_F(PageCloudImplTest, SetWatcherNullToken) {
+  cloud_provider::Status status;
+  cloud_provider::PageCloudWatcherPtr watcher;
+  watcher_binding_.Bind(watcher.NewRequest());
+  page_cloud_->SetWatcher(nullptr, std::move(watcher),
+                          callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+  EXPECT_EQ(1u, handler_->watch_call_min_timestamps.size());
+  EXPECT_TRUE(handler_->watch_call_min_timestamps[0].empty());
 }
 
 TEST_F(PageCloudImplTest, SetWatcherNotificationsOneAtATime) {
