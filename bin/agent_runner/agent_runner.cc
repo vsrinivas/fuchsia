@@ -385,6 +385,8 @@ fidl::Array<fidl::String> AgentRunner::GetAllAgents() {
   }
 
   fidl::Array<fidl::String> agent_urls;
+  // Initialize the size to force non-null.
+  agent_urls.resize(0);
   for (auto const& it : agents) {
     agent_urls.push_back(it);
   }
