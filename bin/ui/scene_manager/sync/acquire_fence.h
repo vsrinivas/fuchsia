@@ -36,8 +36,8 @@ class AcquireFence {
   bool ready() const { return ready_; }
 
  private:
-  async_wait_result_t OnFenceSignalledOrClosed(zx_status_t status,
-                                               const zx_packet_signal* signal);
+  async_wait_result_t OnFenceSignalled(zx_status_t status,
+                                       const zx_packet_signal* signal);
 
   void ClearHandler();
 

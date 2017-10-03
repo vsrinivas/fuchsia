@@ -5,12 +5,12 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/synchronization/waitable_event.h"
 
-#include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/tests/test_with_message_loop.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/entity_node.h"
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "garnet/bin/ui/scene_manager/tests/scene_manager_test.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scene_manager {
 namespace test {
@@ -26,9 +26,9 @@ TEST_F(SceneManagerTest, CreateAndDestroySession) {
 
 bool IsFenceSignalled(const zx::event& fence) {
   zx_signals_t signals = 0u;
-  zx_status_t status = fence.wait_one(kFenceSignalledOrClosed, 0, &signals);
+  zx_status_t status = fence.wait_one(kFenceSignalled, 0, &signals);
   FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
-  return signals & kFenceSignalledOrClosed;
+  return signals & kFenceSignalled;
 }
 
 TEST_F(SceneManagerTest, DISABLED_ReleaseFences) {

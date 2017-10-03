@@ -30,15 +30,15 @@ void AcquireFenceSet::WaitReadyAsync(fxl::Closure ready_callback) {
   waiters_.reserve(fences_.size());
   int waiter_index = 0;
 
-  // Wait for |kFenceSignalledOrClosed| on each fence.
+  // Wait for |kFenceSignalled| on each fence.
   for (auto& fence : fences_) {
     auto wait = std::make_unique<async::AutoWait>(
         fsl::MessageLoop::GetCurrent()->async(),  // async dispatcher
         fence.get(),                              // handle
-        kFenceSignalledOrClosed                   // trigger
+        kFenceSignalled                           // trigger
     );
-    wait->set_handler(std::bind(&AcquireFenceSet::OnFenceSignalledOrClosed,
-                                this, waiter_index, std::placeholders::_2,
+    wait->set_handler(std::bind(&AcquireFenceSet::OnFenceSignalled, this,
+                                waiter_index, std::placeholders::_2,
                                 std::placeholders::_3));
     zx_status_t status = wait->Begin();
     FXL_CHECK(status == ZX_OK);
@@ -50,13 +50,13 @@ void AcquireFenceSet::WaitReadyAsync(fxl::Closure ready_callback) {
   ready_callback_ = std::move(ready_callback);
 }
 
-async_wait_result_t AcquireFenceSet::OnFenceSignalledOrClosed(
+async_wait_result_t AcquireFenceSet::OnFenceSignalled(
     size_t waiter_index,
     zx_status_t status,
     const zx_packet_signal* signal) {
   if (status == ZX_OK) {
     zx_signals_t pending = signal->observed;
-    FXL_DCHECK(pending & kFenceSignalledOrClosed);
+    FXL_DCHECK(pending & kFenceSignalled);
     FXL_DCHECK(ready_callback_);
 
     num_signalled_fences_++;
@@ -72,7 +72,7 @@ async_wait_result_t AcquireFenceSet::OnFenceSignalledOrClosed(
     }
     return ASYNC_WAIT_FINISHED;
   } else {
-    FXL_LOG(ERROR) << "AcquireFenceSet::OnFenceSignalledOrClosed received an "
+    FXL_LOG(ERROR) << "AcquireFenceSet::OnFenceSignalled received an "
                       "error status code: "
                    << status;
 

@@ -15,7 +15,7 @@ AcquireFence::AcquireFence(zx::event fence)
     : fence_(std::move(fence)),
       waiter_(fsl::MessageLoop::GetCurrent()->async(),  // dispatcher
               fence_.get(),                             // handle
-              kFenceSignalledOrClosed)                  // trigger
+              kFenceSignalled)                          // trigger
 {
   FXL_DCHECK(fence_);
 }
@@ -32,9 +32,9 @@ bool AcquireFence::WaitReady(fxl::TimeDelta timeout) {
   zx_signals_t pending = 0u;
   while (!ready_) {
     zx_status_t status =
-        fence_.wait_one(kFenceSignalledOrClosed, zx_deadline, &pending);
+        fence_.wait_one(kFenceSignalled, zx_deadline, &pending);
     FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
-    ready_ = pending & kFenceSignalledOrClosed;
+    ready_ = pending & kFenceSignalled;
     if (zx_deadline != ZX_TIME_INFINITE)
       break;
   }
@@ -54,19 +54,19 @@ void AcquireFence::WaitReadyAsync(fxl::Closure ready_callback) {
     return;
   }
 
-  waiter_.set_handler(std::bind(&AcquireFence::OnFenceSignalledOrClosed, this,
+  waiter_.set_handler(std::bind(&AcquireFence::OnFenceSignalled, this,
                                 std::placeholders::_2, std::placeholders::_3));
   zx_status_t status = waiter_.Begin();
   FXL_CHECK(status == ZX_OK);
   ready_callback_ = std::move(ready_callback);
 }
 
-async_wait_result_t AcquireFence::OnFenceSignalledOrClosed(
+async_wait_result_t AcquireFence::OnFenceSignalled(
     zx_status_t status,
     const zx_packet_signal* signal) {
   if (status == ZX_OK) {
     zx_signals_t pending = signal->observed;
-    FXL_DCHECK(pending & kFenceSignalledOrClosed);
+    FXL_DCHECK(pending & kFenceSignalled);
     FXL_DCHECK(ready_callback_);
 
     ready_ = true;
@@ -76,7 +76,7 @@ async_wait_result_t AcquireFence::OnFenceSignalledOrClosed(
     callback();
     return ASYNC_WAIT_FINISHED;
   } else {
-    FXL_LOG(ERROR) << "AcquireFence::OnFenceSignalledOrClosed received an "
+    FXL_LOG(ERROR) << "AcquireFence::OnFenceSignalled received an "
                       "error status code: "
                    << status;
 

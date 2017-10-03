@@ -34,9 +34,9 @@ class AcquireFenceSet {
   bool ready() const { return num_signalled_fences_ == fences_.size(); }
 
  private:
-  async_wait_result_t OnFenceSignalledOrClosed(zx_koid_t import_koid,
-                                               zx_status_t status,
-                                               const zx_packet_signal* signal);
+  async_wait_result_t OnFenceSignalled(zx_koid_t import_koid,
+                                       zx_status_t status,
+                                       const zx_packet_signal* signal);
 
   void ClearHandlers();
 
