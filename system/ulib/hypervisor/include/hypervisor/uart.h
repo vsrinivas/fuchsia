@@ -119,6 +119,8 @@ private:
 
     // Notify output thread that guest has output buffered.
     cnd_t tx_cnd_;
+    // Notify handler thread that the tx buffer is empty.
+    cnd_t tx_empty_cnd_;
 
     // Receive buffer register (RBR).
     uint8_t rx_buffer_ TA_GUARDED(mutex_) = 0;

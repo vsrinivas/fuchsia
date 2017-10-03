@@ -141,6 +141,9 @@ zx_status_t Uart::Write(const zx_packet_guest_io_t* io) {
             return (io->access_size != 1) ? ZX_ERR_IO_DATA_INTEGRITY : ZX_OK;
 
         for (int i = 0; i < io->access_size; i++) {
+            while (tx_offset_ >= sizeof(tx_buffer_)) {
+                cnd_wait(&tx_empty_cnd_, mutex_.GetInternal());
+            }
             tx_buffer_[tx_offset_++] = io->data[i];
         }
 
@@ -198,6 +201,7 @@ zx_status_t Uart::EmptyTx() {
 
             printf("%.*s", tx_offset_, tx_buffer_);
             tx_offset_ = 0;
+            cnd_signal(&tx_empty_cnd_);
         }
 
         if (fflush(stdout) == EOF) {
