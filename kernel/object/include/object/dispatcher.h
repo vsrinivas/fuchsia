@@ -56,8 +56,22 @@ public:
 
     zx_koid_t get_koid() const { return koid_; }
 
-    // Updating |handle_count_| is done at the Handle management layer.
-    uint32_t* get_handle_count_ptr() { return &handle_count_; }
+    // Must be called under the handle table lock.
+    void increment_handle_count() {
+        ++handle_count_;
+    }
+
+    // Must be called under the handle table lock.
+    // Returns true exactly when the handle count goes to zero.
+    bool decrement_handle_count() {
+        --handle_count_;
+        return handle_count_ == 0u;
+    }
+
+    // Must be called under the handle table lock.
+    uint32_t current_handle_count() const {
+        return handle_count_;
+    }
 
     // Interface for derived classes.
 

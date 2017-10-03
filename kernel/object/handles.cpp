@@ -141,8 +141,7 @@ Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
         if (outstanding_handles > kHighHandleCount)
             high_handle_count(outstanding_handles);
 
-        uint32_t* handle_count = dispatcher->get_handle_count_ptr();
-        (*handle_count)++;
+        dispatcher->increment_handle_count();
 
         base_value = GetNewHandleBaseValue(addr);
     }
@@ -168,8 +167,7 @@ Handle* DupHandle(Handle* source, zx_rights_t rights) {
         if (outstanding_handles > kHighHandleCount)
             high_handle_count(outstanding_handles);
 
-        uint32_t* handle_count = dispatcher->get_handle_count_ptr();
-        (*handle_count)++;
+        dispatcher->increment_handle_count();
 
         base_value = GetNewHandleBaseValue(addr);
     }
@@ -194,10 +192,7 @@ void DeleteHandle(Handle* handle) {
     {
         AutoLock lock(&handle_mutex);
 
-        uint32_t* handle_count = dispatcher->get_handle_count_ptr();
-        (*handle_count)--;
-        if (*handle_count == 0u)
-            zero_handles = true;
+        zero_handles = dispatcher->decrement_handle_count();
 
         handle_arena.Free(handle);
     }
@@ -213,7 +208,7 @@ void DeleteHandle(Handle* handle) {
 
 uint32_t GetHandleCount(const fbl::RefPtr<Dispatcher>& dispatcher) {
     AutoLock lock(&handle_mutex);
-    return *dispatcher->get_handle_count_ptr();
+    return dispatcher->current_handle_count();
 }
 
 Handle* MapU32ToHandle(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
