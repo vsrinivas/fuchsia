@@ -27,11 +27,7 @@ __BEGIN_CDECLS
 // ask clang format not to mess up the indentation:
 // clang-format off
 
-#ifdef _KERNEL
 typedef uint32_t zx_handle_t;
-#else
-typedef int32_t zx_handle_t;
-#endif
 
 #define ZX_HANDLE_INVALID         ((zx_handle_t)0)
 
