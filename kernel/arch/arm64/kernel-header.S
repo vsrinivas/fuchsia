@@ -11,19 +11,22 @@ _fastboot_start:
     add x13, x18, #0x16
     b header_end
 
-    .quad   KERNEL_LOAD_OFFSET
-    .quad   __data_end - _start
+    // valid if the 'ARM\x64' signature below is valid
+    .quad   KERNEL_LOAD_OFFSET              // image offset from start of ram
+    .quad   __data_end - _start             // image size
     .quad   0
 
     .quad   0
     .quad   0
     .quad   0
 
+    // magic linux header that QEMU and other loaders use to determine where to put us
+    // in QEMU, see hw/arm/boot.c load_aarch64_image()
     .byte   'A'
     .byte   'R'
     .byte   'M'
     .byte   0x64
-    .long   pe_header - _start
+    .long   pe_header - _start              //offset to pe header
     .align 3
 
 pe_header:
