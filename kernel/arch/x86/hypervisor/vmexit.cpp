@@ -97,14 +97,14 @@ static uint32_t local_apic_pop_interrupt(LocalApicState* local_apic_state) {
         return kNumInterrupts;
     local_apic_state->interrupt_bitmap.ClearOne(vector);
     // Reverse value to get interrupt.
-    return static_cast<uint32_t>(X86_MAX_INT - vector);
+    return static_cast<uint32_t>(X86_INT_MAX - vector);
 }
 
 static void local_apic_pending_interrupt(LocalApicState* local_apic_state, uint32_t vector) {
     AutoSpinLock lock(&local_apic_state->interrupt_lock);
     // We reverse the value, as RawBitmapGeneric::Scan will return the
     // lowest priority interrupt, but we need the highest priority.
-    local_apic_state->interrupt_bitmap.SetOne(X86_MAX_INT - vector);
+    local_apic_state->interrupt_bitmap.SetOne(X86_INT_MAX - vector);
 }
 
 /* Attempts to issue an interrupt from the bitmap, returning true if it did. */

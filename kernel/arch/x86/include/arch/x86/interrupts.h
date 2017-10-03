@@ -6,9 +6,6 @@
 
 #pragma once
 
-#ifdef ASSEMBLY
-#define X86_MAX_INT 0xff
-#else
 enum x86_interrupt_vector {
     X86_INT_DIVIDE_0 = 0,
     X86_INT_DEBUG,
@@ -43,6 +40,6 @@ enum x86_interrupt_vector {
     X86_INT_IPI_RESCHEDULE,
     X86_INT_IPI_HALT,
 
-    X86_MAX_INT = 0xff,
+    X86_INT_MAX = 0xff,
+    X86_INT_COUNT,
 };
-#endif

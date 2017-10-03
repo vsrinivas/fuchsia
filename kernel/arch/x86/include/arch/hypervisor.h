@@ -19,7 +19,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
-static const uint16_t kNumInterrupts = X86_MAX_INT + 1;
+static const uint16_t kNumInterrupts = X86_INT_COUNT;
 
 typedef struct vm_page vm_page_t;
 

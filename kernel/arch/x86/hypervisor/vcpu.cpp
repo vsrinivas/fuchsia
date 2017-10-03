@@ -678,7 +678,7 @@ void vmx_exit(VmxState* vmx_state) {
 }
 
 zx_status_t Vcpu::Interrupt(uint32_t vector) {
-    if (vector > X86_MAX_INT)
+    if (vector > X86_INT_MAX)
         return ZX_ERR_OUT_OF_RANGE;
     if (!local_apic_signal_interrupt(&local_apic_state_, vector, true)) {
         // If we did not signal the VCPU, it means it is currently running,

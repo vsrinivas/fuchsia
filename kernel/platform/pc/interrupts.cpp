@@ -45,7 +45,7 @@ struct int_handler_struct {
 };
 
 static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
-static struct int_handler_struct int_handler_table[X86_MAX_INT];
+static struct int_handler_struct int_handler_table[X86_INT_MAX];
 static p2ra_state_t x86_irq_vector_allocator;
 
 static void platform_init_apic(uint level)
