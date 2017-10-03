@@ -237,7 +237,6 @@ typedef uintptr_t zx_paddr_t;
 
 // offset
 typedef uint64_t zx_off_t;
-typedef int64_t zx_rel_off_t;
 
 // Maximum string length for kernel names (process name, thread name, etc)
 #define ZX_MAX_NAME_LEN           (32)
