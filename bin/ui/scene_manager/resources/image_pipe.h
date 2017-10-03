@@ -7,7 +7,7 @@
 #include <zx/event.h>
 #include <zx/vmo.h>
 
-#include <deque>
+#include <queue>
 
 #include "garnet/bin/ui/scene_manager/engine/resource_map.h"
 #include "garnet/bin/ui/scene_manager/resources/image.h"
@@ -42,7 +42,7 @@ class ImagePipe : public ImageBase {
                 scenic::MemoryType memory_type,
                 uint64_t memory_offset);
   void RemoveImage(uint32_t image_id);
-  // TODO(MZ-152): Add Presentation time to image_pipe.fidl.
+
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
                     zx::event acquire_fence,
@@ -95,7 +95,7 @@ class ImagePipe : public ImageBase {
     // an invocation of |ImagePipe.PresentImage()|.
     scenic::ImagePipe::PresentImageCallback present_image_callback;
   };
-  std::deque<Frame> frames_;
+  std::queue<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;
 
   scenic::ResourceId current_image_id_ = 0;

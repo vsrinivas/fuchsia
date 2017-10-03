@@ -38,6 +38,20 @@ zx::vmo CopyVmo(const zx::vmo& vmo) {
   return vmo_copy;
 }
 
+zx::event CreateEvent() {
+  zx::event event;
+  FXL_CHECK(zx::event::create(0, &event) == ZX_OK);
+  return event;
+}
+
+fidl::Array<zx::event> CreateEventArray(size_t n) {
+  ::fidl::Array<zx::event> events;
+  for (size_t i = 0; i < n; i++) {
+    events.push_back(CreateEvent());
+  }
+  return events;
+}
+
 fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0u, &vmo);

@@ -960,12 +960,29 @@ bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,
   return false;
 }
 
-void Session::ScheduleUpdate(uint64_t presentation_time,
+bool Session::ScheduleUpdate(uint64_t presentation_time,
                              ::fidl::Array<scenic::OpPtr> ops,
                              ::fidl::Array<zx::event> acquire_fences,
                              ::fidl::Array<zx::event> release_events,
                              const scenic::Session::PresentCallback& callback) {
   if (is_valid()) {
+    uint64_t last_scheduled_presentation_time =
+        last_applied_update_presentation_time_;
+    if (!scheduled_updates_.empty()) {
+      last_scheduled_presentation_time =
+          std::max(last_scheduled_presentation_time,
+                   scheduled_updates_.back().presentation_time);
+    }
+
+    if (presentation_time < last_scheduled_presentation_time) {
+      error_reporter_->ERROR()
+          << "scene_manager::Session: Present called with out-of-order "
+             "presentation time. "
+          << "presentation_time=" << presentation_time
+          << ", last scheduled presentation time="
+          << last_scheduled_presentation_time << ".";
+      return false;
+    }
     auto acquire_fence_set =
         std::make_unique<AcquireFenceSet>(std::move(acquire_fences));
     // TODO: Consider calling ScheduleSessionUpdate immediately if
@@ -979,6 +996,7 @@ void Session::ScheduleUpdate(uint64_t presentation_time,
                                    std::move(acquire_fence_set),
                                    std::move(release_events), callback});
   }
+  return true;
 }
 
 void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
@@ -996,6 +1014,15 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
   TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "id", id_, "time",
                  presentation_time, "interval", presentation_interval);
 
+  if (presentation_time < last_presentation_time_) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session: ApplyScheduledUpdates called with "
+           "presentation_time="
+        << presentation_time << ", which is less than last_presentation_time_="
+        << last_presentation_time_ << ".";
+    return false;
+  }
+
   bool needs_render = false;
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= presentation_time &&
@@ -1006,6 +1033,11 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       info->presentation_time = presentation_time;
       info->presentation_interval = presentation_interval;
       scheduled_updates_.front().present_callback(std::move(info));
+
+      FXL_DCHECK(last_applied_update_presentation_time_ <=
+                 scheduled_updates_.front().presentation_time);
+      last_applied_update_presentation_time_ =
+          scheduled_updates_.front().presentation_time;
 
       for (auto& fence : fences_to_release_on_next_update_) {
         engine()->release_fence_signaller()->AddCPUReleaseFence(
@@ -1034,9 +1066,9 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 
   // TODO: Unify with other session updates.
   while (!scheduled_image_pipe_updates_.empty() &&
-         scheduled_image_pipe_updates_.front().presentation_time <=
+         scheduled_image_pipe_updates_.top().presentation_time <=
              presentation_time) {
-    needs_render = scheduled_image_pipe_updates_.front().image_pipe->Update(
+    needs_render = scheduled_image_pipe_updates_.top().image_pipe->Update(
         presentation_time, presentation_interval);
     scheduled_image_pipe_updates_.pop();
   }

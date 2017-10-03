@@ -2,16 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/fidl_helpers.h"
 #include "garnet/bin/ui/scene_manager/resources/material.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/shape_node.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/circle_shape.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 #include "gtest/gtest.h"
 
 namespace scene_manager {
 namespace test {
+
+TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
+  scenic::Session::PresentCallback callback = [](auto) {};
+  EXPECT_TRUE(session_->ScheduleUpdate(1, ::fidl::Array<scenic::OpPtr>(),
+                                       ::fidl::Array<zx::event>(),
+                                       ::fidl::Array<zx::event>(), callback));
+  EXPECT_FALSE(session_->ScheduleUpdate(0, ::fidl::Array<scenic::OpPtr>(),
+                                        ::fidl::Array<zx::event>(),
+                                        ::fidl::Array<zx::event>(), callback));
+  ExpectLastReportedError(
+      "scene_manager::Session: Present called with out-of-order presentation "
+      "time. presentation_time=0, last scheduled presentation time=1.");
+}
+
+TEST_F(SessionTest, ScheduleUpdateInOrder) {
+  scenic::Session::PresentCallback callback = [](auto) {};
+  EXPECT_TRUE(session_->ScheduleUpdate(1, ::fidl::Array<scenic::OpPtr>(),
+                                       ::fidl::Array<zx::event>(),
+                                       ::fidl::Array<zx::event>(), callback));
+  EXPECT_TRUE(session_->ScheduleUpdate(1, ::fidl::Array<scenic::OpPtr>(),
+                                       ::fidl::Array<zx::event>(),
+                                       ::fidl::Array<zx::event>(), callback));
+  ExpectLastReportedError(nullptr);
+}
 
 TEST_F(SessionTest, ResourceIdAlreadyUsed) {
   EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(1)));

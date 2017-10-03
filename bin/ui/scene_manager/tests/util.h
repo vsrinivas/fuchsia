@@ -6,9 +6,10 @@
 
 #include <zx/event.h>
 
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fsl/vmo/shared_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/vmo/shared_vmo.h"
 #include "zircon/system/ulib/zx/include/zx/event.h"
 #include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
@@ -32,6 +33,12 @@ zx::eventpair CopyEventPair(const zx::eventpair& eventpair);
 
 // Create a duplicate of the VMO.
 zx::vmo CopyVmo(const zx::vmo& vmo);
+
+// Create an event.
+zx::event CreateEvent();
+
+// Create a fidl::Array and populate with |n| newly created events.
+fidl::Array<zx::event> CreateEventArray(size_t n);
 
 // Creates a VMO with the specified size, immediately allocate physical memory
 // for it, and wraps in a |fsl::SharedVmo| to make it easy to map it into the

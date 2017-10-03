@@ -38,8 +38,7 @@ class ImagePipeTest : public SessionTest, public escher::ResourceManager {
 
 TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
   // Create an AcquireFence.
-  zx::event fence1;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
+  zx::event fence1 = CreateEvent();
   AcquireFence buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
@@ -59,8 +58,7 @@ TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
 
 TEST_F(ImagePipeTest, AsyncAcquireFenceSignalling) {
   // Create an AcquireFence.
-  zx::event fence1;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
+  zx::event fence1 = CreateEvent();
   AcquireFence buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
@@ -92,6 +90,17 @@ fxl::RefPtr<fsl::SharedVmo> CreateVmoWithCheckerboardPixels(size_t w,
   size_t pixels_size;
   auto pixels = escher::image_utils::NewCheckerboardPixels(w, h, &pixels_size);
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));
+}
+
+scenic::ImageInfoPtr CreateImageInfoForBgra8Image(size_t w, size_t h) {
+  auto image_info = scenic::ImageInfo::New();
+  image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+  image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
+  image_info->width = w;
+  image_info->height = h;
+  image_info->stride = w;
+
+  return image_info;
 }
 
 fxl::RefPtr<fsl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
@@ -132,13 +141,7 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
   {
     size_t image_dim = 100;
     auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
-
-    auto image_info = scenic::ImageInfo::New();
-    image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
-    image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
-    image_info->width = image_dim;
-    image_info->height = image_dim;
-    image_info->stride = image_dim;
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
@@ -148,6 +151,61 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
     EXPECT_EQ("ImagePipe::AddImage: Image can not be assigned an ID of 0.",
               reported_errors_.back());
   }
+}
+
+// Call Present with out-of-order presentation times, and expect an error.
+TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
+  ImagePipePtr image_pipe =
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+                                                           this);
+
+  uint32_t imageId1 = 1;
+  // Create a checkerboard image and copy it into a vmo.
+  {
+    size_t image_dim = 100;
+    auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
+
+    // Add the image to the image pipe with ImagePipe.AddImage().
+    image_pipe->AddImage(imageId1, std::move(image_info),
+                         CopyVmo(checkerboard->vmo()),
+                         scenic::MemoryType::HOST_MEMORY, 0);
+  }
+  scenic::ImagePipe::PresentImageCallback callback = [](auto) {};
+
+  image_pipe->PresentImage(imageId1, 1, CreateEvent(), CreateEvent(), callback);
+  image_pipe->PresentImage(imageId1, 0, CreateEvent(), CreateEvent(), callback);
+
+  EXPECT_EQ(
+      "scene_manager::ImagePipe: Present called with out-of-order presentation "
+      "time.presentation_time=0, last scheduled presentation time=1",
+      reported_errors_.back());
+}
+
+// Call Present with in-order presentation times, and expect no error.
+TEST_F(ImagePipeTest, PresentImagesInOrder) {
+  ImagePipePtr image_pipe =
+      fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(session_.get(),
+                                                           this);
+
+  uint32_t imageId1 = 1;
+  // Create a checkerboard image and copy it into a vmo.
+  {
+    size_t image_dim = 100;
+    auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
+
+    // Add the image to the image pipe with ImagePipe.AddImage().
+    image_pipe->AddImage(imageId1, std::move(image_info),
+                         CopyVmo(checkerboard->vmo()),
+                         scenic::MemoryType::HOST_MEMORY, 0);
+  }
+  scenic::ImagePipe::PresentImageCallback callback = [](auto) {};
+
+  image_pipe->PresentImage(imageId1, 1, CreateEvent(), CreateEvent(), callback);
+  image_pipe->PresentImage(imageId1, 1, CreateEvent(), CreateEvent(), callback);
+
+  EXPECT_TRUE(reported_errors_.empty());
 }
 
 // Present two frames on the ImagePipe, making sure that acquire fence is
@@ -163,13 +221,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   {
     size_t image_dim = 100;
     auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
-
-    auto image_info = scenic::ImageInfo::New();
-    image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
-    image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
-    image_info->width = image_dim;
-    image_info->height = image_dim;
-    image_info->stride = image_dim;
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
@@ -178,10 +230,8 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   }
 
   // Make checkerboard the currently displayed image.
-  zx::event acquire_fence1;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &acquire_fence1));
-  zx::event release_fence1;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence1));
+  zx::event acquire_fence1 = CreateEvent();
+  zx::event release_fence1 = CreateEvent();
 
   image_pipe->PresentImage(imageId1, 0, CopyEvent(acquire_fence1),
                            CopyEvent(release_fence1), nullptr);
@@ -211,12 +261,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   {
     size_t image_dim = 100;
     auto gradient = CreateVmoWithGradientPixels(image_dim, image_dim);
-    auto image_info = scenic::ImageInfo::New();
-    image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
-    image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
-    image_info->width = image_dim;
-    image_info->height = image_dim;
-    image_info->stride = image_dim;
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
 
     // Add the image to the image pipe.
     image_pipe->AddImage(imageId2, std::move(image_info),
@@ -229,10 +274,8 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ASSERT_FALSE(IsEventSignalled(release_fence1, kFenceSignalled));
 
   // Make gradient the currently displayed image.
-  zx::event acquire_fence2;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &acquire_fence2));
-  zx::event release_fence2;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence2));
+  zx::event acquire_fence2 = CreateEvent();
+  zx::event release_fence2 = CreateEvent();
 
   image_pipe->PresentImage(imageId2, 0, CopyEvent(acquire_fence2),
                            CopyEvent(release_fence2), nullptr);

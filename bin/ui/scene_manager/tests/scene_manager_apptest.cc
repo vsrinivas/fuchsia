@@ -24,6 +24,50 @@ TEST_F(SceneManagerTest, CreateAndDestroySession) {
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 0);
 }
 
+TEST_F(SceneManagerTest, ScheduleUpdateOutOfOrder) {
+  // Create a session.
+  scenic::SessionPtr session;
+  EXPECT_EQ(0U, engine()->GetSessionCount());
+  manager_->CreateSession(session.NewRequest(), nullptr);
+  RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
+
+  // Present on the session with presentation_time = 1.
+  scenic::Session::PresentCallback callback = [](auto) {};
+  session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
+
+  // Briefly pump the message loop. Expect that the session is not destroyed.
+  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+
+  // Present with an older presentation time.
+  session->Present(0, CreateEventArray(1), CreateEventArray(1), callback);
+
+  // Expect the session is destroyed.
+  RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 0);
+}
+
+TEST_F(SceneManagerTest, ScheduleUpdateInOrder) {
+  // Create a session.
+  scenic::SessionPtr session;
+  EXPECT_EQ(0U, engine()->GetSessionCount());
+  manager_->CreateSession(session.NewRequest(), nullptr);
+  RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
+
+  // Present on the session with presentation_time = 1.
+  scenic::Session::PresentCallback callback = [](auto) {};
+  session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
+
+  // Briefly pump the message loop. Expect that the session is not destroyed.
+  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
+
+  // Present with the same presentation time.
+  session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
+
+  // Briefly pump the message loop. Expect that the session is not destroyed.
+  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
+}
+
 bool IsFenceSignalled(const zx::event& fence) {
   zx_signals_t signals = 0u;
   zx_status_t status = fence.wait_one(kFenceSignalled, 0, &signals);
@@ -53,14 +97,9 @@ TEST_F(SceneManagerTest, DISABLED_ReleaseFences) {
   EXPECT_EQ(1u, handler->enqueue_count());
 
   // Create release fences
-  zx::event release_fence1;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence1));
-  zx::event release_fence2;
-  ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence2));
-
-  ::fidl::Array<zx::event> release_fences;
-  release_fences.push_back(CopyEvent(release_fence1));
-  release_fences.push_back(CopyEvent(release_fence2));
+  ::fidl::Array<zx::event> release_fences = CreateEventArray(2);
+  zx::event release_fence1 = CopyEvent(release_fences[0]);
+  zx::event release_fence2 = CopyEvent(release_fences[1]);
 
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
