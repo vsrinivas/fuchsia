@@ -47,7 +47,7 @@ This list tracks the reasons for which we disabled particular [checks]:
    "= default"
  - `performance-unnecessary-value-param` - it was flagging Ledger view classes
    which we prefer to pass by value
- - `readability-implicit-bool-cast` - Fuchsia C++ code commonly uses implicit
+ - `readability-implicit-bool-conversion` - Fuchsia C++ code commonly uses implicit
    bool cast of pointers and numbers
 
 [checks]: https://clang.llvm.org/extra/clang-tidy/checks/list.html
