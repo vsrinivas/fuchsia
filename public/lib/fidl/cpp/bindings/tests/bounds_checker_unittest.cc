@@ -149,7 +149,7 @@ TEST(BoundsCheckerTest, ClaimHandle) {
   {
     // Test the case that |num_handles| is the same value as
     // |internal::kEncodedInvalidHandleValue|.
-    EXPECT_EQ(internal::kEncodedInvalidHandleValue, static_cast<int32_t>(-1));
+    EXPECT_EQ(internal::kEncodedInvalidHandleValue, static_cast<zx_handle_t>(-1));
     internal::BoundsChecker checker(ToPtr(0), 0,
                                     std::numeric_limits<int32_t>::max());
 

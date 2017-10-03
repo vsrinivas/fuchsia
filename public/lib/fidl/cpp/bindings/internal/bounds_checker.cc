@@ -49,17 +49,16 @@ bool BoundsChecker::ClaimMemory(const void* position, uint32_t num_bytes) {
 }
 
 bool BoundsChecker::ClaimHandle(WrappedHandle encoded_handle) {
-  int32_t index = encoded_handle.value;
-  if (index == static_cast<int32_t>(kEncodedInvalidHandleValue))
+  zx_handle_t index = encoded_handle.value;
+  if (index == kEncodedInvalidHandleValue)
     return true;
 
-  if (index < 0 ||
-      static_cast<uint32_t>(index) < handle_begin_ ||
-      static_cast<uint32_t>(index) >= handle_end_)
+  if (index < handle_begin_ ||
+      index >= handle_end_)
     return false;
 
   // |index| + 1 shouldn't overflow, because |index| is not the max value of
-  // int32_t (it is less than |handle_end_|).
+  // numeric_limts<int32_t>::max (it is less than |handle_end_|).
   handle_begin_ = index + 1;
   return true;
 }
