@@ -13,7 +13,8 @@ pub type zx_handle_t = i32;
 
 pub type zx_status_t = i32;
 
-pub type zx_futex_t = isize;
+pub type zx_futex_t = i32;
+
 pub type zx_addr_t = usize;
 pub type zx_paddr_t = usize;
 pub type zx_vaddr_t = usize;
