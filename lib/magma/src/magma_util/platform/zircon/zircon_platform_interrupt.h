@@ -27,7 +27,8 @@ public:
     bool Wait() override
     {
         zx_status_t status = zx_interrupt_wait(handle_.get());
-        if (status != ZX_OK)
+        // ZX_ERR_CANCELED can be returned after Signal().
+        if (status != ZX_OK && status != ZX_ERR_CANCELED)
             return DRETF(false, "zx_interrupt_wait failed (%d)", status);
         return true;
     }
