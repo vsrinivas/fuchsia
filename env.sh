@@ -1000,7 +1000,7 @@ function fpublish() {
     c=$((c + 1))
   done
 
-  if [[ ! $build_dir ]]; then
+  if [[ -z $build_dir ]]; then
     echo "Build directory is not set!"
     return -1
   fi
@@ -1069,11 +1069,11 @@ function fpublish-one() {
     shift
   done
 
-  if [[ ! $stg_dir ]]; then
+  if [[ -z $stg_dir ]]; then
     stg_dir="${build_dir}/fars/${pkg_name}"
   fi
 
-  if [[ ! $update_repo ]]; then
+  if [[ -z $update_repo ]]; then
     local update_repo="${build_dir}/amber-files"
   fi
 
