@@ -11,8 +11,7 @@
 namespace maxwell {
 
 // Manages a single Ask suggestion subscriber.
-class AskSubscriber : public BoundWindowedSuggestionSubscriber<AskController>,
-                      public TranscriptionListener {
+class AskSubscriber : public BoundWindowedSuggestionSubscriber<AskController> {
  public:
   AskSubscriber(
       const RankedSuggestions* ranked_suggestions,
@@ -21,14 +20,13 @@ class AskSubscriber : public BoundWindowedSuggestionSubscriber<AskController>,
       fidl::InterfaceHandle<SuggestionListener> listener,
       fidl::InterfaceRequest<AskController> controller);
 
+  // |AskController|
   void SetUserInput(UserInputPtr input) override;
-
-  // |TranscriptionListener|
-  void OnTranscriptUpdate(const fidl::String& spoken_text) override;
+  void BeginSpeechCapture() override;
+  // end |AskController|
 
  private:
   AskDispatcher* ask_dispatcher_;
-  fidl::Binding<TranscriptionListener> transcription_listener_binding_;
 };
 
 }  // namespace maxwell

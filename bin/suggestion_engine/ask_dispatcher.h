@@ -14,6 +14,7 @@ class AskDispatcher {
  public:
   AskDispatcher() {}
   virtual void DispatchAsk(UserInputPtr input) = 0;
+  virtual void BeginSpeechCapture() = 0;
 };
 
 }  // namespace maxwell

@@ -15,25 +15,14 @@ AskSubscriber::AskSubscriber(
     : BoundWindowedSuggestionSubscriber(ranked_suggestions,
                                         std::move(listener),
                                         std::move(controller)),
-      ask_dispatcher_(ask_dispatcher),
-      transcription_listener_binding_(this, std::move(transcription_listener)) {
-}
+      ask_dispatcher_(ask_dispatcher) {}
 
 void AskSubscriber::SetUserInput(UserInputPtr input) {
   ask_dispatcher_->DispatchAsk(std::move(input));
-  // For now, abort speech recognition if input is changed via the controller.
-  // Closing the TranscriptionListener binding tells the SpeechToText service to
-  // stop transcription and stop sending us updates. We do this here to enact
-  // the policy that if the user starts typing input, they are not doing speech
-  // recognition.
-  if (transcription_listener_binding_.is_bound())
-    transcription_listener_binding_.Close();
 }
 
-void AskSubscriber::OnTranscriptUpdate(const fidl::String& spoken_text) {
-  auto input = UserInput::New();
-  input->set_text(spoken_text);
-  ask_dispatcher_->DispatchAsk(std::move(input));
+void AskSubscriber::BeginSpeechCapture() {
+  ask_dispatcher_->BeginSpeechCapture();
 }
 
 }  // namespace maxwell

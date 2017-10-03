@@ -42,6 +42,7 @@ bool IsInterruption(const SuggestionPrototype* suggestion) {
 
 SuggestionEngineImpl::SuggestionEngineImpl()
     : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      transcription_listener_binding_(this),
       ask_suggestions_(new RankedSuggestions(&ask_channel_)),
       next_suggestions_(new RankedSuggestions(&next_channel_)),
       ask_has_media_response_ptr_factory_(&ask_has_media_response_) {
@@ -129,9 +130,20 @@ SuggestionPrototype* SuggestionEngineImpl::FindSuggestion(
 
 // |AskDispatcher|
 void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
-  // TODO(rosswang): locale/unicode
-  std::string query = input->get_text();
+  // For now, abort speech recognition if input is changed via the controller.
+  // Closing the TranscriptionListener binding tells the SpeechToText service to
+  // stop transcription and stop sending us updates. We do this here to enact
+  // the policy that if the user starts typing input, they are not doing speech
+  // recognition.
+  if (transcription_listener_binding_.is_bound())
+    transcription_listener_binding_.Close();
 
+  // TODO(rosswang): locale/unicode
+  DispatchAskInternal(std::move(input));
+}
+
+void SuggestionEngineImpl::DispatchAskInternal(UserInputPtr input) {
+  std::string query = input->get_text();
   std::transform(query.begin(), query.end(), query.begin(), ::tolower);
 
   if (!query.empty()) {
@@ -202,6 +214,26 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
   }
 }
 
+// |AskDispatcher|
+void SuggestionEngineImpl::BeginSpeechCapture() {
+  if (transcription_listener_binding_.is_bound())
+    transcription_listener_binding_.Close();
+
+  if (speech_to_text_ && media_service_) {
+    fidl::InterfaceHandle<media::MediaCapturer> media_capturer;
+    media_service_->CreateAudioCapturer(media_capturer.NewRequest());
+    speech_to_text_->BeginCapture(std::move(media_capturer),
+                                  transcription_listener_binding_.NewBinding());
+  }
+}
+
+// |TranscriptionListener|
+void SuggestionEngineImpl::OnTranscriptUpdate(const fidl::String& spoken_text) {
+  auto input = UserInput::New();
+  input->set_text(spoken_text);
+  DispatchAskInternal(std::move(input));
+}
+
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<SuggestionListener> listener) {
@@ -238,13 +270,13 @@ void SuggestionEngineImpl::InitiateAsk(
       ask_suggestions_, this, transcription_listener.NewRequest(),
       std::move(listener), std::move(controller));
   ask_channel_.AddSubscriber(std::move(subscriber));
+}
 
-  if (speech_to_text_ && media_service_) {
-    fidl::InterfaceHandle<media::MediaCapturer> media_capturer;
-    media_service_->CreateAudioCapturer(media_capturer.NewRequest());
-    speech_to_text_->BeginCapture(std::move(media_capturer),
-                                  std::move(transcription_listener));
-  }
+// |SuggestionProvider|
+void SuggestionEngineImpl::RegisterSpeechListener(
+    fidl::InterfaceHandle<SpeechListener> speech_listener) {
+  speech_listeners_.AddInterfacePtr(
+      SpeechListenerPtr::Create(std::move(speech_listener)));
 }
 
 // |SuggestionProvider|
