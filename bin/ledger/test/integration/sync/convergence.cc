@@ -425,8 +425,9 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 INSTANTIATE_TEST_CASE_P(
     ManyLedgersConvergenceTest,
     ConvergenceTest,
-    ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
-                                         MergeType::NON_ASSOCIATIVE_CUSTOM),
+    // TODO(LE-313): MergeType::LAST_ONE_WINS is disabled as it is flaky.
+    // Re-enable once LE-313 is done.
+    ::testing::Combine(::testing::Values(MergeType::NON_ASSOCIATIVE_CUSTOM),
                        ::testing::Range(2, 6)));
 
 }  // namespace
