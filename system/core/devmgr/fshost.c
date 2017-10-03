@@ -277,6 +277,18 @@ static loader_service_t* loader_service;
 int main(int argc, char** argv) {
     printf("fshost: started.\n");
 
+    bool start_device_watcher = true;
+
+    while (argc > 1) {
+        if (!strcmp(argv[1], "--no-disk")) {
+            start_device_watcher = false;
+        } else {
+            printf("fshost: unknown option '%s'\n", argv[1]);
+        }
+        argc--;
+        argv++;
+    }
+
     zx_handle_t fs_root = zx_get_startup_handle(PA_HND(PA_USER0, 0));
     devfs_root = zx_get_startup_handle(PA_HND(PA_USER0, 1));
     svc_root = zx_get_startup_handle(PA_HND(PA_USER0, 2));
@@ -316,6 +328,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    block_device_watcher(zx_job_default());
+    if (start_device_watcher) {
+        block_device_watcher(zx_job_default());
+    } else {
+        //TODO: figure out how to join with the service loader
+        // or rootfs service thread
+        for (;;) {
+            sleep(365*24*60*60);
+        }
+    }
 }
 #endif

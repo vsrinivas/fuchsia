@@ -593,8 +593,10 @@ void fshost_start(void) {
     launchpad_set_vdso_vmo(vmo);
 
     //TODO: tell fshost not to run block watcher if we're in zedboot mode
-    const char* args[] = { "/boot/bin/fshost" };
-    devmgr_launch(svcs_job_handle, "fshost", 1, args,
+    const char* argv[] = { "/boot/bin/fshost", "--no-disk" };
+    int argc = getenv_bool("netsvc.netboot", false) ? 2 : 1;
+
+    devmgr_launch(svcs_job_handle, "fshost", argc, argv,
                   NULL, -1, handles, types, n, NULL);
 
     // switch to system loader service provided by fshost
