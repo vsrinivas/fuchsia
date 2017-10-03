@@ -27,10 +27,12 @@ zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, uint8_t e
     if (!req) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = io_buffer_init(&req->buffer, data_size, IO_BUFFER_RW);
-    if (status != ZX_OK) {
-        free(req);
-        return status;
+    if (data_size > 0) {
+        zx_status_t status = io_buffer_init(&req->buffer, data_size, IO_BUFFER_RW);
+        if (status != ZX_OK) {
+            free(req);
+            return status;
+        }
     }
     req->header.ep_address = ep_address;
     req->header.length = data_size;

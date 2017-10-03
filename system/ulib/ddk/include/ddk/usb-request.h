@@ -15,6 +15,8 @@ __BEGIN_CDECLS;
 
 typedef struct usb_request usb_request_t;
 
+typedef void (*usb_request_complete_cb)(usb_request_t* req, void* cookie);
+
 // Should be set by the requestor.
 typedef struct usb_header {
     // frame number for scheduling isochronous transfers
@@ -47,10 +49,21 @@ typedef struct usb_request {
     // The complete_cb() callback is set by the requestor and is
     // invoked by the 'complete' ops method when it is called by
     // the processor upon completion of the usb request.
-    void (*complete_cb)(usb_request_t* req, void* cookie);
+    // The saved_complete_cb field can be used to temporarily save
+    // the original callback and overwrite it with the desired intermediate
+    // callback.
+    usb_request_complete_cb complete_cb;
+
     // Set by requestor for passing data to complete_cb callback
-    // May not be modified by anyone other than the requestor.
+    // The saved_cookie field can be used to temporarily save the
+    // original cookie.
     void* cookie;
+
+    // The current 'owner' of the usb request may save the original
+    // complete callback and cookie, allowing them to insert an
+    // intermediate callback.
+    usb_request_complete_cb saved_complete_cb;
+    void* saved_cookie;
 
     usb_response_t response;
 

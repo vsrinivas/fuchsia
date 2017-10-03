@@ -28,15 +28,19 @@ typedef struct {
     // node for our USB device's "children" list
     list_node_t node;
 
-    // thread for calling client's iotxn complete callback
+    // thread for calling client's usb request complete callback
     thrd_t callback_thread;
     bool callback_thread_stop;
     // completion used for signalling callback_thread
     completion_t callback_thread_completion;
-    // list of txns that need to have client's completion callback called
-    list_node_t completed_txns;
+    // list of requests that need to have client's completion callback called
+    list_node_t completed_reqs;
     // mutex that protects the callback_* members above
     mtx_t callback_lock;
+
+    // list of requests that can be reused
+    list_node_t free_reqs;
+    mtx_t free_reqs_lock;
 
 } usb_interface_t;
 

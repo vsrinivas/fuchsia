@@ -28,7 +28,6 @@ typedef struct usb_protocol_ops {
                            size_t* out_length);
     // queues a USB request
     void (*request_queue)(void* ctx, usb_request_t* usb_request);
-    void (*queue)(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame);
     usb_speed_t (*get_speed)(void* ctx);
     zx_status_t (*set_interface)(void* ctx, int interface_number, int alt_setting);
     zx_status_t (*set_configuration)(void* ctx, int configuration);
@@ -83,15 +82,6 @@ static inline zx_status_t usb_clear_feature(usb_protocol_t* usb, uint8_t request
 
 static inline void usb_request_queue(usb_protocol_t* usb, usb_request_t* usb_request) {
     return usb->ops->request_queue(usb->ctx, usb_request);
-}
-
-static inline void usb_queue(usb_protocol_t* usb, iotxn_t* txn, uint8_t ep_address) {
-    return usb->ops->queue(usb->ctx, txn, ep_address, 0);
-}
-
-static inline void usb_queue_isoch(usb_protocol_t* usb, iotxn_t* txn, uint8_t ep_address,
-                                   uint64_t frame) {
-    return usb->ops->queue(usb->ctx, txn, ep_address, frame);
 }
 
 static inline usb_speed_t usb_get_speed(usb_protocol_t* usb) {
