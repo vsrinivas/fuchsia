@@ -239,7 +239,13 @@ typedef uint64_t zx_off_t;
 #define ZX_CPRNG_ADD_ENTROPY_MAX_LEN 256
 
 // interrupt flags
-#define ZX_INTERRUPT_REMAP_IRQ  0x1
+#define ZX_INTERRUPT_REMAP_IRQ       0x1
+#define ZX_INTERRUPT_MODE_DEFAULT    (0u << 1)
+#define ZX_INTERRUPT_MODE_EDGE_LOW   (1u << 1)
+#define ZX_INTERRUPT_MODE_EDGE_HIGH  (2u << 1)
+#define ZX_INTERRUPT_MODE_LEVEL_LOW  (3u << 1)
+#define ZX_INTERRUPT_MODE_LEVEL_HIGH (4u << 1)
+#define ZX_INTERRUPT_MODE_MASK       0xe
 
 // Channel options and limits.
 #define ZX_CHANNEL_READ_MAY_DISCARD         1u

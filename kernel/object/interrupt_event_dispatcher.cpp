@@ -28,6 +28,34 @@ zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
     if (flags & ZX_INTERRUPT_REMAP_IRQ)
         vector = remap_interrupt(vector);
 
+
+    bool default_mode = false;
+    enum interrupt_trigger_mode tm = IRQ_TRIGGER_MODE_EDGE;
+    enum interrupt_polarity pol = IRQ_POLARITY_ACTIVE_LOW;
+    switch (flags & ZX_INTERRUPT_MODE_MASK) {
+        case ZX_INTERRUPT_MODE_DEFAULT:
+            default_mode = true;
+            break;
+        case ZX_INTERRUPT_MODE_EDGE_LOW:
+            tm = IRQ_TRIGGER_MODE_EDGE;
+            pol = IRQ_POLARITY_ACTIVE_LOW;
+            break;
+        case ZX_INTERRUPT_MODE_EDGE_HIGH:
+            tm = IRQ_TRIGGER_MODE_EDGE;
+            pol = IRQ_POLARITY_ACTIVE_HIGH;
+            break;
+        case ZX_INTERRUPT_MODE_LEVEL_LOW:
+            tm = IRQ_TRIGGER_MODE_LEVEL;
+            pol = IRQ_POLARITY_ACTIVE_LOW;
+            break;
+        case ZX_INTERRUPT_MODE_LEVEL_HIGH:
+            tm = IRQ_TRIGGER_MODE_LEVEL;
+            pol = IRQ_POLARITY_ACTIVE_HIGH;
+            break;
+        default:
+            return ZX_ERR_INVALID_ARGS;
+    }
+
     // If this is not a valid interrupt vector, fail.
     if (!is_valid_interrupt(vector, 0))
         return ZX_ERR_INVALID_ARGS;
@@ -52,6 +80,12 @@ zx_status_t InterruptEventDispatcher::Create(uint32_t vector,
 
     // Looks like things went well.  Register our callback and unmask our
     // interrupt.
+    if (!default_mode) {
+        zx_status_t status = configure_interrupt(vector, tm, pol);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
     register_int_handler(vector, IrqHandler, disp);
     unmask_interrupt(vector);
 
