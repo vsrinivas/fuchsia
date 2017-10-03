@@ -9,7 +9,14 @@
 #include "magma_util/macros.h"
 #include "platform_object.h"
 
-uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev()); }
+uint32_t MagmaSystemDevice::GetDeviceId()
+{
+    uint64_t result;
+    magma_status_t status = Query(MAGMA_QUERY_DEVICE_ID, &result);
+    DASSERT(status == MAGMA_STATUS_OK);
+    DASSERT(result >> 32 == 0);
+    return static_cast<uint32_t>(result);
+}
 
 std::shared_ptr<magma::PlatformConnection>
 MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id_t client_id,

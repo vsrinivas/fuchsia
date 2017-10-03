@@ -64,6 +64,8 @@ public:
     void FormatDump(DumpState& dump_state, std::string& dump_string);
     void DumpStatusToLog();
 
+    magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
+
 private:
 #define CHECK_THREAD_IS_CURRENT(x)                                                                 \
     if (x)                                                                                         \

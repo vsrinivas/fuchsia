@@ -924,11 +924,13 @@ msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
 
 void msd_device_destroy(msd_device_t* dev) { delete MsdIntelDevice::cast(dev); }
 
-uint32_t msd_device_get_id(msd_device_t* dev) { return MsdIntelDevice::cast(dev)->device_id(); }
-
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out)
 {
     switch (id) {
+        case MAGMA_QUERY_DEVICE_ID:
+            *value_out = MsdIntelDevice::cast(device)->device_id();
+            return MAGMA_STATUS_OK;
+
         case MAGMA_QUERY_VENDOR_PARAM_0:
             *value_out = MsdIntelDevice::cast(device)->subslice_total();
             *value_out = (*value_out << 32) | MsdIntelDevice::cast(device)->eu_total();

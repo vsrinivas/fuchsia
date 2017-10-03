@@ -29,9 +29,6 @@ void msd_device_destroy(struct msd_device_t* dev);
 // Returns a value associated with the given id.
 magma_status_t msd_device_query(struct msd_device_t* device, uint64_t id, uint64_t* value_out);
 
-// Returns the device id.  0 is an invalid device id.
-uint32_t msd_device_get_id(struct msd_device_t* dev);
-
 void msd_device_dump_status(struct msd_device_t* dev);
 
 // Opens a device for the given client. Returns null on failure

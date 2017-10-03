@@ -7,6 +7,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "magma_vendor_queries.h"
 #include <bitset>
 #include <cstdio>
 #include <ddk/debug.h>
@@ -381,6 +382,22 @@ magma::Status MsdArmDevice::ProcessDumpStatusToLog()
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
+{
+    switch (id) {
+        case MAGMA_QUERY_DEVICE_ID:
+            *value_out = gpu_features_.gpu_id.reg_value();
+            return MAGMA_STATUS_OK;
+
+        case kMsdArmVendorQueryL2Present:
+            *value_out = gpu_features_.l2_present;
+            return MAGMA_STATUS_OK;
+
+        default:
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
@@ -393,11 +410,9 @@ msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id)
 
 void msd_device_destroy(msd_device_t* dev) { delete MsdArmDevice::cast(dev); }
 
-uint32_t msd_device_get_id(msd_device_t* dev) { return 0; }
-
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out)
 {
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
+    return MsdArmDevice::cast(device)->QueryInfo(id, value_out);
 }
 
 void msd_device_dump_status(msd_device_t* device) { MsdArmDevice::cast(device)->DumpStatusToLog(); }
