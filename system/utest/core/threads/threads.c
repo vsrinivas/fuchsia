@@ -646,7 +646,7 @@ static bool test_reading_register_state(void) {
 
     // Allow some time for the thread to begin execution and reach the
     // instruction that spins.
-    ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(10))), ZX_OK, "");
+    ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
 
     // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED.
     zx_handle_t eport;
