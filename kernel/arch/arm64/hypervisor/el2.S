@@ -10,22 +10,28 @@
 #include <asm.h>
 #include <zircon/errors.h>
 
-#define ESR_EL2_EC_WFI_WFE  0x01
-#define ESR_EL2_EC_HVC      0x16
-#define ESR_EL2_EC_SMC      0x17
-#define ESR_EL2_EC_SHIFT    26
-#define ESR_EL2_ISS_MASK    0x01ffffff
+#define ESR_EL2_EC_WFI_WFE              0x01
+#define ESR_EL2_EC_HVC                  0x16
+#define ESR_EL2_EC_SMC                  0x17
+#define ESR_EL2_EC_SHIFT                26
+#define ESR_EL2_ISS_MASK                0x01ffffff
 
-#define SCTLR_EL2_M         (1 << 0)
-#define SCTLR_EL2_A         (1 << 1)
-#define SCTLR_EL2_C         (1 << 2)
-#define SCTLR_EL2_SA        (1 << 3)
-#define SCTLR_EL2_I         (1 << 12)
+#define SCTLR_EL2_M                     (1 << 0)
+#define SCTLR_EL2_A                     (1 << 1)
+#define SCTLR_EL2_C                     (1 << 2)
+#define SCTLR_EL2_SA                    (1 << 3)
+#define SCTLR_EL2_I                     (1 << 12)
 
-#define HVC_PSCI_INDEX      0
-#define HVC_ON_INDEX        1
-#define HVC_MAX_INDEX       2
-#define VECTOR_TABLE_SIZE   0x800
+#define VTCR_EL2_PS_SHIFT               6
+
+// NOTE(abdulla): This excludes the top bit, as it is too large for VTCR_EL2.PS.
+#define ID_AA64MMFR0_EL1_PARANGE_MASK   0x07
+
+#define HVC_PSCI_INDEX                  0
+#define HVC_ON_INDEX                    1
+#define HVC_MAX_INDEX                   2
+
+#define VECTOR_TABLE_SIZE               0x0800
 
 .section .text.el2,"ax",@progbits
 .align 12
@@ -154,7 +160,7 @@ invalid_exception:
 // stack and hypervisor state, and we use the exec vector table to maintain
 // execution of the hypervisor.
 
-FUNCTION_LABEL(arm64_el2_init_base)
+FUNCTION_LABEL(arm64_el2_init_table)
     /* exceptions from current EL, using SP0 */
     entry_invalid_exception
     entry_invalid_exception
@@ -179,7 +185,7 @@ FUNCTION_LABEL(arm64_el2_init_base)
     entry_invalid_exception
     entry_invalid_exception
 
-FUNCTION_LABEL(arm64_el2_exec_base)
+FUNCTION_LABEL(arm64_el2_exec_table)
     /* exceptions from current EL, using SP0 */
     entry_invalid_exception
     entry_invalid_exception
@@ -239,7 +245,17 @@ FUNCTION_LABEL(el2_hvc_on)
     msr sctlr_el2, x9
     isb
 
-    // Set the exec vector base for EL2.
+    // Set the virtualisation translation control.
+    mrs x9, id_aa64mmfr0_el1
+    and x9, x9, #ID_AA64MMFR0_EL1_PARANGE_MASK
+    lsl x9, x9, #VTCR_EL2_PS_SHIFT
+    movlit x10, MMU_VTCR_FLAGS
+    // Combine MMU_VTCR_FLAGS with VTCR_EL2.PS.
+    orr x9, x9, x10
+    msr vtcr_el2, x9
+    isb
+
+    // Setup the exec vector table for EL2.
     mrs x9, vbar_el2
     add x9, x9, #VECTOR_TABLE_SIZE
     msr vbar_el2, x9
@@ -290,7 +306,7 @@ FUNCTION_LABEL(el2_hvc_off)
     msr sctlr_el2, x9
     isb
 
-    // Set the exec vector base for EL2.
+    // Setup the init vector table for EL2.
     mrs x9, vbar_el2
     sub x9, x9, #VECTOR_TABLE_SIZE
     msr vbar_el2, x9

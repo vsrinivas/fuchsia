@@ -153,6 +153,9 @@
 #define MMU_TCR_EPD0                            BM( 7, 1, 1)
 #define MMU_TCR_T0SZ(size)                      BM( 0, 6, (size))
 
+#define MMU_VTCR_RES1                           BM(31, 1, 1)
+#define MMU_VTCR_SL0(starting_level)            BM( 6, 2, (starting_level))
+
 #define MMU_MAIR_ATTR(index, attr)              BM(index * 8, 8, (attr))
 
 
@@ -269,6 +272,17 @@
                             MMU_TCR_FLAGS0 | \
                             MMU_TCR_AS)
 
+// See ARM DDI 0487B.b, Table D4-7 for details on how to configure SL0.
+// Practically, the only useful configuration is 2.
+//
+// TODO(abdulla): Base this upon on TG0 and T0SZ.
+#define MMU_VTCR_SL0_DEFAULT MMU_VTCR_SL0(2)
+
+// NOTE(abdulla): VTCR_EL2.PS still must be set, based upon ID_AA64MMFR0_EL1.
+// Furthermore, this only covers what's required by ARMv8.0.
+#define MMU_VTCR_FLAGS (MMU_VTCR_RES1 | \
+                        MMU_VTCR_SL0_DEFAULT | \
+                        MMU_TCR_FLAGS0)
 
 #if MMU_IDENT_SIZE_SHIFT > MMU_LX_X(MMU_IDENT_PAGE_SIZE_SHIFT, 2)
 #define MMU_PTE_IDENT_DESCRIPTOR MMU_PTE_L012_DESCRIPTOR_BLOCK
