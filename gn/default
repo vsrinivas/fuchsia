@@ -12,11 +12,7 @@
         "packages/gn/pmd",
         "packages/gn/pmd_tests",
         "peridot/packages/default",
-        "peridot/packages/leveldb",
-        "peridot/packages/maxwell",
-        "peridot/packages/modular_examples",
         "peridot/packages/oauth_token_manager",
-        "peridot/packages/re2",
         "topaz/packages/default"
     ]
 }
