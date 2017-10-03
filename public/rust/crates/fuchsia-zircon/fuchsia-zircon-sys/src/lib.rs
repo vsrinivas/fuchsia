@@ -9,7 +9,7 @@ extern crate bitflags;
 
 use std::{cmp, fmt};
 
-pub type zx_handle_t = i32;
+pub type zx_handle_t = u32;
 
 pub type zx_status_t = i32;
 
