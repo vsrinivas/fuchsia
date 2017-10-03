@@ -46,6 +46,8 @@ typedef struct {
     ethmac_ifc_t* ethmac_ifc;
     void* ethmac_cookie;
 
+    uint64_t ticks_per_second;
+
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
     uint16_t mtu;
@@ -243,12 +245,8 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
 
 // Give a dropped packet notification, but limit ourselves to no more than 1 message/second.
 static void dropped_packet_notification(ecm_ctx_t* ctx) {
-    static uint64_t ticks_per_second = 0;
     uint64_t now_ticks = zx_ticks_get();
-    if (ticks_per_second == 0) {
-        ticks_per_second = zx_ticks_per_second();
-    }
-    if (now_ticks - ctx->tx_drop_notice_ticks >= ticks_per_second) {
+    if (now_ticks - ctx->tx_drop_notice_ticks >= ctx->ticks_per_second) {
         printf("%s: no free write txns, dropping packets\n", module_name);
         ctx->tx_drop_notice_ticks = now_ticks;
     }
@@ -493,6 +491,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
     list_initialize(&ecm_ctx->tx_txn_bufs);
     mtx_init(&ecm_ctx->ethmac_mutex, mtx_plain);
     mtx_init(&ecm_ctx->tx_mutex, mtx_plain);
+    ecm_ctx->ticks_per_second = zx_ticks_per_second();
 
     usb_desc_iter_t iter;
     result = usb_desc_iter_init(&usb, &iter);
