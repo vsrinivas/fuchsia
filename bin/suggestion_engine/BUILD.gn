@@ -4,6 +4,7 @@
 
 executable("suggestion_engine") {
   sources = [
+    "ask_publisher.h",
     "proposal_publisher_impl.cc",
     "proposal_publisher_impl.h",
     "suggestion_engine_impl.cc",

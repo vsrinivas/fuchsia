@@ -67,8 +67,7 @@ class Proposinator {
  public:
   Proposinator(SuggestionEngine* suggestion_engine,
                const fidl::String& url = "Proposinator") {
-    suggestion_engine->RegisterProposalPublisher("Proposinator",
-        out_.NewRequest());
+    suggestion_engine->RegisterPublisher("Proposinator", out_.NewRequest());
   }
 
   virtual ~Proposinator() = default;
@@ -95,26 +94,26 @@ class Proposinator {
   ProposalPublisherPtr out_;
 };
 
-class AskProposinator : public Proposinator, public QueryHandler {
+class AskProposinator : public Proposinator, public AskHandler {
  public:
   AskProposinator(SuggestionEngine* suggestion_engine,
                   const fidl::String& url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
-    fidl::InterfaceHandle<QueryHandler> query_handle;
-    ask_binding_.Bind(&query_handle);
-    suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
+    fidl::InterfaceHandle<AskHandler> ask_handle;
+    ask_binding_.Bind(&ask_handle);
+    out_->RegisterAskHandler(std::move(ask_handle));
   }
 
-  void OnQuery(UserInputPtr query, const OnQueryCallback& callback) override {
+  void Ask(UserInputPtr query, const AskCallback& callback) override {
     query_ = std::move(query);
-    query_callback_ = callback;
-    query_proposals_.resize(0);
+    ask_callback_ = callback;
+    ask_proposals_.resize(0);
   }
 
   void Commit() {
     auto response = AskResponse::New();
-    response->proposals = std::move(query_proposals_);
-    query_callback_(std::move(response));
+    response->proposals = std::move(ask_proposals_);
+    ask_callback_(std::move(response));
   }
 
   fidl::String query() const { return query_ ? query_->get_text() : NULL; }
@@ -130,15 +129,15 @@ class AskProposinator : public Proposinator, public QueryHandler {
       const std::string& headline,
       maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
       fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
-    query_proposals_.push_back(
+    ask_proposals_.push_back(
         CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
  private:
-  fidl::Binding<QueryHandler> ask_binding_;
+  fidl::Binding<AskHandler> ask_binding_;
   UserInputPtr query_;
-  fidl::Array<ProposalPtr> query_proposals_;
-  OnQueryCallback query_callback_;
+  fidl::Array<ProposalPtr> ask_proposals_;
+  AskCallback ask_callback_;
 };
 
 // maintains the number of proposals specified by the context field "n"
@@ -239,7 +238,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         });
     agent_host->AddService<ProposalPublisher>(
         [this, url](fidl::InterfaceRequest<ProposalPublisher> request) {
-          suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
+          suggestion_engine_->RegisterPublisher(url, std::move(request));
         });
     StartAgent(url, std::move(agent_host));
   }

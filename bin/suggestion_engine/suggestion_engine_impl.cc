@@ -77,7 +77,7 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
   RemoveProposal(source->component_url(), proposal->id);
 
   auto suggestion =
-      CreateSuggestionPrototype(source->component_url(), std::move(proposal));
+      CreateSuggestionPrototype(std::move(source), std::move(proposal));
 
   if (IsInterruption(suggestion)) {
     debug_.OnInterrupt(suggestion);
@@ -92,10 +92,11 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
   debug_.OnNextUpdate(next_suggestions_);
 }
 
-void SuggestionEngineImpl::AddAskProposal(const std::string& source_url,
+void SuggestionEngineImpl::AddAskProposal(ProposalPublisherImpl* source,
                                           ProposalPtr proposal) {
-  RemoveProposal(source_url, proposal->id);
-  auto suggestion = CreateSuggestionPrototype(source_url, std::move(proposal));
+  RemoveProposal(source->component_url(), proposal->id);
+  auto suggestion =
+      CreateSuggestionPrototype(std::move(source), std::move(proposal));
   ask_suggestions_->AddSuggestion(std::move(suggestion));
 }
 
@@ -147,7 +148,7 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
   ask_suggestions_->UpdateRankingFunction(
       maxwell::ranking::GetAskRankingFunction(query));
 
-  if (query_handlers_.size() == 0) {
+  if (ask_handlers_.size() == 0) {
     return debug_.OnAskStart(query, ask_suggestions_);
   }
 
@@ -157,14 +158,17 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
   auto has_media_response = ask_has_media_response_ptr_factory_.GetWeakPtr();
   fxl::TimePoint ask_time_point = fxl::TimePoint::Now();
 
-  auto remainingHandlers = std::make_shared<size_t>(query_handlers_.size());
-  for (const auto& ask : query_handlers_) {
-    const std::string url = ask.second;
-    ask.first->OnQuery(
+  auto remainingHandlers = std::make_shared<size_t>(ask_handlers_.size());
+  for (auto ask = ask_handlers_.begin(); ask != ask_handlers_.end(); ask++) {
+    (*ask)->handler->Ask(
         input.Clone(),
+        // TODO(andrewosh) Capturing the ask iterator is unsafe, as
+        // ask_handlers_ can be modified during this iteration.
+        // Replace ask_handlers_ with a map + validation when BoundPtrSet is
+        // removed.
         // TODO(rosswang): Large number of captures, substantial lambda;
         // consider replacing with an object.
-        [this, remainingHandlers, query, url, has_media_response,
+        [this, remainingHandlers, query, ask, has_media_response,
          ask_time_point](AskResponsePtr response) {
           // TODO(rosswang): defer selection of "I don't know" responses
           if (has_media_response && !*has_media_response &&
@@ -192,7 +196,7 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
           }
 
           for (auto& proposal : response->proposals) {
-            AddAskProposal(url, std::move(proposal));
+            AddAskProposal((*ask)->publisher.get(), std::move(proposal));
           }
           (*remainingHandlers)--;
           if ((*remainingHandlers) == 0) {
@@ -266,25 +270,10 @@ void SuggestionEngineImpl::NotifyInteraction(
 }
 
 // |SuggestionEngine|
-void SuggestionEngineImpl::RegisterProposalPublisher(
+void SuggestionEngineImpl::RegisterPublisher(
     const fidl::String& url,
-    fidl::InterfaceRequest<ProposalPublisher> publisher) {
-  // Check to see if a ProposalPublisher has already been created for the
-  // component with this url. If not, create one.
-  std::unique_ptr<ProposalPublisherImpl>& source = proposal_publishers_[url];
-  if (!source) {  // create if it didn't already exist
-    source.reset(new ProposalPublisherImpl(this, url));
-  }
-
-  source.get()->AddBinding(std::move(publisher));
-}
-
-// |SuggestionEngine|
-void SuggestionEngineImpl::RegisterQueryHandler(
-    const fidl::String& url,
-    fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
-  auto query_handler = QueryHandlerPtr::Create(std::move(query_handler_handle));
-  query_handlers_.emplace_back(std::move(query_handler), url);
+    fidl::InterfaceRequest<ProposalPublisher> client) {
+  GetOrCreateSourceClient(url)->AddBinding(std::move(client));
 }
 
 // |SuggestionEngine|
@@ -311,18 +300,33 @@ void SuggestionEngineImpl::RemoveAllAskSuggestions() {
 }
 
 SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
-    const std::string& source_url,
+    ProposalPublisherImpl* source,
     ProposalPtr proposal) {
-  auto prototype_pair =
-      suggestion_prototypes_.emplace(std::make_pair(source_url, proposal->id),
-                                     std::make_unique<SuggestionPrototype>());
+  auto prototype_pair = suggestion_prototypes_.emplace(
+      std::make_pair(source->component_url(), proposal->id),
+      std::make_unique<SuggestionPrototype>());
   auto suggestion_prototype = prototype_pair.first->second.get();
   suggestion_prototype->suggestion_id = RandomUuid();
-  suggestion_prototype->source_url = source_url;
+  suggestion_prototype->source_url = source->component_url();
   suggestion_prototype->timestamp = fxl::TimePoint::Now();
   suggestion_prototype->proposal = std::move(proposal);
 
   return suggestion_prototype;
+}
+
+ProposalPublisherImpl* SuggestionEngineImpl::GetOrCreateSourceClient(
+    const std::string& component_url) {
+  std::unique_ptr<ProposalPublisherImpl>& source =
+      proposal_publishers_[component_url];
+  if (!source)  // create if it didn't already exist
+    source.reset(new ProposalPublisherImpl(this, component_url));
+
+  return source.get();
+}
+
+void SuggestionEngineImpl::AddAskPublisher(
+    std::unique_ptr<AskPublisher> publisher) {
+  ask_handlers_.emplace(std::move(publisher));
 }
 
 void SuggestionEngineImpl::PerformActions(

@@ -6,9 +6,9 @@ import("//garnet/public/lib/fidl/fidl.gni")
 
 fidl("fidl") {
   sources = [
+    "ask_handler.fidl",
     "proposal.fidl",
     "proposal_publisher.fidl",
-    "query_handler.fidl",
     "suggestion_engine.fidl",
   ]
 

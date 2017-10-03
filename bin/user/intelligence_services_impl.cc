@@ -44,27 +44,12 @@ void IntelligenceServicesImpl::GetProposalPublisher(
 
   // TODO(thatguy): Change |component_id| to use ComponentScope once it is
   // renamed to something like ComponentInfo.
-  suggestion_engine_->RegisterProposalPublisher(component_id, std::move(request));
+  suggestion_engine_->RegisterPublisher(component_id, std::move(request));
 }
 
 void IntelligenceServicesImpl::GetActionLog(
     fidl::InterfaceRequest<ComponentActionLog> request) {
   user_action_log_->GetComponentActionLog(scope_.Clone(), std::move(request));
-}
-
-void IntelligenceServicesImpl::RegisterQueryHandler(
-    fidl::InterfaceHandle<QueryHandler> query_handler) {
-  fidl::String component_id;
-  if (scope_->is_agent_scope()) {
-    component_id = scope_->get_agent_scope()->url;
-  } else if (scope_->is_module_scope()) {
-    component_id = scope_->get_module_scope()->url;
-  } else {  // scope_->is_global_scope()
-    component_id = "global";
-  }
-
-  suggestion_engine_->RegisterQueryHandler(component_id,
-      std::move(query_handler));
 }
 
 }  // namespace maxwell

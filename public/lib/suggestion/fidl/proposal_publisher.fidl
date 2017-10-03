@@ -4,6 +4,7 @@
 
 module maxwell;
 
+import "lib/suggestion/fidl/ask_handler.fidl";
 import "lib/suggestion/fidl/proposal.fidl";
 
 // A service enabling Agents to contribute Proposals proactively to the
@@ -17,4 +18,10 @@ interface ProposalPublisher {
 
   // Removes the Proposal with the given ID from the Suggestion engine.
   Remove(string proposal_id);
+
+  // Returns a list of all Proposals created by the identified Agent.
+  GetAll() => (array<Proposal> proposals);
+
+  // TODO: This should be a method on SuggestionEngine.
+  RegisterAskHandler(AskHandler ask_handler);
 };
