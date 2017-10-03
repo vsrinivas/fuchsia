@@ -6,11 +6,11 @@
 #include <utility>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "peridot/examples/hello_world_cpp/hello.fidl.h"
-#include "peridot/public/lib/app_driver/cpp/app_driver.h"
 
 using examples::Hello;
 
@@ -28,9 +28,7 @@ class HelloAppChild : public Hello {
   ~HelloAppChild() override = default;
 
   // Called by AppDriver.
-  void Terminate(const std::function<void()>& done) {
-    done();
-  }
+  void Terminate(const std::function<void()>& done) { done(); }
 
  private:
   // |examples::Hello| implementation:

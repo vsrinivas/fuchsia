@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_PUBLIC_LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
-#define PERIDOT_PUBLIC_LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
+#ifndef LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
+#define LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
 
 #include <memory>
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
+#include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/svc/cpp/service_namespace.h"
-#include "peridot/public/lib/module/fidl/module.fidl.h"
-#include "peridot/public/lib/module/fidl/module_context.fidl.h"
 
 namespace modular {
 
@@ -45,4 +45,4 @@ class ModuleImpl : public Module {
 
 }  // namespace modular
 
-#endif  // PERIDOT_PUBLIC_LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
+#endif  // LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_

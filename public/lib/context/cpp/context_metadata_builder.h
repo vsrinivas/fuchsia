@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "peridot/public/lib/context/fidl/metadata.fidl.h"
+#include "lib/context/fidl/metadata.fidl.h"
 
 namespace maxwell {
 
@@ -21,7 +21,8 @@ class ContextMetadataBuilder {
 
   ContextMetadataBuilder& SetEntityTopic(const fidl::String& topic);
   ContextMetadataBuilder& AddEntityType(const fidl::String& type);
-  ContextMetadataBuilder& SetEntityTypes(const fidl::Array<fidl::String>& types);
+  ContextMetadataBuilder& SetEntityTypes(
+      const fidl::Array<fidl::String>& types);
 
   // Build() can be called only once, as it moves |m_|.
   ContextMetadataPtr Build();

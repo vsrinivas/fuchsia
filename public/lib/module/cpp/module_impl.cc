@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/public/lib/module/cpp/module_impl.h"
+#include "lib/module/cpp/module_impl.h"
 
 namespace modular {
 

@@ -9,11 +9,11 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "peridot/examples/hello_world_cpp/hello.fidl.h"
-#include "peridot/public/lib/app_driver/cpp/app_driver.h"
 
 using examples::HelloPtr;
 
@@ -44,9 +44,7 @@ class HelloAppParent {
   }
 
   // Called by AppDriver.
-  void Terminate(const std::function<void()>& done) {
-    done();
-  }
+  void Terminate(const std::function<void()>& done) { done(); }
 
  private:
   void DoIt(const std::string& request) {

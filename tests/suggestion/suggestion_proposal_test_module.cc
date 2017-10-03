@@ -5,12 +5,12 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/module/fidl/module.fidl.h"
+#include "lib/module_driver/cpp/module_driver.h"
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/public/lib/module_driver/cpp/module_driver.h"
 
 using modular::testing::TestPoint;
 

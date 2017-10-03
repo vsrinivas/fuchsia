@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/public/lib/context/cpp/context_metadata_builder.h"
+#include "lib/context/cpp/context_metadata_builder.h"
 
 namespace maxwell {
 
@@ -10,7 +10,8 @@ ContextMetadataBuilder::ContextMetadataBuilder() {}
 ContextMetadataBuilder::ContextMetadataBuilder(ContextMetadataPtr initial_value)
     : m_(std::move(initial_value)) {}
 
-ContextMetadataBuilder& ContextMetadataBuilder::SetStoryId(const fidl::String& story_id) {
+ContextMetadataBuilder& ContextMetadataBuilder::SetStoryId(
+    const fidl::String& story_id) {
   StoryMetadata()->id = story_id;
   return *this;
 }
@@ -22,7 +23,8 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetStoryFocused(bool focused) {
   return *this;
 }
 
-ContextMetadataBuilder& ContextMetadataBuilder::SetModuleUrl(const fidl::String& url) {
+ContextMetadataBuilder& ContextMetadataBuilder::SetModuleUrl(
+    const fidl::String& url) {
   ModuleMetadata()->url = url;
   return *this;
 }
@@ -32,11 +34,13 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetModulePath(
   return *this;
 }
 
-ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTopic(const fidl::String& topic) {
+ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTopic(
+    const fidl::String& topic) {
   EntityMetadata()->topic = topic;
   return *this;
 }
-ContextMetadataBuilder& ContextMetadataBuilder::AddEntityType(const fidl::String& type) {
+ContextMetadataBuilder& ContextMetadataBuilder::AddEntityType(
+    const fidl::String& type) {
   EntityMetadata()->type.push_back(type);
   return *this;
 }
@@ -51,7 +55,8 @@ ContextMetadataPtr ContextMetadataBuilder::Build() {
 }
 
 StoryMetadataPtr& ContextMetadataBuilder::StoryMetadata() {
-  if (!m_) m_ = ContextMetadata::New();
+  if (!m_)
+    m_ = ContextMetadata::New();
   if (!m_->story) {
     m_->story = StoryMetadata::New();
   }
@@ -59,7 +64,8 @@ StoryMetadataPtr& ContextMetadataBuilder::StoryMetadata() {
 }
 
 ModuleMetadataPtr& ContextMetadataBuilder::ModuleMetadata() {
-  if (!m_) m_ = ContextMetadata::New();
+  if (!m_)
+    m_ = ContextMetadata::New();
   if (!m_->mod) {
     m_->mod = ModuleMetadata::New();
   }
@@ -67,7 +73,8 @@ ModuleMetadataPtr& ContextMetadataBuilder::ModuleMetadata() {
 }
 
 EntityMetadataPtr& ContextMetadataBuilder::EntityMetadata() {
-  if (!m_) m_ = ContextMetadata::New();
+  if (!m_)
+    m_ = ContextMetadata::New();
   if (!m_->entity) {
     m_->entity = EntityMetadata::New();
   }
