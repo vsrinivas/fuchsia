@@ -50,6 +50,7 @@ source_set("object_identifier_lib") {
 
   deps = [
     "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/encryption/public",
   ]
 
   public_deps = [

@@ -25,6 +25,7 @@ namespace storage {
 class PageStorage {
  public:
   struct CommitIdAndBytes {
+    CommitIdAndBytes();
     CommitIdAndBytes(CommitId id, std::string bytes);
     CommitIdAndBytes(CommitIdAndBytes&& other);
 

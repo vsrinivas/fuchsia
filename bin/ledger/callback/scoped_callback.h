@@ -17,7 +17,7 @@ class ScopedLambda {
       : witness_(std::move(witness)), function_(std::move(function)) {}
 
   template <typename... ArgType>
-  void operator()(ArgType&&... args) const {
+  void operator()(ArgType&&... args) {
     if (witness_) {
       function_(std::forward<ArgType>(args)...);
     }

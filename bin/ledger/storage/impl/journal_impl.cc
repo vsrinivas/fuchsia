@@ -194,7 +194,7 @@ void JournalImpl::CreateCommitFromChanges(
           ](Status status) mutable { callback(status, std::move(parent)); }));
           return;
         }
-        std::unique_ptr<storage::Commit> commit =
+        std::unique_ptr<const storage::Commit> commit =
             CommitImpl::FromContentAndParents(page_storage_, object_digest,
                                               std::move(parents));
         GetObjectsToSync(fxl::MakeCopyable([

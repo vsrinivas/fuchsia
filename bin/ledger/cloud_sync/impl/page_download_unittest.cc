@@ -20,6 +20,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_storage.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/test/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
@@ -44,6 +45,16 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
  protected:
   void SetOnNewStateCallback(fxl::Closure callback) {
     new_state_callback_ = std::move(callback);
+  }
+
+  std::string EncryptCommit(std::string content) {
+    encryption::Status status;
+    std::string result;
+    encryption::EncryptCommit(
+        content, callback::Capture(MakeQuitTask(), &status, &result));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(encryption::Status::OK, status);
+    return result;
   }
 
   test::TestPageStorage storage_;
@@ -102,9 +113,9 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", EncryptCommit("content2")), "43");
 
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_IDLE) {
@@ -161,9 +172,9 @@ TEST_F(PageDownloadTest, DownloadEmptyBacklog) {
 // recent commit downloaded from the backlog.
 TEST_F(PageDownloadTest, RegisterWatcher) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", EncryptCommit("content2")), "43");
   auth_provider_.token_to_return = "some-token";
 
   SetOnNewStateCallback([this] {
@@ -201,9 +212,9 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", EncryptCommit("content2")), "43");
   page_download_->StartDownload();
 
   EXPECT_TRUE(
@@ -243,7 +254,7 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   EXPECT_EQ(0u, storage_.received_commits.size());
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
 
   // Make the storage delay requests to add remote commits.
   storage_.should_delay_add_commit_confirmation = true;
@@ -264,9 +275,9 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
 
   // Add two more remote commits, before storage confirms adding the first one.
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", EncryptCommit("content2")), "43");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id3", "content3"), "44");
+      cloud_provider_firebase::Commit("id3", EncryptCommit("content3")), "44");
   cloud_provider_.DeliverRemoteCommits();
 
   // Make storage confirm adding the first commit.
@@ -299,7 +310,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
 
   cloud_provider_.status_to_return = cloud_provider_firebase::Status::OK;
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
   EXPECT_TRUE(
       RunLoopUntil([this] { return storage_.received_commits.size() == 1u; }));
 
@@ -314,7 +325,7 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
   EXPECT_FALSE(cloud_provider_.watcher_removed);
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
   storage_.should_fail_add_commit_from_sync = true;
 
   SetOnNewStateCallback([this] {
@@ -333,9 +344,9 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
 // progress.
 TEST_F(PageDownloadTest, DownloadIdleCallback) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id1", "content1"), "42");
+      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit("id2", "content2"), "43");
+      cloud_provider_firebase::Commit("id2", EncryptCommit("content2")), "43");
 
   int on_idle_calls = 0;
   SetOnNewStateCallback([this, &on_idle_calls] {
@@ -357,8 +368,8 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
   std::vector<cloud_provider_firebase::Record> records;
-  records.emplace_back(cloud_provider_firebase::Commit("id3", "content3"),
-                       "44");
+  records.emplace_back(
+      cloud_provider_firebase::Commit("id3", EncryptCommit("content3")), "44");
   cloud_provider_.watcher->OnRemoteCommits(std::move(records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(3u, storage_.received_commits.size());

@@ -1071,13 +1071,8 @@ Status PageStorageImpl::SynchronousGetCommit(
   if (s != Status::OK) {
     return s;
   }
-  std::unique_ptr<const Commit> result =
-      CommitImpl::FromStorageBytes(this, commit_id, std::move(bytes));
-  if (!result) {
-    return Status::FORMAT_ERROR;
-  }
-  commit->swap(result);
-  return Status::OK;
+  return CommitImpl::FromStorageBytes(this, commit_id, std::move(bytes),
+                                      commit);
 }
 
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
@@ -1127,11 +1122,12 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
       return status;
     }
 
-    std::unique_ptr<const Commit> commit =
-        CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
-    if (!commit) {
+    std::unique_ptr<const Commit> commit;
+    status = CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes),
+                                          &commit);
+    if (status != Status::OK) {
       FXL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
-      return Status::FORMAT_ERROR;
+      return status;
     }
 
     // Remove parents from leaves.

@@ -41,6 +41,22 @@ class CommitImpl::SharedStorageBytes
 };
 
 namespace {
+// Checks whether the given |storage_bytes| are a valid serialization of a
+// commit.
+bool CheckValidSerialization(fxl::StringView storage_bytes) {
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(storage_bytes.data()),
+      storage_bytes.size());
+
+  if (!VerifyCommitStorageBuffer(verifier)) {
+    return false;
+  };
+
+  const CommitStorage* commit_storage = GetCommitStorage(storage_bytes.data());
+  auto parents = commit_storage->parents();
+  return parents && parents->size() >= 1 && parents->size() <= 2;
+}
+
 std::string SerializeCommit(
     uint64_t generation,
     int64_t timestamp,
@@ -86,11 +102,16 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
 
 CommitImpl::~CommitImpl() {}
 
-std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
-    PageStorage* page_storage,
-    CommitId id,
-    std::string storage_bytes) {
+Status CommitImpl::FromStorageBytes(PageStorage* page_storage,
+                                    CommitId id,
+                                    std::string storage_bytes,
+                                    std::unique_ptr<const Commit>* commit) {
   FXL_DCHECK(id != kFirstPageCommitId);
+
+  if (!CheckValidSerialization(storage_bytes)) {
+    return Status::FORMAT_ERROR;
+  }
+
   fxl::RefPtr<SharedStorageBytes> storage_ptr =
       SharedStorageBytes::Create(std::move(storage_bytes));
 
@@ -106,13 +127,14 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
     parent_ids.emplace_back(commit_storage->parents()->Get(i));
   }
-  return std::unique_ptr<Commit>(
-      new CommitImpl(page_storage, std::move(id), commit_storage->timestamp(),
-                     commit_storage->generation(), root_node_digest, parent_ids,
-                     std::move(storage_ptr)));
+  commit->reset(new CommitImpl(page_storage, std::move(id),
+                               commit_storage->timestamp(),
+                               commit_storage->generation(), root_node_digest,
+                               parent_ids, std::move(storage_ptr)));
+  return Status::OK;
 }
 
-std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
+std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
     PageStorage* page_storage,
     ObjectDigestView root_node_digest,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
@@ -147,8 +169,11 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
 
   CommitId id = glue::SHA256Hash(storage_bytes);
 
-  return FromStorageBytes(page_storage, std::move(id),
-                          std::move(storage_bytes));
+  std::unique_ptr<const Commit> commit;
+  Status status = FromStorageBytes(page_storage, std::move(id),
+                                   std::move(storage_bytes), &commit);
+  FXL_DCHECK(status == Status::OK);
+  return commit;
 }
 
 void CommitImpl::Empty(
@@ -171,20 +196,6 @@ void CommitImpl::Empty(
             std::vector<CommitIdView>(), std::move(storage_ptr)));
         callback(Status::OK, std::move(ptr));
       });
-}
-
-bool CommitImpl::CheckValidSerialization(fxl::StringView storage_bytes) {
-  flatbuffers::Verifier verifier(
-      reinterpret_cast<const unsigned char*>(storage_bytes.data()),
-      storage_bytes.size());
-
-  if (!VerifyCommitStorageBuffer(verifier)) {
-    return false;
-  };
-
-  const CommitStorage* commit_storage = GetCommitStorage(storage_bytes.data());
-  auto parents = commit_storage->parents();
-  return parents && parents->size() >= 1 && parents->size() <= 2;
 }
 
 std::unique_ptr<Commit> CommitImpl::Clone() const {

@@ -17,6 +17,7 @@
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit.h"
 #include "peridot/bin/ledger/cloud_provider/public/types.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 
 namespace cloud_sync {
 
@@ -191,39 +192,57 @@ void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
   std::vector<cloud_provider_firebase::Commit> commits;
   std::vector<storage::CommitId> ids;
+  auto waiter =
+      callback::Waiter<encryption::Status, cloud_provider_firebase::Commit>::
+          Create(encryption::Status::OK);
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
-    cloud_provider_firebase::Commit commit(
-        id, storage_commit->GetStorageBytes().ToString());
-    commits.push_back(std::move(commit));
+    encryption::EncryptCommit(storage_commit->GetStorageBytes(), [
+      id, callback = waiter->NewCallback()
+    ](encryption::Status status, std::string encrypted_storage_bytes) mutable {
+      callback(status, cloud_provider_firebase::Commit(
+                           std::move(id), std::move(encrypted_storage_bytes)));
+    });
     ids.push_back(std::move(id));
   }
-  cloud_provider_->AddCommits(
-      auth_token_, std::move(commits),
-      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [
-        this, commit_ids = std::move(ids)
-      ](cloud_provider_firebase::Status status) {
-        // UploadCommit() is called as a last step of a so-far-successful upload
-        // attempt, so we couldn't have failed before.
-        FXL_DCHECK(!errored_);
-        if (status != cloud_provider_firebase::Status::OK) {
+  waiter->Finalize(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(),
+      [ this, ids = std::move(ids) ](
+          encryption::Status status,
+          std::vector<cloud_provider_firebase::Commit> commits) mutable {
+        if (status != encryption::Status::OK) {
           errored_ = true;
           on_error_();
           return;
         }
-        auto waiter = callback::StatusWaiter<storage::Status>::Create(
-            storage::Status::OK);
+        cloud_provider_->AddCommits(
+            auth_token_, std::move(commits),
+            callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [
+              this, commit_ids = std::move(ids)
+            ](cloud_provider_firebase::Status status) {
+              // UploadCommit() is called as a last step of a so-far-successful
+              // upload attempt, so we couldn't have failed before.
+              FXL_DCHECK(!errored_);
+              if (status != cloud_provider_firebase::Status::OK) {
+                errored_ = true;
+                on_error_();
+                return;
+              }
+              auto waiter = callback::StatusWaiter<storage::Status>::Create(
+                  storage::Status::OK);
 
-        for (auto& id : commit_ids) {
-          storage_->MarkCommitSynced(id, waiter->NewCallback());
-        }
-        waiter->Finalize(callback::MakeScoped(
-            weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
-              // TODO(nellyv): Handle IO errors. See LE-225.
-              FXL_DCHECK(status == storage::Status::OK);
-              // This object can be deleted in the on_done_() callback, don't do
-              // anything after the call.
-              on_done_();
+              for (auto& id : commit_ids) {
+                storage_->MarkCommitSynced(id, waiter->NewCallback());
+              }
+              waiter->Finalize(callback::MakeScoped(
+                  weak_ptr_factory_.GetWeakPtr(),
+                  [this](storage::Status status) {
+                    // TODO(nellyv): Handle IO errors. See LE-225.
+                    FXL_DCHECK(status == storage::Status::OK);
+                    // This object can be deleted in the on_done_() callback,
+                    // don't do anything after the call.
+                    on_done_();
+                  }));
             }));
       }));
 }

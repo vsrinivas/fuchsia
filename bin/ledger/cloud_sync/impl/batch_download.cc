@@ -9,7 +9,9 @@
 #include <trace/event.h>
 
 #include "peridot/bin/ledger/callback/scoped_callback.h"
+#include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 
 namespace cloud_sync {
 
@@ -36,22 +38,38 @@ BatchDownload::~BatchDownload() {
 void BatchDownload::Start() {
   FXL_DCHECK(!started_);
   started_ = true;
-  std::vector<storage::PageStorage::CommitIdAndBytes> commits;
+  auto waiter = callback::Waiter<
+      encryption::Status,
+      storage::PageStorage::CommitIdAndBytes>::Create(encryption::Status::OK);
   for (auto& record : records_) {
-    commits.emplace_back(std::move(record.commit.id),
-                         std::move(record.commit.content));
+    encryption::DecryptCommit(record.commit.content, [
+      id = std::move(record.commit.id), callback = waiter->NewCallback()
+    ](encryption::Status status, std::string content) mutable {
+      callback(status, storage::PageStorage::CommitIdAndBytes(
+                           std::move(id), std::move(content)));
+    });
   }
-  storage_->AddCommitsFromSync(
-      std::move(commits),
-      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                           [this](storage::Status status) {
-                             if (status != storage::Status::OK) {
-                               on_error_();
-                               return;
-                             }
+  waiter->Finalize(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(),
+      [this](encryption::Status status,
+             std::vector<storage::PageStorage::CommitIdAndBytes> commits) {
+        if (status != encryption::Status::OK) {
+          on_error_();
+          return;
+        }
 
-                             UpdateTimestampAndQuit();
-                           }));
+        storage_->AddCommitsFromSync(
+            std::move(commits),
+            callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                                 [this](storage::Status status) {
+                                   if (status != storage::Status::OK) {
+                                     on_error_();
+                                     return;
+                                   }
+
+                                   UpdateTimestampAndQuit();
+                                 }));
+      }));
 }
 
 void BatchDownload::UpdateTimestampAndQuit() {

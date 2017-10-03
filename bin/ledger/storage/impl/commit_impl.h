@@ -17,11 +17,12 @@ class CommitImpl : public Commit {
 
   // Factory method for creating a |CommitImpl| object given its storage
   // representation. If the format is incorrect, |nullptr| will be returned.
-  static std::unique_ptr<Commit> FromStorageBytes(PageStorage* page_storage,
-                                                  CommitId id,
-                                                  std::string storage_bytes);
+  static Status FromStorageBytes(PageStorage* page_storage,
+                                 CommitId id,
+                                 std::string storage_bytes,
+                                 std::unique_ptr<const Commit>* commit);
 
-  static std::unique_ptr<Commit> FromContentAndParents(
+  static std::unique_ptr<const Commit> FromContentAndParents(
       PageStorage* page_storage,
       ObjectDigestView root_node_digest,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
@@ -31,10 +32,6 @@ class CommitImpl : public Commit {
   static void Empty(
       PageStorage* page_storage,
       std::function<void(Status, std::unique_ptr<const Commit>)> callback);
-
-  // Checks whether the given |storage_bytes| are a valid serialization of a
-  // commit.
-  static bool CheckValidSerialization(fxl::StringView storage_bytes);
 
   // Commit:
   std::unique_ptr<Commit> Clone() const override;

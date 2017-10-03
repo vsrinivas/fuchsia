@@ -32,6 +32,7 @@ source_set("impl") {
     "//peridot/bin/ledger/cloud_provider/public",
     "//peridot/bin/ledger/cloud_sync/public",
     "//peridot/bin/ledger/device_set",
+    "//peridot/bin/ledger/encryption/public",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/storage/public",

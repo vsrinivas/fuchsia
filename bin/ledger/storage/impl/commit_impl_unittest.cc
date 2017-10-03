@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 
+#include <tuple>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
@@ -25,15 +27,19 @@ class CommitImplTest : public StorageTest {
   PageStorage* GetStorage() override { return &page_storage_; }
 
   bool CheckCommitEquals(const Commit& expected, const Commit& commit) {
-    return (expected.GetId() == commit.GetId()) &&
-           (expected.GetTimestamp() == commit.GetTimestamp()) &&
-           (expected.GetParentIds() == commit.GetParentIds()) &&
-           (expected.GetRootDigest() == commit.GetRootDigest());
+    return std::forward_as_tuple(expected.GetId(), expected.GetTimestamp(),
+                                 expected.GetParentIds(),
+                                 expected.GetRootDigest()) ==
+           std::forward_as_tuple(commit.GetId(), commit.GetTimestamp(),
+                                 commit.GetParentIds(), commit.GetRootDigest());
   }
 
-  bool CheckCommitStorageBytes(const std::unique_ptr<Commit>& commit) {
-    std::unique_ptr<Commit> copy = CommitImpl::FromStorageBytes(
-        &page_storage_, commit->GetId(), commit->GetStorageBytes().ToString());
+  bool CheckCommitStorageBytes(const std::unique_ptr<const Commit>& commit) {
+    std::unique_ptr<const Commit> copy;
+    Status status = CommitImpl::FromStorageBytes(
+        &page_storage_, commit->GetId(), commit->GetStorageBytes().ToString(),
+        &copy);
+    EXPECT_EQ(status, Status::OK);
 
     return CheckCommitEquals(*commit, *copy);
   }
@@ -51,7 +57,7 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
 
   // A commit with one parent.
   parents.emplace_back(new test::CommitRandomImpl());
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       &page_storage_, root_node_digest, std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit));
 
@@ -59,7 +65,7 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
   parents = std::vector<std::unique_ptr<const Commit>>();
   parents.emplace_back(new test::CommitRandomImpl());
   parents.emplace_back(new test::CommitRandomImpl());
-  std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
       &page_storage_, root_node_digest, std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit2));
 }
@@ -69,11 +75,14 @@ TEST_F(CommitImplTest, CloneCommit) {
 
   std::vector<std::unique_ptr<const Commit>> parents;
   parents.emplace_back(new test::CommitRandomImpl());
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       &page_storage_, root_node_digest, std::move(parents));
-  std::unique_ptr<Commit> copy = CommitImpl::FromStorageBytes(
-      &page_storage_, commit->GetId(), commit->GetStorageBytes().ToString());
-  std::unique_ptr<Commit> clone = commit->Clone();
+  std::unique_ptr<const Commit> copy;
+  Status status =
+      CommitImpl::FromStorageBytes(&page_storage_, commit->GetId(),
+                                   commit->GetStorageBytes().ToString(), &copy);
+  ASSERT_EQ(Status::OK, status);
+  std::unique_ptr<const Commit> clone = commit->Clone();
   EXPECT_TRUE(CheckCommitEquals(*copy, *clone));
 }
 
@@ -86,7 +95,7 @@ TEST_F(CommitImplTest, MergeCommitTimestamp) {
   EXPECT_NE(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
   auto max_timestamp =
       std::max(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       &page_storage_, root_node_digest, std::move(parents));
 
   EXPECT_EQ(max_timestamp, commit->GetTimestamp());

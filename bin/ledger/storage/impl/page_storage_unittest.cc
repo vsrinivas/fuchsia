@@ -243,7 +243,7 @@ class PageStorageTest : public StorageTest {
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
-    std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+    std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
         storage_.get(), root_digest, std::move(parent));
     CommitId id = commit->GetId();
 
@@ -439,7 +439,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectDigest(), std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
@@ -457,7 +457,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectDigest(), std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
@@ -491,7 +491,7 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   // Try to add a commit before its parent and see the error.
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(new test::CommitRandomImpl());
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectDigest(), std::move(parent));
 
   Status status;
@@ -560,7 +560,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
-    std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+    std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
         storage_.get(), root_digest, std::move(parent));
     CommitId id = commit->GetId();
 
@@ -647,7 +647,7 @@ TEST_F(PageStorageTest, SyncCommits) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
   // After adding a commit it should marked as unsynced.
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectDigest(), std::move(parent));
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
@@ -680,7 +680,7 @@ TEST_F(PageStorageTest, HeadCommits) {
   parent.emplace_back(GetFirstHead());
   // Adding a new commit with the previous head as its parent should replace the
   // old head.
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectDigest(), std::move(parent));
   CommitId id = commit->GetId();
 
@@ -1374,14 +1374,14 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(GetFirstHead());
 
-  std::unique_ptr<Commit> commit1 = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectDigest(), std::move(parent));
   CommitId id1 = commit1->GetId();
 
   parent.clear();
   parent.emplace_back(commit1->Clone());
 
-  std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
       storage_.get(), RandomObjectDigest(), std::move(parent));
   CommitId id2 = commit2->GetId();
 
