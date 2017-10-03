@@ -23,9 +23,6 @@
 #include <sys/param.h>
 #include <threads.h>
 
-// to assist in the transition to unsigned handles
-#define INVALID_HANDLE(h) ((h) <= 0)
-
 enum special_handles {
     HND_LOADER_SVC,
     HND_EXEC_VMO,
@@ -365,7 +362,7 @@ static void check_elf_stack_size(launchpad_t* lp, elf_load_info_t* elf) {
 }
 
 zx_status_t launchpad_elf_load_basic(launchpad_t* lp, zx_handle_t vmo) {
-    if (INVALID_HANDLE(vmo))
+    if (vmo == ZX_HANDLE_INVALID)
         return lp_error(lp, ZX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
     if (lp->error)
         goto done;
@@ -396,7 +393,7 @@ zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo,
                                      zx_vaddr_t* base, zx_vaddr_t* entry) {
     if (lp->error)
         return lp->error;
-    if (INVALID_HANDLE(vmo))
+    if (vmo == ZX_HANDLE_INVALID)
         return lp_error(lp, ZX_ERR_INVALID_ARGS, "elf_load_extra: invalid vmo");
 
     elf_load_info_t* elf;
@@ -657,7 +654,7 @@ static zx_status_t parse_interp_spec(char *line, char **interp_start,
 }
 
 zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
-    if (INVALID_HANDLE(vmo))
+    if (vmo == ZX_HANDLE_INVALID)
         return lp_error(lp, ZX_ERR_INVALID_ARGS, "file_load: invalid vmo");
 
     if (lp->script_args != NULL) {
@@ -762,7 +759,7 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
 }
 
 zx_status_t launchpad_elf_load(launchpad_t* lp, zx_handle_t vmo) {
-    if (INVALID_HANDLE(vmo))
+    if (vmo == ZX_HANDLE_INVALID)
         return lp_error(lp, ZX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
 
     return launchpad_elf_load_body(lp, NULL, 0, vmo);
