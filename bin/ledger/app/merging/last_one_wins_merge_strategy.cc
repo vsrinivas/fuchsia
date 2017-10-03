@@ -134,6 +134,10 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
       if (!weak_this) {
         return;
       }
+      if (weak_this->cancelled_) {
+        weak_this->Done(Status::INTERNAL_ERROR);
+        return;
+      }
       if (s != storage::Status::OK) {
         FXL_LOG(ERROR) << "Error while merging commits: " << s;
         weak_this->Done(PageUtils::ConvertStatus(s));

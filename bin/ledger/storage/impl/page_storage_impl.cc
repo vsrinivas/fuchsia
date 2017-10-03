@@ -232,6 +232,8 @@ void PageStorageImpl::StartMergeCommit(
 void PageStorageImpl::CommitJournal(
     std::unique_ptr<Journal> journal,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+  FXL_DCHECK(journal);
+
   auto managed_journal = managed_container_.Manage(std::move(journal));
   JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
 
@@ -253,6 +255,8 @@ void PageStorageImpl::CommitJournal(
 
 void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
                                       std::function<void(Status)> callback) {
+  FXL_DCHECK(journal);
+
   auto managed_journal = managed_container_.Manage(std::move(journal));
   JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
 

@@ -213,6 +213,9 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
           callback(Status::INTERNAL_ERROR);
           return;
         }
+        if (!weak_this->IsInValidStateAndNotify(callback)) {
+          return;
+        }
         auto waiter =
             callback::Waiter<storage::Status, storage::ObjectDigest>::Create(
                 storage::Status::OK);
@@ -228,19 +231,7 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
             callback(Status::INTERNAL_ERROR);
             return;
           }
-          if (weak_this->cancelled_ || status != storage::Status::OK) {
-            Status ledger_status =
-                weak_this->cancelled_
-                    ? Status::INTERNAL_ERROR
-                    // The only not found error that can occur is a key not
-                    // found when processing a MergedValue with
-                    // ValueSource::RIGHT.
-                    : PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND);
-            // An eventual error was logged before, no need to do it again here.
-            callback(ledger_status);
-            // Finalize destroys this object; we need to do it after executing
-            // the callback.
-            weak_this->Finalize(ledger_status);
+          if (!weak_this->IsInValidStateAndNotify(callback, status)) {
             return;
           }
 
@@ -283,6 +274,26 @@ void ConflictResolverClient::Done(const DoneCallback& callback) {
             callback(ledger_status);
             Finalize(ledger_status);
           }));
+}
+
+bool ConflictResolverClient::IsInValidStateAndNotify(
+    const MergeCallback& callback,
+    storage::Status status) {
+  if (!cancelled_ && status == storage::Status::OK) {
+    return true;
+  }
+  Status ledger_status =
+      cancelled_ ? Status::INTERNAL_ERROR
+                 // The only not found error that can occur is a key not
+                 // found when processing a MergedValue with
+                 // ValueSource::RIGHT.
+                 : PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND);
+  // An eventual error was logged before, no need to do it again here.
+  callback(ledger_status);
+  // Finalize destroys this object; we need to do it after executing
+  // the callback.
+  Finalize(ledger_status);
+  return false;
 }
 
 }  // namespace ledger

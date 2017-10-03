@@ -142,11 +142,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
     weak_this = weak_factory_.GetWeakPtr(), index = index.get(),
     right_change = right_change.get()
   ](storage::EntryChange change) {
-    if (!weak_this) {
-      return false;
-    }
-
-    if (weak_this->cancelled_) {
+    if (!weak_this || weak_this->cancelled_) {
       return false;
     }
 
@@ -245,6 +241,10 @@ void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
     weak_this = weak_factory_.GetWeakPtr(), journal = std::move(journal)
   ](storage::Status s) mutable {
     if (!weak_this) {
+      return;
+    }
+    if (weak_this->cancelled_) {
+      weak_this->Done(Status::INTERNAL_ERROR);
       return;
     }
     if (s != storage::Status::OK) {

@@ -58,6 +58,12 @@ class ConflictResolverClient : public MergeResultProvider {
              const MergeCallback& callback) override;
   void Done(const DoneCallback& callback) override;
 
+  // Checks whether this ConflictResolverClient is not cancelled and the storage
+  // returned status is ok. If not, calls the given |callback| and |Finalize|
+  // with an error status.
+  bool IsInValidStateAndNotify(const MergeCallback& callback,
+                               storage::Status status = storage::Status::OK);
+
   storage::PageStorage* const storage_;
   PageManager* const manager_;
   ConflictResolver* const conflict_resolver_;
