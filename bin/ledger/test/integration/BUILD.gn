@@ -38,6 +38,7 @@ executable("integration") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/test:ledger_instance_factory",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/test/cloud_provider",
     "//peridot/bin/ledger/test/cloud_server",
     "//peridot/bin/ledger/test/integration/sync",
     "//peridot/public/lib/auth/fidl",
