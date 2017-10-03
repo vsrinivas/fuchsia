@@ -445,7 +445,6 @@ void Blobstore::FreeNode(size_t node_index) {
 }
 
 zx_status_t Blobstore::Unmount() {
-    close(blockfd_);
     // Explicitly delete this (rather than just letting the memory release when
     // the process exits) to ensure that the block device's fifo has been
     // closed.
@@ -728,9 +727,10 @@ Blobstore::Blobstore(int fd, const blobstore_info_t* info)
 Blobstore::~Blobstore() {
     if (fifo_client_ != nullptr) {
         ioctl_block_free_txn(blockfd_, &txnid_);
-        block_fifo_release_client(fifo_client_);
         ioctl_block_fifo_close(blockfd_);
+        block_fifo_release_client(fifo_client_);
     }
+    close(blockfd_);
 }
 
 zx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, fbl::RefPtr<Blobstore>* out) {

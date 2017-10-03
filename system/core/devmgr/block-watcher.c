@@ -137,6 +137,14 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         return ZX_OK;
     }
     case DISK_FORMAT_BLOBFS: {
+        uint8_t guid[GPT_GUID_LEN];
+        const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
+
+        if (ioctl_block_get_type_guid(fd, guid, sizeof(guid)) < 0 ||
+            memcmp(guid, expected_guid, sizeof(guid))) {
+            close(fd);
+            return ZX_OK;
+        }
         if (!blobstore_mounted) {
             mount_options_t options = default_mount_options;
             options.create_mountpoint = true;
