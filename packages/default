@@ -18,6 +18,7 @@
         "garnet/packages/icu",
         "garnet/packages/image-pipe-swapchain",
         "garnet/packages/insntrace",
+        "garnet/packages/iperf",
         "garnet/packages/listen",
         "garnet/packages/media_audio",
         "garnet/packages/media_examples",
