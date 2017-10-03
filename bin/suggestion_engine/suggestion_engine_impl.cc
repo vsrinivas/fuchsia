@@ -193,10 +193,21 @@ void SuggestionEngineImpl::DispatchAskInternal(UserInputPtr input) {
             fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
                 fxl::MakeCopyable([
                   this, has_media_response,
+                  natural_language_response =
+                      response->natural_language_response,
                   media_response = std::move(response->media_response)
                 ]() mutable {
                   // make sure we're still the active query
                   if (has_media_response) {
+                    // TODO(rosswang): allow falling back on this without a
+                    // spoken response (will be easier once we factor out a
+                    // class for Ask flows, but it remains to be seen whether
+                    // that still makes sense after the Ask refactor; it
+                    // probably will though)
+                    speech_listeners_.ForAllPtrs([=](SpeechListener* listener) {
+                      listener->OnTextResponse(natural_language_response);
+                    });
+
                     PlayMediaResponse(std::move(media_response));
                   }
                 }),
@@ -209,6 +220,12 @@ void SuggestionEngineImpl::DispatchAskInternal(UserInputPtr input) {
           (*remainingHandlers)--;
           if ((*remainingHandlers) == 0) {
             debug_.OnAskStart(query, ask_suggestions_);
+            if (has_media_response && !*has_media_response) {
+              // there was no media response for this query
+              speech_listeners_.ForAllPtrs([=](SpeechListener* listener) {
+                listener->OnStatusChanged(SpeechStatus::IDLE);
+              });
+            }
           }
         });
   }
@@ -224,11 +241,26 @@ void SuggestionEngineImpl::BeginSpeechCapture() {
     media_service_->CreateAudioCapturer(media_capturer.NewRequest());
     speech_to_text_->BeginCapture(std::move(media_capturer),
                                   transcription_listener_binding_.NewBinding());
+    transcription_listener_binding_.set_connection_error_handler([=] {
+      speech_listeners_.ForAllPtrs([=](SpeechListener* listener) {
+        // TODO(rosswang): handle the edge case where the voice input outlives
+        // the response flow
+        listener->OnStatusChanged(SpeechStatus::PROCESSING);
+      });
+    });
+
+    speech_listeners_.ForAllPtrs([](SpeechListener* listener) {
+      listener->OnStatusChanged(SpeechStatus::LISTENING);
+    });
   }
 }
 
 // |TranscriptionListener|
 void SuggestionEngineImpl::OnTranscriptUpdate(const fidl::String& spoken_text) {
+  speech_listeners_.ForAllPtrs([=](SpeechListener* listener) {
+    listener->OnTextRecognized(spoken_text);
+  });
+
   auto input = UserInput::New();
   input->set_text(spoken_text);
   DispatchAskInternal(std::move(input));
@@ -495,6 +527,11 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
             media::MediaPacketConsumerPtr::Create(std::move(consumer)), [this] {
               time_lord_.reset();
               media_timeline_consumer_.reset();
+
+              speech_listeners_.ForAllPtrs([=](SpeechListener* listener) {
+                listener->OnStatusChanged(SpeechStatus::RESPONDING);
+              });
+
               media_sink_->GetTimelineControlPoint(time_lord_.NewRequest());
               time_lord_->GetTimelineConsumer(
                   media_timeline_consumer_.NewRequest());
@@ -519,6 +556,9 @@ void SuggestionEngineImpl::HandleMediaUpdates(
     uint64_t version,
     media::MediaTimelineControlPointStatusPtr status) {
   if (status && status->end_of_stream) {
+    speech_listeners_.ForAllPtrs([=](SpeechListener* listener) {
+      listener->OnStatusChanged(SpeechStatus::IDLE);
+    });
     media_packet_producer_ = nullptr;
     media_sink_ = nullptr;
   } else {
