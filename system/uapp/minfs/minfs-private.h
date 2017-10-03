@@ -33,7 +33,27 @@
         __builtin_trap();     \
     } while (0)
 
+// A compile-time debug check, which, if enabled, causes
+// inline functions to be expanded to error checking code.
+// Since this may be expensive, it is typically turned
+// off, except for debugging.
+// #define MINFS_PARANOID_MODE
+
 namespace minfs {
+
+#ifdef __Fuchsia__
+// Validate that |vmo| is large enough to access block |blk|,
+// relative to the start of the vmo.
+inline void validate_vmo_size(zx_handle_t vmo, blk_t blk) {
+#ifdef MINFS_PARANOID_MODE
+    uint64_t size;
+    size_t min = (blk + 1) * kMinfsBlockSize;
+    ZX_ASSERT(zx_vmo_get_size(vmo, &size) == ZX_OK);
+    ZX_ASSERT_MSG(size >= min, "VMO size %lu too small for access at block %lu\n",
+                  size, blk);
+#endif // MINFS_PARANOID_MODE
+}
+#endif // __Fuchsia__
 
 extern fs::Vfs vfs;
 

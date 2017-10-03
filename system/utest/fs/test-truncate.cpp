@@ -223,11 +223,17 @@ bool test_truncate_large(void) {
     END_TEST;
 }
 
+enum SparseTestType {
+    UnlinkThenClose,
+    CloseThenUnlink,
+};
+
 // This test catches a particular regression in MinFS truncation, where,
 // if a block is cut in half for truncation, it is read, filled with
 // zeroes, and writen back out to disk.
 //
 // This test tries to proke at a variety of offsets of interest.
+template <SparseTestType Test>
 bool test_truncate_partial_block_sparse(void) {
     BEGIN_TEST;
 
@@ -266,8 +272,13 @@ bool test_truncate_partial_block_sparse(void) {
         ASSERT_EQ(ftruncate(fd, write_off + kBlockSize + kBlockSize / 2), 0);
         ASSERT_EQ(ftruncate(fd, write_off + kBlockSize / 2), 0);
         ASSERT_EQ(ftruncate(fd, write_off - kBlockSize / 2), 0);
-        ASSERT_EQ(unlink("::truncate-sparse"), 0);
-        ASSERT_EQ(close(fd), 0);
+        if (Test == UnlinkThenClose) {
+            ASSERT_EQ(unlink("::truncate-sparse"), 0);
+            ASSERT_EQ(close(fd), 0);
+        } else {
+            ASSERT_EQ(close(fd), 0);
+            ASSERT_EQ(unlink("::truncate-sparse"), 0);
+        }
     }
 
     END_TEST;
@@ -302,6 +313,7 @@ RUN_FOR_ALL_FILESYSTEMS(truncate_tests,
     RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, KeepOpen>))
     RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, Reopen>))
     RUN_TEST_LARGE((test_truncate_large<1 << 25, 50, Remount>))
-    RUN_TEST_MEDIUM(test_truncate_partial_block_sparse)
+    RUN_TEST_MEDIUM((test_truncate_partial_block_sparse<UnlinkThenClose>))
+    RUN_TEST_MEDIUM((test_truncate_partial_block_sparse<CloseThenUnlink>))
     RUN_TEST_MEDIUM(test_truncate_errno)
 )

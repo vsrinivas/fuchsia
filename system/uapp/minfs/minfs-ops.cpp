@@ -122,6 +122,7 @@ zx_status_t VnodeMinfs::BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, siz
         // only update the indirect block if an entry was deleted
         if (*dirty) {
 #ifdef __Fuchsia__
+            validate_vmo_size(vmo_indirect_->GetVmo(), ib_vmo_offset + i);
             txn->Enqueue(vmoid_indirect_, ib_vmo_offset + i, iarray[i] + fs_->info_.dat_block, 1);
 #else
             fs_->bc_->Writeblk(iarray[i] + fs_->info_.dat_block, entry);
@@ -176,6 +177,7 @@ zx_status_t VnodeMinfs::BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibind
         // only update the indirect block if an entry was deleted
         if (*dirty) {
 #ifdef __Fuchsia__
+            validate_vmo_size(vmo_indirect_->GetVmo(), dib_vmo_offset + i);
             txn->Enqueue(vmoid_indirect_, dib_vmo_offset + i, diarray[i] + fs_->info_.dat_block, 1);
 #else
             fs_->bc_->Writeblk(diarray[i] + fs_->info_.dat_block, dientry);
@@ -294,9 +296,16 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
 
 zx_status_t VnodeMinfs::LoadIndirectWithinDoublyIndirect(uint32_t dindex) {
     uint32_t* dientry;
+
+    size_t size = GetVmoSizeForIndirect(dindex);
+    if (vmo_indirect_->GetSize() >= size) {
+        // We've already loaded this indirect (within dind) block.
+        return ZX_OK;
+    }
+
     ReadIndirectVmoBlock(GetVmoOffsetForDoublyIndirect(dindex), &dientry);
-    return LoadIndirectBlocks(dientry, kMinfsDirectPerIndirect, GetVmoOffsetForIndirect(dindex),
-                              GetVmoSizeForIndirect(dindex));
+    return LoadIndirectBlocks(dientry, kMinfsDirectPerIndirect,
+                              GetVmoOffsetForIndirect(dindex), size);
 }
 
 zx_status_t VnodeMinfs::InitIndirectVmo() {
@@ -582,12 +591,14 @@ zx_status_t VnodeMinfs::GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, ui
 void VnodeMinfs::ReadIndirectVmoBlock(uint32_t offset, uint32_t** entry) {
     ZX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
     uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
+    validate_vmo_size(vmo_indirect_->GetVmo(), offset);
     *entry = reinterpret_cast<uint32_t*>(addr + kMinfsBlockSize * offset);
 }
 
 void VnodeMinfs::ClearIndirectVmoBlock(uint32_t offset) {
     ZX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
     uintptr_t addr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
+    validate_vmo_size(vmo_indirect_->GetVmo(), offset);
     memset(reinterpret_cast<void*>(addr + kMinfsBlockSize * offset), 0, kMinfsBlockSize);
 }
 #else
