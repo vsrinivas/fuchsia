@@ -624,10 +624,12 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     // Allocate tx transaction buffers
     uint16_t tx_buf_sz = ecm_ctx->mtu;
+#if MAX_TX_BUF_SZ < UINT16_MAX
     if (tx_buf_sz > MAX_TX_BUF_SZ) {
         printf("%s: insufficient space for even a single tx buffer\n", module_name);
         goto fail;
     }
+#endif
     size_t tx_buf_remain = MAX_TX_BUF_SZ;
     while (tx_buf_remain >= tx_buf_sz) {
         usb_request_t* tx_buf;
@@ -646,10 +648,12 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     // Allocate rx transaction buffers
     uint16_t rx_buf_sz = ecm_ctx->mtu;
+#if MAX_TX_BUF_SZ < UINT16_MAX
     if (rx_buf_sz > MAX_RX_BUF_SZ) {
         printf("%s: insufficient space for even a single rx buffer\n", module_name);
         goto fail;
     }
+#endif
     size_t rx_buf_remain = MAX_RX_BUF_SZ;
     while (rx_buf_remain >= rx_buf_sz) {
         usb_request_t* rx_buf;
