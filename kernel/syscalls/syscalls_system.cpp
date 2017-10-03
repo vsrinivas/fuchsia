@@ -28,7 +28,7 @@
 
 // Allocate this many extra bytes at the end of the bootdata for the platform
 // to fill in with platform specific boot structures.
-const size_t kBootdataPlatformExtraBytes = PAGE_SIZE;
+const size_t kBootdataPlatformExtraBytes = PAGE_SIZE * 4;
 
 __BEGIN_CDECLS
 extern void mexec_asm(void);

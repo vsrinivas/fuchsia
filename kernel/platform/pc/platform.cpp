@@ -560,48 +560,73 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
 
     zx_status_t ret = enumerate_e820(e820_entry_walk, &ctx);
 
-    if (ret != ZX_OK)
+    if (ret != ZX_OK) {
+        printf("mexec: enumerate_e820 failed. Retcode = %d\n", ret);
         return ret;
+    }
 
-    if (ctx.ret != ZX_OK)
+    if (ctx.ret != ZX_OK) {
+        printf("mexec: error while enumerating e820 map. Retcode = %d\n",
+               ctx.ret);
         return ctx.ret;
+    }
 
     uint32_t section_length = (uint32_t)(sizeof(e820buf) - ctx.len);
 
     ret = bootdata_append_section(bootdata, len, e820buf, section_length,
                                   BOOTDATA_E820_TABLE, 0, 0);
 
-    if (ret != ZX_OK)
+    if (ret != ZX_OK) {
+        printf("mexec: Failed to append e820 map to bootdata. len = %lu, "
+               "section length = %u, retcode = %d\n", len, section_length,
+               ret);
         return ret;
+    }
 
     // Append information about the framebuffer to the bootdata
     if (bootloader.fb.base) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.fb,
                                       sizeof(bootloader.fb), BOOTDATA_FRAMEBUFFER, 0, 0);
-        if (ret != ZX_OK)
+        if (ret != ZX_OK) {
+            printf("mexec: Failed to append framebuffer data to bootdata. len = %lu, "
+                   "section length = %lu, retcode = %d\n", len,
+                   sizeof(bootloader.fb), ret);
             return ret;
+        }
     }
 
     if (bootloader.efi_system_table) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.efi_system_table,
                                       sizeof(bootloader.efi_system_table),
                                       BOOTDATA_EFI_SYSTEM_TABLE, 0, 0);
-        if (ret != ZX_OK)
+        if (ret != ZX_OK) {
+            printf("mexec: Failed to append efi sys table data to bootdata. len = %lu, "
+                   "section length = %lu, retcode = %d\n", len,
+                   sizeof(bootloader.efi_system_table), ret);
             return ret;
+        }
     }
 
     if (bootloader.acpi_rsdp) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.acpi_rsdp,
                                       sizeof(bootloader.acpi_rsdp), BOOTDATA_ACPI_RSDP, 0, 0);
-        if (ret != ZX_OK)
+        if (ret != ZX_OK) {
+            printf("mexec: Failed to append acpi rsdp data to bootdata. len = %lu, "
+                   "section length = %lu, retcode = %d\n", len,
+                   sizeof(bootloader.acpi_rsdp), ret);
             return ret;
+        }
     }
 
     if (bootloader.uart.type != BOOTDATA_UART_NONE) {
         ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.uart,
                                       sizeof(bootloader.uart), BOOTDATA_DEBUG_UART, 0, 0);
-        if (ret != ZX_OK)
+        if (ret != ZX_OK) {
+            printf("mexec: Failed to append uart data to bootdata. len = %lu, "
+                   "section length = %lu, retcode = %d\n", len,
+                   sizeof(bootloader.uart), ret);
             return ret;
+        }
     }
 
     return ZX_OK;
