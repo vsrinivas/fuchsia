@@ -125,7 +125,6 @@ static void high_handle_count(size_t count) {
 }
 
 Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
-    uint32_t* handle_count = nullptr;
     void* addr;
     uint32_t base_value;
 
@@ -142,24 +141,17 @@ Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
         if (outstanding_handles > kHighHandleCount)
             high_handle_count(outstanding_handles);
 
-        handle_count = dispatcher->get_handle_count_ptr();
+        uint32_t* handle_count = dispatcher->get_handle_count_ptr();
         (*handle_count)++;
-        if (*handle_count != 2u)
-            handle_count = nullptr;
 
         base_value = GetNewHandleBaseValue(addr);
     }
 
-    auto state_tracker = dispatcher->get_state_tracker();
-    if (state_tracker != nullptr)
-        state_tracker->UpdateLastHandleSignal(handle_count);
-
     return new (addr) Handle(fbl::move(dispatcher), rights, base_value);
 }
 
-Handle* DupHandle(Handle* source, zx_rights_t rights, bool is_replace) {
+Handle* DupHandle(Handle* source, zx_rights_t rights) {
     fbl::RefPtr<Dispatcher> dispatcher(source->dispatcher());
-    uint32_t* handle_count;
     void* addr;
     uint32_t base_value;
 
@@ -176,17 +168,11 @@ Handle* DupHandle(Handle* source, zx_rights_t rights, bool is_replace) {
         if (outstanding_handles > kHighHandleCount)
             high_handle_count(outstanding_handles);
 
-        handle_count = dispatcher->get_handle_count_ptr();
+        uint32_t* handle_count = dispatcher->get_handle_count_ptr();
         (*handle_count)++;
-        if (*handle_count != 2u)
-            handle_count = nullptr;
 
         base_value = GetNewHandleBaseValue(addr);
     }
-
-    auto state_tracker = dispatcher->get_state_tracker();
-    if (!is_replace && (state_tracker != nullptr))
-        state_tracker->UpdateLastHandleSignal(handle_count);
 
     return new (addr) Handle(source, rights, base_value);
 }
@@ -205,16 +191,13 @@ void DeleteHandle(Handle* handle) {
     internal::TearDownHandle(handle);
 
     bool zero_handles = false;
-    uint32_t* handle_count;
     {
         AutoLock lock(&handle_mutex);
 
-        handle_count = dispatcher->get_handle_count_ptr();
+        uint32_t* handle_count = dispatcher->get_handle_count_ptr();
         (*handle_count)--;
         if (*handle_count == 0u)
             zero_handles = true;
-        else if (*handle_count != 1u)
-            handle_count = nullptr;
 
         handle_arena.Free(handle);
     }
@@ -223,9 +206,6 @@ void DeleteHandle(Handle* handle) {
         dispatcher->on_zero_handles();
         return;
     }
-
-    if (state_tracker)
-        state_tracker->UpdateLastHandleSignal(handle_count);
 
     // If |dispatcher| is the last reference then the dispatcher object
     // gets destroyed here.

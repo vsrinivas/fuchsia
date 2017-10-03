@@ -54,7 +54,7 @@ static zx_status_t handle_dup_replace(
             return ZX_ERR_INVALID_ARGS;
         }
 
-        HandleOwner dest(DupHandle(source, rights, is_replace));
+        HandleOwner dest(DupHandle(source, rights));
         if (!dest)
             return ZX_ERR_NO_MEMORY;
 

@@ -91,8 +91,8 @@ static bool channel_test(void) {
     status = zx_channel_create(0, &h[0], &h[1]);
     ASSERT_EQ(status, ZX_OK, "error in channel create");
 
-    ASSERT_EQ(get_satisfied_signals(h[0]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(get_satisfied_signals(h[1]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[0]), ZX_CHANNEL_WRITABLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[1]), ZX_CHANNEL_WRITABLE, "");
 
     _channel[0] = h[0];
     _channel[2] = h[1];
@@ -101,9 +101,9 @@ static bool channel_test(void) {
     status = zx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
     ASSERT_EQ(status, ZX_OK, "error in message write");
     ASSERT_EQ(get_satisfied_signals(
-        _channel[0]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
+        _channel[0]), ZX_CHANNEL_WRITABLE, "");
     ASSERT_EQ(get_satisfied_signals(
-        _channel[2]), ZX_CHANNEL_READABLE | ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
+        _channel[2]), ZX_CHANNEL_READABLE | ZX_CHANNEL_WRITABLE, "");
 
     status = zx_channel_create(0, &h[0], &h[1]);
     ASSERT_EQ(status, ZX_OK, "error in channel create");
@@ -142,7 +142,7 @@ static bool channel_test(void) {
     // Since the the other side of _channel[3] is closed, and the read thread read everything
     // from it, the only satisfied/satisfiable signals should be "peer closed".
     ASSERT_EQ(get_satisfied_signals(
-        _channel[3]), ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE, "");
+        _channel[3]), ZX_CHANNEL_PEER_CLOSED, "");
 
     zx_handle_close(_channel[2]);
     zx_handle_close(_channel[3]);
@@ -190,7 +190,7 @@ static bool channel_close_test(void) {
     ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
     ASSERT_EQ(get_satisfied_signals(
-        channel[0]), ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE, "");
+        channel[0]), ZX_CHANNEL_PEER_CLOSED, "");
     ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
 
     ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
@@ -213,14 +213,14 @@ static bool channel_close_test(void) {
     ASSERT_EQ(zx_object_wait_one(
         channel1[1], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
     ASSERT_EQ(get_satisfied_signals(
-        channel2[1]), ZX_CHANNEL_WRITABLE | ZX_SIGNAL_LAST_HANDLE, "");
+        channel2[1]), ZX_CHANNEL_WRITABLE, "");
 
     // Close channel[0]; the former channel2[0] should be closed, so channel2[1]
     // should have peer closed.
     ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
     channel[0] = ZX_HANDLE_INVALID;
     ASSERT_EQ(get_satisfied_signals(
-        channel1[1]), ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE, "");
+        channel1[1]), ZX_CHANNEL_PEER_CLOSED, "");
     ASSERT_EQ(zx_object_wait_one(
         channel2[1], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 

@@ -124,39 +124,6 @@ void StateTracker::UpdateState(zx_signals_t clear_mask,
         thread_reschedule();
 }
 
-void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
-    canary_.Assert();
-
-    if (count == nullptr)
-        return;
-
-    StateObserver::Flags flags = 0;
-    ObserverList obs_to_remove;
-
-    {
-        AutoLock lock(&lock_);
-
-        auto previous_signals = signals_;
-
-        // We assume here that the value pointed by |count| can mutate by
-        // other threads.
-        signals_ = (*count == 1u) ?
-            signals_ | ZX_SIGNAL_LAST_HANDLE : signals_ & ~ZX_SIGNAL_LAST_HANDLE;
-
-        if (previous_signals == signals_)
-            return;
-
-        flags = UpdateInternalLocked(&obs_to_remove, signals_);
-    }
-
-    while (!obs_to_remove.is_empty()) {
-        obs_to_remove.pop_front()->OnRemoved();
-    }
-
-    if (flags & StateObserver::kWokeThreads)
-        thread_reschedule();
-}
-
 zx_status_t StateTracker::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;

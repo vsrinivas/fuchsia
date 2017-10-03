@@ -80,7 +80,7 @@ typedef uint32_t zx_signals_t;
 #define __ZX_OBJECT_SIGNAL_19       ((zx_signals_t)1u << 19)
 #define __ZX_OBJECT_SIGNAL_20       ((zx_signals_t)1u << 20)
 #define __ZX_OBJECT_SIGNAL_21       ((zx_signals_t)1u << 21)
-#define __ZX_OBJECT_LAST_HANDLE     ((zx_signals_t)1u << 22)
+#define __ZX_OBJECT_SIGNAL_22       ((zx_signals_t)1u << 22)
 #define __ZX_OBJECT_HANDLE_CLOSED   ((zx_signals_t)1u << 23)
 
 
@@ -97,9 +97,6 @@ typedef uint32_t zx_signals_t;
 
 // Cancelation (handle was closed while waiting with it)
 #define ZX_SIGNAL_HANDLE_CLOSED     __ZX_OBJECT_HANDLE_CLOSED
-
-// Only one user-more reference (handle) to the object exists.
-#define ZX_SIGNAL_LAST_HANDLE       __ZX_OBJECT_LAST_HANDLE
 
 // Event
 #define ZX_EVENT_SIGNALED           __ZX_OBJECT_SIGNALED

@@ -36,8 +36,8 @@ static bool basic_test(void) {
 
     // simple 8 x 8 fifo
     EXPECT_EQ(zx_fifo_create(8, 8, 0, &a, &b), ZX_OK, "");
-    EXPECT_SIGNALS(a, ZX_FIFO_WRITABLE | ZX_SIGNAL_LAST_HANDLE);
-    EXPECT_SIGNALS(b, ZX_FIFO_WRITABLE | ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_SIGNALS(a, ZX_FIFO_WRITABLE);
+    EXPECT_SIGNALS(b, ZX_FIFO_WRITABLE);
 
     // should not be able to read any entries from an empty fifo
     uint32_t actual;
@@ -46,11 +46,11 @@ static bool basic_test(void) {
     // should be able to write all entries into empty fifo
     ASSERT_EQ(zx_fifo_write(a, n, sizeof(n), &actual), ZX_OK, "");
     ASSERT_EQ(actual, 8u, "");
-    EXPECT_SIGNALS(b, ZX_FIFO_READABLE | ZX_FIFO_WRITABLE | ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_SIGNALS(b, ZX_FIFO_READABLE | ZX_FIFO_WRITABLE);
 
     // should be able to write no entries into a full fifo
     ASSERT_EQ(zx_fifo_write(a, n, sizeof(n), &actual), ZX_ERR_SHOULD_WAIT, "");
-    EXPECT_SIGNALS(a, ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_SIGNALS(a, 0u);
 
     // read half the entries, make sure they're what we expect
     memset(n, 0, sizeof(n));
@@ -62,7 +62,7 @@ static bool basic_test(void) {
     ASSERT_EQ(n[3], 4u, "");
 
     // should be writable again now
-    EXPECT_SIGNALS(a, ZX_FIFO_WRITABLE | ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_SIGNALS(a, ZX_FIFO_WRITABLE);
 
     // write some more, wrapping to the front again
     n[0] = 9u;
@@ -81,7 +81,7 @@ static bool basic_test(void) {
     ASSERT_EQ(n[5], 10u, "");
 
     // should no longer be readable
-    EXPECT_SIGNALS(b, ZX_FIFO_WRITABLE | ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_SIGNALS(b, ZX_FIFO_WRITABLE);
 
     // write across the wrap
     n[0] = 11u; n[1] = 12u; n[2] = 13u; n[3] = 14u; n[4] = 15u;
@@ -101,7 +101,7 @@ static bool basic_test(void) {
     }
 
     zx_handle_close(b);
-    EXPECT_SIGNALS(a, ZX_FIFO_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_SIGNALS(a, ZX_FIFO_PEER_CLOSED);
 
     zx_handle_close(a);
 

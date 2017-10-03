@@ -18,15 +18,13 @@ class Handle;
 // specific arena which makes their addresses come from a fixed range.
 Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights);
 
-// Duplicate a handle created by MakeHandle(). If |is_replace| is true
-// then the logic to triger ZX_SIGNAL_LAST_HANDLE is not executed.
-Handle* DupHandle(Handle* source, zx_rights_t rights, bool is_replace);
+// Duplicate a handle created by MakeHandle().
+Handle* DupHandle(Handle* source, zx_rights_t rights);
 
 // Get the number of outstanding handles for a given dispatcher.
 uint32_t GetHandleCount(const fbl::RefPtr<Dispatcher>& dispatcher);
 
-// Deletes a handle created by MakeHandle() or DupHandle(). This might
-// trigger ZX_SIGNAL_LAST_HANDLE.
+// Deletes a handle created by MakeHandle() or DupHandle().
 void DeleteHandle(Handle* handle);
 
 // Maps an integer obtained by Handle->base_value() back to a Handle.

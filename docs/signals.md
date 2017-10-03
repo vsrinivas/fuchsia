@@ -37,17 +37,6 @@ The syscalls **zx_object_wait_one**(), **zx_object_wait_many**(), and **zx_objec
 
 ## Common Signals
 
-### ZX_SIGNAL_LAST_HANDLE
-
-This signal is asserted when there is only a single handle referencing the object.  Thus it
-is always active on newly created objects.
-
-This signal is deasserted when there are more than one handles referencing the object, for
-example, if the initial handle were duplicated.  The process observing this event is, at
-the moment of observation, the last handle holder. This signal can be used to reap local
-resources associated with an object whose handle was duplicated and shared with another
-process.
-
 ### ZX_SIGNAL_HANDLE_CLOSED
 
 This synthetic signal only exists in the results of [object_wait_one](syscalls/object_wait_one.md)
@@ -72,4 +61,3 @@ the object signal syscalls.
 [object_wait_async](syscalls/object_wait_async.md),
 [object_wait_many](syscalls/object_wait_many.md),
 [object_wait_one](syscalls/object_wait_one.md).
-

@@ -26,7 +26,7 @@ public:
 
 class StateTracker {
 public:
-    StateTracker(zx_signals_t signals = 0u) : signals_(signals | ZX_SIGNAL_LAST_HANDLE) { }
+    StateTracker(zx_signals_t signals = 0u) : signals_(signals) { }
 
     StateTracker(const StateTracker& o) = delete;
     StateTracker& operator=(const StateTracker& o) = delete;
@@ -48,10 +48,6 @@ public:
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
     void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
-
-    // Nofity others with ZX_SIGNAL_LAST_HANDLE if the value pointed by |count| is 1. This
-    // value is allowed to mutate by other threads while this call is executing.
-    void UpdateLastHandleSignal(uint32_t* count);
 
     zx_signals_t GetSignalsState() { return signals_; }
 

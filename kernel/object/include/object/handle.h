@@ -62,7 +62,7 @@ private:
     // MakeHandle or DupHandle.
     friend Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher,
                               zx_rights_t rights);
-    friend Handle* DupHandle(Handle* source, zx_rights_t rights, bool is_replace);
+    friend Handle* DupHandle(Handle* source, zx_rights_t rights);
     Handle(const Handle&) = delete;
     Handle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights,
            uint32_t base_value);

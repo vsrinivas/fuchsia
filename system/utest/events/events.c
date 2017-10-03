@@ -179,45 +179,45 @@ static bool wait_signals_test(void) {
 
     status = zx_object_wait_one(events[0], ZX_EVENT_SIGNALED, zx_deadline_after(1u), &pending);
     ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(pending, ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(pending, 0u, "");
 
     status = zx_object_wait_many(items, 3, zx_deadline_after(1));
     ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(items[0].pending, ZX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(items[1].pending, ZX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(items[2].pending, ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(items[0].pending, 0u, "");
+    ASSERT_EQ(items[1].pending, 0u, "");
+    ASSERT_EQ(items[2].pending, 0u, "");
 
     status = zx_object_wait_one(events[0], ZX_EVENT_SIGNALED, 0u, &pending);
     ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(pending, ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(pending, 0u, "");
 
     status = zx_object_wait_many(items, 3, 0);
     ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(items[0].pending, ZX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(items[1].pending, ZX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(items[2].pending, ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(items[0].pending, 0u, "");
+    ASSERT_EQ(items[1].pending, 0u, "");
+    ASSERT_EQ(items[2].pending, 0u, "");
 
     ASSERT_GE(zx_object_signal(events[0], 0u, ZX_EVENT_SIGNALED), 0, "Error during event signal");
 
     status = zx_object_wait_one(events[0], ZX_EVENT_SIGNALED, zx_deadline_after(1u), &pending);
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(pending, ZX_EVENT_SIGNALED | ZX_SIGNAL_LAST_HANDLE, "Error during wait call");
+    ASSERT_EQ(pending, ZX_EVENT_SIGNALED, "Error during wait call");
 
     status = zx_object_wait_many(items, 3, zx_deadline_after(1));
     ASSERT_EQ(status, 0, "wait failed");
     ASSERT_EQ(items[0].pending,
-        ZX_EVENT_SIGNALED | ZX_SIGNAL_LAST_HANDLE, "Error during wait call");
+        ZX_EVENT_SIGNALED, "Error during wait call");
 
     status = zx_object_wait_one(events[0], ZX_EVENT_SIGNALED, 0u, &pending);
     ASSERT_EQ(status, ZX_OK, "wait failed");
-    ASSERT_EQ(pending, ZX_EVENT_SIGNALED | ZX_SIGNAL_LAST_HANDLE, "Error during wait call");
+    ASSERT_EQ(pending, ZX_EVENT_SIGNALED, "Error during wait call");
 
     ASSERT_GE(zx_object_signal(events[0], ZX_EVENT_SIGNALED, 0u), 0, "Error during event reset");
     ASSERT_GE(zx_object_signal(events[2], 0u, ZX_EVENT_SIGNALED), 0, "Error during event signal");
     status = zx_object_wait_many(items, 3, zx_deadline_after(1));
     ASSERT_EQ(status, 0, "wait failed");
     ASSERT_EQ(items[2].pending,
-        ZX_EVENT_SIGNALED | ZX_SIGNAL_LAST_HANDLE, "Error during wait call");
+        ZX_EVENT_SIGNALED, "Error during wait call");
 
     thrd_t thread;
     int ret = thrd_create_with_name(&thread, thread_fn_closer, &events[1], "closer");

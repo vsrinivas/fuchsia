@@ -110,11 +110,11 @@ static bool kill_test(void) {
     zx_signals_t signals;
     ASSERT_EQ(zx_object_wait_one(
         process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, ZX_TASK_TERMINATED | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(signals, ZX_TASK_TERMINATED, "");
 
     ASSERT_EQ(zx_object_wait_one(
         job_child, ZX_JOB_NO_PROCESSES, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
 
     END_TEST;
 }
@@ -137,14 +137,14 @@ static bool wait_test(void) {
     zx_signals_t signals;
     ASSERT_EQ(zx_object_wait_one(
         job_child, ZX_JOB_NO_JOBS, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, ZX_JOB_NO_JOBS | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(signals, ZX_JOB_NO_JOBS, "");
 
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     ASSERT_EQ(zx_task_kill(process), ZX_OK, "");
 
     ASSERT_EQ(zx_object_wait_one(
         job_child, ZX_JOB_NO_PROCESSES, ZX_TIME_INFINITE, &signals), ZX_OK, "");
-    ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
 
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(process), ZX_OK, "");

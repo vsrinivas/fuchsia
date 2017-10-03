@@ -20,7 +20,7 @@ static bool basic_test() {
 
     zx_signals_t pending;
     EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, 0u, &pending), ZX_ERR_TIMED_OUT);
-    EXPECT_EQ(pending, ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_EQ(pending, 0u);
 
     for (int ix = 0; ix != 10; ++ix) {
         const auto deadline_timer = zx_deadline_after(ZX_MSEC(50));
@@ -29,7 +29,7 @@ static bool basic_test() {
         ASSERT_EQ(timer.set(deadline_timer, 0u), ZX_OK);
 
         EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_OK);
-        EXPECT_EQ(pending, ZX_TIMER_SIGNALED | ZX_SIGNAL_LAST_HANDLE);
+        EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
     }
     END_TEST;
 }
@@ -47,7 +47,7 @@ static bool restart_test() {
         ASSERT_EQ(timer.set(deadline_timer, 0u), ZX_OK);
 
         EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, deadline_wait, &pending), ZX_ERR_TIMED_OUT);
-        EXPECT_EQ(pending, ZX_SIGNAL_LAST_HANDLE);
+        EXPECT_EQ(pending, 0u);
     }
     END_TEST;
 }
@@ -106,12 +106,12 @@ static bool signals_asserted_immediately() {
 
         zx_signals_t pending;
         EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, 0u, &pending), ZX_OK);
-        EXPECT_EQ(pending, ZX_TIMER_SIGNALED | ZX_SIGNAL_LAST_HANDLE);
+        EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
 
         EXPECT_EQ(timer.cancel(), ZX_OK);
 
         EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, 0u, &pending), ZX_ERR_TIMED_OUT);
-        EXPECT_EQ(pending, ZX_SIGNAL_LAST_HANDLE);
+        EXPECT_EQ(pending, 0u);
     }
 
     END_TEST;
@@ -146,7 +146,7 @@ static bool coalesce_test(uint32_t mode) {
 
     zx_signals_t pending;
     EXPECT_EQ(timer_2.wait_one(ZX_TIMER_SIGNALED, ZX_TIME_INFINITE, &pending), ZX_OK);
-    EXPECT_EQ(pending, ZX_TIMER_SIGNALED | ZX_SIGNAL_LAST_HANDLE);
+    EXPECT_EQ(pending, ZX_TIMER_SIGNALED);
 
     auto duration = zx_time_get(ZX_CLOCK_MONOTONIC) - start;
 

@@ -39,10 +39,6 @@ private:
 // all of |st|'s observers.
 void call_all_on_hooks(StateTracker* st) {
     st->UpdateState(0, 7);
-    uint32_t count = 5;
-    st->UpdateLastHandleSignal(&count);
-    count = 1;
-    st->UpdateLastHandleSignal(&count);
     st->Cancel(/* handle= */ nullptr);
     st->CancelByKey(/* handle= */ nullptr, /* port= */ nullptr, /* key= */ 2u);
 }
@@ -94,33 +90,6 @@ bool on_state_change_via_update_state(void* context) {
 
     // Cause OnStateChange() to be called.
     st.UpdateState(0, 1);
-
-    // Should have been removed.
-    EXPECT_EQ(1, obs.removals(), "");
-
-    // Further On hook calls should not re-remove.
-    call_all_on_hooks(&st);
-    EXPECT_EQ(1, obs.removals(), "");
-
-    END_TEST;
-}
-
-bool on_state_change_via_last_handle(void* context) {
-    BEGIN_TEST;
-
-    RmOnStateChange obs;
-    EXPECT_EQ(0, obs.removals(), "");
-
-    StateTracker st;
-    st.AddObserver(&obs, nullptr);
-    EXPECT_EQ(0, obs.removals(), ""); // Not removed yet.
-
-    // Cause OnStateChange() to be called. Need to transition out of and
-    // back into ZX_SIGNAL_LAST_HANDLE, because it's asserted by default.
-    uint32_t count = 2;
-    st.UpdateLastHandleSignal(&count);
-    count = 1;
-    st.UpdateLastHandleSignal(&count);
 
     // Should have been removed.
     EXPECT_EQ(1, obs.removals(), "");
@@ -201,7 +170,6 @@ UNITTEST_START_TESTCASE(state_tracker_tests)
 
 ST_UNITTEST(removal::on_initialize)
 ST_UNITTEST(removal::on_state_change_via_update_state)
-ST_UNITTEST(removal::on_state_change_via_last_handle)
 ST_UNITTEST(removal::on_cancel)
 ST_UNITTEST(removal::on_cancel_by_key)
 

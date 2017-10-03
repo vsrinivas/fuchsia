@@ -108,7 +108,7 @@ static bool async_wait_channel_test(void) {
         EXPECT_EQ(out.key, key0);
         EXPECT_EQ(out.type, ZX_PKT_TYPE_SIGNAL_ONE);
         EXPECT_EQ(out.signal.observed,
-            ZX_CHANNEL_WRITABLE | ZX_CHANNEL_READABLE | ZX_SIGNAL_LAST_HANDLE);
+            ZX_CHANNEL_WRITABLE | ZX_CHANNEL_READABLE);
         EXPECT_EQ(out.signal.trigger, ZX_CHANNEL_READABLE);
         EXPECT_EQ(out.signal.count, 1u);
 
@@ -281,7 +281,7 @@ static bool async_wait_event_test_repeat(void) {
         count[0] += (out.signal.observed & ZX_EVENT_SIGNALED) ? 1 : 0;
         count[1] += (out.signal.observed & ZX_USER_SIGNAL_2) ? 1 : 0;
         count[2] += (out.signal.observed &
-            ~(ZX_EVENT_SIGNALED|ZX_USER_SIGNAL_2|ZX_SIGNAL_LAST_HANDLE)) ? 1 : 0;
+            ~(ZX_EVENT_SIGNALED|ZX_USER_SIGNAL_2)) ? 1 : 0;
     }
 
     EXPECT_EQ(count[0], 24u);
@@ -397,7 +397,7 @@ static bool cancel_event(uint32_t wait_mode) {
         wait_count++;
         key_sum += out.key;
         EXPECT_EQ(out.signal.trigger, ZX_EVENT_SIGNALED);
-        EXPECT_EQ(out.signal.observed, ZX_EVENT_SIGNALED | ZX_SIGNAL_LAST_HANDLE);
+        EXPECT_EQ(out.signal.observed, ZX_EVENT_SIGNALED);
     }
 
     if (wait_mode == ZX_WAIT_ASYNC_ONCE) {
@@ -460,7 +460,7 @@ static bool cancel_event_after(uint32_t wait_mode) {
         wait_count++;
         key_sum += out.key;
         EXPECT_EQ(out.signal.trigger, ZX_EVENT_SIGNALED);
-        EXPECT_EQ(out.signal.observed, ZX_EVENT_SIGNALED | ZX_SIGNAL_LAST_HANDLE);
+        EXPECT_EQ(out.signal.observed, ZX_EVENT_SIGNALED);
     }
 
     EXPECT_EQ(wait_count, 1);

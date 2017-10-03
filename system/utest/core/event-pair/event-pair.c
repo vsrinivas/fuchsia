@@ -63,19 +63,19 @@ static bool signal_test(void) {
     ASSERT_NE(h[0], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
     ASSERT_NE(h[1], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
 
-    check_signals_state(h[0], ZX_SIGNAL_LAST_HANDLE);
-    check_signals_state(h[1], ZX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[0], 0u);
+    check_signals_state(h[1], 0u);
 
     EXPECT_EQ(zx_object_signal(h[0], 0u, ZX_USER_SIGNAL_0), ZX_OK, "object_signal failed");
-    check_signals_state(h[1], ZX_SIGNAL_LAST_HANDLE);
-    check_signals_state(h[0], ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[1], 0u);
+    check_signals_state(h[0], ZX_USER_SIGNAL_0);
 
     EXPECT_EQ(zx_object_signal(h[0], ZX_USER_SIGNAL_0, 0u), ZX_OK, "object_signal failed");
-    check_signals_state(h[1], ZX_SIGNAL_LAST_HANDLE);
-    check_signals_state(h[0], ZX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[1], 0u);
+    check_signals_state(h[0], 0u);
 
     EXPECT_EQ(zx_handle_close(h[0]), ZX_OK, "failed to close event pair handle");
-    check_signals_state(h[1], ZX_EPAIR_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[1], ZX_EPAIR_PEER_CLOSED);
     EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");
     END_TEST;
 }
@@ -89,25 +89,25 @@ static bool signal_peer_test(void) {
     ASSERT_NE(h[1], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
 
     EXPECT_EQ(zx_object_signal_peer(h[0], 0u, ZX_USER_SIGNAL_0), ZX_OK, "object_signal failed");
-    check_signals_state(h[0], ZX_SIGNAL_LAST_HANDLE);
-    check_signals_state(h[1], ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[0], 0u);
+    check_signals_state(h[1], ZX_USER_SIGNAL_0);
 
     EXPECT_EQ(zx_object_signal_peer(h[1], 0u, ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2), ZX_OK,
               "object_signal failed");
-    check_signals_state(h[0], ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2 | ZX_SIGNAL_LAST_HANDLE);
-    check_signals_state(h[1], ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[0], ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2);
+    check_signals_state(h[1], ZX_USER_SIGNAL_0);
 
     EXPECT_EQ(zx_object_signal_peer(h[0], ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4),
               ZX_OK, "object_signal failed");
-    check_signals_state(h[0], ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2 | ZX_SIGNAL_LAST_HANDLE);
-    check_signals_state(h[1], ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4 | ZX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[0], ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2);
+    check_signals_state(h[1], ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
 
     EXPECT_EQ(zx_handle_close(h[0]), ZX_OK, "failed to close event pair handle");
 
     // Signaled flags should remain satisfied but now should now also get peer closed (and
     // unsignaled flags should be unsatisfiable).
     check_signals_state(h[1],
-        ZX_EPAIR_PEER_CLOSED | ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4 | ZX_SIGNAL_LAST_HANDLE);
+        ZX_EPAIR_PEER_CLOSED | ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
 
     EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");
 

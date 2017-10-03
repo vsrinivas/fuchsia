@@ -42,7 +42,7 @@ bool cleanup_test(void) {
                                  ZX_TIME_INFINITE, &pending);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
-    ASSERT_EQ(pending, ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_LAST_HANDLE, "cleanup-test: FAILED");
+    ASSERT_EQ(pending, ZX_CHANNEL_PEER_CLOSED, "cleanup-test: FAILED");
     unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
     zx_handle_close(p1[0]);
 
