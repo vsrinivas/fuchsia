@@ -446,6 +446,10 @@ void Blobstore::FreeNode(size_t node_index) {
 
 zx_status_t Blobstore::Unmount() {
     close(blockfd_);
+    // Explicitly delete this (rather than just letting the memory release when
+    // the process exits) to ensure that the block device's fifo has been
+    // closed.
+    delete this;
     // TODO(smklein): To not bind filesystem lifecycle to a process, shut
     // down (closing dispatcher) rather than calling exit.
     exit(0);
@@ -834,7 +838,7 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
     }
 
     if ((status = Blobstore::Create(blockfd, info, out)) != ZX_OK) {
-        fprintf(stderr, "blobstore: mount failed\n");
+        fprintf(stderr, "blobstore: mount failed; could not create blobstore\n");
         return status;
     }
 
@@ -850,7 +854,7 @@ zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd) {
     }
 
     if ((status = fs->GetRootBlob(out)) != ZX_OK) {
-        fprintf(stderr, "blobstore: mount failed\n");
+        fprintf(stderr, "blobstore: mount failed; could not get root blob\n");
         return status;
     }
 

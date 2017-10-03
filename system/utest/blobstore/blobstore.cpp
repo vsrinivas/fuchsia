@@ -1312,13 +1312,13 @@ static bool RootDirectory(void) {
     // Test ioctls which should ONLY operate on Blobs
     ASSERT_LT(ftruncate(dirfd, info->size_data), 0);
 
-    // Should NOT be able to unlink root dir
-    ASSERT_EQ(close(dirfd), 0);
-    ASSERT_LT(unlink(info->path), 0);
-
     char buf[8];
     ASSERT_LT(write(dirfd, buf, 8), 0, "Should not write to directory");
     ASSERT_LT(read(dirfd, buf, 8), 0, "Should not read from directory");
+
+    // Should NOT be able to unlink root dir
+    ASSERT_EQ(close(dirfd), 0);
+    ASSERT_LT(unlink(info->path), 0);
 
     ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
