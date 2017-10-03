@@ -194,10 +194,9 @@ zx_status_t Uart::EmptyTx() {
     while (true) {
         {
             fbl::AutoLock lock(&mutex_);
-            cnd_wait(&tx_cnd_, mutex_.GetInternal());
-
-            if (!tx_offset_)
-                continue;
+            while (tx_offset_ == 0) {
+                cnd_wait(&tx_cnd_, mutex_.GetInternal());
+            }
 
             printf("%.*s", tx_offset_, tx_buffer_);
             tx_offset_ = 0;
