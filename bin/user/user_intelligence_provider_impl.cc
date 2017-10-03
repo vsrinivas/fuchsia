@@ -166,10 +166,10 @@ void UserIntelligenceProviderImpl::StartActionLog(
       app::ConnectToService<maxwell::UserActionLogFactory>(
           action_log_services.get());
   maxwell::ProposalPublisherPtr proposal_publisher;
-  suggestion_engine->RegisterPublisher(url,
-                                       fidl::GetProxy(&proposal_publisher));
+  suggestion_engine->RegisterProposalPublisher(url,
+      fidl::GetProxy(&proposal_publisher));
   action_log_factory->GetUserActionLog(std::move(proposal_publisher),
-                                       fidl::GetProxy(&user_action_log_));
+      fidl::GetProxy(&user_action_log_));
 }
 
 void UserIntelligenceProviderImpl::AddStandardServices(
@@ -195,9 +195,15 @@ void UserIntelligenceProviderImpl::AddStandardServices(
   ](fidl::InterfaceRequest<maxwell::ContextReader> request) {
     context_engine_->GetReader(client_info.Clone(), std::move(request));
   }));
+  agent_host->AddService<maxwell::IntelligenceServices>(fxl::MakeCopyable([
+    this, client_info = agent_info.Clone(), url
+  ](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+    this->GetComponentIntelligenceServices(client_info.Clone(),
+      std::move(request));
+  }));
   agent_host->AddService<maxwell::ProposalPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
-        suggestion_engine_->RegisterPublisher(url, std::move(request));
+        suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
       });
 
   agent_host->AddService<modular::VisibleStoriesProvider>(

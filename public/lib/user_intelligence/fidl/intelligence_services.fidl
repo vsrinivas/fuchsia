@@ -8,9 +8,11 @@ import "lib/action_log/fidl/component.fidl";
 import "lib/context/fidl/context_reader.fidl";
 import "lib/context/fidl/context_writer.fidl";
 import "lib/suggestion/fidl/proposal_publisher.fidl";
+import "lib/suggestion/fidl/query_handler.fidl";
 
 // A container for component-scoped services. This contains any and all
 // services needed by any sort of Module/Agent.
+[ServiceName="maxwell.IntelligenceServices"]
 interface IntelligenceServices {
   // These are just here for illustrative purposes, and are not a complete
   // list.
@@ -19,4 +21,6 @@ interface IntelligenceServices {
 
   GetProposalPublisher(ProposalPublisher& proposal_publisher);
   GetActionLog(ComponentActionLog& action_log);
+
+  RegisterQueryHandler(QueryHandler query_handler);
 };

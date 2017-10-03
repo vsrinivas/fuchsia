@@ -5,6 +5,7 @@
 module maxwell;
 
 import "lib/suggestion/fidl/proposal_publisher.fidl";
+import "lib/suggestion/fidl/query_handler.fidl";
 import "lib/context/fidl/context_writer.fidl";
 import "lib/suggestion/fidl/suggestion_provider.fidl"; // convenience import
 import "lib/story/fidl/story_provider.fidl";
@@ -18,5 +19,8 @@ interface SuggestionEngine {
       ContextWriter context_writer);
 
   // Registers a component that produces suggestions.
-  RegisterPublisher(string url, ProposalPublisher& client);
+  RegisterProposalPublisher(string url, ProposalPublisher& publisher);
+
+  // Registers a component that produces suggestions based on a query.
+  RegisterQueryHandler(string url, QueryHandler query_handler);
 };

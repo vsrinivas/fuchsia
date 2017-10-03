@@ -16,7 +16,6 @@ struct MediaResponse {
   media.MediaType media_type;
   media.MediaPacketProducer media_packet_producer;
 };
-
 struct AskResponse {
   array<Proposal> proposals;
   string? natural_language_response;
@@ -26,10 +25,8 @@ struct AskResponse {
 };
 
 // An interface enabling Agents to contribute Proposals reactively to the
-// Suggestion engine.
-//
-// TODO(rosswang): Consider also allowing this mode for next.
-interface AskHandler {
+// Suggestion engine based on a user query.
+interface QueryHandler {
   // Produces a list of Proposals in response to an Ask query. The query may be
   // empty in the case of an initial ask, and this method is called every time
   // the query changes.
@@ -45,5 +42,5 @@ interface AskHandler {
   // ProposalPublisher to make persistent Proposals. However, these
   // proposals may be subject to more stringent filtering by the Suggestion
   // Engine. TODO(rosswang): spec/revisit.
-  Ask(UserInput query) => (AskResponse response);
+  OnQuery(UserInput query) => (AskResponse response);
 };
