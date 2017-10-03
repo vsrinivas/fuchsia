@@ -1,8 +1,10 @@
 {
     "imports": [
         "peridot/packages/ledger",
+        "peridot/packages/leveldb",
         "peridot/packages/maxwell",
         "peridot/packages/modular",
-        "peridot/packages/modular_examples"
+        "peridot/packages/modular_examples",
+        "peridot/packages/re2"
     ]
 }
