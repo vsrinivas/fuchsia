@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/agent/fidl/agent.fidl.h"
+#include "lib/agent_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -13,38 +13,28 @@ using modular::testing::TestPoint;
 
 namespace {
 
-class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
+class TestAgentApp {
  public:
-  static void New() { new TestAgentApp; }
-
- private:
-  TestAgentApp() { TestInit(__FILE__); }
-  ~TestAgentApp() override = default;
-
-  // |Agent|
-  void Initialize(
-      fidl::InterfaceHandle<modular::AgentContext> /*agent_context*/,
-      const InitializeCallback& callback) override {
-    callback();
+  TestAgentApp(modular::AgentHost* agent_host) {
+    modular::testing::Init(agent_host->application_context(), __FILE__);
   }
 
-  // |Agent|
-  void Connect(
-      const fidl::String& /*requestor_url*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+  // Called by AgentDriver.
+  void Connect(fidl::InterfaceRequest<app::ServiceProvider> /*services*/) {
     modular::testing::GetStore()->Put("test_agent2_connected", "", [] {});
   }
 
-  // |Agent|
+  // Called by AgentDriver.
   void RunTask(const fidl::String& /*task_id*/,
-               const RunTaskCallback& /*callback*/) override {}
+               const std::function<void()>& /*callback*/) {}
 
-  // |Lifecycle|
-  void Terminate() override {
+  // Called by AgentDriver.
+  void Terminate(const std::function<void()>& done) {
     terminate_called_.Pass();
-    DeleteAndQuitAndUnbind();
+    modular::testing::Done(done);
   }
 
+ private:
   TestPoint terminate_called_{"Terminate() called."};
 };
 
@@ -52,7 +42,9 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  TestAgentApp::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AgentDriver<TestAgentApp> driver(app_context.get(),
+                                            [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

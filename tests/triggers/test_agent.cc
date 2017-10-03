@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "lib/agent/fidl/agent.fidl.h"
+#include "lib/agent_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/triggers/trigger_test_agent_interface.fidl.h"
@@ -15,20 +15,12 @@ using modular::testing::TestPoint;
 
 namespace {
 
-class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
-                     modular::testing::TriggerAgentInterface {
+class TestAgentApp : modular::testing::TriggerAgentInterface {
  public:
-  static void New() { new TestAgentApp; }
-
- private:
-  TestAgentApp() { TestInit(__FILE__); }
-  ~TestAgentApp() override = default;
-
-  // |Agent|
-  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
-                  const InitializeCallback& callback) override {
-    agent_context_.Bind(std::move(agent_context));
-    agent_context_->GetComponentContext(component_context_.NewRequest());
+  TestAgentApp(modular::AgentHost* agent_host) {
+    modular::testing::Init(agent_host->application_context(), __FILE__);
+    agent_host->agent_context()->GetComponentContext(
+        component_context_.NewRequest());
 
     // Create a message queue and schedule a task to be run on receiving a
     // message on it.
@@ -39,7 +31,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
     auto trigger_condition = modular::TriggerCondition::New();
     trigger_condition->set_queue_name("Trigger Queue");
     task_info->trigger_condition = std::move(trigger_condition);
-    agent_context_->ScheduleTask(std::move(task_info));
+    agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
     agent_services_.AddService<modular::testing::TriggerAgentInterface>(
         [this](fidl::InterfaceRequest<modular::testing::TriggerAgentInterface>
@@ -49,30 +41,29 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
         });
 
     initialized_.Pass();
-    callback();
   }
 
-  // |Agent|
-  void Connect(const fidl::String& /*requestor_url*/,
-               fidl::InterfaceRequest<app::ServiceProvider> services) override {
+  // Called by AgentDriver.
+  void Connect(fidl::InterfaceRequest<app::ServiceProvider> services) {
     agent_services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("trigger_test_agent_connected", "",
                                       [] {});
   }
 
-  // |Agent|
+  // Called by AgentDriver.
   void RunTask(const fidl::String& /*task_id*/,
-               const RunTaskCallback& callback) override {
+               const std::function<void()>& callback) {
     modular::testing::GetStore()->Put("trigger_test_agent_run_task", "",
-                                      [callback] { callback(); });
+                                      callback);
   }
 
-  // |Lifecycle|
-  void Terminate() override {
+  // Called by AgentDriver.
+  void Terminate(const std::function<void()>& done) {
     modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
-                                      [this] { DeleteAndQuitAndUnbind(); });
+                                      [done] { modular::testing::Done(done); });
   }
 
+ private:
   // |TriggerAgentInterface|
   void GetMessageQueueToken(
       const GetMessageQueueTokenCallback& callback) override {
@@ -82,7 +73,6 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   app::ServiceNamespace agent_services_;
 
-  modular::AgentContextPtr agent_context_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
@@ -96,7 +86,9 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  TestAgentApp::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AgentDriver<TestAgentApp> driver(app_context.get(),
+                                            [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

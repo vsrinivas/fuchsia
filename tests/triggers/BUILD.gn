@@ -40,8 +40,8 @@ executable("trigger_test_agent") {
     ":trigger_test_agent_interface",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
-    "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/agent_driver/cpp",
     "//peridot/public/lib/lifecycle/fidl",
   ]
 }

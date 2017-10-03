@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/agent/fidl/agent.fidl.h"
+#include "lib/agent_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -13,40 +13,29 @@ using modular::testing::TestPoint;
 
 namespace {
 
-class UnstoppableAgentApp : modular::testing::ComponentBase<modular::Agent> {
+class UnstoppableAgentApp {
  public:
-  static void New() {
-    new UnstoppableAgentApp;  // Deleted in Stop().
+  UnstoppableAgentApp(modular::AgentHost* agent_host) {
+    modular::testing::Init(agent_host->application_context(), __FILE__);
+    agent_host->agent_context()->GetComponentContext(
+        component_context_.NewRequest());
+    initialized_.Pass();
+  }
+
+  // Called by AgentDriver.
+  void Connect(fidl::InterfaceRequest<app::ServiceProvider> /*services*/) {}
+
+  // Called by AgentDriver.
+  void RunTask(const fidl::String& /*task_id*/,
+               const std::function<void()>& /*callback*/) {}
+
+  // Called by AgentDriver.
+  void Terminate(const std::function<void()>& done) {
+    stopped_.Pass();
+    modular::testing::Done(done);
   }
 
  private:
-  UnstoppableAgentApp() { TestInit(__FILE__); }
-  ~UnstoppableAgentApp() override = default;
-
-  // |Agent|
-  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
-                  const InitializeCallback& callback) override {
-    agent_context_.Bind(std::move(agent_context));
-    agent_context_->GetComponentContext(component_context_.NewRequest());
-    initialized_.Pass();
-    callback();
-  }
-
-  // |Agent|
-  void Connect(
-      const fidl::String& /*requestor_url*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
-
-  // |Agent|
-  void RunTask(const fidl::String& /*task_id*/,
-               const RunTaskCallback& /*callback*/) override {}
-
-  // |Lifecycle|
-  void Terminate() override {
-    stopped_.Pass();
-    Delete([] {});  // We don't post Quit here.
-  }
-
   modular::AgentContextPtr agent_context_;
   modular::ComponentContextPtr component_context_;
 
@@ -58,7 +47,9 @@ class UnstoppableAgentApp : modular::testing::ComponentBase<modular::Agent> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  UnstoppableAgentApp::New();
-  loop.Run();  // Never returns.
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AgentDriver<UnstoppableAgentApp> driver(app_context.get(),
+                                                   [&loop] { loop.QuitNow(); });
+  loop.Run();
   return 0;
 }

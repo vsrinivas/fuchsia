@@ -43,8 +43,8 @@ executable("component_context_test_agent1") {
     ":test_agent1_interface",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
-    "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/agent_driver/cpp",
   ]
 }
 
@@ -57,8 +57,8 @@ executable("component_context_test_agent2") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
-    "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/agent_driver/cpp",
   ]
 }
 
@@ -71,8 +71,8 @@ executable("component_context_unstoppable_agent") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
-    "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/agent_driver/cpp",
   ]
 }
 

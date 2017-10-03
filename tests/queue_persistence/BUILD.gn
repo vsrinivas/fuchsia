@@ -41,8 +41,8 @@ executable("queue_persistence_test_agent") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
-    "//peridot/lib/testing:component_base",
     "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/agent_driver/cpp",
     "//peridot/public/lib/component/fidl",
   ]
 }

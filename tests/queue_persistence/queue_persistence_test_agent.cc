@@ -3,37 +3,25 @@
 // found in the LICENSE file.
 
 #include "lib/agent/fidl/agent.fidl.h"
+#include "lib/agent_driver/cpp/agent_driver.h"
 #include "lib/component/fidl/message_queue.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
-class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
-                     modular::testing::QueuePersistenceAgentInterface {
+class TestAgentApp : modular::testing::QueuePersistenceAgentInterface {
  public:
-  static void New() {
-    new TestAgentApp;  // deleted in Stop().
-  }
-
- private:
-  using TestPoint = modular::testing::TestPoint;
-
-  TestAgentApp() { TestInit(__FILE__); }
-  ~TestAgentApp() override = default;
-
-  TestPoint initialized_{"Queue persistence test agent initialized"};
-
-  // |Agent|
-  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
-                  const InitializeCallback& callback) override {
-    agent_context_.Bind(std::move(agent_context));
-    agent_context_->GetComponentContext(component_context_.NewRequest());
+  TestAgentApp(modular::AgentHost* agent_host) {
+    modular::testing::Init(agent_host->application_context(), __FILE__);
+    agent_host->agent_context()->GetComponentContext(
+        component_context_.NewRequest());
 
     // Create a message queue and schedule a task to be run on receiving a
     // message on it.
@@ -54,31 +42,31 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
         });
 
     initialized_.Pass();
-    callback();
   }
 
-  // |Agent|
-  void Connect(const fidl::String& /*requestor_url*/,
-               fidl::InterfaceRequest<app::ServiceProvider> services) override {
+  // Called by AgentDriver.
+  void Connect(fidl::InterfaceRequest<app::ServiceProvider> services) {
     services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("queue_persistence_test_agent_connected",
                                       "", [] {});
   }
 
-  // |Agent|
+  // Called by AgentDriver.
   void RunTask(const fidl::String& /*task_id*/,
-               const RunTaskCallback& /*callback*/) override {}
+               const std::function<void()>& /*callback*/) {}
 
-  // |Lifecycle|
-  void Terminate() override {
+  // Called by AgentDriver.
+  void Terminate(const std::function<void()>& done) {
     // Stop processing messages, since we do async operations below and don't
     // want our receiver to fire.
     msg_receiver_.reset();
 
     modular::testing::GetStore()->Put("queue_persistence_test_agent_stopped",
-                                      "", [this] { DeleteAndQuitAndUnbind(); });
+                                      "",
+                                      [done] { modular::testing::Done(done); });
   }
 
+ private:
   // |QueuePersistenceAgentInterface|
   void GetMessageQueueToken(
       const GetMessageQueueTokenCallback& callback) override {
@@ -86,7 +74,8 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
         [callback](const fidl::String& token) { callback(token); });
   }
 
-  modular::AgentContextPtr agent_context_;
+  TestPoint initialized_{"Queue persistence test agent initialized"};
+
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
@@ -101,7 +90,9 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  TestAgentApp::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::AgentDriver<TestAgentApp> driver(app_context.get(),
+                                            [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }
