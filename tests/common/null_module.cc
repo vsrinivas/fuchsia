@@ -8,51 +8,43 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/public/lib/module_driver/cpp/module_driver.h"
 
 using modular::testing::TestPoint;
 
 namespace {
 
-class NullModule : modular::testing::ComponentBase<modular::Module> {
+class NullModule {
  public:
-  static void New() {
-    new NullModule;  // deleted in Stop()
+  NullModule(modular::ModuleHost* module_host,
+             fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      : module_host_(module_host) {
+    modular::testing::Init(module_host_->application_context(), __FILE__);
+    module_host_->module_context()->Ready();
+    initialized_.Pass();
+    module_host_->module_context()->Done();
+  }
+
+  // Called by ModuleDriver.
+  void Terminate(const std::function<void()>& done) {
+    stopped_.Pass();
+    modular::testing::Done(done);
   }
 
  private:
-  NullModule() { TestInit(__FILE__); }
-  ~NullModule() override = default;
-
   TestPoint initialized_{"Null module initialized"};
-
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
-      override {
-    module_context_.Bind(std::move(module_context));
-    module_context_->Ready();
-    initialized_.Pass();
-    module_context_->Done();
-  }
-
   TestPoint stopped_{"Null module stopped"};
 
-  // |Lifecycle|
-  void Terminate() override {
-    stopped_.Pass();
-    DeleteAndQuitAndUnbind();
-  }
-
-  modular::ModuleContextPtr module_context_;
+  modular::ModuleHost* module_host_;
 };
 
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  NullModule::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::ModuleDriver<NullModule> driver(app_context.get(),
+                                           [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

@@ -5,11 +5,13 @@
 #include <iostream>
 
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/module/fidl/module.fidl.h"
+#include "lib/module_driver/cpp/module_driver.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/lib/util/weak_callback.h"
 
 using modular::testing::TestPoint;
 
@@ -24,49 +26,48 @@ constexpr char kChildModule[] =
 constexpr char kChildLink[] = "child";
 constexpr char kChildLinkAlternate[] = "child2";
 
-class ParentApp : modular::testing::ComponentBase<modular::Module> {
+class ParentApp {
  public:
-  static void New() {
-    new ParentApp;  // deletes itself in Stop()
-  }
-
- private:
-  ParentApp() { TestInit(__FILE__); }
-  ~ParentApp() override = default;
-
-  TestPoint initialized_{"Parent module initialized"};
-
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
-      override {
+  ParentApp(modular::ModuleHost* module_host,
+            fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      : module_host_(module_host), weak_ptr_factory_(this) {
+    modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
-    module_context_.Bind(std::move(module_context));
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        Protect([this] { DeleteAndQuit([] {}); }),
+        modular::WeakCallback(
+            weak_ptr_factory_.GetWeakPtr(),
+            [this] { module_host_->module_context()->Done(); }),
         fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
 
     StartChildModuleTwice();
   }
 
+  // Called by ModuleDriver.
+  void Terminate(const std::function<void()>& done) {
+    stopped_.Pass();
+    modular::testing::Done(done);
+  }
+
+ private:
   void StartChildModuleTwice() {
-    module_context_->StartModuleInShell(
+    module_host_->module_context()->StartModuleInShell(
         kChildModuleName, kChildModule, kChildLink, nullptr, nullptr,
         child_module_.NewRequest(), nullptr, true);
 
-    child_module_.set_connection_error_handler(
-        [this] { OnChildModuleStopped(); });
+    // Once the module starts, start the same module again, but with a different
+    // link. This stops the previous module instance and starts a new one.
+    modular::testing::GetStore()->Get(
+        "child_module_init", [this](const fidl::String&) {
+          child_module_.set_connection_error_handler(
+              [this] { OnChildModuleStopped(); });
 
-    // Start the same module again, but with a different link. This stops the
-    // previous module instance and starts a new one.
-    module_context_->StartModuleInShell(
-        kChildModuleName, kChildModule, kChildLinkAlternate, nullptr, nullptr,
-        child_module2_.NewRequest(), nullptr, true);
+          module_host_->module_context()->StartModuleInShell(
+              kChildModuleName, kChildModule, kChildLinkAlternate, nullptr,
+              nullptr, child_module2_.NewRequest(), nullptr, true);
+        });
   }
 
   TestPoint child_module_down_{"Child module killed for restart"};
@@ -74,6 +75,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   void OnChildModuleStopped() {
     child_module_down_.Pass();
 
+    // Confirm that the first module instance stopped, and then stop the second
+    // module instance.
     modular::testing::GetStore()->Get(
         "child_module_stop", [this](const fidl::String&) {
           child_module2_->Stop([this] { OnChildModule2Stopped(); });
@@ -84,27 +87,26 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
   void OnChildModule2Stopped() {
     child_module_stopped_.Pass();
-    module_context_->Done();
+    module_host_->module_context()->Done();
   }
 
+  TestPoint initialized_{"Parent module initialized"};
   TestPoint stopped_{"Parent module stopped"};
 
-  // |Lifecycle|
-  void Terminate() override {
-    stopped_.Pass();
-    DeleteAndQuitAndUnbind();
-  }
-
-  modular::ModuleContextPtr module_context_;
+  modular::ModuleHost* module_host_;
   modular::ModuleControllerPtr child_module_;
   modular::ModuleControllerPtr child_module2_;
+
+  fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
 };
 
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  ParentApp::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::ModuleDriver<ParentApp> driver(app_context.get(),
+                                          [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

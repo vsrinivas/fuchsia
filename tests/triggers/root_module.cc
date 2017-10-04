@@ -6,9 +6,10 @@
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/module/fidl/module.fidl.h"
-#include "peridot/lib/testing/component_base.h"
+#include "lib/module_driver/cpp/module_driver.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/lib/util/weak_callback.h"
 #include "peridot/tests/triggers/trigger_test_agent_interface.fidl.h"
 
 using modular::testing::TestPoint;
@@ -21,27 +22,17 @@ constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
     "file:///system/apps/modular_tests/trigger_test_agent";
 
-class ParentApp : modular::testing::ComponentBase<modular::Module> {
+class ParentApp {
  public:
-  static void New() {
-    new ParentApp;  // deletes itself in Stop()
-  }
-
- private:
-  ParentApp() { TestInit(__FILE__); }
-  ~ParentApp() override = default;
-
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
-      override {
-    module_context_.Bind(std::move(module_context));
+  ParentApp(modular::ModuleHost* module_host,
+            fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      : module_host_(module_host), weak_ptr_factory_(this) {
+    modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
 
     // Exercise ComponentContext.ConnectToAgent()
-    module_context_->GetComponentContext(component_context_.NewRequest());
+    module_host_->module_context()->GetComponentContext(
+        component_context_.NewRequest());
 
     app::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
@@ -78,7 +69,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
                             modular::testing::GetStore()->Get(
                                 "trigger_test_agent_stopped",
                                 [this](const fidl::String&) {
-                                  module_context_->Done();
+                                  module_host_->module_context()->Done();
                                 });
                           });
 
@@ -90,17 +81,20 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        Protect([this] { module_context_->Done(); }),
+        modular::WeakCallback(
+            weak_ptr_factory_.GetWeakPtr(),
+            [this] { module_host_->module_context()->Done(); }),
         fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
-  // |Lifecycle|
-  void Terminate() override {
+  // Called by ModuleDriver.
+  void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    DeleteAndQuitAndUnbind();
+    modular::testing::Done(done);
   }
 
-  modular::ModuleContextPtr module_context_;
+ private:
+  modular::ModuleHost* module_host_;
   modular::AgentControllerPtr agent_controller_;
   modular::testing::TriggerAgentInterfacePtr trigger_agent_interface_;
   modular::ComponentContextPtr component_context_;
@@ -112,13 +106,17 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   TestPoint agent_connected_{"Agent accepted connection"};
   TestPoint agent_stopped_{"Agent1 stopped"};
   TestPoint task_triggered_{"Agent task triggered"};
+
+  fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
 };
 
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  ParentApp::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::ModuleDriver<ParentApp> driver(app_context.get(),
+                                          [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

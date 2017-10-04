@@ -47,6 +47,7 @@ executable("context_link_module") {
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/module_driver/cpp",
     "//peridot/public/lib/story/fidl",
   ]
 }

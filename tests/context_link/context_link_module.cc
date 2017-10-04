@@ -6,9 +6,9 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/module/fidl/module.fidl.h"
+#include "lib/module_driver/cpp/module_driver.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -18,32 +18,23 @@ namespace {
 
 constexpr char kLink[] = "context_link";
 
-class TestApp : modular::testing::ComponentBase<modular::Module> {
+class TestApp {
  public:
-  static void New() {
-    new TestApp;  // deleted in Stop()
-  }
-
- private:
-  TestApp() { TestInit(__FILE__); }
-  ~TestApp() override = default;
-
-  TestPoint initialized_{"Child module initialized"};
-
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
-      override {
-    module_context_.Bind(std::move(module_context));
+  TestApp(modular::ModuleHost* module_host,
+          fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
+    modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
-
-    module_context_->GetLink(kLink, link_.NewRequest());
-
+    module_host->module_context()->GetLink(kLink, link_.NewRequest());
     Set1();
   }
 
+  // Called from ModuleDriver.
+  void Terminate(const std::function<void()>& done) {
+    stopped_.Pass();
+    modular::testing::Done(done);
+  }
+
+ private:
   void Set1() {
     link_->Set(nullptr,
                "{\"link_value\":\"1\",\"@context\":{\"topic\":\""
@@ -63,15 +54,8 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
                "context_link_test\"}}");
   }
 
-  // |Lifecycle|
-  void Terminate() override {
-    stopped_.Pass();
-    DeleteAndQuitAndUnbind();
-  }
-
+  TestPoint initialized_{"Child module initialized"};
   TestPoint stopped_{"Child module stopped"};
-
-  modular::ModuleContextPtr module_context_;
   modular::LinkPtr link_;
 };
 
@@ -79,7 +63,9 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  TestApp::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

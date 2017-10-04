@@ -80,12 +80,19 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
 
   // |LifecycleImpl::Delegate|
   void Terminate() override {
-    FXL_DCHECK(impl_);
+    // It's possible that we process the |Lifecycle.Terminate| message before
+    // the |Module.Initialize| message, even when both messages are ready to be
+    // processed at the same time. In this case, because |impl_| hasn't been
+    // instantiated yet, we cannot delegate the |Lifecycle.Terminate| message.
     module_impl_.reset();
-    impl_->Terminate([this] {
-      impl_.reset();
+    if (impl_) {
+      impl_->Terminate([this] {
+        impl_.reset();
+        on_terminated_();
+      });
+    } else {
       on_terminated_();
-    });
+    }
   }
 
   app::ApplicationContext* const app_context_;

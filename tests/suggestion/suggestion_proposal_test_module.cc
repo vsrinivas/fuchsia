@@ -8,9 +8,9 @@
 #include "lib/module_driver/cpp/module_driver.h"
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/lib/util/weak_callback.h"
 
 using modular::testing::TestPoint;
 
@@ -73,18 +73,16 @@ class SuggestionApp {
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [ weak_ptr = weak_ptr_factory_.GetWeakPtr(), this ] {
-          if (weak_ptr) {
-            module_host_->module_context()->Done();
-          }
-        },
+        modular::WeakCallback(
+            weak_ptr_factory_.GetWeakPtr(),
+            [this] { module_host_->module_context()->Done(); }),
         fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done([done] { done(); });
+    modular::testing::Done(done);
   }
 
  private:

@@ -5,7 +5,9 @@
 import("//garnet/public/lib/fidl/fidl.gni")
 
 group("cpp") {
-  public_deps = [":module_driver"]
+  public_deps = [
+    ":module_driver",
+  ]
 }
 
 source_set("module_driver") {
@@ -13,12 +15,15 @@ source_set("module_driver") {
     "module_driver.h",
   ]
 
-  deps = [
+  # Since this is a header-only target, all dependencies in module_driver.h
+  # need to also be dependencies in consuming targets.
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/lifecycle/cpp",
-    "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/module/cpp",
+    "//peridot/public/lib/module/fidl",
   ]
 }

@@ -10,10 +10,11 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/module/fidl/module.fidl.h"
+#include "lib/module_driver/cpp/module_driver.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
-#include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/lib/util/weak_callback.h"
 #include "peridot/tests/component_context/test_agent1_interface.fidl.h"
 
 using modular::testing::TestPoint;
@@ -68,30 +69,20 @@ class CounterTrigger {
   FXL_DISALLOW_COPY_AND_ASSIGN(CounterTrigger);
 };
 
-class ParentApp : modular::testing::ComponentBase<modular::Module> {
+class ParentApp {
  public:
-  static void New() {
-    new ParentApp;  // deletes itself in Stop() or after timeout.
-  }
+  ParentApp(modular::ModuleHost* module_host,
+            fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      : steps_(kTotalSimultaneousTests,
+               [this, module_host] { module_host->module_context()->Done(); }),
+        weak_ptr_factory_(this) {
+    modular::testing::Init(module_host->application_context(), __FILE__);
 
- private:
-  ParentApp()
-      : steps_(kTotalSimultaneousTests, [this] { module_context_->Done(); }) {
-    TestInit(__FILE__);
-  }
-  ~ParentApp() override = default;
-
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
-      override {
-    module_context_.Bind(std::move(module_context));
     initialized_.Pass();
 
     // Exercise ComponentContext.ConnectToAgent()
-    module_context_->GetComponentContext(component_context_.NewRequest());
+    module_host->module_context()->GetComponentContext(
+        component_context_.NewRequest());
 
     app::ServiceProviderPtr agent1_services;
     component_context_->ConnectToAgent(kTest1Agent,
@@ -103,18 +94,29 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
         "test_agent1_connected", [this](const fidl::String&) {
           agent1_connected_.Pass();
           TestMessageQueue([this] {
-            TestAgentController(Protect([this] { steps_.Step(); }));
+            TestAgentController(modular::WeakCallback(
+                weak_ptr_factory_.GetWeakPtr(), [this] { steps_.Step(); }));
           });
         });
 
-    TestUnstoppableAgent(Protect([this] { steps_.Step(); }));
+    TestUnstoppableAgent(modular::WeakCallback(weak_ptr_factory_.GetWeakPtr(),
+                                               [this] { steps_.Step(); }));
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        Protect([this] { steps_.Cancel(); }), kTimeout);
+        modular::WeakCallback(weak_ptr_factory_.GetWeakPtr(),
+                              [this] { steps_.Cancel(); }),
+        kTimeout);
   }
 
+  // Called by ModuleDriver.
+  void Terminate(const std::function<void()>& done) {
+    stopped_.Pass();
+    modular::testing::Done(done);
+  }
+
+ private:
   // Tests message queues. Calls |done_cb| when completed successfully.
   void TestMessageQueue(std::function<void()> done_cb) {
     constexpr char kTestMessage[] = "test message!";
@@ -166,22 +168,16 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // time, so this test isn't reliable. We need to make a call to the agent
     // and wait for a response.
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        Protect([this, done_cb] {
-          unstoppable_agent_controller_.reset();
-          done_cb();
-        }),
+        modular::WeakCallback(weak_ptr_factory_.GetWeakPtr(),
+                              [this, done_cb] {
+                                unstoppable_agent_controller_.reset();
+                                done_cb();
+                              }),
         fxl::TimeDelta::FromMilliseconds(500));
-  }
-
-  // |Lifecycle|
-  void Terminate() override {
-    stopped_.Pass();
-    DeleteAndQuitAndUnbind();
   }
 
   CounterTrigger steps_;
 
-  modular::ModuleContextPtr module_context_;
   modular::AgentControllerPtr agent1_controller;
   modular::testing::Agent1InterfacePtr agent1_interface_;
   modular::ComponentContextPtr component_context_;
@@ -197,13 +193,17 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   TestPoint agent1_stopped_{"Agent1 stopped"};
   TestPoint msg_queue_communicated_{
       "Communicated message between Agent1 using a MessageQueue"};
+
+  fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
 };
 
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  ParentApp::New();
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  modular::ModuleDriver<ParentApp> driver(app_context.get(),
+                                          [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }
