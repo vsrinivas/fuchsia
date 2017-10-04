@@ -180,7 +180,7 @@ zx_status_t sys_vcpu_write_state(zx_handle_t vcpu_handle, uint32_t kind,
     if (status != ZX_OK)
         return status;
 
-    uint8_t buffer[sizeof(zx_vcpu_state_t)];
+    alignas(alignof(zx_vcpu_state_t)) uint8_t buffer[sizeof(zx_vcpu_state_t)];
     if (len > sizeof(buffer))
         return ZX_ERR_INVALID_ARGS;
     status = user_buffer.copy_array_from_user(buffer, len);
