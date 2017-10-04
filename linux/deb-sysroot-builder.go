@@ -232,10 +232,12 @@ func installSysroot(list []pkg, installDir string) error {
 		return err
 	}
 
+	// This is only needed when running dpkg-shlibdeps.
 	if err := os.MkdirAll(filepath.Join(installDir, "debian"), 0777); err != nil {
 		return err
 	}
 
+	// An empty control file is necessary to run dpkg-shlibdeps.
 	if file, err := os.OpenFile(filepath.Join(installDir, "debian", "control"), os.O_RDONLY|os.O_CREATE, 0644); err != nil {
 		return err
 	} else {
@@ -272,10 +274,12 @@ func installSysroot(list []pkg, installDir string) error {
 		}
 
 		fmt.Printf("Installing %s...\n", filename)
+		// Extract the content of the package into the install directory.
 		err := exec.Command("dpkg-deb", "-x", deb, installDir).Run()
 		if err != nil {
 			return err
 		}
+		// Get the package name.
 		cmd := exec.Command("dpkg-deb", "--field", deb, "Package")
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
@@ -292,16 +296,19 @@ func installSysroot(list []pkg, installDir string) error {
 		if err := cmd.Wait(); err != nil {
 			return err
 		}
+		// Construct the path which contains the control information files.
 		controlDir := filepath.Join(installDir, "debian", string(baseDir), "DEBIAN")
 		if err := os.MkdirAll(controlDir, 0777); err != nil {
 			return err
 		}
+		// Extract the control information files.
 		err = exec.Command("dpkg-deb", "-e", deb, controlDir).Run()
 		if err != nil {
 			return err
 		}
 	}
 
+	// Prune /usr/share, leave only pkgconfig files.
 	files, err := ioutil.ReadDir(filepath.Join(installDir, "usr", "share"))
 	if err != nil {
 		return err
@@ -314,12 +321,13 @@ func installSysroot(list []pkg, installDir string) error {
 		}
 	}
 
+	// Relativize all symlinks within the sysroot.
 	for _, d := range []string{"usr/lib", "lib64", "lib"} {
 		p := filepath.Join(installDir, d)
 		if _, err := os.Stat(p); os.IsNotExist(err) {
 			continue
 		}
-		filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
+		if err := filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -332,28 +340,30 @@ func installSysroot(list []pkg, installDir string) error {
 					return nil
 				}
 				patterns := []string{
-					"usr/lib/gcc/*-linux-gnu/*.*/*",
+					"usr/lib/gcc/*-linux-gnu/*/*",
 					"usr/lib/*-linux-gnu/*",
 					"usr/lib/*",
 					"lib64/*",
 					"lib/*",
 				}
 				if err := relativize(path, target, installDir, patterns); err != nil {
-					return nil
+					return err
 				}
 				if _, err := os.Stat(path); os.IsNotExist(err) {
 					return fmt.Errorf("%s: broken link", path)
 				}
 			}
 			return nil
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
+	// Rewrite and relativize all linkerscripts.
 	linkerscripts := []string{
         "usr/lib/*-linux-gnu/libpthread.so",
         "usr/lib/*-linux-gnu/libc.so",
 	}
-
 	for _, l := range linkerscripts {
 		matches, err := filepath.Glob(filepath.Join(installDir, l))
 		if err != nil {
