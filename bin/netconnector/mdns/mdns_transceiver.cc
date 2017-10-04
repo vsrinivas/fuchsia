@@ -10,7 +10,6 @@
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
-#include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

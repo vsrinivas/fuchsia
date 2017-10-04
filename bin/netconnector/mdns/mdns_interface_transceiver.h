@@ -10,7 +10,6 @@
 #include "garnet/bin/netconnector/ip_address.h"
 #include "garnet/bin/netconnector/mdns/dns_message.h"
 #include "garnet/bin/netconnector/socket_address.h"
-#include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
