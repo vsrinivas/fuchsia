@@ -379,7 +379,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             size_t num_to_copy = MIN(num_cpus, num_space_for);
 
             // build an alias to the output buffer that is in units of the cpu stat structure
-            user_ptr<zx_info_cpu_stats_t> cpu_buf(static_cast<zx_info_cpu_stats_t *>(_buffer.get()));
+            user_ptr<zx_info_cpu_stats_t> cpu_buf = _buffer.reinterpret<zx_info_cpu_stats_t>();
 
             for (unsigned int i = 0; i < static_cast<unsigned int>(num_to_copy); i++) {
                 const auto cpu = &percpu[i];
