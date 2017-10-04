@@ -29,13 +29,13 @@ fn main_res() -> Result<(), fidl::Error> {
     let mut core = reactor::Core::new().unwrap();
     let handle = core.handle();
 
-    let mut app_context = ApplicationContext::new(&handle)?;
-    let mut launcher = Launcher::new(&mut app_context, &handle)?;
+    let app_context = ApplicationContext::new(&handle)?;
+    let launcher = Launcher::new(&app_context, &handle)?;
 
     // Launch the server and connect to the echo service.
     let echo_url = String::from("file://system/apps/echo_server_rust");
-    let mut app = launcher.launch(echo_url, None, &handle)?;
-    let mut echo = app.connect_to_service::<Echo::Service>(&handle)?;
+    let app = launcher.launch(echo_url, None, &handle)?;
+    let echo = app.connect_to_service::<Echo::Service>(&handle)?;
 
     // Send "echo msg" to the server.
     // `response_fut` is a `Future` which returns `Option<String>`.

@@ -71,7 +71,7 @@ pub trait Server {
 
 pub trait Client {
     {{range $message := $interface.Messages}}
-        fn {{$message.Name}}(&mut self
+        fn {{$message.Name}}(&self
             {{- range $index, $field := $message.RequestStruct.Fields -}}
                 , {{$field.Name}}: {{$field.Type}}
             {{- end -}}
@@ -179,7 +179,7 @@ pub struct Proxy(fidl::Client);
 impl Client for Proxy {
     {{- range $message := $interface.Messages}}
         #[inline]
-        fn {{$message.Name}}(&mut self
+        fn {{$message.Name}}(&self
             {{- range $field := $message.RequestStruct.Fields}}
                 , {{$field.Name}}: {{$field.Type}}
             {{- end -}} )
@@ -224,7 +224,7 @@ impl Client for Proxy {
 impl Proxy {
     {{- range $message := $interface.Messages}}
         #[inline]
-        pub fn {{$message.Name}}(&mut self
+        pub fn {{$message.Name}}(&self
             {{- range $field := $message.RequestStruct.Fields}}
                 , {{$field.Name}}: {{$field.Type}}
             {{- end -}} )

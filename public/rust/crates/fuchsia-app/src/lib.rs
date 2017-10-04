@@ -36,7 +36,7 @@ pub mod client {
     #[inline]
     /// Connect to a FIDL service on the given `service_provider`.
     pub fn connect_to_service<Service: FidlService>(
-        service_provider: &mut ServiceProvider::Proxy,
+        service_provider: &ServiceProvider::Proxy,
         handle: &TokioHandle
     ) -> Result<Service::Proxy, fidl::Error>
     {
@@ -64,7 +64,7 @@ pub mod client {
                     ApplicationEnvironment::Service::NAME)?;
 
             let app_env_client = fidl::ClientEnd::new(app_env_channel);
-            let mut app_env = ApplicationEnvironment::new_proxy(app_env_client, handle)?;
+            let app_env = ApplicationEnvironment::new_proxy(app_env_client, handle)?;
             let (service_provider, service_provider_server_end) = ServiceProvider::new_pair(handle)?;
             app_env.get_services(service_provider_server_end)?;
 
@@ -78,10 +78,10 @@ pub mod client {
         /// Connect to a service provided through the current application's environment.
         ///
         /// This connection is made using the application environment's service provider.
-        pub fn connect_to_service<Service: FidlService>(&mut self, handle: &TokioHandle)
+        pub fn connect_to_service<Service: FidlService>(&self, handle: &TokioHandle)
             -> Result<Service::Proxy, fidl::Error>
         {
-            connect_to_service::<Service>(&mut self.service_provider, handle)
+            connect_to_service::<Service>(&self.service_provider, handle)
         }
     }
 
@@ -94,7 +94,7 @@ pub mod client {
         #[inline]
         /// Create a new application launcher.
         pub fn new(
-            context: &mut ApplicationContext,
+            context: &ApplicationContext,
             handle: &TokioHandle) -> Result<Self, fidl::Error>
         {
             let app_launcher = context.connect_to_service::<ApplicationLauncher::Service>(handle)?;
@@ -103,7 +103,7 @@ pub mod client {
 
         /// Launch an application at the specified URL.
         pub fn launch(
-            &mut self,
+            &self,
             url: String,
             arguments: Option<Vec<String>>,
             handle: &TokioHandle
@@ -137,10 +137,10 @@ pub mod client {
     impl App {
         #[inline]
         /// Connect to a service provided by the `App`.
-        pub fn connect_to_service<Service: FidlService>(&mut self, handle: &TokioHandle)
+        pub fn connect_to_service<Service: FidlService>(&self, handle: &TokioHandle)
             -> Result<Service::Proxy, fidl::Error>
         {
-            connect_to_service::<Service>(&mut self.service_provider, handle)
+            connect_to_service::<Service>(&self.service_provider, handle)
         }
     }
 }
