@@ -593,7 +593,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
                 max_burst = ss_comp_desc->bMaxBurst;
             }
         } else if (speed == USB_SPEED_HIGH) {
-            if (ep_type == USB_ENDPOINT_ISOCHRONOUS || ep_type == USB_ENDPOINT_ISOCHRONOUS) {
+            if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
                 max_burst = usb_ep_add_mf_transactions(ep_desc);
             }
         }
