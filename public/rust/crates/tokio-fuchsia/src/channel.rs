@@ -8,7 +8,7 @@ use std::fmt;
 use std::borrow::BorrowMut;
 
 use futures::{Async, Future, Poll};
-use mio::fuchsia::EventedHandle;
+use mio::fuchsia::{EventedHandle, FuchsiaReady};
 use zircon::{self, AsHandleRef, MessageBuf};
 
 use tokio_core::reactor::{Handle, PollEvented};
@@ -54,17 +54,28 @@ impl Channel {
         self.evented.poll_read()
     }
 
-    /// Recieves a message on the channel and registers this `Channel` as
-    /// needing a read on recieving a `zircon::Status::ErrShouldWait`.
+    /// Receives a message on the channel and registers this `Channel` as
+    /// needing a read on receiving a `zircon::Status::ErrShouldWait`.
     pub fn recv_from(&self, opts: u32, buf: &mut MessageBuf) -> io::Result<()> {
-        if let Async::NotReady = self.evented.poll_read() {
-            return Err(would_block())
+        let signals = self.evented.poll_ready(FuchsiaReady::from(
+                          zircon::ZX_CHANNEL_READABLE |
+                          zircon::ZX_CHANNEL_PEER_CLOSED).into());
+
+        match signals {
+            Async::NotReady => Err(would_block()),
+            Async::Ready(ready) => {
+                let signals = FuchsiaReady::from(ready).into_zx_signals();
+                if zircon::ZX_CHANNEL_PEER_CLOSED.intersects(signals) {
+                    Err(io::ErrorKind::ConnectionAborted.into())
+                } else {
+                    let res = self.channel.read(opts, buf);
+                    if res == Err(zircon::Status::ErrShouldWait) {
+                        self.evented.need_read();
+                    }
+                    res.map_err(io::Error::from)
+                }
+            }
         }
-        let res = self.channel.read(opts, buf);
-        if res == Err(zircon::Status::ErrShouldWait) {
-            self.evented.need_read();
-        }
-        res.map_err(io::Error::from)
     }
 
     /// Creates a future that receive a message to be written to the buffer
