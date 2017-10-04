@@ -206,7 +206,7 @@ void DeleteHandle(Handle* handle) {
     // gets destroyed here.
 }
 
-uint32_t GetHandleCount(const fbl::RefPtr<Dispatcher>& dispatcher) {
+uint32_t GetHandleCount(const fbl::RefPtr<const Dispatcher>& dispatcher) {
     AutoLock lock(&handle_mutex);
     return dispatcher->current_handle_count();
 }

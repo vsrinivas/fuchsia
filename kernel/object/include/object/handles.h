@@ -22,7 +22,7 @@ Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights);
 Handle* DupHandle(Handle* source, zx_rights_t rights);
 
 // Get the number of outstanding handles for a given dispatcher.
-uint32_t GetHandleCount(const fbl::RefPtr<Dispatcher>& dispatcher);
+uint32_t GetHandleCount(const fbl::RefPtr<const Dispatcher>& dispatcher);
 
 // Deletes a handle created by MakeHandle() or DupHandle().
 void DeleteHandle(Handle* handle);
