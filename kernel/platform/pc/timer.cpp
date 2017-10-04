@@ -605,7 +605,7 @@ zx_status_t platform_configure_watchdog(uint32_t frequency) {
                         DELIVERY_MODE_NMI,
                         IO_APIC_IRQ_UNMASK,
                         DST_MODE_PHYSICAL,
-                        0,
+                        apic_bsp_id(),
                         0);
 
                 uint64_t hpet_rate_ms = hpet_ticks_per_ms();
@@ -631,9 +631,8 @@ zx_status_t platform_configure_watchdog(uint32_t frequency) {
                     DELIVERY_MODE_NMI,
                     IO_APIC_IRQ_UNMASK,
                     DST_MODE_PHYSICAL,
-                    0,
+                    apic_bsp_id(),
                     0);
-            printf("CONFIGURED WATCHDOG\n");
             return ZX_OK;
         }
         default: return ZX_ERR_NOT_SUPPORTED;

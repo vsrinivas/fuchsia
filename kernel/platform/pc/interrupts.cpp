@@ -96,7 +96,7 @@ static void platform_init_apic(uint level)
     ASSERT(arch_ints_disabled());
 
     // Initialize the delivery modes/targets for the ISA interrupts
-    uint8_t local_apic_id = apic_local_id();
+    uint8_t bsp_apic_id = apic_bsp_id();
     for (uint8_t irq = 0; irq < 8; ++irq) {
         // Explicitly skip mapping the PIC2 interrupt, since it is actually
         // just used internally on the PICs for daisy chaining.  QEMU remaps
@@ -109,7 +109,7 @@ static void platform_init_apic(uint level)
                     DELIVERY_MODE_FIXED,
                     IO_APIC_IRQ_MASK,
                     DST_MODE_PHYSICAL,
-                    local_apic_id,
+                    bsp_apic_id,
                     0);
         }
         apic_io_configure_isa_irq(
@@ -117,7 +117,7 @@ static void platform_init_apic(uint level)
                 DELIVERY_MODE_FIXED,
                 IO_APIC_IRQ_MASK,
                 DST_MODE_PHYSICAL,
-                local_apic_id,
+                bsp_apic_id,
                 0);
     }
 
@@ -170,7 +170,7 @@ zx_status_t configure_interrupt(unsigned int vector,
             DELIVERY_MODE_FIXED,
             IO_APIC_IRQ_MASK,
             DST_MODE_PHYSICAL,
-            0,
+            apic_bsp_id(),
             0);
 
     spin_unlock_irqrestore(&lock, state);
@@ -319,7 +319,7 @@ zx_status_t x86_alloc_msi_block(uint requested_irqs,
         // processor, or just processor 0, or something), or the decision of
         // which CPUs to bind to should be left to the caller.
         uint32_t tgt_addr = 0xFEE00000;                 // base addr
-        tgt_addr |= ((uint32_t)apic_local_id()) << 12;  // Dest ID == our local APIC ID
+        tgt_addr |= ((uint32_t)apic_bsp_id()) << 12;    // Dest ID == the BSP APIC ID
         tgt_addr |= 0x08;                               // Redir hint == 1
         tgt_addr &= ~0x04;                              // Dest Mode == Physical
 
