@@ -57,6 +57,10 @@ void ConflictResolverClient::Start() {
           weak_factory_.GetWeakPtr(),
           [this](storage::Status status,
                  std::unique_ptr<storage::Journal> journal) {
+            if (cancelled_) {
+              Finalize(Status::INTERNAL_ERROR);
+              return;
+            }
             journal_ = std::move(journal);
             if (status != storage::Status::OK) {
               FXL_LOG(ERROR) << "Unable to start merge commit: " << status;
@@ -267,12 +271,11 @@ void ConflictResolverClient::Done(const DoneCallback& callback) {
           weak_factory_.GetWeakPtr(),
           [this, callback](storage::Status status,
                            std::unique_ptr<const storage::Commit>) {
-            if (status != storage::Status::OK) {
-              FXL_LOG(ERROR) << "Unable to commit merge journal: " << status;
+            if (!IsInValidStateAndNotify(callback, status)) {
+              return;
             }
-            Status ledger_status = PageUtils::ConvertStatus(status);
-            callback(ledger_status);
-            Finalize(ledger_status);
+            callback(Status::OK);
+            Finalize(Status::OK);
           }));
 }
 

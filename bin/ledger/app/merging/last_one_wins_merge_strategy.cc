@@ -74,6 +74,10 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this](storage::Status s, std::unique_ptr<storage::Journal> journal) {
+            if (cancelled_) {
+              Done(Status::INTERNAL_ERROR);
+              return;
+            }
             FXL_DCHECK(s == storage::Status::OK);
             journal_ = std::move(journal);
             BuildAndCommitJournal();

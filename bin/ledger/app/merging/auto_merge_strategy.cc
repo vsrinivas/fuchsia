@@ -104,6 +104,10 @@ void AutoMergeStrategy::AutoMerger::Start() {
       callback::MakeScoped(weak_factory_.GetWeakPtr(), fxl::MakeCopyable([
                              this, changes = std::move(changes)
                            ](storage::Status status) mutable {
+                             if (cancelled_) {
+                               Done(Status::INTERNAL_ERROR);
+                               return;
+                             }
                              OnRightChangeReady(status, std::move(changes));
                            }));
 
@@ -167,6 +171,10 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
       weak_factory_.GetWeakPtr(), fxl::MakeCopyable([
         this, right_change = std::move(right_change), index = std::move(index)
       ](storage::Status status) mutable {
+        if (cancelled_) {
+          Done(Status::INTERNAL_ERROR);
+          return;
+        }
         OnComparisonDone(status, std::move(right_change), index->distinct);
       }));
 
@@ -197,8 +205,13 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
     delegated_merge_ = std::make_unique<ConflictResolverClient>(
         storage_, manager_, conflict_resolver_, std::move(left_),
         std::move(right_), std::move(ancestor_),
-        callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                             [this](Status status) { Done(status); }));
+        callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](Status status) {
+          if (cancelled_) {
+            Done(Status::INTERNAL_ERROR);
+            return;
+          }
+          Done(status);
+        }));
 
     delegated_merge_->Start();
     return;
@@ -214,6 +227,10 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
           fxl::MakeCopyable([ this, right_changes = std::move(right_changes) ](
               storage::Status s,
               std::unique_ptr<storage::Journal> journal) mutable {
+            if (cancelled_) {
+              Done(Status::INTERNAL_ERROR);
+              return;
+            }
             if (s != storage::Status::OK) {
               FXL_LOG(ERROR) << "Unable to start merge commit: " << s;
               Done(PageUtils::ConvertStatus(s));
