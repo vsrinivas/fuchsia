@@ -201,8 +201,8 @@ zx_status_t Device::Bind() {
 
 zx_status_t Device::ReadRegister(uint16_t offset, uint32_t* value) {
     auto ret = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0,
-            offset, value, sizeof(*value), ZX_TIME_INFINITE);
-    return ret < 0 ? ret : ZX_OK;
+            offset, value, sizeof(*value), ZX_TIME_INFINITE, NULL);
+    return ret;
 }
 
 template <uint16_t A> zx_status_t Device::ReadRegister(Register<A>* reg) {
@@ -211,8 +211,8 @@ template <uint16_t A> zx_status_t Device::ReadRegister(Register<A>* reg) {
 
 zx_status_t Device::WriteRegister(uint16_t offset, uint32_t value) {
     auto ret = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
-            offset, &value, sizeof(value), ZX_TIME_INFINITE);
-    return ret < 0 ? ret : ZX_OK;
+            offset, &value, sizeof(value), ZX_TIME_INFINITE, NULL);
+    return ret;
 }
 
 template <uint16_t A> zx_status_t Device::WriteRegister(const Register<A>& reg) {
@@ -469,9 +469,10 @@ zx_status_t Device::LoadFirmware() {
             errorf("error reading firmware\n");
             return ZX_ERR_BAD_STATE;
         }
+        size_t out_length;
         status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
-                             0, addr, buf, to_send, ZX_TIME_INFINITE);
-        if (status < (ssize_t)to_send) {
+                             0, addr, buf, to_send, ZX_TIME_INFINITE, &out_length);
+        if (status != ZX_OK || out_length < to_send) {
             errorf("failed to send firmware\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -493,7 +494,7 @@ zx_status_t Device::LoadFirmware() {
 
     // Tell the device to load the firmware
     status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
-                         kFirmware, 0, NULL, 0, ZX_TIME_INFINITE);
+                         kFirmware, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
     if (status != ZX_OK) {
         errorf("failed to send load firmware command\n");
         return status;
@@ -707,7 +708,7 @@ zx_status_t Device::InitRegisters() {
     CHECK_WRITE(USB_DMA_CFG, status);
 
     status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
-            kReset, 0, NULL, 0, ZX_TIME_INFINITE);
+            kReset, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
     if (status != ZX_OK) {
         errorf("failed reset\n");
         return status;
@@ -1043,9 +1044,10 @@ zx_status_t Device::InitRegisters() {
     memset(&rwe.ba_sess_mask, 0xff, sizeof(rwe.ba_sess_mask));
     for (int i = 0; i < 256; i++) {
         uint16_t addr = RX_WCID_BASE + i * sizeof(rwe);
+        size_t out_length;
         status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
-                             0, addr, &rwe, sizeof(rwe), ZX_TIME_INFINITE);
-        if (status < (ssize_t)sizeof(rwe)) {
+                             0, addr, &rwe, sizeof(rwe), ZX_TIME_INFINITE, &out_length);
+        if (status != ZX_OK || out_length < (ssize_t)sizeof(rwe)) {
             errorf("failed to set RX WCID search entry\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -1849,7 +1851,8 @@ zx_status_t Device::DisableWpdma() {
 zx_status_t Device::DetectAutoRun(bool* autorun) {
     uint32_t fw_mode = 0;
     zx_status_t status = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR),
-            kDeviceMode, kAutorun, 0, &fw_mode, sizeof(fw_mode), ZX_TIME_INFINITE);
+            kDeviceMode, kAutorun, 0, &fw_mode, sizeof(fw_mode), ZX_TIME_INFINITE,
+            NULL);
     if (status < 0) {
         errorf("DeviceMode error: %d\n", status);
         return status;
