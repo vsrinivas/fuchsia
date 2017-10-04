@@ -35,7 +35,7 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
 }
 
 VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo)
-    : vmo_(vmo), state_tracker_(0u) {}
+    : vmo_(vmo) {}
 
 VmObjectDispatcher::~VmObjectDispatcher() {
     // Intentionally leave vmo_->user_id() set to our koid even though we're

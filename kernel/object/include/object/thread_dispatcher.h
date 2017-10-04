@@ -17,7 +17,6 @@
 #include <object/dispatcher.h>
 #include <object/excp_port.h>
 #include <object/futex_node.h>
-#include <object/state_tracker.h>
 
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -91,7 +90,7 @@ public:
 
     // Dispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }
-    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    bool has_state_tracker() const final { return true; }
     void on_zero_handles() final;
     zx_koid_t get_related_koid() const final;
 
@@ -204,8 +203,6 @@ private:
 
     // Node for linked list of threads blocked on a futex
     FutexNode futex_node_;
-
-    StateTracker state_tracker_;
 
     // A thread-level exception port for this thread.
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);

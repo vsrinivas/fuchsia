@@ -4,10 +4,35 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/state_tracker.h>
+#include <object/dispatcher.h>
 
 #include <object/state_observer.h>
 #include <unittest.h>
+
+namespace {
+
+class TestDispatcher final : public Dispatcher {
+public:
+    TestDispatcher() {}
+    ~TestDispatcher() final = default;
+    zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_NONE; }
+    bool has_state_tracker() const final { return true; }
+
+    // Heler: Causes OnStateChange() to be called.
+    void CallUpdateState() {
+        UpdateState(0, 1);
+    }
+
+    // Helper: Causes most On*() hooks (except for OnInitialized) to
+    // be called on all of |st|'s observers.
+    void CallAllOnHooks() {
+        UpdateState(0, 7);
+        Cancel(/* handle= */ nullptr);
+        CancelByKey(/* handle= */ nullptr, /* port= */ nullptr, /* key= */ 2u);
+    }
+};
+
+} // namespace
 
 // Tests for observer removal
 namespace removal {
@@ -35,14 +60,6 @@ private:
     int removals_ = 0;
 };
 
-// Helper: Causes most On*() hooks (except for OnInitialized) to be called on
-// all of |st|'s observers.
-void call_all_on_hooks(StateTracker* st) {
-    st->UpdateState(0, 7);
-    st->Cancel(/* handle= */ nullptr);
-    st->CancelByKey(/* handle= */ nullptr, /* port= */ nullptr, /* key= */ 2u);
-}
-
 bool on_initialize(void* context) {
     BEGIN_TEST;
 
@@ -58,14 +75,14 @@ bool on_initialize(void* context) {
     EXPECT_EQ(0, obs.removals(), "");
 
     // Cause OnInitialize() to be called.
-    StateTracker st;
+    TestDispatcher st;
     st.AddObserver(&obs, nullptr);
 
     // Should have been removed.
     EXPECT_EQ(1, obs.removals(), "");
 
     // Further On hook calls should not re-remove.
-    call_all_on_hooks(&st);
+    st.CallAllOnHooks();
     EXPECT_EQ(1, obs.removals(), "");
 
     END_TEST;
@@ -84,18 +101,18 @@ bool on_state_change_via_update_state(void* context) {
     RmOnStateChange obs;
     EXPECT_EQ(0, obs.removals(), "");
 
-    StateTracker st;
+    TestDispatcher st;
     st.AddObserver(&obs, nullptr);
     EXPECT_EQ(0, obs.removals(), ""); // Not removed yet.
 
     // Cause OnStateChange() to be called.
-    st.UpdateState(0, 1);
+    st.CallUpdateState();
 
     // Should have been removed.
     EXPECT_EQ(1, obs.removals(), "");
 
     // Further On hook calls should not re-remove.
-    call_all_on_hooks(&st);
+    st.CallAllOnHooks();
     EXPECT_EQ(1, obs.removals(), "");
 
     END_TEST;
@@ -114,7 +131,7 @@ bool on_cancel(void* context) {
     RmOnCancel obs;
     EXPECT_EQ(0, obs.removals(), "");
 
-    StateTracker st;
+    TestDispatcher st;
     st.AddObserver(&obs, nullptr);
     EXPECT_EQ(0, obs.removals(), ""); // Not removed yet.
 
@@ -125,7 +142,7 @@ bool on_cancel(void* context) {
     EXPECT_EQ(1, obs.removals(), "");
 
     // Further On hook calls should not re-remove.
-    call_all_on_hooks(&st);
+    st.CallAllOnHooks();
     EXPECT_EQ(1, obs.removals(), "");
 
     END_TEST;
@@ -145,7 +162,7 @@ bool on_cancel_by_key(void* context) {
     RmOnCancelByKey obs;
     EXPECT_EQ(0, obs.removals(), "");
 
-    StateTracker st;
+    TestDispatcher st;
     st.AddObserver(&obs, nullptr);
     EXPECT_EQ(0, obs.removals(), ""); // Not removed yet.
 
@@ -156,7 +173,7 @@ bool on_cancel_by_key(void* context) {
     EXPECT_EQ(1, obs.removals(), "");
 
     // Further On hook calls should not re-remove.
-    call_all_on_hooks(&st);
+    st.CallAllOnHooks();
     EXPECT_EQ(1, obs.removals(), "");
 
     END_TEST;

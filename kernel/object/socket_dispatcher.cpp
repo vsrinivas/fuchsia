@@ -64,8 +64,8 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
         if (!ac.check())
             return ZX_ERR_NO_MEMORY;
 
-        socket0->state_tracker_.UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
-        socket1->state_tracker_.UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
+        socket0->UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
+        socket1->UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
     }
 
     *rights = ZX_DEFAULT_SOCKET_RIGHTS;
@@ -75,9 +75,9 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
 }
 
 SocketDispatcher::SocketDispatcher(uint32_t flags)
-    : flags_(flags),
+    : Dispatcher(ZX_SOCKET_WRITABLE),
+      flags_(flags),
       peer_koid_(0u),
-      state_tracker_(ZX_SOCKET_WRITABLE),
       control_msg_len_(0),
       read_disabled_(false) {
 }
@@ -111,7 +111,7 @@ void SocketDispatcher::OnPeerZeroHandles() {
 
     AutoLock lock(&lock_);
     other_.reset();
-    state_tracker_.UpdateState(ZX_SOCKET_WRITABLE, ZX_SOCKET_PEER_CLOSED);
+    UpdateState(ZX_SOCKET_WRITABLE, ZX_SOCKET_PEER_CLOSED);
 }
 
 zx_status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
@@ -121,7 +121,7 @@ zx_status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
         return ZX_ERR_INVALID_ARGS;
 
     if (!peer) {
-        state_tracker_.UpdateState(clear_mask, set_mask);
+        UpdateState(clear_mask, set_mask);
         return ZX_OK;
     }
 
@@ -138,7 +138,7 @@ zx_status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
 
 zx_status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
-    state_tracker_.UpdateState(clear_mask, set_mask);
+    UpdateState(clear_mask, set_mask);
     return ZX_OK;
 }
 
@@ -153,7 +153,7 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) {
     fbl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
-        zx_signals_t signals = state_tracker_.GetSignalsState();
+        zx_signals_t signals = GetSignalsState();
         // If we're already shut down in the requested way, return immediately.
         const uint32_t want_signals =
             (shutdown_read ? ZX_SOCKET_READ_DISABLED : 0) |
@@ -174,7 +174,7 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) {
             clear_mask |= ZX_SOCKET_WRITABLE;
             set_mask |= ZX_SOCKET_WRITE_DISABLED;
         }
-        state_tracker_.UpdateState(clear_mask, set_mask);
+        UpdateState(clear_mask, set_mask);
     }
     // Our peer already be closed - if so, we've already updated our own bits so we are done. If the
     // peer is done, we need to notify them of the state change.
@@ -208,7 +208,7 @@ zx_status_t SocketDispatcher::ShutdownOther(uint32_t how) {
             set_mask |= ZX_SOCKET_READ_DISABLED;
     }
 
-    state_tracker_.UpdateState(clear_mask, set_mask);
+    UpdateState(clear_mask, set_mask);
     return ZX_OK;
 }
 
@@ -223,7 +223,7 @@ zx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
         AutoLock lock(&lock_);
         if (!other_)
             return ZX_ERR_PEER_CLOSED;
-        zx_signals_t signals = state_tracker_.GetSignalsState();
+        zx_signals_t signals = GetSignalsState();
         if (signals & ZX_SOCKET_WRITE_DISABLED)
             return ZX_ERR_BAD_STATE;
         other = other_;
@@ -276,9 +276,9 @@ zx_status_t SocketDispatcher::WriteControlSelf(user_ptr<const void> src,
 
     control_msg_len_ = static_cast<uint32_t>(len);
 
-    state_tracker_.UpdateState(0u, ZX_SOCKET_CONTROL_READABLE);
+    UpdateState(0u, ZX_SOCKET_CONTROL_READABLE);
     if (other_)
-        other_->state_tracker_.UpdateState(ZX_SOCKET_CONTROL_WRITABLE, 0u);
+        other_->UpdateState(ZX_SOCKET_CONTROL_WRITABLE, 0u);
 
     return ZX_OK;
 }
@@ -306,11 +306,11 @@ zx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
 
     if (st > 0) {
         if (was_empty)
-            state_tracker_.UpdateState(0u, ZX_SOCKET_READABLE);
+            UpdateState(0u, ZX_SOCKET_READABLE);
     }
 
     if (other_ && is_full())
-        other_->state_tracker_.UpdateState(ZX_SOCKET_WRITABLE, 0u);
+        other_->UpdateState(ZX_SOCKET_WRITABLE, 0u);
 
     *written = st;
     return status;
@@ -351,11 +351,11 @@ zx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
         uint32_t set_mask = 0u;
         if (read_disabled_)
             set_mask |= ZX_SOCKET_READ_DISABLED;
-        state_tracker_.UpdateState(ZX_SOCKET_READABLE, set_mask);
+        UpdateState(ZX_SOCKET_READABLE, set_mask);
     }
 
     if (other_ && was_full && (st > 0))
-        other_->state_tracker_.UpdateState(0u, ZX_SOCKET_WRITABLE);
+        other_->UpdateState(0u, ZX_SOCKET_WRITABLE);
 
     *nread = static_cast<size_t>(st);
     return ZX_OK;
@@ -379,9 +379,9 @@ zx_status_t SocketDispatcher::ReadControl(user_ptr<void> dst, size_t len,
         return ZX_ERR_INVALID_ARGS; // Invalid user buffer.
 
     control_msg_len_ = 0;
-    state_tracker_.UpdateState(ZX_SOCKET_CONTROL_READABLE, 0u);
+    UpdateState(ZX_SOCKET_CONTROL_READABLE, 0u);
     if (other_)
-        other_->state_tracker_.UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
+        other_->UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
 
     *nread = copy_len;
     return ZX_OK;

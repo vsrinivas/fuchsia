@@ -11,9 +11,9 @@
 #include <vm/vm_aspace.h>
 #include <object/dispatcher.h>
 #include <object/futex_context.h>
+#include <object/handle.h>
 #include <object/handle_owner.h>
 #include <object/policy_manager.h>
-#include <object/state_tracker.h>
 #include <object/thread_dispatcher.h>
 
 #include <zircon/syscalls/object.h>
@@ -61,7 +61,7 @@ public:
 
     // Dispatcher implementation
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PROCESS; }
-    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    bool has_state_tracker() const final { return true; }
     void on_zero_handles() final;
     zx_koid_t get_related_koid() const final;
 
@@ -312,8 +312,6 @@ private:
     // our list of handles
     mutable fbl::Mutex handle_table_lock_; // protects |handles_|.
     fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
-
-    StateTracker state_tracker_;
 
     FutexContext futex_context_;
 

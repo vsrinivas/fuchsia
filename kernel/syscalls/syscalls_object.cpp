@@ -131,7 +131,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             if (status != ZX_OK)
                 return status;
 
-            bool waitable = dispatcher->get_state_tracker() != nullptr;
+            bool waitable = dispatcher->has_state_tracker();
 
             // build the info structure
             zx_info_handle_basic_t info = {
@@ -801,11 +801,10 @@ zx_status_t sys_object_set_cookie(zx_handle_t handle, zx_handle_t hscope, uint64
     if (status != ZX_OK)
         return status;
 
-    StateTracker* st = dispatcher->get_state_tracker();
-    if (st == nullptr)
+    if (!dispatcher->has_state_tracker())
         return ZX_ERR_NOT_SUPPORTED;
 
-    return st->SetCookie(dispatcher->get_cookie_jar(), scope, cookie);
+    return dispatcher->SetCookie(dispatcher->get_cookie_jar(), scope, cookie);
 }
 
 zx_status_t sys_object_get_cookie(zx_handle_t handle, zx_handle_t hscope, user_ptr<uint64_t> _cookie) {
@@ -820,12 +819,11 @@ zx_status_t sys_object_get_cookie(zx_handle_t handle, zx_handle_t hscope, user_p
     if (status != ZX_OK)
         return status;
 
-    StateTracker* st = dispatcher->get_state_tracker();
-    if (st == nullptr)
+    if (!dispatcher->has_state_tracker())
         return ZX_ERR_NOT_SUPPORTED;
 
     uint64_t cookie;
-    status = st->GetCookie(dispatcher->get_cookie_jar(), scope, &cookie);
+    status = dispatcher->GetCookie(dispatcher->get_cookie_jar(), scope, &cookie);
     if (status != ZX_OK)
         return status;
 

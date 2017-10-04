@@ -11,7 +11,6 @@
 #include <kernel/event.h>
 #include <object/dispatcher.h>
 #include <object/message_packet.h>
-#include <object/state_tracker.h>
 
 #include <zircon/types.h>
 #include <fbl/canary.h>
@@ -29,7 +28,7 @@ public:
 
     ~ChannelDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
-    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    bool has_state_tracker() const final { return true; }
     zx_status_t add_observer(StateObserver* observer) final;
     zx_koid_t get_related_koid() const final TA_REQ(lock_) { return other_koid_; }
     zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
@@ -111,7 +110,6 @@ private:
     MessageList messages_ TA_GUARDED(lock_);
     uint64_t message_count_ TA_GUARDED(lock_) = 0;
     WaiterList waiters_ TA_GUARDED(lock_);
-    StateTracker state_tracker_;
     fbl::RefPtr<ChannelDispatcher> other_ TA_GUARDED(lock_);
     zx_koid_t other_koid_ TA_GUARDED(lock_);
 };

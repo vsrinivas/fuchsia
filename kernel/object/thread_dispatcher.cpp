@@ -63,8 +63,7 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
 
 ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process,
                                    uint32_t flags)
-    : process_(fbl::move(process)),
-      state_tracker_(0u) {
+    : process_(fbl::move(process)) {
     LTRACE_ENTRY_OBJ;
 }
 
@@ -407,7 +406,7 @@ void ThreadDispatcher::Exiting() {
     LTRACE_ENTRY_OBJ;
 
     // signal any waiters
-    state_tracker_.UpdateState(0u, ZX_TASK_TERMINATED);
+    UpdateState(0u, ZX_TASK_TERMINATED);
 
     {
         AutoLock lock(&exception_lock_);

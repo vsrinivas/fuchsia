@@ -12,7 +12,6 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <object/dispatcher.h>
-#include <object/state_tracker.h>
 
 #include <sys/types.h>
 
@@ -24,7 +23,7 @@ public:
 
     ~TimerDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_TIMER; }
-    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    bool has_state_tracker() const final { return true; }
     void on_zero_handles() final;
 
     // Timer specific ops.
@@ -47,5 +46,4 @@ private:
     zx_duration_t slack_ TA_GUARDED(lock_);
     bool cancel_pending_ TA_GUARDED(lock_);
     timer_t timer_ TA_GUARDED(lock_);
-    StateTracker state_tracker_;
 };

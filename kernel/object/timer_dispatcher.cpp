@@ -93,7 +93,7 @@ zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack) {
     // If the timer is already due, then we can set the signal immediately without
     // starting the timer.
     if ((deadline == 0u) || (deadline <= current_time())) {
-        state_tracker_.UpdateState(0u, ZX_TIMER_SIGNALED);
+        UpdateState(0u, ZX_TIMER_SIGNALED);
         return ZX_OK;
     }
 
@@ -135,7 +135,7 @@ void TimerDispatcher::SetTimerLocked(bool cancel_first) {
 
 bool TimerDispatcher::CancelTimerLocked() {
     // Always clear the signal bit.
-    state_tracker_.UpdateState(ZX_TIMER_SIGNALED, 0u);
+    UpdateState(ZX_TIMER_SIGNALED, 0u);
 
     // If the timer isn't pending then we're done.
     if (!deadline_)
@@ -183,7 +183,7 @@ void TimerDispatcher::OnTimerFired() {
             }
         } else {
             // The timer is firing.
-            state_tracker_.UpdateState(0u, ZX_TIMER_SIGNALED);
+            UpdateState(0u, ZX_TIMER_SIGNALED);
             deadline_ = 0u;
         }
     }

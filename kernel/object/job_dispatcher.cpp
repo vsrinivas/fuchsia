@@ -58,7 +58,8 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              fbl::RefPtr<JobDispatcher> parent,
                              pol_cookie_t policy)
-    : parent_(fbl::move(parent)),
+    : Dispatcher(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
+      parent_(fbl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),
       process_count_(0u),
@@ -66,7 +67,6 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       importance_(parent != nullptr
                       ? ZX_JOB_IMPORTANCE_INHERITED
                       : ZX_JOB_IMPORTANCE_MAX),
-      state_tracker_(ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS),
       policy_(policy) {
 
     // Set the initial relative importance.
@@ -194,7 +194,7 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
             panic("No user processes left!\n");
     }
 
-    state_tracker_.UpdateState(0u, set);
+    UpdateState(0u, set);
 }
 
 void JobDispatcher::UpdateSignalsIncrementLocked() {
@@ -211,7 +211,7 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
         DEBUG_ASSERT(!jobs_.is_empty());
         clear |= ZX_JOB_NO_JOBS;
     }
-    state_tracker_.UpdateState(clear, 0u);
+    UpdateState(clear, 0u);
 }
 
 pol_cookie_t JobDispatcher::GetPolicy() {

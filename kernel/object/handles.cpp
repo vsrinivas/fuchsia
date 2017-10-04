@@ -17,7 +17,6 @@
 #include <object/diagnostics.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <object/state_tracker.h>
 
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
@@ -177,10 +176,9 @@ Handle* DupHandle(Handle* source, zx_rights_t rights) {
 
 void DeleteHandle(Handle* handle) {
     fbl::RefPtr<Dispatcher> dispatcher(handle->dispatcher());
-    auto state_tracker = dispatcher->get_state_tracker();
 
-    if (state_tracker) {
-        state_tracker->Cancel(handle);
+    if (dispatcher->has_state_tracker()) {
+        dispatcher->Cancel(handle);
     }
 
     // Destroys, but does not free, the Handle, and fixes up its memory

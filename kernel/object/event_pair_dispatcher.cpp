@@ -12,7 +12,6 @@
 #include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <object/state_tracker.h>
 
 constexpr uint32_t kUserSignalMask = ZX_EVENT_SIGNALED | ZX_USER_SIGNAL_ALL;
 
@@ -46,8 +45,8 @@ void EventPairDispatcher::on_zero_handles() {
     fbl::AutoLock locker(&lock_);
     DEBUG_ASSERT(other_);
 
-    other_->state_tracker_.InvalidateCookie(other_->get_cookie_jar());
-    other_->state_tracker_.UpdateState(0u, ZX_EPAIR_PEER_CLOSED);
+    other_->InvalidateCookie(other_->get_cookie_jar());
+    other_->UpdateState(0u, ZX_EPAIR_PEER_CLOSED);
     other_.reset();
 }
 
@@ -58,7 +57,7 @@ zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_m
         return ZX_ERR_INVALID_ARGS;
 
     if (!peer) {
-        state_tracker_.UpdateState(clear_mask, set_mask);
+        UpdateState(clear_mask, set_mask);
         return ZX_OK;
     }
 
@@ -66,13 +65,12 @@ zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_m
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
         return ZX_ERR_PEER_CLOSED;
-    other_->state_tracker_.UpdateState(clear_mask, set_mask);
+    other_->UpdateState(clear_mask, set_mask);
     return ZX_OK;
 }
 
 EventPairDispatcher::EventPairDispatcher()
-        : state_tracker_(0u),
-          other_koid_(0ull) {}
+        : other_koid_(0ull) {}
 
 // This is called before either EventPairDispatcher is accessible from threads other than the one
 // initializing the event pair, so it does not need locking.

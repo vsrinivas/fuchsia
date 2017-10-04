@@ -9,7 +9,6 @@
 #include <zircon/types.h>
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
-#include <object/state_tracker.h>
 
 #include <lib/user_copy/user_ptr.h>
 
@@ -25,7 +24,7 @@ public:
 
     ~VmObjectDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_VMO; }
-    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    bool has_state_tracker() const final { return true; }
     void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
     zx_status_t set_name(const char* name, size_t len) final;
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
@@ -51,6 +50,5 @@ private:
     // VMOs do not currently maintain any VMO-specific signal state,
     // but do allow user signals to be set. In addition, the CookieJar
     // shares the same lock.
-    StateTracker state_tracker_;
     CookieJar cookie_jar_;
 };

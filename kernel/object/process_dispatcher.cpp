@@ -96,7 +96,7 @@ zx_status_t ProcessDispatcher::Create(
 ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
                                      fbl::StringPiece name,
                                      uint32_t flags)
-  : job_(fbl::move(job)), policy_(job_->GetPolicy()), state_tracker_(0u),
+  : job_(fbl::move(job)), policy_(job_->GetPolicy()),
     name_(name.data(), name.length()) {
     LTRACE_ENTRY_OBJ;
 
@@ -369,7 +369,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
 
         // signal waiter
         LTRACEF_LEVEL(2, "signaling waiters\n");
-        state_tracker_.UpdateState(0u, ZX_TASK_TERMINATED);
+        UpdateState(0u, ZX_TASK_TERMINATED);
 
         // IWBN to call job_->RemoveChildProcess(this) here, but that risks
         // a deadlock as we have |state_lock_| and RemoveChildProcess grabs the

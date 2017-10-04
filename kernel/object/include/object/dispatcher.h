@@ -8,13 +8,25 @@
 
 #include <err.h>
 #include <stdint.h>
+#include <stdint.h>
 
-#include <zircon/syscalls/object.h>
-#include <zircon/types.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <object/handle.h>
+#include <kernel/spinlock.h>
+#include <object/state_observer.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
+
+class Handle;
+
+struct CookieJar {
+    zx_koid_t scope_ = ZX_KOID_INVALID;
+    uint64_t cookie_ = 0u;
+};
 
 template <typename T> struct DispatchTag;
 
@@ -45,13 +57,11 @@ DECLARE_DISPTAG(TimerDispatcher, ZX_OBJ_TYPE_TIMER)
 
 #undef DECLARE_DISPTAG
 
-class StateTracker;
-class StateObserver;
-class CookieJar;
-
 class Dispatcher : public fbl::RefCounted<Dispatcher> {
 public:
-    Dispatcher();
+    // At construction, the object's state tracker is asserting
+    // |signals|.
+    explicit Dispatcher(zx_signals_t signals = 0u);
     virtual ~Dispatcher();
 
     zx_koid_t get_koid() const { return koid_; }
@@ -73,11 +83,37 @@ public:
         return handle_count_;
     }
 
+    // The following are only to be called when |has_state_tracker| reports true.
+
+    using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
+
+    // Add an observer.
+    void AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo);
+
+    // Remove an observer (which must have been added).
+    void RemoveObserver(StateObserver* observer);
+
+    // Called when observers of the handle's state (e.g., waits on the handle) should be
+    // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being
+    // destroyed or transferred. Returns true if at least one observer was found.
+    bool Cancel(Handle* handle);
+
+    // Like Cancel() but issued via via zx_port_cancel().
+    bool CancelByKey(Handle* handle, const void* port, uint64_t key);
+
+    // Accessors for CookieJars
+    // These live with the state tracker so they can make use of the state tracker's
+    // lock (since not all objects have their own locks, but all Dispatchers that are
+    // cookie-capable have state trackers)
+    zx_status_t SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie);
+    zx_status_t GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie);
+    zx_status_t InvalidateCookie(CookieJar *cookiejar);
+
     // Interface for derived classes.
 
     virtual zx_obj_type_t get_type() const = 0;
 
-    virtual StateTracker* get_state_tracker() { return nullptr; }
+    virtual bool has_state_tracker() const { return false; }
 
     virtual zx_status_t add_observer(StateObserver* observer);
 
@@ -99,9 +135,35 @@ public:
     // a CookieJar for those cookies to be stored in.
     virtual CookieJar* get_cookie_jar() { return nullptr; }
 
+protected:
+    // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
+    // setting satisfiable signals should not wake anyone.)
+    void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
+
+    zx_signals_t GetSignalsState() const {
+        ZX_DEBUG_ASSERT(has_state_tracker());
+        return signals_;
+    }
+
 private:
+    // Returns flag kHandled if one of the observers have been signaled.
+    StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) TA_REQ(lock_);
+
     const zx_koid_t koid_;
     uint32_t handle_count_;
+
+    // TODO(kulakowski) Make signals_ TA_GUARDED(lock_).
+    // Right now, signals_ is almost entirely accessed under the
+    // common dispatcher lock_. Once we migrate the per-object locks
+    // to instead use the common dispatcher lock_, all of the unlocked
+    // accesses (all of which go via GetSignalsState) will be
+    // statically under this lock_, rather than maybe under this lock
+    // or the more specific object lock.
+    zx_signals_t signals_;
+    fbl::Mutex lock_;
+
+    // Active observers are elements in |observers_|.
+    ObserverList observers_ TA_GUARDED(lock_);
 };
 
 // DownCastDispatcher checks if a RefPtr<Dispatcher> points to a

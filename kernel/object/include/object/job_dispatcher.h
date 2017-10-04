@@ -12,7 +12,6 @@
 #include <object/excp_port.h>
 #include <object/policy_manager.h>
 #include <object/process_dispatcher.h>
-#include <object/state_tracker.h>
 
 #include <zircon/types.h>
 #include <fbl/array.h>
@@ -66,7 +65,7 @@ public:
 
     // Dispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_JOB; }
-    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    bool has_state_tracker() const final { return true; }
     void on_zero_handles() final;
     zx_koid_t get_related_koid() const final;
     fbl::RefPtr<JobDispatcher> parent() { return fbl::RefPtr<JobDispatcher>(parent_); }
@@ -200,7 +199,6 @@ private:
     uint32_t process_count_ TA_GUARDED(lock_);
     uint32_t job_count_ TA_GUARDED(lock_);
     zx_job_importance_t importance_ TA_GUARDED(lock_);
-    StateTracker state_tracker_;
 
     using RawJobList =
         fbl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;

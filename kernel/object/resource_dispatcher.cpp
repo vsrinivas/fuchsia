@@ -27,7 +27,7 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
 }
 
 ResourceDispatcher::ResourceDispatcher(uint32_t kind, uint64_t low, uint64_t high) :
-    kind_(kind), low_(low), high_(high), state_tracker_(0) {
+    kind_(kind), low_(low), high_(high) {
 }
 
 ResourceDispatcher::~ResourceDispatcher() {

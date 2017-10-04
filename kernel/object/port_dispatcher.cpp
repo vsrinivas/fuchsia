@@ -15,7 +15,7 @@
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
 #include <object/excp_port.h>
-#include <object/state_tracker.h>
+#include <object/handle.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/port.h>
@@ -300,7 +300,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     // Called under the handle table lock.
 
     auto dispatcher = handle->dispatcher();
-    if (!dispatcher->get_state_tracker())
+    if (!dispatcher->has_state_tracker())
         return ZX_ERR_NOT_SUPPORTED;
 
     fbl::AllocChecker ac;

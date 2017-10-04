@@ -57,9 +57,9 @@ zx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t o
 
 FifoDispatcher::FifoDispatcher(uint32_t /*options*/, uint32_t count, uint32_t elem_size,
                                fbl::unique_ptr<uint8_t[]> data)
-    : elem_count_(count), elem_size_(elem_size), mask_(count - 1),
-      peer_koid_(0u), state_tracker_(ZX_FIFO_WRITABLE),
-      head_(0u), tail_(0u), data_(fbl::move(data)) {
+    : Dispatcher(ZX_FIFO_WRITABLE),
+      elem_count_(count), elem_size_(elem_size), mask_(count - 1),
+      peer_koid_(0u), head_(0u), tail_(0u), data_(fbl::move(data)) {
 }
 
 FifoDispatcher::~FifoDispatcher() {
@@ -79,7 +79,7 @@ zx_status_t FifoDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, 
         return ZX_ERR_INVALID_ARGS;
 
     if (!peer) {
-        state_tracker_.UpdateState(clear_mask, set_mask);
+        UpdateState(clear_mask, set_mask);
         return ZX_OK;
     }
 
@@ -96,7 +96,7 @@ zx_status_t FifoDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, 
 
 zx_status_t FifoDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
-    state_tracker_.UpdateState(clear_mask, set_mask);
+    UpdateState(clear_mask, set_mask);
     return ZX_OK;
 }
 
@@ -117,7 +117,7 @@ void FifoDispatcher::OnPeerZeroHandles() {
 
     AutoLock lock(&lock_);
     other_.reset();
-    state_tracker_.UpdateState(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
+    UpdateState(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
 }
 
 zx_status_t FifoDispatcher::WriteFromUser(user_ptr<const uint8_t> ptr, size_t len, uint32_t* actual) {
@@ -182,11 +182,11 @@ zx_status_t FifoDispatcher::WriteSelf(user_ptr<const uint8_t> ptr, size_t bytele
 
     // if was empty, we've become readable
     if (was_empty)
-        state_tracker_.UpdateState(0u, ZX_FIFO_READABLE);
+        UpdateState(0u, ZX_FIFO_READABLE);
 
     // if now full, we're no longer writable
     if (elem_count_ == (head_ - tail_))
-        other_->state_tracker_.UpdateState(ZX_FIFO_WRITABLE, 0u);
+        other_->UpdateState(ZX_FIFO_WRITABLE, 0u);
 
     *actual = (head_ - old_head);
     return ZX_OK;
@@ -240,11 +240,11 @@ zx_status_t FifoDispatcher::ReadToUser(user_ptr<uint8_t> ptr, size_t bytelen, ui
 
     // if we were full, we have become writable
     if (was_full && other_)
-        other_->state_tracker_.UpdateState(0u, ZX_FIFO_WRITABLE);
+        other_->UpdateState(0u, ZX_FIFO_WRITABLE);
 
     // if we've become empty, we're no longer readable
     if ((head_ - tail_) == 0)
-        state_tracker_.UpdateState(ZX_FIFO_READABLE, 0u);
+        UpdateState(ZX_FIFO_READABLE, 0u);
 
     *actual = (tail_ - old_tail);
     return ZX_OK;

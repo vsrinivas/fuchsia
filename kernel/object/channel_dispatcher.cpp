@@ -52,7 +52,7 @@ zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
 }
 
 ChannelDispatcher::ChannelDispatcher()
-    : state_tracker_(ZX_CHANNEL_WRITABLE) {
+    : Dispatcher(ZX_CHANNEL_WRITABLE) {
 }
 
 // This is called before either ChannelDispatcher is accessible from threads other than the one
@@ -79,7 +79,7 @@ zx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
     AutoLock lock(&lock_);
     StateObserver::CountInfo cinfo =
         {{{message_count_, ZX_CHANNEL_READABLE}, {0u, 0u}}};
-    state_tracker_.AddObserver(observer, &cinfo);
+    AddObserver(observer, &cinfo);
     return ZX_OK;
 }
 
@@ -120,7 +120,7 @@ void ChannelDispatcher::OnPeerZeroHandles() {
 
     AutoLock lock(&lock_);
     other_.reset();
-    state_tracker_.UpdateState(ZX_CHANNEL_WRITABLE, ZX_CHANNEL_PEER_CLOSED);
+    UpdateState(ZX_CHANNEL_WRITABLE, ZX_CHANNEL_PEER_CLOSED);
     // (3B) Abort any waiting Call operations
     // because we've been canceled by reason
     // of the opposing endpoint going away.
@@ -158,7 +158,7 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
     message_count_--;
 
     if (messages_.is_empty())
-        state_tracker_.UpdateState(ZX_CHANNEL_READABLE, 0u);
+        UpdateState(ZX_CHANNEL_READABLE, 0u);
 
     return rv;
 }
@@ -282,7 +282,7 @@ int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
     messages_.push_back(fbl::move(msg));
     message_count_++;
 
-    state_tracker_.UpdateState(0u, ZX_CHANNEL_READABLE);
+    UpdateState(0u, ZX_CHANNEL_READABLE);
     return 0;
 }
 
@@ -293,7 +293,7 @@ zx_status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mas
         return ZX_ERR_INVALID_ARGS;
 
     if (!peer) {
-        state_tracker_.UpdateState(clear_mask, set_mask);
+        UpdateState(clear_mask, set_mask);
         return ZX_OK;
     }
 
@@ -310,7 +310,7 @@ zx_status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mas
 
 zx_status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
-    state_tracker_.UpdateState(clear_mask, set_mask);
+    UpdateState(clear_mask, set_mask);
     return ZX_OK;
 }
 

@@ -10,7 +10,8 @@
 
 #include <kernel/event.h>
 
-#include <object/state_tracker.h>
+#include <object/handle.h>
+#include <object/dispatcher.h>
 
 #include <fbl/type_support.h>
 
@@ -41,11 +42,9 @@ zx_status_t WaitStateObserver::Begin(Event* event,
 zx_signals_t WaitStateObserver::End() {
     canary_.Assert();
     DEBUG_ASSERT(dispatcher_);
+    DEBUG_ASSERT(dispatcher_->has_state_tracker());
 
-    auto tracker = dispatcher_->get_state_tracker();
-    DEBUG_ASSERT(tracker);
-    if (tracker)
-        tracker->RemoveObserver(this);
+    dispatcher_->RemoveObserver(this);
     dispatcher_.reset();
 
     // Return the set of reasons that we may have been woken.  Basically, this

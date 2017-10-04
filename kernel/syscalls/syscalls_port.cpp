@@ -127,11 +127,11 @@ zx_status_t sys_port_cancel(zx_handle_t handle, zx_handle_t source, uint64_t key
         if (!watched->HasRights(ZX_RIGHT_READ))
             return ZX_ERR_ACCESS_DENIED;
 
-        auto state_tracker = watched->dispatcher()->get_state_tracker();
-        if (!state_tracker)
+        auto dispatcher = watched->dispatcher();
+        if (!dispatcher->has_state_tracker())
             return ZX_ERR_NOT_SUPPORTED;
 
-        bool had_observer = state_tracker->CancelByKey(watched, port.get(), key);
+        bool had_observer = dispatcher->CancelByKey(watched, port.get(), key);
         bool packet_removed = port->CancelQueued(watched, key);
         return (had_observer || packet_removed) ? ZX_OK : ZX_ERR_NOT_FOUND;
     }
