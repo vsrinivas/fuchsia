@@ -94,6 +94,7 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
         }
 
         alloc_req_t request;
+        memset(&request, 0, sizeof(request));
         request.slice_count = 1;
         strcpy(request.name, "fs-test-partition");
         memcpy(request.type, kTestPartGUID, sizeof(request.type));

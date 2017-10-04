@@ -226,7 +226,7 @@ zx_status_t FvmContainer::AllocatePartition(uint8_t* type, uint8_t* guid, const 
 
         // Make sure this vpartition has not already been allocated
         if (entry->slices == 0) {
-            entry->init(type, guid, slices, name);
+            entry->init(type, guid, slices, name, 0);
             vpart_hint_ = index + 1;
             dirty_ = true;
             *vpart_index = index;

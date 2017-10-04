@@ -156,11 +156,13 @@ static int FVMRebind(int fvm_fd, char* ramdisk_path, const partition_entry_t* en
         snprintf(vpart_driver, sizeof(vpart_driver), "%s-p-%zu",
                  entries[i].name, entries[i].number);
         if (wait_for_driver_bind(path, vpart_driver)) {
+            fprintf(stderr, "Failed to wait for %s / %s\n", path, vpart_driver);
             return -1;
         }
         strcat(path, "/");
         strcat(path, vpart_driver);
         if (wait_for_driver_bind(path, "block")) {
+            fprintf(stderr, "  Failed to wait for %s / block\n", path);
             return -1;
         }
         path[path_len] = '\0';
@@ -215,6 +217,10 @@ static int EndFVMTest(const char* ramdisk_path) {
 constexpr uint8_t kTestUniqueGUID[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+constexpr uint8_t kTestUniqueGUID2[] = {
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
+
 constexpr char kTestPartName1[] = "data";
 constexpr uint8_t kTestPartGUIDData[] = GUID_DATA_VALUE;
 constexpr char kTestPartName2[] = "blob";
@@ -502,6 +508,7 @@ static bool TestAllocateOne(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -542,6 +549,7 @@ static bool TestAllocateMany(void) {
 
     // Test allocation of multiple VPartitions
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -585,6 +593,7 @@ static bool TestCloseDuringAccess(void) {
     ASSERT_GT(fd, 0);
 
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -653,6 +662,7 @@ static bool TestReleaseDuringAccess(void) {
     ASSERT_GT(fd, 0);
 
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -777,6 +787,7 @@ static bool TestVPartitionExtend(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     size_t slice_count = 1;
     request.slice_count = slice_count;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
@@ -864,6 +875,7 @@ static bool TestVPartitionExtendSparse(void) {
     ASSERT_GT(fd, 0);
 
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     slices_left--;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
@@ -929,6 +941,7 @@ static bool TestVPartitionShrink(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     size_t slice_count = 1;
     request.slice_count = slice_count;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
@@ -1021,6 +1034,7 @@ static bool TestVPartitionSplit(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     size_t slice_count = 5;
     request.slice_count = slice_count;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
@@ -1149,6 +1163,7 @@ static bool TestVPartitionDestroy(void) {
 
     // Test allocation of multiple VPartitions
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -1220,6 +1235,7 @@ static bool TestVPartitionQuery(void) {
 
     // Allocate partition
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 10;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -1317,6 +1333,7 @@ static bool TestSliceAccessContiguous(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -1388,6 +1405,7 @@ static bool TestSliceAccessMany(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -1462,6 +1480,7 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
     size_t slice_size = fvm_info.slice_size;
 
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
 
@@ -1581,6 +1600,7 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
     size_t slice_size = fvm_info.slice_size;
 
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
 
@@ -1673,6 +1693,7 @@ static bool TestPersistenceSimple(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -1785,6 +1806,7 @@ static bool TestCorruptMount(void) {
 
     // Allocate one VPart
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -1891,6 +1913,155 @@ static bool TestCorruptMount(void) {
     END_TEST;
 }
 
+static bool TestVPartitionUpgrade(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+    constexpr uint64_t kBlkSize = 512;
+    constexpr uint64_t kBlkCount = 1 << 20;
+    constexpr uint64_t kSliceSize = 64 * (1 << 20);
+    ASSERT_EQ(StartFVMTest(kBlkSize, kBlkCount, kSliceSize, ramdisk_path,
+                           fvm_driver), 0, "error mounting FVM");
+
+    int fd = open(fvm_driver, O_RDWR);
+    ASSERT_GT(fd, 0);
+
+    // Short-hand for asking if we can open a partition.
+    auto openable = [](const uint8_t* instanceGUID, const uint8_t* typeGUID) {
+        int fd = fvm_open_partition(instanceGUID, typeGUID, nullptr);
+        if (fd < 0) {
+            return false;
+        }
+        ASSERT_EQ(close(fd), 0);
+        return true;
+    };
+
+    // Allocate two VParts, one active, and one inactive.
+    alloc_req_t request;
+    memset(&request, 0, sizeof(request));
+    request.flags = fvm::kVPartFlagInactive;
+    request.slice_count = 1;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    int vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0);
+    ASSERT_EQ(close(vp_fd), 0);
+
+    request.flags = 0;
+    memcpy(request.guid, kTestUniqueGUID2, GUID_LEN);
+    strcpy(request.name, kTestPartName2);
+    vp_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(vp_fd, 0);
+    ASSERT_EQ(close(vp_fd), 0);
+
+    const partition_entry_t entries[] = {
+        {kTestPartName2, 2},
+    };
+    fd = FVMRebind(fd, ramdisk_path, entries, 1);
+    ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
+
+    // We shouldn't be able to re-open the inactive partition...
+    ASSERT_FALSE(openable(kTestUniqueGUID, kTestPartGUIDData));
+    // ... but we SHOULD be able to re-open the active partition.
+    ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+
+    // Try to upgrade the partition (from GUID2 --> GUID)
+    request.flags = fvm::kVPartFlagInactive;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    int new_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(new_fd, 0);
+    ASSERT_EQ(close(new_fd), 0);
+
+    upgrade_req_t upgrade;
+    memcpy(upgrade.old_guid, kTestUniqueGUID2, GUID_LEN);
+    memcpy(upgrade.new_guid, kTestUniqueGUID, GUID_LEN);
+    ASSERT_EQ(ioctl_block_fvm_upgrade(fd, &upgrade), ZX_OK);
+
+    // After upgrading, we should be able to open both partitions
+    ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
+    ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+
+    // Rebind the FVM driver, check the upgrade has succeeded.
+    // The original (GUID2) should be deleted, and the new partition (GUID)
+    // should exist.
+    const partition_entry_t upgraded_entries[] = {
+        {kTestPartName1, 1},
+    };
+    fd = FVMRebind(fd, ramdisk_path, upgraded_entries, 1);
+    ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
+
+    ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
+    ASSERT_FALSE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+
+    // Try upgrading when the "new" version doesn't exist.
+    // (It should return an error and have no noticable effect).
+    memcpy(upgrade.old_guid, kTestUniqueGUID, GUID_LEN);
+    memcpy(upgrade.new_guid, kTestUniqueGUID2, GUID_LEN);
+    ASSERT_EQ(ioctl_block_fvm_upgrade(fd, &upgrade), ZX_ERR_NOT_FOUND);
+
+    fd = FVMRebind(fd, ramdisk_path, upgraded_entries, 1);
+    ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
+
+    ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
+    ASSERT_FALSE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+
+    // Try upgrading when the "old" version doesn't exist.
+    request.flags = fvm::kVPartFlagInactive;
+    memcpy(request.guid, kTestUniqueGUID2, GUID_LEN);
+    strcpy(request.name, kTestPartName2);
+    new_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(new_fd, 0);
+    ASSERT_EQ(close(new_fd), 0);
+
+    char fake_guid[GUID_LEN];
+    memset(fake_guid, 0, GUID_LEN);
+    memcpy(upgrade.old_guid, fake_guid, GUID_LEN);
+    memcpy(upgrade.new_guid, kTestUniqueGUID2, GUID_LEN);
+    ASSERT_EQ(ioctl_block_fvm_upgrade(fd, &upgrade), ZX_OK);
+
+    const partition_entry_t upgraded_entries_both[] = {
+        {kTestPartName1, 1},
+        {kTestPartName2, 2},
+    };
+    fd = FVMRebind(fd, ramdisk_path, upgraded_entries_both, 2);
+    ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
+
+    // We should be able to open both partitions again.
+    ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
+    ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+
+    // Destroy and reallocate the first partition as inactive.
+    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    ASSERT_GT(vp_fd, 0);
+    ASSERT_EQ(ioctl_block_fvm_destroy(vp_fd), 0);
+    ASSERT_EQ(close(vp_fd), 0);
+    request.flags = fvm::kVPartFlagInactive;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    new_fd = fvm_allocate_partition(fd, &request);
+    ASSERT_GT(new_fd, 0);
+    ASSERT_EQ(close(new_fd), 0);
+
+    // Upgrade the partition with old_guid == new_guid.
+    // This should activate the partition.
+    memcpy(upgrade.old_guid, kTestUniqueGUID, GUID_LEN);
+    memcpy(upgrade.new_guid, kTestUniqueGUID, GUID_LEN);
+    ASSERT_EQ(ioctl_block_fvm_upgrade(fd, &upgrade), ZX_OK);
+
+    fd = FVMRebind(fd, ramdisk_path, upgraded_entries_both, 2);
+    ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
+
+    // We should be able to open both partitions again.
+    ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
+    ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
 // Test that the FVM driver can mount filesystems.
 static bool TestMounting(void) {
     BEGIN_TEST;
@@ -1933,9 +2104,10 @@ static bool TestMounting(void) {
     ASSERT_GT(rootfd, 0);
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* out = reinterpret_cast<vfs_query_info_t*>(buf);
-    ASSERT_EQ(ioctl_vfs_query_fs(rootfd, out, sizeof(buf) - 1),
-              static_cast<ssize_t>(sizeof(vfs_query_info_t) + strlen("minfs")),
+    ssize_t r = ioctl_vfs_query_fs(rootfd, out, sizeof(buf));
+    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(vfs_query_info_t) + strlen("minfs")),
               "Failed to query filesystem");
+    out->name[r - sizeof(vfs_query_info_t)] = '\0';
     ASSERT_EQ(strcmp("minfs", out->name), 0, "Unexpected filesystem mounted");
 
     // Verify that MinFS does not try to use more of the VPartition than
@@ -1974,6 +2146,7 @@ static bool TestCorruptionOk(void) {
 
     // Allocate one VPart (writes to backup)
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -2048,6 +2221,7 @@ static bool TestCorruptionRegression(void) {
 
     // Allocate one VPart (writes to backup)
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -2119,6 +2293,7 @@ static bool TestCorruptionUnrecoverable(void) {
 
     // Allocate one VPart (writes to backup)
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     request.slice_count = 1;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -2419,6 +2594,7 @@ static bool TestRandomOpMultithreaded(void) {
     ASSERT_GT(fd, 0);
 
     alloc_req_t request;
+    memset(&request, 0, sizeof(request));
     size_t slice_count = 1;
     request.slice_count = slice_count;
     strcpy(request.name, "TestPartition");
@@ -2517,6 +2693,7 @@ RUN_TEST_MEDIUM(TestSliceAccessMany)
 RUN_TEST_MEDIUM(TestSliceAccessNonContiguousPhysical)
 RUN_TEST_MEDIUM(TestSliceAccessNonContiguousVirtual)
 RUN_TEST_MEDIUM(TestPersistenceSimple)
+RUN_TEST_LARGE(TestVPartitionUpgrade)
 RUN_TEST_LARGE(TestMounting)
 RUN_TEST_MEDIUM(TestCorruptionOk)
 RUN_TEST_MEDIUM(TestCorruptionRegression)

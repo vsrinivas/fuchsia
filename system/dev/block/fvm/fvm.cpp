@@ -212,6 +212,7 @@ zx_status_t VPartitionManager::Load() {
         if (GetVPartEntryLocked(i)->slices == 0) {
             continue;
         } else if ((status = VPartition::Create(this, i, &vpartitions[i])) != ZX_OK) {
+            fprintf(stderr, "FVM: Failed to Create vpartition %lu\n", i);
             return status;
         }
     }
@@ -224,7 +225,7 @@ zx_status_t VPartitionManager::Load() {
             continue;
         }
         if (vpartitions[entry->vpart] == nullptr) {
-            return ZX_ERR_BAD_STATE;
+            continue;
         }
 
         // It's fine to load the slices while not holding the vpartition
@@ -239,8 +240,11 @@ zx_status_t VPartitionManager::Load() {
     for (size_t i = 0; i < FVM_MAX_ENTRIES; i++) {
         if (vpartitions[i] == nullptr) {
             continue;
-        }
-        if (AddPartition(fbl::move(vpartitions[i]))) {
+        } else if (GetAllocatedVPartEntry(i)->flags & kVPartFlagInactive) {
+            fprintf(stderr, "FVM: Freeing inactive partition\n");
+            FreeSlices(vpartitions[i].get(), 0, VSliceMax());
+            continue;
+        } else if (AddPartition(fbl::move(vpartitions[i]))) {
             continue;
         }
         device_count++;
@@ -369,6 +373,40 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
     return status;
 }
 
+zx_status_t VPartitionManager::Upgrade(const uint8_t* old_guid, const uint8_t* new_guid) {
+    fbl::AutoLock lock(&lock_);
+    size_t old_index = 0;
+    size_t new_index = 0;
+
+    if (!memcmp(old_guid, new_guid, GUID_LEN)) {
+        old_guid = nullptr;
+    }
+
+    for (size_t i = 1; i < FVM_MAX_ENTRIES; i++) {
+        auto entry = GetVPartEntryLocked(i);
+        if (entry->slices != 0) {
+            if (old_guid && !(entry->flags & kVPartFlagInactive) &&
+                !memcmp(entry->guid, old_guid, GUID_LEN)) {
+                old_index = i;
+            } else if ((entry->flags & kVPartFlagInactive) &&
+                       !memcmp(entry->guid, new_guid, GUID_LEN)) {
+                new_index = i;
+            }
+        }
+    }
+
+    if (!new_index) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    if (old_index) {
+        GetVPartEntryLocked(old_index)->flags |= kVPartFlagInactive;
+    }
+    GetVPartEntryLocked(new_index)->flags &= ~kVPartFlagInactive;
+
+    return WriteFvmLocked();
+}
+
 zx_status_t VPartitionManager::FreeSlices(VPartition* vp, size_t vslice_start,
                                           size_t count) {
     fbl::AutoLock lock(&lock_);
@@ -406,7 +444,7 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
             }
 
             // Remove device, VPartition if this was a request to free all slices.
-            device_remove(vp->zxdev());
+            vp->DdkRemove();
             auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
             entry->clear();
             vp->KillLocked();
@@ -472,7 +510,7 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
             auto entry = GetVPartEntryLocked(vpart_entry);
             entry->init(request->type, request->guid,
                         static_cast<uint32_t>(request->slice_count),
-                        request->name);
+                        request->name, request->flags & kVPartAllocateMask);
 
             if ((status = AllocateSlicesLocked(vpart.get(), 0,
                                                request->slice_count)) != ZX_OK) {
@@ -493,6 +531,13 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
         info->vslice_count = VSliceMax();
         *out_actual = sizeof(fvm_info_t);
         return ZX_OK;
+    }
+    case IOCTL_BLOCK_FVM_UPGRADE: {
+        if (cmdlen < sizeof(upgrade_req_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        const upgrade_req_t* req = static_cast<const upgrade_req_t*>(cmd);
+        return Upgrade(req->old_guid, req->new_guid);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;

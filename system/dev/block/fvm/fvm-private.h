@@ -121,6 +121,17 @@ public:
     zx_status_t AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
                                      size_t count) TA_REQ(lock_);
 
+    // Marks the partition with instance GUID |old_guid| as inactive,
+    // and marks partitions with instance GUID |new_guid| as active.
+    //
+    // If a partition with |old_guid| does not exist, it is ignored.
+    // If |old_guid| equals |new_guid|, then |old_guid| is ignored.
+    // If a partition with |new_guid| does not exist, |ZX_ERR_NOT_FOUND|
+    // is returned.
+    //
+    // Updates the FVM metadata atomically.
+    zx_status_t Upgrade(const uint8_t* old_guid, const uint8_t* new_guid) TA_EXCL(lock_);
+
     // Deallocate 'count' slices, write back the FVM.
     // If a request is made to remove vslice_count = 0, deallocates the entire
     // VPartition.

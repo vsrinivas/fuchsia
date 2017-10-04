@@ -41,12 +41,19 @@ static_assert(sizeof(fvm_t) <= FVM_BLOCK_SIZE, "FVM Superblock too large");
 
 #define FVM_MAX_ENTRIES 1024
 
+// Identifies that the partition is inactive, and should be destroyed on
+// reboot (unless activated before rebinding the FVM).
+constexpr uint32_t kVPartFlagInactive = 0x00000001;
+constexpr uint32_t kVPartAllocateMask = 0x00000001; // All acceptable flags to pass to allocate.
+
 typedef struct {
-    void init(const uint8_t* type_, const uint8_t* guid_, uint32_t slices_, const char* name_) {
+    void init(const uint8_t* type_, const uint8_t* guid_, uint32_t slices_, const char* name_,
+              uint32_t flags_) {
         slices = slices_;
         memcpy(type, type_, FVM_GUID_LEN);
         memcpy(guid, guid_, FVM_GUID_LEN);
         memcpy(name, name_, FVM_NAME_LEN);
+        flags = flags_;
     }
 
     void clear() {
@@ -56,7 +63,7 @@ typedef struct {
     uint8_t type[FVM_GUID_LEN]; // Mirroring GPT value
     uint8_t guid[FVM_GUID_LEN]; // Mirroring GPT value
     uint32_t slices;            // '0' if unallocated
-    uint32_t reserved;
+    uint32_t flags;
     uint8_t name[FVM_NAME_LEN];
 } vpart_entry_t;
 

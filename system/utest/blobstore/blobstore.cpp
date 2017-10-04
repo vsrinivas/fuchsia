@@ -181,6 +181,7 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
         fvm_path_out[strlen(fvm_path_out) - strlen("/fvm")] = 0;
 
         alloc_req_t request;
+        memset(&request, 0, sizeof(request));
         request.slice_count = 1;
         strcpy(request.name, "fs-test-partition");
         memcpy(request.type, kTestPartGUID, sizeof(request.type));
