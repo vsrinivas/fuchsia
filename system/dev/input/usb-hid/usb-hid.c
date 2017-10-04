@@ -139,14 +139,13 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
     zx_status_t status = usb_control(&hid->usb,
                                      (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
                                      USB_REQ_GET_DESCRIPTOR, desc_type << 8, hid->interface,
-                                     desc_buf, desc_len, ZX_TIME_INFINITE);
+                                     desc_buf, desc_len, ZX_TIME_INFINITE, len);
     if (status < 0) {
         dprintf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
         free(desc_buf);
         return status;
     } else {
         *data = desc_buf;
-        *len = desc_len;
     }
     return ZX_OK;
 }
@@ -158,15 +157,9 @@ static zx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_i
     }
 
     usb_hid_device_t* hid = ctx;
-    // TODO: update this when usb_control returns actual length separately from the status
-    zx_status_t status = usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+    return usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len,
-            ZX_TIME_INFINITE);
-    if (status >= 0) {
-        *out_len = status;
-        status = ZX_OK;
-    }
-    return status;
+            ZX_TIME_INFINITE, out_len);
 }
 
 static zx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
@@ -174,14 +167,14 @@ static zx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_i
     usb_hid_device_t* hid = ctx;
     return usb_control(&hid->usb, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len,
-            ZX_TIME_INFINITE);
+            ZX_TIME_INFINITE, NULL);
 }
 
 static zx_status_t usb_hid_get_idle(void* ctx, uint8_t rpt_id, uint8_t* duration) {
     usb_hid_device_t* hid = ctx;
     return usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_IDLE, rpt_id, hid->interface, duration, sizeof(*duration),
-            ZX_TIME_INFINITE);
+            ZX_TIME_INFINITE, NULL);
 }
 
 static zx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration) {
@@ -189,7 +182,7 @@ static zx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration)
     usb_hid_device_t* hid = ctx;
     status = usb_control(&hid->usb, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_IDLE, (duration << 8) | rpt_id, hid->interface, NULL, 0,
-            ZX_TIME_INFINITE);
+            ZX_TIME_INFINITE, NULL);
     if (status == ZX_ERR_IO_REFUSED) {
         // The SET_IDLE command is optional, so this may stall.
         // If that occurs, reset the endpoint and ignore the error
@@ -203,13 +196,14 @@ static zx_status_t usb_hid_get_protocol(void* ctx, uint8_t* protocol) {
     usb_hid_device_t* hid = ctx;
     return usb_control(&hid->usb, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_PROTOCOL, 0, hid->interface, protocol, sizeof(*protocol),
-            ZX_TIME_INFINITE);
+            ZX_TIME_INFINITE, NULL);
 }
 
 static zx_status_t usb_hid_set_protocol(void* ctx, uint8_t protocol) {
     usb_hid_device_t* hid = ctx;
     return usb_control(&hid->usb, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
-            USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL, 0,ZX_TIME_INFINITE);
+            USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL, 0,ZX_TIME_INFINITE,
+            NULL);
 }
 
 static hidbus_protocol_ops_t usb_hid_bus_ops = {

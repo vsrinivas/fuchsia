@@ -81,13 +81,14 @@ typedef struct {
 } ax88179_tx_hdr_t;
 
 static zx_status_t ax88179_read_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t reg_len, void* data) {
+    size_t out_length;
     zx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                                      AX88179_REQ_MAC, reg_addr, reg_len, data, reg_len,
-                                     ZX_TIME_INFINITE);
+                                     ZX_TIME_INFINITE, &out_length);
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         dprintf(SPEW, "read mac %#x:\n", reg_addr);
         if (status > 0) {
-            hexdump8(data, status);
+            hexdump8(data, out_length);
         }
     }
     return status;
@@ -99,14 +100,15 @@ static zx_status_t ax88179_write_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t r
         hexdump8(data, reg_len);
     }
     return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_MAC,
-                       reg_addr, reg_len, data, reg_len, ZX_TIME_INFINITE);
+                       reg_addr, reg_len, data, reg_len, ZX_TIME_INFINITE, NULL);
 }
 
 static zx_status_t ax88179_read_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t* data) {
+    size_t out_length;
     zx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                                      AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, data, sizeof(*data),
-                                     ZX_TIME_INFINITE);
-    if (status == sizeof(*data)) {
+                                     ZX_TIME_INFINITE, &out_length);
+    if (out_length == sizeof(*data)) {
         dprintf(SPEW, "read phy %#x: %#x\n", reg_addr, *data);
     }
     return status;
@@ -115,7 +117,7 @@ static zx_status_t ax88179_read_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t* 
 static zx_status_t ax88179_write_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t data) {
     dprintf(SPEW, "write phy %#x: %#x\n", reg_addr, data);
     return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
-                       AX88179_PHY_ID, reg_addr, &data, sizeof(data), ZX_TIME_INFINITE);
+                       AX88179_PHY_ID, reg_addr, &data, sizeof(data), ZX_TIME_INFINITE, NULL);
 }
 
 static uint8_t ax88179_media_mode[6][2] = {

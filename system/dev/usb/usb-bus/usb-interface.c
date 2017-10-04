@@ -229,7 +229,7 @@ static void usb_control_complete(iotxn_t* txn, void* cookie) {
 
 static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_t request,
                                          uint16_t value, uint16_t index, void* data,
-                                         size_t length, zx_time_t timeout) {
+                                         size_t length, zx_time_t timeout, size_t* out_length) {
     usb_interface_t* intf = ctx;
     iotxn_t* txn;
 
@@ -278,7 +278,9 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
         }
     }
     if (status == ZX_OK) {
-        status = txn->actual;
+        if (out_length != NULL) {
+            *out_length = txn->actual;
+        }
 
         if (length > 0 && !out) {
             iotxn_copyfrom(txn, data, txn->actual, 0);

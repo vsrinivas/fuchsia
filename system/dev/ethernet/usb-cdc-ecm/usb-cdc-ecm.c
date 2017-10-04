@@ -409,16 +409,18 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
     const size_t expected_str_size = sizeof(usb_string_descriptor_t) + ETH_MAC_SIZE * 4;
     char str_desc_buf[expected_str_size];
 
+    size_t out_length;
     // Read string descriptor for MAC address (string index is in iMACAddress field)
     zx_status_t result = usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress,
-                                            str_desc_buf, sizeof(str_desc_buf), ZX_TIME_INFINITE);
+                                            str_desc_buf, sizeof(str_desc_buf), ZX_TIME_INFINITE,
+                                            &out_length);
     if (result < 0) {
         printf("%s: error reading MAC address\n", module_name);
         return false;
     }
-    if ((size_t)result != expected_str_size) {
+    if (out_length != expected_str_size) {
         printf("%s: MAC address string incorrect length (saw %zd, expected %zd)\n",
-               module_name, (size_t)result, expected_str_size);
+               module_name, out_length, expected_str_size);
         return false;
     }
 

@@ -287,7 +287,7 @@ static bool hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* cmd_item) {
         }
 
         status = usb_control(&hci->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                             0, 0, 0, buf, length, ZX_TIME_INFINITE);
+                             0, 0, 0, buf, length, ZX_TIME_INFINITE, NULL);
         if (status < 0) {
             printf("hci_read_thread: usb_control failed: %s\n", zx_status_get_string(status));
             goto fail;

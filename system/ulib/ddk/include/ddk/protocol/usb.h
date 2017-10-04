@@ -24,7 +24,8 @@ typedef struct usb_protocol_data {
 
 typedef struct usb_protocol_ops {
     zx_status_t (*control)(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
-                           uint16_t index, void* data, size_t length, zx_time_t timeout);
+                           uint16_t index, void* data, size_t length, zx_time_t timeout,
+                           size_t* out_length);
     // queues a USB request
     void (*request_queue)(void* ctx, usb_request_t* usb_request);
     void (*queue)(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame);
@@ -49,31 +50,35 @@ typedef struct usb_protocol {
 // synchronously executes a control request on endpoint zero
 static inline zx_status_t usb_control(usb_protocol_t* usb, uint8_t request_type, uint8_t request,
                                       uint16_t value, uint16_t index, void* data, size_t length,
-                                      zx_time_t timeout) {
-    return usb->ops->control(usb->ctx, request_type, request, value, index, data, length, timeout);
+                                      zx_time_t timeout, size_t* out_length) {
+    return usb->ops->control(usb->ctx, request_type, request, value, index, data, length, timeout,
+                             out_length);
 }
 
 static inline zx_status_t usb_get_descriptor(usb_protocol_t* usb, uint8_t request_type,
                                              uint16_t type, uint16_t index, void* data,
-                                             size_t length, zx_time_t timeout) {
+                                             size_t length, zx_time_t timeout, size_t* out_length) {
     return usb_control(usb, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR, type << 8 | index, 0,
-                       data, length, timeout);
+                       data, length, timeout, out_length);
 }
 
 static inline zx_status_t usb_get_status(usb_protocol_t* usb, uint8_t request_type, uint16_t index,
-                                         void* data, size_t length, zx_time_t timeout) {
+                                         void* data, size_t length, zx_time_t timeout,
+                                         size_t* out_length) {
     return usb_control(usb, request_type | USB_DIR_IN, USB_REQ_GET_STATUS, 0, index, data, length,
-                       timeout);
+                       timeout, out_length);
 }
 
 static inline zx_status_t usb_set_feature(usb_protocol_t* usb, uint8_t request_type, int feature,
                                           int index, zx_time_t timeout) {
-    return usb_control(usb, request_type, USB_REQ_SET_FEATURE, feature, index, NULL, 0, timeout);
+    return usb_control(usb, request_type, USB_REQ_SET_FEATURE, feature, index, NULL, 0, timeout,
+                       NULL);
 }
 
 static inline zx_status_t usb_clear_feature(usb_protocol_t* usb, uint8_t request_type, int feature,
                                             int index, zx_time_t timeout) {
-    return usb_control(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, NULL, 0, timeout);
+    return usb_control(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, NULL, 0, timeout,
+                       NULL);
 }
 
 static inline void usb_request_queue(usb_protocol_t* usb, usb_request_t* usb_request) {

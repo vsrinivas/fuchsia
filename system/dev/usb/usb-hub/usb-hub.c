@@ -68,10 +68,14 @@ inline void usb_hub_set_port_attached(usb_hub_t* hub, int port, bool enabled) {
 static zx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, port_status_t* out_status) {
     usb_port_status_t status;
 
+    size_t out_length;
     zx_status_t result = usb_get_status(&hub->usb, USB_RECIP_PORT, port, &status, sizeof(status),
-                                        ZX_TIME_INFINITE);
-    if (result != sizeof(status)) {
+                                        ZX_TIME_INFINITE, &out_length);
+    if (result != ZX_OK) {
         return result;
+    }
+    if (out_length != sizeof(status)) {
+        return ZX_ERR_BAD_STATE;
     }
 
     dprintf(TRACE, "usb_hub_get_port_status port %d ", port);
@@ -280,12 +284,19 @@ static int usb_hub_thread(void* arg) {
     usb_request_t* req = hub->status_request;
 
     usb_hub_descriptor_t desc;
+    size_t out_length;
     int desc_type = (hub->hub_speed == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
     zx_status_t result = usb_get_descriptor(&hub->usb, USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                            desc_type, 0, &desc, sizeof(desc), ZX_TIME_INFINITE);
+                                            desc_type, 0, &desc, sizeof(desc), ZX_TIME_INFINITE,
+                                            &out_length);
     if (result < 0) {
         dprintf(ERROR, "get hub descriptor failed: %d\n", result);
         return result;
+    }
+    if (out_length != sizeof(desc)) {
+        dprintf(ERROR, "get hub descriptor got length %lu, want length %lu\n",
+                out_length, sizeof(desc));
+        return ZX_ERR_BAD_STATE;
     }
 
     result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &desc);

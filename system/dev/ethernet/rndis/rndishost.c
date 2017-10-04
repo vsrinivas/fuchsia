@@ -75,7 +75,7 @@ static zx_status_t rndis_command(rndishost_t* eth, void* buf) {
     zx_status_t status;
     status = usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_CDC_SEND_ENCAPSULATED_COMMAND,
-                         0, eth->control_intf, buf, header->msg_length, ZX_TIME_INFINITE);
+                         0, eth->control_intf, buf, header->msg_length, ZX_TIME_INFINITE, NULL);
 
     if (status < 0) {
         return status;
@@ -84,7 +84,7 @@ static zx_status_t rndis_command(rndishost_t* eth, void* buf) {
     // TODO: Set a reasonable timeout on this call.
     status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_CDC_GET_ENCAPSULATED_RESPONSE,
-                         0, eth->control_intf, buf, RNDIS_BUFFER_SIZE, ZX_TIME_INFINITE);
+                         0, eth->control_intf, buf, RNDIS_BUFFER_SIZE, ZX_TIME_INFINITE, NULL);
 
     if (header->request_id != request_id) {
         return ZX_ERR_IO_DATA_INTEGRITY;

@@ -33,13 +33,13 @@ static zx_status_t ums_reset(ums_t* ums) {
     // TODO: check interface number, see if index needs to be set
     DEBUG_PRINT(("UMS: performing reset recovery\n"));
     zx_status_t status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                     USB_REQ_RESET, 0x00, 0x00, NULL, 0, ZX_TIME_INFINITE);
+                                     USB_REQ_RESET, 0x00, 0x00, NULL, 0, ZX_TIME_INFINITE, NULL);
     status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT, ums->bulk_in_addr, NULL, 0,
-                         ZX_TIME_INFINITE);
+                         ZX_TIME_INFINITE, NULL);
     status = usb_control(&ums->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT, ums->bulk_out_addr, NULL, 0,
-                         ZX_TIME_INFINITE);
+                         ZX_TIME_INFINITE, NULL);
     return status;
 }
 
@@ -709,11 +709,15 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device, void** cookie) {
     }
 
     uint8_t max_lun;
+    size_t out_length;
     zx_status_t status = usb_control(&usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                                      USB_REQ_GET_MAX_LUN, 0x00, 0x00, &max_lun, sizeof(max_lun),
-                                     ZX_TIME_INFINITE);
-    if (status != sizeof(max_lun)) {
+                                     ZX_TIME_INFINITE, &out_length);
+    if (status != ZX_OK) {
         return status;
+    }
+    if (out_length != sizeof(max_lun)) {
+        return ZX_ERR_BAD_STATE;
     }
 
     ums_t* ums = calloc(1, sizeof(ums_t) + (max_lun + 1) * sizeof(ums_block_t));
