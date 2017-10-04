@@ -130,11 +130,23 @@ zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     }
     log->head += wiresize;
 
+    // Need to check this before re-releasing the log lock, since we may
+    // re-enable interrupts while doing that.  If interrupts are enabled when we
+    // make this check, we could see the following sequence of events between
+    // two CPUs and incorrectly conclude we are holding the thread lock:
+    // C2: Acquire thread_lock
+    // C1: Running this thread, evaluate spin_lock_holder_cpu(&thread_lock) -> C2
+    // C1: Context switch away
+    // C2: Release thread_lock
+    // C2: Context switch to this thread
+    // C2: Running this thread, evaluate arch_curr_cpu_num() -> C2
+    bool holding_thread_lock = spin_lock_holder_cpu(&thread_lock) == arch_curr_cpu_num();
+
     spin_unlock_irqrestore(&log->lock, state);
 
     // if we happen to be called from within the global thread lock, use a
     // special version of event signal
-    if (spin_lock_holder_cpu(&thread_lock) == arch_curr_cpu_num()) {
+    if (holding_thread_lock) {
         event_signal_thread_locked(&log->event);
     } else {
         event_signal(&log->event, false);
