@@ -286,7 +286,9 @@ void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
 
 void AutoMergeStrategy::AutoMerger::Cancel() {
   cancelled_ = true;
-  delegated_merge_->Cancel();
+  if (delegated_merge_) {
+    delegated_merge_->Cancel();
+  }
 }
 
 void AutoMergeStrategy::AutoMerger::Done(Status status) {
