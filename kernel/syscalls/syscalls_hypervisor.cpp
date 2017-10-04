@@ -71,7 +71,7 @@ zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr
 }
 
 zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
-                            user_ptr<const zx_vcpu_create_args_t> _args,
+                            user_ptr<const zx_vcpu_create_args_t> user_args,
                             user_ptr<zx_handle_t> out) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
@@ -83,7 +83,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
         return status;
 
     zx_vcpu_create_args_t args;
-    status = _args.copy_from_user(&args);
+    status = user_args.copy_from_user(&args);
     if (status != ZX_OK)
         return status;
 
@@ -119,7 +119,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     return ZX_OK;
 }
 
-zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_ptr<zx_port_packet_t> _packet) {
+zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_ptr<zx_port_packet_t> user_packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;
@@ -132,7 +132,7 @@ zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_ptr<zx_port_packet_t> 
     if (status != ZX_OK)
         return status;
 
-    status = _packet.copy_to_user(packet);
+    status = user_packet.copy_to_user(packet);
     if (status != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
@@ -151,7 +151,7 @@ zx_status_t sys_vcpu_interrupt(zx_handle_t vcpu_handle, uint32_t vector) {
 }
 
 zx_status_t sys_vcpu_read_state(zx_handle_t vcpu_handle, uint32_t kind,
-                                user_ptr<void> _buffer, uint32_t len) {
+                                user_ptr<void> user_buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;
@@ -165,14 +165,14 @@ zx_status_t sys_vcpu_read_state(zx_handle_t vcpu_handle, uint32_t kind,
     status = vcpu->ReadState(kind, buffer, len);
     if (status != ZX_OK)
         return status;
-    status = _buffer.copy_array_to_user(buffer, len);
+    status = user_buffer.copy_array_to_user(buffer, len);
     if (status != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
     return ZX_OK;
 }
 
 zx_status_t sys_vcpu_write_state(zx_handle_t vcpu_handle, uint32_t kind,
-                                 user_ptr<const void> _buffer, uint32_t len) {
+                                 user_ptr<const void> user_buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;
@@ -183,7 +183,7 @@ zx_status_t sys_vcpu_write_state(zx_handle_t vcpu_handle, uint32_t kind,
     uint8_t buffer[sizeof(zx_vcpu_state_t)];
     if (len > sizeof(buffer))
         return ZX_ERR_INVALID_ARGS;
-    status = _buffer.copy_array_from_user(buffer, len);
+    status = user_buffer.copy_array_from_user(buffer, len);
     if (status != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
     return vcpu->WriteState(kind, buffer, len);

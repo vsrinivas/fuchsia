@@ -40,7 +40,7 @@ constexpr size_t kWaitManyInlineCount = 8u;
 zx_status_t sys_object_wait_one(zx_handle_t handle_value,
                                 zx_signals_t signals,
                                 zx_time_t deadline,
-                                user_ptr<zx_signals_t> _observed) {
+                                user_ptr<zx_signals_t> observed) {
     LTRACEF("handle %x\n", handle_value);
 
     Event event;
@@ -81,8 +81,8 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     ktrace(TAG_WAIT_ONE_DONE, koid, signals_state, result, 0);
 #endif
 
-    if (_observed) {
-        if (_observed.copy_to_user(signals_state) != ZX_OK)
+    if (observed) {
+        if (observed.copy_to_user(signals_state) != ZX_OK)
             return ZX_ERR_INVALID_ARGS;
     }
 
@@ -92,7 +92,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     return result;
 }
 
-zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> _items, uint32_t count, zx_time_t deadline) {
+zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> user_items, uint32_t count, zx_time_t deadline) {
     LTRACEF("count %u\n", count);
 
     if (!count) {
@@ -102,7 +102,7 @@ zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> _items, uint32_t count
         return ZX_ERR_TIMED_OUT;
     }
 
-    if (!_items)
+    if (!user_items)
         return ZX_ERR_INVALID_ARGS;
     if (count > kMaxWaitHandleCount)
         return ZX_ERR_INVALID_ARGS;
@@ -111,7 +111,7 @@ zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> _items, uint32_t count
     fbl::InlineArray<zx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
-    if (_items.copy_array_from_user(items.get(), count) != ZX_OK)
+    if (user_items.copy_array_from_user(items.get(), count) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     fbl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
@@ -161,7 +161,7 @@ zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> _items, uint32_t count
         combined |= (items[ix].pending = wait_state_observers[ix].End());
     }
 
-    if (_items.copy_array_to_user(items.get(), count) != ZX_OK)
+    if (user_items.copy_array_to_user(items.get(), count) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     if (combined & ZX_SIGNAL_HANDLE_CLOSED)
