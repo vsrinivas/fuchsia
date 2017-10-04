@@ -33,13 +33,39 @@ EntitySpan EntitySpan::FromJson(const std::string& json_string) {
                     e["start"].GetInt(), e["end"].GetInt());
 }
 
-std::vector<EntitySpan> EntitySpan::FromContextValues(
-    const fidl::Array<ContextValuePtr>& values) {
+// Get Entities from a Json array. This will be replaced when entities are
+// input as a fidl::Array to FromContextValues.
+std::vector<EntitySpan> EntitiesFromJson(const std::string& json_string) {
+  // Validate and parse the string.
+  if (json_string.empty()) {
+    FXL_LOG(INFO) << "No current entities.";
+    return std::vector<EntitySpan>();
+  }
+
+  rapidjson::Document entities_doc;
+  entities_doc.Parse(json_string.c_str());
+  if (entities_doc.HasParseError()) {
+    FXL_LOG(ERROR) << "Invalid Entities JSON error #: "
+                   << entities_doc.GetParseError();
+    return std::vector<EntitySpan>();
+  }
+
+  if (!entities_doc.IsArray()) {
+    FXL_LOG(ERROR) << "Invalid Array entry in Context:" << json_string;
+    return std::vector<EntitySpan>();
+  }
+
   std::vector<EntitySpan> entities;
-  for (const auto& value : values) {
-    entities.push_back(EntitySpan::FromJson(value->content));
+  for (const rapidjson::Value& e : entities_doc.GetArray()) {
+    entities.push_back(EntitySpan::FromJson(modular::JsonValueToString(e)));
   }
   return entities;
+}
+
+std::vector<EntitySpan> EntitySpan::FromContextValues(
+    const fidl::Array<ContextValuePtr>& values) {
+  // TODO(travismart): Pass entities as a fidl Array, not a Json array.
+  return EntitiesFromJson(values[0]->content);
 }
 
 void EntitySpan::Init(const std::string& content,

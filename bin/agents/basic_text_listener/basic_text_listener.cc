@@ -79,11 +79,11 @@ class BasicTextListener : ContextListener {
     text_doc.Parse(result->values[kRawTextTopic][0]->content);
     // TODO(travismart): What to do if there are multiple topics, or if
     // topics_[0] has more than one entry?
-    if (!text_doc[0].HasMember("text") || !text_doc[0]["text"].IsString()) {
+    if (!text_doc.HasMember("text") || !text_doc["text"].IsString()) {
       FXL_LOG(ERROR) << "Invalid " << kRawTextTopic
                      << " entry in Context Engine.";
     }
-    const std::string raw_text = text_doc[0]["text"].GetString();
+    const std::string raw_text = text_doc["text"].GetString();
 
     writer_->WriteEntityTopic(kFocalEntitiesTopic,
                               GetEntitiesFromText(raw_text));

@@ -45,15 +45,13 @@ class SelectedEntityFinder : ContextListener {
       FXL_LOG(INFO) << "No current selection.";
       return std::make_pair(-1, -1);
     }
-    rapidjson::Document selection_doc;
-    selection_doc.Parse(json_string);
-    if (selection_doc.HasParseError() || selection_doc.Empty() ||
-        !selection_doc.IsArray()) {
+    rapidjson::Document selection;
+    selection.Parse(json_string);
+    if (selection.HasParseError() || selection.Empty()) {
       FXL_LOG(ERROR) << "Invalid " << kRawTextSelectionTopic
-                     << " entry in Context.";
+                     << " entry in Context." << json_string;
       return std::make_pair(-1, -1);
     }
-    const rapidjson::Value& selection = selection_doc[0];
     if (!(selection.HasMember("start") && selection["start"].IsInt() &&
           selection.HasMember("end") && selection["end"].IsInt())) {
       FXL_LOG(ERROR) << "Invalid " << kRawTextSelectionTopic
