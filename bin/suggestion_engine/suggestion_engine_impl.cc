@@ -165,7 +165,7 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
         // TODO(rosswang): Large number of captures, substantial lambda;
         // consider replacing with an object.
         [this, remainingHandlers, query, url, has_media_response,
-         ask_time_point](AskResponsePtr response) {
+         ask_time_point](QueryResponsePtr response) {
           // TODO(rosswang): defer selection of "I don't know" responses
           if (has_media_response && !*has_media_response &&
               response->media_response) {

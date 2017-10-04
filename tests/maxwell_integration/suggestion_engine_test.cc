@@ -68,7 +68,7 @@ class Proposinator {
   Proposinator(SuggestionEngine* suggestion_engine,
                const fidl::String& url = "Proposinator") {
     suggestion_engine->RegisterProposalPublisher("Proposinator",
-        out_.NewRequest());
+                                                 out_.NewRequest());
   }
 
   virtual ~Proposinator() = default;
@@ -112,7 +112,7 @@ class AskProposinator : public Proposinator, public QueryHandler {
   }
 
   void Commit() {
-    auto response = AskResponse::New();
+    auto response = QueryResponse::New();
     response->proposals = std::move(query_proposals_);
     query_callback_(std::move(response));
   }
@@ -239,7 +239,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         });
     agent_host->AddService<ProposalPublisher>(
         [this, url](fidl::InterfaceRequest<ProposalPublisher> request) {
-          suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
+          suggestion_engine_->RegisterProposalPublisher(url,
+                                                        std::move(request));
         });
     StartAgent(url, std::move(agent_host));
   }

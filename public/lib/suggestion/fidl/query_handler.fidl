@@ -16,7 +16,7 @@ struct MediaResponse {
   media.MediaType media_type;
   media.MediaPacketProducer media_packet_producer;
 };
-struct AskResponse {
+struct QueryResponse {
   array<Proposal> proposals;
   string? natural_language_response;
   // An optional voice/audio/media response to the query as answered by this
@@ -42,5 +42,5 @@ interface QueryHandler {
   // ProposalPublisher to make persistent Proposals. However, these
   // proposals may be subject to more stringent filtering by the Suggestion
   // Engine. TODO(rosswang): spec/revisit.
-  OnQuery(UserInput query) => (AskResponse response);
+  OnQuery(UserInput query) => (QueryResponse response);
 };
