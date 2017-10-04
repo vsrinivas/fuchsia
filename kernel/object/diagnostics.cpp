@@ -687,8 +687,8 @@ static void DumpAddressSpace(const cmd_args* arg) {
 }
 
 static void DumpHandleTable() {
-    printf("outstanding handles: %zu\n", internal::OutstandingHandles());
-    internal::DumpHandleTableInfo();
+    printf("outstanding handles: %zu\n", diagnostics::OutstandingHandles());
+    diagnostics::DumpHandleTableInfo();
 }
 
 static size_t mwd_limit = 32 * 256;
@@ -701,7 +701,7 @@ static int hwd_thread(void* arg) {
     static size_t previous_handle_count = 0u;
 
     for (;;) {
-        auto handle_count = internal::OutstandingHandles();
+        auto handle_count = diagnostics::OutstandingHandles();
         if (handle_count != previous_handle_count) {
             if (handle_count > hwd_limit) {
                 printf("HandleWatchdog! %zu handles outstanding (greater than limit %zu)\n",

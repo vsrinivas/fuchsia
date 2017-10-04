@@ -33,7 +33,7 @@ Handle* MapU32ToHandle(uint32_t value);
 // To be called once during bringup.
 void HandleTableInit();
 
-namespace internal {
+namespace diagnostics {
 // Dumps internal details of the handle table using printf().
 // Should only be called by diagnostics.cpp.
 void DumpHandleTableInfo();
@@ -41,4 +41,4 @@ void DumpHandleTableInfo();
 // Returns the number of outstanding handles.
 // Should only be called by diagnostics.cpp.
 size_t OutstandingHandles();
-} // namespace internal
+} // namespace diagnostics

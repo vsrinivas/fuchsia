@@ -38,7 +38,7 @@ constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 static fbl::Mutex handle_mutex;
 static fbl::Arena TA_GUARDED(handle_mutex) handle_arena;
 
-size_t internal::OutstandingHandles() {
+size_t diagnostics::OutstandingHandles() {
     AutoLock lock(&handle_mutex);
     return handle_arena.DiagnosticCount();
 }
@@ -223,7 +223,7 @@ Handle* MapU32ToHandle(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     return handle->base_value() == value ? handle : nullptr;
 }
 
-void internal::DumpHandleTableInfo() {
+void diagnostics::DumpHandleTableInfo() {
     AutoLock lock(&handle_mutex);
     handle_arena.Dump();
 }
