@@ -22,7 +22,7 @@ TEST_P(ObjectDigestSmallTest, Index) {
   ObjectDigest object_digest =
       ComputeObjectDigest(ObjectType::INDEX, GetParam());
   EXPECT_EQ(ObjectDigestType::INDEX_HASH, GetObjectDigestType(object_digest));
-  EXPECT_EQ(glue::SHA256Hash(GetParam()),
+  EXPECT_EQ(glue::SHA256WithLengthHash(GetParam()),
             ExtractObjectDigestData(object_digest));
 }
 
@@ -47,7 +47,7 @@ TEST_P(ObjectDigestBigTest, Index) {
   ObjectDigest object_digest =
       ComputeObjectDigest(ObjectType::INDEX, GetParam());
   EXPECT_EQ(ObjectDigestType::INDEX_HASH, GetObjectDigestType(object_digest));
-  EXPECT_EQ(glue::SHA256Hash(GetParam()),
+  EXPECT_EQ(glue::SHA256WithLengthHash(GetParam()),
             ExtractObjectDigestData(object_digest));
 }
 
@@ -55,7 +55,7 @@ TEST_P(ObjectDigestBigTest, Value) {
   ObjectDigest object_digest =
       ComputeObjectDigest(ObjectType::VALUE, GetParam());
   EXPECT_EQ(ObjectDigestType::VALUE_HASH, GetObjectDigestType(object_digest));
-  EXPECT_EQ(glue::SHA256Hash(GetParam()),
+  EXPECT_EQ(glue::SHA256WithLengthHash(GetParam()),
             ExtractObjectDigestData(object_digest));
 }
 

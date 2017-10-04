@@ -69,9 +69,9 @@ ObjectDigest ComputeObjectDigest(ObjectType type,
       if (content.size() <= kStorageHashSize) {
         return content.ToString();
       }
-      return AddPrefix(kValueHashPrefix, glue::SHA256Hash(content));
+      return AddPrefix(kValueHashPrefix, glue::SHA256WithLengthHash(content));
     case ObjectType::INDEX:
-      return AddPrefix(kIndexHashPrefix, glue::SHA256Hash(content));
+      return AddPrefix(kIndexHashPrefix, glue::SHA256WithLengthHash(content));
   }
 }
 

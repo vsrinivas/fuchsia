@@ -52,11 +52,9 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
-using StreamingHash = glue::SHA256StreamingHash;
-
 const char kLevelDbDir[] = "/leveldb";
 
-static_assert(kStorageHashSize == StreamingHash::kHashSize,
+static_assert(kStorageHashSize == glue::kHashSize,
               "Unexpected kStorageHashSize value");
 
 struct StringPointerComparator {

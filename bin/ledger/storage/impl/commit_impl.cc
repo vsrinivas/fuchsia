@@ -167,7 +167,7 @@ std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
   std::string storage_bytes = SerializeCommit(
       generation, timestamp, root_node_digest, std::move(parent_commits));
 
-  CommitId id = glue::SHA256Hash(storage_bytes);
+  CommitId id = glue::SHA256WithLengthHash(storage_bytes);
 
   std::unique_ptr<const Commit> commit;
   Status status = FromStorageBytes(page_storage, std::move(id),

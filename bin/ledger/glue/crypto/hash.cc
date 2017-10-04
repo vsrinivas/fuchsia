@@ -10,31 +10,13 @@
 
 namespace glue {
 
-struct SHA256StreamingHash::Context {
-  SHA256_CTX sha256;
-};
-
-SHA256StreamingHash::~SHA256StreamingHash() {}
-
-SHA256StreamingHash::SHA256StreamingHash()
-    : context_(std::make_unique<Context>()) {
-  SHA256_Init(&context_->sha256);
-}
-
-void SHA256StreamingHash::Update(fxl::StringView data) {
-  SHA256_Update(&context_->sha256, data.data(), data.size());
-}
-
-void SHA256StreamingHash::Finish(std::string* output) {
-  output->resize(SHA256_DIGEST_LENGTH);
-  SHA256_Final(reinterpret_cast<uint8_t*>(&(*output)[0]), &context_->sha256);
-}
-
-std::string SHA256Hash(fxl::StringView data) {
+std::string SHA256WithLengthHash(fxl::StringView data) {
   std::string result;
   result.resize(SHA256_DIGEST_LENGTH);
   SHA256_CTX sha256;
   SHA256_Init(&sha256);
+  uint64_t size = data.size();
+  SHA256_Update(&sha256, &size, sizeof(size));
   SHA256_Update(&sha256, data.data(), data.size());
   SHA256_Final(reinterpret_cast<uint8_t*>(&result[0]), &sha256);
   return result;

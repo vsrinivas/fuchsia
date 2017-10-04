@@ -39,7 +39,7 @@ class FakeObject : public Object {
 };
 
 storage::ObjectDigest ComputeObjectDigest(fxl::StringView value) {
-  return glue::SHA256Hash(value);
+  return glue::SHA256WithLengthHash(value);
 }
 
 }  // namespace

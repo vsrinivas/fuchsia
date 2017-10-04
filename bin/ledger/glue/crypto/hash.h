@@ -13,23 +13,9 @@
 
 namespace glue {
 
-class SHA256StreamingHash {
- public:
-  constexpr static size_t kHashSize = 32;
+constexpr static size_t kHashSize = 32;
 
-  SHA256StreamingHash();
-  ~SHA256StreamingHash();
-  void Update(fxl::StringView data);
-  void Finish(std::string* output);
-
- private:
-  struct Context;
-  std::unique_ptr<Context> context_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SHA256StreamingHash);
-};
-
-std::string SHA256Hash(fxl::StringView data);
+std::string SHA256WithLengthHash(fxl::StringView data);
 
 }  // namespace glue
 
