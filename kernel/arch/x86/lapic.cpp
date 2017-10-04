@@ -31,6 +31,9 @@
 // Virtual address of the local APIC's MMIO registers
 static void *apic_virt_base;
 
+static uint8_t bsp_apic_id;
+static bool bsp_apic_id_valid;
+
 #define LAPIC_ID_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x020))
 #define LAPIC_VERSION_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x030))
 #define TASK_PRIORITY_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x080))
@@ -117,7 +120,11 @@ void apic_local_init(void)
     // If this is the bootstrap processor, we should record our APIC ID now
     // that we know it.
     if (v & IA32_APIC_BASE_BSP) {
-        x86_set_local_apic_id(apic_local_id());
+        uint8_t id = apic_local_id();
+
+        bsp_apic_id = id;
+        bsp_apic_id_valid = true;
+        x86_set_local_apic_id(id);
     }
 
     // Specify the spurious interrupt vector and enable the local APIC
@@ -131,6 +138,12 @@ void apic_local_init(void)
 uint8_t apic_local_id(void)
 {
     return (uint8_t)(*LAPIC_ID_ADDR >> 24);
+}
+
+uint8_t apic_bsp_id(void)
+{
+    DEBUG_ASSERT(bsp_apic_id_valid);
+    return bsp_apic_id;
 }
 
 static inline void apic_wait_for_ipi_send(void) {

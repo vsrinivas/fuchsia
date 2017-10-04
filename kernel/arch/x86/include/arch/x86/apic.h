@@ -46,6 +46,7 @@ enum apic_interrupt_dst_mode {
 void apic_vm_init(void);
 void apic_local_init(void);
 uint8_t apic_local_id(void);
+uint8_t apic_bsp_id(void); // The APIC ID of the bootstrap processor
 void apic_irq_set(unsigned int vector, bool enable);
 void apic_send_ipi(
         uint8_t vector,

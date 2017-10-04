@@ -57,6 +57,7 @@ zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     }
 
     uint32_t bootstrap_ap = apic_local_id();
+    DEBUG_ASSERT(bootstrap_ap == apic_bsp_id());
 
     uint apic_idx = 0;
     for (uint i = 0; i < cpu_count; ++i) {

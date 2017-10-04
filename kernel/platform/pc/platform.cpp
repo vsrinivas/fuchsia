@@ -798,6 +798,7 @@ static void platform_init_smp(void)
 
     // we're implicitly running on the BSP
     uint32_t bsp_apic_id = apic_local_id();
+    DEBUG_ASSERT(bsp_apic_id == apic_bsp_id());
 
     // iterate over all the cores and optionally disable some of them
     dprintf(INFO, "cpu topology:\n");
