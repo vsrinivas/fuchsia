@@ -53,7 +53,7 @@ zx_status_t VmObjectDispatcher::set_name(const char* name, size_t len) {
     return vmo_->set_name(name, len);
 }
 
-zx_status_t VmObjectDispatcher::Read(user_ptr<void> user_data,
+zx_status_t VmObjectDispatcher::Read(user_out_ptr<void> user_data,
                                      size_t length,
                                      uint64_t offset,
                                      size_t* bytes_read) {
@@ -62,7 +62,7 @@ zx_status_t VmObjectDispatcher::Read(user_ptr<void> user_data,
     return vmo_->ReadUser(user_data, offset, length, bytes_read);
 }
 
-zx_status_t VmObjectDispatcher::Write(user_ptr<const void> user_data,
+zx_status_t VmObjectDispatcher::Write(user_in_ptr<const void> user_data,
                                       size_t length,
                                       uint64_t offset,
                                       size_t* bytes_written) {
@@ -86,7 +86,7 @@ zx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
 }
 
 zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
-                                        user_ptr<void> buffer, size_t buffer_size) {
+                                        user_inout_ptr<void> buffer, size_t buffer_size) {
     canary_.Assert();
 
     LTRACEF("op %u offset %#" PRIx64 " size %#" PRIx64

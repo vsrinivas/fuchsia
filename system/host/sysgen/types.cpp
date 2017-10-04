@@ -57,6 +57,17 @@ string ArraySpec::kind_str() const {
     }
 }
 
+string ArraySpec::kind_lowercase_str() const {
+    switch (kind) {
+    case IN:
+        return "in";
+    case OUT:
+        return "out";
+    default:
+        return "inout";
+    }
+}
+
 bool ArraySpec::assign_kind(const vector<string>& attrs) {
     if (has_attribute("IN", attrs)) {
         kind = ArraySpec::IN;
@@ -92,7 +103,10 @@ string TypeSpec::as_cpp_declaration(bool is_wrapped) const {
     string ptr_type = type == "any" ? "void" : type;
 
     if (is_wrapped) {
-        return "user_ptr<" + modifier + ptr_type + "> " + name;
+        // This policy strings here matches the enum defined in the
+        // kernel's user_ptr.h.
+        string policy = arr_spec->kind_lowercase_str();
+        return "user_" + policy + "_ptr<" + modifier + ptr_type + "> " + name;
     }
     return modifier + ptr_type + "* " + name;
 }

@@ -24,7 +24,7 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<zx_handle_t> _out) {
+zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_ptr<zx_handle_t> _out) {
     LTRACEF("size %#" PRIx64 "\n", size);
 
     if (options != 0u)
@@ -61,8 +61,8 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<zx_handle_t
     return ZX_OK;
 }
 
-zx_status_t sys_vmo_read(zx_handle_t handle, user_ptr<void> _data,
-                         uint64_t offset, size_t len, user_ptr<size_t> _actual) {
+zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data,
+                         uint64_t offset, size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, _data.get(), offset, len);
 
@@ -103,8 +103,8 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_ptr<void> _data,
     return status;
 }
 
-zx_status_t sys_vmo_write(zx_handle_t handle, user_ptr<const void> _data,
-                          uint64_t offset, size_t len, user_ptr<size_t> _actual) {
+zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data,
+                          uint64_t offset, size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, _data.get(), offset, len);
 
@@ -145,7 +145,7 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_ptr<const void> _data,
     return status;
 }
 
-zx_status_t sys_vmo_get_size(zx_handle_t handle, user_ptr<uint64_t> _size) {
+zx_status_t sys_vmo_get_size(zx_handle_t handle, user_out_ptr<uint64_t> _size) {
     LTRACEF("handle %x, sizep %p\n", handle, _size.get());
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -185,7 +185,7 @@ zx_status_t sys_vmo_set_size(zx_handle_t handle, uint64_t size) {
 }
 
 zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, uint64_t size,
-                             user_ptr<void> _buffer, size_t buffer_size) {
+                             user_inout_ptr<void> _buffer, size_t buffer_size) {
     LTRACEF("handle %x op %u offset %#" PRIx64 " size %#" PRIx64
             " buffer %p buffer_size %zu\n",
             handle, op, offset, size, _buffer.get(), buffer_size);
@@ -222,7 +222,7 @@ zx_status_t sys_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) 
 }
 
 zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options, uint64_t offset, uint64_t size,
-        user_ptr<zx_handle_t>(_out_handle)) {
+                          user_out_ptr<zx_handle_t>(_out_handle)) {
     LTRACEF("handle %x options %#x offset %#" PRIx64 " size %#" PRIx64 "\n",
             handle, options, offset, size);
 

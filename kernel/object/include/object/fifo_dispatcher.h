@@ -31,14 +31,14 @@ public:
     void on_zero_handles() final;
     zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
-    zx_status_t WriteFromUser(user_ptr<const uint8_t> src, size_t len, uint32_t* actual);
-    zx_status_t ReadToUser(user_ptr<uint8_t> dst, size_t len, uint32_t* actual);
+    zx_status_t WriteFromUser(user_in_ptr<const uint8_t> src, size_t len, uint32_t* actual);
+    zx_status_t ReadToUser(user_out_ptr<uint8_t> dst, size_t len, uint32_t* actual);
 
 private:
     FifoDispatcher(uint32_t options, uint32_t elem_count, uint32_t elem_size,
                    fbl::unique_ptr<uint8_t[]> data);
     void Init(fbl::RefPtr<FifoDispatcher> other);
-    zx_status_t WriteSelf(user_ptr<const uint8_t> ptr, size_t len, uint32_t* actual);
+    zx_status_t WriteSelf(user_in_ptr<const uint8_t> ptr, size_t len, uint32_t* actual);
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
 
     void OnPeerZeroHandles();

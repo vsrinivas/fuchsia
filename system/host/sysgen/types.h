@@ -29,6 +29,7 @@ struct ArraySpec {
     std::string name;
 
     std::string kind_str() const;
+    std::string kind_lowercase_str() const;
     bool assign_kind(const std::vector<std::string>& attrs);
     std::string to_string() const;
 };

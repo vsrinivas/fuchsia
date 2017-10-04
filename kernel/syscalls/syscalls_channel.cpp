@@ -29,7 +29,7 @@ using fbl::AutoLock;
 #define LOCAL_TRACE 0
 
 zx_status_t sys_channel_create(
-    uint32_t options, user_ptr<zx_handle_t> out0, user_ptr<zx_handle_t> out1) {
+    uint32_t options, user_out_ptr<zx_handle_t> out0, user_out_ptr<zx_handle_t> out1) {
     LTRACEF("out_handles %p,%p\n", out0.get(), out1.get());
 
     if (options != 0u)
@@ -70,7 +70,7 @@ zx_status_t sys_channel_create(
 }
 
 static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
-                            user_ptr<zx_handle_t> handles, uint32_t num_handles) {
+                            user_out_ptr<zx_handle_t> handles, uint32_t num_handles) {
     Handle* const* handle_list = msg->handles();
     msg->set_owns_handles(false);
 
@@ -90,9 +90,10 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
 }
 
 zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
-                             user_ptr<void> bytes, user_ptr<zx_handle_t> handles,
+                             user_out_ptr<void> bytes, user_out_ptr<zx_handle_t> handles,
                              uint32_t num_bytes, uint32_t num_handles,
-                             user_ptr<uint32_t> actual_bytes, user_ptr<uint32_t> actual_handles) {
+                             user_out_ptr<uint32_t> actual_bytes,
+                             user_out_ptr<uint32_t> actual_handles) {
     LTRACEF("handle %x bytes %p num_bytes %p handles %p num_handles %p",
             handle_value, bytes.get(), actual_bytes.get(), handles.get(), actual_handles.get());
 
@@ -144,8 +145,8 @@ zx_status_t sys_channel_read(zx_handle_t handle_value, uint32_t options,
 static zx_status_t channel_read_out(ProcessDispatcher* up,
                                     fbl::unique_ptr<MessagePacket> reply,
                                     zx_channel_call_args_t* args,
-                                    user_ptr<uint32_t> actual_bytes,
-                                    user_ptr<uint32_t> actual_handles) {
+                                    user_out_ptr<uint32_t> actual_bytes,
+                                    user_out_ptr<uint32_t> actual_handles) {
     uint32_t num_bytes = reply->data_size();
     uint32_t num_handles = reply->num_handles();
 
@@ -161,13 +162,13 @@ static zx_status_t channel_read_out(ProcessDispatcher* up,
     }
 
     if (num_bytes > 0u) {
-        if (reply->CopyDataTo(make_user_ptr(args->rd_bytes)) != ZX_OK) {
+        if (reply->CopyDataTo(make_user_out_ptr(args->rd_bytes)) != ZX_OK) {
             return ZX_ERR_INVALID_ARGS;
         }
     }
 
     if (num_handles > 0u) {
-        msg_get_handles(up, reply.get(), make_user_ptr(args->rd_handles), num_handles);
+        msg_get_handles(up, reply.get(), make_user_out_ptr(args->rd_handles), num_handles);
     }
     return ZX_OK;
 }
@@ -177,9 +178,9 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
                                          fbl::unique_ptr<MessagePacket> reply,
                                          zx_channel_call_args_t* args,
                                          zx_status_t call_status,
-                                         user_ptr<uint32_t> actual_bytes,
-                                         user_ptr<uint32_t> actual_handles,
-                                         user_ptr<zx_status_t> read_status) {
+                                         user_out_ptr<uint32_t> actual_bytes,
+                                         user_out_ptr<uint32_t> actual_handles,
+                                         user_out_ptr<zx_status_t> read_status) {
     // Timeout is always returned directly.
     if (call_status == ZX_ERR_TIMED_OUT) {
         return call_status;
@@ -200,7 +201,7 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up,
 }
 
 static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, zx_handle_t* handles,
-                                   user_ptr<const zx_handle_t> user_handles, uint32_t num_user_handles,
+                                   user_in_ptr<const zx_handle_t> user_handles, uint32_t num_user_handles,
                                    Dispatcher* channel) {
 
     if (user_handles.copy_array_from_user(handles, num_user_handles) != ZX_OK)
@@ -249,8 +250,8 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, zx
 }
 
 zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
-                              user_ptr<const void> user_bytes, uint32_t num_bytes,
-                              user_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
+                              user_in_ptr<const void> user_bytes, uint32_t num_bytes,
+                              user_in_ptr<const zx_handle_t> user_handles, uint32_t num_handles) {
     LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n",
             handle_value, user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
 
@@ -294,10 +295,10 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
 
 zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
                                      zx_time_t deadline,
-                                     user_ptr<const zx_channel_call_args_t> user_args,
-                                     user_ptr<uint32_t> actual_bytes,
-                                     user_ptr<uint32_t> actual_handles,
-                                     user_ptr<zx_status_t> read_status) {
+                                     user_in_ptr<const zx_channel_call_args_t> user_args,
+                                     user_out_ptr<uint32_t> actual_bytes,
+                                     user_out_ptr<uint32_t> actual_handles,
+                                     user_out_ptr<zx_status_t> read_status) {
     zx_channel_call_args_t args;
 
     if (user_args.copy_from_user(&args) != ZX_OK)
@@ -319,7 +320,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
 
     // Prepare a MessagePacket for writing
     fbl::unique_ptr<MessagePacket> msg;
-    result = MessagePacket::Create(make_user_ptr<const void>(args.wr_bytes),
+    result = MessagePacket::Create(make_user_in_ptr(args.wr_bytes),
                                    num_bytes, num_handles, &msg);
     if (result != ZX_OK)
         return result;
@@ -327,7 +328,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     zx_handle_t handles[kMaxMessageHandles];
     if (num_handles > 0u) {
         result = msg_put_handles(up, msg.get(), handles,
-                                 make_user_ptr<const zx_handle_t>(args.wr_handles), num_handles,
+                                 make_user_in_ptr(args.wr_handles), num_handles,
                                  static_cast<Dispatcher*>(channel.get()));
         if (result)
             return result;
@@ -357,10 +358,10 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
 }
 
 zx_status_t sys_channel_call_finish(zx_time_t deadline,
-                                    user_ptr<const zx_channel_call_args_t> user_args,
-                                    user_ptr<uint32_t> actual_bytes,
-                                    user_ptr<uint32_t> actual_handles,
-                                    user_ptr<zx_status_t> read_status) {
+                                    user_in_ptr<const zx_channel_call_args_t> user_args,
+                                    user_out_ptr<uint32_t> actual_bytes,
+                                    user_out_ptr<uint32_t> actual_handles,
+                                    user_out_ptr<zx_status_t> read_status) {
 
     zx_channel_call_args_t args;
     if (user_args.copy_from_user(&args) != ZX_OK)

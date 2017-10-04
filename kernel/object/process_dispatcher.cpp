@@ -530,7 +530,7 @@ zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) {
 }
 
 zx_status_t ProcessDispatcher::GetAspaceMaps(
-    user_ptr<zx_info_maps_t> maps, size_t max,
+    user_out_ptr<zx_info_maps_t> maps, size_t max,
     size_t* actual, size_t* available) {
     AutoLock lock(&state_lock_);
     if (state_ != State::RUNNING) {
@@ -540,7 +540,7 @@ zx_status_t ProcessDispatcher::GetAspaceMaps(
 }
 
 zx_status_t ProcessDispatcher::GetVmos(
-    user_ptr<zx_info_vmo_t> vmos, size_t max,
+    user_out_ptr<zx_info_vmo_t> vmos, size_t max,
     size_t* actual_out, size_t* available_out) {
     AutoLock lock(&state_lock_);
     if (state_ != State::RUNNING) {

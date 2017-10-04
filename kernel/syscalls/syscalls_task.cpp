@@ -72,7 +72,7 @@ LK_INIT_HOOK(thread_set_priority_experiment,
 // TODO(ZX-1025): copy_user_string may truncate the incoming string,
 // and may copy extra data past the NUL.
 // TODO(dbort): If anyone else needs this, move it into user_ptr.
-static zx_status_t copy_user_string(const user_ptr<const char>& src,
+static zx_status_t copy_user_string(const user_in_ptr<const char>& src,
                                     size_t src_len,
                                     char* buf, size_t buf_len,
                                     fbl::StringPiece* sp) {
@@ -100,8 +100,8 @@ static zx_status_t get_process(ProcessDispatcher* up,
 }
 
 zx_status_t sys_thread_create(zx_handle_t process_handle,
-                              user_ptr<const char> _name, uint32_t name_len,
-                              uint32_t options, user_ptr<zx_handle_t> _out) {
+                              user_in_ptr<const char> _name, uint32_t name_len,
+                              uint32_t options, user_out_ptr<zx_handle_t> _out) {
     LTRACEF("process handle %x, options %#x\n", process_handle, options);
 
     // currently, the only valid option value is 0
@@ -177,8 +177,8 @@ void sys_thread_exit() {
 }
 
 zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
-                                  user_ptr<void> _buffer,
-                                  uint32_t buffer_len, user_ptr<uint32_t> _actual) {
+                                  user_out_ptr<void> _buffer,
+                                  uint32_t buffer_len, user_out_ptr<uint32_t> _actual) {
     LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -217,7 +217,7 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t state_kind,
 }
 
 zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t state_kind,
-                                   user_ptr<const void> _buffer, uint32_t buffer_len) {
+                                   user_in_ptr<const void> _buffer, uint32_t buffer_len) {
     LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -280,9 +280,9 @@ zx_status_t sys_task_suspend(zx_handle_t task_handle) {
 }
 
 zx_status_t sys_process_create(zx_handle_t job_handle,
-                               user_ptr<const char> _name, uint32_t name_len,
-                               uint32_t options, user_ptr<zx_handle_t> _proc_handle,
-                               user_ptr<zx_handle_t> _vmar_handle) {
+                               user_in_ptr<const char> _name, uint32_t name_len,
+                               uint32_t options, user_out_ptr<zx_handle_t> _proc_handle,
+                               user_out_ptr<zx_handle_t> _vmar_handle) {
     LTRACEF("job handle %x, options %#x\n", job_handle, options);
 
     // currently, the only valid option value is 0
@@ -418,8 +418,8 @@ void sys_process_exit(int retcode) {
 }
 
 zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
-                                    user_ptr<void> _buffer,
-                                    size_t len, user_ptr<size_t> _actual) {
+                                    user_out_ptr<void> _buffer,
+                                    size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);
 
     if (!_buffer)
@@ -484,8 +484,8 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
 }
 
 zx_status_t sys_process_write_memory(zx_handle_t proc, uintptr_t vaddr,
-                                     user_ptr<const void> _buffer,
-                                     size_t len, user_ptr<size_t> _actual) {
+                                     user_in_ptr<const void> _buffer,
+                                     size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);
 
     if (!_buffer)
@@ -582,7 +582,7 @@ zx_status_t sys_task_kill(zx_handle_t task_handle) {
     }
 }
 
-zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_ptr<zx_handle_t> _out) {
+zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_out_ptr<zx_handle_t> _out) {
     LTRACEF("parent: %x\n", parent_job);
 
     if (options != 0u)
@@ -610,7 +610,8 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_ptr<zx
 }
 
 zx_status_t sys_job_set_policy(zx_handle_t job_handle, uint32_t options,
-    uint32_t topic, user_ptr<const void> _policy, uint32_t count) {
+                               uint32_t topic, user_in_ptr<const void> _policy,
+                               uint32_t count) {
 
     if ((options != ZX_JOB_POL_RELATIVE) && (options != ZX_JOB_POL_ABSOLUTE))
         return ZX_ERR_INVALID_ARGS;

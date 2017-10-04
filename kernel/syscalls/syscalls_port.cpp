@@ -25,7 +25,7 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> out) {
+zx_status_t sys_port_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
     LTRACEF("options %u\n", options);
 
     // No options are supported.
@@ -61,7 +61,7 @@ zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> out) {
     return ZX_OK;
 }
 
-zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const zx_port_packet_t> packet_in, size_t count) {
+zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_t> packet_in, size_t count) {
     LTRACEF("handle %x\n", handle);
 
     if (count != 0u && count != 1u)
@@ -82,7 +82,7 @@ zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const zx_port_packet_t> 
 }
 
 zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
-                          user_ptr<zx_port_packet_t> packet_out, size_t size) {
+                          user_out_ptr<zx_port_packet_t> packet_out, size_t size) {
     LTRACEF("handle %x\n", handle);
 
     if (size != 0u)

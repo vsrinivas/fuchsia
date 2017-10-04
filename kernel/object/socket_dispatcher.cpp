@@ -214,7 +214,7 @@ zx_status_t SocketDispatcher::ShutdownOther(uint32_t how) {
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
+zx_status_t SocketDispatcher::Write(user_in_ptr<const void> src, size_t len,
                                     size_t* nwritten) {
     canary_.Assert();
 
@@ -241,7 +241,7 @@ zx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
     return other->WriteSelf(src, len, nwritten);
 }
 
-zx_status_t SocketDispatcher::WriteControl(user_ptr<const void> src, size_t len) {
+zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t len) {
     canary_.Assert();
 
     if ((flags_ & ZX_SOCKET_HAS_CONTROL) == 0)
@@ -264,7 +264,7 @@ zx_status_t SocketDispatcher::WriteControl(user_ptr<const void> src, size_t len)
     return other->WriteControlSelf(src, len);
 }
 
-zx_status_t SocketDispatcher::WriteControlSelf(user_ptr<const void> src,
+zx_status_t SocketDispatcher::WriteControlSelf(user_in_ptr<const void> src,
                                                size_t len) {
     canary_.Assert();
 
@@ -285,7 +285,7 @@ zx_status_t SocketDispatcher::WriteControlSelf(user_ptr<const void> src,
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
+zx_status_t SocketDispatcher::WriteSelf(user_in_ptr<const void> src, size_t len,
                                         size_t* written) {
     canary_.Assert();
 
@@ -318,7 +318,7 @@ zx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
     return status;
 }
 
-zx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
+zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
                                    size_t* nread) {
     canary_.Assert();
 
@@ -363,7 +363,7 @@ zx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::ReadControl(user_ptr<void> dst, size_t len,
+zx_status_t SocketDispatcher::ReadControl(user_out_ptr<void> dst, size_t len,
                                           size_t* nread) {
     canary_.Assert();
 

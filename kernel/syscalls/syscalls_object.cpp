@@ -38,7 +38,7 @@ class SimpleJobEnumerator final : public JobEnumerator {
 public:
     // If |job| is true, only records job koids; otherwise, only
     // records process koids.
-    SimpleJobEnumerator(user_ptr<zx_koid_t> ptr, size_t max, bool jobs)
+    SimpleJobEnumerator(user_out_ptr<zx_koid_t> ptr, size_t max, bool jobs)
         : jobs_(jobs), ptr_(ptr), max_(max) {}
 
     size_t get_avail() const { return avail_; }
@@ -72,16 +72,16 @@ private:
     }
 
     const bool jobs_;
-    const user_ptr<zx_koid_t> ptr_;
+    const user_out_ptr<zx_koid_t> ptr_;
     const size_t max_;
 
     size_t count_ = 0;
     size_t avail_ = 0;
 };
 
-zx_status_t single_record_result(user_ptr<void> _buffer, size_t buffer_size,
-                                 user_ptr<size_t> _actual,
-                                 user_ptr<size_t> _avail,
+zx_status_t single_record_result(user_out_ptr<void> _buffer, size_t buffer_size,
+                                 user_out_ptr<size_t> _actual,
+                                 user_out_ptr<size_t> _avail,
                                  void* record_data, size_t record_size) {
     size_t avail = 1;
     size_t actual;
@@ -111,8 +111,8 @@ zx_status_t single_record_result(user_ptr<void> _buffer, size_t buffer_size,
 // This allows for zx_object_get_info(handle, topic, &info, sizeof(info), NULL, NULL)
 
 zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
-                                user_ptr<void> _buffer, size_t buffer_size,
-                                user_ptr<size_t> _actual, user_ptr<size_t> _avail) {
+                                user_out_ptr<void> _buffer, size_t buffer_size,
+                                user_out_ptr<size_t> _actual, user_out_ptr<size_t> _avail) {
     LTRACEF("handle %x topic %u\n", handle, topic);
 
     ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
@@ -379,7 +379,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             size_t num_to_copy = MIN(num_cpus, num_space_for);
 
             // build an alias to the output buffer that is in units of the cpu stat structure
-            user_ptr<zx_info_cpu_stats_t> cpu_buf = _buffer.reinterpret<zx_info_cpu_stats_t>();
+            user_out_ptr<zx_info_cpu_stats_t> cpu_buf = _buffer.reinterpret<zx_info_cpu_stats_t>();
 
             for (unsigned int i = 0; i < static_cast<unsigned int>(num_to_copy); i++) {
                 const auto cpu = &percpu[i];
@@ -513,7 +513,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
 }
 
 zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
-                                    user_ptr<void> _value, size_t size) {
+                                    user_out_ptr<void> _value, size_t size) {
     if (!_value)
         return ZX_ERR_INVALID_ARGS;
 
@@ -600,7 +600,7 @@ static zx_status_t is_current_thread(fbl::RefPtr<Dispatcher>* dispatcher) {
 }
 
 zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
-                                    user_ptr<const void> _value, size_t size) {
+                                    user_in_ptr<const void> _value, size_t size) {
     if (!_value)
         return ZX_ERR_INVALID_ARGS;
 
@@ -698,7 +698,7 @@ zx_status_t sys_object_signal_peer(zx_handle_t handle_value, uint32_t clear_mask
 // ZX_HANDLE_INVALID is currently treated as a "magic" handle used to
 // obtain a process from "the system".
 zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t rights,
-                                 user_ptr<zx_handle_t> _out) {
+                                 user_out_ptr<zx_handle_t> _out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (handle == ZX_HANDLE_INVALID) {
@@ -807,7 +807,7 @@ zx_status_t sys_object_set_cookie(zx_handle_t handle, zx_handle_t hscope, uint64
     return dispatcher->SetCookie(dispatcher->get_cookie_jar(), scope, cookie);
 }
 
-zx_status_t sys_object_get_cookie(zx_handle_t handle, zx_handle_t hscope, user_ptr<uint64_t> _cookie) {
+zx_status_t sys_object_get_cookie(zx_handle_t handle, zx_handle_t hscope, user_out_ptr<uint64_t> _cookie) {
     auto up = ProcessDispatcher::GetCurrent();
 
     zx_koid_t scope = up->GetKoidForHandle(hscope);

@@ -22,7 +22,7 @@
 
 #include "syscalls_priv.h"
 
-zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<zx_handle_t> out) {
+zx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_out_ptr<zx_handle_t> out) {
     if (clock_id != ZX_CLOCK_MONOTONIC)
         return ZX_ERR_INVALID_ARGS;
 

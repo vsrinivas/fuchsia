@@ -46,7 +46,7 @@ zx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
 }
 
 // static
-zx_status_t MessagePacket::Create(user_ptr<const void> data, uint32_t data_size,
+zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_size,
                                   uint32_t num_handles,
                                   fbl::unique_ptr<MessagePacket>* msg) {
     zx_status_t status = NewPacket(data_size, num_handles, msg);

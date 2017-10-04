@@ -26,7 +26,7 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_socket_create(uint32_t options, user_ptr<zx_handle_t> out0, user_ptr<zx_handle_t> out1) {
+zx_status_t sys_socket_create(uint32_t options, user_out_ptr<zx_handle_t> out0, user_out_ptr<zx_handle_t> out1) {
     LTRACEF("entry out_handles %p, %p\n", out0.get(), out1.get());
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -61,8 +61,8 @@ zx_status_t sys_socket_create(uint32_t options, user_ptr<zx_handle_t> out0, user
 }
 
 zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
-                             user_ptr<const void> buffer, size_t size,
-                             user_ptr<size_t> actual) {
+                             user_in_ptr<const void> buffer, size_t size,
+                             user_out_ptr<size_t> actual) {
     LTRACEF("handle %x\n", handle);
 
     if ((size > 0u) && !buffer)
@@ -103,8 +103,8 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
 }
 
 zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
-                            user_ptr<void> buffer, size_t size,
-                            user_ptr<size_t> actual) {
+                            user_out_ptr<void> buffer, size_t size,
+                            user_out_ptr<size_t> actual) {
     LTRACEF("handle %x\n", handle);
 
     if (!buffer && size > 0)

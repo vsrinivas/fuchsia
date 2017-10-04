@@ -448,7 +448,7 @@ class VmMapBuilder final : public VmEnumerator {
 public:
     // NOTE: Code outside of the syscall layer should not typically know about
     // user_ptrs; do not use this pattern as an example.
-    VmMapBuilder(user_ptr<zx_info_maps_t> maps, size_t max)
+    VmMapBuilder(user_out_ptr<zx_info_maps_t> maps, size_t max)
         : maps_(maps), max_(max) {}
 
     bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) override {
@@ -500,7 +500,7 @@ private:
     // The caller must write an entry for the root VmAspace at index 0.
     size_t nelem_ = 1;
     size_t available_ = 1;
-    user_ptr<zx_info_maps_t> maps_;
+    user_out_ptr<zx_info_maps_t> maps_;
     size_t max_;
 };
 } // namespace
@@ -508,7 +508,7 @@ private:
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<zx_info_maps_t> maps, size_t max,
+                            user_out_ptr<zx_info_maps_t> maps, size_t max,
                             size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
     *actual = 0;
@@ -568,7 +568,7 @@ class AspaceVmoEnumerator final : public VmEnumerator {
 public:
     // NOTE: Code outside of the syscall layer should not typically know about
     // user_ptrs; do not use this pattern as an example.
-    AspaceVmoEnumerator(user_ptr<zx_info_vmo_t> vmos, size_t max)
+    AspaceVmoEnumerator(user_out_ptr<zx_info_vmo_t> vmos, size_t max)
         : vmos_(vmos), max_(max) {}
 
     bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
@@ -593,7 +593,7 @@ public:
     size_t available() const { return available_; }
 
 private:
-    const user_ptr<zx_info_vmo_t> vmos_;
+    const user_out_ptr<zx_info_vmo_t> vmos_;
     const size_t max_;
 
     size_t nelem_ = 0;
@@ -604,7 +604,7 @@ private:
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<zx_info_vmo_t> vmos, size_t max,
+                            user_out_ptr<zx_info_vmo_t> vmos, size_t max,
                             size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
     DEBUG_ASSERT(actual != nullptr);
@@ -629,7 +629,7 @@ zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
-                                     user_ptr<zx_info_vmo_t> vmos, size_t max,
+                                     user_out_ptr<zx_info_vmo_t> vmos, size_t max,
                                      size_t* actual_out, size_t* available_out) {
     DEBUG_ASSERT(process != nullptr);
     DEBUG_ASSERT(actual_out != nullptr);

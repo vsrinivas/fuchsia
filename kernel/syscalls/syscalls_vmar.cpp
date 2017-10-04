@@ -27,8 +27,9 @@
 #define LOCAL_TRACE 0
 
 zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
-                    size_t offset, size_t size, uint32_t map_flags,
-                    user_ptr<zx_handle_t> child_vmar, user_ptr<uintptr_t> child_addr) {
+                              size_t offset, size_t size, uint32_t map_flags,
+                              user_out_ptr<zx_handle_t> child_vmar,
+                              user_out_ptr<uintptr_t> child_addr) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -94,7 +95,7 @@ zx_status_t sys_vmar_destroy(zx_handle_t vmar_handle) {
 
 zx_status_t sys_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset,
                          zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags,
-                         user_ptr<uintptr_t> mapped_addr) {
+                         user_out_ptr<uintptr_t> mapped_addr) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the VMAR dispatcher from handle

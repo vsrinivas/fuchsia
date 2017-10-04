@@ -199,7 +199,7 @@ zx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
     return ZX_OK;
 }
 
-static zx_status_t bootdata_append_cmdline(user_ptr<const char> cmdlinebuf,
+static zx_status_t bootdata_append_cmdline(user_in_ptr<const char> cmdlinebuf,
                                            const size_t cmdlinebuf_size,
                                            uint8_t* bootimage_buffer,
                                            const size_t bootimage_buflen) {
@@ -246,7 +246,7 @@ static zx_status_t bootdata_append_cmdline(user_ptr<const char> cmdlinebuf,
 }
 
 zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
-                             user_ptr<const char> cmdline, uint32_t cmdline_len) {
+                             user_in_ptr<const char> cmdline, uint32_t cmdline_len) {
     zx_status_t result;
 
     paddr_t new_kernel_addr;

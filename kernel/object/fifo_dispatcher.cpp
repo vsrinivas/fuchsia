@@ -120,7 +120,7 @@ void FifoDispatcher::OnPeerZeroHandles() {
     UpdateState(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
 }
 
-zx_status_t FifoDispatcher::WriteFromUser(user_ptr<const uint8_t> ptr, size_t len, uint32_t* actual) {
+zx_status_t FifoDispatcher::WriteFromUser(user_in_ptr<const uint8_t> ptr, size_t len, uint32_t* actual) {
     canary_.Assert();
 
     fbl::RefPtr<FifoDispatcher> other;
@@ -134,7 +134,7 @@ zx_status_t FifoDispatcher::WriteFromUser(user_ptr<const uint8_t> ptr, size_t le
     return other->WriteSelf(ptr, len, actual);
 }
 
-zx_status_t FifoDispatcher::WriteSelf(user_ptr<const uint8_t> ptr, size_t bytelen, uint32_t* actual) {
+zx_status_t FifoDispatcher::WriteSelf(user_in_ptr<const uint8_t> ptr, size_t bytelen, uint32_t* actual) {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;
@@ -192,7 +192,7 @@ zx_status_t FifoDispatcher::WriteSelf(user_ptr<const uint8_t> ptr, size_t bytele
     return ZX_OK;
 }
 
-zx_status_t FifoDispatcher::ReadToUser(user_ptr<uint8_t> ptr, size_t bytelen, uint32_t* actual) {
+zx_status_t FifoDispatcher::ReadToUser(user_out_ptr<uint8_t> ptr, size_t bytelen, uint32_t* actual) {
     canary_.Assert();
 
     size_t count = bytelen / elem_size_;

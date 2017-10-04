@@ -17,9 +17,9 @@ public:
     MBufChain() = default;
     ~MBufChain();
 
-    zx_status_t WriteStream(user_ptr<const void> src, size_t len, size_t* written);
-    zx_status_t WriteDatagram(user_ptr<const void> src, size_t len, size_t* written);
-    size_t Read(user_ptr<void> dst, size_t len, bool datagram);
+    zx_status_t WriteStream(user_in_ptr<const void> src, size_t len, size_t* written);
+    zx_status_t WriteDatagram(user_in_ptr<const void> src, size_t len, size_t* written);
+    size_t Read(user_out_ptr<void> dst, size_t len, bool datagram);
     bool is_full() const;
     bool is_empty() const;
     size_t size() const { return size_; }

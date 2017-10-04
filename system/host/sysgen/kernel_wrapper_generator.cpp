@@ -61,7 +61,8 @@ bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
     string close_invocation = invocation(os, "uint64_t", syscall_name, sc);
     sc.for_each_kernel_arg([&](const TypeSpec& arg) {
         if (arg.arr_spec) {
-            os << "make_user_ptr(" << arg.name << "), ";
+            string policy = arg.arr_spec->kind_lowercase_str();
+            os << "make_user_" << policy <<"_ptr(" << arg.name << "), ";
         } else {
             os << arg.name << ", ";
         }

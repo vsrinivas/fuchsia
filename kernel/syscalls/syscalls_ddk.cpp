@@ -46,7 +46,7 @@ static_assert(ZX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
 zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t vector, uint32_t options,
-                                 user_ptr<zx_handle_t> out_handle) {
+                                 user_out_ptr<zx_handle_t> out_handle) {
     LTRACEF("vector %u options 0x%x\n", vector, options);
 
     zx_status_t status;
@@ -111,7 +111,7 @@ zx_status_t sys_interrupt_signal(zx_handle_t handle_value) {
 
 zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,
                                       uint32_t alignment_log2,
-                                      user_ptr<zx_handle_t> _out) {
+                                      user_out_ptr<zx_handle_t> _out) {
     LTRACEF("size 0x%zu\n", size);
 
     if (size == 0) return ZX_ERR_INVALID_ARGS;
@@ -168,7 +168,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,
 }
 
 zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t size,
-                                    user_ptr<zx_handle_t> _out) {
+                                    user_out_ptr<zx_handle_t> _out) {
     LTRACEF("size 0x%zu\n", size);
 
     // TODO: attempting to create a physical VMO that points to memory should be an error
@@ -208,7 +208,8 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, uintptr_t paddr, size_t s
     return ZX_OK;
 }
 
-zx_status_t sys_bootloader_fb_get_info(user_ptr<uint32_t> format, user_ptr<uint32_t> width, user_ptr<uint32_t> height, user_ptr<uint32_t> stride) {
+zx_status_t sys_bootloader_fb_get_info(user_out_ptr<uint32_t> format, user_out_ptr<uint32_t> width,
+                                       user_out_ptr<uint32_t> height, user_out_ptr<uint32_t> stride) {
 #if ARCH_X86
     if (!bootloader.fb.base ||
             format.copy_to_user(bootloader.fb.format) ||
@@ -224,7 +225,7 @@ zx_status_t sys_bootloader_fb_get_info(user_ptr<uint32_t> format, user_ptr<uint3
 #endif
 }
 
-zx_status_t sys_set_framebuffer(zx_handle_t hrsrc, user_ptr<void> vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
+zx_status_t sys_set_framebuffer(zx_handle_t hrsrc, user_inout_ptr<void> vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {

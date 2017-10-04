@@ -20,7 +20,7 @@
 #include "syscalls_priv.h"
 
 zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, zx_handle_t physmem_vmo,
-                             user_ptr<zx_handle_t> out) {
+                             user_out_ptr<zx_handle_t> out) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
 
@@ -71,8 +71,8 @@ zx_status_t sys_guest_set_trap(zx_handle_t guest_handle, uint32_t kind, zx_vaddr
 }
 
 zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
-                            user_ptr<const zx_vcpu_create_args_t> user_args,
-                            user_ptr<zx_handle_t> out) {
+                            user_in_ptr<const zx_vcpu_create_args_t> user_args,
+                            user_out_ptr<zx_handle_t> out) {
     if (options != 0u)
         return ZX_ERR_INVALID_ARGS;
 
@@ -119,7 +119,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options,
     return ZX_OK;
 }
 
-zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_ptr<zx_port_packet_t> user_packet) {
+zx_status_t sys_vcpu_resume(zx_handle_t vcpu_handle, user_out_ptr<zx_port_packet_t> user_packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;
@@ -151,7 +151,7 @@ zx_status_t sys_vcpu_interrupt(zx_handle_t vcpu_handle, uint32_t vector) {
 }
 
 zx_status_t sys_vcpu_read_state(zx_handle_t vcpu_handle, uint32_t kind,
-                                user_ptr<void> user_buffer, uint32_t len) {
+                                user_out_ptr<void> user_buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;
@@ -172,7 +172,7 @@ zx_status_t sys_vcpu_read_state(zx_handle_t vcpu_handle, uint32_t kind,
 }
 
 zx_status_t sys_vcpu_write_state(zx_handle_t vcpu_handle, uint32_t kind,
-                                 user_ptr<const void> user_buffer, uint32_t len) {
+                                 user_in_ptr<const void> user_buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;

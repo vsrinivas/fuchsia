@@ -40,7 +40,7 @@ static_assert(ZX_WAIT_MANY_MAX_ITEMS == kMaxWaitHandleCount, "");
 zx_status_t sys_object_wait_one(zx_handle_t handle_value,
                                 zx_signals_t signals,
                                 zx_time_t deadline,
-                                user_ptr<zx_signals_t> observed) {
+                                user_out_ptr<zx_signals_t> observed) {
     LTRACEF("handle %x\n", handle_value);
 
     Event event;
@@ -92,7 +92,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     return result;
 }
 
-zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> user_items, uint32_t count, zx_time_t deadline) {
+zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, uint32_t count, zx_time_t deadline) {
     LTRACEF("count %u\n", count);
 
     if (!count) {

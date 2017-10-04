@@ -27,7 +27,7 @@ public:
     // Creates a message packet containing the provided data and space for
     // |num_handles| handles. The handles array is uninitialized and must
     // be completely overwritten by clients.
-    static zx_status_t Create(user_ptr<const void> data, uint32_t data_size,
+    static zx_status_t Create(user_in_ptr<const void> data, uint32_t data_size,
                               uint32_t num_handles,
                               fbl::unique_ptr<MessagePacket>* msg);
     static zx_status_t Create(const void* data, uint32_t data_size,
@@ -38,7 +38,7 @@ public:
 
     // Copies the packet's |data_size()| bytes to |buf|.
     // Returns an error if |buf| points to a bad user address.
-    zx_status_t CopyDataTo(user_ptr<void> buf) const {
+    zx_status_t CopyDataTo(user_out_ptr<void> buf) const {
         return buf.copy_array_to_user(data(), data_size_);
     }
 

@@ -35,18 +35,18 @@ public:
     zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
     // Socket methods.
-    zx_status_t Write(user_ptr<const void> src, size_t len, size_t* written);
+    zx_status_t Write(user_in_ptr<const void> src, size_t len, size_t* written);
 
-    zx_status_t WriteControl(user_ptr<const void> src, size_t len);
+    zx_status_t WriteControl(user_in_ptr<const void> src, size_t len);
 
     // Shut this endpoint of the socket down for reading, writing, or both.
     zx_status_t Shutdown(uint32_t how);
 
     zx_status_t HalfClose();
 
-    zx_status_t Read(user_ptr<void> dst, size_t len, size_t* nread);
+    zx_status_t Read(user_out_ptr<void> dst, size_t len, size_t* nread);
 
-    zx_status_t ReadControl(user_ptr<void> dst, size_t len, size_t* nread);
+    zx_status_t ReadControl(user_out_ptr<void> dst, size_t len, size_t* nread);
 
     void OnPeerZeroHandles();
 
@@ -56,8 +56,8 @@ private:
     SocketDispatcher(zx_signals_t starting_signals, uint32_t flags,
                      fbl::unique_ptr<char[]> control_msg);
     void Init(fbl::RefPtr<SocketDispatcher> other);
-    zx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
-    zx_status_t WriteControlSelf(user_ptr<const void> src, size_t len);
+    zx_status_t WriteSelf(user_in_ptr<const void> src, size_t len, size_t* nwritten);
+    zx_status_t WriteControlSelf(user_in_ptr<const void> src, size_t len);
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     zx_status_t ShutdownOther(uint32_t how);
 

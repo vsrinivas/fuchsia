@@ -25,7 +25,7 @@
 #define LOCAL_TRACE 0
 
 zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
-                            user_ptr<zx_handle_t> out0, user_ptr<zx_handle_t> out1) {
+                            user_out_ptr<zx_handle_t> out0, user_out_ptr<zx_handle_t> out1) {
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_FIFO);
     if (res != ZX_OK)
@@ -57,8 +57,8 @@ zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
     return ZX_OK;
 }
 
-zx_status_t sys_fifo_write(zx_handle_t handle, user_ptr<const void> entries,
-        size_t len, user_ptr<uint32_t> actual_out) {
+zx_status_t sys_fifo_write(zx_handle_t handle, user_in_ptr<const void> entries,
+                           size_t len, user_out_ptr<uint32_t> actual_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<FifoDispatcher> fifo;
@@ -77,7 +77,8 @@ zx_status_t sys_fifo_write(zx_handle_t handle, user_ptr<const void> entries,
     return ZX_OK;
 }
 
-zx_status_t sys_fifo_read(zx_handle_t handle, user_ptr<void> entries, size_t len, user_ptr<uint32_t> actual_out) {
+zx_status_t sys_fifo_read(zx_handle_t handle, user_out_ptr<void> entries, size_t len,
+                          user_out_ptr<uint32_t> actual_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<FifoDispatcher> fifo;

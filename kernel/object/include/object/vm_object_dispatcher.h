@@ -29,13 +29,14 @@ public:
     zx_status_t set_name(const char* name, size_t len) final;
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 
-    zx_status_t Read(user_ptr<void> user_data, size_t length,
+    zx_status_t Read(user_out_ptr<void> user_data, size_t length,
                      uint64_t offset, size_t* actual);
-    zx_status_t Write(user_ptr<const void> user_data, size_t length,
+    zx_status_t Write(user_in_ptr<const void> user_data, size_t length,
                       uint64_t offset, size_t* actual);
     zx_status_t SetSize(uint64_t);
     zx_status_t GetSize(uint64_t* size);
-    zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_ptr<void> buffer, size_t buffer_size);
+    zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_inout_ptr<void> buffer,
+                        size_t buffer_size);
     zx_status_t Clone(uint32_t options, uint64_t offset, uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* clone_vmo);
     zx_status_t SetMappingCachePolicy(uint32_t cache_policy);
 

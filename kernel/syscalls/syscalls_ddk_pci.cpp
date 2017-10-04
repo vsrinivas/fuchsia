@@ -119,7 +119,7 @@ zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_
     }
 }
 
-zx_status_t sys_pci_init(zx_handle_t handle, user_ptr<const zx_pci_init_arg_t> _init_buf, uint32_t len) {
+zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t> _init_buf, uint32_t len) {
     // TODO(ZX-971): finer grained validation
     // TODO(security): Add additional access checks
     zx_status_t status;
@@ -284,8 +284,8 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_ptr<const zx_pci_init_arg_t> _
 
 zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
                                    uint32_t index,
-                                   user_ptr<zx_pcie_device_info_t> out_info,
-                                   user_ptr<zx_handle_t> out_handle) {
+                                   user_out_ptr<zx_pcie_device_info_t> out_info,
+                                   user_out_ptr<zx_handle_t> out_handle) {
     /**
      * Returns the pci config of a device.
      * @param index Device index
@@ -330,7 +330,7 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
 }
 
 zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t width,
-                                user_ptr<uint32_t> out_val) {
+                                user_out_ptr<uint32_t> out_val) {
     fbl::RefPtr<PciDeviceDispatcher> pci_device;
     fbl::RefPtr<Dispatcher> dispatcher;
 
@@ -367,7 +367,7 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
  * PCI moves to userspace.
  */
 zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func,
-                               uint8_t offset, user_ptr<uint32_t> val, size_t width, bool write) {
+                               uint8_t offset, user_inout_ptr<uint32_t> val, size_t width, bool write) {
 #if ARCH_X86
     uint32_t val_;
     zx_status_t status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
@@ -444,7 +444,7 @@ zx_status_t sys_pci_reset_device(zx_handle_t dev_handle) {
     return pci_device->ResetDevice();
 }
 
-zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_ptr<zx_pci_resource_t> out_bar) {
+zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_out_ptr<zx_pci_resource_t> out_bar) {
     fbl::RefPtr<PciDeviceDispatcher> pci_device;
     fbl::RefPtr<Dispatcher> dispatcher;
     HandleOwner mmio_handle;
@@ -530,7 +530,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_ptr<z
     return ZX_OK;
 }
 
-zx_status_t sys_pci_get_config(zx_handle_t dev_handle, user_ptr<zx_pci_resource_t> out_config) {
+zx_status_t sys_pci_get_config(zx_handle_t dev_handle, user_out_ptr<zx_pci_resource_t> out_config) {
     fbl::RefPtr<PciDeviceDispatcher> pci_device;
     fbl::RefPtr<Dispatcher> dispatcher;
     pci_config_info_t pci_config;
@@ -633,7 +633,7 @@ zx_status_t sys_pci_io_write(zx_handle_t handle, uint32_t bar_num, uint32_t offs
 }
 
 zx_status_t sys_pci_io_read(zx_handle_t handle, uint32_t bar_num, uint32_t offset, uint32_t len,
-                            user_ptr<uint32_t> out_value_ptr) {
+                            user_out_ptr<uint32_t> out_value_ptr) {
     /**
      * Performs port I/O read for the PCI device associated with the handle.
      * @param handle Handle associated with a PCI device
@@ -647,7 +647,7 @@ zx_status_t sys_pci_io_read(zx_handle_t handle, uint32_t bar_num, uint32_t offse
 
 zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
                                   int32_t which_irq,
-                                  user_ptr<zx_handle_t> out_handle) {
+                                  user_out_ptr<zx_handle_t> out_handle) {
     /**
      * Returns a handle that can be waited on.
      * @param handle Handle associated with a PCI device
@@ -695,7 +695,7 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
  */
 zx_status_t sys_pci_query_irq_mode_caps(zx_handle_t dev_handle,
                                         uint32_t mode,
-                                        user_ptr<uint32_t> out_max_irqs) {
+                                        user_out_ptr<uint32_t> out_max_irqs) {
     LTRACEF("handle %x\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -737,7 +737,7 @@ zx_status_t sys_pci_set_irq_mode(zx_handle_t dev_handle,
     return pci_device->SetIrqMode((zx_pci_irq_mode_t)mode, requested_irq_count);
 }
 #else  // WITH_DEV_PCIE
-zx_status_t sys_pci_init(zx_handle_t, user_ptr<const zx_pci_init_arg_t>, uint32_t) {
+zx_status_t sys_pci_init(zx_handle_t, user_in_ptr<const zx_pci_init_arg_t>, uint32_t) {
     shutdown_early_init_console();
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -747,17 +747,17 @@ zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_
 }
 
 zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t width,
-                                user_ptr<uint32_t> out_val) {
+                                user_out_ptr<uint32_t> out_val) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func,
-                               uint8_t offset, user_ptr<uint32_t> val, size_t width, bool write) {
+                               uint8_t offset, user_inout_ptr<uint32_t> val, size_t width, bool write) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_get_nth_device(zx_handle_t, uint32_t, user_ptr<zx_pcie_device_info_t>,
-                                   user_ptr<zx_handle_t>) {
+zx_status_t sys_pci_get_nth_device(zx_handle_t, uint32_t, user_inout_ptr<zx_pcie_device_info_t>,
+                                   user_inout_ptr<zx_handle_t>) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -785,15 +785,15 @@ zx_status_t sys_pci_io_write(zx_handle_t, uint32_t, uint32_t, uint32_t, uint32_t
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_io_read(zx_handle_t, uint32_t, uint32_t, uint32_t, user_ptr<uint32_t>) {
+zx_status_t sys_pci_io_read(zx_handle_t, uint32_t, uint32_t, uint32_t, user_out_ptr<uint32_t>) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_map_interrupt(zx_handle_t, int32_t, user_ptr<zx_handle_t>) {
+zx_status_t sys_pci_map_interrupt(zx_handle_t, int32_t, user_out_ptr<zx_handle_t>) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_pci_query_irq_mode_caps(zx_handle_t, uint32_t, user_ptr<uint32_t>) {
+zx_status_t sys_pci_query_irq_mode_caps(zx_handle_t, uint32_t, user_out_ptr<uint32_t>) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

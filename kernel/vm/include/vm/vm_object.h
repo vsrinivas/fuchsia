@@ -99,16 +99,16 @@ public:
     }
 
     // read/write operators against user space pointers only
-    virtual zx_status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+    virtual zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual zx_status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+    virtual zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len,
                                   size_t* bytes_written) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // translate a range of the vmo to physical addresses and store in the buffer
-    virtual zx_status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+    virtual zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
                                    size_t buffer_size) {
         return ZX_ERR_NOT_SUPPORTED;
     }

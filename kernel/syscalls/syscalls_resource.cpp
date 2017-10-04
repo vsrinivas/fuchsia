@@ -30,7 +30,7 @@
 // the range of the parent.
 zx_status_t sys_resource_create(zx_handle_t handle, uint32_t kind,
                                 uint64_t low, uint64_t high,
-                                user_ptr<zx_handle_t> resource_out) {
+                                user_out_ptr<zx_handle_t> resource_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (high < low)

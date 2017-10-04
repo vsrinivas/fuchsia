@@ -90,7 +90,7 @@ zx_status_t sys_clock_adjust(zx_handle_t hrsrc, uint32_t clock_id, int64_t offse
     }
 }
 
-zx_status_t sys_event_create(uint32_t options, user_ptr<zx_handle_t> event_out) {
+zx_status_t sys_event_create(uint32_t options, user_out_ptr<zx_handle_t> event_out) {
     LTRACEF("options 0x%x\n", options);
 
     if (options != 0u)
@@ -120,7 +120,8 @@ zx_status_t sys_event_create(uint32_t options, user_ptr<zx_handle_t> event_out) 
 }
 
 zx_status_t sys_eventpair_create(uint32_t options,
-                                 user_ptr<zx_handle_t> out0, user_ptr<zx_handle_t> out1) {
+                                 user_out_ptr<zx_handle_t> out0,
+                                 user_out_ptr<zx_handle_t> out1) {
     LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
 
     if (options != 0u)  // No options defined/supported yet.
@@ -157,7 +158,7 @@ zx_status_t sys_eventpair_create(uint32_t options,
     return ZX_OK;
 }
 
-zx_status_t sys_log_create(uint32_t options, user_ptr<zx_handle_t> out) {
+zx_status_t sys_log_create(uint32_t options, user_out_ptr<zx_handle_t> out) {
     LTRACEF("options 0x%x\n", options);
 
     // create a Log dispatcher
@@ -189,7 +190,7 @@ zx_status_t sys_log_create(uint32_t options, user_ptr<zx_handle_t> out) {
 }
 
 zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
-                                user_ptr<zx_handle_t> out) {
+                                user_out_ptr<zx_handle_t> out) {
     zx_status_t status = validate_resource(rsrc, ZX_RSRC_KIND_ROOT);
     if (status != ZX_OK)
         return status;
@@ -197,7 +198,8 @@ zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
     return sys_log_create(options, out);
 }
 
-zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options, user_ptr<const void> ptr, size_t len) {
+zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
+                               user_in_ptr<const void> ptr, size_t len) {
     LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, ptr.get(), len);
 
     if (len > DLOG_MAX_DATA)
@@ -220,7 +222,8 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options, user_pt
     return log->Write(options, buf, len);
 }
 
-zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_ptr<void> ptr, size_t len) {
+zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options,
+                              user_out_ptr<void> ptr, size_t len) {
     LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, ptr.get(), len);
 
     if (options != 0)
@@ -244,15 +247,15 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_ptr
     return static_cast<zx_status_t>(actual);
 }
 
-zx_status_t sys_log_write(zx_handle_t log_handle, uint32_t len, user_ptr<const void> ptr, uint32_t options) {
+zx_status_t sys_log_write(zx_handle_t log_handle, uint32_t len, user_in_ptr<const void> ptr, uint32_t options) {
     return sys_debuglog_write(log_handle, options, ptr, len);
 }
 
-zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_ptr<void> ptr, uint32_t options) {
+zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_out_ptr<void> ptr, uint32_t options) {
     return sys_debuglog_read(log_handle, options, ptr, len);
 }
 
-zx_status_t sys_cprng_draw(user_ptr<void> buffer, size_t len, user_ptr<size_t> actual) {
+zx_status_t sys_cprng_draw(user_out_ptr<void> buffer, size_t len, user_out_ptr<size_t> actual) {
     if (len > kMaxCPRNGDraw)
         return ZX_ERR_INVALID_ARGS;
 
@@ -273,7 +276,7 @@ zx_status_t sys_cprng_draw(user_ptr<void> buffer, size_t len, user_ptr<size_t> a
     return ZX_OK;
 }
 
-zx_status_t sys_cprng_add_entropy(user_ptr<const void> buffer, size_t len) {
+zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t len) {
     if (len > kMaxCPRNGSeed)
         return ZX_ERR_INVALID_ARGS;
 

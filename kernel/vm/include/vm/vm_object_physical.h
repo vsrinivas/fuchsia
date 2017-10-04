@@ -32,7 +32,7 @@ public:
         // any deadlocks.
         TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
 
-    zx_status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+    zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
                            size_t buffer_size) override;
 
     void Dump(uint depth, bool verbose) override;

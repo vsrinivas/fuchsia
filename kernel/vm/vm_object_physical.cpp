@@ -88,7 +88,7 @@ zx_status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list
     return ZX_OK;
 }
 
-zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+zx_status_t VmObjectPhysical::LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
                                          size_t buffer_size) {
     canary_.Assert();
 

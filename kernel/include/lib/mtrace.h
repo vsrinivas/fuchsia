@@ -19,9 +19,9 @@
 #include <zircon/types.h>
 
 zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
-                           user_ptr<void> arg, uint32_t size);
+                           user_inout_ptr<void> arg, uint32_t size);
 
 #ifdef __x86_64__
 zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
-                               user_ptr<void> arg, uint32_t size);
+                               user_inout_ptr<void> arg, uint32_t size);
 #endif

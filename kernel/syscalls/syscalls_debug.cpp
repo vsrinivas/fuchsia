@@ -31,7 +31,7 @@
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
 
-zx_status_t sys_debug_read(zx_handle_t handle, user_ptr<void> ptr, uint32_t len) {
+zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<void> ptr, uint32_t len) {
     LTRACEF("ptr %p\n", ptr.get());
 
     // TODO(ZX-971): finer grained validation
@@ -60,7 +60,7 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_ptr<void> ptr, uint32_t len)
     return static_cast<zx_status_t>(idx);
 }
 
-zx_status_t sys_debug_write(user_ptr<const void> ptr, uint32_t len) {
+zx_status_t sys_debug_write(user_in_ptr<const void> ptr, uint32_t len) {
     LTRACEF("ptr %p, len %u\n", ptr.get(), len);
 
     if (len > kMaxDebugWriteSize)
@@ -75,7 +75,7 @@ zx_status_t sys_debug_write(user_ptr<const void> ptr, uint32_t len) {
     return len;
 }
 
-zx_status_t sys_debug_send_command(zx_handle_t handle, user_ptr<const void> ptr, uint32_t len) {
+zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const void> ptr, uint32_t len) {
     LTRACEF("ptr %p, len %u\n", ptr.get(), len);
 
     // TODO(ZX-971): finer grained validation
@@ -96,9 +96,9 @@ zx_status_t sys_debug_send_command(zx_handle_t handle, user_ptr<const void> ptr,
     return console_run_script(buf);
 }
 
-zx_status_t sys_ktrace_read(zx_handle_t handle, user_ptr<void> _data,
+zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data,
                             uint32_t offset, uint32_t len,
-                            user_ptr<uint32_t> _actual) {
+                            user_out_ptr<uint32_t> _actual) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -113,7 +113,7 @@ zx_status_t sys_ktrace_read(zx_handle_t handle, user_ptr<void> _data,
 }
 
 zx_status_t sys_ktrace_control(
-        zx_handle_t handle, uint32_t action, uint32_t options, user_ptr<void> _ptr) {
+    zx_handle_t handle, uint32_t action, uint32_t options, user_inout_ptr<void> _ptr) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -157,7 +157,7 @@ zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg
 
 zx_status_t sys_mtrace_control(zx_handle_t handle,
                                uint32_t kind, uint32_t action, uint32_t options,
-                               user_ptr<void> ptr, uint32_t size) {
+                               user_inout_ptr<void> ptr, uint32_t size) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {

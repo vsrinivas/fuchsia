@@ -975,7 +975,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+zx_status_t VmObjectPaged::ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
     canary_.Assert();
 
     // read routine that uses copy_to_user
@@ -986,7 +986,7 @@ zx_status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t 
     return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
 }
 
-zx_status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+zx_status_t VmObjectPaged::WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len,
                                      size_t* bytes_written) {
     canary_.Assert();
 
@@ -998,7 +998,7 @@ zx_status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
 }
 
-zx_status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+zx_status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
                                       size_t buffer_size) {
     canary_.Assert();
 
@@ -1010,7 +1010,7 @@ zx_status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_ptr<pa
         return ZX_ERR_BUFFER_TOO_SMALL;
 
     auto copy_to_user = [](void* context, size_t offset, size_t index, paddr_t pa) -> zx_status_t {
-        user_ptr<paddr_t>* buffer = static_cast<user_ptr<paddr_t>*>(context);
+        user_inout_ptr<paddr_t>* buffer = static_cast<user_inout_ptr<paddr_t>*>(context);
         return buffer->element_offset(index).copy_to_user(pa);
     };
     // only lookup pages that are already present

@@ -21,7 +21,7 @@ class VmAspace;
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<zx_info_maps_t> maps, size_t max,
+                            user_out_ptr<zx_info_maps_t> maps, size_t max,
                             size_t* actual, size_t* available);
 
 // Walks the VmAspace and writes entries that describe its mapped VMOs into
@@ -31,7 +31,7 @@ zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
-                            user_ptr<zx_info_vmo_t> vmos, size_t max,
+                            user_out_ptr<zx_info_vmo_t> vmos, size_t max,
                             size_t* actual, size_t* available);
 
 // For every VMO in the process's handle table, writes an entry into |vmos|,
@@ -41,7 +41,7 @@ zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
 zx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
-                                     user_ptr<zx_info_vmo_t> vmos, size_t max,
+                                     user_out_ptr<zx_info_vmo_t> vmos, size_t max,
                                      size_t* actual, size_t* available);
 
 // Prints (with the supplied prefix) the number of mapped, committed bytes for

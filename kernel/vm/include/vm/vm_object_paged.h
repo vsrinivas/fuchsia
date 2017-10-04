@@ -54,12 +54,12 @@ public:
     zx_status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                        vmo_lookup_fn_t lookup_fn, void* context) override;
 
-    zx_status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len,
+    zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len,
                          size_t* bytes_read) override;
-    zx_status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+    zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len,
                           size_t* bytes_written) override;
 
-    zx_status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+    zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
                            size_t buffer_size) override;
 
     void Dump(uint depth, bool verbose) override;

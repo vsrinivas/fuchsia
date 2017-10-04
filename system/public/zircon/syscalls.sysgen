@@ -585,7 +585,7 @@ syscall pci_config_read
 
 syscall pci_cfg_pio_rw
     (handle: zx_handle_t, bus: uint8_t, dev: uint8_t, func: uint8_t, offset: uint8_t,
-        val: uint32_t[1] OUT, width: size_t, write: bool)
+        val: uint32_t[1] INOUT, width: size_t, write: bool)
     returns (zx_status_t);
 
 syscall pci_get_bar

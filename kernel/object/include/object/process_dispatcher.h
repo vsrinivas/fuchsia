@@ -196,10 +196,10 @@ public:
     zx_status_t GetStats(zx_info_task_stats_t* stats);
     // NOTE: Code outside of the syscall layer should not typically know about
     // user_ptrs; do not use this pattern as an example.
-    zx_status_t GetAspaceMaps(user_ptr<zx_info_maps_t> maps, size_t max,
-                           size_t* actual, size_t* available);
-    zx_status_t GetVmos(user_ptr<zx_info_vmo_t> vmos, size_t max,
-                     size_t* actual, size_t* available);
+    zx_status_t GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, size_t max,
+                              size_t* actual, size_t* available);
+    zx_status_t GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t max,
+                        size_t* actual, size_t* available);
 
     zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads);
 
