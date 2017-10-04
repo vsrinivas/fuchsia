@@ -191,6 +191,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   //    b) Its metadata doesn't match.
   // 2) A value is added that matches our existing subscription.
   // 3) A value is updated that newly matches our subscription.
+  // 4) When a value is removed, it is no longer returned.
 
   // (1)
   auto query = ContextQuery::New();
@@ -252,6 +253,13 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   EXPECT_EQ(2lu, listener.last_update->values["a"].size());
   EXPECT_EQ("now it matches", listener.last_update->values["a"][0]->content);
   EXPECT_EQ("match", listener.last_update->values["a"][1]->content);
+  listener.reset();
+
+  // (4)
+  repository_.Remove(id);
+  ASSERT_TRUE(listener.last_update);
+  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
+  EXPECT_EQ("match", listener.last_update->values["a"][0]->content);
   listener.reset();
 }
 
