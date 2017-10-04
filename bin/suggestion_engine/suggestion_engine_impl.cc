@@ -171,12 +171,11 @@ void SuggestionEngineImpl::DispatchAskInternal(UserInputPtr input) {
 
   auto remainingHandlers = std::make_shared<size_t>(query_handlers_.size());
   for (const auto& ask : query_handlers_) {
-    const std::string url = ask.second;
     ask.first->OnQuery(
         input.Clone(),
         // TODO(rosswang): Large number of captures, substantial lambda;
         // consider replacing with an object.
-        [this, remainingHandlers, query, url, has_media_response,
+        [this, remainingHandlers, query, url = ask.second, has_media_response,
          ask_time_point](QueryResponsePtr response) {
           // TODO(rosswang): defer selection of "I don't know" responses
           if (has_media_response && !*has_media_response &&
@@ -346,10 +345,10 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
   // component with this url. If not, create one.
   std::unique_ptr<ProposalPublisherImpl>& source = proposal_publishers_[url];
   if (!source) {  // create if it didn't already exist
-    source.reset(new ProposalPublisherImpl(this, url));
+    source = std::make_unique<ProposalPublisherImpl>(this, url);
   }
 
-  source.get()->AddBinding(std::move(publisher));
+  source->AddBinding(std::move(publisher));
 }
 
 // |SuggestionEngine|
