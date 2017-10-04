@@ -624,7 +624,7 @@ const trace_string_ref_t& Importer::GetNameRef(
     uint32_t id) {
   auto it = table.find(id);
   if (it == table.end()) {
-    fbl::String name = fbl::StringPrintf("%s 0x%d", kind, id);
+    fbl::String name = fbl::StringPrintf("%s 0x%x", kind, id);
     std::tie(it, std::ignore) =
         table.emplace(id, trace_context_make_registered_string_copy(
                               context_, name.data(), name.length()));
