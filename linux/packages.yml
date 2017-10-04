@@ -7,6 +7,7 @@ all:
   - libatk-bridge2.0-dev
   - libatk1.0-0
   - libatk1.0-dev
+  - libatomic1
   - libatspi2.0-0
   - libatspi2.0-dev
   - libattr1
@@ -16,6 +17,10 @@ all:
   - libbluetooth-dev
   - libbrlapi0.6
   - libbrlapi-dev
+  - libbsd0
+  - libbsd-dev
+  - libbz2-1.0
+  - libbz2-dev
   - libc6
   - libc6-dev
   - libcairo2
@@ -31,15 +36,20 @@ all:
   - libdbus-1-dev
   - libdbus-glib-1-2
   - libdrm2
+  - libdrm-amdgpu1
   - libdrm-dev
   - libdrm-nouveau2
   - libdrm-radeon1
+  - libedit2
+  - libedit-dev
   - libegl1-mesa
   - libegl1-mesa-dev
   - libelf1
   - libelf-dev
   - libexpat1
   - libexpat1-dev
+  - libfdt1
+  - libfdt-dev
   - libffi6
   - libffi-dev
   - libfontconfig1
@@ -66,6 +76,7 @@ all:
   - libglu1-mesa-dev
   - libgnome-keyring0
   - libgnome-keyring-dev
+  - libgnutls-dane0
   - libgnutls-openssl27
   - libgnutls30
   - libgnutlsxx28
@@ -73,6 +84,8 @@ all:
   - libgomp1
   - libgpg-error0
   - libgpg-error-dev
+  - libgpm2
+  - libgpm-dev
   - libgssapi-krb5-2
   - libgssrpc4
   - libgtk-3-0
@@ -83,7 +96,8 @@ all:
   - libharfbuzz-dev
   - libharfbuzz-gobject0
   - libharfbuzz-icu0
-  - libatomic1
+  - libicu57
+  - libicu-dev
   - libjsoncpp1
   - libjsoncpp-dev
   - libk5crypto3
@@ -94,6 +108,10 @@ all:
   - libkrb5-3
   - libkrb5-dev
   - libkrb5support0
+  - liblzma5
+  - liblzma-dev
+  - libncurses5
+  - libncurses5-dev
   - libnspr4
   - libnspr4-dev
   - libnss3
@@ -112,7 +130,9 @@ all:
   - libpangoxft-1.0-0
   - libpci3
   - libpci-dev
+  - libpcre16-3
   - libpcre3
+  - libpcre32-3
   - libpcre3-dev
   - libpcrecpp0v5
   - libpixman-1-0
@@ -123,14 +143,19 @@ all:
   - libpulse0
   - libpulse-dev
   - libpulse-mainloop-glib0
+  - libpython2.7
+  - libpython2.7-dev
   - libselinux1
   - libspeechd2
   - libspeechd-dev
-  - libssl1.0.2
+  - libssl1.1
   - libssl-dev
   - libstdc++6
   - libstdc++-6-dev
+  - libtinfo5
+  - libtinfo-dev
   - libtasn1-6
+  - libtasn1-6-dev
   - libudev-dev
   - libudev1
   - libwayland-client0
@@ -174,6 +199,8 @@ all:
   - libxinerama-dev
   - libxkbcommon0
   - libxkbcommon-dev
+  - libxml2
+  - libxml2-dev
   - libxrandr2
   - libxrandr-dev
   - libxrender1
