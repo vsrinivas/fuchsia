@@ -27,3 +27,5 @@ void sched_migrate(thread_t *t);
 /* this usually means the caller should locally reschedule soon */
 bool sched_unblock(thread_t *t) __WARN_UNUSED_RESULT;
 bool sched_unblock_list(struct list_node *list) __WARN_UNUSED_RESULT;
+
+void sched_transition_off_cpu(cpu_num_t old_cpu);

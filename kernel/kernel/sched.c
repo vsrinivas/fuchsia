@@ -109,17 +109,18 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
 }
 
 /* pick a 'random' cpu out of the passed in mask of cpus */
-static cpu_mask_t rand_cpu(const cpu_mask_t mask) {
+static cpu_mask_t rand_cpu(cpu_mask_t mask) {
     if (unlikely(mask == 0))
         return 0;
 
-    /* check that the mask passed in has at least one bit set in the online mask */
-    cpu_mask_t online = mp_get_online_mask();
-    if (unlikely((mask & online) == 0))
+    /* check that the mask passed in has at least one bit set in the active mask */
+    cpu_mask_t active = mp_get_active_mask();
+    mask &= active;
+    if (unlikely(mask == 0))
         return 0;
 
-    /* compute the highest online cpu */
-    cpu_num_t highest_cpu = highest_cpu_set(online);
+    /* compute the highest cpu in the mask */
+    cpu_num_t highest_cpu = highest_cpu_set(mask);
 
     /* not very random, round robins a bit through the mask until it gets a hit */
     for (;;) {
@@ -150,6 +151,7 @@ static cpu_mask_t find_cpu_mask(thread_t* t) {
 
     /* get a list of idle cpus and mask off the ones that aren't in our affinity mask */
     cpu_mask_t idle_cpu_mask = mp_get_idle_mask();
+    cpu_mask_t active_cpu_mask = mp_get_active_mask();
     idle_cpu_mask &= cpu_affinity;
     if (idle_cpu_mask != 0) {
         if (idle_cpu_mask & curr_cpu_mask) {
@@ -158,18 +160,21 @@ static cpu_mask_t find_cpu_mask(thread_t* t) {
         }
 
         if (last_ran_cpu_mask & idle_cpu_mask) {
+            DEBUG_ASSERT(last_ran_cpu_mask & mp_get_active_mask());
             /* the last core it ran on is idle and isn't the current cpu */
             return last_ran_cpu_mask;
         }
 
         /* pick an idle_cpu */
+        DEBUG_ASSERT((idle_cpu_mask & mp_get_active_mask()) == idle_cpu_mask);
         return rand_cpu(idle_cpu_mask);
     }
 
     /* no idle cpus in our affinity mask */
 
     /* if the last cpu it ran on is in the affinity mask and not the current cpu, pick that */
-    if ((last_ran_cpu_mask & cpu_affinity) && last_ran_cpu_mask != curr_cpu_mask) {
+    if ((last_ran_cpu_mask & cpu_affinity & active_cpu_mask) &&
+        last_ran_cpu_mask != curr_cpu_mask) {
         return last_ran_cpu_mask;
     }
 
@@ -185,6 +190,7 @@ static cpu_mask_t find_cpu_mask(thread_t* t) {
     mask = rand_cpu(mask);
     if (mask == 0)
         return curr_cpu_mask; /* local cpu is the only choice */
+    DEBUG_ASSERT((mask & mp_get_active_mask()) == mask);
     return mask;
 }
 
@@ -445,6 +451,26 @@ static void migrate_current_thread(thread_t *current_thread) {
     if (accum_cpu_mask)
         mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
     sched_resched_internal();
+}
+
+/* migrate all threads assigned to |old_cpu| to other queues */
+void sched_transition_off_cpu(cpu_num_t old_cpu) {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    // Ensure we do not get scheduled on anymore.
+    mp_set_curr_cpu_active(false);
+
+    thread_t* t;
+    bool local_resched = false;
+    cpu_mask_t accum_cpu_mask = 0;
+    while (!thread_is_idle(t = sched_get_top_thread(old_cpu))) {
+        find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
+        DEBUG_ASSERT(!local_resched);
+    }
+
+    if (accum_cpu_mask) {
+        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+    }
 }
 
 /* check to see if the current thread needs to migrate to a new core */

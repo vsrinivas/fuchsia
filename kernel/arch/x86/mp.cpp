@@ -354,12 +354,6 @@ void arch_flush_state_and_halt(event_t *flush_done)
 {
     DEBUG_ASSERT(arch_ints_disabled());
 
-    // Enter no-fill cache mode (see Intel 3A section 11.5.3)
-    ulong cr0 = x86_get_cr0();
-    cr0 |= X86_CR0_CD;
-    cr0 &= ~X86_CR0_NW;
-    x86_set_cr0(cr0);
-
     __asm__ volatile("wbinvd" : : : "memory");
 
     event_signal(flush_done, false);

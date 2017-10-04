@@ -446,7 +446,7 @@ void timer_transition_off_cpu(uint old_cpu) {
     spin_lock_irqsave(&timer_lock, state);
     uint cpu = arch_curr_cpu_num();
 
-    timer_t* old_head = list_peek_head_type(&percpu[old_cpu].timer_queue, timer_t, node);
+    timer_t* old_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
 
     timer_t *entry = NULL, *tmp_entry = NULL;
     /* Move all timers from old_cpu to this cpu */

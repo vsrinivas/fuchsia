@@ -620,7 +620,7 @@ void thread_set_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
     THREAD_LOCK(state);
 
     // make sure the passed in mask is valid and at least one cpu can run the thread
-    if (affinity & mp_get_online_mask()) {
+    if (affinity & mp_get_active_mask()) {
         // set the affinity mask
         t->cpu_affinity = affinity;
 

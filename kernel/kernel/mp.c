@@ -15,6 +15,7 @@
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
+#include <kernel/sched.h>
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/timer.h>
@@ -201,16 +202,14 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
 
 static void mp_unplug_trampoline(void) __NO_RETURN;
 static void mp_unplug_trampoline(void) {
-    /* release the thread lock that was implicitly held across the reschedule */
-    spin_unlock(&thread_lock);
-
-    /* do *not* enable interrupts, we want this CPU to never receive another
-     * interrupt */
+    /* We're still holding the thread lock from the reschedule that took us
+     * here. */
 
     thread_t* ct = get_current_thread();
     event_t* unplug_done = ct->arg;
 
-    mp_set_curr_cpu_active(false);
+    cpu_num_t cpu_num = arch_curr_cpu_num();
+    sched_transition_off_cpu(cpu_num);
 
     /* Note that before this invocation, but after we stopped accepting
      * interrupts, we may have received a synchronous task to perform.
@@ -219,6 +218,11 @@ static void mp_unplug_trampoline(void) {
      * of the other CPUs finish their work (very unlikely, since tasks
      * should be quick), then this CPU may execute the task. */
     mp_set_curr_cpu_online(false);
+
+    spin_unlock(&thread_lock);
+
+    /* do *not* enable interrupts, we want this CPU to never receive another
+     * interrupt */
 
     /* flush all of our caches */
     arch_flush_state_and_halt(unplug_done);
@@ -320,7 +324,7 @@ zx_status_t mp_unplug_cpu(uint cpu_id) {
         goto cleanup_mutex;
     }
 
-/* Fall through.  Since the thread is scheduled, it should not be in any
+    /* Fall through.  Since the thread is scheduled, it should not be in any
      * queues.  Since the CPU running this thread is now shutdown, we can just
      * erase the thread's existence. */
 cleanup_thread:
