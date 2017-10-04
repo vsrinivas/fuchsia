@@ -79,20 +79,6 @@ const string map_override(const string& name, const std::map<string, string>& ov
     return (ft == overrides.end()) ? name : ft->second;
 }
 
-void TypeSpec::debug_dump() const {
-    fprintf(stderr, "  + %s %s\n", type.c_str(), name.c_str());
-    if (arr_spec) {
-        if (arr_spec->count)
-            fprintf(stderr, "      [%u] (explicit)\n", arr_spec->count);
-        else
-            fprintf(stderr, "      [%s]\n", arr_spec->name.c_str());
-    }
-    if (!attributes.empty()) {
-        fprintf(stderr, "       - ");
-        dump_attributes(attributes);
-    }
-}
-
 string TypeSpec::to_string() const {
     return type + (arr_spec ? arr_spec->to_string() : string());
 }
@@ -245,20 +231,6 @@ void Syscall::print_error(const char* what) const {
     fprintf(stderr, "error: %s  : %s\n", name.c_str(), what);
 }
 
-void Syscall::debug_dump() const {
-    fprintf(stderr, "line %d: syscall {%s}\n", fc.line_start, name.c_str());
-    fprintf(stderr, "- return(s)\n");
-    for (auto& r : ret_spec) {
-        r.debug_dump();
-    }
-    fprintf(stderr, "- args(s)\n");
-    for (auto& a : arg_spec) {
-        a.debug_dump();
-    }
-    fprintf(stderr, "- attrs(s)\n");
-    dump_attributes(attributes);
-}
-
 string Syscall::return_type() const {
     if (ret_spec.empty()) {
         return "void";
@@ -268,13 +240,4 @@ string Syscall::return_type() const {
 
 bool Syscall::is_void_return() const {
     return return_type() == "void";
-}
-
-bool Syscall::will_wrap(const string& type) const {
-    return type.find("reinterpret_cast") != string::npos;
-}
-
-// TODO(andymutton): Rework this after changing arm and removing the invocation generator.
-string Syscall::maybe_wrap(const string& type) const {
-    return will_wrap(type) ? "make_user_ptr(" + type + ")" : type;
 }

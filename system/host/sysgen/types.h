@@ -39,7 +39,6 @@ struct TypeSpec {
     std::vector<std::string> attributes;
     ArraySpec* arr_spec = nullptr;
 
-    void debug_dump() const;
     std::string to_string() const;
     std::string as_cpp_declaration(bool is_wrapped) const;
     std::string as_rust_declaration() const;
@@ -68,11 +67,8 @@ struct Syscall {
     void assign_index(int* next_index);
     bool valid_array_count(const TypeSpec& ts) const;
     void print_error(const char* what) const;
-    void debug_dump() const;
     std::string return_type() const;
     bool is_void_return() const;
-    bool will_wrap(const std::string& type) const;
-    std::string maybe_wrap(const std::string& type) const;
 };
 
 const std::string map_override(
