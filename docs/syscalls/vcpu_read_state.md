@@ -20,6 +20,8 @@ zx_status_t zx_vcpu_read_state(zx_handle_t vcpu, uint32_t kind, void* buffer,
 *buffer*. It is only valid to read the state of *vcpu* when execution has been
 paused.
 
+*kind* must be *ZX_VCPU_STATE*.
+
 ## RETURN VALUE
 
 **vcpu_read_state**() returns ZX_OK on success. On failure, an error value is

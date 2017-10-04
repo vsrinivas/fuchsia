@@ -10,7 +10,8 @@ vcpu_write_state - write the state of a VCPU
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
-zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, const zx_vcpu_state_t* state);
+zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, uint32_t kind,
+                                const void* buffer, uint32_t len);
 ```
 
 ## DESCRIPTION
@@ -18,6 +19,8 @@ zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, const zx_vcpu_state_t* state);
 **vcpu_write_state**() writes the state of *vcpu* as specified by *kind* from
 *buffer*. It is only valid to write the state of *vcpu* when execution has been
 paused.
+
+*kind* may be *ZX_VCPU_STATE* or *ZX_VCPU_IO*.
 
 ## RETURN VALUE
 
