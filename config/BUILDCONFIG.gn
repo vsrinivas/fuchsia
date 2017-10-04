@@ -451,6 +451,23 @@ template("variant_target") {
         visibility += [ ":${target_name}" ]
       }
     }
+  } else if (current_toolchain == shlib_toolchain) {
+    # Don't copy from a variant into a -shared toolchain, because nobody
+    # looks for an executable or loadable_module there.  Instead, just
+    # forward any deps to the real target.
+    group(target_name) {
+      forward_variables_from(target_invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      if (defined(visibility)) {
+        visibility += [ ":${target_name}" ]
+      }
+      deps = [
+        ":${target_name}(${builder_toolchain})",
+      ]
+    }
   } else {
     # When some variant was selected, then this target in all other
     # toolchains is actually just this copy rule.  The target is built in
