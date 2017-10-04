@@ -4,6 +4,31 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+executable("msd_arm_mali_nonhardware_tests") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+  ]
+
+  public_deps = [
+    ":tests_not_requiring_hardware",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("tests_not_requiring_hardware") {
+  testonly = true
+
+  sources = [
+    "test_address_space.cc",
+  ]
+
+  deps = [
+    ":test_deps",
+  ]
+}
+
 # These tests require ARM Mali graphics hardware to run.  They can be
 # run inside the test build of the driver.
 source_set("tests_requiring_hardware") {

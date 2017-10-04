@@ -7,10 +7,9 @@ import("//packages/package.gni")
 
 package("magma-test-build-only") {
   testonly = true
+  deps = []
   if (build_libvulkan_arm_mali || build_intel_gen) {
-    deps = [
-      ":tests",
-    ]
+    deps += [ ":tests" ]
     if (build_intel_gen) {
       deps += [
         "$mesa_build_root:tests",
@@ -19,17 +18,22 @@ package("magma-test-build-only") {
       ]
     }
   }
+  if (build_msd_arm_mali) {
+    deps += [ "//garnet/drivers/gpu/msd-arm-mali:tests" ]
+  }
 }
 
 package("magma-test") {
   testonly = true
+  deps = []
+  tests = []
   if (build_libvulkan_arm_mali || build_intel_gen) {
-    deps = [
+    deps += [
       ":autorun",
       ":tests",
     ]
 
-    tests = [
+    tests += [
       {
         name = "magma_sys_unit_tests"
       },
@@ -89,6 +93,13 @@ package("magma-test") {
             dest = "magma_autorun"
           } ]
     }
+  }
+
+  if (build_msd_arm_mali) {
+    deps += [ "//garnet/drivers/gpu/msd-arm-mali:tests" ]
+    tests += [ {
+          name = "msd_arm_mali_nonhardware_tests"
+        } ]
   }
 }
 
