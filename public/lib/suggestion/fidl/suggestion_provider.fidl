@@ -54,7 +54,15 @@ interface AskController {
   // results should be updated to reflect it.
   SetUserInput(UserInput input);
 
-  // Transitions to |SpeechStatus.LISTENING|.
+  // Starts capturing speech from the microphone. Transitions internal
+  // |SpeechStatus| to |LISTENING|.
+  //
+  // TODO(rosswang => jwnichols): Right now, this immediately runs a query
+  // without waiting for SetUserInput above. However, since Jeff's getting rid
+  // of this flow, it might make sense to require SysUI to issue a new query
+  // with the recognized text received from |SpeechListener|, or better yet
+  // wire it a |SpeechToText| directly.
+  //
   // TODO(rosswang): consider whether this should be folded into |SetUserInput|
   // (see comments in |user_input.fidl|) or moved to SysUI. It is conceivable
   // that SysUI should use |SpeechToText| itself and send only the recognized
@@ -94,24 +102,45 @@ interface AskSuggestionListener {
   OnAskResults(UserInput query, array<Suggestion> suggestions);
 };
 
+// Encodes the valid states of an Ask, including spoken phases. States include
+// those used for interpreting speech to text as well as for when the system is
+// querying handlers or generating audio output.
+//
 // TODO(rosswang): The |PROCESSING| and |RESPONDING| states might be pertinent
 // to non-speech flows as well.
+// TODO(rosswang): Error state for failed recognition
 enum SpeechStatus {
   // Exchange complete or not started
+  // Valid outgoing transitions:
+  // -> |LISTENING| (spoken query)
+  // -> |PROCESSING| (text query)
+  // -> |RESPONDING| (spoken response from Next/Interruption) (not implemented)
   IDLE,
+
   // Mic open, user speaking
+  // Valid outgoing transitions:
+  // -> |PROCESSING|
   LISTENING,
+
   // Mic closed, awaiting results
+  // Valid outgoing transitions:
+  // -> |RESPONDING| (spoken response)
+  // -> |IDLE| (no spoken response)
+  // -> |LISTENING| (transition may be forced by system or user while busy)
   PROCESSING,
+
   // System speaking
+  // Valid outgoing transitions:
+  // -> |IDLE| (spoken response complete)
+  // -> |LISTENING| (transition may be forced by system or user while busy)
+  // -> |PROCESSING| (text query while busy)
   RESPONDING
 };
 
 // TODO(rosswang): possibly merge this into AskSuggestionListener once the dust
 // settles
 interface SpeechListener {
-  // Convenience method that receives status updates for the conversational
-  // exchange.
+  // Called every time the internal |SpeechStatus| changes.
   OnStatusChanged(SpeechStatus status);
 
   // Receives the recognition result from the user's spoken input. This method
@@ -125,7 +154,7 @@ interface SpeechListener {
   // OnAudioResponse with a method to start playback.
 
   // Receives a text representation of the spoken response. This method is
-  // called at the beginning of the RESPONDING phase.
+  // called at the beginning of the |RESPONDING| phase.
   OnTextResponse(string response_text);
 };
 
