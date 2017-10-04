@@ -40,25 +40,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/src/mi/mempool.c \
     $(LOCAL_DIR)/src/mi/strerror.c \
 
-ifeq ($(ARCH),arm)
-MODULE_SRCS += \
-    $(LOCAL_DIR)/src/elf32.c \
-    $(LOCAL_DIR)/src/arm/Gcreate_addr_space.c \
-    $(LOCAL_DIR)/src/arm/Gex_tables.c \
-    $(LOCAL_DIR)/src/arm/Gget_proc_info.c \
-    $(LOCAL_DIR)/src/arm/Gget_save_loc.c \
-    $(LOCAL_DIR)/src/arm/Gglobal.c \
-    $(LOCAL_DIR)/src/arm/Ginit.c \
-    $(LOCAL_DIR)/src/arm/Ginit_local.c \
-    $(LOCAL_DIR)/src/arm/Ginit_remote.c \
-    $(LOCAL_DIR)/src/arm/Gregs.c \
-    $(LOCAL_DIR)/src/arm/Gsignal_frame.c \
-    $(LOCAL_DIR)/src/arm/Gstash_frame.c \
-    $(LOCAL_DIR)/src/arm/Gstep.c \
-    $(LOCAL_DIR)/src/arm/fuchsia.c \
-    $(LOCAL_DIR)/src/arm/regname.c \
-
-else ifeq ($(ARCH),arm64)
+ifeq ($(ARCH),arm64)
 MODULE_SRCS += \
     $(LOCAL_DIR)/src/elf64.c \
     $(LOCAL_DIR)/src/aarch64/Gcreate_addr_space.c \
