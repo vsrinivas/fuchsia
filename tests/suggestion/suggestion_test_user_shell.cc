@@ -46,8 +46,7 @@ class SuggestionTestUserShellApp
 
     suggestion_provider_->SubscribeToNext(
         suggestion_listener_bindings_.AddBinding(this),
-        next_controller_.NewRequest());
-    next_controller_->SetResultCount(20 /* arbitrarily chosen */);
+        20 /* arbitrarily chosen */);
 
     story_provider_->CreateStory(
         "file:///system/apps/modular_tests/suggestion_proposal_test_module",
@@ -109,6 +108,9 @@ class SuggestionTestUserShellApp
   // |SuggestionListener|
   void OnRemoveAll() override {}
 
+  // |SuggestionListener|
+  void OnProcessingChange(bool processing) override {}
+
   mozart::ViewOwnerPtr view_owner_;
 
   modular::UserShellContextPtr user_shell_context_;
@@ -117,7 +119,6 @@ class SuggestionTestUserShellApp
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   maxwell::SuggestionProviderPtr suggestion_provider_;
-  maxwell::NextControllerPtr next_controller_;
   fidl::BindingSet<maxwell::SuggestionListener> suggestion_listener_bindings_;
 
   TestPoint initialized_{"SuggestionTestUserShell initialized"};

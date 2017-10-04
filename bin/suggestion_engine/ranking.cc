@@ -55,8 +55,8 @@ namespace ranking {
 // TODO(rosswang): Allow intersections and more generally edit distance with
 // substring discounting.
 RankingFunction GetAskRankingFunction(const std::string& query) {
-  return [query = std::move(query)](const SuggestionPrototype* prototype)
-      ->int64_t {
+  return [query = std::move(query)](
+             const SuggestionPrototype* prototype) -> int64_t {
     if (query.empty()) {
       return GetDefaultRank(prototype);
     }

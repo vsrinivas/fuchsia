@@ -12,9 +12,8 @@
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
-#include "peridot/bin/suggestion_engine/ask_subscriber.h"
 #include "peridot/bin/suggestion_engine/interruptions_subscriber.h"
-#include "peridot/bin/suggestion_engine/next_subscriber.h"
+#include "peridot/bin/suggestion_engine/windowed_subscriber.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 #include <string>
@@ -116,37 +115,53 @@ void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
   }
 }
 
-SuggestionPrototype* SuggestionEngineImpl::FindSuggestion(
-    std::string suggestion_id) {
-  RankedSuggestion* suggestion =
-      next_suggestions_->GetSuggestion(suggestion_id);
-  if (suggestion) {
-    return suggestion->prototype;
-  }
-  suggestion = ask_suggestions_->GetSuggestion(suggestion_id);
-  return suggestion->prototype;
-}
+// |SuggestionProvider|
+void SuggestionEngineImpl::Query(
+    fidl::InterfaceHandle<SuggestionListener> listener,
+    UserInputPtr input,
+    int count) {
+  // TODO(jwnichols): I'm not sure this is correct or should be here
+  speech_listeners_.ForAllPtrs([=](FeedbackListener* listener) {
+    listener->OnStatusChanged(SpeechStatus::PROCESSING);
+  });
 
-// |AskDispatcher|
-void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
-  // TODO(rosswang): locale/unicode
+  // Process:
+  //   1. Close out and clean up any existing query process
+  //   2. Normalize the query (e.g., lowercase text)
+  //   3. Update the context engine with the new query
+  //   4. Set up the ask variables in suggestion engine
+  //   5. Get suggestions from each of the QueryHandlers
+  //   6. Rank the suggestions as received
+  //   7. Send "done" to SuggestionListener
+
+  // Step 1
+  CleanUpPreviousQuery();
+
+  // Step 2
   std::string query = input->get_text();
   std::transform(query.begin(), query.end(), query.begin(), ::tolower);
 
+  // Step 3
   if (!query.empty()) {
     std::string formattedQuery;
     modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
   }
 
-  speech_listeners_.ForAllPtrs([=](FeedbackListener* listener) {
-    listener->OnStatusChanged(SpeechStatus::PROCESSING);
-  });
+  // Step 4
+  std::unique_ptr<WindowedSuggestionSubscriber> subscriber =
+      std::make_unique<WindowedSuggestionSubscriber>(
+          ask_suggestions_,
+          std::move(listener),
+          count);
 
-  // TODO(andrewosh): Include/exclude logic improves upon this, but with
-  // increased complexity.
-  RemoveAllAskSuggestions();
+  subscriber->set_connection_error_handler([this] {
+    CleanUpPreviousQuery();
+  });  // called if the listener disconnects
 
+  ask_channel_.AddSubscriber(std::move(subscriber));
+
+  // TODO(jwnichols): Rethink the ranking subsystem
   ask_suggestions_->UpdateRankingFunction(
       maxwell::ranking::GetAskRankingFunction(query));
 
@@ -154,22 +169,22 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
     return debug_.OnAskStart(query, ask_suggestions_);
   }
 
+  // TODO(jwnichols): Can this media stuff move elsewhere?
   // Mark any outstanding media responses as stale (see below)
   ask_has_media_response_ptr_factory_.InvalidateWeakPtrs();
   ask_has_media_response_ = false;
   auto has_media_response = ask_has_media_response_ptr_factory_.GetWeakPtr();
   fxl::TimePoint ask_time_point = fxl::TimePoint::Now();
 
+  // Step 5
   auto remainingHandlers = std::make_shared<size_t>(query_handlers_.size());
   for (const auto& ask : query_handlers_) {
     ask.first->OnQuery(
         input.Clone(),
         // TODO(rosswang): Large number of captures, substantial lambda;
         // consider replacing with an object.
-        [
-          this, remainingHandlers, query, url = ask.second, has_media_response,
-          ask_time_point
-        ](QueryResponsePtr response) {
+        [this, remainingHandlers, query, url = ask.second, has_media_response,
+         ask_time_point](QueryResponsePtr response) {
           // TODO(rosswang): defer selection of "I don't know" responses
           if (has_media_response && !*has_media_response &&
               response->media_response) {
@@ -184,12 +199,11 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
             }
 
             fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                fxl::MakeCopyable([
-                  this, has_media_response,
-                  natural_language_response =
-                      response->natural_language_response,
-                  media_response = std::move(response->media_response)
-                ]() mutable {
+                fxl::MakeCopyable([this, has_media_response,
+                                   natural_language_response =
+                                       response->natural_language_response,
+                                   media_response = std::move(
+                                       response->media_response)]() mutable {
                   // make sure we're still the active query
                   if (has_media_response) {
                     // TODO(rosswang): allow falling back on this without a
@@ -208,12 +222,17 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
                 media_delay);
           }
 
+          // Step 6: Ranking currently happens as proposals are added
+          // TODO(jwnichols): Making ranking happen more explicitly
+          // (e.g., after a group of proposals has been added, instead of
+          // for each one)
           for (auto& proposal : response->proposals) {
             AddAskProposal(url, std::move(proposal));
           }
           (*remainingHandlers)--;
           if ((*remainingHandlers) == 0) {
             debug_.OnAskStart(query, ask_suggestions_);
+            ask_channel_.DispatchOnProcessingChange(false);
             if (has_media_response && !*has_media_response) {
               // there was no media response for this query
               speech_listeners_.ForAllPtrs([=](FeedbackListener* listener) {
@@ -225,7 +244,7 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
   }
 }
 
-// |AskDispatcher|
+// |SuggestionProvider|
 void SuggestionEngineImpl::BeginSpeechCapture(
     fidl::InterfaceHandle<TranscriptionListener> transcription_listener) {
   if (speech_to_text_ && media_service_) {
@@ -244,8 +263,8 @@ void SuggestionEngineImpl::BeginSpeechCapture(
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<SuggestionListener> listener) {
-  InterruptionsSubscriber* subscriber =
-      new InterruptionsSubscriber(std::move(listener));
+  std::unique_ptr<SuggestionSubscriber> subscriber =
+      std::make_unique<InterruptionsSubscriber>(std::move(listener));
   // New InterruptionsSubscribers are initially sent the existing set of Next
   // suggestions. AnnoyanceType filtering happens in the subscriber.
   for (const auto& suggestion : next_suggestions_->Get()) {
@@ -257,26 +276,13 @@ void SuggestionEngineImpl::SubscribeToInterruptions(
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToNext(
     fidl::InterfaceHandle<SuggestionListener> listener,
-    fidl::InterfaceRequest<NextController> controller) {
-  NextSubscriber* subscriber = new NextSubscriber(
-      next_suggestions_, std::move(listener), std::move(controller));
-  // New NextSubscribers are initially sent the existing set of Next
-  // suggestions.
-  for (const auto& suggestion : next_suggestions_->Get()) {
-    subscriber->OnAddSuggestion(*suggestion);
-  }
+    int count) {
+  std::unique_ptr<WindowedSuggestionSubscriber> subscriber =
+      std::make_unique<WindowedSuggestionSubscriber>(
+          next_suggestions_,
+          std::move(listener),
+          count);
   next_channel_.AddSubscriber(std::move(subscriber));
-}
-
-// |SuggestionProvider|
-void SuggestionEngineImpl::InitiateAsk(
-    fidl::InterfaceHandle<SuggestionListener> listener,
-    fidl::InterfaceRequest<AskController> controller) {
-  fidl::InterfaceHandle<TranscriptionListener> transcription_listener;
-  AskSubscriber* subscriber = new AskSubscriber(
-      ask_suggestions_, this, transcription_listener.NewRequest(),
-      std::move(listener), std::move(controller));
-  ask_channel_.AddSubscriber(std::move(subscriber));
 }
 
 // |SuggestionProvider|
@@ -290,26 +296,42 @@ void SuggestionEngineImpl::RegisterFeedbackListener(
 void SuggestionEngineImpl::NotifyInteraction(
     const fidl::String& suggestion_uuid,
     InteractionPtr interaction) {
-  SuggestionPrototype* suggestion_prototype = FindSuggestion(suggestion_uuid);
+  // Find the suggestion
+  bool suggestion_in_ask = false;
+  RankedSuggestion* suggestion =
+      next_suggestions_->GetSuggestion(suggestion_uuid);
+  if (!suggestion) {
+    suggestion = ask_suggestions_->GetSuggestion(suggestion_uuid);
+    suggestion_in_ask = true;
+  }
 
-  std::string log_detail = suggestion_prototype
-                               ? short_proposal_str(*suggestion_prototype)
-                               : "invalid";
+  // If it exists (and it should), perform the action and clean up
+  if (suggestion) {
+    std::string log_detail = suggestion->prototype
+                                 ? short_proposal_str(*suggestion->prototype)
+                                 : "invalid";
 
-  FXL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
-                        ? "Accepted"
-                        : "Dismissed")
-                << " suggestion " << suggestion_uuid << " (" << log_detail
-                << ")";
+    FXL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
+                          ? "Accepted"
+                          : "Dismissed")
+                  << " suggestion " << suggestion_uuid << " (" << log_detail
+                  << ")";
 
-  debug_.OnSuggestionSelected(suggestion_prototype);
+    debug_.OnSuggestionSelected(suggestion->prototype);
 
-  if (suggestion_prototype) {
-    auto& proposal = suggestion_prototype->proposal;
+    auto& proposal = suggestion->prototype->proposal;
     if (interaction->type == InteractionType::SELECTED) {
       PerformActions(proposal->on_selected, proposal->display->color);
-      RemoveProposal(suggestion_prototype->source_url, proposal->id);
     }
+
+    if (suggestion_in_ask) {
+      CleanUpPreviousQuery();
+    } else {
+      RemoveProposal(suggestion->prototype->source_url, proposal->id);
+    }
+  } else {
+    FXL_LOG(WARNING) << "Requested suggestion prototype not found. UUID: "
+                     << suggestion_uuid;
   }
 }
 
@@ -354,13 +376,19 @@ void SuggestionEngineImpl::SetSpeechToText(
 
 // end SuggestionEngine
 
-void SuggestionEngineImpl::RemoveAllAskSuggestions() {
+void SuggestionEngineImpl::CleanUpPreviousQuery() {
+  // Clean up the suggestions
   for (auto& suggestion : ask_suggestions_->Get()) {
     suggestion_prototypes_.erase(
         std::make_pair(suggestion->prototype->source_url,
                        suggestion->prototype->proposal->id));
   }
   ask_suggestions_->RemoveAllSuggestions();
+
+  // Clean up the query suggestion subscriber
+  ask_channel_.RemoveAllSubscribers();
+
+  // TODO(jwnichols): What else?
 }
 
 SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
@@ -410,7 +438,7 @@ void SuggestionEngineImpl::PerformActions(
                 story_controller->GetInfo(fxl::MakeCopyable(
                     // TODO(thatguy): We should not be std::move()ing
                     // story_controller *while we're calling it*.
-                    [ this, controller = std::move(story_controller) ](
+                    [this, controller = std::move(story_controller)](
                         modular::StoryInfoPtr story_info,
                         modular::StoryState state) {
                       FXL_LOG(INFO)
@@ -466,12 +494,12 @@ void SuggestionEngineImpl::PerformActions(
       case Action::Tag::CUSTOM_ACTION: {
         auto custom_action = maxwell::CustomActionPtr::Create(
             std::move(action->get_custom_action()));
-        custom_action->Execute(fxl::MakeCopyable([
-          this, custom_action = std::move(custom_action), story_color
-        ](fidl::Array<maxwell::ActionPtr> actions) {
-          if (actions)
-            PerformActions(std::move(actions), story_color);
-        }));
+        custom_action->Execute(fxl::MakeCopyable(
+            [this, custom_action = std::move(custom_action),
+             story_color](fidl::Array<maxwell::ActionPtr> actions) {
+              if (actions)
+                PerformActions(std::move(actions), story_color);
+            }));
         break;
       }
       default:

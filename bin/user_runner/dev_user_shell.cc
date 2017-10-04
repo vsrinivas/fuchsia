@@ -74,9 +74,7 @@ class DevUserShellApp : modular::StoryWatcher,
     suggestion_provider_->SubscribeToInterruptions(
         suggestion_listener_bindings_.AddBinding(this));
     suggestion_provider_->SubscribeToNext(
-        suggestion_listener_bindings_.AddBinding(this),
-        next_controller_.NewRequest());
-    next_controller_->SetResultCount(3);
+        suggestion_listener_bindings_.AddBinding(this), 3);
 
     Connect();
   }
@@ -171,6 +169,13 @@ class DevUserShellApp : modular::StoryWatcher,
     FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnRemoveAll()";
   }
 
+  // |SuggestionListener|
+  void OnProcessingChange(bool processing) override {
+    FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnProcessingChange("
+                << processing
+                << ")";
+  }
+
   const Settings settings_;
 
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
@@ -185,7 +190,6 @@ class DevUserShellApp : modular::StoryWatcher,
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   maxwell::SuggestionProviderPtr suggestion_provider_;
-  maxwell::NextControllerPtr next_controller_;
   fidl::BindingSet<maxwell::SuggestionListener> suggestion_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);

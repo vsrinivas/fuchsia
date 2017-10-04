@@ -18,12 +18,19 @@ class SuggestionSubscriber {
 
   virtual ~SuggestionSubscriber() = default;
 
+  // Send the current initial set of suggestions
+  virtual void OnSubscribe(){};
+
   virtual void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) = 0;
 
   virtual void OnRemoveSuggestion(
       const RankedSuggestion& ranked_suggestion) = 0;
 
+  // TODO(jwnichols): Why did we change the terminology here?  Seems like it
+  // should be OnRemoveAllSuggestions().
   virtual void Invalidate() = 0;
+
+  virtual void OnProcessingChange(bool processing) = 0;
 
   // FIDL methods, for use with BoundSet without having to expose listener_.
 
@@ -72,6 +79,10 @@ class SuggestionSubscriber {
 
   void DispatchRemove(const RankedSuggestion& ranked_suggestion) {
     listener()->OnRemove(ranked_suggestion.prototype->suggestion_id);
+  }
+
+  void DispatchProcessingChange(bool processing) {
+    listener()->OnProcessingChange(processing);
   }
 
   SuggestionListener* listener() const { return listener_.get(); }

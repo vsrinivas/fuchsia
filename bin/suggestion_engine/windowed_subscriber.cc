@@ -6,34 +6,33 @@
 
 namespace maxwell {
 
-void WindowedSuggestionSubscriber::SetResultCount(int32_t count) {
-  FXL_LOG(INFO) << "WindowedSuggestionSubscriber::SetResultCount(" << count
-                << ")";
-  if (count < 0)
-    count = 0;
-
-  const auto& suggestion_vector = ranked_suggestions_->Get();
-
-  size_t target = std::min((size_t)count, suggestion_vector.size());
-  size_t prev = std::min((size_t)max_results_, suggestion_vector.size());
-
-  if (target != prev) {
-    if (target > prev) {
-      fidl::Array<SuggestionPtr> delta;
-      for (size_t i = prev; i < target; i++) {
-        delta.push_back(CreateSuggestion(*suggestion_vector[i]));
-      }
-      listener()->OnAdd(std::move(delta));
-    } else if (target == 0) {
-      listener()->OnRemoveAll();
-    } else if (target < prev) {
-      for (size_t i = prev - 1; i >= target; i--) {
-        listener()->OnRemove(suggestion_vector[i]->prototype->suggestion_id);
-      }
-    }
+void WindowedSuggestionSubscriber::OnSubscribe() {
+  auto& suggestions = ranked_suggestions_->Get();
+  for (size_t i = 0; i < (size_t)max_results_ && i < suggestions.size(); i++) {
+    DispatchAdd(*suggestions[i]);
   }
+}
 
-  max_results_ = count;
+void WindowedSuggestionSubscriber::OnAddSuggestion(
+    const RankedSuggestion& ranked_suggestion) {
+  if (IncludeSuggestion(ranked_suggestion)) {
+    DispatchAdd(ranked_suggestion);
+
+    // Evict if we were already full
+    if (IsFull())
+      DispatchRemove(*ranked_suggestions_->Get()[max_results_]);
+  }
+}
+
+void WindowedSuggestionSubscriber::OnRemoveSuggestion(
+    const RankedSuggestion& ranked_suggestion) {
+  if (IncludeSuggestion(ranked_suggestion)) {
+    // Shift in if we were full
+    if (IsFull())
+      DispatchAdd(*ranked_suggestions_->Get()[max_results_]);
+
+    DispatchRemove(ranked_suggestion);
+  }
 }
 
 void WindowedSuggestionSubscriber::Invalidate() {
@@ -49,6 +48,10 @@ void WindowedSuggestionSubscriber::Invalidate() {
 
   if (window)  // after OnRemoveAll, no point in adding if no window
     listener()->OnAdd(std::move(window));
+}
+
+void WindowedSuggestionSubscriber::OnProcessingChange(bool processing) {
+  listener()->OnProcessingChange(processing);
 }
 
 // A suggestion should be included if its sorted index (by rank) is less than

@@ -9,7 +9,9 @@
 
 namespace maxwell {
 
-void SuggestionChannel::AddSubscriber(SuggestionSubscriber* subscriber) {
+void SuggestionChannel::AddSubscriber(
+    std::unique_ptr<SuggestionSubscriber> subscriber) {
+  subscriber->OnSubscribe();
   subscribers_.push_back(std::move(subscriber));
 }
 
@@ -31,6 +33,16 @@ void SuggestionChannel::DispatchOnRemoveSuggestion(
   for (const auto& subscriber : subscribers_) {
     subscriber->OnRemoveSuggestion(*suggestion);
   }
+}
+
+void SuggestionChannel::DispatchOnProcessingChange(bool processing) {
+  for (const auto& subscriber : subscribers_) {
+    subscriber->OnProcessingChange(processing);
+  }
+}
+
+void SuggestionChannel::RemoveAllSubscribers() {
+  subscribers_.clear();
 }
 
 }  // namespace maxwell

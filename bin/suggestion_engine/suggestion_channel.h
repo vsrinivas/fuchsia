@@ -16,7 +16,9 @@ class SuggestionChannel {
   void DispatchInvalidate();
   void DispatchOnAddSuggestion(RankedSuggestion* suggestion);
   void DispatchOnRemoveSuggestion(RankedSuggestion* suggestion);
-  void AddSubscriber(SuggestionSubscriber* subscriber);
+  void DispatchOnProcessingChange(bool processing);
+  void AddSubscriber(std::unique_ptr<SuggestionSubscriber> subscriber);
+  void RemoveAllSubscribers();
 
   bool is_bound() {
     for (auto& subscriber : subscribers_) {
@@ -33,7 +35,7 @@ class SuggestionChannel {
   }
 
  private:
-  std::vector<SuggestionSubscriber*> subscribers_;
+  std::vector<std::unique_ptr<SuggestionSubscriber>> subscribers_;
 };
 
 }  // namespace maxwell

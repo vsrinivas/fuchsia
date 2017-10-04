@@ -51,6 +51,9 @@ class RankedSuggestions {
   // The sorted vector of RankedSuggestions, sorted by
   // |ranking_function_|. The vector is re-sorted whenever its
   // contents are modified or when |ranking_function_| is updated.
+  // TODO(jwnichols): Should ranking happen automatically or specifically
+  // when requested?  I think I would lean toward the latter, since ranking
+  // may be expensive.
   std::vector<std::unique_ptr<RankedSuggestion>> suggestions_;
 };
 

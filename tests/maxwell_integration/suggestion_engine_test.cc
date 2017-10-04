@@ -282,20 +282,20 @@ class AskTest : public virtual SuggestionEngineTest {
     suggestion_debug()->WatchAskProposals(debug_listener_binding_.NewBinding());
   }
 
-  void InitiateAsk() {
-    suggestion_provider()->InitiateAsk(listener_binding_.NewBinding(),
-                                       ctl_.NewRequest());
+  void CloseAndResetListener() {
+    if (listener_binding_.is_bound()) {
+      listener_binding_.Close();
+      listener_.ClearSuggestions();
+    }
   }
 
-  void KillListener() { listener_binding_.Close(); }
-
-  void SetQuery(const std::string& query) {
+  void Query(const std::string& query, int count = 10) {
+    CloseAndResetListener();
     auto input = UserInput::New();
     input->set_text(query);
-    ctl_->SetUserInput(std::move(input));
+    suggestion_provider()->Query(listener_binding_.NewBinding(),
+                                 std::move(input), count);
   }
-
-  void SetResultCount(int32_t count) { ctl_->SetResultCount(count); }
 
   int suggestion_count() const { return listener_.suggestion_count(); }
 
@@ -321,7 +321,6 @@ class AskTest : public virtual SuggestionEngineTest {
   TestDebugAskListener debug_listener_;
   fidl::Binding<SuggestionListener> listener_binding_;
   fidl::Binding<AskProposalListener> debug_listener_binding_;
-  AskControllerPtr ctl_;
 };
 
 class InterruptionTest : public virtual SuggestionEngineTest {
@@ -374,8 +373,6 @@ class NextTest : public virtual SuggestionEngineTest {
   void SetUp() override {
     SuggestionEngineTest::SetUp();
 
-    suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
-                                           ctl_.NewRequest());
     suggestion_debug()->WatchNextProposals(
         debug_listener_binding_.NewBinding());
   }
@@ -384,15 +381,27 @@ class NextTest : public virtual SuggestionEngineTest {
   TestSuggestionListener* listener() { return &listener_; }
 
  protected:
-  void SetResultCount(int count) { ctl_->SetResultCount(count); }
+  void StartListening(int count) {
+    suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
+                                           count);
+  }
+
+  void CloseAndResetListener() {
+    listener_binding_.Close();
+    listener_.ClearSuggestions();
+  }
+
+  void SetResultCount(int count) {
+    CloseAndResetListener();
+    suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
+                                           count);
+  }
 
   int suggestion_count() const { return listener_.suggestion_count(); }
 
   const Suggestion* GetOnlySuggestion() const {
     return listener_.GetOnlySuggestion();
   }
-
-  void KillController() { ctl_.reset(); }
 
   void EnsureDebugMatches() {
     auto& subscriberNexts = listener_.GetSuggestions();
@@ -414,7 +423,6 @@ class NextTest : public virtual SuggestionEngineTest {
 
   fidl::Binding<SuggestionListener> listener_binding_;
   fidl::Binding<NextProposalListener> debug_listener_binding_;
-  NextControllerPtr ctl_;
 };
 
 class ResultCountTest : public NextTest {
@@ -442,12 +450,12 @@ class ResultCountTest : public NextTest {
 #define CHECK_RESULT_COUNT(expected) ASYNC_EQ(expected, suggestion_count())
 
 TEST_F(ResultCountTest, InitiallyEmpty) {
-  SetResultCount(10);
+  StartListening(10);
   CHECK_RESULT_COUNT(0);
 }
 
 TEST_F(ResultCountTest, OneByOne) {
-  SetResultCount(10);
+  StartListening(10);
   PublishNewSignal();
   CHECK_RESULT_COUNT(1);
 
@@ -456,6 +464,7 @@ TEST_F(ResultCountTest, OneByOne) {
 }
 
 TEST_F(ResultCountTest, AddOverLimit) {
+  StartListening(0);
   PublishNewSignal(3);
   CHECK_RESULT_COUNT(0);
 
@@ -473,7 +482,7 @@ TEST_F(ResultCountTest, AddOverLimit) {
 }
 
 TEST_F(ResultCountTest, Clear) {
-  SetResultCount(10);
+  StartListening(10);
   PublishNewSignal(3);
   CHECK_RESULT_COUNT(3);
 
@@ -485,7 +494,7 @@ TEST_F(ResultCountTest, Clear) {
 }
 
 TEST_F(ResultCountTest, MultiRemove) {
-  SetResultCount(10);
+  StartListening(10);
   PublishNewSignal(3);
   CHECK_RESULT_COUNT(3);
 
@@ -496,6 +505,9 @@ TEST_F(ResultCountTest, MultiRemove) {
   CHECK_RESULT_COUNT(3);
 }
 
+/* TODO(jwnichols): Re-enable these two tests when this functionality returns
+   to the suggestion engine.
+
 // The ideas agent only publishes a single proposal ID, so each new idea is a
 // duplicate suggestion. Test that given two such ideas (via two GPS locations),
 // only the latest is kept.
@@ -504,7 +516,7 @@ TEST_F(NextTest, Dedup) {
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   StartSuggestionAgent("file:///system/apps/agents/ideas");
 
-  SetResultCount(10);
+  StartListening(10);
   gps.Publish(90, 0);
   CHECK_RESULT_COUNT(1);
   const Suggestion* suggestion = GetOnlySuggestion();
@@ -527,7 +539,7 @@ TEST_F(NextTest, NamespacingPerAgent) {
   StartSuggestionAgent("file:///system/apps/agents/ideas");
   Proposinator conflictinator(suggestion_engine());
 
-  SetResultCount(10);
+  StartListening(10);
   gps.Publish(90, 0);
   // Spoof the idea agent's proposal ID (well, not really spoofing since they
   // are namespaced by component).
@@ -535,6 +547,7 @@ TEST_F(NextTest, NamespacingPerAgent) {
   CHECK_RESULT_COUNT(2);
   EnsureDebugMatches();
 }
+*/
 
 // Tests the removal of earlier suggestions, ensuring that suggestion engine can
 // handle the case where an agent requests the removal of suggestions in a non-
@@ -546,7 +559,7 @@ TEST_F(NextTest, NamespacingPerAgent) {
 TEST_F(NextTest, Fifo) {
   Proposinator fifo(suggestion_engine());
 
-  SetResultCount(10);
+  StartListening(10);
   fifo.Propose("1");
   CHECK_RESULT_COUNT(1);
   auto uuid_1 = GetOnlySuggestion()->uuid;
@@ -565,7 +578,7 @@ TEST_F(NextTest, Fifo) {
 TEST_F(NextTest, CappedFifo) {
   Proposinator fifo(suggestion_engine());
 
-  SetResultCount(1);
+  StartListening(1);
   fifo.Propose("1");
   CHECK_RESULT_COUNT(1);
   auto uuid1 = GetOnlySuggestion()->uuid;
@@ -591,15 +604,14 @@ TEST_F(NextTest, RemoveBeforeSubscribe) {
   zombinator.Remove("brains");
   Sleep();
 
-  SetResultCount(10);
+  StartListening(10);
   CHECK_RESULT_COUNT(0);
 }
 
 TEST_F(NextTest, SubscribeBeyondController) {
   Proposinator p(suggestion_engine());
 
-  SetResultCount(10);
-  KillController();
+  StartListening(10);
   Sleep();
   p.Propose("1");
   p.Propose("2");
@@ -610,7 +622,7 @@ class SuggestionInteractionTest : public NextTest {};
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   Proposinator p(suggestion_engine());
-  SetResultCount(10);
+  StartListening(10);
 
   auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
@@ -628,7 +640,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   Proposinator p(suggestion_engine());
-  SetResultCount(10);
+  StartListening(10);
 
   auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
@@ -651,7 +663,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   Proposinator p(suggestion_engine());
-  SetResultCount(10);
+  StartListening(10);
 
   auto module_id = "foo://bar1";
 
@@ -679,17 +691,15 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
 TEST_F(AskTest, DefaultAsk) {
   AskProposinator p(suggestion_engine());
 
-  InitiateAsk();
-  SetQuery("test query");
+  Query("test query");
   Sleep();
   p.ProposeForAsk("1");
   p.Commit();
   Sleep();
 
-  SetResultCount(10);
   CHECK_RESULT_COUNT(1);
 
-  SetQuery("test query 2");
+  Query("test query 2");
   Sleep();
   p.ProposeForAsk("2");
   p.Commit();
@@ -705,10 +715,7 @@ TEST_F(AskTest, DefaultAsk) {
 TEST_F(AskTest, AskDifferentQueries) {
   AskProposinator p(suggestion_engine());
 
-  InitiateAsk();
-  SetResultCount(10);
-
-  SetQuery("The Hottest Band on the Internet");
+  Query("The Hottest Band on the Internet");
   Sleep();
   p.ProposeForAsk("Mozart's Ghost");
   p.ProposeForAsk("The Hottest Band on the Internet");
@@ -717,7 +724,7 @@ TEST_F(AskTest, AskDifferentQueries) {
 
   CHECK_TOP_HEADLINE("The Hottest Band on the Internet");
 
-  SetQuery("Mozart's Ghost");
+  Query("Mozart's Ghost");
   Sleep();
   p.ProposeForAsk("Mozart's Ghost");
   p.ProposeForAsk("The Hottest Band on the Internet");
@@ -731,10 +738,7 @@ TEST_F(AskTest, AskDifferentQueries) {
 TEST_F(AskTest, ChangeHeadlineRank) {
   AskProposinator p(suggestion_engine());
 
-  InitiateAsk();
-  SetResultCount(10);
-
-  SetQuery("test query");
+  Query("test query");
   Sleep();
   p.ProposeForAsk("E-mail", "E-mail");
   p.ProposeForAsk("E-vite", "E-vite");
@@ -745,7 +749,7 @@ TEST_F(AskTest, ChangeHeadlineRank) {
 
   CHECK_RESULT_COUNT(4);
 
-  SetQuery("Ca");
+  Query("Ca");
   Sleep();
   p.ProposeForAsk("E-mail", "E-mail");
   p.ProposeForAsk("E-vite", "E-vite");
@@ -757,7 +761,7 @@ TEST_F(AskTest, ChangeHeadlineRank) {
   // E-card has a 'ca' in the 3rd position, so should be ranked highest.
   CHECK_TOP_HEADLINE("E-card");
 
-  SetQuery("Ca");
+  Query("Ca");
   Sleep();
   p.ProposeForAsk("E-mail", "E-mail");
   p.ProposeForAsk("E-mail", "Cam");
@@ -778,8 +782,7 @@ TEST_F(AskTest, ChangeHeadlineRank) {
 TEST_F(AskTest, AskRanking) {
   AskProposinator p(suggestion_engine());
 
-  InitiateAsk();
-  SetQuery("");
+  Query("");
   Sleep();
   p.ProposeForAsk("View E-mail");
   p.ProposeForAsk("Compose E-mail");
@@ -789,7 +792,6 @@ TEST_F(AskTest, AskRanking) {
   p.Commit();
   Sleep();
 
-  SetResultCount(10);
   CHECK_RESULT_COUNT(5);
   // Results should be ranked by timestamp at this point.
   HEADLINE_EQ("View E-mail", 0);
@@ -799,7 +801,7 @@ TEST_F(AskTest, AskRanking) {
   HEADLINE_EQ("E-mail Guests", 4);
   EnsureDebugMatches();
 
-  SetQuery("e-mail");
+  Query("e-mail");
   Sleep();
   p.ProposeForAsk("View E-mail");
   p.ProposeForAsk("Compose E-mail");
@@ -816,13 +818,21 @@ TEST_F(AskTest, AskRanking) {
   HEADLINE_EQ("Reply to E-mail", 3);
   EnsureDebugMatches();
 
-  SetResultCount(2);
+  Query("e-mail", 2);
+  Sleep();
+  p.ProposeForAsk("View E-mail");
+  p.ProposeForAsk("Compose E-mail");
+  p.ProposeForAsk("Reply to E-mail");
+  p.ProposeForAsk("Send E-vites");
+  p.ProposeForAsk("E-mail Guests");
+  p.Commit();
+  Sleep();
+
   CHECK_RESULT_COUNT(2);
   HEADLINE_EQ("View E-mail", 0);
   HEADLINE_EQ("E-mail Guests", 1);
 
-  SetResultCount(1);
-  SetQuery("Compose");
+  Query("Compose", 1);
   Sleep();
   p.ProposeForAsk("View E-mail");
   p.ProposeForAsk("Compose E-mail");
@@ -845,7 +855,7 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   // Show that without any existing Stories, we see Proposals to launch
   // any story.
   Proposinator p(suggestion_engine());
-  SetResultCount(10);
+  StartListening(10);
 
   auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
@@ -863,7 +873,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   // Show that with an existing Story for a URL, we see Proposals to launch
   // other URLs.
   Proposinator p(suggestion_engine());
-  SetResultCount(10);
+  StartListening(10);
 
   // First notify watchers of the StoryProvider that a story
   // already exists.
@@ -884,13 +894,16 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   CHECK_RESULT_COUNT(1);
 }
 
+/* TODO(jwnichols): Re-enable these two tests when this functionality returns
+   to the suggestion engine.
+
 TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   Sleep();  // TEMPORARY; wait for init
 
   // If a Story already exists, then Proposals that want to create
   // that same story are filtered when they are proposed.
   Proposinator p(suggestion_engine());
-  SetResultCount(10);
+  StartListening(10);
 
   // First notify watchers of the StoryProvider that this story
   // already exists.
@@ -916,7 +929,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   Sleep();  // TEMPORARY; wait for init
 
   Proposinator p(suggestion_engine());
-  SetResultCount(10);
+  StartListening(10);
 
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bar";
@@ -941,6 +954,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
 
   CHECK_RESULT_COUNT(1);
 }
+*/
 
 TEST_F(InterruptionTest, SingleInterruption) {
   Sleep();  // TEMPORARY; wait for init

@@ -36,36 +36,25 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
  public:
   WindowedSuggestionSubscriber(
       const RankedSuggestions* ranked_suggestions,
-      fidl::InterfaceHandle<SuggestionListener> listener)
+      fidl::InterfaceHandle<SuggestionListener> listener,
+      int32_t count)
       : SuggestionSubscriber(std::move(listener)),
+        max_results_(count),
         ranked_suggestions_(ranked_suggestions) {}
 
   virtual ~WindowedSuggestionSubscriber() = default;
 
-  void SetResultCount(int32_t count);
+  void OnSubscribe() override;
 
-  void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) override {
-    if (IncludeSuggestion(ranked_suggestion)) {
-      DispatchAdd(ranked_suggestion);
+  void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) override;
 
-      // Evict if we were already full
-      if (IsFull())
-        DispatchRemove(*ranked_suggestions_->Get()[max_results_]);
-    }
-  }
-
-  void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) override {
-    if (IncludeSuggestion(ranked_suggestion)) {
-      // Shift in if we were full
-      if (IsFull())
-        DispatchAdd(*ranked_suggestions_->Get()[max_results_]);
-
-      DispatchRemove(ranked_suggestion);
-    }
-  }
+  void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) override;
 
   // Notifies the listener that all elements should be updated.
   void Invalidate() override;
+
+  // Notifies the listener that the processing state has changed.
+  void OnProcessingChange(bool processing) override;
 
  private:
   bool IsFull() const {
@@ -78,28 +67,6 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
   // given by SetResultCount.
   int32_t max_results_ = 0;
   const RankedSuggestions* ranked_suggestions_;
-};
-
-// Convenience template baking a controller interface into
-// WindowedSuggestionSubscriber.
-template <class Controller>
-class BoundWindowedSuggestionSubscriber : public Controller,
-                                          public WindowedSuggestionSubscriber {
- public:
-  BoundWindowedSuggestionSubscriber(
-      const RankedSuggestions* ranked_suggestions,
-      fidl::InterfaceHandle<SuggestionListener> listener,
-      fidl::InterfaceRequest<Controller> controller)
-      : WindowedSuggestionSubscriber(std::move(ranked_suggestions),
-                                     std::move(listener)),
-        binding_(this, std::move(controller)) {}
-
-  void SetResultCount(int32_t count) override {
-    WindowedSuggestionSubscriber::SetResultCount(count);
-  }
-
- private:
-  fidl::Binding<Controller> binding_;
 };
 
 }  // namespace maxwell

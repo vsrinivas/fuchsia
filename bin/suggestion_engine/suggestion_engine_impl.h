@@ -10,7 +10,6 @@
 
 #include "lib/app/cpp/application_context.h"
 
-#include "peridot/bin/suggestion_engine/ask_dispatcher.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/filter.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
@@ -72,8 +71,7 @@ const std::string kQueryContextKey = "/suggestion_engine/current_query";
 // 3) Acts as a SuggestionProvider for those wishing to subscribe to
 //    Suggestions.
 class SuggestionEngineImpl : public SuggestionEngine,
-                             public SuggestionProvider,
-                             public AskDispatcher {
+                             public SuggestionProvider {
  public:
   SuggestionEngineImpl();
 
@@ -97,38 +95,21 @@ class SuggestionEngineImpl : public SuggestionEngine,
       fidl::InterfaceHandle<SuggestionListener> listener) override;
 
   // |SuggestionProvider|
-  void SubscribeToNext(
-      fidl::InterfaceHandle<SuggestionListener> listener,
-      fidl::InterfaceRequest<NextController> controller) override;
+  void SubscribeToNext(fidl::InterfaceHandle<SuggestionListener> listener,
+                       int count) override;
 
-  // The way Asks are currently handled is confusing, but can be understood as
-  // follows:
-  //
-  // Asks are currently logically pull-based, but implemented on top of a
-  // push-based design. This should be changed. Within this system, the
-  // AskSubscriber has two responsibilities:
-  //  1) Take the queries passed to the `controller` (via SetUserQuery) and hand
-  //     those off to the SuggestionEngineImpl's (or whichever class implements
-  //     AskDispatcher) DispatchAsk method. DispatchAsk will fan the query out
-  //     to all registered AskHandlers and the results are pushed into
-  //     ask_suggestions_.
-  //
-  //  2) Since ask_suggestions_ is a RankedSuggestions, it has a
-  //     SuggestionChannel with registered SuggestionSubscribers. The
-  //     AskSubscriber is a SuggestionSubscriber, and so also functions as a
-  //     proxy to pass the latest query results back to `listener`.
-  //
-  // TODO: This process can be refactored to eliminate the need for
-  // ask_suggestions_
-  //
   // |SuggestionProvider|
-  //
-  void InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
-                   fidl::InterfaceRequest<AskController> controller) override;
+  void Query(fidl::InterfaceHandle<SuggestionListener> listener,
+             UserInputPtr input,
+             int count) override;
 
   // |SuggestionProvider|
   void RegisterFeedbackListener(
       fidl::InterfaceHandle<FeedbackListener> speech_listener) override;
+
+  // |SuggestionProvider|
+  void BeginSpeechCapture(fidl::InterfaceHandle<TranscriptionListener>
+                              transcription_listener) override;
 
   // When a user interacts with a Suggestion, the suggestion engine will be
   // notified of consumed suggestion's ID. With this, we will do two things:
@@ -140,15 +121,11 @@ class SuggestionEngineImpl : public SuggestionEngine,
   //    SuggestionEngineImpl (i.e. an ActionManager which delegates action
   //    execution to ActionHandlers based on the Action's tag).
   //
-  // 2) Remove consumed Suggestion from our suggestion repositories
-  //    (ask_suggestions_ and next_suggestions_).
-  //
-  //    As described in the top-level comment, once the Ask pathway is made
-  //    entirely stateless, this will only need to remove the corresponding
-  //    suggestion from next_suggestions_.
+  // 2) Remove consumed Suggestion from the next_suggestions_ repository,
+  //    if it came from there.  Clear the ask_suggestions_ repository if
+  //    it came from there.
   //
   // |SuggestionProvider|
-  //
   void NotifyInteraction(const fidl::String& suggestion_uuid,
                          InteractionPtr interaction) override;
 
@@ -170,29 +147,18 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // |SuggestionEngine|
   void SetSpeechToText(fidl::InterfaceHandle<SpeechToText> service) override;
 
-  // |AskDispatcher|
-  void DispatchAsk(UserInputPtr input) override;
-
-  // |AskDispatcher|
-  void BeginSpeechCapture(fidl::InterfaceHandle<TranscriptionListener>
-                              transcription_listener) override;
-
  private:
+  // Cleans up all resources associated with a query, including clearing
+  // the previous ask suggestions, closing any still open SuggestionListeners,
+  // etc.
+  void CleanUpPreviousQuery();
+
   // TODO(jwnichols): Remove when we change the way ask suggestions are
   // returned to SysUI
   void AddAskProposal(const std::string& source_url, ProposalPtr proposal);
 
   // Searches for a SuggestionPrototype in the Next and Ask lists.
   SuggestionPrototype* FindSuggestion(std::string suggestion_id);
-
-  // This method is only required because the Ask pathway is not entirely
-  // stateless. Whenever a new Ask query is issued, ask_suggestions_ is emptied,
-  // all AskSubscribers are invalidated (they're notified that they should
-  // re-fetch all Ask Suggestions).
-  //
-  // After the query is completed, the now-empty ask_suggestions_ is
-  // repopulated with the latest results.
-  void RemoveAllAskSuggestions();
 
   SuggestionPrototype* CreateSuggestionPrototype(const std::string& source_url,
                                                  ProposalPtr proposal);

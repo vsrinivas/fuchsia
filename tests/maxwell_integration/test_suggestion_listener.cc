@@ -50,3 +50,7 @@ void TestSuggestionListener::OnRemoveAll() {
   ordered_suggestions_.clear();
   suggestions_by_id_.clear();
 }
+
+void TestSuggestionListener::OnProcessingChange(bool processing) {
+  FXL_LOG(INFO) << "OnProcessingChange to " << processing;
+}

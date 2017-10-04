@@ -25,35 +25,32 @@ interface SuggestionProvider {
   SubscribeToInterruptions(SuggestionListener listener);
 
   // Creates a subscription to "Next" Suggestions, with changes sent to
-  // |listener|, and binds |controller| to a service that offers control over
-  // result paging.
+  // |listener|. A maximum of |count| suggestions will be returned. To
+  // change the count, call this method again with a new count.
   //
   // Closing the the |listener| pipe terminates the subscription.
-  SubscribeToNext(SuggestionListener listener, NextController& controller);
+  SubscribeToNext(SuggestionListener listener, int32 count);
 
-  // Should be called when the user initiates an "Ask". Results are sent to
-  // |listener|, and changes to user input as well as paging controls are made
-  // available through |controller|.
+  // Should be called when the user initiates a query for suggestions, perhaps
+  // as an “Ask” or a scoped suggestion. Results are sent to |listener|. Changes
+  // to the query should be communicated by closing the previous |listener| and
+  // calling the method again with the new query.
   //
-  // Closing the |listener| pipe signals to the SuggestionService that the "Ask"
+  // Closing the |listener| pipe signals to the SuggestionService that the query
   // has been completed or canceled.
-  InitiateAsk(SuggestionListener listener, AskController& controller);
-
-  // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
-  RegisterFeedbackListener(FeedbackListener speech_listener);
+  Query(SuggestionListener listener, UserInput query, int32 count);
 
   // Notifies the suggestion engine that the user has interacted with the given
   // Suggestion in the manner described in |interaction|.
   NotifyInteraction(string suggestion_uuid, Interaction interaction);
-};
 
-// Exposed through |InitiateAsk()| on the SuggestionProvider. Gives clients the ability
-// to update the suggestion engine on changes to user input once a user
-// initiates an "Ask" interaction.
-interface AskController {
-  // Use this to signal to the service that the user input has changed, and
-  // results should be updated to reflect it.
-  SetUserInput(UserInput input);
+  // *** Speech Section ***
+  // TODO(jwnichols): Move these into a separate speech service.  It is
+  // convenient to have them here now, but this is not a good long term
+  // solution.
+
+  // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
+  RegisterFeedbackListener(FeedbackListener speech_listener);
 
   // Starts capturing speech from the microphone. Transitions internal
   // |SpeechStatus| to |LISTENING|. This is a simplification of the
@@ -67,37 +64,58 @@ interface AskController {
   // However, it's worth it to also consider the implications for any other
   // input modalities we might like to support.
   BeginSpeechCapture(TranscriptionListener transcription_listener);
-
-  // Sets the number of desired results. If the new count is larger than the
-  // previous value, the corresponding listener will get one or more |OnAdd()|
-  // calls. If the new value is smaller, the listener will get one or more
-  // |OnRemove()| calls.
-  SetResultCount(int32 count);
-};
-
-interface NextController {
-  // Sets the number of desired results. If the new count is larger than the
-  // previous value, the corresponding listener will get one or more |OnAdd()|
-  // calls. If the new value is smaller, the listener will get one or more
-  // |OnRemove()| calls.
-  SetResultCount(int32 count);
 };
 
 interface SuggestionListener {
-  // TODO(thatguy): Figure out what's the best pattern to use here, to make sure
-  // that UI updates are smooth.
-  // TODO(anwilson): Sit down with thatguy@ and hash this out.
-  // TODO(rosswang): For now, changed suggestions will maintain the same UUID
-  // but will result in a remove/add pair. This may change in the future; if it
-  // doesn't, document this behavior here.
+  // Changed suggestions will maintain the same UUID but will result in a
+  // remove/add pair.
   OnAdd(array<Suggestion> suggestions);
   OnRemove(string uuid);
   OnRemoveAll();
+
+  // This method allows the listener to track the progress of the query and
+  // show an indicator to the user, if desired.
+  OnProcessingChange(bool processing);
 };
 
-interface AskSuggestionListener {
-  OnAskResults(UserInput query, array<Suggestion> suggestions);
+enum InteractionType {
+  SELECTED,
+  DISMISSED
+  // SNOOZED
 };
+
+struct Interaction {
+  InteractionType type;
+
+  // TODO(thatguy): Include parameters for each type of interaction where
+  // applicable. Consider making this a union in lieu of the struct/enum combo.
+};
+
+struct Suggestion {
+  // Uniquely and globally identifies this Suggestion.
+  string uuid;
+
+  // Specifies the sort order for Suggestions within a single subscription.
+  // Lower ranks appear first.
+  float rank;
+
+  // The probability that a given suggestion would be selected if it were the
+  // only suggestion shown to the user. This score tends to decrease as rank
+  // increases, but unlike rank this score may be the same between suggestions.
+  float confidence;
+
+  // Display properties of the Suggestion
+  SuggestionDisplay display;
+
+  // When the suggestion affects a specific story, the ID of that story will be
+  // included here.
+  string? story_id;
+};
+
+// *** Speech Section ***
+// TODO(jwnichols): Move these into a separate speech service.  It is
+// convenient to have them here now, but this is not a good long term
+// solution.
 
 // Encodes the valid states of an Ask, including spoken phases. States include
 // those used for interpreting speech to text as well as for when the system is
@@ -134,38 +152,4 @@ interface FeedbackListener {
   // Receives a text representation of the spoken response. This method is
   // called at the beginning of the |RESPONDING| phase.
   OnTextResponse(string response_text);
-};
-
-enum InteractionType {
-  SELECTED,
-  DISMISSED
-  // SNOOZED
-};
-
-struct Interaction {
-  InteractionType type;
-
-  // TODO(thatguy): Include parameters for each type of interaction where
-  // applicable. Consider making this a union in lieu of the struct/enum combo.
-};
-
-struct Suggestion {
-  // Uniquely and globally identifies this Suggestion.
-  string uuid;
-
-  // Specifies the sort order for Suggestions within a single subscription.
-  // Lower ranks appear first.
-  float rank;
-
-  // The probability that a given suggestion would be selected if it were the
-  // only suggestion shown to the user. This score tends to decrease as rank
-  // increases, but unlike rank this score may be the same between suggestions.
-  float confidence;
-
-  // Display properties of the Suggestion
-  SuggestionDisplay display;
-
-  // When the suggestion affects a specific story, the ID of that story will be
-  // included here.
-  string? story_id;
 };

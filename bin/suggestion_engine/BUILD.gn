@@ -36,10 +36,7 @@ executable("suggestion_engine") {
 
 source_set("subscribers") {
   sources = [
-    "ask_subscriber.cc",
-    "ask_subscriber.h",
     "interruptions_subscriber.h",
-    "next_subscriber.h",
     "windowed_subscriber.cc",
     "windowed_subscriber.h",
   ]
@@ -54,7 +51,6 @@ source_set("subscribers") {
 
 source_set("interfaces") {
   sources = [
-    "ask_dispatcher.h",
     "suggestion_subscriber.h",
   ]
 

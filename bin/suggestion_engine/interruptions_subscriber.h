@@ -31,5 +31,11 @@ class InterruptionsSubscriber : public SuggestionSubscriber {
   }
 
   void Invalidate() override { return; }
+
+  // TODO(jwnichols): Remove this when we give interruptions their own
+  // interruption-specific listener instead of reusing SuggestionListener
+  void OnProcessingChange(bool processing) override {
+    DispatchProcessingChange(processing);
+  }
 };
 }  // namespace maxwell
