@@ -6,8 +6,9 @@
 
 #include <hid/usages.h>
 
-#include "lib/ui/input/cpp/formatting.h"
+#include "garnet/bin/ui/ime/text_input_state_update_functions.h"
 #include "lib/fxl/logging.h"
+#include "lib/ui/input/cpp/formatting.h"
 
 namespace ime {
 
@@ -49,6 +50,8 @@ void ImeImpl::SetState(mozart::TextInputStatePtr state) {
 void ImeImpl::Show() {}
 void ImeImpl::Hide() {}
 
+// TODO(MZ-375): break out the logic for each case below into a separate
+// function and unit test it, as was done with DeleteBackward().
 void ImeImpl::InjectInput(mozart::InputEventPtr event) {
   FXL_DCHECK(event->is_keyboard());
   FXL_VLOG(1) << "InjectInput; event=" << *event;
@@ -76,24 +79,7 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
     } else {
       switch (keyboard->hid_usage) {
         case HID_USAGE_KEY_BACKSPACE: {
-          FXL_VLOG(1) << "Deleting character (state = " << *state_ << "')";
-          std::string text = state_->text.To<std::string>();
-          int64_t base = state_->selection->base;
-          int64_t extent = state_->selection->extent;
-          if (base == -1 && extent == -1) {
-            base = state_->text.size() - 1;
-            extent = base + 1;
-          } else if (base == extent) {
-            if (base != 0) {
-              base--;
-            }
-          }
-          state_->revision++;
-          text.erase(base, extent - base);
-          state_->text = fidl::String(text);
-          state_->selection->base = base;
-          state_->selection->extent = state_->selection->base;
-
+          DeleteBackward(state_);
           FXL_VLOG(1) << "Notifying (state = " << *state_ << "')";
           client_->DidUpdateState(state_.Clone(), std::move(event));
         } break;

@@ -14,6 +14,17 @@ executable("ime") {
   ]
 
   deps = [
+    ":common",
+  ]
+}
+
+source_set("common") {
+  sources = [
+    "text_input_state_update_functions.cc",
+    "text_input_state_update_functions.h",
+  ]
+
+  public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/fidl",
