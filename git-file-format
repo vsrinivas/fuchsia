@@ -118,7 +118,11 @@ def main():
         if args.dry_run:
             continue
 
-        subprocess.check_call(cmd)
+        try:
+            subprocess.check_call(cmd)
+        except Exception as e:
+            print " ".join(cmd) + " failed"
+            raise e
 
     if (args.dry_run or args.verbose) and not count:
         print " (none)"
