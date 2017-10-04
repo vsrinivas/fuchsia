@@ -7,10 +7,11 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <inet6/inet6.h>
 #include <tftp/tftp.h>
-
+#include <launchpad/launchpad.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 
@@ -18,10 +19,24 @@
 
 #define SCRATCHSZ 2048
 
+// Identifies what the file being streamed over TFTP should be
+// used for.
+typedef enum netfile_type {
+    netboot, // A bootfs file
+    paver,   // A disk image which should be paved to disk
+} netfile_type_t;
+
 typedef struct {
     bool is_write;
     char filename[PATH_MAX + 1];
-    nbfile* netboot_file;
+    netfile_type_t type;
+    union {
+        nbfile* netboot_file;
+        struct {
+            int fd;
+            zx_handle_t process;
+        } paver;
+    };
 } file_info_t;
 
 typedef struct {
@@ -58,13 +73,48 @@ static tftp_status file_open_write(const char* filename, size_t size,
     strncpy(file_info->filename, filename, PATH_MAX);
     file_info->filename[PATH_MAX] = '\0';
 
+    const size_t image_prefix_len = strlen(NB_IMAGE_PREFIX);
     const size_t netboot_prefix_len = strlen(NB_FILENAME_PREFIX);
     if (netbootloader && !strncmp(filename, NB_FILENAME_PREFIX, netboot_prefix_len)) {
         // netboot
+        file_info->type = netboot;
         file_info->netboot_file = netboot_get_buffer(filename, size);
         if (file_info->netboot_file != NULL) {
             return TFTP_NO_ERROR;
         }
+    } else if (netbootloader & !strncmp(filename, NB_IMAGE_PREFIX, image_prefix_len)) {
+        // paving an image to disk
+        launchpad_t* lp;
+        launchpad_create(0, "paver", &lp);
+        const char* bin = "/boot/bin/install-disk-image";
+        launchpad_load_from_file(lp, bin);
+        if (!strcmp(filename + image_prefix_len, NB_FVM_HOST_FILENAME)) {
+            printf("netsvc: Running FVM Paver\n");
+            const char* args[] = { bin, "install-fvm" };
+            launchpad_set_args(lp, 2, args);
+        } else if (!strcmp(filename + image_prefix_len, NB_EFI_HOST_FILENAME)) {
+            printf("netsvc: Running EFI Paver\n");
+            const char* args[] = { bin, "install-efi" };
+            launchpad_set_args(lp, 2, args);
+        } else {
+            fprintf(stderr, "netsvc: Unknown Paver\n");
+            return TFTP_ERR_IO;
+        }
+        launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON);
+
+        int fds[2];
+        if (pipe(fds)) {
+            return TFTP_ERR_IO;
+        }
+        launchpad_transfer_fd(lp, fds[0], STDIN_FILENO);
+        if (launchpad_go(lp, &file_info->paver.process, NULL) != ZX_OK) {
+            printf("netsvc: tftp couldn't launch paver\n");
+            return TFTP_ERR_IO;
+        }
+
+        file_info->type = paver;
+        file_info->paver.fd = fds[1];
+        return TFTP_NO_ERROR;
     } else {
         // netcp
         if (netfile_open(filename, O_WRONLY) == 0) {
@@ -81,13 +131,25 @@ static tftp_status file_read(void* data, size_t* length, off_t offset, void* coo
 
 static tftp_status file_write(const void* data, size_t* length, off_t offset, void* cookie) {
     file_info_t* file_info = cookie;
-    if (file_info->netboot_file != NULL) {
+    if (file_info->type == netboot && file_info->netboot_file != NULL) {
         nbfile* nb_file = file_info->netboot_file;
         if (((size_t)offset > nb_file->size) || (offset + *length) > nb_file->size) {
             return TFTP_ERR_INVALID_ARGS;
         }
         memcpy(nb_file->data + offset, data, *length);
         nb_file->offset = offset + *length;
+        return TFTP_NO_ERROR;
+    } else if (file_info->type == paver) {
+        size_t len = *length;
+        while (len) {
+            int r = write(file_info->paver.fd, data, len);
+            if (r <= 0) {
+                printf("netsvc: Couldn't write to paver fd: %d\n", r);
+                return TFTP_ERR_IO;
+            }
+            len -= r;
+            data += r;
+        }
         return TFTP_NO_ERROR;
     } else {
         int write_result = netfile_offset_write(data, offset, *length);
@@ -103,8 +165,14 @@ static tftp_status file_write(const void* data, size_t* length, off_t offset, vo
 
 static void file_close(void* cookie) {
     file_info_t* file_info = cookie;
-    if (file_info->netboot_file == NULL) {
+    if (file_info->type != paver && file_info->netboot_file == NULL) {
         netfile_close();
+    } else if (file_info->type == paver) {
+        zx_signals_t signals;
+        close(file_info->paver.fd);
+        zx_object_wait_one(file_info->paver.process, ZX_TASK_TERMINATED,
+                           zx_deadline_after(ZX_SEC(10)), &signals);
+        zx_handle_close(file_info->paver.process);
     }
 }
 

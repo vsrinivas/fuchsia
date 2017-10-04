@@ -16,6 +16,7 @@
 #include "devmgr.h"
 
 static zx_handle_t job;
+static bool netboot;
 
 static zx_status_t launch_blobstore(int argc, const char** argv, zx_handle_t* hnd,
                                     uint32_t* ids, size_t len) {
@@ -129,17 +130,17 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     disk_format_t df = detect_disk_format(fd);
 
     switch (df) {
-    case DISK_FORMAT_FVM: {
-        printf("devmgr: /dev/class/block/%s: FVM?\n", name);
-        // probe for partition table
-        ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
-        close(fd);
-        return ZX_OK;
-    }
     case DISK_FORMAT_GPT: {
         printf("devmgr: %s: GPT?\n", device_path);
         // probe for partition table
         ioctl_device_bind(fd, GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB));
+        close(fd);
+        return ZX_OK;
+    }
+    case DISK_FORMAT_FVM: {
+        printf("devmgr: /dev/class/block/%s: FVM?\n", name);
+        // probe for partition table
+        ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
         close(fd);
         return ZX_OK;
     }
@@ -150,6 +151,18 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         close(fd);
         return ZX_OK;
     }
+    default:
+        break;
+    }
+
+    // If we're in netbooting mode, then only bind drivers for partition
+    // containers, not filesystems themselves.
+    if (netboot) {
+        close(fd);
+        return ZX_OK;
+    }
+
+    switch (df) {
     case DISK_FORMAT_BLOBFS: {
         uint8_t guid[GPT_GUID_LEN];
         const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
@@ -205,8 +218,9 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     }
 }
 
-void block_device_watcher(zx_handle_t _job) {
+void block_device_watcher(zx_handle_t _job, bool _netboot) {
     job = _job;
+    netboot = _netboot;
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY | O_RDONLY)) >= 0) {

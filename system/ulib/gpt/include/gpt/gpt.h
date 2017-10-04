@@ -8,6 +8,10 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
+
 #define PARTITIONS_COUNT 128
 #define GPT_GUID_LEN 16
 #define GPT_GUID_STRLEN 37
@@ -44,6 +48,14 @@
     0x4c, 0x13,                                    \
     0xbb, 0x4c,                                    \
     0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c, 0xa4, 0x5d \
+}
+
+#define GUID_FVM_STRING "41D0E340-57E3-954E-8C1E-17ECAC44CFF5"
+#define GUID_FVM_VALUE {                           \
+    0x40, 0xe3, 0xd0, 0x41,                        \
+    0xe3, 0x57,                                    \
+    0x4e, 0x95,                                    \
+    0x8c, 0x1e, 0x17, 0xec, 0xac, 0x44, 0xcf, 0xf5 \
 }
 
 typedef struct gpt_partition {
@@ -111,3 +123,5 @@ int gpt_get_diffs(gpt_device_t* dev, int idx, unsigned* diffs);
 #define GPT_DIFF_LAST    (0x08u)
 #define GPT_DIFF_FLAGS   (0x10u)
 #define GPT_DIFF_NAME    (0x20u)
+
+__END_CDECLS

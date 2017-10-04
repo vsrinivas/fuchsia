@@ -526,7 +526,7 @@ static bool TestAllocateOne(void) {
 
     // Try accessing the block again after closing / re-opening it.
     ASSERT_EQ(close(vp_fd), 0);
-    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
 
@@ -1724,7 +1724,7 @@ static bool TestPersistenceSimple(void) {
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
 
-    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
     ASSERT_TRUE(CheckRead(vp_fd, 0, info.block_size, buf.get()));
 
@@ -1777,7 +1777,7 @@ static bool TestPersistenceSimple(void) {
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
 
-    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
 
     ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
@@ -1884,7 +1884,7 @@ static bool TestCorruptMount(void) {
     // Clean up
     ASSERT_EQ(umount(mount_path), ZX_OK);
 
-    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0, "");
 
     // Verify that data slices increased and others were fixed on mount
@@ -1928,7 +1928,7 @@ static bool TestVPartitionUpgrade(void) {
 
     // Short-hand for asking if we can open a partition.
     auto openable = [](const uint8_t* instanceGUID, const uint8_t* typeGUID) {
-        int fd = fvm_open_partition(instanceGUID, typeGUID, nullptr);
+        int fd = open_partition(instanceGUID, typeGUID, 0, nullptr);
         if (fd < 0) {
             return false;
         }
@@ -2033,7 +2033,7 @@ static bool TestVPartitionUpgrade(void) {
     ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
 
     // Destroy and reallocate the first partition as inactive.
-    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0);
     ASSERT_EQ(ioctl_block_fvm_destroy(vp_fd), 0);
     ASSERT_EQ(close(vp_fd), 0);
@@ -2188,7 +2188,7 @@ static bool TestCorruptionOk(void) {
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
 
-    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
 
     // The slice extension is still accessible.
@@ -2260,7 +2260,7 @@ static bool TestCorruptionRegression(void) {
     };
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
-    vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0);
 
     // The slice extension is no longer accessible
@@ -2648,7 +2648,7 @@ static bool TestRandomOpMultithreaded(void) {
         // Re-open all partitions, re-launch the worker threads
         for (size_t i = 0; i < ThreadCount; i++) {
             request.guid[0] = static_cast<uint8_t>(i);
-            int vp_fd = fvm_open_partition(request.guid, request.type, nullptr);
+            int vp_fd = open_partition(request.guid, request.type, 0, nullptr);
             ASSERT_GT(vp_fd, 0);
             s.thread_states[i].vp_fd = vp_fd;
             EXPECT_EQ(thrd_create(&s.thread_states[i].thr,

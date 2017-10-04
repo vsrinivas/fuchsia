@@ -834,15 +834,15 @@ zx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, fbl::RefPtr<
                                        &fs->node_map_vmoid_)) != ZX_OK) {
         return status;
     } else if ((status = fs->LoadBitmaps()) < 0) {
-        fprintf(stderr, "blobstore: Failed to load bitmaps\n");
+        fprintf(stderr, "blobstore: Failed to load bitmaps: %d\n", status);
         return status;
     } else if ((status = MappedVmo::Create(kBlobstoreBlockSize, "blobstore-superblock",
                                            &fs->info_vmo_)) != ZX_OK) {
-        fprintf(stderr, "blobstore: Failed to create info vmo\n");
+        fprintf(stderr, "blobstore: Failed to create info vmo: %d\n", status);
         return status;
     } else if ((status = fs->AttachVmo(fs->info_vmo_->GetVmo(),
                                        &fs->info_vmoid_)) != ZX_OK) {
-        fprintf(stderr, "blobstore: Failed to attach info vmo\n");
+        fprintf(stderr, "blobstore: Failed to attach info vmo: %d\n", status);
         return status;
     }
 

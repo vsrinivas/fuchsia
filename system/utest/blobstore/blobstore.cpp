@@ -194,7 +194,7 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
         close(fvm_fd);
         close(fd);
 
-        if ((fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUID, ramdisk_path_out)) < 0) {
+        if ((fd = open_partition(kTestUniqueGUID, kTestPartGUID, 0, ramdisk_path_out)) < 0) {
             fprintf(stderr, "[FAILED]: Could not locate FVM partition\n");
             return -1;
         }

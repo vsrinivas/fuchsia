@@ -165,7 +165,7 @@ static int xfer(struct sockaddr_in6* addr, const char* local_name, const char* r
 
 void usage(void) {
     fprintf(stderr,
-            "usage:   %s [ <option> ]* <kernel> [ <ramdisk> ] [ -- [ <kerneloption> ]* ]\n"
+            "usage:   %s [ <option> ]* [<kernel>] [ <ramdisk> ] [ -- [ <kerneloption> ]* ]\n"
             "\n"
             "options:\n"
             "  -1         only boot once, then exit\n"
@@ -176,9 +176,11 @@ void usage(void) {
             "             (ignored with --tftp)\n"
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
-            "  --netboot  use the netboot protocol\n"
-            "  --tftp     use the tftp protocol (default)\n"
-            "  --nocolor  disable ANSI color (false)\n",
+            "  --fvm <file> use the supplied file as a sparse FVM image\n"
+            "  --efi <file> use the supplied file as an EFI image\n"
+            "  --netboot    use the netboot protocol\n"
+            "  --tftp       use the tftp protocol (default)\n"
+            "  --nocolor    disable ANSI color (false)\n",
             appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
     exit(1);
 }
@@ -228,6 +230,8 @@ int main(int argc, char** argv) {
     char* cmdnext = cmdline;
     char* nodename = NULL;
     int r, s, n = 1;
+    const char* efi_image = NULL;
+    const char* fvm_image = NULL;
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
     int once = 0;
@@ -250,6 +254,22 @@ int main(int argc, char** argv) {
             } else {
                 usage();
             }
+        } else if (!strcmp(argv[1], "--fvm")) {
+            argc--;
+            argv++;
+            if (argc <= 2) {
+                fprintf(stderr, "'--fvm' option requires an argument (FVM image)\n");
+                return -1;
+            }
+            fvm_image = argv[1];
+        } else if (!strcmp(argv[1], "--efi")) {
+            argc--;
+            argv++;
+            if (argc <= 2) {
+                fprintf(stderr, "'--efi' option requires an argument (EFI image)\n");
+                return -1;
+            }
+            efi_image = argv[1];
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
         } else if (!strcmp(argv[1], "-b")) {
@@ -486,6 +506,15 @@ int main(int argc, char** argv) {
                               use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
             }
         }
+        if (status == 0 && fvm_image) {
+            status = xfer(&ra, fvm_image, use_filename_prefix ? NB_FVM_FILENAME
+                          : NB_FVM_HOST_FILENAME);
+        }
+        if (status == 0 && efi_image) {
+            status = xfer(&ra, efi_image, use_filename_prefix ? NB_EFI_FILENAME
+                          : NB_EFI_HOST_FILENAME);
+        }
+
         if (status == 0) {
             status = xfer(&ra, kernel_fn, use_filename_prefix ? NB_KERNEL_FILENAME : "kernel.bin");
             if (status == 0) {

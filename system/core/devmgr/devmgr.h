@@ -47,7 +47,7 @@ zx_handle_t fs_root_clone(void);
 zx_handle_t devfs_root_clone(void);
 zx_handle_t svc_root_clone(void);
 
-void block_device_watcher(zx_handle_t job);
+void block_device_watcher(zx_handle_t job, bool netboot);
 
 // getenv_bool looks in the environment for name. If not found, it returns
 // default. If found, it returns false if the found value matches "0", "off", or

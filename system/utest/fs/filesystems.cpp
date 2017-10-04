@@ -107,7 +107,7 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
         close(fvm_fd);
         close(fd);
 
-        if ((fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUID, test_disk_path)) < 0) {
+        if ((fd = open_partition(kTestUniqueGUID, kTestPartGUID, 0, test_disk_path)) < 0) {
             fprintf(stderr, "[FAILED]: Could not locate FVM partition\n");
             exit(-1);
         }

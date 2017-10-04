@@ -18,6 +18,7 @@
 #include <zx/vmo.h>
 #endif
 
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
 #include <fdio/watcher.h>
@@ -62,18 +63,28 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
 }
 
 #ifdef __Fuchsia__
+// Checks that |fd| is a partition which matches |uniqueGUID| and |typeGUID|.
+// If either is null, it doesn't compare |fd| with that guid.
+// At least one of the GUIDs must be non-null.
 static bool is_partition(int fd, const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
+    ZX_ASSERT(uniqueGUID || typeGUID);
     uint8_t buf[GUID_LEN];
     if (fd < 0) {
         return false;
-    } else if (ioctl_block_get_type_guid(fd, buf, sizeof(buf)) < 0) {
-        return false;
-    } else if (memcmp(buf, typeGUID, GUID_LEN) != 0) {
-        return false;
-    } else if (ioctl_block_get_partition_guid(fd, buf, sizeof(buf)) < 0) {
-        return false;
-    } else if (memcmp(buf, uniqueGUID, GUID_LEN) != 0) {
-        return false;
+    }
+    if (typeGUID) {
+        if (ioctl_block_get_type_guid(fd, buf, sizeof(buf)) < 0) {
+            return false;
+        } else if (memcmp(buf, typeGUID, GUID_LEN) != 0) {
+            return false;
+        }
+    }
+    if (uniqueGUID) {
+        if (ioctl_block_get_partition_guid(fd, buf, sizeof(buf)) < 0) {
+            return false;
+        } else if (memcmp(buf, uniqueGUID, GUID_LEN) != 0) {
+            return false;
+        }
     }
     return true;
 }
@@ -293,28 +304,45 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
         return -1;
     }
 
+    return open_partition(request->guid, request->type, ZX_SEC(10), nullptr);
+}
+
+int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,
+                   zx_duration_t timeout, char* out_path) {
+    ZX_ASSERT(uniqueGUID || typeGUID);
+
     typedef struct {
-        const alloc_req_t* request;
-        int out_partition;
+        const uint8_t* guid;
+        const uint8_t* type;
+        char* out_path;
+        fbl::unique_fd out_partition;
     } alloc_helper_info_t;
 
     alloc_helper_info_t info;
-    info.request = request;
+    info.guid = uniqueGUID;
+    info.type = typeGUID;
+    info.out_path = out_path;
+    info.out_partition.reset();
 
     auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
         if (event != WATCH_EVENT_ADD_FILE) {
             return ZX_OK;
-        }
-        auto info = static_cast<alloc_helper_info_t*>(cookie);
-        int devfd = openat(dirfd, fn, O_RDWR);
-        if (devfd < 0) {
+        } else if ((strcmp(fn, ".") == 0) || strcmp(fn, "..") == 0) {
             return ZX_OK;
         }
-        if (is_partition(devfd, info->request->guid, info->request->type)) {
-            info->out_partition = devfd;
+        auto info = static_cast<alloc_helper_info_t*>(cookie);
+        fbl::unique_fd devfd(openat(dirfd, fn, O_RDWR));
+        if (!devfd) {
+            return ZX_OK;
+        }
+        if (is_partition(devfd.get(), info->guid, info->type)) {
+            info->out_partition = fbl::move(devfd);
+            if (info->out_path) {
+                strcpy(info->out_path, kBlockDevPath);
+                strcat(info->out_path, fn);
+            }
             return ZX_ERR_STOP;
         }
-        close(devfd);
         return ZX_OK;
     };
 
@@ -323,41 +351,12 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
         return -1;
     }
 
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(2));
+    zx_time_t deadline = zx_deadline_after(timeout);
     if (fdio_watch_directory(dirfd(dir), cb, deadline, &info) != ZX_ERR_STOP) {
         return -1;
     }
     closedir(dir);
-    return info.out_partition;
+    return info.out_partition.release();
 }
 
-int fvm_open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, char* out) {
-    DIR* dir = opendir(kBlockDevPath);
-    if (dir == nullptr) {
-        return -1;
-    }
-    struct dirent* de;
-    int result_fd = -1;
-    while ((de = readdir(dir)) != NULL) {
-        if ((strcmp(de->d_name, ".") == 0) || strcmp(de->d_name, "..") == 0) {
-            continue;
-        }
-        int devfd = openat(dirfd(dir), de->d_name, O_RDWR);
-        if (devfd < 0) {
-            continue;
-        } else if (!is_partition(devfd, uniqueGUID, typeGUID)) {
-            close(devfd);
-            continue;
-        }
-        result_fd = devfd;
-        if (out != nullptr) {
-            strcpy(out, kBlockDevPath);
-            strcat(out, de->d_name);
-        }
-        break;
-    }
-
-    closedir(dir);
-    return result_fd;
-}
 #endif

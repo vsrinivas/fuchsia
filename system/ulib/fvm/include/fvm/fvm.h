@@ -47,8 +47,8 @@ constexpr uint32_t kVPartFlagInactive = 0x00000001;
 constexpr uint32_t kVPartAllocateMask = 0x00000001; // All acceptable flags to pass to allocate.
 
 typedef struct {
-    void init(const uint8_t* type_, const uint8_t* guid_, uint32_t slices_, const char* name_,
-              uint32_t flags_) {
+    void init(const uint8_t* type_, const uint8_t* guid_, uint32_t slices_,
+              const char* name_, uint32_t flags_) {
         slices = slices_;
         memcpy(type, type_, FVM_GUID_LEN);
         memcpy(guid, guid_, FVM_GUID_LEN);
@@ -150,12 +150,18 @@ zx_status_t fvm_overwrite(const char* path, size_t slice_size);
 // Returns an open fd to the new partition on success, -1 on error.
 int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request);
 
-// Finds and opens a vpartition by GUID.
-// Returns an open fd to the partition on success, -1 on error.
+// TODO(smklein): Move the following function out of ulib/fvm, it is
+// also applicable to the GPT
+
+// Waits for a partition with a GUID pair to appear, and opens it.
 //
-// "out" is an optional output parameter, which, if non-null,
-// should contain a buffer of size "PATH_MAX", and will contain
-// the path to the vpartition on success.
-int fvm_open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, char* out);
+// If one of the GUIDs is null, it is ignored. For example:
+//   wait_for_partition(NULL, systemGUID, ZX_SEC(5));
+// Waits for any partition with the corresponding system GUID to appear.
+// At least one of the GUIDs must be non-null.
+//
+// Returns an open fd to the partition on success, -1 on error.
+int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,
+                   zx_duration_t timeout, char* out_path);
 
 __END_CDECLS

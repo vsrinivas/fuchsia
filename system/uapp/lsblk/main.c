@@ -64,6 +64,8 @@ static const char* guid_to_type(char* guid) {
         return "fuchsia-data";
     } else if (!strcmp(GUID_BLOBFS_STRING, guid)) {
         return "fuchsia-blobfs";
+    } else if (!strcmp(GUID_FVM_STRING, guid)) {
+        return "fuchsia-fvm";
     } else {
         return "unknown";
     }

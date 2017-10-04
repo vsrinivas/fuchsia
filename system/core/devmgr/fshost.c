@@ -286,11 +286,10 @@ static loader_service_t* loader_service;
 int main(int argc, char** argv) {
     printf("fshost: started.\n");
 
-    bool start_device_watcher = true;
-
+    bool netboot = false;
     while (argc > 1) {
-        if (!strcmp(argv[1], "--no-disk")) {
-            start_device_watcher = false;
+        if (!strcmp(argv[1], "--netboot")) {
+            netboot = true;
         } else {
             printf("fshost: unknown option '%s'\n", argv[1]);
         }
@@ -337,14 +336,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (start_device_watcher) {
-        block_device_watcher(zx_job_default());
-    } else {
-        //TODO: figure out how to join with the service loader
-        // or rootfs service thread
-        for (;;) {
-            sleep(365*24*60*60);
-        }
-    }
+    block_device_watcher(zx_job_default(), netboot);
 }
 #endif

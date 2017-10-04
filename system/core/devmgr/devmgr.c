@@ -220,7 +220,7 @@ int service_starter(void* arg) {
     }
 
     char vcmd[64];
-    bool netboot = false;
+    __UNUSED bool netboot = false;
     bool vruncmd = false;
     if (!getenv_bool("netsvc.disable", false)) {
         const char* args[] = { "/boot/bin/netsvc", NULL, NULL };
@@ -296,11 +296,9 @@ int service_starter(void* arg) {
         thrd_detach(t);
     }
 
-    if (!netboot) {
 #ifndef WITH_FSHOST
-        block_device_watcher(svcs_job_handle);
+    block_device_watcher(svcs_job_handle, netboot);
 #endif
-    }
     return 0;
 }
 
@@ -628,8 +626,7 @@ void fshost_start(void) {
 
     launchpad_set_vdso_vmo(vmo);
 
-    //TODO: tell fshost not to run block watcher if we're in zedboot mode
-    const char* argv[] = { "/boot/bin/fshost", "--no-disk" };
+    const char* argv[] = { "/boot/bin/fshost", "--netboot" };
     int argc = getenv_bool("netsvc.netboot", false) ? 2 : 1;
 
     // Pass zircon.system.* options to the fshost as environment variables
