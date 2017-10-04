@@ -91,6 +91,10 @@ zx_status_t usb_request_mmap(usb_request_t* req, void** data) {
     return ZX_OK;
 }
 
+zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, size_t length) {
+    return io_buffer_cache_op(&req->buffer, op, offset, length);
+}
+
 zx_status_t usb_request_physmap(usb_request_t* req) {
     return io_buffer_physmap(&req->buffer);
 }

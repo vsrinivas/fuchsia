@@ -162,6 +162,8 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     mtx_init(&xhci->input_context_lock, mtx_plain);
     completion_reset(&xhci->command_queue_completion);
 
+    usb_request_pool_init(&xhci->free_reqs);
+
     xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio;
     xhci->op_regs = (xhci_op_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->length);
     xhci->doorbells = (uint32_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->dboff);
@@ -319,9 +321,9 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         for (int j = 0; j < XHCI_NUM_EPS; j++) {
             xhci_endpoint_t* ep = &eps[j];
             mtx_init(&ep->lock, mtx_plain);
-            list_initialize(&ep->queued_txns);
-            list_initialize(&ep->pending_txns);
-            ep->current_txn = NULL;
+            list_initialize(&ep->queued_reqs);
+            list_initialize(&ep->pending_reqs);
+            ep->current_req = NULL;
         }
     }
 
@@ -450,12 +452,12 @@ static void xhci_slot_stop(xhci_slot_t* slot) {
 
         mtx_lock(&ep->lock);
         if (ep->state != EP_STATE_DEAD) {
-            iotxn_t* txn;
-            while ((txn = list_remove_tail_type(&ep->pending_txns, iotxn_t, node)) != NULL) {
-                iotxn_complete(txn, ZX_ERR_IO_NOT_PRESENT, 0);
+            usb_request_t* req;
+            while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
             }
-            while ((txn = list_remove_tail_type(&ep->queued_txns, iotxn_t, node)) != NULL) {
-                iotxn_complete(txn, ZX_ERR_IO_NOT_PRESENT, 0);
+            while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
             }
             ep->state = EP_STATE_DEAD;
         }

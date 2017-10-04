@@ -17,6 +17,12 @@ __BEGIN_CDECLS;
 
 typedef struct usb_request usb_request_t;
 
+// cache maintenance ops
+#define USB_REQUEST_CACHE_INVALIDATE        ZX_VMO_OP_CACHE_INVALIDATE
+#define USB_REQUEST_CACHE_CLEAN             ZX_VMO_OP_CACHE_CLEAN
+#define USB_REQUEST_CACHE_CLEAN_INVALIDATE  ZX_VMO_OP_CACHE_CLEAN_INVALIDATE
+#define USB_REQUEST_CACHE_SYNC              ZX_VMO_OP_CACHE_SYNC
+
 typedef void (*usb_request_complete_cb)(usb_request_t* req, void* cookie);
 
 // Should be set by the requestor.
@@ -76,6 +82,8 @@ typedef struct usb_request {
     // in a transaction queue)
     list_node_t node;
 
+    void *context;
+
     // The release_cb() callback is set by the allocator and is
     // invoked by the 'usb_request_release' method when it is called
     // by the requestor.
@@ -110,6 +118,10 @@ ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, 
 // usb_request_mmap() maps the usb request's vm object. The 'data' field is set with the
 // mapped address if this function succeeds.
 zx_status_t usb_request_mmap(usb_request_t* req, void** data);
+
+// usb_request_cacheop() performs a cache maintenance op against the request's internal
+// buffer.
+zx_status_t usb_request_cacheop(usb_request_t* req, uint32_t op, size_t offset, size_t length);
 
 // Looks up the physical pages backing this request's vm object.
 zx_status_t usb_request_physmap(usb_request_t* req);

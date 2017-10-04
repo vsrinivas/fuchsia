@@ -17,6 +17,7 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-bus.h>
+#include <ddk/usb-request.h>
 
 #include "xhci-hw.h"
 #include "xhci-root-hub.h"
@@ -43,7 +44,7 @@
 
 // state for endpoint's current transfer
 typedef struct {
-    iotxn_phys_iter_t   phys_iter;
+    phys_iter_t         phys_iter;
     uint32_t            packet_count;       // remaining packets to send
     uint8_t             ep_type;
     uint8_t             direction;
@@ -63,10 +64,10 @@ typedef enum {
 typedef struct {
     const xhci_endpoint_context_t* epc;
     xhci_transfer_ring_t transfer_ring;
-    list_node_t queued_txns;    // iotxns waiting to be processed
-    iotxn_t* current_txn;       // iotxn currently being processed
-    list_node_t pending_txns;   // processed txns waiting for completion, including current_txn
-    xhci_transfer_state_t* transfer_state;  // transfer state for current_txn
+    list_node_t queued_reqs;     // requests waiting to be processed
+    usb_request_t* current_req;  // request currently being processed
+    list_node_t pending_reqs;    // processed requests waiting for completion, including current_req
+    xhci_transfer_state_t* transfer_state;  // transfer state for current_req
     mtx_t lock;
     xhci_ep_state_t state;
 } xhci_endpoint_t;
@@ -205,6 +206,9 @@ struct xhci {
     io_buffer_t scratch_pad_pages_buffer;
     // VMO buffer for scratch pad index
     io_buffer_t scratch_pad_index_buffer;
+
+    // pool of control requests that can be reused
+    usb_request_pool_t free_reqs;
 };
 
 zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts);
@@ -235,3 +239,5 @@ static inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
 // upper layer routines in usb-xhci.c
 zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
+
+void xhci_request_queue(xhci_t* xhci, usb_request_t* req);

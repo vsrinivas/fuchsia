@@ -378,12 +378,12 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
     xhci_transfer_ring_free(transfer_ring);
 
     // complete any remaining requests
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&ep->pending_txns, iotxn_t, node))) {
-        iotxn_complete(txn, complete_status, 0);
+    usb_request_t* req;
+    while ((req = list_remove_head_type(&ep->pending_reqs, usb_request_t, node))) {
+        usb_request_complete(req, complete_status, 0);
     }
-    while ((txn = list_remove_head_type(&ep->queued_txns, iotxn_t, node))) {
-        iotxn_complete(txn, complete_status, 0);
+    while ((req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node))) {
+        usb_request_complete(req, complete_status, 0);
     }
 
     return ZX_OK;

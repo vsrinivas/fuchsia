@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/iotxn.h>
 #include <ddk/protocol/usb.h>
+#include <ddk/usb-request.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -312,16 +312,16 @@ void xhci_stop_root_hubs(xhci_t* xhci) {
     }
 
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
-        iotxn_t* txn;
+        usb_request_t* req;
         xhci_root_hub_t* rh = &xhci->root_hubs[i];
-        while ((txn = list_remove_tail_type(&rh->pending_intr_reqs, iotxn_t, node)) != NULL) {
-            iotxn_complete(txn, ZX_ERR_IO_NOT_PRESENT, 0);
+        while ((req = list_remove_tail_type(&rh->pending_intr_reqs, usb_request_t, node)) != NULL) {
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
         }
     }
 }
 
 static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t* rh, uint16_t value,
-                                          uint16_t index, size_t length, iotxn_t* txn) {
+                                          uint16_t index, size_t length, usb_request_t* req) {
     uint8_t type = request_type & USB_TYPE_MASK;
     uint8_t recipient = request_type & USB_RECIP_MASK;
 
@@ -329,14 +329,14 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
         uint8_t desc_type = value >> 8;
         if (desc_type == USB_DT_DEVICE && index == 0) {
             if (length > sizeof(usb_device_descriptor_t)) length = sizeof(usb_device_descriptor_t);
-            iotxn_copyto(txn, rh->device_desc, length, 0);
-            iotxn_complete(txn, ZX_OK, length);
+            usb_request_copyto(req, rh->device_desc, length, 0);
+            usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         } else if (desc_type == USB_DT_CONFIG && index == 0) {
             uint16_t desc_length = le16toh(rh->config_desc->wTotalLength);
             if (length > desc_length) length = desc_length;
-            iotxn_copyto(txn, rh->config_desc, length, 0);
-            iotxn_complete(txn, ZX_OK, length);
+            usb_request_copyto(req, rh->config_desc, length, 0);
+            usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         } else if (value >> 8 == USB_DT_STRING) {
             uint8_t string_index = value & 0xFF;
@@ -344,8 +344,8 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
                 const uint8_t* string = xhci_rh_string_table[string_index];
                 if (length > string[0]) length = string[0];
 
-                iotxn_copyto(txn, string, length, 0);
-                iotxn_complete(txn, ZX_OK, length);
+                usb_request_copyto(req, string, length, 0);
+                usb_request_complete(req, ZX_OK, length);
                 return ZX_OK;
             }
         }
@@ -362,19 +362,20 @@ static zx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
             // TODO - fill in other stuff. But usb-hub driver doesn't need anything else at this point.
 
             if (length > sizeof(desc)) length = sizeof(desc);
-            iotxn_copyto(txn, &desc, length, 0);
-            iotxn_complete(txn, ZX_OK, length);
+            usb_request_copyto(req, &desc, length, 0);
+            usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         }
     }
 
     dprintf(ERROR, "xhci_rh_get_descriptor unsupported value: %d index: %d\n", value, index);
-    iotxn_complete(txn, ZX_ERR_NOT_SUPPORTED, 0);
+    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 // handles control requests for virtual root hub devices
-static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_t* setup, iotxn_t* txn) {
+static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_t* setup,
+                                   usb_request_t* req) {
     uint8_t request_type = setup->bmRequestType;
     uint8_t request = setup->bRequest;
     uint16_t value = le16toh(setup->wValue);
@@ -384,11 +385,11 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
             request_type, request, value, index, le16toh(setup->wLength));
 
     if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
-        return xhci_rh_get_descriptor(request_type, rh, value, index, le16toh(setup->wLength), txn);
+        return xhci_rh_get_descriptor(request_type, rh, value, index, le16toh(setup->wLength), req);
     } else if ((request_type & ~USB_DIR_MASK) == (USB_TYPE_CLASS | USB_RECIP_PORT)) {
         // index is 1-based port number
         if (index < 1 || index > rh->num_ports) {
-            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+            usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
             return ZX_OK;
         }
         int rh_port_index = rh->port_map[index - 1];
@@ -397,11 +398,11 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
         if (request == USB_REQ_SET_FEATURE) {
             if (value == USB_FEATURE_PORT_POWER) {
                 // nothing to do - root hub ports are already powered
-                iotxn_complete(txn, ZX_OK, 0);
+                usb_request_complete(req, ZX_OK, 0);
                 return ZX_OK;
             } else if (value == USB_FEATURE_PORT_RESET) {
                 xhci_reset_port(xhci, rh, rh_port_index);
-                iotxn_complete(txn, ZX_OK, 0);
+                usb_request_complete(req, ZX_OK, 0);
                 return ZX_OK;
             }
         } else if (request == USB_REQ_CLEAR_FEATURE) {
@@ -425,32 +426,32 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
                     break;
             }
 
-            iotxn_complete(txn, ZX_OK, 0);
+            usb_request_complete(req, ZX_OK, 0);
             return ZX_OK;
         } else if ((request_type & USB_DIR_MASK) == USB_DIR_IN &&
                    request == USB_REQ_GET_STATUS && value == 0) {
             usb_port_status_t* status = &rh->port_status[port_index];
-            size_t length = txn->length;
+            size_t length = req->header.length;
             if (length > sizeof(*status)) length = sizeof(*status);
-            iotxn_copyto(txn, status, length, 0);
-            iotxn_complete(txn, ZX_OK, length);
+            usb_request_copyto(req, status, length, 0);
+            usb_request_complete(req, ZX_OK, length);
             return ZX_OK;
         }
     } else if (request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
-               request == USB_REQ_SET_CONFIGURATION && txn->length == 0) {
+               request == USB_REQ_SET_CONFIGURATION && req->header.length == 0) {
         // nothing to do here
-        iotxn_complete(txn, ZX_OK, 0);
+        usb_request_complete(req, ZX_OK, 0);
         return ZX_OK;
     }
 
     dprintf(ERROR, "unsupported root hub control request type: 0x%02X req: %d value: %d index: %d\n",
            request_type, request, value, index);
 
-    iotxn_complete(txn, ZX_ERR_NOT_SUPPORTED, 0);
+    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
+static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, usb_request_t* req) {
     dprintf(SPEW, "xhci_rh_handle_intr_req\n");
     uint8_t status_bits[128 / 8];
     bool have_status = 0;
@@ -472,31 +473,30 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
     }
 
     if (have_status) {
-        size_t length = txn->length;
+        size_t length = req->header.length;
         if (length > sizeof(status_bits)) length = sizeof(status_bits);
-        iotxn_copyto(txn, status_bits, length, 0);
-        iotxn_complete(txn, ZX_OK, length);
+        usb_request_copyto(req, status_bits, length, 0);
+        usb_request_complete(req, ZX_OK, length);
     } else {
         // queue transaction until we have something to report
-        list_add_tail(&rh->pending_intr_reqs, &txn->node);
+        list_add_tail(&rh->pending_intr_reqs, &req->node);
     }
 }
 
-zx_status_t xhci_rh_iotxn_queue(xhci_t* xhci, iotxn_t* txn, int rh_index) {
-    dprintf(SPEW, "xhci_rh_iotxn_queue rh_index: %d\n", rh_index);
+zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_index) {
+    dprintf(SPEW, "xhci_rh_usb_request_queue rh_index: %d\n", rh_index);
 
-    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
 
-    uint8_t ep_index = xhci_endpoint_index(data->ep_address);
+    uint8_t ep_index = xhci_endpoint_index(req->header.ep_address);
     if (ep_index == 0) {
-        return xhci_rh_control(xhci, rh, &data->setup, txn);
+        return xhci_rh_control(xhci, rh, &req->setup, req);
     } else if (ep_index == 2) {
-        xhci_rh_handle_intr_req(rh, txn);
+        xhci_rh_handle_intr_req(rh, req);
         return ZX_OK;
     }
 
-    iotxn_complete(txn, ZX_ERR_NOT_SUPPORTED, 0);
+    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -560,9 +560,10 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
             }
 
             if (status->wPortChange) {
-                iotxn_t* txn = list_remove_head_type(&rh->pending_intr_reqs, iotxn_t, node);
-                if (txn) {
-                    xhci_rh_handle_intr_req(rh, txn);
+                usb_request_t* req = list_remove_head_type(&rh->pending_intr_reqs,
+                                                           usb_request_t, node);
+                if (req) {
+                    xhci_rh_handle_intr_req(rh, req);
                 }
             }
         }

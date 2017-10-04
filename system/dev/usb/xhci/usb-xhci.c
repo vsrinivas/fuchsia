@@ -53,17 +53,8 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     usb_bus_remove_device(&xhci->bus, slot_id);
 }
 
-static void xhci_request_queue(void* ctx, usb_request_t* req) {
-    xhci_t* xhci = ctx;
-
-    iotxn_t* txn;
-    zx_status_t status = usb_request_to_iotxn(req, &txn);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
-        usb_request_complete(req, status, 0);
-        return;
-    }
-    iotxn_queue(xhci->zxdev, txn);
+static void xhci_hci_request_queue(void* ctx, usb_request_t* req) {
+    xhci_request_queue(ctx, req);
 }
 
 static void xhci_set_bus_interface(void* ctx, usb_bus_interface_t* bus) {
@@ -139,7 +130,7 @@ static zx_status_t xhci_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_add
 }
 
 usb_hci_protocol_ops_t xhci_hci_protocol = {
-    .request_queue = xhci_request_queue,
+    .request_queue = xhci_hci_request_queue,
     .set_bus_interface = xhci_set_bus_interface,
     .get_max_device_count = xhci_get_max_device_count,
     .enable_endpoint = xhci_enable_ep,
@@ -152,19 +143,18 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .cancel_all = xhci_cancel_all,
 };
 
-static void xhci_iotxn_queue(void* ctx, iotxn_t* txn) {
-    xhci_t* xhci = ctx;
-    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
+void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
     zx_status_t status;
 
-    if (txn->length > xhci_get_max_transfer_size(xhci->zxdev, data->device_id, data->ep_address)) {
+    if (req->header.length > xhci_get_max_transfer_size(xhci->zxdev, req->header.device_id,
+                                                        req->header.ep_address)) {
         status = ZX_ERR_INVALID_ARGS;
     } else {
-        status = xhci_queue_transfer(xhci, txn);
+        status = xhci_queue_transfer(xhci, req);
     }
 
     if (status != ZX_OK && status != ZX_ERR_BUFFER_TOO_SMALL) {
-        iotxn_complete(txn, status, 0);
+        usb_request_complete(req, status, 0);
     }
 }
 
@@ -198,7 +188,6 @@ static void xhci_release(void* ctx) {
 
 static zx_protocol_device_t xhci_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .iotxn_queue = xhci_iotxn_queue,
     .unbind = xhci_unbind,
     .release = xhci_release,
 };
