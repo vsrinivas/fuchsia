@@ -324,6 +324,9 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
 
 void ContextRepository::ReindexAndNotify(
     ContextRepository::InProgressUpdate update) {
+  for (auto& value : update.removed_values) {
+    index_.Remove(value.id, value.value->type, value.merged_metadata);
+  }
   for (auto* value : update.updated_values) {
     // Step 1: reindex the value.
 
@@ -335,7 +338,7 @@ void ContextRepository::ReindexAndNotify(
     index_.Add(value->id, value->value->type, value->merged_metadata);
   }
 
-  // Step 3: recompute the output for each subscription and notify its
+  // Step 2: recompute the output for each subscription and notify its
   // listeners.
   for (auto& it : subscriptions_) {
     QueryAndMaybeNotify(&it.second, false /* force */);
