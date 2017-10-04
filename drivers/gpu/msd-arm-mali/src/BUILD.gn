@@ -19,6 +19,8 @@ source_set("src") {
     "msd_arm_device.h",
     "msd_arm_driver.cc",
     "msd_arm_driver.h",
+    "power_manager.cc",
+    "power_manager.h",
     "registers.h",
   ]
 

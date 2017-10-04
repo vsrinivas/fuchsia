@@ -37,6 +37,14 @@ protected:
     }
 };
 
+class MsdArmDevice::GpuInterruptRequest : public DeviceRequest {
+public:
+    GpuInterruptRequest() {}
+
+protected:
+    magma::Status Process(MsdArmDevice* device) override { return device->ProcessGpuInterrupt(); }
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<MsdArmDevice> MsdArmDevice::Create(void* device_handle, bool start_device_thread)
@@ -118,11 +126,14 @@ bool MsdArmDevice::Init(void* device_handle)
 
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
+    power_manager_ = std::make_unique<PowerManager>();
+
     if (!InitializeInterrupts())
         return false;
 
     EnableInterrupts();
 
+    power_manager_->EnableCores(register_io_.get());
     return true;
 }
 
@@ -179,16 +190,37 @@ int MsdArmDevice::GpuInterruptThreadLoop()
         if (interrupt_thread_quit_flag_)
             break;
 
-        auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
-        auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
-        clear_flags.WriteTo(register_io_.get());
+        auto request = std::make_unique<GpuInterruptRequest>();
+        auto reply = request->GetReply();
 
-        dprintf(ERROR, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
-        gpu_interrupt_->Complete();
+        EnqueueDeviceRequest(std::move(request), true);
+        reply->Wait();
     }
 
     DLOG("GPU Interrupt thread exited");
     return 0;
+}
+
+magma::Status MsdArmDevice::ProcessGpuInterrupt()
+{
+    auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
+    auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
+    clear_flags.WriteTo(register_io_.get());
+
+    DLOG("Got GPU interrupt status 0x%x\n", irq_status.reg_value());
+    if (!irq_status.reg_value())
+        dprintf(ERROR, "Got unexpected GPU IRQ with no flags set\n");
+
+    if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
+        irq_status.power_changed_single().set(0);
+        irq_status.power_changed_all().set(0);
+        power_manager_->ReceivedPowerInterrupt(register_io_.get());
+    }
+
+    if (irq_status.reg_value())
+        dprintf(ERROR, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
+    gpu_interrupt_->Complete();
+    return MAGMA_STATUS_OK;
 }
 
 int MsdArmDevice::JobInterruptThreadLoop()

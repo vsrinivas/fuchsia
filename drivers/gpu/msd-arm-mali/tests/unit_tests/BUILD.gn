@@ -11,6 +11,7 @@ source_set("tests_requiring_hardware") {
 
   sources = [
     "test_device.cc",
+    "test_power_manager.cc",
   ]
 
   deps = [

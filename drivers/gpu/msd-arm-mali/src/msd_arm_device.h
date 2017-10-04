@@ -20,6 +20,7 @@
 #include "platform_device.h"
 #include "platform_interrupt.h"
 #include "platform_semaphore.h"
+#include "power_manager.h"
 #include <deque>
 #include <list>
 #include <mutex>
@@ -76,6 +77,7 @@ private:
     DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
     class DumpRequest;
+    class GpuInterruptRequest;
 
     RegisterIo* register_io()
     {
@@ -94,6 +96,7 @@ private:
     void DisableInterrupts();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
     magma::Status ProcessDumpStatusToLog();
+    magma::Status ProcessGpuInterrupt();
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
@@ -117,6 +120,8 @@ private:
     std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
 
     GpuFeatures gpu_features_;
+
+    std::unique_ptr<PowerManager> power_manager_;
 };
 
 #endif // MSD_ARM_DEVICE_H
