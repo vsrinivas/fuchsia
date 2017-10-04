@@ -104,6 +104,17 @@
 + [timer_set](syscalls/timer_set.md) - start a timer
 + [timer_cancel](syscalls/timer_cancel.md) - cancel a timer
 
+## Hypervisor guests
++ [guest_create](syscalls/guest_create.md) - create a hypervisor guest
++ [guest_set_trap](syscalls/guest_set_trap.md) - set a trap in a hypervisor guest
+
+## Virtual CPUs
++ [vcpu_create](syscalls/vcpu_create.md) - create a virtual cpu
++ [vcpu_resume](syscalls/vcpu_resume.md) - resume execution of a virtual cpu
++ [vcpu_interrupt](syscalls/vcpu_interrupt.md) - raise an interrupt on a virtual cpu
++ [vcpu_read_state](syscalls/vcpu_read_state.md) - read state from a virtual cpu
++ [vcpu_write_state](syscalls/vcpu_write_state.md) - write state to a virtual cpu
+
 ## Global system information
 + [system_get_num_cpus](syscalls/system_get_num_cpus.md) - get number of CPUs
 + [system_get_physmem](syscalls/system_get_physmem.md) - get physical memory size
