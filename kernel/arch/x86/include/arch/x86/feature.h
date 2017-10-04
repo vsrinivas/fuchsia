@@ -99,6 +99,7 @@ static inline bool x86_feature_test(struct x86_cpuid_bit bit)
 void x86_feature_debug(void);
 
 /* add feature bits to test here */
+/* format: X86_CPUID_BIT(cpuid leaf, register (eax-edx:0-3), bit) */
 #define X86_FEATURE_SSE3         X86_CPUID_BIT(0x1, 2, 0)
 #define X86_FEATURE_VMX          X86_CPUID_BIT(0x1, 2, 5)
 #define X86_FEATURE_SSSE3        X86_CPUID_BIT(0x1, 2, 9)
@@ -126,6 +127,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_TSC_ADJUST   X86_CPUID_BIT(0x7, 1, 1)
 #define X86_FEATURE_AVX2         X86_CPUID_BIT(0x7, 1, 5)
 #define X86_FEATURE_SMEP         X86_CPUID_BIT(0x7, 1, 7)
+#define X86_FEATURE_ERMS         X86_CPUID_BIT(0x7, 1, 9)
 #define X86_FEATURE_RDSEED       X86_CPUID_BIT(0x7, 1, 18)
 #define X86_FEATURE_SMAP         X86_CPUID_BIT(0x7, 1, 20)
 #define X86_FEATURE_PT           X86_CPUID_BIT(0x7, 1, 25)

@@ -186,7 +186,7 @@ const struct x86_model_info * x86_get_model(void)
 
 void x86_feature_debug(void)
 {
-    static struct {
+    const struct {
         struct x86_cpuid_bit bit;
         const char *name;
     } features[] = {
@@ -207,6 +207,7 @@ void x86_feature_debug(void)
         { X86_FEATURE_TSC_ADJUST, "tsc_adj" },
         { X86_FEATURE_SMEP, "smep" },
         { X86_FEATURE_SMAP, "smap" },
+        { X86_FEATURE_ERMS, "erms" },
         { X86_FEATURE_RDRAND, "rdrand" },
         { X86_FEATURE_RDSEED, "rdseed" },
         { X86_FEATURE_PKU, "pku" },
@@ -216,6 +217,7 @@ void x86_feature_debug(void)
         { X86_FEATURE_RDTSCP, "rdtscp" },
         { X86_FEATURE_INVAR_TSC, "invar_tsc" },
         { X86_FEATURE_TSC_DEADLINE, "tsc_deadline" },
+        { X86_FEATURE_X2APIC, "x2apic" },
         { X86_FEATURE_VMX, "vmx" },
         { X86_FEATURE_HYPERVISOR, "hypervisor" },
         { X86_FEATURE_PT, "pt" },
