@@ -40,12 +40,8 @@ zx_status_t usb_audio_set_sample_rate(usb_protocol_t* usb, uint8_t ep_addr, uint
     zx_status_t result = usb_control(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_ENDPOINT,
                                      USB_AUDIO_SET_CUR,
                                      USB_AUDIO_SAMPLING_FREQ_CONTROL << 8,
-                                     ep_addr, &buffer, sizeof(buffer), ZX_TIME_INFINITE);
-    if (result < 0) {
-        return result;
-    } else {
-        return ZX_OK;
-    }
+                                     ep_addr, &buffer, sizeof(buffer), ZX_TIME_INFINITE, NULL);
+    return result;
 }
 
 // volume is in 0 - 100 range
@@ -54,22 +50,25 @@ zx_status_t usb_audio_set_volume(usb_protocol_t* usb, uint8_t interface_number, 
     uint16_t volume_min;
     uint16_t volume_max;
     zx_status_t status;
+    size_t out_length;
 
     status = usb_control(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_GET_MIN, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
-                         fu_id << 8, &volume_min, sizeof(volume_min), ZX_TIME_INFINITE);
-    if (status != sizeof(volume_min)) goto out;
+                         fu_id << 8, &volume_min, sizeof(volume_min), ZX_TIME_INFINITE,
+                         &out_length);
+    if (status != ZX_OK || out_length != sizeof(volume_min)) goto out;
     status = usb_control(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_GET_MAX, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
-                         fu_id << 8, &volume_max, sizeof(volume_max), ZX_TIME_INFINITE);
-    if (status != sizeof(volume_min)) goto out;
+                         fu_id << 8, &volume_max, sizeof(volume_max), ZX_TIME_INFINITE,
+                         &out_length);
+    if (status != ZX_OK || status != sizeof(volume_min)) goto out;
     if (volume_min >= volume_max) return ZX_ERR_INTERNAL;
 
     // TODO (voydanoff) - maybe this should be logarithmic?
     uint16_t volume16 = volume_min + ((volume_max - volume_min) * volume) / 100;
     status = usb_control(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_AUDIO_SET_CUR, USB_AUDIO_VOLUME_CONTROL << 8 | interface_number,
-                         fu_id << 8, &volume16, sizeof(volume16), ZX_TIME_INFINITE);
+                         fu_id << 8, &volume16, sizeof(volume16), ZX_TIME_INFINITE, NULL);
 
 out:
     if (status == ZX_ERR_IO_REFUSED) {
