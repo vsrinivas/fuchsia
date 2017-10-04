@@ -110,7 +110,11 @@ FUNCTION_LABEL(_multiboot_start)
 
 .Lfarjump:
     /* zero the bss section */
-    bss_setup
+    movl $PHYS(__bss_start), %edi
+    movl $PHYS(__bss_end), %ecx
+    sub %edi, %ecx              // Compute the length of the bss in bytes.
+    xor %eax, %eax
+    rep stosb // while (ecx-- > 0) *edi++ = al;
 
 paging_setup:
     /* Preparing 64 bit paging, we will use 2MB pages covering 1GB
@@ -226,7 +230,11 @@ FUNCTION_LABEL(_entry64)
     mov $PHYS(farjump64), %rsp
 
     /* zero the bss */
-    bss_setup
+    lea __bss_start(%rip), %rdi
+    lea __bss_end(%rip), %rcx
+    sub %rdi, %rcx              // Compute the length of the bss in bytes.
+    xor %eax, %eax
+    rep stosb // while (rcx-- > 0) *rdi++ = al;
 
 .Lpaging_setup64:
     /* initialize the default page tables */
