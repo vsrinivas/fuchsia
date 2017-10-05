@@ -59,6 +59,17 @@ type file struct {
 	src, dst string
 }
 
+type clientHeader struct {
+	flag *bool
+	src  string // Path to the source of the header, relative to root of the Fuchsia tree
+	dst  string // Path within the target sysroot
+}
+
+type clientLib struct {
+	flag *bool
+	name string
+}
+
 var (
 	hostOs     string
 	hostCpu    string
@@ -116,6 +127,26 @@ func init() {
 		},
 	}
 
+	clientHeaders := []clientHeader{
+		{
+			media,
+			"garnet/public/lib/media/c/audio.h",
+			"media/audio.h",
+		},
+		{
+			sysroot,
+			"garnet/public/lib/netstack/c/netconfig.h",
+			"netstack/netconfig.h",
+		},
+	}
+
+	clientLibs := []clientLib{
+		{
+			media,
+			"libmedia_client.so",
+		},
+	}
+
 	files := []file{
 		{
 			kernelImg,
@@ -137,31 +168,6 @@ func init() {
 			armBuilddir + "user.bootfs",
 			"target/aarch64/bootdata.bin",
 		},
-		{
-			media,
-			"garnet/public/lib/media/c/audio.h",
-			"sysroot/x86_64-fuchsia/include/media/audio.h",
-		},
-		{
-			media,
-			x86Builddir + "x64-shared/libmedia_client.so",
-			"sysroot/x86_64-fuchsia/lib/libmedia_client.so",
-		},
-		{
-			media,
-			x86Builddir + "x64-shared/lib.unstripped/libmedia_client.so",
-			"sysroot/x86_64-fuchsia/debug-info/libmedia_client.so",
-		},
-		{
-			media,
-			armBuilddir + "arm64-shared/libmedia_client.so",
-			"sysroot/aarch64-fuchsia/lib/libmedia_client.so",
-		},
-		{
-			media,
-			armBuilddir + "arm64-shared/lib.unstripped/libmedia_client.so",
-			"sysroot/aarch64-fuchsia/debug-info/libmedia_client.so",
-		},
 	}
 
 	components = []component{
@@ -179,6 +185,16 @@ func init() {
 			customType,
 			copyKernelDebugObjs,
 		},
+	}
+	for _, c := range clientHeaders {
+		files = append(files, file{c.flag, c.src, "sysroot/x86_64-fuchsia/include/" + c.dst})
+		files = append(files, file{c.flag, c.src, "sysroot/aarch-fuchsia/include/" + c.dst})
+	}
+	for _, c := range clientLibs {
+		files = append(files, file{c.flag, x86Builddir + "x64-shared/" + c.name, "sysroot/x86_64-fuchsia/lib/" + c.name})
+		files = append(files, file{c.flag, x86Builddir + "x64-shared/lib.unstripped/" + c.name, "sysroot/x86_64-fuchsia/debug-info/" + c.name})
+		files = append(files, file{c.flag, armBuilddir + "arm64-shared/" + c.name, "sysroot/aarch64-fuchsia/lib/" + c.name})
+		files = append(files, file{c.flag, armBuilddir + "arm64-shared/lib.unstripped/" + c.name, "sysroot/aarch64-fuchsia/debug-info/" + c.name})
 	}
 	for _, d := range dirs {
 		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
