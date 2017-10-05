@@ -116,6 +116,13 @@ void PageDelegate::PutWithPriority(
     fidl::Array<uint8_t> value,
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
+  if (key.size() > kMaxKeySize) {
+    FXL_VLOG(1) << "Key too large: " << key.size()
+                << " bytes long, which is more than the maximum allowed size ("
+                << kMaxKeySize << ").";
+    callback(Status::KEY_TOO_LARGE);
+    return;
+  }
   auto promise =
       callback::Promise<storage::Status, storage::ObjectDigest>::Create(
           storage::Status::ILLEGAL_STATE);
@@ -148,7 +155,14 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                                 ReferencePtr reference,
                                 Priority priority,
                                 const Page::PutReferenceCallback& callback) {
-  auto promise = callback::
+   if (key.size() > kMaxKeySize) {
+     FXL_VLOG(1) << "Key too large: " << key.size()
+                 << " bytes long, which is more than the maximum allowed size ("
+                 << kMaxKeySize << ").";
+     callback(Status::KEY_TOO_LARGE);
+     return;
+   }
+   auto promise = callback::
       Promise<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::ILLEGAL_STATE);
   storage_->GetObject(reference->opaque_id,

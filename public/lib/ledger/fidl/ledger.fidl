@@ -26,6 +26,7 @@ enum Status {
   NO_TRANSACTION_IN_PROGRESS,
   INTERNAL_ERROR,
   CONFIGURATION_ERROR,
+  KEY_TOO_LARGE,
   VALUE_TOO_LARGE,
   UNKNOWN_ERROR = -1,
 };
@@ -92,14 +93,17 @@ interface Page {
   // - All pending mutations will regularly be bundled together and committed.
   //   They are guaranteed to be persisted as soon as the client receives a
   //   successful status.
-  // |Put()| and |PutWithPriority()| can be used for small values that fit
-  // inside a FIDL message. If the value is bigger, a reference must be first
-  // created using |CreateReferenceFromSocket()| or |CreateReferenceFromVmo()|
-  // and then |PutReference()| can be used. |PutWithPriority()| and
-  // |PutReference()| have an additional |priority| parameter managing the
-  // synchronization policy for this value. |Put()| uses a default priority of
-  // |Priority.EAGER|. For the list of available priorities and their
-  // definition, see |Priority|.
+  // When inserting into a page, key length cannot exceed 256: Calls to any of
+  // the three insertion methods (|Put()|, |PutWithPriority()|,
+  // |PutReference()|) with a bigger key will fail with a |KEY_TOO_LARGE|
+  // status. |Put()| and |PutWithPriority()| can be used for small values that
+  // fit inside a FIDL message. If the value is bigger, a reference must be
+  // first created using |CreateReferenceFromSocket()| or
+  // |CreateReferenceFromVmo()| and then |PutReference()| can be used.
+  // |PutWithPriority()| and |PutReference()| have an additional |priority|
+  // parameter managing the synchronization policy for this value. |Put()| uses
+  // a default priority of |Priority.EAGER|. For the list of available
+  // priorities and their definition, see |Priority|.
   Put(array<uint8> key, array<uint8> value) => (Status status);
   PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
       => (Status status);

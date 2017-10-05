@@ -12,6 +12,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/integration/integration_test.h"
@@ -121,12 +122,20 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   auto instance = NewLedgerAppInstance();
-  const size_t entry_count = 2;
+  // Put enough entries to ensure we will need more than one query to retrieve
+  // them. The number of entries that can be retrieved in one query is bound by
+  // |kMaxMessageHandles| and by size of the fidl message (determined by
+  // |kMaxInlineDataSize|), so we insert one entry more than that.
+  const size_t key_size = ledger::kMaxKeySize;
+  const size_t entry_size = ledger::fidl_serialization::GetEntrySize(key_size);
+  const size_t entry_count =
+      std::min(ledger::fidl_serialization::kMaxMessageHandles,
+               ledger::fidl_serialization::kMaxInlineDataSize / entry_size) +
+      1;
   const auto key_generator = [](size_t i) {
-    std::string filler(
-        ledger::fidl_serialization::kMaxInlineDataSize * 3 / 2 / entry_count,
-        'k');
-    return fxl::StringPrintf("key%02" PRIuMAX "%s", i, filler.c_str());
+    std::string prefix = fxl::StringPrintf("key%03" PRIuMAX, i);
+    std::string filler(key_size - prefix.size(), 'k');
+    return prefix + filler;
   };
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;

@@ -11,6 +11,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/integration/integration_test.h"
@@ -244,13 +245,17 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   EXPECT_EQ(1, num_queries);
 
   // Add entries and grab a new snapshot.
-  const size_t N = 100;
+  // Add enough keys so they don't all fit in memory and we will have to have
+  // multiple queries.
+  const size_t key_size = ledger::kMaxKeySize;
+  const size_t N =
+      ledger::fidl_serialization::kMaxInlineDataSize / key_size + 1;
   fidl::Array<uint8_t> keys[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetKeys().
     keys[i] = RandomArray(
-        ledger::fidl_serialization::kMaxInlineDataSize * 3 / N / 2,
+        key_size,
         {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
   }
 
@@ -370,16 +375,22 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   EXPECT_EQ(1, num_queries);
 
   // Add entries and grab a new snapshot.
-  const size_t N = 10;
+  // Add enough keys so they don't all fit in memory and we will have to have
+  // multiple queries.
+  const size_t value_size = 100;
+  const size_t key_size = ledger::kMaxKeySize;
+  const size_t N =
+      ledger::fidl_serialization::kMaxInlineDataSize / (key_size + value_size) +
+      1;
   fidl::Array<uint8_t> keys[N];
   fidl::Array<uint8_t> values[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
     keys[i] = RandomArray(
-        ledger::fidl_serialization::kMaxInlineDataSize * 3 / N / 2,
+        key_size,
         {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
-    values[i] = RandomArray(100);
+    values[i] = RandomArray(value_size);
   }
 
   for (size_t i = 0; i < N; ++i) {

@@ -255,6 +255,58 @@ TEST_F(PageImplTest, PutUnknownReference) {
   EXPECT_FALSE(RunLoopWithTimeout());
 }
 
+TEST_F(PageImplTest, PutKeyTooLarge) {
+  const size_t key_size = kMaxKeySize + 1;
+  std::string key = GetKey(1, key_size);
+  std::string value("a small value");
+  auto callback = [this](Status status) {
+      EXPECT_EQ(Status::KEY_TOO_LARGE, status);
+
+      // Make sure no entries or journals were added (operation has failed).
+      auto objects = fake_storage_->GetObjects();
+      EXPECT_EQ(0u, objects.size());
+
+      const std::map<std::string,
+                     std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+          journals = fake_storage_->GetJournals();
+      EXPECT_EQ(0u, journals.size());
+      message_loop_.PostQuitTask();
+    };
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback);
+  EXPECT_FALSE(RunLoopWithTimeout());
+}
+
+TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
+  const size_t key_size = kMaxKeySize + 1;
+  std::string key = GetKey(1, key_size);
+  std::string object_data("some_data");
+  std::unique_ptr<const storage::Object> object = AddObject(object_data);
+
+  storage::ObjectDigest object_digest = object->GetDigest();
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_digest);
+
+  auto callback = [this](Status status) {
+      EXPECT_EQ(Status::KEY_TOO_LARGE, status);
+
+      // We manually created an object above, so there should be one object in
+      // storage.
+      auto objects = fake_storage_->GetObjects();
+      EXPECT_EQ(1u, objects.size());
+
+      // But there should be no operations pending (an attempt to put a new
+      // key-value pair failed).
+      const std::map<std::string,
+                     std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+          journals = fake_storage_->GetJournals();
+      EXPECT_EQ(0u, journals.size());
+      message_loop_.PostQuitTask();
+    };
+  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+                          Priority::LAZY, callback);
+  EXPECT_FALSE(RunLoopWithTimeout());
+}
+
 TEST_F(PageImplTest, DeleteNoTransaction) {
   std::string key("some_key");
 
@@ -583,9 +635,17 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
-  const size_t entry_count = 20;
-  const size_t min_key_size =
-      fidl_serialization::kMaxInlineDataSize * 3 / 2 / entry_count;
+  const size_t min_key_size = kMaxKeySize;
+  // Put enough entries to ensure pagination of the result.
+  // The number of entries in a Page is bounded by the maximum number of
+  // handles, and the size of a fidl message (which cannot exceed
+  // |kMaxInlineDataSize|), so we put one entry more than that.
+  const size_t entry_count =
+      std::min(fidl_serialization::kMaxMessageHandles,
+               (fidl_serialization::kMaxInlineDataSize -
+                fidl_serialization::kArrayHeaderSize) /
+                   fidl_serialization::GetEntrySize(min_key_size)) +
+      1;
   AddEntries(entry_count, min_key_size);
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -605,7 +665,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Call GetEntries with the previous token and receive the remaining results.
-  auto callback_getentries2 = [this, &actual_entries](
+  auto callback_getentries2 = [this, &actual_entries, &entry_count](
                                   Status status, fidl::Array<EntryPtr> entries,
                                   fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
@@ -892,9 +952,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
-  const size_t key_count = 20;
-  const size_t min_key_size =
-      fidl_serialization::kMaxInlineDataSize * 3 / 2 / key_count;
+  const size_t min_key_size = kMaxKeySize;
+  const size_t key_count =
+      fidl_serialization::kMaxInlineDataSize /
+          fidl_serialization::GetByteArraySize(min_key_size) +
+      1;
   AddEntries(key_count, min_key_size);
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -915,7 +977,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Call GetKeys with the previous token and receive the remaining results.
-  auto callback_getkeys2 = [this, &actual_keys](
+  auto callback_getkeys2 = [this, &actual_keys, &key_count](
                                Status status,
                                fidl::Array<fidl::Array<uint8_t>> keys,
                                fidl::Array<uint8_t> next_token) {
