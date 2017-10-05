@@ -1291,8 +1291,9 @@ zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    if (deadline <= current_time())
+    if (deadline != ZX_TIME_INFINITE && deadline <= current_time()) {
         return ZX_ERR_TIMED_OUT;
+    }
 
     if (current_thread->interruptable && unlikely(current_thread->signals)) {
         if (current_thread->signals & THREAD_SIGNAL_KILL) {
