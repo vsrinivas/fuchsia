@@ -10,11 +10,13 @@
 
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {
 
 void FindCommonAncestor(
+    coroutine::CoroutineService* coroutine_service,
     storage::PageStorage* storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,

@@ -13,6 +13,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
@@ -74,6 +75,7 @@ class MergeResolver : public storage::CommitWatcher {
   void ResolveConflicts(DelayedStatus delayed_status,
                         std::vector<storage::CommitId> heads);
 
+  coroutine::CoroutineService* coroutine_service_;
   storage::PageStorage* const storage_;
   std::unique_ptr<backoff::Backoff> backoff_;
   PageManager* page_manager_ = nullptr;

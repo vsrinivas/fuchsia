@@ -10,6 +10,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/callback/waiter.h"
+#include "peridot/bin/ledger/coroutine/coroutine.h"
 
 namespace ledger {
 
@@ -27,87 +28,85 @@ struct GenerationComparator {
   }
 };
 
-// Recursively retrieves the parents of the most recent commits in the given
-// set, i.e. the commits with the highest generation. The recursion stops when
-// only one commit is left in the set, which is the lowest common ancestor.
-void FindCommonAncestorInGeneration(
+// Find the common ancestor the 2 given commits.
+//
+// The algorithm goes as follows: we keep a set of "active" commits, ordered
+// by generation order. Until this set has only one element, we take the
+// commit with the greater generation (the one deepest in the commit graph)
+// and replace it by its parent. If we seed the initial set with two commits,
+// we get their unique lowest common ancestor.
+// At each step of the iteration we request the parent commits of all commits
+// with the same generation.
+storage::Status FindCommonAncestorSync(
+    coroutine::CoroutineHandler* handler,
     storage::PageStorage* storage,
-    std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>*
-        commits,
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
-        callback) {
-  FXL_DCHECK(!commits->empty());
-  // If there is only one commit in the set it is the lowest common ancestor.
-  if (commits->size() == 1) {
-    callback(Status::OK,
-             std::move(const_cast<std::unique_ptr<const storage::Commit>&>(
-                 *commits->rbegin())));
-    return;
-  }
-  // Pop the newest commits and retrieve their parents.
-  uint64_t expected_generation = (*commits->rbegin())->GetGeneration();
-  auto waiter = callback::
-      Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
-          storage::Status::OK);
-  while (commits->size() > 1 &&
-         expected_generation == (*commits->rbegin())->GetGeneration()) {
-    // Pop the newest commit.
-    std::unique_ptr<const storage::Commit> commit =
-        std::move(const_cast<std::unique_ptr<const storage::Commit>&>(
-            *commits->rbegin()));
-    auto it = commits->end();
-    --it;
-    commits->erase(it);
-    // Request its parents.
-    for (const auto& parent_id : commit->GetParentIds()) {
-      storage->GetCommit(parent_id, waiter->NewCallback());
+    std::unique_ptr<const storage::Commit> head1,
+    std::unique_ptr<const storage::Commit> head2,
+    std::unique_ptr<const storage::Commit>* result) {
+  std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>
+      commits;
+  commits.emplace(std::move(head1));
+  commits.emplace(std::move(head2));
+
+  while (commits.size() > 1) {
+    // Pop the newest commits and retrieve their parents.
+    uint64_t expected_generation = (*commits.rbegin())->GetGeneration();
+    auto waiter = callback::
+        Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
+            storage::Status::OK);
+    while (commits.size() > 1 &&
+           expected_generation == (*commits.rbegin())->GetGeneration()) {
+      // Pop the newest commit.
+      std::unique_ptr<const storage::Commit> commit =
+          std::move(const_cast<std::unique_ptr<const storage::Commit>&>(
+              *commits.rbegin()));
+      commits.erase(std::prev(commits.end()));
+      // Request its parents.
+      for (const auto& parent_id : commit->GetParentIds()) {
+        storage->GetCommit(parent_id, waiter->NewCallback());
+      }
     }
-  }
-  // Once the parents have been retrieved, recursively try to find the common
-  // ancestor in that generation.
-  waiter->Finalize([ storage, commits, callback = std::move(callback) ](
-      storage::Status status,
-      std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
+    storage::Status status;
+    std::vector<std::unique_ptr<const storage::Commit>> parents;
+    if (coroutine::SyncCall(
+            handler, [waiter](auto callback) { waiter->Finalize(callback); },
+            &status, &parents)) {
+      return storage::Status::INTERRUPTED;
+    }
     if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status), nullptr);
-      return;
+      return status;
     }
-    // Push the parents in the commit set.
+    // Once the parents have been retrieved, add these in the set.
+    // ancestor in that generation.
     for (auto& parent : parents) {
-      commits->insert(std::move(parent));
+      commits.insert(std::move(parent));
     }
-    FindCommonAncestorInGeneration(storage, commits, std::move(callback));
-  });
+  }
+  FXL_DCHECK(commits.size() == 1);
+  // TODO(qsr): Use std::set::extract when C++17 is available.
+  *result = std::move(
+      const_cast<std::unique_ptr<const storage::Commit>&>(*commits.begin()));
+  return storage::Status::OK;
 }
 
 }  // namespace
 
 void FindCommonAncestor(
+    coroutine::CoroutineService* coroutine_service,
     storage::PageStorage* const storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  // The algorithm goes as follows: we keep a set of "active" commits, ordered
-  // by generation order. Until this set has only one element, we take the
-  // commit with the greater generation (the one deepest in the commit graph)
-  // and replace it by its parent. If we seed the initial set with two commits,
-  // we get their unique lowest common ancestor.
-  // At each step of the recursion (FindCommonAncestorInGeneration) we request
-  // the parent commits of all commits with the same generation.
-
-  // commits set should not be deleted before the callback is executed.
-  auto commits = std::make_unique<
-      std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>>();
-
-  commits->emplace(std::move(head1));
-  commits->emplace(std::move(head2));
-  FindCommonAncestorInGeneration(
-      storage, commits.get(), fxl::MakeCopyable([
-        commits = std::move(commits), callback = std::move(callback)
-      ](Status status, std::unique_ptr<const storage::Commit> ancestor) {
-        callback(status, std::move(ancestor));
-      }));
+  coroutine_service->StartCoroutine(fxl::MakeCopyable([
+    storage, head1 = std::move(head1), head2 = std::move(head2),
+    callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) mutable {
+    std::unique_ptr<const storage::Commit> result;
+    storage::Status status = FindCommonAncestorSync(
+        handler, storage, std::move(head1), std::move(head2), &result);
+    callback(PageUtils::ConvertStatus(status), std::move(result));
+  }));
 }
 
 }  // namespace ledger
