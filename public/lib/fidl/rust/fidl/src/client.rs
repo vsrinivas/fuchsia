@@ -5,13 +5,12 @@
 //! An implementation of a client for a fidl interface.
 
 use {ClientEnd, ServerEnd, EncodeBuf, DecodeBuf, MsgType, Error};
-use cookiemap::CookieMap;
 
 use tokio_core::reactor::Handle;
 use tokio_fuchsia;
 use futures::{Async, Future, Poll, future};
 use futures::task::{self, Task};
-use std::collections::btree_map::Entry;
+use slab::Slab;
 use std::{io, mem};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -45,7 +44,6 @@ enum MessageInterest {
     WillPoll,
     Waiting(Task),
     Received(DecodeBuf),
-    Done,
 }
 
 impl MessageInterest {
@@ -58,17 +56,11 @@ impl MessageInterest {
         }
     }
 
-    /// Get the received buffer if one exists.
-    fn take_buf(&mut self) -> Option<DecodeBuf> {
-        if !self.is_received() {
-            // Keep waiting.
-            return None;
-        }
-        let old_self = mem::replace(self, MessageInterest::Done);
-        if let MessageInterest::Received(buf) = old_self {
-            Some(buf)
+    fn unwrap_received(self) -> DecodeBuf {
+        if let MessageInterest::Received(buf) = self {
+            buf
         } else {
-            None
+            panic!("expected received message")
         }
     }
 }
@@ -87,34 +79,35 @@ struct ClientInner {
     /// An interest is registered with `register_msg_interest` and deregistered
     /// by either receiving a message via a call to `poll_recv` or manually
     /// deregistering with `deregister_msg_interest`
-    message_interests: Mutex<CookieMap<MessageInterest>>,
+    message_interests: Mutex<Slab<MessageInterest>>,
 }
 
 impl ClientInner {
     /// Registers interest in a response message.
     ///
-    /// This function returns a `u64` ID which should be used to send a message
+    /// This function returns a `usize` ID which should be used to send a message
     /// via the channel. Responses are then received using `poll_recv`.
-    fn register_msg_interest(&self) -> u64 {
+    fn register_msg_interest(&self) -> usize {
         self.message_interests.lock().unwrap().insert(
-            MessageInterest::WillPoll)
+            MessageInterest::WillPoll) as usize
     }
 
     /// Check for receipt of a message with a given ID.
-    fn poll_recv(&self, id: u64, task_to_register_opt: Option<&Task>) -> Poll<DecodeBuf, Error> {
+    fn poll_recv(&self, id: usize, task_to_register_opt: Option<&Task>) -> Poll<DecodeBuf, Error> {
+        // TODO(cramertj) return errors if one has occured _ever_ in poll_recv, not just if
+        // one happens on this call.
+
         // Look to see if there are messages available
         if self.received_messages_count.load(Ordering::SeqCst) > 0 {
-           if let Entry::Occupied(mut entry) =
-               self.message_interests.lock().unwrap().inner_map().entry(id)
-           {
-               // If a message was received for the ID in question,
-               // remove the message interest entry and return the response.
-               if let Some(buf) = entry.get_mut().take_buf() {
-                   entry.remove_entry();
-                   self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
-                   return Ok(Async::Ready(buf));
-               }
-           }
+            let mut message_interests = self.message_interests.lock().unwrap();
+
+            // If a message was received for the ID in question,
+            // remove the message interest entry and return the response.
+            if message_interests.get(id).expect("Polled unregistered interest").is_received() {
+                let buf = message_interests.remove(id).unwrap_received();
+                self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
+                return Ok(Async::Ready(buf));
+            }
         }
 
         // Receive messages from the channel until a message with the appropriate ID
@@ -124,68 +117,62 @@ impl ClientInner {
             match self.channel.recv_from(buf.get_mut_buf()) {
                 Ok(()) => {},
                 Err(e) => {
-                    if e.kind() == io::ErrorKind::WouldBlock {
-                        // Set the current task to be notified if a response is seen
+                    if e.kind() != io::ErrorKind::WouldBlock {
+                        return Err(e.into())
+                    }
+
+                    let mut message_interests = self.message_interests.lock().unwrap();
+
+                    if message_interests.get(id)
+                        .expect("Polled unregistered interst")
+                        .is_received()
+                    {
+                        // If, by happy accident, we just raced to getting the result,
+                        // then yay! Return success.
+                        let buf = message_interests.remove(id).unwrap_received();
+                        self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
+                        return Ok(Async::Ready(buf));
+                    } else {
+                        // Set the current task to be notified when a response arrives.
                         if let Some(task_to_register) = task_to_register_opt {
-                            if let Entry::Occupied(mut entry) =
-                                self.message_interests.lock().unwrap().inner_map().entry(id)
-                            {
-                                if let Some(buf) = entry.get_mut().take_buf() {
-                                    // If, by happy accident, we just raced to getting the result,
-                                    // then yay! Return success.
-                                    entry.remove_entry();
-                                    self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
-                                    return Ok(Async::Ready(buf));
-                                } else {
-                                    // Set the current task to be notified when a response arrives.
-                                    *entry.get_mut() = MessageInterest::Waiting(task_to_register.clone());
-                                }
-                            }
+                            *message_interests.get_mut(id)
+                                .expect("Polled unregistered interest") =
+                                    MessageInterest::Waiting(task_to_register.clone());
                         }
                         return Ok(Async::NotReady);
-                    } else {
-                        return Err(e.into());
                     }
                 }
             }
 
-            match buf.decode_message_header() {
-                Some(MsgType::Response) => {
-                    let recvd_id = buf.get_message_id();
+            if let MsgType::Response = buf.decode_message_header().ok_or(Error::InvalidHeader)? {
+                // TODO(cramertj) use TryFrom here after stabilization
+                let recvd_id = buf.get_message_id() as usize;
 
-                    // If a message was received for the ID in question,
-                    // remove the message interest entry and return the response.
-                    if recvd_id == id {
-                        self.message_interests.lock().unwrap().remove(id);
-                        return Ok(Async::Ready(buf));
-                    }
+                // If a message was received for the ID in question,
+                // remove the message interest entry and return the response.
+                if recvd_id == id {
+                    self.message_interests.lock().unwrap().remove(id);
+                    return Ok(Async::Ready(buf));
+                }
 
-                    // Look for a message interest with the given ID.
-                    // If one is found, store the message so that it can be picked up later.
-                    if let Entry::Occupied(mut entry) =
-                        self.message_interests.lock().unwrap().inner_map().entry(id)
-                    {
-                        if let MessageInterest::Waiting(ref task) = *entry.get() {
-                            // Wake up the task to let them know a message has arrived.
-                            task.notify();
-                        }
-                        *entry.get_mut() = MessageInterest::Received(buf);
-                        self.received_messages_count.fetch_add(1, Ordering::SeqCst);
+                // Look for a message interest with the given ID.
+                // If one is found, store the message so that it can be picked up later.
+                let mut message_interests = self.message_interests.lock().unwrap();
+                if let Some(entry) = message_interests.get_mut(recvd_id) {
+                    let old_entry = mem::replace(entry, MessageInterest::Received(buf));
+                    self.received_messages_count.fetch_add(1, Ordering::SeqCst);
+                    if let MessageInterest::Waiting(task) = old_entry {
+                        // Wake up the task to let them know a message has arrived.
+                        task.notify();
                     }
                 }
-                _ => {
-                    // Ignore messages with invalid headers.
-                    // We don't want to stop recieving any messages just because the server
-                    // sent one bad one.
-                },
             }
         }
     }
 
-    fn deregister_msg_interest(&self, id: u64) {
+    fn deregister_msg_interest(&self, id: usize) {
         if self.message_interests
                .lock().unwrap().remove(id)
-               .expect("attempted to deregister unregistered message interest")
                .is_received()
         {
             self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
@@ -214,7 +201,7 @@ impl Client {
             inner: Arc::new(ClientInner {
                 channel: channel,
                 received_messages_count: AtomicUsize::new(0),
-                message_interests: Mutex::new(CookieMap::new()),
+                message_interests: Mutex::new(Slab::new()),
             })
         }
     }
@@ -230,7 +217,7 @@ impl Client {
             -> SendMessageExpectResponseFuture
     {
         let id = self.inner.register_msg_interest();
-        buf.set_message_id(id);
+        buf.set_message_id(id as u64);
         let (out_buf, handles) = buf.get_mut_content();
         if let Err(e) = self.inner.channel.write(out_buf, handles) {
             return future::Either::A(future::err(e.into()));
@@ -248,7 +235,7 @@ impl Client {
 /// A future which polls for the response to a client message.
 #[derive(Debug)]
 pub struct MessageResponse {
-    id: u64,
+    id: usize,
     // `None` if the message response has been recieved
     client: Option<Arc<ClientInner>>,
     last_registered_task: Option<Task>,

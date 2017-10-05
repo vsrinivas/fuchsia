@@ -10,6 +10,7 @@
 extern crate fuchsia_zircon as zircon;
 extern crate byteorder;
 extern crate futures;
+extern crate slab;
 extern crate tokio_core;
 extern crate tokio_fuchsia;
 
@@ -19,7 +20,6 @@ mod message;
 mod error;
 mod server;
 mod interface;
-mod cookiemap;
 mod client;
 mod endpoints;
 
