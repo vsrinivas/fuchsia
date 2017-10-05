@@ -32,6 +32,8 @@
 #define SATA_DEVINFO_FW_REV_LEN   8
 #define SATA_DEVINFO_MODEL_ID_LEN 40
 
+#define SATA_MAX_BLOCK_COUNT  0x10000 // 16-bit count
+
 typedef struct sata_pdata {
     zx_time_t timeout; // for ahci driver watchdog
     uint64_t lba;   // in blocks

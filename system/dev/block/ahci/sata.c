@@ -33,6 +33,7 @@ typedef struct sata_device {
     zx_device_t* parent;
 
     block_callbacks_t* callbacks;
+    block_info_t info;
 
     int port;
     int flags;
@@ -140,6 +141,12 @@ static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* control
     }
     dev->flags = flags;
 
+    memset(&dev->info, 0, sizeof(dev->info));
+    dev->info.block_size = dev->sector_sz;
+    dev->info.block_count = dev->capacity / dev->sector_sz;
+    dev->info.max_transfer_size = MIN(AHCI_MAX_PRDS * PAGE_SIZE, // fully discontiguous
+                                      SATA_MAX_BLOCK_COUNT * dev->sector_sz); // SATA cmd limit
+
     return ZX_OK;
 }
 
@@ -156,8 +163,20 @@ static void sata_iotxn_queue(void* ctx, iotxn_t* txn) {
         return;
     }
 
-    // constrain to device capacity and round down to block aligned
-    txn->length = MIN(ROUNDDOWN(txn->length, device->sector_sz), device->capacity - txn->offset);
+    // length must be a multiple of block size
+    if (txn->length % device->sector_sz) {
+        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+        return;
+    }
+
+    // constrain to device capacity
+    txn->length = MIN(txn->length, device->capacity - txn->offset);
+
+    // transfer must be smaller than max size
+    if (txn->length > device->info.max_transfer_size) {
+        iotxn_complete(txn, ZX_ERR_OUT_OF_RANGE, 0);
+        return;
+    }
 
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
     pdata->cmd = txn->opcode == IOTXN_OP_READ ? SATA_CMD_READ_DMA_EXT : SATA_CMD_WRITE_DMA_EXT;
@@ -175,10 +194,7 @@ static void sata_sync_complete(iotxn_t* txn, void* cookie) {
 }
 
 static void sata_get_info(sata_device_t* dev, block_info_t* info) {
-    memset(info, 0, sizeof(*info));
-    info->block_size = dev->sector_sz;
-    info->block_count = dev->capacity / dev->sector_sz;
-    info->max_transfer_size = AHCI_MAX_PRDS * PAGE_SIZE; // fully discontiguous
+    memcpy(info, &dev->info, sizeof(*info));
 }
 
 static zx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen, void* reply,
