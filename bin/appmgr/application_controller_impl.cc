@@ -6,23 +6,26 @@
 
 #include <utility>
 
-#include "garnet/bin/appmgr/application_environment_impl.h"
-#include "lib/fxl/functional/closure.h"
+#include "garnet/bin/appmgr/application_namespace.h"
+#include "garnet/bin/appmgr/job_holder.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/closure.h"
 
 namespace app {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
-    ApplicationEnvironmentImpl* environment,
+    JobHolder* job_holder,
     std::unique_ptr<archive::FileSystem> fs,
     zx::process process,
-    std::string path)
+    std::string path,
+    fxl::RefPtr<ApplicationNamespace> application_namespace)
     : binding_(this),
-      environment_(environment),
+      job_holder_(job_holder),
       fs_(std::move(fs)),
       process_(std::move(process)),
-      path_(std::move(path)) {
+      path_(std::move(path)),
+      application_namespace_(std::move(application_namespace)) {
   termination_handler_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, process_.get(), ZX_TASK_TERMINATED);
   if (request.is_pending()) {
@@ -86,7 +89,7 @@ void ApplicationControllerImpl::OnHandleReady(zx_handle_t handle,
 
   process_.reset();
 
-  environment_->ExtractApplication(this);
+  job_holder_->ExtractApplication(this);
   // The destructor of the temporary returned by ExtractApplication destroys
   // |this| at the end of the previous statement.
 }

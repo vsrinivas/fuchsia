@@ -7,17 +7,21 @@
 
 #include <zx/vmo.h>
 
+#include "garnet/bin/appmgr/application_namespace.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_runner.fidl.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_ptr.h"
 
 namespace app {
 
 class ApplicationRunnerHolder {
  public:
-  ApplicationRunnerHolder(ServiceProviderPtr services,
-                          ApplicationControllerPtr controller);
+  ApplicationRunnerHolder(
+      ServiceProviderPtr services,
+      ApplicationControllerPtr controller,
+      fxl::RefPtr<ApplicationNamespace> application_namespace);
   ~ApplicationRunnerHolder();
 
   void StartApplication(
@@ -29,6 +33,8 @@ class ApplicationRunnerHolder {
   ServiceProviderPtr services_;
   ApplicationControllerPtr controller_;
   ApplicationRunnerPtr runner_;
+
+  std::vector<fxl::RefPtr<ApplicationNamespace>> namespaces_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);
 };

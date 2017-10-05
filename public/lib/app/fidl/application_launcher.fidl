@@ -35,6 +35,18 @@ struct ApplicationLaunchInfo {
   // appmgr and provided to this application.
   // Adding a mount point at either 'pkg' or 'svc' will be ignored.
   FlatNamespace? flat_namespace;
+
+  // A list of services to be added to this application's svc namespace. These
+  // services are in addition to those coming from ApplicationEnvironment.
+  ServiceList? additional_services;
+};
+
+struct ServiceList {
+  // A list of services that can be requested from |provider|.
+  array<string> names;
+
+  // A service provider to get the services listed in |names| from.
+  ServiceProvider provider;
 };
 
 // An interface for creating application instances.

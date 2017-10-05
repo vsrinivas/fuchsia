@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdlib.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <stdlib.h>
 
 #include <string>
 #include <unordered_map>
@@ -12,10 +12,10 @@
 
 #include "garnet/bin/appmgr/config.h"
 #include "garnet/bin/appmgr/root_environment_host.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 constexpr char kDefaultConfigPath[] = "/system/data/appmgr/initial.config";
 
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
   if (!initial_apps.empty()) {
     message_loop.task_runner()->PostTask([&root, &initial_apps] {
       for (auto& launch_info : initial_apps) {
-        root.environment()->CreateApplication(std::move(launch_info), nullptr);
+        root.job_holder()->CreateApplication(std::move(launch_info), nullptr);
       }
     });
   }

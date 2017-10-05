@@ -61,7 +61,8 @@ int ServiceProviderBridge::OpenAsFileDescriptor() {
 
 void ServiceProviderBridge::Connect(fbl::StringPiece name,
                                     zx::channel channel) {
-  ConnectToService(fidl::String(name.data(), name.length()), std::move(channel));
+  ConnectToService(fidl::String(name.data(), name.length()),
+                   std::move(channel));
 }
 
 void ServiceProviderBridge::ConnectToService(const fidl::String& service_name,
@@ -70,7 +71,7 @@ void ServiceProviderBridge::ConnectToService(const fidl::String& service_name,
   if (it != name_to_service_connector_.end())
     it->second(std::move(channel));
   else
-    backend_->ConnectToService(std::move(service_name), std::move(channel));
+    backend_->ConnectToService(service_name, std::move(channel));
 }
 
 }  // namespace app

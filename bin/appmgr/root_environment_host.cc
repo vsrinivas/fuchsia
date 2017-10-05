@@ -20,8 +20,7 @@ RootEnvironmentHost::RootEnvironmentHost(
     : loader_(application_path), host_binding_(this) {
   fidl::InterfaceHandle<ApplicationEnvironmentHost> host;
   host_binding_.Bind(&host);
-  environment_ = std::make_unique<ApplicationEnvironmentImpl>(
-      nullptr, std::move(host), kRootLabel);
+  root_job_ = std::make_unique<JobHolder>(nullptr, std::move(host), kRootLabel);
 }
 
 RootEnvironmentHost::~RootEnvironmentHost() = default;

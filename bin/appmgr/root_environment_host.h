@@ -7,10 +7,10 @@
 
 #include <memory>
 
+#include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/root_application_loader.h"
 #include "lib/app/fidl/application_environment_host.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
-#include "garnet/bin/appmgr/application_environment_impl.h"
-#include "garnet/bin/appmgr/root_application_loader.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -23,7 +23,7 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
   explicit RootEnvironmentHost(std::vector<std::string> application_path);
   ~RootEnvironmentHost() override;
 
-  ApplicationEnvironmentImpl* environment() const { return environment_.get(); }
+  JobHolder* job_holder() const { return root_job_.get(); }
 
   // ApplicationEnvironmentHost implementation:
 
@@ -42,7 +42,7 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
   fidl::BindingSet<ServiceProvider> service_provider_bindings_;
 
   std::vector<std::string> path_;
-  std::unique_ptr<ApplicationEnvironmentImpl> environment_;
+  std::unique_ptr<JobHolder> root_job_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RootEnvironmentHost);
 };

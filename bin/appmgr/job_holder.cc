@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/application_environment_impl.h"
+#include "garnet/bin/appmgr/job_holder.h"
 
 #include <fcntl.h>
+#include <fdio/namespace.h>
+#include <fdio/util.h>
 #include <launchpad/launchpad.h>
+#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zx/process.h>
-#include <fdio/namespace.h>
-#include <fdio/util.h>
-#include <unistd.h>
 
 #include <utility>
 
-#include "lib/app/cpp/connect.h"
-#include "garnet/lib/far/format.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
+#include "garnet/lib/far/format.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/fsl/handles/object_info.h"
 
 namespace app {
 namespace {
@@ -178,13 +178,14 @@ LaunchType Classify(const zx::vmo& data, std::string* runner) {
 
 }  // namespace
 
-uint32_t ApplicationEnvironmentImpl::next_numbered_label_ = 1u;
+uint32_t JobHolder::next_numbered_label_ = 1u;
 
-ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
-    ApplicationEnvironmentImpl* parent,
-    fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
-    const fidl::String& label)
-    : parent_(parent) {
+JobHolder::JobHolder(JobHolder* parent,
+                     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
+                     const fidl::String& label)
+    : parent_(parent),
+      default_namespace_(
+          fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)) {
   host_.Bind(std::move(host));
 
   // parent_ is null if this is the root application environment. if so, we
@@ -193,11 +194,6 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
       parent_ != nullptr ? parent_->job_.get() : zx_job_default();
   FXL_CHECK(zx::job::create(parent_job, 0u, &job_) == ZX_OK);
   FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
-
-  // Get the ApplicationLoader service up front.
-  ServiceProviderPtr service_provider;
-  GetServices(service_provider.NewRequest());
-  loader_ = ConnectToService<ApplicationLoader>(service_provider.get());
 
   if (label.size() == 0)
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
@@ -208,78 +204,34 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
 
   app::ServiceProviderPtr services_backend;
   host_->GetApplicationEnvironmentServices(services_backend.NewRequest());
-  services_.set_backend(std::move(services_backend));
+  default_namespace_->services().set_backend(std::move(services_backend));
 
-  services_.AddService<ApplicationEnvironment>(
-      [this](fidl::InterfaceRequest<ApplicationEnvironment> request) {
-        environment_bindings_.AddBinding(this, std::move(request));
-      });
-
-  services_.AddService<ApplicationLauncher>(
-      [this](fidl::InterfaceRequest<ApplicationLauncher> request) {
-        launcher_bindings_.AddBinding(this, std::move(request));
-      });
+  ServiceProviderPtr service_provider;
+  default_namespace_->services().AddBinding(service_provider.NewRequest());
+  loader_ = ConnectToService<ApplicationLoader>(service_provider.get());
 }
 
-ApplicationEnvironmentImpl::~ApplicationEnvironmentImpl() {
+JobHolder::~JobHolder() {
   job_.kill();
 }
 
-std::unique_ptr<ApplicationEnvironmentControllerImpl>
-ApplicationEnvironmentImpl::ExtractChild(ApplicationEnvironmentImpl* child) {
-  auto it = children_.find(child);
-  if (it == children_.end()) {
-    return nullptr;
-  }
-  auto controller = std::move(it->second);
-  children_.erase(it);
-  return controller;
-}
-
-std::unique_ptr<ApplicationControllerImpl>
-ApplicationEnvironmentImpl::ExtractApplication(
-    ApplicationControllerImpl* controller) {
-  auto it = applications_.find(controller);
-  if (it == applications_.end()) {
-    return nullptr;
-  }
-  auto application = std::move(it->second);
-  applications_.erase(it);
-  return application;
-}
-
-void ApplicationEnvironmentImpl::AddBinding(
-    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
-  environment_bindings_.AddBinding(this, std::move(environment));
-}
-
-void ApplicationEnvironmentImpl::CreateNestedEnvironment(
+void JobHolder::CreateNestedJob(
     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
     const fidl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<ApplicationEnvironmentImpl>(this, std::move(host),
-                                                   label));
-  ApplicationEnvironmentImpl* child = controller->environment();
+      std::make_unique<JobHolder>(this, std::move(host), label));
+  JobHolder* child = controller->job_holder();
   child->AddBinding(std::move(environment));
   children_.emplace(child, std::move(controller));
 
-  PublishServicesForFirstNestedEnvironment(&child->services_);
+  PublishServicesForFirstNestedEnvironment(
+      &child->default_namespace_->services());
 }
 
-void ApplicationEnvironmentImpl::GetApplicationLauncher(
-    fidl::InterfaceRequest<ApplicationLauncher> launcher) {
-  launcher_bindings_.AddBinding(this, std::move(launcher));
-}
-
-void ApplicationEnvironmentImpl::GetServices(
-    fidl::InterfaceRequest<ServiceProvider> services) {
-  services_.AddBinding(std::move(services));
-}
-
-void ApplicationEnvironmentImpl::CreateApplication(
+void JobHolder::CreateApplication(
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   if (launch_info->url.get().empty()) {
@@ -302,36 +254,72 @@ void ApplicationEnvironmentImpl::CreateApplication(
         this, launch_info = std::move(launch_info),
         controller = std::move(controller)
       ](ApplicationPackagePtr package) mutable {
+        fxl::RefPtr<ApplicationNamespace> application_namespace =
+            default_namespace_;
+        if (!launch_info->additional_services.is_null()) {
+          application_namespace = fxl::MakeRefCounted<ApplicationNamespace>(
+              default_namespace_, this,
+              std::move(launch_info->additional_services));
+        }
+
         if (package) {
           std::string runner;
           LaunchType type = Classify(package->data, &runner);
           switch (type) {
             case LaunchType::kProcess:
-              CreateApplicationWithProcess(std::move(package),
-                                           std::move(launch_info),
-                                           std::move(controller));
+              CreateApplicationWithProcess(
+                  std::move(package), std::move(launch_info),
+                  std::move(controller), std::move(application_namespace));
               break;
             case LaunchType::kArchive:
-              CreateApplicationFromArchive(std::move(package),
-                                           std::move(launch_info),
-                                           std::move(controller));
+              CreateApplicationFromArchive(
+                  std::move(package), std::move(launch_info),
+                  std::move(controller), std::move(application_namespace));
               break;
             case LaunchType::kRunner:
-              CreateApplicationWithRunner(std::move(package),
-                                          std::move(launch_info), runner,
-                                          std::move(controller));
+              CreateApplicationWithRunner(
+                  std::move(package), std::move(launch_info), runner,
+                  std::move(controller), std::move(application_namespace));
               break;
           }
         }
       }));
 }
 
-void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
+std::unique_ptr<ApplicationEnvironmentControllerImpl> JobHolder::ExtractChild(
+    JobHolder* child) {
+  auto it = children_.find(child);
+  if (it == children_.end()) {
+    return nullptr;
+  }
+  auto controller = std::move(it->second);
+  children_.erase(it);
+  return controller;
+}
+
+std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
+    ApplicationControllerImpl* controller) {
+  auto it = applications_.find(controller);
+  if (it == applications_.end()) {
+    return nullptr;
+  }
+  auto application = std::move(it->second);
+  applications_.erase(it);
+  return application;
+}
+
+void JobHolder::AddBinding(
+    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
+  default_namespace_->AddBinding(std::move(environment));
+}
+
+void JobHolder::CreateApplicationWithRunner(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     std::string runner,
-    fidl::InterfaceRequest<ApplicationController> controller) {
-  zx::channel svc = services_.OpenAsDirectory();
+    fidl::InterfaceRequest<ApplicationController> controller,
+    fxl::RefPtr<ApplicationNamespace> application_namespace) {
+  zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
     return;
 
@@ -350,7 +338,8 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
   startup_info->launch_info = std::move(launch_info);
   startup_info->flat_namespace = builder.BuildForRunner();
 
-  auto* runner_ptr = GetOrCreateRunner(runner);
+  auto* runner_ptr =
+      GetOrCreateRunner(runner, std::move(application_namespace));
   if (runner_ptr == nullptr) {
     FXL_LOG(ERROR) << "Could not create runner " << runner << " to run "
                    << launch_info->url;
@@ -359,11 +348,12 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
                                std::move(controller));
 }
 
-void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
+void JobHolder::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller) {
-  zx::channel svc = services_.OpenAsDirectory();
+    fidl::InterfaceRequest<ApplicationController> controller,
+    fxl::RefPtr<ApplicationNamespace> application_namespace) {
+  zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
     return;
 
@@ -384,22 +374,24 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
-        std::move(controller), this, nullptr, std::move(process), url);
+        std::move(controller), this, nullptr, std::move(process), url,
+        std::move(application_namespace));
     ApplicationControllerImpl* key = application.get();
     applications_.emplace(key, std::move(application));
   }
 }
 
-void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
+void JobHolder::CreateApplicationFromArchive(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller) {
+    fidl::InterfaceRequest<ApplicationController> controller,
+    fxl::RefPtr<ApplicationNamespace> application_namespace) {
   auto file_system =
       std::make_unique<archive::FileSystem>(std::move(package->data));
   zx::channel pkg = file_system->OpenAsDirectory();
   if (!pkg)
     return;
-  zx::channel svc = services_.OpenAsDirectory();
+  zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
     return;
 
@@ -450,10 +442,12 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
     flat_namespace->paths.resize(1);
     flat_namespace->paths[0] = "/svc";
     flat_namespace->directories.resize(1);
-    flat_namespace->directories[0] = services_.OpenAsDirectory();
+    flat_namespace->directories[0] =
+        application_namespace->services().OpenAsDirectory();
     startup_info->flat_namespace = std::move(flat_namespace);
 
-    auto* runner = GetOrCreateRunner(runtime.runner());
+    auto* runner =
+        GetOrCreateRunner(runtime.runner(), std::move(application_namespace));
     if (runner == nullptr) {
       FXL_LOG(ERROR) << "Cannot create " << runner << " to run "
                      << launch_info->url;
@@ -470,15 +464,16 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
     if (process) {
       auto application = std::make_unique<ApplicationControllerImpl>(
           std::move(controller), this, std::move(file_system),
-          std::move(process), url);
+          std::move(process), url, std::move(application_namespace));
       ApplicationControllerImpl* key = application.get();
       applications_.emplace(key, std::move(application));
     }
   }
 }
 
-ApplicationRunnerHolder* ApplicationEnvironmentImpl::GetOrCreateRunner(
-    const std::string& runner) {
+ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
+    const std::string& runner,
+    fxl::RefPtr<ApplicationNamespace> application_namespace) {
   // We create the entry in |runners_| before calling ourselves
   // recursively to detect cycles.
   auto result = runners_.emplace(runner, nullptr);
@@ -495,7 +490,8 @@ ApplicationRunnerHolder* ApplicationEnvironmentImpl::GetOrCreateRunner(
         [this, runner] { runners_.erase(runner); });
 
     result.first->second = std::make_unique<ApplicationRunnerHolder>(
-        std::move(runner_services), std::move(runner_controller));
+        std::move(runner_services), std::move(runner_controller),
+        std::move(application_namespace));
   } else if (!result.first->second) {
     // There was a cycle in the runner graph.
     FXL_LOG(ERROR) << "Detected a cycle in the runner graph for " << runner
