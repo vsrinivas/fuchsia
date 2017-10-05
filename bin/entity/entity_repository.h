@@ -15,7 +15,7 @@
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/entity/entity_impl.h"
-#include "peridot/lib/fidl/operation.h"
+#include "lib/async/cpp/operation.h"
 
 namespace modular {
 

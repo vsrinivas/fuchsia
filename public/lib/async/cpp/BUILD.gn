@@ -12,3 +12,15 @@ source_set("future_value") {
     "//garnet/public/lib/fxl",
   ]
 }
+
+source_set("operation") {
+  sources = [
+    "operation.cc",
+    "operation.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/system/ulib/trace",
+  ]
+}

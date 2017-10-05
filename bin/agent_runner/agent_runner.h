@@ -25,7 +25,7 @@
 #include "peridot/bin/agent_runner/agent_runner_storage.h"
 #include "peridot/bin/entity/entity_repository.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/lib/fidl/operation.h"
+#include "lib/async/cpp/operation.h"
 
 namespace modular {
 

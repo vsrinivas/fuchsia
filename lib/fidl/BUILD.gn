@@ -58,18 +58,6 @@ source_set("json_xdr") {
   ]
 }
 
-source_set("operation") {
-  sources = [
-    "operation.cc",
-    "operation.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/trace",
-  ]
-}
-
 source_set("proxy") {
   sources = [
     "proxy.cc",

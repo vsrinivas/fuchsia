@@ -28,9 +28,9 @@ executable("oauth_token_manager") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
-    "//peridot/lib/fidl:operation",
-    "//peridot/lib/rapidjson",
+    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl",
+    "//third_party/rapidjson",
     "//topaz/runtime/web_runner/services",
     "//zircon/system/ulib/trace-provider",
   ]

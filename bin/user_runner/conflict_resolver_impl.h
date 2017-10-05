@@ -10,7 +10,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/lib/fidl/operation.h"
+#include "lib/async/cpp/operation.h"
 
 namespace modular {
 

@@ -16,7 +16,7 @@ source_set("entity") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/fidl:operation",
+    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/entity/fidl",
   ]
 }

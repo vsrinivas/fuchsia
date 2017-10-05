@@ -35,9 +35,13 @@
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/bin/oauth_token_manager/credentials_generated.h"
-#include "peridot/lib/fidl/operation.h"
-#include "peridot/lib/rapidjson/rapidjson.h"
+#include "lib/async/cpp/operation.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/error/en.h"
+#include "third_party/rapidjson/rapidjson/pointer.h"
+#include "third_party/rapidjson/rapidjson/prettywriter.h"
+#include "third_party/rapidjson/rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/rapidjson/writer.h"
 #include "topaz/runtime/web_runner/services/web_view.fidl.h"
 
 namespace modular {
@@ -93,6 +97,14 @@ enum TokenType {
 // Adjusts the token expiration window by a small amount to proactively refresh
 // tokens before the expiry time limit has reached.
 const uint64_t kPaddingForTokenExpiryInS = 600;
+
+template <typename T>
+inline std::string JsonValueToPrettyString(const T& v) {
+  rapidjson::StringBuffer buffer;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+  v.Accept(writer);
+  return buffer.GetString();
+}
 
 // TODO(alhaad/ukode): Don't use a hand-rolled version of this.
 std::string UrlEncode(const std::string& value) {
@@ -298,7 +310,7 @@ void Post(const std::string& request_body,
     } else {
       failure_callback(
           Status::BAD_RESPONSE,
-          "Invalid response: " + modular::JsonValueToPrettyString(doc));
+          "Invalid response: " + JsonValueToPrettyString(doc));
     }
     return;
   });
@@ -379,7 +391,7 @@ void Get(
     } else {
       failure_callback(
           Status::BAD_RESPONSE,
-          "Invalid response: " + modular::JsonValueToPrettyString(doc));
+          "Invalid response: " + JsonValueToPrettyString(doc));
     }
   });
 }
@@ -647,14 +659,14 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
   // saves it to local token in-memory cache.
   bool GetFirebaseToken(rapidjson::Document jwt_token) {
     FXL_VLOG(1) << "Firebase Token: "
-                << modular::JsonValueToPrettyString(jwt_token);
+                << JsonValueToPrettyString(jwt_token);
 
     if (!jwt_token.HasMember("idToken") || !jwt_token.HasMember("localId") ||
         !jwt_token.HasMember("email") || !jwt_token.HasMember("expiresIn")) {
       FXL_LOG(ERROR)
           << "Firebase Token returned from server is missing "
           << "either idToken or email or localId fields. Returned token: "
-          << modular::JsonValueToPrettyString(jwt_token);
+          << JsonValueToPrettyString(jwt_token);
       return false;
     }
 
@@ -830,14 +842,14 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
     if (!tokens.HasMember("access_token")) {
       FXL_LOG(ERROR) << "Tokens returned from server does not contain "
                      << "access_token. Returned token: "
-                     << modular::JsonValueToPrettyString(tokens);
+                     << JsonValueToPrettyString(tokens);
       return false;
     };
 
     if ((token_type_ == ID_TOKEN) && !tokens.HasMember("id_token")) {
       FXL_LOG(ERROR) << "Tokens returned from server does not contain "
                      << "id_token. Returned token: "
-                     << modular::JsonValueToPrettyString(tokens);
+                     << JsonValueToPrettyString(tokens);
       return false;
     }
 
@@ -1039,7 +1051,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
         !tokens.HasMember("access_token")) {
       FXL_LOG(ERROR) << "Tokens returned from server does not contain "
                      << "refresh_token or access_token. Returned token: "
-                     << modular::JsonValueToPrettyString(tokens);
+                     << JsonValueToPrettyString(tokens);
       return false;
     };
 
@@ -1314,7 +1326,7 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
   // with an error code in the response body.
   bool RevokeAllTokens(rapidjson::Document status) {
     FXL_VLOG(1) << "Revoke token api response: "
-                << modular::JsonValueToPrettyString(status);
+                << JsonValueToPrettyString(status);
 
     return true;
   }
@@ -1401,7 +1413,7 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   // Populate profile urls and display name for the account.
   bool SetAccountAttributes(rapidjson::Document attributes) {
     FXL_VLOG(1) << "People:get api response: "
-                << modular::JsonValueToPrettyString(attributes);
+                << JsonValueToPrettyString(attributes);
 
     if (!account_) {
       return false;

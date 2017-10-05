@@ -15,7 +15,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "peridot/lib/fidl/operation.h"
+#include "lib/async/cpp/operation.h"
 #include "peridot/lib/ledger_client/page_client.h"
 
 namespace modular {

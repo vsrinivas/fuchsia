@@ -24,7 +24,7 @@
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/operation.h"
+#include "lib/async/cpp/operation.h"
 
 namespace modular {
 
