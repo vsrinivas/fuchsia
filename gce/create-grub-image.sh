@@ -7,7 +7,7 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 fi
 
-$FUCHSIA_ROOT/scripts/gce/gce make-grub-image || exit 1
+$FUCHSIA_DIR/scripts/gce/gce make-grub-image || exit 1
 
 grubdisk="$FUCHSIA_OUT_DIR/${FUCHSIA_GCE_GRUB}.raw"
 

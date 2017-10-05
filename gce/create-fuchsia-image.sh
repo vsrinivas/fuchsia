@@ -7,7 +7,7 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 fi
 
-$FUCHSIA_ROOT/scripts/gce/gce make-fuchsia-image || exit 1
+$FUCHSIA_DIR/scripts/gce/gce make-fuchsia-image || exit 1
 
 diskimage="$FUCHSIA_OUT_DIR/$FUCHSIA_GCE_IMAGE.img"
 
