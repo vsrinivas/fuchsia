@@ -445,7 +445,7 @@ function fset() {
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
-  export GOPATH="${FUCHSIA_BUILD_DIR}"
+  export GOPATH="${FUCHSIA_BUILD_DIR}:${FUCHSIA_DIR}/garnet/go"
   FUCHSIA_RUST_BIN="${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/rust/bin"
 
   # Add tools to path, removing prior tools directory if any. This also
