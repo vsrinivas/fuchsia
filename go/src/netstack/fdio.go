@@ -23,6 +23,7 @@ import (
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
+	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
@@ -66,7 +67,7 @@ func (a *app) Name() string {
 	return "net.Netstack"
 }
 
-func socketDispatcher(stk tcpip.Stack, ctx *context.Context) (*socketServer, error) {
+func socketDispatcher(stk *stack.Stack, ctx *context.Context) (*socketServer, error) {
 	d, err := fdio.NewDispatcher(fdio.Handler)
 	if err != nil {
 		return nil, err
@@ -135,7 +136,7 @@ func (ios *iostate) release(f func()) {
 // As written, we have two netstack threads per socket.
 // That's not so bad for small client work, but even a client OS is
 // eventually going to feel the overhead of this.
-func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
+func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
@@ -224,7 +225,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 }
 
 // loopSocketRead connects libc read to the network stack for TCP sockets.
-func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
+func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
@@ -336,7 +337,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 }
 
 // loopDgramRead connects libc read to the network stack for UDP messages.
-func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
+func (ios *iostate) loopDgramRead(stk *stack.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
@@ -388,7 +389,7 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 }
 
 // loopDgramWrite connects libc write to the network stack for UDP messages.
-func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
+func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
@@ -556,7 +557,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 
 type socketServer struct {
 	dispatcher *fdio.Dispatcher
-	stack      tcpip.Stack
+	stack      *stack.Stack
 	dnsClient  *dns.Client
 	ns         *netstack
 

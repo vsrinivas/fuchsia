@@ -39,7 +39,7 @@ func main() {
 	}, []string{
 		tcp.ProtocolName,
 		udp.ProtocolName,
-	}).(*stack.Stack)
+	})
 	s, err := socketDispatcher(stk, ctx)
 	if err != nil {
 		log.Fatal(err)
