@@ -45,7 +45,8 @@ FUNCTION(read_msr_safe)
     cli
 
     # Set up the GPF handler, in case the MSR doesn't exist
-    movq $.Lgpf_handler, %gs:PERCPU_GPF_RETURN_OFFSET
+    leaq .Lgpf_handler(%rip), %rax
+    movq %rax, %gs:PERCPU_GPF_RETURN_OFFSET
     rdmsr
 
     # Cleanup the GPF handler

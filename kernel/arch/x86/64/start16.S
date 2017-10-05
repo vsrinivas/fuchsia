@@ -111,7 +111,7 @@ FUNCTION_LABEL(_x86_secondary_cpu_long_mode_entry)
 
     # Switch out of the copied code page and into the kernel's
     # version of it
-    mov  $.Lhighaddr, %rbx
+    movabs $.Lhighaddr, %rbx
     jmp  *%rbx
 .Lhighaddr:
     # Switch to the kernel's PML4
@@ -119,7 +119,7 @@ FUNCTION_LABEL(_x86_secondary_cpu_long_mode_entry)
     # As of this point, %esi is invalid
 
     # Reload the GDT with one based off of non-identity mapping
-    lgdt _gdtr
+    lgdt _gdtr(%rip)
 
     # Zero our data segments
     xor %eax, %eax
@@ -130,12 +130,12 @@ FUNCTION_LABEL(_x86_secondary_cpu_long_mode_entry)
     mov %eax, %ss
 
     # Load the IDT
-    lidt _idtr
+    lidt _idtr(%rip)
 
     mov %rdx, %rsi
     # Do an indirect call to keep this position independent
     # x86_secondary_entry(CPU ready counter, thread)
-    movq $x86_secondary_entry, %rbx
+    movabs $x86_secondary_entry, %rbx
     call *%rbx
 
 # If x86_secondary_entry returns, hang.
@@ -154,7 +154,7 @@ FUNCTION_LABEL(_x86_suspend_wakeup)
 
     # Switch out of the copied code page and into the kernel's
     # version of it
-    mov  $.Lwakeup_highaddr, %rbx
+    movabs $.Lwakeup_highaddr, %rbx
     jmp  *%rbx
 .Lwakeup_highaddr:
     # Switch to the kernel's PML4
@@ -162,7 +162,7 @@ FUNCTION_LABEL(_x86_suspend_wakeup)
     # As of this point, %esi is invalid
 
     # Reload the GDT with one based off of non-identity mapping
-    lgdt _gdtr
+    lgdt _gdtr(%rip)
 
     # Zero our data segments
     xor %eax, %eax
@@ -173,7 +173,7 @@ FUNCTION_LABEL(_x86_suspend_wakeup)
     mov %eax, %ss
 
     # Load the IDT
-    lidt _idtr
+    lidt _idtr(%rip)
 
     mov 8(%rdi), %rsi
     mov 16(%rdi), %rbp

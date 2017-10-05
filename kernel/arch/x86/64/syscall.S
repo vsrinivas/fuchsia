@@ -302,7 +302,8 @@ FUNCTION_LABEL(x86_syscall)
     // Verify the syscall is in range and jump to it.
     cmp     $ZX_SYS_COUNT, %rax
     jae     .Lunknown_syscall
-    jmp     *.Lcall_wrapper_table(, %rax, 8)
+    leaq    .Lcall_wrapper_table(%rip), %r11
+    jmp     *(%r11, %rax, 8)
 .Lunknown_syscall:
     pre_0_args
     call    unknown_syscall

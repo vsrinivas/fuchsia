@@ -29,7 +29,8 @@ FUNCTION(_x86_copy_to_or_from_user)
 0:
 
     # Setup page fault return
-    movq $.Lfault_copy, (%r10)
+    leaq .Lfault_copy(%rip), %rax
+    movq %rax, (%r10)
 
     # Between now and the reset of the fault return, we cannot make a function
     # call or manipulate the stack.  We need to be able to restore all callee
