@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
 #include <lib/console.h>
@@ -905,4 +906,12 @@ static int cmd_test(int argc, const cmd_args *argv, uint32_t flags)
 }
 #endif
 
+static void kernel_shell_init(uint level)
+{
+    if (cmdline_get_bool("kernel.shell", false)) {
+        console_start();
+    }
+}
+
+LK_INIT_HOOK(kernel_shell, kernel_shell_init, LK_INIT_LEVEL_APPS);
 

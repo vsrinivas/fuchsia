@@ -177,6 +177,11 @@ kernel thread should sleep between checks.
 The `k oom info` command will show the current value of this and other
 parameters.
 
+## kernel.shell=\<bool>
+
+This option tells the kernel to start its own shell on the kernel console
+instead of a userspace sh.
+
 ## kernel.smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than

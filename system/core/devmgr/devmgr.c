@@ -273,7 +273,6 @@ int service_starter(void* arg) {
     return 0;
 }
 
-#if !_ZX_KERNEL_HAS_SHELL
 static int console_starter(void* arg) {
     // if no kernel shell on serial uart, start a sh there
     printf("devmgr: shell startup\n");
@@ -298,14 +297,14 @@ static int console_starter(void* arg) {
 }
 
 static void start_console_shell(void) {
-    thrd_t t;
-    if ((thrd_create_with_name(&t, console_starter, NULL, "console-starter")) == thrd_success) {
-        thrd_detach(t);
+    // start a shell on the kernel console if it isn't already running a shell
+    if (!getenv_bool("kernel.shell", false)) {
+        thrd_t t;
+        if ((thrd_create_with_name(&t, console_starter, NULL, "console-starter")) == thrd_success) {
+            thrd_detach(t);
+        }
     }
 }
-#else
-static void start_console_shell(void) {}
-#endif
 
 static void load_cmdline_from_bootfs(void) {
     int fd = open("/boot/config/devmgr", O_RDONLY);
