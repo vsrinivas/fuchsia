@@ -96,28 +96,39 @@ int fuchsia_audio_manager_get_output_devices(
   return dev_num;
 }
 
+// Returns -1 if there is no device with the given ID.
+static int get_device_num_by_id(char* device_id) {
+  // If |device_id| is not specified or empty then use the default device (0).
+  if (!device_id || !*device_id)
+    return 0;
+  for (int dev_num = 0; dev_num < kStubNumDevices; ++dev_num) {
+    if (strcmp(kStubDeviceIds[dev_num], device_id) == 0) {
+      return dev_num;
+    }
+  }
+  return -1;
+}
+
 int fuchsia_audio_manager_get_output_device_default_parameters(
     fuchsia_audio_manager* manager,
     char* device_id,
     fuchsia_audio_parameters* stream_params) {
   FXL_DCHECK(manager);
-  FXL_DCHECK(device_id);
-  FXL_DCHECK(strlen(device_id));
   FXL_DCHECK(stream_params);
 
   // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
   // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
 
-  for (int dev_num = 0; dev_num < kStubNumDevices; ++dev_num) {
-    if (strcmp(kStubDeviceIds[dev_num], device_id) == 0) {
-      stream_params->sample_rate = kStubDeviceRates[dev_num];
-      stream_params->num_channels = kStubDeviceNumChans[dev_num];
-      stream_params->buffer_size = kStubDeviceBufferSizes[dev_num];
-      return ZX_OK;
-    }
+  int dev_num = get_device_num_by_id(device_id);
+  if (dev_num < 0) {
+    return ZX_ERR_NOT_FOUND;  // Device was removed after a previous call to
+                              // fuchsia_audio_manager_get_output_devices
   }
-  return ZX_ERR_NOT_FOUND;  // Device was removed after a previous call to
-                            // fuchsia_audio_manager_get_output_devices
+
+  stream_params->sample_rate = kStubDeviceRates[dev_num];
+  stream_params->num_channels = kStubDeviceNumChans[dev_num];
+  stream_params->buffer_size = kStubDeviceBufferSizes[dev_num];
+  return ZX_OK;
 }
 
 int fuchsia_audio_manager_create_output_stream(
@@ -136,16 +147,8 @@ int fuchsia_audio_manager_create_output_stream(
   // TODO(mpuryear): if a callback (FIDL or other) returned an error since the
   // previous API call from this client, then return ZX_ERR_CONNECTION_ABORTED
 
-  int dev_num = 0;
-  // Use |device_id| if present, else use the default device (0)
-  if (device_id && strlen(device_id)) {
-    for (; dev_num < kStubNumDevices; ++dev_num) {
-      if (strcmp(kStubDeviceIds[dev_num], device_id) == 0) {
-        break;
-      }
-    }
-  }
-  if (dev_num == kStubNumDevices) {
+  int dev_num =  get_device_num_by_id(device_id);
+  if (dev_num < 0) {
     return ZX_ERR_NOT_FOUND;  // Device was removed after a previous call to
                               // fuchsia_audio_manager_get_output_devices
   }

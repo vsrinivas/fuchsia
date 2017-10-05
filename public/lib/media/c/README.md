@@ -137,7 +137,8 @@ int fuchsia_audio_manager_get_output_device_default_parameters(
 - **audio_manager**: pointer to an opaque *fuchsia_audio_manager* struct
 obtained from the system via a *fuchsia_audio_manager_create()* call.
 - **device_id**: string representing the unique device identifier, received
-from the system as part of that device's fuchsia_audio_device_description.
+from the system as part of that device's fuchsia_audio_device_description. If
+NULL or empty then parameters for the default output device are returned.
 - **params_out**: pointer to memory allocated by the client, where system
 should copy default parameters for the specified device, via a
 *fuchsia_audio_parameters* struct.
@@ -159,6 +160,10 @@ This is intended to help the application determine its optimal timer frequency
 and buffer size, to appropriately balance low latency and low power
 consumption.
 
+As with fuchsia_audio_manager_create_output_stream, if the provided *device_id*
+is NULL or empty, the default device will be used (index 0 when retrieving the
+complete list of devices).
+
 ### fuchsia_audio_manager_create_output_stream
 ```
 int fuchsia_audio_manager_create_output_stream(
@@ -173,6 +178,8 @@ int fuchsia_audio_manager_create_output_stream(
 obtained from the system via a *fuchsia_audio_manager_create()* call.
 - **device_id**: string representing the unique device identifier, received
 from the system as part of that device's fuchsia_audio_device_description.
+If this parameter is NULL or empty then the stream should be created for the
+default output device.
 - **stream_params**: pointer to an *fuchsia_audio_parameters* struct,
 containing the intended parameters/format for the output stream.
 - **stream_out**: pointer to memory allocated by the client. If the call is
@@ -190,8 +197,9 @@ system-allocated *fuchsia_audio_output_stream* struct if the call succeeds.
 ##### Notes
 This call creates a new audio output stream and returns it to the client.
 
-If the provided *device_id* is NULL or empty, the default device will be used
-(index 0 when retrieving the complete list of devices).
+As with fuchsia_audio_manager_create_output_stream, if the provided *device_id*
+is NULL or empty, the default device will be used (index 0 when retrieving the
+complete list of devices).
 
 The *buffer_size* parameter specified by the client (within *stream_params*)
 is a hint to the system about the likely size of the buffer it will use in

@@ -177,6 +177,28 @@ TEST(media_client, audio_device_default_params_errors) {
   fuchsia_audio_manager_free(manager);
 }
 
+// Verify that nullptr can be passed as device_id.
+TEST(media_client, default_audio_device) {
+  fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
+  ASSERT_TRUE(manager);
+
+  fuchsia_audio_parameters params;
+  ::memset(&params, 0, sizeof(params));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+                       manager, nullptr, &params));
+  ASSERT_NE(0, params.sample_rate);
+  ASSERT_NE(0, params.num_channels);
+  ASSERT_NE(0, params.buffer_size);
+
+  fuchsia_audio_output_stream* stream;
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
+                       manager, nullptr, &params, &stream));
+  ASSERT_TRUE(stream);
+  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
+
+  fuchsia_audio_manager_free(manager);
+}
+
 TEST(media_client, audio_streams) {
   fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
   ASSERT_TRUE(manager);
