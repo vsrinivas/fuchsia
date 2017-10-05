@@ -68,6 +68,10 @@ template("dart_package") {
     assert(false, "Must specify either a package_name or infer_package_name")
   }
 
+  # TODO(pylaligand): remove when the transition to the new analysis method is
+  # over.
+  not_needed(invoker, [ "analysis_options" ])
+
   dart_deps = []
   if (defined(invoker.deps)) {
     foreach(dep, invoker.deps) {
@@ -86,6 +90,7 @@ template("dart_package") {
       !defined(invoker.disable_analysis) || !invoker.disable_analysis
   if (with_analysis) {
     dot_packages_target_name = "${target_name}_dot_packages"
+    options_file = "analysis_options.yaml"
   } else {
     dot_packages_target_name = target_name
   }
@@ -102,6 +107,11 @@ template("dart_package") {
       # This file contributes to the script and needs to be listed as an input.
       "//build/dart/label_to_package_name.py",
     ]
+    if (with_analysis) {
+      # Require an options file. This allows the analysis service to pick the
+      # correct set of options for this target.
+      inputs += [ options_file ]
+    }
 
     outputs = [
       dot_packages_file,
@@ -145,11 +155,6 @@ template("dart_package") {
       invocation_target_name = target_name
     }
 
-    options_file = "//build/dart/default_analysis_options"
-    if (defined(invoker.analysis_options)) {
-      options_file = invoker.analysis_options
-    }
-
     dart_sdk_dir = "//dart/tools/sdks/$host_os/dart-sdk"
     dart_analyzer_binary = "$dart_sdk_dir/bin/dartanalyzer"
 
@@ -158,10 +163,6 @@ template("dart_package") {
 
       deps = dart_deps + [ ":$dot_packages_target_name" ]
 
-      # Technically this is not strictly needed as even if the contents of the
-      # options file change the analysis script should remain unchanged.
-      # However, this is a sanity check to ensure at build time that this
-      # attribute points to a valid file.
       inputs = [
         options_file,
       ]
