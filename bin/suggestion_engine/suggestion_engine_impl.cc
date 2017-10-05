@@ -175,15 +175,18 @@ void SuggestionEngineImpl::DispatchAskInternal(UserInputPtr input) {
         input.Clone(),
         // TODO(rosswang): Large number of captures, substantial lambda;
         // consider replacing with an object.
-        [this, remainingHandlers, query, url = ask.second, has_media_response,
-         ask_time_point](QueryResponsePtr response) {
+        [
+          this, remainingHandlers, query, url = ask.second, has_media_response,
+          ask_time_point
+        ](QueryResponsePtr response) {
           // TODO(rosswang): defer selection of "I don't know" responses
           if (has_media_response && !*has_media_response &&
               response->media_response) {
             *has_media_response = true;
             // TODO(rosswang): Never delay for voice queries.
             fxl::TimeDelta media_delay =
-                fxl::TimePoint::Now() - ask_time_point - kAskMediaResponseDelay;
+                kAskMediaResponseDelay -
+                (fxl::TimePoint::Now() - ask_time_point);
 
             if (media_delay < fxl::TimeDelta::Zero()) {
               media_delay = fxl::TimeDelta::Zero();
