@@ -86,12 +86,12 @@ func init() {
 		{
 			sysroot,
 			x86ZxBuildDir + "sysroot",
-			"sysroot/x86_64-fuchsia",
+			"sysroot/x86_64-fuchsia/",
 		},
 		{
 			sysroot,
 			armZxBuildDir + "sysroot",
-			"sysroot/arm64-fuchsia",
+			"sysroot/aarch64-fuchsia",
 		},
 		{
 			qemu,
@@ -198,6 +198,9 @@ func copyKernelDebugObjs(src, dstPrefix string) {
 		}
 		return nil
 	})
+	if *dryRun {
+		return
+	}
 	// The ids.txt file has absolute paths but relative paths within the SDK are
 	// more useful to users.
 	srcIds, err := os.Open(filepath.Join(src, "ids.txt"))
@@ -258,7 +261,7 @@ func copyFile(src, dst string) {
 
 func copyDir(src, dst string) {
 	mkdir(filepath.Dir(dst))
-	cp("-r", src, dst)
+	cp("-r", src, "-T", dst)
 }
 
 func tar(src, dst string) {
