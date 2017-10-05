@@ -12,7 +12,8 @@ import sys
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Ninja files for Fuchsia")
+    parser = argparse.ArgumentParser(description="Generate Ninja files for Fuchsia",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--args", dest="gn_args", help="additional args to pass to gn",
                         action="append")
     parser.add_argument("--help-args", dest="gn_args_list", default=False,
