@@ -865,6 +865,11 @@ zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
     DEBUG_ASSERT(!thread_is_idle(current_thread));
     DEBUG_ASSERT(!arch_in_int_handler());
 
+    // Skip all of the work if the deadline has already passed.
+    if (deadline <= now) {
+        return ZX_OK;
+    }
+
     timer_t timer;
     timer_init(&timer);
 
