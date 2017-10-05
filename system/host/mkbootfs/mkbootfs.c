@@ -40,16 +40,19 @@ struct fsentry {
     char* srcpath;
 };
 
-#define ITEM_BOOTDATA 0
-#define ITEM_BOOTFS_BOOT 1
-#define ITEM_BOOTFS_SYSTEM 2
-#define ITEM_KERNEL 3
-#define ITEM_CMDLINE 4
+typedef enum {
+    ITEM_BOOTDATA,
+    ITEM_BOOTFS_BOOT,
+    ITEM_BOOTFS_SYSTEM,
+    ITEM_KERNEL,
+    ITEM_CMDLINE,
+    ITEM_PLATFORM_ID,
+} item_type_t;
 
 typedef struct item item_t;
 
 struct item {
-    uint32_t type;
+    item_type_t type;
     item_t* next;
 
     fsentry_t* first;
@@ -59,6 +62,9 @@ struct item {
     // used by bootfs items
     size_t hdrsize;
     size_t outsize;
+
+    // Used only by ITEM_PLATFORM_ID items.
+    bootdata_platform_id_t platform_id;
 };
 
 typedef struct filter filter_t;
@@ -106,7 +112,7 @@ char* trim(char* str) {
 static item_t* first_item;
 static item_t* last_item;
 
-item_t* new_item(uint32_t type) {
+item_t* new_item(item_type_t type) {
     item_t* item = calloc(1, sizeof(item_t));
     if (item == NULL) {
         fprintf(stderr, "OUT OF MEMORY\n");
@@ -232,7 +238,8 @@ okay:
     return 0;
 }
 
-int import_file_as(const char* fn, uint32_t type, uint32_t hdrlen, bootdata_t* hdr) {
+int import_file_as(const char* fn, item_type_t type, uint32_t hdrlen,
+                   bootdata_t* hdr) {
     // bootdata file
     struct stat s;
     if (stat(fn, &s) != 0) {
@@ -611,7 +618,7 @@ fail:
 #define PAGEALIGN(n) (((n) + 4095) & (~4095))
 #define PAGEFILL(n) (PAGEALIGN(n) - (n))
 
-char fill[4096];
+static const char fill[4096];
 
 #define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
@@ -766,7 +773,9 @@ int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra
 
     bootdata_t hdr = {
         .type = type,
-        .length = item->first->length + nulls,
+        .length = ((item->type == ITEM_PLATFORM_ID ?
+                    sizeof(item->platform_id) : item->first->length)
+                   + nulls),
         .extra = 0,
         .flags = 0,
     };
@@ -795,7 +804,13 @@ int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra
         uint32_t tmp = crc32(0, (void*) &hdr, sizeof(hdr));
         *crc = crc32(tmp, (void*) &ehdr, sizeof(ehdr));
     }
-    if (copyfile(fd, item->first->srcpath, item->first->length, NULL, crc) < 0) {
+    if (item->type == ITEM_PLATFORM_ID) {
+        if (copydata(fd, &item->platform_id, sizeof(item->platform_id),
+                     NULL, crc) < 0) {
+            return -1;
+        }
+    } else if (copyfile(fd, item->first->srcpath, item->first->length,
+                        NULL, crc) < 0) {
         return -1;
     }
     if (nulls && (copydata(fd, fill, nulls, NULL, crc) < 0)) {
@@ -826,7 +841,7 @@ int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra
     return 0;
 }
 
-int write_bootdata(const char* fn, item_t* item, bool extra, bootdata_platform_id_t* platform_id) {
+int write_bootdata(const char* fn, item_t* item, bool extra) {
     //TODO: re-enable for debugging someday
     bool compressed = true;
 
@@ -861,6 +876,9 @@ int write_bootdata(const char* fn, item_t* item, bool extra, bootdata_platform_i
         case ITEM_CMDLINE:
             CHECK(write_bootitem(fd, item, BOOTDATA_CMDLINE, 1, extra));
             break;
+        case ITEM_PLATFORM_ID:
+            CHECK(write_bootitem(fd, item, BOOTDATA_PLATFORM_ID, 0, extra));
+            break;
         case ITEM_BOOTFS_BOOT:
         case ITEM_BOOTFS_SYSTEM:
             CHECK(write_bootfs(fd, op, item, compressed, extra));
@@ -871,31 +889,6 @@ int write_bootdata(const char* fn, item_t* item, bool extra, bootdata_platform_i
         }
 
         item = item->next;
-    }
-
-    if (platform_id) {
-         bootdata_t header = {
-            .type = BOOTDATA_PLATFORM_ID,
-            .length = sizeof(*platform_id),
-            .flags = (extra ? BOOTDATA_FLAG_EXTRA : 0),
-        };
-        if (writex(fd, &header, sizeof(header)) < 0) {
-            return -1;
-        }
-        if (extra) {
-            bootextra_t bootextra = {
-                .reserved0 = 0,
-                .reserved1 = 0,
-                .magic = BOOTITEM_MAGIC,
-                .crc32 = BOOTITEM_NO_CRC32,
-            };
-            if (writex(fd, &bootextra, sizeof(bootextra)) < 0) {
-                goto fail;
-            }
-        }
-        if (writex(fd, platform_id, sizeof(*platform_id)) < 0) {
-            return -1;
-        }
     }
 
     off_t file_end = lseek(fd, 0, SEEK_CUR);
@@ -1111,11 +1104,9 @@ int main(int argc, char **argv) {
     bool have_kernel = false;
     bool have_cmdline = false;
     bool extra = false;
-    unsigned incount = 0;
     const char* vid_arg = NULL;
     const char* pid_arg = NULL;
     const char* board_arg = NULL;
-    bootdata_platform_id_t platform_id = {};
 
     if (argc == 1) {
         usage();
@@ -1243,7 +1234,6 @@ int main(int argc, char **argv) {
             return -1;
         } else {
             // input file
-            incount++;
             char* path = argv[0];
             if (path[0] == '@') {
                 path++;
@@ -1264,30 +1254,35 @@ int main(int argc, char **argv) {
         argc--;
         argv++;
     }
+
+    if (vid_arg || pid_arg || board_arg) {
+        bootdata_platform_id_t platform_id = {};
+        if (vid_arg) {
+            if (!parse_uint32(vid_arg, &platform_id.vid)) {
+                fprintf(stderr, "error: could not parse --vid %s\n", vid_arg);
+                return -1;
+            }
+        }
+        if (pid_arg) {
+            if (!parse_uint32(pid_arg, &platform_id.pid)) {
+                fprintf(stderr, "error: could not parse --pid %s\n", pid_arg);
+                return -1;
+            }
+        }
+        if (board_arg) {
+            if (strlen(board_arg) >= sizeof(platform_id.board_name)) {
+                fprintf(stderr, "error: board name too long\n");
+                return -1;
+            }
+            strncpy(platform_id.board_name, board_arg,
+                    sizeof(platform_id.board_name));
+        }
+        new_item(ITEM_PLATFORM_ID)->platform_id = platform_id;
+    }
+
     if (first_item == NULL) {
         fprintf(stderr, "error: no inputs given\n");
         return -1;
-    }
-
-    if (vid_arg) {
-        if (!parse_uint32(vid_arg, &platform_id.vid)) {
-            fprintf(stderr, "error: could not parse --vid %s\n", vid_arg);
-            return -1;
-        }
-    }
-    if (pid_arg) {
-        if (!parse_uint32(pid_arg, &platform_id.pid)) {
-            fprintf(stderr, "error: could not parse --pid %s\n", pid_arg);
-            return -1;
-        }
-    }
-
-    if (board_arg) {
-        if (strlen(board_arg) >= sizeof(platform_id.board_name)) {
-            fprintf(stderr, "error: board name too long\n");
-            return -1;
-        }
-        strncpy(platform_id.board_name, board_arg, sizeof(platform_id.board_name));
     }
 
     // preflight calculations for bootfs items
@@ -1318,9 +1313,5 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (platform_id.vid || platform_id.pid || platform_id.board_name[0]) {
-        return write_bootdata(output_file, first_item, extra, &platform_id);
-    } else {
-        return write_bootdata(output_file, first_item, extra, NULL);
-    }
+    return write_bootdata(output_file, first_item, extra);
 }
