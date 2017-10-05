@@ -61,24 +61,9 @@ void event_destroy(event_t* e) {
     wait_queue_destroy(&e->wait);
 }
 
-/**
- * @brief  Wait for event to be signaled
- *
- * If the event has already been signaled, this function
- * returns immediately.  Otherwise, the current thread
- * goes to sleep until the event object is signaled,
- * the deadline is reached, or the event object is destroyed
- * by another thread.
- *
- * @param e        Event object
- * @param deadline Deadline to abort at, in ns
- * @param interruptable  Allowed to interrupt if thread is signaled
- *
- * @return  0 on success, ZX_ERR_TIMED_OUT on timeout,
- *          other values depending on wait_result value
- *          when event_signal_etc is used.
- */
-zx_status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptable) {
+static zx_status_t event_wait_worker(event_t* e, zx_time_t deadline,
+                                     bool interruptable,
+                                     uint signal_mask) {
     thread_t* current_thread = get_current_thread();
     zx_status_t ret = ZX_OK;
 
@@ -97,7 +82,7 @@ zx_status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptab
         }
     } else {
         /* unsignaled, block here */
-        ret = wait_queue_block(&e->wait, deadline);
+        ret = wait_queue_block_with_mask(&e->wait, deadline, signal_mask);
     }
 
     current_thread->interruptable = false;
@@ -105,6 +90,46 @@ zx_status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptab
     THREAD_UNLOCK(state);
 
     return ret;
+}
+
+/**
+ * @brief  Wait for event to be signaled
+ *
+ * If the event has already been signaled, this function
+ * returns immediately.  Otherwise, the current thread
+ * goes to sleep until the event object is signaled,
+ * the deadline is reached, or the event object is destroyed
+ * by another thread.
+ *
+ * @param e        Event object
+ * @param deadline Deadline to abort at, in ns
+ * @param interruptable  Allowed to interrupt if thread is signaled
+ *
+ * @return  0 on success, ZX_ERR_TIMED_OUT on timeout,
+ *          other values depending on wait_result value
+ *          when event_signal_etc is used.
+ */
+zx_status_t event_wait_deadline(event_t* e, zx_time_t deadline, bool interruptable) {
+    return event_wait_worker(e, deadline, interruptable, 0);
+}
+
+/**
+ * @brief  Wait for event to be signaled, ignoring existing signals in
+           |signal_mask|.
+ *
+ * If the event has already been signaled (except for signals in
+ * |signal_mask|), this function returns immediately.
+ * Otherwise, the current thread goes to sleep until the event object is
+ * signaled, or the event object is destroyed by another thread.
+ * There is no deadline, and the caller must be interruptable.
+ *
+ * @param e        Event object
+ *
+ * @return  0 on success, other values depending on wait_result value
+ *          when event_signal_etc is used.
+ */
+zx_status_t event_wait_with_mask(event_t* e, uint signal_mask) {
+    return event_wait_worker(e, ZX_TIME_INFINITE, true, signal_mask);
 }
 
 static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_result, bool thread_lock_held) {

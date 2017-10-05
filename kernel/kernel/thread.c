@@ -1268,25 +1268,8 @@ static enum handler_return wait_queue_timeout_handler(timer_t* timer, zx_time_t 
     return ret;
 }
 
-/**
- * @brief  Block until a wait queue is notified.
- *
- * This function puts the current thread at the end of a wait
- * queue and then blocks until some other thread wakes the queue
- * up again.
- *
- * @param  wait     The wait queue to enter
- * @param  deadline The time at which to abort the wait
- *
- * If the deadline is zero, this function returns immediately with
- * ZX_ERR_TIMED_OUT.  If the deadline is ZX_TIME_INFINITE, this function
- * waits indefinitely.  Otherwise, this function returns with
- * ZX_ERR_TIMED_OUT when the deadline occurs.
- *
- * @return ZX_ERR_TIMED_OUT on timeout, else returns the return
- * value specified when the queue was woken by wait_queue_wake_one().
- */
-zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
+static zx_status_t wait_queue_block_worker(wait_queue_t* wait, zx_time_t deadline,
+                                           uint signal_mask) {
     timer_t timer;
 
     thread_t* current_thread = get_current_thread();
@@ -1300,7 +1283,8 @@ zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
         return ZX_ERR_TIMED_OUT;
     }
 
-    if (current_thread->interruptable && unlikely(current_thread->signals)) {
+    if (current_thread->interruptable &&
+        (unlikely(current_thread->signals & ~signal_mask))) {
         if (current_thread->signals & THREAD_SIGNAL_KILL) {
             return ZX_ERR_INTERNAL_INTR_KILLED;
         } else if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
@@ -1328,6 +1312,53 @@ zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
     }
 
     return current_thread->blocked_status;
+}
+
+/**
+ * @brief  Block until a wait queue is notified.
+ *
+ * This function puts the current thread at the end of a wait
+ * queue and then blocks until some other thread wakes the queue
+ * up again.
+ *
+ * @param  wait     The wait queue to enter
+ * @param  deadline The time at which to abort the wait
+ *
+ * If the deadline is zero, this function returns immediately with
+ * ZX_ERR_TIMED_OUT.  If the deadline is ZX_TIME_INFINITE, this function
+ * waits indefinitely.  Otherwise, this function returns with
+ * ZX_ERR_TIMED_OUT when the deadline occurs.
+ *
+ * @return ZX_ERR_TIMED_OUT on timeout, else returns the return
+ * value specified when the queue was woken by wait_queue_wake_one().
+ */
+zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
+    return wait_queue_block_worker(wait, deadline, 0);
+}
+
+/**
+ * @brief  Block until a wait queue is notified, ignoring existing signals
+ *         in |signal_mask|.
+ *
+ * This function puts the current thread at the end of a wait
+ * queue and then blocks until some other thread wakes the queue
+ * up again.
+ *
+ * @param  wait        The wait queue to enter
+ * @param  deadline    The time at which to abort the wait
+ * @param  signal_mask Mask of existing signals to ignore
+ *
+ * If the deadline is zero, this function returns immediately with
+ * ZX_ERR_TIMED_OUT.  If the deadline is ZX_TIME_INFINITE, this function
+ * waits indefinitely.  Otherwise, this function returns with
+ * ZX_ERR_TIMED_OUT when the deadline occurs.
+ *
+ * @return ZX_ERR_TIMED_OUT on timeout, else returns the return
+ * value specified when the queue was woken by wait_queue_wake_one().
+ */
+zx_status_t wait_queue_block_with_mask(wait_queue_t* wait, zx_time_t deadline,
+                                       uint signal_mask) {
+    return wait_queue_block_worker(wait, deadline, signal_mask);
 }
 
 /**

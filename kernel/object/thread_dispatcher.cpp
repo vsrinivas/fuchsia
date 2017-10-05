@@ -687,7 +687,7 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
 
     zx_status_t status;
     do {
-        status = event_wait_deadline(&exception_event_, ZX_TIME_INFINITE, true);
+        status = event_wait_with_mask(&exception_event_, THREAD_SIGNAL_SUSPEND);
     } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
 
     AutoLock lock(&state_lock_);

@@ -66,6 +66,11 @@ static inline zx_status_t event_wait(event_t* e) {
     return event_wait_deadline(e, ZX_TIME_INFINITE, false);
 }
 
+/* Version of event_wait_deadline that ignores existing signals in
+ * |signal_mask|. There is no deadline, and the caller must be interruptable.
+ */
+zx_status_t event_wait_with_mask(event_t*, uint signal_mask);
+
 int event_signal_etc(event_t*, bool reschedule, zx_status_t result);
 int event_signal(event_t*, bool reschedule);
 int event_signal_thread_locked(event_t*);

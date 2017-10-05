@@ -48,6 +48,15 @@ void wait_queue_destroy(wait_queue_t*);
 zx_status_t wait_queue_block(wait_queue_t*, zx_time_t deadline);
 
 /*
+ * block on a wait queue, ignoring existing signals in |signal_mask|.
+ * return status is whatever the caller of wait_queue_wake_*() specifies.
+ * a deadline other than ZX_TIME_INFINITE will abort at the specified time
+ * and return ZX_ERR_TIMED_OUT. a deadline in the past will immediately return.
+ */
+zx_status_t wait_queue_block_with_mask(wait_queue_t*, zx_time_t deadline,
+                                       uint signal_mask);
+
+/*
  * release one or more threads from the wait queue.
  * reschedule = should the system reschedule if any is released.
  * wait_queue_error = what wait_queue_block() should return for the blocking thread.
