@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 // fbl::atomic<T> provides typesafe C++ atomics on integral
-// types. It does not support:
+// types and enums. It does not support:
 // - bool, as the desired interface is rather different
 // - pointer types, though they could be easily added
 // - wide characters
@@ -61,7 +61,8 @@ enum memory_order : int {
 
 template <typename T>
 struct atomic {
-    static_assert(is_integral<T>::value, "fbl::atomic only support integral types");
+    static_assert(is_integral<T>::value || is_enum<T>::value,
+                  "fbl::atomic only support integral and enum types");
     static_assert(!is_same<T, bool>::value, "fbl::atomic does not support bool");
     static_assert(!is_same<T, wchar_t>::value, "fbl::atomic does not support wide characters");
     static_assert(!is_same<T, char16_t>::value, "fbl::atomic does not support wide characters");

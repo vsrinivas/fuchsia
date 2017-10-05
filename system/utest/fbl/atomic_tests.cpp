@@ -164,6 +164,128 @@ static_assert(IsSameAsSomeBuiltin<fbl::atomic_uint_fast32_t>(), "");
 static_assert(IsSameAsSomeBuiltin<fbl::atomic_int_fast64_t>(), "");
 static_assert(IsSameAsSomeBuiltin<fbl::atomic_uint_fast64_t>(), "");
 
+// We should be able to instantiate fbl::atomics of enum type as well.
+
+enum unspecified_enum {
+    kUnspecifiedValue = 23,
+};
+__UNUSED fbl::atomic<unspecified_enum> atomic_unspecified_enum;
+
+enum specified_enum_char : char {
+    kSpecifiedValue_char = 23,
+};
+__UNUSED fbl::atomic<specified_enum_char> atomic_specified_enum_char;
+
+enum specified_enum_signed_char : signed char {
+    kSpecifiedValue_signed_char = 23,
+};
+__UNUSED fbl::atomic<specified_enum_signed_char> atomic_specified_enum_signed_char;
+
+enum specified_enum_unsigned_char : unsigned char {
+    kSpecifiedValue_unsigned_char = 23,
+};
+__UNUSED fbl::atomic<specified_enum_unsigned_char> atomic_specified_enum_unsigned_char;
+
+enum specified_enum_short : short {
+    kSpecifiedValue_short = 23,
+};
+__UNUSED fbl::atomic<specified_enum_short> atomic_specified_enum_short;
+
+enum specified_enum_unsigned_short : unsigned short {
+    kSpecifiedValue_unsigned_short = 23,
+};
+__UNUSED fbl::atomic<specified_enum_unsigned_short> atomic_specified_enum_unsigned_short;
+
+enum specified_enum_int : int {
+    kSpecifiedValue_int = 23,
+};
+__UNUSED fbl::atomic<specified_enum_int> atomic_specified_enum_int;
+
+enum specified_enum_unsigned_int : unsigned int {
+    kSpecifiedValue_unsigned_int = 23,
+};
+__UNUSED fbl::atomic<specified_enum_unsigned_int> atomic_specified_enum_unsigned_int;
+
+enum specified_enum_long : long {
+    kSpecifiedValue_long = 23,
+};
+__UNUSED fbl::atomic<specified_enum_long> atomic_specified_enum_long;
+
+enum specified_enum_unsigned_long : unsigned long{
+    kSpecifiedValue_unsigned_long = 23,
+};
+__UNUSED fbl::atomic<specified_enum_unsigned_long> atomic_specified_enum_unsigned_long;
+
+enum specified_enum_long_long : long long {
+    kSpecifiedValue_long_long = 23,
+};
+__UNUSED fbl::atomic<specified_enum_long_long> atomic_specified_enum_long_long;
+
+enum specified_enum_unsigned_long_long : unsigned long long {
+    kSpecifiedValue_unsigned_long_long = 23,
+};
+__UNUSED fbl::atomic<specified_enum_unsigned_long_long> atomic_specified_enum_unsigned_long_long;
+
+enum struct unspecified_struct_enum {
+    kUnspecifiedValueStruct = 23,
+};
+__UNUSED fbl::atomic<unspecified_struct_enum> atomic_unspecified_struct_enum;
+
+enum struct specified_struct_enum_char : char {
+    kSpecifiedStructValue_char = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_char> atomic_specified_struct_enum_char;
+
+enum struct specified_struct_enum_signed_char : signed char {
+    kSpecifiedStructValue_signed_char = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_signed_char> atomic_specified_struct_enum_signed_char;
+
+enum struct specified_struct_enum_unsigned_char : unsigned char {
+    kSpecifiedStructValue_unsigned_char = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_unsigned_char> atomic_specified_struct_enum_unsigned_char;
+
+enum struct specified_struct_enum_short : short {
+    kSpecifiedStructValue_short = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_short> atomic_specified_struct_enum_short;
+
+enum struct specified_struct_enum_unsigned_short : unsigned short {
+    kSpecifiedStructValue_unsigned_short = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_unsigned_short> atomic_specified_struct_enum_unsigned_short;
+
+enum struct specified_struct_enum_int : int {
+    kSpecifiedStructValue_int = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_int> atomic_specified_struct_enum_int;
+
+enum struct specified_struct_enum_unsigned_int : unsigned int {
+    kSpecifiedStructValue_unsigned_int = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_unsigned_int> atomic_specified_struct_enum_unsigned_int;
+
+enum struct specified_struct_enum_long : long {
+    kSpecifiedStructValue_long = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_long> atomic_specified_struct_enum_long;
+
+enum struct specified_struct_enum_unsigned_long : unsigned long{
+    kSpecifiedStructValue_unsigned_long = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_unsigned_long> atomic_specified_struct_enum_unsigned_long;
+
+enum struct specified_struct_enum_long_long : long long {
+    kSpecifiedStructValue_long_long = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_long_long> atomic_specified_struct_enum_long_long;
+
+enum struct specified_struct_enum_unsigned_long_long : unsigned long long {
+    kSpecifiedStructValue_unsigned_long_long = 23,
+};
+__UNUSED fbl::atomic<specified_struct_enum_unsigned_long_long> atomic_specified_struct_enum_unsigned_long_long;
+
 bool atomic_wont_compile_test() {
     BEGIN_TEST;
 
