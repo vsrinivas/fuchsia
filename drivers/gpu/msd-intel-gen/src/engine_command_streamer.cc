@@ -318,25 +318,19 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
     helper.write_indirect_context_pointer();
     helper.write_indirect_context_offset_pointer();
     helper.write_context_timestamp();
+    helper.write_pdp3_upper(0);
+    helper.write_pdp3_lower(0);
+    helper.write_pdp2_upper(0);
+    helper.write_pdp2_lower(0);
+    helper.write_pdp1_upper(0);
+    helper.write_pdp1_lower(0);
+    helper.write_pdp0_upper(0);
+    helper.write_pdp0_lower(0);
     if (address_space->type() == ADDRESS_SPACE_PPGTT) {
         auto ppgtt = static_cast<PerProcessGtt*>(address_space);
-        helper.write_pdp3_upper(ppgtt->get_pdp(3));
-        helper.write_pdp3_lower(ppgtt->get_pdp(3));
-        helper.write_pdp2_upper(ppgtt->get_pdp(2));
-        helper.write_pdp2_lower(ppgtt->get_pdp(2));
-        helper.write_pdp1_upper(ppgtt->get_pdp(1));
-        helper.write_pdp1_lower(ppgtt->get_pdp(1));
-        helper.write_pdp0_upper(ppgtt->get_pdp(0));
-        helper.write_pdp0_lower(ppgtt->get_pdp(0));
-    } else {
-        helper.write_pdp3_upper(0);
-        helper.write_pdp3_lower(0);
-        helper.write_pdp2_upper(0);
-        helper.write_pdp2_lower(0);
-        helper.write_pdp1_upper(0);
-        helper.write_pdp1_lower(0);
-        helper.write_pdp0_upper(0);
-        helper.write_pdp0_lower(0);
+        uint64_t pml4_addr = ppgtt->get_pml4_bus_addr();
+        helper.write_pdp0_upper(pml4_addr);
+        helper.write_pdp0_lower(pml4_addr);
     }
 
     if (id() == RENDER_COMMAND_STREAMER) {

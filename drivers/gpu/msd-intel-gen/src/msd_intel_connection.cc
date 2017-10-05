@@ -79,14 +79,13 @@ void msd_connection_commit_buffer(msd_connection_t* connection, msd_buffer_t* bu
 {
 }
 
-std::unique_ptr<MsdIntelConnection>
-MsdIntelConnection::Create(Owner* owner, std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
-                           msd_client_id_t client_id)
+std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,
+                                                               msd_client_id_t client_id)
 {
     std::unique_ptr<GpuMappingCache> cache;
 #if MSD_INTEL_ENABLE_MAPPING_CACHE
     cache = GpuMappingCache::Create();
 #endif
-    return std::unique_ptr<MsdIntelConnection>(new MsdIntelConnection(
-        owner, PerProcessGtt::Create(std::move(scratch_buffer), std::move(cache)), client_id));
+    return std::unique_ptr<MsdIntelConnection>(
+        new MsdIntelConnection(owner, PerProcessGtt::Create(std::move(cache)), client_id));
 }

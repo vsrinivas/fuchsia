@@ -193,7 +193,7 @@ void MsdIntelDevice::Destroy()
 
 std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id_t client_id)
 {
-    return MsdIntelConnection::Create(this, scratch_buffer_, client_id);
+    return MsdIntelConnection::Create(this, client_id);
 }
 
 bool MsdIntelDevice::Init(void* device_handle)
@@ -287,12 +287,6 @@ bool MsdIntelDevice::Init(void* device_handle)
     }
 
     semaphore_port_ = magma::SemaphorePort::Create();
-
-    scratch_buffer_ =
-        std::shared_ptr<magma::PlatformBuffer>(magma::PlatformBuffer::Create(PAGE_SIZE, "scratch"));
-
-    if (!scratch_buffer_->PinPages(0, 1))
-        return DRETF(false, "failed to pin pages scratch buffer");
 
     registers::MasterInterruptControl::write(register_io_.get(), true);
 

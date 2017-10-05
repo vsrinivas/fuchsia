@@ -89,13 +89,13 @@ public:
     static uint64_t context_descriptor(gpu_addr_t gpu_addr, uint32_t context_id, bool ppgtt_enable)
     {
         constexpr uint32_t kValid = 1;
-        constexpr uint32_t kLegacyMode32bitPpgtt = 1 << 3;
+        constexpr uint32_t kLegacyMode48bitPpgtt = 3 << 3;
         constexpr uint32_t kLegacyModePpgttEnable = 1 << 8;
         constexpr uint32_t kContextIdShift = 32;
 
         uint64_t desc = gpu_addr;
         desc |= kValid;
-        desc |= kLegacyMode32bitPpgtt;
+        desc |= kLegacyMode48bitPpgtt;
         if (ppgtt_enable)
             desc |= kLegacyModePpgttEnable;
         desc |= static_cast<uint64_t>(context_id) << kContextIdShift;

@@ -44,79 +44,32 @@ static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, CachingType caching_ty
     return pte;
 }
 
-static inline gen_pde_t gen_pde_encode(uint64_t bus_addr)
-{
-    return bus_addr | PAGE_RW | PAGE_PRESENT;
-}
-
-std::unique_ptr<PerProcessGtt::PageDirectory> PerProcessGtt::PageDirectory::Create()
-{
-    static_assert(offsetof(PageDirectoryGpu, entry) == 0,
-                  "unexpected offsetof(PageDirectory,entry)");
-    static_assert(offsetof(PageDirectoryGpu, page_table[0]) == PAGE_SIZE,
-                  "unexpected offsetof(PageDirectory,page_table[0])");
-    static_assert(offsetof(PageDirectoryGpu, page_table[1]) == 2 * PAGE_SIZE,
-                  "unexpected offsetof(PageDirectory,page_table[1])");
-
-    const uint32_t kPageCount = magma::round_up(sizeof(PageDirectoryGpu), PAGE_SIZE) / PAGE_SIZE;
-
-    auto buffer = magma::PlatformBuffer::Create(kPageCount * PAGE_SIZE, "ppgtt-directory");
-    if (!buffer)
-        return DRETP(nullptr, "couldn't create buffer");
-
-    if (!buffer->PinPages(0, kPageCount))
-        return DRETP(nullptr, "failed to pin pages");
-
-    PageDirectoryGpu* gpu;
-    if (!buffer->MapCpu(reinterpret_cast<void**>(&gpu)))
-        return DRETP(nullptr, "failed to map cpu");
-
-    std::vector<uint64_t> page_bus_addresses(kPageCount);
-    if (!buffer->MapPageRangeBus(0, kPageCount, page_bus_addresses.data()))
-        return DRETP(nullptr, "failed to map page range bus");
-
-    return std::unique_ptr<PageDirectory>(
-        new PageDirectory(std::move(buffer), gpu, std::move(page_bus_addresses)));
-}
-
-PerProcessGtt::PageDirectory::PageDirectory(std::unique_ptr<magma::PlatformBuffer> buffer,
-                                            PageDirectoryGpu* gpu,
-                                            std::vector<uint64_t> page_bus_addresses)
-    : buffer_(std::move(buffer)), gpu_(gpu), page_bus_addresses_(std::move(page_bus_addresses))
-{
-    bus_addr_ = page_bus_addresses_[0];
-
-    for (uint32_t entry = 0; entry < kPageDirectoryEntries; entry++) {
-        uint32_t page_index = entry + 1;
-        DASSERT(page_index < page_bus_addresses_.size());
-        write_pde(entry, gen_pde_encode(page_bus_addresses_[page_index]));
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<PerProcessGtt>
-PerProcessGtt::Create(std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
-                      std::shared_ptr<GpuMappingCache> cache)
+std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(std::shared_ptr<GpuMappingCache> cache)
 {
-    std::vector<std::unique_ptr<PageDirectory>> page_directories(kPageDirectories);
+    auto scratch_page = magma::PlatformBuffer::Create(PAGE_SIZE, "scratch");
+    if (!scratch_page)
+        return DRETP(nullptr, "couldn't allocate scratch page");
 
-    for (uint32_t i = 0; i < page_directories.size(); i++) {
-        auto page_directory = PageDirectory::Create();
-        if (!page_directory)
-            return DRETP(nullptr, "couldn't create page directory %d", i);
-        page_directories[i] = std::move(page_directory);
-    }
+    if (!scratch_page->PinPages(0, 1))
+        return DRETP(nullptr, "failed to pin scratch page");
 
-    return std::unique_ptr<PerProcessGtt>(new PerProcessGtt(
-        std::move(scratch_buffer), std::move(page_directories), std::move(cache)));
+    uint64_t scratch_bus_addr;
+    if (!scratch_page->MapPageRangeBus(0, 1, &scratch_bus_addr))
+        return DRETP(nullptr, "MapPageRangeBus failed");
+
+    auto pml4_table = Pml4Table::Create(std::move(scratch_page), scratch_bus_addr);
+    if (!pml4_table)
+        return DRETP(nullptr, "failed to create pml4table");
+
+    return std::unique_ptr<PerProcessGtt>(
+        new PerProcessGtt(std::move(pml4_table), std::move(cache)));
 }
 
-PerProcessGtt::PerProcessGtt(std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
-                             std::vector<std::unique_ptr<PageDirectory>> page_directories,
+PerProcessGtt::PerProcessGtt(std::unique_ptr<Pml4Table> pml4_table,
                              std::shared_ptr<GpuMappingCache> cache)
-    : AddressSpace(ADDRESS_SPACE_PPGTT, cache), scratch_buffer_(std::move(scratch_buffer)),
-      page_directories_(std::move(page_directories))
+    : AddressSpace(ADDRESS_SPACE_PPGTT, cache), pml4_table_(std::move(pml4_table))
 {
 }
 
@@ -124,10 +77,6 @@ PerProcessGtt::PerProcessGtt(std::shared_ptr<magma::PlatformBuffer> scratch_buff
 bool PerProcessGtt::Init()
 {
     DASSERT(!initialized_);
-    DASSERT(page_directories_.size() == kPageDirectories);
-
-    if (!scratch_buffer_->MapPageRangeBus(0, 1, &scratch_bus_addr_))
-        return DRETF(false, "MapPageBus failed");
 
     uint64_t start = 0;
 
@@ -136,9 +85,6 @@ bool PerProcessGtt::Init()
         return DRETF(false, "failed to create allocator");
 
     initialized_ = true;
-
-    bool result = Clear(start, Size());
-    DASSERT(result);
 
     return true;
 }
@@ -168,27 +114,42 @@ bool PerProcessGtt::Clear(uint64_t start, uint64_t length)
         return DRETF(false, "invalid start + length");
 
     // readable, because mesa doesn't properly handle overfetching
-    gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true, false);
+    gen_pte_t pte = gen_pte_encode(pml4_table_->scratch_page_bus_addr(), CACHING_NONE, true, false);
 
-    uint32_t page_table_index = (start >> PAGE_SHIFT) & kPageTableMask;
-    uint32_t page_directory_index = (start >> (PAGE_SHIFT + kPageTableShift)) & kPageDirectoryMask;
-    uint32_t page_directory_pointer_index =
-        start >> (PAGE_SHIFT + kPageTableShift + kPageDirectoryShift);
+    uint32_t page_table_index = (start >>= PAGE_SHIFT) & kPageTableMask;
+    uint32_t page_directory_index = (start >>= kPageTableShift) & kPageDirectoryMask;
+    uint32_t page_directory_ptr_index = (start >>= kPageDirectoryShift) & kPageDirectoryPtrMask;
+    uint32_t pml4_index = (start >>= kPageDirectoryPtrShift);
 
-    DLOG("start pdp %u pd %i pt %u", page_directory_pointer_index, page_directory_index,
-         page_table_index);
+    DLOG("start pml4 %u pdp %u pd %i pt %u", pml4_index, page_directory_ptr_index,
+         page_directory_index, page_table_index);
+
+    auto page_directory = pml4_table_->page_directory(pml4_index, page_directory_ptr_index);
+    auto page_table_entry =
+        page_directory ? page_directory->page_table_entry(page_directory_index, page_table_index)
+                       : nullptr;
 
     for (uint64_t num_entries = length >> PAGE_SHIFT; num_entries > 0; num_entries--) {
-        DASSERT(page_directory_pointer_index < kPageDirectories);
-        page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
-                                                                   page_table_index, pte);
+        if (!page_table_entry)
+            return DRETF(false, "couldn't get page table entry");
+
+        *page_table_entry++ = pte;
 
         if (++page_table_index == kPageTableEntries) {
             page_table_index = 0;
             if (++page_directory_index == kPageDirectoryEntries) {
                 page_directory_index = 0;
-                ++page_directory_pointer_index;
+                if (++page_directory_ptr_index == kPageDirectoryPtrEntries) {
+                    page_directory_ptr_index = 0;
+                    ++pml4_index;
+                    DASSERT(pml4_index < kPml4Entries);
+                }
+                page_directory = pml4_table_->page_directory(pml4_index, page_directory_ptr_index);
             }
+            page_table_entry =
+                page_directory
+                    ? page_directory->page_table_entry(page_directory_index, page_table_index)
+                    : nullptr;
         }
     }
 
@@ -257,49 +218,79 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_
     if (!buffer->MapPageRangeBus(start_page_index, num_pages, bus_addr_array.data()))
         return DRETF(false, "failed obtaining bus addresses");
 
-    uint32_t page_table_index = (addr >> PAGE_SHIFT) & kPageTableMask;
-    uint32_t page_directory_index = (addr >> (PAGE_SHIFT + kPageTableShift)) & kPageDirectoryMask;
-    uint32_t page_directory_pointer_index =
-        addr >> (PAGE_SHIFT + kPageTableShift + kPageDirectoryShift);
+    uint32_t page_table_index = (addr >>= PAGE_SHIFT) & kPageTableMask;
+    uint32_t page_directory_index = (addr >>= kPageTableShift) & kPageDirectoryMask;
+    uint32_t page_directory_ptr_index = (addr >>= kPageDirectoryShift) & kPageDirectoryPtrMask;
+    uint32_t pml4_index = (addr >>= kPageDirectoryPtrShift);
 
-    DLOG("start pdp %u pd %i pt %u", page_directory_pointer_index, page_directory_index,
-         page_table_index);
+    DLOG("addr pml4 %u pdp %u pd %i pt %u", pml4_index, page_directory_ptr_index,
+         page_directory_index, page_table_index);
+
+    auto page_directory = pml4_table_->page_directory(pml4_index, page_directory_ptr_index);
+    auto page_table_entry =
+        page_directory ? page_directory->page_table_entry(page_directory_index, page_table_index)
+                       : nullptr;
 
     for (uint64_t i = 0; i < num_pages + kOverfetchPageCount + kGuardPageCount; i++) {
+        gen_pte_t pte;
         if (i < num_pages) {
             // buffer pages
-            gen_pte_t pte = gen_pte_encode(bus_addr_array[i], caching_type, true, true);
-            page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
-                                                                       page_table_index, pte);
+            pte = gen_pte_encode(bus_addr_array[i], caching_type, true, true);
         } else if (i < num_pages + kOverfetchPageCount) {
             // overfetch page: readable
-            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true, false);
-            page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
-                                                                       page_table_index, pte);
+            pte = gen_pte_encode(pml4_table_->scratch_page_bus_addr(), CACHING_NONE, true, false);
         } else {
             // guard page: also readable, because mesa doesn't properly handle overfetching
-            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true, false);
-            page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
-                                                                       page_table_index, pte);
+            pte = gen_pte_encode(pml4_table_->scratch_page_bus_addr(), CACHING_NONE, true, false);
         }
+
+        if (!page_table_entry)
+            return DRETF(false, "couldn't get page table entry");
+
+        *page_table_entry++ = pte;
 
         if (++page_table_index == kPageTableEntries) {
             page_table_index = 0;
             if (++page_directory_index == kPageDirectoryEntries) {
                 page_directory_index = 0;
-                ++page_directory_pointer_index;
-                DASSERT(page_directory_pointer_index <= kPageDirectories);
+                if (++page_directory_ptr_index == kPageDirectoryPtrEntries) {
+                    page_directory_ptr_index = 0;
+                    ++pml4_index;
+                    DASSERT(pml4_index < kPml4Entries);
+                }
+                page_directory = pml4_table_->page_directory(pml4_index, page_directory_ptr_index);
             }
+            page_table_entry =
+                page_directory
+                    ? page_directory->page_table_entry(page_directory_index, page_table_index)
+                    : nullptr;
         }
     }
+
     return true;
 }
 
-PerProcessGtt::PageDirectoryGpu*
-PerProcessGtt::get_page_directory_gpu(uint32_t page_directory_pointer_index)
+gen_pte_t PerProcessGtt::get_pte(gpu_addr_t gpu_addr)
 {
-    DASSERT(page_directory_pointer_index < page_directories_.size());
-    return page_directories_[page_directory_pointer_index]->gpu();
+    gpu_addr_t addr_copy = gpu_addr;
+
+    uint32_t page_table_index = (addr_copy >>= PAGE_SHIFT) & PerProcessGtt::kPageTableMask;
+    uint32_t page_directory_index =
+        (addr_copy >>= PerProcessGtt::kPageTableShift) & PerProcessGtt::kPageDirectoryMask;
+    uint32_t page_directory_ptr_index =
+        (addr_copy >>= PerProcessGtt::kPageDirectoryShift) & PerProcessGtt::kPageDirectoryPtrMask;
+    uint32_t pml4_index = (addr_copy >>= PerProcessGtt::kPageDirectoryPtrShift);
+
+    DLOG("gpu_addr 0x%lx pml4 0x%x pdp 0x%x pd 0x%x pt 0x%x", gpu_addr, pml4_index,
+         page_directory_ptr_index, page_directory_index, page_table_index);
+
+    auto page_directory = pml4_table_->page_directory(pml4_index, page_directory_ptr_index);
+    DASSERT(page_directory);
+    auto page_table_entry =
+        page_directory->page_table_entry(page_directory_index, page_table_index);
+    DASSERT(page_table_entry);
+
+    return *page_table_entry;
 }
 
 //////////////////////////////////////////////////////////////////////////////

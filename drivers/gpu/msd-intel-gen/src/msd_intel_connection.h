@@ -31,9 +31,7 @@ public:
                       present_buffer_callback_t callback) = 0;
     };
 
-    static std::unique_ptr<MsdIntelConnection>
-    Create(Owner* owner, std::shared_ptr<magma::PlatformBuffer> scratch_buffer,
-           msd_client_id_t client_id);
+    static std::unique_ptr<MsdIntelConnection> Create(Owner* owner, msd_client_id_t client_id);
 
     virtual ~MsdIntelConnection() {}
 
