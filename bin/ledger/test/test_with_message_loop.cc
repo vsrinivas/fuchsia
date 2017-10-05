@@ -60,4 +60,13 @@ fxl::Closure TestWithMessageLoop::MakeQuitTask() {
   return [this] { message_loop_.PostQuitTask(); };
 }
 
+fxl::Closure TestWithMessageLoop::MakeQuitTaskOnce() {
+  return fxl::MakeCopyable([ this, called = false ]() mutable {
+    if (!called) {
+      called = true;
+      message_loop_.PostQuitTask();
+    }
+  });
+}
+
 }  // namespace test

@@ -44,6 +44,10 @@ class TestWithMessageLoop : public ::testing::Test {
   // Creates a closure that quits the test message loop when executed.
   fxl::Closure MakeQuitTask();
 
+  // Creates a closure that quits the test message loop on the first time it's
+  // executed. If executed a second time, it does nothing.
+  fxl::Closure MakeQuitTaskOnce();
+
   fsl::MessageLoop message_loop_;
 
  private:

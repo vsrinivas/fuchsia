@@ -304,10 +304,10 @@ TEST_F(MergeResolverTest, LastOneWins) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(MakeQuitTask());
+  resolver.set_on_empty(MakeQuitTaskOnce());
 
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+  EXPECT_TRUE(resolver.IsEmpty());
 
   ids.clear();
   page_storage_->GetHeadCommitIds(
@@ -321,6 +321,7 @@ TEST_F(MergeResolverTest, LastOneWins) {
       ids[0], ::callback::Capture(MakeQuitTask(), &status, &commit));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(storage::Status::OK, status);
+  ASSERT_TRUE(commit);
 
   std::vector<storage::Entry> content_vector = GetCommitContents(*commit);
   // Entries are ordered by keys
