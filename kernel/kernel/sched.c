@@ -119,7 +119,7 @@ static cpu_mask_t rand_cpu(const cpu_mask_t mask) {
         return 0;
 
     /* compute the highest online cpu */
-    cpu_mask_t highest_cpu = highest_cpu_set(online);
+    cpu_num_t highest_cpu = highest_cpu_set(online);
 
     /* not very random, round robins a bit through the mask until it gets a hit */
     for (;;) {
