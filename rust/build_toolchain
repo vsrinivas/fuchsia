@@ -54,6 +54,9 @@ ${tool} --target=${arch}-unknown-fuchsia --sysroot=$FUCHSIA_OUT_DIR/build-zircon
 EOF
     chmod +x $clangdir/bin/${arch}-unknown-fuchsia-${tool}
   done
+  if [[ ! -x $clangdir/${arch}-unknown-fuchsia-ar ]]; then
+    ln -s $clangdir/bin/llvm-ar $clangdir/bin/${arch}-unknown-fuchsia-ar
+  fi
   export AR_${arch}_unknown_fuchsia=llvm-ar
   export CC_${arch}_unknown_fuchsia=${arch}-unknown-fuchsia-clang
   export CXX_${arch}_unknown_fuchsia=${arch}-unknown-fuchsia-clang++
