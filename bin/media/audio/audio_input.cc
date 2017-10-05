@@ -71,7 +71,9 @@ zx_status_t AudioInput::Initalize() {
 }
 
 AudioInput::~AudioInput() {
-  Stop();
+  if (state_ != State::kUninitialized) {
+    Stop();
+  }
 }
 
 std::vector<std::unique_ptr<media::StreamTypeSet>>
