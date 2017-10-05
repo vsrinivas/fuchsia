@@ -17,7 +17,7 @@ called `fuchsia` run the following commands. The `fuchsia` directory should
 not exist before running these steps.
 
 ```
-curl -s https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT | base64 -d | bash -s fuchsia
+curl -s https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT | base64 --decode | bash -s fuchsia
 cd fuchsia
 export PATH=`pwd`/.jiri_root/bin:$PATH
 jiri import fuchsia https://fuchsia.googlesource.com/manifest
