@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIDL_OPERATION_H_
-#define PERIDOT_LIB_FIDL_OPERATION_H_
+#ifndef LIB_ASYNC_CPP_OPERATION_H_
+#define LIB_ASYNC_CPP_OPERATION_H_
 
 #include <functional>
 #include <memory>
@@ -416,4 +416,4 @@ class SyncCall : public Operation<> {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_FIDL_OPERATION_H_
+#endif  // LIB_ASYNC_CPP_OPERATION_H_
