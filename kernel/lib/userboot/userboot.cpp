@@ -413,11 +413,6 @@ static zx_status_t attempt_userboot() {
 }
 
 void userboot_init(uint level) {
-#if !WITH_APP_SHELL
-    dprintf(INFO, "userboot: console init\n");
-    console_init();
-#endif
-
     attempt_userboot();
 }
 

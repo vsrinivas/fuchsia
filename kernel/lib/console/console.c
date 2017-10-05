@@ -18,9 +18,7 @@
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
 #include <lib/console.h>
-#if WITH_LIB_ENV
-#include <lib/env.h>
-#endif
+#include <lk/init.h>
 
 #ifndef CONSOLE_ENABLE_HISTORY
 #define CONSOLE_ENABLE_HISTORY 1
@@ -45,7 +43,7 @@ static char *debug_buffer;
 static bool echo = true;
 
 /* command processor state */
-static mutex_t *command_lock;
+static mutex_t command_lock = MUTEX_INITIAL_VALUE(command_lock);
 int lastresult;
 static bool abort_script;
 
@@ -89,13 +87,8 @@ STATIC_COMMAND("history", "command history", &cmd_history)
 #endif
 STATIC_COMMAND_END(help);
 
-int console_init(void)
+static void console_init(uint level)
 {
-    LTRACE_ENTRY;
-
-    command_lock = calloc(sizeof(mutex_t), 1);
-    mutex_init(command_lock);
-
     /* add all the statically defined commands to the list */
     cmd_block *block;
     for (block = __start_commands; block != __stop_commands; block++) {
@@ -105,9 +98,9 @@ int console_init(void)
 #if CONSOLE_ENABLE_HISTORY
     init_history();
 #endif
-
-    return 0;
 }
+
+LK_INIT_HOOK(console, console_init, LK_INIT_LEVEL_HEAP);
 
 #if CONSOLE_ENABLE_HISTORY
 static int cmd_history(int argc, const cmd_args *argv, uint32_t flags)
@@ -627,7 +620,7 @@ static zx_status_t command_loop(int (*get_line)(const char **, void *),
         }
 
         if (!locked)
-            mutex_acquire(command_lock);
+            mutex_acquire(&command_lock);
 
         abort_script = false;
         lastresult = command->cmd_callback(argc, args, 0);
@@ -654,7 +647,7 @@ static zx_status_t command_loop(int (*get_line)(const char **, void *),
         abort_script = false;
 
         if (!locked)
-            mutex_release(command_lock);
+            mutex_release(&command_lock);
     }
 
     free(outbuf);
@@ -677,7 +670,7 @@ void console_abort_script(void)
     abort_script = true;
 }
 
-void console_start(void)
+static void console_start(void)
 {
     debug_buffer = malloc(LINE_LEN);
 
@@ -911,3 +904,5 @@ static int cmd_test(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 #endif
+
+

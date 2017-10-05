@@ -85,8 +85,6 @@ typedef struct _cmd_block {
 #define COMMAND_BLOCK_INIT_ITEM(cmd_block_ptr, cmd_ptr) {(cmd_block_ptr)->next = NULL; (cmd_block_ptr)->count = 1; (cmd_block_ptr)->list = cmd_ptr;}
 
 /* external api */
-int console_init(void);
-void console_start(void);
 void console_register_commands(cmd_block *block);
 int console_run_script(const char *string);
 int console_run_script_locked(const char *string); // special case from inside a command
