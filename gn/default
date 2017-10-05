@@ -12,7 +12,6 @@
         "packages/gn/pmd",
         "packages/gn/pmd_tests",
         "peridot/packages/default",
-        "peridot/packages/oauth_token_manager",
         "topaz/packages/default"
     ]
 }
