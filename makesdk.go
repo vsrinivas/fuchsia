@@ -79,6 +79,7 @@ func init() {
 	x86ZxBuildDir := zxBuildDir + "/build-zircon-pc-x86-64/"
 	armZxBuildDir := zxBuildDir + "/build-zircon-qemu-arm64/"
 	x86Builddir := "out/release-x86-64/"
+	armBuilddir := "out/release-aarch64/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
 
 	dirs := []dir{
@@ -90,7 +91,7 @@ func init() {
 		{
 			sysroot,
 			armZxBuildDir + "sysroot",
-			"sysroot/aarch64-fuchsia",
+			"sysroot/arm64-fuchsia",
 		},
 		{
 			qemu,
@@ -119,12 +120,22 @@ func init() {
 		{
 			kernelImg,
 			"out/build-zircon/build-zircon-pc-x86-64/zircon.bin",
-			"kernel/zircon.bin",
+			"target/x86_64/zircon.bin",
 		},
 		{
 			bootdata,
 			x86Builddir + "user.bootfs",
-			"bootdata.bin",
+			"target/x86_64/bootdata.bin",
+		},
+		{
+			kernelImg,
+			"out/build-zircon/build-zircon-qemu-arm64/zircon.bin",
+			"target/aarch64/zircon.bin",
+		},
+		{
+			bootdata,
+			armBuilddir + "user.bootfs",
+			"target/aarch64/bootdata.bin",
 		},
 		{
 			media,
@@ -141,13 +152,30 @@ func init() {
 			x86Builddir + "x64-shared/lib.unstripped/libmedia_client.so",
 			"sysroot/x86_64-fuchsia/debug-info/libmedia_client.so",
 		},
+		{
+			media,
+			armBuilddir + "arm64-shared/libmedia_client.so",
+			"sysroot/aarch64-fuchsia/lib/libmedia_client.so",
+		},
+		{
+			media,
+			armBuilddir + "arm64-shared/lib.unstripped/libmedia_client.so",
+			"sysroot/aarch64-fuchsia/debug-info/libmedia_client.so",
+		},
 	}
 
 	components = []component{
 		{
 			kernelDebugObjs,
 			x86ZxBuildDir,
-			"kernel/debug",
+			"sysroot/x86_64-fuchsia/debug-info",
+			customType,
+			copyKernelDebugObjs,
+		},
+		{
+			kernelDebugObjs,
+			armZxBuildDir,
+			"sysroot/aarch64-fuchsia/debug-info",
 			customType,
 			copyKernelDebugObjs,
 		},
