@@ -231,12 +231,19 @@ int handlespam(void) {
     return 0;
 }
 
+int nanospam(void) {
+    for (;;) {
+        zx_nanosleep(1);
+    }
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         printf(
             "usage: evil-tests spam1        spam writes into channel\n"
             "       evil-tests spam2        spam writes, don't close channel after\n"
             "       evil-tests spam3        spam handle creation\n"
+            "       evil-tests nano         spam nanosleep\n"
             "       evil-tests heap1 <n>    heap stress test, locking\n"
             "       evil-tests heap2 <n>    heap stress test, no locking\n");
         return -1;
@@ -246,6 +253,8 @@ int main(int argc, char** argv) {
         return writespam(1);
     } else if (!strcmp(argv[1], "spam3")) {
         return handlespam();
+    } else if (!strcmp(argv[1], "nano")) {
+        return nanospam();
     } else if (!strcmp(argv[1], "heap1")) {
         int n = (argc > 2) ? strtoul(argv[2], 0, 10) : THREADS;
         return heapblaster(n, 1);
