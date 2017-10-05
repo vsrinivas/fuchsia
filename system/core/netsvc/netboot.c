@@ -135,7 +135,7 @@ void netboot_advertise(const char* nodename) {
              BOOTLOADER_VERSION, nodename);
     const size_t data_len = strlen((char*)msg->data) + 1;
     udp6_send(buffer, sizeof(nbmsg) + data_len, &ip6_ll_all_nodes,
-              NB_ADVERT_PORT, NB_SERVER_PORT);
+              NB_ADVERT_PORT, NB_SERVER_PORT, false);
 }
 
 static void nb_open(const char* filename, uint32_t cookie, uint32_t arg,
@@ -145,7 +145,7 @@ static void nb_open(const char* filename, uint32_t cookie, uint32_t arg,
     m.cookie = cookie;
     m.cmd = NB_ACK;
     m.arg = netfile_open(filename, arg);
-    udp6_send(&m, sizeof(m), saddr, sport, dport);
+    udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
 static void nb_read(uint32_t cookie, uint32_t arg,
@@ -178,7 +178,7 @@ static void nb_read(uint32_t cookie, uint32_t arg,
         // Ignore bogus read requests -- host will timeout if they're confused
         return;
     }
-    udp6_send(&m, msg_size, saddr, sport, dport);
+    udp6_send(&m, msg_size, saddr, sport, dport, false);
 }
 
 static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg,
@@ -196,7 +196,7 @@ static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg
         blocknum = arg;
     }
     m.cookie = cookie;
-    udp6_send(&m, sizeof(m), saddr, sport, dport);
+    udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
 static void nb_close(uint32_t cookie,
@@ -206,7 +206,7 @@ static void nb_close(uint32_t cookie,
     m.cookie = cookie;
     m.cmd = NB_ACK;
     m.arg = netfile_close();
-    udp6_send(&m, sizeof(m), saddr, sport, dport);
+    udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
 static void bootloader_recv(void* data, size_t len,
@@ -316,7 +316,7 @@ static void bootloader_recv(void* data, size_t len,
     ack.magic = NB_MAGIC;
 transmit:
     if (do_transmit) {
-        udp6_send(&ack, sizeof(ack), saddr, sport, NB_SERVER_PORT);
+        udp6_send(&ack, sizeof(ack), saddr, sport, NB_SERVER_PORT, false);
     }
 
     if (do_boot) {
@@ -354,7 +354,7 @@ void netboot_recv(void *data, size_t len, bool is_mcast,
         msg->cmd = NB_ACK;
         memcpy(buf, msg, sizeof(nbmsg));
         memcpy(buf + sizeof(nbmsg), nodename, dlen);
-        udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport);
+        udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport, false);
         break;
     case NB_SHELL_CMD:
         if (!is_mcast) {

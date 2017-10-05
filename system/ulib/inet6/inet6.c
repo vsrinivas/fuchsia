@@ -212,13 +212,14 @@ static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* daddr, size_t length, uint8
 
 #define UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
 
-zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, uint16_t dport, uint16_t sport) {
+zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, uint16_t dport,
+                      uint16_t sport, bool block) {
     if (dlen > UDP6_MAX_PAYLOAD)
         return ZX_ERR_INVALID_ARGS;
     size_t length = dlen + UDP_HDR_LEN;
     udp_pkt_t* p;
     eth_buffer_t* ethbuf;
-    zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf);
+    zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf, block);
     if (status != ZX_OK) {
         return status;
     }
@@ -240,14 +241,15 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
 
 #define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
 
-static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* daddr) {
+static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* daddr,
+                              bool block) {
     if (length > ICMP6_MAX_PAYLOAD)
         return ZX_ERR_INVALID_ARGS;
     eth_buffer_t* ethbuf;
     ip6_pkt_t* p;
     icmp6_hdr_t* icmp;
 
-    zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf);
+    zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**) &p, &ethbuf, block);
     if (status != ZX_OK) {
         return status;
     }
@@ -304,6 +306,7 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     if (sum != 0xFFFF)
         BAD("Checksum Incorrect");
 
+    zx_status_t status;
     if (icmp->type == ICMP6_NDP_N_SOLICIT) {
         ndp_n_hdr_t* ndp = _data;
         struct {
@@ -329,15 +332,19 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
         msg.opt[1] = 1;
         memcpy(msg.opt + 2, &ll_mac_addr, ETH_ADDR_LEN);
 
-        icmp6_send(&msg, sizeof(msg), (void*)&ip->src);
-        return;
-    }
-
-    if (icmp->type == ICMP6_ECHO_REQUEST) {
+        status = icmp6_send(&msg, sizeof(msg), (void*)&ip->src, false);
+    } else if (icmp->type == ICMP6_ECHO_REQUEST) {
         icmp->checksum = 0;
         icmp->type = ICMP6_ECHO_REPLY;
-        icmp6_send(_data, len, (void*)&ip->src);
+        status = icmp6_send(_data, len, (void*)&ip->src, false);
+    } else {
+        // Ignore
         return;
+    }
+    if (status == ZX_ERR_SHOULD_WAIT) {
+        printf("inet6: No buffers available, dropping ICMP response\n");
+    } else if (status < 0) {
+        printf("inet6: Failed to send ICMP response (err = %d)\n", status);
     }
 }
 

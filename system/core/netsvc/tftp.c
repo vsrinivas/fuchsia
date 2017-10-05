@@ -111,7 +111,7 @@ static void file_close(void* cookie) {
 static tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = transport_cookie;
     zx_status_t status = udp6_send(data, len, &transport_info->dest_addr,
-                                   transport_info->dest_port, NB_TFTP_OUTGOING_PORT);
+                                   transport_info->dest_port, NB_TFTP_OUTGOING_PORT, true);
     if (status != ZX_OK) {
         return TFTP_ERR_IO;
     }

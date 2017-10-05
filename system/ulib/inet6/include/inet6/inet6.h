@@ -138,7 +138,8 @@ void eth_recv(void* data, size_t len);
 typedef struct eth_buffer eth_buffer_t;
 
 // provided by interface driver
-zx_status_t eth_get_buffer(size_t len, void** data, eth_buffer_t** out);
+zx_status_t eth_get_buffer(size_t len, void** data, eth_buffer_t** out,
+                           bool block);
 void eth_put_buffer(eth_buffer_t* ethbuf);
 
 zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len);
@@ -148,7 +149,7 @@ int eth_add_mcast_filter(const mac_addr_t* addr);
 // call to transmit a UDP packet
 zx_status_t udp6_send(const void* data, size_t len,
                       const ip6_addr_t* daddr, uint16_t dport,
-                      uint16_t sport);
+                      uint16_t sport, bool block);
 
 // implement to recive UDP packets
 void udp6_recv(void* data, size_t len,

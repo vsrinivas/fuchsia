@@ -118,7 +118,7 @@ static void check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
 
 static eth_buffer_t* eth_buffers = NULL;
 
-static void eth_put_buffer_locked(eth_buffer_t* buf, uint32_t state) {
+static void eth_put_buffer_locked(eth_buffer_t* buf, uint32_t state) __TA_REQUIRES(eth_lock) {
     check_ethbuf(buf, state);
     buf->state = ETH_BUFFER_FREE;
     buf->next = eth_buffers;
@@ -131,21 +131,37 @@ void eth_put_buffer(eth_buffer_t* ethbuf) {
     mtx_unlock(&eth_lock);
 }
 
-static void tx_complete(void* ctx, void* cookie) {
+static void tx_complete(void* ctx, void* cookie) __TA_REQUIRES(eth_lock) {
     eth_put_buffer_locked(cookie, ETH_BUFFER_TX);
 }
 
 static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** out,
-                                         uint32_t newstate) {
+                                         uint32_t newstate, bool block) __TA_REQUIRES(eth_lock) {
     eth_buffer_t* buf;
     if (sz > NET_BUFFERSZ) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (eth_buffers == NULL) {
-        // Reap used tx buffers
-        eth_complete_tx(eth, NULL, tx_complete);
-        if (eth_buffers == NULL) {
-            return ZX_ERR_SHOULD_WAIT;
+        while (1) {
+            eth_complete_tx(eth, NULL, tx_complete);
+            if (eth_buffers != NULL) {
+                break;
+            }
+            if (!block) {
+                return ZX_ERR_SHOULD_WAIT;
+            }
+            zx_status_t status;
+            zx_signals_t signals;
+            mtx_unlock(&eth_lock);
+            status = zx_object_wait_one(eth->rx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
+                                        ZX_TIME_INFINITE, &signals);
+            mtx_lock(&eth_lock);
+            if (status < 0) {
+                return status;
+            }
+            if (signals & ZX_FIFO_PEER_CLOSED) {
+                return ZX_ERR_PEER_CLOSED;
+            }
         }
     }
     buf = eth_buffers;
@@ -160,9 +176,9 @@ static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** 
     return ZX_OK;
 }
 
-zx_status_t eth_get_buffer(size_t sz, void** data, eth_buffer_t** out) {
+zx_status_t eth_get_buffer(size_t sz, void** data, eth_buffer_t** out, bool block) {
     mtx_lock(&eth_lock);
-    zx_status_t r = eth_get_buffer_locked(sz, data, out, ETH_BUFFER_CLIENT);
+    zx_status_t r = eth_get_buffer_locked(sz, data, out, ETH_BUFFER_CLIENT, block);
     mtx_unlock(&eth_lock);
     return r;
 }
@@ -311,7 +327,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     for (unsigned n = 0; n < NET_BUFFERS; n++) {
         void* data;
         eth_buffer_t* ethbuf;
-        if (eth_get_buffer_locked(NET_BUFFERSZ, &data, &ethbuf, ETH_BUFFER_RX)) {
+        if (eth_get_buffer_locked(NET_BUFFERSZ, &data, &ethbuf, ETH_BUFFER_RX, false)) {
             printf("netifc: only queued %u buffers (desired: %u)\n", n, NET_BUFFERS);
             break;
         }

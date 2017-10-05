@@ -83,7 +83,7 @@ static void debuglog_send(void) {
             goto done;
         }
     }
-    udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
+    udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT, false);
 done:
     debuglog_next_timeout = zx_deadline_after(ZX_MSEC(100));
 }
