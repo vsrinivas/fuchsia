@@ -97,6 +97,7 @@ type EndpointTemplate struct {
 type InterfaceMessageTemplate struct {
 	Name    string
 	RawName string
+	TyName  string
 	// This is the ordinal name (denoted by '@x' in the IDL).
 	MessageOrdinal uint32
 	MinVersion     uint32
@@ -343,8 +344,10 @@ func NewInterfaceTemplate(context *Context, fidlInterface *fidl_types.FidlInterf
 	sort.Sort(SortableOrdinals(ordinals))
 	for _, ordinal := range ordinals {
 		fidlMethod := fidlInterface.Methods[ordinal]
-		raw_name := formatMethodName(*fidlMethod.DeclData.ShortName)
-		msg_name := mangleReservedKeyword(raw_name)
+		shortName := *fidlMethod.DeclData.ShortName
+		rawName := formatMethodName(shortName)
+		msgName := mangleReservedKeyword(rawName)
+		tyName := mangleReservedKeyword(formatEnumValue(shortName))
 
 		req_struct := NewStructTemplate(context, &fidlMethod.Parameters)
 		req_struct.Name = interface_name + "_" + req_struct.Name
@@ -356,8 +359,9 @@ func NewInterfaceTemplate(context *Context, fidlInterface *fidl_types.FidlInterf
 		}
 
 		msgs = append(msgs, InterfaceMessageTemplate{
-			Name:           msg_name,
-			RawName:        raw_name,
+			Name:           msgName,
+			TyName:         tyName,
+			RawName:        rawName,
 			MessageOrdinal: fidlMethod.Ordinal,
 			MinVersion:     fidlMethod.MinVersion,
 			RequestStruct:  req_struct,

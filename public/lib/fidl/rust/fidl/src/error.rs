@@ -43,7 +43,7 @@ pub enum Error {
     /// The remote handle was closed.
     RemoteClosed,
 
-    /// A client future was polled after it had already completed.
+    /// A future was polled after it had already completed.
     PollAfterCompletion,
 
     /// An error was encountered during the execution of the server-side handler.

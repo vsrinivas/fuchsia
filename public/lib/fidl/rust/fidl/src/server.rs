@@ -4,7 +4,7 @@
 
 //! An implementation of a server for a fidl interface.
 
-use {DecodeBuf, EncodeBuf, Error, FidlService, Result, MsgType};
+use {DecodeBuf, EncodeBuf, Error, FidlService, MsgType};
 
 use std::io;
 
@@ -16,8 +16,14 @@ use zircon::Channel;
 
 use tokio_fuchsia;
 
-/// A value indicating that the current channel should be closed.
+/// A value from a server handler indicating that the current channel should be closed.
 pub struct CloseChannel;
+
+impl From<CloseChannel> for Error {
+    fn from(_: CloseChannel) -> Error {
+        Error::ServerExecution
+    }
+}
 
 /// The "stub" which handles raw FIDL buffer requests.
 pub trait Stub {
@@ -25,22 +31,25 @@ pub trait Stub {
     type Service: FidlService;
 
     /// The type of the future that is resolved to a response.
-    type DispatchFuture: Future<Item = EncodeBuf, Error = Error>;
+    type DispatchResponseFuture: Future<Item = EncodeBuf, Error = Error>;
+
+    /// The type of the future that dispatches a message with no response.
+    type DispatchFuture: Future<Item = (), Error = Error>;
 
     /// Dispatches a request and returns a future for the response.
-    fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture;
+    fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchResponseFuture;
 
-    /// Dispatches a request that doesn't have a response.
-    fn dispatch(&mut self, request: &mut DecodeBuf) -> Result<()>;
+    /// Dispatches a request and returns a future with no response.
+    fn dispatch(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture;
 }
 
 #[must_use = "futures do nothing unless polled"]
-struct DispatchFuture<S: Stub> {
+struct DispatchResponseFutureWithId<S: Stub> {
     id: u64,
-    future: S::DispatchFuture,
+    future: S::DispatchResponseFuture,
 }
 
-impl<S: Stub> Future for DispatchFuture<S> {
+impl<S: Stub> Future for DispatchResponseFutureWithId<S> {
     type Item = (u64, EncodeBuf);
     type Error = Error;
 
@@ -61,7 +70,8 @@ pub struct Server<S: Stub> {
     channel: tokio_fuchsia::Channel,
     stub: S,
     buf: DecodeBuf,
-    dispatch_futures: FuturesUnordered<DispatchFuture<S>>,
+    dispatch_futures: FuturesUnordered<S::DispatchFuture>,
+    dispatch_response_futures: FuturesUnordered<DispatchResponseFutureWithId<S>>,
 }
 
 impl<S: Stub> Server<S> {
@@ -72,6 +82,7 @@ impl<S: Stub> Server<S> {
             channel: tokio_fuchsia::Channel::from_channel(channel, handle)?,
             buf: DecodeBuf::new(),
             dispatch_futures: FuturesUnordered::new(),
+            dispatch_response_futures: FuturesUnordered::new(),
         })
     }
 }
@@ -82,17 +93,20 @@ impl<S: Stub> Future for Server<S> {
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
-            let made_progress_this_loop_iter;
+            let mut made_progress_this_loop_iter = false;
 
             // Handle one dispatch_future at a time if any are available
-            let item = self.dispatch_futures.poll()?;
+            if let Async::Ready(Some(())) = self.dispatch_futures.poll()? {
+                made_progress_this_loop_iter = true;
+            }
+
+            // Handle one dispatch_response_future at a time if any are available
+            let item = self.dispatch_response_futures.poll()?;
             if let Async::Ready(Some((id, mut encode_buf))) = item {
                 encode_buf.set_message_id(id);
                 let (out_buf, handles) = encode_buf.get_mut_content();
                 self.channel.write(out_buf, handles, 0)?;
                 made_progress_this_loop_iter = true;
-            } else {
-                made_progress_this_loop_iter = false;
             }
 
             // Now process incoming requests
@@ -100,12 +114,13 @@ impl<S: Stub> Future for Server<S> {
                 Ok(()) => {
                     match self.buf.decode_message_header() {
                         Some(MsgType::Request) => {
-                            self.stub.dispatch(&mut self.buf)?;
+                            self.dispatch_futures.push(self.stub.dispatch(&mut self.buf));
                         }
                         Some(MsgType::RequestExpectsResponse) => {
                             let id = self.buf.get_message_id();
                             let future = self.stub.dispatch_with_response(&mut self.buf);
-                            self.dispatch_futures.push(DispatchFuture { id, future });
+                            self.dispatch_response_futures.push(
+                                DispatchResponseFutureWithId { id, future });
                         }
                         None | Some(MsgType::Response) => {
                             return Err(Error::InvalidHeader);
@@ -132,7 +147,7 @@ mod tests {
     use futures::future;
     use byteorder::{ByteOrder, LittleEndian};
     use super::*;
-    use {ClientEnd, ServerEnd};
+    use {ClientEnd, ServerEnd, Result};
 
     struct DummyDispatcher;
     struct DummyService;
@@ -152,17 +167,17 @@ mod tests {
     impl Stub for DummyDispatcher {
         type Service = DummyService;
 
-        type DispatchFuture = future::FutureResult<EncodeBuf, Error>;
-
-        fn dispatch_with_response(&mut self, _request: &mut DecodeBuf) -> Self::DispatchFuture {
+        type DispatchResponseFuture = future::FutureResult<EncodeBuf, Error>;
+        fn dispatch_with_response(&mut self, _request: &mut DecodeBuf) -> Self::DispatchResponseFuture {
             let buf = EncodeBuf::new_response(43);
             future::ok(buf)
         }
 
-        fn dispatch(&mut self, request: &mut DecodeBuf) -> Result<()> {
+        type DispatchFuture = future::FutureResult<(), Error>;
+        fn dispatch(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture {
             let ordinal = LittleEndian::read_u32(&request.get_bytes()[8..12]);
             assert_eq!(ordinal, 42);
-            Ok(())
+            future::ok(())
         }
     }
 

@@ -33,16 +33,27 @@ pub use interface::InterfacePtr;
 pub use client::{Client, FidlService};
 pub use endpoints::{ClientEnd, ServerEnd};
 
-/// A specialized `Box<Future<...>>` type for FIDL server implementations.
-/// This is a convenience to avoid writing
-/// `Box<Future<Item = I, Error = CloseChannel> + Send>`.
-/// Errors in this `Future` should require no extra handling, and upon error the type should
-/// be dropped.
-pub type ServerFuture<Item> = Box<futures::Future<Item = Item, Error = CloseChannel> + Send>;
-
 /// A specialized `Box<Future<...>>` type for FIDL.
 /// This is a convenience to avoid writing
-/// `Box<Future<Item = I, Error = CloseChannel> + Send>`.
+/// `Future<Item = I, Error = CloseChannel> + Send`.
 /// The error type indicates various FIDL protocol errors, as well as general-purpose IO
 /// errors such as a closed channel.
 pub type BoxFuture<Item> = Box<futures::Future<Item = Item, Error = Error> + Send>;
+
+/// A specialized `Future<...>` type for FIDL server implementations.
+/// This is a convenience to avoid writing
+/// `Future<Item = I, Error = CloseChannel> + Send>`.
+/// Errors in this `Future` should require no extra handling, and upon error the type should
+/// be dropped.
+pub trait ServerFuture<Item>: futures::Future<Item = Item, Error = CloseChannel> + Send {}
+impl<T, Item> ServerFuture<Item> for T
+    where T: futures::Future<Item = Item, Error = CloseChannel> + Send {}
+
+/// A specialized `Future<...>` type for FIDL.
+/// This is a convenience to avoid writing
+/// `Future<Item = I, Error = fidl::Error> + Send`.
+/// The error type indicates various FIDL protocol errors, as well as general-purpose IO
+/// errors such as a closed channel.
+pub trait Future<Item>: futures::Future<Item = Item, Error = Error> + Send {}
+impl<T, Item> Future<Item> for T
+    where T: futures::Future<Item = Item, Error = Error> + Send {}

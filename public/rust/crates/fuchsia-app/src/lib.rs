@@ -148,7 +148,7 @@ pub mod client {
 /// Tools for providing Fuchsia services.
 pub mod server {
     use super::*;
-    use futures::{Future, Poll};
+    use futures::{future, Future, Poll};
 
     type ServerInner<Services> =
         fidl::Server<ServiceProvider::Dispatcher<ServiceProviderServer<Services>>>;
@@ -289,11 +289,12 @@ pub mod server {
     }
 
     impl<Services: ServiceFactories> ServiceProvider::Server for ServiceProviderServer<Services> {
+        type ConnectToService = future::FutureResult<(), fidl::CloseChannel>;
         fn connect_to_service(&mut self, service_name: String, channel: Channel)
-            -> Result<(), fidl::CloseChannel>
+            -> Self::ConnectToService
         {
             self.services.spawn_service(service_name, channel, &self.handle);
-            Ok(())
+            future::ok(())
         }
     }
 }

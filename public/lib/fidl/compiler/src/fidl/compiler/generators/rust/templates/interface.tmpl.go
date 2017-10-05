@@ -49,23 +49,25 @@ const GenerateInterface = `
 pub mod {{$interface.Name}} {
 
 use fidl::{self, DecodeBuf, DecodablePtr, EncodeBuf, EncodablePtr, FidlService, Stub};
-use futures::{Future, future};
+use futures::{Async, Poll, Future, future};
 use zircon;
 use tokio_core::reactor;
 use super::*;
 
 pub trait Server {
     {{range $message := $interface.Messages}}
+        type {{$message.TyName}}: fidl::ServerFuture<
+            {{- if ne $message.ResponseStruct.Name "" }}
+                {{template "GenerateResponseType" $message.ResponseStruct}}
+            {{- else }}
+                ()
+            {{end}}
+        >;
         fn {{$message.Name}}(&mut self
             {{- range $index, $field := $message.RequestStruct.Fields -}}
                 , {{$field.Name}}: {{$field.Type}}
             {{- end -}}
-        )
-        {{- if ne $message.ResponseStruct.Name "" }}
-            -> fidl::ServerFuture<{{template "GenerateResponseType" $message.ResponseStruct}}>
-        {{- else}}
-            -> Result<(), fidl::CloseChannel>
-        {{end}};
+        ) -> Self::{{$message.TyName}};
     {{end}}
 }
 
@@ -86,79 +88,55 @@ pub trait Client {
 
 pub struct Dispatcher<T: Server>(pub T);
 
-impl<T: Server> Stub for Dispatcher<T> {
-    type Service = Service;
-
-    // TODO(cramertj): consider optimizing with an enum to avoid unnecessary boxing
-    type DispatchFuture = fidl::BoxFuture<EncodeBuf>;
-
-    #[inline]
-    fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture {
-        let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
-        match name {
-            {{range $message := $interface.Messages}}
-                {{if ne $message.ResponseStruct.Name ""}}
-                    {{$message.MessageOrdinal}} => self.
-                    {{- $message.RawName}}(request),
-                {{end}}
-            {{end}}
-            _ => Box::new(future::err(fidl::Error::UnknownOrdinal))
-        }
-    }
-
-    #[inline]
-    fn dispatch(&mut self, request: &mut ::fidl::DecodeBuf) -> Result<(), fidl::Error> {
-        let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
-        match name {
-            {{range $message := $interface.Messages}}
-                {{if eq $message.ResponseStruct.Name ""}}
-                    {{$message.MessageOrdinal}} =>
-                        self.{{- $message.RawName}}(request),
-                {{end}}
-            {{end}}
-            _ => Err(::fidl::Error::UnknownOrdinal)
-        }
-    }
+pub enum DispatchResponseFuture <
+    {{range $message := $interface.Messages}}
+        {{if ne $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}},
+        {{end}}
+    {{end}}
+> {
+    {{range $message := $interface.Messages}}
+        {{if ne $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}}({{- $message.TyName}}),
+        {{end}}
+    {{end}}
+    FidlError(fidl::Error),
 }
 
-impl<T: Server> Dispatcher<T> {
-    {{- range $message := $interface.Messages}}
-        #[inline]
-        fn {{$message.RawName}}(&mut self, request: &mut fidl::DecodeBuf)
-            {{- if eq $message.ResponseStruct.Name "" }}
-                -> Result<(), fidl::Error>
-                {
-                    let request: {{$message.RequestStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(request, 16));
-                    self.0.{{$message.Name}}(
-                        {{- range $index, $field := $message.RequestStruct.Fields -}}
-                        {{- if $index}}, {{end -}}
-                        request.{{- $field.Name -}}
-                        {{- end -}}
-                    ).map_err(|fidl::CloseChannel| fidl::Error::ServerExecution)
-                }
-            {{- else}}
-                -> Box<Future<Item = EncodeBuf, Error = fidl::Error> + Send>
-                {
-                    let r: ::fidl::Result<{{$message.RequestStruct.Name}}> = ::fidl::DecodablePtr::decode_obj(request, 24);
-                    let request = match r {
-                        Ok(request) => request,
-                        Err(error) => return Box::new(future::err(error)),
-                    };
+impl<
+    {{range $message := $interface.Messages}}
+        {{if ne $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}}: fidl::ServerFuture<
+                {{template "GenerateResponseType" $message.ResponseStruct}}
+            >,
+        {{end}}
+    {{end}}
+>
+Future for DispatchResponseFuture<
+    {{range $message := $interface.Messages}}
+        {{if ne $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}},
+        {{end}}
+    {{end}}
+>
+{
+    type Item = EncodeBuf;
+    type Error = fidl::Error;
+    fn poll(&mut self) -> Poll<EncodeBuf, fidl::Error> {
+        match *self {
+            {{range $message := $interface.Messages}}
+                {{if ne $message.ResponseStruct.Name ""}}
+                    DispatchResponseFuture::{{- $message.TyName}}(ref mut inner) => {
+                        let res = try_ready!(inner.poll());
+                        // Split apart response tuple into multiple response fields
+                        let ({{- if ne 1 (len $message.ResponseStruct.Fields) -}} ( {{- end -}}
+                            {{- range $index, $field := $message.ResponseStruct.Fields -}}
+                                {{- if $index}}, {{end -}}
+                                {{- $field.Name -}}
+                            {{- end -}}
+                            {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ) {{- end -}}
+                            ,)= (res,);
 
-                    Box::new(self.0.{{$message.Name}}(
-                        {{- range $index, $field := $message.RequestStruct.Fields -}}
-                            {{- if $index}}, {{end -}}
-                            request.{{- $field.Name -}}
-                        {{- end -}}
-                    ).map(|
-                        {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ( {{- end -}}
-                        {{- range $index, $field := $message.ResponseStruct.Fields -}}
-                            {{- if $index}}, {{end -}}
-                            {{- $field.Name -}}
-                        {{- end -}}
-                        {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ) {{- end -}}
-                        |
-                    {
                         let response = {{$message.ResponseStruct.Name}} {
                             {{range $field := $message.ResponseStruct.Fields}}
                                 {{$field.Name}}: {{$field.Name}},
@@ -166,13 +144,137 @@ impl<T: Server> Dispatcher<T> {
                         };
                         let mut encode_buf = ::fidl::EncodeBuf::new_response({{$message.MessageOrdinal}});
                         ::fidl::EncodablePtr::encode_obj(response, &mut encode_buf);
-                        encode_buf
-                    }).map_err(|fidl::CloseChannel| fidl::Error::ServerExecution))
-                }
+                        Ok(Async::Ready(encode_buf))
+                    }
+                {{end}}
             {{end}}
-    {{end}}
+            DispatchResponseFuture::FidlError(ref mut err) =>
+                Err(::std::mem::replace(err, fidl::Error::PollAfterCompletion)),
+        }
+    }
 }
 
+pub enum DispatchFuture <
+    {{range $message := $interface.Messages}}
+        {{if eq $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}},
+        {{end}}
+    {{end}}
+> {
+    {{range $message := $interface.Messages}}
+        {{if eq $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}}({{- $message.TyName}}),
+        {{end}}
+    {{end}}
+    FidlError(fidl::Error),
+}
+
+impl<
+    {{range $message := $interface.Messages}}
+        {{if eq $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}}: fidl::ServerFuture<()>,
+        {{end}}
+    {{end}}
+> Future for DispatchFuture<
+    {{range $message := $interface.Messages}}
+        {{if eq $message.ResponseStruct.Name ""}}
+            {{- $message.TyName}},
+        {{end}}
+    {{end}}
+> {
+    type Item = ();
+    type Error = fidl::Error;
+    fn poll(&mut self) -> Poll<(), fidl::Error> {
+        match *self {
+            {{range $message := $interface.Messages}}
+                {{if eq $message.ResponseStruct.Name ""}}
+                    DispatchFuture::{{- $message.TyName}}(ref mut inner) => {
+                        inner.poll().map_err(Into::into)
+                    }
+                {{end}}
+            {{end}}
+            DispatchFuture::FidlError(ref mut err) =>
+                Err(::std::mem::replace(err, fidl::Error::PollAfterCompletion)),
+        }
+    }
+}
+
+impl<T: Server> Stub for Dispatcher<T> {
+    type Service = Service;
+
+    type DispatchResponseFuture = DispatchResponseFuture<
+        {{range $message := $interface.Messages}}
+            {{if ne $message.ResponseStruct.Name ""}}
+                T::{{- $message.TyName}},
+            {{end}}
+        {{end}}
+    >;
+
+    type DispatchFuture = DispatchFuture<
+        {{range $message := $interface.Messages}}
+            {{if eq $message.ResponseStruct.Name ""}}
+                T::{{- $message.TyName}},
+            {{end}}
+        {{end}}
+    >;
+
+    #[inline]
+    fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchResponseFuture {
+        let name: u32 = match fidl::Decodable::decode(request, 0, 8) {
+            Ok(x) => x,
+            Err(e) => return DispatchResponseFuture::FidlError(e),
+        };
+
+        match name {
+            {{range $message := $interface.Messages}}
+                {{if ne $message.ResponseStruct.Name ""}}
+                    {{$message.MessageOrdinal}} => {
+                        let request: {{$message.RequestStruct.Name}} = match fidl::DecodablePtr::decode_obj(request, 24) {
+                            Ok(request) => request,
+                            Err(e) => return DispatchResponseFuture::FidlError(e),
+                        };
+                        DispatchResponseFuture::{{- $message.TyName}}(
+                            Server::{{$message.Name}}(&mut self.0
+                                {{- range $index, $field := $message.RequestStruct.Fields -}}
+                                    , request.{{- $field.Name -}}
+                                {{- end -}}
+                            )
+                        )
+                    }
+                {{end}}
+            {{end}}
+            _ => DispatchResponseFuture::FidlError(fidl::Error::UnknownOrdinal),
+        }
+    }
+
+    #[inline]
+    fn dispatch(&mut self, request: &mut ::fidl::DecodeBuf) -> Self::DispatchFuture {
+        let name: u32 = match fidl::Decodable::decode(request, 0, 8) {
+            Ok(x) => x,
+            Err(e) => return DispatchFuture::FidlError(e),
+        };
+        match name {
+            {{range $message := $interface.Messages}}
+                {{if eq $message.ResponseStruct.Name ""}}
+                    {{$message.MessageOrdinal}} => {
+                        let request: {{$message.RequestStruct.Name}} = match fidl::DecodablePtr::decode_obj(request, 16) {
+                            Ok(request) => request,
+                            Err(e) => return DispatchFuture::FidlError(e),
+                        };
+                        DispatchFuture::{{- $message.TyName}}(
+                            Server::{{$message.Name}}(&mut self.0
+                                {{- range $index, $field := $message.RequestStruct.Fields -}}
+                                    , request.{{- $field.Name -}}
+                                {{- end -}}
+                            )
+                        )
+                    }
+                {{end}}
+            {{end}}
+            _ => DispatchFuture::FidlError(::fidl::Error::UnknownOrdinal)
+        }
+    }
+}
 
 pub struct Proxy(fidl::Client);
 

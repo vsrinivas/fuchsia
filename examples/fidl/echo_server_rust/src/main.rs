@@ -21,10 +21,12 @@ use tokio_core::reactor;
 struct EchoServer;
 
 impl Echo::Server for EchoServer {
-    fn echo_string(&mut self, value: Option<String>)
-        -> fidl::ServerFuture<Option<String>>
+
+    type EchoString = future::FutureResult<Option<String>, fidl::CloseChannel>;
+
+    fn echo_string(&mut self, value: Option<String>) -> Self::EchoString
     {
-        Box::new(future::ok(value))
+        future::ok(value)
     }
 }
 
