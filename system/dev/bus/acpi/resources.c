@@ -116,3 +116,43 @@ zx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out) {
 
     return ZX_OK;
 }
+
+zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
+    switch (res->Type) {
+        case ACPI_RESOURCE_TYPE_IRQ: {
+            ACPI_RESOURCE_IRQ* irq = &res->Data.Irq;
+            out->trigger = irq->Triggering;
+            out->polarity = irq->Polarity;
+            out->sharable = irq->Sharable;
+            out->wake_capable = irq->WakeCapable;
+            out->pin_count = irq->InterruptCount;
+            if (irq->InterruptCount > countof(out->pins)) {
+                return ZX_ERR_OUT_OF_RANGE;
+            }
+            for (uint8_t i = 0;
+                 (i < irq->InterruptCount) && (i < countof(out->pins)); i++) {
+                out->pins[i] = irq->Interrupts[i];
+            }
+            break;
+        }
+        case ACPI_RESOURCE_TYPE_EXTENDED_IRQ: {
+            ACPI_RESOURCE_EXTENDED_IRQ* irq = &res->Data.ExtendedIrq;
+            out->trigger = irq->Triggering;
+            out->polarity = irq->Polarity;
+            out->sharable = irq->Sharable;
+            out->wake_capable = irq->WakeCapable;
+            out->pin_count = irq->InterruptCount;
+            if (irq->InterruptCount > countof(out->pins)) {
+                return ZX_ERR_OUT_OF_RANGE;
+            }
+            for (uint8_t i = 0;
+                 (i < irq->InterruptCount) && (i < countof(out->pins)); i++) {
+                out->pins[i] = irq->Interrupts[i];
+            }
+            break;
+        }
+        default: return ZX_ERR_INVALID_ARGS;
+    }
+
+    return ZX_OK;
+}

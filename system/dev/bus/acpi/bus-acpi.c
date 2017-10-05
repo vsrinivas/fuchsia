@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/debug.h>
+#include <ddk/protocol/acpi.h>
 #include <ddk/protocol/pciroot.h>
 
 #include <inttypes.h>
@@ -14,27 +15,62 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <threads.h>
 
 #include <zircon/compiler.h>
 #include <zircon/process.h>
-#include <zircon/processargs.h>
-#include <zircon/syscalls.h>
 
 #include "errors.h"
 #include "init.h"
 #include "dev.h"
+#include "errors.h"
 #include "pci.h"
 #include "powerbtn.h"
 #include "processor.h"
 #include "power.h"
+#include "resources.h"
 
 #define MAX_NAMESPACE_DEPTH 100
 
 #define HID_LENGTH 8
 #define CID_LENGTH 8
 
+typedef struct acpi_device_resource {
+    bool writeable;
+    uint32_t base_address;
+    uint32_t alignment;
+    uint32_t address_length;
+} acpi_device_resource_t;
+
+typedef struct acpi_device_irq {
+    uint8_t trigger;
+#define ACPI_IRQ_TRIGGER_LEVEL  0
+#define ACPI_IRQ_TRIGGER_EDGE   1
+    uint8_t polarity;
+#define ACPI_IRQ_ACTIVE_HIGH    0
+#define ACPI_IRQ_ACTIVE_LOW     1
+#define ACPI_IRQ_ACTIVE_BOTH    2
+    uint8_t sharable;
+#define ACPI_IRQ_EXCLUSIVE      0
+#define ACPI_IRQ_SHARED         1
+    uint8_t wake_capable;
+    uint8_t pin;
+} acpi_device_irq_t;
+
 typedef struct acpi_device {
     zx_device_t* zxdev;
+
+    mtx_t lock;
+
+    bool got_resources;
+
+    // memory resources from _CRS
+    acpi_device_resource_t* resources;
+    size_t resource_count;
+
+    // interrupt resources from _CRS
+    acpi_device_irq_t* irqs;
+    size_t irq_count;
 
     // handle to the corresponding ACPI node
     ACPI_HANDLE ns_node;
@@ -206,6 +242,260 @@ static pciroot_protocol_ops_t pciroot_proto = {
     .get_auxdata = pciroot_op_get_auxdata,
 };
 
+typedef struct {
+    acpi_device_resource_t* resources;
+    size_t resource_count;
+    size_t resource_i;
+
+    acpi_device_irq_t* irqs;
+    size_t irq_count;
+    size_t irq_i;
+} acpi_crs_ctx_t;
+
+static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void* _ctx) {
+    acpi_crs_ctx_t* ctx = (acpi_crs_ctx_t*)_ctx;
+
+    if (resource_is_memory(res)) {
+        resource_memory_t mem;
+        zx_status_t st = resource_parse_memory(res, &mem);
+        // only expect fixed memory resource. resource_parse_memory sets minimum == maximum
+        // for this memory resource type.
+        if ((st != ZX_OK) || (mem.minimum != mem.maximum)) {
+            return AE_ERROR;
+        }
+
+        ctx->resources[ctx->resource_i].writeable = mem.writeable;
+        ctx->resources[ctx->resource_i].base_address = mem.minimum;
+        ctx->resources[ctx->resource_i].alignment = mem.alignment;
+        ctx->resources[ctx->resource_i].address_length = mem.address_length;
+
+        ctx->resource_i += 1;
+
+    } else if (resource_is_address(res)) {
+        resource_address_t addr;
+        zx_status_t st = resource_parse_address(res, &addr);
+        if (st != ZX_OK) {
+            return AE_ERROR;
+        }
+        if ((addr.resource_type == RESOURCE_ADDRESS_MEMORY) && addr.min_address_fixed &&
+            addr.max_address_fixed && (addr.maximum < addr.minimum)) {
+
+            ctx->resources[ctx->resource_i].writeable = true;
+            ctx->resources[ctx->resource_i].base_address = addr.min_address_fixed;
+            ctx->resources[ctx->resource_i].alignment = 0;
+            ctx->resources[ctx->resource_i].address_length = addr.address_length;
+
+            ctx->resource_i += 1;
+        }
+
+    } else if (resource_is_irq(res)) {
+        resource_irq_t irq;
+        zx_status_t st = resource_parse_irq(res, &irq);
+        if (st != ZX_OK) {
+            return AE_ERROR;
+        }
+        for (size_t i = 0; i < irq.pin_count; i++) {
+            ctx->irqs[ctx->irq_i].trigger = irq.trigger;
+            ctx->irqs[ctx->irq_i].polarity = irq.polarity;
+            ctx->irqs[ctx->irq_i].sharable = irq.sharable;
+            ctx->irqs[ctx->irq_i].wake_capable = irq.wake_capable;
+            ctx->irqs[ctx->irq_i].pin = irq.pins[i];
+
+            ctx->irq_i += 1;
+        }
+    }
+
+    return AE_OK;
+}
+
+static ACPI_STATUS report_current_resources_count_cb(ACPI_RESOURCE* res, void* _ctx) {
+    acpi_crs_ctx_t* ctx = (acpi_crs_ctx_t*)_ctx;
+
+    if (resource_is_memory(res)) {
+        resource_memory_t mem;
+        zx_status_t st = resource_parse_memory(res, &mem);
+        if ((st != ZX_OK) || (mem.minimum != mem.maximum)) {
+            return AE_ERROR;
+        }
+        ctx->resource_count += 1;
+
+    } else if (resource_is_address(res)) {
+        resource_address_t addr;
+        zx_status_t st = resource_parse_address(res, &addr);
+        if (st != ZX_OK) {
+            return AE_ERROR;
+        }
+        if ((addr.resource_type == RESOURCE_ADDRESS_MEMORY) && addr.min_address_fixed &&
+            addr.max_address_fixed && (addr.maximum < addr.minimum)) {
+            ctx->resource_count += 1;
+        }
+
+    } else if (resource_is_irq(res)) {
+        ctx->irq_count += res->Data.Irq.InterruptCount;
+    }
+
+    return AE_OK;
+}
+
+static zx_status_t report_current_resources(acpi_device_t* dev) {
+    acpi_crs_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+
+    if (dev->got_resources) {
+        return ZX_OK;
+    }
+
+    // call _CRS to count number of resources
+    ACPI_STATUS acpi_status = AcpiWalkResources(dev->ns_node, (char*)"_CRS",
+            report_current_resources_count_cb, &ctx);
+    if ((acpi_status != AE_NOT_FOUND) && (acpi_status != AE_OK)) {
+        return acpi_to_zx_status(acpi_status);
+    }
+
+    if (ctx.resource_count == 0) {
+        return ZX_OK;
+    }
+
+    // allocate resources
+    ctx.resources = calloc(ctx.resource_count, sizeof(acpi_device_resource_t));
+    if (!ctx.resources) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    ctx.irqs = calloc(ctx.irq_count, sizeof(acpi_device_irq_t));
+    if (!ctx.irqs) {
+        free(ctx.resources);
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // call _CRS again and fill in resources
+    acpi_status = AcpiWalkResources(dev->ns_node, (char*)"_CRS",
+            report_current_resources_resource_cb, &ctx);
+    if ((acpi_status != AE_NOT_FOUND) && (acpi_status != AE_OK)) {
+        free(ctx.resources);
+        free(ctx.irqs);
+        return acpi_to_zx_status(acpi_status);
+    }
+
+    dev->resources = ctx.resources;
+    dev->resource_count = ctx.resource_count;
+    dev->irqs = ctx.irqs;
+    dev->irq_count = ctx.irq_count;
+
+    dprintf(TRACE, "acpi-bus[%s]: found %zd resources %zx irqs\n", device_get_name(dev->zxdev),
+            dev->resource_count, dev->irq_count);
+    if (driver_get_log_flags() & DDK_LOG_SPEW) {
+        dprintf(SPEW, "resources:\n");
+        for (size_t i = 0; i < dev->resource_count; i++) {
+            dprintf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x writeable=%d\n", i,
+                    dev->resources[i].base_address,
+                    dev->resources[i].address_length,
+                    dev->resources[i].alignment,
+                    dev->resources[i].writeable);
+        }
+        dprintf(SPEW, "irqs:\n");
+        for (size_t i = 0; i < dev->irq_count; i++) {
+            dprintf(SPEW, "  %02zd: pin=%u %s %s %s %s\n", i,
+                    dev->irqs[i].pin,
+                    dev->irqs[i].trigger ? "edge" : "level",
+                    (dev->irqs[i].polarity == 2) ? "both" :
+                        (dev->irqs[i].polarity ? "low" : "high"),
+                    dev->irqs[i].sharable ? "shared" : "exclusive",
+                    dev->irqs[i].wake_capable ? "wake" : "nowake");
+        }
+    }
+
+    dev->got_resources = true;
+
+    return ZX_OK;
+}
+
+static zx_status_t acpi_op_map_resource(void* ctx, uint32_t res_id, uint32_t cache_policy,
+        void** out_vaddr, size_t* out_size, zx_handle_t* out_handle) {
+    acpi_device_t* dev = (acpi_device_t*)ctx;
+    mtx_lock(&dev->lock);
+
+    zx_status_t st = report_current_resources(dev);
+    if (st != ZX_OK) {
+        goto unlock;
+    }
+
+    if (res_id >= dev->resource_count) {
+        st = ZX_ERR_NOT_FOUND;
+        goto unlock;
+    }
+
+    acpi_device_resource_t* res = dev->resources + res_id;
+    if (((res->base_address & (PAGE_SIZE - 1)) != 0) ||
+        ((res->address_length & (PAGE_SIZE - 1)) != 0)) {
+        dprintf(ERROR, "acpi-bus[%s]: resource id=%d addr=0x%08x len=0x%x is not page aligned\n",
+                device_get_name(dev->zxdev), res_id, res->base_address, res->address_length);
+        st = ZX_ERR_NOT_FOUND;
+        goto unlock;
+    }
+
+    zx_handle_t vmo;
+    zx_vaddr_t vaddr;
+    size_t size = res->address_length;
+    st = zx_vmo_create_physical(get_root_resource(), res->base_address, size, &vmo);
+    if (st != ZX_OK) {
+        goto unlock;
+    }
+
+    st = zx_vmo_set_cache_policy(vmo, cache_policy);
+    if (st != ZX_OK) {
+        zx_handle_close(vmo);
+        goto unlock;
+    }
+
+    st = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
+                     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
+                     &vaddr);
+    if (st != ZX_OK) {
+        zx_handle_close(vmo);
+    } else {
+        *out_handle = vmo;
+        *out_vaddr = (void*)vaddr;
+        *out_size = size;
+    }
+unlock:
+    mtx_unlock(&dev->lock);
+    return st;
+}
+
+static zx_status_t acpi_op_map_interrupt(void* ctx, int which_irq, zx_handle_t* out_handle) {
+    acpi_device_t* dev = (acpi_device_t*)ctx;
+    mtx_lock(&dev->lock);
+
+    zx_status_t st = report_current_resources(dev);
+    if (st != ZX_OK) {
+        goto unlock;
+    }
+
+    if ((uint)which_irq >= dev->irq_count) {
+        st = ZX_ERR_NOT_FOUND;
+        goto unlock;
+    }
+
+    acpi_device_irq_t* irq = dev->irqs + which_irq;
+    zx_handle_t handle;
+    st = zx_interrupt_create(get_root_resource(), irq->pin, ZX_INTERRUPT_REMAP_IRQ, &handle);
+    if (st != ZX_OK) {
+        goto unlock;
+    }
+
+    *out_handle = handle;
+
+unlock:
+    mtx_unlock(&dev->lock);
+    return st;
+}
+
+// TODO marking unused until we publish some devices
+static __attribute__ ((unused)) acpi_protocol_ops_t acpi_proto = {
+    .map_resource = acpi_op_map_resource,
+    .map_interrupt = acpi_op_map_interrupt,
+};
+
 static zx_protocol_device_t acpi_root_device_proto = {
     .version = DEVICE_OPS_VERSION,
 };
@@ -249,6 +539,12 @@ static zx_device_t* publish_device(zx_device_t* parent,
     zx_device_prop_t props[4];
     int propcount = 0;
 
+    char acpi_name[5] = { 0 };
+    if (!name) {
+        memcpy(acpi_name, &info->Name, sizeof(acpi_name) - 1);
+        name = (const char*)acpi_name;
+    }
+
     // Publish HID in device props
     const char* hid = hid_from_acpi_devinfo(info);
     if (hid) {
@@ -271,9 +567,7 @@ static zx_device_t* publish_device(zx_device_t* parent,
 
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         // ACPI names are always 4 characters in a uint32
-        char acpi_name[5] = { 0 };
-        memcpy(acpi_name, &info->Name, sizeof(acpi_name) - 1);
-        zxlogf(SPEW, "acpi-bus: got device %s\n", acpi_name);
+        dprintf(SPEW, "acpi-bus: got device %s\n", acpi_name);
         if (info->Valid & ACPI_VALID_HID) {
             zxlogf(SPEW, "     HID=%s\n", info->HardwareId.String);
         } else {
@@ -297,8 +591,6 @@ static zx_device_t* publish_device(zx_device_t* parent,
             zxlogf(SPEW, "     [%d] id=0x%08x value=0x%08x\n", i, props[i].id, props[i].value);
         }
     }
-
-    // TODO: publish pciroot and other acpi devices in separate devhosts?
 
     acpi_device_t* dev = calloc(1, sizeof(acpi_device_t));
     if (!dev) {

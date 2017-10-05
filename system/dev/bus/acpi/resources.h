@@ -49,6 +49,15 @@ typedef struct resource_io {
     uint16_t maximum;
 } resource_io_t;
 
+typedef struct resource_irq {
+    uint8_t trigger;
+    uint8_t polarity;
+    uint8_t sharable;
+    uint8_t wake_capable;
+    uint8_t pin_count;
+    uint32_t pins[16];
+} resource_irq_t;
+
 static bool resource_is_memory(ACPI_RESOURCE* res) {
     return res->Type == ACPI_RESOURCE_TYPE_MEMORY24 ||
             res->Type == ACPI_RESOURCE_TYPE_MEMORY32||
@@ -67,6 +76,12 @@ static bool resource_is_io(ACPI_RESOURCE* res) {
             res->Type == ACPI_RESOURCE_TYPE_FIXED_IO;
 }
 
+static bool resource_is_irq(ACPI_RESOURCE* res) {
+    return res->Type == ACPI_RESOURCE_TYPE_IRQ ||
+            res->Type == ACPI_RESOURCE_TYPE_EXTENDED_IRQ;
+}
+
 zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out);
 zx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out);
 zx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out);
+zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out);
