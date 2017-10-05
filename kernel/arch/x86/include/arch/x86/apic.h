@@ -13,11 +13,12 @@
 
 __BEGIN_CDECLS
 
-#define INVALID_APIC_ID             0xffffffff
-#define APIC_PHYS_BASE              0xfee00000
-#define IA32_APIC_BASE_BSP          (1u << 8)
-#define IA32_APIC_BASE_XAPIC_ENABLE (1u << 11)
-#define NUM_ISA_IRQS                16
+#define INVALID_APIC_ID              0xffffffff
+#define APIC_PHYS_BASE               0xfee00000
+#define IA32_APIC_BASE_BSP           (1u << 8)
+#define IA32_APIC_BASE_X2APIC_ENABLE (1u << 10)
+#define IA32_APIC_BASE_XAPIC_ENABLE  (1u << 11)
+#define NUM_ISA_IRQS                 16
 
 // LVT Timer bitmasks
 #define LVT_TIMER_VECTOR_MASK       0x000000ff

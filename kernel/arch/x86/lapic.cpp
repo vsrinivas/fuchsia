@@ -25,17 +25,16 @@
 
 // We currently only implement support for the xAPIC
 
-// Initialization MSR
-#define IA32_APIC_BASE_X2APIC_ENABLE (1 << 10)
-
 // Virtual address of the local APIC's MMIO registers
 static void *apic_virt_base;
+static bool x2apic_enabled = false;
 
 static uint8_t bsp_apic_id;
 static bool bsp_apic_id_valid;
 
 // local apic registers
 // set as an offset into the mmio region here
+// x2APIC msr offsets are these >> 4
 #define LAPIC_REG_ID                  (0x020)
 #define LAPIC_REG_VERSION             (0x030)
 #define LAPIC_REG_TASK_PRIORITY       (0x080)
@@ -60,6 +59,10 @@ static bool bsp_apic_id_valid;
 #define LAPIC_REG_CURRENT_COUNT       (0x390)
 #define LAPIC_REG_DIVIDE_CONF         (0x3E0)
 
+#define LAPIC_X2APIC_MSR_BASE         (0x800)
+#define LAPIC_X2APIC_MSR_ICR          (0x830)
+#define LAPIC_X2APIC_MSR_SELF_IPI     (0x83f)
+
 // Spurious IRQ bitmasks
 #define SVR_APIC_ENABLE (1 << 8)
 #define SVR_SPURIOUS_VECTOR(x) (x)
@@ -76,6 +79,9 @@ static bool bsp_apic_id_valid;
 #define ICR_DST_ALL ICR_DST_SHORTHAND(2)
 #define ICR_DST_ALL_MINUS_SELF ICR_DST_SHORTHAND(3)
 
+#define X2_ICR_DST(x) ((uint64_t)(x) << 32)
+#define X2_ICR_BROADCAST ((uint64_t)(0xffffffff) << 32)
+
 // Common LVT bitmasks
 #define LVT_VECTOR(x) (x)
 #define LVT_DELIVERY_MODE(x) (((uint32_t)(x)) << 8)
@@ -86,11 +92,19 @@ static void apic_error_init(void);
 static void apic_timer_init(void);
 
 static uint32_t lapic_reg_read(size_t offset) {
-    return *((volatile uint32_t *)((uintptr_t)apic_virt_base + offset));
+    if (x2apic_enabled) {
+        return read_msr32(LAPIC_X2APIC_MSR_BASE + (uint32_t)(offset >> 4));
+    } else {
+        return *((volatile uint32_t *)((uintptr_t)apic_virt_base + offset));
+    }
 }
 
 static void lapic_reg_write(size_t offset, uint32_t val) {
-    *((volatile uint32_t *)((uintptr_t)apic_virt_base + offset)) = val;
+    if (x2apic_enabled) {
+        write_msr(LAPIC_X2APIC_MSR_BASE + (uint32_t)(offset >> 4), val);
+    } else {
+        *((volatile uint32_t *)((uintptr_t)apic_virt_base + offset)) = val;
+    }
 }
 
 static void lapic_reg_or(size_t offset, uint32_t bits) {
@@ -104,21 +118,24 @@ static void lapic_reg_and(size_t offset, uint32_t bits) {
 // This function must be called once on the kernel address space
 void apic_vm_init(void)
 {
-    ASSERT(apic_virt_base == NULL);
-    // Create a mapping for the page of MMIO registers
-    zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
-            "lapic",
-            PAGE_SIZE, // size
-            &apic_virt_base, // returned virtual address
-            PAGE_SIZE_SHIFT, // alignment log2
-            APIC_PHYS_BASE, // physical address
-            0, // vmm flags
-            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
-                ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
-    if (res != ZX_OK) {
-        panic("Could not allocate APIC management page: %d\n", res);
+    // only memory map the aperture if we're using the legacy mmio interface
+    if (!x2apic_enabled) {
+        ASSERT(apic_virt_base == NULL);
+        // Create a mapping for the page of MMIO registers
+        zx_status_t res = VmAspace::kernel_aspace()->AllocPhysical(
+                "lapic",
+                PAGE_SIZE, // size
+                &apic_virt_base, // returned virtual address
+                PAGE_SIZE_SHIFT, // alignment log2
+                APIC_PHYS_BASE, // physical address
+                0, // vmm flags
+                ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
+                    ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
+        if (res != ZX_OK) {
+            panic("Could not allocate APIC management page: %d\n", res);
+        }
+        ASSERT(apic_virt_base != NULL);
     }
-    ASSERT(apic_virt_base != NULL);
 }
 
 // Initializes the current processor's local APIC.  Should be called after
@@ -127,9 +144,19 @@ void apic_local_init(void)
 {
     DEBUG_ASSERT(arch_ints_disabled());
 
-    // Enter XAPIC mode and set the base address
     uint64_t v = read_msr(X86_MSR_IA32_APIC_BASE);
+
+    // if were the boot processor, test and cache x2apic ability
+    if (v & IA32_APIC_BASE_BSP) {
+        if (x86_feature_test(X86_FEATURE_X2APIC)) {
+            dprintf(SPEW, "x2APIC enabled\n");
+            x2apic_enabled = true;
+        }
+    }
+
+    // Enter xAPIC or x2APIC mode and set the base address
     v |= IA32_APIC_BASE_XAPIC_ENABLE;
+    v |= x2apic_enabled ? IA32_APIC_BASE_X2APIC_ENABLE : 0;
     write_msr(X86_MSR_IA32_APIC_BASE, v);
 
     // If this is the bootstrap processor, we should record our APIC ID now
@@ -152,7 +179,16 @@ void apic_local_init(void)
 
 uint8_t apic_local_id(void)
 {
-    return (uint8_t)(lapic_reg_read(LAPIC_REG_ID) >> 24);
+    uint32_t id = lapic_reg_read(LAPIC_REG_ID);
+
+    // legacy apic stores the id in the top 8 bits of the register
+    if (!x2apic_enabled)
+        id >>= 24;
+
+    // we can only deal with 8 bit apic ids right now
+    DEBUG_ASSERT(id < 256);
+
+    return (uint8_t)id;
 }
 
 uint8_t apic_bsp_id(void)
@@ -180,9 +216,13 @@ void apic_send_ipi(
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST(dst_apic_id));
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    if (x2apic_enabled) {
+        write_msr(LAPIC_X2APIC_MSR_ICR, X2_ICR_DST(dst_apic_id) | request);
+    } else {
+        lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST(dst_apic_id));
+        lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+        apic_wait_for_ipi_send();
+    }
     arch_interrupt_restore(state, 0);
 }
 
@@ -193,8 +233,13 @@ void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm)
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    if (x2apic_enabled) {
+        // special register for triggering self ipis
+        write_msr(LAPIC_X2APIC_MSR_SELF_IPI, vector);
+    } else {
+        lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+        apic_wait_for_ipi_send();
+    }
     arch_interrupt_restore(state, 0);
 }
 
@@ -208,9 +253,13 @@ void apic_send_broadcast_self_ipi(
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    if (x2apic_enabled) {
+        write_msr(LAPIC_X2APIC_MSR_ICR, X2_ICR_BROADCAST | request);
+    } else {
+        lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
+        lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+        apic_wait_for_ipi_send();
+    }
     arch_interrupt_restore(state, 0);
 }
 
@@ -224,16 +273,20 @@ void apic_send_broadcast_ipi(
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    if (x2apic_enabled) {
+        write_msr(LAPIC_X2APIC_MSR_ICR, X2_ICR_BROADCAST | request);
+    } else {
+        lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
+        lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+        apic_wait_for_ipi_send();
+    }
     arch_interrupt_restore(state, 0);
 }
 
 void apic_issue_eoi(void)
 {
-    // Write any value to the EOI address to issue an EOI
-    lapic_reg_write(LAPIC_REG_EOI, 1);
+    // Write 0 to the EOI address to issue an EOI
+    lapic_reg_write(LAPIC_REG_EOI, 0);
 }
 
 // If this function returns an error, timer state will not have
