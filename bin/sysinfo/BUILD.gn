@@ -12,9 +12,7 @@ executable("sysinfo") {
     "launchpad",
     "zircon",
   ]
-  deps = [
-    "//garnet/public/lib/fxl",
-  ]
+  deps = [ "//garnet/public/lib/netstack/c" ]
 }
 
 package("package") {
@@ -24,9 +22,7 @@ package("package") {
 
   package_name = "sysinfo"
 
-  binaries = [
-    {
-      name = "sysinfo"
-    },
-  ]
+  binaries = [ {
+        name = "sysinfo"
+      } ]
 }
