@@ -987,15 +987,27 @@ int dump_bootdata(const char* fn) {
             printf("%08zx: %08x BOOTFS @/system (size=%08x)\n",
                    off, hdr.length, hdr.extra);
             break;
-        case BOOTDATA_KERNEL:
-            printf("%08zx: %08x KERNEL\n", off, hdr.length);
-            break;
-        case BOOTDATA_MDI:
-            printf("%08zx: %08x MDI\n", off, hdr.length);
-            break;
-        case BOOTDATA_CMDLINE:
-            printf("%08zx: %08x CMDLINE\n", off, hdr.length);
-            break;
+
+#define BOOTDATA_CASE(type)                                         \
+        case BOOTDATA_##type:                                       \
+            printf("%08zx: %08x %s\n", off, hdr.length, #type);     \
+            break
+        BOOTDATA_CASE(MDI);
+        BOOTDATA_CASE(KERNEL);
+        BOOTDATA_CASE(CMDLINE);
+        BOOTDATA_CASE(ACPI_RSDP);
+        BOOTDATA_CASE(FRAMEBUFFER);
+        BOOTDATA_CASE(DEBUG_UART);
+        BOOTDATA_CASE(PLATFORM_ID);
+        BOOTDATA_CASE(LASTLOG_NVRAM);
+        BOOTDATA_CASE(LASTLOG_NVRAM2);
+        BOOTDATA_CASE(E820_TABLE);
+        BOOTDATA_CASE(EFI_MEMORY_MAP);
+        BOOTDATA_CASE(EFI_SYSTEM_TABLE);
+        BOOTDATA_CASE(LAST_CRASHLOG);
+        BOOTDATA_CASE(IGNORE);
+#undef BOOTDATA_CASE
+
         default:
             printf("%08zx: %08x UNKNOWN (type=%08x)\n", off, hdr.length, hdr.type);
             break;
