@@ -18,14 +18,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <zircon/boot/netboot.h>
 #include <tftp/tftp.h>
+#include <zircon/boot/netboot.h>
 
 #include "bootserver.h"
 
 // Point to user-selected values (or NULL if no values selected)
-uint16_t *tftp_block_size;
-uint16_t *tftp_window_size;
+uint16_t* tftp_block_size;
+uint16_t* tftp_window_size;
 
 typedef struct {
     int fd;
@@ -78,7 +78,8 @@ tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
         }
         *length = bytes_read;
     }
-    update_status(offset);
+
+    update_status(offset + *length);
     return TFTP_NO_ERROR;
 }
 
@@ -219,7 +220,7 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     tftp_session* session = NULL;
     size_t session_data_sz = tftp_sizeof_session();
 
-    if (!(session_data = calloc(session_data_sz, 1))  ||
+    if (!(session_data = calloc(session_data_sz, 1)) ||
         !(inbuf = malloc(TFTP_BUF_SZ)) ||
         !(outbuf = malloc(TFTP_BUF_SZ))) {
         fprintf(stderr, "%s: error: Unable to allocate memory\n", appname);
@@ -279,7 +280,7 @@ done:
         free(inbuf);
     }
     if (outbuf) {
-        free (outbuf);
+        free(outbuf);
     }
     file_close(&xd);
     return result;

@@ -360,6 +360,7 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
                 goto done;
             }
         } else if (ack->cmd == NB_FILE_RECEIVED) {
+            current_pos += r;
             completed = true;
         } else {
             current_pos += r;
@@ -369,6 +370,7 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     } while (!completed);
 
     status = 0;
+    update_status(msg->arg);
 done:
     if (s >= 0) {
         close(s);

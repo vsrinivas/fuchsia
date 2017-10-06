@@ -7,10 +7,13 @@
 #define _DARWIN_C_SOURCE
 
 #include <inttypes.h>
+#include <libgen.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -25,12 +28,31 @@
 
 #include "bootserver.h"
 
+#define ANSI_RED "\x1b[31m"
+#define ANSI_GREEN "\x1b[32m"
+#define ANSI_YELLOW "\x1b[33m"
+#define ANSI_BLUE "\x1b[34m"
+#define ANSI_MAGENTA "\x1b[35m"
+#define ANSI_CYAN "\x1b[36m"
+#define ANSI_RESET "\x1b[0m"
+#define ANSI_LINESTART "\33[2K\r"
+
+#define ANSI(name) (use_color == false || is_redirected) ? "" : ANSI_##name
+
+#define log(args...)                                                      \
+    do {                                                                  \
+        char logline[1024];                                               \
+        snprintf(logline, sizeof(logline), args);                         \
+        fprintf(stderr, "%s [%s] %s\n", date_string(), appname, logline); \
+    } while (false)
+
 char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
 bool use_filename_prefix = true;
 bool use_net186_workaround = false;
 
 static bool use_tftp = true;
+static bool use_color = true;
 static size_t total_file_size;
 static int progress_reported;
 static int packets_sent;
@@ -38,10 +60,30 @@ static struct timeval start_time, end_time;
 static bool is_redirected;
 static const char spinner[] = {'|', '/', '-', '\\'};
 
+char* date_string() {
+    static char date_buf[80];
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
+    snprintf(date_buf, sizeof(date_buf), "%4d-%02d-%02d %02d:%02d:%02d",
+             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    return date_buf;
+}
+
+char* sockaddr_str(struct sockaddr_in6* addr) {
+    static char buf[128];
+    char tmp[INET6_ADDRSTRLEN];
+    snprintf(buf, sizeof(buf), "[%s]%d",
+             inet_ntop(AF_INET6, &addr->sin6_addr, tmp, INET6_ADDRSTRLEN),
+             ntohs(addr->sin6_port));
+    return buf;
+}
+
 void initialize_status(const char* name, size_t size) {
     total_file_size = size;
     progress_reported = 0;
     packets_sent = 0;
+
     size_t prefix_len = strlen(NB_FILENAME_PREFIX);
     const char* base_name;
     if (!strncmp(name, NB_FILENAME_PREFIX, prefix_len)) {
@@ -49,43 +91,52 @@ void initialize_status(const char* name, size_t size) {
     } else {
         base_name = name;
     }
-    fprintf(stderr, "Sending %s [%lu bytes]:\n", base_name, (unsigned long)size);
+
+    char path[PATH_MAX];
+    memcpy(path, name, strnlen(name, PATH_MAX));
+    log("Transfer starts   [%5.1f MB]   %s/%s%s%s (%zu bytes)",
+        (float)size / 1024.0 / 1024.0,
+        dirname(path), ANSI(GREEN), basename(path), ANSI(RESET), size);
 }
 
 void update_status(size_t bytes_so_far) {
     packets_sent++;
+
+    bool is_last_piece = (bytes_so_far == total_file_size);
     if (total_file_size == 0) {
         return;
     }
+
     if (is_redirected) {
-        int percent_sent = (bytes_so_far / (total_file_size / 100));
+        int percent_sent = (bytes_so_far * 100 / (total_file_size));
         if (percent_sent - progress_reported >= 5) {
-            fprintf(stderr, "%d%%...", percent_sent);
+            fprintf(stderr, "\t%d%%...", percent_sent);
             progress_reported = percent_sent;
         }
     } else {
-        if (packets_sent > 1024) {
+        if (packets_sent > 1024 || is_last_piece) {
             packets_sent = 0;
             float bw = 0;
             static int spin = 0;
 
             struct timeval now;
             gettimeofday(&now, NULL);
-            int64_t us_since_begin = ((int64_t)(now.tv_sec - start_time.tv_sec) * 1000000) +
-                                     ((int64_t)now.tv_usec - start_time.tv_usec);
-            if (us_since_begin >= 1000000) {
-                bw = (float)bytes_so_far / (1024.0 * 1024.0 * ((float)us_since_begin / 1000000));
-            }
+            int64_t sec = (int64_t)(now.tv_sec - start_time.tv_sec);
+            int64_t usec = (int64_t)(now.tv_usec - start_time.tv_usec);
+            int64_t elapsed_usec = sec * 1000000 + usec;
+            bw = (float)bytes_so_far * 1000000 / (1024.0 * 1024.0 * ((float)elapsed_usec));
 
-            fprintf(stderr, "\33[2K\r");
+            fprintf(stderr, "%s", ANSI_LINESTART);
             if (total_file_size > 0) {
-                fprintf(stderr, "%c %.01f%%", spinner[(spin++) % 4],
+                fprintf(stderr, "\t%c %.01f%%", spinner[(spin++) % 4],
                         100.0 * (float)bytes_so_far / (float)total_file_size);
             } else {
-                fprintf(stderr, "%c", spinner[(spin++) % 4]);
+                fprintf(stderr, "\t%c", spinner[(spin++) % 4]);
             }
-            if (bw > 0.1) {
-                fprintf(stderr, " %.01fMB/s", bw);
+            fprintf(stderr, "\t %.01fMB/s", bw);
+            if (is_last_piece) {
+                fprintf(stderr, "\tTook %" PRId64 ".%" PRId64 " sec",
+                        elapsed_usec / 1000000, elapsed_usec % 1000000);
             }
         }
     }
@@ -105,11 +156,7 @@ static int xfer(struct sockaddr_in6* addr, const char* local_name, const char* r
         end_time.tv_sec -= 1;
         end_time.tv_usec += 1000000;
     }
-    if (result == 0) {
-        fprintf(stderr, "\nTransfer completed in %d.%06d sec\n",
-                (int)(end_time.tv_sec - start_time.tv_sec),
-                (int)(end_time.tv_usec - start_time.tv_usec));
-    }
+    fprintf(stderr, "\n");
     return result;
 }
 
@@ -127,7 +174,8 @@ void usage(void) {
             "  -n         only boot device with this nodename\n"
             "  -w <sz>    tftp window size (default=%d, ignored with --netboot)\n"
             "  --netboot  use the netboot protocol\n"
-            "  --tftp     use the tftp protocol (default)\n",
+            "  --tftp     use the tftp protocol (default)\n"
+            "  --nocolor  disable ANSI color (false)\n",
             appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
     exit(1);
 }
@@ -156,16 +204,16 @@ int send_boot_command(struct sockaddr_in6* ra) {
     target_addr.sin6_port = htons(NB_SERVER_PORT);
     int s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
     if (s < 0) {
-        fprintf(stderr, "%s: cannot create socket %d\n", appname, s);
+        log("cannot create socket %d", s);
         return -1;
     }
     ssize_t send_result = sendto(s, &msg, sizeof(msg), 0, (struct sockaddr*)&target_addr,
                                  sizeof(target_addr));
     if (send_result == sizeof(msg)) {
-        fprintf(stderr, "%s: sent boot command\n", appname);
+        log("Issued boot command to %s\n\n", sockaddr_str(ra));
         return 0;
     }
-    fprintf(stderr, "%s: failure sending boot command\n", appname);
+    log("failure sending boot command to %s", sockaddr_str(ra));
     return -1;
 }
 
@@ -268,11 +316,13 @@ int main(int argc, char** argv) {
             use_tftp = false;
         } else if (!strcmp(argv[1], "--tftp")) {
             use_tftp = true;
+        } else if (!strcmp(argv[1], "--nocolor")) {
+            use_color = false;
         } else if (!strcmp(argv[1], "--")) {
             while (argc > 2) {
                 size_t len = strlen(argv[2]);
                 if (len > (sizeof(cmdline) - 2 - (cmdnext - cmdline))) {
-                    fprintf(stderr, "%s: commandline too large\n", appname);
+                    fprintf(stderr, "[%s] commandline too large\n", appname);
                     return -1;
                 }
                 if (cmdnext != cmdline) {
@@ -297,7 +347,7 @@ int main(int argc, char** argv) {
         nodename = getenv("ZIRCON_NODENAME");
     }
     if (nodename) {
-        fprintf(stderr, "%s: Will only boot nodename '%s'\n", appname, nodename);
+        fprintf(stderr, "[%s] Will only boot nodename '%s'\n", appname, nodename);
     }
 
     // compute the default ramdisk fn to use if
@@ -306,7 +356,7 @@ int main(int argc, char** argv) {
     char* auto_ramdisk_fn = NULL;
     if (ramdisk_fn == NULL) {
         char* bootdata_fn = "bootdata.bin";
-        char *end = strrchr(kernel_fn, '/');
+        char* end = strrchr(kernel_fn, '/');
         if (end == NULL) {
             auto_ramdisk_fn = bootdata_fn;
         } else {
@@ -325,20 +375,18 @@ int main(int argc, char** argv) {
 
     s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
     if (s < 0) {
-        fprintf(stderr, "%s: cannot create socket %d\n", appname, s);
+        log("cannot create socket %d", s);
         return -1;
     }
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &n, sizeof(n));
     if ((r = bind(s, (void*)&addr, sizeof(addr))) < 0) {
-        fprintf(stderr, "%s: cannot bind to [%s]%d %d: %s\n", appname,
-                inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)),
-                ntohs(addr.sin6_port), errno, strerror(errno));
+        log("cannot bind to %s %d: %s\n",
+            sockaddr_str(&addr),
+            errno, strerror(errno));
         return -1;
     }
 
-    fprintf(stderr, "%s: listening on [%s]%d\n", appname,
-            inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)),
-            ntohs(addr.sin6_port));
+    log("listening on %s", sockaddr_str(&addr));
 
     for (;;) {
         struct sockaddr_in6 ra;
@@ -348,19 +396,19 @@ int main(int argc, char** argv) {
         rlen = sizeof(ra);
         r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
         if (r < 0) {
-            fprintf(stderr, "%s: socket read error %d\n", appname, r);
+            log("socket read error %d", r);
             break;
         }
         if (r < sizeof(nbmsg))
             continue;
         if (!IN6_IS_ADDR_LINKLOCAL(&ra.sin6_addr)) {
-            fprintf(stderr, "%s: ignoring non-link-local message\n", appname);
+            log("ignoring non-link-local message");
             continue;
         }
         if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) &&
             !IN6_ARE_ADDR_EQUAL(&allowed_addr, &ra.sin6_addr)) {
-            fprintf(stderr, "%s: ignoring message not from allowed address '%s'\n",
-                    appname, inet_ntop(AF_INET6, &allowed_addr, tmp, sizeof(tmp)));
+            log("ignoring message not from allowed address '%s'",
+                inet_ntop(AF_INET6, &allowed_addr, tmp, sizeof(tmp)));
             continue;
         }
         if (msg->magic != NB_MAGIC)
@@ -369,10 +417,9 @@ int main(int argc, char** argv) {
             continue;
         if ((use_tftp && (msg->arg < NB_VERSION_1_2)) ||
             (!use_tftp && (msg->arg < NB_VERSION_1_1))) {
-            fprintf(stderr, "%s: Incompatible version 0x%08X of bootloader detected from [%s]%d, "
-                            "please upgrade your bootloader\n",
-                    appname, msg->arg, inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
-                    ntohs(ra.sin6_port));
+            log("%sIncompatible version 0x%08X of bootloader "
+                "detected from %s, please upgrade your bootloader%s",
+                ANSI(RED), msg->arg, sockaddr_str(&ra), ANSI(RESET));
             if (once) {
                 break;
             }
@@ -381,13 +428,11 @@ int main(int argc, char** argv) {
         if (msg->arg < NB_VERSION_1_3) {
             use_net186_workaround = true;
         }
-        fprintf(stderr, "%s: got beacon from [%s]%d\n", appname,
-                inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
-                ntohs(ra.sin6_port));
+
+        log("got beacon from %s", sockaddr_str(&ra));
 
         // ensure any payload is null-terminated
         buf[r] = 0;
-
 
         char* save = NULL;
         char* adv_nodename = NULL;
@@ -397,28 +442,25 @@ int main(int argc, char** argv) {
              var = strtok_r(NULL, ";", &save)) {
             if (!strncmp(var, "nodename=", 9)) {
                 adv_nodename = var + 9;
-            } else if(!strncmp(var, "version=", 8)) {
+            } else if (!strncmp(var, "version=", 8)) {
                 adv_version = var + 8;
             }
         }
 
         if (nodename) {
             if (adv_nodename == NULL) {
-                fprintf(stderr, "%s: ignoring unknown nodename (expecting %s)\n",
-                        appname, nodename);
+                log("ignoring unknown nodename (expecting %s)",
+                    nodename);
             } else if (strcmp(adv_nodename, nodename)) {
-                fprintf(stderr, "%s: ignoring nodename %s (expecting %s)\n",
-                        appname, adv_nodename, nodename);
+                log("ignoring nodename %s (expecting %s)",
+                    adv_nodename, nodename);
                 continue;
             }
         }
 
         if (strcmp(BOOTLOADER_VERSION, adv_version)) {
-            fprintf(stderr,
-                    "%s: WARNING:\n"
-                    "%s: WARNING: Bootloader version '%s' != '%s'. Please Upgrade.\n"
-                    "%s: WARNING:\n",
-                    appname, appname, adv_version, BOOTLOADER_VERSION, appname);
+            log("%sWARNING: Bootloader version '%s' != '%s'. Please Upgrade%s",
+                ANSI(RED), adv_version, BOOTLOADER_VERSION, ANSI(RESET));
             if (!strcmp(adv_version, "0.5.5")) {
                 use_filename_prefix = false;
             }
