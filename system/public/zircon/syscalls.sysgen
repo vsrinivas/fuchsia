@@ -639,10 +639,6 @@ syscall acpi_uefi_rsdp
     (handle: zx_handle_t)
     returns (uint64_t);
 
-syscall acpi_cache_flush
-    (handle: zx_handle_t)
-    returns (zx_status_t);
-
 # Resources
 
 syscall resource_create

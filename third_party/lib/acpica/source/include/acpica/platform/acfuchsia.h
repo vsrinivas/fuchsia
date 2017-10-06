@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <threads.h>
 
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <semaphore.h>
 
@@ -27,7 +28,9 @@
 
 extern zx_handle_t root_resource_handle;
 
-#define ACPI_FLUSH_CPU_CACHE() zx_acpi_cache_flush(root_resource_handle)
+// Make this a no-op.  The only codepath we use it for is ACPI poweroff, in
+// which case we don't care about the cache state.
+#define ACPI_FLUSH_CPU_CACHE()
 
 // Use the standard library headers
 #define ACPI_USE_STANDARD_HEADERS

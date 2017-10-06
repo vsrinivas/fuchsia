@@ -309,21 +309,3 @@ uint64_t sys_acpi_uefi_rsdp(zx_handle_t hrsrc) {
 #endif
     return 0;
 }
-
-zx_status_t sys_acpi_cache_flush(zx_handle_t hrsrc) {
-    // TODO(ZX-971): finer grained validation
-    zx_status_t status;
-    if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
-        return status;
-    }
-    // TODO(teisenbe): This should be restricted to when interrupts are
-    // disabled, but we haven't added support for letting the ACPI process
-    // disable interrupts yet.  It only uses this for S-state transitions
-    // like poweroff and (more importantly) sleep.
-#if ARCH_X86
-    __asm__ volatile ("wbinvd");
-    return ZX_OK;
-#else
-    return ZX_ERR_NOT_SUPPORTED;
-#endif
-}
