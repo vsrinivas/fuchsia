@@ -164,8 +164,8 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   void WriteModuleData(FlowToken flow) {
     ModuleDataPtr data = ModuleData::New();
     data->module_url = module_url_;
-    data->module_path = std::move(module_path_);
-    data->link_path = std::move(link_path_);
+    data->module_path = module_path_.Clone();
+    data->link_path = link_path_.Clone();
     data->module_source = ModuleSource::EXTERNAL;
     data->surface_relation = surface_relation_.Clone();
     data->module_stopped = false;
