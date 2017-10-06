@@ -276,7 +276,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev, void** cookie) {
                 hid_desc = (usb_hid_descriptor_t *)header;
             } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
                 endpt = (usb_endpoint_descriptor_t *)header;
-                if (usb_ep_direction(endpt) != USB_ENDPOINT_IN &&
+                if (usb_ep_direction(endpt) != USB_ENDPOINT_IN ||
                     usb_ep_type(endpt) != USB_ENDPOINT_INTERRUPT) {
                     endpt = NULL;
                 }
