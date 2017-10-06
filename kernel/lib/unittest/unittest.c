@@ -71,8 +71,8 @@ bool unittest_expect_bytes(const uint8_t* expected,
 #include <lib/console.h>
 
 // External references to the testcase registration tables.
-extern unittest_testcase_registration_t __start_unittest_testcases[] __WEAK;
-extern unittest_testcase_registration_t __stop_unittest_testcases[] __WEAK;
+extern unittest_testcase_registration_t __start_unittest_testcases[];
+extern unittest_testcase_registration_t __stop_unittest_testcases[];
 
 static void usage(const char* progname) {
     printf("Usage:\n"
