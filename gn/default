@@ -4,7 +4,6 @@
         "packages/gn/amber",
         "packages/gn/asio",
         "packages/gn/build_info",
-        "packages/gn/install-fuchsia",
         "packages/gn/make-fuchsia-vol",
         "packages/gn/pm",
         "packages/gn/pmd",
