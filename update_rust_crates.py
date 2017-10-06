@@ -25,11 +25,10 @@ from check_rust_licenses import check_licenses
 # Note that crates in //third_party/rust-crates/mirror will be automatically
 # taken into account, as will Fuchsia crates published to crates.io.
 CONFIGS = [
-    "apps/xi/modules/xi-core",
     "garnet/public/lib/fidl/rust/fidl",
     "garnet/public/rust/crates/tokio-fuchsia",
-    "rust/rust_sample_module",
     "third_party/xi-editor/rust/core-lib",
+    "topaz/app/xi/modules/xi-core",
 ]
 
 NATIVE_LIBS = {

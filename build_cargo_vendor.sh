@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -6,8 +6,6 @@
 # NOTE: building cargo-vendor manually is currently necessary as cargo-vendor
 # cannot be built from sources in the Fuchsia tree AND cannot be installed via
 # "cargo install"...
-
-set -e
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
@@ -20,7 +18,12 @@ fi
 readonly RUST_BASE="$ROOT_DIR/buildtools/$PLATFORM/rust"
 readonly CARGO="$RUST_BASE/bin/cargo"
 
-export PATH="$PATH:$ROOT_DIR/buildtools/cmake/bin"
+command -v cmake >/dev/null 2>&1
+if [[ "$?" != 0 ]]; then
+  echo "cmake not found, aborting"
+  exit 1
+fi
+
 export RUSTC="$RUST_BASE/bin/rustc"
 export CARGO_TARGET_DIR="$ROOT_DIR/out/cargo-vendor"
 
