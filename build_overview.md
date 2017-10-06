@@ -11,39 +11,15 @@ The contents of the generated image are controlled by a set of modules defining
 what should go into the GN build and what should be packaged into the image.
 
 
-### Modules
+### Packages
 
-Module definitions can be found under [`//packages/gn`][modules-source]. A
-module contains references to other modules it builds on top of (`imports`),
-the GN targets it needs built (`labels`), and how to pack the build outputs into
-the final image (`binaries`):
-```
-{
-    "imports": [
-        "packages/gn/foo_framework”,
-        “packages/gn/some_extra_data”
-    ],
-    "labels": [
-        "//my/stuff/depends_on_foo",
-        "//my/stuff/api_for_others"
-    ],
-    "binaries": [
-        {
-            "binary": "path/in/output/tree/my_foo_base_stuff",
-            "bootfs_path": "apps/best_app_ever"
-        }
-    ]
-}
-```
-
-> TODO(pylaligand): document packages.
-
+You can configure what gets built using the [packaging system][packages-source].
 
 ### Build targets
 
 Build targets are defined in `BUILD.gn` files scattered all over the source
 tree. These files use a Python-like syntax to declare buildable objects:
-```
+``` py
 import("//build/some/template.gni")
 
 my_template("foo") {
@@ -55,12 +31,15 @@ my_template("foo") {
   ]
 }
 ```
-Available commands and constructs are defined in the
-[GN reference][gn-reference]. There are also a handful of custom templates in
-`.gni` files in the [`//build` project][build-project].
+Available commands (invoked using gn cli tool) and constructs (built-in target
+declaration types) are defined in the [GN reference][gn-reference]. There are
+also a handful of custom templates in `.gni` files in the
+[`//build` project][build-project].
+
+These custom templates mostly define custom target declaration types, such as
+the [package declaration type][packages-source].
 
 > TODO(pylaligand): list available templates
-
 
 ### Executing a build
 
@@ -83,6 +62,7 @@ $ packages/gn/gen.py --packages packages/gn/fuchsia_base,packages/gn/my_stuff
 ```
 This will create an `out/debug-<arch>` directory containing Ninja files to run
 the build.
+
 
 ##### C
 
@@ -215,3 +195,5 @@ You likely forgot to run **A** before running **B**.
 [modules-source]: https://fuchsia.googlesource.com/packages/+/master/gn
 [gn-reference]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/build/+/master/
+[packages-source]: https://fuchsia.googlesource.com/docs/+/master/build_packages.md
+
