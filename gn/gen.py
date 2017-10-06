@@ -19,10 +19,12 @@ def main():
     parser.add_argument("--help-args", dest="gn_args_list", default=False,
                         help="Show GN build arguments usable in --args",
                         action="store_true")
-    parser.add_argument("--zircon_project", "-p", help="zircon project",
+    parser.add_argument("--zircon_project", "-z", help="zircon project",
                         default=os.environ.get("ZIRCON_PROJECT"))
-    parser.add_argument("--modules", "-m", help="comma separted list of modules",
+    parser.add_argument("--modules", "-m", help="[deprecated, use --packages instead] comma separated list of modules",
                         default="packages/gn/default")
+    parser.add_argument("--packages", "-p", help="comma separated list of packages",
+                        default=argparse.SUPPRESS)
     parser.add_argument("--release", "-r", help="generate release mode build files",
         action="store_true")
     parser.add_argument("--outdir", "-o", help="output directory")
@@ -77,7 +79,8 @@ def main():
     if args.with_dart_analysis:
         gn_args += " run_dart_analysis=true"
 
-    gn_args += " modules=\"" + args.modules + "\""
+    modules = args.packages if "packages" in args else args.modules
+    gn_args += " modules=\"" + modules + "\""
 
     if args.release:
         gn_args += " is_debug=false"
