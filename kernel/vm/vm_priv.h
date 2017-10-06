@@ -23,9 +23,6 @@ extern "C" void boot_alloc_reserve(uintptr_t phys, size_t len);
 extern uintptr_t boot_alloc_start;
 extern uintptr_t boot_alloc_end;
 
-void vmm_init_preheap(void);
-void vmm_init(void);
-
 // utility function to test that offset + len is entirely within a range
 // returns false if out of range
 // NOTE: only use unsigned lengths
