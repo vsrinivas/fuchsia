@@ -72,6 +72,8 @@ Status PageUtils::ConvertStatus(storage::Status status,
       return not_found_status;
     case storage::Status::NOT_CONNECTED_ERROR:
       return Status::NETWORK_ERROR;
+    case storage::Status::INTERRUPTED:
+      return Status::INTERNAL_ERROR;
     default:
       FXL_DCHECK(false) << "Internal error in Ledger storage. Status: "
                         << status;
