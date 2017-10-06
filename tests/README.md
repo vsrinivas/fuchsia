@@ -39,7 +39,7 @@ under fuchsia. In order to start `test_runner`, you can:
   workstation, do:
 
 ```
-./packages/gn/gen.py -m packages/gn/boot_test_modular
+./packages/gn/gen.py -p packages/gn/boot_test_modular
 
 ```
 

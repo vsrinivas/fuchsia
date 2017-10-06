@@ -17,7 +17,7 @@ commands:
 
 ```
 scripts/build-zircon.sh -t x86_64
-packages/gn/gen.py --debug -m peridot/packages/default
+packages/gn/gen.py --debug -p peridot/packages/default
 buildtools/ninja -C out/debug-x86-64
 ```
 
@@ -25,7 +25,7 @@ For 64bit ARM (aarch64):
 
 ```
 scripts/build-zircon.sh -t aarch64
-packages/gn/gen.py -t aarch64 --debug -m peridot/packages/default
+packages/gn/gen.py -t aarch64 --debug -p peridot/packages/default
 buildtools/ninja -C out/debug-aarch64
 ```
 
