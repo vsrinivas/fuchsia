@@ -10,6 +10,7 @@
 #include "lib/agent/fidl/agent.fidl.h"
 #include "lib/agent/fidl/agent_context.fidl.h"
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
+#include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
@@ -92,15 +93,19 @@ class AgentContextImpl : AgentContext, AgentController {
 
   const std::string url_;
 
-  AppClient<Lifecycle> app_client_;
+  std::unique_ptr<AppClient<Lifecycle>> app_client_;
   AgentPtr agent_;
-  fidl::Binding<AgentContext> agent_context_binding_;
+  fidl::BindingSet<AgentContext> agent_context_bindings_;
   fidl::BindingSet<AgentController> agent_controller_bindings_;
 
   AgentRunner* const agent_runner_;
 
   ComponentContextImpl component_context_impl_;
   fidl::BindingSet<ComponentContext> component_context_bindings_;
+
+  // A service provider that represents the services to be added into an
+  // application's namespace.
+  app::ServiceProviderImpl service_provider_impl_;
 
   auth::TokenProviderFactory* const token_provider_factory_;  // Not owned.
   maxwell::UserIntelligenceProvider* const

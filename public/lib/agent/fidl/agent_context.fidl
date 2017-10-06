@@ -11,6 +11,7 @@ import "lib/component/fidl/component_context.fidl";
 // This interface is exposed to all agents. It allows to schedule tasks to occur
 // in response to triggers which are conditions like a message arriving on a
 // MessageQueue.
+[ServiceName="modular.AgentContext"]
 interface AgentContext {
   // |context| is the ComponentContext which this AgentContext is a part of.
   GetComponentContext(ComponentContext& request);

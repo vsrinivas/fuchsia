@@ -50,20 +50,20 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
     FlowToken flow{this};
 
-    ConnectToService(agent_context_impl_->app_client_.services(),
+    ConnectToService(agent_context_impl_->app_client_->services(),
                      agent_context_impl_->agent_.NewRequest());
 
     // We only want to use Lifecycle if it exists.
-    agent_context_impl_->app_client_.primary_service()
+    agent_context_impl_->app_client_->primary_service()
         .set_connection_error_handler(
             [agent_context_impl = agent_context_impl_] {
-              agent_context_impl->app_client_.primary_service().reset();
+              agent_context_impl->app_client_->primary_service().reset();
             });
 
     // When the agent process dies, we remove it.
     // TODO(alhaad): In the future we would want to detect a crashing agent and
     // stop scheduling tasks for it.
-    agent_context_impl_->app_client_.SetAppErrorHandler(
+    agent_context_impl_->app_client_->SetAppErrorHandler(
         [agent_context_impl = agent_context_impl_] {
           agent_context_impl->agent_runner_->RemoveAgent(
               agent_context_impl->url_);
@@ -78,7 +78,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
     // TODO(alhaad): We should have a timer for an agent which does not return
     // its callback within some timeout.
     agent_context_impl_->agent_->Initialize(
-        agent_context_impl_->agent_context_binding_.NewBinding(),
+        agent_context_impl_->agent_context_bindings_.AddBinding(agent_context_impl_),
         [this, flow] { agent_context_impl_->state_ = State::RUNNING; });
   }
 
@@ -123,14 +123,14 @@ class AgentContextImpl::StopCall : Operation<bool> {
 
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATING;
-    agent_context_impl_->app_client_.Teardown(kBasicTimeout,
+    agent_context_impl_->app_client_->Teardown(kBasicTimeout,
                                               [this, flow] { Kill(flow); });
   }
 
   void Kill(FlowToken flow) {
     stopped_ = true;
     agent_context_impl_->agent_.reset();
-    agent_context_impl_->agent_context_binding_.Close();
+    agent_context_impl_->agent_context_bindings_.CloseAllBindings();
   }
 
   bool stopped_ = false;
@@ -143,9 +143,6 @@ class AgentContextImpl::StopCall : Operation<bool> {
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                                    AppConfigPtr agent_config)
     : url_(agent_config->url),
-      app_client_(info.app_launcher, std::move(agent_config),
-                  std::string(kAppStoragePath) + HashAgentUrl(url_), nullptr),
-      agent_context_binding_(this),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
                               kAgentComponentNamespace,
@@ -153,6 +150,16 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                               url_),
       token_provider_factory_(info.token_provider_factory),
       user_intelligence_provider_(info.user_intelligence_provider) {
+  service_provider_impl_.AddService<AgentContext>(
+      [this](fidl::InterfaceRequest<AgentContext> request) {
+        agent_context_bindings_.AddBinding(this, std::move(request));
+      });
+  auto service_list = app::ServiceList::New();
+  service_list->names.push_back(AgentContext::Name_);
+  service_provider_impl_.AddBinding(service_list->provider.NewRequest());
+  app_client_ = std::make_unique<AppClient<Lifecycle>>(
+      info.app_launcher, std::move(agent_config),
+      std::string(kAppStoragePath) + HashAgentUrl(url_), std::move(service_list));
   new InitializeCall(&operation_queue_, this);
 }
 
