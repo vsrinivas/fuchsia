@@ -8,12 +8,16 @@ package("netstack_tests") {
   testonly = true
 
   deps = [
-    "//garnet/go/src/netstack/tests/automated:netstack_loopback_test",
+    "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
+    "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
   ]
 
   tests = [
     {
       name = "netstack_loopback_test"
+    },
+    {
+      name = "netstack_gonet_test"
     },
   ]
 }
