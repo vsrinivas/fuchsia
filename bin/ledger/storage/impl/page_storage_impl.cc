@@ -92,12 +92,8 @@ PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
 
 PageStorageImpl::~PageStorageImpl() {
   // Interrupt any active handlers.
-  // Interrupted handlers will be erased from the |handlers_| set. Use another
-  // set instead to guarantee correctness.
-  auto handlers = std::move(handlers_);
-  handlers_.clear();
-  for (auto handler : handlers) {
-    handler->Continue(true);
+  while (!handlers_.empty()) {
+    (*handlers_.begin())->Continue(true);
   }
 }
 
