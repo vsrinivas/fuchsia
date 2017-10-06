@@ -3,11 +3,11 @@
         "cpp"
     ],
     "labels": [
-        "//apps/install-fuchsia/app:install-fuchsia",
-        "//apps/install-fuchsia/tests:install-fuchsia-tests",
-        "//apps/install-fuchsia/app:sparser_host",
-        "//apps/install-fuchsia/app:sparser",
-        "//apps/install-fuchsia/tests:install-fuchsia-sparse-tests"
+        "//zircon/system/uapp/installer/app:install-fuchsia",
+        "//zircon/system/uapp/installer/tests:install-fuchsia-tests",
+        "//zircon/system/uapp/installer/app:sparser_host",
+        "//zircon/system/uapp/installer/app:sparser",
+        "//zircon/system/uapp/installer/tests:install-fuchsia-sparse-tests"
     ],
     "binaries": [
         {
