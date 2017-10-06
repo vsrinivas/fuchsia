@@ -52,5 +52,9 @@ extern zx_handle_t root_resource_handle;
 
 extern bool _acpica_acquire_global_lock(void *FacsPtr);
 extern bool _acpica_release_global_lock(void *FacsPtr);
+
+void acpica_enable_noncontested_mode(void);
+void acpica_disable_noncontested_mode(void);
+
 #define ACPI_ACQUIRE_GLOBAL_LOCK(FacsPtr, Acq) Acq = _acpica_acquire_global_lock(FacsPtr)
 #define ACPI_RELEASE_GLOBAL_LOCK(FacsPtr, Pnd) Pnd = _acpica_release_global_lock(FacsPtr)

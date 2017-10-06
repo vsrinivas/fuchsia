@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <threads.h>
+#include <pthread.h>
 
 #include <hw/inout.h>
 #include <zircon/assert.h>
@@ -119,6 +120,38 @@ static ACPI_STATUS thrd_status_to_acpi_status(int status) {
         case thrd_timedout: return AE_TIME;
         default: return AE_ERROR;
     }
+}
+
+// The |acpi_spinlock_lock| is used to guarantee that all spinlock acquisitions will
+// be uncontested in certain circumstances.  This allows us to ensure that
+// the codepaths for entering an S-state will not need to wait for some other thread
+// to finish processing.  The scheme works with the following protocol:
+//
+// Normal operational threads: If attempting to acquire a lock, and the thread
+// holds no spinlock yet, then acquire |acpi_spinlock_lock| in READ mode before
+// acquiring the desired lock.  For all other lock acquisitions behave normally.
+// If a thread is releasing its last held lock, release the |acpi_spinlock_lock|.
+//
+// Non-contested thread: To enter non-contested mode, call
+// |acpica_enable_noncontested_mode| while not holding any ACPI spinlock.  This will
+// acquire the |acpi_spinlock_lock| in WRITE mode.  Call
+// |acpica_disable_noncontested_mode| while not holding any ACPI spinlock to release
+// the |acpi_spinlock_lock|.
+static pthread_rwlock_t acpi_spinlock_lock = PTHREAD_RWLOCK_INITIALIZER;
+static thread_local uint64_t acpi_spinlocks_held = 0;
+
+void acpica_enable_noncontested_mode() {
+    ZX_ASSERT(acpi_spinlocks_held == 0);
+    int ret = pthread_rwlock_wrlock(&acpi_spinlock_lock);
+    ZX_ASSERT(ret == 0);
+    acpi_spinlocks_held++;
+}
+
+void acpica_disable_noncontested_mode() {
+    ZX_ASSERT(acpi_spinlocks_held == 1);
+    int ret = pthread_rwlock_unlock(&acpi_spinlock_lock);
+    ZX_ASSERT(ret == 0);
+    acpi_spinlocks_held--;
 }
 
 /**
@@ -557,7 +590,6 @@ ACPI_STATUS AcpiOsCreateSemaphore(
  *        previous call to AcpiOsCreateSemaphore.
  *
  * @return AE_OK The semaphore was successfully deleted.
- * @return AE_BAD_PARAMETER The Handle is invalid.
  */
 ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
     free(Handle);
@@ -762,7 +794,13 @@ void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) {
  * @return Platform-dependent CPU flags.  To be used when the lock is released.
  */
 ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) TA_ACQ(Handle) {
+    if (acpi_spinlocks_held == 0) {
+        int ret = pthread_rwlock_rdlock(&acpi_spinlock_lock);
+        ZX_ASSERT(ret == 0);
+    }
+
     mtx_lock(Handle);
+    acpi_spinlocks_held++;
     return 0;
 }
 
@@ -775,6 +813,12 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) TA_ACQ(Handle) {
  */
 void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) TA_REL(Handle) {
     mtx_unlock(Handle);
+
+    acpi_spinlocks_held--;
+    if (acpi_spinlocks_held == 0) {
+        int ret = pthread_rwlock_unlock(&acpi_spinlock_lock);
+        ZX_ASSERT(ret == 0);
+    }
 }
 
 // Wrapper structs for interfacing between our interrupt handler convention and
