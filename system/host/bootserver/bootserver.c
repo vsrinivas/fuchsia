@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
         } else if (!strcmp(argv[1], "-b")) {
-            if (argc <= 1) {
+            if (argc <= 2) {
                 fprintf(stderr, "'-b' option requires an argument (tftp block size)\n");
                 return -1;
             }
@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-w")) {
-            if (argc <= 1) {
+            if (argc <= 2) {
                 fprintf(stderr, "'-w' option requires an argument (tftp window size)\n");
                 return -1;
             }
@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-i")) {
-            if (argc <= 1) {
+            if (argc <= 2) {
                 fprintf(stderr, "'-i' option requires an argument (micros between packets)\n");
                 return -1;
             }
@@ -246,7 +246,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-a")) {
-            if (argc <= 1) {
+            if (argc <= 2) {
                 fprintf(stderr, "'-a' option requires a valid ipv6 address\n");
                 return -1;
             }
@@ -257,7 +257,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-n")) {
-            if (argc <= 1) {
+            if (argc <= 2) {
                 fprintf(stderr, "'-n' option requires a valid nodename\n");
                 return -1;
             }

@@ -63,10 +63,6 @@ static int io_rcv(int s, nbmsg* msg, nbmsg* ack) {
         }
 
         if (ack->cmd == NB_ACK || ack->cmd == NB_FILE_RECEIVED) {
-            if (msg && ack->arg > msg->arg) {
-                fprintf(stderr, "\n%s: error: Argument mismatch\n", appname);
-                return 0;
-            }
             return 0;
         }
 
@@ -161,15 +157,17 @@ static int io(int s, nbmsg* msg, size_t len, nbmsg* ack, bool wait_reply) {
             fprintf(stderr, "\n%s: error: Select timed out\n", appname);
             return -1;
         } else {
+            r = 0;
             if (FD_ISSET(s, &reads)) {
                 r = io_rcv(s, msg, ack);
             }
 
-            if (FD_ISSET(s, &writes)) {
+            // If we got an ack, don't bother sending anything - go handle the ack first
+            if (!r && FD_ISSET(s, &writes) && (ack->cookie == 0 || ack->cmd != NB_ACK)) {
                 r = io_send(s, msg, len);
             }
 
-            if (!wait_reply) {
+            if (r || !wait_reply) {
                 return r;
             }
         }
@@ -344,10 +342,18 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
         }
 
         // ACKs really are NACKs
-        if (ack->cookie > 0 && ack->cmd == NB_ACK && ack->arg != current_pos) {
-            fprintf(stderr, "\n%s: need to rewind to %d from %zu\n",
-                    appname, ack->arg, current_pos);
-            current_pos = ack->arg;
+        if (ack->cookie > 0 && ack->cmd == NB_ACK) {
+            // ACKs tend to be generated in groups, since a dropped packet will cause ACKs for all
+            // outstanding packets. Therefore briefly sleep when we recieve an ACK with a different
+            // position, to let things settle and prevent ourselves from fighting subsequent acks.
+            if (ack->arg != current_pos) {
+                fprintf(stderr, "\n%s: need to reset to %d from %zu\n",
+                        appname, ack->arg, current_pos);
+                current_pos = ack->arg;
+
+                tv.tv_usec = 100000;
+                select(0, NULL, NULL, NULL, &tv);
+            }
             if (xseek(&xd, current_pos)) {
                 fprintf(stderr, "\n%s: error: Failed to rewind '%s' to %zu\n",
                         appname, fn, current_pos);
