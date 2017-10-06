@@ -1,9 +1,6 @@
 {
     "imports": [
         "garnet/packages/default",
-        "garnet/packages/go_stdlib_tests",
-        "garnet/packages/iperf",
-        "garnet/packages/libc-tests",
         "packages/gn/amber",
         "packages/gn/asio",
         "packages/gn/build_info",
