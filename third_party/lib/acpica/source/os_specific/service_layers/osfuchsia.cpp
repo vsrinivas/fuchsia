@@ -629,6 +629,90 @@ ACPI_STATUS AcpiOsSignalSemaphore(
 }
 
 /**
+ * @brief Create a mutex.
+ *
+ * @param OutHandle A pointer to a locaton where a handle to the mutex is
+ *        to be returned.
+ *
+ * @return AE_OK The muted was successfully created.
+ * @return AE_BAD_PARAMETER The OutHandle pointer is NULL.
+ * @return AE_NO_MEMORY Insufficient memory to create the mutex.
+ */
+ACPI_STATUS AcpiOsCreateMutex(ACPI_MUTEX *OutHandle) {
+    mtx_t* lock = (mtx_t*)malloc(sizeof(mtx_t));
+    if (!lock) {
+        return AE_NO_MEMORY;
+    }
+
+    ACPI_STATUS status = thrd_status_to_acpi_status(
+            mtx_init(lock, mtx_timed));
+    if (status != AE_OK) {
+        return status;
+    }
+    *OutHandle = lock;
+    return AE_OK;
+}
+
+/**
+ * @brief Delete a mutex.
+ *
+ * @param Handle A handle to a mutex objected that was returned by a
+ *        previous call to AcpiOsCreateMutex.
+ *
+ */
+void AcpiOsDeleteMutex(ACPI_MUTEX Handle) {
+    mtx_destroy(Handle);
+    free(Handle);
+}
+
+/**
+ * @brief Acquire a mutex, optionally with a timeout.
+ *
+ * @param Handle A handle to a mutex objected that was returned by a
+ *        previous call to AcpiOsCreateMutex.
+ * @param Timeout How long the caller is willing to wait for the lock,
+ *        in milliseconds.  A value of -1 indicates that the caller
+ *        is willing to wait forever. Timeout may be 0.
+ *
+ * @return AE_OK The mutex was successfully acquired.
+ * @return AE_BAD_PARAMETER The Handle is invalid.
+ * @return AE_TIME The mutex could not be acquired within the specified time.
+ * @return AE_ERROR An unknown error occurred.
+ */
+ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout) TA_NO_THREAD_SAFETY_ANALYSIS {
+    if (Timeout == UINT16_MAX) {
+        mtx_lock(Handle);
+        return AE_OK;
+    }
+
+    zx_time_t now = zx_time_get(ZX_CLOCK_UTC);
+    struct timespec then = {
+        .tv_sec = static_cast<time_t>(now / ZX_SEC(1)),
+        .tv_nsec = static_cast<long>(now % ZX_SEC(1)),
+    };
+    then.tv_nsec += ZX_MSEC(Timeout);
+    if (then.tv_nsec > static_cast<long>(ZX_SEC(1))) {
+        then.tv_sec += then.tv_nsec / ZX_SEC(1);
+        then.tv_nsec %= ZX_SEC(1);
+    }
+
+    int ret = mtx_timedlock(Handle, &then);
+    if (ret != thrd_success) {
+        if (ret == thrd_timedout) {
+            return AE_TIME;
+        } else {
+            return AE_ERROR;
+        }
+    }
+
+    return AE_OK;
+}
+
+void AcpiOsReleaseMutex(ACPI_MUTEX Handle) TA_NO_THREAD_SAFETY_ANALYSIS {
+    mtx_unlock(Handle);
+}
+
+/**
  * @brief Create a spin lock.
  *
  * @param OutHandle A pointer to a locaton where a handle to the lock is
