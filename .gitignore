@@ -20,3 +20,4 @@ Thumbs.db
 cscope.*
 tags
 target
+go/pkg
