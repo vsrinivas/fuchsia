@@ -1,8 +1,8 @@
 #compdef fset
 
 _fset() {
-  # _modules completes a comma separated list of modules
-  _modules() {
+  # _packages completes a comma separated list of packages
+  _packages() {
     _values -s , $FUCHSIA_DIR/packages/gn/^*.*(.:t)
   }
 
@@ -16,7 +16,7 @@ _fset() {
 
   # arguments to fset
   _arguments '1:arch:{_describe "arch" archs}' '--release[release build]' \
-    '--modules[modules to build]:modules:_modules' \
+    '--packages[packages to build]:packages:_packages' \
     '--goma[use goma]' "--no-goma[don't use goma]" \
     "--no-ensure-goma[don't make sure goma is running]" \
     "--ccache[use ccache]" "--no-ccache[don't use ccache]" \

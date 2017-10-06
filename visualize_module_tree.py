@@ -12,9 +12,9 @@ import sys
 
 
 def main():
-    modules_directory = os.path.join(paths.FUCHSIA_ROOT, 'packages', 'gn')
+    packages_directory = os.path.join(paths.FUCHSIA_ROOT, 'packages', 'gn')
     print('digraph fuchsia {')
-    for directory, _, files in os.walk(modules_directory):
+    for directory, _, files in os.walk(packages_directory):
         modules = [file for file in files
                    if file.find('.') == -1 and file != 'default']
         sanitize = lambda name: name.replace('-', '_')

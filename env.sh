@@ -394,12 +394,12 @@ function fset() {
         fset-add-gen-arg --release
         export FUCHSIA_VARIANT=release
         ;;
-      --modules)
+      --packages)
         if [[ $# -lt 2 ]]; then
           fset-usage
           return 1
         fi
-        fset-add-gen-arg --modules $2
+        fset-add-gen-arg --packages $2
         shift
         ;;
       --goma)

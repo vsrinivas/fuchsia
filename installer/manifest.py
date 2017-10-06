@@ -5,7 +5,7 @@ Copyright 2017 The Fuchsia Authors. All rights reserved.
 Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 
-This modules provides an interface to build minfs images from fuchsia
+This module provides an interface to build minfs images from fuchsia
 manifest files.
 
 """
