@@ -18,12 +18,12 @@ RUST_CRATES = {
     # //build/secondary.
     "published": {
         "fuchsia-zircon": {
-            "version": "0.2.0",
+            "version": "0.3.0",
             "path": "garnet/public/rust/crates/fuchsia-zircon",
             "target": "//garnet/public/rust/crates/fuchsia-zircon",
         },
         "fuchsia-zircon-sys": {
-            "version": "0.2.0",
+            "version": "0.3.0",
             "path": "garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
             "target": "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
         },
