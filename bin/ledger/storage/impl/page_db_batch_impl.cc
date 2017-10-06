@@ -144,8 +144,7 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
                                         ObjectDigestView object_digest,
                                         PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
-  FXL_DCHECK(CheckHasObject(handler, object_digest))
-      << "Unknown object: " << convert::ToHex(object_digest);
+  RETURN_ON_ERROR(DCheckHasObject(handler, object_digest));
 
   auto transient_key = TransientObjectRow::GetKeyFor(object_digest);
   auto local_key = LocalObjectRow::GetKeyFor(object_digest);
@@ -197,14 +196,19 @@ Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
   return batch_->Execute(handler);
 }
 
-bool PageDbBatchImpl::CheckHasObject(CoroutineHandler* handler,
-                                     convert::ExtendedStringView key) {
+Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler,
+                                        convert::ExtendedStringView key) {
+#ifdef NDEBUG
+  return Status::OK;
+#else
   bool result;
   Status status = db_->HasObject(handler, key, &result);
-  if (status != Status::OK) {
-    return false;
+  if (status == Status::INTERRUPTED) {
+    return status;
   }
-  return result;
+  FXL_DCHECK(status == Status::OK && result);
+  return Status::OK;
+#endif
 }
 
 }  // namespace storage
