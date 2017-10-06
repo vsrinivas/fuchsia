@@ -426,7 +426,7 @@ template("fidl") {
         "//garnet/public/lib/fidl/rust/fidl",
         "//garnet/public/rust/crates/tokio-fuchsia",
         "//garnet/public/rust/crates/fuchsia-zircon",
-        "//third_party/rust-crates:futures-0.1.15",
+        "//third_party/rust-crates:futures-0.1.16",
       ]
 
       non_rust_deps = [ ":${rust_crate_target_name}" ]

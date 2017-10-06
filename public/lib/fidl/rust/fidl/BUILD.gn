@@ -9,7 +9,7 @@ rust_library("fidl") {
     "//garnet/public/rust/crates/tokio-fuchsia",
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates:byteorder-0.5.3",
-    "//third_party/rust-crates:futures-0.1.15",
+    "//third_party/rust-crates:futures-0.1.16",
     "//third_party/rust-mirrors/tokio-core",
   ]
 
