@@ -18,7 +18,7 @@ ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
     ModuleDataPtr module_data,
     ModuleControllerImpl* const module_controller_impl,
-    fidl::InterfaceRequest<ModuleContext> module_context)
+    fidl::InterfaceRequest<app::ServiceProvider> service_provider_request)
     : module_data_(std::move(module_data)),
       story_controller_impl_(info.story_controller_impl),
       module_controller_impl_(module_controller_impl),
@@ -27,8 +27,13 @@ ModuleContextImpl::ModuleContextImpl(
                                   info.story_controller_impl->GetStoryId()),
                               EncodeModulePath(module_data_->module_path),
                               module_data_->module_url),
-      user_intelligence_provider_(info.user_intelligence_provider),
-      binding_(this, std::move(module_context)) {}
+      user_intelligence_provider_(info.user_intelligence_provider) {
+  service_provider_impl_.AddService<ModuleContext>(
+      [this](fidl::InterfaceRequest<ModuleContext> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
+  service_provider_impl_.AddBinding(std::move(service_provider_request));
+}
 
 ModuleContextImpl::~ModuleContextImpl() {}
 

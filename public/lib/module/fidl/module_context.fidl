@@ -14,6 +14,7 @@ import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
+[ServiceName="modular.ModuleContext"]
 interface ModuleContext {
   // Gets a Link instance with the given name.
   //

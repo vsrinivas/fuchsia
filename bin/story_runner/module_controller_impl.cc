@@ -39,6 +39,7 @@ ModuleControllerImpl::ModuleControllerImpl(
     app::ApplicationLauncher* const application_launcher,
     AppConfigPtr module_config,
     const fidl::Array<fidl::String>& module_path,
+    app::ServiceListPtr service_list,
     fidl::InterfaceHandle<ModuleContext> module_context,
     fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -47,7 +48,8 @@ ModuleControllerImpl::ModuleControllerImpl(
       app_client_(
           application_launcher,
           module_config.Clone(),
-          std::string(kAppStoragePath) + HashModuleUrl(module_config->url)),
+          std::string(kAppStoragePath) + HashModuleUrl(module_config->url),
+          std::move(service_list)),
       module_path_(module_path.Clone()) {
   app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
 

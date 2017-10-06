@@ -702,14 +702,19 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
 
-    fidl::InterfaceHandle<ModuleContext> self;
-    fidl::InterfaceRequest<ModuleContext> self_request = self.NewRequest();
+    app::ServiceProviderPtr provider;
+    auto provider_request = provider.NewRequest();
+    auto module_context = app::ConnectToService<ModuleContext>(provider.get());
+    auto service_list = app::ServiceList::New();
+    service_list->names.push_back(ModuleContext::Name_);
+    service_list->provider = std::move(provider);
 
     Connection connection;
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
         story_controller_impl_,
         story_controller_impl_->story_scope_.GetLauncher(),
-        std::move(module_config), module_path_, std::move(self),
+        std::move(module_config), module_path_,
+        std::move(service_list), std::move(module_context),
         std::move(view_provider_request), std::move(outgoing_services_),
         std::move(incoming_services_));
     connection.module_controller_impl->Connect(
@@ -729,7 +734,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
     connection.module_context_impl = std::make_unique<ModuleContextImpl>(
         module_context_info, module_data_.Clone(),
-        connection.module_controller_impl.get(), std::move(self_request));
+        connection.module_controller_impl.get(), std::move(provider_request));
 
     story_controller_impl_->connections_.emplace_back(std::move(connection));
 

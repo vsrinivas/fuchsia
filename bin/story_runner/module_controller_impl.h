@@ -34,6 +34,7 @@ class ModuleControllerImpl : ModuleController {
       app::ApplicationLauncher* application_launcher,
       AppConfigPtr module_config,
       const fidl::Array<fidl::String>& module_path,
+      app::ServiceListPtr service_list,
       fidl::InterfaceHandle<ModuleContext> module_context,
       fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,

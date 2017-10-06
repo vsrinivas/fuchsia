@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -44,7 +45,7 @@ class ModuleContextImpl : ModuleContext {
   ModuleContextImpl(const ModuleContextInfo& info,
                     ModuleDataPtr module_data,
                     ModuleControllerImpl* module_controller_impl,
-                    fidl::InterfaceRequest<ModuleContext> module_context);
+                    fidl::InterfaceRequest<app::ServiceProvider> service_provider_request);
 
   ~ModuleContextImpl() override;
 
@@ -113,9 +114,11 @@ class ModuleContextImpl : ModuleContext {
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
 
-  // The one connection to the StoryControllerImpl instance that this
-  // ModuleContextImpl instance represents.
-  fidl::Binding<ModuleContext> binding_;
+  fidl::BindingSet<ModuleContext> bindings_;
+
+  // A service provider that represents the services to be added into an
+  // application's namespace.
+  app::ServiceProviderImpl service_provider_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
 };
