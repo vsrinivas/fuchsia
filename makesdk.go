@@ -188,7 +188,7 @@ func init() {
 	}
 	for _, c := range clientHeaders {
 		files = append(files, file{c.flag, c.src, "sysroot/x86_64-fuchsia/include/" + c.dst})
-		files = append(files, file{c.flag, c.src, "sysroot/aarch-fuchsia/include/" + c.dst})
+		files = append(files, file{c.flag, c.src, "sysroot/aarch64-fuchsia/include/" + c.dst})
 	}
 	for _, c := range clientLibs {
 		files = append(files, file{c.flag, x86Builddir + "x64-shared/" + c.name, "sysroot/x86_64-fuchsia/lib/" + c.name})
