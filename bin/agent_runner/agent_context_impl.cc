@@ -14,6 +14,24 @@
 
 namespace modular {
 
+constexpr char kAppStoragePath[] = "/data/APP_DATA";
+
+namespace {
+
+// A stopgap solution to map an agent's url to a directory name where the
+// agent's /data is mapped. We need three properties here - (1) two module urls
+// that are the same get mapped to the same hash, (2) two modules urls that are
+// different don't get the same name (with very high probability) and (3) the
+// name is visually inspectable.
+std::string HashAgentUrl(const std::string& agent_url) {
+  std::size_t found = agent_url.find_last_of('/');
+  auto last_part =
+      found == agent_url.length() - 1 ? "" : agent_url.substr(found + 1);
+  return std::to_string(std::hash<std::string>{}(agent_url)) + last_part;
+}
+
+};  // namespace
+
 class AgentContextImpl::InitializeCall : Operation<> {
  public:
   InitializeCall(OperationContainer* const container,
@@ -125,7 +143,8 @@ class AgentContextImpl::StopCall : Operation<bool> {
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                                    AppConfigPtr agent_config)
     : url_(agent_config->url),
-      app_client_(info.app_launcher, std::move(agent_config)),
+      app_client_(info.app_launcher, std::move(agent_config),
+                  std::string(kAppStoragePath) + HashAgentUrl(url_), nullptr),
       agent_context_binding_(this),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
