@@ -55,6 +55,8 @@ pub const PA_FDIO_PIPE: u32 = 0x33;
 pub const PA_FDIO_EVENT: u32 = 0x34;
 pub const PA_FDIO_LOGGER: u32 = 0x35;
 pub const PA_FDIO_SOCKET: u32 = 0x36;
+
+pub const PA_SERVICE_REQUEST: u32 = 0x3B;
 // Used by devmgr and devhosts
 pub const PA_RESOURCE: u32 = 0x3F;
 // Handle types used by the application model

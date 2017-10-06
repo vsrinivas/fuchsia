@@ -17,6 +17,7 @@ use zircon::Channel;
 use tokio_fuchsia;
 
 /// A value from a server handler indicating that the current channel should be closed.
+#[derive(Debug)]
 pub struct CloseChannel;
 
 impl From<CloseChannel> for Error {
@@ -168,7 +169,10 @@ mod tests {
         type Service = DummyService;
 
         type DispatchResponseFuture = future::FutureResult<EncodeBuf, Error>;
-        fn dispatch_with_response(&mut self, _request: &mut DecodeBuf) -> Self::DispatchResponseFuture {
+        fn dispatch_with_response(
+            &mut self,
+            _request: &mut DecodeBuf,
+        ) -> Self::DispatchResponseFuture {
             let buf = EncodeBuf::new_response(43);
             future::ok(buf)
         }
@@ -192,8 +196,12 @@ mod tests {
         let server = Server::new(dispatcher, server_end, &handle).unwrap();
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle).unwrap().map_err(|err| err.into());
-        let receiver = server.select(rcv_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle)
+            .unwrap()
+            .map_err(|err| err.into());
+        let receiver = server.select(rcv_timeout).map(|(_, _)| ()).map_err(
+            |(err, _)| err,
+        );
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()| {
             let mut handles = Vec::new();
@@ -217,8 +225,12 @@ mod tests {
         let client_end = Channel::from_channel(client_end, &handle).unwrap();
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle).unwrap().map_err(|err| err.into());
-        let receiver = server.select(rcv_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle)
+            .unwrap()
+            .map_err(|err| err.into());
+        let receiver = server.select(rcv_timeout).map(|(_, _)| ()).map_err(
+            |(err, _)| err,
+        );
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().and_then(|()| {
             let mut handles = Vec::new();

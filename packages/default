@@ -8,6 +8,7 @@
         "garnet/packages/cmdutils",
         "garnet/packages/cobalt_client",
         "garnet/packages/debugserver",
+        "garnet/packages/device_settings",
         "garnet/packages/drivers",
         "garnet/packages/escher",
         "garnet/packages/fidl",

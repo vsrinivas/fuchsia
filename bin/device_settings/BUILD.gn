@@ -1,0 +1,38 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rust_binary.gni")
+import("//packages/package.gni")
+
+rust_binary("device_settings_manager_bin") {
+  with_tests = true
+  name = "device_settings_manager"
+  deps = [
+    "//garnet/public/lib/device_settings/fidl:fidl_rust_library",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
+    "//garnet/public/rust/crates/mxruntime",
+    "//garnet/public/rust/crates/mxruntime/mxruntime-sys",
+    "//garnet/public/rust/crates/tokio-fuchsia",
+    "//third_party/rust-crates:futures-0.1.16",
+    "//third_party/rust-crates:tempdir-0.3.5",
+    "//third_party/rust-mirrors/mio",
+    "//third_party/rust-mirrors/tokio-core",
+  ]
+}
+
+package("device_settings_manager") {
+  deps = [
+    ":device_settings_manager_bin",
+  ]
+
+  binaries = [ {
+        name = "device_settings_manager"
+      } ]
+  tests = [ {
+        name = "device_settings_manager-bin-test"
+      } ]
+}

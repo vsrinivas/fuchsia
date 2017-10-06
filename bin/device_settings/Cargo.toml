@@ -1,0 +1,17 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "device_settings_manager"
+version = "0.1.0"
+license = "BSD-3-Clause"
+
+[dependencies]
+futures = "0.1"
+tokio-core = "0.1"
+bytes = "0.4"
+tempdir = "0.3"
+
+[profile.release]
+panic = 'abort'

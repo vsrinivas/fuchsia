@@ -1,0 +1,28 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module device_settings;
+
+enum Status {
+  OK,
+  ERR_NOT_SET,
+  ERR_INVALID_SETTING,
+  ERR_READ,
+  ERR_INCORRECT_TYPE
+};
+
+
+// Manager Interface used to mange settings
+[ServiceName="device_settings::DeviceSettings"]
+interface DeviceSettingsManager {
+  GetInteger(string name) => (int64 val, Status s);
+
+  GetString(string name) => (string val, Status s);
+
+  // Return false on database error and true on success.
+  SetInteger(string name, int64 val) => (bool result);
+
+  // Return false on database error and true on success.
+  SetString(string name, string val) => (bool result);
+};
