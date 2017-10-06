@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display.h>
@@ -24,16 +25,6 @@
 
 #define BACKLIGHT_CTRL_OFFSET (0xc8250)
 #define BACKLIGHT_CTRL_BIT ((uint32_t)(1u << 31))
-
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 typedef struct intel_i915_device {
     void* regs;
@@ -157,7 +148,7 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
     status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &device->regs, &device->regs_size, &device->regs_handle);
     if (status != ZX_OK) {
-        printf("i915: failed to map bar 0: %d\n", status);
+        dprintf(ERROR, "i915: failed to map bar 0: %d\n", status);
         goto fail;
     }
 
@@ -167,7 +158,7 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
                               &device->framebuffer_size,
                               &device->framebuffer_handle);
     if (status != ZX_OK) {
-        printf("i915: failed to map bar 2: %d\n", status);
+        dprintf(ERROR, "i915: failed to map bar 2: %d\n", status);
         goto fail;
     }
 
@@ -207,7 +198,7 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    xprintf("initialized intel i915 display driver, reg=%p regsize=0x%llx fb=%p fbsize=0x%llx\n",
+    dprintf(SPEW, "i915: reg=%p regsize=0x%llx fb=%p fbsize=0x%llx\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
     return ZX_OK;
@@ -223,7 +214,7 @@ static zx_driver_ops_t intel_i915_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(intel_i915, intel_i915_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(intel_i915, intel_i915_driver_ops, "zircon", "*0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
     BI_MATCH_IF(EQ, BIND_PCI_CLASS, 0x3), // Display class

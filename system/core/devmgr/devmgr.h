@@ -54,4 +54,8 @@ void block_device_watcher(zx_handle_t job);
 // "false", otherwise it returns true.
 bool getenv_bool(const char* key, bool _default);
 
+// Global flag tracking if devmgr believes this is a full Fuchsia build
+// (requiring /system, etc) or not.
+extern bool require_system;
+
 __END_CDECLS

@@ -145,6 +145,9 @@ static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 // Drivers to add to All Drivers
 static list_node_t list_drivers_new = LIST_INITIAL_VALUE(list_drivers_new);
 
+// Drivers to try last
+static list_node_t list_drivers_fallback = LIST_INITIAL_VALUE(list_drivers_fallback);
+
 // All Devices (excluding static immortal devices)
 static list_node_t list_devices = LIST_INITIAL_VALUE(list_devices);
 
@@ -1363,6 +1366,10 @@ static bool is_root_driver(driver_t* drv) {
 
 static work_t new_driver_work;
 
+// dc_driver_added is called from driver enumeration either before
+// or after the devcoordinator starts running.  If after, it's added
+// to the list of new drivers and work is queued to process it.  If
+// before it's added to the list of all drivers or fallback list.
 void dc_driver_added(driver_t* drv, const char* version) {
     if (dc_running) {
         list_add_head(&list_drivers_new, &drv->node);
@@ -1371,7 +1378,11 @@ void dc_driver_added(driver_t* drv, const char* version) {
         }
         return;
     }
-    if (version[0] == '!') {
+    //TODO: real priority scheme
+    if (version[0] == '*') {
+        // fallback driver, load only if all else fails
+        list_add_tail(&list_drivers_fallback, &drv->node);
+    } else if (version[0] == '!') {
         // debugging / development hack
         // prioritize drivers with version "!..." over others
         list_add_head(&list_drivers, &drv->node);
@@ -1402,6 +1413,9 @@ device_t* coordinator_init(zx_handle_t root_job) {
     return &root_device;
 }
 
+// dc_bind_driver is called when a new driver becomes available to
+// the devcoordinator.  Existing devices are inspected to see if the
+// new driver is bindable to them (unless they are already bound).
 void dc_bind_driver(driver_t* drv) {
     if (dc_running) {
         printf("devcoord: driver '%s' added\n", drv->name);
@@ -1496,6 +1510,16 @@ void coordinator(void) {
 #endif
     dc_prepare_proxy(&sys_device);
 
+    if (require_system) {
+        printf("devcoord: full system required, ignoring fallback drivers\n");
+    } else {
+        driver_t* drv;
+        while ((drv = list_remove_tail_type(&list_drivers_fallback, driver_t, node)) != NULL) {
+            list_add_tail(&list_drivers, &drv->node);
+        }
+    }
+
+    // Initial bind attempt for drivers enumerated at startup.
     driver_t* drv;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
         dc_bind_driver(drv);

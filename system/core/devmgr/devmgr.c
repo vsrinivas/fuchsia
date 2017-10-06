@@ -26,6 +26,10 @@
 #include "devmgr.h"
 #include "memfs-private.h"
 
+// Global flag tracking if devmgr believes this is a full Fuchsia build
+// (requiring /system, etc) or not.
+bool require_system;
+
 // The handle used to transmit messages to appmgr.
 static zx_handle_t svc_root_handle;
 // The handle used by appmgr to serve incoming requests.
@@ -410,6 +414,8 @@ int main(int argc, char** argv) {
     while (*e) {
         printf("cmdline: %s\n", *e++);
     }
+
+    require_system = getenv_bool("devmgr.require-system", false);
 
     start_console_shell();
 

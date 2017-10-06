@@ -84,7 +84,9 @@ void find_loadable_drivers(const char* path) {
         if (de->d_name[0] == '.') {
             continue;
         }
-
+        if (de->d_type != DT_REG) {
+            continue;
+        }
         char libname[256 + 32];
         int r = snprintf(libname, sizeof(libname), "%s/%s", path, de->d_name);
         if ((r < 0) || (r >= (int)sizeof(libname))) {
