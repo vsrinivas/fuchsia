@@ -20,6 +20,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include "errors.h"
 #include "init.h"
 #include "dev.h"
 #include "pci.h"
@@ -27,11 +28,10 @@
 #include "processor.h"
 #include "power.h"
 
-#define MXDEBUG 0
-
 #define MAX_NAMESPACE_DEPTH 100
 
 #define HID_LENGTH 8
+#define CID_LENGTH 8
 
 typedef struct acpi_device {
     zx_device_t* zxdev;
@@ -45,7 +45,18 @@ typedef struct {
     bool found_pci;
 } publish_acpi_device_ctx_t;
 
+typedef struct {
+    uint8_t n;
+    uint8_t i;
+    zx_status_t st;
+    auxdata_i2c_device_t* data;
+} pci_child_auxdata_ctx_t;
+
 zx_handle_t root_resource_handle;
+
+static zx_device_t* publish_device(zx_device_t* parent, ACPI_HANDLE handle,
+                                   ACPI_DEVICE_INFO* info, const char* name,
+                                   uint32_t protocol_id, void* protocol_ops);
 
 static void acpi_device_release(void* ctx) {
     acpi_device_t* dev = (acpi_device_t*)ctx;
@@ -57,7 +68,142 @@ static zx_protocol_device_t acpi_device_proto = {
     .release = acpi_device_release,
 };
 
+static ACPI_STATUS find_pci_child_callback(ACPI_HANDLE object, uint32_t nesting_level,
+                                           void* context, void** out_value) {
+    ACPI_DEVICE_INFO* info;
+    ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
+    if (acpi_status != AE_OK) {
+        zxlogf(TRACE, "bus-acpi: AcpiGetObjectInfo failed %d\n", acpi_status);
+        return acpi_status;
+    }
+    ACPI_FREE(info);
+    ACPI_OBJECT obj = {
+        .Type = ACPI_TYPE_INTEGER,
+    };
+    ACPI_BUFFER buffer = {
+        .Length = sizeof(obj),
+        .Pointer = &obj,
+    };
+    acpi_status = AcpiEvaluateObject(object, (char*)"_ADR", NULL, &buffer);
+    if (acpi_status != AE_OK) {
+        return AE_OK;
+    }
+    uint32_t addr = *(uint32_t*)context;
+    ACPI_HANDLE* out_handle = (ACPI_HANDLE*)out_value;
+    if (addr == obj.Integer.Value) {
+        *out_handle = object;
+        return AE_CTRL_TERMINATE;
+    } else {
+        return AE_OK;
+    }
+}
+
+static ACPI_STATUS pci_child_data_resources_callback(ACPI_RESOURCE* res, void* context) {
+    pci_child_auxdata_ctx_t* ctx = (pci_child_auxdata_ctx_t*)context;
+    auxdata_i2c_device_t* child = ctx->data;
+
+    if (res->Type != ACPI_RESOURCE_TYPE_SERIAL_BUS) {
+        return AE_NOT_FOUND;
+    }
+    if (res->Data.I2cSerialBus.Type != ACPI_RESOURCE_SERIAL_TYPE_I2C) {
+        return AE_NOT_FOUND;
+    }
+
+    ACPI_RESOURCE_I2C_SERIALBUS* i2c = &res->Data.I2cSerialBus;
+    child->bus_master = i2c->SlaveMode;
+    child->ten_bit = i2c->AccessMode;
+    child->address = i2c->SlaveAddress;
+    child->bus_speed = i2c->ConnectionSpeed;
+
+    ctx->st = ZX_OK;
+
+    return AE_CTRL_TERMINATE;
+}
+
+static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object, uint32_t nesting_level,
+                                       void* context, void** out_value) {
+    pci_child_auxdata_ctx_t* ctx = (pci_child_auxdata_ctx_t*)context;
+    uint32_t i = ctx->i++;
+    if (i < ctx->n) {
+        return AE_OK;
+    } else if (i > ctx->n) {
+        return AE_CTRL_TERMINATE;
+    }
+
+    // get device type (only looking for i2c-hid right now)
+    ACPI_BUFFER buffer = {
+        .Length = ACPI_ALLOCATE_BUFFER,
+    };
+    ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_CID", NULL, &buffer);
+    if (acpi_status == AE_OK) {
+        ACPI_OBJECT* obj = buffer.Pointer;
+        if (!memcmp(obj->String.Pointer, I2C_HID_CID_STRING, CID_LENGTH)) {
+            ctx->data->protocol_id = ZX_PROTOCOL_I2C_HID;
+        }
+        ACPI_FREE(obj);
+    }
+
+    // call _CRS to get i2c info
+    acpi_status = AcpiWalkResources(object, (char*)"_CRS",
+                                    pci_child_data_resources_callback, ctx);
+    if (acpi_status != AE_OK) {
+        ctx->st = acpi_to_zx_status(acpi_status);
+    }
+
+    // terminate child walk once the the nth device is found
+    return AE_CTRL_TERMINATE;
+}
+
+static zx_status_t pciroot_op_get_auxdata(void* context, auxdata_type_t type,
+                                          void* _args, size_t args_len,
+                                          void* out_data, size_t out_len) {
+    acpi_device_t* dev = (acpi_device_t*)context;
+    if (type != AUXDATA_PCI_CHILD_NTH_DEVICE) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    auxdata_args_pci_child_nth_device_t* args = _args;
+    if (args->child_type != AUXDATA_DEVICE_I2C) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (out_len != sizeof(auxdata_i2c_device_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    ACPI_HANDLE pci_node = NULL;
+    uint32_t addr = (args->dev_id << 16) | args->func_id;
+
+    // Look for the child node with this device and function id
+    ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, dev->ns_node, 1,
+                                                find_pci_child_callback, NULL,
+                                                &addr, &pci_node);
+    if ((acpi_status != AE_OK) && (acpi_status != AE_CTRL_TERMINATE)) {
+        return acpi_to_zx_status(acpi_status);
+    }
+    if (pci_node == NULL) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    // Look for the nth child for this pci node and fill in data
+    pci_child_auxdata_ctx_t ctx = {
+        .n = args->n,
+        .i = 0,
+        .st = ZX_ERR_NOT_FOUND,
+        .data = out_data,
+    };
+
+    acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, pci_node, 1, pci_child_data_callback,
+                                    NULL, &ctx, NULL);
+    if ((acpi_status != AE_OK) && (acpi_status != AE_CTRL_TERMINATE)) {
+        return acpi_to_zx_status(acpi_status);
+    }
+
+    return ctx.st;
+}
+
 static pciroot_protocol_ops_t pciroot_proto = {
+    .get_auxdata = pciroot_op_get_auxdata,
 };
 
 static zx_protocol_device_t acpi_root_device_proto = {

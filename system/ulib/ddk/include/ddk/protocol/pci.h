@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/protocol/auxdata.h>
 #include <hw/pci.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/pci.h>
@@ -76,8 +77,9 @@ typedef struct pci_protocol_ops {
     zx_status_t (*get_device_info)(void* ctx, zx_pcie_device_info_t* out_info);
     uint32_t    (*config_read)(void* ctx, uint8_t offset, size_t width);
     uint8_t     (*get_next_capability)(void* ctx, uint8_t type, uint8_t offset);
+    zx_status_t (*get_auxdata)(void* ctx, auxdata_type_t type, void* args, size_t args_len,
+                               void* out_data, size_t out_len);
 } pci_protocol_ops_t;
-
 typedef struct pci_protocol {
     pci_protocol_ops_t* ops;
     void* ctx;
@@ -147,6 +149,12 @@ static uint8_t pci_get_first_capability(pci_protocol_t* pci, uint8_t type) {
     // pointer to fetch the next capability. By offsetting the CapPtr field
     // by -1 we can pretend we're working with a normal capability entry
     return pci_get_next_capability(pci, kPciCfgCapabilitiesPtr - 1u, type);
+}
+
+static inline zx_status_t pci_get_auxdata(pci_protocol_t* pci, auxdata_type_t type,
+                                          void* args, size_t args_len,
+                                          void* out_data, size_t out_len) {
+    return pci->ops->get_auxdata(pci->ctx, type, args, args_len, out_data, out_len);
 }
 
 __END_CDECLS;

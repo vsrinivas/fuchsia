@@ -829,26 +829,36 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         "reg=%p regsize=%ld\n",
         device->regs, device->regs_size);
 
-    // Temporarily setup the controller for the Acer12 touch panel. This will
-    // eventually be done by enumerating the device via ACPI, but for now we
-    // hardcode it.
-    if (pci_config->vendor_id == INTEL_VID &&
-        pci_config->device_id == ACER_I2C_TOUCH) {
-        intel_serialio_i2c_set_bus_frequency(device, 400000);
-        intel_serialio_i2c_add_slave(device, I2C_7BIT_ADDRESS, 0x0010);
-    }
+    // get child info from aux data
+    auxdata_args_nth_device_t auxdata_args = {
+        .child_type = AUXDATA_DEVICE_I2C,
+        .n = 0,
+    };
+    auxdata_i2c_device_t child;
+    uint32_t bus_speed = 0;
+    // TODO: this seems nonstandard to device model
+    do {
+        memset(&child, 0, sizeof(child));
+        status = pci_get_auxdata(&pci, AUXDATA_NTH_DEVICE, &auxdata_args, sizeof(auxdata_args),
+                                 &child, sizeof(child));
+        if (status == ZX_OK) {
+            if (child.protocol_id == ZX_PROTOCOL_I2C_HID) {
+                if (bus_speed && bus_speed != child.bus_speed) {
+                    zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)\n",
+                            bus_speed, child.bus_speed);
+                    break;
+                }
+                if (!bus_speed) {
+                    intel_serialio_i2c_set_bus_frequency(device, child.bus_speed);
+                    bus_speed = child.bus_speed;
+                }
+                intel_serialio_i2c_add_slave(device,
+                        child.ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS,
+                        child.address);
+            }
+        }
+    } while ((status == ZX_OK) && auxdata_args.n++);
 
-    // more temporary hacks
-    if (pci_config->vendor_id == INTEL_VID &&
-        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID) {
-        intel_serialio_i2c_set_bus_frequency(device, 1000000);
-        intel_serialio_i2c_add_slave(device, I2C_7BIT_ADDRESS, 0x000A);
-    }
-    if (pci_config->vendor_id == INTEL_VID &&
-        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID) {
-        intel_serialio_i2c_set_bus_frequency(device, 400000);
-        intel_serialio_i2c_add_slave(device, I2C_7BIT_ADDRESS, 0x0049);
-    }
 
     zx_handle_close(config_handle);
     return ZX_OK;

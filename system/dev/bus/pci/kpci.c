@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
@@ -31,13 +32,75 @@ static void kpci_release(void* ctx) {
     free(device);
 }
 
+static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t h) {
+#if PROXY_DEVICE
+    return ZX_ERR_NOT_SUPPORTED;
+#else
+    uint32_t actual;
+    zx_status_t st = zx_channel_read(h, 0, NULL, NULL, 0, 0, &actual, NULL);
+    if ((st != ZX_OK) && (st != ZX_ERR_BUFFER_TOO_SMALL)) {
+        return st;
+    }
+
+    pci_req_auxdata_nth_device_t req;
+    if (actual > sizeof(req)) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    st = zx_channel_read(h, 0, &req, NULL, sizeof(req), 0, &actual, NULL);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    if ((req.hdr.op != PCI_OP_GET_AUXDATA) ||
+        (req.auxdata_type != AUXDATA_NTH_DEVICE) ||
+        (req.args.child_type != AUXDATA_DEVICE_I2C)) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    kpci_device_t* device = ctx;
+    if (device->pciroot.ctx == NULL) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    auxdata_args_pci_child_nth_device_t args = {
+        .bus_id = device->info.bus_id,
+        .dev_id = device->info.dev_id,
+        .func_id = device->info.func_id,
+        .n = req.args.n,
+        .child_type = req.args.child_type,
+    };
+
+    pci_resp_auxdata_i2c_nth_device_t resp = {
+        .hdr = {
+            .txid = req.hdr.txid,
+            .len = sizeof(resp),
+            .op = req.hdr.op,
+            .status = ZX_OK,
+        },
+    };
+    st = pciroot_get_auxdata(&device->pciroot, AUXDATA_PCI_CHILD_NTH_DEVICE,
+                             &args, sizeof(args),
+                             &resp.device, sizeof(resp.device));
+    if (st != ZX_OK) {
+        resp.hdr.status = st;
+    }
+
+    return zx_channel_write(h, 0, &resp, sizeof(resp), NULL, 0);
+#endif
+}
+
 static zx_protocol_device_t kpci_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .rxrpc = kpci_rxrpc,
     .release = kpci_release,
 };
 
+// initializes and optionally adds a new child device
+// device will be added if parent is not NULL
 static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index,
-                                   bool save_handle, zx_device_t** out) {
+                                   bool save_handle, zx_handle_t rpcch,
+                                   zx_device_t** out) {
     zx_pcie_device_info_t info;
     zx_handle_t handle;
 
@@ -62,6 +125,12 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index,
         handle = ZX_HANDLE_INVALID;
     }
     device->index = index;
+
+#if PROXY_DEVICE
+    device->pciroot_rpcch = rpcch;
+#else
+    status = device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device->pciroot);
+#endif
 
     char name[20];
     snprintf(name, sizeof(name), "%02x:%02x:%02x", info.bus_id, info.dev_id, info.func_id);
@@ -123,13 +192,10 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index,
 
 static zx_status_t kpci_drv_create(void* ctx, zx_device_t* parent,
                                    const char* name, const char* args,
-                                   zx_handle_t resource) {
-    if (resource != ZX_HANDLE_INVALID) {
-        zx_handle_close(resource);
-    }
+                                   zx_handle_t rpcch) {
     uint32_t index = strtoul(args, NULL, 10);
     zx_device_t* dev;
-    return kpci_init_child(parent, index, true, &dev);
+    return kpci_init_child(parent, index, true, rpcch, &dev);
 }
 
 static zx_driver_ops_t kpci_driver_ops = {
@@ -147,7 +213,7 @@ static zx_status_t kpci_drv_bind(void* ctx, zx_device_t* parent, void** cookie) 
     for (uint32_t index = 0;; index++) {
         zx_device_t* dev;
         // don't hang onto the PCI handle - we don't need it any more
-        if (kpci_init_child(parent, index, false, &dev) != ZX_OK) {
+        if (kpci_init_child(parent, index, false, ZX_HANDLE_INVALID, &dev) != ZX_OK) {
             break;
         }
     }

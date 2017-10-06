@@ -14,6 +14,8 @@
 #define GOOGLE_CROS_EC_HID_STRING  "GOOG0004"
 #define GOOGLE_TBMC_HID_STRING     "GOOG0006"
 
+#define I2C_HID_CID_STRING          "PNP0C50"
+
 __BEGIN_CDECLS
 
 zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);

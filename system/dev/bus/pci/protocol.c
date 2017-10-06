@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
+#include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci.h>
 
 #include <assert.h>
@@ -10,6 +12,8 @@
 #include <zircon/process.h>
 
 #include "kpci-private.h"
+
+_Atomic zx_txid_t pci_global_txid = 0;
 
 static zx_status_t kpci_enable_bus_master(void* ctx, bool enable) {
     kpci_device_t* device = ctx;
@@ -227,6 +231,74 @@ static zx_status_t kpci_get_device_info(void* ctx, zx_pcie_device_info_t* out_in
     return ZX_OK;
 }
 
+static zx_status_t kpci_get_auxdata(void* ctx, auxdata_type_t type,
+                                    void* _args, size_t args_len,
+                                    void* out_data, size_t out_len) {
+#if PROXY_DEVICE
+    if (type != AUXDATA_NTH_DEVICE) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (args_len != sizeof(auxdata_args_nth_device_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    auxdata_args_nth_device_t* args = _args;
+    if (args->child_type != AUXDATA_DEVICE_I2C) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (out_len != sizeof(auxdata_i2c_device_t)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    kpci_device_t* dev = ctx;
+    if (dev->pciroot_rpcch == ZX_HANDLE_INVALID) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    pci_req_auxdata_nth_device_t req = {
+        .hdr = {
+            .txid = atomic_fetch_add(&pci_global_txid, 1),
+            .op = PCI_OP_GET_AUXDATA,
+            .len = sizeof(req),
+        },
+        .auxdata_type = type,
+        .args = {
+            .child_type = args->child_type,
+            .n = args->n,
+        },
+    };
+    pci_resp_auxdata_i2c_nth_device_t resp;
+    zx_channel_call_args_t cc_args = {
+        .wr_bytes = &req,
+        .rd_bytes = &resp,
+        .wr_num_bytes = sizeof(req),
+        .rd_num_bytes = sizeof(resp),
+        .wr_handles = NULL,
+        .rd_handles = NULL,
+        .wr_num_handles = 0,
+        .rd_num_handles = 0,
+    };
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    zx_status_t st = zx_channel_call(dev->pciroot_rpcch, 0, ZX_TIME_INFINITE, &cc_args,
+                                     &actual_bytes, &actual_handles, NULL);
+    if (st != ZX_OK) {
+        return st;
+    } else if (actual_bytes != sizeof(resp)) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    if (resp.hdr.status == ZX_OK) {
+        memcpy(out_data, &resp.device, sizeof(resp.device));
+    }
+
+    return resp.hdr.status;
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
+}
+
 static pci_protocol_ops_t _pci_protocol = {
     .enable_bus_master = kpci_enable_bus_master,
     .enable_pio = kpci_enable_pio,
@@ -239,4 +311,5 @@ static pci_protocol_ops_t _pci_protocol = {
     .get_device_info = kpci_get_device_info,
     .config_read = kpci_config_read,
     .get_next_capability = kpci_get_next_capability,
+    .get_auxdata = kpci_get_auxdata,
 };
