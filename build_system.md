@@ -51,7 +51,7 @@ architecture. If not supplied, it defaults to x86-64.
 ./buildtools/ninja -C out/debug-aarch64
 ```
 
-You can configure the set of modules that `gen.py` uses with the `--modules`
+You can configure the set of packages that `gen.py` uses with the `--packages`
 argument. After running `gen.py` once, you can do incremental builds using
 `ninja`.
 
