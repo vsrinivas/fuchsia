@@ -649,7 +649,7 @@ RUN_TEST(cancel_event_key_once_after)
 RUN_TEST(cancel_event_key_repeat_after)
 RUN_TEST(threads_event_once)
 RUN_TEST(threads_event_repeat)
-RUN_TEST(cancel_stress)
+RUN_TEST_LARGE(cancel_stress)
 END_TEST_CASE(port_tests)
 
 #ifndef BUILD_COMBINED_TESTS
