@@ -272,7 +272,7 @@ echo "Building boot environment for installer"
 gn_gen_path="packages/gn/gen.py"
 ninja_path="buildtools/ninja"
 
-"$script_dir/../../$gn_gen_path" --outdir out/installer-system --target_cpu "$build_arch" --modules packages/gn/installer-system,packages/gn/install-fuchsia
+"$script_dir/../../$gn_gen_path" --outdir out/installer-system --target_cpu "$build_arch" --packages packages/gn/installer-system,packages/gn/install-fuchsia
 
 sys_out="${script_dir}/../../out/installer-system-${build_arch}"
 "${script_dir}/../../${ninja_path}" -C "$sys_out"

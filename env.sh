@@ -338,7 +338,7 @@ function fset-usage() {
   # Note: if updating the syntax here please update zsh-completion/_fset to match
   cat >&2 <<END
 Usage: fset x86-64|arm64|rpi3|odroidc2|hikey960
-                              [--release] [--modules m1,m2...]
+                              [--release] [--packages p1,p2...]
                               [--goma|--no-goma] [--no-ensure-goma]
                               [--goma-dir path]
                               [--ccache|--no-ccache]
