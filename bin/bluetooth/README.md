@@ -19,7 +19,7 @@ configures a minimal build that includes Bluetooth unit tests and command-line t
 quick iteration times when developing unit tests on QEMU):
 
 ```
-./packages/gn/gen.py --modules fxl,mtl,bluetooth
+./packages/gn/gen.py --packages garnet/packages/fxl,garnet/packages/mtl,garnet/packages/bluetooth
 ```
 
 *NOTE: You may see warnings related to skia which are safe to ignore. The warnings can be muted by
@@ -28,7 +28,7 @@ passing `--ignore-skia` to gen.py.*
 To build the entire Fuchsia tree and also include the FIDL examples:
 
 ```
-./packages/gn/gen.py --modules bluetooth_examples,default
+./packages/gn/gen.py --modules topaz/packages/examples,packages/gn/default
 ```
 
 ## Development

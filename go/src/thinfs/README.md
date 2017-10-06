@@ -28,7 +28,7 @@ incrementally rebuild Thinfs alone.
 
 ```shell
 cd $FUCHSIA_ROOT
-./packages/gn/gen.py --modules=thinfs
+./packages/gn/gen.py --packages=garnet/packages/thinfs
 ./buildtools/ninja -C out/debug-x86-64
 ```
 

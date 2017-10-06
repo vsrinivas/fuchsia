@@ -17,7 +17,7 @@ commands:
 
 ```
 scripts/build-zircon.sh -t x86_64
-packages/gn/gen.py --debug -m garnet/packages/default
+packages/gn/gen.py --debug -p garnet/packages/default
 buildtools/ninja -C out/debug-x86-64
 ```
 
@@ -25,7 +25,7 @@ For 64bit ARM (aarch64):
 
 ```
 scripts/build-zircon.sh -t aarch64
-packages/gn/gen.py -t aarch64 --debug -m garnet/packages/default
+packages/gn/gen.py -t aarch64 --debug -p garnet/packages/default
 buildtools/ninja -C out/debug-aarch64
 ```
 
