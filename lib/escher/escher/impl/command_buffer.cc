@@ -107,15 +107,15 @@ void CommandBuffer::KeepAlive(Resource* resource) {
     return;
   }
 
-  FXL_DCHECK(resource->sequence_number() <= sequence_number_);
-  resource->set_sequence_number(sequence_number_);
   if (resource->IsKindOf<DescriptorSetAllocation>()) {
-    // TODO: DescriptorSetPool will immediately recycle allocations, even while
-    // they're still in use.  Therefore, we must ref the allocations until the
-    // CommandBuffer has completed.  One way to fix this would be for
+    // TODO(ES-37): DescriptorSetPool will immediately recycle allocations, even
+    // while they're still in use.  Therefore, we must ref the allocations until
+    // the CommandBuffer has completed.  One way to fix this would be for
     // DescriptorSetPool to become a CommandBufferSequencerListener, similar to
     // ResourceRecycler.
     used_resources_.push_back(ResourcePtr(resource));
+  } else if (resource.sequence_number() < sequence_number_) {
+    resource->set_sequence_number(sequence_number_);
   }
 }
 
