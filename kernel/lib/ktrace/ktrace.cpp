@@ -307,4 +307,4 @@ void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name) {
     ktrace_name_etc(tag, id, arg, name, false);
 }
 
-LK_INIT_HOOK(ktrace, ktrace_init, LK_INIT_LEVEL_APPS - 1);
+LK_INIT_HOOK(ktrace, ktrace_init, LK_INIT_LEVEL_USER);

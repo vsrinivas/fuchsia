@@ -913,5 +913,4 @@ static void kernel_shell_init(uint level)
     }
 }
 
-LK_INIT_HOOK(kernel_shell, kernel_shell_init, LK_INIT_LEVEL_APPS);
-
+LK_INIT_HOOK(kernel_shell, kernel_shell_init, LK_INIT_LEVEL_USER);

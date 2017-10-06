@@ -31,7 +31,7 @@ enum lk_init_level {
     LK_INIT_LEVEL_ARCH           = 0x80000,
     LK_INIT_LEVEL_PLATFORM       = 0x90000,
     LK_INIT_LEVEL_TARGET         = 0xa0000,
-    LK_INIT_LEVEL_APPS           = 0xb0000,
+    LK_INIT_LEVEL_USER           = 0xb0000,
 
     LK_INIT_LEVEL_LAST = UINT_MAX,
 };

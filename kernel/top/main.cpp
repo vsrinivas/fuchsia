@@ -11,7 +11,6 @@
  */
 #include <lk/main.h>
 
-#include <app.h>
 #include <arch.h>
 #include <debug.h>
 #include <kernel/init.h>
@@ -98,11 +97,7 @@ static int bootstrap2(void*) {
     lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_TARGET - 1);
     target_init();
 
-    dprintf(SPEW, "calling apps_init()\n");
-    lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET, LK_INIT_LEVEL_APPS - 1);
-    apps_init();
-
-    lk_primary_cpu_init_level(LK_INIT_LEVEL_APPS, LK_INIT_LEVEL_LAST);
+    lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET, LK_INIT_LEVEL_LAST);
 
     return 0;
 }

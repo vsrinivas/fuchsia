@@ -10,7 +10,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
-	kernel/app \
 	kernel/kernel \
 	kernel/platform \
 	kernel/target

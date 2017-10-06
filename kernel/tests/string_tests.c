@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <app.h>
 #include <inttypes.h>
 #include <kernel/thread.h>
 #include <malloc.h>
