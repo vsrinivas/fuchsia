@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -14,7 +15,6 @@
 #include <zircon/types.h>
 #include <pretty/hexdump.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -23,7 +23,6 @@
 #define USB_HID_PROTOCOL_KBD    0x01
 #define USB_HID_PROTOCOL_MOUSE  0x02
 
-#define USB_HID_DEBUG 0
 #define to_usb_hid(d) containerof(d, usb_hid_device_t, hiddev)
 
 typedef struct usb_hid_device {
@@ -49,13 +48,13 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
     void* buffer;
     zx_status_t status = usb_request_mmap(req, &buffer);
     if (status != ZX_OK) {
-        printf("usb-hid: usb_request_mmap failed: %s\n", zx_status_get_string(status));
+        dprintf(ERROR, "usb-hid: usb_request_mmap failed: %s\n", zx_status_get_string(status));
         return;
     }
-#if USB_HID_DEBUG
-    printf("usb-hid: callback request status %d\n", req->response.status);
-    hexdump(buffer, req->response.actual);
-#endif
+    dprintf(SPEW, "usb-hid: callback request status %d\n", req->response.status);
+    if (driver_get_log_flags() & DDK_LOG_SPEW) {
+        hexdump(buffer, req->response.actual);
+    }
 
     bool requeue = true;
     switch (req->response.status) {
@@ -70,7 +69,8 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
         mtx_unlock(&hid->lock);
         break;
     default:
-        printf("usb-hid: unknown interrupt status %d; not requeuing req\n", req->response.status);
+        dprintf(ERROR, "usb-hid: unknown interrupt status %d; not requeuing req\n",
+                req->response.status);
         requeue = false;
         break;
     }
@@ -141,7 +141,7 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
                                      USB_REQ_GET_DESCRIPTOR, desc_type << 8, hid->interface,
                                      desc_buf, desc_len, ZX_TIME_INFINITE);
     if (status < 0) {
-        printf("usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
+        dprintf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
         free(desc_buf);
         return status;
     } else {
@@ -193,6 +193,7 @@ static zx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration)
     if (status == ZX_ERR_IO_REFUSED) {
         // The SET_IDLE command is optional, so this may stall.
         // If that occurs, reset the endpoint and ignore the error
+        dprintf(TRACE, "usb-hid: stall while setting idle. reseting endpoint.\n");
         status = usb_reset_endpoint(&hid->usb, 0);
     }
     return status;
