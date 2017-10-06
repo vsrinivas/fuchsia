@@ -22,6 +22,7 @@
         "garnet/packages/iperf",
         "garnet/packages/libc-tests",
         "garnet/packages/listen",
+        "garnet/packages/make-fuchsia-vol",
         "garnet/packages/media_audio",
         "garnet/packages/media_examples",
         "garnet/packages/media_tests",
