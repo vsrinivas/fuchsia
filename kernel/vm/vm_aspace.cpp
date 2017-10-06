@@ -13,6 +13,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 #include <fbl/type_support.h>
 #include <inttypes.h>
 #include <kernel/cmdline.h>
@@ -45,11 +46,13 @@ VmAspace* VmAspace::kernel_aspace_ = nullptr;
 static VmAddressRegion* dummy_root_vmar = nullptr;
 
 // list of all address spaces
-static mutex_t aspace_list_lock = MUTEX_INITIAL_VALUE(aspace_list_lock);
-static fbl::DoublyLinkedList<VmAspace*> aspaces;
+static fbl::Mutex aspace_list_lock;
+static fbl::DoublyLinkedList<VmAspace*> aspaces TA_GUARDED(aspace_list_lock);
 
-// called once at boot to initialize the singleton kernel address space
-void VmAspace::KernelAspaceInitPreHeap() {
+// Called once at boot to initialize the singleton kernel address
+// space. Thread safety analysis is disabled since we don't need to
+// lock yet.
+void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
     // the singleton kernel address space
     static VmAspace _kernel_aspace(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL, "kernel");
 
