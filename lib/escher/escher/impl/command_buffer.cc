@@ -114,7 +114,7 @@ void CommandBuffer::KeepAlive(Resource* resource) {
     // DescriptorSetPool to become a CommandBufferSequencerListener, similar to
     // ResourceRecycler.
     used_resources_.push_back(ResourcePtr(resource));
-  } else if (resource.sequence_number() < sequence_number_) {
+  } else if (resource->sequence_number() < sequence_number_) {
     resource->set_sequence_number(sequence_number_);
   }
 }
