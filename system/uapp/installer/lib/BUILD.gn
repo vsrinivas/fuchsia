@@ -1,0 +1,22 @@
+config("installerlib_config") {
+  include_dirs = [ "include" ]
+}
+
+static_library("lib") {
+  sources = [
+    "include/installer/installer.h",
+    "installer.c",
+  ]
+  deps = [
+    "//zircon/system/ulib/gpt",
+  ]
+  public_configs = [ ":installerlib_config" ]
+}
+
+static_library("sparse") {
+  sources = [
+    "include/installer/sparse.h",
+    "sparse.c",
+  ]
+  public_configs = [ ":installerlib_config" ]
+}

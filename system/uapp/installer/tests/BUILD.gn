@@ -1,0 +1,24 @@
+executable("install-fuchsia-tests") {
+  testonly = true
+  sources = [ "tests.c" ]
+  libs = [
+    "fs-management",
+    "zircon",
+  ]
+  deps = [
+    "//apps/install-fuchsia/lib:lib",
+    "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/unittest"
+   ]
+}
+
+executable("install-fuchsia-sparse-tests") {
+  sources = [ "sparse_tests.c" ]
+  libs = [
+    "zircon",
+  ]
+  deps = [
+    "//apps/install-fuchsia/lib:sparse",
+    "//zircon/system/ulib/unittest"
+  ]
+}

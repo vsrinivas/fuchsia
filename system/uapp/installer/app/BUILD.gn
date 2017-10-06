@@ -1,0 +1,33 @@
+executable("sparser") {
+  sources = [
+    "sparse.c"
+  ]
+
+  deps = [
+    "//apps/install-fuchsia/lib:sparse"
+  ]
+}
+
+group("sparser_host") {
+  deps = [
+    ":sparser(//build/toolchain:host_x64)"
+  ]
+}
+
+executable("install-fuchsia") {
+  sources = [
+    "install-fuchsia.c"
+  ]
+
+  libs = [
+    "fs-management",
+    "zircon"
+  ]
+
+  deps = [
+    "//apps/install-fuchsia/lib",
+    "//zircon/system/ulib/gpt",
+    "//zircon/third_party/ulib/lz4",
+    "//apps/install-fuchsia/lib:sparse",
+  ]
+}
