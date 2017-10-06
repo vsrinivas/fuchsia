@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_arm_device.h"
+#include "job_scheduler.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "magma_util/dlog.h"
@@ -43,6 +44,27 @@ public:
 
 protected:
     magma::Status Process(MsdArmDevice* device) override { return device->ProcessGpuInterrupt(); }
+};
+
+class MsdArmDevice::JobInterruptRequest : public DeviceRequest {
+public:
+    JobInterruptRequest() {}
+
+protected:
+    magma::Status Process(MsdArmDevice* device) override { return device->ProcessJobInterrupt(); }
+};
+
+class MsdArmDevice::ScheduleAtomRequest : public DeviceRequest {
+public:
+    ScheduleAtomRequest(std::unique_ptr<MsdArmAtom> atom) : atom_(std::move(atom)) {}
+
+protected:
+    magma::Status Process(MsdArmDevice* device) override
+    {
+        return device->ProcessScheduleAtom(std::move(atom_));
+    }
+
+    std::unique_ptr<MsdArmAtom> atom_;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -127,6 +149,8 @@ bool MsdArmDevice::Init(void* device_handle)
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
     power_manager_ = std::make_unique<PowerManager>();
+
+    scheduler_ = std::make_unique<JobScheduler>(this, 3);
 
     if (!InitializeInterrupts())
         return false;
@@ -235,17 +259,36 @@ int MsdArmDevice::JobInterruptThreadLoop()
 
         if (interrupt_thread_quit_flag_)
             break;
-
-        auto irq_status = registers::JobIrqFlags::GetStatus().ReadFrom(register_io_.get());
-        auto clear_flags = registers::JobIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
-        clear_flags.WriteTo(register_io_.get());
-
-        magma::log(magma::LOG_WARNING, "Got unexpected Job IRQ %d\n", irq_status.reg_value());
-        job_interrupt_->Complete();
+        auto request = std::make_unique<JobInterruptRequest>();
+        auto reply = request->GetReply();
+        EnqueueDeviceRequest(std::move(request), true);
+        reply->Wait();
     }
 
     DLOG("Job Interrupt thread exited");
     return 0;
+}
+
+magma::Status MsdArmDevice::ProcessJobInterrupt()
+{
+    auto irq_status = registers::JobIrqFlags::GetStatus().ReadFrom(register_io_.get());
+    auto clear_flags = registers::JobIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
+    clear_flags.WriteTo(register_io_.get());
+    DLOG("Processing job interrupt status %x", irq_status.reg_value());
+
+    if (irq_status.failed_slots().get())
+        magma::log(magma::LOG_WARNING, "Got unexpected failed slots %x\n",
+                   irq_status.failed_slots().get());
+
+    uint32_t finished = irq_status.finished_slots().get();
+    while (finished) {
+        uint32_t slot = ffs(finished) - 1;
+        scheduler_->JobCompleted(slot);
+        finished &= ~(1 << slot);
+    }
+
+    job_interrupt_->Complete();
+    return MAGMA_STATUS_OK;
 }
 
 int MsdArmDevice::MmuInterruptThreadLoop()
@@ -343,6 +386,11 @@ void MsdArmDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, 
     device_request_semaphore_->Signal();
 }
 
+void MsdArmDevice::ScheduleAtom(std::unique_ptr<MsdArmAtom> atom)
+{
+    EnqueueDeviceRequest(std::make_unique<ScheduleAtomRequest>(std::move(atom)));
+}
+
 void MsdArmDevice::DumpRegisters(const GpuFeatures& features, RegisterIo* io, DumpState* dump_state)
 {
     static struct {
@@ -427,6 +475,15 @@ magma::Status MsdArmDevice::ProcessDumpStatusToLog()
     magma::log(magma::LOG_INFO, "%s", dump.c_str());
     return MAGMA_STATUS_OK;
 }
+
+magma::Status MsdArmDevice::ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom)
+{
+    scheduler_->EnqueueAtom(std::move(atom));
+    scheduler_->TryToSchedule();
+    return MAGMA_STATUS_OK;
+}
+
+void MsdArmDevice::RunAtom(MsdArmAtom* atom) {}
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
 {

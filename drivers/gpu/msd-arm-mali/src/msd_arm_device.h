@@ -12,6 +12,7 @@
 
 #include "device_request.h"
 #include "gpu_features.h"
+#include "job_scheduler.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
@@ -27,7 +28,7 @@
 #include <thread>
 #include <vector>
 
-class MsdArmDevice : public msd_device_t {
+class MsdArmDevice : public msd_device_t, public JobScheduler::Owner {
 public:
     // Creates a device for the given |device_handle| and returns ownership.
     // If |start_device_thread| is false, then StartDeviceThread should be called
@@ -72,6 +73,7 @@ public:
     void DumpToString(std::string& dump_string);
     void FormatDump(DumpState& dump_state, std::string& dump_string);
     void DumpStatusToLog();
+    void ScheduleAtom(std::unique_ptr<MsdArmAtom> atom);
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -86,6 +88,8 @@ private:
 
     class DumpRequest;
     class GpuInterruptRequest;
+    class JobInterruptRequest;
+    class ScheduleAtomRequest;
 
     RegisterIo* register_io()
     {
@@ -105,6 +109,9 @@ private:
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
     magma::Status ProcessDumpStatusToLog();
     magma::Status ProcessGpuInterrupt();
+    magma::Status ProcessJobInterrupt();
+    magma::Status ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom);
+    void RunAtom(MsdArmAtom* atom) override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
@@ -130,6 +137,7 @@ private:
     GpuFeatures gpu_features_;
 
     std::unique_ptr<PowerManager> power_manager_;
+    std::unique_ptr<JobScheduler> scheduler_;
 };
 
 #endif // MSD_ARM_DEVICE_H
