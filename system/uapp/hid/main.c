@@ -437,8 +437,9 @@ int get_report(int argc, const char** argv) {
     // Because of this uncertainty, we currently just provide a worst-case 4KB
     // buffer to read into, and report the number of bytes which came back along
     // with the expected size of the raw report.
-    uint8_t* buf = malloc(4u << 10);
-    rc = ioctl_input_get_report(fd, &rpt_arg, buf, sizeof(buf));
+    size_t bufsz = 4u << 10;
+    uint8_t* buf = malloc(bufsz);
+    rc = ioctl_input_get_report(fd, &rpt_arg, buf, bufsz);
     if (rc < 0) {
         printf("hid: could not get report: %zd\n", rc);
     } else {
