@@ -45,7 +45,8 @@ zx::channel CloneChannel(int fd) {
 
 AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
                              AppConfigPtr config,
-                             std::string data_origin)
+                             std::string data_origin,
+                             app::ServiceListPtr additional_services)
     : AsyncHolderBase(config->url) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->services = services_.NewRequest();
@@ -74,6 +75,10 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
       FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
       return;
     }
+  }
+
+  if (!additional_services.is_null()) {
+    launch_info->additional_services = std::move(additional_services);
   }
   launcher->CreateApplication(std::move(launch_info), app_.NewRequest());
 }

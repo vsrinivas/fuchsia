@@ -33,13 +33,17 @@ namespace modular {
 // |data_origin| will be mapped into /data for the newly started application.
 // If left empty, it'll be mapped to the root /data.
 //
+// |additional_services| will allow us to add custom services to an applications
+// namespace.
+//
 // AppClientBase are the non-template parts factored out so they don't need to
 // be inline. It can be used on its own too.
 class AppClientBase : public AsyncHolderBase {
  public:
   AppClientBase(app::ApplicationLauncher* launcher,
                 AppConfigPtr config,
-                std::string data_origin = "");
+                std::string data_origin = "",
+                app::ServiceListPtr additional_services = nullptr);
   virtual ~AppClientBase();
 
   // Gives access to the service provider of the started application. Services
@@ -74,8 +78,10 @@ class AppClient : public AppClientBase {
  public:
   AppClient(app::ApplicationLauncher* const launcher,
             AppConfigPtr config,
-            std::string data_origin = "")
-      : AppClientBase(launcher, std::move(config), std::move(data_origin)) {
+            std::string data_origin = "",
+            app::ServiceListPtr additional_services = nullptr)
+      : AppClientBase(launcher, std::move(config), std::move(data_origin),
+                      std::move(additional_services)) {
     ConnectToService(services(), service_.NewRequest());
   }
 

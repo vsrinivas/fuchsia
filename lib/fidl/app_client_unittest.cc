@@ -15,6 +15,7 @@ namespace modular {
 namespace testing {
 namespace {
 
+constexpr char kServiceName[] = "service1";
 constexpr char kTestUrl[] = "some/test/url";
 
 AppConfigPtr GetTestAppConfig() {
@@ -106,6 +107,31 @@ TEST_F(AppClientTest, Run_Success) {
       });
 
   AppClient<test::TerminateService> app_client(&launcher, GetTestAppConfig());
+
+  EXPECT_TRUE(callback_called);
+}
+
+TEST_F(AppClientTest, RunWithParams_Success) {
+  app::ServiceListPtr additional_services = app::ServiceList::New();
+  additional_services->names.push_back(kServiceName);
+  // We just need |provider_request| to stay around till the end of this test.
+  auto provider_request = additional_services->provider.NewRequest();
+
+  bool callback_called = false;
+  FakeApplicationLauncher launcher;
+  launcher.RegisterApplication(
+      kTestUrl, [&callback_called](
+                    app::ApplicationLaunchInfoPtr launch_info,
+                    fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+        EXPECT_EQ(kTestUrl, launch_info->url);
+        auto additional_services = std::move(launch_info->additional_services);
+        EXPECT_FALSE(additional_services.is_null());
+        EXPECT_EQ(kServiceName, additional_services->names[0]);
+        callback_called = true;
+      });
+
+  AppClient<test::TerminateService> app_client(
+      &launcher, GetTestAppConfig(), "", std::move(additional_services));
 
   EXPECT_TRUE(callback_called);
 }
