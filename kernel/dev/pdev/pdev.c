@@ -11,8 +11,8 @@
 
 static mdi_node_ref_t driver_list = {};
 
-extern const struct lk_pdev_init_struct __start_lk_pdev_init[] __WEAK;
-extern const struct lk_pdev_init_struct __stop_lk_pdev_init[] __WEAK;
+extern const struct lk_pdev_init_struct __start_lk_pdev_init[];
+extern const struct lk_pdev_init_struct __stop_lk_pdev_init[];
 
 static void pdev_init_driver(mdi_node_ref_t* node_ref, uint level) {
     mdi_id_t id = mdi_id(node_ref);
