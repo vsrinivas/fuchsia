@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import fileinput
 import os
 import paths
 import platform
@@ -29,6 +30,7 @@ CONFIGS = [
     "garnet/public/rust/crates/tokio-fuchsia",
     "third_party/xi-editor/rust/core-lib",
     "topaz/app/xi/modules/xi-core",
+    "topaz/examples/spinning-square-rs",
 ]
 
 NATIVE_LIBS = {
@@ -180,6 +182,44 @@ rust_info("%s") {
             build_file.write("}\n")
 
 
+def fix_build_files(crates):
+    """Updates BUILD.gn files with newer versions of third-party crates."""
+    dep_pattern = re.compile(
+            r"^(\s*)\"//third_party/rust-crates:([a-z\-]+)-(\d[\d\.]+)\",\s*$")
+    not_found = set()
+    for root, dirs, files in os.walk(os.path.join(paths.FUCHSIA_ROOT)):
+        for file in files:
+            _, ext = os.path.splitext(file)
+            if file != "BUILD.gn" and ext != ".gni":
+                continue
+            base = os.path.relpath(root, paths.FUCHSIA_ROOT)
+            if base == "third_party/rust-crates":
+                # The build file defining the crates is up-to-date, thank you
+                # very much.
+                continue
+            path = os.path.join(root, file)
+            for line in fileinput.input(path, inplace=1):
+                match = dep_pattern.match(line)
+                if not match:
+                    sys.stdout.write(line)
+                    continue
+                crate_name = match.group(2)
+                new_version = next((x["version"] for x in crates
+                                    if x["name"] == crate_name), None)
+                if not new_version:
+                    sys.stdout.write(line)
+                    not_found.add(crate_name)
+                    continue
+                sys.stdout.write("%s\"//third_party/rust-crates:%s-%s\",\n" %
+                                 (match.group(1), crate_name, new_version))
+    if not_found:
+        print("Unable to find new versions for:")
+        for crate in not_found:
+            print("  - %s" % crate)
+        return False
+    return True
+
+
 def call_or_exit(args, dir):
     if subprocess.call(args, cwd=dir) != 0:
         raise Exception("Command failed in %s: %s" % (dir, " ".join(args)))
@@ -279,7 +319,13 @@ def main():
     with open(update_path, "w") as update_file:
         update_file.write("%s\n" % uuid.uuid1())
 
+    print("Fixing build files")
+    if not fix_build_files(crates):
+        print("Failed to update build files")
+        return 1
+
     print("Vendor directory updated at %s" % vendor_dir)
+    return 0
 
 
 if __name__ == '__main__':
