@@ -26,9 +26,6 @@ extern uintptr_t boot_alloc_end;
 void vmm_init_preheap(void);
 void vmm_init(void);
 
-// global vmm lock (for now)
-extern mutex_t vmm_lock;
-
 // utility function to test that offset + len is entirely within a range
 // returns false if out of range
 // NOTE: only use unsigned lengths
