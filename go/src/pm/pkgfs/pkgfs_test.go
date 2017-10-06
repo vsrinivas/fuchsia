@@ -95,9 +95,11 @@ func tmain(m *testing.M) int {
 	if err := pkgfs.Mount(d); err != nil {
 		panic(err)
 	}
+	println("pkgfs mounted")
 	defer func() {
 		println("unmounting pkgfs")
 		pkgfs.Unmount()
+		println("unmount done")
 	}()
 	pkgfsMount = d
 

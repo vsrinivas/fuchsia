@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"syscall"
 	"syscall/zx"
@@ -22,6 +23,7 @@ import (
 // mountInfo is a platform specific type that carries platform specific mounting
 // data, such as the file descriptor or handle of the mount.
 type mountInfo struct {
+	unmountOnce  sync.Once
 	serveChannel *zx.Channel
 	parentFd     *os.File
 }
@@ -76,15 +78,14 @@ func (f *Filesystem) Mount(path string) error {
 
 // Unmount detaches the filesystem from a previously mounted path. If mount was not previously called or successful, this will panic.
 func (f *Filesystem) Unmount() {
-	handles, err := syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
-	if err == nil {
-		if len(handles) >= 1 {
-			syscall.FDIOForFD(int(handles[0])).Ioctl(fdio.IoctlVFSUnmountFS, nil, nil)
-		}
-	}
-	// TODO(raggi): log errors?
-	f.mountInfo.serveChannel.Close()
-	f.mountInfo.parentFd.Close()
+	f.mountInfo.unmountOnce.Do(func() {
+		// TODO(raggi): log errors?
+		syscall.FDIOForFD(int(f.mountInfo.parentFd.Fd())).Ioctl(fdio.IoctlVFSUnmountNode, nil, nil)
+		f.mountInfo.serveChannel.Close()
+		f.mountInfo.parentFd.Close()
+		f.mountInfo.serveChannel = nil
+		f.mountInfo.parentFd = nil
+	})
 }
 
 func goErrToFSErr(err error) error {
