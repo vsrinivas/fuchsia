@@ -544,7 +544,7 @@ static bool threads_event_repeat() {
 }
 
 
-static constexpr uint32_t kStressCount = 60000u;
+static constexpr uint32_t kStressCount = 20000u;
 static constexpr uint64_t kSleeps[] = { 0, 10, 2, 0, 15, 0};
 
 static int signaler_thread(void* arg) {
