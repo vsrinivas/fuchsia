@@ -67,8 +67,8 @@ static cmd_block *command_list = NULL;
 /* a linear array of statically defined command blocks,
    defined in the linker script.
  */
-extern cmd_block __start_commands[] __WEAK;
-extern cmd_block __stop_commands[] __WEAK;
+extern cmd_block __start_commands[];
+extern cmd_block __stop_commands[];
 
 static int cmd_help(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_echo(int argc, const cmd_args *argv, uint32_t flags);
