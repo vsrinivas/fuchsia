@@ -11,14 +11,6 @@
 #  bootloader.
 #  Assumes this is run from the zircon source directory.
 
-if [ "$#" -ne 1 ]; then
-	echo "Usage: hikey-efi-boot-image <uefi repo path>"
-	echo "   see /docs/targets/hikey960-uefi.md for more info"
-	exit 1
-fi
-
-#where the hikey repos live
-HIKEY_DIR=$1
 ZIRCON_DIR=.
 ZIRCON_BUILD=${ZIRCON_DIR}/build-zircon-hikey960-arm64
 
@@ -36,17 +28,50 @@ DT_OFFSET=0x07a00000
 
 CMDLINE="TERM=uart"
 
+function HELP() {
+    echo "Usage: hikey-efi-boot-image <uefi repo path>"
+    echo "   see /docs/targets/hikey960-uefi.md for more info"
+    echo "-m : Add mexec option to command line"
+    echo "-h for help"
+    exit 1
+}
+
+while getopts "mh" FLAG; do
+    case $FLAG in
+        m) CMDLINE+=" netsvc.netboot=true";;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ "$#" -lt 1 ]; then
+    echo "not enough arguments"
+    HELP
+fi
+
+# where the hikey repos live
+HIKEY_DIR=$1
+MKBOOTIMG=${HIKEY_DIR}/tools-images-hikey960/build-from-source/mkbootimg
+
+if [ ! -e ${MKBOOTIMG} ]; then
+    echo "mkbootimg not found at path ${MKBOOTIMG}"
+    HELP
+fi
+
 # mkdtimg and mkbootimg can be found at:
 #  https://github.com/96boards-hikey/tools-images-hikey960/tree/master/build-from-source
 
-
-${HIKEY_DIR}/tools-images-hikey960/build-from-source/mkbootimg --kernel $KERNEL \
+${MKBOOTIMG} --kernel $KERNEL \
 --kernel_offset $KERNEL_OFFSET \
 --base $MEMBASE \
 --ramdisk_offset $RAMDISK_OFFSET \
 --ramdisk $RAMDISK \
 --tags_offset $DT_OFFSET \
---cmdline $CMDLINE \
+--cmdline "$CMDLINE" \
 -o $OUT_IMAGE || exit 1
 
 fastboot boot $OUT_IMAGE || exit 1
