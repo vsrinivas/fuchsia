@@ -24,6 +24,6 @@ shared_library("swapchain") {
     "$loader_build_root:extra_vulkan_headers",
     "$loader_build_root/layers:layer_common",
     "$magma_build_root/src/display_pipe",
-    "//garnet/public/lib/images/fidl:fidl_sync",
+    "//garnet/public/lib/images/fidl",
   ]
 }

@@ -30,14 +30,15 @@ int main(int argc, const char** argv) {
   if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
     return 1;
 
-  fidl::SynchronousInterfacePtr<app::ApplicationLauncher> launcher;
+  app::ApplicationLauncherSyncPtr launcher;
   auto launcher_request = GetSynchronousProxy(&launcher);
   fdio_service_connect_at(service_root.get(), launcher->Name_,
                           launcher_request.PassChannel().release());
 
-  fidl::SynchronousInterfacePtr<app::ApplicationController> controller;
+  app::ApplicationControllerSyncPtr controller;
   auto controller_request = GetSynchronousProxy(&controller);
-  launcher->CreateApplication(std::move(launch_info), std::move(controller_request));
+  launcher->CreateApplication(std::move(launch_info),
+                              std::move(controller_request));
 
   int32_t return_code;
   if (!controller->Wait(&return_code)) {

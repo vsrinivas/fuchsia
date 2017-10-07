@@ -56,7 +56,6 @@ template("fidl") {
 
   cpp_sources_suffix = "cpp_sources"
   cpp_sources_target_name = "${target_name}_${cpp_sources_suffix}"
-  cpp_sync_sources_target_name = "${target_name}_${cpp_sources_suffix}_sync"
 
   if (defined(invoker.sources)) {
     legacy_gen_path = rebase_path(
@@ -237,31 +236,6 @@ template("fidl") {
 
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sources_target_name}" ]
-    }
-
-    deps = cpp_deps
-  }
-
-  # This target provides C++ synchronous bindings support. The dependent may
-  # also depend on the non-sync C++ bindings target.
-  source_set("${target_name}_sync") {
-    if (defined(invoker.visibility)) {
-      visibility = invoker.visibility
-    }
-
-    if (defined(invoker.testonly)) {
-      testonly = invoker.testonly
-    }
-
-    public_configs = [ "//garnet/public:config" ]
-
-    public_deps = [
-      "//garnet/public/lib/fidl/cpp/bindings",
-    ]
-
-    public_deps += cpp_public_deps
-    if (defined(invoker.sources)) {
-      public_deps += [ ":${cpp_sync_sources_target_name}" ]
     }
 
     deps = cpp_deps
@@ -531,43 +505,16 @@ template("fidl") {
       if (defined(invoker.testonly)) {
         testonly = invoker.testonly
       }
-      sources =
-          process_file_template(invoker.sources,
-                                [
-                                  "{{source_gen_dir}}/{{source_file_part}}.h",
-                                  "{{source_gen_dir}}/{{source_file_part}}.cc",
-                                ])
-      public_configs =
-          [ "//garnet/public/lib/fidl/cpp/bindings:bindings_config" ]
-      deps = [
-        ":$generator_target_name",
-        ":${cpp_sources_target_name}__common",
-        "//garnet/public/lib/fidl/compiler/interfaces:interfaces__generator",
-        "//garnet/public/lib/fidl/cpp/bindings",
-      ]
-      foreach(d, all_deps) {
-        # Resolve the name, so that a target //mojo/something becomes
-        # //mojo/something:something and we can append cpp_sources_suffix to
-        # get the cpp dependency name.
-        full_name = get_label_info(d, "label_no_toolchain")
-        deps += [ "${full_name}_${cpp_sources_suffix}" ]
-      }
-    }
-
-    source_set(cpp_sync_sources_target_name) {
-      if (defined(invoker.testonly)) {
-        testonly = invoker.testonly
-      }
       sources = process_file_template(
               invoker.sources,
               [
+                "{{source_gen_dir}}/{{source_file_part}}.h",
+                "{{source_gen_dir}}/{{source_file_part}}.cc",
                 "{{source_gen_dir}}/{{source_file_part}}-sync.cc",
                 "{{source_gen_dir}}/{{source_file_part}}-sync.h",
               ])
-      public_configs = [
-        "//garnet/public/lib/fidl/cpp/bindings:bindings_config",
-        "//garnet/public:config",
-      ]
+      public_configs =
+          [ "//garnet/public/lib/fidl/cpp/bindings:bindings_config" ]
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",

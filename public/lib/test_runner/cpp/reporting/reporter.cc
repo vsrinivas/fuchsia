@@ -5,8 +5,8 @@
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/test_runner/fidl/test_runner.fidl-sync.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/test_runner/fidl/test_runner.fidl-sync.h"
 
 namespace test_runner {
 
@@ -17,7 +17,7 @@ void ReportResult(std::string identity,
     return;
   }
 
-  fidl::SynchronousInterfacePtr<TestRunner> test_runner;
+  TestRunnerSyncPtr test_runner;
   context->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&test_runner));
 
   test_runner->Identify(identity);

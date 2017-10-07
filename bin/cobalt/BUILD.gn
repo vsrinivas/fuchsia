@@ -24,11 +24,9 @@ package("cobalt") {
     },
   ]
 
-  tests = [
-    {
-      name = "cobalt_testapp_no_network"
-    },
-  ]
+  tests = [ {
+        name = "cobalt_testapp_no_network"
+      } ]
 }
 
 executable("bin") {
@@ -42,9 +40,9 @@ executable("bin") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/cobalt/fidl:fidl",
-    "//third_party/cobalt/encoder",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/cobalt/encoder",
     "//third_party/grpc:grpc++",
 
     # TODO(rudominer) Change to protobuf_lite after we have a different way
@@ -60,18 +58,18 @@ executable("cobalt_testapp") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/cobalt/fidl:fidl_sync",
-    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/cobalt/fidl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
 copy("cobalt_testapp_no_network") {
   sources = [
-    "cobalt_testapp_no_network"
+    "cobalt_testapp_no_network",
   ]
 
   outputs = [
-    "$root_out_dir/cobalt_testapp_no_network"
+    "$root_out_dir/cobalt_testapp_no_network",
   ]
 }

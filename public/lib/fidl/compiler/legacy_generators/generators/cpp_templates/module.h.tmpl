@@ -14,15 +14,17 @@ this stuff up (it involves digging through all the templates included here. -#}
 #include <stdint.h>
 
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/message_validator.h"
 #include "lib/fidl/cpp/bindings/no_interface.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "{{module.path}}-common.h"
+#include "{{module.path}}-sync.h"
 {%- for import in imports %}
 #include "{{import.module.path}}.h"
 {%- endfor %}
@@ -34,6 +36,7 @@ namespace {{namespace}} {
 // --- Interface Forward Declarations ---
 {%  for interface in interfaces %}
 using {{interface.name}}Ptr = ::fidl::InterfacePtr<{{interface.name}}>;
+using {{interface.name}}SyncPtr = ::fidl::SynchronousInterfacePtr<{{interface.name}}>;
 {%  endfor %}
 
 // --- Interface Proxies ---

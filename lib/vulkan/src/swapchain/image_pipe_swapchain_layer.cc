@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "lib/images/fidl/image_pipe.fidl-sync.h"
+#include "lib/images/fidl/image_pipe.fidl.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer_config.h"
@@ -43,7 +43,7 @@ struct SupportedImageProperties {
 };
 
 struct ImagePipeSurface {
-    fidl::SynchronousInterfacePtr<scenic::ImagePipe> image_pipe;
+    scenic::ImagePipeSyncPtr image_pipe;
     SupportedImageProperties supported_properties;
 };
 
@@ -55,7 +55,7 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
 public:
     ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                       fidl::SynchronousInterfacePtr<scenic::ImagePipe> image_pipe)
+                       scenic::ImagePipeSyncPtr image_pipe)
         : supported_properties_(supported_properties), image_pipe_(std::move(image_pipe)),
           image_pipe_closed_(false)
     {
@@ -72,7 +72,7 @@ public:
 
 private:
     SupportedImageProperties supported_properties_;
-    fidl::SynchronousInterfacePtr<scenic::ImagePipe> image_pipe_;
+    scenic::ImagePipeSyncPtr image_pipe_;
     std::vector<VkImage> images_;
     std::vector<VkDeviceMemory> memories_;
     std::vector<uint32_t> acquired_ids_;
@@ -389,7 +389,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(VkInstance instance,
     std::vector<VkSurfaceFormatKHR> formats(
         {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
     surface->supported_properties = {{pCreateInfo->width, pCreateInfo->height}, formats};
-    surface->image_pipe = fidl::SynchronousInterfacePtr<scenic::ImagePipe>::Create(
+    surface->image_pipe = scenic::ImagePipeSyncPtr::Create(
         fidl::InterfaceHandle<scenic::ImagePipe>(zx::channel(pCreateInfo->imagePipeHandle), 0u));
     *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
     return VK_SUCCESS;

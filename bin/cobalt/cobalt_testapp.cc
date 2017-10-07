@@ -21,12 +21,12 @@
 #include "lib/cobalt/fidl/cobalt_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 // Command-line flags
 
@@ -186,8 +186,8 @@ class CobaltTestApp {
   int previous_value_of_num_send_attempts_ = 0;
   std::unique_ptr<app::ApplicationContext> context_;
   app::ApplicationControllerPtr app_controller_;
-  fidl::SynchronousInterfacePtr<cobalt::CobaltEncoder> encoder_;
-  fidl::SynchronousInterfacePtr<cobalt::CobaltController> cobalt_controller_;
+  cobalt::CobaltEncoderSyncPtr encoder_;
+  cobalt::CobaltControllerSyncPtr cobalt_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };
@@ -238,7 +238,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
-  fidl::SynchronousInterfacePtr<cobalt::CobaltEncoderFactory> factory;
+  cobalt::CobaltEncoderFactorySyncPtr factory;
   app::ConnectToService(services.get(), fidl::GetSynchronousProxy(&factory));
   factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
 
@@ -282,7 +282,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
-  fidl::SynchronousInterfacePtr<cobalt::CobaltEncoderFactory> factory;
+  cobalt::CobaltEncoderFactorySyncPtr factory;
   context_->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&factory));
 
   factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
