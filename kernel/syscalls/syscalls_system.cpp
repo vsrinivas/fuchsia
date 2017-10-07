@@ -28,6 +28,8 @@
 #include <string.h>
 #include <trace.h>
 
+#include "syscalls_system_priv.h"
+
 #define LOCAL_TRACE 0
 
 // Allocate this many extra bytes at the end of the bootdata for the platform
@@ -383,7 +385,7 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
 }
 
 zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
-                                user_in_ptr<const zx_system_powerctl_arg_t> arg) {
+                                user_in_ptr<const zx_system_powerctl_arg_t> raw_arg) {
 
     zx_status_t status;
     if ((status = validate_resource(root_rsrc, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -400,7 +402,13 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
             return mp_unplug_cpu_mask(mp_get_online_mask() & ~primary);
         }
         case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE: {
-            return ZX_ERR_NOT_SUPPORTED;
+            zx_system_powerctl_arg_t arg;
+            status = raw_arg.copy_from_user(&arg);
+            if (status != ZX_OK) {
+                return status;
+            }
+
+            return arch_system_powerctl(cmd, &arg);
         }
         default: return ZX_ERR_INVALID_ARGS;
     }

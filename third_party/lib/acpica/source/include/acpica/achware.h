@@ -117,6 +117,9 @@ AcpiHwLegacySleep (
     UINT8                   SleepState);
 
 ACPI_STATUS
+AcpiHwLegacySleepFinal(UINT8 SleepState, UINT8 SleepTypeA, UINT8 SleepTypeB);
+
+ACPI_STATUS
 AcpiHwLegacyWakePrep (
     UINT8                   SleepState);
 

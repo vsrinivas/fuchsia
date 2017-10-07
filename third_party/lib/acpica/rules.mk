@@ -16,6 +16,10 @@ MODULE_CFLAGS += -fno-strict-aliasing
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/source/include/acpica
 
 MODULE_SRCS += \
+	$(LOCAL_DIR)/source/components/hardware/hwregs.c \
+	$(LOCAL_DIR)/source/components/hardware/hwsleep.c \
+	$(LOCAL_DIR)/source/components/hardware/hwvalid.c \
+	$(LOCAL_DIR)/source/components/hardware/hwxface.c \
 	$(LOCAL_DIR)/source/components/tables/tbdata.c \
 	$(LOCAL_DIR)/source/components/tables/tbfadt.c \
 	$(LOCAL_DIR)/source/components/tables/tbfind.c \

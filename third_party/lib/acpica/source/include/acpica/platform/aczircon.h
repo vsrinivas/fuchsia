@@ -15,7 +15,6 @@
  * https://acpica.org/sites/acpica/files/acpica-reference_17.pdf
  */
 
-
 #if __x86_64__
 #define ACPI_MACHINE_WIDTH 64
 #else
