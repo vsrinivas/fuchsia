@@ -12,14 +12,6 @@ clang_toolchain_suite(target_cpu) {
   use_strip = true
 }
 
-if (current_cpu == "arm64") {
-  clang_target = "aarch64-fuchsia"
-} else if (current_cpu == "x64") {
-  clang_target = "x86_64-fuchsia"
-} else {
-  assert(false, "Unsupported architecture")
-}
-
 package("cpp") {
   files = exec_script("//build/clang_print_file_name.py",
                       [

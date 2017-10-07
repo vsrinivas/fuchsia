@@ -4,6 +4,7 @@
 
 import("//build/config/sysroot.gni")
 import("//build/toolchain/ccache.gni")
+import("//build/toolchain/clang_toolchain.gni")
 
 assert(current_os == "fuchsia")
 
@@ -101,18 +102,9 @@ config("compiler_sysroot") {
 }
 
 config("compiler_target") {
-  cflags = []
-  ldflags = []
-  if (current_cpu == "arm64") {
-    cflags += [ "--target=aarch64-fuchsia" ]
-    ldflags += [ "--target=aarch64-fuchsia" ]
-  } else if (current_cpu == "x64") {
-    cflags += [ "--target=x86_64-fuchsia" ]
-    ldflags += [ "--target=x86_64-fuchsia" ]
-  } else {
-    assert(false, "Unsupported architecture")
-  }
+  cflags = [ "--target=$clang_target" ]
   asmflags = cflags
+  ldflags = cflags
 }
 
 config("compiler_cpu") {
