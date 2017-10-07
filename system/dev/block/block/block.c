@@ -36,7 +36,7 @@ static int blockserver_thread_serve(blkdev_t* bdev) TA_REL(bdev->lock) {
     bdev->threadcount++;
     mtx_unlock(&bdev->lock);
 
-    blockserver_serve(bs, &bdev->proto);
+    blockserver_serve(bs);
 
     mtx_lock(&bdev->lock);
     if (bdev->bs == bs) {
@@ -77,7 +77,7 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     }
 
     BlockServer* bs;
-    if ((status = blockserver_create(out_buf, &bs)) != ZX_OK) {
+    if ((status = blockserver_create(&bdev->proto, out_buf, &bs)) != ZX_OK) {
         goto done;
     }
 

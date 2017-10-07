@@ -41,8 +41,9 @@ static void OutOfBandErrorRespond(const zx::fifo& fifo, zx_status_t status, txni
     }
 }
 
-BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid) :
-    fifo_(fifo), flags_(0), goal_(0) {
+BlockTransaction::BlockTransaction(zx_handle_t fifo, txnid_t txnid, block_protocol_t* proto,
+                                   uint32_t max_xfer) :
+    fifo_(fifo), proto_(proto), max_xfer_(max_xfer), flags_(0), goal_(0) {
     memset(&response_, 0, sizeof(response_));
     response_.txnid = txnid;
 }
@@ -73,6 +74,27 @@ fail:
 }
 
 void BlockTransaction::Complete(block_msg_t* msg, zx_status_t status) {
+    if (status == ZX_OK && msg->len_remaining != 0) {
+        // Although this message has "completed", it is actually larger than
+        // the underlying transfer size. Before the "message" completes, ensure
+        // that the rest of it has been communicated with the underlying block
+        // device (in max_xfer_ sized chunks).
+        uint32_t length = fbl::min(msg->len_remaining, max_xfer_);
+        msg->len_remaining -= length;
+        uint64_t vmo_offset = msg->vmo_offset;
+        msg->vmo_offset += length;
+        uint64_t dev_offset = msg->dev_offset;
+        msg->dev_offset += length;
+
+        if (msg->opcode == BLOCKIO_READ) {
+            block_read(proto_, msg->iobuf->vmo(), length, vmo_offset,
+                       dev_offset, msg);
+        } else {
+            block_write(proto_, msg->iobuf->vmo(), length, vmo_offset,
+                        dev_offset, msg);
+        }
+        return;
+    }
     fbl::AutoLock lock(&lock_);
     response_.count++;
     ZX_DEBUG_ASSERT(goal_ != 0);
@@ -137,17 +159,17 @@ zx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
 }
 
 zx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
-    for (vmoid_t i = last_id; i < fbl::numeric_limits<vmoid_t>::max(); i++) {
+    for (vmoid_t i = last_id_; i < fbl::numeric_limits<vmoid_t>::max(); i++) {
         if (!tree_.find(i).IsValid()) {
             *out = i;
-            last_id = static_cast<vmoid_t>(i + 1);
+            last_id_ = static_cast<vmoid_t>(i + 1);
             return ZX_OK;
         }
     }
-    for (vmoid_t i = 0; i < last_id; i++) {
+    for (vmoid_t i = 0; i < last_id_; i++) {
         if (!tree_.find(i).IsValid()) {
             *out = i;
-            last_id = static_cast<vmoid_t>(i + 1);
+            last_id_ = static_cast<vmoid_t>(i + 1);
             return ZX_OK;
         }
     }
@@ -178,7 +200,9 @@ zx_status_t BlockServer::AllocateTxn(txnid_t* out) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
             fbl::AllocChecker ac;
-            txns_[i] = fbl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
+            txns_[i] = fbl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(),
+                                                                txnid, proto_,
+                                                                info_.max_transfer_size));
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -198,9 +222,9 @@ void BlockServer::FreeTxn(txnid_t txnid) {
     txns_[txnid] = nullptr;
 }
 
-zx_status_t BlockServer::Create(zx::fifo* fifo_out, BlockServer** out) {
+zx_status_t BlockServer::Create(block_protocol_t* proto, zx::fifo* fifo_out, BlockServer** out) {
     fbl::AllocChecker ac;
-    BlockServer* bs = new (&ac) BlockServer();
+    BlockServer* bs = new (&ac) BlockServer(proto);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -235,8 +259,8 @@ static block_callbacks_t cb = {
     blockserver_fifo_complete,
 };
 
-zx_status_t BlockServer::Serve(block_protocol_t* proto) {
-    block_set_callbacks(proto, &cb);
+zx_status_t BlockServer::Serve() {
+    block_set_callbacks(proto_, &cb);
 
     zx_status_t status;
     block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
@@ -271,6 +295,14 @@ zx_status_t BlockServer::Serve(block_protocol_t* proto) {
             switch (requests[i].opcode & BLOCKIO_OP_MASK) {
             case BLOCKIO_READ:
             case BLOCKIO_WRITE: {
+                if (requests[i].length > fbl::numeric_limits<uint32_t>::max()) {
+                    // Operation which is too large
+                    if (wants_reply) {
+                        OutOfBandErrorRespond(fifo_, ZX_ERR_INVALID_ARGS, txnid);
+                    }
+                    continue;
+                }
+
                 block_msg_t* msg;
                 status = txns_[txnid]->Enqueue(wants_reply, &msg);
                 if (status != ZX_OK) {
@@ -290,12 +322,24 @@ zx_status_t BlockServer::Serve(block_protocol_t* proto) {
                     break;
                 }
 
-                if ((requests[i].opcode & BLOCKIO_OP_MASK) == BLOCKIO_READ) {
-                    block_read(proto, iobuf->io_vmo_.get(), requests[i].length,
-                                     requests[i].vmo_offset, requests[i].dev_offset, msg);
+                uint64_t length = requests[i].length;
+                const uint32_t max_xfer = info_.max_transfer_size;
+                if (max_xfer != 0 && max_xfer < requests[i].length) {
+                    msg->len_remaining = static_cast<uint32_t>(requests[i].length) - max_xfer;
+                    msg->vmo_offset = requests[i].vmo_offset + max_xfer;
+                    msg->dev_offset = requests[i].dev_offset + max_xfer;
+                    length = max_xfer;
                 } else {
-                    block_write(proto, iobuf->io_vmo_.get(), requests[i].length,
-                                      requests[i].vmo_offset, requests[i].dev_offset, msg);
+                    msg->len_remaining = 0;
+                }
+                msg->opcode = requests[i].opcode & BLOCKIO_OP_MASK;
+
+                if (msg->opcode == BLOCKIO_READ) {
+                    block_read(proto_, iobuf->vmo(), length,
+                               requests[i].vmo_offset, requests[i].dev_offset, msg);
+                } else {
+                    block_write(proto_, iobuf->vmo(), length,
+                                requests[i].vmo_offset, requests[i].dev_offset, msg);
                 }
                 break;
             }
@@ -320,7 +364,10 @@ zx_status_t BlockServer::Serve(block_protocol_t* proto) {
     }
 }
 
-BlockServer::BlockServer() : last_id(0) {}
+BlockServer::BlockServer(block_protocol_t* proto) : proto_(proto), last_id_(0) {
+    block_get_info(proto_, &info_);
+}
+
 BlockServer::~BlockServer() {
     ShutDown();
 }
@@ -332,9 +379,9 @@ void BlockServer::ShutDown() {
 }
 
 // C declarations
-zx_status_t blockserver_create(zx_handle_t* fifo_out, BlockServer** out) {
+zx_status_t blockserver_create(block_protocol_t* proto, zx_handle_t* fifo_out, BlockServer** out) {
     zx::fifo fifo;
-    zx_status_t status = BlockServer::Create(&fifo, out);
+    zx_status_t status = BlockServer::Create(proto, &fifo, out);
     *fifo_out = fifo.release();
     return status;
 }
@@ -344,8 +391,8 @@ void blockserver_shutdown(BlockServer* bs) {
 void blockserver_free(BlockServer* bs) {
     delete bs;
 }
-zx_status_t blockserver_serve(BlockServer* bs, block_protocol_t* proto) {
-    return bs->Serve(proto);
+zx_status_t blockserver_serve(BlockServer* bs) {
+    return bs->Serve();
 }
 zx_status_t blockserver_attach_vmo(BlockServer* bs, zx_handle_t raw_vmo, vmoid_t* out) {
     zx::vmo vmo(raw_vmo);

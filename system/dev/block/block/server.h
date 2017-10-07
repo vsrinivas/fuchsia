@@ -34,11 +34,13 @@ public:
     // checking it and using it.  This will require a mechanism to "pin" VMO pages.
     zx_status_t ValidateVmoHack(uint64_t length, uint64_t vmo_offset);
 
+
+    zx_handle_t vmo() const { return io_vmo_.get(); }
+
     IoBuffer(zx::vmo vmo, vmoid_t vmoid);
     ~IoBuffer();
 
 private:
-    friend class BlockServer;
     friend struct TypeWAVLTraits;
     DISALLOW_COPY_ASSIGN_AND_MOVE(IoBuffer);
 
@@ -53,11 +55,16 @@ class BlockTransaction;
 typedef struct {
     fbl::RefPtr<BlockTransaction> txn;
     fbl::RefPtr<IoBuffer> iobuf;
+    uint32_t opcode;
+    uint32_t len_remaining;
+    uint64_t vmo_offset;
+    uint64_t dev_offset;
 } block_msg_t;
 
 class BlockTransaction : public fbl::RefCounted<BlockTransaction> {
 public:
-    BlockTransaction(zx_handle_t fifo, txnid_t txnid);
+    BlockTransaction(zx_handle_t fifo, txnid_t txnid, block_protocol_t* proto,
+                     uint32_t max_xfer);
     ~BlockTransaction();
 
     // Verifies that the incoming txn does not break the Block IO fifo protocol.
@@ -72,6 +79,8 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockTransaction);
 
     const zx_handle_t fifo_;
+    block_protocol_t* proto_;
+    const uint32_t max_xfer_;
 
     fbl::Mutex lock_;
     block_msg_t msgs_[MAX_TXN_MESSAGES] TA_GUARDED(lock_);
@@ -83,10 +92,10 @@ private:
 class BlockServer {
 public:
     // Creates a new BlockServer
-    static zx_status_t Create(zx::fifo* fifo_out, BlockServer** out);
+    static zx_status_t Create(block_protocol_t* proto, zx::fifo* fifo_out, BlockServer** out);
 
     // Starts the BlockServer using the current thread
-    zx_status_t Serve(block_protocol_t* proto);
+    zx_status_t Serve();
     zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out);
     zx_status_t AllocateTxn(txnid_t* out);
     void FreeTxn(txnid_t txnid);
@@ -96,17 +105,19 @@ public:
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
-    BlockServer();
+    BlockServer(block_protocol_t* proto);
 
     zx_status_t Read(block_fifo_request_t* requests, uint32_t* count);
     zx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
     zx::fifo fifo_;
+    block_protocol_t* proto_;
+    block_info_t info_;
 
     fbl::Mutex server_lock_;
     fbl::WAVLTree<vmoid_t, fbl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
     fbl::RefPtr<BlockTransaction> txns_[MAX_TXN_COUNT] TA_GUARDED(server_lock_);
-    vmoid_t last_id TA_GUARDED(server_lock_);
+    vmoid_t last_id_ TA_GUARDED(server_lock_);
 };
 
 #else
@@ -119,7 +130,7 @@ typedef struct BlockServer BlockServer;
 __BEGIN_CDECLS
 
 // Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(zx_handle_t* fifo_out, BlockServer** out);
+zx_status_t blockserver_create(block_protocol_t* proto, zx_handle_t* fifo_out, BlockServer** out);
 
 // Shut down the blockserver. It will stop serving requests.
 void blockserver_shutdown(BlockServer* bs);
@@ -128,7 +139,7 @@ void blockserver_shutdown(BlockServer* bs);
 void blockserver_free(BlockServer* bs);
 
 // Use the current thread to block on incoming FIFO requests.
-zx_status_t blockserver_serve(BlockServer* bs, block_protocol_t* ops);
+zx_status_t blockserver_serve(BlockServer* bs);
 
 // Attach an IO buffer to the Block Server
 zx_status_t blockserver_attach_vmo(BlockServer* bs, zx_handle_t vmo, vmoid_t* out);
