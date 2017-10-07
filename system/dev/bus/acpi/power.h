@@ -4,5 +4,8 @@
 
 #pragma once
 
+#include <zircon/types.h>
+
 void poweroff(void);
 void reboot(void);
+zx_status_t suspend_to_ram(void);

@@ -498,7 +498,10 @@ static zx_status_t cmd_s_state_transition(zx_handle_t h, acpi_handle_ctx_t* ctx,
     case ACPI_S_STATE_S5:
         poweroff();
         break;
-    case ACPI_S_STATE_S3: // fall-through since suspend-to-RAM is not yet supported
+    case ACPI_S_STATE_S3: {
+        suspend_to_ram();
+        break;
+    }
     default:
         return send_error(h, cmd->hdr.request_id, ZX_ERR_NOT_SUPPORTED);
     }
