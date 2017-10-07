@@ -46,11 +46,13 @@ template("go_build") {
     }
 
     output_path = "${root_out_dir}/${output_name}"
+    unstripped_output_path = "${root_out_dir}/exe.unstripped/${output_name}"
     outputs = [
       output_path,
+      unstripped_output_path,
     ]
 
-    script = rebase_path("//build/go/build.py")
+    script = "//build/go/build.py"
     depfile = "${output_path}.d"
 
     go_dependencies = []
@@ -78,7 +80,7 @@ template("go_build") {
       "--binname",
       output_name,
       "--toolchain-prefix",
-      rebase_path(clang_prefix),
+      clang_prefix,
     ]
 
     if (defined(invoker.test) && invoker.test) {

@@ -48,7 +48,9 @@ def main():
         'win': 'windows',
     }[args.current_os]
 
-    output_name = os.path.join(args.root_out_dir, args.binname)
+    output_name = os.path.join(args.root_out_dir, 'exe.unstripped',
+                               args.binname)
+    stripped_output_name = os.path.join(args.root_out_dir, args.binname)
 
     # Project path is a package specific gopath, also known as a "project" in go parlance.
     project_path = os.path.join(args.root_out_dir, 'gen', 'gopaths', args.binname)
@@ -101,15 +103,21 @@ def main():
     retcode = subprocess.call(cmd, env=env)
 
     if retcode == 0:
+      retcode = subprocess.call([os.path.join(args.toolchain_prefix, 'strip'),
+                                 '-o', stripped_output_name, output_name],
+                                env=env)
+
+    if retcode == 0:
         godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
                 env['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
-                godepfile_args = [godepfile, '-o', output_name]
+                godepfile_args = [godepfile, '-o', stripped_output_name]
                 if args.is_test:
                     godepfile_args += [ '-test']
                 godepfile_args += [args.package]
                 subprocess.Popen(godepfile_args, stdout=out, env=env)
+
     return retcode
 
 
