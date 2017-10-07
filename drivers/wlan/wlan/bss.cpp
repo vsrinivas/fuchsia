@@ -263,8 +263,11 @@ BSSDescriptionPtr Bss::ToFidl() {
     fidl->rsni_measurement = rsni_;
 
     // RSN
-    fidl->rsn = fidl::Array<uint8_t>::New(rsne_len_);
-    memcpy(fidl->rsn.data(), rsne_.get(), rsne_len_);
+    fidl->rsn.reset();
+    if (rsne_len_ > 0) {
+        fidl->rsn = fidl::Array<uint8_t>::New(rsne_len_);
+        memcpy(fidl->rsn.data(), rsne_.get(), rsne_len_);
+    }
 
     return fidl_ptr;
 }
