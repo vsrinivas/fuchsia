@@ -286,6 +286,10 @@ declare_args() {
   #     Boolean: If true, the selector matches in the host toolchain.
   #     If false, the selector matches in the target toolchain.
   #
+  #   testonly
+  #     Boolean: If true, the selector matches targets with testonly=true.
+  #     If false, the selector matches in targets without testonly=true.
+  #
   #   target_type
   #     Strings: Matches "executable", "loadable_module", or "driver_module"
   #
@@ -366,6 +370,11 @@ template("variant_target") {
         selected = true
         if (selected && defined(selector.host)) {
           selected = is_fuchsia_host == selector.host
+        }
+
+        if (selected && defined(selector.testonly)) {
+          selected = (defined(target_invoker.testonly) &&
+                      target_invoker.testonly) == selector.testonly
         }
 
         if (selected && select.target_type != []) {
