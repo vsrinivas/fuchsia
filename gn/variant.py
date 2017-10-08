@@ -26,7 +26,7 @@ class variant(
         'shared_toolchain', # GN toolchain (and thus build dir subdirectory).
         'libprefix',        # Prefix on DT_SONAME string.
         'runtime',          # SONAME of runtime, does not use libprefix.
-        'aux',              # List of target files required if this is used.
+        'aux',              # List of (file, group) required if this is used.
     ])):
 
     def matches(self, info, assume=False):
@@ -38,16 +38,20 @@ class variant(
 
 
 def make_variant(name, info):
+    libprefix = ''
+    runtime = None
+    # All drivers need devhost; it must be in /boot (group 0).
+    aux = [('bin/devhost', 0)] if is_driver(info) else []
     if name is None:
         tc = '%s-shared' % info.cpu.gn
     else:
         tc = '%s-%s-shared' % (info.cpu.gn, name)
         if name in ('asan', 'asan-sancov'):
-            return variant(tc,
-                           'asan/',
-                           'libclang_rt.asan-%s.so' % info.cpu.llvm,
-                           ['bin/devhost.asan'] if is_driver(info) else [])
-    return variant(tc, '', None, [])
+            libprefix = 'asan/'
+            runtime = 'libclang_rt.asan-%s.so' % info.cpu.llvm
+            # ASan drivers need devhost.asan.
+            aux = [(file + '.asan', group) for file, group in aux]
+    return variant(tc, libprefix, runtime, aux)
 
 
 def find_variant(info, build_dir=''):

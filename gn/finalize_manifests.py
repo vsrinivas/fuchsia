@@ -97,25 +97,18 @@ def collect_binaries(manifest, aux_binaries, examined):
     soname_map_by_toolchain = {}
 
     def add_binary(binary, context=None, auxiliary=False):
-        def RewriteBinaryGroup(old_binary, context_binary):
+        def RewriteBinaryGroup(old_binary, group_override):
             return binary_entry(
-                old_binary.entry._replace(group=context_binary.entry.group),
+                old_binary.entry._replace(group=group_override),
                 old_binary.info)
 
-        # A dependency is already in binaries.
-        # Promote it to the right group if necessary.
-        def use_old_binary(old_binary):
-            if binary.entry.group < old_binary.entry.group:
-                binaries[old_binary.entry.target] = RewriteBinaryGroup(
-                    old_binary, binary)
-
         # Add a binary by target name.
-        def add_auxiliary(target, required):
-            # If we already have this target, just reconcile its group.
-            old_binary = binaries.get(target)
-            if old_binary:
-                use_old_binary(old_binary)
-                return True
+        def add_auxiliary(target, required, group_override=None):
+            if group_override is None:
+                group_override = binary.entry.group
+                aux_context = context
+            else:
+                aux_context = None
             # Look for the target in auxiliary manifests.
             aux_binary = aux_binaries.get(target)
             if required:
@@ -123,19 +116,21 @@ def collect_binaries(manifest, aux_binaries, examined):
                     "'%s' not in auxiliary manifests, needed by %r via %r" %
                     (target, binary.entry, context.root_dependent))
             if aux_binary:
-                add_binary(
-                    RewriteBinaryGroup(aux_binary, context.root_dependent),
-                    context, True)
+                add_binary(RewriteBinaryGroup(aux_binary, group_override),
+                           aux_context, True)
                 return True
             return False
 
         existing_binary = binaries.get(binary.entry.target)
         if existing_binary is not None:
-            if existing_binary.entry.source == binary.entry.source:
-                use_old_binary(existing_binary)
+            if existing_binary.entry.source != binary.entry.source:
+                raise Exception("%r in both %r and %r" %
+                                (binary.entry.target, existing_binary, binary))
+            # If the old record was in a later group, we still need to
+            # process all the dependencies again to promote them to
+            # the new group too.
+            if existing_binary.entry.group <= binary.entry.group:
                 return
-            raise Exception("%r in both %r and %r" %
-                            (binary.entry.target, existing_binary, binary))
 
         examined.add(binary.entry.source)
 
@@ -161,18 +156,21 @@ def collect_binaries(manifest, aux_binaries, examined):
             # This binary has a SONAME, so record it in the map.
             soname_binary = context.soname_map.setdefault(binary.info.soname,
                                                           binary)
-            if soname_binary is not binary:
+            if soname_binary.entry.source != binary.entry.source:
                 raise Exception(
                     "SONAME '%s' in both %r and %r" %
                     (binary.info.soname, soname_binary, binary))
+            if binary.entry.group < soname_binary.entry.group:
+                # Update the record to the earliest group.
+                context.soname_map[binary.info.soname] = binary
 
         # The PT_INTERP is implicitly required from an auxiliary manifest.
         if binary.info.interp:
             add_auxiliary('lib/' + binary.info.interp, True)
 
         # The variant might require other auxiliary binaries too.
-        for variant_aux in context.variant.aux:
-            add_auxiliary(variant_aux, True)
+        for variant_aux, variant_aux_group in context.variant.aux:
+            add_auxiliary(variant_aux, True, variant_aux_group)
 
         # Handle the DT_NEEDED list.
         for soname in binary.info.needed:
@@ -181,10 +179,13 @@ def collect_binaries(manifest, aux_binaries, examined):
                 continue
 
             lib = context.soname_map.get(soname)
-            if lib:
-                # Already handled this one.
-                use_old_binary(lib)
+            if lib and lib.entry.group <= binary.entry.group:
+                # Already handled this one in the same or earlier group.
                 continue
+
+            # The DT_SONAME is libc.so, but the file is ld.so.1 on disk.
+            if soname == 'libc.so':
+                soname = 'ld.so.1'
 
             # Translate the SONAME to a target file name.
             target = ('lib/' +
