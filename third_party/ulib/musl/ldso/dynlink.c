@@ -1135,13 +1135,30 @@ __NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo,
         }
     }
 
-    if (name == NULL) {
-        // If this was loaded by VMO rather than by name, then insist that
-        // it have a SONAME.
+    // If this was loaded by VMO rather than by name, we have to synthesize
+    // one.  If the SONAME if present.  Otherwise synthesize something
+    // informative from the VMO (that won't look like any sensible SONAME).
+    char synthetic_name[ZX_MAX_NAME_LEN + 32];
+    if (name == NULL)
         name = temp_dso.soname;
-        if (name == NULL) {
-            unmap_library(&temp_dso);
-            return ZX_ERR_WRONG_TYPE;
+    if (name == NULL) {
+        char vmo_name[ZX_MAX_NAME_LEN];
+        if (_zx_object_get_property(vmo, ZX_PROP_NAME,
+                                    vmo_name, sizeof(vmo_name)) != ZX_OK)
+            vmo_name[0] = '\0';
+        zx_info_handle_basic_t info;
+        if (_zx_object_get_info(vmo, ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                NULL, NULL) != ZX_OK) {
+            name = "<dlopen_vmo>";
+        } else {
+            if (vmo_name[0] == '\0') {
+                snprintf(synthetic_name, sizeof(synthetic_name),
+                         "<VMO:%" PRIu64 ">", info.koid);
+            } else {
+                snprintf(synthetic_name, sizeof(synthetic_name),
+                         "<VMO:%" PRIu64 ":%s>", info.koid, vmo_name);
+            }
+            name = synthetic_name;
         }
     }
 
