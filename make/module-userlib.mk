@@ -29,8 +29,8 @@ EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a
 GENERATED += $(MODULE_LIBNAME).a
 endif
 
-# modules that declare a soname desire to be shared libs as well
-ifneq ($(MODULE_SO_NAME),)
+# modules that declare a soname or install name desire to be shared libs as well
+ifneq ($(MODULE_SO_NAME)$(MODULE_SO_INSTALL_NAME),)
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 
@@ -44,12 +44,14 @@ endif
 
 $(MODULE_LIBNAME).so: _OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 $(MODULE_LIBNAME).so: _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
-$(MODULE_LIBNAME).so: _SONAME := lib$(MODULE_SO_NAME).so
+ifneq (,$(MODULE_SO_NAME))
+$(MODULE_LIBNAME).so: _SONAME_FLAGS := -soname lib$(MODULE_SO_NAME).so
+endif
 $(MODULE_LIBNAME).so: _LDFLAGS := $(GLOBAL_LDFLAGS) $(USERLIB_SO_LDFLAGS) $(MODULE_LDFLAGS)
 $(MODULE_LIBNAME).so: $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) $(MODULE_ALIBS) $(MODULE_SOLIBS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking userlib $@)
-	$(call BUILDCMD,$(USER_LD),$(_LDFLAGS) -shared -soname $(_SONAME) \
+	$(call BUILDCMD,$(USER_LD),$(_LDFLAGS) -shared $(_SONAME_FLAGS) \
                                    $(_OBJS) $(_LIBS) $(LIBGCC) -o $@)
 
 EXTRA_IDFILES += $(MODULE_LIBNAME).so.id
