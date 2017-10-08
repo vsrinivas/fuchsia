@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fdio/util.h>
-
-#include "lib/app/fidl/application_controller.fidl-sync.h"
-#include "lib/app/fidl/application_launcher.fidl-sync.h"
+#include "lib/app/cpp/environment_services.h"
+#include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 
 int main(int argc, const char** argv) {
   if (argc < 2) {
@@ -20,25 +17,13 @@ int main(int argc, const char** argv) {
     launch_info->arguments.push_back(argv[2 + i]);
   }
 
-  // Manually connect to the service root instead of using ApplicationContext to
-  // avoid having to spin up a message loop just to send 2 messages.
-  zx::channel h1, service_root;
-  if (zx::channel::create(0, &h1, &service_root) != ZX_OK)
-    return 1;
-
-  // TODO(abarth): Use "/svc/" once that actually works.
-  if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
-    return 1;
-
+  // Connect to the ApplicationLauncher service through our static environment.
   app::ApplicationLauncherSyncPtr launcher;
-  auto launcher_request = GetSynchronousProxy(&launcher);
-  fdio_service_connect_at(service_root.get(), launcher->Name_,
-                          launcher_request.PassChannel().release());
+  app::ConnectToEnvironmentService(GetSynchronousProxy(&launcher));
 
   app::ApplicationControllerSyncPtr controller;
-  auto controller_request = GetSynchronousProxy(&controller);
   launcher->CreateApplication(std::move(launch_info),
-                              std::move(controller_request));
+                              GetSynchronousProxy(&controller));
 
   int32_t return_code;
   if (!controller->Wait(&return_code)) {

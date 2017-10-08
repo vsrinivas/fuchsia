@@ -7,14 +7,16 @@ source_set("cpp") {
     "application_context.cc",
     "application_context.h",
     "connect.h",
+    "environment_services.cc",
+    "environment_services.h",
     "service_provider_impl.cc",
     "service_provider_impl.h",
   ]
 
   public_deps = [
-    "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
   ]
 }

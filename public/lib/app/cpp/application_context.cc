@@ -2,30 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/app/cpp/application_context.h"
+
+#include <fdio/util.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <fdio/util.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
 namespace app {
+
 namespace {
 
 constexpr char kServiceRootPath[] = "/svc";
-
-zx::channel GetServiceRoot() {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
-    return zx::channel();
-
-  // TODO(abarth): Use kServiceRootPath once that actually works.
-  if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
-    return zx::channel();
-
-  return h2;
-}
 
 }  // namespace
 
@@ -58,7 +49,7 @@ ApplicationContext::CreateFromStartupInfoNotChecked() {
   zx_handle_t service_request = zx_get_startup_handle(PA_SERVICE_REQUEST);
   zx_handle_t services = zx_get_startup_handle(PA_APP_SERVICES);
   return std::make_unique<ApplicationContext>(
-      GetServiceRoot(), zx::channel(service_request),
+      subtle::CreateStaticServiceRootHandle(), zx::channel(service_request),
       fidl::InterfaceRequest<ServiceProvider>(zx::channel(services)));
 }
 
@@ -77,7 +68,8 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
   }
 
   return std::make_unique<ApplicationContext>(
-      GetServiceRoot(), std::move(startup_info->launch_info->service_request),
+      subtle::CreateStaticServiceRootHandle(),
+      std::move(startup_info->launch_info->service_request),
       std::move(startup_info->launch_info->services));
 }
 
