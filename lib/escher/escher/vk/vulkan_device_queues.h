@@ -45,9 +45,12 @@ class VulkanDeviceQueues
     PFN_vkGetSwapchainImagesKHR GetSwapchainImagesKHR = nullptr;
     PFN_vkAcquireNextImageKHR AcquireNextImageKHR = nullptr;
     PFN_vkQueuePresentKHR QueuePresentKHR = nullptr;
+
+#if defined(OS_FUCHSIA)
     PFN_vkImportSemaphoreFuchsiaHandleKHR ImportSemaphoreFuchsiaHandleKHR =
         nullptr;
     PFN_vkGetSemaphoreFuchsiaHandleKHR GetSemaphoreFuchsiaHandleKHR = nullptr;
+#endif
   };
 
   // Constructor.

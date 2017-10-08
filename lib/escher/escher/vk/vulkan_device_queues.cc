@@ -33,11 +33,13 @@ VulkanDeviceQueues::ProcAddrs::ProcAddrs(
   GET_DEVICE_PROC_ADDR(GetSwapchainImagesKHR);
   GET_DEVICE_PROC_ADDR(AcquireNextImageKHR);
   GET_DEVICE_PROC_ADDR(QueuePresentKHR);
+#if defined(OS_FUCHSIA)
   if (extension_names.find(VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME) !=
       extension_names.end()) {
     GET_DEVICE_PROC_ADDR(ImportSemaphoreFuchsiaHandleKHR);
     GET_DEVICE_PROC_ADDR(GetSemaphoreFuchsiaHandleKHR);
   }
+#endif
 }
 
 namespace {
