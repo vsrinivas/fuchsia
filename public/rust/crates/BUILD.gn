@@ -4,7 +4,7 @@
 
 import("//packages/package.gni")
 
-package("tests") {
+package("rust-crates-tests") {
   testonly = true
 
   deps = [
