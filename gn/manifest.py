@@ -59,29 +59,37 @@ def partition_manifest(manifest, select, selected_group, unselected_group):
 
 
 def ingest_manifest_file(filename, in_cwd, groups, out_cwd, output_group):
-    if groups == 'all':
-        select = lambda group: True
-    elif not groups:
-        select = lambda group: False
-    else:
-        groups = [group if group else None for group in groups.split(',')]
-        select = lambda group: group in groups
+    groups_seen = set()
+    def select(group):
+        groups_seen.add(group)
+        if isinstance(groups, bool):
+            return groups
+        return group in groups
     with open(filename, 'r') as file:
-        return partition_manifest(read_manifest_file(file, in_cwd, out_cwd),
-                                  select, output_group, None)
+        selected, unselected = partition_manifest(
+            read_manifest_file(file, in_cwd, out_cwd),
+            select, output_group, None)
+        return selected, unselected, groups_seen
 
 
 def test_main(filename, manifest_cwd, result_cwd, groups):
-    selected, unselected = ingest_manifest_file(filename, manifest_cwd, groups,
-                                                result_cwd, None)
+    if groups == 'all':
+        groups = True
+    else:
+        groups = set(group if group else None for group in groups.split(','))
+    selected, unselected, groups_seen = ingest_manifest_file(
+        filename, manifest_cwd, groups, result_cwd, None)
     for manifest, title in [(selected, 'Selected:'),
                             (unselected, 'Unselected:')]:
         manifest.sort(key=lambda entry: entry.target)
         print title
         print format_manifest_file(manifest)
+    print 'Groups seen: %r' % groups_seen
+    if not isinstance(groups, bool):
+        print 'Unused groups: %r' % (groups - groups_seen)
 
 
 # For manual testing.
 if __name__ == "__main__":
     import sys
-    test_main(*sys.argv)
+    test_main(*sys.argv[1:])

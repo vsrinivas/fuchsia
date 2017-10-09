@@ -361,7 +361,13 @@ class input_manifest_action(argparse.Action):
         outputs = getattr(namespace, 'output', None)
 
         file = values
-        groups = namespace.groups
+        if namespace.groups is None:
+            groups = False
+        elif namespace.groups == 'all':
+            groups = True
+        else:
+            groups = set(group if group else None
+                         for group in namespace.groups.split(','))
         cwd = getattr(namespace, 'cwd', '')
         output_group = None if outputs is None else len(outputs) - 1
 
@@ -400,8 +406,16 @@ def main():
     all_selected = []
     all_unselected = []
     for input in args.manifest:
-        selected, unselected = manifest.ingest_manifest_file(
+        selected, unselected, groups_seen = manifest.ingest_manifest_file(
             input.file, input.cwd, input.groups, '.', input.output_group)
+
+        if not isinstance(input.groups, bool):
+            unused_groups = input.groups - groups_seen
+            if unused_groups:
+                raise Exception(
+                    '%s not found in %r; try one of: %s' %
+                    (', '.join(map(repr, unused_groups)), input.file,
+                     ', '.join(map(repr, groups_seen - input.groups))))
 
         all_selected += selected
         all_unselected += unselected
