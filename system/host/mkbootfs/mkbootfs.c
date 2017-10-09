@@ -70,6 +70,7 @@ struct item {
 typedef struct filter filter_t;
 struct filter {
     filter_t* next;
+    bool matched_any;
     char text[];
 };
 
@@ -86,6 +87,7 @@ int add_filter(filter_t** flist, const char* text) {
         fprintf(stderr, "error: out of memory (filter string)\n");
         return -1;
     }
+    filter->matched_any = false;
     memcpy(filter->text, text, len);
     filter->next = *flist;
     *flist = filter;
@@ -232,6 +234,7 @@ int import_manifest(FILE* fp, const char* fn, item_t* fs) {
             filter_t* filter;
             for (filter = group_filter; filter != NULL; filter = filter->next) {
                 if (!strcmp(filter->text, group)) {
+                    filter->matched_any = true;
                     goto okay;
                 }
             }
@@ -1309,6 +1312,14 @@ int main(int argc, char **argv) {
                     sizeof(platform_id.board_name));
         }
         new_item(ITEM_PLATFORM_ID)->platform_id = platform_id;
+    }
+
+    for (filter_t* f = group_filter; f != NULL; f = f->next) {
+        if (!f->matched_any) {
+            fprintf(stderr, "error: group '%s' not used in any manifest\n",
+                    f->text);
+            return -1;
+        }
     }
 
     if (first_item == NULL) {
