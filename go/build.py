@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--go-dependency', help='Manifest of dest=src of dependencies',
                         action='append')
     parser.add_argument('--binname', help='Output file', required=True)
+    parser.add_argument('--unstripped-binname', help='Unstripped output file')
     parser.add_argument('--toolchain-prefix', help='Path to toolchain binaries',
                         required=False)
     parser.add_argument('package', help='The package name')
@@ -48,9 +49,12 @@ def main():
         'win': 'windows',
     }[args.current_os]
 
-    output_name = os.path.join(args.root_out_dir, 'exe.unstripped',
-                               args.binname)
-    stripped_output_name = os.path.join(args.root_out_dir, args.binname)
+    output_name = os.path.join(args.root_out_dir, args.binname)
+    depfile_output = output_name
+    if args.unstripped_binname:
+        stripped_output_name = output_name
+        output_name = os.path.join(args.root_out_dir, 'exe.unstripped',
+                                   args.binname)
 
     # Project path is a package specific gopath, also known as a "project" in go parlance.
     project_path = os.path.join(args.root_out_dir, 'gen', 'gopaths', args.binname)
@@ -102,7 +106,7 @@ def main():
 
     retcode = subprocess.call(cmd, env=env)
 
-    if retcode == 0:
+    if retcode == 0 and args.unstripped_binname:
       retcode = subprocess.call([os.path.join(args.toolchain_prefix, 'strip'),
                                  '-o', stripped_output_name, output_name],
                                 env=env)
@@ -112,7 +116,7 @@ def main():
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
                 env['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
-                godepfile_args = [godepfile, '-o', stripped_output_name]
+                godepfile_args = [godepfile, '-o', depfile_output]
                 if args.is_test:
                     godepfile_args += [ '-test']
                 godepfile_args += [args.package]

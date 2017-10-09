@@ -45,12 +45,15 @@ template("go_build") {
       output_name = invoker.output_name
     }
 
+    use_strip = is_fuchsia
+
     output_path = "${root_out_dir}/${output_name}"
-    unstripped_output_path = "${root_out_dir}/exe.unstripped/${output_name}"
-    outputs = [
-      output_path,
-      unstripped_output_path,
-    ]
+    outputs = [ output_path ]
+
+    if (use_strip) {
+      unstripped_output_path = "${root_out_dir}/exe.unstripped/${output_name}"
+      outputs += [ unstripped_output_path ]
+    }
 
     script = "//build/go/build.py"
     depfile = "${output_path}.d"
@@ -82,6 +85,10 @@ template("go_build") {
       "--toolchain-prefix",
       rebase_path(clang_prefix, "", root_build_dir),
     ]
+
+    if (use_strip) {
+      args += [ "--unstripped-binname", "exe.unstripped/${output_name}" ]
+    }
 
     if (defined(invoker.test) && invoker.test) {
       args += [ "--is-test=true" ]
