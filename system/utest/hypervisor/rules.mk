@@ -15,7 +15,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/virtio_queue.cpp \
     $(LOCAL_DIR)/virtio_queue_fake.cpp \
 
-ifeq ($(SUBARCH),x86-64)
+ifeq ($(ARCH),arm64)
+MODULE_SRCS += \
+    $(LOCAL_DIR)/arm64.S
+else ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \
     $(LOCAL_DIR)/decode.cpp \
     $(LOCAL_DIR)/page_table.cpp \

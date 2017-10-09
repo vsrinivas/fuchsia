@@ -6,32 +6,30 @@
 
 #include "constants_priv.h"
 
-#define FUNCTION(x)     .global x; .type x,STT_FUNC; x:
 #define IA32_GS_BASE    0xc0000101
 
 .text
 
+// Test vcpu_resume.
 FUNCTION(vcpu_resume_start)
-    mov $UART_PORT, %dx
-    mov $'m', %al
-    out %al, %dx
-    mov $'x', %al
-    out %al, %dx
-
+    // Test that we do not exit on load/store of CR3.
     mov %cr3, %rax
     mov %rax, %cr3
 
+    // Test that we do not exit on store of GS_BASE.
     xor %eax, %eax
     xor %edx, %edx
     mov $IA32_GS_BASE, %ecx
     wrmsr
 
+    // Test that we handle CPUID instruction correctly.
     xor %eax, %eax
     cpuid
 
-    out %al, $EXIT_TEST_PORT
+    movq $0, (EXIT_TEST_ADDR)
 FUNCTION(vcpu_resume_end)
 
+// Test vcpu_read_state and vcpu_write_state.
 FUNCTION(vcpu_read_write_state_start)
     add $1, %rax
     add $2, %rcx
@@ -53,16 +51,17 @@ FUNCTION(vcpu_read_write_state_start)
     stc  // Set carry flag (bit 0)
     stac // Set AC flag (bit 18)
 
-    out %al, $EXIT_TEST_PORT
+    movq $0, (EXIT_TEST_ADDR)
 FUNCTION(vcpu_read_write_state_end)
 
+// Test guest_set_trap using a memory-based trap.
 FUNCTION(guest_set_trap_start)
-    mov $VMO_SIZE, %rdx
-    mov -0x1000(%rdx), %rax
-    out %al, $EXIT_TEST_PORT
+    movq $0, (TRAP_ADDR)
+    movq $0, (EXIT_TEST_ADDR)
 FUNCTION(guest_set_trap_end)
 
-FUNCTION(guest_set_trap_with_port_start)
+// Test guest_set_trap using an IO-based trap.
+FUNCTION(guest_set_trap_with_io_start)
     out %al, $TRAP_PORT
-    out %al, $EXIT_TEST_PORT
-FUNCTION(guest_set_trap_with_port_end)
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION(guest_set_trap_with_io_end)
