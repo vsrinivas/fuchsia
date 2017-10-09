@@ -49,24 +49,24 @@
 #define UART_SYNC_OFFSET                UART_ASYNC_SIZE
 
 /* RTC ports. */
-#define RTC_INDEX_PORT                  0x70
-#define RTC_DATA_PORT                   0x71
+#define RTC_BASE                        0x70
+#define RTC_SIZE                        0x2
 
 /* I8042 ports. */
-#define I8042_DATA_PORT                 0x60
-#define I8042_COMMAND_PORT              0x64
+#define I8042_BASE                      0x60
 
 /* PM1 ports. */
 #define PM1_EVENT_PORT                  0x1000
 #define PM1_CONTROL_PORT                0x2000
 
 /* PIC ports. */
-#define PIC1_COMMAND_PORT               0x20
-#define PIC1_DATA_PORT                  0x21
-#define PIC2_COMMAND_PORT               0xa0
-#define PIC2_DATA_PORT                  0xa1
+#define PIC1_BASE                       0x20
+#define PIC2_BASE                       0xa0
+#define PIC_SIZE                        0x2
 
 /* PIT ports. */
+#define PIT_BASE                        0x40
+#define PIT_SIZE                        0x4
 #define PIT_CHANNEL_0                   0x40
 #define PIT_CONTROL_PORT                0x43
 

@@ -21,7 +21,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/guest.cpp \
     $(LOCAL_DIR)/input.cpp \
     $(LOCAL_DIR)/io_apic.cpp \
-    $(LOCAL_DIR)/io_port.cpp \
     $(LOCAL_DIR)/local_apic.cpp \
     $(LOCAL_DIR)/pci.cpp \
     $(LOCAL_DIR)/phys_mem.cpp \
@@ -32,7 +31,8 @@ MODULE_SRCS += \
 
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \
-    $(LOCAL_DIR)/decode.cpp
+    $(LOCAL_DIR)/decode.cpp \
+    $(LOCAL_DIR)/io_port.cpp
 endif
 
 MODULE_LIBS := \

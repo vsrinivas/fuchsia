@@ -2,113 +2,177 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
+#include <hypervisor/io_port.h>
+
 #include <time.h>
 
 #include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
-#include <hypervisor/io_port.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/hypervisor.h>
-#include <zircon/syscalls/port.h>
 
 #include "acpi_priv.h"
 
 // clang-format off
 
-/* PIC configuration constants. */
-#define PIC_INVALID                     UINT8_MAX
+/* PIC constatants. */
+constexpr uint16_t kPicDataPort                 = 1;
+constexpr uint8_t kPicInvalid                   = UINT8_MAX;
+
+/* PM1 relative port mappings. */
+constexpr uint16_t kPm1StatusPort               = PM1A_REGISTER_STATUS;
+constexpr uint16_t kPm1EnablePort               = PM1A_REGISTER_ENABLE;
+constexpr uint16_t kPm1Size                     = kPm1EnablePort + 1;
+
+/* RTC relative port mappings. */
+constexpr uint16_t kRtcIndexPort                = 0;
+constexpr uint16_t kRtcDataPort                 = 1;
 
 /* RTC register addresses. */
-#define RTC_REGISTER_SECONDS            0u
-#define RTC_REGISTER_MINUTES            2u
-#define RTC_REGISTER_HOURS              4u
-#define RTC_REGISTER_DAY_OF_MONTH       7u
-#define RTC_REGISTER_MONTH              8u
-#define RTC_REGISTER_YEAR               9u
-#define RTC_REGISTER_A                  10u
-#define RTC_REGISTER_B                  11u
+constexpr uint8_t kRtcRegisterSeconds           = 0;
+constexpr uint8_t kRtcRegisterMinutes           = 2;
+constexpr uint8_t kRtcRegisterHours             = 4;
+constexpr uint8_t kRtcRegisterDayOfMonth        = 7;
+constexpr uint8_t kRtcRegisterMonth             = 8;
+constexpr uint8_t kRtcRegisterYear              = 9;
+constexpr uint8_t kRtcRegisterA                 = 10;
+constexpr uint8_t kRtcRegisterB                 = 11;
 
 /* RTC register B flags. */
-#define RTC_REGISTER_B_DAYLIGHT_SAVINGS (1u << 0)
-#define RTC_REGISTER_B_HOUR_FORMAT      (1u << 1)
+constexpr uint8_t kRtcRegisterBDaylightSavings  = 1 << 0;
+constexpr uint8_t kRtcRegisterBHourFormat       = 1 << 1;
+
+/* RTC relative port mappings. */
+constexpr uint16_t kI8042DataPort               = 0x0;
+constexpr uint16_t kI8042CommandPort            = 0x4;
 
 /* I8042 status flags. */
-#define I8042_STATUS_OUTPUT_FULL        (1u << 0)
-#define I8042_STATUS_INPUT_FULL         (1u << 1)
+constexpr uint8_t kI8042StatusOutputFull        = 1 << 0;
 
 /* I8042 test constants. */
-#define I8042_COMMAND_TEST              0xaa
-#define I8042_DATA_TEST_RESPONSE        0x55
+constexpr uint8_t kI8042CommandTest             = 0xaa;
+constexpr uint8_t kI8042DataTestResponse        = 0x55;
 
 // clang-format on
 
-zx_status_t IoPort::Init(zx_handle_t guest) {
-#if __x86_64__
-    // Setup PIC.
-    zx_status_t status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIC1_COMMAND_PORT,
-                                           PIC1_DATA_PORT - PIC1_COMMAND_PORT + 1,
-                                           ZX_HANDLE_INVALID, 0);
-    if (status != ZX_OK)
-        return status;
-    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIC2_COMMAND_PORT,
-                               PIC2_DATA_PORT - PIC2_COMMAND_PORT + 1, ZX_HANDLE_INVALID, 0);
-    if (status != ZX_OK)
-        return status;
-    // Setup PIT.
-    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIT_CHANNEL_0, 1, ZX_HANDLE_INVALID, 0);
-    if (status != ZX_OK)
-        return status;
-    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PIT_CONTROL_PORT, 1, ZX_HANDLE_INVALID,
-                               0);
-    if (status != ZX_OK)
-        return status;
-    // Setup PM1.
-    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, PM1_EVENT_PORT, PM1A_REGISTER_ENABLE + 1,
-                               ZX_HANDLE_INVALID, 0);
-    if (status != ZX_OK)
-        return status;
-    // Setup RTC.
-    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, RTC_INDEX_PORT,
-                               RTC_DATA_PORT - RTC_INDEX_PORT + 1, ZX_HANDLE_INVALID, 0);
-    if (status != ZX_OK)
-        return status;
-    // Setup I8042.
-    status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, I8042_DATA_PORT, 1, ZX_HANDLE_INVALID, 0);
-    if (status != ZX_OK)
-        return status;
-    return zx_guest_set_trap(guest, ZX_GUEST_TRAP_IO, I8042_COMMAND_PORT, 1, ZX_HANDLE_INVALID, 0);
-#else // __x86_64__
+zx_status_t PicHandler::Init(Guest* guest, uint16_t base) {
+    return guest->CreateMapping(TrapType::PIO_SYNC, base, PIC_SIZE, 0, this);
+}
+
+zx_status_t PicHandler::Read(uint64_t addr, IoValue* value) {
+    if (addr == kPicDataPort) {
+        value->access_size = 1;
+        value->u8 = kPicInvalid;
+        return ZX_OK;
+    }
     return ZX_ERR_NOT_SUPPORTED;
-#endif // __x86_64__
+}
+
+zx_status_t PicHandler::Write(uint64_t addr, const IoValue& value) {
+    return ZX_OK;
+}
+
+zx_status_t PitHandler::Init(Guest* guest) {
+    return guest->CreateMapping(TrapType::PIO_SYNC, PIT_BASE, PIT_SIZE, 0, this);
+}
+
+zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t PitHandler::Write(uint64_t addr, const IoValue& value) {
+    return ZX_OK;
+}
+
+zx_status_t Pm1Handler::Init(Guest* guest) {
+    return guest->CreateMapping(TrapType::PIO_SYNC, PM1_EVENT_PORT, kPm1Size, 0, this);
+}
+
+zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) {
+    switch (addr) {
+    case kPm1StatusPort:
+        value->access_size = 2;
+        value->u16 = 0;
+        break;
+    case kPm1EnablePort: {
+        value->access_size = 2;
+        fbl::AutoLock lock(&mutex_);
+        value->u16 = enable_;
+        break;
+    }
+    defaut:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
+    switch (addr) {
+    case kPm1EnablePort: {
+        if (value.access_size != 2)
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        fbl::AutoLock lock(&mutex_);
+        enable_ = value.u16;
+        break;
+    }
+    defaut:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return ZX_OK;
 }
 
 static uint8_t to_bcd(int binary) {
     return static_cast<uint8_t>(((binary / 10) << 4) | (binary % 10));
 }
 
-static zx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
-    time_t now = time(NULL);
+zx_status_t RtcHandler::Init(Guest* guest) {
+    return guest->CreateMapping(TrapType::PIO_SYNC, RTC_BASE, RTC_SIZE, 0, this);
+}
+
+zx_status_t RtcHandler::Read(uint64_t port, IoValue* value) {
+    if (port == kRtcDataPort) {
+        value->access_size = 1;
+        uint8_t rtc_index;
+        {
+            fbl::AutoLock lock(&mutex_);
+            rtc_index = index_;
+        }
+        return HandleRtc(rtc_index, &value->u8);
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t RtcHandler::Write(uint64_t addr, const IoValue& value) {
+    if (addr == kRtcIndexPort) {
+        if (value.access_size != 1)
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        fbl::AutoLock lock(&mutex_);
+        index_ = value.u8;
+        return ZX_OK;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t RtcHandler::HandleRtc(uint8_t rtc_index, uint8_t* value) {
+    time_t now = time(nullptr);
     struct tm tm;
-    if (localtime_r(&now, &tm) == NULL)
+    if (localtime_r(&now, &tm) == nullptr)
         return ZX_ERR_INTERNAL;
     switch (rtc_index) {
-    case RTC_REGISTER_SECONDS:
+    case kRtcRegisterSeconds:
         *value = to_bcd(tm.tm_sec);
         break;
-    case RTC_REGISTER_MINUTES:
+    case kRtcRegisterMinutes:
         *value = to_bcd(tm.tm_min);
         break;
-    case RTC_REGISTER_HOURS:
+    case kRtcRegisterHours:
         *value = to_bcd(tm.tm_hour);
         break;
-    case RTC_REGISTER_DAY_OF_MONTH:
+    case kRtcRegisterDayOfMonth:
         *value = to_bcd(tm.tm_mday);
         break;
-    case RTC_REGISTER_MONTH:
+    case kRtcRegisterMonth:
         *value = to_bcd(tm.tm_mon);
         break;
-    case RTC_REGISTER_YEAR: {
+    case kRtcRegisterYear: {
         // RTC expects the number of years since 2000.
         int year = tm.tm_year - 100;
         if (year < 0)
@@ -116,14 +180,14 @@ static zx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
         *value = to_bcd(year);
         break;
     }
-    case RTC_REGISTER_A:
+    case kRtcRegisterA:
         // Ensure that UIP is 0. Other values (clock frequency) are obsolete.
         *value = 0;
         break;
-    case RTC_REGISTER_B:
-        *value = RTC_REGISTER_B_HOUR_FORMAT;
+    case kRtcRegisterB:
+        *value = kRtcRegisterBHourFormat;
         if (tm.tm_isdst)
-            *value |= RTC_REGISTER_B_DAYLIGHT_SAVINGS;
+            *value |= kRtcRegisterBDaylightSavings;
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -131,87 +195,70 @@ static zx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     return ZX_OK;
 }
 
-zx_status_t IoPort::Read(uint16_t port, zx_vcpu_io_t* vcpu_io) const {
-#ifdef __x86_64__
+zx_status_t I8042Handler::Init(Guest* guest) {
+    zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, I8042_BASE + kI8042DataPort,
+                                              1, kI8042DataPort, this);
+    if (status != ZX_OK)
+        return status;
+
+    return guest->CreateMapping(TrapType::PIO_SYNC, I8042_BASE + kI8042CommandPort,
+                                1, kI8042CommandPort, this);
+}
+
+zx_status_t I8042Handler::Read(uint64_t port, IoValue* value) {
     switch (port) {
-    case RTC_DATA_PORT: {
-        vcpu_io->access_size = 1;
-        uint8_t index;
-        {
-            fbl::AutoLock lock(&mutex_);
-            index = rtc_index_;
-        }
-        return handle_rtc(index, &vcpu_io->u8);
-    }
-    case I8042_DATA_PORT: {
-        vcpu_io->access_size = 1;
+    case kI8042DataPort: {
+        value->access_size = 1;
         fbl::AutoLock lock(&mutex_);
-        vcpu_io->u8 = i8042_command_ == I8042_COMMAND_TEST ? I8042_DATA_TEST_RESPONSE : 0;
+        value->u8 = command_ == kI8042CommandTest ? kI8042DataTestResponse : 0;
         break;
     }
-    case I8042_COMMAND_PORT:
-        vcpu_io->access_size = 1;
-        vcpu_io->u8 = I8042_STATUS_OUTPUT_FULL;
-        break;
-    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-        vcpu_io->access_size = 2;
-        vcpu_io->u16 = 0;
-        break;
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE: {
-        vcpu_io->access_size = 2;
-        fbl::AutoLock lock(&mutex_);
-        vcpu_io->u16 = pm1_enable_;
-        break;
-    }
-    case PIC1_DATA_PORT:
-        vcpu_io->access_size = 1;
-        vcpu_io->u8 = PIC_INVALID;
+    case kI8042CommandPort:
+        value->access_size = 1;
+        value->u8 = kI8042StatusOutputFull;
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;
-#else  // __x86_64__
-    return ZX_ERR_NOT_SUPPORTED;
-#endif // __x86_64__
 }
 
-zx_status_t IoPort::Write(const zx_packet_guest_io_t* io) {
-#ifdef __x86_64__
-    switch (io->port) {
-    case I8042_DATA_PORT:
-    case PIT_CHANNEL_0:
-    case PIT_CONTROL_PORT:
-    case PIC1_COMMAND_PORT... PIC1_DATA_PORT:
-    case PIC2_COMMAND_PORT... PIC2_DATA_PORT:
-    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-        break;
-    case I8042_COMMAND_PORT: {
-        if (io->access_size != 1)
+zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
+    switch (port) {
+    case kI8042DataPort:
+    case kI8042CommandPort: {
+        if (value.access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
         fbl::AutoLock lock(&mutex_);
-        i8042_command_ = io->u8;
-        break;
-    }
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE: {
-        if (io->access_size != 2)
-            return ZX_ERR_IO_DATA_INTEGRITY;
-        fbl::AutoLock lock(&mutex_);
-        pm1_enable_ = io->u16;
-        break;
-    }
-    case RTC_INDEX_PORT: {
-        if (io->access_size != 1)
-            return ZX_ERR_IO_DATA_INTEGRITY;
-        fbl::AutoLock lock(&mutex_);
-        rtc_index_ = io->u8;
+        command_ = value.u8;
         break;
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;
-#else  // __x86_64__
-    return ZX_ERR_NOT_SUPPORTED;
-#endif // __x86_64__
+}
+
+zx_status_t IoPort::Init(Guest* guest) {
+    zx_status_t status;
+    status = pic1_.Init(guest, PIC1_BASE);
+    if (status != ZX_OK)
+        return status;
+    status = pic2_.Init(guest, PIC2_BASE);
+    if (status != ZX_OK)
+        return status;
+    status = pit_.Init(guest);
+    if (status != ZX_OK)
+        return status;
+    status = pm1_.Init(guest);
+    if (status != ZX_OK)
+        return status;
+    status = rtc_.Init(guest);
+    if (status != ZX_OK)
+        return status;
+    status = i8042_.Init(guest);
+    if (status != ZX_OK)
+        return status;
+
+    return ZX_OK;
 }

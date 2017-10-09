@@ -178,14 +178,6 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
     zx_vcpu_io_t vcpu_io;
     memset(&vcpu_io, 0, sizeof(vcpu_io));
     switch (io->port) {
-    case I8042_COMMAND_PORT:
-    case I8042_DATA_PORT:
-    case PIC1_DATA_PORT:
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
-    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-    case RTC_DATA_PORT:
-        status = vcpu_ctx->guest->io_port->Read(io->port, &vcpu_io);
-        break;
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         status = vcpu_ctx->guest->pci_bus->ReadIoPort(io->port, io->access_size, &vcpu_io);
@@ -229,16 +221,6 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
                                  uint64_t key) {
 #if __x86_64__
     switch (io->port) {
-    case I8042_COMMAND_PORT:
-    case I8042_DATA_PORT:
-    case PIT_CHANNEL_0:
-    case PIT_CONTROL_PORT:
-    case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
-    case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
-    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-    case RTC_INDEX_PORT:
-        return vcpu_ctx->guest->io_port->Write(io);
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         return vcpu_ctx->guest->pci_bus->WriteIoPort(io);

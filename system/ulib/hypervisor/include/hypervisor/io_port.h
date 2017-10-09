@@ -4,31 +4,74 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/mutex.h>
+#include <hypervisor/guest.h>
+#include <hypervisor/io.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
-typedef struct zx_packet_guest_io zx_packet_guest_io_t;
-typedef struct zx_vcpu_io zx_vcpu_io_t;
-
-/* Stores the IO port state. */
-class IoPort {
+class PicHandler : public IoHandler {
 public:
-    zx_status_t Init(zx_handle_t guest);
+    zx_status_t Init(Guest* guest, uint16_t base);
 
-    zx_status_t Read(uint16_t port, zx_vcpu_io_t* vcpu_io) const;
-    zx_status_t Write(const zx_packet_guest_io_t* io);
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+};
+
+class PitHandler : public IoHandler {
+public:
+    zx_status_t Init(Guest* guest);
+
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+};
+
+class Pm1Handler : public IoHandler {
+public:
+    zx_status_t Init(Guest* guest);
+
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
 private:
-    mutable fbl::Mutex mutex_;
-#if __x86_64__
-    // Index of the RTC register to use.
-    uint8_t rtc_index_ TA_GUARDED(mutex_) = 0;
-    // Command being issued to the i8042 controller.
-    uint8_t i8042_command_ TA_GUARDED(mutex_) = 0;
-    // State of power management enable register.
-    uint16_t pm1_enable_ TA_GUARDED(mutex_) = 0;
-#endif // __x86_64__
+    fbl::Mutex mutex_;
+    uint16_t enable_ TA_GUARDED(mutex_) = 0;
+};
+
+class RtcHandler : public IoHandler {
+public:
+    zx_status_t Init(Guest* guest);
+
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+private:
+    zx_status_t HandleRtc(uint8_t rtc_index, uint8_t* value);
+    fbl::Mutex mutex_;
+    uint8_t index_ TA_GUARDED(mutex_) = 0;
+};
+
+class I8042Handler : public IoHandler {
+public:
+    zx_status_t Init(Guest* guest);
+
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+private:
+    fbl::Mutex mutex_;
+    uint8_t command_ TA_GUARDED(mutex_) = 0;
+};
+
+class IoPort {
+public:
+    zx_status_t Init(Guest* guest);
+
+private:
+    PicHandler pic1_;
+    PicHandler pic2_;
+    PitHandler pit_;
+    Pm1Handler pm1_;
+    RtcHandler rtc_;
+    I8042Handler i8042_;
 };

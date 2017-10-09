@@ -13,7 +13,6 @@
 
 class PciBus;
 class IoApic;
-class IoPort;
 
 /**
  * Create an identity-mapped page table.
@@ -57,7 +56,6 @@ public:
     // callbacks to address ranges.
     PciBus* pci_bus;
     IoApic* io_apic;
-    IoPort* io_port;
 
 private:
     zx_status_t IoThread();

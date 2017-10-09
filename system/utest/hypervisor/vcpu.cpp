@@ -7,7 +7,6 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io_apic.h>
-#include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
@@ -22,7 +21,6 @@
 typedef struct test {
     vcpu_ctx_t vcpu_ctx;
     IoApic io_apic;
-    IoPort io_port;
     PciBus pci_bus;
     zx_vcpu_io_t vcpu_io;
     Guest guest;
@@ -49,7 +47,6 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
 
 static void setup(test_t* test) {
     test->guest.io_apic = &test->io_apic;
-    test->guest.io_port = &test->io_port;
     test->guest.pci_bus = &test->pci_bus;
     test->vcpu_ctx.guest = &test->guest;
 
@@ -59,7 +56,6 @@ static void setup(test_t* test) {
     test->vcpu_ctx.write_state = vcpu_write_test_state;
 
     test->pci_bus.Init();
-    test->io_port.Init(ZX_HANDLE_INVALID);
 }
 
 /* Test accesses to the PCI config address ports.

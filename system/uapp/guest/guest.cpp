@@ -260,12 +260,13 @@ int main(int argc, char** argv) {
     // Setup IO APIC.
     IoApic io_apic;
     guest.io_apic = &io_apic;
+#if __x86_64__
     // Setup IO ports.
     IoPort io_port;
-    guest.io_port = &io_port;
-    status = io_port.Init(guest.handle());
+    status = io_port.Init(&guest);
     if (status != ZX_OK)
         return status;
+#endif
     // Setup PCI.
     PciBus bus(guest.handle(), &io_apic);
     guest.pci_bus = &bus;
