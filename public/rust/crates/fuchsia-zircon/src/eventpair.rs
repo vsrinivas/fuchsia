@@ -48,7 +48,7 @@ impl Default for EventPairOpts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Duration, ZX_SIGNAL_LAST_HANDLE, ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0};
+    use {Duration, ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0};
     use deadline_after;
 
     #[test]
@@ -62,11 +62,11 @@ mod tests {
         // If we set a signal, we should be able to wait for it.
         assert!(p1.signal_peer(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0).is_ok());
         assert_eq!(p2.wait_handle(ZX_USER_SIGNAL_0, deadline_after(eighty_ms)).unwrap(),
-            ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+            ZX_USER_SIGNAL_0);
 
         // Should still work, signals aren't automatically cleared.
         assert_eq!(p2.wait_handle(ZX_USER_SIGNAL_0, deadline_after(eighty_ms)).unwrap(),
-            ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+            ZX_USER_SIGNAL_0);
 
         // Now clear it, and waiting should time out again.
         assert!(p1.signal_peer(ZX_USER_SIGNAL_0, ZX_SIGNAL_NONE).is_ok());

@@ -60,7 +60,7 @@ impl Default for TimerOpts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Duration, ZX_SIGNAL_LAST_HANDLE, ZX_TIMER_SIGNALED};
+    use {Duration, ZX_TIMER_SIGNALED};
     use deadline_after;
 
     #[test]
@@ -83,7 +83,7 @@ mod tests {
         // Set it, and soon it should signal.
         assert_eq!(timer.set(ten_ms, 0), Ok(()));
         assert_eq!(timer.wait_handle(ZX_TIMER_SIGNALED, deadline_after(twenty_ms)).unwrap(),
-            ZX_TIMER_SIGNALED | ZX_SIGNAL_LAST_HANDLE);
+            ZX_TIMER_SIGNALED);
 
         // Cancel it, and it should stop signalling.
         assert_eq!(timer.cancel(), Ok(()));

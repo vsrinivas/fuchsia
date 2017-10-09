@@ -89,7 +89,7 @@ bitflags! {
         const ZX_OBJECT_SIGNAL_19         = 1 << 19,
         const ZX_OBJECT_SIGNAL_20         = 1 << 20,
         const ZX_OBJECT_SIGNAL_21         = 1 << 21,
-        const ZX_OBJECT_LAST_HANDLE       = 1 << 22,
+        const ZX_OBJECT_SIGNAL_22         = 1 << 22,
         const ZX_OBJECT_HANDLE_CLOSED     = 1 << 23,
         const ZX_USER_SIGNAL_0            = 1 << 24,
         const ZX_USER_SIGNAL_1            = 1 << 25,
@@ -106,9 +106,6 @@ bitflags! {
 
         // Cancelation (handle was closed while waiting with it)
         const ZX_SIGNAL_HANDLE_CLOSED     = ZX_OBJECT_HANDLE_CLOSED.bits,
-
-        // Only one user-more reference (handle) to the object exists.
-        const ZX_SIGNAL_LAST_HANDLE       = ZX_OBJECT_LAST_HANDLE.bits,
 
         // Event
         const ZX_EVENT_SIGNALED           = ZX_OBJECT_SIGNAL_3.bits,

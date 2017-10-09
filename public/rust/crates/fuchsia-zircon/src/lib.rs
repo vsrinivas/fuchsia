@@ -290,7 +290,6 @@ pub use zircon_sys::{
         ZX_SIGNAL_NONE,
 
         ZX_SIGNAL_HANDLE_CLOSED,
-        ZX_SIGNAL_LAST_HANDLE,
 
         ZX_USER_SIGNAL_0,
         ZX_USER_SIGNAL_1,
@@ -798,11 +797,11 @@ mod tests {
         // If we set a signal, we should be able to wait for it.
         assert!(event.signal_handle(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0).is_ok());
         assert_eq!(event.wait_handle(ZX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
-            ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+            ZX_USER_SIGNAL_0);
 
         // Should still work, signals aren't automatically cleared.
         assert_eq!(event.wait_handle(ZX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
-            ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+            ZX_USER_SIGNAL_0);
 
         // Now clear it, and waiting should time out again.
         assert!(event.signal_handle(ZX_USER_SIGNAL_0, ZX_SIGNAL_NONE).is_ok());
@@ -822,27 +821,27 @@ mod tests {
           WaitItem { handle: e2.as_handle_ref(), waitfor: ZX_USER_SIGNAL_1, pending: ZX_SIGNAL_NONE },
         ];
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
-        assert_eq!(items[0].pending, ZX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_SIGNAL_NONE);
+        assert_eq!(items[1].pending, ZX_SIGNAL_NONE);
 
         // Signal one object and it should return success.
         assert!(e1.signal_handle(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
-        assert_eq!(items[0].pending, ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_USER_SIGNAL_0);
+        assert_eq!(items[1].pending, ZX_SIGNAL_NONE);
 
         // Signal the other and it should return both.
         assert!(e2.signal_handle(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_1).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
-        assert_eq!(items[0].pending, ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, ZX_USER_SIGNAL_1 | ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_USER_SIGNAL_0);
+        assert_eq!(items[1].pending, ZX_USER_SIGNAL_1);
 
         // Clear signals on both; now it should time out again.
         assert!(e1.signal_handle(ZX_USER_SIGNAL_0, ZX_SIGNAL_NONE).is_ok());
         assert!(e2.signal_handle(ZX_USER_SIGNAL_1, ZX_SIGNAL_NONE).is_ok());
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
-        assert_eq!(items[0].pending, ZX_SIGNAL_LAST_HANDLE);
-        assert_eq!(items[1].pending, ZX_SIGNAL_LAST_HANDLE);
+        assert_eq!(items[0].pending, ZX_SIGNAL_NONE);
+        assert_eq!(items[1].pending, ZX_SIGNAL_NONE);
     }
 
     #[test]

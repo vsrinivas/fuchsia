@@ -192,7 +192,7 @@ pub enum WaitAsyncOpts {
 mod tests {
     use super::*;
     use {Duration, Event, EventOpts};
-    use {ZX_SIGNAL_LAST_HANDLE, ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_1};
+    use {ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_1};
     use deadline_after;
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
         match read_packet.contents() {
             PacketContents::SignalOne(sig) => {
                 assert_eq!(sig.trigger(), ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1);
-                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0);
                 assert_eq!(sig.count(), 1);
             }
             _ => panic!("wrong packet type"),
@@ -256,7 +256,7 @@ mod tests {
         match read_packet.contents() {
             PacketContents::SignalOne(sig) => {
                 assert_eq!(sig.trigger(), ZX_USER_SIGNAL_0);
-                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0);
                 assert_eq!(sig.count(), 1);
             }
             _ => panic!("wrong packet type"),
@@ -298,7 +298,7 @@ mod tests {
         match read_packet.contents() {
             PacketContents::SignalRep(sig) => {
                 assert_eq!(sig.trigger(), ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1);
-                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0);
                 assert_eq!(sig.count(), 1);
             }
             _ => panic!("wrong packet type"),
@@ -318,7 +318,7 @@ mod tests {
         match read_packet.contents() {
             PacketContents::SignalRep(sig) => {
                 assert_eq!(sig.trigger(), ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1);
-                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0);
                 assert_eq!(sig.count(), 1);
             }
             _ => panic!("wrong packet type"),
@@ -341,7 +341,7 @@ mod tests {
         match read_packet.contents() {
             PacketContents::SignalRep(sig) => {
                 assert_eq!(sig.trigger(), ZX_USER_SIGNAL_0);
-                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0 | ZX_SIGNAL_LAST_HANDLE);
+                assert_eq!(sig.observed(), ZX_USER_SIGNAL_0);
                 assert_eq!(sig.count(), 1);
             }
             _ => panic!("wrong packet type"),
