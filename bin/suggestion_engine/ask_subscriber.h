@@ -22,7 +22,8 @@ class AskSubscriber : public BoundWindowedSuggestionSubscriber<AskController> {
 
   // |AskController|
   void SetUserInput(UserInputPtr input) override;
-  void BeginSpeechCapture() override;
+  void BeginSpeechCapture(fidl::InterfaceHandle<TranscriptionListener>
+                              transcription_listener) override;
   // end |AskController|
 
  private:

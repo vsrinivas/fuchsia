@@ -8,12 +8,33 @@ import "lib/media/fidl/media_capturer.fidl";
 
 [ServiceName="maxwell.SpeechToText"]
 interface SpeechToText {
+  // Starts capturing speech from the microphone.
+  //
+  // TODO(rosswang): The point of passing a |MediaCapturer| as a parameter here
+  // is to allow the system to revoke capture access if warranted without
+  // relying on some kind of dynamic app permissions. Keep an eye on how
+  // permissions end up being implemented to make sure this continues to make
+  // sense, since I don't think this is an isolated problem.
   BeginCapture(media.MediaCapturer media_capturer,
-    TranscriptionListener transcription_listener);
+               TranscriptionListener transcription_listener);
 };
 
 // Represents an active transcription session. Either side may close this
-// interface to indicate that transcription should stop.
+// interface to indicate that transcription should stop. If the transcription is
+// unexpectedly closed before |OnReady| is called, the implementer should treat
+// it as an error (in such cases, |OnError| is called).
 interface TranscriptionListener {
+  // Indicates that capture has begun. Prior to this, parts of the system may
+  // not have been initialized and audio may have been dropped. No calls to
+  // |OnTranscriptUpdate| will occur before |OnReady| is called.
+  OnReady();
+  // Receives updated transcripts. Each call receives the most likely
+  // transcription of the entire utterance at that time. Previously transcribed
+  // text may mutate in response to later input.
   OnTranscriptUpdate(string spoken_text);
+  // An error occurred before or during transcription. Depending on the nature
+  // of the error, this may occur before |OnReady| is called, and |OnReady| may
+  // never be called. This binding will be closed immediately after sending this
+  // message.
+  OnError();
 };

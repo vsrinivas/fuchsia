@@ -4,6 +4,7 @@
 
 module maxwell;
 
+import "lib/suggestion/fidl/speech_to_text.fidl";
 import "lib/suggestion/fidl/suggestion_display.fidl";
 import "lib/suggestion/fidl/user_input.fidl";
 
@@ -38,8 +39,8 @@ interface SuggestionProvider {
   // has been completed or canceled.
   InitiateAsk(SuggestionListener listener, AskController& controller);
 
-  // TODO(rosswang): remove this if/when SpeechListener is merged into Ask.
-  RegisterSpeechListener(SpeechListener speech_listener);
+  // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
+  RegisterFeedbackListener(FeedbackListener speech_listener);
 
   // Notifies the suggestion engine that the user has interacted with the given
   // Suggestion in the manner described in |interaction|.
@@ -55,13 +56,9 @@ interface AskController {
   SetUserInput(UserInput input);
 
   // Starts capturing speech from the microphone. Transitions internal
-  // |SpeechStatus| to |LISTENING|.
-  //
-  // TODO(rosswang => jwnichols): Right now, this immediately runs a query
-  // without waiting for SetUserInput above. However, since Jeff's getting rid
-  // of this flow, it might make sense to require SysUI to issue a new query
-  // with the recognized text received from |SpeechListener|, or better yet
-  // wire it a |SpeechToText| directly.
+  // |SpeechStatus| to |LISTENING|. This is a simplification of the
+  // |SpeechToText| interface (for now) in that it does not require that the
+  // caller supply a |MediaCapturer|.
   //
   // TODO(rosswang): consider whether this should be folded into |SetUserInput|
   // (see comments in |user_input.fidl|) or moved to SysUI. It is conceivable
@@ -69,7 +66,7 @@ interface AskController {
   // text (and any markup/alternative interpretations) to Suggestion Engine.
   // However, it's worth it to also consider the implications for any other
   // input modalities we might like to support.
-  BeginSpeechCapture();
+  BeginSpeechCapture(TranscriptionListener transcription_listener);
 
   // Sets the number of desired results. If the new count is larger than the
   // previous value, the corresponding listener will get one or more |OnAdd()|
@@ -106,46 +103,27 @@ interface AskSuggestionListener {
 // those used for interpreting speech to text as well as for when the system is
 // querying handlers or generating audio output.
 //
-// TODO(rosswang): The |PROCESSING| and |RESPONDING| states might be pertinent
-// to non-speech flows as well.
-// TODO(rosswang): Error state for failed recognition
+// All state transitions are valid.
+//
+// TODO(rosswang): These states might be pertinent to non-speech flows as well.
+// TODO(rosswang): |IDLE| vs. |PROCESSING| is going to become the
+// |OnProcessingChanged| state event on |SuggestionHandler| soon.
 enum SpeechStatus {
   // Exchange complete or not started
-  // Valid outgoing transitions:
-  // -> |LISTENING| (spoken query)
-  // -> |PROCESSING| (text query)
-  // -> |RESPONDING| (spoken response from Next/Interruption) (not implemented)
   IDLE,
-
-  // Mic open, user speaking
-  // Valid outgoing transitions:
-  // -> |PROCESSING|
-  LISTENING,
-
-  // Mic closed, awaiting results
-  // Valid outgoing transitions:
-  // -> |RESPONDING| (spoken response)
-  // -> |IDLE| (no spoken response)
-  // -> |LISTENING| (transition may be forced by system or user while busy)
+  // Query sent, awaiting results
   PROCESSING,
-
   // System speaking
-  // Valid outgoing transitions:
-  // -> |IDLE| (spoken response complete)
-  // -> |LISTENING| (transition may be forced by system or user while busy)
-  // -> |PROCESSING| (text query while busy)
   RESPONDING
 };
 
-// TODO(rosswang): possibly merge this into AskSuggestionListener once the dust
-// settles
-interface SpeechListener {
+// TODO(rosswang): This is very temporary. Probably next week, OnStatusChanged
+// will be split between the |TranscriptionListener| lifecycle and
+// |SuggestionListener|'s |onProcessingChanged|. |OnTextResponse will probably
+// be part of the callback on |Query|.
+interface FeedbackListener {
   // Called every time the internal |SpeechStatus| changes.
   OnStatusChanged(SpeechStatus status);
-
-  // Receives the recognition result from the user's spoken input. This method
-  // may be called multiple times during the LISTENING phase.
-  OnTextRecognized(string recognized_text);
 
   // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
   // once it becomes trivial for SysUI to implement it. This would allow SysUI

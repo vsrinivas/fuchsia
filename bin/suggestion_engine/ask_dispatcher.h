@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 
 namespace maxwell {
@@ -14,7 +15,8 @@ class AskDispatcher {
  public:
   AskDispatcher() {}
   virtual void DispatchAsk(UserInputPtr input) = 0;
-  virtual void BeginSpeechCapture() = 0;
+  virtual void BeginSpeechCapture(
+      fidl::InterfaceHandle<TranscriptionListener> transcription_listener) = 0;
 };
 
 }  // namespace maxwell

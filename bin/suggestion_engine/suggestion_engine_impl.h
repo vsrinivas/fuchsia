@@ -73,8 +73,7 @@ const std::string kQueryContextKey = "/suggestion_engine/current_query";
 //    Suggestions.
 class SuggestionEngineImpl : public SuggestionEngine,
                              public SuggestionProvider,
-                             public AskDispatcher,
-                             public TranscriptionListener {
+                             public AskDispatcher {
  public:
   SuggestionEngineImpl();
 
@@ -128,8 +127,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
                    fidl::InterfaceRequest<AskController> controller) override;
 
   // |SuggestionProvider|
-  void RegisterSpeechListener(
-      fidl::InterfaceHandle<SpeechListener> speech_listener) override;
+  void RegisterFeedbackListener(
+      fidl::InterfaceHandle<FeedbackListener> speech_listener) override;
 
   // When a user interacts with a Suggestion, the suggestion engine will be
   // notified of consumed suggestion's ID. With this, we will do two things:
@@ -175,10 +174,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void DispatchAsk(UserInputPtr input) override;
 
   // |AskDispatcher|
-  void BeginSpeechCapture() override;
-
-  // |TranscriptionListener|
-  void OnTranscriptUpdate(const fidl::String& spoken_text) override;
+  void BeginSpeechCapture(fidl::InterfaceHandle<TranscriptionListener>
+                              transcription_listener) override;
 
  private:
   // TODO(jwnichols): Remove when we change the way ask suggestions are
@@ -205,8 +202,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
     return std::to_string(id++);
   }
 
-  void DispatchAskInternal(UserInputPtr input);
-
   // TODO(andrewosh): Performing actions should be handled by a separate
   // interface that's passed to the SuggestionEngineImpl.
   void PerformActions(const fidl::Array<maxwell::ActionPtr>& actions,
@@ -220,7 +215,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   fidl::BindingSet<SuggestionEngine> bindings_;
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
-  fidl::Binding<TranscriptionListener> transcription_listener_binding_;
   fidl::BindingSet<SuggestionDebug> debug_bindings_;
 
   // Both story_provider_ and focus_provider_ptr are used exclusively during
@@ -305,7 +299,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
   media::TimelineConsumerPtr media_timeline_consumer_;
 
   SpeechToTextPtr speech_to_text_;
-  fidl::InterfacePtrSet<SpeechListener> speech_listeners_;
+  fidl::InterfacePtrSet<FeedbackListener> speech_listeners_;
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;

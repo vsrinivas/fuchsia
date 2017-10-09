@@ -21,8 +21,9 @@ void AskSubscriber::SetUserInput(UserInputPtr input) {
   ask_dispatcher_->DispatchAsk(std::move(input));
 }
 
-void AskSubscriber::BeginSpeechCapture() {
-  ask_dispatcher_->BeginSpeechCapture();
+void AskSubscriber::BeginSpeechCapture(
+    fidl::InterfaceHandle<TranscriptionListener> transcription_listener) {
+  ask_dispatcher_->BeginSpeechCapture(std::move(transcription_listener));
 }
 
 }  // namespace maxwell

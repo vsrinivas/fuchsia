@@ -32,6 +32,10 @@ fidl("suggestion_provider") {
     "suggestion_provider.fidl",
     "user_input.fidl",
   ]
+
+  public_deps = [
+    ":speech_to_text",
+  ]
 }
 
 fidl("debug") {
