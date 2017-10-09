@@ -300,6 +300,10 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         if (IsStaValid()) { status = sta_->SendEapolRequest(std::move(req)); }
         break;
     }
+    case Method::SETKEYS_request: {
+        // TODO(hahnr): Implement key management.
+        break;
+    }
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
         status = ZX_ERR_NOT_SUPPORTED;

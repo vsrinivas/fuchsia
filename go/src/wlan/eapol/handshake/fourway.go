@@ -11,6 +11,7 @@ import (
 	"wlan/eapol/crypto"
 	"wlan/keywrap"
 	"wlan/wlan/elements"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
 	"bytes"
 	"log"
 	"encoding/hex"
@@ -74,6 +75,7 @@ type FourWay struct {
 	aNonce           [32]byte
 	sNonce           [32]byte
 	ptk              *crypto.PTK
+	gtk              []byte
 	state            fourWayState
 }
 
@@ -96,7 +98,7 @@ func (hs *FourWay) HandleEAPOLKeyFrame(f *eapol.KeyFrame) error {
 	}
 
 	// Frames which made it this far are valid and must be processed.
-	// Note: Frame with an encrypted data field will be encrypted by the time of reaching this point.
+	// Note: Frames with an encrypted data field will be encrypted by the time of reaching this point.
 	// However, their data was not checked against any constraints or requirements, mostly because the
 	// data is often context specific and cannot be validated at such an early process.
 	return hs.state.handleEAPOLKeyFrame(hs, f)
@@ -161,7 +163,7 @@ func (s *fourWayStateIdle) sendMessage2(hs *FourWay, msg1 *eapol.KeyFrame) error
 		MIC:            make([]byte, 16), // TODO(hahnr): MIC size must be derived from selected AKM.
 	}
 	message2.UpdateMIC(hs.ptk.KCK)
-	return hs.config.Transport.SendEAPOLKeyFrame(hs.config.StaAddr, hs.config.PeerAddr, message2)
+	return hs.config.Transport.SendEAPOLRequest(hs.config.StaAddr, hs.config.PeerAddr, message2)
 }
 
 func (s *fourWayStateWaitingGTK) isMessageAllowed(f *eapol.KeyFrame) bool {
@@ -190,6 +192,10 @@ func (s *fourWayStateWaitingGTK) handleEAPOLKeyFrame(hs *FourWay, msg *eapol.Key
 		return err
 	}
 
+	if err := s.configureKeysInStation(hs); err != nil {
+		return err
+	}
+
 	hs.state = &fourWayStateCompleted{}
 	return nil
 }
@@ -200,8 +206,9 @@ func (s *fourWayStateWaitingGTK) handleEAPOLKeyFrame(hs *FourWay, msg *eapol.Key
 func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFrame) error {
 	// IEEE Std 802.11-2016, 12.7.2 d)
 	// The specification requires that if a valid MIC is set, the key replay counter must be
-	// increased. Previous verifications guarantee that (1) if a MIC is set, it is valid, (2) if the
-	// handshake's third message was received, it has a MIC set.
+	// increased. Previous verifications guarantee that
+	// (1) if a MIC is set, it is valid,
+	// (2) if the handshake's third message was received, it has a MIC set.
 	hs.keyReplayCounter = msg3.ReplayCounter
 
 	// Extract GTK and RSNE from message's data.
@@ -216,13 +223,12 @@ func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFram
 		return fmt.Errorf("Message 3 does not hold a GTK")
 	}
 	if bytes.Compare(rsne.Raw, hs.config.AssocRSNE.Bytes()) != 0 {
-		return fmt.Errorf("Message 3 has a different RSNE from association.")
+		return fmt.Errorf("Message 3 has a different RSNE from association")
 	}
 	if debug {
 		log.Println("GTK: ", hex.EncodeToString(gtkKDE.GTK))
 	}
-
-	// TODO(hahnr): Configure Keys in STA via MLME-SETKEYS.request.
+	hs.gtk = gtkKDE.GTK
 	return nil
 }
 
@@ -243,7 +249,45 @@ func (s *fourWayStateWaitingGTK) sendMessage4(hs *FourWay, msg3 *eapol.KeyFrame)
 		MIC:            make([]byte, 16), // TODO(hahnr): MIC size must be derived from selected AKM.
 	}
 	message4.UpdateMIC(hs.ptk.KCK)
-	return hs.config.Transport.SendEAPOLKeyFrame(hs.config.StaAddr, hs.config.PeerAddr, message4)
+	return hs.config.Transport.SendEAPOLRequest(hs.config.StaAddr, hs.config.PeerAddr, message4)
+}
+
+func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
+	keyList := []mlme.SetKeyDescriptor{}
+
+	if hs.config.AssocRSNE.GroupData != nil {
+		cipher := hs.config.AssocRSNE.GroupData
+		keyList = append(keyList, mlme.SetKeyDescriptor{
+			Key:             hs.gtk,
+			Length:          uint16(len(hs.gtk)),
+			KeyType:         mlme.KeyType_Group,
+			KeyId:           toMLMEKeyID(cipher),
+			CipherSuiteOui:  cipher.OUI,
+			CipherSuiteType: uint8(cipher.Type),
+		})
+	}
+
+	if len(hs.config.AssocRSNE.PairwiseCiphers) > 0 {
+		// The STA selects the pairwise cipher by comparing all its supported cipher suites to the ones
+		// announced by the AP's Beacon frames. One cipher suite of the intersecting set is chosen and the
+		// AP is informed about the selected cipher suite in the Association request sent from the STA.
+		// Even though it is technically possible, it makes no sense for a STA to send a list with more
+		// than one pairwise cipher suites to the AP in its Association request. In this case, it would be
+		// unclear which suite to use. Hence, the simple assumption that the first pairwise cipher suite
+		// of a none empty list is the negotiated suite.
+		cipher := hs.config.AssocRSNE.PairwiseCiphers[0]
+		keyList = append(keyList, mlme.SetKeyDescriptor{
+			Key:             hs.ptk.TK,
+			Length:          uint16(len(hs.ptk.TK)),
+			KeyType:         mlme.KeyType_Pairwise,
+			KeyId:           toMLMEKeyID(&cipher),
+			Address:         hs.config.PeerAddr,
+			CipherSuiteOui:  cipher.OUI,
+			CipherSuiteType: uint8(cipher.Type),
+		})
+	}
+
+	return hs.config.Transport.SendSetKeysRequest(keyList)
 }
 
 func (s *fourWayStateCompleted) isMessageAllowed(f *eapol.KeyFrame) bool {
@@ -459,9 +503,9 @@ func extractInfoFromMessage3(keyData []byte) (*eapol.GTKKDE, *eapol.RSNElement, 
 	return gtkKDE, rsne, nil
 }
 
-// There is no general way of deriving the message's number from let's say a dedicated byte but
-// instead the message's number must be derived from the message's structure and content.
 func getMessageNumber(f *eapol.KeyFrame) messageNumber {
+	// There is no general way of deriving the message's number from let's say a dedicated byte but
+	// instead the message's number must be derived from the message's structure and content.
 	// The Handshake so far only supports the role of the Supplicant. Hence, only third or first
 	// messages are expected to be received. This needs to be adjusted once also an Authenticator role
 	// is supported.
@@ -479,6 +523,11 @@ func getMessageNumber(f *eapol.KeyFrame) messageNumber {
 		return THIRD_MESSAGE
 	}
 	return FIRST_MESSAGE
+}
+
+func toMLMEKeyID(_ *elements.CipherSuite) mlme.KeyId {
+	// TODO(hahnr): Support additional ciphers.
+	return mlme.KeyId_Ccmp
 }
 
 func isZero(buf []byte) bool {

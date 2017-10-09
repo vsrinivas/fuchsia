@@ -193,7 +193,8 @@ type KeyExchange interface {
 
 // Transports EAPOL frames to their destination.
 type Transport interface {
-	SendEAPOLKeyFrame(srcAddr [6]uint8, dstAddr [6]uint8, f *KeyFrame) error
+	SendEAPOLRequest(srcAddr [6]uint8, dstAddr [6]uint8, f *KeyFrame) error
+	SendSetKeysRequest(keylist []mlme.SetKeyDescriptor) error
 }
 
 // Sends EAPOL frames via SME.
@@ -201,12 +202,18 @@ type SMETransport struct {
 	SME sme.Transport
 }
 
-func (s *SMETransport) SendEAPOLKeyFrame(srcAddr [6]uint8, dstAddr [6]uint8, f *KeyFrame) error {
+func (s *SMETransport) SendEAPOLRequest(srcAddr [6]uint8, dstAddr [6]uint8, f *KeyFrame) error {
 	req := &mlme.EapolRequest{
 		SrcAddr: srcAddr,
 		DstAddr: dstAddr,
-		Data:	f.Bytes(),
+		Data:    f.Bytes(),
 	}
 	s.SME.SendMessage(req, int32(mlme.Method_EapolRequest))
+	return nil
+}
+
+func (s *SMETransport) SendSetKeysRequest(keyList []mlme.SetKeyDescriptor) error {
+	req := &mlme.SetKeysRequest{Keylist: keyList}
+	s.SME.SendMessage(req, int32(mlme.Method_SetkeysRequest))
 	return nil
 }
