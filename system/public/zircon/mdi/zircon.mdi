@@ -44,10 +44,6 @@ uint32  kernel.arm-timer.irq-virt         MDI_ARM_TIMER_IRQ_VIRT                
 uint32  kernel.arm-timer.irq-sphys        MDI_ARM_TIMER_IRQ_SPHYS               1033 // for using secure physical timer
 uint32  kernel.arm-timer.freq-override    MDI_ARM_TIMER_FREQ_OVERRIDE           1034 // optional
 
-// bcm28xx drivers
-list    kernel.bcm28xx-interrupt          MDI_BCM28XX_INTERRUPT                 1040
-list    kernel.bcm28xx-uart               MDI_BCM28XX_UART                      1041
-
 // ARM pl011 uart
 list    kernel.arm-pl011-uart             MDI_ARM_PL011_UART                    1050
 // pl011 driver uses base-virt, base-phys and IRQ
