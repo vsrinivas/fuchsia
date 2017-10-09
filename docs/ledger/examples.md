@@ -17,7 +17,7 @@ use Ledger through Framework Link objects.)
  * [chat] - a chat agent that uses Ledger to store messages
 
 [chat]: https://fuchsia.googlesource.com/modules/chat/
-[Ledger benchmarks]: https://fuchsia.googlesource.com/ledger/+/master/src/test/benchmark
+[Ledger benchmarks]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/benchmark
 [moterm]: https://fuchsia.googlesource.com/moterm
-[story runner]: https://fuchsia.googlesource.com/modular/+/master/src/story_runner
+[story runner]: https://fuchsia.googlesource.com/peridot/+/master/bin/story_runner/
 [todo list]: https://fuchsia.googlesource.com/modules/prototypes/+/master/modules/todo_list/

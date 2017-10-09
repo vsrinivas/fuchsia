@@ -54,10 +54,10 @@ Cloud Sync.
 
 Code:
 
- - [/src/storage], in particular:
-   - [/src/storage/public] contains the public (exposed to other components) API
-   - [/src/storage/impl] contains the implementation
-   - [/src/storage/impl/btree] contains the implementation of the B-tree
+ - [/bin/ledger/storage], in particular:
+   - [/bin/ledger/storage/public] contains the public (exposed to other components) API
+   - [/bin/ledger/storage/impl] contains the implementation
+   - [/bin/ledger/storage/impl/btree] contains the implementation of the B-tree
 
 ## Local client
 
@@ -71,8 +71,8 @@ the policy selected by the client app, calling back to it if necessary - see
 
 Code:
 
- - [/src/app], in particular:
-   - [/src/app/merging] implements conflict resolution
+ - [/bin/ledger/app], in particular:
+   - [/bin/ledger/app/merging] implements conflict resolution
 
 ## Cloud sync
 
@@ -83,18 +83,18 @@ by other devices, downloads them and registers them with Storage.
 
 Code:
 
- - [/src/cloud_sync] implements high-level sync logic, in particular:
-   - [/src/cloud_sync/public] contains the public (exposed to other components) API
-   - [/src/cloud_sync/impl] contains the implementation
- - [/src/cloud_provider] implements integration with cloud services
+ - [/bin/ledger/cloud_sync] implements high-level sync logic, in particular:
+   - [/bin/ledger/cloud_sync/public] contains the public (exposed to other components) API
+   - [/bin/ledger/cloud_sync/impl] contains the implementation
+ - [/bin/ledger/cloud_provider] implements integration with cloud services
 
-[/src/storage]: https://fuchsia.googlesource.com/ledger/+/master/src/storage/
-[/src/storage/public]: https://fuchsia.googlesource.com/ledger/+/master/src/storage/public/
-[/src/storage/impl]: https://fuchsia.googlesource.com/ledger/+/master/src/storage/impl/
-[/src/storage/impl/btree]: https://fuchsia.googlesource.com/ledger/+/master/src/storage/impl/btree/
-[/src/app]: https://fuchsia.googlesource.com/ledger/+/master/src/app/
-[/src/app/merging]: https://fuchsia.googlesource.com/ledger/+/master/src/app/merging/
-[/src/cloud_sync]: https://fuchsia.googlesource.com/ledger/+/master/src/cloud_sync/
-[/src/cloud_sync/public]: https://fuchsia.googlesource.com/ledger/+/master/src/cloud_sync/public/
-[/src/cloud_sync/impl]: https://fuchsia.googlesource.com/ledger/+/master/src/cloud_sync/impl/
-[/src/cloud_provider]: https://fuchsia.googlesource.com/ledger/+/master/src/cloud_provider/
+[/bin/ledger/storage]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/storage/
+[/bin/ledger/storage/public]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/storage/public/
+[/bin/ledger/storage/impl]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/storage/impl/
+[/bin/ledger/storage/impl/btree]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/storage/impl/btree/
+[/bin/ledger/app]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/app/
+[/bin/ledger/app/merging]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/app/merging/
+[/bin/ledger/cloud_sync]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/cloud_sync/
+[/bin/ledger/cloud_sync/public]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/cloud_sync/public/
+[/bin/ledger/cloud_sync/impl]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/cloud_sync/impl/
+[/bin/ledger/cloud_provider]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/cloud_provider/

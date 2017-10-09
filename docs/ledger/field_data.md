@@ -4,7 +4,7 @@ Ledger uses [Cobalt] to record field data.
 
 In order to add more events:
 
- - edit Ledger code under [/src/cobalt]
+ - edit Ledger code under [/bin/ledger/cobalt]
  - register the new events, see documentation for [Cobalt client]
 
 In order to view the recorded data, run:
@@ -23,5 +23,5 @@ Command or 'help': run range -4 0 1
 ```
 
 [Cobalt]: https://fuchsia.googlesource.com/cobalt
-[/src/cobalt]: https://fuchsia.googlesource.com/ledger/+/master/src/cobalt/
+[/bin/ledger/cobalt]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/cobalt/
 [Cobalt client]: https://fuchsia.googlesource.com/cobalt_client
