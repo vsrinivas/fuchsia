@@ -36,13 +36,9 @@ extern zx_handle_t root_resource_handle;
 // Use the builtin cache implementation
 #define ACPI_USE_LOCAL_CACHE
 
-// Use our own mutex implementation
-#define ACPI_MUTEX_TYPE ACPI_OSL_MUTEX
-
 // Specify the types Fuchsia uses for various common objects
 #define ACPI_CPU_FLAGS int
 #define ACPI_SPINLOCK mtx_t*
-#define ACPI_MUTEX mtx_t*
 #define ACPI_SEMAPHORE sem_t*
 
 // Borrowed from aclinuxex.h
