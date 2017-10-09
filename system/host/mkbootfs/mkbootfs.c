@@ -109,6 +109,14 @@ char* trim(char* str) {
     return str;
 }
 
+static FILE* depfile = NULL;
+
+static void notice_dep(const char* dep) {
+    if (depfile != NULL) {
+        fprintf(depfile, " %s", dep);
+    }
+}
+
 static item_t* first_item;
 static item_t* last_item;
 
@@ -151,6 +159,7 @@ fsentry_t* import_manifest_entry(const char* fn, int lineno, const char* dst, co
     if ((e->srcpath = strdup(src)) == NULL) goto fail;
     e->namelen = strlen(e->name) + 1;
     e->length = s.st_size;
+    notice_dep(e->srcpath);
     return e;
 fail:
     free(e->name);
@@ -171,6 +180,7 @@ fsentry_t* import_directory_entry(const char* dst, const char* src, struct stat*
     if ((e->srcpath = strdup(src)) == NULL) goto fail;
     e->namelen = strlen(e->name) + 1;
     e->length = s->st_size;
+    notice_dep(e->srcpath);
     return e;
 fail:
     free(e->name);
@@ -194,6 +204,8 @@ int import_manifest(FILE* fp, const char* fn, item_t* fs) {
     fsentry_t* e;
     char* eq;
     char line[4096];
+
+    notice_dep(fn);
 
     while (fgets(line, sizeof(line), fp) != NULL) {
         lineno++;
@@ -246,6 +258,8 @@ int import_file_as(const char* fn, item_type_t type, uint32_t hdrlen,
         fprintf(stderr, "error: cannot stat '%s'\n", fn);
         return -1;
     }
+
+    notice_dep(fn);
 
     if (type == ITEM_BOOTDATA) {
         size_t hsz = sizeof(bootdata_t);
@@ -310,6 +324,8 @@ int import_directory(const char* dpath, const char* spath, item_t* item, bool sy
         fprintf(stderr, "error: cannot open directory '%s'\n", spath);
         return -1;
     }
+
+    notice_dep(spath);
 
     if (item == NULL) {
         item = new_item(system ? ITEM_BOOTFS_SYSTEM : ITEM_BOOTFS_BOOT);
@@ -1066,6 +1082,7 @@ void usage(void) {
     "       provided in the specified order.\n"
     "\n"
     "options: -o <filename>         output bootdata file name\n"
+    "         --depfile <filename>  output make/ninja dependencies file name\n"
     "         -k <filename>         include kernel (must be first)\n"
     "         -C <filename>         include kernel command line\n"
     "         -c                    compress bootfs image (default)\n"
@@ -1229,6 +1246,20 @@ int main(int argc, char **argv) {
             board_arg = argv[1];
             argc--;
             argv++;
+        } else if (!strcmp(cmd,"--depfile")) {
+            if (argc < 2) {
+                fprintf(stderr, "error: no value given for --depfile\n");
+                return -1;
+            }
+            depfile = fopen(argv[1], "w");
+            if (depfile == NULL) {
+                fprintf(stderr, "cannot write '%s': %s\n",
+                        argv[1], strerror(errno));
+                return -1;
+            }
+            fprintf(depfile, "%s:", output_file);
+            argc--;
+            argv++;
         } else if (cmd[0] == '-') {
             fprintf(stderr, "unknown option: %s\n", cmd);
             return -1;
@@ -1283,6 +1314,12 @@ int main(int argc, char **argv) {
     if (first_item == NULL) {
         fprintf(stderr, "error: no inputs given\n");
         return -1;
+    }
+
+    if (depfile != NULL) {
+        putc('\n', depfile);
+        fclose(depfile);
+        depfile = NULL;
     }
 
     // preflight calculations for bootfs items
