@@ -34,7 +34,11 @@ extern void x86_bootstrap16_start(void);
 extern void x86_bootstrap16_end(void);
 
 // 64-bit entry points that bootstrap might transition to
+
+// Entry point used for secondary CPU initialization
 extern void _x86_secondary_cpu_long_mode_entry(void);
+// Entry point used for suspend-to-RAM resume vector.  Note that
+// this does not restore %rdi.
 extern void _x86_suspend_wakeup(void);
 
 __END_CDECLS
@@ -59,9 +63,17 @@ struct __PACKED x86_bootstrap16_data {
 struct __PACKED x86_realmode_entry_data {
     struct x86_bootstrap16_data hdr;
 
-    // Virtual address of the register dump
+    // Virtual address of the register dump (expected to be in
+    // the form of x86_realmode_entry_data_registers)
     uint64_t registers_ptr;
 };
+
+struct x86_realmode_entry_data_registers {
+    uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;
+    uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+    uint64_t rsp, rip;
+};
+
 
 struct __PACKED x86_ap_bootstrap_data {
     struct x86_bootstrap16_data hdr;

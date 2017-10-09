@@ -191,6 +191,11 @@ FUNCTION_LABEL(_x86_suspend_wakeup)
     mov 112(%rdi), %r15
     mov 120(%rdi), %rsp
 
+    # Note: %rdi is not restored, but it is a caller-save register anyway.  If
+    # we want to restore %rdi, we could potentially use the stack here to do something
+    # like "push 128(%rdi); mov (%rdi), %rdi; ret", but that would require assuming RSP
+    # points to usable stack.
+
     # Restore RIP
     jmp *128(%rdi)
 
