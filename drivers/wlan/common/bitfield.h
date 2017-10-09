@@ -17,6 +17,7 @@ template <typename ValueType> class BitField {
     constexpr explicit BitField(ValueType val) : val_(val) {}
     constexpr BitField() = default;
 
+    constexpr size_t len() { return sizeof(ValueType); }
     void clear() { val_ = 0; }
     void set_val(ValueType val) { val_ = val; }
     ValueType* mut_val() { return &val_; }
