@@ -27,7 +27,7 @@ const uint ARCH_MMU_FLAG_NS = (1u << 6);      // NON-SECURE
 const uint ARCH_MMU_FLAG_INVALID = (1u << 7); // Indicates that flags are not specified
 
 const uint ARCH_ASPACE_FLAG_KERNEL = (1u << 0);
-const uint ARCH_ASPACE_FLAG_GUEST_PASPACE = (1u << 1);
+const uint ARCH_ASPACE_FLAG_GUEST = (1u << 1);
 
 // per arch base class api to encapsulate the mmu routines on an aspace
 class ArchVmAspaceInterface {

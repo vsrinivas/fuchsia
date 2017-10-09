@@ -249,7 +249,7 @@ FUNCTION_LABEL(el2_hvc_on)
     mrs x9, id_aa64mmfr0_el1
     and x9, x9, #ID_AA64MMFR0_EL1_PARANGE_MASK
     lsl x9, x9, #VTCR_EL2_PS_SHIFT
-    movlit x10, MMU_VTCR_FLAGS
+    movlit x10, MMU_VTCR_EL2_FLAGS
     // Combine MMU_VTCR_FLAGS with VTCR_EL2.PS.
     orr x9, x9, x10
     msr vtcr_el2, x9

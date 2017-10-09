@@ -40,13 +40,6 @@ static inline bool is_user_address_range(vaddr_t va, size_t len) {
            (len == 0 || is_user_address(va + len - 1));
 }
 
-#ifndef GUEST_PHYSICAL_ASPACE_BASE
-#define GUEST_PHYSICAL_ASPACE_BASE 0UL
-#endif
-#ifndef GUEST_PHYSICAL_ASPACE_SIZE
-#define GUEST_PHYSICAL_ASPACE_SIZE (1UL << 48)
-#endif
-
 __BEGIN_CDECLS
 
 // C friendly opaque handle to the internals of the VMM.

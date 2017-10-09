@@ -106,6 +106,8 @@
 #define PDPT_ADDR_OFFSET        2
 #define NO_OF_PT_ENTRIES        512
 
+#define MMU_GUEST_SIZE_SHIFT    48
+
 #define X86_FLAGS_MASK          (0x8000000000000ffful)
 #define X86_LARGE_FLAGS_MASK    (0x8000000000001ffful)
 #define X86_PDPT_ADDR_MASK      (0x00000000ffffffe0ul)

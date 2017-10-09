@@ -154,6 +154,13 @@ zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flag
 
         index = vaddr_rem >> index_shift;
         ASSERT(index < MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP);
+    } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+        index_shift = MMU_GUEST_TOP_SHIFT;
+        page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
+
+        vaddr_rem = vaddr;
+        index = vaddr_rem >> index_shift;
+        ASSERT(index < MMU_GUEST_PAGE_TABLE_ENTRIES_TOP);
     } else {
         index_shift = MMU_USER_TOP_SHIFT;
         page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
@@ -388,8 +395,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
                 page_table_is_clear(next_page_table, page_size_shift)) {
                 LTRACEF("pte %p[0x%lx] = 0 (was page table)\n", page_table, index);
                 page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
-                __asm__ volatile("dmb ishst" ::
-                                     : "memory");
+                __asm__ volatile("dmb ishst" ::: "memory");
                 FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr,
                               page_size_shift);
             }
@@ -397,10 +403,13 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
             LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
             fbl::atomic_signal_fence();
-            if (asid == MMU_ARM64_GLOBAL_ASID)
+            if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+                // TODO(abdulla): Add handling for guest.
+            } else if (asid == MMU_ARM64_GLOBAL_ASID) {
                 ARM64_TLBI(vaae1is, vaddr >> 12);
-            else
+            } else {
                 ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
+            }
         } else {
             LTRACEF("pte %p[0x%lx] already clear\n", page_table, index);
         }
@@ -697,6 +706,12 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
                            ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
                            MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
                            tt_virt_, MMU_ARM64_GLOBAL_ASID);
+        } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+            ret = MapPages(vaddr, paddr, count * PAGE_SIZE,
+                           mmu_flags_to_pte_attr(mmu_flags),
+                           0, MMU_GUEST_SIZE_SHIFT,
+                           MMU_GUEST_TOP_SHIFT, MMU_GUEST_PAGE_SIZE_SHIFT,
+                           tt_virt_, 0 /* asid */);
         } else {
             ret = MapPages(vaddr, paddr, count * PAGE_SIZE,
                            mmu_flags_to_pte_attr(mmu_flags),
@@ -738,6 +753,12 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
                          MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
                          tt_virt_,
                          MMU_ARM64_GLOBAL_ASID);
+    } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+        ret = UnmapPages(vaddr, count * PAGE_SIZE,
+                         0, MMU_GUEST_SIZE_SHIFT,
+                         MMU_GUEST_TOP_SHIFT, MMU_GUEST_PAGE_SIZE_SHIFT,
+                         tt_virt_,
+                         0 /* asid */);
     } else {
         ret = UnmapPages(vaddr, count * PAGE_SIZE,
                          0, MMU_USER_SIZE_SHIFT,
@@ -775,6 +796,12 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
                            ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
                            MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
                            tt_virt_, MMU_ARM64_GLOBAL_ASID);
+    } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+        ret = ProtectPages(vaddr, count * PAGE_SIZE,
+                           mmu_flags_to_pte_attr(mmu_flags),
+                           0, MMU_GUEST_SIZE_SHIFT,
+                           MMU_GUEST_TOP_SHIFT, MMU_GUEST_PAGE_SIZE_SHIFT,
+                           tt_virt_, 0 /* asid */);
     } else {
         ret = ProtectPages(vaddr, count * PAGE_SIZE,
                            mmu_flags_to_pte_attr(mmu_flags),
@@ -809,11 +836,13 @@ zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
         tt_phys_ = vaddr_to_paddr(const_cast<pte_t*>(tt_virt_));
         asid_ = (uint16_t)MMU_ARM64_GLOBAL_ASID;
     } else {
-        //DEBUG_ASSERT(base >= 0);
-        DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
-
-        if (arm64_mmu_alloc_asid(&asid_) != ZX_OK)
-            return ZX_ERR_NO_MEMORY;
+        if (flags & ARCH_ASPACE_FLAG_GUEST) {
+            DEBUG_ASSERT(base + size <= 1UL << MMU_GUEST_SIZE_SHIFT);
+        } else {
+            DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
+            if (arm64_mmu_alloc_asid(&asid_) != ZX_OK)
+                return ZX_ERR_NO_MEMORY;
+        }
 
         base_ = base;
         size_ = size;
@@ -851,10 +880,13 @@ zx_status_t ArmArchVmAspace::Destroy() {
     DEBUG_ASSERT(page);
     pmm_free_page(page);
 
-    ARM64_TLBI(ASIDE1IS, asid_);
-
-    arm64_mmu_free_asid(asid_);
-    asid_ = 0;
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+        // TODO(abdulla): Add handling for guest.
+    } else {
+        ARM64_TLBI(ASIDE1IS, asid_);
+        arm64_mmu_free_asid(asid_);
+        asid_ = 0;
+    }
 
     return ZX_OK;
 }
@@ -867,7 +899,7 @@ void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace
     uint64_t ttbr;
     if (aspace) {
         aspace->canary_.Assert();
-        DEBUG_ASSERT((aspace->flags_ & ARCH_ASPACE_FLAG_KERNEL) == 0);
+        DEBUG_ASSERT((aspace->flags_ & (ARCH_ASPACE_FLAG_KERNEL | ARCH_ASPACE_FLAG_GUEST)) == 0);
 
         tcr = MMU_TCR_FLAGS_USER;
         ttbr = ((uint64_t)aspace->asid_ << 48) | aspace->tt_phys_;

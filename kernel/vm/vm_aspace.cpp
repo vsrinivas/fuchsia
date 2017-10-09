@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/fault.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_object.h>
@@ -38,6 +39,9 @@
 using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+
+#define GUEST_PHYSICAL_ASPACE_BASE 0UL
+#define GUEST_PHYSICAL_ASPACE_SIZE (1UL << MMU_GUEST_SIZE_SHIFT)
 
 // pointer to a singleton kernel address space
 VmAspace* VmAspace::kernel_aspace_ = nullptr;
@@ -147,7 +151,7 @@ zx_status_t VmAspace::Init() {
     bool is_guest = (flags_ & TYPE_MASK) == TYPE_GUEST_PHYS;
     uint arch_aspace_flags =
         (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) |
-        (is_guest ? ARCH_ASPACE_FLAG_GUEST_PASPACE : 0u);
+        (is_guest ? ARCH_ASPACE_FLAG_GUEST : 0u);
     zx_status_t status = arch_aspace_.Init(base_, size_, arch_aspace_flags);
     if (status != ZX_OK) {
         return status;
@@ -530,6 +534,11 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     canary_.Assert();
     DEBUG_ASSERT(!aspace_destroyed_);
     LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
+
+    if ((flags_ & TYPE_MASK) == TYPE_GUEST_PHYS) {
+        flags &= ~VMM_PF_FLAG_USER;
+        flags |= VMM_PF_FLAG_GUEST;
+    }
 
     // for now, hold the aspace lock across the page fault operation,
     // which stops any other operations on the address space from moving

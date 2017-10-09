@@ -41,10 +41,16 @@
 #define MMU_IDENT_SIZE_SHIFT 42 /* Max size supported by block mappings */
 #endif
 
+// See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
+// This size is based on a 4KB granule and a starting level of 1. We chose this
+// size due to the 40-bit physical address range on Cortex-A53.
+#define MMU_GUEST_SIZE_SHIFT 38
+
 #define MMU_MAX_PAGE_SIZE_SHIFT 48
 
 #define MMU_KERNEL_PAGE_SIZE_SHIFT      (PAGE_SIZE_SHIFT)
 #define MMU_USER_PAGE_SIZE_SHIFT        (USER_PAGE_SIZE_SHIFT)
+#define MMU_GUEST_PAGE_SIZE_SHIFT       (USER_PAGE_SIZE_SHIFT)
 
 #if MMU_IDENT_SIZE_SHIFT < 25
 #error MMU_IDENT_SIZE_SHIFT too small
@@ -118,6 +124,19 @@
 #define MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT (MMU_IDENT_SIZE_SHIFT - MMU_IDENT_TOP_SHIFT)
 #define MMU_PAGE_TABLE_ENTRIES_IDENT (0x1 << MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT)
 
+#if MMU_GUEST_SIZE_SHIFT > MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 0)
+#define MMU_GUEST_TOP_SHIFT MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 0)
+#elif MMU_GUEST_SIZE_SHIFT > MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 1)
+#define MMU_GUEST_TOP_SHIFT MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 1)
+#elif MMU_GUEST_SIZE_SHIFT > MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 2)
+#define MMU_GUEST_TOP_SHIFT MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 2)
+#elif MMU_GUEST_SIZE_SHIFT > MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 3)
+#define MMU_GUEST_TOP_SHIFT MMU_LX_X(MMU_GUEST_PAGE_SIZE_SHIFT, 3)
+#else
+#error Guest physical address space size must be larger than page size
+#endif
+#define MMU_GUEST_PAGE_TABLE_ENTRIES_TOP (0x1 << (MMU_GUEST_SIZE_SHIFT - MMU_GUEST_TOP_SHIFT))
+
 #define MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT      (30)
 
 #ifndef ASSEMBLY
@@ -153,8 +172,10 @@
 #define MMU_TCR_EPD0                            BM( 7, 1, 1)
 #define MMU_TCR_T0SZ(size)                      BM( 0, 6, (size))
 
-#define MMU_VTCR_RES1                           BM(31, 1, 1)
-#define MMU_VTCR_SL0(starting_level)            BM( 6, 2, (starting_level))
+#define MMU_TCR_EL2_RES1                        (BM(31, 1, 1) | BM(23, 1, 1))
+
+#define MMU_VTCR_EL2_RES1                       BM(31, 1, 1)
+#define MMU_VTCR_EL2_SL0(starting_level)        BM( 6, 2, (starting_level))
 
 #define MMU_MAIR_ATTR(index, attr)              BM(index * 8, 8, (attr))
 
@@ -272,17 +293,24 @@
                             MMU_TCR_FLAGS0 | \
                             MMU_TCR_AS)
 
-// See ARM DDI 0487B.b, Table D4-7 for details on how to configure SL0.
-// Practically, the only useful configuration is 2.
-//
-// TODO(abdulla): Base this upon on TG0 and T0SZ.
-#define MMU_VTCR_SL0_DEFAULT MMU_VTCR_SL0(2)
+#define MMU_VTCR_FLAGS_GUEST \
+                       (MMU_TCR_TG0(MMU_TG0(MMU_GUEST_PAGE_SIZE_SHIFT)) | \
+                        MMU_TCR_SH0(MMU_SH_INNER_SHAREABLE) | \
+                        MMU_TCR_ORGN0(MMU_RGN_WRITE_BACK_ALLOCATE) | \
+                        MMU_TCR_IRGN0(MMU_RGN_WRITE_BACK_ALLOCATE) | \
+                        MMU_TCR_T0SZ(64 - MMU_GUEST_SIZE_SHIFT))
+
+// NOTE(abdulla): VCR_EL2.PS still must be set, based upon ID_AA64MMFR0_EL1.
+// Furthermore, this only covers what's required by ARMv8.0.
+#define MMU_TCR_EL2_FLAGS (MMU_TCR_EL2_RES1 | MMU_TCR_FLAGS0_IDENT)
+
+// See ARM DDI 0487B.b, Table D4-7 for details on how to configure SL0. We chose
+// a starting level of 1, due to our use of a 4KB granule and a 40-bit PARange.
+#define MMU_VTCR_EL2_SL0_DEFAULT MMU_VTCR_EL2_SL0(1)
 
 // NOTE(abdulla): VTCR_EL2.PS still must be set, based upon ID_AA64MMFR0_EL1.
 // Furthermore, this only covers what's required by ARMv8.0.
-#define MMU_VTCR_FLAGS (MMU_VTCR_RES1 | \
-                        MMU_VTCR_SL0_DEFAULT | \
-                        MMU_TCR_FLAGS0)
+#define MMU_VTCR_EL2_FLAGS (MMU_VTCR_EL2_RES1 | MMU_VTCR_EL2_SL0_DEFAULT | MMU_VTCR_FLAGS_GUEST)
 
 #if MMU_IDENT_SIZE_SHIFT > MMU_LX_X(MMU_IDENT_PAGE_SIZE_SHIFT, 2)
 #define MMU_PTE_IDENT_DESCRIPTOR MMU_PTE_L012_DESCRIPTOR_BLOCK

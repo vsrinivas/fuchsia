@@ -1147,7 +1147,7 @@ zx_status_t X86ArchVmAspace::UnmapPages(vaddr_t vaddr, const size_t count,
 zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
     fbl::AutoLock a(&lock_);
 
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
         return UnmapPages<ExtendedPageTable>(vaddr, count, unmapped);
     } else {
         return UnmapPages<PageTable>(vaddr, count, unmapped);
@@ -1199,7 +1199,7 @@ zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
                                  uint mmu_flags, size_t* mapped) {
     fbl::AutoLock a(&lock_);
 
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
         if (mmu_flags & ~kValidEptFlags)
             return ZX_ERR_INVALID_ARGS;
         return MapPages<ExtendedPageTable>(vaddr, paddr, count, mmu_flags, mapped);
@@ -1241,7 +1241,7 @@ zx_status_t X86ArchVmAspace::ProtectPages(vaddr_t vaddr, size_t count, uint mmu_
 zx_status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
     fbl::AutoLock a(&lock_);
 
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
         if (mmu_flags & ~kValidEptFlags)
             return ZX_ERR_INVALID_ARGS;
         return ProtectPages<ExtendedPageTable>(vaddr, count, mmu_flags);
@@ -1297,7 +1297,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
         pt_phys_ = kernel_pt_phys;
         pt_virt_ = (pt_entry_t*)X86_PHYS_TO_VIRT(pt_phys_);
         LTRACEF("kernel aspace: pt phys %#" PRIxPTR ", virt %p\n", pt_phys_, pt_virt_);
-    } else if (mmu_flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+    } else if (mmu_flags & ARCH_ASPACE_FLAG_GUEST) {
         vm_page_t* p = pmm_alloc_page(0, &pt_phys_);
         if (p == nullptr) {
             TRACEF("error allocating top level page directory\n");
@@ -1305,7 +1305,8 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
         }
         p->state = VM_PAGE_STATE_MMU;
         pt_virt_ = static_cast<pt_entry_t*>(paddr_to_kvaddr(pt_phys_));
-        memset(pt_virt_, 0, sizeof(pt_entry_t) * NO_OF_PT_ENTRIES);
+        // TODO(abdulla): Remove when PMM returns pre-zeroed pages.
+        arch_zero_page(pt_virt_);
         LTRACEF("guest paspace: pt phys %#" PRIxPTR ", virt %p\n", pt_phys_, pt_virt_);
     } else {
         /* allocate a top level page table for the new address space */
@@ -1321,6 +1322,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
         p->state = VM_PAGE_STATE_MMU;
 
         // Zero out the user space half of it.
+        // TODO(abdulla): Remove when PMM returns pre-zeroed pages.
         memset(pt_virt_, 0, sizeof(pt_entry_t) * NO_OF_PT_ENTRIES / 2);
 
         // Copy the kernel portion of it from the master kernel pt.
@@ -1369,7 +1371,7 @@ zx_status_t X86ArchVmAspace::DestroyAspace() {
 zx_status_t X86ArchVmAspace::Destroy() {
     fbl::AutoLock a(&lock_);
 
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE)
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST)
         return DestroyAspace<ExtendedPageTable>();
     else
         return DestroyAspace<PageTable>();
@@ -1459,7 +1461,7 @@ zx_status_t X86ArchVmAspace::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
 zx_status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
     fbl::AutoLock a(&lock_);
 
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
         return QueryVaddr<ExtendedPageTable>(vaddr, paddr, mmu_flags,
                                              ept_mmu_flags);
     } else {
