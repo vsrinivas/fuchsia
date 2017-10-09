@@ -349,14 +349,15 @@ mod tests {
 
     #[test]
     fn channel_call() {
-        let hundred_ms: Duration = 100_000_000;
+        // NOTE(raggi): we saw this time-out in CQ killing a tryjob, so upped to 500ms.
+        let five_hundred_ms: Duration = 500_000_000;
 
         // Create a pair of channels
         let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
 
         // Start a new thread to respond to the call.
         let server = thread::spawn(move || {
-            assert_eq!(p2.wait_handle(ZX_CHANNEL_READABLE, deadline_after(hundred_ms)),
+            assert_eq!(p2.wait_handle(ZX_CHANNEL_READABLE, deadline_after(five_hundred_ms)),
                 Ok(ZX_CHANNEL_READABLE | ZX_CHANNEL_WRITABLE));
             let mut buf = MessageBuf::new();
             assert_eq!(p2.read(0, &mut buf), Ok(()));
@@ -370,7 +371,7 @@ mod tests {
         let mut empty = vec![];
         let mut buf = MessageBuf::new();
         buf.ensure_capacity_bytes(12);
-        assert_eq!(p1.call(0, deadline_after(hundred_ms), b"txidcall", &mut empty, &mut buf),
+        assert_eq!(p1.call(0, deadline_after(five_hundred_ms), b"txidcall", &mut empty, &mut buf),
             Ok(()));
         assert_eq!(buf.bytes(), b"txidresponse");
         assert_eq!(buf.n_handles(), 0);
