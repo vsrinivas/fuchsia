@@ -103,7 +103,7 @@ constexpr T&& forward(typename remove_reference<T>::type& t) {
 
 template <typename T>
 constexpr T&& forward(typename remove_reference<T>::type&& t) {
-    static_assert(!is_lvalue_reference<T>::value, "bad util::forward call");
+    static_assert(!is_lvalue_reference<T>::value, "bad fbl::forward call");
     return static_cast<T&&>(t);
 }
 
