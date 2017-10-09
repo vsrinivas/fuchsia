@@ -24,7 +24,7 @@ zx_status_t fidl_encode(const fidl_type_t* type,
                         void* bytes,
                         uint32_t num_bytes,
                         zx_handle_t* handles,
-                        uint32_t num_handles,
+                        uint32_t max_handles,
                         uint32_t* actual_handles_out,
                         const char** error_msg_out);
 

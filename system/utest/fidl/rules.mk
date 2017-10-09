@@ -10,6 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/decoding_tests.cpp \
+    $(LOCAL_DIR)/encoding_tests.cpp \
     $(LOCAL_DIR)/main.c \
 
 MODULE_NAME := fidl-test

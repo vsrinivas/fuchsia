@@ -17,6 +17,11 @@
 
 namespace fidl {
 
+inline uint64_t FidlAlign(uint32_t offset) {
+    constexpr uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
+    return (offset + alignment_mask) & ~alignment_mask;
+}
+
 struct FidlField {
     const fidl_type* type;
     uint32_t offset;
