@@ -26,9 +26,6 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-extern int _start;
-extern int _end;
-
 extern int __code_start;
 extern int __code_end;
 extern int __rodata_start;
@@ -37,6 +34,7 @@ extern int __data_start;
 extern int __data_end;
 extern int __bss_start;
 extern int __bss_end;
+extern int _end;
 
 // boot time allocated page full of zeros
 vm_page_t* zero_page;
@@ -117,7 +115,8 @@ void vm_init_preheap(uint level) {
 
     // mark all of the kernel pages in use
     LTRACEF("marking all kernel pages as used\n");
-    MarkPagesInUse((vaddr_t)&_start, ((uintptr_t)&_end - (uintptr_t)&_start));
+    MarkPagesInUse((vaddr_t)&__code_start,
+                   (uintptr_t)&_end - (uintptr_t)&__code_start);
 
     // mark the physical pages used by the boot time allocator
     if (boot_alloc_end != boot_alloc_start) {

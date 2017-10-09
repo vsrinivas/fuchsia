@@ -13,21 +13,10 @@
 ENTRY(_multiboot_start)
 SECTIONS
 {
-    . = %MEMBASE% + %HEADER_LOAD_OFFSET%;
-
-    /* TODO: remove this logic and push .text.header into .text where
-     * .text.boot0 is once ENABLE_NEW_BOOT is made default.
-     * Remove PHYS_HEADER_LOAD_OFFSET as well.
-     */
-    .text.header : AT (%MEMBASE% + %KERNEL_LOAD_OFFSET% - %PHYS_HEADER_LOAD_OFFSET%) {
-        KEEP(*(.text.header))
-    }
-
     . = %KERNEL_BASE% + %KERNEL_LOAD_OFFSET%;
-    _start = .;
+    __code_start = .;
 
     .text : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
-        __code_start = .;
         KEEP(*(.text.boot0))
 
         . = ALIGN(8);
