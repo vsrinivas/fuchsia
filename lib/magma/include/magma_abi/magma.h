@@ -37,6 +37,12 @@ void magma_release_buffer(struct magma_connection_t* connection, magma_buffer_t 
 uint64_t magma_get_buffer_id(magma_buffer_t buffer);
 uint64_t magma_get_buffer_size(magma_buffer_t buffer);
 
+// Clean the cache for a region of memory and write the contents to ram. If
+// invalidate is true, then invalidates the cache lines, so reads will be from
+// memory.
+magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_t size,
+                                 magma_cache_operation_t operation);
+
 magma_status_t magma_map(struct magma_connection_t* connection, magma_buffer_t buffer,
                          void** addr_out);
 magma_status_t magma_unmap(struct magma_connection_t* connection, magma_buffer_t buffer);

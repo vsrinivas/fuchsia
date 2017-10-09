@@ -253,6 +253,25 @@ public:
         // entire buffer again
         EXPECT_TRUE(buffer->CommitPages(0, num_pages));
     }
+
+    static void CleanCache(bool invalidate)
+    {
+        const uint64_t kNumPages = 100;
+        const uint64_t kBufferSize = kNumPages * PAGE_SIZE;
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(kBufferSize, "test");
+
+        // start of range invalid
+        EXPECT_FALSE(buffer->CleanCache(kBufferSize, 1, invalidate));
+        // end of range invalid
+        EXPECT_FALSE(buffer->CleanCache(0, kBufferSize + 1, invalidate));
+        // one byte in the middle
+        EXPECT_TRUE(buffer->CleanCache(kBufferSize / 2, 1, invalidate));
+        // entire buffer
+        EXPECT_TRUE(buffer->CleanCache(0, kBufferSize, invalidate));
+        // entire buffer again
+        EXPECT_TRUE(buffer->CleanCache(0, kBufferSize, invalidate));
+    }
 };
 
 TEST(PlatformBuffer, Basic)
@@ -274,4 +293,10 @@ TEST(PlatformBuffer, Commit)
     TestPlatformBuffer::CommitPages(1);
     TestPlatformBuffer::CommitPages(16);
     TestPlatformBuffer::CommitPages(1024);
+}
+
+TEST(PlatformBuffer, CleanCache)
+{
+    TestPlatformBuffer::CleanCache(false);
+    TestPlatformBuffer::CleanCache(true);
 }

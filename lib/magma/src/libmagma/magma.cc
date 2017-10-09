@@ -99,6 +99,26 @@ uint64_t magma_get_buffer_size(magma_buffer_t buffer)
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->size();
 }
 
+magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_t size,
+                                 magma_cache_operation_t operation)
+{
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+    bool invalidate;
+    switch (operation) {
+        case MAGMA_CACHE_OPERATION_CLEAN:
+            invalidate = false;
+            break;
+        case MAGMA_CACHE_OPERATION_CLEAN_INVALIDATE:
+            invalidate = true;
+            break;
+        default:
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "invalid cache operations");
+    }
+
+    bool result = platform_buffer->CleanCache(offset, size, invalidate);
+    return result ? MAGMA_STATUS_OK : MAGMA_STATUS_INTERNAL_ERROR;
+}
+
 magma_status_t magma_import(magma_connection_t* connection, uint32_t buffer_handle,
                             magma_buffer_t* buffer_out)
 {

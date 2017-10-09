@@ -47,6 +47,8 @@ public:
                                  uint64_t addr_out[]) = 0;
     virtual bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) = 0;
 
+    virtual bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) = 0;
+
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 };
 

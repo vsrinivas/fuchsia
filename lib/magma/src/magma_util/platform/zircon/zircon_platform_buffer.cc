@@ -172,6 +172,7 @@ public:
     bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                          uint64_t addr_out[]) override;
     bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) override;
+    bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
 
     uint32_t num_pages() { return size_ / PAGE_SIZE; }
 
@@ -382,6 +383,15 @@ bool ZirconPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t p
 
 bool ZirconPlatformBuffer::UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count)
 {
+    return true;
+}
+
+bool ZirconPlatformBuffer::CleanCache(uint64_t offset, uint64_t size, bool invalidate)
+{
+    uint32_t op = invalidate ? ZX_VMO_OP_CACHE_CLEAN_INVALIDATE : ZX_VMO_OP_CACHE_CLEAN;
+    zx_status_t status = vmo_.op_range(op, offset, size, nullptr, 0);
+    if (status != ZX_OK)
+        return DRETF(false, "failed to clean cache: %d", status);
     return true;
 }
 
