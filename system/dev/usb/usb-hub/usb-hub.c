@@ -293,9 +293,13 @@ static int usb_hub_thread(void* arg) {
         dprintf(ERROR, "get hub descriptor failed: %d\n", result);
         return result;
     }
-    if (out_length != sizeof(desc)) {
-        dprintf(ERROR, "get hub descriptor got length %lu, want length %lu\n",
-                out_length, sizeof(desc));
+    // The length of the descriptor varies depending on whether it is USB 2.0 or 3.0,
+    // and how many ports it has.
+    size_t min_length = 7;
+    size_t max_length = sizeof(desc);
+    if (out_length < min_length || out_length > max_length) {
+        dprintf(ERROR, "get hub descriptor got length %lu, want length between %lu and %lu\n",
+                out_length, min_length, max_length);
         return ZX_ERR_BAD_STATE;
     }
 
