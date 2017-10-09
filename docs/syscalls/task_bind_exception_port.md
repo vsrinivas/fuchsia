@@ -56,65 +56,6 @@ This option is useful, for example, when a debugger wants to detach from the
 thread's process, but leave the thread in stasis waiting for an exception
 response.
 
-### Exception processing
-
-When a thread gets an exception it is paused while the kernel processes
-the exception. The kernel looks for bound exception ports in a specific order
-and if it finds one an "exception report" is sent to the bound port.
-Then when the "exception handler" that bound the port is finished processing
-the exception it "resumes" the thread with the **task_resume**() system call.
-
-Resuming the thread can be done in either of two ways:
-
-- Resume execution of the thread as if the exception has been resolved.
-If the thread gets another exception then exception processing begins
-again anew.
-
-- Resume exception processing, marking the exception as "unhandled", giving
-the next exception port in the search order a chance to process the exception.
-
-Exception reports are messages sent through the port with a specific format
-defined by the port message protocol. The packet contents are defined by
-the *zx_exception_packet_t* type defined in zircon/syscalls/port.h.
-
-### Exception search order
-
-Exception ports are searched in the following order:
-
-- Debugger - The debugger exception port is associated with processes, and
-is for things like gdb. To bind to the debugger exception port
-pass *ZX_EXCEPTION_PORT_DEBUGGER* in *options* when binding an
-exception port to the process.
-There is only one debugger exception port per process.
-
-- Thread - This is for exception ports bound directly to the thread.
-There is only one thread exception port per thread.
-
-- Process - This is for exception ports bound directly to the process.
-There is only one process exception port per process.
-
-- Job - This is for exception ports bound to the process's job. Note that jobs
-have a hierarchy. First the process's job is searched. If it has a bound
-exception port then the exception is delivered to that port. If it does not
-have a bound exception port, or if the handler returns **ZX_RESUME_TRY_NEXT**,
-then that job's parent job is searched, and so on right up to the root job.
-
-- System - This is the last port searched and gives the system a chance to
-process the exception before the kernel kills the process.
-
-If no exception port handles the exception then the kernel finishes
-exception processing by killing the process.
-
-### Types of exceptions
-
-At a high level there are two types of exceptions: architectural and synthetic.
-Architectural exceptions are things like a segment fault (e.g., dereferencing
-the NULL pointer) or executing an undefined instruction. Synthetic exceptions
-are things like thread start and stop notifications.
-
-Exception types are enumerated in the *zx_excp_type_t* enum defined
-in zircon/syscalls/exception.h.
-
 ## RETURN VALUE
 
 **task_bind_exception_port**() returns **ZX_OK** on success.
@@ -138,6 +79,7 @@ or *eport* is not that of a port and is not **ZX_HANDLE_INVALID**.
 
 ## SEE ALSO
 
+[exceptions](../exceptions.md).
 [port_create](port_create.md).
 [port_wait](port_wait.md).
 [task_resume](task_resume.md).
