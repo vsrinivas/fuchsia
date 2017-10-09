@@ -16,10 +16,12 @@ SECTIONS
     . = %KERNEL_BASE% + %KERNEL_LOAD_OFFSET%;
     __code_start = .;
 
-    .text : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
+    .text.boot0 : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
         KEEP(*(.text.boot0))
+    } =0x9090
 
-        . = ALIGN(8);
+    . = ALIGN(8);
+    .buildsig : {
         buildsig = .;
         BYTE(0x42); BYTE(0x53); BYTE(0x49); BYTE(0x47); /* BSIG */
         BYTE(0x53); BYTE(0x54); BYTE(0x52); BYTE(0x54); /* STRT */
@@ -33,12 +35,18 @@ SECTIONS
         QUAD(__build_id_note_start);
         BYTE(0x42); BYTE(0x53); BYTE(0x49); BYTE(0x47); /* BSIG */
         BYTE(0x45); BYTE(0x4e); BYTE(0x44); BYTE(0x53); /* ENDS */
+     }
 
+    .text.boot : {
         KEEP(*(.text.boot))
+    }
+
+    .text : {
         *(.text* .sram.text)
         *(.gnu.linkonce.t.*)
-        __code_end = .;
     } =0x9090
+
+    __code_end = .;
 
     . = ALIGN(4096);
     __rodata_start = .;
