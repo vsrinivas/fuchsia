@@ -480,7 +480,7 @@ private:
     int signaled_;
 };
 
-Event event;
+static Event event;
 
 static int signal_thread1(void* arg) {
     log("thread 1 waiting on event\n");

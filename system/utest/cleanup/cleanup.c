@@ -12,7 +12,7 @@
 
 static const char* msg = "This is a test message, please discard.";
 
-volatile int test_state = 0;
+static volatile int test_state = 0;
 
 int watchdog(void* arg) {
     usleep(1000 * 1000);

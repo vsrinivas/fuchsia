@@ -91,10 +91,10 @@ void multicast_from_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip6) {
 }
 
 // ip6 stack configuration
-mac_addr_t ll_mac_addr;
-ip6_addr_t ll_ip6_addr;
-mac_addr_t snm_mac_addr;
-ip6_addr_t snm_ip6_addr;
+static mac_addr_t ll_mac_addr;
+static ip6_addr_t ll_ip6_addr;
+static mac_addr_t snm_mac_addr;
+static ip6_addr_t snm_ip6_addr;
 
 // cache for the last source addresses we've seen
 static mac_addr_t rx_mac_addr;

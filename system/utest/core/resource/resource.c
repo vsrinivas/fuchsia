@@ -10,12 +10,12 @@
 #include <unittest/unittest.h>
 #include <stdio.h>
 
-extern zx_handle_t root_resource;
+extern zx_handle_t get_root_resource(void);
 
 static bool test_resource_actions(void) {
     BEGIN_TEST;
 
-    zx_handle_t rrh = root_resource;
+    zx_handle_t rrh = get_root_resource();
     ASSERT_NE(rrh, ZX_HANDLE_INVALID, "no root resource handle");
 
     zx_handle_t h;

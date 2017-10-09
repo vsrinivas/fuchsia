@@ -20,8 +20,8 @@ struct test_params {
     uint16_t blksz;
 };
 
-uint8_t *src_file;
-uint8_t *dst_file;
+static uint8_t *src_file;
+static uint8_t *dst_file;
 
 /* FAUX FILES INTERFACE */
 
@@ -122,8 +122,8 @@ typedef struct {
     _Atomic size_t read_ndx;
     _Atomic size_t write_ndx;
 } fake_socket_t;
-fake_socket_t client_out_socket = { .size = FAKE_SOCK_BUF_SZ };
-fake_socket_t server_out_socket = { .size = FAKE_SOCK_BUF_SZ };
+static fake_socket_t client_out_socket = { .size = FAKE_SOCK_BUF_SZ };
+static fake_socket_t server_out_socket = { .size = FAKE_SOCK_BUF_SZ };
 
 typedef struct {
     fake_socket_t* in_sock;

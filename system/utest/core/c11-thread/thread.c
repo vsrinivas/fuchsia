@@ -12,7 +12,7 @@
 #include <zircon/threads.h>
 #include <unittest/unittest.h>
 
-volatile int threads_done[7];
+static volatile int threads_done[7];
 
 static int thread_entry(void* arg) {
     int thread_number = (int)(intptr_t)arg;

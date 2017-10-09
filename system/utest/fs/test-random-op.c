@@ -582,7 +582,7 @@ static int task_truncate_a(worker_t* w) {
     return DONE;
 }
 
-struct random_op {
+static struct random_op {
     const char* name;
     int (*fn)(worker_t*);
     unsigned weight;
@@ -630,7 +630,7 @@ static void add_random_ops(env_t* env) {
 
 static const unsigned N_SERIAL_OPS = 4; // yield every 1/n ops
 
-const unsigned MAX_OPS = 1000;
+static const unsigned MAX_OPS = 1000;
 static int do_random_ops(void* arg) {
     worker_t* w = arg;
     env_t* env = w->env;

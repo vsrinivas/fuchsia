@@ -1203,11 +1203,11 @@ void test_inferior(void)
 // Compilers are getting too smart.
 // These maintain the semantics we want even under optimization.
 
-volatile int* crashing_ptr = (int*) 42;
-volatile int crash_depth;
+static volatile int* crashing_ptr = (int*) 42;
+static volatile int crash_depth;
 
 // This is used to cause fp != sp when the crash happens on arm64.
-int leaf_stack_size = 10;
+static int leaf_stack_size = 10;
 
 static int __NO_INLINE test_segfault_doit2(int*);
 

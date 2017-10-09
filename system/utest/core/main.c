@@ -33,7 +33,7 @@ static void log_write(const void* data, size_t len) {
 // The reason these are here is that the "core" tests intentionally do not
 // use fdio. See ./README.md.
 
-zx_handle_t root_resource;
+static zx_handle_t root_resource;
 
 void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[]) {
     for (unsigned n = 0; n < count; n++) {

@@ -13,7 +13,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-zx_handle_t _channel[4];
+static zx_handle_t _channel[4];
 
 /**
  * Channel tests with wait multiple.

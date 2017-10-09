@@ -24,8 +24,9 @@
 const char* test_root_path;
 bool use_real_disk = false;
 char test_disk_path[PATH_MAX];
-char fvm_disk_path[PATH_MAX];
 fs_info_t* test_info;
+
+static char fvm_disk_path[PATH_MAX];
 
 const fsck_options_t test_fsck_options = {
     .verbose = false,

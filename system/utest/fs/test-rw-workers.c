@@ -218,7 +218,7 @@ bool test_work_single_thread(void) {
 #define KB(n) ((n)*1024)
 #define MB(n) ((n)*1024 * 1024)
 
-struct {
+static struct {
     int (*work)(worker_t*);
     const char* name;
     uint32_t size;
