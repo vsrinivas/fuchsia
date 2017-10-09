@@ -15,7 +15,7 @@
 #include <zircon/device/block.h>
 #include <block-client/client.h>
 
-uint64_t number(const char* str) {
+static uint64_t number(const char* str) {
     char* end;
     uint64_t n = strtoull(str, &end, 10);
 
@@ -37,7 +37,7 @@ uint64_t number(const char* str) {
     return m * n;
 }
 
-void bytes_per_second(uint64_t bytes, uint64_t nanos) {
+static void bytes_per_second(uint64_t bytes, uint64_t nanos) {
     double s = ((double)nanos) / ((double)1000000000);
     double rate = ((double)bytes) / s;
 
@@ -52,51 +52,36 @@ void bytes_per_second(uint64_t bytes, uint64_t nanos) {
     fprintf(stderr, "%g %s/s\n", rate, unit);
 }
 
-int usage(void);
-
-int iotime_lread(int argc, char** argv) {
-    if (argc != 5) {
-        return usage();
-    }
-    size_t total = number(argv[3]);
-    size_t bufsz = number(argv[4]);
-
+static zx_time_t iotime_posix(int is_read, int fd, size_t total, size_t bufsz) {
     void* buffer = malloc(bufsz);
     if (buffer == NULL) {
         fprintf(stderr, "error: out of memory\n");
-        return -1;
-    }
-
-    int fd = open(argv[2], O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "error: cannot open '%s'\n", argv[2]);
-        return -1;
+        return ZX_TIME_INFINITE;
     }
 
     zx_time_t t0 = zx_time_get(ZX_CLOCK_MONOTONIC);
     size_t n = total;
+    const char* fn_name = is_read ? "read" : "write";
     while (n > 0) {
         size_t xfer = (n > bufsz) ? bufsz : n;
-        ssize_t r = read(fd, buffer, xfer);
+        ssize_t r = is_read ? read(fd, buffer, xfer) : write(fd, buffer, xfer);
         if (r < 0) {
-            fprintf(stderr, "error: read() error %d\n", errno);
-            return -1;
+            fprintf(stderr, "error: %s() error %d\n", fn_name, errno);
+            return ZX_TIME_INFINITE;
         }
         if ((size_t)r != xfer) {
-            fprintf(stderr, "error: read() %zu of %zu bytes read\n", r, xfer);
-            return -1;
+            fprintf(stderr, "error: %s() %zu of %zu bytes processed\n", fn_name, r, xfer);
+            return ZX_TIME_INFINITE;
         }
         n -= xfer;
     }
     zx_time_t t1 = zx_time_get(ZX_CLOCK_MONOTONIC);
 
-    fprintf(stderr, "read %zu bytes in %zu ns: ", total, t1 - t0);
-    bytes_per_second(total, t1 - t0);
-    return 0;
+    return t1 - t0;
 }
 
 
-int make_ramdisk(size_t blocks) {
+static int make_ramdisk(size_t blocks) {
     char ramdisk_path[PATH_MAX];
     if (create_ramdisk(512, blocks / 512, ramdisk_path)) {
         return -1;
@@ -105,106 +90,51 @@ int make_ramdisk(size_t blocks) {
     return open(ramdisk_path, O_RDWR);
 }
 
-int iotime_bread(int argc, char** argv) {
-    if (argc != 5) {
-        return usage();
-    }
-    size_t total = number(argv[3]);
-    size_t bufsz = number(argv[4]);
-
+static zx_time_t iotime_block(int is_read, int fd, size_t total, size_t bufsz) {
     if ((total % 4096) || (bufsz % 4096)) {
         fprintf(stderr, "error: total and buffer size must be multiples of 4K\n");
-        return -1;
+        return ZX_TIME_INFINITE;
     }
 
-    void* buffer = malloc(bufsz);
-    if (buffer == NULL) {
-        fprintf(stderr, "error: out of memory\n");
-        return -1;
-    }
-
-    int fd;
-    if (!strcmp(argv[2], "--ramdisk")) {
-        if ((fd = make_ramdisk(total)) < 0) {
-            fprintf(stderr, "error: cannot create %zu-byte ramdisk\n", total);
-            return -1;
-        }
-    } else {
-        if ((fd = open(argv[2], O_RDONLY)) < 0) {
-            fprintf(stderr, "error: cannot open '%s'\n", argv[2]);
-            return -1;
-        }
-    }
-
-    zx_time_t t0 = zx_time_get(ZX_CLOCK_MONOTONIC);
-    size_t n = total;
-    while (n > 0) {
-        size_t xfer = (n > bufsz) ? bufsz : n;
-        ssize_t r = read(fd, buffer, xfer);
-        if (r < 0) {
-            fprintf(stderr, "error: read() error %d\n", errno);
-            return -1;
-        }
-        if ((size_t)r != xfer) {
-            fprintf(stderr, "error: read() %zu of %zu bytes read\n", r, xfer);
-            return -1;
-        }
-        n -= xfer;
-    }
-    zx_time_t t1 = zx_time_get(ZX_CLOCK_MONOTONIC);
-
-    fprintf(stderr, "read %zu bytes in %zu ns: ", total, t1 - t0);
-    bytes_per_second(total, t1 - t0);
-    return 0;
+    return iotime_posix(is_read, fd, total, bufsz);
 }
 
-int iotime_fread(int argc, char** argv) {
-    if (argc != 5) {
-        return usage();
-    }
-    size_t total = number(argv[3]);
-    size_t bufsz = number(argv[4]);
-
+static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_t bufsz) {
+    zx_status_t r;
     zx_handle_t vmo;
-    if (zx_vmo_create(bufsz, 0, &vmo) != ZX_OK) {
-        fprintf(stderr, "error: out of memory\n");
-        return -1;
-    }
-
-    int fd = open(argv[2], O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "error: cannot open '%s'\n", argv[2]);
-        return -1;
+    if ((r = zx_vmo_create(bufsz, 0, &vmo)) != ZX_OK) {
+        fprintf(stderr, "error: out of memory %d\n", r);
+        return ZX_TIME_INFINITE;
     }
 
     zx_handle_t fifo;
     if (ioctl_block_get_fifos(fd, &fifo) != sizeof(fifo)) {
-        fprintf(stderr, "err: cannot get fifo for '%s'\n", argv[2]);
-        return -1;
+        fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
+        return ZX_TIME_INFINITE;
     }
 
     txnid_t txnid;
     if (ioctl_block_alloc_txn(fd, &txnid) != sizeof(txnid)) {
-        fprintf(stderr, "err: cannot allocate txn for '%s'\n", argv[2]);
-        return -1;
+        fprintf(stderr, "error: cannot allocate txn for '%s'\n", dev);
+        return ZX_TIME_INFINITE;
     }
 
     zx_handle_t dup;
-    if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
-        fprintf(stderr, "error: cannot duplicate handle\n");
-        return -1;
+    if ((r = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+        fprintf(stderr, "error: cannot duplicate handle %d\n", r);
+        return ZX_TIME_INFINITE;
     }
 
     vmoid_t vmoid;
     if (ioctl_block_attach_vmo(fd, &dup, &vmoid) != sizeof(vmoid)) {
-        fprintf(stderr, "error: cannot attach vmo for '%s'\n", argv[2]);
-        return -1;
+        fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
+        return ZX_TIME_INFINITE;
     }
 
     fifo_client_t* client;
-    if (block_fifo_create_client(fifo, &client) != ZX_OK) {
-        fprintf(stderr, "err: cannot create block client for '%s'\n", argv[2]);
-        return -1;
+    if ((r = block_fifo_create_client(fifo, &client)) != ZX_OK) {
+        fprintf(stderr, "error: cannot create block client for '%s' %d\n", dev, r);
+        return ZX_TIME_INFINITE;
     }
 
     zx_time_t t0 = zx_time_get(ZX_CLOCK_MONOTONIC);
@@ -214,45 +144,73 @@ int iotime_fread(int argc, char** argv) {
         block_fifo_request_t request = {
             .txnid = txnid,
             .vmoid = vmoid,
-            .opcode = BLOCKIO_READ,
+            .opcode = is_read ? BLOCKIO_READ : BLOCKIO_WRITE,
             .length = xfer,
             .vmo_offset = 0,
             .dev_offset = total - n,
         };
-        if (block_fifo_txn(client, &request, 1) != ZX_OK) {
-            fprintf(stderr, "error: block_fifo_txn error\n");
-            return -1;
+        if ((r = block_fifo_txn(client, &request, 1)) != ZX_OK) {
+            fprintf(stderr, "error: block_fifo_txn error %d\n", r);
+            return ZX_TIME_INFINITE;
         }
         n -= xfer;
     }
     zx_time_t t1 = zx_time_get(ZX_CLOCK_MONOTONIC);
-
-    fprintf(stderr, "read %zu bytes in %zu ns: ", total, t1 - t0);
-    bytes_per_second(total, t1 - t0);
-    return 0;
+    return t1 - t0;
 }
 
-int usage(void) {
+static int usage(void) {
     fprintf(stderr,
-            "usage: iotime <op>...\n\n"
-            "   op: lread <device> <bytes> <bufsize>   posix linear read\n"
-            "       bread <device> <bytes> <bufsize>   block linear read\n"
-            "       fread <device> <bytes> <bufsize>   fifo linear read\n");
+            "usage: iotime <read|write> <posix|block|fifo> <device|--ramdisk> <bytes> <bufsize>\n\n"
+            "        <bytes> and <bufsize> must be a multiple of 4k for block mode\n"
+            "        --ramdisk only supported for block mode\n");
     return -1;
 }
 
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
+    if (argc != 6) {
         return usage();
     }
-    if (!strcmp(argv[1], "lread")) {
-        return iotime_lread(argc, argv);
-    } else if (!strcmp(argv[1], "bread")) {
-        return iotime_bread(argc, argv);
-    } else if (!strcmp(argv[1], "fread")) {
-        return iotime_fread(argc, argv);
+
+    int is_read = !strcmp(argv[1], "read");
+    size_t total = number(argv[4]);
+    size_t bufsz = number(argv[5]);
+
+    int fd;
+    if (!strcmp(argv[3], "--ramdisk")) {
+        if (strcmp(argv[2], "block")) {
+            fprintf(stderr, "ramdisk only supported for block\n");
+            return -1;
+        }
+        if ((fd = make_ramdisk(total)) < 0) {
+            fprintf(stderr, "error: cannot create %zu-byte ramdisk\n", total);
+            return -1;
+        }
     } else {
-        return usage();
+        if ((fd = open(argv[3], is_read ? O_RDONLY : O_WRONLY)) < 0) {
+            fprintf(stderr, "error: cannot open '%s'\n", argv[3]);
+            return -1;
+        }
+    }
+
+    zx_time_t res;
+    if (!strcmp(argv[2], "posix")) {
+        res = iotime_posix(is_read, fd, total, bufsz);
+    } else if (!strcmp(argv[2], "block")) {
+        res = iotime_block(is_read, fd, total, bufsz);
+    } else if (!strcmp(argv[2], "fifo")) {
+        res = iotime_fifo(argv[3], is_read, fd, total, bufsz);
+    } else {
+        fprintf(stderr, "error: unknown mode '%s'\n", argv[2]);
+        return -1;
+    }
+
+    if (res != ZX_TIME_INFINITE) {
+        fprintf(stderr, "%s %zu bytes in %zu ns: ", is_read ? "read" : "write", total, res);
+        bytes_per_second(total, res);
+        return 0;
+    } else {
+        return -1;
     }
 }
