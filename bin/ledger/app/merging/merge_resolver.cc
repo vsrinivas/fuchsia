@@ -95,9 +95,12 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
   storage_->GetHeadCommitIds(
       [this, delayed_status](storage::Status s,
                              std::vector<storage::CommitId> heads) {
-        FXL_DCHECK(s == storage::Status::OK);
-        if (heads.size() == 1) {
-          // No conflict.
+        if (s != storage::Status::OK || heads.size() == 1) {
+          // An error occurred, or there is no conflict. In either case, return
+          // early.
+          if (s != storage::Status::OK) {
+            FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
+          }
           merge_in_progress_ = false;
           if (on_empty_callback_) {
             on_empty_callback_();
@@ -199,6 +202,11 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                             tracing = std::move(tracing)
                           ](storage::Status status,
                             std::unique_ptr<storage::Journal> journal) mutable {
+                            if (status != storage::Status::OK) {
+                              FXL_LOG(ERROR) << "Unable to start merge commit "
+                                                "for identical commits.";
+                              return;
+                            }
                             storage_->CommitJournal(
                                 std::move(journal),
                                 fxl::MakeCopyable([
