@@ -66,3 +66,18 @@ cp /boot/data/rootfs.ext2 /boot/data/rootfs-rw.ext2
     -c 'root=/dev/vda rw init=/init' \
     /boot/data/bzImage
 ```
+
+Linux also supports an interactive graphical framebuffer:
+
+```
+/boot/bin/guest \
+    -g \
+    -r /boot/data/initrd \
+    -c 'console=tty0' \
+    /boot/data/bzImage
+```
+
+This will cause the guest to gain control of the framebuffer. Keyboard HID
+events will be passed through to the guest using a virito-input device
+(automatically enabled when the GPU is enaled with `-g`). You can
+toggle back to the host virtcon by pressing Alt+Esc.
