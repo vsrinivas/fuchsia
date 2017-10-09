@@ -94,7 +94,6 @@ struct linger {
 #define PF_LLC 26
 #define PF_IB 27
 #define PF_MPLS 28
-#define PF_CAN 29
 #define PF_TIPC 30
 #define PF_BLUETOOTH 31
 #define PF_IUCV 32
@@ -140,7 +139,6 @@ struct linger {
 #define AF_LLC PF_LLC
 #define AF_IB PF_IB
 #define AF_MPLS PF_MPLS
-#define AF_CAN PF_CAN
 #define AF_TIPC PF_TIPC
 #define AF_BLUETOOTH PF_BLUETOOTH
 #define AF_IUCV PF_IUCV
