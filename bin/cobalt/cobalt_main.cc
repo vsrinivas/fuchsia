@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdlib.h>
+
 #include <chrono>
 #include <memory>
 #include <string>
@@ -53,7 +55,7 @@ constexpr fxl::StringView kScheduleIntervalSecondsFlagName =
 // Used to override kMinIntervalDefault;
 constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
 
-const char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:8001";
+const char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:443";
 const int32_t kFuchsiaCustomerId = 1;
 
 const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
@@ -325,8 +327,7 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                      std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval)
     : context_(app::ApplicationContext::CreateFromStartupInfo()),
-      // TODO(azani): Enable TLS.
-      shuffler_client_(kCloudShufflerUri, false),
+      shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
       shipping_manager_(
           ShippingManager::SizeParams(cobalt::kMaxBytesPerObservation,
@@ -384,6 +385,9 @@ ClientSecret CobaltApp::getClientSecret() {
 }  // namespace
 
 int main(int argc, const char** argv) {
+   setenv(
+      "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/system/data/boringssl/cert.pem", 1);
+
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
