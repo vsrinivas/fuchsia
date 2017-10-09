@@ -7,5 +7,5 @@ MODULES +=
 
 include kernel/project/virtual/user.mk
 include kernel/project/virtual/test.mk
-include kernel/project/target/aml-a113-a53.mk
+include kernel/project/target/gauss-a53.mk
 

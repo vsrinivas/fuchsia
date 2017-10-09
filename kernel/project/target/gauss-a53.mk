@@ -4,5 +4,5 @@
 # https://opensource.org/licenses/MIT
 
 ARCH := arm64
-TARGET := aml-a113
+TARGET := gauss
 ARM_CPU := cortex-a53
