@@ -246,7 +246,7 @@ static zx_status_t rtl8111_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
 
 static void rtl8111_send(void* ctx, uint32_t options, void* data, size_t length) {
     if (length > ETH_BUF_SIZE) {
-        dprintf(ERROR, "rtl8111: Unsupported packet length %d\n", length);
+        dprintf(ERROR, "rtl8111: Unsupported packet length %zu\n", length);
         return;
     }
     ethernet_device_t* edev = ctx;
