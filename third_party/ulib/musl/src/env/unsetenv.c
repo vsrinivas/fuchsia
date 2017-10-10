@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "env_impl.h"
 #include "libc.h"
-
-extern char** __env_map;
 
 int unsetenv(const char* name) {
     int i, j;

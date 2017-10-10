@@ -2,8 +2,6 @@
 #include "time_impl.h"
 #include <errno.h>
 
-extern const char __gmt[];
-
 time_t timegm(struct tm* tm) {
     struct tm new;
     long long t = __tm_to_secs(tm);

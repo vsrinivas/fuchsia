@@ -3,6 +3,8 @@
 #include "libc.h"
 #include <time.h>
 
+extern const char __gmt[] ATTR_LIBC_VISIBILITY;
+
 char* __asctime(const struct tm* restrict, char* restrict)
     ATTR_LIBC_VISIBILITY;
 

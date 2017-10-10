@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern unsigned short __seed48[7];
+#include "rand48_impl.h"
 
 unsigned short* seed48(unsigned short* s) {
     static unsigned short p[3];
