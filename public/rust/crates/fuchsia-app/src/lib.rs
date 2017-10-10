@@ -118,6 +118,7 @@ pub mod client {
                 service_request: None,
                 flat_namespace: None,
                 services: Some(service_provider_server_end),
+                additional_services: None,
             };
 
             self.app_launcher.create_application(launch_info, Some(controller_server_end))?;
