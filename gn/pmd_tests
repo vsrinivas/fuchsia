@@ -1,6 +1,6 @@
 {
     "labels": [
-        "//apps/pm:pkgfs_test"
+        "//garnet/go/src/pm:pkgfs_test"
     ],
     "binaries": [
         {

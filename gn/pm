@@ -3,8 +3,8 @@
         "go"
     ],
     "labels": [
-        "//apps/pm:pm",
-        "//apps/pm:pm(//build/toolchain:host_x64)"
+        "//garnet/go/src/pm:pm",
+        "//garnet/go/src/pm:pm(//build/toolchain:host_x64)"
     ],
     "binaries": [
         {

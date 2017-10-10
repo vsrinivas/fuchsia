@@ -1,6 +1,6 @@
 {
     "labels": [
-        "//apps/pm:pmd"
+        "//garnet/go/src/pm:pmd"
     ],
     "binaries": [
         {
