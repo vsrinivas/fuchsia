@@ -15,6 +15,17 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
                                          zx_off_t offset, uint32_t flags) {
     zx_vaddr_t virt;
 
+    bool contiguous = (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
+    if (!contiguous) {
+        // needs to be done before ZX_VMO_OP_LOOKUP for non-contiguous VMOs
+        zx_status_t status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
+        if (status != ZX_OK) {
+            dprintf(ERROR, "io_buffer: zx_vmo_op_range(ZX_VMO_OP_COMMIT) failed %d\n", status);
+            zx_handle_close(vmo_handle);
+            return status;
+        }
+    }
+
     if (flags & IO_BUFFER_RW) {
         flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
     } else {
@@ -73,16 +84,6 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
     if (status != ZX_OK) {
         dprintf(ERROR, "io_buffer: zx_vmo_create failed %d\n", status);
         return status;
-    }
-
-    if (!contiguous) {
-        // needs to be done before ZX_VMO_OP_LOOKUP for non-contiguous VMOs
-        status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
-        if (status != ZX_OK) {
-            dprintf(ERROR, "io_buffer: zx_vmo_op_range(ZX_VMO_OP_COMMIT) failed %d\n", status);
-            zx_handle_close(vmo_handle);
-            return status;
-        }
     }
 
     return io_buffer_init_common(buffer, vmo_handle, size, 0, flags);
