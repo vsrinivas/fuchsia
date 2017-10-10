@@ -323,9 +323,8 @@ private:
     int retcode_ = 0;
 
     // Exception ports bound to the process.
-    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
-    fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(exception_lock_);
-    fbl::Mutex exception_lock_;
+    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(state_lock_);
+    fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(state_lock_);
 
     // This is the value of _dl_debug_addr from ld.so.
     // See third_party/ulib/musl/ldso/dynlink.c.

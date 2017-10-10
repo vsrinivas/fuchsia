@@ -350,18 +350,19 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // unbinds the port or closes all handles to its underlying
         // PortDispatcher.
         //
-        // There's no need to hold |exception_lock_| across OnProcessExit
-        // here so don't. We don't assume anything about what OnProcessExit
-        // does. If it blocks the exception port could get removed out from
+        // We don't assume anything about what OnProcessExit does.
+        // If it blocks the exception port could get removed out from
         // underneath us, so make a copy.
+        //
+        // TODO(ZX-814): OnProcessExit calls will go away.
         {
-            fbl::RefPtr<ExceptionPort> eport(exception_port());
+            fbl::RefPtr<ExceptionPort> eport(exception_port_);
             if (eport) {
                 eport->OnProcessExit(this);
             }
         }
         {
-            fbl::RefPtr<ExceptionPort> debugger_eport(debugger_exception_port());
+            fbl::RefPtr<ExceptionPort> debugger_eport(debugger_exception_port_);
             if (debugger_eport) {
                 debugger_eport->OnProcessExit(this);
             }
@@ -482,13 +483,17 @@ zx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(zx_handle_t handl
 }
 
 zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
+    memset(info, 0, sizeof(*info));
+
     // retcode_ depends on the state: make sure they're consistent.
     state_lock_.Acquire();
     int retcode = retcode_;
     State state = state_;
+    if (debugger_exception_port_) {  // TODO: Protect with rights if necessary.
+        info->debugger_attached = true;
+    }
     state_lock_.Release();
 
-    memset(info, 0, sizeof(*info));
     switch (state) {
     case State::DEAD:
     case State::DYING:
@@ -502,12 +507,7 @@ zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
     default:
         break;
     }
-    {
-        AutoLock lock(&exception_lock_);
-        if (debugger_exception_port_) {  // TODO: Protect with rights if necessary.
-            info->debugger_attached = true;
-        }
-    }
+
     return ZX_OK;
 }
 
@@ -598,10 +598,9 @@ zx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport
         break;
     }
 
-    // Lock both |state_lock_| and |exception_lock_| to ensure the process
-    // doesn't transition to dead while we're setting the exception handler.
+    // Lock |state_lock_| to ensure the process doesn't transition to dead
+    // while we're setting the exception handler.
     AutoLock state_lock(&state_lock_);
-    AutoLock excp_lock(&exception_lock_);
     if (state_ == State::DEAD)
         return ZX_ERR_NOT_FOUND;
     if (debugger) {
@@ -625,7 +624,7 @@ bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
     // want them to hit another exception and get back into
     // ExceptionHandlerExchange.
     {
-        AutoLock lock(&exception_lock_);
+        AutoLock lock(&state_lock_);
         if (debugger) {
             debugger_exception_port_.swap(eport);
         } else {
@@ -663,12 +662,12 @@ bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
 }
 
 fbl::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
-    AutoLock lock(&exception_lock_);
+    AutoLock lock(&state_lock_);
     return exception_port_;
 }
 
 fbl::RefPtr<ExceptionPort> ProcessDispatcher::debugger_exception_port() {
-    AutoLock lock(&exception_lock_);
+    AutoLock lock(&state_lock_);
     return debugger_exception_port_;
 }
 

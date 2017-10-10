@@ -205,8 +205,7 @@ private:
     FutexNode futex_node_;
 
     // A thread-level exception port for this thread.
-    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
-    fbl::Mutex exception_lock_;
+    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(state_lock_);
 
     // Support for sending an exception to an exception handler and then waiting for a response.
     ExceptionStatus exception_status_ TA_GUARDED(state_lock_)

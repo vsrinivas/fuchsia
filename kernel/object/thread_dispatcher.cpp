@@ -409,9 +409,12 @@ void ThreadDispatcher::Exiting() {
     UpdateState(0u, ZX_TASK_TERMINATED);
 
     {
-        AutoLock lock(&exception_lock_);
-        if (exception_port_)
-            exception_port_->OnThreadExit(this);
+        // TODO(ZX-814): This obtains |state_lock_| again (first time was in
+        // above call to UpdateState). This will go away when ZX-814 lands:
+        // this exception will be subsumed by ZX_THREAD_TERMINATED.
+        fbl::RefPtr<ExceptionPort> eport(exception_port());
+        if (eport)
+            eport->OnThreadExit(this);
         // Note: If an eport is bound, it will have a reference to the
         // ThreadDispatcher and thus keep the object, and the underlying
         // ThreadDispatcher object, around until someone unbinds the port or closes
@@ -424,7 +427,7 @@ void ThreadDispatcher::Exiting() {
     // where the process is also dying (and thus the thread could transition
     // DYING->DEAD from underneath it), but that's life (or death :-)).
     // N.B. OnThreadExitForDebugger will block in ExceptionHandlerExchange, so
-    // don't hold the process's |exception_lock_| across the call.
+    // don't hold the process's |state_lock_| across the call.
     {
         fbl::RefPtr<ExceptionPort> eport(process_->debugger_exception_port());
         if (eport) {
@@ -579,10 +582,9 @@ zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport)
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
 
-    // Lock both |state_lock_| and |exception_lock_| to ensure the thread
-    // doesn't transition to dead while we're setting the exception handler.
+    // Lock |state_lock_| to ensure the thread doesn't transition to dead
+    // while we're setting the exception handler.
     AutoLock state_lock(&state_lock_);
-    AutoLock excp_lock(&exception_lock_);
     if (state_ == State::DEAD)
         return ZX_ERR_NOT_FOUND;
     if (exception_port_)
@@ -601,7 +603,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
     // we don't want it to hit another exception and get back into
     // ExceptionHandlerExchange.
     {
-        AutoLock lock(&exception_lock_);
+        AutoLock lock(&state_lock_);
         exception_port_.swap(eport);
         if (eport == nullptr) {
             // Attempted to unbind when no exception port is bound.
@@ -636,7 +638,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
 fbl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
     canary_.Assert();
 
-    AutoLock lock(&exception_lock_);
+    AutoLock lock(&state_lock_);
     return exception_port_;
 }
 
