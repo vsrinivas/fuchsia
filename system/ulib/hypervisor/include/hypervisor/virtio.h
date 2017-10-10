@@ -33,10 +33,10 @@ public:
     virtual ~VirtioDevice() = default;
 
     // Read a device-specific configuration field.
-    virtual zx_status_t ReadConfig(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
+    virtual zx_status_t ReadConfig(uint64_t port, IoValue* value);
 
     // Write a device-specific configuration field.
-    virtual zx_status_t WriteConfig(uint16_t port, const zx_vcpu_io_t* io);
+    virtual zx_status_t WriteConfig(uint64_t port, const IoValue& value);
 
     // Handle notify events for one of this devices queues.
     virtual zx_status_t HandleQueueNotify(uint16_t queue_sel) {

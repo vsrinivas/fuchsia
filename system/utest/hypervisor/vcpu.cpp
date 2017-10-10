@@ -27,7 +27,7 @@ typedef struct test {
 
     test()
         : vcpu_ctx(ZX_HANDLE_INVALID, 0),
-          pci_bus(ZX_HANDLE_INVALID, &io_apic) {}
+          pci_bus(&guest, &io_apic) {}
 } test_t;
 
 static zx_status_t vcpu_read_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,

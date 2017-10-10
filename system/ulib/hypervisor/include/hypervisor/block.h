@@ -27,7 +27,7 @@ public:
     zx_status_t Init(const char* path);
 
     // Our config space is read-only.
-    zx_status_t WriteConfig(uint16_t port, const zx_vcpu_io_t* io) override {
+    zx_status_t WriteConfig(uint64_t port, const IoValue& value) override {
         return ZX_ERR_NOT_SUPPORTED;
     }
 

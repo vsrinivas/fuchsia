@@ -278,45 +278,44 @@ zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
     return ring_has_avail(queue) ? ZX_ERR_NEXT : ZX_OK;
 }
 
-zx_status_t VirtioDevice::ReadConfig(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
+zx_status_t VirtioDevice::ReadConfig(uint64_t port, IoValue* value) {
     fbl::AutoLock lock(&config_mutex_);
-    vcpu_io->access_size = access_size;
-    switch (access_size) {
+    switch (value->access_size) {
     case 1: {
         uint8_t* buf = reinterpret_cast<uint8_t*>(device_config_);
-        vcpu_io->u8 = buf[port];
+        value->u8 = buf[port];
         return ZX_OK;
     }
     case 2: {
         uint16_t* buf = reinterpret_cast<uint16_t*>(device_config_);
-        vcpu_io->u16 = buf[port / 2];
+        value->u16 = buf[port / 2];
         return ZX_OK;
     }
     case 4: {
         uint32_t* buf = reinterpret_cast<uint32_t*>(device_config_);
-        vcpu_io->u32 = buf[port / 4];
+        value->u32 = buf[port / 4];
         return ZX_OK;
     }
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioDevice::WriteConfig(uint16_t port, const zx_vcpu_io_t* io) {
+zx_status_t VirtioDevice::WriteConfig(uint64_t port, const IoValue& value) {
     fbl::AutoLock lock(&config_mutex_);
-    switch (io->access_size) {
+    switch (value.access_size) {
     case 1: {
         uint8_t* buf = reinterpret_cast<uint8_t*>(device_config_);
-        buf[port] = io->u8;
+        buf[port] = value.u8;
         return ZX_OK;
     }
     case 2: {
         uint16_t* buf = reinterpret_cast<uint16_t*>(device_config_);
-        buf[port / 2] = io->u16;
+        buf[port / 2] = value.u16;
         return ZX_OK;
     }
     case 4: {
         uint32_t* buf = reinterpret_cast<uint32_t*>(device_config_);
-        buf[port / 4] = io->u32;
+        buf[port / 4] = value.u32;
         return ZX_OK;
     }
     }

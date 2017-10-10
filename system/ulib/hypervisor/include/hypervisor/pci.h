@@ -7,7 +7,8 @@
 #include <threads.h>
 
 #include <fbl/mutex.h>
-#include <sys/types.h>
+#include <hypervisor/guest.h>
+#include <hypervisor/io.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -49,6 +50,7 @@
 
 class IoApic;
 class PciBus;
+class PciDevice;
 
 typedef struct instruction instruction_t;
 typedef struct zx_packet_guest_io zx_packet_guest_io_t;
@@ -74,30 +76,25 @@ typedef struct pci_cap {
     uint8_t len;
 } pci_cap_t;
 
-/* Determines how to handle accesses to a BAR region. */
-enum class PciMemoryType {
-    // Strongly ordered. All accesses occur and are committed in the order they
-    // are generated.
-    STRONG = 0,
-
-    // Weakly ordered. VCPU execution will resume before the result of a write
-    // has been committed.
-    WEAK = 1,
-
-    // Weakly ordered but no value is decoded. All accesses to a region with a
-    // BELL type will appear as a 'write 0' to the device.
-    BELL = 2,
-};
-
-struct PciBar {
+struct PciBar : public IoHandler {
     // Register value.
     uint32_t addr;
     // Size of this BAR.
     uint32_t size;
-    // Address space for this bar (memory or IO ports).
-    uint32_t aspace;
-    // Memory type to emulate.
-    PciMemoryType memory_type;
+    // The type of trap to create for this region.
+    TrapType trap_type;
+
+    // Pointer to the owning device.
+    PciDevice* device;
+    // Bar number.
+    uint8_t n;
+
+    // IoHandler interface.
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+    uint32_t aspace() const;
+    uint32_t base() const;
 };
 
 /* Stores the state of PCI devices. */
@@ -117,13 +114,12 @@ public:
     };
 
     // Read from a region mapped by a BAR register.
-    virtual zx_status_t ReadBar(uint8_t bar, uint16_t port, uint8_t access_size,
-                                zx_vcpu_io_t* vcpu_io) {
+    virtual zx_status_t ReadBar(uint8_t bar, uint64_t addr, IoValue* value) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Write to a region mapped by a BAR register.
-    virtual zx_status_t WriteBar(uint8_t bar, uint16_t port, const zx_vcpu_io_t* io) {
+    virtual zx_status_t WriteBar(uint8_t bar, uint64_t addr, const IoValue& value) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -161,9 +157,7 @@ private:
     friend class PciBus;
 
     // Setup traps and handlers for accesses to BAR regions.
-    zx_status_t SetupBarTraps(zx_handle_t guest);
-
-    static zx_status_t Handler(zx_port_packet_t* packet, void* ctx);
+    zx_status_t SetupBarTraps(Guest* guest);
 
     zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value);
 
@@ -195,19 +189,9 @@ public:
     // Base address in MMIO space to map device BAR registers.
     static const uint32_t kMmioBarBase = 0xf0000000;
 
-    PciBus(zx_handle_t guest, const IoApic* io_apic);
+    PciBus(Guest* guest, const IoApic* io_apic);
 
     zx_status_t Init();
-
-    // Search for any devices that have a BAR mapped to the provided |aspace|
-    // and |addr|.
-    //
-    // If found, |bar_out| and |bar_off_out| are populated with the BAR &
-    // offset, the device is returned in |device_out|, and ZX_OK is returned.
-    //
-    // If no mapping exists ZX_ERR_NOT_FOUND is returned.
-    zx_status_t MappedDevice(uint8_t aspace, uintptr_t addr, PciDevice** device_out,
-                             uint8_t* bar_out, uint16_t* bar_off_out);
 
     // Connect a PCI device to the bus.
     //
@@ -246,8 +230,7 @@ public:
 private:
     fbl::Mutex mutex_;
 
-    // Guest handle.
-    zx_handle_t guest_;
+    Guest* guest_;
     // Selected address in PCI config space.
     uint32_t config_addr_ TA_GUARDED(mutex_) = 0;
 

@@ -36,22 +36,13 @@ static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_
         return vcpu_ctx->guest->pci_bus->ReadEcam(addr, access_size, io);
     }
 
-    uint8_t bar;
-    uint16_t device_offset;
-    PciBus* bus = vcpu_ctx->guest->pci_bus;
-    PciDevice* pci_device;
-    zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_MMIO, addr, &pci_device, &bar,
-                                           &device_offset);
-    if (status != ZX_ERR_NOT_FOUND) {
-        return pci_device->ReadBar(bar, device_offset, io->access_size, io);
-    }
-
     IoMapping& mapping = trap_key_to_mapping(trap_key);
     IoValue value = {};
     value.access_size = io->access_size;
-    status = mapping.Read(addr, &value);
+    zx_status_t status = mapping.Read(addr, &value);
     if (status != ZX_OK)
         return status;
+
     io->access_size = value.access_size;
     io->u32 = value.u32;
     return ZX_OK;
@@ -62,16 +53,6 @@ static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
         return vcpu_ctx->guest->pci_bus->WriteEcam(addr, io);
-    }
-
-    uint8_t bar;
-    uint16_t device_offset;
-    PciBus* bus = vcpu_ctx->guest->pci_bus;
-    PciDevice* pci_device;
-    zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_MMIO, addr, &pci_device, &bar,
-                                          &device_offset);
-    if (status != ZX_ERR_NOT_FOUND) {
-        return pci_device->WriteBar(bar, device_offset, io);
     }
 
     IoMapping& mapping = trap_key_to_mapping(trap_key);
@@ -193,17 +174,6 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
         status = vcpu_ctx->guest->pci_bus->ReadIoPort(io->port, io->access_size, &vcpu_io);
         break;
     default: {
-        uint8_t bar;
-        uint16_t port_off;
-        PciBus* bus = vcpu_ctx->guest->pci_bus;
-        PciDevice* pci_device;
-        zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_PIO, io->port, &pci_device, &bar,
-                                              &port_off);
-        if (status != ZX_ERR_NOT_FOUND) {
-            status = pci_device->ReadBar(bar, port_off, io->access_size, &vcpu_io);
-            break;
-        }
-
         IoMapping& mapping = trap_key_to_mapping(key);
         IoValue value = {};
         value.access_size = io->access_size;
@@ -235,21 +205,6 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         return vcpu_ctx->guest->pci_bus->WriteIoPort(io);
     default: {
-        uint8_t bar;
-        uint16_t port_off;
-        PciBus* bus = vcpu_ctx->guest->pci_bus;
-        PciDevice* pci_device;
-        zx_status_t status = bus->MappedDevice(PCI_BAR_ASPACE_PIO, io->port, &pci_device, &bar,
-                                               &port_off);
-        if (status != ZX_ERR_NOT_FOUND) {
-            // Convert the IO packet into a vcpu_io structure.
-            zx_vcpu_io_t vcpu_io;
-            static_assert(sizeof(vcpu_io.data) == sizeof(io->data),
-                          "data size mismatch between zx_vcpu_io and zx_packet_get_io.");
-            memcpy(vcpu_io.data, io->data, sizeof(vcpu_io.data));
-            vcpu_io.access_size = io->access_size;
-            return pci_device->WriteBar(bar, port_off, &vcpu_io);
-        }
         IoMapping& mapping = trap_key_to_mapping(key);
         IoValue value;
         value.access_size = io->access_size;

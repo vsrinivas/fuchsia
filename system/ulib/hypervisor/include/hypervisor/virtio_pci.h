@@ -21,22 +21,21 @@ public:
     VirtioPci(VirtioDevice* device);
 
     // Read a value at |bar| and |offset| from this device.
-    zx_status_t ReadBar(uint8_t bar, uint16_t offset, uint8_t access_size,
-                        zx_vcpu_io_t* vcpu_io) override;
+    zx_status_t ReadBar(uint8_t bar, uint64_t offset, IoValue* value) override;
     // Write a value at |bar| and |offset| to this device.
-    zx_status_t WriteBar(uint8_t bar, uint16_t offset, const zx_vcpu_io_t* io) override;
+    zx_status_t WriteBar(uint8_t bar, uint64_t offset, const IoValue& value) override;
 
 private:
     // Handle accesses to the general configuration BAR.
-    zx_status_t ConfigBarRead(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
-    zx_status_t ConfigBarWrite(uint16_t port, const zx_vcpu_io_t* io);
+    zx_status_t ConfigBarRead(uint64_t port, IoValue* value);
+    zx_status_t ConfigBarWrite(uint64_t port, const IoValue& value);
 
     // Handle accesses to the common configuration region.
-    zx_status_t CommonCfgRead(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
-    zx_status_t CommonCfgWrite(uint16_t port, const zx_vcpu_io_t* io);
+    zx_status_t CommonCfgRead(uint64_t port, IoValue* value);
+    zx_status_t CommonCfgWrite(uint64_t port, const IoValue& value);
 
     // Handle writes to the notify BAR.
-    zx_status_t NotifyBarWrite(uint16_t port, const zx_vcpu_io_t* io);
+    zx_status_t NotifyBarWrite(uint64_t port, const IoValue& value);
 
     void SetupCaps();
     void SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,

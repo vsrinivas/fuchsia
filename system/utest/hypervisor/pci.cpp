@@ -11,7 +11,8 @@
 static bool read_config_register(void) {
     BEGIN_TEST;
 
-    PciBus bus(ZX_HANDLE_INVALID, nullptr);
+    Guest guest;
+    PciBus bus(&guest, nullptr);
     bus.Init();
     PciDevice& device = bus.root_complex();
 
@@ -29,7 +30,8 @@ static bool read_config_register(void) {
 static bool read_config_register_bytewise(void) {
     BEGIN_TEST;
 
-    PciBus bus(ZX_HANDLE_INVALID, nullptr);
+    Guest guest;
+    PciBus bus(&guest, nullptr);
     bus.Init();
     PciDevice& device = bus.root_complex();
 
@@ -57,7 +59,8 @@ static bool read_config_register_bytewise(void) {
 static bool read_bar_size(void) {
     BEGIN_TEST;
 
-    PciBus bus(ZX_HANDLE_INVALID, nullptr);
+    Guest guest;
+    PciBus bus(&guest, nullptr);
     bus.Init();
     PciDevice& device = bus.root_complex();
 
@@ -86,7 +89,8 @@ static bool read_bar_size(void) {
 static bool read_cap_basic(void) {
     BEGIN_TEST;
 
-    PciBus bus(ZX_HANDLE_INVALID, nullptr);
+    Guest guest;
+    PciBus bus(&guest, nullptr);
     bus.Init();
     PciDevice& device = bus.root_complex();
 
@@ -139,7 +143,8 @@ static bool read_cap_basic(void) {
 static bool read_cap_chained(void) {
     BEGIN_TEST;
 
-    PciBus bus(ZX_HANDLE_INVALID, nullptr);
+    Guest guest;
+    PciBus bus(&guest, nullptr);
     bus.Init();
     PciDevice& device = bus.root_complex();
 

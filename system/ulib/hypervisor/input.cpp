@@ -182,8 +182,8 @@ VirtioInput::VirtioInput(uintptr_t guest_physmem_addr, size_t guest_physmem_size
                    guest_physmem_addr, guest_physmem_size),
       device_name_(device_name), device_serial_(device_serial) {}
 
-zx_status_t VirtioInput::WriteConfig(uint16_t port, const zx_vcpu_io_t* io) {
-    zx_status_t status = VirtioDevice::WriteConfig(port, io);
+zx_status_t VirtioInput::WriteConfig(uint64_t port, const IoValue& value) {
+    zx_status_t status = VirtioDevice::WriteConfig(port, value);
     if (status != ZX_OK)
         return status;
     if (port >= 2)
