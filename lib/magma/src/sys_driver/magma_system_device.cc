@@ -12,8 +12,8 @@
 uint32_t MagmaSystemDevice::GetDeviceId()
 {
     uint64_t result;
-    magma_status_t status = Query(MAGMA_QUERY_DEVICE_ID, &result);
-    DASSERT(status == MAGMA_STATUS_OK);
+    magma::Status status = Query(MAGMA_QUERY_DEVICE_ID, &result);
+    DASSERT(status.ok());
     DASSERT(result >> 32 == 0);
     return static_cast<uint32_t>(result);
 }
