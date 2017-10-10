@@ -7,6 +7,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/iotxn.h>
+#include <ddk/phys-iter.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
@@ -103,6 +104,15 @@ void usb_request_release(usb_request_t* req);
 // The usb_request's complete_cb() will be called as the last action of
 // this method.
 void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actual);
+
+// initializes a phys_iter_t for a usb request
+// max_length is the maximum length of a range returned by usb_request_phys_iter_next()
+// max_length must be either a positive multiple of PAGE_SIZE, or zero for no limit.
+void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t max_length);
+
+// returns the next physical address and length for the iterator up to size max_length.
+// return value is length, or zero if iteration is done.
+size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr);
 
 // usb_request_to_iotxn() converts a USB request to an iotxn.
 // The original USB request is not freed.

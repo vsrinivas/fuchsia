@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 #include <zircon/listnode.h>
 #include <ddk/driver.h>
+#include <ddk/phys-iter.h>
 #include <sys/types.h>
 #include <limits.h>
 
@@ -141,13 +142,7 @@ static_assert(offsetof(iotxn_t, extra) == 128, "extra should be at 128");
 static_assert(offsetof(iotxn_t, context) == 192, "context should be at 192");
 
 // used to iterate over contiguous buffer ranges in the physical address space
-typedef struct {
-    iotxn_t*    txn;        // txn we are operating on
-    zx_off_t    offset;     // current offset in the txn (relative to iotxn vmo_offset)
-    size_t      max_length; // max length to be returned by iotxn_phys_iter_next()
-    uint64_t    page;       // index of page in txn->phys that contains offset
-    uint64_t    last_page;  // last valid page index in txn->phys
-} iotxn_phys_iter_t;
+typedef phys_iter_t iotxn_phys_iter_t;
 
 #define iotxn_pdata(txn, type) ((type*) (txn)->protocol_data)
 

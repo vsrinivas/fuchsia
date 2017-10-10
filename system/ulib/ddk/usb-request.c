@@ -108,6 +108,20 @@ void usb_request_complete(usb_request_t* req, zx_status_t status, zx_off_t actua
     }
 }
 
+void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t max_length) {
+    phys_iter_buffer_t buf = {
+        .length = req->header.length,
+        .vmo_offset = req->buffer.offset,
+        .phys = req->buffer.phys_list,
+        .phys_count = req->buffer.phys_count
+    };
+    phys_iter_init(iter, &buf, max_length);
+}
+
+size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
+    return phys_iter_next(iter, out_paddr);
+}
+
 // Helper functions for converting a usb request to an iotxn.
 // TODO(jocelyndang): remove once all usb drivers have transitioned to usb requests.
 

@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/io-buffer.c \
     $(LOCAL_DIR)/iotxn.c \
+    $(LOCAL_DIR)/phys-iter.c \
     $(LOCAL_DIR)/usb-request.c \
 
 MODULE_STATIC_LIBS := system/ulib/pretty system/ulib/sync
