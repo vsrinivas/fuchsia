@@ -41,7 +41,6 @@ private:
     fbl::Canary<fbl::magic("TIMR")> canary_;
     const slack_mode slack_mode_;
     dpc_t timer_dpc_;
-    fbl::Mutex lock_;
     zx_time_t deadline_ TA_GUARDED(lock_);
     zx_duration_t slack_ TA_GUARDED(lock_);
     bool cancel_pending_ TA_GUARDED(lock_);
