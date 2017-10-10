@@ -56,7 +56,7 @@ go_binary("amber-publish") {
       source = "//garnet/go/src/amber"
     },
     {
-      source = "//apps/pm"
+      source = "//garnet/go/src/pm"
       package = "fuchsia.googlesource.com/pm"
     },
     {
