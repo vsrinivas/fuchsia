@@ -42,7 +42,6 @@ LogDispatcher::~LogDispatcher() {
 void LogDispatcher::Signal() {
     canary_.Assert();
 
-    fbl::AutoLock lock(&lock_);
     UpdateState(0, ZX_CHANNEL_READABLE);
 }
 
@@ -68,7 +67,7 @@ zx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* a
 
     zx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
     if (status == ZX_ERR_SHOULD_WAIT) {
-        UpdateState(ZX_CHANNEL_READABLE, 0);
+        UpdateStateLocked(ZX_CHANNEL_READABLE, 0);
     }
 
     return status;

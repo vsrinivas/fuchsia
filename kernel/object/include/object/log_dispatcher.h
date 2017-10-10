@@ -33,8 +33,6 @@ private:
 
     fbl::Canary<fbl::magic("LOGD")> canary_;
 
-    dlog_reader reader_;
-    uint32_t flags_;
-
-    fbl::Mutex lock_;
+    dlog_reader reader_ TA_GUARDED(lock_);
+    const uint32_t flags_;
 };
