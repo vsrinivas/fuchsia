@@ -6,11 +6,11 @@
 
 #include <algorithm>
 
+#include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "garnet/bin/ui/root_presenter/presentation.h"
-#include "lib/fxl/logging.h"
 
 namespace root_presenter {
 
@@ -35,13 +35,16 @@ App::App(const fxl::CommandLine& command_line)
 
 App::~App() {}
 
-void App::Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
+void App::Present(
+    fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle,
+    fidl::InterfaceRequest<mozart::Presentation> presentation_request) {
   InitializeServices();
 
   auto presentation =
       std::make_unique<Presentation>(view_manager_.get(), scene_manager_.get());
   presentation->Present(
       mozart::ViewOwnerPtr::Create(std::move(view_owner_handle)),
+      std::move(presentation_request),
       [ this, presentation = presentation.get() ] {
         auto it = std::find_if(
             presentations_.begin(), presentations_.end(),

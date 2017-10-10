@@ -4,6 +4,7 @@
 
 module mozart;
 
+import "lib/ui/presentation/fidl/presentation.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // The Presenter service provides a way for applications to ask that a
@@ -11,5 +12,5 @@ import "lib/ui/views/fidl/view_token.fidl";
 // concerns up to the discretion of the presenter implementation.
 [ServiceName="mozart::Presenter"]
 interface Presenter {
-  Present(mozart.ViewOwner view_owner);
+  Present(mozart.ViewOwner view_owner, mozart.Presentation&? presentation_request);
 };

@@ -8,15 +8,15 @@
 #include <memory>
 #include <vector>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
-#include "lib/ui/presentation/fidl/presenter.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "garnet/bin/ui/input_reader/input_reader.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include "lib/ui/input/input_device_impl.h"
+#include "lib/ui/presentation/fidl/presenter.fidl.h"
+#include "lib/ui/views/fidl/view_manager.fidl.h"
 
 namespace root_presenter {
 
@@ -42,7 +42,9 @@ class App : public mozart::Presenter,
 
  private:
   // |Presenter|:
-  void Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override;
+  void Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
+               fidl::InterfaceRequest<mozart::Presentation>
+                   presentation_request) override;
 
   // |InputDeviceRegistry|:
   void RegisterDevice(mozart::DeviceDescriptorPtr descriptor,

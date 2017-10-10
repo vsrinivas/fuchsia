@@ -55,7 +55,9 @@ class TileView : public mozart::BaseView,
   void OnChildUnavailable(uint32_t child_key) override;
 
   // |Presenter|:
-  void Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override;
+  void Present(
+      fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
+      fidl::InterfaceRequest<mozart::Presentation> presentation) override;
 
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(

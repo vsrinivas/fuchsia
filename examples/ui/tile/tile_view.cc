@@ -30,7 +30,8 @@ TileView::TileView(mozart::ViewManagerPtr view_manager,
 TileView::~TileView() {}
 
 void TileView::Present(
-    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
+    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    fidl::InterfaceRequest<mozart::Presentation> presentation) {
   const std::string empty_url;
   AddChildView(std::move(child_view_owner), empty_url, nullptr);
 }

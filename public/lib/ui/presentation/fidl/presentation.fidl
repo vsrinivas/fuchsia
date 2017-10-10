@@ -1,0 +1,16 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+// Allows clients of Presenter.Present() to control a presentation.
+// Experimental.
+interface Presentation {
+  // Enable or disable clipping for the Scenic renderer associated with the
+  // presentation.
+  EnableClipping(bool enabled);
+
+  UseOrthographicView();
+  UsePerspectiveView();
+};

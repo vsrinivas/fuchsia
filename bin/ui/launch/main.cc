@@ -24,8 +24,7 @@ int main(int argc, const char** argv) {
   }
 
   fsl::MessageLoop loop;
-  auto application_context_ =
-      app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
 
   // Launch application.
   app::ServiceProviderPtr services;
@@ -51,7 +50,7 @@ int main(int argc, const char** argv) {
   // Ask the presenter to display it.
   auto presenter =
       application_context_->ConnectToEnvironmentService<mozart::Presenter>();
-  presenter->Present(std::move(view_owner));
+  presenter->Present(std::move(view_owner), nullptr);
 
   // Done!
   loop.Run();

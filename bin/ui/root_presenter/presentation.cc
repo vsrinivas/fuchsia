@@ -64,6 +64,7 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
                     kCursorRadius,
                     kCursorRadius),
       cursor_material_(&session_),
+      presentation_binding_(this),
       tree_listener_binding_(this),
       tree_container_listener_binding_(this),
       view_container_listener_binding_(this),
@@ -91,25 +92,37 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
 
 Presentation::~Presentation() {}
 
-void Presentation::Present(mozart::ViewOwnerPtr view_owner,
-                           fxl::Closure shutdown_callback) {
+void Presentation::Present(
+    mozart::ViewOwnerPtr view_owner,
+    fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+    fxl::Closure shutdown_callback) {
   FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_info_);
 
   shutdown_callback_ = std::move(shutdown_callback);
 
   scene_manager_->GetDisplayInfo(fxl::MakeCopyable([
-    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner)
+    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+    presentation_request = std::move(presentation_request)
   ](scenic::DisplayInfoPtr display_info) mutable {
     if (weak)
-      weak->CreateViewTree(std::move(view_owner), std::move(display_info));
+      weak->CreateViewTree(std::move(view_owner),
+                           std::move(presentation_request),
+                           std::move(display_info));
   }));
 }
 
-void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
-                                  scenic::DisplayInfoPtr display_info) {
+void Presentation::CreateViewTree(
+    mozart::ViewOwnerPtr view_owner,
+    fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+    scenic::DisplayInfoPtr display_info) {
   FXL_DCHECK(!display_info_);
   FXL_DCHECK(display_info);
+
+  if (presentation_request) {
+    presentation_binding_.Bind(std::move(presentation_request));
+  }
+
   display_info_ = std::move(display_info);
   device_pixel_ratio_ = display_info_->device_pixel_ratio;
   logical_width_ = display_info_->physical_width / device_pixel_ratio_;
@@ -451,6 +464,23 @@ void Presentation::OnPropertiesChanged(
     const OnPropertiesChangedCallback& callback) {
   // Nothing to do right now.
   callback();
+}
+
+// |Presentation|
+void Presentation::EnableClipping(bool enabled) {
+  FXL_LOG(INFO) << "Presentation Controller method called: EnableClipping!!";
+}
+
+// |Presentation|
+void Presentation::UseOrthographicView() {
+  FXL_LOG(INFO)
+      << "Presentation Controller method called: UseOrthographicView!!";
+}
+
+// |Presentation|
+void Presentation::UsePerspectiveView() {
+  FXL_LOG(INFO)
+      << "Presentation Controller method called: UsePerspectiveView!!";
 }
 
 void Presentation::PresentScene() {

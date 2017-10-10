@@ -6,6 +6,7 @@ import("//garnet/public/lib/fidl/fidl.gni")
 
 fidl("fidl") {
   sources = [
+    "presentation.fidl",
     "presenter.fidl",
   ]
 

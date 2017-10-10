@@ -16,6 +16,7 @@
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/fidl/input_dispatcher.fidl.h"
 #include "lib/ui/input/input_device_impl.h"
+#include "lib/ui/presentation/fidl/presentation.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
@@ -43,7 +44,8 @@ namespace root_presenter {
 //   + child: cursor N
 class Presentation : private mozart::ViewTreeListener,
                      private mozart::ViewListener,
-                     private mozart::ViewContainerListener {
+                     private mozart::ViewContainerListener,
+                     private mozart::Presentation {
  public:
   Presentation(mozart::ViewManager* view_manager,
                scenic::SceneManager* scene_manager);
@@ -54,7 +56,10 @@ class Presentation : private mozart::ViewTreeListener,
   // Invokes the callback if an error occurs.
   // This method must be called at most once for the lifetime of the
   // presentation.
-  void Present(mozart::ViewOwnerPtr view_owner, fxl::Closure shutdown_callback);
+  void Present(
+      mozart::ViewOwnerPtr view_owner,
+      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+      fxl::Closure shutdown_callback);
 
   void OnReport(uint32_t device_id, mozart::InputReportPtr report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
@@ -73,8 +78,19 @@ class Presentation : private mozart::ViewTreeListener,
       mozart::ViewPropertiesPtr properties,
       const OnPropertiesChangedCallback& callback) override;
 
-  void CreateViewTree(mozart::ViewOwnerPtr view_owner,
-                      scenic::DisplayInfoPtr display_info);
+  // |Presentation|
+  void EnableClipping(bool enabled) override;
+
+  // |Presentation|
+  void UseOrthographicView() override;
+
+  // |Presentation|
+  void UsePerspectiveView() override;
+
+  void CreateViewTree(
+      mozart::ViewOwnerPtr view_owner,
+      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+      scenic::DisplayInfoPtr display_info);
   void OnEvent(mozart::InputEventPtr event);
 
   void PresentScene();
@@ -123,6 +139,7 @@ class Presentation : private mozart::ViewTreeListener,
 
   mozart::PointF mouse_coordinates_;
 
+  fidl::Binding<mozart::Presentation> presentation_binding_;
   fidl::Binding<mozart::ViewTreeListener> tree_listener_binding_;
   fidl::Binding<mozart::ViewContainerListener> tree_container_listener_binding_;
   fidl::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
