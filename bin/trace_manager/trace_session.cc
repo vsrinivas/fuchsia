@@ -48,7 +48,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   tracees_.emplace_back(std::make_unique<Tracee>(bundle));
   if (!tracees_.back()->Start(
           trace_buffer_size_, categories_.Clone(),
-          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ](bool success) {
+          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
             if (weak)
               weak->CheckAllProvidersStarted();
           },
@@ -58,6 +58,9 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
           })) {
     tracees_.pop_back();
   } else {
+    // We haven't fully started at this point, we still have to wait for
+    // the provider to indicate it has started, but for our purposes we have
+    // started "enough".
     TransitionToState(State::kStarted);
   }
 }
@@ -109,13 +112,21 @@ void TraceSession::Abort() {
   abort_handler_();
 }
 
+// Called when a provider state change is detected.
+// This includes "failed" as well as "started".
+
 void TraceSession::CheckAllProvidersStarted() {
   bool all_started = std::accumulate(
       tracees_.begin(), tracees_.end(), true,
       [](bool value, const auto& tracee) {
-        return value && (tracee->state() == Tracee::State::kStarted ||
-                         tracee->state() == Tracee::State::kStartAcknowledged);
-
+        bool ready = (tracee->state() == Tracee::State::kStarted ||
+                      // If a provider fails to start continue tracing.
+                      // TODO(TO-530): We should still record what providers
+                      // failed to start.
+                      tracee->state() == Tracee::State::kStopped);
+        FXL_VLOG(2) << "tracee " << *tracee->bundle()
+                    << (ready ? "" : " not") << " ready";
+        return value && ready;
       });
 
   if (all_started)
@@ -148,7 +159,13 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
     tracees_.erase(it);
   }
 
-  CheckAllProvidersStarted();  // may have removed the last straggler
+  if (state_ != State::kStopping) {
+    // A trace provider may have entered the finished state without having
+    // first successfully started. Check whether all remaining providers have
+    // now started.
+    CheckAllProvidersStarted();
+  }
+
   FinishSessionIfEmpty();
 }
 

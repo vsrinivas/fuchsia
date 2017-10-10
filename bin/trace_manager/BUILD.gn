@@ -28,6 +28,7 @@ executable("bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/tracing/fidl",
     "//third_party/rapidjson",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 

@@ -24,15 +24,12 @@ namespace tracing {
 
 class Tracee : private fsl::MessageLoopHandler {
  public:
-  using ProviderStartedCallback = std::function<void(bool)>;
 
   enum class State {
     // All systems go, provider hasn't been started, yet.
     kReady,
     // The provider was asked to start.
     kStartPending,
-    // The provider has acknowledged the start request, but is not tracing.
-    kStartAcknowledged,
     // The provider is started and tracing.
     kStarted,
     // The provider is being stopped right now.
@@ -58,8 +55,8 @@ class Tracee : private fsl::MessageLoopHandler {
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(size_t buffer_size,
              fidl::Array<fidl::String> categories,
-             ProviderStartedCallback provider_started_callback,
-             fxl::Closure stop_callback);
+             fxl::Closure started_callback,
+             fxl::Closure stopped_callback);
   void Stop();
   TransferStatus TransferRecords(const zx::socket& socket) const;
 
@@ -68,7 +65,6 @@ class Tracee : private fsl::MessageLoopHandler {
 
  private:
   void TransitionToState(State new_state);
-  void OnProviderStarted(bool success);
   // |fsl::MessageLoopHandler|
   void OnHandleReady(zx_handle_t handle,
                      zx_signals_t pending,
@@ -82,7 +78,7 @@ class Tracee : private fsl::MessageLoopHandler {
   zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;
   zx::eventpair fence_;
-  ProviderStartedCallback started_callback_;
+  fxl::Closure started_callback_;
   fxl::Closure stopped_callback_;
   fsl::MessageLoop::HandlerKey fence_handler_key_{};
 

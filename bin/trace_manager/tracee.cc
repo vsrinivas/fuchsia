@@ -5,6 +5,7 @@
 #include "garnet/bin/trace_manager/tracee.h"
 
 #include <trace-engine/fields.h>
+#include <trace-provider/provider.h>
 
 #include "lib/fxl/logging.h"
 
@@ -68,7 +69,7 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const {
 
 bool Tracee::Start(size_t buffer_size,
                    fidl::Array<fidl::String> categories,
-                   ProviderStartedCallback started_callback,
+                   fxl::Closure started_callback,
                    fxl::Closure stopped_callback) {
   FXL_DCHECK(state_ == State::kReady);
   FXL_DCHECK(!buffer_vmo_);
@@ -106,11 +107,7 @@ bool Tracee::Start(size_t buffer_size,
 
   bundle_->provider->Start(
       std::move(buffer_vmo_for_provider), std::move(fence_for_provider),
-      std::move(categories),
-      [weak = weak_ptr_factory_.GetWeakPtr()](bool success) {
-        if (weak)
-          weak->OnProviderStarted(success);
-      });
+      std::move(categories));
 
   buffer_vmo_ = std::move(buffer_vmo);
   buffer_vmo_size_ = buffer_size;
@@ -118,13 +115,14 @@ bool Tracee::Start(size_t buffer_size,
   started_callback_ = std::move(started_callback);
   stopped_callback_ = std::move(stopped_callback);
   fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
-      this, fence_.get(), ZX_EPAIR_PEER_CLOSED);
+      this, fence_.get(),
+      TRACE_PROVIDER_SIGNAL_STARTED | ZX_EPAIR_PEER_CLOSED);
   TransitionToState(State::kStartPending);
   return true;
 }
 
 void Tracee::Stop() {
-  if (state_ != State::kStarted && state_ != State::kStartAcknowledged)
+  if (state_ != State::kStarted)
     return;
   bundle_->provider->Stop();
   TransitionToState(State::kStopping);
@@ -136,41 +134,49 @@ void Tracee::TransitionToState(State new_state) {
   state_ = new_state;
 }
 
-void Tracee::OnProviderStarted(bool success) {
-  if (state_ != State::kStartPending)
-    return;
-
-  TransitionToState(success ? State::kStarted : State::kStartAcknowledged);
-  // We only invoke the callback if this instance
-  // is still alive. If it is not, we are in the
-  // situation that a call to Stop has overtaken the
-  // call to Start().
-  // TODO(tvoss): Is this situation actually
-  // possible?
-  auto started_callback = std::move(started_callback_);
-  started_callback(success);
-}
-
 void Tracee::OnHandleReady(zx_handle_t handle,
                            zx_signals_t pending,
                            uint64_t count) {
-  FXL_DCHECK(pending & ZX_EPAIR_PEER_CLOSED);
-  FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
-             state_ == State::kStartAcknowledged || state_ == State::kStopping);
-  FXL_DCHECK(stopped_callback_);
+  FXL_VLOG(2) << *bundle_ << ": pending=0x" << std::hex << pending;
+  FXL_DCHECK(pending & (TRACE_PROVIDER_SIGNAL_STARTED |
+                        ZX_EPAIR_PEER_CLOSED));
+  FXL_DCHECK(state_ == State::kStartPending ||
+             state_ == State::kStarted ||
+             state_ == State::kStopping);
+  if (pending & TRACE_PROVIDER_SIGNAL_STARTED) {
+    // Clear the signal before invoking the callback: We could get back to
+    // back notifications.
+    zx_object_signal(handle, TRACE_PROVIDER_SIGNAL_STARTED, 0u);
+    // The provider should only be signalling us when it has finished startup.
+    if (state_ == State::kStartPending) {
+      TransitionToState(State::kStarted);
+      fxl::Closure started_callback = std::move(started_callback_);
+      FXL_DCHECK(started_callback);
+      started_callback();
+    } else {
+      FXL_LOG(WARNING) << *bundle_
+                       << ": Received TRACE_PROVIDER_SIGNAL_STARTED in state "
+                       << state_;
+    }
+  }
 
-  fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
-  fence_handler_key_ = 0u;
+  if (pending & ZX_EPAIR_PEER_CLOSED) {
+    fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+    fence_handler_key_ = 0u;
 
-  fxl::Closure stopped_callback = std::move(stopped_callback_);
-  stopped_callback();
-  TransitionToState(State::kStopped);
+    TransitionToState(State::kStopped);
+    fxl::Closure stopped_callback = std::move(stopped_callback_);
+    FXL_DCHECK(stopped_callback);
+    stopped_callback();
+  }
 }
 
 void Tracee::OnHandleError(zx_handle_t handle, zx_status_t error) {
+  FXL_VLOG(2) << *bundle_ << ": error=" << error;
   FXL_DCHECK(error == ZX_ERR_CANCELED);
-  FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
-             state_ == State::kStartAcknowledged || state_ == State::kStopping);
+  FXL_DCHECK(state_ == State::kStartPending ||
+             state_ == State::kStarted ||
+             state_ == State::kStopping);
   TransitionToState(State::kStopped);
 }
 
@@ -247,9 +253,6 @@ std::ostream& operator<<(std::ostream& out, Tracee::State state) {
       break;
     case Tracee::State::kStarted:
       out << "started";
-      break;
-    case Tracee::State::kStartAcknowledged:
-      out << "start ack'd";
       break;
     case Tracee::State::kStopping:
       out << "stopping";

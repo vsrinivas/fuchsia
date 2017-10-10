@@ -7,7 +7,7 @@ module tracing;
 // The provider interface which applications must implement and register
 // with the |TraceRegistry| to participate in tracing.
 //
-// See //garnet/lib/trace/provider.h for a C++ implementation of
+// See //zircon/system/ulib/trace-provider/ for a C++ implementation of
 // this interface which can easily be configured by an application.
 [ServiceName="tracing::TraceProvider"]
 interface TraceProvider {
@@ -24,19 +24,15 @@ interface TraceProvider {
   //
   // At most one trace can be running at a time.  If the trace provider
   // receives a request to start tracing while already tracing, it must
-  // return false.
+  // ignore the request.
   //
-  // TODO(ZX-1046): Previously this interface was expected to restart tracing
-  // if tracing was already running.  Some trace providers implement this more
-  // elaborate behavior.  Once we port them to Zircon we can modify that
-  // code to return false instead then delete this TODO.
-  //
-  // Returns the result of the operation in |success|, true indicates that
-  // the provider is tracing now, false indicates that tracing could
-  // not be started.
+  // There is no result. If the provider successfully starts it must call
+  // zx_object_signal_peer() on |fence| passing TRACE_PROVIDER_SIGNAL_STARTED.
+  // #include <trace-provider/provider.h> to get TRACE_PROVIDER_SIGNAL_STARTED.
+  // To indicate failure to start close |fence|.
   //
   // TODO(jeffbrown): Implement half-full signal and streaming protocol.
-  Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories) => (bool success);
+  Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories);
 
   // Stops tracing.
   //
