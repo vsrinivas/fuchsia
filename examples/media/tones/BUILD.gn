@@ -1,0 +1,19 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("tones") {
+  sources = [
+    "main.cc",
+    "tone_generator.cc",
+    "tone_generator.h",
+    "tones.cc",
+    "tones.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/media/audio",
+    "//garnet/public/lib/fxl",
+  ]
+}
