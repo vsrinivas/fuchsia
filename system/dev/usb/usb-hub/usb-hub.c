@@ -327,19 +327,7 @@ static int usb_hub_thread(void* arg) {
         usb_hub_power_on_port(hub, i);
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "usb-hub",
-        .ctx = hub,
-        .ops = &usb_hub_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
-
-    result = device_add(hub->usb_device, &args, &hub->zxdev);
-    if (result != ZX_OK) {
-        usb_hub_free(hub);
-        return result;
-    }
+    device_make_visible(hub->zxdev);
 
     // bit field for port status bits
     uint8_t status_buf[128 / 8];
@@ -408,8 +396,8 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     // find our interrupt endpoint
     usb_desc_iter_t iter;
-    zx_status_t result = usb_desc_iter_init(&usb, &iter);
-    if (result < 0) return result;
+    status = usb_desc_iter_init(&usb, &iter);
+    if (status < 0) return status;
 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints != 1) {
@@ -445,22 +433,35 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
     usb_request_t* req;
     status = usb_request_alloc(&req, max_packet_size, ep_addr);
     if (status != ZX_OK) {
-        goto fail;
+        usb_hub_free(hub);
+        return status;
     }
     req->complete_cb = usb_hub_interrupt_complete;
     req->cookie = hub;
     hub->status_request = req;
 
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "usb-hub",
+        .ctx = hub,
+        .ops = &usb_hub_device_proto,
+        .flags = DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INVISIBLE,
+    };
+
+    status = device_add(hub->usb_device, &args, &hub->zxdev);
+    if (status != ZX_OK) {
+        usb_hub_free(hub);
+        return status;
+    }
+
     int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
     if (ret != thrd_success) {
-        status = ZX_ERR_NO_MEMORY;
-        goto fail;
+        device_remove(hub->zxdev);
+        usb_hub_free(hub);
+        return ZX_ERR_NO_MEMORY;
     }
-    return ZX_OK;
 
-fail:
-    usb_hub_free(hub);
-    return status;
+    return ZX_OK;
 }
 
 static zx_driver_ops_t usb_hub_driver_ops = {
