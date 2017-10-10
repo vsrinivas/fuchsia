@@ -221,7 +221,7 @@ static void cdc_ethmac_send(void* cookie, uint32_t options, void* data, size_t l
         return;
     }
 
-    dprintf(LTRACE, "%s: sending %d bytes\n", __FUNCTION__, length);
+    dprintf(LTRACE, "%s: sending %zu bytes\n", __FUNCTION__, length);
 
     mtx_lock(&cdc->tx_mutex);
 

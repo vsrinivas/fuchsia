@@ -68,7 +68,7 @@ static zx_status_t qemu_pci_init(void) {
     status = zx_pci_init(get_root_resource(), arg, arg_size);
     free(arg);
     if (status != ZX_OK) {
-        dprintf(ERROR, "%S: error %d in zx_pci_init\n", __FUNCTION__, status);
+        dprintf(ERROR, "%s: error %d in zx_pci_init\n", __FUNCTION__, status);
         goto fail;
     }
 

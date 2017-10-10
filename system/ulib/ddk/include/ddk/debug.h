@@ -63,7 +63,7 @@ __BEGIN_CDECLS
 #define DDK_LOG_LDEBUG4  (ZX_LOG_DEBUG4 | ZX_LOG_LOCAL)
 
 
-void driver_printf(uint32_t flags, const char* fmt, ...);
+void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 
 // dprintf() provides a path to the kernel debuglog gated by log level flags
 //

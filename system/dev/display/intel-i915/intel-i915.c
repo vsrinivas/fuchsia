@@ -11,11 +11,13 @@
 #include <hw/pci.h>
 
 #include <assert.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #define INTEL_I915_VID (0x8086)
 #define INTEL_I915_BROADWELL_DID (0x1616)
@@ -198,7 +200,7 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    dprintf(SPEW, "i915: reg=%p regsize=0x%llx fb=%p fbsize=0x%llx\n",
+    dprintf(SPEW, "i915: reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
     return ZX_OK;
