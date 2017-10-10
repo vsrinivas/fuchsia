@@ -12,7 +12,6 @@
 #include <zx/port.h>
 
 class PciBus;
-class IoApic;
 
 /**
  * Create an identity-mapped page table.
@@ -55,7 +54,6 @@ public:
     // TODO: Replace these with an interface that allows devices to map
     // callbacks to address ranges.
     PciBus* pci_bus;
-    IoApic* io_apic;
 
 private:
     zx_status_t IoThread();

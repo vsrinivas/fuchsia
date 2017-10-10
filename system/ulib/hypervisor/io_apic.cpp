@@ -37,6 +37,10 @@
 
 // clang-format on
 
+zx_status_t IoApic::Init(Guest* guest) {
+    return guest->CreateMapping(TrapType::MMIO_SYNC, IO_APIC_PHYS_BASE, IO_APIC_SIZE, 0, this);
+}
+
 zx_status_t IoApic::RegisterLocalApic(uint8_t local_apic_id, LocalApic* local_apic) {
     if (local_apic_id >= kMaxLocalApics)
         return ZX_ERR_OUT_OF_RANGE;
@@ -131,34 +135,76 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) const {
     return zx_vcpu_interrupt(vcpu, vector);
 }
 
-zx_status_t IoApic::RegisterHandler(const instruction_t* inst) {
-    uint32_t select_register;
-    {
+zx_status_t IoApic::Read(uint64_t addr, IoValue* value) {
+    switch (addr) {
+    case IO_APIC_IOREGSEL: {
         fbl::AutoLock lock(&mutex_);
-        select_register = select_;
+        value->u32 = select_;
+        return ZX_OK;
     }
+    case IO_APIC_IOWIN: {
+        uint32_t select_register;
+        {
+            fbl::AutoLock lock(&mutex_);
+            select_register = select_;
+        }
+        return ReadRegister(select_register, value);
+    }
+    default:
+        fprintf(stderr, "Unhandled IO APIC address %#lx\n", addr);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
 
+zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
+    switch (addr) {
+    case IO_APIC_IOREGSEL: {
+        if (value.u32 > UINT8_MAX)
+            return ZX_ERR_INVALID_ARGS;
+        fbl::AutoLock lock(&mutex_);
+        select_ = value.u32;
+        return ZX_OK;
+    }
+    case IO_APIC_IOWIN: {
+        uint32_t select_register;
+        {
+            fbl::AutoLock lock(&mutex_);
+            select_register = select_;
+        }
+        return WriteRegister(select_register, value);
+    }
+    default:
+        fprintf(stderr, "Unhandled IO APIC address %#lx\n", addr);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) {
     switch (select_register) {
     case IO_APIC_REGISTER_ID: {
         fbl::AutoLock lock(&mutex_);
-        return inst_rw32(inst, &id_);
+        value->u32 = id_;
+        return ZX_OK;
     }
     case IO_APIC_REGISTER_VER:
         // There are two redirect offsets per redirection entry. We return
         // the maximum redirection entry index.
         //
         // From Intel 82093AA, Section 3.2.2.
-        return inst_read32(inst, (kNumRedirects - 1) << 16 | IO_APIC_VERSION);
+        value->u32 = (kNumRedirects - 1) << 16 | IO_APIC_VERSION;
+        return ZX_OK;
     case IO_APIC_REGISTER_ARBITRATION:
         // Since we have a single I/O APIC, it is always the winner
         // of arbitration and its arbitration register is always 0.
-        return inst_read32(inst, 0);
-    case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
+        value->u32 = 0;
+        return ZX_OK;
+    case FIRST_REDIRECT_OFFSET... LAST_REDIRECT_OFFSET: {
         fbl::AutoLock lock(&mutex_);
         uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
         RedirectEntry& entry = redirect_[redirect_offset / 2];
-        uint32_t* redirect_register = redirect_offset % 2 == 0 ? &entry.lower : &entry.upper;
-        return inst_rw32(inst, redirect_register);
+        uint32_t redirect_register = redirect_offset % 2 == 0 ? entry.lower : entry.upper;
+        value->u32 = redirect_register;
+        return ZX_OK;
     }
     default:
         fprintf(stderr, "Unhandled IO APIC register %#x\n", select_register);
@@ -166,25 +212,27 @@ zx_status_t IoApic::RegisterHandler(const instruction_t* inst) {
     }
 }
 
-zx_status_t IoApic::Handler(const zx_packet_guest_mem_t* mem, const instruction_t* inst) {
-    ZX_ASSERT(mem->addr >= IO_APIC_PHYS_BASE);
-    zx_vaddr_t offset = mem->addr - IO_APIC_PHYS_BASE;
-
-    switch (offset) {
-    case IO_APIC_IOREGSEL: {
-        uint32_t select;
-        zx_status_t status = inst_write32(inst, &select);
-        if (status != ZX_OK)
-            return status;
-
+zx_status_t IoApic::WriteRegister(uint32_t select_register, const IoValue& value) {
+    switch (select_register) {
+    case IO_APIC_REGISTER_ID: {
         fbl::AutoLock lock(&mutex_);
-        select_ = select;
-        return select_ > UINT8_MAX ? ZX_ERR_INVALID_ARGS : ZX_OK;
+        id_ = value.u32;
+        return ZX_OK;
     }
-    case IO_APIC_IOWIN:
-        return RegisterHandler(inst);
+    case FIRST_REDIRECT_OFFSET... LAST_REDIRECT_OFFSET: {
+        fbl::AutoLock lock(&mutex_);
+        uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
+        RedirectEntry& entry = redirect_[redirect_offset / 2];
+        uint32_t* redirect_register = redirect_offset % 2 == 0 ? &entry.lower : &entry.upper;
+        *redirect_register = value.u32;
+        return ZX_OK;
+    }
+    case IO_APIC_REGISTER_VER:
+    case IO_APIC_REGISTER_ARBITRATION:
+        // Read-only, ignore writes.
+        return ZX_OK;
     default:
-        fprintf(stderr, "Unhandled IO APIC address %#lx\n", offset);
+        fprintf(stderr, "Unhandled IO APIC register %#x\n", select_register);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }

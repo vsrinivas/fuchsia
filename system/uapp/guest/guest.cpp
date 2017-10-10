@@ -260,7 +260,9 @@ int main(int argc, char** argv) {
 
     // Setup IO APIC.
     IoApic io_apic;
-    guest.io_apic = &io_apic;
+    status = io_apic.Init(&guest);
+    if (status != ZX_OK)
+        return status;
 #if __x86_64__
     // Setup IO ports.
     IoPort io_port;

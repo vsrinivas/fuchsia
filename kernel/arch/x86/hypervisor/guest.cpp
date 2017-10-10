@@ -11,8 +11,6 @@
 
 #include "vmx_cpu_state_priv.h"
 
-static const zx_vaddr_t kIoApicPhysBase = 0xfec00000;
-
 static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
     // From Volume 3, Section 24.6.9.
     uint8_t* msr_bitmaps = msr_bitmaps_page->VirtualAddress<uint8_t>();
@@ -39,16 +37,6 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
         return ZX_ERR_NO_MEMORY;
 
     zx_status_t status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
-    if (status != ZX_OK)
-        return status;
-
-    // We ensure the page containing the IO APIC address is not mapped so that
-    // we VM exit with an EPT violation when the guest accesses the page.
-    status = guest->gpas_->UnmapRange(kIoApicPhysBase, PAGE_SIZE);
-    if (status != ZX_OK)
-        return status;
-
-    status = guest->traps_.InsertTrap(ZX_GUEST_TRAP_MEM, kIoApicPhysBase, PAGE_SIZE, nullptr, 0);
     if (status != ZX_OK)
         return status;
 

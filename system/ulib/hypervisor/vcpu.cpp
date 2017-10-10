@@ -11,7 +11,6 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/block.h>
 #include <hypervisor/decode.h>
-#include <hypervisor/io_apic.h>
 #include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/vcpu.h>
@@ -160,13 +159,9 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
 #endif // __x86_64__
         fprintf(stderr, "\n");
     } else {
-        Guest* guest = vcpu_ctx->guest;
         switch (mem->addr) {
         case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
             status = vcpu_ctx->local_apic.Handler(mem, &inst);
-            break;
-        case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
-            status = guest->io_apic->Handler(mem, &inst);
             break;
         default: {
             status = handle_mmio(vcpu_ctx, mem, trap_key, &inst);

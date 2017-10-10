@@ -8,13 +8,15 @@
 
 #include <fbl/mutex.h>
 #include <hypervisor/decode.h>
+#include <hypervisor/guest.h>
+#include <hypervisor/io.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 
 class LocalApic;
 
 /* Stores the IO APIC state. */
-class IoApic {
+class IoApic : public IoHandler {
 public:
     static constexpr size_t kNumRedirects = 48u;
     static constexpr size_t kNumRedirectOffsets = kNumRedirects * 2;
@@ -26,11 +28,14 @@ public:
         uint32_t lower;
     };
 
+    zx_status_t Init(Guest* guest);
+
+    // IoHandler interface.
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
     // Associate a local APIC with an IO APIC.
     zx_status_t RegisterLocalApic(uint8_t local_apic_id, LocalApic* local_apic);
-
-    // Handle memory access to the IO APIC.
-    zx_status_t Handler(const zx_packet_guest_mem_t* mem, const instruction_t* inst);
 
     // Returns the redirected interrupt vector and target VCPU for the given
     // global IRQ.
@@ -43,7 +48,8 @@ public:
     zx_status_t Interrupt(uint32_t global_irq) const;
 
 private:
-    zx_status_t RegisterHandler(const instruction_t* inst);
+    zx_status_t ReadRegister(uint32_t select_register, IoValue* value);
+    zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
 
     mutable fbl::Mutex mutex_;
     // IO register-select register.
@@ -55,4 +61,3 @@ private:
     // Connected local APICs.
     LocalApic* local_apic_[kMaxLocalApics] = {};
 };
-

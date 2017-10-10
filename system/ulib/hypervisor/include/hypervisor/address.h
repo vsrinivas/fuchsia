@@ -24,7 +24,7 @@
 
 /* IO APIC memory range. */
 #define IO_APIC_PHYS_BASE               0xfec00000
-#define IO_APIC_PHYS_TOP                (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
+#define IO_APIC_SIZE                    PAGE_SIZE
 
 /* PCI ECAM memory range. */
 #define PCI_ECAM_PHYS_BASE              0xd0000000

@@ -46,7 +46,6 @@ static zx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
 }
 
 static void setup(test_t* test) {
-    test->guest.io_apic = &test->io_apic;
     test->guest.pci_bus = &test->pci_bus;
     test->vcpu_ctx.guest = &test->guest;
 
