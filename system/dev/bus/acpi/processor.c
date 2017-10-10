@@ -82,12 +82,17 @@ static void notify_handler(ACPI_HANDLE node, uint32_t value, void* _ctx) {
         return;
     }
     acpi_event_packet_t pkt = {
-        .pkt_key = ctx->event_key,
         .version = 0,
         .type = type,
         .arg = value,
     };
-    zx_port_queue(ctx->notify, &pkt, 0);
+    zx_port_packet_t packet = {
+        .key = ctx->event_key,
+        .type = ZX_PKT_TYPE_USER,
+        .status = 0,
+    };
+    memcpy(&packet.user, &pkt, sizeof(pkt));
+    zx_port_queue(ctx->notify, &packet, 0);
 }
 
 static fdio_dispatcher_t* dispatcher;

@@ -43,9 +43,6 @@ typedef struct {
 // more: GPE, exception, SCI, Fixed
 
 typedef struct {
-    uint64_t pkt_key;
-    uint32_t pkt_type;
-    int32_t pkt_status;
     uint8_t version; // Protocol version, currently only 0 defined.
     uint8_t reserved0;
     uint16_t type;   // event type
@@ -53,7 +50,7 @@ typedef struct {
     uint32_t reserved1[6];
 } __PACKED acpi_event_packet_t;
 
-static_assert(sizeof(zx_port_packet_t) == sizeof(acpi_event_packet_t), "");
+static_assert(sizeof(zx_packet_user_t) == sizeof(acpi_event_packet_t), "");
 
 // List all children of the node associated with the handle used to issue the
 // request.
