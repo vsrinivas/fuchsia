@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "asio_unittests": "//third_party/asio:asio_unittests"
-    }
-}

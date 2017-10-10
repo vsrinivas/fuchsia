@@ -1,8 +1,0 @@
-{
-    "resources": [
-        {
-            "bootfs_path": "data/bootstrap/amber.config",
-            "file": "garnet/go/src/amber/startup.config"
-        }
-    ]
-}
