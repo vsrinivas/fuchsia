@@ -3,10 +3,10 @@
         "go"
     ],
     "labels": [
-        "//apps/amber:amber",
-        "//apps/amber:amber-keys",
-        "//apps/amber:amber-srv-keys",
-        "//apps/amber:amber-publish(//build/toolchain:host_x64)"
+        "//garnet/go/src/amber:amber",
+        "//garnet/go/src/amber:amber-keys",
+        "//garnet/go/src/amber:amber-srv-keys",
+        "//garnet/go/src/amber:amber-publish(//build/toolchain:host_x64)"
     ],
     "binaries": [
         {
