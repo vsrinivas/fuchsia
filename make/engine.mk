@@ -244,7 +244,7 @@ endif
 
 USER_COMPILEFLAGS += $(SAFESTACK)
 
-USER_CRT1_OBJ := $(BUILDDIR)/system/ulib/crt1.o
+USER_SCRT1_OBJ := $(BUILDDIR)/system/ulib/Scrt1.o
 
 # Additional flags for building shared libraries (ld -shared).
 USERLIB_SO_LDFLAGS := $(USER_LDFLAGS) -z defs
