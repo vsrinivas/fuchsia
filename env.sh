@@ -33,7 +33,6 @@ esac
 
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
-export ZIRCON_DIR="${FUCHSIA_DIR}/zircon"
 export QEMU_DIR="${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/qemu/bin"
 export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
@@ -125,7 +124,7 @@ function zgo() {
     return 1
   fi
 
-  cd "${ZIRCON_DIR}/$1"
+  cd "${FUCHSIA_DIR}/zircon/$1"
 }
 
 if [[ -z "${ZSH_VERSION}" ]]; then
@@ -133,8 +132,8 @@ if [[ -z "${ZSH_VERSION}" ]]; then
     local cur
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=($(ls -dp1 --color=never ${ZIRCON_DIR}/${cur}* 2>/dev/null | \
-      sed -n "s|^${ZIRCON_DIR}/\(.*/\)\$|\1|p" | xargs echo))
+    COMPREPLY=($(ls -dp1 --color=never ${FUCHSIA_DIR}/zircon/${cur}* 2>/dev/null | \
+      sed -n "s|^${FUCHSIA_DIR}/zircon/\(.*/\)\$|\1|p" | xargs echo))
   }
   complete -o nospace -F _zgo zgo
 fi
@@ -196,7 +195,7 @@ function zset() {
 
   # add tools to path, removing prior tools directory if any
   export PATH="$(__patched_path \
-      "${ZIRCON_DIR}/build-[^/]*/tools" \
+      "${FUCHSIA_DIR}/zircon/build-[^/]*/tools" \
       "${ZIRCON_TOOLS_DIR}"
   )"
 }
@@ -267,7 +266,7 @@ END
 function zrun() {
   zcheck || return 1
 
-  "${ZIRCON_DIR}/scripts/run-zircon" -o "${ZIRCON_BUILD_DIR}" -a "${ZIRCON_ARCH}" \
+  "${FUCHSIA_DIR}/zircon/scripts/run-zircon" -o "${ZIRCON_BUILD_DIR}" -a "${ZIRCON_ARCH}" \
     -q "${QEMU_DIR}" $@
 }
 
@@ -284,7 +283,7 @@ function zsymbolize() {
   zcheck || return 1
 
   # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
-  "${ZIRCON_DIR}/scripts/symbolize" --build-dir "${ZIRCON_BUILD_DIR}" "$@"
+  "${FUCHSIA_DIR}/zircon/scripts/symbolize" --build-dir "${ZIRCON_BUILD_DIR}" "$@"
 }
 
 ### zlog: run zircon log listener
@@ -758,7 +757,7 @@ function fsymbolize() {
   fcheck || return 1
 
   # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
-  "${ZIRCON_DIR}/scripts/symbolize" \
+  "${FUCHSIA_DIR}/zircon/scripts/symbolize" \
       --build-dir "${ZIRCON_BUILD_DIR}" "${FUCHSIA_BUILD_DIR}" "$@"
 }
 

@@ -1,4 +1,4 @@
 #compdef zgo
 
-# complete zgo with directories under ${ZIRCON_DIR}
-_files -/ -W ${ZIRCON_DIR} zgo
+# complete zgo with directories under ${FUCHSIA_DIR}/zircon
+_files -/ -W ${FUCHSIA_DIR}/zircon zgo

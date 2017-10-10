@@ -5,9 +5,9 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 
-toolchain="$ZIRCON_DIR/prebuilt/downloads/x86_64-elf-6.3.0-$(uname)-x86_64/bin"
+toolchain="${FUCHSIA_DIR}/zircon/prebuilt/downloads/x86_64-elf-6.3.0-$(uname)-x86_64/bin"
 if [[ ! -d $toolchain ]]; then
-  "./$ZIRCON_DIR/scripts/download-toolchain"
+  "./${FUCHSIA_DIR}/zircon/scripts/download-toolchain"
 fi
 
 if [[ ! -e $FUCHSIA_OUT_DIR/build-objconv/bin/objconv ]]; then

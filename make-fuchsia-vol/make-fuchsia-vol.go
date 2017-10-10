@@ -29,10 +29,9 @@ import (
 )
 
 var (
+	fuchsiaDir      = os.Getenv("FUCHSIA_DIR")
 	fuchsiaBuildDir = os.Getenv("FUCHSIA_BUILD_DIR")
 	zirconBuildDir  = os.Getenv("ZIRCON_BUILD_DIR")
-
-	zirconDir = os.Getenv("ZIRCON_DIR")
 )
 
 var (
@@ -46,7 +45,7 @@ var (
 	cmdline        = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
 
 	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("ZIRCON_PROJECT"), "rpi"), "install rpi3 layout")
-	rpi3Root = flag.String("rpi3Root", filepath.Join(zirconDir, "kernel/target/rpi3"), "zircon rpi3 target root")
+	rpi3Root = flag.String("rpi3Root", filepath.Join(fuchsiaDir, "zircon/kernel/target/rpi3"), "zircon rpi3 target root")
 
 	efiOnly = flag.Bool("efionly", false, "install only Zircon EFI partition")
 
