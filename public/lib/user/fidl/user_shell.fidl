@@ -4,6 +4,7 @@
 
 module modular;
 
+import "lib/component/fidl/component_context.fidl";
 import "lib/context/fidl/context_writer.fidl";
 import "lib/context/fidl/context_reader.fidl";
 import "lib/suggestion/fidl/proposal_publisher.fidl";
@@ -34,6 +35,7 @@ interface UserShellContext {
   // logged into GUEST mode.
   GetAccount() => (auth.Account? account);
   GetAgentProvider(AgentProvider& request);
+  GetComponentContext(ComponentContext& request);
   GetContextReader(maxwell.ContextReader& request);
   GetContextWriter(maxwell.ContextWriter& request);
   GetDeviceName() => (string device_name);

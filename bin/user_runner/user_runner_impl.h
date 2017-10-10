@@ -71,6 +71,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   // |UserShellContext|
   void GetAccount(const GetAccountCallback& callback) override;
   void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
+  void GetComponentContext(
+      fidl::InterfaceRequest<ComponentContext> request) override;
   void GetContextReader(
       fidl::InterfaceRequest<maxwell::ContextReader> request) override;
   void GetContextWriter(
@@ -139,6 +141,11 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
+
+  // Component context given to user shell so that it can run agents and create
+  // message queues.
+  std::unique_ptr<ComponentContextImpl> user_shell_component_context_impl_;
+  fidl::BindingSet<ComponentContext> user_shell_component_context_bindings_;
 
   // Given to the user shell so it can store its own data. These data are shared
   // between all user shells (so it's not private to the user shell *app*).

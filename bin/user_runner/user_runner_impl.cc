@@ -60,6 +60,7 @@ constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
+constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kUserShellLinkName[] = "user-shell-link";
 
 ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
@@ -108,7 +109,7 @@ void UserRunnerImpl::Initialize(
       application_context_->environment(),
       std::string(kUserScopeLabelPrefix) + GetAccountId(account));
   user_shell_ = std::make_unique<AppClient<UserShell>>(
-      user_scope_->GetLauncher(), std::move(user_shell));
+      user_scope_->GetLauncher(), user_shell.Clone());
   user_shell_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
                    << "Logging out.";
@@ -248,6 +249,10 @@ void UserRunnerImpl::Initialize(
       });
   // End init maxwell.
 
+  user_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
+      component_context_info, kUserShellComponentNamespace, user_shell->url,
+      user_shell->url);
+
   fidl::InterfacePtr<FocusProvider> focus_provider_story_provider;
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
@@ -361,6 +366,12 @@ void UserRunnerImpl::GetAccount(const GetAccountCallback& callback) {
 void UserRunnerImpl::GetAgentProvider(
     fidl::InterfaceRequest<AgentProvider> request) {
   agent_runner_->Connect(std::move(request));
+}
+
+void UserRunnerImpl::GetComponentContext(
+    fidl::InterfaceRequest<ComponentContext> request) {
+  user_shell_component_context_bindings_.AddBinding(
+      user_shell_component_context_impl_.get(), std::move(request));
 }
 
 void UserRunnerImpl::GetContextReader(

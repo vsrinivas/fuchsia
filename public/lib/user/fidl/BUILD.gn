@@ -21,6 +21,7 @@ fidl("fidl") {
 
   deps = [
     "//garnet/public/lib/ui/views/fidl",
+    "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/suggestion/fidl:suggestion_provider",
