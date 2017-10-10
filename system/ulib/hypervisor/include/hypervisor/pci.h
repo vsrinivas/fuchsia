@@ -89,7 +89,7 @@ enum class PciMemoryType {
     BELL = 2,
 };
 
-typedef struct pci_bar {
+struct PciBar {
     // Register value.
     uint32_t addr;
     // Size of this BAR.
@@ -98,7 +98,7 @@ typedef struct pci_bar {
     uint32_t aspace;
     // Memory type to emulate.
     PciMemoryType memory_type;
-} pci_bar_t;
+};
 
 /* Stores the state of PCI devices. */
 class PciDevice {
@@ -143,7 +143,7 @@ public:
     // Returns a pointer to a base address register for this device.
     //
     // Returns nullptr if the register is not implmeneted.
-    const pci_bar_t* bar(size_t n) const { return is_bar_implemented(n) ? &bar_[n] : nullptr; }
+    const PciBar* bar(size_t n) const { return is_bar_implemented(n) ? &bar_[n] : nullptr; }
 
     // Install a capability list.
     void set_capabilities(const pci_cap_t* caps, size_t num_caps) {
@@ -155,7 +155,7 @@ protected:
     PciDevice(const Attributes attrs);
 
     // Base address registers.
-    pci_bar_t bar_[PCI_MAX_BARS] = {};
+    PciBar bar_[PCI_MAX_BARS] = {};
 
 private:
     friend class PciBus;

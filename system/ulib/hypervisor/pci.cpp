@@ -46,7 +46,7 @@ static const uint8_t kPciCapNextOffset = 1;
  */
 static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35, 36};
 
-static uint32_t pci_bar_base(pci_bar_t* bar) {
+static uint32_t pci_bar_base(PciBar* bar) {
     switch (bar->aspace) {
     case PCI_BAR_ASPACE_PIO:
         return bar->addr & kPioAddressMask;
@@ -57,7 +57,7 @@ static uint32_t pci_bar_base(pci_bar_t* bar) {
     }
 }
 
-static uint16_t pci_bar_size(pci_bar_t* bar) {
+static uint16_t pci_bar_size(PciBar* bar) {
     return static_cast<uint16_t>(bar->size);
 }
 
@@ -115,7 +115,7 @@ zx_status_t PciBus::Connect(PciDevice* device, uint8_t slot) {
 
     // Initialize BAR registers.
     for (uint8_t bar_num = 0; bar_num < PCI_MAX_BARS; ++bar_num) {
-        pci_bar_t* bar = &device->bar_[bar_num];
+        PciBar* bar = &device->bar_[bar_num];
 
         // Skip unimplemented bars.
         if (!device->is_bar_implemented(bar_num))
@@ -376,7 +376,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
             return pci_device_read_unimplemented(value);
 
         fbl::AutoLock lock(&mutex_);
-        const pci_bar_t* bar = &bar_[bar_num];
+        const PciBar* bar = &bar_[bar_num];
         *value = bar->addr | bar->aspace;
         return ZX_OK;
     }
@@ -478,7 +478,7 @@ zx_status_t PciDevice::WriteConfig(uint16_t reg, uint8_t len, uint32_t value) {
             return pci_device_write_unimplemented();
 
         fbl::AutoLock lock(&mutex_);
-        pci_bar_t* bar = &bar_[bar_num];
+        PciBar* bar = &bar_[bar_num];
         bar->addr = value;
         // We zero bits in the BAR in order to set the size.
         bar->addr &= ~(bar->size - 1);
@@ -510,7 +510,7 @@ zx_status_t PciBus::MappedDevice(uint8_t aspace, uintptr_t addr,
 
         for (uint8_t bar_num = 0; bar_num < PCI_MAX_BARS; ++bar_num) {
             uint16_t command;
-            pci_bar_t* bar;
+            PciBar* bar;
             {
                 fbl::AutoLock lock(&device->mutex_);
 
@@ -578,7 +578,7 @@ zx_status_t PciDevice::SetupBarTraps(zx_handle_t guest) {
     size_t num_traps = 0;
     trap_args_t traps[PCI_MAX_BARS];
     for (uint8_t i = 0; i < PCI_MAX_BARS; ++i) {
-        pci_bar_t* bar = &bar_[i];
+        PciBar* bar = &bar_[i];
         if (!is_bar_implemented(i))
             break;
 

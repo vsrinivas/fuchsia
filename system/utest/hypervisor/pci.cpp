@@ -72,7 +72,7 @@ static bool read_bar_size(void) {
               "Failed to read BAR0 from PCI config space");
     EXPECT_EQ(value & PCI_BAR_ASPACE_MASK, PCI_BAR_ASPACE_PIO,
               "Expected PIO bit to be set in BAR");
-    const pci_bar_t* bar = device.bar(0);
+    const PciBar* bar = device.bar(0);
     ASSERT_NOT_NULL(bar);
     EXPECT_EQ(~(value & ~PCI_BAR_ASPACE_MASK) + 1, bar->size,
               "Incorrect bar size read from pci device");
