@@ -9,7 +9,7 @@ KERNEL_INCLUDES += $(LOCAL_DIR)/source/include
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 MODULE_CFLAGS += -Wno-discarded-qualifiers -Wno-format-signedness
 else
-MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
+MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers -Wno-null-pointer-arithmetic
 endif
 MODULE_CFLAGS += -fno-strict-aliasing
 

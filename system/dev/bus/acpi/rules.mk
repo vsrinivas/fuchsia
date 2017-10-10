@@ -14,7 +14,11 @@ MODULE_TYPE := driver
 
 MODULE_NAME := bus-acpi
 
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+MODULE_CFLAGS += -Wno-null-pointer-arithmetic
+endif
 MODULE_CFLAGS += -fno-strict-aliasing
+
 MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include
 
 MODULE_SRCS := \
