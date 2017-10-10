@@ -1138,13 +1138,13 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS := $(LOCAL_COMPILEFLAGS)
 MODULE_CFLAGS := $(LOCAL_CFLAGS)
 
-MODULE_SRCS := $(LOCAL_DIR)/arch/$(MUSL_ARCH)/crt1.S
+MODULE_SRCS := $(LOCAL_DIR)/arch/$(MUSL_ARCH)/Scrt1.S
 
 # where our object files will end up
 LOCAL_OUT := $(BUILDDIR)/system/ulib/c.crt/$(LOCAL_DIR)
-LOCAL_CRT1_OBJ := $(LOCAL_OUT)/arch/$(MUSL_ARCH)/crt1.S.o
+LOCAL_SCRT1_OBJ := $(LOCAL_OUT)/arch/$(MUSL_ARCH)/Scrt1.S.o
 
 # install it globally
-$(call copy-dst-src,$(USER_CRT1_OBJ),$(LOCAL_CRT1_OBJ))
+$(call copy-dst-src,$(USER_SCRT1_OBJ),$(LOCAL_SCRT1_OBJ))
 
 include make/module.mk
