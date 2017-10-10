@@ -2,36 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//garnet/public/lib/fidl/fidl.gni")
 import("//packages/package.gni")
 
-executable("bin") {
-  output_name = "netconnector_example"
-
-  sources = [
-    "main.cc",
-    "netconnector_example_impl.cc",
-    "netconnector_example_impl.h",
-    "netconnector_example_params.cc",
-    "netconnector_example_params.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/netconnector/cpp",
-    "//garnet/public/lib/netconnector/fidl",
-  ]
-}
-
-package("netconnector_example") {
+package("netconnector") {
+  package_name = "netconnector_examples"
   app = true
-
   deps = [
-    ":bin",
+    "netconnector_example",
   ]
 
-  binaries = [ {
-        name = "netconnector_example"
-      } ]
+  binaries = [
+    {
+      name = "netconnector_example"
+    },
+  ]
 }
