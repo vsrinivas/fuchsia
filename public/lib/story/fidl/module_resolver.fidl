@@ -23,7 +23,7 @@ interface ModuleResolver {
   //
   // For detailed information on the resolution process, see
   // docs/module_resolution.md.
-  FindModules(Daisy daisy, ResolverScoringInfo scoring_info) => (array<ModuleResolverResult> modules);
+  FindModules(Daisy daisy, ResolverScoringInfo scoring_info) => (FindModulesResult result);
 };
 
 // TODO(thatguy): Placeholder to define the exact data (either directly contain
@@ -37,13 +37,13 @@ interface ModuleResolver {
 struct ResolverScoringInfo {
 };
 
+struct FindModulesResult {
+  array<ModuleResolverResult> modules;
+};
+
 struct ModuleResolverResult {
-  // The ID the package containing this Module. For now, equals the path to
-  // the package in pkgfs.
-  // TODO(thatguy): Replace with a handle to the package manager? Evaluate
-  // whether this is possible or desirable (scalable) given the calling
-  // patterns into ModuleResolver.
-  string package_id;
+  // The ID of the Module. For now, this is the URL of the Module binary.
+  string module_id;
 
   // The |local_name| within the Module's manifest file (see
   // docs/manifests/module.md). The verb to be invoked and constraints on its
@@ -54,7 +54,7 @@ struct ModuleResolverResult {
   // is initialized. This map is keyed by the noun's name as given in the
   // `verb_template` file referenced by the `module` metadata file for
   // |package_id| where |local_name| is defined.
-  map<string, Entity> initial_nouns;
+  map<string, EntityReference> initial_nouns;
 
   // TODO(thatguy): Schema information for the Link. This can be derived by the
   // client by looking at both |package_id| and |local_name|.

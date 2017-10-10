@@ -6,14 +6,12 @@
 // WORK IN PROGRESS, NOT YET PART OF THE BUILD
 //
 
-import "entity.fidl";
-
 module modular;
 
 // The Daisy struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/daisy.md.
 struct Daisy {
-  Verb? verb;
+  string? verb;
 
   // A list of zero or more Nouns, keyed by the noun's name in |verb|'s
   // definition, from which Entity type constraints are derived. If no |verb|
@@ -30,14 +28,6 @@ struct Daisy {
   // string json_parameters;
   // array<string> required_services;
 }
-
-struct Verb {
-  // The ID of the package in which verb |name| is defined.
-  string package_id;
-
-  // The name of the verb published in package |package_id|.
-  string name;
-};
 
 // As stated above, this structure serves two purposes:
 //
@@ -60,9 +50,10 @@ union Noun {
   // Set this if you want to explicitly define this noun's allowed types. This
   // is also useful in the cases where the noun has a 'direction' of type
   // 'output', and you wish to set the allowable output types from the Module
-  // (see docs/manifests/verb_template.md for a definition of 'direction').
+  // (see docs/modular/manifests/verb_template.md for a definition of
+  // 'direction').
   //
   // Only one entry in |entity_type| must match the constraint specified by
   // the Module for the constraint to be considered satisfied.
-  array<EntityType> entity_type;
+  array<string> entity_type;
 }
