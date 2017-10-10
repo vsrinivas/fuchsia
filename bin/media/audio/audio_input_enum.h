@@ -6,23 +6,30 @@
 
 #include <string>
 #include <vector>
+#include <zircon/types.h>
 
 namespace media {
 
 // Enumerates audio inputs.
 class AudioInputEnum {
  public:
-  AudioInputEnum();
+  struct Details {
+    Details(std::string p, zx_time_t pt) : path(std::move(p)), plug_time(pt) {}
 
+    std::string path;
+    zx_time_t plug_time;
+  };
+
+  AudioInputEnum();
   ~AudioInputEnum();
 
-  const std::vector<std::string>& input_device_paths() {
-    return input_device_paths_;
+  const std::vector<const Details>& input_devices() {
+    return input_devices_;
   }
 
  private:
   static const std::string kAudioInputDeviceClassPath;
-  std::vector<std::string> input_device_paths_;
+  std::vector<const Details> input_devices_;
 };
 
 }  // namespace media

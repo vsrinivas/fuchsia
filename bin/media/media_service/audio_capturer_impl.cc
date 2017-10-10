@@ -28,14 +28,22 @@ AudioCapturerImpl::AudioCapturerImpl(
       producer_(FidlPacketProducer::Create()) {
   AudioInputEnum audio_enum;
 
-  if (audio_enum.input_device_paths().empty()) {
+  if (audio_enum.input_devices().empty()) {
     FXL_LOG(WARNING) << "No audio input devices found";
     RCHECK(false);
     return;
   }
 
-  source_ = AudioInput::Create(audio_enum.input_device_paths().front());
+  // Select the most recently plugged in audio input
+  size_t best = 0;
+  for (size_t i = 0; i < audio_enum.input_devices().size(); ++i) {
+    if (audio_enum.input_devices()[i].plug_time >
+        audio_enum.input_devices()[best].plug_time) {
+      best = i;
+    }
+  }
 
+  source_ = AudioInput::Create(audio_enum.input_devices()[best].path);
   graph_.ConnectNodes(graph_.Add(source_), graph_.Add(producer_));
   graph_.Prepare();
 }
