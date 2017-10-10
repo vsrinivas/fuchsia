@@ -30,8 +30,8 @@ static zx_status_t unhandled_mem(const zx_packet_guest_mem_t* mem, const instruc
     return ZX_OK;
 }
 
-static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, uint8_t access_size,
-                                    zx_vcpu_io_t* io) {
+static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
+                                    uint8_t access_size, zx_vcpu_io_t* io) {
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
         return vcpu_ctx->guest->pci_bus->ReadEcam(addr, access_size, io);
@@ -46,10 +46,20 @@ static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, uint8
     if (status != ZX_ERR_NOT_FOUND) {
         return pci_device->ReadBar(bar, device_offset, io->access_size, io);
     }
-    return status;
+
+    IoMapping& mapping = trap_key_to_mapping(trap_key);
+    IoValue value = {};
+    value.access_size = io->access_size;
+    status = mapping.Read(addr, &value);
+    if (status != ZX_OK)
+        return status;
+    io->access_size = value.access_size;
+    io->u32 = value.u32;
+    return ZX_OK;
 }
 
-static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, zx_vcpu_io_t* io) {
+static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
+                                     zx_vcpu_io_t* io) {
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
         return vcpu_ctx->guest->pci_bus->WriteEcam(addr, io);
@@ -65,11 +75,15 @@ static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, zx_v
         return pci_device->WriteBar(bar, device_offset, io);
     }
 
-    return status;
+    IoMapping& mapping = trap_key_to_mapping(trap_key);
+    IoValue value;
+    value.access_size = io->access_size;
+    value.u32 = io->u32;
+    return mapping.Write(addr, value);
 }
 
 static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem,
-                               const instruction_t* inst) {
+                               uint64_t trap_key, const instruction_t* inst) {
     zx_status_t status;
     zx_vcpu_io_t mmio;
     if (inst->type == INST_MOV_WRITE) {
@@ -89,11 +103,11 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
         if (status != ZX_OK)
             return status;
         mmio.access_size = inst->mem;
-        return handle_mmio_write(vcpu_ctx, mem->addr, &mmio);
+        return handle_mmio_write(vcpu_ctx, trap_key, mem->addr, &mmio);
     }
 
     if (inst->type == INST_MOV_READ) {
-        status = handle_mmio_read(vcpu_ctx, mem->addr, inst->mem, &mmio);
+        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->mem, &mmio);
         if (status != ZX_OK)
             return status;
         switch (inst->mem) {
@@ -109,7 +123,7 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
     }
 
     if (inst->type == INST_TEST) {
-        status = handle_mmio_read(vcpu_ctx, mem->addr, inst->mem, &mmio);
+        status = handle_mmio_read(vcpu_ctx, trap_key, mem->addr, inst->mem, &mmio);
         if (status != ZX_OK)
             return status;
         switch (inst->mem) {
@@ -123,7 +137,8 @@ static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t
     return ZX_ERR_INVALID_ARGS;
 }
 
-static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem) {
+static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem,
+                              uint64_t trap_key) {
     zx_vcpu_state_t vcpu_state;
     zx_status_t status = vcpu_ctx->read_state(vcpu_ctx, ZX_VCPU_STATE, &vcpu_state,
                                               sizeof(vcpu_state));
@@ -154,7 +169,7 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
             status = guest->io_apic->Handler(mem, &inst);
             break;
         default: {
-            status = handle_mmio(vcpu_ctx, mem, &inst);
+            status = handle_mmio(vcpu_ctx, mem, trap_key, &inst);
             if (status == ZX_ERR_NOT_FOUND)
                 status = unhandled_mem(mem, &inst);
             break;
@@ -291,7 +306,7 @@ zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
 zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet) {
     switch (packet->type) {
     case ZX_PKT_TYPE_GUEST_MEM:
-        return handle_mem(vcpu_ctx, &packet->guest_mem);
+        return handle_mem(vcpu_ctx, &packet->guest_mem, packet->key);
     case ZX_PKT_TYPE_GUEST_IO:
         return handle_io(vcpu_ctx, &packet->guest_io, packet->key);
     default:

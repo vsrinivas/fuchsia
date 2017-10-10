@@ -22,6 +22,7 @@
 #include <hypervisor/io_apic.h>
 #include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
+#include <hypervisor/tpm.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <virtio/balloon.h>
@@ -266,6 +267,11 @@ int main(int argc, char** argv) {
     status = io_port.Init(&guest);
     if (status != ZX_OK)
         return status;
+    // Setup TPM
+    TpmHandler tpm;
+    status = tpm.Init(&guest);
+    if (status != ZX_OK)
+        return status;
 #endif
     // Setup PCI.
     PciBus bus(guest.handle(), &io_apic);
@@ -281,11 +287,6 @@ int main(int argc, char** argv) {
     if (status != ZX_OK)
         return status;
 
-    // Setup TPM.
-    status = zx_guest_set_trap(guest.handle(), ZX_GUEST_TRAP_MEM, TPM_PHYS_BASE,
-                               TPM_PHYS_TOP - TPM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
-    if (status != ZX_OK)
-        return status;
     // Setup block device.
     VirtioBlock block(physmem_addr, physmem_size);
     PciDevice& virtio_block = block.pci_device();

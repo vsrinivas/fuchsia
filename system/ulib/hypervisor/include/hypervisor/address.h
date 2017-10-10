@@ -32,7 +32,7 @@
 
 /* TPM memory range. */
 #define TPM_PHYS_BASE                   0xfed40000
-#define TPM_PHYS_TOP                    TPM_PHYS_BASE + 0x5000 - 1
+#define TPM_SIZE                        0x5000
 
 /* UART ports. */
 #define UART_BASE                       0x3f8
