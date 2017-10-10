@@ -29,8 +29,8 @@ int vsnprintf(char* restrict s, size_t n, const char* restrict fmt, va_list ap) 
     }
 
     /* Ensure pointers don't wrap if "infinite" n is passed in */
-    if (n > (char*)0 + SIZE_MAX - s - 1)
-        n = (char*)0 + SIZE_MAX - s - 1;
+    if (n > SIZE_MAX - (uintptr_t)s - 1)
+        n = SIZE_MAX - (uintptr_t)s - 1;
     f.buf_size = n;
     f.buf = f.wpos = (void*)s;
     f.wbase = f.wend = (void*)(s + n);
