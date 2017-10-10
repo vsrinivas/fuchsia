@@ -1,245 +1,279 @@
-all:
-  - comerr-dev
-  - krb5-multidev
-  - libasound2
-  - libasound2-dev
-  - libatk-bridge2.0-0
-  - libatk-bridge2.0-dev
-  - libatk1.0-0
-  - libatk1.0-dev
-  - libatomic1
-  - libatspi2.0-0
-  - libatspi2.0-dev
-  - libattr1
-  - libavahi-client3
-  - libavahi-common3
-  - libbluetooth3
-  - libbluetooth-dev
-  - libbrlapi0.6
-  - libbrlapi-dev
-  - libbsd0
-  - libbsd-dev
-  - libbz2-1.0
-  - libbz2-dev
-  - libc6
-  - libc6-dev
-  - libcairo2
-  - libcairo2-dev
-  - libcairo-gobject2
-  - libcairo-script-interpreter2
-  - libcap-dev
-  - libcap2
-  - libcomerr2
-  - libcups2
-  - libcups2-dev
-  - libdbus-1-3
-  - libdbus-1-dev
-  - libdbus-glib-1-2
-  - libdrm2
-  - libdrm-dev
-  - libdrm-nouveau2
-  - libdrm-radeon1
-  - libedit2
-  - libedit-dev
-  - libegl1-mesa
-  - libegl1-mesa-dev
-  - libelf1
-  - libelf-dev
-  - libexpat1
-  - libexpat1-dev
-  - libfdt1
-  - libfdt-dev
-  - libffi6
-  - libffi-dev
-  - libfontconfig1
-  - libfontconfig1-dev
-  - libfreetype6
-  - libfreetype6-dev
-  - libgbm1
-  - libgbm-dev
-  - libgcc-4.8-dev
-  - libgcc1
-  - libgconf-2-4
-  - libgconf2-4
-  - libgconf2-dev
-  - libgcrypt20
-  - libgcrypt20-dev
-  - libgdk-pixbuf2.0-0
-  - libgdk-pixbuf2.0-dev
-  - libgl1-mesa-dev
-  - libgl1-mesa-glx
-  - libglapi-mesa
-  - libglib2.0-0
-  - libglib2.0-dev
-  - libglu1-mesa
-  - libglu1-mesa-dev
-  - libgnome-keyring0
-  - libgnome-keyring-dev
-  - libgnutls-openssl27
-  - libgnutls-deb0-28
-  - libgnutlsxx28
-  - libgnutls28-dev
-  - libgomp1
-  - libgpg-error0
-  - libgpg-error-dev
-  - libgpm2
-  - libgpm-dev
-  - libgssapi-krb5-2
-  - libgssrpc4
-  - libgtk-3-0
-  - libgtk-3-dev
-  - libgtk2.0-0
-  - libgtk2.0-dev
-  - libharfbuzz0b
-  - libharfbuzz-dev
-  - libharfbuzz-gobject0
-  - libharfbuzz-icu0
-  - libicu52
-  - libicu-dev
-  - libjsoncpp0
-  - libjsoncpp-dev
-  - libk5crypto3
-  - libkadm5clnt-mit9
-  - libkadm5srv-mit9
-  - libkdb5-7
-  - libkeyutils1
-  - libkrb5-3
-  - libkrb5-dev
-  - libkrb5support0
-  - liblzma5
-  - liblzma-dev
-  - libncurses5
-  - libncurses5-dev
-  - libnspr4
-  - libnspr4-dev
-  - libnss3
-  - libnss3-dev
-  - libnss-db
-  - liborbit2
-  - libp11-2
-  - libp11-kit0
-  - libpam0g
-  - libpam0g-dev
-  - libpango-1.0-0
-  - libpango1.0-dev
-  - libpangoft2-1.0-0
-  - libpangocairo-1.0-0
-  - libpangox-1.0-0
-  - libpangoxft-1.0-0
-  - libpci3
-  - libpci-dev
-  - libpcre3
-  - libpcre3-dev
-  - libpcrecpp0
-  - libpixman-1-0
-  - libpixman-1-dev
-  - libpng12-0
-  - libpng12-dev
-  - libpthread-stubs0-dev
-  - libpulse0
-  - libpulse-dev
-  - libpulse-mainloop-glib0
-  - libpython2.7
-  - libpython2.7-dev
-  - libselinux1
-  - libspeechd2
-  - libspeechd-dev
-  - libssl1.0.0
-  - libssl-dev
-  - libstdc++6
-  - libstdc++-4.8-dev
-  - libtinfo5
-  - libtinfo-dev
-  - libtasn1-6
-  - libtasn1-6-dev
-  - libudev-dev
-  - libudev1
-  - libwayland-client0
-  - libwayland-cursor0
-  - libwayland-dev
-  - libwayland-egl1-mesa
-  - libwayland-server0
-  - libx11-6
-  - libx11-dev
-  - libx11-xcb1
-  - libx11-xcb-dev
-  - libxau6
-  - libaudit1
-  - libxau-dev
-  - libxcb1
-  - libxcb1-dev
-  - libxcb-dri2-0
-  - libxcb-dri3-0
-  - libxcb-glx0
-  - libxcb-present0
-  - libxcb-render0
-  - libxcb-render0-dev
-  - libxcb-sync1
-  - libxcb-shm0
-  - libxcb-shm0-dev
-  - libxcomposite1
-  - libxcomposite-dev
-  - libxcursor1
-  - libxcursor-dev
-  - libxdamage1
-  - libxdamage-dev
-  - libxdmcp6
-  - libxdmcp-dev
-  - libxext6
-  - libxext-dev
-  - libxfixes3
-  - libxfixes-dev
-  - libxi6
-  - libxi-dev
-  - libxinerama1
-  - libxinerama-dev
-  - libxkbcommon0
-  - libxkbcommon-dev
-  - libxml2
-  - libxml2-dev
-  - libxrandr2
-  - libxrandr-dev
-  - libxrender1
-  - libxrender-dev
-  - libxshmfence1
-  - libxss1
-  - libxss-dev
-  - libxt6
-  - libxt-dev
-  - libxtst6
-  - libxtst-dev
-  - libxxf86vm1
-  - linux-libc-dev
-  - mesa-common-dev
-  - speech-dispatcher
-  - x11proto-composite-dev
-  - x11proto-core-dev
-  - x11proto-damage-dev
-  - x11proto-fixes-dev
-  - x11proto-input-dev
-  - x11proto-kb-dev
-  - x11proto-randr-dev
-  - x11proto-record-dev
-  - x11proto-render-dev
-  - x11proto-scrnsaver-dev
-  - x11proto-xext-dev
-  - x11proto-xinerama-dev
-  - zlib1g
-  - zlib1g-dev
-amd64:
-  - libasan0
-  - libcilkrts5
-  - libdrm-intel1
-  - libitm1
-  - liblsan0
-  - libquadmath0
-  - libtsan0
-  - libubsan0
-arm64:
-  - libdatrie1
-  - libgmp10
-  - libgraphite2-3
-  - libhogweed2
-  - libitm1
-  - libnettle4
-  - libthai0
+dists:
+  - jessie
+  - jessie-updates
+components:
+  - main
+keyring: debian-archive-jessie-stable.gpg
+packages:
+  - package: comerr-dev
+  - package: krb5-multidev
+  - package: libasound2
+  - package: libasound2-dev
+  - package: libatk-bridge2.0-0
+  - package: libatk-bridge2.0-dev
+  - package: libatk1.0-0
+  - package: libatk1.0-dev
+  - package: libatomic1
+  - package: libatspi2.0-0
+  - package: libatspi2.0-dev
+  - package: libattr1
+  - package: libavahi-client3
+  - package: libavahi-common3
+  - package: libbluetooth3
+  - package: libbluetooth-dev
+  - package: libbrlapi0.6
+  - package: libbrlapi-dev
+  - package: libbsd0
+  - package: libbsd-dev
+  - package: libbz2-1.0
+  - package: libbz2-dev
+  - package: libc6
+  - package: libc6-dev
+  - package: libcairo2
+  - package: libcairo2-dev
+  - package: libcairo-gobject2
+  - package: libcairo-script-interpreter2
+  - package: libcap-dev
+  - package: libcap2
+  - package: libcomerr2
+  - package: libcups2
+  - package: libcups2-dev
+  - package: libdbus-1-3
+  - package: libdbus-1-dev
+  - package: libdbus-glib-1-2
+  - package: libdrm2
+  - package: libdrm-dev
+  - package: libdrm-nouveau2
+  - package: libdrm-radeon1
+  - package: libedit2
+  - package: libedit-dev
+  - package: libegl1-mesa
+  - package: libegl1-mesa-dev
+  - package: libelf1
+  - package: libelf-dev
+  - package: libexpat1
+  - package: libexpat1-dev
+  - package: libfdt1
+  - package: libfdt-dev
+  - package: libffi6
+  - package: libffi-dev
+  - package: libfontconfig1
+  - package: libfontconfig1-dev
+  - package: libfreetype6
+  - package: libfreetype6-dev
+  - package: libgbm1
+  - package: libgbm-dev
+  - package: libgcc-4.8-dev
+  - package: libgcc1
+  - package: libgconf-2-4
+  - package: libgconf2-4
+  - package: libgconf2-dev
+  - package: libgcrypt20
+  - package: libgcrypt20-dev
+  - package: libgdk-pixbuf2.0-0
+  - package: libgdk-pixbuf2.0-dev
+  - package: libgl1-mesa-dev
+  - package: libgl1-mesa-glx
+  - package: libglapi-mesa
+  - package: libglib2.0-0
+  - package: libglib2.0-dev
+  - package: libglu1-mesa
+  - package: libglu1-mesa-dev
+  - package: libgnome-keyring0
+  - package: libgnome-keyring-dev
+  - package: libgnutls-openssl27
+  - package: libgnutls-deb0-28
+  - package: libgnutlsxx28
+  - package: libgnutls28-dev
+  - package: libgomp1
+  - package: libgpg-error0
+  - package: libgpg-error-dev
+  - package: libgpm2
+  - package: libgpm-dev
+  - package: libgssapi-krb5-2
+  - package: libgssrpc4
+  - package: libgtk-3-0
+  - package: libgtk-3-dev
+  - package: libgtk2.0-0
+  - package: libgtk2.0-dev
+  - package: libharfbuzz0b
+  - package: libharfbuzz-dev
+  - package: libharfbuzz-gobject0
+  - package: libharfbuzz-icu0
+  - package: libicu52
+  - package: libicu-dev
+  - package: libjsoncpp0
+  - package: libjsoncpp-dev
+  - package: libk5crypto3
+  - package: libkadm5clnt-mit9
+  - package: libkadm5srv-mit9
+  - package: libkdb5-7
+  - package: libkeyutils1
+  - package: libkrb5-3
+  - package: libkrb5-dev
+  - package: libkrb5support0
+  - package: liblzma5
+  - package: liblzma-dev
+  - package: libncurses5
+  - package: libncurses5-dev
+  - package: libnspr4
+  - package: libnspr4-dev
+  - package: libnss3
+  - package: libnss3-dev
+  - package: libnss-db
+  - package: liborbit2
+  - package: libp11-2
+  - package: libp11-kit0
+  - package: libpam0g
+  - package: libpam0g-dev
+  - package: libpango-1.0-0
+  - package: libpango1.0-dev
+  - package: libpangoft2-1.0-0
+  - package: libpangocairo-1.0-0
+  - package: libpangox-1.0-0
+  - package: libpangoxft-1.0-0
+  - package: libpci3
+  - package: libpci-dev
+  - package: libpcre3
+  - package: libpcre3-dev
+  - package: libpcrecpp0
+  - package: libpixman-1-0
+  - package: libpixman-1-dev
+  - package: libpng12-0
+  - package: libpng12-dev
+  - package: libpthread-stubs0-dev
+  - package: libpulse0
+  - package: libpulse-dev
+  - package: libpulse-mainloop-glib0
+  - package: libpython2.7
+  - package: libpython2.7-dev
+  - package: libselinux1
+  - package: libspeechd2
+  - package: libspeechd-dev
+  - package: libssl1.0.0
+  - package: libssl-dev
+  - package: libstdc++6
+  - package: libstdc++-4.8-dev
+  - package: libtinfo5
+  - package: libtinfo-dev
+  - package: libtasn1-6
+  - package: libtasn1-6-dev
+  - package: libudev-dev
+  - package: libudev1
+  - package: libwayland-client0
+  - package: libwayland-cursor0
+  - package: libwayland-dev
+  - package: libwayland-egl1-mesa
+  - package: libwayland-server0
+  - package: libx11-6
+  - package: libx11-dev
+  - package: libx11-xcb1
+  - package: libx11-xcb-dev
+  - package: libxau6
+  - package: libaudit1
+  - package: libxau-dev
+  - package: libxcb1
+  - package: libxcb1-dev
+  - package: libxcb-dri2-0
+  - package: libxcb-dri3-0
+  - package: libxcb-glx0
+  - package: libxcb-present0
+  - package: libxcb-render0
+  - package: libxcb-render0-dev
+  - package: libxcb-sync1
+  - package: libxcb-shm0
+  - package: libxcb-shm0-dev
+  - package: libxcomposite1
+  - package: libxcomposite-dev
+  - package: libxcursor1
+  - package: libxcursor-dev
+  - package: libxdamage1
+  - package: libxdamage-dev
+  - package: libxdmcp6
+  - package: libxdmcp-dev
+  - package: libxext6
+  - package: libxext-dev
+  - package: libxfixes3
+  - package: libxfixes-dev
+  - package: libxi6
+  - package: libxi-dev
+  - package: libxinerama1
+  - package: libxinerama-dev
+  - package: libxkbcommon0
+  - package: libxkbcommon-dev
+  - package: libxml2
+  - package: libxml2-dev
+  - package: libxrandr2
+  - package: libxrandr-dev
+  - package: libxrender1
+  - package: libxrender-dev
+  - package: libxshmfence1
+  - package: libxss1
+  - package: libxss-dev
+  - package: libxt6
+  - package: libxt-dev
+  - package: libxtst6
+  - package: libxtst-dev
+  - package: libxxf86vm1
+  - package: linux-libc-dev
+  - package: mesa-common-dev
+  - package: speech-dispatcher
+  - package: x11proto-composite-dev
+  - package: x11proto-core-dev
+  - package: x11proto-damage-dev
+  - package: x11proto-fixes-dev
+  - package: x11proto-input-dev
+  - package: x11proto-kb-dev
+  - package: x11proto-randr-dev
+  - package: x11proto-record-dev
+  - package: x11proto-render-dev
+  - package: x11proto-scrnsaver-dev
+  - package: x11proto-xext-dev
+  - package: x11proto-xinerama-dev
+  - package: zlib1g
+  - package: zlib1g-dev
+  - package: libasan0
+    arch:
+      - amd64
+  - package: libcilkrts5
+    arch:
+      - amd64
+  - package: libdrm-intel1
+    arch:
+      - amd64
+  - package: libitm1
+    arch:
+      - amd64
+  - package: liblsan0
+    arch:
+      - amd64
+  - package: libquadmath0
+    arch:
+      - amd64
+  - package: libtsan0
+    arch:
+      - amd64
+  - package: libubsan0
+    arch:
+      - amd64
+  - package: libdatrie1
+    arch:
+      - arm64
+  - package: libgmp10
+    arch:
+      - arm64
+  - package: libgraphite2-3
+    arch:
+      - arm64
+  - package: libhogweed2
+    arch:
+      - arm64
+  - package: libitm1
+    arch:
+      - arm64
+  - package: libnettle4
+    arch:
+      - arm64
+  - package: libthai0
+    arch:
+      - arm64

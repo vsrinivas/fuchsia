@@ -6,15 +6,15 @@
 package main
 
 import (
-	"bytes"
 	"bufio"
+	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,10 +24,17 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/google/subcommands"
 	"golang.org/x/crypto/openpgp"
 	"gopkg.in/yaml.v2"
 )
+
+// gpg keyring file generated using:
+//   export KEYS="46925553 2B90D010 518E17E1 1A7B6500"
+//   gpg --keyserver keys.gnupg.net --recv-keys $KEYS
+//   gpg --output ./debian-archive-stretch-stable.gpg --export $KEYS
 
 const (
 	aptRepo = "http://http.us.debian.org/debian"
@@ -40,67 +47,53 @@ func (i *stringsValue) String() string {
 }
 
 func (i *stringsValue) Set(value string) error {
-    *i = strings.Split(value, ",")
-    return nil
+	*i = strings.Split(value, ",")
+	return nil
 }
 
-var (
-	release string
-	components stringsValue
-	arch string
-	packagesFile string
-	outDir string
-	packageList string
-	debsCache string
-	keyRingFile string
-)
-
-func init() {
-	components = stringsValue{"main"}
-
-	flag.StringVar(&release, "release", "stretch", "Debian release to use")
-	flag.Var(&components, "c", "Debian components to use")
-	flag.StringVar(&arch, "arch", "amd64", "Target architecture")
-	flag.StringVar(&packagesFile, "packages", "packages.yml", "List of packages")
-	flag.StringVar(&outDir, "out", "sysroot", "Output directory")
-	flag.StringVar(&packageList, "list", "packagelist", "Package list filename")
-	flag.StringVar(&debsCache, "cache", "debs", "Cache for .deb files")
-
-	// gpg keyring file generated using:
-	//   export KEYS="46925553 2B90D010 518E17E1 1A7B6500"
-	//   gpg --keyserver keys.gnupg.net --recv-keys $KEYS
-	//   gpg --output ./debian-archive-stretch-stable.gpg --export $KEYS
-	flag.StringVar(&keyRingFile, "keyring", "debian-archive-stretch-stable.gpg", "Keyring file")
-
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: deb-sysroot-builder\n")
-		flag.PrintDefaults()
-	}
+type Config struct {
+	Dists      []string  `yaml:"dists"`
+	Components []string  `yaml:"components"`
+	Keyring    string    `yaml:"keyring"`
+	Packages   []Package `yaml:"packages"`
 }
 
-type pkg struct {
-	name string
-	hash string
+type Package struct {
+	Name string   `yaml:"package"`
+	Arch []string `yaml:"arch,omitempty"`
 }
 
-type pkgs []pkg
-
-func (p pkgs) Len() int {
-	return len(p)
+type Lockfile struct {
+	Hash     string    `yaml:"hash"`
+	Updated  time.Time `yaml:"updated"`
+	Packages []Lock    `yaml:"packages"`
 }
 
-func (p pkgs) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
+type Lock struct {
+	Name     string `yaml:"package"`
+	Version  string `yaml:"version"`
+	Filename string `yaml:"filename"`
+	Hash     string `yaml:"hash"`
 }
 
-func (p pkgs) Less(i, j int) bool {
-	return p[i].name < p[j].name
+type Locks []Lock
+
+func (l Locks) Len() int {
+	return len(l)
 }
 
-func downloadPackageList() ([]pkg, error) {
-	pkgs := map[string]pkg{}
+func (l Locks) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
 
-	file, err := os.Open(keyRingFile)
+func (l Locks) Less(i, j int) bool {
+	return l[i].Name < l[j].Name
+}
+
+func downloadPackageList(config *Config, arch string) ([]Lock, error) {
+	pkgs := map[string]Lock{}
+
+	file, err := os.Open(config.Keyring)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +103,7 @@ func downloadPackageList() ([]pkg, error) {
 		return nil, err
 	}
 
-	for _, dist := range []string{release, release + "-updates"} {
+	for _, dist := range config.Dists {
 		u, err := url.Parse(aptRepo)
 		u.Path = path.Join(u.Path, "dists", dist, "Release")
 		r, err := http.Get(u.String())
@@ -137,9 +130,9 @@ func downloadPackageList() ([]pkg, error) {
 			return nil, err
 		}
 
-		for _, c := range components {
+		for _, c := range config.Components {
 			u, err := url.Parse(aptRepo)
-			u.Path = path.Join(u.Path, "dists", dist, c, "binary-" + arch, "Packages.gz")
+			u.Path = path.Join(u.Path, "dists", dist, c, "binary-"+arch, "Packages.gz")
 			r, err := http.Get(u.String())
 			if err != nil {
 				return nil, err
@@ -151,7 +144,7 @@ func downloadPackageList() ([]pkg, error) {
 				return nil, err
 			}
 
-			f := path.Join(c, "binary-" + arch, "Packages.gz")
+			f := path.Join(c, "binary-"+arch, "Packages.gz")
 			l := regexp.MustCompile(`([0-9a-z]{64})\s+\d+\s+` + f)
 			m := l.FindStringSubmatch(string(b))
 
@@ -169,32 +162,32 @@ func downloadPackageList() ([]pkg, error) {
 				return nil, err
 			}
 
-			sep := regexp.MustCompile(`\n\n`)
-			for _, p := range sep.Split(string(d), -1) {
-				rec := regexp.MustCompile(`(?m)^(?:Package:|Filename:|SHA256:) (.*)$`)
-				m := rec.FindAllStringSubmatch(p, 3)
-				if m != nil {
-					pkgs[m[0][1]] = pkg{ m[1][1], m[2][1] }
+			for _, p := range strings.Split(string(d), "\n\n") {
+				rec := regexp.MustCompile(`(?m)^(?:Package:|Version:|Filename:|SHA256:) (.*)$`)
+				m := rec.FindAllStringSubmatch(p, 4)
+				if m == nil {
+					continue
+				}
+				pkgs[m[0][1]] = Lock{
+					Name:     m[0][1],
+					Version:  m[1][1],
+					Filename: m[2][1],
+					Hash:     m[3][1],
 				}
 			}
 		}
 	}
 
-	f, err := ioutil.ReadFile(packagesFile)
-	if err != nil {
-		return nil, err
-	}
-    var packages map[string][]string
-	if err := yaml.Unmarshal(f, &packages); err != nil {
-        return nil, err
-    }
-
-	list := []pkg{}
-	for _, name := range append(packages["all"], packages[arch]...) {
-		if pkg, ok := pkgs[name]; ok {
+	list := []Lock{}
+	for _, p := range config.Packages {
+		if pkg, ok := pkgs[p.Name]; ok {
 			list = append(list, pkg)
 		} else {
-			fmt.Printf("Package %s not found\n", name)
+			for _, a := range p.Arch {
+				if a == arch {
+					fmt.Printf("Package %s not found\n", p.Name)
+				}
+			}
 		}
 	}
 
@@ -212,8 +205,8 @@ func relativize(link, target, dir string, patterns []string) error {
 				if err := os.Remove(link); err != nil {
 					return err
 				}
-				relDir := ".." + strings.Repeat("/..", strings.Count(p, "/") - 1)
-				if err := os.Symlink(relDir + target, link); err != nil {
+				relDir := ".." + strings.Repeat("/..", strings.Count(p, "/")-1)
+				if err := os.Symlink(relDir+target, link); err != nil {
 					return err
 				}
 				return nil
@@ -223,7 +216,7 @@ func relativize(link, target, dir string, patterns []string) error {
 	return nil
 }
 
-func installSysroot(list []pkg, installDir string) error {
+func installSysroot(list []Lock, installDir, debsCache string) error {
 	if err := os.MkdirAll(debsCache, 0777); err != nil {
 		return err
 	}
@@ -245,13 +238,13 @@ func installSysroot(list []pkg, installDir string) error {
 	}
 
 	for _, pkg := range list {
-		filename := filepath.Base(pkg.name)
+		filename := filepath.Base(pkg.Filename)
 		deb := filepath.Join(debsCache, filename)
 		if _, err := os.Stat(deb); os.IsNotExist(err) {
 			fmt.Printf("Downloading %s...\n", filename)
 
 			u, err := url.Parse(aptRepo)
-			u.Path = path.Join(u.Path, pkg.name)
+			u.Path = path.Join(u.Path, pkg.Filename)
 			r, err := http.Get(u.String())
 			if err != nil {
 				return err
@@ -264,7 +257,7 @@ func installSysroot(list []pkg, installDir string) error {
 			}
 
 			sum := sha256.Sum256(buf)
-			if pkg.hash != hex.EncodeToString(sum[:]) {
+			if pkg.Hash != hex.EncodeToString(sum[:]) {
 				return fmt.Errorf("%s: checksum doesn't match", filename)
 			}
 
@@ -331,7 +324,7 @@ func installSysroot(list []pkg, installDir string) error {
 			if err != nil {
 				return err
 			}
-			if info.Mode() & os.ModeSymlink == os.ModeSymlink {
+			if info.Mode()&os.ModeSymlink == os.ModeSymlink {
 				target, err := os.Readlink(path)
 				if err != nil {
 					return err
@@ -361,8 +354,8 @@ func installSysroot(list []pkg, installDir string) error {
 
 	// Rewrite and relativize all linkerscripts.
 	linkerscripts := []string{
-        "usr/lib/*-linux-gnu/libpthread.so",
-        "usr/lib/*-linux-gnu/libc.so",
+		"usr/lib/*-linux-gnu/libpthread.so",
+		"usr/lib/*-linux-gnu/libc.so",
 	}
 	for _, l := range linkerscripts {
 		matches, err := filepath.Glob(filepath.Join(installDir, l))
@@ -374,7 +367,7 @@ func installSysroot(list []pkg, installDir string) error {
 			if err != nil {
 				return err
 			}
-			sub:= regexp.MustCompile(`(/usr)?/lib/[a-z0-9_]+-linux-gnu/`)
+			sub := regexp.MustCompile(`(/usr)?/lib/[a-z0-9_]+-linux-gnu/`)
 			contents := sub.ReplaceAllString(string(read), "")
 			if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
 				return err
@@ -389,33 +382,125 @@ func installSysroot(list []pkg, installDir string) error {
 	return nil
 }
 
-func main() {
-	flag.Parse()
+type updateCmd struct {
+	arch     string
+	config   string
+	lockfile string
+}
 
-	if _, err := os.Stat(keyRingFile); os.IsNotExist(err) {
-		log.Fatalf("keyring file '%s' missing", keyRingFile)
-	}
+func (*updateCmd) Name() string     { return "update" }
+func (*updateCmd) Synopsis() string { return "Update the lock file." }
+func (*updateCmd) Usage() string {
+	return `update [-arch] [-packages] [-list]:
+	Update the lock file to include specific package versions.
+`
+}
 
-	list, err := downloadPackageList()
+func (c *updateCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.arch, "arch", "amd64", "Target architecture")
+	f.StringVar(&c.config, "config", "packages.yml", "Package configuration")
+	f.StringVar(&c.lockfile, "lock", "packages.lock", "Lockfile filename")
+}
+
+func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	d, err := ioutil.ReadFile(c.config)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "failed to read config: %v\n", err)
+		return subcommands.ExitFailure
 	}
-	sort.Sort(pkgs(list))
-
-	if packageList != "" {
-		f, err := os.Create(packageList)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer f.Close()
-		w := bufio.NewWriter(f)
-		for _, pkg := range list {
-			fmt.Fprintf(w, "%s\n", strings.TrimPrefix(pkg.name, "pool/"))
-		}
-		w.Flush()
+	config := &Config{}
+	if err := yaml.Unmarshal(d, &config); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to unmarshal config: %v\n", err)
+		return subcommands.ExitFailure
 	}
 
-	if err := installSysroot(list, outDir); err != nil {
-		log.Fatal(err)
+	if _, err := os.Stat(config.Keyring); os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "keyring file '%s' missing\n", config.Keyring)
+		return subcommands.ExitUsageError
 	}
+
+	list, err := downloadPackageList(config, c.arch)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to download package list: %v\n", err)
+		return subcommands.ExitFailure
+	}
+	sort.Sort(Locks(list))
+
+	hash := sha256.New()
+	hash.Write(d)
+
+	pkgs := Lockfile{
+		Updated:  time.Now(),
+		Hash:     fmt.Sprintf("%x", hash.Sum(nil)),
+		Packages: list,
+	}
+
+	l, err := yaml.Marshal(&pkgs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to marshal lockfile: %v\n", err)
+		return subcommands.ExitFailure
+	}
+
+	if err := ioutil.WriteFile(c.lockfile, l, 0666); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write lockfile: %v\n", err)
+		return subcommands.ExitFailure
+	}
+
+	return subcommands.ExitSuccess
+}
+
+type installCmd struct {
+	arch      string
+	outDir    string
+	debsCache string
+}
+
+func (*installCmd) Name() string     { return "install" }
+func (*installCmd) Synopsis() string { return "Install packages" }
+func (*installCmd) Usage() string {
+	return `install [-out] [-cache] <lockfile>:
+  Install the specific versions from the lock file.
+`
+}
+
+func (c *installCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.outDir, "out", "sysroot", "Output directory")
+	f.StringVar(&c.debsCache, "cache", "debs", "Cache for .deb files")
+}
+
+func (c *installCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if len(f.Args()) != 1 {
+		fmt.Fprintln(os.Stderr, "missing lockfile argument")
+		return subcommands.ExitUsageError
+	}
+	lockfile := f.Args()[0]
+
+	d, err := ioutil.ReadFile(lockfile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to read lockfile: %v\n", err)
+		return subcommands.ExitFailure
+	}
+	var lock Lockfile
+	if err := yaml.Unmarshal(d, &lock); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to unmarshal lockfile: %v\n", err)
+		return subcommands.ExitFailure
+	}
+
+	if err := installSysroot(lock.Packages, c.outDir, c.debsCache); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to install sysroot: %v\n", err)
+		return subcommands.ExitFailure
+	}
+	return subcommands.ExitSuccess
+}
+
+func main() {
+	subcommands.Register(subcommands.HelpCommand(), "")
+	subcommands.Register(subcommands.FlagsCommand(), "")
+	subcommands.Register(subcommands.CommandsCommand(), "")
+	subcommands.Register(&updateCmd{}, "")
+	subcommands.Register(&installCmd{}, "")
+
+	flag.Parse()
+	ctx := context.Background()
+	os.Exit(int(subcommands.Execute(ctx)))
 }
