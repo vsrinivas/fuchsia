@@ -149,7 +149,8 @@ void trace_release_context(trace_context_t* context);
 //    currently registered observers.
 // 5. In response to observing the |ZX_EVENT_SIGNALED| signal, the trace observer
 //    first clears the |ZX_EVENT_SIGNALED| bit (using |zx_object_signal()| or equivalent)
-//    then adjusts its behavior as in step 2 and 3 above.
+//    then adjusts its behavior as in step 2 and 3 above, and then calls
+//    trace_notify_observer_updated().
 // 6. When no longer interested in receiving events, the trace observer calls
 //    |trace_unregister_observer()| to unregister itself then closes the event handle.
 //
@@ -163,6 +164,10 @@ zx_status_t trace_register_observer(zx_handle_t event);
 // Returns |ZX_OK| if successful.
 // Returns |ZX_ERR_NOT_FOUND| if the event was not previously registered.
 zx_status_t trace_unregister_observer(zx_handle_t event);
+
+// Callback to notify the engine that the observer has finished processing
+// all state changes.
+void trace_notify_observer_updated(zx_handle_t event);
 
 __END_CDECLS
 

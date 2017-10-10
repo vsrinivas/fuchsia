@@ -50,6 +50,9 @@ struct trace_handler_ops {
     // Called by instrumentation on any thread.  Must be thread-safe.
     bool (*is_category_enabled)(trace_handler_t* handler, const char* category);
 
+    // Called by the trace engine to indicate it has completed startup.
+    void (*trace_started)(trace_handler_t* handler);
+
     // Called by the trace engine when tracing has stopped.
     //
     // The trace collection status is |ZX_OK| if trace collection was successful.

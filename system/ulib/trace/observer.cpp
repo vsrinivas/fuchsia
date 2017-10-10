@@ -53,11 +53,18 @@ async_wait_result_t TraceObserver::Handle(async_t* async, zx_status_t status,
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT(signal->observed & ZX_EVENT_SIGNALED);
 
-    // Clear the signal before invoking the callback.
+    // Clear the signal otherwise we'll keep getting called.
+    // Clear the signal *before* invoking the callback because there's no
+    // synchronization between the engine and the observers, thus it's possible
+    // that an observer could get back to back notifications.
     event_.signal(ZX_EVENT_SIGNALED, 0u);
 
     // Invoke the callback.
     callback_();
+
+    // Tell engine we're done.
+    trace_notify_observer_updated(event_.get());
+
     return ASYNC_WAIT_AGAIN;
 }
 

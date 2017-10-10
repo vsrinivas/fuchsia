@@ -33,6 +33,7 @@ private:
 
     // |trace::TraceHandler|
     bool IsCategoryEnabled(const char* category) override;
+    void TraceStarted() override;
     void TraceStopped(async_t* async,
                       zx_status_t disposition, size_t buffer_bytes_written) override;
 

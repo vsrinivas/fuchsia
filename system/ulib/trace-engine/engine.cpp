@@ -56,7 +56,14 @@ trace_handler_t* g_handler{nullptr};
 // Trace observer table.
 // Rules:
 //   - can only be accessed or modified while holding g_engine_mutex
-fbl::Vector<zx_handle_t> g_observers;
+struct Observer {
+    // The event handle that we notify the observer through.
+    zx_handle_t event;
+    // Set to true when the observer has notified us it has updated its
+    // state after being notified tracing has started.
+    bool awaiting_update_after_start;
+};
+fbl::Vector<Observer> g_observers;
 
 // Trace context reference count.
 // This functions as a non-exclusive lock for the engine's trace context.
@@ -69,27 +76,31 @@ fbl::Vector<zx_handle_t> g_observers;
 //     (in other words, holding a context reference prevents the engine from stopping)
 fbl::atomic_uint32_t g_context_refs{0u};
 
-// Trace context released event.
-// Used by |trace_release_context()| to signal (with ZX_EVENT_SIGNALED) when
-// the trace context reference count has dropped to zero.
-// Rules:
-//   - can only be modified while holding g_engine_mutex and engine is stopped
-//   - can be read outside the lock while the engine is not stopped
-zx::event g_context_released_event;
-
 // Trace context.
 // Rules:
 //   - can only be modified while holding g_engine_mutex and engine is stopped
 //   - can be accessed outside the lock while holding a context reference
 trace_context_t* g_context{nullptr};
 
+// Event for tracking two things:
+// - when all observers has started
+//   (SIGNAL_ALL_OBSERVERS_STARTED)
+// - when the trace context reference count has dropped to zero
+//   (SIGNAL_CONTEXT_RELEASED)
+// Rules:
+//   - can only be modified while holding g_engine_mutex and engine is stopped
+//   - can be read outside the lock while the engine is not stopped
+zx::event g_event;
+constexpr zx_signals_t SIGNAL_ALL_OBSERVERS_STARTED = ZX_USER_SIGNAL_0;
+constexpr zx_signals_t SIGNAL_CONTEXT_RELEASED = ZX_USER_SIGNAL_1;
+
 // Asynchronous operations posted to the asynchronous dispatcher while the
 // engine is running.  Use of these structures is guarded by the engine lock.
-async_wait_t g_context_released_wait;
+async_wait_t g_event_wait;
 
-async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
-                                            zx_status_t status,
-                                            const zx_packet_signal_t* signal);
+async_wait_result_t handle_event(async_t* async, async_wait_t* wait,
+                                 zx_status_t status,
+                                 const zx_packet_signal_t* signal);
 
 // must hold g_engine_mutex
 inline void update_disposition_locked(zx_status_t disposition) {
@@ -98,10 +109,18 @@ inline void update_disposition_locked(zx_status_t disposition) {
 }
 
 void notify_observers_locked() {
-    for (zx_handle_t observer : g_observers) {
-        zx_status_t status = zx_object_signal(observer, 0u, ZX_EVENT_SIGNALED);
+    for (auto& observer : g_observers) {
+        zx_status_t status = zx_object_signal(observer.event, 0u, ZX_EVENT_SIGNALED);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
+}
+
+void notify_engine_all_observers_started_if_needed_locked() {
+    for (auto& item : g_observers) {
+        if (item.awaiting_update_after_start)
+            return;
+    }
+    g_event.signal(0u, SIGNAL_ALL_OBSERVERS_STARTED);
 }
 
 } // namespace
@@ -124,20 +143,21 @@ zx_status_t trace_start_engine(async_t* async,
         return ZX_ERR_BAD_STATE;
     ZX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) == 0u);
 
-    zx::event context_released_event;
-    zx_status_t status = zx::event::create(0u, &context_released_event);
+    zx::event event;
+    zx_status_t status = zx::event::create(0u, &event);
     if (status != ZX_OK)
         return status;
 
-    // Schedule a wait for the buffer to be released.
-    g_context_released_wait = {
+    // Schedule a waiter for |event|.
+    g_event_wait = {
         .state = {ASYNC_STATE_INIT},
-        .handler = &handle_context_released,
-        .object = context_released_event.get(),
-        .trigger = ZX_EVENT_SIGNALED,
+        .handler = &handle_event,
+        .object = event.get(),
+        .trigger = (SIGNAL_ALL_OBSERVERS_STARTED |
+                    SIGNAL_CONTEXT_RELEASED),
         .flags = ASYNC_FLAG_HANDLE_SHUTDOWN,
         .reserved = 0};
-    status = async_begin_wait(async, &g_context_released_wait);
+    status = async_begin_wait(async, &g_event_wait);
     if (status != ZX_OK)
         return status;
 
@@ -147,7 +167,7 @@ zx_status_t trace_start_engine(async_t* async,
     g_handler = handler;
     g_disposition = ZX_OK;
     g_context = new trace_context(buffer, buffer_num_bytes, handler);
-    g_context_released_event = fbl::move(context_released_event);
+    g_event = fbl::move(event);
 
     // Write the trace initialization record first before allowing clients to
     // get in and write their own trace records.
@@ -157,7 +177,14 @@ zx_status_t trace_start_engine(async_t* async,
     g_context_refs.store(1u, fbl::memory_order_release);
 
     // Notify observers that the state changed.
-    notify_observers_locked();
+    if (g_observers.is_empty()) {
+        g_event.signal(0u, SIGNAL_ALL_OBSERVERS_STARTED);
+    } else {
+        for (auto& observer : g_observers)
+            observer.awaiting_update_after_start = true;
+        notify_observers_locked();
+    }
+
     return ZX_OK;
 }
 
@@ -192,39 +219,56 @@ zx_status_t trace_stop_engine(zx_status_t disposition) {
 
 namespace {
 
-async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
-                                            zx_status_t status,
-                                            const zx_packet_signal_t* signal) {
-    // Handle the case where the asynchronous dispatcher is being shut down.
+// Handle status == ZX_ERR_CANCELED passed to handle_event().
+// Returns true if processing can continue (all holders of the trace context
+// have released it), false if not.
+// Upon a return of false callers are expected to shut down the trace engine,
+// i.e., return ASYNC_WAIT_FINISHED.
+
+bool handle_async_dispatcher_shutdown() {
+    // Stop the engine, in case it hasn't noticed yet.
+    trace_stop_engine(ZX_ERR_CANCELED);
+
+    // There may still be outstanding references to the trace context.
+    // We don't know when or whether they will be cleared but we can't complete
+    // shut down until they are gone since there might still be live pointers
+    // into the trace buffer so allow a brief timeout.  If the release event
+    // hasn't been signaled by then, declare the trace engine dead in the water
+    // to prevent dangling pointers.  This situations should be very rare as it
+    // only occurs when the asynchronous dispatcher is shutting down, typically
+    // just prior to process exit.
+    auto status = g_event.wait_one(
+        SIGNAL_CONTEXT_RELEASED,
+        zx_deadline_after(ZX_MSEC(kSynchronousShutdownTimeoutMilliseconds)),
+        nullptr);
     if (status != ZX_OK) {
-        ZX_DEBUG_ASSERT(status == ZX_ERR_CANCELED);
-
-        // Stop the engine, in case it hasn't noticed yet.
-        trace_stop_engine(ZX_ERR_CANCELED);
-
-        // There may still be outstanding references to the trace context.
-        // We don't know when or whether they will be cleared but we can't complete
-        // shut down until they are gone since there might still be live pointers
-        // into the trace buffer so allow a brief timeout.  If the release event
-        // hasn't been signaled by then, declare the trace engine dead in the water
-        // to prevent dangling pointers.  This situations should be very rare as it
-        // only occurs when the asynchronous dispatcher is shutting down, typically
-        // just prior to process exit.
-        status = g_context_released_event.wait_one(
-            ZX_EVENT_SIGNALED,
-            zx_deadline_after(ZX_MSEC(kSynchronousShutdownTimeoutMilliseconds)),
-            nullptr);
-        if (status != ZX_OK) {
-            // Uh oh.
-            printf("Timed out waiting for %u trace context references to be released "
-                   "after %u ms while the asynchronous dispatcher was shutting down.\n"
-                   "Tracing will no longer be available in this process.",
-                   g_context_refs.load(fbl::memory_order_relaxed),
-                   kSynchronousShutdownTimeoutMilliseconds);
-            return ASYNC_WAIT_FINISHED;
-        }
+        // Uh oh.
+        printf("Timed out waiting for %u trace context references to be released "
+               "after %u ms while the asynchronous dispatcher was shutting down.\n"
+               "Tracing will no longer be available in this process.",
+               g_context_refs.load(fbl::memory_order_relaxed),
+               kSynchronousShutdownTimeoutMilliseconds);
+        return false;
     }
 
+    return true;
+}
+
+void handle_all_observers_started() {
+    // TODO(TO-530): Allow indicating an observer failed to start.
+
+    // Clear the signal, otherwise we'll keep getting called.
+    g_event.signal(SIGNAL_ALL_OBSERVERS_STARTED, 0u);
+
+    // Note: There's no race in the use of |g_handler| here. If it will be set
+    // to NULL that will be done later (handle_context_released is called by
+    // handle_event after we are).
+    if (g_handler) {
+        g_handler->ops->trace_started(g_handler);
+    }
+}
+
+void handle_context_released(async_t* async) {
     // All ready to clean up.
     // Grab the mutex while modifying shared state.
     zx_status_t disposition;
@@ -248,7 +292,7 @@ async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
         g_async = nullptr;
         g_handler = nullptr;
         g_disposition = ZX_OK;
-        g_context_released_event.reset();
+        g_event.reset();
         delete g_context;
         g_context = nullptr;
 
@@ -258,7 +302,44 @@ async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
 
     // Notify the handler about the final disposition.
     handler->ops->trace_stopped(handler, async, disposition, buffer_bytes_written);
-    return ASYNC_WAIT_FINISHED;
+
+    // Note: There's no need to clear SIGNAL_CONTEXT_RELEASED as we're about
+    // to shutdown.
+}
+
+async_wait_result_t handle_event(async_t* async, async_wait_t* wait,
+                                 zx_status_t status,
+                                 const zx_packet_signal_t* signal) {
+    // Note: This function may get both SIGNAL_ALL_OBSERVERS_STARTED
+    // and SIGNAL_CONTEXT_RELEASED at the same time.
+
+    // Assume we want to wait for the next event.
+    async_wait_result_t result = ASYNC_WAIT_AGAIN;
+
+    // Handle the case where the asynchronous dispatcher is being shut down.
+    if (status != ZX_OK) {
+        ZX_DEBUG_ASSERT(status == ZX_ERR_CANCELED);
+        if (!handle_async_dispatcher_shutdown())
+            return ASYNC_WAIT_FINISHED;
+        // Still want to process SIGNAL_CONTEXT_RELEASED if present,
+        // so we don't return just yet.
+        result = ASYNC_WAIT_FINISHED;
+    }
+
+    // If async dispatcher is being shut down, ignore any started observers.
+    if (status == ZX_OK &&
+        (signal->observed & SIGNAL_ALL_OBSERVERS_STARTED)) {
+        handle_all_observers_started();
+    }
+
+    // Also cleanup if async dispatcher is being shut down.
+    if (status != ZX_OK ||
+        (signal->observed & SIGNAL_CONTEXT_RELEASED)) {
+        handle_context_released(async);
+        result = ASYNC_WAIT_FINISHED;
+    }
+
+    return result;
 }
 
 } // namespace
@@ -329,7 +410,7 @@ void trace_release_context(trace_context_t* context) {
     // contents may have changes from the perspective of other threads.
     if (unlikely(g_context_refs.fetch_sub(1u, fbl::memory_order_release) == 1u)) {
         // Notify the engine that the last reference was released.
-        zx_status_t status = g_context_released_event.signal(0u, ZX_EVENT_SIGNALED);
+        zx_status_t status = g_event.signal(0u, SIGNAL_CONTEXT_RELEASED);
         ZX_DEBUG_ASSERT(status == ZX_OK);
     }
 }
@@ -337,12 +418,12 @@ void trace_release_context(trace_context_t* context) {
 zx_status_t trace_register_observer(zx_handle_t event) {
     fbl::AutoLock lock(&g_engine_mutex);
 
-    for (auto item : g_observers) {
-        if (item == event)
+    for (const auto& item : g_observers) {
+        if (item.event == event)
             return ZX_ERR_INVALID_ARGS;
     }
 
-    g_observers.push_back(event);
+    g_observers.push_back(Observer{event,false});
     return ZX_OK;
 }
 
@@ -350,10 +431,28 @@ zx_status_t trace_unregister_observer(zx_handle_t event) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     for (size_t i = 0; i < g_observers.size(); i++) {
-        if (g_observers[i] == event) {
+        if (g_observers[i].event == event) {
+            bool awaited = g_observers[i].awaiting_update_after_start;
             g_observers.erase(i);
+            if (awaited) {
+                notify_engine_all_observers_started_if_needed_locked();
+            }
             return ZX_OK;
         }
     }
     return ZX_ERR_NOT_FOUND;
+}
+
+void trace_notify_observer_updated(zx_handle_t event) {
+    fbl::AutoLock lock(&g_engine_mutex);
+
+    for (auto& item : g_observers) {
+        if (item.event == event) {
+            if (item.awaiting_update_after_start) {
+                item.awaiting_update_after_start = false;
+                notify_engine_all_observers_started_if_needed_locked();
+            }
+            return;
+        }
+    }
 }

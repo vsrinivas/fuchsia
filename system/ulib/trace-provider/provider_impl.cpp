@@ -25,17 +25,12 @@ struct header_v0 {
     uint32_t flags;
 };
 
-struct header_v1 : header_v0 {
-    uint64_t id;
-};
-
 struct message {
     uint32_t size;
     uint32_t version;
 };
 
 // TraceProvider::Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories)
-//     => (bool success)
 struct start : message {
     uint32_t buffer; // handle<vmo>
     uint32_t fence; // handle<eventpair>
@@ -51,11 +46,6 @@ struct string_entry {
     uint32_t entry_length; // not including any padding
     uint32_t string_length; // Note: there is no trailing NUL
     char text[];
-};
-
-struct start_reply : message {
-    uint8_t success; // bool, least significant bit
-    uint8_t padding[7];
 };
 
 // TraceRegistry::RegisterTraceProvider(TraceProvider provider, string? label)
@@ -76,19 +66,16 @@ TraceProviderImpl::TraceProviderImpl(async_t* async, zx::channel channel)
 
 TraceProviderImpl::~TraceProviderImpl() = default;
 
-bool TraceProviderImpl::Start(zx::vmo buffer, zx::eventpair fence,
+void TraceProviderImpl::Start(zx::vmo buffer, zx::eventpair fence,
                               fbl::Vector<fbl::String> enabled_categories) {
     if (running_)
-        return false;
+        return;
 
     zx_status_t status = TraceHandlerImpl::StartEngine(
         async_, fbl::move(buffer), fbl::move(fence),
         fbl::move(enabled_categories));
-    if (status != ZX_OK)
-        return false;
-
-    running_ = true;
-    return true;
+    if (status == ZX_OK)
+        running_ = true;
 }
 
 void TraceProviderImpl::Stop() {
@@ -160,13 +147,6 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     if (h0->size < sizeof(header_v0) || h0->size > num_bytes)
         return false;
 
-    const header_v1* h1 = nullptr;
-    if (h0->version >= 1) {
-        if (h0->size < sizeof(header_v1))
-            return false;
-        h1 = static_cast<const header_v1*>(h0);
-    }
-
     num_bytes -= h0->size;
     if (num_bytes < sizeof(message))
         return false;
@@ -180,11 +160,8 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     switch (h0->ordinal) {
     case 0: {
         // TraceProvider::Start(handle<vmo> buffer, handle<eventpair> fence,
-        //     array<string> categories) => (bool success)
-        if (!h1) // request id only present in v1 and beyond
-            return false;
-        if (!(h1->flags & 1)) // expects response
-            return false;
+        //     array<string> categories)
+        // Note: There is no response so may be a version 0 packet.
         if (num_bytes < sizeof(start))
             return false;
         const start* s = static_cast<const start*>(m);
@@ -222,27 +199,14 @@ bool TraceProviderImpl::Connection::ReadMessage() {
             enabled_categories.push_back(fbl::String(str->text, str->string_length));
         }
 
-        bool success = impl_->Start(
+        impl_->Start(
             zx::vmo(fbl::move(handles[s->buffer])),
             zx::eventpair(fbl::move(handles[s->fence])),
             fbl::move(enabled_categories));
 
-        // Send reply.
-        struct {
-            header_v1 h;
-            start_reply m;
-        } reply = {};
-        reply.h.size = 24;
-        reply.h.version = 1;
-        reply.h.ordinal = 0;
-        reply.h.flags = 2;
-        reply.h.id = h1->id;
-        reply.m.size = 16;
-        reply.m.version = 0;
-        reply.m.success = success ? 1 : 0;
-        status = channel_.write(0u, &reply, sizeof(reply), nullptr, 0u);
-        if (status != ZX_OK)
-            return false;
+        // The provider hasn't necessarily started yet. We've just asked it
+        // to. It will tell the trace manager directly via |fence| when it
+        // is ready. If Start() failed then |fence| will have been closed.
         return true;
     }
     case 1:

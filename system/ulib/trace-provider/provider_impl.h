@@ -43,7 +43,7 @@ private:
         async::Wait wait_;
     };
 
-    bool Start(zx::vmo buffer, zx::eventpair fence,
+    void Start(zx::vmo buffer, zx::eventpair fence,
                fbl::Vector<fbl::String> enabled_categories);
     void Stop();
 

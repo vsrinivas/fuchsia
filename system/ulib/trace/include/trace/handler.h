@@ -35,6 +35,9 @@ public:
     // Called by instrumentation on any thread.  Must be thread-safe.
     virtual bool IsCategoryEnabled(const char* category) { return true; }
 
+    // Called by the trace engine to indicate it has completed startup.
+    virtual void TraceStarted() {}
+
     // Called by the trace engine when tracing has stopped.
     //
     // The trace collection status is |ZX_OK| if trace collection was successful.
@@ -51,6 +54,7 @@ public:
 
 private:
     static bool CallIsCategoryEnabled(trace_handler_t* handler, const char* category);
+    static void CallTraceStarted(trace_handler_t* handler);
     static void CallTraceStopped(trace_handler_t* handler, async_t* async,
                                  zx_status_t disposition, size_t buffer_bytes_written);
 
