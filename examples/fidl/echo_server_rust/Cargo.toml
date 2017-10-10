@@ -11,7 +11,7 @@ description = "Example of an echo server Fuchsia app in Rust"
 
 [dependencies]
 futures = "0.1.15"
-tokio-core = "0.1.9"
+tokio-core = "0.1"
 
 [profile.release]
 panic = 'abort'

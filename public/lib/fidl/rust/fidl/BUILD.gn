@@ -11,6 +11,7 @@ rust_library("fidl") {
     "//third_party/rust-crates:byteorder-0.5.3",
     "//third_party/rust-crates:futures-0.1.16",
     "//third_party/rust-mirrors/tokio-core",
+    "//third_party/rust-mirrors/mio",
   ]
 
   with_tests = true

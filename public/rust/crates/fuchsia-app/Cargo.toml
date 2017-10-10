@@ -11,4 +11,4 @@ description = "Library for managing Fuchsia applications and services"
 
 [dependencies]
 futures = "0.1.15"
-tokio-core = "0.1.9"
+tokio-core = "0.1"

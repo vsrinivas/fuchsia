@@ -12,6 +12,7 @@ rust_binary("echo_server_rust_bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/crates/fuchsia-app",
     "//third_party/rust-crates:futures-0.1.16",
+    "//third_party/rust-mirrors/mio",
     "//third_party/rust-mirrors/tokio-core",
   ]
 }

@@ -29,7 +29,7 @@ def make_crate(output, gen_dir, inputs, srcroot, dep_inputs):
   cargo_f.write('\n')
   cargo_f.write('[dependencies]\n')
   cargo_f.write('futures = "0.1"\n')
-  cargo_f.write('tokio-core = "0.1.9"\n')
+  cargo_f.write('tokio-core = "0.1"\n')
 
   lib_fn = os.path.join(cargo_toml_dir, 'src', 'lib.rs')
   src_f = file(lib_fn, 'w')
