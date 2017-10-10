@@ -11,7 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/amber/publish"
+	"amber/publish"
+
 	"fuchsia.googlesource.com/pm/build"
 )
 

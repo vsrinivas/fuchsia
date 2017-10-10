@@ -18,7 +18,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"fuchsia.googlesource.com/amber/daemon"
+	"amber/daemon"
+
 	tuf "github.com/flynn/go-tuf/client"
 	"github.com/flynn/go-tuf/data"
 )

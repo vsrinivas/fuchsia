@@ -6,11 +6,12 @@ import("//build/go/go_binary.gni")
 import("//packages/package.gni")
 
 go_binary("amber") {
-  gopackage = "fuchsia.googlesource.com/amber/cmd/amber"
+  gopackage = "amber/cmd/amber"
 
   go_dependencies = [
     {
-      package = "fuchsia.googlesource.com/amber"
+      package = "amber"
+      source = "//garnet/go/src/amber"
     },
     {
       package = "golang.org/x/crypto"
@@ -31,10 +32,6 @@ go_binary("amber") {
     {
       source = "//third_party/golibs/github.com/golang/snappy"
       package = "github.com/golang/snappy"
-    },
-    {
-      source = "//garnet/go/src/netstack"
-      package = "fuchsia.googlesource.com/netstack"
     }
   ]
 }
@@ -51,11 +48,12 @@ package("amber_package") {
 }
 
 go_binary("amber-publish") {
-  gopackage = "fuchsia.googlesource.com/amber/cmd/publish"
+  gopackage = "amber/cmd/publish"
 
   go_dependencies = [
     {
-      package = "fuchsia.googlesource.com/amber"
+      package = "amber"
+      source = "//garnet/go/src/amber"
     },
     {
       source = "//apps/pm"
