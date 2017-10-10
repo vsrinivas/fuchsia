@@ -90,6 +90,9 @@ ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, 
 // mapped address if this function succeeds.
 zx_status_t usb_request_mmap(usb_request_t* req, void** data);
 
+// Looks up the physical pages backing this request's vm object.
+zx_status_t usb_request_physmap(usb_request_t* req);
+
 // usb_request_release() frees the message data -- should be called only by the entity that allocated it
 void usb_request_release(usb_request_t* req);
 

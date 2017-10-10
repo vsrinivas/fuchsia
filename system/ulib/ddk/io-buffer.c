@@ -9,6 +9,7 @@
 #include <zircon/syscalls.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_handle, size_t size,
                                          zx_off_t offset, uint32_t flags) {
@@ -151,9 +152,43 @@ void io_buffer_release(io_buffer_t* buffer) {
         zx_handle_close(buffer->vmo_handle);
         buffer->vmo_handle = ZX_HANDLE_INVALID;
     }
+    free(buffer->phys_list);
+    buffer->phys_list = NULL;
+    buffer->phys_count = 0;
 }
 
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const zx_off_t offset, const size_t size) {
     return zx_vmo_op_range(buffer->vmo_handle, op, offset, size, NULL, 0);
+}
+
+zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
+    if (buffer->phys_count > 0) {
+        return ZX_OK;
+    }
+    if (buffer->size == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // ZX_VMO_OP_LOOKUP returns whole pages, so take into account unaligned vmo
+    // offset and length when calculating the amount of pages returned
+    uint64_t page_offset = ROUNDDOWN(buffer->offset, PAGE_SIZE);
+    uint64_t page_length = buffer->size + (buffer->offset - page_offset);
+    uint64_t pages = ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
+
+    zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
+    if (paddrs == NULL) {
+        dprintf(ERROR, "io_buffer: out of memory\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+    zx_status_t status = io_buffer_physmap_range(buffer, page_offset, page_length,
+                                                 pages, paddrs);
+
+    if (status != ZX_OK) {
+        free(paddrs);
+        return status;
+    }
+    buffer->phys_list = paddrs;
+    buffer->phys_count = pages;
+    return ZX_OK;
 }

@@ -89,6 +89,10 @@ zx_status_t usb_request_mmap(usb_request_t* req, void** data) {
     return ZX_OK;
 }
 
+zx_status_t usb_request_physmap(usb_request_t* req) {
+    return io_buffer_physmap(&req->buffer);
+}
+
 void usb_request_release(usb_request_t* req) {
     if (req->release_cb) {
         req->release_cb(req);

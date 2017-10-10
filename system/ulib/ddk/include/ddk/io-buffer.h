@@ -19,7 +19,15 @@ typedef struct {
     size_t size;
     zx_off_t offset;
     void* virt;
+    // Points to the physical page backing the start of the VMO.
     zx_paddr_t phys;
+
+    // This is used for storing the addresses of the physical pages backing non
+    // contiguous buffers and is set by io_buffer_physmap().
+    // Each entry in the list represents a whole page and the first entry
+    // points to the page containing 'offset'.
+    zx_paddr_t* phys_list;
+    uint64_t phys_count;
 } io_buffer_t;
 
 enum {
@@ -47,6 +55,12 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
 
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const zx_off_t offset, const size_t size);
+
+// Looks up the physical pages backing this buffer's vm object.
+// This is used for non contiguous buffers.
+// The 'phys_list' and 'phys_count' fields are set if this function succeeds.
+zx_status_t io_buffer_physmap(io_buffer_t* buffer);
+
 // Releases an io_buffer
 void io_buffer_release(io_buffer_t* buffer);
 
@@ -62,8 +76,9 @@ static inline zx_paddr_t io_buffer_phys(io_buffer_t* buffer) {
     return buffer->phys + buffer->offset;
 }
 
-static inline zx_paddr_t io_buffer_physmap(io_buffer_t* buffer, zx_off_t offset, size_t length,
-                                           size_t phys_count, zx_paddr_t* physmap) {
+static inline zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
+                                                  size_t length, size_t phys_count,
+                                                  zx_paddr_t* physmap) {
     return zx_vmo_op_range(buffer->vmo_handle, ZX_VMO_OP_LOOKUP, offset, length,
                            physmap, phys_count * sizeof(*physmap));
 }

@@ -282,8 +282,8 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         off_t offset = 0;
         for (uint32_t i = 0; i < scratch_pad_bufs; i++) {
             zx_paddr_t scratch_pad_phys;
-            result = io_buffer_physmap(&xhci->scratch_pad_pages_buffer, offset, PAGE_SIZE,
-                                       sizeof(scratch_pad_phys), &scratch_pad_phys);
+            result = io_buffer_physmap_range(&xhci->scratch_pad_pages_buffer, offset, PAGE_SIZE,
+                                             sizeof(scratch_pad_phys), &scratch_pad_phys);
             if (result != ZX_OK) {
                 dprintf(ERROR, "io_buffer_physmap failed for xhci->scratch_pad_pages_buffer\n");
                 goto fail;
