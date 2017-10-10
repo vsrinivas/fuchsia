@@ -61,6 +61,17 @@ SECTIONS
         *(.rodata* .gnu.linkonce.r.*)
     }
 
+    .init_array : ALIGN(8) {
+        __init_array_start = .;
+        KEEP(*(.init_array .ctors))
+        __init_array_end = .;
+    }
+    .fini_array : ALIGN(8) {
+        __fini_array_start = .;
+        KEEP(*(.fini_array .dtors))
+        __fini_array_end = .;
+    }
+
     /*
      * Any read-only data "orphan" sections will be inserted here.
      * Ideally we'd put those into the .rodata output section, but
@@ -79,17 +90,6 @@ SECTIONS
         __rodata_end = .;
         __data_start = .;
         *(.data .data.* .gnu.linkonce.d.*)
-    }
-
-    .init_array : ALIGN(4) {
-        __init_array_start = .;
-        KEEP(*(.init_array .ctors))
-        __init_array_end = .;
-    }
-    .fini_array : ALIGN(4) {
-        __fini_array_start = .;
-        KEEP(*(.fini_array .dtors))
-        __fini_array_end = .;
     }
 
     /*
