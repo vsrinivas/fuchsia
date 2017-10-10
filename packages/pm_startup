@@ -1,0 +1,8 @@
+{
+    "resources": [
+        {
+            "bootfs_path": "data/bootstrap/pmd.config",
+            "file": "garnet/go/src/pm/startup.config"
+        }
+    ]
+}

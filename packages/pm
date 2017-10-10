@@ -1,0 +1,15 @@
+{
+    "languages": [
+        "go"
+    ],
+    "labels": [
+        "//garnet/go/src/pm:pm",
+        "//garnet/go/src/pm:pm(//build/toolchain:host_x64)"
+    ],
+    "binaries": [
+        {
+            "binary": "pm",
+            "bootfs_path": "apps/pm"
+        }
+    ]
+}

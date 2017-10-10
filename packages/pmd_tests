@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//garnet/go/src/pm:pkgfs_test"
+    ],
+    "binaries": [
+        {
+            "binary": "pkgfs_test",
+            "bootfs_path": "test/pkgfs_test"
+        }
+    ]
+}

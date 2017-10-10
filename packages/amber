@@ -1,0 +1,21 @@
+{
+    "languages": [
+        "go"
+    ],
+    "labels": [
+        "//garnet/go/src/amber:amber",
+        "//garnet/go/src/amber:amber-keys",
+        "//garnet/go/src/amber:amber-srv-keys",
+        "//garnet/go/src/amber:amber-publish(//build/toolchain:host_x64)"
+    ],
+    "binaries": [
+        {
+            "binary": "amber",
+            "bootfs_path": "apps/amber"
+        },
+        {
+            "binary": "amber-keys",
+            "bootfs_path": "data/amber/keys"
+        }
+    ]
+}
