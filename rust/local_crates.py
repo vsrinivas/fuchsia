@@ -35,7 +35,7 @@ RUST_CRATES = {
             "target": "//third_party/rust-mirrors/mio",
         },
         "tokio-core": {
-            "version": "0.1.9",
+            "version": "0.1.10",
             "path": "third_party/rust-mirrors/tokio-core",
             "target": "//third_party/rust-mirrors/tokio-core",
         },

@@ -8,5 +8,6 @@ rust_library("tokio-core") {
   deps = [
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
+    "//third_party/rust-mirrors/mio",
   ]
 }
