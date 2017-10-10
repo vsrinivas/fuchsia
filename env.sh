@@ -33,7 +33,6 @@ esac
 
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
-export QEMU_DIR="${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/qemu/bin"
 export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
 function __netaddr() {
@@ -266,8 +265,10 @@ END
 function zrun() {
   zcheck || return 1
 
+  local qemu_dir="${QEMU_DIR:-${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/qemu/bin}"
+
   "${FUCHSIA_DIR}/zircon/scripts/run-zircon" -o "${ZIRCON_BUILD_DIR}" -a "${ZIRCON_ARCH}" \
-    -q "${QEMU_DIR}" $@
+    -q "${qemu_dir}" "$@"
 }
 
 ### zsymbolize: symbolizes stack traces
