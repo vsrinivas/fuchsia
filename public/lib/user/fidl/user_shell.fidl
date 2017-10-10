@@ -14,6 +14,7 @@ import "lib/agent/fidl/agent_provider.fidl";
 import "lib/auth/fidl/account/account.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/story/fidl/story_provider.fidl";
+import "lib/ui/presentation/fidl/presentation.fidl";
 import "lib/user/fidl/focus.fidl";
 
 // This interface is implemented by a User Shell. Dependencies are
@@ -27,6 +28,10 @@ interface UserShell {
   Terminate();
 };
 
+// This interface allows the |UserShell| to request capabilities from the
+// |UserRunner| in a way that is more explicit about the services that are
+// offered than a generic |ServiceProvider|.
+//
 // TODO(jwnichols): This includes both |maxwell.IntelligenceServices| and
 // access to the services that it provides. Consider removing the direct
 // access to the contained services.
@@ -43,6 +48,7 @@ interface UserShellContext {
   GetFocusProvider(FocusProvider& request);
   GetIntelligenceServices(maxwell.IntelligenceServices& request);
   GetLink(Link& request);
+  GetPresentation(mozart.Presentation& presentation);
   GetProposalPublisher(maxwell.ProposalPublisher& request);
   GetStoryProvider(StoryProvider& request);
   GetSuggestionProvider(maxwell.SuggestionProvider& request);

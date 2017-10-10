@@ -421,6 +421,11 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   user_shell_link_->Connect(std::move(request));
 }
 
+void UserRunnerImpl::GetPresentation(
+    fidl::InterfaceRequest<mozart::Presentation> request) {
+  user_context_->GetPresentation(std::move(request));
+}
+
 void UserRunnerImpl::GetProposalPublisher(
     fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
   intelligence_services_->GetProposalPublisher(std::move(request));

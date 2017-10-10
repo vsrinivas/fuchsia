@@ -15,6 +15,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/presentation/fidl/presenter.fidl.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -60,8 +61,9 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   }
 
   // |DeviceShell|
-  void Initialize(fidl::InterfaceHandle<modular::DeviceShellContext>
-                      device_shell_context) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::DeviceShellContext> device_shell_context,
+      modular::DeviceShellParamsPtr device_shell_params) override {
     device_shell_context_.Bind(std::move(device_shell_context));
     device_shell_context_->GetUserProvider(user_provider_.NewRequest());
 

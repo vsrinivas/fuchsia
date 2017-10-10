@@ -244,14 +244,18 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
+    fidl::InterfaceHandle<mozart::Presentation> presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     if (!settings_.test) {
       app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
-          std::move(root_view));
+          std::move(root_view), presentation.NewRequest());
     }
 
+    // Populate parameters and initialize the device shell.
+    auto params = DeviceShellParams::New();
+    params->presentation = std::move(presentation);
     device_shell_->primary_service()->Initialize(
-        device_shell_context_binding_.NewBinding());
+        device_shell_context_binding_.NewBinding(), std::move(params));
 
     // 2. Wait for persistent data to come up.
     if (!settings_.no_minfs) {

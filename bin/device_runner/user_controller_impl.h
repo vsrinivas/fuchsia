@@ -44,6 +44,7 @@ class UserControllerImpl : UserController, UserContext {
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceHandle<app::ServiceProvider> device_shell_services,
       fidl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
 
@@ -58,6 +59,10 @@ class UserControllerImpl : UserController, UserContext {
   // |UserContext|
   void Logout() override;
 
+  // |UserContext|
+  void GetPresentation(
+      fidl::InterfaceRequest<mozart::Presentation> presentation) override;
+
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<UserRunner>> user_runner_;
 
@@ -67,6 +72,9 @@ class UserControllerImpl : UserController, UserContext {
   fidl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
 
   std::vector<LogoutCallback> logout_response_callbacks_;
+
+  app::ServiceProviderPtr device_shell_services_;
+
   DoneCallback done_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserControllerImpl);

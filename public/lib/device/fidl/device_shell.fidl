@@ -5,11 +5,14 @@
 module modular;
 
 import "lib/device/fidl/user_provider.fidl";
+import "lib/ui/presentation/fidl/presentation.fidl";
+import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is implemented by a device shell application.
 [ServiceName="modular.DeviceShell"]
 interface DeviceShell {
-  Initialize(DeviceShellContext device_shell_context);
+  Initialize(DeviceShellContext device_shell_context,
+             DeviceShellParams device_shell_params);
 
   // This method may be invoked by the device runner in reaction to an
   // invocation of DeviceShellContext.Shutdown(), or because of some other
@@ -27,11 +30,19 @@ interface DeviceShell {
                            AuthenticationContext& request);
 };
 
+// This interface allows the |DeviceShell| to request capabilities from the
+// |DeviceRunner| in a way that is more explicit about the services that are
+// offered than a generic |ServiceProvider|.
 interface DeviceShellContext {
   GetUserProvider(UserProvider& request);
 
   // This requests the shutdown of the device.
   Shutdown();
+};
+
+// These params are passed to |DeviceShell.Initialize|.
+struct DeviceShellParams {
+  mozart.Presentation presentation;
 };
 
 // This interface is implemented by device shell. It is used to notify the

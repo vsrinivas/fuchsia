@@ -4,6 +4,7 @@
 
 module modular;
 
+import "lib/app/fidl/service_provider.fidl";
 import "lib/auth/fidl/account/account.fidl";
 import "lib/config/fidl/config.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
@@ -52,6 +53,10 @@ struct UserLoginParams {
   // |view_owner| is the view given to the |UserShell| started for the newly
   // logged-in user.
   mozart.ViewOwner& view_owner;
+
+  // Services provided by the |DeviceShell| that can be offered to the
+  // |UserShell| that is being logged into.
+  app.ServiceProvider? services;
 
   // If login fails, |user_controller| is closed.
   UserController& user_controller;

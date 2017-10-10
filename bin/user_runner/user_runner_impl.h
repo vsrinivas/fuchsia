@@ -21,6 +21,7 @@
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "lib/ui/presentation/fidl/presentation.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
@@ -84,6 +85,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   void GetIntelligenceServices(
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
   void GetLink(fidl::InterfaceRequest<Link> request) override;
+  void GetPresentation(
+      fidl::InterfaceRequest<mozart::Presentation> request) override;
   void GetProposalPublisher(
       fidl::InterfaceRequest<maxwell::ProposalPublisher> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;

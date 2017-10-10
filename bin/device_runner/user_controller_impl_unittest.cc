@@ -36,8 +36,8 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   UserControllerImpl impl(
       &launcher, app_config.Clone(), app_config.Clone(), app_config.Clone(),
       std::move(token_provider_factory_ptr), nullptr /* account */,
-      nullptr /* view_owner_request */, user_controller_ptr.NewRequest(),
-      nullptr /* done_callback */);
+      nullptr /* view_owner_request */, nullptr /* device_shell_services */,
+      user_controller_ptr.NewRequest(), nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }

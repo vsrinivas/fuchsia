@@ -8,6 +8,7 @@ import "peridot/bin/ledger/fidl/internal.fidl";
 import "lib/auth/fidl/account_provider.fidl";
 import "lib/auth/fidl/account/account.fidl";
 import "lib/config/fidl/config.fidl";
+import "lib/ui/presentation/fidl/presentation.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // The device_runner application (there is no |DeviceRunner| service) requests
@@ -33,4 +34,6 @@ interface UserRunner {
 interface UserContext {
   // See detailed comments in UserShellContext.Logout().
   Logout();
+
+  GetPresentation(mozart.Presentation& presentation);
 };

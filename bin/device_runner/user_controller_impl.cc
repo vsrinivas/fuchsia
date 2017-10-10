@@ -22,10 +22,15 @@ UserControllerImpl::UserControllerImpl(
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    fidl::InterfaceHandle<app::ServiceProvider> device_shell_services,
     fidl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
+      device_shell_services_(device_shell_services
+                                 ? app::ServiceProviderPtr::Create(
+                                       std::move(device_shell_services))
+                                 : nullptr),
       done_(std::move(done)) {
   // 0. Generate the path to map '/data' for the user runner we are starting.
   std::string data_origin;
@@ -79,6 +84,15 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
         [](UserWatcher* watcher) { watcher->OnLogout(); });
     done_(this);
   });
+}
+
+// |UserContext|
+void UserControllerImpl::GetPresentation(
+    fidl::InterfaceRequest<mozart::Presentation> presentation) {
+  if (device_shell_services_) {
+    device_shell_services_->ConnectToService("mozart.Presentation",
+                                             presentation.PassChannel());
+  }
 }
 
 // |UserController|
