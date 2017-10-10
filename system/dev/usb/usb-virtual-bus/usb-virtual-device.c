@@ -81,12 +81,17 @@ usb_dci_protocol_ops_t virt_device_dci_protocol = {
     .ep_clear_stall = device_ep_clear_stall,
 };
 
+static usb_mode_t virt_device_get_initial_mode(void* ctx) {
+    return USB_MODE_NONE;
+}
+
 static zx_status_t virt_device_set_mode(void* ctx, usb_mode_t mode) {
     usb_virtual_device_t* device = ctx;
     return usb_virtual_bus_set_mode(device->bus, mode);
 }
 
 usb_mode_switch_protocol_ops_t virt_device_ums_protocol = {
+    .get_initial_mode = virt_device_get_initial_mode,
     .set_mode = virt_device_set_mode,
 };
 

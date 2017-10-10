@@ -8,6 +8,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-dci.h>
+#include <ddk/protocol/usb-mode-switch.h>
 #include <zircon/device/usb-device.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -78,10 +79,11 @@ typedef struct {
     zx_device_t* xhci_dev;
     zx_device_t* parent;
     platform_device_protocol_t pdev;
+    usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
     pdev_mmio_buffer_t mmio;
 
-    usb_mode_t mode;
+    usb_mode_t usb_mode;
 
     // event stuff
     io_buffer_t event_buffer;

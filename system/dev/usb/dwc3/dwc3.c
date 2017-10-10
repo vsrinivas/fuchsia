@@ -6,7 +6,6 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/usb-function.h>
-#include <ddk/protocol/usb-mode-switch.h>
 #include <hw/reg.h>
 #include <pretty/hexdump.h>
 
@@ -268,6 +267,11 @@ usb_dci_protocol_ops_t dwc_dci_protocol = {
     .ep_clear_stall = dwc3_clear_stall,
 };
 
+static usb_mode_t dwc3_get_initial_mode(void* ctx) {
+    dwc3_t* dwc = ctx;
+    return usb_mode_switch_get_initial_mode(&dwc->ums);
+}
+
 static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     dwc3_t* dwc = ctx;
     zx_status_t status = ZX_OK;
@@ -275,12 +279,12 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     if (mode == USB_MODE_OTG) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (dwc->mode == mode) {
+    if (dwc->usb_mode == mode) {
         return ZX_OK;
     }
 
     // Shutdown if we are in device mode
-    if (dwc->mode == USB_MODE_DEVICE) {
+    if (dwc->usb_mode == USB_MODE_DEVICE) {
         dwc3_events_stop(dwc);
         zx_handle_close(dwc->irq_handle);
         dwc->irq_handle = ZX_HANDLE_INVALID;
@@ -292,15 +296,9 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         dwc3_start_host_mode(dwc);
     }
 
-    // Tell platform bus to switch mode, if applicable
-    usb_mode_switch_protocol_t ums;
-    bool have_pdev_protocol = (pdev_get_protocol(&dwc->pdev, ZX_PROTOCOL_USB_MODE_SWITCH, &ums)
-                               == ZX_OK);
-    if (have_pdev_protocol) {
-        status = usb_mode_switch_set_mode(&ums, mode);
-        if (status != ZX_OK) {
-            goto fail;
-        }
+    status = usb_mode_switch_set_mode(&dwc->ums, mode);
+    if (status != ZX_OK) {
+        goto fail;
     }
 
     if (mode == USB_MODE_DEVICE) {
@@ -313,19 +311,18 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
         dwc3_start_peripheral_mode(dwc);
     }
 
-    dwc->mode = mode;
+    dwc->usb_mode = mode;
     return ZX_OK;
 
 fail:
-    if (have_pdev_protocol) {
-        usb_mode_switch_set_mode(&ums, USB_MODE_NONE);
-    }
-    dwc->mode = USB_MODE_NONE;
+    usb_mode_switch_set_mode(&dwc->ums, USB_MODE_NONE);
+    dwc->usb_mode = USB_MODE_NONE;
 
     return status;
 }
 
 usb_mode_switch_protocol_ops_t dwc_ums_protocol = {
+    .get_initial_mode = dwc3_get_initial_mode,
     .set_mode = dwc3_set_mode,
 };
 
@@ -409,6 +406,11 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
         goto fail;
     }
 
+    status = pdev_get_protocol(&dwc->pdev, ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
     mtx_init(&dwc->lock, mtx_plain);
 
     for (unsigned i = 0; i < countof(dwc->eps); i++) {
@@ -418,7 +420,7 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
         list_initialize(&ep->queued_txns);
     }
     dwc->parent = parent;
-    dwc->mode = USB_MODE_NONE;
+    dwc->usb_mode = USB_MODE_NONE;
 
     status = pdev_map_mmio_buffer(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &dwc->mmio);

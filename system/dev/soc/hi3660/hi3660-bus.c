@@ -99,6 +99,10 @@ static gpio_protocol_ops_t gpio_ops = {
     .int_clear = hi3660_gpio_int_clear,
 };
 
+static usb_mode_t hi3660_get_initial_mode(void* ctx) {
+    return USB_MODE_DEVICE;
+}
+
 static zx_status_t hi3660_set_mode(void* ctx, usb_mode_t mode) {
     hi3660_bus_t* bus = ctx;
 
@@ -110,6 +114,7 @@ static zx_status_t hi3660_set_mode(void* ctx, usb_mode_t mode) {
 }
 
 usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
+    .get_initial_mode = hi3660_get_initial_mode,
     .set_mode = hi3660_set_mode,
 };
 
