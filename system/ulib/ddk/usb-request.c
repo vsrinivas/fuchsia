@@ -137,7 +137,7 @@ static void converted_iotxn_complete(iotxn_t* txn, void* cookie) {
 zx_status_t usb_request_to_iotxn(usb_request_t* req, iotxn_t** out) {
     iotxn_t* txn;
     zx_status_t status = iotxn_alloc_vmo(&txn, 0, req->buffer.vmo_handle,
-                                         req->buffer.offset, req->buffer.size);
+                                         req->buffer.offset, req->header.length);
     if (status != ZX_OK) {
         return status;
     }
