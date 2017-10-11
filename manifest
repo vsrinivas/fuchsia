@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <projects>
+    <project name="zircon"
+             path="zircon"
+             remote="https://fuchsia.googlesource.com/zircon"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             githooks="manifest/git-hooks"/>
+    <project name="zircon/benchmarks"
+             path="zircon/benchmarks"
+             remote="https://fuchsia.googlesource.com/magenta/benchmarks"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             githooks="manifest/git-hooks"/>
+    <project name="third_party/benchmark"
+             path="third_party/benchmark"
+             remote="https://fuchsia.googlesource.com/third_party/benchmark"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             githooks="manifest/git-hooks"/>
+    <project name="third_party/gflags"
+             path="third_party/gflags"
+             remote="https://fuchsia.googlesource.com/third_party/gflags"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             githooks="manifest/git-hooks"/>
+  </projects>
+  <hooks>
+    <hook name="download-toolchain"
+          project="zircon"
+          action="scripts/download-toolchain"/>
+  </hooks>
+</manifest>
