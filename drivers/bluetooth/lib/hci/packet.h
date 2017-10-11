@@ -6,10 +6,8 @@
 
 #include <memory>
 
-#include <fbl/intrusive_double_list.h>
-
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/intrusive_pointer_traits.h"
+#include "garnet/drivers/bluetooth/lib/common/linked_list.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -89,11 +87,11 @@ namespace hci {
 //
 //   Packet is NOT thread-safe without external locking.
 
-// PacketBase provides the basic view and fbl::DoublyLinkedList functionality of
-// a Packet. Intended to be inherited by the Packet template and all of its
-// specializations.
+// PacketBase provides basic view functionality and intrusively
+// linked-listability. Intended to be inherited by the Packet template and all
+// of its specializations.
 template <typename HeaderType, typename T>
-class PacketBase : public fbl::DoublyLinkedListable<std::unique_ptr<T>> {
+class PacketBase : public common::LinkedListable<T> {
  public:
   virtual ~PacketBase() = default;
 

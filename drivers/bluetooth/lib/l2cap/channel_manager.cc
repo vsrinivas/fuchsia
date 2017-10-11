@@ -103,10 +103,9 @@ void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
   // ChannelManager::Register() above).
 
   if (iter == ll_map_.end()) {
-    pp_iter =
-        pending_packets_
-            .emplace(handle, fbl::DoublyLinkedList<hci::ACLDataPacketPtr>())
-            .first;
+    pp_iter = pending_packets_
+                  .emplace(handle, common::LinkedList<hci::ACLDataPacket>())
+                  .first;
   } else {
     pp_iter = pending_packets_.find(handle);
   }

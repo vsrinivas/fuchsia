@@ -152,9 +152,8 @@ bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet,
   return true;
 }
 
-bool ACLDataChannel::SendPackets(
-    fbl::DoublyLinkedList<ACLDataPacketPtr> packets,
-    Connection::LinkType ll_type) {
+bool ACLDataChannel::SendPackets(common::LinkedList<ACLDataPacket> packets,
+                                 Connection::LinkType ll_type) {
   if (!is_initialized_) {
     FXL_VLOG(1)
         << "hci: ACLDataChannel: Cannot send packets while uninitialized";

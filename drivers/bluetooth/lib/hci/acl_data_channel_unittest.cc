@@ -490,10 +490,10 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsFailure) {
 
   // Empty packet list.
   EXPECT_FALSE(acl_data_channel()->SendPackets(
-      fbl::DoublyLinkedList<ACLDataPacketPtr>(), Connection::LinkType::kACL));
+      common::LinkedList<ACLDataPacket>(), Connection::LinkType::kACL));
 
   // Packet exceeds MTU
-  fbl::DoublyLinkedList<ACLDataPacketPtr> packets;
+  common::LinkedList<ACLDataPacket> packets;
   packets.push_back(
       ACLDataPacket::New(0x0001, ACLPacketBoundaryFlag::kFirstNonFlushable,
                          ACLBroadcastFlag::kPointToPoint, kMaxMTU + 1));
@@ -530,7 +530,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPackets) {
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
-  fbl::DoublyLinkedList<ACLDataPacketPtr> packets;
+  common::LinkedList<ACLDataPacket> packets;
   for (int i = 1; i <= kExpectedPacketCount; ++i) {
     auto packet =
         ACLDataPacket::New(1, ACLPacketBoundaryFlag::kFirstNonFlushable,
@@ -567,7 +567,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
 
   // Each thread will send a sequence of kPacketsPerThread packets. The payload
   // of each packet encodes an integer
-  fbl::DoublyLinkedList<ACLDataPacketPtr> packets[kThreadCount];
+  common::LinkedList<ACLDataPacket> packets[kThreadCount];
   for (size_t i = 0; i < kThreadCount; ++i) {
     for (size_t j = 1; j <= kPacketsPerThread; ++j) {
       auto packet =

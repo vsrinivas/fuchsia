@@ -122,7 +122,7 @@ class ChannelManager final {
   // been created.
   using PendingPacketMap =
       std::unordered_map<hci::ConnectionHandle,
-                         fbl::DoublyLinkedList<hci::ACLDataPacketPtr>>;
+                         common::LinkedList<hci::ACLDataPacket>>;
   PendingPacketMap pending_packets_ __TA_GUARDED(mtx_);
 
   common::CancelableCallbackFactory<void()> cancelable_callback_factory_;

@@ -118,7 +118,7 @@ class ACLDataChannel final {
   //
   // Takes ownership of the contents of |packets|. Returns false if |packets|
   // contains an element that exceeds the MTU for |ll_type| or it is empty.
-  bool SendPackets(fbl::DoublyLinkedList<ACLDataPacketPtr> packets,
+  bool SendPackets(common::LinkedList<ACLDataPacket> packets,
                    Connection::LinkType ll_type);
 
   // Returns the underlying channel handle.

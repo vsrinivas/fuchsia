@@ -24,7 +24,7 @@ namespace l2cap {
 // Recombiner or Fragmenter.
 //
 // A PDU instance is light-weight (it consists of a single unique_ptr via
-// fbl::DoublyLinkedList and a size_t field) and can be passed around by value.
+// common::LinkedList and a size_t field) and can be passed around by value.
 // As the PDU uniquely owns its chain of fragments, a PDU is move-only.
 //
 // THREAD-SAFETY:
@@ -33,7 +33,7 @@ namespace l2cap {
 // instance will be accessed on multiple threads.
 class PDU final {
  public:
-  using FragmentList = fbl::DoublyLinkedList<hci::ACLDataPacketPtr>;
+  using FragmentList = common::LinkedList<hci::ACLDataPacket>;
 
   // Reader allows sequential access to the payload of a (B-frame) PDU using no
   // dynamic allocations and as little copying as possible.
