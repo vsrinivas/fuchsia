@@ -17,6 +17,9 @@
 #include <string.h>
 #include <zircon/types.h>
 
+
+extern int __code_start;
+
 #define DLOG_SIZE (128u * 1024u)
 #define DLOG_MASK (DLOG_SIZE - 1u)
 
@@ -330,9 +333,8 @@ void dlog_bluescreen_init(void) {
 
     // Log the ELF build ID in the format the symbolizer scripts understand.
     if (version.elf_build_id[0] != '\0') {
-        vaddr_t base = KERNEL_BASE + KERNEL_LOAD_OFFSET;
         dprintf(INFO, "dso: id=%s base=%#lx name=zircon.elf\n",
-                version.elf_build_id, base);
+                version.elf_build_id, (uintptr_t)&__code_start);
     }
 }
 
