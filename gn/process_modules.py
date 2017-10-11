@@ -97,9 +97,6 @@ def detect_duplicate_keys(pairs):
 
 
 def resolve_imports(import_queue, build_root):
-    # Hack: Add cpp manifest until we derive runtime information from the
-    # package configs themselves.
-    import_queue.append('packages/gn/cpp')
     imported = set(import_queue)
     amalgamation = Amalgamation()
     amalgamation.build_root = build_root
@@ -122,15 +119,20 @@ def resolve_imports(import_queue, build_root):
     return amalgamation
 
 
-def write_manifest(manifest, files, autorun=None):
-    manifest_dir = os.path.dirname(manifest)
-    if not os.path.exists(manifest_dir):
-        os.makedirs(manifest_dir)
-    with open(manifest, "w") as manifest_file:
-        for f in files:
-            manifest_file.write("%s=%s\n" % (f["bootfs_path"], f["file"]))
-        if autorun:
-            manifest_file.write("autorun=%s\n" % autorun)
+def manifest_contents(files, autorun=None):
+    return ''.join("%s=%s\n" % (f["bootfs_path"], f["file"]) for f in files)
+
+
+def update_file(file, contents):
+    if os.path.exists(file) and os.path.getsize(file) == len(contents):
+        with open(file, 'r') as f:
+            if f.read() == contents:
+                return
+    dir = os.path.dirname(file)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    with open(file, 'w') as f:
+        f.write(contents)
 
 
 def main():
@@ -152,10 +154,15 @@ def main():
     if not amalgamation:
         return 1
 
-    write_manifest(args.boot_manifest, amalgamation.boot.files)
-    write_manifest(args.system_manifest, amalgamation.system.files, autorun=args.autorun)
+    update_file(args.boot_manifest, manifest_contents(amalgamation.boot.files))
 
-    if args.depfile != "":
+    system_manifest_contents = manifest_contents(amalgamation.system.files)
+    if args.autorun:
+        system_manifest_contents += "autorun=%s\n" % autorun
+    update_file(args.system_manifest, system_manifest_contents)
+
+
+    if args.depfile:
         with open(args.depfile, "w") as f:
             f.write("user.bootfs: ")
             f.write(args.boot_manifest + " " + args.system_manifest)
@@ -164,12 +171,12 @@ def main():
             for resource in amalgamation.resources:
                 f.write(" " + resource)
 
-    if args.component_index != "":
-        with open(args.component_index, "w") as f:
-            json.dump(amalgamation.component_urls, f)
+    if args.component_index:
+        update_file(args.component_index,
+                    json.dumps(amalgamation.component_urls, sort_keys=True))
 
-    with open(args.packages, "w") as f:
-        f.write("\n".join(amalgamation.packages))
+    update_file(args.packages, '\n'.join(amalgamation.packages) + '\n')
+
     sys.stdout.write("\n".join(amalgamation.deps))
     sys.stdout.write("\n")
     return 0
