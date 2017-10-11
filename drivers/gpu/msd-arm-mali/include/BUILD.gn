@@ -9,6 +9,7 @@ config("msd_include_config") {
 source_set("include") {
   public_configs = [ ":msd_include_config" ]
   sources = [
+    "magma_arm_mali_types.h",
     "magma_vendor_queries.h",
   ]
   public_deps = [
