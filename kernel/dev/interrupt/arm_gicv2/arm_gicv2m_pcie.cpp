@@ -53,6 +53,24 @@ public:
 };
 
 static void arm_gicv2_pcie_init(mdi_node_ref_t* node, uint level) {
+    bool msi = false;
+
+    if (level != LK_INIT_LEVEL_PLATFORM)
+        return;
+
+    mdi_node_ref_t child;
+    mdi_each_child(node, &child) {
+        switch (mdi_id(&child)) {
+        case MDI_ARM_GIC_V2_USE_MSI:
+            mdi_node_boolean(&child, &msi);
+            break;
+        }
+    }
+    if (!msi)
+        return;
+
+    dprintf(SPEW, "GICv2 MSI init\n");
+
     /* Initialize the MSI allocator */
     zx_status_t res = arm_gicv2m_msi_init();
     if (res != ZX_OK)
@@ -69,6 +87,6 @@ static void arm_gicv2_pcie_init(mdi_node_ref_t* node, uint level) {
     }
 }
 
-LK_PDEV_INIT(arm_gicv2_pcie_init, MDI_ARM_GIC_V2_PCIE, arm_gicv2_pcie_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(arm_gicv2_pcie_init, MDI_ARM_GIC_V2, arm_gicv2_pcie_init, LK_INIT_LEVEL_PLATFORM);
 
 #endif  // if WITH_DEV_PCIE

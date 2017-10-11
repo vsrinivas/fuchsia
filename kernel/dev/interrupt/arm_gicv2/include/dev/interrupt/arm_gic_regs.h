@@ -53,6 +53,18 @@ extern uint64_t arm_gicv2_gicc_offset;
 #define GICD_CPENDSGIR(n)       (GICD_OFFSET + 0xf10 + (n) * 4)
 #define GICD_SPENDSGIR(n)       (GICD_OFFSET + 0xf20 + (n) * 4)
 
+#define GICD_CIDR0              (GICD_OFFSET + 0xff0)
+#define GICD_CIDR1              (GICD_OFFSET + 0xff4)
+#define GICD_CIDR2              (GICD_OFFSET + 0xff8)
+#define GICD_CIDR3              (GICD_OFFSET + 0xffc)
+#define GICD_PIDR0              (GICD_OFFSET + 0xfe0)
+#define GICD_PIDR1              (GICD_OFFSET + 0xfe4)
+#define GICD_PIDR2              (GICD_OFFSET + 0xfe8)
+#define GICD_PIDR3              (GICD_OFFSET + 0xfec)
+
+/* we might need to check that we're not a gic v3, in which case look for the v3 PIDR2 reg */
+#define GICD_V3_PIDR2           (GICD_OFFSET + 0xffe8)
+
 #define MAX_INT 1024
 #define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))
 #define GIC_REG_COUNT(bit_per_reg) DIV_ROUND_UP(MAX_INT, (bit_per_reg))

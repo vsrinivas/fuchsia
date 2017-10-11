@@ -117,12 +117,13 @@ static void gic_init_percpu_early(void)
     gic_write_igrpen(1);
 }
 
-static void gic_init(void)
+static zx_status_t gic_init(void)
 {
     LTRACE_ENTRY;
 
-    __UNUSED uint rev = (GICREG(0, GICD_PIDR2) >> 4) & 0xf;
-    assert(rev == 3 || rev == 4);
+    uint rev = (GICREG(0, GICD_PIDR2) >> 4) & 0xf;
+    if (rev != 3 && rev != 4)
+        return ZX_ERR_NOT_FOUND;
 
     uint32_t typer = GICREG(0, GICD_TYPER);
     uint32_t idbits = BITS_SHIFT(typer, 23, 19);
@@ -159,6 +160,8 @@ static void gic_init(void)
 
     mb();
     ISB;
+
+    return ZX_OK;
 }
 
 static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
@@ -384,6 +387,7 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     bool got_gicr_offset = false;
     bool got_gicr_stride = false;
     bool got_ipi_base = false;
+    bool optional = false;
 
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
@@ -402,6 +406,9 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
             break;
         case MDI_ARM_GIC_V3_IPI_BASE:
             got_ipi_base = !mdi_node_uint32(&child, &ipi_base);
+            break;
+        case MDI_ARM_GIC_V3_OPTIONAL:
+            mdi_node_boolean(&child, &optional);
             break;
         }
     }
@@ -430,7 +437,17 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
 
     arm_gicv3_gic_base = (uint64_t)gic_base_virt;
 
-    gic_init();
+    if (gic_init() != ZX_OK) {
+        if (optional) {
+            // failed to detect gic v3 but it's marked optional. continue
+            return;
+        }
+        printf("GICv3: failed to detect GICv3, interrupts will be broken\n");
+        return;
+    }
+
+    dprintf(SPEW, "detected GICv3\n");
+
     pdev_register_interrupts(&gic_ops);
 
     register_int_handler(MP_IPI_GENERIC + ipi_base, &arm_ipi_generic_handler, 0);

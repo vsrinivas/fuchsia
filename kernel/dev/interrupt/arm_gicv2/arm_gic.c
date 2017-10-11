@@ -46,7 +46,7 @@ static uint32_t ipi_base = 0;
 
 uint max_irqs = 0;
 
-static void arm_gic_init(void);
+static zx_status_t arm_gic_init(void);
 
 static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
@@ -117,9 +117,28 @@ static int arm_gic_max_cpu(void)
     return (GICREG(0, GICD_TYPER) >> 5) & 0x7;
 }
 
-static void arm_gic_init(void)
+static zx_status_t arm_gic_init(void)
 {
     uint i;
+
+    // see if we're gic v2
+    uint rev = 0;
+    uint32_t pidr2 = GICREG(0, GICD_PIDR2);
+    if (pidr2 != 0) {
+        uint rev = BITS_SHIFT(pidr2, 7, 4);
+        if (rev != 2) {
+            return ZX_ERR_NOT_FOUND;
+        }
+    } else {
+        // some v2's return a null PIDR2
+        pidr2 = GICREG(0, GICD_V3_PIDR2);
+        rev = BITS_SHIFT(pidr2, 7, 4);
+        if (rev >= 3) {
+            // looks like a gic v3
+            return ZX_ERR_NOT_FOUND;
+        }
+        // HACK: if gicv2 and v3 pidr2 seems to be blank, assume we're v2 and continue
+    }
 
     max_irqs = ((GICREG(0, GICD_TYPER) & 0x1F) + 1) * 32;
     LTRACEF("arm_gic_init max_irqs: %u\n", max_irqs);
@@ -143,6 +162,8 @@ static void arm_gic_init(void)
     GICREG(0, GICD_CTLR) = 1; // enable GIC0
 
     gic_init_percpu_early();
+
+    return ZX_OK;
 }
 
 static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
@@ -335,6 +356,9 @@ static const struct pdev_interrupt_ops gic_ops = {
 };
 
 static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
+    if (level != LK_INIT_LEVEL_PLATFORM_EARLY)
+        return;
+
     uint64_t gic_base_virt = 0;
     uint64_t msi_frame_phys = 0;
     uint64_t msi_frame_virt = 0;
@@ -343,6 +367,7 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     bool got_gicd_offset = false;
     bool got_gicc_offset = false;
     bool got_ipi_base = false;
+    bool optional = false;
 
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
@@ -364,6 +389,9 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
             break;
         case MDI_ARM_GIC_V2_MSI_FRAME_VIRT:
             mdi_node_uint64(&child, &msi_frame_virt);
+            break;
+        case MDI_ARM_GIC_V2_OPTIONAL:
+            mdi_node_boolean(&child, &optional);
             break;
         }
     }
@@ -391,7 +419,16 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
 
     arm_gicv2_gic_base = (uint64_t)(gic_base_virt);
 
-    arm_gic_init();
+    if (arm_gic_init() != ZX_OK) {
+        if (optional) {
+            // failed to detect gic v2 but it's marked optional. continue
+            return;
+        }
+        printf("GICv3: failed to detect GICv2, interrupts will be broken\n");
+        return;
+    }
+
+    dprintf(SPEW, "detected GICv2\n");
 
     // pass the list of physical and virtual addresses for the GICv2m register apertures
     if (msi_frame_phys && msi_frame_virt) {

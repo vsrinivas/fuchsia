@@ -19,6 +19,7 @@ function HELP {
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme), default is ahci"
     echo "-g                   : use graphical console"
+    echo "-G <version>         : use GIC v2 or v3"
     echo "-I <interface name>  : network interface name, default is qemu."
     echo "-k                   : use KVM"
     echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
@@ -52,6 +53,7 @@ DISK=0
 DISKFILE="blk.bin"
 DISKTYPE=
 BUILDDIR=
+GIC=0
 GRAPHICS=0
 DO_KVM=0
 LTO=0
@@ -74,7 +76,7 @@ else
   IFNAME="qemu"
 fi
 
-while getopts "Aa:bc:CdD:gI:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
+while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
     case $FLAG in
         A) ASAN=1;;
         a) ARCH=$OPTARG;;
@@ -84,6 +86,7 @@ while getopts "Aa:bc:CdD:gI:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
         d) DISK=1;;
         D) DISKFILE=$OPTARG;;
         g) GRAPHICS=1;;
+        G) GIC=$OPTARG;;
         I) IFNAME=$OPTARG;;
         k) DO_KVM=1;;
         L) LTO=1;;
@@ -311,11 +314,20 @@ fi
 case $ARCH in
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
-        ARGS+=" -machine virt -kernel $BUILDDIR/zircon.elf"
+        ARGS+=" -kernel $BUILDDIR/zircon.elf"
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
+          if [[ $GIC == 0 ]]; then
+            # if the gic isn't overridden, default to 'host'
+            GIC=host
+          fi
         else
           ARGS+=" -machine virtualization=true -cpu cortex-a53"
+        fi
+        ARGS+=" -machine virt"
+        # append a gic version to the machine specifier
+        if [[ $GIC != 0 ]]; then
+            ARGS+=",gic_version=${GIC}"
         fi
         ;;
     x86-64)

@@ -14,6 +14,17 @@ kernel = {
         base-phys = 0x09000000
         irq = 33
     }
+    // qemu optionally implements either gic v3 or v2
+    // put both devices here and mark them optional
+    arm-gic-v3 = {
+        base-virt = 0xffffffffc8000000
+        base-phys = 0x08000000
+        gicd-offset = 0x00000
+        gicr-offset = 0xa0000
+        gicr-stride = 0x20000
+        ipi-base = 13
+        optional = true
+    }
     arm-gic-v2 = {
         base-virt = 0xffffffffc8000000
         base-phys = 0x08000000
@@ -22,6 +33,8 @@ kernel = {
         ipi-base = 13
         msi-frame-phys = 0x08020000
         msi-frame-virt = 0xffffffffc8020000
+        optional = true
+        msi = true
     }
     arm-psci = {
         use-hvc = true
@@ -29,5 +42,4 @@ kernel = {
     arm-timer = {
         irq-virt = 27
     }
-    arm-gic-v2-pcie = {}
 }

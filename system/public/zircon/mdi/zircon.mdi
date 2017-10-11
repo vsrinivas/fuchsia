@@ -36,6 +36,7 @@ uint64  kernel.arm-gic-v3.gicd-offset     MDI_ARM_GIC_V3_GICD_OFFSET            
 uint64  kernel.arm-gic-v3.gicr-offset     MDI_ARM_GIC_V3_GICR_OFFSET            1012
 uint64  kernel.arm-gic-v3.gicr-stride     MDI_ARM_GIC_V3_GICR_STRIDE            1013
 uint32  kernel.arm-gic-v3.ipi-base        MDI_ARM_GIC_V3_IPI_BASE               1014
+boolean kernel.arm-gic-v3.optional        MDI_ARM_GIC_V3_OPTIONAL               1015
 
 // ARM generic timer driver
 list    kernel.arm-timer                  MDI_ARM_TIMER                         1030
@@ -58,9 +59,8 @@ uint64  kernel.arm-gic-v2.gicc-offset     MDI_ARM_GIC_V2_GICC_OFFSET            
 uint32  kernel.arm-gic-v2.ipi-base        MDI_ARM_GIC_V2_IPI_BASE               1073
 uint64  kernel.arm-gic-v2.msi-frame-phys  MDI_ARM_GIC_V2_MSI_FRAME_PHYS         1074
 uint64  kernel.arm-gic-v2.msi-frame-virt  MDI_ARM_GIC_V2_MSI_FRAME_VIRT         1075
-
-// ARM gicv2 pcie support
-list    kernel.arm-gic-v2-pcie            MDI_ARM_GIC_V2_PCIE                   1080
+boolean kernel.arm-gic-v2.optional        MDI_ARM_GIC_V2_OPTIONAL               1076
+boolean kernel.arm-gic-v2.msi             MDI_ARM_GIC_V2_USE_MSI                1077
 
 // AmLogic S905
 list    kernel.s905-uart                  MDI_S905_UART                         1090
