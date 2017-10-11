@@ -93,7 +93,8 @@ void initialize_status(const char* name, size_t size) {
     }
 
     char path[PATH_MAX];
-    memcpy(path, name, strnlen(name, PATH_MAX));
+    strncpy(path, name, PATH_MAX);
+    path[PATH_MAX - 1] = '\0';
     log("Transfer starts   [%5.1f MB]   %s/%s%s%s (%zu bytes)",
         (float)size / 1024.0 / 1024.0,
         dirname(path), ANSI(GREEN), basename(path), ANSI(RESET), size);
