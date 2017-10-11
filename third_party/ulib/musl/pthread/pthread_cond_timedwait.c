@@ -38,7 +38,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
         (m->_m_lock & PTHREAD_MUTEX_OWNED_LOCK_MASK) != __thread_get_tid())
         return EPERM;
 
-    if (ts && ts->tv_nsec >= 1000000000UL)
+    if (ts && (ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000L))
         return EINVAL;
 
     lock(&c->_c_lock);

@@ -165,7 +165,7 @@ long sysconf(int name) {
             [_SC_THREAD_ROBUST_PRIO_PROTECT] = -1,
     };
 
-    if (name >= sizeof(values) / sizeof(values[0]) || !values[name]) {
+    if (name < 0 || (size_t)name >= sizeof(values) / sizeof(values[0]) || !values[name]) {
         errno = EINVAL;
         return -1;
     } else if (values[name] >= -1) {

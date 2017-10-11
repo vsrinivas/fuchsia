@@ -2,7 +2,7 @@
 #include "pthread_impl.h"
 
 struct instance {
-    atomic_int count;
+    atomic_uint count;
     atomic_int last;
     atomic_int waiters;
     atomic_int finished;

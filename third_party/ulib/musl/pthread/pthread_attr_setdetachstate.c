@@ -1,7 +1,8 @@
 #include "pthread_impl.h"
 
 int pthread_attr_setdetachstate(pthread_attr_t* a, int state) {
-    if (state > 1U)
+    if (state != PTHREAD_CREATE_DETACHED &&
+        state != PTHREAD_CREATE_JOINABLE)
         return EINVAL;
     a->_a_detach = state;
     return 0;

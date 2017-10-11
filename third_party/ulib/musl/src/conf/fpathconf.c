@@ -24,7 +24,7 @@ long fpathconf(int fd, int name) {
                                    [_PC_ALLOC_SIZE_MIN] = 4096,
                                    [_PC_SYMLINK_MAX] = SYMLINK_MAX,
                                    [_PC_2_SYMLINKS] = 1};
-    if (name >= sizeof(values) / sizeof(values[0])) {
+    if (name < 0 || (size_t)name >= sizeof(values) / sizeof(values[0])) {
         errno = EINVAL;
         return -1;
     }
