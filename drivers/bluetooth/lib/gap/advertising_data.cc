@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <endian.h>
-
 #include "advertising_data.h"
+
+#include <type_traits>
+
+#include <endian.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
@@ -12,15 +14,16 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/utf_codecs.h"
 
-// A |TypeConverter| that will create a |fidl::Array<unsigned char>| containing
-// a copy of of the contents of an |ByteBuffer|, copying the memory directly. If
-// the input array is empty, the array will be empty. Used by
-// Array<uint8_t>::From() in AsLEAdvertisingData()
-template <>
-struct fidl::TypeConverter<fidl::Array<unsigned char>,
-                           bluetooth::common::ByteBuffer> {
-  static fidl::Array<unsigned char> Convert(
-      const bluetooth::common::ByteBuffer& input) {
+// A partial fidl::TypeConverter template specialization for copying the
+// contents of a type that derives from common::ByteBuffer into a
+// fidl::Array<unsigned char>. If the input array is empty, the output array
+// will be empty. Used by Array<uint8_t>::From() in AsLEAdvertisingData()
+template <typename T>
+struct fidl::TypeConverter<fidl::Array<unsigned char>, T> {
+  static fidl::Array<unsigned char> Convert(const T& input) {
+    static_assert(std::is_base_of<::bluetooth::common::ByteBuffer, T>::value,
+                  "");
+
     Array<unsigned char> result = Array<unsigned char>::New(input.size());
     memcpy(result.data(), input.data(), input.size());
     return result;
@@ -271,12 +274,12 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
 
   for (const auto& pair : manufacturer_data_) {
     fidl_data->manufacturer_specific_data.insert(
-        pair.first, fidl::Array<unsigned char>::From(*pair.second));
+        pair.first, fidl::Array<unsigned char>::From(pair.second));
   }
 
   for (const auto& pair : service_data_) {
     fidl_data->service_data.insert(
-        pair.first.ToString(), fidl::Array<unsigned char>::From(*pair.second));
+        pair.first.ToString(), fidl::Array<unsigned char>::From(pair.second));
   }
 
   for (const auto& uuid : service_uuids_) {
@@ -346,9 +349,8 @@ const std::unordered_set<common::UUID>& AdvertisingData::service_uuids() const {
 
 void AdvertisingData::SetServiceData(const common::UUID& uuid,
                                      const common::ByteBuffer& data) {
-  std::unique_ptr<common::DynamicByteBuffer> srv_data(
-      new common::DynamicByteBuffer(data.size()));
-  data.Copy(srv_data.get());
+  common::DynamicByteBuffer srv_data(data.size());
+  data.Copy(&srv_data);
   service_data_[uuid] = std::move(srv_data);
 }
 
@@ -363,16 +365,16 @@ const std::unordered_set<common::UUID> AdvertisingData::service_data_uuids()
 
 const common::BufferView AdvertisingData::service_data(
     const common::UUID& uuid) const {
-  if (service_data_.count(uuid) == 0)
+  auto iter = service_data_.find(uuid);
+  if (iter == service_data_.end())
     return common::BufferView();
-  return common::BufferView(*service_data_.at(uuid));
+  return common::BufferView(iter->second);
 }
 
 void AdvertisingData::SetManufacturerData(const uint16_t company_id,
                                           const common::BufferView& data) {
-  std::unique_ptr<common::DynamicByteBuffer> manuf_data(
-      new common::DynamicByteBuffer(data.size()));
-  data.Copy(manuf_data.get());
+  common::DynamicByteBuffer manuf_data(data.size());
+  data.Copy(&manuf_data);
   manufacturer_data_[company_id] = std::move(manuf_data);
 }
 
@@ -387,9 +389,10 @@ const std::unordered_set<uint16_t> AdvertisingData::manufacturer_data_ids()
 
 const common::BufferView AdvertisingData::manufacturer_data(
     const uint16_t company_id) const {
-  if (manufacturer_data_.count(company_id) == 0)
+  auto iter = manufacturer_data_.find(company_id);
+  if (iter == manufacturer_data_.end())
     return common::BufferView();
-  return common::BufferView(*manufacturer_data_.at(company_id));
+  return common::BufferView(iter->second);
 }
 
 void AdvertisingData::SetTxPower(int8_t dbm) {
@@ -432,12 +435,12 @@ size_t AdvertisingData::CalculateBlockSize() const {
   if (local_name_) len += 2 + local_name_->size();
 
   for (const auto& manuf_pair : manufacturer_data_) {
-    len += 2 + 2 + manuf_pair.second->size();
+    len += 2 + 2 + manuf_pair.second.size();
   }
 
   for (const auto& service_data_pair : service_data_) {
     len += 2 + service_data_pair.first.CompactSize() +
-           service_data_pair.second->size();
+           service_data_pair.second.size();
   }
 
   for (const auto& uri : uris_) {
@@ -502,18 +505,18 @@ bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
   }
 
   for (const auto& manuf_pair : manufacturer_data_) {
-    size_t data_size = manuf_pair.second->size();
+    size_t data_size = manuf_pair.second.size();
     (*buffer)[pos++] = 1 + 2 + data_size;  // 1 for type, 2 for Manuf. Code
     (*buffer)[pos++] =
         static_cast<uint8_t>(DataType::kManufacturerSpecificData);
     pos += BufferWrite(buffer, pos, manuf_pair.first);
-    buffer->Write(*manuf_pair.second, pos);
+    buffer->Write(manuf_pair.second, pos);
     pos += data_size;
   }
 
   for (const auto& service_data_pair : service_data_) {
     size_t uuid_size = service_data_pair.first.CompactSize();
-    (*buffer)[pos++] = 1 + uuid_size + service_data_pair.second->size();
+    (*buffer)[pos++] = 1 + uuid_size + service_data_pair.second.size();
     switch (uuid_size) {
       case 2:
         (*buffer)[pos++] = static_cast<uint8_t>(DataType::kServiceData16Bit);
@@ -527,8 +530,8 @@ bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
     };
     auto target = buffer->mutable_view(pos);
     pos += service_data_pair.first.ToBytes(&target);
-    buffer->Write(*service_data_pair.second, pos);
-    pos += service_data_pair.second->size();
+    buffer->Write(service_data_pair.second, pos);
+    pos += service_data_pair.second.size();
   }
 
   for (const auto& uri : uris_) {

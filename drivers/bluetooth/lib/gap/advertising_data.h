@@ -127,16 +127,16 @@ class AdvertisingData {
   ::btfidl::low_energy::AdvertisingDataPtr AsLEAdvertisingData() const;
 
  private:
+  // TODO(armansito): Consider storing the payload in its serialized form and
+  // have these point into the structure (see NET-209).
   common::Optional<std::string> local_name_;
   common::Optional<int8_t> tx_power_;
   common::Optional<uint16_t> appearance_;
 
   std::unordered_set<common::UUID> service_uuids_;
 
-  std::unordered_map<uint16_t, std::unique_ptr<common::ByteBuffer>>
-      manufacturer_data_;
-  std::unordered_map<common::UUID, std::unique_ptr<common::ByteBuffer>>
-      service_data_;
+  std::unordered_map<uint16_t, common::DynamicByteBuffer> manufacturer_data_;
+  std::unordered_map<common::UUID, common::DynamicByteBuffer> service_data_;
 
   std::vector<std::string> uris_;
 };
