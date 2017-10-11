@@ -71,9 +71,7 @@ zx_status_t AudioInput::Initalize() {
 }
 
 AudioInput::~AudioInput() {
-  if (state_ != State::kUninitialized) {
-    Stop();
-  }
+  Stop();
 }
 
 std::vector<std::unique_ptr<media::StreamTypeSet>>
@@ -150,19 +148,16 @@ void AudioInput::Start() {
 }
 
 void AudioInput::Stop() {
-  FXL_DCHECK(state_ != State::kUninitialized);
-
   if (state_ != State::kStarted) {
     return;
   }
 
-  state_ = State::kStopping;
+  // Tell the worker thread to stop.
+  state_ = State::kStopped;
 
   if (worker_thread_.joinable()) {
     worker_thread_.join();
   }
-
-  FXL_DCHECK(state_ == State::kStopped);
 }
 
 bool AudioInput::can_accept_allocator() const {
@@ -176,17 +171,17 @@ void AudioInput::set_allocator(std::shared_ptr<PayloadAllocator> allocator) {
 void AudioInput::SetDownstreamDemand(Demand demand) {}
 
 void AudioInput::Worker() {
-  FXL_DCHECK((state_ == State::kStarted) || (state_ == State::kStopping));
+  FXL_DCHECK(state_ != State::kUninitialized);
   FXL_DCHECK(config_valid_);
 
   zx_status_t res;
   uint32_t cached_frames_per_packet = frames_per_packet();
   uint32_t cached_packet_size = packet_size();
 
-  auto cleanup = fbl::MakeAutoCall([this]() {
-    audio_input_->ResetRingBuffer();
-    state_ = State::kStopped;
-  });
+  // TODO(dalesat): Report this failure so the capture client can be informed.
+
+  auto cleanup =
+      fbl::MakeAutoCall([this]() { audio_input_->ResetRingBuffer(); });
 
   // Configure the format.
   res =

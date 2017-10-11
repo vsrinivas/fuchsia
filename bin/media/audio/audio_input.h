@@ -50,7 +50,7 @@ class AudioInput : public ActiveSource {
   static constexpr uint32_t kPacketsPerRingBuffer = 16;
   static constexpr uint32_t kPacketsPerSecond = 100;
 
-  enum class State { kUninitialized, kStopped, kStarted, kStopping };
+  enum class State { kUninitialized, kStopped, kStarted };
 
   AudioInput(const std::string& device_path);
   zx_status_t Initalize();
