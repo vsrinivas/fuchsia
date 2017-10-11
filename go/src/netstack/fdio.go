@@ -268,7 +268,10 @@ func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 				<-notifyCh
 				// TODO: get socket closed message from loopSocketWrite
 				continue
-			} else if err == tcpip.ErrClosedForReceive {
+			} else if err == tcpip.ErrClosedForReceive || err == tcpip.ErrConnectionRefused {
+				if err == tcpip.ErrConnectionRefused {
+					ios.lastError = err
+				}
 				_, err := dataHandle.Write(nil, ZX_SOCKET_HALF_CLOSE)
 				switch mxerror.Status(err) {
 				case zx.ErrOk:
