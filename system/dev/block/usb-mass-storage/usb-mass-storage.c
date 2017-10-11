@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/driver.h>
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/assert.h>
@@ -327,7 +328,7 @@ static ssize_t ums_read(ums_block_t* dev, iotxn_t* txn) {
         uint32_t residue;
         status = ums_read_csw(ums, &residue);
         if (status == ZX_OK && residue) {
-            printf("unexpected residue in ums_read\n");
+            dprintf(ERROR, "unexpected residue in ums_read\n");
             status = ZX_ERR_IO;
         }
     }
@@ -398,7 +399,7 @@ static ssize_t ums_write(ums_block_t* dev, iotxn_t* txn) {
         uint32_t residue;
         status = ums_read_csw(ums, &residue);
         if (status == ZX_OK && residue) {
-            printf("unexpected residue in ums_write\n");
+            dprintf(ERROR, "unexpected residue in ums_write\n");
             status = ZX_ERR_IO;
         }
     }
@@ -457,7 +458,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
     scsi_read_capacity_10_t data;
     zx_status_t status = ums_read_capacity10(ums, lun, &data);
     if (status < 0) {
-        printf("read_capacity10 failed: %d\n", status);
+        dprintf(ERROR, "read_capacity10 failed: %d\n", status);
         return status;
     }
 
@@ -468,7 +469,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
         scsi_read_capacity_16_t data;
         status = ums_read_capacity16(ums, lun, &data);
         if (status < 0) {
-            printf("read_capacity16 failed: %d\n", status);
+            dprintf(ERROR, "read_capacity16 failed: %d\n", status);
             return status;
         }
 
@@ -476,7 +477,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
         dev->block_size = betoh32(data.block_length);
     }
     if (dev->block_size == 0) {
-        printf("UMS zero block size\n");
+        dprintf(ERROR, "UMS zero block size\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -487,7 +488,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
     scsi_mode_sense_6_data_t ms_data;
     status = ums_mode_sense6(ums, lun, &ms_data);
     if (status != ZX_OK) {
-        printf("ums_mode_sense6 failed: %d\n", status);
+        dprintf(ERROR, "ums_mode_sense6 failed: %d\n", status);
         return status;
     }
 
@@ -532,7 +533,7 @@ static zx_status_t ums_check_luns_ready(ums_t* ums) {
             if (status == ZX_OK) {
                 dev->device_added = true;
             } else {
-                printf("UMS: device_add for block device failed %d\n", status);
+                dprintf(ERROR, "UMS: device_add for block device failed %d\n", status);
             }
         } else if (!ready && dev->device_added) {
             device_remove(dev->zxdev);
@@ -557,8 +558,9 @@ static int ums_worker_thread(void* arg) {
         uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
         status = ums_inquiry(ums, lun, inquiry_data);
         if (status < 0) {
-            printf("ums_inquiry failed for lun %d status: %d\n", lun, status);
-            goto fail;
+            dprintf(ERROR, "ums_inquiry failed for lun %d status: %d\n", lun, status);
+            device_remove(ums->zxdev);
+            return status;
         }
         uint8_t rmb = inquiry_data[1] & 0x80;   // Removable Media Bit
         if (rmb) {
@@ -566,19 +568,7 @@ static int ums_worker_thread(void* arg) {
         }
     }
 
-    // Add root device, which will contain block devices for logical units
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "ums",
-        .ctx = ums,
-        .ops = &ums_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
-
-    status = device_add(ums->usb_zxdev, &args, &ums->zxdev);
-    if (status != ZX_OK) {
-        goto fail;
-    }
+    device_make_visible(ums->zxdev);
 
     bool wait = true;
     while (1) {
@@ -652,11 +642,6 @@ static int ums_worker_thread(void* arg) {
     }
 
     return ZX_OK;
-
-fail:
-    printf("ums_worker_thread failed\n");
-    ums_release(ums);
-    return status;
 }
 
 static zx_status_t ums_bind(void* ctx, zx_device_t* device, void** cookie) {
@@ -769,12 +754,30 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     ums->tag_send = ums->tag_receive = 8;
 
-    thrd_create_with_name(&ums->worker_thread, ums_worker_thread, ums, "ums_worker_thread");
+    // Add root device, which will contain block devices for logical units
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ums",
+        .ctx = ums,
+        .ops = &ums_device_proto,
+        .flags = DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INVISIBLE,
+    };
+
+    status = device_add(ums->usb_zxdev, &args, &ums->zxdev);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    int ret = thrd_create_with_name(&ums->worker_thread, ums_worker_thread, ums, "ums_worker_thread");
+    if (ret != thrd_success) {
+        device_remove(ums->zxdev);
+        return ZX_ERR_NO_MEMORY;
+    }
 
     return status;
 
 fail:
-    printf("ums_bind failed: %d\n", status);
+    dprintf(ERROR, "ums_bind failed: %d\n", status);
     ums_release(ums);
     return status;
 }
