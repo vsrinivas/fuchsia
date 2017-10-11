@@ -87,26 +87,29 @@ void MergeResolver::PostCheckConflicts(DelayedStatus delayed_status) {
 }
 
 void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
-  if (!strategy_ || merge_in_progress_ || in_delay_) {
-    // No strategy, or a merge already in progress. Let's bail out early.
+  if (!strategy_ || merge_in_progress_ || check_conflicts_in_progress_ ||
+      in_delay_) {
+    // No strategy is set, or a merge is already in progress, or we are already
+    // checking for conflicts, or we are delaying merges. Let's bail out early.
     return;
   }
-  merge_in_progress_ = true;
+  check_conflicts_in_progress_ = true;
   storage_->GetHeadCommitIds(
       [this, delayed_status](storage::Status s,
                              std::vector<storage::CommitId> heads) {
+        check_conflicts_in_progress_ = false;
         if (s != storage::Status::OK || heads.size() == 1) {
           // An error occurred, or there is no conflict. In either case, return
           // early.
           if (s != storage::Status::OK) {
             FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
           }
-          merge_in_progress_ = false;
           if (on_empty_callback_) {
             on_empty_callback_();
           }
           return;
         }
+        merge_in_progress_ = true;
         heads.resize(2);
         ResolveConflicts(delayed_status, std::move(heads));
       });

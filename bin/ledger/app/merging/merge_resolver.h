@@ -33,7 +33,8 @@ class MergeResolver : public storage::CommitWatcher {
 
   void set_on_empty(fxl::Closure on_empty_callback);
 
-  // Returns true if no merge is currently in progress.
+  // Returns true if no merge is currently in progress. Note that returning
+  // true, does not mean that there are no pending conflicts.
   bool IsEmpty();
 
   // Changes the current merge strategy. Any pending merge will be cancelled.
@@ -83,6 +84,7 @@ class MergeResolver : public storage::CommitWatcher {
   std::unique_ptr<MergeStrategy> next_strategy_;
   bool has_next_strategy_ = false;
   bool merge_in_progress_ = false;
+  bool check_conflicts_in_progress_ = false;
   bool in_delay_ = false;
   fxl::Closure on_empty_callback_;
   fxl::Closure on_destroyed_;
