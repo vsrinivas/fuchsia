@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <time.h>
 
-#include "clock_impl.h"
+#include "pthread_impl.h"
 
 /* This assumes that a check for the
    template size has already been made */

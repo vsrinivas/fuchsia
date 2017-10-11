@@ -1,11 +1,12 @@
-#include "libc.h"
+#include "pthread_impl.h"
+
 #include <errno.h>
 #include <stdint.h>
 #include <time.h>
 
-#include "clock_impl.h"
-
 #include <zircon/syscalls.h>
+
+#include "libc.h"
 
 int __clock_gettime(clockid_t clk, struct timespec* ts) {
     uint32_t zx_clock;

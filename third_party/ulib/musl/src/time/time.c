@@ -1,6 +1,6 @@
 #include <time.h>
 
-#include "clock_impl.h"
+#include "pthread_impl.h"
 
 time_t time(time_t* t) {
     struct timespec ts;

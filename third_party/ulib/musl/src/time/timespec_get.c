@@ -1,6 +1,6 @@
 #include <time.h>
 
-#include "clock_impl.h"
+#include "pthread_impl.h"
 
 /* There is no other implemented value than TIME_UTC; all other values
  * are considered erroneous. */

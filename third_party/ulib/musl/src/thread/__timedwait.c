@@ -3,8 +3,6 @@
 #include <zircon/syscalls.h>
 #include <time.h>
 
-#include "clock_impl.h"
-
 int __timedwait(atomic_int* futex, int val, clockid_t clk, const struct timespec* at) {
     struct timespec to;
     zx_time_t deadline = ZX_TIME_INFINITE;
