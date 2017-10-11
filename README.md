@@ -14,7 +14,6 @@ This repository contains documentation for Fuchsia.
 + How do I boot on my...
   + [Acer Switch Alpha 12?][acer_12]
   + [Intel NUC?][intel_nuc]
-  + [Raspberry Pi 3?][rpi3]
 
 + [How do I write a flutter module?][flutter_module]
 
@@ -37,7 +36,6 @@ This repository contains documentation for Fuchsia.
 [build_system]: build_system.md "Build system"
 [acer_12]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md "Acer 12"
 [intel_nuc]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md "Intel NUC"
-[rpi3]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/rpi3.md "Rasperry Pi 3"
 [flutter_module]: https://fuchsia.googlesource.com/modular/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
 [ci_guide]: https://fuchsia.googlesource.com/infra/infra/+/master/docs/guide "Continuous integration guide"
 [contributing]: https://fuchsia.googlesource.com/docs/+/master/CONTRIBUTING.md "Contributing changes"
