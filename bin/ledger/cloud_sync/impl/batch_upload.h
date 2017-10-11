@@ -93,6 +93,10 @@ class BatchUpload {
   // Number of object uploads currently in progress.
   unsigned int current_uploads_ = 0u;
 
+  // Number of object being handled, including those being uploaded and those
+  // whose metadata are being updated in storage.
+  unsigned int current_objects_handled_ = 0u;
+
   bool started_ = false;
   bool errored_ = false;
 

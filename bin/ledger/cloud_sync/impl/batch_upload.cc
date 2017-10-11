@@ -91,6 +91,7 @@ void BatchUpload::UploadNextObject() {
   FXL_DCHECK(!remaining_object_digests_.empty());
   FXL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
+  current_objects_handled_++;
   auto object_digest_to_send = std::move(remaining_object_digests_.front());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
   remaining_object_digests_.pop();
@@ -120,11 +121,14 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
         current_uploads_--;
 
         if (status != cloud_provider_firebase::Status::OK) {
+          FXL_DCHECK(current_objects_handled_ > 0);
+          current_objects_handled_--;
+
           errored_ = true;
           // Re-enqueue the object for another upload attempt.
           remaining_object_digests_.push(std::move(digest));
 
-          if (current_uploads_ == 0u) {
+          if (current_objects_handled_ == 0u) {
             on_error_();
           }
           return;
@@ -137,17 +141,20 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
                 weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
                   FXL_DCHECK(status == storage::Status::OK);
 
-                  // Notify the user about the error once all pending uploads of
-                  // the recent retry complete.
-                  if (errored_ && current_uploads_ == 0u) {
+                  FXL_DCHECK(current_objects_handled_ > 0);
+                  current_objects_handled_--;
+
+                  // Notify the user about the error once all pending operations
+                  // of the recent retry complete.
+                  if (errored_ && current_objects_handled_ == 0u) {
                     on_error_();
                     return;
                   }
 
-                  if (current_uploads_ == 0 &&
+                  if (current_objects_handled_ == 0 &&
                       remaining_object_digests_.empty()) {
-                    // All the referenced objects are uploaded, upload the
-                    // commits.
+                    // All the referenced objects are uploaded and marked as
+                    // synced, upload the commits.
                     FilterAndUploadCommits();
                     return;
                   }
