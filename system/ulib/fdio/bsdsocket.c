@@ -127,19 +127,19 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     // check the result
-    int errno_;
-    socklen_t errno_len = sizeof(errno_);
-    r = fdio_getsockopt(io, SOL_SOCKET, SO_ERROR, &errno_, &errno_len);
+    zx_status_t status;
+    socklen_t status_len = sizeof(status);
+    r = fdio_getsockopt(io, SOL_SOCKET, SO_ERROR, &status, &status_len);
     if (r < 0) {
         fdio_release(io);
         return ERRNO(EIO);
     }
-    if (errno_ == 0) {
+    if (status == ZX_OK) {
         io->flags |= FDIO_FLAG_SOCKET_CONNECTED;
     }
     fdio_release(io);
-    if (errno_ != 0) {
-        return ERRNO(errno_);
+    if (status != ZX_OK) {
+        return ERRNO(fdio_status_to_errno(status));
     }
     return 0;
 }
@@ -397,7 +397,25 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
     }
 
     zx_status_t r;
-    r = fdio_getsockopt(io, level, optname, optval, optlen);
+    if (level == SOL_SOCKET && optname == SO_ERROR) {
+        if (optval == NULL || optlen == NULL || *optlen < sizeof(int)) {
+            r = ZX_ERR_INVALID_ARGS;
+        } else {
+            zx_status_t status;
+            socklen_t status_len = sizeof(status);
+            r = fdio_getsockopt(io, SOL_SOCKET, SO_ERROR, &status, &status_len);
+            if (r == ZX_OK) {
+                int errno_ = 0;
+                if (status != ZX_OK) {
+                    errno_ = fdio_status_to_errno(status);
+                }
+                *(int*)optval = errno_;
+                *optlen = sizeof(int);
+            }
+        }
+    } else {
+        r = fdio_getsockopt(io, level, optname, optval, optlen);
+    }
     fdio_release(io);
 
     return STATUS(r);
