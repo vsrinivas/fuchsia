@@ -22,19 +22,12 @@ else
   export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
-case "$(uname -s)" in
-  Darwin)
-    export HOST_PLATFORM="mac-x64"
-    ;;
-  Linux)
-    export HOST_PLATFORM="linux-x64"
-    ;;
-esac
-
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 
 FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
+
+source "${FUCHSIA_DIR}/scripts/devshell/env.sh"
 
 function __netaddr() {
   # We want to give the user time to accept Darwin's firewall dialog.
@@ -43,27 +36,6 @@ function __netaddr() {
   else
     netaddr --nowait "$@"
   fi
-}
-
-# __patched_path <old-regex> <new-component>
-# Prints a new path value based on the current $PATH, removing path components
-# that match <old-regex> and adding <new-component> to the end.
-function __patched_path() {
-    local old_regex="$1"
-    local new_component="$2"
-    local stripped
-    # Put each PATH component on a line, delete any lines that match the regex,
-    # then glue back together with ':' characters.
-    stripped="$(
-        set -o pipefail &&
-        echo "${PATH}" |
-        tr ':' '\n' |
-        grep -v -E "^${old_regex}$" |
-        tr '\n' ':'
-    )"
-    # The trailing newline will have become a colon, so no need to add another
-    # one here.
-    echo "${stripped}${new_component}"
 }
 
 ### envhelp: print usage for command or list of commands
@@ -138,68 +110,6 @@ if [[ -z "${ZSH_VERSION}" ]]; then
   complete -o nospace -F _zgo zgo
 fi
 
-### zset: set zircon build properties
-
-function zset-usage() {
-  cat >&2 <<END
-Usage: zset x86-64|arm64|rpi3|odroidc2|hikey960
-Sets zircon build options.
-END
-}
-
-function zset() {
-  if [[ $# -ne 1 ]]; then
-    zset-usage
-    return 1
-  fi
-
-  local settings="$*"
-
-  case $1 in
-    x86-64)
-      export ZIRCON_PROJECT=zircon-pc-x86-64
-      export ZIRCON_ARCH=x86-64
-      export ZIRCON_BUILD_TARGET=x86_64
-      ;;
-    arm64)
-      export ZIRCON_PROJECT=zircon-qemu-arm64
-      export ZIRCON_ARCH=arm64
-      export ZIRCON_BUILD_TARGET=aarch64
-      ;;
-    rpi3)
-      export ZIRCON_PROJECT=zircon-rpi3-arm64
-      export ZIRCON_ARCH=arm64
-      export ZIRCON_BUILD_TARGET=rpi3
-      ;;
-    odroidc2)
-      export ZIRCON_PROJECT=zircon-odroidc2-arm64
-      export ZIRCON_ARCH=arm64
-      export ZIRCON_BUILD_TARGET=odroidc2
-      ;;
-    hikey960)
-      export ZIRCON_PROJECT=zircon-hikey960-arm64
-      export ZIRCON_ARCH=arm64
-      export ZIRCON_BUILD_TARGET=hikey960
-      ;;
-    *)
-      zset-usage
-      return 1
-  esac
-
-  export ZIRCON_BUILD_ROOT="${FUCHSIA_OUT_DIR}/build-zircon"
-  export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_ROOT}/build-${ZIRCON_PROJECT}"
-  export ZIRCON_TOOLS_DIR="${ZIRCON_BUILD_ROOT}/tools"
-  export ZIRCON_BUILD_REV_CACHE="${ZIRCON_BUILD_DIR}/build.rev";
-  export ZIRCON_SETTINGS="${settings}"
-  export ENVPROMPT_INFO="${ZIRCON_ARCH}"
-
-  # add tools to path, removing prior tools directory if any
-  export PATH="$(__patched_path \
-      "${FUCHSIA_DIR}/zircon/build-[^/]*/tools" \
-      "${ZIRCON_TOOLS_DIR}"
-  )"
-}
-
 ### zcheck: checks whether zset was run
 
 function zcheck-usage() {
@@ -251,7 +161,7 @@ END
 function zboot() {
   zcheck || return 1
 
-  "${ZIRCON_TOOLS_DIR}/bootserver" "${ZIRCON_BUILD_DIR}/zircon.bin" "$@"
+  "${FUCHSIA_OUT_DIR}/build-zircon/tools/bootserver" "${ZIRCON_BUILD_DIR}/zircon.bin" "$@"
 }
 
 ### zrun: run zircon in qemu
@@ -266,7 +176,7 @@ END
 function zrun() {
   zcheck || return 1
 
-  local qemu_dir="${QEMU_DIR:-${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/qemu/bin}"
+  local qemu_dir="${QEMU_DIR:-$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n ${BUILDTOOLS_QEMU_DIR})/bin}"
 
   "${FUCHSIA_DIR}/zircon/scripts/run-zircon" -o "${ZIRCON_BUILD_DIR}" -a "${ZIRCON_ARCH}" \
     -q "${qemu_dir}" "$@"
@@ -300,7 +210,7 @@ END
 function zlog() {
   zcheck || return 1
 
-  "${ZIRCON_TOOLS_DIR}/loglistener" "$@"
+  "${FUCHSIA_OUT_DIR}/build-zircon/tools/loglistener" "$@"
 }
 
 
@@ -441,25 +351,11 @@ function fset() {
   done
 
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
-  export FUCHSIA_TOOLS_DIR="${FUCHSIA_BUILD_DIR}/tools"
   export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
   export GOPATH="${FUCHSIA_BUILD_DIR}:${FUCHSIA_DIR}/garnet/go"
-  FUCHSIA_RUST_BIN="${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/rust/bin"
-
-  # Add tools to path, removing prior tools directory if any. This also
-  # matches the Zircon tools directory added by zset, so add it back too.
-  export PATH="$(__patched_path \
-      "${FUCHSIA_OUT_DIR}/[^/]*-[^/]*/tools" \
-      "${FUCHSIA_TOOLS_DIR}:${ZIRCON_TOOLS_DIR}"
-  )"
-
-  export PATH="$(__patched_path \
-    "$FUCHSIA_RUST_BIN" \
-    "$FUCHSIA_RUST_BIN"
-  )"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -n "${goma_dir}" ]]; then
