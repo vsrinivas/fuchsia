@@ -11,8 +11,10 @@ package("media") {
   deps = [
     "audio_player",
     "master_gain",
+    "media_client_sine",
     "media_player",
     "simple_sine",
+    "simple_sine_sync",
     "tones",
     "vu_meter",
   ]
@@ -25,10 +27,16 @@ package("media") {
       name = "master_gain"
     },
     {
+      name = "media_client_sine"
+    },
+    {
       name = "media_player"
     },
     {
       name = "simple_sine"
+    },
+    {
+      name = "simple_sine_sync"
     },
     {
       name = "tones"

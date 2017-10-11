@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/audio_server.fidl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
-#include "lib/media/timeline/timeline.h"
 
 namespace examples {
 
 class MediaApp {
  public:
-  MediaApp() : mapped_address_(0), num_packets_sent_(0){};
+  MediaApp();
+  ~MediaApp();
+
   void Run(app::ApplicationContext* app_context);
 
  private:
@@ -34,8 +34,8 @@ class MediaApp {
   media::MediaPacketConsumerPtr packet_consumer_;
 
   zx::vmo vmo_;
-  uintptr_t mapped_address_;
-  size_t num_packets_sent_;
+  uintptr_t mapped_address_ = 0u;
+  size_t num_packets_completed_ = 0u;
 };
 
 }  // namespace examples

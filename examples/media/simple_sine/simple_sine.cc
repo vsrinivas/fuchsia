@@ -2,38 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <math.h>
-#include <zircon/syscalls.h>
-#include <iostream>
+#include "garnet/examples/media/simple_sine/simple_sine.h"
 
-#include "lib/app/cpp/application_context.h"
+#include <zircon/syscalls.h>
+
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-
-#include "garnet/examples/media/simple_sine/simple_sine.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 
 namespace {
-// Set the renderer format to: stereo, 16-bit signed integer (LPCM), 48 kHz.
+// Set the renderer format to: 48 kHz, stereo, 16-bit LPCM (signed integer).
+constexpr float kRendererFrameRate = 48000.0f;
 constexpr size_t kNumChannels = 2;
 constexpr size_t kSampleSize = sizeof(int16_t);
-constexpr float kRendererSampleRate = 48000.0f;
-// Each buffer of audio payload will be 10 milliseconds in length.
-constexpr size_t kFramesPerPayload = 480;
+// For this example, feed audio to the system in payloads of 5 milliseconds.
+constexpr size_t kMSecsPerPayload = 5;
+constexpr size_t kFramesPerPayload =
+    kMSecsPerPayload * kRendererFrameRate / 1000;
 constexpr size_t kPayloadSize = kFramesPerPayload * kNumChannels * kSampleSize;
-// Use 4 payload buffers, mapped contiguously in a single memory section (id 0).
-constexpr size_t kNumPayloads = 4;
+// Use 10 payload buffers, mapped contiguously in a single memory section (id 0)
+constexpr size_t kNumPayloads = 10;
 constexpr size_t kTotalMappingSize = kPayloadSize * kNumPayloads;
 constexpr size_t kBufferId = 0;
-// Play a sine wave that is 500 Hz, at 1/8 of full-scale.
-constexpr float kFrequency = 500.0f;
-constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererSampleRate;
-constexpr float kAmplitudeScalar = std::numeric_limits<int16_t>::max() * 0.125f;
-// Loop for 1 second.
-constexpr size_t kNumPacketsToSend = kRendererSampleRate / kFramesPerPayload;
+// Play a sine wave that is 440 Hz, at 1/8 of full-scale volume.
+constexpr float kFrequency = 440.0f;
+constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererFrameRate;
+constexpr float kAmplitudeScalar = 0.125f * std::numeric_limits<int16_t>::max();
+// Loop for 2 seconds.
+constexpr size_t kTotalDurationSecs = 2;
+constexpr size_t kNumPacketsToSend =
+    kTotalDurationSecs * kRendererFrameRate / kFramesPerPayload;
 }  // namespace
 
 namespace examples {
+
+MediaApp::MediaApp() {}
+MediaApp::~MediaApp() {}
 
 // Prepare for playback, submit initial data and start the presentation timeline
 void MediaApp::Run(app::ApplicationContext* app_context) {
@@ -78,7 +83,7 @@ void MediaApp::SetMediaType() {
   auto details = media::AudioMediaTypeDetails::New();
   details->sample_format = media::AudioSampleFormat::SIGNED_16;
   details->channels = kNumChannels;
-  details->frames_per_second = kRendererSampleRate;
+  details->frames_per_second = kRendererFrameRate;
 
   auto media_type = media::MediaType::New();
   media_type->medium = media::MediaTypeMedium::AUDIO;
@@ -142,16 +147,16 @@ void MediaApp::WriteStereoAudioIntoBuffer() {
   }
 }
 
-// We divide the buffer into 4 payloads. Create a packet for this payload.
+// We divide the buffer into 10 payloads. Create a packet for this payload.
 media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
   auto packet = media::MediaPacket::New();
 
-  packet->pts_rate_ticks = kRendererSampleRate;
+  packet->pts_rate_ticks = kRendererFrameRate;
   packet->pts_rate_seconds = 1;
   packet->keyframe = false;
   packet->end_of_stream = false;
   packet->payload_buffer_id = kBufferId;
-  packet->payload_offset = payload_num * kPayloadSize;
+  packet->payload_offset = (payload_num * kPayloadSize) % kTotalMappingSize;
   packet->payload_size = kPayloadSize;
   packet->pts = media::MediaPacket::kNoTimestamp;
 
@@ -164,15 +169,14 @@ media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
 void MediaApp::SendMediaPacket(media::MediaPacketPtr packet) {
   FXL_DCHECK(packet_consumer_);
 
-  ++num_packets_sent_;
-  size_t payload_num = packet->payload_buffer_id;
   packet_consumer_->SupplyPacket(
-      std::move(packet), [ this, packet_num = num_packets_sent_,
-                           payload_num ](media::MediaPacketDemandPtr) {
-        FXL_DCHECK(packet_num <= kNumPacketsToSend);
-        if (packet_num <= kNumPacketsToSend - kNumPayloads) {
-          SendMediaPacket(CreateMediaPacket(payload_num));
-        } else if (packet_num >= kNumPacketsToSend) {
+      std::move(packet), [this](media::MediaPacketDemandPtr) {
+        ++num_packets_completed_;
+        FXL_DCHECK(num_packets_completed_ <= kNumPacketsToSend);
+        if (num_packets_completed_ + kNumPayloads <= kNumPacketsToSend) {
+          SendMediaPacket(
+              CreateMediaPacket(num_packets_completed_ + kNumPayloads));
+        } else if (num_packets_completed_ >= kNumPacketsToSend) {
           Shutdown();
         }
       });
@@ -192,7 +196,7 @@ void MediaApp::StartPlayback() {
   transform->reference_delta = 1;
   transform->subject_delta = 1;
 
-  timeline_consumer->SetTimelineTransform(std::move(transform), [](bool) {});
+  timeline_consumer->SetTimelineTransformNoReply(std::move(transform));
 }
 
 // Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp)

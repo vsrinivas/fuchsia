@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
   examples::MediaApp media_app;
   media_app.Run(application_context.get());
 
-  // We've set everything in motion. Wait for our message loop thread to close.
+  // We've set everything going. Wait for our message loop to return.
   loop.Run();
 
   return 0;

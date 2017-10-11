@@ -2,17 +2,17 @@
 #Use of this source code is governed by a BSD - style license that can be
 #found in the LICENSE file.
 
-executable("simple_sine") {
+executable("simple_sine_sync") {
   sources = [
     "main.cc",
-    "simple_sine.cc",
-    "simple_sine.h",
+    "simple_sine_sync.cc",
+    "simple_sine_sync.h",
   ]
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/transport",
   ]
 }
