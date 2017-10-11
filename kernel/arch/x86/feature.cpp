@@ -29,6 +29,7 @@ enum x86_microarch_list x86_microarch;
 static struct x86_model_info model_info;
 
 bool g_x86_feature_smap;
+bool g_x86_feature_fsgsbase;
 
 static int initialized = 0;
 
@@ -106,6 +107,7 @@ void x86_feature_init(void)
     }
 
     g_x86_feature_smap = x86_feature_test(X86_FEATURE_SMAP);
+    g_x86_feature_fsgsbase = x86_feature_test(X86_FEATURE_FSGSBASE);
 }
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info) {

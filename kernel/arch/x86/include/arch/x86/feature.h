@@ -229,4 +229,7 @@ enum x86_microarch_list {
 };
 extern enum x86_microarch_list x86_microarch;
 
+extern bool g_x86_feature_smap;
+extern bool g_x86_feature_fsgsbase;
+
 __END_CDECLS
