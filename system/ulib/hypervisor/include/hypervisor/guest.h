@@ -11,8 +11,6 @@
 #include <zircon/types.h>
 #include <zx/port.h>
 
-class PciBus;
-
 /**
  * Create an identity-mapped page table.
  *
@@ -50,11 +48,6 @@ public:
     // Setup a trap to delegate accesses to an IO region to |handler|.
     zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size, uint64_t offset,
                               IoHandler* handler);
-
-    // TODO: Replace these with an interface that allows devices to map
-    // callbacks to address ranges.
-    PciBus* pci_bus;
-
 private:
     zx_status_t IoThread();
 

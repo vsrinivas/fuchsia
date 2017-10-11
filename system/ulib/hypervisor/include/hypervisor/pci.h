@@ -4,12 +4,9 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -51,11 +48,6 @@
 class IoApic;
 class PciBus;
 class PciDevice;
-
-typedef struct instruction instruction_t;
-typedef struct zx_packet_guest_io zx_packet_guest_io_t;
-typedef struct zx_packet_guest_mem zx_packet_guest_mem_t;
-typedef struct zx_vcpu_io zx_vcpu_io_t;
 
 /* PCI capability structure.
  *
@@ -124,8 +116,8 @@ public:
     }
 
     // Handle accesses to this devics config space.
-    zx_status_t ReadConfig(uint16_t reg, uint8_t len, uint32_t* value);
-    zx_status_t WriteConfig(uint16_t reg, uint8_t len, uint32_t value);
+    zx_status_t ReadConfig(uint64_t reg, IoValue* value);
+    zx_status_t WriteConfig(uint64_t reg, const IoValue& value);
 
     // Send the configured interrupt for this device.
     zx_status_t Interrupt() const;
@@ -181,6 +173,26 @@ private:
     uint32_t global_irq_ = 0;
 };
 
+class PciPortHandler : public IoHandler {
+public:
+    PciPortHandler(PciBus* bus);
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+private:
+    PciBus* bus_;
+};
+
+class PciEcamHandler : public IoHandler {
+public:
+    PciEcamHandler(PciBus* bus);
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+private:
+    PciBus* bus_;
+};
+
 class PciBus {
 public:
     // Base address in PIO space to map device BAR registers.
@@ -205,12 +217,12 @@ public:
     // Access devices via the ECAM region.
     //
     // |addr| is the offset from the start of the ECAM region for this bus.
-    zx_status_t ReadEcam(zx_vaddr_t addr, uint8_t access_size, zx_vcpu_io_t* io);
-    zx_status_t WriteEcam(zx_vaddr_t addr, const zx_vcpu_io_t* io);
+    zx_status_t ReadEcam(uint64_t addr, IoValue* value);
+    zx_status_t WriteEcam(uint64_t addr, const IoValue& value);
 
     // Handle access to the PC IO ports (0xcf8 - 0xcff).
-    zx_status_t ReadIoPort(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io);
-    zx_status_t WriteIoPort(const zx_packet_guest_io_t* io);
+    zx_status_t ReadIoPort(uint64_t port, IoValue* value);
+    zx_status_t WriteIoPort(uint64_t port, const IoValue& value);
 
     // Raise an interrupt for the given device.
     zx_status_t Interrupt(const PciDevice& device) const;
@@ -231,6 +243,9 @@ private:
     fbl::Mutex mutex_;
 
     Guest* guest_;
+    PciEcamHandler ecam_handler_;
+    PciPortHandler port_handler_;
+
     // Selected address in PCI config space.
     uint32_t config_addr_ TA_GUARDED(mutex_) = 0;
 

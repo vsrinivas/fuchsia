@@ -25,7 +25,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/page_table.cpp \
     $(LOCAL_DIR)/pci.cpp \
     $(LOCAL_DIR)/uart.cpp \
-    $(LOCAL_DIR)/vcpu.cpp \
     $(LOCAL_DIR)/x86-64.S
 
 MODULE_STATIC_LIBS := \

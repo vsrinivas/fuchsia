@@ -11,12 +11,7 @@
 #include <hw/pci.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
-#include <hypervisor/decode.h>
 #include <hypervisor/io_apic.h>
-#include <hypervisor/vcpu.h>
-#include <virtio/virtio_ids.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/hypervisor.h>
 
 // PCI BAR register addresses.
 #define PCI_REGISTER_BAR_0 0x10
@@ -30,12 +25,18 @@
 #define PCI_REGISTER_CAP_BASE 0xa4
 #define PCI_REGISTER_CAP_TOP UINT8_MAX
 
-static const uint32_t kPioAddressMask = ~bit_mask<uint32_t>(2);
-static const uint32_t kMmioAddressMask = ~bit_mask<uint32_t>(4);
+/* PCI config relative IO port addresses (typically at 0xcf8). */
+constexpr uint16_t kPciConfigAddressPortBase = 0;
+constexpr uint16_t kPciConfigAddressPortTop = 3;
+constexpr uint16_t kPciConfigDataPortBase = 4;
+constexpr uint16_t kPciConfigDataPortTop = 7;
+
+constexpr uint32_t kPioAddressMask = ~bit_mask<uint32_t>(2);
+constexpr uint32_t kMmioAddressMask = ~bit_mask<uint32_t>(4);
 
 // PCI capabilities register layout.
-static const uint8_t kPciCapTypeOffset = 0;
-static const uint8_t kPciCapNextOffset = 1;
+constexpr uint8_t kPciCapTypeOffset = 0;
+constexpr uint8_t kPciCapNextOffset = 1;
 
 /* Per-device IRQ assignments.
  *
@@ -44,7 +45,7 @@ static const uint8_t kPciCapNextOffset = 1;
  * The DSDT defines interrupts for 5 devices (IRQ 32-36). Adding
  * additional devices beyond that will require updates to the DSDT.
  */
-static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35, 36};
+constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35, 36};
 
 uint32_t PciBar::aspace() const {
     switch (trap_type) {
@@ -94,8 +95,31 @@ static const PciDevice::Attributes kRootComplexAttributes = {
 PciDevice::PciDevice(const Attributes attrs)
     : attrs_(attrs) {}
 
+PciPortHandler::PciPortHandler(PciBus* bus)
+    : bus_(bus) {}
+
+zx_status_t PciPortHandler::Read(uint64_t addr, IoValue* value) {
+    return bus_->ReadIoPort(addr, value);
+}
+
+zx_status_t PciPortHandler::Write(uint64_t addr, const IoValue& value) {
+    return bus_->WriteIoPort(addr, value);
+}
+
+PciEcamHandler::PciEcamHandler(PciBus* bus)
+    : bus_(bus) {}
+
+zx_status_t PciEcamHandler::Read(uint64_t addr, IoValue* value) {
+    return bus_->ReadEcam(addr, value);
+}
+
+zx_status_t PciEcamHandler::Write(uint64_t addr, const IoValue& value) {
+    return bus_->WriteEcam(addr, value);
+}
+
 PciBus::PciBus(Guest* guest, const IoApic* io_apic)
-    : guest_(guest), io_apic_(io_apic), root_complex_(kRootComplexAttributes) {}
+    : guest_(guest), ecam_handler_(this), port_handler_(this), io_apic_(io_apic),
+      root_complex_(kRootComplexAttributes) {}
 
 zx_status_t PciBus::Init() {
     root_complex_.bar_[0].size = 0x10;
@@ -103,18 +127,20 @@ zx_status_t PciBus::Init() {
     zx_status_t status = Connect(&root_complex_, PCI_DEVICE_ROOT_COMPLEX);
     if (status != ZX_OK)
         return status;
-    status = zx_guest_set_trap(guest_->handle(), ZX_GUEST_TRAP_MEM, PCI_ECAM_PHYS_BASE,
-                               PCI_ECAM_PHYS_TOP - PCI_ECAM_PHYS_BASE + 1, ZX_HANDLE_INVALID, 0);
+
+    // Setup ECAM trap for a single bus.
+    status = guest_->CreateMapping(TrapType::MMIO_SYNC, PCI_ECAM_PHYS_BASE, PCI_ECAM_SIZE(0, 1),
+                                   0, &ecam_handler_);
     if (status != ZX_OK)
         return status;
-    status = zx_guest_set_trap(guest_->handle(), ZX_GUEST_TRAP_IO, PCI_CONFIG_ADDRESS_PORT_BASE,
-                               PCI_CONFIG_ADDRESS_PORT_TOP - PCI_CONFIG_ADDRESS_PORT_BASE + 1,
-                               ZX_HANDLE_INVALID, 0);
+
+    // Setup PIO trap.
+    status = guest_->CreateMapping(TrapType::PIO_SYNC, PCI_CONFIG_PORT_BASE, PCI_CONFIG_PORT_SIZE,
+                                   0, &port_handler_);
     if (status != ZX_OK)
         return status;
-    return zx_guest_set_trap(guest_->handle(), ZX_GUEST_TRAP_IO, PCI_CONFIG_DATA_PORT_BASE,
-                             PCI_CONFIG_DATA_PORT_TOP - PCI_CONFIG_DATA_PORT_BASE + 1,
-                             ZX_HANDLE_INVALID, 0);
+
+    return ZX_OK;
 }
 
 uint32_t PciBus::config_addr() {
@@ -164,7 +190,7 @@ zx_status_t PciBus::Connect(PciDevice* device, uint8_t slot) {
     return device->SetupBarTraps(guest_);
 }
 
-static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
+static void pci_addr_invalid_read(IoValue* value) {
     // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
     //
     // The host bus to PCI bridge must unambiguously report attempts to read the
@@ -172,22 +198,22 @@ static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
     // it is adequate for the host bus to PCI bridge to return a value of all
     // 1's on read accesses to Configuration Space registers of non-existent
     // devices.
-    *value = bit_mask<uint32_t>(len * 8);
+    value->u32 = bit_mask<uint32_t>(value->access_size * 8);
 }
 
-zx_status_t PciBus::ReadEcam(zx_vaddr_t addr, uint8_t access_size, zx_vcpu_io_t* io) {
+zx_status_t PciBus::ReadEcam(uint64_t addr, IoValue* value) {
     const uint8_t device = PCI_ECAM_DEVICE(addr);
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
     const bool valid = is_addr_valid(PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
     if (!valid) {
-        pci_addr_invalid_read(access_size, &io->u32);
+        pci_addr_invalid_read(value);
         return ZX_OK;
     }
 
-    return device_[device]->ReadConfig(reg, access_size, &io->u32);
+    return device_[device]->ReadConfig(reg, value);
 }
 
-zx_status_t PciBus::WriteEcam(zx_vaddr_t addr, const zx_vcpu_io_t* io) {
+zx_status_t PciBus::WriteEcam(uint64_t addr, const IoValue& value) {
     const uint8_t device = PCI_ECAM_DEVICE(addr);
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
     const bool valid = is_addr_valid(PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
@@ -195,75 +221,76 @@ zx_status_t PciBus::WriteEcam(zx_vaddr_t addr, const zx_vcpu_io_t* io) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    return device_[device]->WriteConfig(reg, io->access_size, io->u32);
+    return device_[device]->WriteConfig(reg, value);
 }
 
-zx_status_t PciBus::ReadIoPort(uint16_t port, uint8_t access_size, zx_vcpu_io_t* vcpu_io) {
+zx_status_t PciBus::ReadIoPort(uint64_t port, IoValue* value) {
     switch (port) {
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
-        uint32_t bit_offset = (port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8;
-        uint32_t mask = bit_mask<uint32_t>(access_size * 8);
+    case kPciConfigAddressPortBase... kPciConfigAddressPortTop: {
+        uint64_t bit_offset = (port - kPciConfigAddressPortBase) * 8;
+        uint32_t mask = bit_mask<uint32_t>(value->access_size * 8);
 
         fbl::AutoLock lock(&mutex_);
         uint32_t addr = config_addr_ >> bit_offset;
-        vcpu_io->access_size = access_size;
-        vcpu_io->u32 = (vcpu_io->u32 & ~mask) | (addr & mask);
+        value->u32 = addr & mask;
         return ZX_OK;
     }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
+    case kPciConfigDataPortBase... kPciConfigDataPortTop: {
         uint32_t addr;
-        uint32_t reg;
+        uint64_t reg;
         {
             fbl::AutoLock lock(&mutex_);
             addr = config_addr_;
-            vcpu_io->access_size = access_size;
             if (!is_addr_valid(PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr),
                                PCI_TYPE1_FUNCTION(addr))) {
-                pci_addr_invalid_read(access_size, &vcpu_io->u32);
+                pci_addr_invalid_read(value);
                 return ZX_OK;
             }
         }
 
         PciDevice* device = device_[PCI_TYPE1_DEVICE(addr)];
-        reg = PCI_TYPE1_REGISTER(addr) + port - PCI_CONFIG_DATA_PORT_BASE;
-        return device->ReadConfig(static_cast<uint16_t>(reg), access_size, &vcpu_io->u32);
+        reg = PCI_TYPE1_REGISTER(addr) + port - kPciConfigDataPortBase;
+        return device->ReadConfig(reg, value);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-zx_status_t PciBus::WriteIoPort(const zx_packet_guest_io_t* io) {
-    switch (io->port) {
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
+zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
+    switch (port) {
+    case kPciConfigAddressPortBase... kPciConfigAddressPortTop: {
         // Software can (and Linux does) perform partial word accesses to the
         // PCI address register. This means we need to take care to read/write
         // portions of the 32bit register without trampling the other bits.
-        uint32_t bit_offset = (io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8;
-        uint32_t bit_size = io->access_size * 8;
+        uint64_t bit_offset = (port - kPciConfigAddressPortBase) * 8;
+        uint32_t bit_size = value.access_size * 8;
         uint32_t mask = bit_mask<uint32_t>(bit_size);
 
         fbl::AutoLock lock(&mutex_);
         // Clear out the bits we'll be modifying.
         config_addr_ = clear_bits(config_addr_, bit_size, bit_offset);
         // Set the bits of the address.
-        config_addr_ |= (io->u32 & mask) << bit_offset;
+        config_addr_ |= (value.u32 & mask) << bit_offset;
         return ZX_OK;
     }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
+    case kPciConfigDataPortBase... kPciConfigDataPortTop: {
         uint32_t addr;
-        uint32_t reg;
+        uint64_t reg;
         {
             fbl::AutoLock lock(&mutex_);
             addr = config_addr_;
 
-            if (!is_addr_valid(PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr), PCI_TYPE1_FUNCTION(addr)))
+            if (!is_addr_valid(PCI_TYPE1_BUS(addr),
+                               PCI_TYPE1_DEVICE(addr),
+                               PCI_TYPE1_FUNCTION(addr))) {
                 return ZX_ERR_OUT_OF_RANGE;
+            }
 
-            reg = PCI_TYPE1_REGISTER(addr) + io->port - PCI_CONFIG_DATA_PORT_BASE;
+            reg = PCI_TYPE1_REGISTER(addr) + port - kPciConfigDataPortBase;
         }
         PciDevice* device = device_[PCI_TYPE1_DEVICE(addr)];
-        return device->WriteConfig(static_cast<uint16_t>(reg), io->access_size, io->u32);
+        return device->WriteConfig(reg, value);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -440,7 +467,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t PciDevice::ReadConfig(uint16_t reg, uint8_t len, uint32_t* value) {
+zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) {
     // Perform 4-byte aligned read and then shift + mask the result to get the
     // expected value.
     uint32_t word = 0;
@@ -452,8 +479,8 @@ zx_status_t PciDevice::ReadConfig(uint16_t reg, uint8_t len, uint32_t* value) {
         return status;
 
     word >>= bit_offset;
-    word &= bit_mask<uint32_t>(len * 8);
-    *value = word;
+    word &= bit_mask<uint32_t>(value->access_size * 8);
+    value->u32 = word;
     return ZX_OK;
 }
 
@@ -466,7 +493,7 @@ static inline zx_status_t pci_device_write_unimplemented() {
     return ZX_OK;
 }
 
-zx_status_t PciDevice::WriteConfig(uint16_t reg, uint8_t len, uint32_t value) {
+zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
     switch (reg) {
     case PCI_CONFIG_VENDOR_ID:
     case PCI_CONFIG_DEVICE_ID:
@@ -478,10 +505,10 @@ zx_status_t PciDevice::WriteConfig(uint16_t reg, uint8_t len, uint32_t value) {
         // Read-only registers.
         return ZX_ERR_NOT_SUPPORTED;
     case PCI_CONFIG_COMMAND: {
-        if (len != 2)
+        if (value.access_size != 2)
             return ZX_ERR_NOT_SUPPORTED;
         fbl::AutoLock lock(&mutex_);
-        command_ = static_cast<uint16_t>(value);
+        command_ = value.u16;
         return ZX_OK;
     }
     case PCI_REGISTER_BAR_0:
@@ -490,16 +517,16 @@ zx_status_t PciDevice::WriteConfig(uint16_t reg, uint8_t len, uint32_t value) {
     case PCI_REGISTER_BAR_3:
     case PCI_REGISTER_BAR_4:
     case PCI_REGISTER_BAR_5: {
-        if (len != 4)
+        if (value.access_size != 4)
             return ZX_ERR_NOT_SUPPORTED;
 
-        uint32_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
+        uint64_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
         if (bar_num >= PCI_MAX_BARS)
             return pci_device_write_unimplemented();
 
         fbl::AutoLock lock(&mutex_);
         PciBar* bar = &bar_[bar_num];
-        bar->addr = value;
+        bar->addr = value.u32;
         // We zero bits in the BAR in order to set the size.
         bar->addr &= ~(bar->size - 1);
         return ZX_OK;

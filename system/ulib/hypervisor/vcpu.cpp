@@ -26,14 +26,9 @@ static zx_status_t unhandled_mem(const zx_packet_guest_mem_t* mem, const instruc
 
 static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
                                     uint8_t access_size, zx_vcpu_io_t* io) {
-    switch (addr) {
-    case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
-        return vcpu_ctx->guest->pci_bus->ReadEcam(addr, access_size, io);
-    }
-
     IoMapping& mapping = trap_key_to_mapping(trap_key);
     IoValue value = {};
-    value.access_size = io->access_size;
+    value.access_size = access_size;
     zx_status_t status = mapping.Read(addr, &value);
     if (status != ZX_OK)
         return status;
@@ -45,11 +40,6 @@ static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_
 
 static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
                                      zx_vcpu_io_t* io) {
-    switch (addr) {
-    case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
-        return vcpu_ctx->guest->pci_bus->WriteEcam(addr, io);
-    }
-
     IoMapping& mapping = trap_key_to_mapping(trap_key);
     IoValue value;
     value.access_size = io->access_size;
@@ -160,27 +150,20 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
 static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
                                 uint64_t key) {
 #if __x86_64__
-    zx_status_t status = ZX_OK;
-    zx_vcpu_io_t vcpu_io;
-    memset(&vcpu_io, 0, sizeof(vcpu_io));
-    switch (io->port) {
-    case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
-    case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
-        status = vcpu_ctx->guest->pci_bus->ReadIoPort(io->port, io->access_size, &vcpu_io);
-        break;
-    default: {
-        IoMapping& mapping = trap_key_to_mapping(key);
-        IoValue value = {};
-        value.access_size = io->access_size;
-        status = mapping.Read(io->port, &value);
-        vcpu_io.access_size = value.access_size;
-        vcpu_io.u32 = value.u32;
-    }
-    }
+    IoMapping& mapping = trap_key_to_mapping(key);
+    IoValue value = {};
+    value.access_size = io->access_size;
+    zx_status_t status = mapping.Read(io->port, &value);
+
     if (status != ZX_OK) {
         fprintf(stderr, "Unhandled port in %#x: %d\n", io->port, status);
         return status;
     }
+
+    zx_vcpu_io_t vcpu_io;
+    memset(&vcpu_io, 0, sizeof(vcpu_io));
+    vcpu_io.access_size = value.access_size;
+    vcpu_io.u32 = value.u32;
     if (vcpu_io.access_size != io->access_size) {
         fprintf(stderr, "Unexpected size (%u != %u) for port in %#x\n", vcpu_io.access_size,
                 io->access_size, io->port);
@@ -195,20 +178,11 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
 static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
                                  uint64_t key) {
 #if __x86_64__
-    switch (io->port) {
-    case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
-    case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
-        return vcpu_ctx->guest->pci_bus->WriteIoPort(io);
-    default: {
-        IoMapping& mapping = trap_key_to_mapping(key);
-        IoValue value;
-        value.access_size = io->access_size;
-        value.u32 = io->u32;
-        return mapping.Write(io->port, value);
-    }
-    }
-    fprintf(stderr, "Unhandled port out %#x\n", io->port);
-    return ZX_ERR_NOT_SUPPORTED;
+    IoMapping& mapping = trap_key_to_mapping(key);
+    IoValue value;
+    value.access_size = io->access_size;
+    value.u32 = io->u32;
+    return mapping.Write(io->port, value);
 #else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__

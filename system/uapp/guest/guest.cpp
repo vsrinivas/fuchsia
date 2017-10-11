@@ -277,7 +277,6 @@ int main(int argc, char** argv) {
 #endif
     // Setup PCI.
     PciBus bus(&guest, &io_apic);
-    guest.pci_bus = &bus;
     status = bus.Init();
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create PCI bus\n");

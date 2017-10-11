@@ -71,9 +71,7 @@
 #define PIT_CONTROL_PORT                0x43
 
 /* PCI config ports. */
-#define PCI_CONFIG_ADDRESS_PORT_BASE    0xcf8
-#define PCI_CONFIG_ADDRESS_PORT_TOP     (PCI_CONFIG_ADDRESS_PORT_BASE + 3)
-#define PCI_CONFIG_DATA_PORT_BASE       0xcfc
-#define PCI_CONFIG_DATA_PORT_TOP        (PCI_CONFIG_DATA_PORT_BASE + 3)
+#define PCI_CONFIG_PORT_BASE            0xcf8
+#define PCI_CONFIG_PORT_SIZE            0x8
 
 // clang-format on
