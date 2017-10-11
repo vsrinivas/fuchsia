@@ -12,6 +12,7 @@ group("services") {
     "entity/fidl",
     "lifecycle/fidl",
     "module/fidl",
+    "module_resolver/fidl",
     "remote/fidl",
     "story/fidl",
     "surface/fidl",

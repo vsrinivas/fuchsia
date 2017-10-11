@@ -1,0 +1,17 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+# For consumption outside modular.
+fidl("fidl") {
+  sources = [
+    "daisy.fidl",
+    "module_resolver.fidl",
+  ]
+
+  deps = [
+    "//peridot/public/lib/entity/fidl",
+  ]
+}

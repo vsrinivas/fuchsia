@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//
-// WORK IN PROGRESS, NOT YET PART OF THE BUILD
-//
-
 module modular;
+
+import "../../entity/fidl/entity_reference.fidl";
 
 // The Daisy struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/daisy.md.
@@ -27,7 +25,7 @@ struct Daisy {
 
   // string json_parameters;
   // array<string> required_services;
-}
+};
 
 // As stated above, this structure serves two purposes:
 //
@@ -38,9 +36,11 @@ struct Daisy {
 // derived, to initialize a Module after it has been selected through Module
 // Resolution.
 union Noun {
-  // Set this if you already have an Entity instance at runtime. |entity.types|
-  // will be used to set the constraints for this noun during resolution.
-  Entity entity;
+  // Set this if you already have an EntityReference at runtime. An
+  // EntityReference can acquired by calling Entity.getReference().
+  // Entity.getTypes() will be used to set the constraints for this noun during
+  // resolution.
+  EntityReference entity;
 
   // Set this if you have an unstructured blob of text. Module Resolution will
   // perform Entity extraction (see docs/module_resolution.md), from which it will
@@ -56,4 +56,4 @@ union Noun {
   // Only one entry in |entity_type| must match the constraint specified by
   // the Module for the constraint to be considered satisfied.
   array<string> entity_type;
-}
+};
