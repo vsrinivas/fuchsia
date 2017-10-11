@@ -17,6 +17,8 @@ class LpcmReformatter : public Transform {
       const AudioStreamType& in_type,
       AudioStreamType::SampleFormat out_sample_format);
 
+  ~LpcmReformatter() override {}
+
   // Returns the type of the stream the reformatter will produce.
   virtual std::unique_ptr<StreamType> output_stream_type() = 0;
 };

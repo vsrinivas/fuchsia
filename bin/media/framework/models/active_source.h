@@ -15,13 +15,15 @@ namespace media {
 // Stage for |ActiveSource|.
 class ActiveSourceStage : public Stage {
  public:
+  ~ActiveSourceStage() override {}
+
   virtual void SupplyPacket(PacketPtr packet) = 0;
 };
 
 // Source that produces packets asynchronously.
 class ActiveSource : public Node<ActiveSourceStage> {
  public:
-  virtual ~ActiveSource() {}
+  ~ActiveSource() override {}
 
   // Flushes media state.
   virtual void Flush(){};

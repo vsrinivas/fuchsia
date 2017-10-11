@@ -15,13 +15,15 @@ namespace media {
 // Stage for |ActiveSink|.
 class ActiveSinkStage : public Stage {
  public:
+  ~ActiveSinkStage() override {}
+
   virtual void SetDemand(Demand demand) = 0;
 };
 
 // Sink that consumes packets asynchronously.
 class ActiveSink : public Node<ActiveSinkStage> {
  public:
-  virtual ~ActiveSink() {}
+  ~ActiveSink() override {}
 
   // Flushes media state. |hold_frame| indicates whether a video renderer
   // should hold (and display) the newest frame.

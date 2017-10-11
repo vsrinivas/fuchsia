@@ -13,6 +13,8 @@ namespace media {
 // Stage for |ActiveMultistreamSource|.
 class ActiveMultistreamSourceStage : public Stage {
  public:
+  ~ActiveMultistreamSourceStage() override {}
+
   // Supplies a packet for the indicated output.
   virtual void SupplyPacket(size_t output_index, PacketPtr packet) = 0;
 };
@@ -20,7 +22,7 @@ class ActiveMultistreamSourceStage : public Stage {
 // Asynchronous source of packets for multiple streams.
 class ActiveMultistreamSource : public Node<ActiveMultistreamSourceStage> {
  public:
-  virtual ~ActiveMultistreamSource() {}
+  ~ActiveMultistreamSource() override {}
 
   // Flushes media state.
   virtual void Flush(){};

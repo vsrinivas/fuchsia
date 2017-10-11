@@ -14,6 +14,8 @@ namespace media {
 // Stage for |ActiveMultistreamSink|.
 class ActiveMultistreamSinkStage : public Stage {
  public:
+  ~ActiveMultistreamSinkStage() override {}
+
   // TODO(dalesat): Revisit allocation semantics.
 
   // Allocates an input and returns its index.
@@ -31,7 +33,7 @@ class ActiveMultistreamSinkStage : public Stage {
 // Synchronous sink of packets for multiple streams.
 class ActiveMultistreamSink : public Node<ActiveMultistreamSinkStage> {
  public:
-  virtual ~ActiveMultistreamSink() {}
+  ~ActiveMultistreamSink() override {}
 
   // Flushes media state. |hold_frame| indicates whether a video renderer
   // should hold (and display) the newest frame.

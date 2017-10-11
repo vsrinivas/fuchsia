@@ -18,6 +18,8 @@ class FfmpegDecoder : public Decoder {
   // Creates an ffmpeg-based Decoder object for a given media type.
   static Result Create(const StreamType& stream_type,
                        std::shared_ptr<Decoder>* decoder_out);
+
+  ~FfmpegDecoder() override {}
 };
 
 }  // namespace media

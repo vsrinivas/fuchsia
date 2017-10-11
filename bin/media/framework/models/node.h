@@ -46,6 +46,8 @@ class GenericNode {
 template <typename TStage>
 class Node : public GenericNode {
  public:
+  ~Node() override {}
+
   // Sets |stage_|. This method is called only by the graph and the stage.
   void SetStage(TStage* stage) { SetGenericStage(stage); }
 

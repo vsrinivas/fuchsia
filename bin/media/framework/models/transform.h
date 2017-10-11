@@ -17,7 +17,7 @@ class TransformStage : public Stage {};
 // Synchronous packet transform.
 class Transform : public Node<TransformStage> {
  public:
-  virtual ~Transform() {}
+  ~Transform() override {}
 
   // Flushes media state.
   virtual void Flush(){};

@@ -11,12 +11,15 @@
 namespace media {
 
 // Stage for |MultistreamSource|.
-class MultistreamSourceStage : public Stage {};
+class MultistreamSourceStage : public Stage {
+ public:
+  ~MultistreamSourceStage() override {}
+};
 
 // Synchronous source of packets for multiple streams.
 class MultistreamSource : public Node<MultistreamSourceStage> {
  public:
-  virtual ~MultistreamSource() {}
+  ~MultistreamSource() override {}
 
   // Flushes media state.
   virtual void Flush(){};
