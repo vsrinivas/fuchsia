@@ -190,7 +190,6 @@ void BatchUpload::FilterAndUploadCommits() {
 
 void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
-  std::vector<cloud_provider_firebase::Commit> commits;
   std::vector<storage::CommitId> ids;
   auto waiter =
       callback::Waiter<encryption::Status, cloud_provider_firebase::Commit>::
