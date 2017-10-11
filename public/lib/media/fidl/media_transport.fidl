@@ -110,6 +110,10 @@ interface MediaPacketConsumer {
   // response if it has changed.
   SupplyPacket(MediaPacket packet) => (MediaPacketDemand? demand);
 
+  // Supplies a packet to the consumer without returning a demand callback.
+  SupplyPacketNoDemand(MediaPacket packet);
+
+
   // Flushes the stream. The callback signals that the flush operation is
   // complete. |hold_frame| indicates whether a video renderer (if any) should
   // continue to display the last displayed frame.

@@ -13,7 +13,7 @@ const int64 kMinTime = -0x7fffffffffffffff;
 // Maximum time value.
 const int64 kMaxTime = 0x7ffffffffffffffe;
 
-// Represents the relationship between and subject timeline and a reference
+// Represents the relationship between a subject timeline and a reference
 // timeline.
 //
 // To translate a reference timeline value r to the subject timeline, apply

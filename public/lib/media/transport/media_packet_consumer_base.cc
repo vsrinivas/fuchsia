@@ -229,6 +229,11 @@ void MediaPacketConsumerBase::SupplyPacket(
       label, std::move(media_packet), payload, callback, counter_)));
 }
 
+void MediaPacketConsumerBase::SupplyPacketNoDemand(
+    MediaPacketPtr media_packet) {
+  SupplyPacket(std::move(media_packet), SupplyPacketCallback());
+}
+
 void MediaPacketConsumerBase::Flush(bool hold_frame,
                                     const FlushCallback& callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
@@ -315,15 +320,16 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
       callback_(callback),
       counter_(counter) {
   FXL_DCHECK(packet_);
-  FXL_DCHECK(callback);
   FXL_DCHECK(counter_);
   counter_->OnPacketArrival();
 }
 
 MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
-  counter_->task_runner()->PostTask([
-    callback = callback_, counter = std::move(counter_), label = label_
-  ]() { callback(counter->OnPacketDeparture(label)); });
+  if (callback_) {
+    counter_->task_runner()->PostTask([
+      callback = callback_, counter = std::move(counter_), label = label_
+    ]() { callback(counter->OnPacketDeparture(label)); });
+  }
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
