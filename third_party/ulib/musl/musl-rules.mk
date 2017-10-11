@@ -284,7 +284,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/ldso/dlerror.c \
     $(LOCAL_DIR)/src/ldso/dlinfo.c \
     $(LOCAL_DIR)/src/legacy/cuserid.c \
-    $(LOCAL_DIR)/src/legacy/daemon.c \
     $(LOCAL_DIR)/src/legacy/err.c \
     $(LOCAL_DIR)/src/legacy/euidaccess.c \
     $(LOCAL_DIR)/src/legacy/futimes.c \

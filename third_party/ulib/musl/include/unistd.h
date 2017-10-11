@@ -164,7 +164,6 @@ int getdomainname(char*, size_t);
 int setdomainname(const char*, size_t);
 int setgroups(size_t, const gid_t*);
 char* getpass(const char*);
-int daemon(int, int);
 void setusershell(void);
 void endusershell(void);
 char* getusershell(void);
