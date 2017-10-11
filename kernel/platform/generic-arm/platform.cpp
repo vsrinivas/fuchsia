@@ -67,7 +67,7 @@ static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 static bool halt_on_panic = false;
 
 /* initial memory mappings. parsed by start.S */
-struct mmu_initial_mapping mmu_initial_mappings[] = {
+const struct mmu_initial_mapping mmu_initial_mappings[] = {
  /* 1GB of sdram space */
  {
      .phys = MEMBASE,

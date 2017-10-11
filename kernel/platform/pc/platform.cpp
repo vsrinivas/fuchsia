@@ -58,7 +58,7 @@ extern bootdata_t* _bootdata_base;
 
 pc_bootloader_info_t bootloader;
 
-struct mmu_initial_mapping mmu_initial_mappings[] = {
+const struct mmu_initial_mapping mmu_initial_mappings[] = {
     /* 64GB of memory mapped where the kernel lives */
     {
         .phys = MEMBASE,

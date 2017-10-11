@@ -47,6 +47,6 @@ static_assert(sizeof(struct mmu_initial_mapping) == __MMU_INITIAL_MAPPING_SIZE, 
 // Platform or target must fill out one of these to set up the initial memory map
 // for kernel and enough IO space to boot.
 // Declared extern C because it may be accessed from assembly.
-extern "C" struct mmu_initial_mapping mmu_initial_mappings[];
+extern "C" const struct mmu_initial_mapping mmu_initial_mappings[];
 
 #endif // !ASSEMBLY

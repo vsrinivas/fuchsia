@@ -269,7 +269,7 @@ void vm_init_postheap(uint level) {
 
 void* paddr_to_kvaddr(paddr_t pa) {
     // slow path to do reverse lookup
-    struct mmu_initial_mapping* map = mmu_initial_mappings;
+    const struct mmu_initial_mapping* map = mmu_initial_mappings;
     while (map->size > 0) {
         if (!(map->flags & MMU_INITIAL_MAPPING_TEMPORARY) && pa >= map->phys &&
             pa <= map->phys + map->size - 1) {
