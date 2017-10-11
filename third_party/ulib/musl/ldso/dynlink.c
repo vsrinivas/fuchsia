@@ -54,11 +54,11 @@ static void loader_svc_config(const char* config);
 // This matches struct r_debug in <link.h>.
 // TODO(mcgrathr): Use the type here.
 struct debug {
-    int ver;
-    void* head;
-    void (*bp)(void);
-    int state;
-    void* base;
+    int r_version;
+    void* r_map;
+    void (*r_brk)(void);
+    int r_state;
+    void* r_ldbase;
 };
 
 struct dso {
@@ -1675,11 +1675,11 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
 
     atomic_init(&unlogged_tail, (uintptr_t)tail);
 
-    debug.ver = 1;
-    debug.bp = dl_debug_state;
-    debug.head = head;
-    debug.base = ldso.base;
-    debug.state = 0;
+    debug.r_version = 1;
+    debug.r_brk = dl_debug_state;
+    debug.r_map = head;
+    debug.r_ldbase = ldso.base;
+    debug.r_state = 0;
 
     status = _zx_object_set_property(__zircon_process_self,
                                      ZX_PROP_PROCESS_DEBUG_ADDR,
