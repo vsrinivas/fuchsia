@@ -51,25 +51,8 @@ static void loader_svc_config(const char* config);
 #define VMO_NAME_PREFIX_BSS "bss:"
 #define VMO_NAME_PREFIX_DATA "data:"
 
-// This matches struct r_debug in <link.h>.
-// TODO(mcgrathr): Use the type here.
-struct debug {
-    int r_version;
-    void* r_map;
-    void (*r_brk)(void);
-    int r_state;
-    void* r_ldbase;
-};
-
 struct dso {
-    // These five fields match struct link_map in <link.h>.
-    // TODO(mcgrathr): Use the type here.
-    struct dso_header {
-        unsigned char* l_addr;
-        char* l_name;
-        ElfW(Dyn)* l_ld;
-        struct dso *l_next, *l_prev;
-    } l_map;
+    struct link_map l_map;
 
     union {
         const struct gnu_note* build_id_note; // Written by map_library.
@@ -140,7 +123,7 @@ static int runtime __asm__("_dynlink_runtime") __USED;
 static int ldso_fail;
 static jmp_buf* rtld_fail;
 static pthread_rwlock_t lock;
-static struct debug debug;
+static struct r_debug debug;
 static struct tls_module* tls_tail;
 static size_t tls_cnt, tls_offset, tls_align = MIN_TLS_ALIGN;
 static size_t static_tls_cnt;
@@ -156,7 +139,7 @@ static zx_handle_t logger = ZX_HANDLE_INVALID;
 // E.g., the list of loaded shared libraries is obtained from here.
 // The value is stored in the process's ZX_PROPERTY_PROCESS_DEBUG_ADDR so that
 // tools can obtain the value when aslr is enabled.
-struct debug* _dl_debug_addr = &debug;
+struct r_debug* _dl_debug_addr = &debug;
 
 // If true then dump load map data in a specific format for tracing.
 // This is used by Intel PT (Processor Trace) support for example when
@@ -257,19 +240,19 @@ static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
 
 // Accessors for dso previous and next pointers.
 static inline struct dso* dso_next(struct dso* p) {
-    return p->l_map.l_next;
+    return (struct dso*)p->l_map.l_next;
 }
 
 static inline struct dso* dso_prev(struct dso* p) {
-    return p->l_map.l_prev;
+    return (struct dso*)p->l_map.l_prev;
 }
 
 static inline void dso_set_next(struct dso* p, struct dso* next) {
-    p->l_map.l_next = next;
+    p->l_map.l_next = &next->l_map;
 }
 
 static inline void dso_set_prev(struct dso* p, struct dso* prev) {
-    p->l_map.l_prev = prev;
+    p->l_map.l_prev = &prev->l_map;
 }
 
 __NO_SAFESTACK NO_ASAN
@@ -420,7 +403,7 @@ __attribute__((__visibility__("hidden"))) ptrdiff_t __tlsdesc_static(void), __tl
 
 __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
                                              size_t rel_size, size_t stride) {
-    unsigned char* base = dso->l_map.l_addr;
+    ElfW(Addr) base = dso->l_map.l_addr;
     Sym* syms = dso->syms;
     char* strings = dso->strings;
     Sym* sym;
@@ -497,7 +480,7 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
             *reloc_addr = sym_val + addend;
             break;
         case REL_RELATIVE:
-            *reloc_addr = (size_t)base + addend;
+            *reloc_addr = base + addend;
             break;
         case REL_COPY:
             memcpy(reloc_addr, (void*)sym_val, sym->st_size);
@@ -883,7 +866,7 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
         }
     }
 
-    dso->l_map.l_addr = base;
+    dso->l_map.l_addr = (uintptr_t)base;
     dso->l_map.l_ld = laddr(dso, dyn);
     if (dso->tls.size)
         dso->tls.image = laddr(dso, tls_image);
@@ -1357,7 +1340,7 @@ __NO_SAFESTACK NO_ASAN static void kernel_mapped_dso(struct dso* p) {
     }
     min_addr &= -PAGE_SIZE;
     max_addr = (max_addr + PAGE_SIZE - 1) & -PAGE_SIZE;
-    p->map = p->l_map.l_addr + min_addr;
+    p->map = laddr(p, min_addr);
     p->map_len = max_addr - min_addr;
 }
 
@@ -1506,7 +1489,7 @@ static dl_start_return_t __dls3(void* start_arg);
 __NO_SAFESTACK NO_ASAN __attribute__((__visibility__("hidden")))
 dl_start_return_t __dls2(
     void* start_arg, void* vdso_map) {
-    ldso.l_map.l_addr = (unsigned char*)__ehdr_start;
+    ldso.l_map.l_addr = (uintptr_t)__ehdr_start;
 
     Ehdr* ehdr = (void*)ldso.l_map.l_addr;
     ldso.l_map.l_name = (char*)"libc.so";
@@ -1522,7 +1505,7 @@ dl_start_return_t __dls2(
         // a preloaded shared object right away, so ld.so itself
         // can depend on it and require its symbols.
 
-        vdso.l_map.l_addr = vdso_map;
+        vdso.l_map.l_addr = (uintptr_t)vdso_map;
         vdso.l_map.l_name = (char*)"<vDSO>";
         vdso.global = -1;
 
@@ -1696,8 +1679,8 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
     atomic_init(&unlogged_tail, (uintptr_t)tail);
 
     debug.r_version = 1;
-    debug.r_brk = dl_debug_state;
-    debug.r_map = head;
+    debug.r_brk = (uintptr_t)dl_debug_state;
+    debug.r_map = &head->l_map;
     debug.r_ldbase = ldso.l_map.l_addr;
     debug.r_state = 0;
 
@@ -2124,7 +2107,7 @@ int dladdr(const void* addr, Dl_info* info) {
         return 0;
 
     info->dli_fname = p->l_map.l_name;
-    info->dli_fbase = p->l_map.l_addr;
+    info->dli_fbase = (void*)p->l_map.l_addr;
     info->dli_sname = strings + bestsym->st_name;
     info->dli_saddr = best;
 
