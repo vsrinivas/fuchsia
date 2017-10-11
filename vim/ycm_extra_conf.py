@@ -9,24 +9,25 @@ import os
 import stat
 import subprocess
 
+# NOTE: paths.py is a direct copy from //packages/gn/paths.py
+# If there is an issue with the paths not being valid, just pull a new copy.
+import sys
+sys.path.append(os.path.dirname(__file__))
+import paths as fuchsia_paths
+
 fuchsia_root = os.path.realpath(os.environ['FUCHSIA_DIR'])
 fuchsia_build = os.path.realpath(os.environ['FUCHSIA_BUILD_DIR'])
-fuchsia_buildtools = os.path.realpath(os.path.join(fuchsia_root, 'buildtools'))
 
-for f in os.listdir(os.path.join(fuchsia_buildtools, 'toolchain')):
-  if f.startswith('clang'):
-    fuchsia_toolchain_builtins = os.path.join(fuchsia_buildtools, 'toolchain',
-                                              f)
-assert fuchsia_toolchain_builtins, \
-    'Could not find toolchain in {}'.format(fuchsia_buildtools)
+fuchsia_clang = os.path.join(fuchsia_paths.BUILDTOOLS_PATH, 'clang')
+ninja_path = os.path.join(fuchsia_root, 'buildtools', 'ninja')
 
 common_flags = [
     '-std=c++14',
     '-xc++',
     '-isystem',
-    fuchsia_toolchain_builtins + '/include',
+    fuchsia_clang + '/include',
     '-isystem',
-    fuchsia_toolchain_builtins + '/include/c++/v1',
+    fuchsia_clang + '/include/c++/v1',
 ]
 
 default_flags = [
@@ -70,11 +71,10 @@ def GetClangCommandFromNinjaForFilename(filename):
   filename = os.path.realpath(filename)
   subdir_filename = filename[len(fuchsia_root) + 1:]
   rel_filename = os.path.join('..', '..', subdir_filename)
-  ninja_filename = os.path.join(fuchsia_buildtools, 'ninja')
 
   # Ask ninja how it would build our source file.
   ninja_command = [
-      ninja_filename, '-v', '-C', fuchsia_build, '-t', 'commands',
+      ninja_path, '-v', '-C', fuchsia_build, '-t', 'commands',
       rel_filename + '^'
   ]
   p = subprocess.Popen(ninja_command, stdout=subprocess.PIPE)
