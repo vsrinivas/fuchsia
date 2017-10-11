@@ -255,7 +255,7 @@ int MsdArmDevice::MmuInterruptThreadLoop()
 
     while (!interrupt_thread_quit_flag_) {
         DLOG("MMU waiting for interrupt");
-        job_interrupt_->Wait();
+        mmu_interrupt_->Wait();
         DLOG("MMU Returned from interrupt wait!");
 
         if (interrupt_thread_quit_flag_)
