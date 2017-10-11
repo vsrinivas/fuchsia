@@ -16,17 +16,52 @@
 
 #include "device.h"
 
+#include "hif.h"
+
+#include <ddk/debug.h>
+#include <fbl/type_support.h>
+
 namespace ath10k {
 
-Device::Device(zx_device_t* device, pci_protocol_t* pci)
-  : BaseDevice(device), pci_(pci) {}
+int device_init(void* arg) {
+    auto dev = reinterpret_cast<Device*>(arg);
+    return dev->Init();
+}
+
+Device::Device(zx_device_t* device, fbl::unique_ptr<Hif> hif)
+  : BaseDevice(device), hif_(fbl::move(hif)) {}
 
 zx_status_t Device::Bind() {
-    DdkAdd("ath10k");
+    zx_status_t status = hif_->Bind();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    DdkAdd("ath10k", DEVICE_ADD_INVISIBLE);
+
+    int ret = thrd_create_with_name(&init_thread_, device_init, reinterpret_cast<void*>(this),
+            "ath10k-init");
+    if (ret != thrd_success) {
+        DdkRemove();
+    }
+
     return ZX_OK;
 }
 
+int Device::Init() {
+    zx_status_t status = hif_->Init(&rev_);
+    if (status != ZX_OK) {
+        DdkRemove();
+        return status;
+    }
+
+    dprintf(INFO, "ath10k: rev %s\n", HwRevToString(rev_));
+
+    return 0;
+}
+
 void Device::DdkUnbind() {
+    thrd_join(init_thread_, nullptr);
     DdkRemove();
 }
 

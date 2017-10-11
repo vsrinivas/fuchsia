@@ -24,6 +24,11 @@ driver_module("ath10k_driver") {
     "device.cpp",
     "device.h",
     "driver.cpp",
+    "hif.h",
+    "hw.cpp",
+    "hw.h",
+    "pci.cpp",
+    "pci.h",
   ]
 
   deps = [

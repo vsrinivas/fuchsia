@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "hw.h"
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -27,8 +29,15 @@ static zx_driver_ops_t ath10k_driver_ops = {
     .bind = ath10k_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(ath10k, ath10k_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(ath10k, ath10k_driver_ops, "zircon", "0.1", 10)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, 0x168c),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x003e),
+    BI_ABORT_IF(NE, BIND_PCI_VID, ATHEROS_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA988X_2_0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA6174_2_1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA99X0_2_0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA6164_2_1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9377_1_0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9984_1_0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9887_1_0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QCA9888_2_0_DID),
 ZIRCON_DRIVER_END(ath10k)

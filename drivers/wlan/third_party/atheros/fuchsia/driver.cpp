@@ -15,12 +15,13 @@
  */
 
 #include "device.h"
+#include "pci.h"
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <fbl/unique_ptr.h>
 
 #include <cstdio>
-#include <memory>
 
 extern "C" zx_status_t ath10k_bind(void* ctx, zx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
@@ -28,11 +29,13 @@ extern "C" zx_status_t ath10k_bind(void* ctx, zx_device_t* device, void** cookie
     pci_protocol_t pci;
     zx_status_t status =
         device_get_protocol(device, ZX_PROTOCOL_PCI, reinterpret_cast<void*>(&pci));
+    // For now, we only support PCIe devices, so just return an error in this case.
     if (status != ZX_OK) {
         return status;
     }
 
-    auto dev = std::make_unique<ath10k::Device>(device, &pci);
+    auto pcibus = fbl::make_unique<ath10k::PciBus>(&pci);
+    auto dev = fbl::make_unique<ath10k::Device>(device, fbl::move(pcibus));
     status = dev->Bind();
     if (status != ZX_OK) {
         std::printf("ath10k: could not bind: %d\n", status);
