@@ -82,11 +82,12 @@ static void boot_addr_range_reset(boot_addr_range_t *range)
  * array with the ranges of memory it finds, compacted to the start of the
  * array. it returns the total count of arenas which have been populated.
  */
+extern int __code_start;
 extern int _end;
 static zx_status_t mem_arena_init(boot_addr_range_t *range)
 {
     mem_limit_ctx ctx;
-    ctx.kernel_base = KERNEL_BASE + KERNEL_LOAD_OFFSET;
+    ctx.kernel_base = reinterpret_cast<uintptr_t>(&__code_start);
     ctx.kernel_size = reinterpret_cast<uintptr_t>(&_end) - ctx.kernel_base;
     ctx.ramdisk_base = reinterpret_cast<uintptr_t>(platform_get_ramdisk(&ctx.ramdisk_size));
 
