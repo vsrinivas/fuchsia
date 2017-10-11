@@ -291,7 +291,7 @@ static int usb_hub_thread(void* arg) {
                                             &out_length);
     if (result < 0) {
         dprintf(ERROR, "get hub descriptor failed: %d\n", result);
-        return result;
+        goto fail;
     }
     // The length of the descriptor varies depending on whether it is USB 2.0 or 3.0,
     // and how many ports it has.
@@ -300,20 +300,22 @@ static int usb_hub_thread(void* arg) {
     if (out_length < min_length || out_length > max_length) {
         dprintf(ERROR, "get hub descriptor got length %lu, want length between %lu and %lu\n",
                 out_length, min_length, max_length);
-        return ZX_ERR_BAD_STATE;
+        result = ZX_ERR_BAD_STATE;
+        goto fail;
     }
 
     result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &desc);
     if (result < 0) {
         dprintf(ERROR, "configure_hub failed: %d\n", result);
-        return result;
+        goto fail;
     }
 
     int num_ports = desc.bNbrPorts;
     hub->num_ports = num_ports;
     hub->port_status = calloc(num_ports + 1, sizeof(port_status_t));
     if (!hub->port_status) {
-        return ZX_ERR_NO_MEMORY;
+        result = ZX_ERR_NO_MEMORY;
+        goto fail;
     }
 
     // power on delay in microseconds
@@ -371,6 +373,10 @@ static int usb_hub_thread(void* arg) {
     }
 
     return ZX_OK;
+
+fail:
+    device_remove(hub->zxdev);
+    return result;
 }
 
 static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
@@ -457,7 +463,6 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device, void** cookie) {
     int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
     if (ret != thrd_success) {
         device_remove(hub->zxdev);
-        usb_hub_free(hub);
         return ZX_ERR_NO_MEMORY;
     }
 
