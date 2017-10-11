@@ -177,6 +177,11 @@ kernel thread should sleep between checks.
 The `k oom info` command will show the current value of this and other
 parameters.
 
+## kernel.mexec-pci-shutdown=\<bool>
+
+If false, this option leaves PCI devices running when calling mexec. Defaults
+to true.
+
 ## kernel.shell=\<bool>
 
 This option tells the kernel to start its own shell on the kernel console
