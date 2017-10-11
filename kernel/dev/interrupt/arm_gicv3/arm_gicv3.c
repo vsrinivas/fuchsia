@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <bits.h>
 #include <string.h>
 #include <dev/interrupt/arm_gic.h>
 #include <kernel/thread.h>
@@ -118,24 +119,27 @@ static void gic_init_percpu_early(void)
 
 static void gic_init(void)
 {
+    LTRACE_ENTRY;
+
     __UNUSED uint rev = (GICREG(0, GICD_PIDR2) >> 4) & 0xf;
     assert(rev == 3 || rev == 4);
 
     uint32_t typer = GICREG(0, GICD_TYPER);
-    __UNUSED uint idbits = (typer >> 19) & 0x1f;
+    uint32_t idbits = BITS_SHIFT(typer, 23, 19);
     gic_max_int = (idbits + 1) * 32;
-    printf("gic_init max_irqs: %u\n", gic_max_int);
 
     // disable the distributor
     GICREG(0, GICD_CTLR) = 0;
     gic_wait_for_rwp(GICD_CTLR);
     ISB;
 
-    // mask and clear spi
+    // mask and clear all spis, set group 1
     uint i;
     for (i = 32; i < gic_max_int; i += 32) {
         GICREG(0, GICD_ICENABLER(i / 32)) = ~0;
         GICREG(0, GICD_ICPENDR(i / 32)) = ~0;
+        GICREG(0, GICD_IGROUPR(i / 32)) = ~0;
+        GICREG(0, GICD_IGRPMODR(i / 32)) = 0;
     }
     gic_wait_for_rwp(GICD_CTLR);
 
@@ -152,6 +156,9 @@ static void gic_init(void)
     }
 
     gic_init_percpu_early();
+
+    mb();
+    ISB;
 }
 
 static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
@@ -192,6 +199,8 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
 
 static zx_status_t gic_mask_interrupt(unsigned int vector)
 {
+    LTRACEF("vector %u\n", vector);
+
     if (vector >= gic_max_int)
         return ZX_ERR_INVALID_ARGS;
 
@@ -202,6 +211,8 @@ static zx_status_t gic_mask_interrupt(unsigned int vector)
 
 static zx_status_t gic_unmask_interrupt(unsigned int vector)
 {
+    LTRACEF("vector %u\n", vector);
+
     if (vector >= gic_max_int)
         return ZX_ERR_INVALID_ARGS;
 
@@ -214,6 +225,8 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_trigger_mode tm,
                                            enum interrupt_polarity pol)
 {
+    LTRACEF("vector %u, trigger mode %u, polarity %u\n", vector, tm, pol);
+
     if (vector <= 15 || vector >= gic_max_int) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -240,6 +253,8 @@ static zx_status_t gic_get_interrupt_config(unsigned int vector,
                                             enum interrupt_trigger_mode* tm,
                                             enum interrupt_polarity* pol)
 {
+    LTRACEF("vector %u\n", vector);
+
     if (vector >= gic_max_int)
         return ZX_ERR_INVALID_ARGS;
 
@@ -250,6 +265,7 @@ static zx_status_t gic_get_interrupt_config(unsigned int vector,
 }
 
 static unsigned int gic_remap_interrupt(unsigned int vector) {
+    LTRACEF("vector %u\n", vector);
     return vector;
 }
 
@@ -258,6 +274,8 @@ static enum handler_return gic_handle_irq(iframe* frame) {
     // get the current vector
     uint32_t iar = gic_read_iar();
     unsigned vector = iar & 0x3ff;
+
+    LTRACEF_LEVEL(2, "iar %#x, vector %u\n", iar, vector);
 
     if (vector >= 0x3fe) {
         // spurious
@@ -273,7 +291,8 @@ static enum handler_return gic_handle_irq(iframe* frame) {
 
     ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
-    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#" PRIxPTR "\n", iar, cpu, get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
+    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#" PRIxPTR "\n",
+            iar, cpu, get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
 
     // deliver the interrupt
     enum handler_return ret = INT_NO_RESCHEDULE;
@@ -358,6 +377,8 @@ static const struct pdev_interrupt_ops gic_ops = {
 static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     uint64_t gic_base_virt = 0;
 
+    LTRACE_ENTRY;
+
     bool got_gic_base_virt = false;
     bool got_gicd_offset = false;
     bool got_gicr_offset = false;
@@ -415,6 +436,8 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     register_int_handler(MP_IPI_GENERIC + ipi_base, &arm_ipi_generic_handler, 0);
     register_int_handler(MP_IPI_RESCHEDULE + ipi_base, &arm_ipi_reschedule_handler, 0);
     register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
+
+    LTRACE_EXIT;
 }
 
 LK_PDEV_INIT(arm_gic_v3_init, MDI_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY);
