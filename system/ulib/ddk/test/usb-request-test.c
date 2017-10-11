@@ -20,8 +20,35 @@ static bool test_alloc_simple(void) {
     END_TEST;
 }
 
+static bool test_alloc_vmo(void) {
+    BEGIN_TEST;
+
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 4, 0, &vmo), ZX_OK, "");
+
+    usb_request_t* req;
+    ASSERT_EQ(usb_request_alloc_vmo(&req, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0), ZX_OK, "");
+
+    // Try copying some random data to and from the request.
+    void* data = malloc(PAGE_SIZE * 4);
+    ASSERT_EQ(usb_request_copyto(req, data, PAGE_SIZE * 4, 0), PAGE_SIZE * 3,
+              "only 3 pages should be copied as vmo_offset is 1 page");
+
+    void* out_data = malloc(PAGE_SIZE * 4);
+    ASSERT_EQ(usb_request_copyfrom(req, out_data, PAGE_SIZE * 4, 0), PAGE_SIZE * 3,
+              "only 3 pages should be copied as vmo_offset is 1 page");
+
+    ASSERT_EQ(memcmp(data, out_data, PAGE_SIZE * 3), 0, "");
+
+    free(data);
+    free(out_data);
+    usb_request_release(req);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(usb_request_tests)
 RUN_TEST(test_alloc_simple)
+RUN_TEST(test_alloc_vmo)
 END_TEST_CASE(usb_request_tests)
 
 struct test_case_element* test_case_ddk_usb_request = TEST_CASE_ELEMENT(usb_request_tests);
