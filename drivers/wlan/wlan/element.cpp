@@ -174,4 +174,42 @@ bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t* raw, 
     return true;
 }
 
+bool HtCapabilities::Create(uint8_t* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
+                            AmpduParams ampdu_params, SupportedMcsSet mcs_set,
+                            HtExtCapabilities ht_ext_cap, TxBfCapability txbf_cap,
+                            AselCapability asel_cap) {
+    size_t elem_size = sizeof(HtCapabilities);
+    if (elem_size > len) return false;
+
+    auto elem = reinterpret_cast<HtCapabilities*>(buf);
+    elem->hdr.id = element_id::kHtCapabilities;
+    elem->hdr.len = elem_size - sizeof(ElementHeader);
+
+    elem->ht_cap_info = ht_cap_info;
+    elem->ampdu_params = ampdu_params;
+    elem->mcs_set = mcs_set;
+    elem->ht_ext_cap = ht_ext_cap;
+    elem->txbf_cap = txbf_cap;
+    elem->asel_cap = asel_cap;
+
+    *actual = elem_size;
+    return true;
+}
+
+bool HtOperation::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t primary_chan,
+                         HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet mcs_set) {
+    size_t elem_size = sizeof(HtOperation);
+    if (elem_size > len) return false;
+
+    auto elem = reinterpret_cast<HtOperation*>(buf);
+    elem->hdr.id = element_id::kHtOperation;
+    elem->hdr.len = elem_size - sizeof(ElementHeader);
+
+    elem->primary_chan = primary_chan;
+    elem->head = head;
+    elem->tail = tail;
+    elem->mcs_set = mcs_set;
+    return true;
+}
+
 }  // namespace wlan

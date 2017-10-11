@@ -309,6 +309,27 @@ class AmpduParams : public common::BitField<uint8_t> {
 };
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
+class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
+    constexpr explicit SupportedMcsRxMcsHead(uint64_t val) : common::BitField<uint64_t>(val) {}
+    constexpr SupportedMcsRxMcsHead() = default;
+
+    // HT-MCS table in IEEE Std 802.11-2016, Annex B.4.17.2
+    // VHT-MCS tables in IEEE Std 802.11-2016, 21.5
+    WLAN_BIT_FIELD(bitmask, 0, 64);
+};
+
+// IEEE Std 802.11-2016, 9.4.2.56.4
+class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
+    constexpr explicit SupportedMcsRxMcsTail(uint32_t val) : common::BitField<uint32_t>(val) {}
+    constexpr SupportedMcsRxMcsTail() = default;
+
+    WLAN_BIT_FIELD(bitmask, 0, 13);
+    WLAN_BIT_FIELD(reserved1, 13, 3);
+    WLAN_BIT_FIELD(highest_rate, 16, 10);  // Mbps. Rx Highest Supported Rate.
+    WLAN_BIT_FIELD(reserved2, 26, 6);
+};
+
+// IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsTxMcs : public common::BitField<uint32_t> {
     constexpr explicit SupportedMcsTxMcs(uint32_t chunk) : common::BitField<uint32_t>(chunk) {}
     constexpr SupportedMcsTxMcs() = default;
@@ -329,14 +350,13 @@ class SupportedMcsTxMcs : public common::BitField<uint32_t> {
     }
 };
 
+// IEEE Std 802.11-2016, 9.4.2.56.4
 struct SupportedMcsSet {
-    static constexpr size_t kRxMcsChunkLen = 12;
-
-    uint8_t rx_mcs[kRxMcsChunkLen];
+    SupportedMcsRxMcsHead rx_mcs_head;
+    SupportedMcsRxMcsTail rx_mcs_tail;
     SupportedMcsTxMcs tx_mcs;
 
     // TODO(porce): Implement accessors
-    size_t len() { return kRxMcsChunkLen + tx_mcs.len(); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.5
@@ -471,7 +491,10 @@ class AselCapability : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.56
 struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabilities> {
-    static bool Create();
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
+                       AmpduParams ampdu_params, SupportedMcsSet mcs_set,
+                       HtExtCapabilities ht_ext_cap, TxBfCapability txbf_cap,
+                       AselCapability asel_cap);
     static constexpr size_t kMinLen = 26;
     static constexpr size_t kMaxLen = 26;
 
@@ -540,18 +563,19 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.57
 struct HtOperation : public Element<TimElement, element_id::kHtOperation> {
-    static bool Create();
+    bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t primary_chan, HtOpInfoHead head,
+                HtOpInfoTail tail, SupportedMcsSet mcs_set);
     static constexpr size_t kMinLen = 22;
     static constexpr size_t kMaxLen = 22;
-    static constexpr size_t kMcsSetLen = 16;
 
     ElementHeader hdr;
-    uint8_t primary_chan;
+
+    uint8_t primary_chan;  // Primary 20 MHz channel.
 
     // Implementation hack to support 40bits bitmap.
     HtOpInfoHead head;
     HtOpInfoTail tail;
-    uint8_t mcs_set[kMcsSetLen];  // See IEEE Std 802.11-2016, 9.5.2.56.4 for values.
-
+    SupportedMcsSet mcs_set;
 } __PACKED;
+
 }  // namespace wlan
