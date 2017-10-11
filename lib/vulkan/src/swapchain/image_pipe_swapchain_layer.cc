@@ -59,21 +59,27 @@ struct PendingImageInfo {
 
 class ImagePipeSwapchain {
 public:
-    ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                       scenic::ImagePipeSyncPtr image_pipe)
-        : supported_properties_(supported_properties), image_pipe_(std::move(image_pipe)),
-          image_pipe_closed_(false)
-    {
-    }
+ ImagePipeSwapchain(SupportedImageProperties supported_properties,
+                    scenic::ImagePipeSyncPtr image_pipe)
+     : supported_properties_(supported_properties),
+       image_pipe_(std::move(image_pipe)),
+       image_pipe_closed_(false),
+       device_(VK_NULL_HANDLE) {}
 
-    VkResult Initialize(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo,
-                        const VkAllocationCallbacks* pAllocator);
+ VkResult Initialize(VkDevice device,
+                     const VkSwapchainCreateInfoKHR* pCreateInfo,
+                     const VkAllocationCallbacks* pAllocator);
 
-    void Cleanup(VkDevice device, const VkAllocationCallbacks* pAllocator);
+ void Cleanup(VkDevice device, const VkAllocationCallbacks* pAllocator);
 
-    VkResult GetSwapchainImages(uint32_t* pCount, VkImage* pSwapchainImages);
-    VkResult AcquireNextImage(uint64_t timeout_ns, VkSemaphore semaphore, uint32_t* pImageIndex);
-    VkResult Present(uint32_t index);
+ VkResult GetSwapchainImages(uint32_t* pCount, VkImage* pSwapchainImages);
+ VkResult AcquireNextImage(uint64_t timeout_ns,
+                           VkSemaphore semaphore,
+                           uint32_t* pImageIndex);
+ VkResult Present(VkQueue queue,
+                  uint32_t index,
+                  uint32_t waitSemaphoreCount,
+                  const VkSemaphore* pWaitSemaphores);
 
 private:
     SupportedImageProperties supported_properties_;
@@ -84,6 +90,7 @@ private:
     std::vector<uint32_t> available_ids_;
     std::vector<PendingImageInfo> pending_images_;
     bool image_pipe_closed_;
+    VkDevice device_;
 };
 
 VkResult ImagePipeSwapchain::Initialize(VkDevice device,
@@ -93,6 +100,54 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
     VkResult result;
     VkLayerDispatchTable* pDisp =
         GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table;
+
+    VkInstance instance =
+        GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->instance;
+
+    uint32_t physical_device_count;
+    result =
+        vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
+    if (result != VK_SUCCESS)
+      return result;
+
+    if (physical_device_count < 1)
+      return VK_ERROR_DEVICE_LOST;
+
+    std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
+    result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
+                                        physical_devices.data());
+    if (result != VK_SUCCESS)
+      return VK_ERROR_DEVICE_LOST;
+
+    bool external_semaphore_extension_available = false;
+    for (auto physical_device : physical_devices) {
+      uint32_t device_extension_count;
+      result = vkEnumerateDeviceExtensionProperties(
+          physical_device, nullptr, &device_extension_count, nullptr);
+      if (result != VK_SUCCESS)
+        return VK_ERROR_DEVICE_LOST;
+
+      if (device_extension_count > 0) {
+        std::vector<VkExtensionProperties> device_extensions(
+            device_extension_count);
+        result = vkEnumerateDeviceExtensionProperties(physical_device, nullptr,
+                                                      &device_extension_count,
+                                                      device_extensions.data());
+        if (result != VK_SUCCESS)
+          return VK_ERROR_DEVICE_LOST;
+
+        for (uint32_t i = 0; i < device_extension_count; i++) {
+          if (!strcmp(VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
+                      device_extensions[i].extensionName)) {
+            external_semaphore_extension_available = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!external_semaphore_extension_available)
+      return VK_ERROR_SURFACE_LOST_KHR;
 
     bool scanout_tiling_enabled = false;
     uint32_t instance_extension_count;
@@ -201,6 +256,7 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
 
         available_ids_.push_back(i);
     }
+    device_ = device;
     return VK_SUCCESS;
 }
 
@@ -315,69 +371,71 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     return swapchain->AcquireNextImage(timeout, semaphore, pImageIndex);
 }
 
-VkResult ImagePipeSwapchain::Present(uint32_t index)
-{
-    if (image_pipe_closed_)
-        return VK_ERROR_DEVICE_LOST;
+VkResult ImagePipeSwapchain::Present(VkQueue queue,
+                                     uint32_t index,
+                                     uint32_t waitSemaphoreCount,
+                                     const VkSemaphore* pWaitSemaphores) {
+  if (image_pipe_closed_)
+    return VK_ERROR_DEVICE_LOST;
 
-    auto iter = std::find(acquired_ids_.begin(), acquired_ids_.end(), index);
-    FXL_DCHECK(iter != acquired_ids_.end());
-    acquired_ids_.erase(iter);
+  VkLayerDispatchTable* pDisp =
+      GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)
+          ->device_dispatch_table;
 
-    zx::event acquire_fence, release_fence;
-    zx_status_t status;
-    status = zx::event::create(0, &acquire_fence);
-    if (status != ZX_OK)
-        return VK_ERROR_DEVICE_LOST;
+  auto acquire_fences = fidl::Array<zx::event>::New(waitSemaphoreCount);
+  for (uint32_t i = 0; i < waitSemaphoreCount; i++) {
+    VkSemaphoreGetFuchsiaHandleInfoKHR info = {
+        VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
+        nullptr,
+        pWaitSemaphores[i],
+        VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+    };
+    VkResult result = pDisp->GetSemaphoreFuchsiaHandleKHR(
+        device_, &info, acquire_fences[i].reset_and_get_address());
+    if (result != VK_SUCCESS)
+      return VK_ERROR_SURFACE_LOST_KHR;
+  }
 
-    status = zx::event::create(0, &release_fence);
-    if (status != ZX_OK)
-        return VK_ERROR_DEVICE_LOST;
+  auto iter = std::find(acquired_ids_.begin(), acquired_ids_.end(), index);
+  FXL_DCHECK(iter != acquired_ids_.end());
+  acquired_ids_.erase(iter);
 
-    status = acquire_fence.signal(0u, ZX_EVENT_SIGNALED);
-    if (status) {
-        FXL_DLOG(ERROR) << "failed to signal fence event, zx::event::signal() failed with status "
-                        << status;
-        return VK_ERROR_DEVICE_LOST;
-    }
+  zx::event release_fence;
+  zx_status_t status;
 
-    zx::event image_release_fence;
-    status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
-    if (status) {
-        FXL_DLOG(ERROR)
-            << "failed to duplicate release fence, zx::event::duplicate() failed with status "
-            << status;
-        return VK_ERROR_DEVICE_LOST;
-    }
+  status = zx::event::create(0, &release_fence);
+  if (status != ZX_OK)
+    return VK_ERROR_DEVICE_LOST;
 
-    pending_images_.push_back({std::move(image_release_fence), index});
+  zx::event image_release_fence;
+  status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
+  if (status != ZX_OK) {
+    FXL_DLOG(ERROR) << "failed to duplicate release fence, "
+                       "zx::event::duplicate() failed with status "
+                    << status;
+    return VK_ERROR_DEVICE_LOST;
+  }
 
-    auto acquire_fences = fidl::Array<zx::event>::New(1);
-    auto release_fences = fidl::Array<zx::event>::New(1);
-    acquire_fences.push_back(std::move(acquire_fence));
-    release_fences.push_back(std::move(release_fence));
+  pending_images_.push_back({std::move(image_release_fence), index});
 
-    scenic::PresentationInfoPtr info;
-    image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
-                              std::move(acquire_fences),
-                              std::move(release_fences), &info);
+  fidl::Array<zx::event> release_fences;
+  release_fences.push_back(std::move(release_fence));
 
-    return VK_SUCCESS;
+  scenic::PresentationInfoPtr info;
+  image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
+                            std::move(acquire_fences),
+                            std::move(release_fences), &info);
+
+  return VK_SUCCESS;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo)
 {
-
-    VkLayerDispatchTable* pDisp =
-        GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table;
-
-    // TODO(MA-264) Should export semaphores to an zx::event handle and give to ImagePipe consumer.
-    // For now we just idle the queue
-    pDisp->QueueWaitIdle(queue);
-
     for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
         auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(pPresentInfo->pSwapchains[i]);
-        VkResult result = swapchain->Present(pPresentInfo->pImageIndices[i]);
+        VkResult result = swapchain->Present(
+            queue, pPresentInfo->pImageIndices[i],
+            pPresentInfo->waitSemaphoreCount, pPresentInfo->pWaitSemaphores);
         if (pPresentInfo->pResults) {
             pPresentInfo->pResults[i] = result;
         } else if (result != VK_SUCCESS) {
@@ -552,6 +610,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
 
     // Setup device dispatch table
     my_device_data->device_dispatch_table = new VkLayerDispatchTable;
+    my_device_data->instance = my_instance_data->instance;
     layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table,
                                      fpGetDeviceProcAddr);
 
