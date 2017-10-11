@@ -45,31 +45,31 @@ static const unsigned char charmaps[] = "utf8\0char\0\0\310"
                                         "gb2312\0\0\332"
                                         "big5\0bigfive\0cp950\0big5hkscs\0\0\340"
                                         "euckr\0ksc5601\0ksx1001\0cp949\0\0\350"
-#include "codepages.h"
+#include "codepages.inc"
     ;
 
 static const unsigned short legacy_chars[] = {
-#include "legacychars.h"
+#include "legacychars.inc"
 };
 
 static const unsigned short jis0208[84][94] = {
-#include "jis0208.h"
+#include "jis0208.inc"
 };
 
 static const unsigned short gb18030[126][190] = {
-#include "gb18030.h"
+#include "gb18030.inc"
 };
 
 static const unsigned short big5[89][157] = {
-#include "big5.h"
+#include "big5.inc"
 };
 
 static const unsigned short hkscs[] = {
-#include "hkscs.h"
+#include "hkscs.inc"
 };
 
 static const unsigned short ksc[93][94] = {
-#include "ksc.h"
+#include "ksc.inc"
 };
 
 static int fuzzycmp(const unsigned char* a, const unsigned char* b) {
