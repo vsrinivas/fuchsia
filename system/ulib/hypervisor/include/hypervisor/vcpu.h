@@ -36,23 +36,3 @@ zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx);
 
 /* Processes a single guest packet. */
 zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet);
-
-typedef zx_status_t (*device_handler_fn_t)(zx_port_packet_t* packet, void* ctx);
-
-/* A set of arguments to specify a trap region.
- *
- * See zx_guest_set_trap for more details on trap args.
- */
-typedef struct trap_args {
-    uint32_t kind;
-    zx_vaddr_t addr;
-    size_t len;
-    uint32_t key;
-    bool use_port;
-} trap_args_t;
-
-/* Set traps for a device and start asynchronous handling of device operations
- * for any traps where |trap_args_t::use_port| is true.
- */
-zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
-                        device_handler_fn_t handler, void* ctx);

@@ -5,16 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <fbl/unique_ptr.h>
-#include <hw/pci.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
-#include <hypervisor/block.h>
 #include <hypervisor/decode.h>
-#include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/vcpu.h>
-#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include "acpi_priv.h"
@@ -263,83 +258,4 @@ zx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, zx_port_packet_t* packet) 
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
         return ZX_ERR_NOT_SUPPORTED;
     }
-}
-
-struct device_t {
-    zx_handle_t port;
-    device_handler_fn_t handler;
-    void* ctx;
-
-    device_t(zx_handle_t port, device_handler_fn_t handler, void* ctx)
-        : port(port), handler(handler), ctx(ctx) {}
-    ~device_t() { zx_handle_close(port); }
-};
-
-static int device_loop(void* ctx) {
-    fbl::unique_ptr<device_t> device(static_cast<device_t*>(ctx));
-
-    while (true) {
-        zx_port_packet_t packet;
-        zx_status_t status = zx_port_wait(device->port, ZX_TIME_INFINITE, &packet, 0);
-        if (status != ZX_OK) {
-            fprintf(stderr, "Failed to wait for device port %d\n", status);
-            break;
-        }
-
-        status = device->handler(&packet, device->ctx);
-        if (status != ZX_OK) {
-            fprintf(stderr, "Unable to handle packet for device %d\n", status);
-            break;
-        }
-    }
-
-    return ZX_ERR_INTERNAL;
-}
-
-zx_status_t device_trap(zx_handle_t guest, const trap_args_t* traps, size_t num_traps,
-                        device_handler_fn_t handler, void* ctx) {
-    if (num_traps == 0)
-        return ZX_ERR_INVALID_ARGS;
-
-    // Only create a port if we have at least one BAR that requires it.
-    bool create_port = false;
-    for (size_t i = 0; !create_port && i < num_traps; ++i)
-        create_port = create_port || traps[i].use_port;
-
-    zx_handle_t port = ZX_HANDLE_INVALID;
-    if (create_port) {
-        zx_status_t status = zx_port_create(0, &port);
-        if (status != ZX_OK) {
-            fprintf(stderr, "Failed to create device port %d\n", status);
-            return ZX_ERR_INTERNAL;
-        }
-    }
-
-    auto device = fbl::make_unique<device_t>(port, handler, ctx);
-
-    for (size_t i = 0; i < num_traps; ++i) {
-        const trap_args_t* trap = &traps[i];
-        zx_handle_t port = trap->use_port ? device->port : ZX_HANDLE_INVALID;
-        zx_status_t status = zx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, port,
-                                               trap->key);
-        if (status != ZX_OK)
-            return ZX_ERR_INTERNAL;
-    }
-
-    if (create_port) {
-        thrd_t thread;
-        int ret = thrd_create(&thread, device_loop, device.release());
-        if (ret != thrd_success) {
-            fprintf(stderr, "Failed to create device thread %d\n", ret);
-            return ZX_ERR_INTERNAL;
-        }
-
-        ret = thrd_detach(thread);
-        if (ret != thrd_success) {
-            fprintf(stderr, "Failed to detach device thread %d\n", ret);
-            return ZX_ERR_INTERNAL;
-        }
-    }
-
-    return ZX_OK;
 }
