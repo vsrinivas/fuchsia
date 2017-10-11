@@ -235,8 +235,17 @@ static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
 
 
 /* Compute load address for a virtual address in a given dso. */
-#define laddr(p, v) (void*)((p)->l_map.l_addr + (v))
-#define fpaddr(p, v) ((void (*)(void))laddr(p, v))
+static inline size_t saddr(struct dso* p, size_t v) {
+    return p->l_map.l_addr + v;
+}
+
+static inline void* laddr(struct dso* p, size_t v) {
+    return (void*)saddr(p, v);
+}
+
+static inline void (*fpaddr(struct dso* p, size_t v))(void) {
+    return (void (*)(void))saddr(p, v);
+}
 
 // Accessors for dso previous and next pointers.
 static inline struct dso* dso_next(struct dso* p) {
@@ -466,7 +475,7 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
             addend = *reloc_addr;
         }
 
-        sym_val = def.sym ? (size_t)laddr(def.dso, def.sym->st_value) : 0;
+        sym_val = def.sym ? saddr(def.dso, def.sym->st_value) : 0;
         tls_val = def.sym ? def.sym->st_value : 0;
 
         switch (type) {
@@ -1283,7 +1292,7 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
         if (head != &ldso && p->relro_start != p->relro_end) {
             zx_status_t status =
                 _zx_vmar_protect(p->vmar,
-                                 (uintptr_t)laddr(p, p->relro_start),
+                                 saddr(p, p->relro_start),
                                  p->relro_end - p->relro_start,
                                  ZX_VM_FLAG_PERM_READ);
             if (status == ZX_ERR_BAD_HANDLE &&
