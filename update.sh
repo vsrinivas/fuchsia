@@ -13,18 +13,17 @@ readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
-. "${SCRIPT_ROOT}/download.sh"
+source "${SCRIPT_ROOT}/vars.sh"
+source "${SCRIPT_ROOT}/download.sh"
 
 case "$(uname -s)" in
   Darwin)
     readonly HOST_PLATFORM="mac"
     readonly CIPD_PLATFORM="mac-amd64"
-    readonly GN_PLATFORM="mac-x64"
     ;;
   Linux)
     readonly HOST_PLATFORM="linux64"
     readonly CIPD_PLATFORM="linux-amd64"
-    readonly GN_PLATFORM="linux-x64"
     ;;
   *)
     echo "Unknown operating system. Cannot install build tools."
@@ -68,15 +67,15 @@ function download_gn() {
 }
 
 function download_clang() {
-  download_cipd_package clang clang "${SCRIPT_ROOT}/${GN_PLATFORM}/clang"
+  download_cipd_package clang clang "${BUILDTOOLS_CLANG_DIR}"
 }
 
 function download_rust() {
-  download_cipd_package rust rust "${SCRIPT_ROOT}/${GN_PLATFORM}/rust"
+  download_cipd_package rust rust "${BUILDTOOLS_RUST_DIR}"
 }
 
 function download_go() {
-  download_cipd_package go go "${SCRIPT_ROOT}/${GN_PLATFORM}/go"
+  download_cipd_package go go "${BUILDTOOLS_GO_DIR}"
 }
 
 function download_godepfile() {
@@ -84,7 +83,7 @@ function download_godepfile() {
 }
 
 function download_qemu() {
-  download_cipd_package qemu qemu "${SCRIPT_ROOT}/${GN_PLATFORM}/qemu"
+  download_cipd_package qemu qemu "${BUILDTOOLS_QEMU_DIR}"
 }
 
 if [[ "${HOST_PLATFORM}" == "linux64" ]]; then
