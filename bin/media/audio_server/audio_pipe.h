@@ -6,9 +6,9 @@
 
 #include <memory>
 
-#include "lib/media/transport/media_packet_consumer_base.h"
-#include "lib/media/fidl/timeline_controller.fidl.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
+#include "lib/media/fidl/timeline_controller.fidl.h"
+#include "lib/media/transport/media_packet_consumer_base.h"
 
 namespace media {
 namespace audio {

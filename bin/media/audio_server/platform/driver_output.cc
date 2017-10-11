@@ -8,12 +8,12 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fcntl.h>
-#include <zircon/process.h>
 #include <fdio/io.h>
+#include <zircon/process.h>
 #include <iomanip>
 
-#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "lib/fxl/logging.h"
 
 static constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -64,8 +64,7 @@ DriverOutput::~DriverOutput() {}
 MediaResult DriverOutput::Init() {
   FXL_DCHECK(state_ == State::Uninitialized);
 
-  if ((stream_channel_ == nullptr) ||
-      (rb_channel_ == nullptr) ||
+  if ((stream_channel_ == nullptr) || (rb_channel_ == nullptr) ||
       (cmd_timeout_ == nullptr)) {
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
@@ -76,6 +75,7 @@ MediaResult DriverOutput::Init() {
   }
 
   // Activate the stream channel.
+  // clang-format off
   ::audio::dispatcher::Channel::ProcessHandler process_handler(
     [ output = fbl::WrapRefPtr(this) ]
     (::audio::dispatcher::Channel* channel) -> zx_status_t {
@@ -91,11 +91,11 @@ MediaResult DriverOutput::Init() {
       FXL_DCHECK(output->stream_channel_.get() == channel);
       output->ProcessChannelClosed();
     });
+  // clang-format on
 
   zx_status_t res;
   res = stream_channel_->Activate(fbl::move(initial_stream_channel_),
-                                  mix_domain_,
-                                  fbl::move(process_handler),
+                                  mix_domain_, fbl::move(process_handler),
                                   fbl::move(channel_closed_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate stream channel for DriverOutput!  "
@@ -104,6 +104,7 @@ MediaResult DriverOutput::Init() {
   }
 
   // Activate the command timeout timer.
+  // clang-format off
   ::audio::dispatcher::Timer::ProcessHandler cmd_timeout_handler(
     [ output = fbl::WrapRefPtr(this) ]
     (::audio::dispatcher::Timer* timer) -> zx_status_t {
@@ -111,12 +112,13 @@ MediaResult DriverOutput::Init() {
       FXL_DCHECK(output->cmd_timeout_.get() == timer);
       return output->OnCommandTimeout();
     });
+  // clang-format on
 
   res = cmd_timeout_->Activate(mix_domain_, fbl::move(cmd_timeout_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR)
-      << "Failed to activate command timeout timer for DriverOutput!  "
-      << "(res " << res << ")";
+        << "Failed to activate command timeout timer for DriverOutput!  "
+        << "(res " << res << ")";
     return MediaResult::INTERNAL_ERROR;
   }
 
@@ -547,6 +549,7 @@ zx_status_t DriverOutput::ProcessSetFormatResponse(
   }
 
   // Activate the ring buffer channel.
+  // clang-format off
   ::audio::dispatcher::Channel::ProcessHandler process_handler(
     [ output = fbl::WrapRefPtr(this) ]
     (::audio::dispatcher::Channel * channel) -> zx_status_t {
@@ -562,6 +565,7 @@ zx_status_t DriverOutput::ProcessSetFormatResponse(
       FXL_DCHECK(output->rb_channel_.get() == channel);
       output->ProcessChannelClosed();
     });
+  // clang-format on
 
   res = rb_channel_->Activate(fbl::move(rb_channel), mix_domain_,
                               fbl::move(process_handler),
@@ -620,6 +624,7 @@ zx_status_t DriverOutput::ProcessPlugStateChange(bool plugged,
 
   // Reflect this message to the AudioOutputManager so it can deal with the plug
   // state change.
+  // clang-format off
   manager_->ScheduleMessageLoopTask(
     [ manager = manager_,
       output = fbl::WrapRefPtr(this),
@@ -627,6 +632,7 @@ zx_status_t DriverOutput::ProcessPlugStateChange(bool plugged,
       plug_time ]() {
       manager->HandlePlugStateChange(output, plugged, plug_time);
     });
+  // clang-format on
 
   return ZX_OK;
 }

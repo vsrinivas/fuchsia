@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/media/timeline/timeline.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media {
 namespace audio {
@@ -15,13 +15,13 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
   // Precompute some useful timing/format stuff.
   //
   // Start with the ratio between frames and nanoseconds.
-  frames_per_ns_ = TimelineRate(format_->frames_per_second,
-                                Timeline::ns_from_seconds(1));
+  frames_per_ns_ =
+      TimelineRate(format_->frames_per_second, Timeline::ns_from_seconds(1));
 
   // Figure out the rate we need to scale by in order to produce our fixed
   // point timestamps.
   frame_to_media_ratio_ =
-    TimelineRate(1 << AudioRendererImpl::PTS_FRACTIONAL_BITS, 1);
+      TimelineRate(1 << AudioRendererImpl::PTS_FRACTIONAL_BITS, 1);
 
   // Figure out the total number of bytes in a packed frame.
   switch (format_->sample_format) {
@@ -49,7 +49,6 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 
   bytes_per_frame_ *= format_->channels;
 }
-
 
 // static
 fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(

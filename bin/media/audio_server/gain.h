@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <atomic>
 #include <stdint.h>
+#include <atomic>
 
 #include "lib/media/fidl/audio_renderer.fidl.h"
 
@@ -21,14 +21,14 @@ class Gain {
   using AScale = uint32_t;
 
   // constructor
-  Gain() : db_target_rend_gain_(0.0f) { }
+  Gain() : db_target_rend_gain_(0.0f) {}
 
   // Audio gains for renderers and outputs are expressed as floating point in
   // decibels.  Renderer and output gains are combined and the stored in the
   // renderer to output link as a 4.28 fixed point amplitude scale factor.
   static constexpr unsigned int kFractionalScaleBits = 28;
   static constexpr AScale kUnityScale =
-    (static_cast<AScale>(1u) << kFractionalScaleBits);
+      (static_cast<AScale>(1u) << kFractionalScaleBits);
   static constexpr float kMinGain = AudioRenderer::kMutedGain;
   static constexpr float kMaxGain = 24.0f;
 

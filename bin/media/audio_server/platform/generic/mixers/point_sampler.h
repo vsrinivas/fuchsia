@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "lib/media/fidl/media_types.fidl.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
+#include "lib/media/fidl/media_types.fidl.h"
 
 namespace media {
 namespace audio {

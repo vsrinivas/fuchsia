@@ -35,10 +35,8 @@ AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(
   FXL_DCHECK(renderer);
   FXL_DCHECK(renderer->format_info_valid());
 
-  return AudioRendererToOutputLinkPtr(
-      new AudioRendererToOutputLink(renderer,
-                                    renderer->format_info(),
-                                    fbl::move(output)));
+  return AudioRendererToOutputLinkPtr(new AudioRendererToOutputLink(
+      renderer, renderer->format_info(), fbl::move(output)));
 }
 
 void AudioRendererToOutputLink::PushToPendingQueue(
@@ -86,7 +84,8 @@ void AudioRendererToOutputLink::InitPendingQueue(
   FXL_DCHECK(this != source.get());
 
   fxl::MutexLocker source_locker(&source->pending_queue_mutex_);
-  if (source->pending_queue_->empty()) return;
+  if (source->pending_queue_->empty())
+    return;
 
   fxl::MutexLocker locker(&pending_queue_mutex_);
   FXL_DCHECK(pending_queue_->empty());

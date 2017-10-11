@@ -9,8 +9,8 @@
 #include <zx/vmo.h>
 #include <string>
 
-#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
 
 namespace media {
 namespace audio {

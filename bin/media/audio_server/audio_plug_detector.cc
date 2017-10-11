@@ -5,17 +5,17 @@
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
 
 #include <dirent.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/macros.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/device/audio.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zx/channel.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/macros.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
@@ -49,16 +49,14 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
   // Record our new manager
   manager_ = manager;
 
-  watcher_ = fsl::DeviceWatcher::Create(AUDIO_OUTPUT_DEVNODES,
-      [this](int dir_fd, std::string filename) {
+  watcher_ = fsl::DeviceWatcher::Create(
+      AUDIO_OUTPUT_DEVNODES, [this](int dir_fd, std::string filename) {
         AddAudioDevice(dir_fd, filename);
       });
 
   if (watcher_ == nullptr) {
-    FXL_LOG(ERROR)
-        << "AudioPlugDetector failed to create DeviceWatcher for \""
-        << AUDIO_OUTPUT_DEVNODES
-        << "\".";
+    FXL_LOG(ERROR) << "AudioPlugDetector failed to create DeviceWatcher for \""
+                   << AUDIO_OUTPUT_DEVNODES << "\".";
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
@@ -80,8 +78,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
   fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
     FXL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \""
-                     << name << "\". ("
-                     << strerror(errno) << " : " << errno
+                     << name << "\". (" << strerror(errno) << " : " << errno
                      << ")";
     return;
   }
@@ -89,8 +86,8 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
   zx::channel channel;
   ssize_t res;
 
-  res = ioctl_audio_get_channel(dev_node.get(),
-                                 channel.reset_and_get_address());
+  res =
+      ioctl_audio_get_channel(dev_node.get(), channel.reset_and_get_address());
   if (res < 0) {
     FXL_LOG(INFO) << "Failed to open channel to Audio output (res " << res
                   << ")";

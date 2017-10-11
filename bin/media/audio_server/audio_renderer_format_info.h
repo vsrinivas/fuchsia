@@ -8,14 +8,14 @@
 #include <stdint.h>
 
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include "lib/media/timeline/timeline_rate.h"
 #include "lib/media/fidl/media_types.fidl.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace audio {
 
-class AudioRendererFormatInfo :
-  public fbl::RefCounted<AudioRendererFormatInfo> {
+class AudioRendererFormatInfo
+    : public fbl::RefCounted<AudioRendererFormatInfo> {
  public:
   static fbl::RefPtr<AudioRendererFormatInfo> Create(
       AudioMediaTypeDetailsPtr format);

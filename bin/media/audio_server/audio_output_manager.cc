@@ -17,8 +17,7 @@ namespace media {
 namespace audio {
 
 AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
-    : server_(server) {
-}
+    : server_(server) {}
 
 AudioOutputManager::~AudioOutputManager() {
   Shutdown();
@@ -181,10 +180,11 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutput* output,
   // Do not create any links if the renderer's output format has not been set.
   // Links will be created during SelectOutputsForRenderer when the renderer
   // finally has its format set via AudioRendererImpl::SetMediaType
-  if (!renderer->format_info_valid()) return;
+  if (!renderer->format_info_valid())
+    return;
 
-  auto link = AudioRendererToOutputLink::Create(renderer,
-                                                fbl::WrapRefPtr(output));
+  auto link =
+      AudioRendererToOutputLink::Create(renderer, fbl::WrapRefPtr(output));
   FXL_DCHECK(link);
 
   // If we cannot add this link to the output, it's because the output is in
@@ -213,7 +213,7 @@ fbl::RefPtr<AudioOutput> AudioOutputManager::FindLastPluggedOutput() {
   // index.
   for (auto& output : outputs_) {
     if (output.plugged() &&
-       (!best_output || (best_output->plug_time() < output.plug_time()))) {
+        (!best_output || (best_output->plug_time() < output.plug_time()))) {
       best_output = &output;
     }
   }
@@ -245,7 +245,7 @@ void AudioOutputManager::OnOutputPlugged(
   FXL_DCHECK(output && output->plugged() && (output != throttle_output_));
 
   switch (routing_policy_) {
-      case RoutingPolicy::ALL_PLUGGED_OUTPUTS:
+    case RoutingPolicy::ALL_PLUGGED_OUTPUTS:
       // If we are following the 'all plugged outputs' routing policy, simply
       // add this newly plugged output to all of the active renderers.
       for (auto renderer : renderers_) {
@@ -263,7 +263,8 @@ void AudioOutputManager::OnOutputPlugged(
       // output.  Because of the parallized nature of plug detection and stream
       // discovery, it is possible that two outputs might be plugged in at
       // similar times, but we handle their plugged status out-of-order.
-      if (FindLastPluggedOutput() != output) return;
+      if (FindLastPluggedOutput() != output)
+        return;
 
       for (auto& unlink_tgt : outputs_) {
         if (&unlink_tgt != output.get()) {

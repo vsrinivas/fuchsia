@@ -77,6 +77,7 @@ MediaResult AudioOutput::Init() {
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
+  // clang-format off
   ::audio::dispatcher::WakeupEvent::ProcessHandler process_handler(
       [ output = fbl::WrapRefPtr(this) ]
       (::audio::dispatcher::WakeupEvent * event) -> zx_status_t {
@@ -84,6 +85,7 @@ MediaResult AudioOutput::Init() {
         output->OnWakeup();
         return ZX_OK;
       });
+  // clang-format on
 
   zx_status_t res =
       mix_wakeup_->Activate(mix_domain_, fbl::move(process_handler));
@@ -111,11 +113,13 @@ void AudioOutput::ShutdownSelf() {
     FXL_DCHECK(mix_domain_);
     mix_domain_->DeactivateFromWithinDomain();
 
+    // clang-format off
     FXL_DCHECK(manager_);
     manager_->ScheduleMessageLoopTask(
       [ manager = manager_, self = fbl::WrapRefPtr(this) ]() {
         manager->ShutdownOutput(self);
       });
+    // clang-format on
   }
 }
 

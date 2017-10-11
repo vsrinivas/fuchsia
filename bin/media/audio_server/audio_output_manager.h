@@ -8,11 +8,11 @@
 #include <fbl/ref_ptr.h>
 #include <set>
 
-#include "lib/media/fidl/media_result.fidl.h"
-#include "lib/media/fidl/media_transport.fidl.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
+#include "lib/media/fidl/media_result.fidl.h"
+#include "lib/media/fidl/media_transport.fidl.h"
 
 namespace media {
 namespace audio {
@@ -78,7 +78,7 @@ class AudioOutputManager {
                              zx_time_t plug_time);
 
   // Master gain control.  Only safe to access via the main message loop thread.
-  void  SetMasterGain(float db_gain);
+  void SetMasterGain(float db_gain);
   float master_gain() const { return master_gain_; }
 
  private:

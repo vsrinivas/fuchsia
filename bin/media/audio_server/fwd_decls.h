@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <memory>
 #include <fbl/ref_ptr.h>
+#include <memory>
 #include <set>
 
 namespace media {

@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <fbl/ref_ptr.h>
 #include <deque>
 #include <memory>
-#include <fbl/ref_ptr.h>
 
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
@@ -68,7 +68,8 @@ class AudioRendererToOutputLink {
   using PacketQueuePtr = std::unique_ptr<PacketQueue>;
 
   static AudioRendererToOutputLinkPtr Create(
-      const AudioRendererImplPtr& renderer, fbl::RefPtr<AudioOutput> output);
+      const AudioRendererImplPtr& renderer,
+      fbl::RefPtr<AudioOutput> output);
   virtual ~AudioRendererToOutputLink();
 
   // Accessor for the link's gain state tracking class.  Used by both the main
@@ -93,8 +94,8 @@ class AudioRendererToOutputLink {
   void FlushPendingQueue();
   void InitPendingQueue(const AudioRendererToOutputLinkPtr& source);
   bool pending_queue_empty() const {
-      fxl::MutexLocker locker(&pending_queue_mutex_);
-      return pending_queue_->empty();
+    fxl::MutexLocker locker(&pending_queue_mutex_);
+    return pending_queue_->empty();
   }
 
   // AudioOutput PendingQueue operations.  Never call these from the

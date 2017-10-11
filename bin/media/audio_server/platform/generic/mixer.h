@@ -6,10 +6,10 @@
 
 #include <memory>
 
-#include "lib/media/fidl/media_types.fidl.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/gain.h"
+#include "lib/media/fidl/media_types.fidl.h"
 
 namespace media {
 namespace audio {
@@ -19,8 +19,8 @@ using MixerPtr = std::unique_ptr<Mixer>;
 
 class Mixer {
  public:
-  static constexpr uint32_t FRAC_ONE = 1u
-                                       << AudioRendererImpl::PTS_FRACTIONAL_BITS;
+  static constexpr uint32_t FRAC_ONE =
+      1u << AudioRendererImpl::PTS_FRACTIONAL_BITS;
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
   virtual ~Mixer();
 
@@ -58,11 +58,12 @@ class Mixer {
   // the destination buffer.
   //
   // @param frac_src_frames
-  // The total number of fractional renderer frames contained by the source buffer.
+  // The total number of fractional renderer frames contained by the source
+  // buffer.
   //
   // @param frac_src_offset
-  // A pointer to the offset (expressed in fractional renderer frames) at which the
-  // first frame to be mixed with the destination buffer should be sampled.
+  // A pointer to the offset (expressed in fractional renderer frames) at which
+  // the first frame to be mixed with the destination buffer should be sampled.
   // When Mix has finished, frac_src_offset will be updated to indicate the
   // offset of the sampling position of the next frame to be mixed with the
   // output buffer.

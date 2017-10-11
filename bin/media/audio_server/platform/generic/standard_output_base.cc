@@ -45,6 +45,7 @@ MediaResult StandardOutputBase::Init() {
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
+  // clang-format off
   ::audio::dispatcher::Timer::ProcessHandler process_handler(
     [ output = fbl::WrapRefPtr(this) ]
     (::audio::dispatcher::Timer * timer) -> zx_status_t {
@@ -52,6 +53,7 @@ MediaResult StandardOutputBase::Init() {
       output->Process();
       return ZX_OK;
     });
+  // clang-format on
 
   zx_status_t zx_res =
       mix_timer_->Activate(mix_domain_, fbl::move(process_handler));

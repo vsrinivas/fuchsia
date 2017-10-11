@@ -30,6 +30,7 @@ executable("audio_server") {
             "//garnet/public/lib/media/flog",
           ]
 
+<<<<<<< HEAD
       deps = [
         "//garnet/public/lib/app/cpp",
         "//garnet/public/lib/media/timeline",
@@ -43,4 +44,19 @@ executable("audio_server") {
         "//zircon/system/ulib/zx",
         "//zircon/system/ulib/fbl",
       ]
+=======
+      deps = [
+        "//garnet/public/lib/app/cpp",
+        "//garnet/public/lib/media/timeline",
+        "//garnet/public/lib/media/transport",
+        "//garnet/public/lib/media/fidl",
+        "//garnet/bin/media/audio",
+        "//garnet/bin/media/util",
+        "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+        "//garnet/public/lib/fxl",
+        "//garnet/public/lib/fsl",
+        "//zircon/system/ulib/zx",
+        "//zircon/system/ulib/fbl",
+      ]
+>>>>>>> 4ad62b8de... [audio] clang-format pass for audio_server
 }

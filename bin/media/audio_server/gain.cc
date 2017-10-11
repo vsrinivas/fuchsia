@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/audio_server/gain.h"
 
-#include <math.h>
 #include <fbl/algorithm.h>
+#include <math.h>
 
 #include "lib/fxl/logging.h"
 
@@ -35,16 +35,15 @@ Gain::AScale Gain::GetGainScale(float output_db_gain) {
   // point, just zero out the amplitude scale and return that.
   float effective_gain = db_current_rend_gain_ + db_current_output_gain_;
 
-  if ((db_current_rend_gain_   <= kMinGain) ||
-      (db_current_output_gain_ <= kMinGain) ||
-      (effective_gain          <= kMinGain)) {
+  if ((db_current_rend_gain_ <= kMinGain) ||
+      (db_current_output_gain_ <= kMinGain) || (effective_gain <= kMinGain)) {
     amplitude_scale_ = 0u;
   } else {
     // Compute the amplitude scale factor as a double and sanity check before
     // converting to the fixed point representation.
     double amp_scale = pow(10.0, effective_gain / 20.0);
     FXL_DCHECK(amp_scale <
-              (1u << ((sizeof(AScale) * 8) - kFractionalScaleBits)));
+               (1u << ((sizeof(AScale) * 8) - kFractionalScaleBits)));
 
     amp_scale *= static_cast<double>(kUnityScale);
     amplitude_scale_ = static_cast<AScale>(amp_scale);

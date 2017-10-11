@@ -4,15 +4,16 @@
 
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 
-#include "lib/media/flog/flog.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/media/flog/flog.h"
 
 namespace media {
 namespace audio {
 
-AudioServerImpl::AudioServerImpl(std::unique_ptr<app::ApplicationContext> application_context)
+AudioServerImpl::AudioServerImpl(
+    std::unique_ptr<app::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
       output_manager_(this),
       cleanup_queue_(new CleanupQueue) {

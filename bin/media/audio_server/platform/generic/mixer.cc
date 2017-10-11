@@ -4,11 +4,11 @@
 
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 
-#include "lib/media/timeline/timeline_rate.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/linear_sampler.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/no_op.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixers/point_sampler.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace audio {

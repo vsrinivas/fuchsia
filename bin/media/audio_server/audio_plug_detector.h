@@ -4,15 +4,15 @@
 
 #pragma once
 
+#include <fbl/macros.h>
+#include <fbl/mutex.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
-#include <fbl/macros.h>
-#include <fbl/mutex.h>
 
-#include "lib/media/fidl/media_result.fidl.h"
-#include "lib/fxl/files/unique_fd.h"
 #include "lib/fsl/io/device_watcher.h"
+#include "lib/fxl/files/unique_fd.h"
+#include "lib/media/fidl/media_result.fidl.h"
 
 namespace media {
 namespace audio {
