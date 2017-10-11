@@ -13,10 +13,41 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/user_copy.h>
 #include <kernel/thread.h>
+#include <lib/code_patching.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
+
+CODE_TEMPLATE(kStacInstruction, "stac");
+CODE_TEMPLATE(kClacInstruction, "clac");
+static const uint8_t kNopInstruction = 0x90;
+
+extern "C" {
+
+void fill_out_stac_instruction(const CodePatchInfo* patch) {
+    const size_t kSize = 3;
+    DEBUG_ASSERT(patch->dest_size == kSize);
+    DEBUG_ASSERT(kStacInstructionEnd - kStacInstruction == kSize);
+    if (x86_feature_test(X86_FEATURE_SMAP)) {
+        memcpy(patch->dest_addr, kStacInstruction, kSize);
+    } else {
+        memset(patch->dest_addr, kNopInstruction, kSize);
+    }
+}
+
+void fill_out_clac_instruction(const CodePatchInfo* patch) {
+    const size_t kSize = 3;
+    DEBUG_ASSERT(patch->dest_size == kSize);
+    DEBUG_ASSERT(kClacInstructionEnd - kClacInstruction == kSize);
+    if (x86_feature_test(X86_FEATURE_SMAP)) {
+        memcpy(patch->dest_addr, kClacInstruction, kSize);
+    } else {
+        memset(patch->dest_addr, kNopInstruction, kSize);
+    }
+}
+
+}
 
 static inline bool ac_flag(void)
 {

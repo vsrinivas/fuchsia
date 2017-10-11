@@ -10,6 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
+    kernel/lib/code_patching \
     kernel/lib/fbl \
     kernel/lib/pretty \
     kernel/lib/user_copy \

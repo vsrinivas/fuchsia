@@ -6,6 +6,10 @@
 
 #include <asm.h>
 #include <err.h>
+#include <lib/code_patching.h>
+
+#define STAC APPLY_CODE_PATCH_FUNC(fill_out_stac_instruction, 3)
+#define CLAC APPLY_CODE_PATCH_FUNC(fill_out_clac_instruction, 3)
 
 /* Register use in this code:
  * %rdi = argument 1, void* dst
@@ -21,12 +25,8 @@ FUNCTION(_x86_copy_to_or_from_user)
     # Copy fault_return out of %rcx, because %rcx is used by "rep movsb" later.
     movq %rcx, %r10
 
-    # Check if SMAP is enabled
-    cmpb $0, g_x86_feature_smap(%rip)
     # Disable SMAP protection if SMAP is enabled
-    jz 0f
-    stac
-0:
+    STAC
 
     # Setup page fault return
     leaq .Lfault_copy(%rip), %rax
@@ -50,10 +50,7 @@ FUNCTION(_x86_copy_to_or_from_user)
     movq $0, (%r10)
 
     # Re-enable SMAP protection
-    cmpb $0, g_x86_feature_smap(%rip)
-    jz 0f
-    clac
-0:
+    CLAC
     ret
 
 .Lfault_copy:
