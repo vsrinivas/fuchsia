@@ -385,7 +385,9 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
         if (st != ZX_OK) {
             goto err;
         }
-        iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, blkcnt * blksiz);
+
+        uint32_t op = (cmd & SDMMC_CMD_READ) ? IOTXN_CACHE_INVALIDATE : IOTXN_CACHE_CLEAN;
+        iotxn_cacheop(txn, op, 0, blkcnt * blksiz);
 
         if (use_dma) {
             iotxn_phys_iter_t iter;
