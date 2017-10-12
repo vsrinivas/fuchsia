@@ -42,8 +42,10 @@ struct RxWcidEntry {
 
 constexpr uint16_t RX_WCID_BASE = 0x1800;
 constexpr uint16_t FW_IMAGE_BASE = 0x3000;
+constexpr uint16_t PAIRWISE_KEY_BASE = 0x4000;
 constexpr uint16_t IV_EIV_BASE = 0x6000;
 constexpr uint16_t WCID_ATTR_BASE = 0x6800;
+constexpr uint16_t SHARED_KEY_BASE = 0x6c00;
 constexpr uint16_t SHARED_KEY_MODE_BASE = 0x7000;
 
 // B/G min/max TX power
@@ -56,6 +58,63 @@ constexpr int8_t kMaxTxPower_A = 15;
 constexpr uint16_t kEirpMaxPower = 0x50;
 // TX compensation max power
 constexpr uint16_t kTxCompMaxPower = 0x0c;
+
+// Entry for pairwise and shared key table.
+struct KeyEntry {
+  uint8_t key[16];
+  uint8_t txMic[8];
+  uint8_t rxMic[8];
+} __PACKED;
+
+struct IvEivEntry {
+  uint32_t iv;
+  uint32_t eiv;
+} __PACKED;
+
+enum KeyMode: uint8_t {
+  kNone = 0,
+  kWEP42 = 1,
+  kWEP104 = 2,
+  kTKIP = 3,
+  kAES = 4,
+  kCKIP42 = 5,
+  kCKIP104 = 6,
+  kCKIP128 = 7,
+  kWAPI = 8,
+} __PACKED;
+
+enum KeyType: uint8_t {
+  kSharedKey = 0,
+  kPairwiseKey = 1,
+};
+
+class WcidAttr: public BitField<uint32_t> {
+ public:
+  WLAN_BIT_FIELD(keyType, 0, 1); // KeyType
+  WLAN_BIT_FIELD(keyMode, 1, 3); // KeyMode
+  WLAN_BIT_FIELD(bssIdx, 4, 3);
+  WLAN_BIT_FIELD(rxUsrDef, 7, 3);
+  WLAN_BIT_FIELD(keyModeExt, 10, 1);
+  WLAN_BIT_FIELD(bssIdxExt, 11, 1);
+  WLAN_BIT_FIELD(rsv, 12, 3);
+  WLAN_BIT_FIELD(wapiMcbc, 15, 1);
+  WLAN_BIT_FIELD(wapiRsv, 16, 8);
+  WLAN_BIT_FIELD(wapiKeyIdx, 24, 8);
+};
+
+// Each SharedKeyMode entry allows to set the key mode for 8 shared keys.
+class SharedKeyMode: public BitField<uint32_t> {
+ public:
+  WLAN_BIT_FIELD(skey0_mode, 0, 3); // KeyMode
+  WLAN_BIT_FIELD(skey1_mode, 4, 3);
+  WLAN_BIT_FIELD(skey2_mode, 8, 3);
+  WLAN_BIT_FIELD(skey3_mode, 12, 3);
+  WLAN_BIT_FIELD(skey4_mode, 16, 3);
+  WLAN_BIT_FIELD(skey5_mode, 20, 3);
+  WLAN_BIT_FIELD(skey6_mode, 24, 3);
+  WLAN_BIT_FIELD(skey7_mode, 28, 3);
+};
+
 
 // Registers
 
@@ -231,6 +290,25 @@ class MacAddrDw1 : public Register<0x100c> {
     WLAN_BIT_FIELD(mac_addr_4, 0, 8);
     WLAN_BIT_FIELD(mac_addr_5, 8, 8);
     WLAN_BIT_FIELD(unicast_to_me_mask, 16, 8);
+};
+
+class MacBssidDw0 : public Register<0x1010> {
+ public:
+  WLAN_BIT_FIELD(mac_addr_0, 0, 8);
+  WLAN_BIT_FIELD(mac_addr_1, 8, 8);
+  WLAN_BIT_FIELD(mac_addr_2, 16, 8);
+  WLAN_BIT_FIELD(mac_addr_3, 24, 8);
+};
+
+class MacBssidDw1 : public Register<0x1014> {
+ public:
+  WLAN_BIT_FIELD(mac_addr_4, 0, 8);
+  WLAN_BIT_FIELD(mac_addr_5, 8, 8);
+  WLAN_BIT_FIELD(multi_bss_mode, 16, 2);
+  WLAN_BIT_FIELD(multi_bcn_num, 18, 3);
+  WLAN_BIT_FIELD(new_multi_bssid_mode, 21, 1);
+  WLAN_BIT_FIELD(multi_bssid_mode_bit4, 22, 1);
+  WLAN_BIT_FIELD(multi_bssid_mode_bit3, 23, 1);
 };
 
 class MaxLenCfg : public Register<0x1018> {
