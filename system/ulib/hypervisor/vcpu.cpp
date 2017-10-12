@@ -202,6 +202,8 @@ zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
             return status;
         }
         status = vcpu_packet_handler(vcpu_ctx, &packet);
+        if (status == ZX_ERR_STOP)
+            return ZX_OK;
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
             return status;

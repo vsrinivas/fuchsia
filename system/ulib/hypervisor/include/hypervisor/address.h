@@ -59,6 +59,12 @@
 #define PM1_EVENT_PORT                  0x1000
 #define PM1_CONTROL_PORT                0x2000
 
+/* Power states as defined in the DSDT.
+ *
+ * We only implement a transition from S0 to S5 to trigger guest termination.
+ */
+#define SLP_TYP5                        0x1
+
 /* PIC ports. */
 #define PIC1_BASE                       0x20
 #define PIC2_BASE                       0xa0

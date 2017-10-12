@@ -16,6 +16,9 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
         PICM = Arg0
     }
 
+    // System \_S5 State (Soft Off).
+    Name (_S5, Package () { 0x01, 0x00, 0x00 })
+
     Scope (_SB)
     {
         Device (PCI0)

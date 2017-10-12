@@ -37,8 +37,13 @@ static inline constexpr T clear_bits(T x, size_t nbits, size_t shift) {
 }
 
 template <typename T>
+static inline constexpr T bit_shift(T x, size_t bit) {
+    return static_cast<T>((x >> bit) & 1);
+}
+
+template <typename T>
 static inline constexpr T bits_shift(T x, size_t high, size_t low) {
-    return (x >> low) & bit_mask<T>(high - low + 1);
+    return static_cast<T>((x >> low) & bit_mask<T>(high - low + 1));
 }
 
 template <typename T>

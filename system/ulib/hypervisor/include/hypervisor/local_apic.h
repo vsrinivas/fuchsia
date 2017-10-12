@@ -32,17 +32,21 @@ public:
 
         Register reserved2[4];
 
-        Register tpr;    // Read/Write.
-        Register apr;    // Read Only.
-        Register ppr;    // Read Only.
-        Register eoi;    // Write Only.
-        Register rrd;    // Read Only.
-        Register ldr;    // Read/Write.
-        Register dfr;    // Read/Write.
-        Register isr[8]; // Read Only.
-        Register tmr[8]; // Read Only.
-        Register irr[8]; // Read Only.
-        Register esr;    // Read Only.
+        Register tpr;       // Read/Write.
+        Register apr;       // Read Only.
+        Register ppr;       // Read Only.
+        Register eoi;       // Write Only.
+        Register rrd;       // Read Only.
+        Register ldr;       // Read/Write.
+        Register dfr;       // Read/Write.
+        Register isr[8];    // Read Only.
+        Register tmr[8];    // Read Only.
+        Register irr[8];    // Read Only.
+        Register esr;       // Read Only.
+
+        Register reserved3[6];
+
+        Register lvt_cmci;  // Read/Write.
     } __PACKED;
 
     LocalApic(zx_handle_t vcpu, uintptr_t apic_addr)

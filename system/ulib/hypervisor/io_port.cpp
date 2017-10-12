@@ -8,6 +8,7 @@
 
 #include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
+#include <hypervisor/bits.h>
 
 #include "acpi_priv.h"
 
@@ -20,6 +21,7 @@ constexpr uint8_t kPicInvalid                   = UINT8_MAX;
 /* PM1 relative port mappings. */
 constexpr uint16_t kPm1StatusPort               = PM1A_REGISTER_STATUS;
 constexpr uint16_t kPm1EnablePort               = PM1A_REGISTER_ENABLE;
+constexpr uint16_t kPm1ControlPort              = PM1_CONTROL_PORT - PM1_EVENT_PORT;
 constexpr uint16_t kPm1Size                     = kPm1EnablePort + 1;
 
 /* RTC relative port mappings. */
@@ -83,7 +85,13 @@ zx_status_t PitHandler::Write(uint64_t addr, const IoValue& value) {
 }
 
 zx_status_t Pm1Handler::Init(Guest* guest) {
-    return guest->CreateMapping(TrapType::PIO_SYNC, PM1_EVENT_PORT, kPm1Size, 0, this);
+    // Map 2 distinct register blocks for event and control registers.
+    zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, PM1_EVENT_PORT, kPm1Size, 0,
+                                              this);
+    if (status != ZX_OK)
+        return status;
+    return guest->CreateMapping(TrapType::PIO_SYNC, PM1_CONTROL_PORT, kPm1Size, kPm1ControlPort,
+                                this);
 }
 
 zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) {
@@ -111,6 +119,15 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
             return ZX_ERR_IO_DATA_INTEGRITY;
         fbl::AutoLock lock(&mutex_);
         enable_ = value.u16;
+        break;
+    }
+    case kPm1ControlPort: {
+        uint16_t slp_en = bit_shift(value.u16, 13);
+        uint16_t slp_type = bits_shift(value.u16, 12, 10);
+        if (slp_en != 0) {
+            // Only power-off transitions are supported.
+            return slp_type == SLP_TYP5 ? ZX_ERR_STOP : ZX_ERR_NOT_SUPPORTED;
+        }
         break;
     }
     defaut:

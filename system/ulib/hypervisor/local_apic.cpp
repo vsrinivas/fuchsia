@@ -24,6 +24,7 @@
 #define LOCAL_APIC_REGISTER_IRR_31_0        0x0200
 #define LOCAL_APIC_REGISTER_IRR_255_224     0x0270
 #define LOCAL_APIC_REGISTER_ESR             0x0280
+#define LOCAL_APIC_REGISTER_LVT_CMCI        0x02f0
 #define LOCAL_APIC_REGISTER_ICR_31_0        0x0300
 #define LOCAL_APIC_REGISTER_ICR_63_32       0x0310
 #define LOCAL_APIC_REGISTER_LVT_TIMER       0x0320
@@ -102,6 +103,7 @@ zx_status_t LocalApic::Write(uint64_t addr, const IoValue& value) {
         return value.u32 != registers_->id.u32 ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     }
     case LOCAL_APIC_REGISTER_DFR:
+    case LOCAL_APIC_REGISTER_LVT_CMCI:
     case LOCAL_APIC_REGISTER_ICR_31_0... LOCAL_APIC_REGISTER_ICR_63_32:
     case LOCAL_APIC_REGISTER_LDR:
     case LOCAL_APIC_REGISTER_LVT_ERROR:
