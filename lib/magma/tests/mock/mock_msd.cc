@@ -46,11 +46,15 @@ void msd_connection_close(msd_connection_t* connection)
     delete MsdMockConnection::cast(connection);
 }
 
-uint32_t msd_device_get_id(msd_device_t* dev) { return MsdMockDevice::cast(dev)->GetDeviceId(); }
-
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out)
 {
-    return MAGMA_STATUS_INVALID_ARGS;
+    switch (id) {
+        case MAGMA_QUERY_DEVICE_ID:
+            *value_out = MsdMockDevice::cast(device)->GetDeviceId();
+            return MAGMA_STATUS_OK;
+        default:
+            return MAGMA_STATUS_INVALID_ARGS;
+    }
 }
 
 msd_context_t* msd_connection_create_context(msd_connection_t* dev)
