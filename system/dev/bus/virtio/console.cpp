@@ -1,11 +1,12 @@
 #include "console.h"
 #include "utils.h"
 
+#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <string.h>
 #include <virtio/virtio.h>
 #include <zx/vmar.h>
-#include <string.h>
 
 #define LOCAL_TRACE 0
 
@@ -18,7 +19,7 @@ zx_status_t QueueTransfer(Ring* ring, uintptr_t phys, uint32_t len, bool write) 
     vring_desc* desc = ring->AllocDescChain(1, &index);
     if (!desc) {
         // This should not happen
-        VIRTIO_ERROR("Failed to find free descriptor for the virtio ring\n");
+        zxlogf(ERROR, "Failed to find free descriptor for the virtio ring\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -32,7 +33,6 @@ zx_status_t QueueTransfer(Ring* ring, uintptr_t phys, uint32_t len, bool write) 
 }
 
 } // namespace
-
 
 TransferBuffer::TransferBuffer() {}
 
@@ -51,7 +51,7 @@ zx_status_t TransferBuffer::Init(size_t count, uint32_t chunk_size) {
 
     TransferDescriptor* descriptor = new TransferDescriptor[count_];
     if (!descriptor) {
-        VIRTIO_ERROR("Failed to allocate transfer descriptors (%d)\n", ZX_ERR_NO_MEMORY);
+        zxlogf(ERROR, "Failed to allocate transfer descriptors (%d)\n", ZX_ERR_NO_MEMORY);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -61,7 +61,7 @@ zx_status_t TransferBuffer::Init(size_t count, uint32_t chunk_size) {
     zx_status_t status = map_contiguous_memory(size_, &virt, &phys);
 
     if (status) {
-        VIRTIO_ERROR("Failed to allocate transfer buffers (%d)\n", status);
+        zxlogf(ERROR, "Failed to allocate transfer buffers (%d)\n", status);
         return status;
     }
 
@@ -113,39 +113,39 @@ bool TransferQueue::IsEmpty() const {
     return queue_.is_empty();
 }
 
-ConsoleDevice::ConsoleDevice(zx_device_t* bus_device)
-    : Device(bus_device) { }
+ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(backend)) {}
 
-ConsoleDevice::~ConsoleDevice() { }
+ConsoleDevice::~ConsoleDevice() {}
 
 // We don't need to hold request_lock_ during initialization
 zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACE_ENTRY;
     // It's a common part for all virtio devices: reset the device, notify
     // about the driver and negotiate supported features
-    Reset();
-    StatusAcknowledgeDriver();
-    if (!IsFeatureSupported(VIRTIO_F_VERSION_1)) {
-        VIRTIO_ERROR("Legacy virtio interface is not supported by this driver\n");
+    DeviceReset();
+    DriverStatusAck();
+    if (!DeviceFeatureSupported(VIRTIO_F_VERSION_1)) {
+        zxlogf(ERROR, "%s: Legacy virtio interface is not supported by this driver\n", tag());
         return ZX_ERR_NOT_SUPPORTED;
     }
-    AcknowledgeFeature(VIRTIO_F_VERSION_1);
+    DriverFeatureAck(VIRTIO_F_VERSION_1);
 
-    zx_status_t status = StatusFeaturesOK();
+    zx_status_t status = DeviceStatusFeaturesOk();
     if (status) {
-        VIRTIO_ERROR("Feature negotiation failed (%d)\n", status);
+        zxlogf(ERROR, "%s: Feature negotiation failed (%d)\n", tag(), status);
         return status;
     }
 
     status = port0_receive_queue_.Init(0, kDescriptors);
     if (status) {
-        VIRTIO_ERROR("Failed to initialize receive queue (%d)\n", status);
+        zxlogf(ERROR, "%s: Failed to initialize receive queue (%d)\n", tag(), status);
         return status;
     }
 
     status = port0_receive_buffer_.Init(kDescriptors, kChunkSize);
     if (status) {
-        VIRTIO_ERROR("Failed to allocate buffers for receive queue (%d)\n", status);
+        zxlogf(ERROR, "%s: Failed to allocate buffers for receive queue (%d)\n", tag(), status);
         return status;
     }
 
@@ -153,20 +153,20 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
     // put all descriptors in the virtio ring available list
     for (size_t i = 0; i < kDescriptors; ++i) {
         TransferDescriptor* desc = port0_receive_buffer_.GetDescriptor(i);
-        QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/0);
+        QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/ 0);
     }
     // Notify the device
     port0_receive_queue_.Kick();
 
     status = port0_transmit_queue_.Init(1, kDescriptors);
     if (status) {
-        VIRTIO_ERROR("Failed to initialize transmit queue (%d)\n", status);
+        zxlogf(ERROR, "%s: Failed to initialize transmit queue (%d)\n", tag(), status);
         return status;
     }
 
     status = port0_transmit_buffer_.Init(kDescriptors, kChunkSize);
     if (status) {
-        VIRTIO_ERROR("Failed to allocate buffers for transmit queue (%d)\n", status);
+        zxlogf(ERROR, "%s: Failed to allocate buffers for transmit queue (%d)\n", tag(), status);
         return status;
     }
 
@@ -178,7 +178,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
     }
 
     StartIrqThread();
-    StatusDriverOK();
+    DriverStatusOk();
 
     device_ops_.read = virtio_console_read;
     device_ops_.write = virtio_console_write;
@@ -194,7 +194,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 
     status = device_add(bus_device_, &args, &device_);
     if (status) {
-        VIRTIO_ERROR("Failed to register virtio-console device (%d)\n", status);
+        zxlogf(ERROR, "%s: Failed to register device (%d)\n", tag(), status);
         device_ = nullptr;
         return status;
     }
@@ -218,7 +218,7 @@ void ConsoleDevice::IrqRingUpdate() {
             bool has_next = desc->flags & VRING_DESC_F_NEXT;
             uint16_t next = desc->next;
 
-            TransferDescriptor *trans = port0_receive_buffer_.PhysicalToDescriptor(desc->addr);
+            TransferDescriptor* trans = port0_receive_buffer_.PhysicalToDescriptor(desc->addr);
 
             trans->processed_len = 0;
             trans->used_len = fbl::min(trans->total_len, remain);
@@ -243,7 +243,7 @@ void ConsoleDevice::IrqRingUpdate() {
             bool has_next = desc->flags & VRING_DESC_F_NEXT;
             uint16_t next = desc->next;
 
-            TransferDescriptor *trans = port0_transmit_buffer_.PhysicalToDescriptor(desc->addr);
+            TransferDescriptor* trans = port0_transmit_buffer_.PhysicalToDescriptor(desc->addr);
 
             port0_transmit_descriptors_.Add(trans);
 
@@ -288,7 +288,7 @@ zx_status_t ConsoleDevice::Read(void* buf, size_t count, zx_off_t off, size_t* a
     // Did we read the whole buffer? If so return it back to the device
     if (desc->processed_len == desc->used_len) {
         port0_receive_descriptors_.Dequeue();
-        QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/0);
+        QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/ 0);
         port0_receive_queue_.Kick();
     }
 
@@ -322,7 +322,7 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, zx_off_t off, si
     desc->used_len = len;
     *actual += len;
 
-    QueueTransfer(&port0_transmit_queue_, desc->phys, desc->used_len, /*write*/1);
+    QueueTransfer(&port0_transmit_queue_, desc->phys, desc->used_len, /*write*/ 1);
     port0_transmit_queue_.Kick();
 
     LTRACE_EXIT;

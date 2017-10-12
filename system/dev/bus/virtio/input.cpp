@@ -207,8 +207,8 @@ void InputDevice::virtio_input_stop(void* ctx) {
     inp->Stop();
 }
 
-InputDevice::InputDevice(zx_device_t* bus_device)
-    : Device(bus_device) {}
+InputDevice::InputDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(backend)) {}
 
 InputDevice::~InputDevice() {}
 
@@ -218,7 +218,7 @@ zx_status_t InputDevice::Init() {
     fbl::AutoLock lock(&lock_);
 
     // Reset the device and read configuration
-    Reset();
+    DeviceReset();
 
     SelectConfig(VIRTIO_INPUT_CFG_ID_NAME, 0);
     LTRACEF_LEVEL(2, "name %s\n", config_.u.string);
@@ -254,7 +254,7 @@ zx_status_t InputDevice::Init() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    StatusAcknowledgeDriver();
+    DriverStatusAck();
 
     // Plan to clean up unless everything succeeds.
     auto cleanup = fbl::MakeAutoCall([this]() { Release(); });
@@ -262,7 +262,7 @@ zx_status_t InputDevice::Init() {
     // Allocate the main vring
     zx_status_t status = vring_.Init(0, kEventCount);
     if (status != ZX_OK) {
-        VIRTIO_ERROR("Failed to allocate vring: %s\n", zx_status_get_string(status));
+        zxlogf(ERROR, "Failed to allocate vring: %s\n", zx_status_get_string(status));
         return status;
     }
 
@@ -272,7 +272,7 @@ zx_status_t InputDevice::Init() {
         static_assert(sizeof(virtio_input_event_t) <= PAGE_SIZE, "");
         status = io_buffer_init(&buffers_[id], sizeof(virtio_input_event_t), IO_BUFFER_RO);
         if (status != ZX_OK) {
-            VIRTIO_ERROR("Failed to allocate I/O buffers: %s\n", zx_status_get_string(status));
+            zxlogf(ERROR, "Failed to allocate I/O buffers: %s\n", zx_status_get_string(status));
             return status;
         }
     }
@@ -283,7 +283,7 @@ zx_status_t InputDevice::Init() {
     for (uint16_t i = 0; i < kEventCount; ++i) {
         desc = vring_.AllocDescChain(1, &id);
         if (desc == nullptr) {
-            VIRTIO_ERROR("Failed to allocate descriptor chain\n");
+            zxlogf(ERROR, "Failed to allocate descriptor chain\n");
             return ZX_ERR_NO_RESOURCES;
         }
         ZX_ASSERT(id < kEventCount);
@@ -298,8 +298,7 @@ zx_status_t InputDevice::Init() {
     memset(&report_, 0, sizeof(report_));
 
     StartIrqThread();
-
-    StatusDriverOK();
+    DriverStatusOk();
 
     device_ops_.release = virtio_input_release;
 
@@ -326,7 +325,7 @@ zx_status_t InputDevice::Init() {
 
     status = device_add(bus_device_, &args, &device_);
     if (status != ZX_OK) {
-        VIRTIO_ERROR("Failed to add device: %s\n", zx_status_get_string(status));
+        zxlogf(ERROR, "Failed to add device: %s\n", zx_status_get_string(status));
         device_ = nullptr;
         return status;
     }
@@ -492,8 +491,8 @@ void InputDevice::IrqConfigChange() {
 }
 
 void InputDevice::SelectConfig(uint8_t select, uint8_t subsel) {
-    WriteDeviceConfig<uint8_t>(offsetof(virtio_input_config_t, select), select);
-    WriteDeviceConfig<uint8_t>(offsetof(virtio_input_config_t, subsel), subsel);
+    WriteDeviceConfig(offsetof(virtio_input_config_t, select), select);
+    WriteDeviceConfig(offsetof(virtio_input_config_t, subsel), subsel);
     CopyDeviceConfig(&config_, sizeof(config_));
 }
 

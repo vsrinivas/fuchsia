@@ -59,12 +59,14 @@ private:
 // Actual virtio console implementation
 class ConsoleDevice : public Device {
 public:
-    ConsoleDevice(zx_device_t* device);
+    explicit ConsoleDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
     virtual ~ConsoleDevice();
 
     virtual zx_status_t Init() override;
 
     virtual void IrqRingUpdate() override;
+    virtual void IrqConfigChange() override {}; // No need to handle configuration changes
+    const char* tag() const override { return "virtio-console"; };
 
 private:
     // For two queues it sums up to 32KiB, we probably don't need that much

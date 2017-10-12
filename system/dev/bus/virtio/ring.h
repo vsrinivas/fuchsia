@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 #pragma once
 
-#include <zircon/types.h>
 #include <virtio/virtio_ring.h>
+#include <zircon/types.h>
 
 #include "trace.h"
 
@@ -52,7 +52,7 @@ inline void Ring::IrqRingUpdate(T free_chain) {
     // find a new free chain of descriptors
     uint16_t cur_idx = ring_.used->idx;
     uint16_t i = ring_.last_used;
-    for(; i != cur_idx; ++i) {
+    for (; i != cur_idx; ++i) {
         // TRACEF("looking at idx %u\n", i);
 
         struct vring_used_elem* used_elem = &ring_.used->ring[i & ring_.num_mask];

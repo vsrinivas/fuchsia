@@ -33,6 +33,7 @@
  *
  * Copyright Rusty Russell IBM Corporation 2007. */
 #include <stdint.h>
+#include <stddef.h>
 
 /* This marks a buffer as continuing via the next field. */
 #define VRING_DESC_F_NEXT 1

@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <stdint.h>
 
+#include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <zx/vmar.h>
 
@@ -45,7 +46,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     // make sure the count is available in this ring
     uint16_t max_ring_size = device_->GetRingSize(index);
     if (count > max_ring_size) {
-        VIRTIO_ERROR("ring init count too big for hardware %u > %u\n", count, max_ring_size);
+        zxlogf(ERROR, "ring init count too big for hardware %u > %u\n", count, max_ring_size);
         return ZX_ERR_OUT_OF_RANGE;
     }
 
@@ -55,7 +56,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
 
     zx_status_t r = map_contiguous_memory(size, &ring_va_, &ring_pa_);
     if (r) {
-        VIRTIO_ERROR("map_contiguous_memory failed %d\n", r);
+        zxlogf(ERROR, "map_contiguous_memory failed %d\n", r);
         return r;
     }
     ring_va_len_ = size;

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 #pragma once
 
-#include <zircon/types.h>
 #include <sys/types.h>
+#include <zircon/types.h>
 
 // collection of utility routines for virtio
 

@@ -4,16 +4,17 @@
 
 #include "block.h"
 
+#include <ddk/debug.h>
 #include <ddk/protocol/block.h>
-#include <inttypes.h>
-#include <zircon/compiler.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <inttypes.h>
 #include <pretty/hexdump.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <zircon/compiler.h>
 
 #include "trace.h"
 #include "utils.h"
@@ -64,7 +65,7 @@ void BlockDevice::GetInfo(block_info_t* info) {
 }
 
 zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                        void* reply, size_t max, size_t* out_actual) {
+                                            void* reply, size_t max, size_t* out_actual) {
     LTRACEF("ctx %p, op %u\n", ctx, op);
 
     BlockDevice* bd = static_cast<BlockDevice*>(ctx);
@@ -87,10 +88,8 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
     }
 }
 
-BlockDevice::BlockDevice(zx_device_t* bus_device)
-    : Device(bus_device) {
-    // so that Bind() knows how much io space to allocate
-    bar0_size_ = 0x40;
+BlockDevice::BlockDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(backend)) {
 }
 
 BlockDevice::~BlockDevice() {
@@ -108,7 +107,7 @@ void BlockDevice::virtio_block_get_info(void* ctx, block_info_t* info) {
 }
 
 void BlockDevice::virtio_block_complete(iotxn_t* txn, void* cookie) {
-    BlockDevice* dev = (BlockDevice *)txn->extra[0];
+    BlockDevice* dev = (BlockDevice*)txn->extra[0];
     dev->callbacks_->complete(cookie, txn->status);
     iotxn_release(txn);
 }
@@ -130,7 +129,7 @@ void BlockDevice::block_do_txn(BlockDevice* dev, uint32_t opcode,
     zx_status_t status;
     iotxn_t* txn;
     if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL,
-                    vmo, vmo_offset, length)) != ZX_OK) {
+                                  vmo, vmo_offset, length)) != ZX_OK) {
         dev->callbacks_->complete(cookie, status);
         return;
     }
@@ -160,10 +159,17 @@ zx_status_t BlockDevice::Init() {
     LTRACE_ENTRY;
 
     // reset the device
-    Reset();
+    DeviceReset();
 
     // read our configuration
     CopyDeviceConfig(&config_, sizeof(config_));
+    // TODO(cja): The blk_size provided in the device configuration is only
+    // populated if a specific feature bit has been negotiated during
+    // initialization, otherwise it is 0, at least in Virtio 0.9.5. Use 512
+    // as a default as a stopgap for now until proper feature negotiation
+    // is supported.
+    if (config_.blk_size == 0)
+        config_.blk_size = 512;
 
     LTRACEF("capacity %#" PRIx64 "\n", config_.capacity);
     LTRACEF("size_max %#x\n", config_.size_max);
@@ -171,14 +177,14 @@ zx_status_t BlockDevice::Init() {
     LTRACEF("blk_size %#x\n", config_.blk_size);
 
     // ack and set the driver status bit
-    StatusAcknowledgeDriver();
+    DriverStatusAck();
 
     // XXX check features bits and ack/nak them
 
     // allocate the main vring
     auto err = vring_.Init(0, ring_size);
     if (err < 0) {
-        VIRTIO_ERROR("failed to allocate vring\n");
+        zxlogf(ERROR, "failed to allocate vring\n");
         return err;
     }
 
@@ -187,7 +193,7 @@ zx_status_t BlockDevice::Init() {
 
     zx_status_t r = map_contiguous_memory(size, (uintptr_t*)&blk_req_, &blk_req_pa_);
     if (r < 0) {
-        VIRTIO_ERROR("cannot alloc blk_req buffers %d\n", r);
+        zxlogf(ERROR, "cannot alloc blk_req buffers %d\n", r);
         return r;
     }
 
@@ -203,7 +209,7 @@ zx_status_t BlockDevice::Init() {
     StartIrqThread();
 
     // set DRIVER_OK
-    StatusDriverOK();
+    DriverStatusOk();
 
     // initialize the zx_device and publish us
     // point the ctx of our DDK device at ourself
@@ -283,7 +289,7 @@ void BlockDevice::IrqConfigChange() {
 // given a iotxn, call back for every physical address run
 // TODO: see if we can use the iotxn_phys_iter routines instead
 template <typename callback>
-static void ScatterGatherHelper(const iotxn_t *txn, callback callback_new_run) {
+static void ScatterGatherHelper(const iotxn_t* txn, callback callback_new_run) {
     uint64_t run_start = -1;
     uint64_t run_len = 0;
 

@@ -5,10 +5,9 @@
 
 #include "device.h"
 #include "ring.h"
-
 #include <ddk/io-buffer.h>
-#include <zircon/compiler.h>
 #include <stdlib.h>
+#include <zircon/compiler.h>
 
 namespace virtio {
 
@@ -16,15 +15,16 @@ class Ring;
 
 class RngDevice : public Device {
 public:
-    RngDevice(zx_device_t* device);
+    RngDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend);
     virtual ~RngDevice();
 
-    virtual zx_status_t Init();
+    zx_status_t Init() override;
 
-    virtual void IrqRingUpdate();
-    virtual void IrqConfigChange();
+    void IrqRingUpdate() override;
+    void IrqConfigChange() override;
+    const char* tag() const override { return "virtio-rng"; }
 
-
+protected:
 private:
     // TODO(SEC-29): The kernel should trigger entropy requests, instead of relying on this
     // userspace thread to push entropy whenever it wants to. As a temporary hack, this thread
@@ -47,7 +47,6 @@ private:
     // the buffer used to receive entropy
     static constexpr size_t kBufferSize = ZX_CPRNG_ADD_ENTROPY_MAX_LEN;
     io_buffer_t buf_;
-
 };
 
 } // namespace virtio

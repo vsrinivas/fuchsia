@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
@@ -17,91 +18,84 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include "backends/pci.h"
 #include "block.h"
 #include "console.h"
 #include "device.h"
-#include "rng.h"
 #include "ethernet.h"
 #include "gpu.h"
 #include "input.h"
-#include "trace.h"
+#include "rng.h"
 
-#define LOCAL_TRACE 0
-
-// implement driver object:
-
-extern "C" zx_status_t virtio_bind(void* ctx, zx_device_t* device, void** cookie) {
-    LTRACEF("device %p\n", device);
+extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void** cookie) {
     zx_status_t status;
     pci_protocol_t pci;
 
-    /* grab the pci device and configuration */
-    if (device_get_protocol(device, ZX_PROTOCOL_PCI, &pci)) {
-        TRACEF("no pci protocol\n");
-        return -1;
+    // grab the pci device and configuration to pass to the backend
+    if (device_get_protocol(bus_device, ZX_PROTOCOL_PCI, &pci)) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    const pci_config_t* config;
-    size_t config_size;
-    zx_handle_t config_handle = ZX_HANDLE_INVALID;
-    status = pci_map_resource(&pci, PCI_RESOURCE_CONFIG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   (void**)&config, &config_size, &config_handle);
+    zx_pcie_device_info_t info;
+    status = pci_get_device_info(&pci, &info);
     if (status != ZX_OK) {
-        TRACEF("failed to grab config handle\n");
         return status;
     }
 
-    LTRACEF("pci %p\n", &pci);
-    LTRACEF("0x%x:0x%x\n", config->vendor_id, config->device_id);
+    // Due to the similarity between Virtio 0.9.5 legacy devices and Virtio 1.0
+    // transitional devices we need to check whether modern capabilities exist.
+    // If no vendor capabilities are found then we will default to the legacy
+    // interface.
+    fbl::unique_ptr<virtio::Backend> backend = nullptr;
+    if (pci_get_first_capability(&pci, kPciCapIdVendor) != 0) {
+        zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend\n", info.bus_id, info.dev_id, info.func_id);
+        backend.reset(new virtio::PciModernBackend(pci, info));
+    } else {
+        zxlogf(SPEW, "virtio %02x:%02x.%1x using legacy PCI backend\n", info.bus_id, info.dev_id, info.func_id);
+        backend.reset(new virtio::PciLegacyBackend(pci, info));
+    }
 
-    // TODO: Make symbols for these constants and reuse in the BIND protocol.
-    fbl::unique_ptr<virtio::Device> vd = nullptr;
-    switch (config->device_id) {
-    case 0x1000:
-        LTRACEF("found net device\n");
-        vd.reset(new virtio::EthernetDevice(device));
+    status = backend->Bind();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Now that the backend for this device has been initialized we can
+    // compose a device based on the PCI device id
+    fbl::unique_ptr<virtio::Device> virtio_device = nullptr;
+    switch (info.device_id) {
+    case VIRTIO_DEV_TYPE_NETWORK:
+    case VIRTIO_DEV_TYPE_T_NETWORK:
+        virtio_device.reset(new virtio::EthernetDevice(bus_device, fbl::move(backend)));
         break;
-    case 0x1001:
-    case 0x1042:
-        LTRACEF("found block device\n");
-        vd.reset(new virtio::BlockDevice(device));
+    case VIRTIO_DEV_TYPE_BLOCK:
+    case VIRTIO_DEV_TYPE_T_BLOCK:
+        virtio_device.reset(new virtio::BlockDevice(bus_device, fbl::move(backend)));
         break;
-    case 0x1003:
-    case 0x1043:
-        LTRACEF("found console device\n");
-        vd.reset(new virtio::ConsoleDevice(device));
+    case VIRTIO_DEV_TYPE_CONSOLE:
+    case VIRTIO_DEV_TYPE_T_CONSOLE:
+        virtio_device.reset(new virtio::ConsoleDevice(bus_device, fbl::move(backend)));
         break;
-    case 0x1050:
-        LTRACEF("found gpu device\n");
-        vd.reset(new virtio::GpuDevice(device));
+    case VIRTIO_DEV_TYPE_GPU:
+        virtio_device.reset(new virtio::GpuDevice(bus_device, fbl::move(backend)));
         break;
-    case 0x1005:
-    case 0x1044:
-        LTRACEF("found entropy device\n");
-        vd.reset(new virtio::RngDevice(device));
+    case VIRTIO_DEV_TYPE_ENTROPY:
+    case VIRTIO_DEV_TYPE_T_ENTROPY:
+        virtio_device.reset(new virtio::RngDevice(bus_device, fbl::move(backend)));
         break;
-    case 0x1052:
-        LTRACEF("found input device\n");
-        vd.reset(new virtio::InputDevice(device));
+    case VIRTIO_DEV_TYPE_INPUT:
+        virtio_device.reset(new virtio::InputDevice(bus_device, fbl::move(backend)));
         break;
     default:
-        printf("unhandled device id, how did this happen?\n");
-        return -1;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    LTRACEF("calling Bind on driver\n");
-    status = vd->Bind(&pci, config_handle, config);
-    if (status != ZX_OK)
+    status = virtio_device->Init();
+    if (status != ZX_OK) {
         return status;
-
-    status = vd->Init();
-    if (status != ZX_OK)
-        return status;
+    }
 
     // if we're here, we're successful so drop the unique ptr ref to the object and let it live on
-    vd.release();
-
-    LTRACE_EXIT;
-
+    virtio_device.release();
     return ZX_OK;
 }

@@ -5,14 +5,16 @@
 #include "gpu.h"
 
 #include <assert.h>
-#include <inttypes.h>
-#include <zircon/compiler.h>
+#include <ddk/debug.h>
+#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
+#include <inttypes.h>
 #include <pretty/hexdump.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <zircon/compiler.h>
 
 #include "trace.h"
 #include "utils.h"
@@ -74,9 +76,8 @@ void GpuDevice::virtio_gpu_flush(void* ctx) {
     gd->Flush();
 }
 
-GpuDevice::GpuDevice(zx_device_t* bus_device)
-    : Device(bus_device) {
-
+GpuDevice::GpuDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(backend)) {
     cnd_init(&request_cond_);
     cnd_init(&flush_cond_);
 }
@@ -85,13 +86,6 @@ GpuDevice::~GpuDevice() {
     // TODO: clean up allocated physical memory
     cnd_destroy(&request_cond_);
     cnd_destroy(&flush_cond_);
-}
-
-static void dump_gpu_config(const volatile struct virtio_gpu_config* config) {
-    LTRACEF("events_read 0x%x\n", config->events_read);
-    LTRACEF("events_clear 0x%x\n", config->events_clear);
-    LTRACEF("num_scanouts 0x%x\n", config->num_scanouts);
-    LTRACEF("reserved 0x%x\n", config->reserved);
 }
 
 zx_status_t GpuDevice::send_command_response(const void* cmd, size_t cmd_len, void** _res, size_t res_len) {
@@ -373,12 +367,12 @@ zx_status_t GpuDevice::virtio_gpu_start() {
     /* get the display info and see if we find a valid pmode */
     err = get_display_info();
     if (err < 0) {
-        VIRTIO_ERROR("failed to get display info\n");
+        zxlogf(ERROR, "%s: failed to get display info\n", tag());
         return err;
     }
 
     if (pmode_id_ < 0) {
-        VIRTIO_ERROR("we failed to find a pmode, exiting\n");
+        zxlogf(ERROR, "%s: failed to find a pmode, exiting\n", tag());
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -389,7 +383,7 @@ zx_status_t GpuDevice::virtio_gpu_start() {
     /* allocate a resource */
     err = allocate_2d_resource(&display_resource_id_, pmode_.r.width, pmode_.r.height);
     if (err < 0) {
-        VIRTIO_ERROR("failed to allocate 2d resource\n");
+        zxlogf(ERROR, "%s: failed to allocate 2d resource\n", tag());
         return err;
     }
 
@@ -398,7 +392,7 @@ zx_status_t GpuDevice::virtio_gpu_start() {
 
     err = map_contiguous_memory(len, (uintptr_t*)&fb_, &fb_pa_);
     if (err < 0) {
-        VIRTIO_ERROR("failed to allocate framebuffer, wanted 0x%zx bytes\n", len);
+        zxlogf(ERROR, "%s: failed to allocate framebuffer, wanted 0x%zx bytes\n", tag(), len);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -406,14 +400,14 @@ zx_status_t GpuDevice::virtio_gpu_start() {
 
     err = attach_backing(display_resource_id_, fb_pa_, len);
     if (err < 0) {
-        VIRTIO_ERROR("failed to attach backing store\n");
+        zxlogf(ERROR, "%s: failed to attach backing store\n", tag());
         return err;
     }
 
     /* attach this resource as a scanout */
     err = set_scanout(pmode_id_, display_resource_id_, pmode_.r.width, pmode_.r.height);
     if (err < 0) {
-        VIRTIO_ERROR("failed to set scanout\n");
+        zxlogf(ERROR, "%s: failed to set scanout\n", tag());
         return err;
     }
 
@@ -463,27 +457,31 @@ zx_status_t GpuDevice::Init() {
     LTRACE_ENTRY;
 
     // reset the device
-    Reset();
+    DeviceReset();
 
-    volatile virtio_gpu_config* config = (virtio_gpu_config*)mmio_regs_.device_config;
-    dump_gpu_config(config);
+    struct virtio_gpu_config config;
+    CopyDeviceConfig(&config, sizeof(config));
+    LTRACEF("events_read 0x%x\n", config.events_read);
+    LTRACEF("events_clear 0x%x\n", config.events_clear);
+    LTRACEF("num_scanouts 0x%x\n", config.num_scanouts);
+    LTRACEF("reserved 0x%x\n", config.reserved);
 
     // ack and set the driver status bit
-    StatusAcknowledgeDriver();
+    DriverStatusAck();
 
     // XXX check features bits and ack/nak them
 
     // allocate the main vring
     auto err = vring_.Init(0, 16);
     if (err < 0) {
-        VIRTIO_ERROR("failed to allocate vring\n");
+        zxlogf(ERROR, "%s: failed to allocate vring\n", tag());
         return err;
     }
 
     // allocate a gpu request
     auto r = map_contiguous_memory(PAGE_SIZE, (uintptr_t*)&gpu_req_, &gpu_req_pa_);
     if (r < 0) {
-        VIRTIO_ERROR("cannot alloc gpu_req buffers %d\n", r);
+        zxlogf(ERROR, "%s: cannot alloc gpu_req buffers %d\n", tag(), r);
         return r;
     }
 
@@ -493,7 +491,7 @@ zx_status_t GpuDevice::Init() {
     StartIrqThread();
 
     // set DRIVER_OK
-    StatusDriverOK();
+    DriverStatusOk();
 
     // start a worker thread that runs through a sequence to finish initializing the gpu
     thrd_create_with_name(&start_thread_, virtio_gpu_start_entry, this, "virtio-gpu-starter");

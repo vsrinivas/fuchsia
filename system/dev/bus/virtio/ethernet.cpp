@@ -8,11 +8,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
-#include <zircon/assert.h>
-#include <zircon/status.h>
-#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -21,6 +19,9 @@
 #include <pretty/hexdump.h>
 #include <virtio/net.h>
 #include <virtio/virtio.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include "ring.h"
 #include "trace.h"
@@ -113,14 +114,14 @@ zx_status_t InitBuffers(fbl::unique_ptr<io_buffer_t[]>* out) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<io_buffer_t[]> bufs(new (&ac) io_buffer_t[kNumIoBufs]);
     if (!ac.check()) {
-        VIRTIO_ERROR("out of memory!\n");
+        zxlogf(ERROR, "out of memory!\n");
         return ZX_ERR_NO_MEMORY;
     }
     memset(bufs.get(), 0, sizeof(io_buffer_t) * kNumIoBufs);
     size_t buf_size = kFrameSize * kFramesInBuf;
     for (uint16_t id = 0; id < kNumIoBufs; ++id) {
         if ((rc = io_buffer_init(&bufs[id], buf_size, IO_BUFFER_RW | IO_BUFFER_CONTIG)) != ZX_OK) {
-            VIRTIO_ERROR("failed to allocate I/O buffers: %s\n", zx_status_get_string(rc));
+            zxlogf(ERROR, "failed to allocate I/O buffers: %s\n", zx_status_get_string(rc));
             return rc;
         }
     }
@@ -168,12 +169,9 @@ uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id) {
 
 } // namespace
 
-EthernetDevice::EthernetDevice(zx_device_t* bus_device)
-    : Device(bus_device), rx_(this), tx_(this), bufs_(nullptr), unkicked_(0), ifc_(nullptr),
-      cookie_(nullptr) {
-    LTRACE_ENTRY;
-    // VirtIO spec 1.0, section 4.1.4.8
-    bar0_size_ = VIRTIO_PCI_CONFIG_OFFSET_NOMSI + sizeof(config_);
+EthernetDevice::EthernetDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(backend)), rx_(this), tx_(this), bufs_(nullptr), unkicked_(0),
+      ifc_(nullptr), cookie_(nullptr) {
 }
 
 EthernetDevice::~EthernetDevice() {
@@ -190,7 +188,7 @@ zx_status_t EthernetDevice::Init() {
     fbl::AutoLock lock(&state_lock_);
 
     // Reset the device and read our configuration
-    Reset();
+    DeviceReset();
     CopyDeviceConfig(&config_, sizeof(config_));
     LTRACEF("mac %02x:%02x:%02x:%02x:%02x:%02x\n", config_.mac[0], config_.mac[1], config_.mac[2],
             config_.mac[3], config_.mac[4], config_.mac[5]);
@@ -198,7 +196,7 @@ zx_status_t EthernetDevice::Init() {
     LTRACEF("max_virtqueue_pairs  %u\n", config_.max_virtqueue_pairs);
 
     // Ack and set the driver status bit
-    StatusAcknowledgeDriver();
+    DriverStatusAck();
 
     // TODO(aarongreen): Check features bits and ack/nak them
 
@@ -209,7 +207,7 @@ zx_status_t EthernetDevice::Init() {
     uint16_t num_descs = static_cast<uint16_t>(kBacklog & 0xffff);
     if ((rc = InitBuffers(&bufs_)) != ZX_OK || (rc = rx_.Init(kRxId, num_descs)) != ZX_OK ||
         (rc = tx_.Init(kTxId, num_descs)) != ZX_OK) {
-        VIRTIO_ERROR("failed to allocate virtqueue: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "failed to allocate virtqueue: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
@@ -250,7 +248,7 @@ zx_status_t EthernetDevice::Init() {
     args.proto_id = ZX_PROTOCOL_ETHERMAC;
     args.proto_ops = &kProtoOps;
     if ((rc = device_add(bus_device_, &args, &device_)) != ZX_OK) {
-        VIRTIO_ERROR("failed to add device: %s\n", zx_status_get_string(rc));
+        zxlogf(ERROR, "failed to add device: %s\n", zx_status_get_string(rc));
         return rc;
     }
     // Give the rx buffers to the host
@@ -258,7 +256,7 @@ zx_status_t EthernetDevice::Init() {
 
     // Woohoo! Driver should be ready.
     cleanup.cancel();
-    StatusDriverOK();
+    DriverStatusOk();
     return ZX_OK;
 }
 

@@ -7,8 +7,9 @@
 #include "ring.h"
 #include "virtio_gpu.h"
 
-#include <zircon/compiler.h>
+#include <fbl/unique_ptr.h>
 #include <stdlib.h>
+#include <zircon/compiler.h>
 
 #include <ddk/protocol/display.h>
 
@@ -18,18 +19,20 @@ class Ring;
 
 class GpuDevice : public Device {
 public:
-    GpuDevice(zx_device_t* device);
+    GpuDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
     virtual ~GpuDevice();
 
-    virtual zx_status_t Init();
+    zx_status_t Init() override;
 
-    virtual void IrqRingUpdate();
-    virtual void IrqConfigChange();
+    void IrqRingUpdate() override;
+    void IrqConfigChange() override;
 
     void* framebuffer() const { return fb_; }
     const virtio_gpu_resp_display_info::virtio_gpu_display_one* pmode() const { return &pmode_; }
 
     void Flush();
+
+    const char* tag() const override { return "virtio-gpu"; };
 
 private:
     // DDK driver hooks

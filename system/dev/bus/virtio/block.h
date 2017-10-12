@@ -6,9 +6,10 @@
 #include "device.h"
 #include "ring.h"
 
-#include <zircon/compiler.h>
 #include <stdlib.h>
+#include <zircon/compiler.h>
 
+#include "backends/backend.h"
 #include <ddk/protocol/block.h>
 #include <virtio/block.h>
 
@@ -18,24 +19,25 @@ class Ring;
 
 class BlockDevice : public Device {
 public:
-    BlockDevice(zx_device_t* device);
+    BlockDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
     virtual ~BlockDevice();
 
-    virtual zx_status_t Init();
+    virtual zx_status_t Init() override;
 
-    virtual void IrqRingUpdate();
-    virtual void IrqConfigChange();
+    virtual void IrqRingUpdate() override;
+    virtual void IrqConfigChange() override;
 
     uint64_t GetSize() const { return config_.capacity * config_.blk_size; }
     uint32_t GetBlockSize() const { return config_.blk_size; }
     uint64_t GetBlockCount() const { return config_.capacity; }
+    const char* tag() const override { return "virtio-blk"; }
 
 private:
     // DDK driver hooks
     static void virtio_block_iotxn_queue(void* ctx, iotxn_t* txn);
     static zx_off_t virtio_block_get_size(void* ctx);
     static zx_status_t virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual);
+                                          void* out_buf, size_t out_len, size_t* out_actual);
 
     static void virtio_block_set_callbacks(void* ctx, block_callbacks_t* cb);
     static void virtio_block_get_info(void* ctx, block_info_t* info);

@@ -47,8 +47,8 @@
 #define VIRTIO_PCI_MSI_CONFIG_VECTOR                0x14    // uint16_t
 #define VIRTIO_PCI_MSI_QUEUE_VECTOR                 0x16    // uint16_t
 
-#define VIRTIO_PCI_CONFIG_OFFSET_NOMSI              0x14    // uint16_t
-#define VIRTIO_PCI_CONFIG_OFFSET_MSI                0x18    // uint16_t
+#define VIRTIO_PCI_CONFIG_OFFSET_NOMSIX             0x14    // uint16_t
+#define VIRTIO_PCI_CONFIG_OFFSET_MSIX               0x18    // uint16_t
 
 #define VIRTIO_PCI_CAP_COMMON_CFG                   1
 #define VIRTIO_PCI_CAP_NOTIFY_CFG                   2
@@ -56,20 +56,14 @@
 #define VIRTIO_PCI_CAP_DEVICE_CFG                   4
 #define VIRTIO_PCI_CAP_PCI_CFG                      5
 
+#define VIRTIO_ISR_QUEUE_INT                        0x1
+#define VIRTIO_ISR_DEV_CFG_INT                      0x2
+
+#define VIRTIO_F_RING_INDIRECT_DESC                 28
+#define VIRTIO_F_RING_EVENT_IDX                     29
 #define VIRTIO_F_VERSION_1                          32
 
 __BEGIN_CDECLS
-
-typedef struct virtio_pci_legacy_config {
-    uint32_t device_features;
-    uint32_t guest_features;
-    uint32_t queue_address;
-    uint16_t queue_size;
-    uint16_t queue_select;
-    uint16_t queue_notify;
-    uint8_t device_status;
-    uint8_t isr_status;
-} __PACKED virtio_pci_legacy_config_t;
 
 typedef struct virtio_pci_cap {
     uint8_t cap_vndr;
@@ -106,5 +100,48 @@ typedef struct virtio_pci_common_cfg {
     uint64_t queue_avail;
     uint64_t queue_used;
 } __PACKED virtio_pci_common_cfg_t;
+
+#define VIRTIO_PCI_VENDOR_ID            0x1af4
+
+// Device ids
+#define VIRTIO_DEV_ID_RESERVED          0
+#define VIRTIO_DEV_ID_NETWORK           1
+#define VIRTIO_DEV_ID_BLOCK             2
+#define VIRTIO_DEV_ID_CONSOLE           3
+#define VIRTIO_DEV_ID_ENTROPY           4
+#define VIRTIO_DEV_ID_BALLOON_T         5
+#define VIRTIO_DEV_ID_IOMEMORY          6
+#define VIRTIO_DEV_ID_RPMSG             7
+#define VIRTIO_DEV_ID_SCSI_HOST         8
+#define VIRTIO_DEV_ID_9P_TRANS          9
+#define VIRTIO_DEV_ID_MAC80211          10
+#define VIRTIO_DEV_ID_RPROC             11
+#define VIRTIO_DEV_ID_CAIF              12
+#define VIRTIO_DEV_ID_BALLOON           13
+// Intentional gap of 14-15
+#define VIRTIO_DEV_ID_GPU               16
+#define VIRTIO_DEV_ID_TIMER             17
+#define VIRTIO_DEV_ID_INPUT             18
+
+// Device Types (transitional)
+#define VIRTIO_DEV_TYPE_T_NETWORK       0x1000
+#define VIRTIO_DEV_TYPE_T_BLOCK         0x1001
+#define VIRTIO_DEV_TYPE_T_BALLOON       0x1002
+#define VIRTIO_DEV_TYPE_T_CONSOLE       0x1003
+#define VIRTIO_DEV_TYPE_T_SCSI_HOST     0x1004
+#define VIRTIO_DEV_TYPE_T_ENTROPY       0x1005
+#define VIRTIO_DEV_TYPE_T_9P            0x1006
+
+// Legacy Device Types
+#define VIRTIO_LEGACY_DEV_TYPE(dev_id) (0x1040 + dev_id)
+#define VIRTIO_DEV_TYPE_NETWORK        VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_NETWORK)
+#define VIRTIO_DEV_TYPE_BLOCK          VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_BLOCK)
+#define VIRTIO_DEV_TYPE_BALLOON        VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_BALLOON)
+#define VIRTIO_DEV_TYPE_CONSOLE        VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_CONSOLE)
+#define VIRTIO_DEV_TYPE_SCSI           VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_SCSI_HOST)
+#define VIRTIO_DEV_TYPE_ENTROPY        VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_ENTROPY)
+#define VIRTIO_DEV_TYPE_9P             VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_9P)
+#define VIRTIO_DEV_TYPE_GPU            VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_GPU)
+#define VIRTIO_DEV_TYPE_INPUT          VIRTIO_LEGACY_DEV_TYPE(VIRTIO_DEV_ID_INPUT)
 
 __END_CDECLS

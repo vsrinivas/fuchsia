@@ -26,6 +26,4 @@
 #define LTRACEF(x...) do { if (LOCAL_TRACE) { TRACEF(x); } } while (0)
 #define LTRACEF_LEVEL(level, x...) do { if (LOCAL_TRACE >= (level)) { TRACEF(x); } } while (0)
 
-#define VIRTIO_ERROR(fmt, x...) printf("virtio: " fmt, ## x)
-
 // clang-format on

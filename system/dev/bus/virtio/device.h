@@ -5,93 +5,97 @@
 
 #include <zircon/types.h>
 
+#include "backends/backend.h"
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-#include <zx/handle.h>
 #include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 #include <threads.h>
 #include <virtio/virtio.h>
+#include <zx/handle.h>
 
+// Virtio devices are represented by a derived class specific to their type (eg
+// gpu) with a virtio::Device base. The device class handles general work around
+// IRQ handling and contains a backend that is instantiated at creation time
+// that implements a virtio backend. This allows a single device driver to work
+// on both Virtio legacy or transistional without needing to special case the
+// device interaction.
 namespace virtio {
 
 class Device {
 public:
-    Device(zx_device_t* bus_device);
+    Device(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend);
     virtual ~Device();
 
-    zx_device_t* bus_device() { return bus_device_; }
-    zx_device_t* device() { return device_; }
-
-    virtual zx_status_t Bind(pci_protocol_t*, zx_handle_t pci_config_handle, const pci_config_t*);
     virtual zx_status_t Init() = 0;
-    virtual void Unbind();
     virtual void Release();
+    virtual void Unbind();
 
     void StartIrqThread();
-
     // interrupt cases that devices may override
-    virtual void IrqRingUpdate() {}
-    virtual void IrqConfigChange() {}
+    virtual void IrqRingUpdate() = 0;
+    virtual void IrqConfigChange() = 0;
 
-    // used by Ring class to manipulate config registers
-    void SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail, zx_paddr_t pa_used);
-    uint16_t GetRingSize(uint16_t index);
-    void RingKick(uint16_t ring_index);
+    // Get the Ring size for the particular device / backend.
+    // This has to be proxied to a backend method because we can't
+    // simply do config reads to determine the information.
+    uint16_t GetRingSize(uint16_t index) { return backend_->GetRingSize(index); }
+    // Set up ring descriptors with the backend.
+    void SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_desc, zx_paddr_t pa_avail,
+                 zx_paddr_t pa_used) {
+        backend_->SetRing(index, count, pa_desc, pa_avail, pa_used);
+    }
+
+    // Another method that has to be proxied to the backend due to differences
+    // in how Legacy vs Modern systems are laid out.
+    void RingKick(uint16_t ring_index) { backend_->RingKick(ring_index); }
+
+    // It is expected that each derived device will implement tag().
+    zx_device_t* device() { return device_; }
+    virtual const char* tag() const = 0; // Implemented by derived devices
 
 protected:
-    // read bytes out of BAR 0's config space
-    template <typename T> T ReadConfigBar(uint16_t offset);
-    template <typename T> void WriteConfigBar(uint16_t offset, T val);
-    zx_status_t CopyDeviceConfig(void* _buf, size_t len);
-    template <typename T> void WriteDeviceConfig(uint16_t offset, T val);
+    // Methods for checking / acknowledging features
+    bool DeviceFeatureSupported(uint32_t feature) { return backend_->ReadFeature(feature); }
+    void DriverFeatureAck(uint32_t feature) { backend_->SetFeature(feature); }
+    bool DeviceStatusFeaturesOk() { return backend_->ConfirmFeatures(); }
 
-    void Reset();
-    void StatusAcknowledgeDriver();
-    zx_status_t StatusFeaturesOK();
-    void StatusDriverOK();
+    // Devie lifecycle methods
+    void DeviceReset() { backend_->DeviceReset(); }
+    void DriverStatusAck() { backend_->DriverStatusAck(); }
+    void DriverStatusOk() { backend_->DriverStatusOk(); }
+    uint32_t IsrStatus() { return backend_->IsrStatus(); }
 
-    bool IsFeatureSupported(size_t bit);
-    void AcknowledgeFeature(size_t bit);
+    // Device config management
+    zx_status_t CopyDeviceConfig(void* _buf, size_t len) const;
+    template <typename T>
+    T ReadDeviceConfig(uint16_t offset, T* val) { return backend_->DeviceConfigRead(offset, val); }
+    template <typename T>
+    void WriteDeviceConfig(uint16_t offset, T val) { backend_->DeviceConfigWrite(offset, val); }
 
+    zx_device_t* bus_device() const { return bus_device_; }
     static int IrqThreadEntry(void* arg);
     void IrqWorker();
 
-    zx_status_t MapBar(uint8_t bar);
-
-    // members
-    zx_device_t* bus_device_ = nullptr;
-    fbl::Mutex lock_;
-
-    // handles to pci bits
-    pci_protocol_t pci_ = { nullptr, nullptr };
-    zx::handle pci_config_handle_ = {};
-    const pci_config_t* pci_config_ = nullptr;
-    zx::handle irq_handle_ = {};
-
-    // bar0 memory map or PIO
-    uint32_t bar0_pio_base_ = 0;
-    uint32_t bar0_size_ = 0; // for now, must be set in subclass before Bind()
-
-    // based on the capability descriptions multiple bars may need to be mapped
-    struct bar {
-        volatile void* mmio_base;
-        zx::handle mmio_handle;
-    } bar_[6] = {};
-    struct {
-        volatile virtio_pci_common_cfg* common_config;
-        volatile uint32_t* isr_status;
-        volatile uint16_t* notify_base;
-        uint32_t notify_mul;
-        volatile void* device_config;
-    } mmio_regs_ = {};
-
+    // backend responsible for hardware io. Will be released when device goes out of scope
+    fbl::unique_ptr<Backend> backend_;
     // irq thread object
     thrd_t irq_thread_ = {};
+    zx::handle irq_handle_ = {};
+    // Bus device is the parent device on the bus, device is this driver's device node.
+    zx_device_t* bus_device_ = nullptr;
+    zx_device_t* device_ = nullptr;
 
     // DDK device
-    zx_device_t* device_ = nullptr;
+    // TODO: It might make sense for the base device class to be the one
+    // to handle device_add() calls rather than delegating it to the derived
+    // instances of devices.
     zx_protocol_device_t device_ops_ = {};
+
+    // This lock exists for devices to synchronize themselves, it should not be used by the base
+    // device class.
+    fbl::Mutex lock_;
 };
 
 } // namespace virtio

@@ -17,7 +17,7 @@ namespace virtio {
 
 class InputDevice : public Device {
 public:
-    InputDevice(zx_device_t* device);
+    InputDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
     virtual ~InputDevice();
 
     zx_status_t Init() override;
@@ -25,6 +25,7 @@ public:
 
     void IrqRingUpdate() override;
     void IrqConfigChange() override;
+    const char* tag() const override { return "virtio-input"; }
 
 private:
     // DDK driver hooks
