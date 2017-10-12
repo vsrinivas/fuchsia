@@ -148,15 +148,14 @@ public:
     // any descriptors that become available in the queues.
     zx_status_t Init(const char* path);
 
-
     // Adds a scanout to the GPU.
     //
     // Currently only a single scanout is supported. ZX_ERR_ALREADY_EXISTS will
     // be returned if this method is called multiple times.
     zx_status_t AddScanout(fbl::unique_ptr<GpuScanout> scanout);
 
-
     zx_status_t HandleGpuCommand(virtio_queue_t* queue, uint16_t head, uint32_t* used);
+
 protected:
     static zx_status_t QueueHandler(virtio_queue_t* queue, uint16_t head, uint32_t* used,
                                     void* ctx);

@@ -11,7 +11,6 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 
-
 /* Stores the local APIC state. */
 class LocalApic {
 public:
@@ -65,4 +64,3 @@ private:
     // Register accessors.
     Registers* regs_ TA_GUARDED(mutex_);
 };
-

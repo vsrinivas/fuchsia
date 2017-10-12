@@ -75,9 +75,9 @@ zx_status_t LocalApic::Handler(const zx_packet_guest_mem_t* mem, instruction_t* 
         // Therefore, we ignore writes to the ESR.
         if (inst->type == INST_MOV_WRITE)
             return ZX_OK;
-    case LOCAL_APIC_REGISTER_ISR_31_0 ... LOCAL_APIC_REGISTER_ISR_255_224:
-    case LOCAL_APIC_REGISTER_TMR_31_0 ... LOCAL_APIC_REGISTER_TMR_255_224:
-    case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
+    case LOCAL_APIC_REGISTER_ISR_31_0... LOCAL_APIC_REGISTER_ISR_255_224:
+    case LOCAL_APIC_REGISTER_TMR_31_0... LOCAL_APIC_REGISTER_TMR_255_224:
+    case LOCAL_APIC_REGISTER_IRR_31_0... LOCAL_APIC_REGISTER_IRR_255_224:
         return inst_read32(inst, 0);
     case LOCAL_APIC_REGISTER_ID: {
         // The IO APIC implementation currently assumes these won't change.
@@ -90,7 +90,7 @@ zx_status_t LocalApic::Handler(const zx_packet_guest_mem_t* mem, instruction_t* 
         return inst_rw32(inst, reinterpret_cast<uint32_t*>(addr));
     }
     case LOCAL_APIC_REGISTER_DFR:
-    case LOCAL_APIC_REGISTER_ICR_31_0 ... LOCAL_APIC_REGISTER_ICR_63_32:
+    case LOCAL_APIC_REGISTER_ICR_31_0... LOCAL_APIC_REGISTER_ICR_63_32:
     case LOCAL_APIC_REGISTER_LDR:
     case LOCAL_APIC_REGISTER_LVT_ERROR:
     case LOCAL_APIC_REGISTER_LVT_LINT0:
@@ -115,4 +115,3 @@ zx_status_t LocalApic::Handler(const zx_packet_guest_mem_t* mem, instruction_t* 
     fprintf(stderr, "Unhandled local APIC address %#lx\n", offset);
     return ZX_ERR_NOT_SUPPORTED;
 }
-

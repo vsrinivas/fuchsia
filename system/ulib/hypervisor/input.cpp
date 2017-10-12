@@ -367,9 +367,9 @@ zx_status_t KeyboardEventSource::HandleHidKeys(const hid_keys_t& curr_keys) {
     hid_keys_t released;
     hid_kbd_released_keys(&prev_keys_, &curr_keys, &released);
     hid_for_every_key(&released, keycode) {
-      zx_status_t status = SendKeyEvent(keycode, false);
-      if (status != ZX_OK)
-          return status;
+        zx_status_t status = SendKeyEvent(keycode, false);
+        if (status != ZX_OK)
+            return status;
     }
 
     prev_keys_ = curr_keys;

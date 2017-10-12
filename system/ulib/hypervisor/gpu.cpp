@@ -224,7 +224,6 @@ void VirtioGpu::SetScanout(const virtio_gpu_set_scanout_t* request,
         fprintf(stderr, "virtio-gpu: partial scanout not supported.\n");
         response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
         return;
-
     }
     if (it->format() != scanout_->format()) {
         fprintf(stderr, "virtio-gpu: resource/scanout pixel format mismatch not supported.\n");
@@ -329,7 +328,6 @@ void FramebufferScanout::FlushRegion(const virtio_gpu_rect_t& r) {
         .height = r.height,
     };
     ioctl_display_flush_fb_region(fd_, &fb_region);
-
 }
 
 GpuResource::GpuResource(VirtioGpu* gpu, const virtio_gpu_resource_create_2d_t* args)
@@ -348,7 +346,7 @@ virtio_gpu_ctrl_type GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* me
     if (backing_size < required_bytes) {
         fprintf(stderr, "virtio-gpu: attach backing command provided buffer is too small.\n");
         backing_.clear();
-        return VIRTIO_GPU_RESP_ERR_UNSPEC;;
+        return VIRTIO_GPU_RESP_ERR_UNSPEC;
     }
     return VIRTIO_GPU_RESP_OK_NODATA;
 }

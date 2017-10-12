@@ -27,6 +27,5 @@ zx_status_t PhysMem::Init(size_t size) {
 PhysMem::~PhysMem() {
     if (addr_ != 0) {
         zx::vmar::root_self().unmap(addr_, vmo_size_);
-
     }
 }

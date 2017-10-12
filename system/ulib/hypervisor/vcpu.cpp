@@ -124,7 +124,7 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
         fprintf(stderr, "\n");
     } else {
         switch (mem->addr) {
-        case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
+        case LOCAL_APIC_PHYS_BASE... LOCAL_APIC_PHYS_TOP:
             status = vcpu_ctx->local_apic.Handler(mem, &inst);
             break;
         default: {
@@ -201,8 +201,8 @@ static zx_status_t vcpu_state_write(vcpu_ctx_t* vcpu_ctx, uint32_t kind, const v
 }
 
 vcpu_ctx::vcpu_ctx(zx_handle_t vcpu_, uintptr_t apic_addr_)
-    :  vcpu(vcpu_), read_state(&vcpu_state_read), write_state(vcpu_state_write),
-       local_apic(vcpu_, apic_addr_) {}
+    : vcpu(vcpu_), read_state(&vcpu_state_read), write_state(vcpu_state_write),
+      local_apic(vcpu_, apic_addr_) {}
 
 zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
     while (true) {

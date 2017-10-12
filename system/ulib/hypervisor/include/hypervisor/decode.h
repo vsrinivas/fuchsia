@@ -106,7 +106,7 @@ static inline zx_status_t inst_test8(const instruction_t* inst, uint8_t inst_val
     *inst->flags &= ~X86_FLAGS_STATUS;
     *inst->flags |= x86_flags_for_test8(inst_val, value);
     return ZX_OK;
-#else // __x86_64__
+#else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }

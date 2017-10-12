@@ -51,6 +51,7 @@ public:
     zx_status_t Start();
 
     zx_status_t HidEventLoop();
+
 private:
     // Sends an evdev key event.
     zx_status_t SendKeyEvent(uint32_t scancode, bool pressed);
@@ -87,8 +88,8 @@ public:
 
     // Invoked when new devices are added.
     static zx_status_t AddInputDevice(int dirfd, int event, const char* fn, void* cookie);
-private:
 
+private:
     fbl::Mutex mutex_;
     const char* device_name_;
     const char* device_serial_;

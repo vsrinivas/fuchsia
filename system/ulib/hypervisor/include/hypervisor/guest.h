@@ -48,6 +48,7 @@ public:
     // Setup a trap to delegate accesses to an IO region to |handler|.
     zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size, uint64_t offset,
                               IoHandler* handler);
+
 private:
     zx_status_t IoThread();
 

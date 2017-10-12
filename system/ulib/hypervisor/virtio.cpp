@@ -14,7 +14,7 @@
 #define QUEUE_SIZE 128u
 
 // Convert guest-physical addresses to usable virtual addresses.
-#define guest_paddr_to_host_vaddr(device, addr)                                                    \
+#define guest_paddr_to_host_vaddr(device, addr) \
     (static_cast<zx_vaddr_t>(((device)->guest_physmem_addr()) + (addr)))
 
 VirtioDevice::VirtioDevice(uint8_t device_id, void* config, size_t config_size,

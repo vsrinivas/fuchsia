@@ -110,7 +110,7 @@ zx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     rsdt->TableOffsetEntry[2] = mcfg_off;
     acpi_header(&rsdt->Header, ACPI_SIG_RSDT, rsdt_length);
     return ZX_OK;
-#else // __x86_64__
+#else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
