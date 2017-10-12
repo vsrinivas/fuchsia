@@ -98,7 +98,7 @@ be added to the project's `BUILD.gn`. The `BUILD.gn` file for the hello_world
 example this:
 
 ```
-import("//flutter/build/flutter_app.gni")
+import("//third_party/flutter/build/flutter_app.gni")
 
 flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
