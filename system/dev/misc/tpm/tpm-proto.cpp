@@ -342,7 +342,7 @@ zx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len) {
     return ZX_OK;
 }
 
-ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
+zx_status_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len, size_t* actual) {
     bool active = false;
     zx_status_t st = get_active_locality(loc, &active);
     st = check_expected_state(st, active, true);
@@ -400,5 +400,6 @@ ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len) {
     // (State Transition Table)).
     *TPM_STS(loc) = TPM_STS_CMD_RDY;
 
-    return bytes_recvd;
+    *actual = bytes_recvd;
+    return ZX_OK;
 }

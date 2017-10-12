@@ -14,10 +14,9 @@
 
 #include <assert.h>
 #include <endian.h>
-#include <ddk/binding.h>
-#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <fbl/unique_free_ptr.h>
 #include <zircon/device/tpm.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -43,13 +42,17 @@ static io_buffer_t io_buffer;
 
 // implement tpm protocol:
 
-static ssize_t tpm_get_random(zx_device_t* dev, void* buf, size_t count) {
+static zx_status_t tpm_get_random(zx_device_t* dev, void* buf, uint32_t count, size_t* actual) {
+    static_assert(MAX_RAND_BYTES <= UINT32_MAX, "");
     if (count > MAX_RAND_BYTES) {
         count = MAX_RAND_BYTES;
     }
     struct tpm_getrandom_cmd cmd;
     uint32_t resp_len = tpm_init_getrandom(&cmd, count);
-    struct tpm_getrandom_resp *resp = malloc(resp_len);
+    fbl::unique_free_ptr<tpm_getrandom_resp> resp(
+            reinterpret_cast<tpm_getrandom_resp*>(malloc(resp_len)));
+    size_t actual_read;
+    uint32_t bytes_returned;
     if (!resp) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -60,17 +63,17 @@ static ssize_t tpm_get_random(zx_device_t* dev, void* buf, size_t count) {
     if (status != ZX_OK) {
         goto cleanup;
     }
-    status = tpm_recv_resp(LOCALITY0, (uint8_t*)resp, resp_len);
-    if (status < 0) {
+    status = tpm_recv_resp(LOCALITY0, (uint8_t*)resp.get(), resp_len, &actual_read);
+    if (status != ZX_OK) {
         goto cleanup;
     }
-    if ((uint32_t)status < sizeof(*resp) ||
-        (uint32_t)status != betoh32(resp->hdr.total_len)) {
+    if (actual_read < sizeof(*resp) ||
+        actual_read != betoh32(resp->hdr.total_len)) {
 
         status = ZX_ERR_BAD_STATE;
         goto cleanup;
     }
-    uint32_t bytes_returned = betoh32(resp->bytes_returned);
+    bytes_returned = betoh32(resp->bytes_returned);
     if ((uint32_t)status != sizeof(*resp) + bytes_returned ||
         resp->hdr.tag != htobe16(TPM_TAG_RSP_COMMAND) ||
         bytes_returned > count ||
@@ -81,9 +84,9 @@ static ssize_t tpm_get_random(zx_device_t* dev, void* buf, size_t count) {
     }
     memcpy(buf, resp->bytes, bytes_returned);
     memset(resp->bytes, 0, bytes_returned);
-    status = bytes_returned;
+    *actual = bytes_returned;
+    status = ZX_OK;
 cleanup:
-    free(resp);
     mtx_unlock(&tpm_lock);
     return status;
 }
@@ -92,6 +95,7 @@ static zx_status_t tpm_save_state(void) {
     struct tpm_savestate_cmd cmd;
     uint32_t resp_len = tpm_init_savestate(&cmd);
     struct tpm_savestate_resp resp;
+    size_t actual;
 
     mtx_lock(&tpm_lock);
 
@@ -99,12 +103,12 @@ static zx_status_t tpm_save_state(void) {
     if (status != ZX_OK) {
         goto cleanup;
     }
-    status = tpm_recv_resp(LOCALITY0, (uint8_t*)&resp, resp_len);
-    if (status < 0) {
+    status = tpm_recv_resp(LOCALITY0, (uint8_t*)&resp, resp_len, &actual);
+    if (status != ZX_OK) {
         goto cleanup;
     }
-    if ((uint32_t)status < sizeof(resp) ||
-        (uint32_t)status != betoh32(resp.hdr.total_len) ||
+    if (actual < sizeof(resp) ||
+        actual != betoh32(resp.hdr.total_len) ||
         resp.hdr.tag != htobe16(TPM_TAG_RSP_COMMAND) ||
         resp.hdr.return_code != htobe32(TPM_SUCCESS)) {
 
@@ -127,9 +131,22 @@ static zx_status_t tpm_device_ioctl(void* ctx, uint32_t op,
 }
 
 // implement device protocol:
-static zx_protocol_device_t tpm_device_proto __UNUSED = {
-    .version = DEVICE_OPS_VERSION,
-    .ioctl = tpm_device_ioctl,
+zx_protocol_device_t tpm_device_proto = {
+    DEVICE_OPS_VERSION,
+    nullptr, // get_protocol
+    nullptr, // open
+    nullptr, // openat
+    nullptr, // close
+    nullptr, // unbind
+    nullptr, // release
+    nullptr, // read
+    nullptr, // write
+    nullptr, // iotxn_queue
+    nullptr, // get_size
+    tpm_device_ioctl,
+    nullptr, // suspend
+    nullptr, // resume
+    nullptr, // rxrpc
 };
 
 
@@ -148,18 +165,21 @@ zx_status_t tpm_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "tpm",
-        .ops = &tpm_device_proto,
-        .proto_id = ZX_PROTOCOL_TPM,
-    };
+    device_add_args_t args;
+    memset(&args, 0, sizeof(args));
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "tpm";
+    args.ops = &tpm_device_proto;
+    args.proto_id = ZX_PROTOCOL_TPM;
 
     zx_device_t* dev;
     status =  device_add(parent, &args, &dev);
     if (status != ZX_OK) {
         return status;
     }
+
+    uint8_t buf[32] = { 0 };
+    size_t bytes_read;
 
     // tpm_request_use will fail if we're not at least 30ms past _TPM_INIT.
     // The system firmware performs the init, so it's safe to assume that
@@ -197,9 +217,8 @@ zx_status_t tpm_bind(void* ctx, zx_device_t* parent) {
 
     // Make a best-effort attempt to give the kernel some more entropy
     // TODO(security): Perform a more recurring seeding
-    uint8_t buf[32] = { 0 };
-    ssize_t bytes_read = tpm_get_random(dev, buf, sizeof(buf));
-    if (bytes_read > 0) {
+    status = tpm_get_random(dev, buf, static_cast<uint32_t>(sizeof(buf)), &bytes_read);
+    if (status == ZX_OK) {
         zx_cprng_add_entropy(buf, bytes_read);
         memset(buf, 0, sizeof(buf));
     }
@@ -217,11 +236,3 @@ cleanup_device:
 #endif
 }
 
-static zx_driver_ops_t tpm_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = tpm_bind,
-};
-
-ZIRCON_DRIVER_BEGIN(tpm, tpm_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
-ZIRCON_DRIVER_END(tpm)

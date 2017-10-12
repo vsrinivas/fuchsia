@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/device.h>
 #include <zircon/types.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -35,6 +36,10 @@ enum tpm_result {
     TPM_RETRY = 0x800,
 };
 
+__BEGIN_CDECLS
+zx_status_t tpm_bind(void* ctx, zx_device_t* parent);
+__END_CDECLS
+
 zx_status_t tpm_set_irq(enum locality loc, uint8_t vector);
 zx_status_t tpm_enable_irq_type(enum locality loc, enum irq_type type);
 zx_status_t tpm_disable_irq_type(enum locality loc, enum irq_type type);
@@ -49,6 +54,5 @@ zx_status_t tpm_request_use(enum locality loc);
 zx_status_t tpm_wait_for_locality(enum locality loc);
 
 zx_status_t tpm_send_cmd(enum locality loc, uint8_t* cmd, size_t len);
-// Returns the total number of bytes in the response, may be less than max_len.
-// If negative, the return value is an error code
-ssize_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len);
+// |actual| will contain the total number of bytes in the response, may be less than max_len.
+zx_status_t tpm_recv_resp(enum locality loc, uint8_t* resp, size_t max_len, size_t* actual);
