@@ -9,6 +9,7 @@
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "garnet/examples/ui/shadertoy/service/view_shadertoy.h"
+#include "garnet/lib/escher/escher/resources/resource_recycler.h"
 
 namespace shadertoy {
 
@@ -32,7 +33,8 @@ fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
 }
 
 ShadertoyState::ShadertoyState(App* app)
-    : app_(app),
+    : escher::Resource(app->escher()->resource_recycler()),
+      app_(app),
       escher_(app_->escher()),
       compiler_(app_->compiler()),
       renderer_(app_->renderer()),
@@ -107,13 +109,17 @@ void ShadertoyState::SetImage(
 }
 
 void ShadertoyState::RequestFrame(uint64_t presentation_time) {
-  if (is_drawing_ || is_paused_ || !pipeline_ || (width_ * height_ == 0)) {
+  if (is_drawing_ || is_paused_ || is_closed_ || !pipeline_ ||
+      (width_ * height_ == 0)) {
     return;
   }
   is_drawing_ = true;
 
   // The stars have aligned; draw a frame.
   DrawFrame(presentation_time, stopwatch_.GetElapsedSeconds());
+
+  // Ensure that all frames are finished before this object is destroyed.
+  KeepAlive(escher()->command_buffer_sequencer()->latest_sequence_number());
 }
 
 void ShadertoyState::OnFramePresented(const scenic::PresentationInfoPtr& info) {
@@ -123,7 +129,11 @@ void ShadertoyState::OnFramePresented(const scenic::PresentationInfoPtr& info) {
 }
 
 void ShadertoyState::Close() {
-  FXL_CHECK(false) << "unimplemented";
+  if (!is_closed_) {
+    is_closed_ = true;
+    KeepAlive(escher()->command_buffer_sequencer()->latest_sequence_number());
+    app_->CloseShadertoy(this);
+  }
 }
 
 }  // namespace shadertoy

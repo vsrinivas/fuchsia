@@ -16,6 +16,8 @@ class ShadertoyImpl : public mozart::example::Shadertoy {
   explicit ShadertoyImpl(fxl::RefPtr<ShadertoyState> state);
   ~ShadertoyImpl() override;
 
+  ShadertoyState* state() const { return state_.get(); }
+
  private:
   // |Shadertoy|
   void SetPaused(bool paused) override;

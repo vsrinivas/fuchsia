@@ -20,8 +20,6 @@ executable("service") {
     "pipeline.h",
     "renderer.cc",
     "renderer.h",
-    "shadertoy_factory_impl.cc",
-    "shadertoy_factory_impl.h",
     "shadertoy_impl.cc",
     "shadertoy_impl.h",
     "shadertoy_state.cc",

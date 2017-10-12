@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "lib/app/cpp/application_context.h"
-#include "garnet/examples/ui/shadertoy/service/shadertoy_factory_impl.h"
 #include "escher/escher.h"
+#include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
+#include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
@@ -14,10 +15,12 @@
 
 namespace shadertoy {
 
+class ShadertoyState;
+
 // A thin wrapper that manages connections to a ShadertoyFactoryImpl singleton.
 // TODO: clean up when there are no remaining bindings to Shadertoy nor
 // ShadertoyFactory.  What is the best-practice pattern to use here?
-class App {
+class App : public mozart::example::ShadertoyFactory {
  public:
   App(app::ApplicationContext* app_context, escher::Escher* escher);
   ~App();
@@ -29,8 +32,27 @@ class App {
   static constexpr vk::Format kDefaultImageFormat = vk::Format::eB8G8R8A8Srgb;
 
  private:
-  std::unique_ptr<ShadertoyFactoryImpl> factory_;
-  fidl::BindingSet<mozart::example::ShadertoyFactory> bindings_;
+  friend class ShadertoyState;
+
+  // Called by ShadertoyState::Close().
+  void CloseShadertoy(ShadertoyState* shadertoy);
+
+  // |ShadertoyFactory|
+  void NewImagePipeShadertoy(
+      ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
+      ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe) override;
+
+  // |ShadertoyFactory|
+  void NewViewShadertoy(
+      ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
+      ::fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      bool handle_input_events) override;
+
+  fidl::BindingSet<mozart::example::ShadertoyFactory> factory_bindings_;
+  fidl::BindingSet<mozart::example::Shadertoy,
+                   std::unique_ptr<mozart::example::Shadertoy>>
+      shadertoy_bindings_;
+
   escher::Escher* const escher_;
   Renderer renderer_;
   Compiler compiler_;

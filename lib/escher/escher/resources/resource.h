@@ -40,11 +40,16 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
  protected:
   explicit Resource(ResourceManager* owner);
 
- private:
+  // Keep the resource alive until all CommandBuffers up to the specified
+  // sequence number have finished executing.
+  void KeepAlive(uint64_t seq_num) {
+    sequence_number_ = seq_num > sequence_number_ ? seq_num : sequence_number_;
+  }
+
   // Support CommandBuffer::KeepAlive().
   friend class impl::CommandBuffer;
-  void set_sequence_number(uint64_t seq_num) { sequence_number_ = seq_num; }
 
+ private:
   uint64_t sequence_number_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Resource);

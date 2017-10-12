@@ -114,8 +114,8 @@ void CommandBuffer::KeepAlive(Resource* resource) {
     // DescriptorSetPool to become a CommandBufferSequencerListener, similar to
     // ResourceRecycler.
     used_resources_.push_back(ResourcePtr(resource));
-  } else if (resource->sequence_number() < sequence_number_) {
-    resource->set_sequence_number(sequence_number_);
+  } else {
+    resource->KeepAlive(sequence_number_);
   }
 }
 
@@ -146,10 +146,11 @@ void CommandBuffer::CopyImage(const ImagePtr& src_image,
   KeepAlive(dst_image);
 }
 
-void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
+void CommandBuffer::CopyBuffer(const BufferPtr& src,
+                               const BufferPtr& dst,
                                vk::BufferCopy region) {
-  command_buffer_.copyBuffer(src->get(), dst->get(),
-                             1 /* region_count */, &region);
+  command_buffer_.copyBuffer(src->get(), dst->get(), 1 /* region_count */,
+                             &region);
   KeepAlive(src);
   KeepAlive(dst);
 }
