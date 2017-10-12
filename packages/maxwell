@@ -40,6 +40,10 @@
             "bootfs_path": "apps/agents/maxwell_proposal_maker"
         },
         {
+            "binary": "module_resolver",
+            "bootfs_path": "apps/module_resolver"
+        },
+        {
             "binary": "context_engine",
             "bootfs_path": "apps/context_engine"
         },

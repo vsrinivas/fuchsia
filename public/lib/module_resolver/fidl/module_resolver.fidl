@@ -7,7 +7,7 @@ module modular;
 import "daisy.fidl";
 import "../../entity/fidl/entity_reference.fidl";
 
-[ServiceName="ModuleResolver"]
+[ServiceName="modular.ModuleResolver"]
 interface ModuleResolver {
   // Finds Modules (contained in Fuchsia packages) that satisfy the constraints
   // specified in |daisy|. Results are returned in order according to scoring

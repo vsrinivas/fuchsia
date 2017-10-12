@@ -1,0 +1,30 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("module_resolver") {
+  sources = [
+    "module_resolver_main.cc",
+  ]
+
+  deps = [
+    ":module_resolver_impl",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/module_resolver/fidl",
+  ]
+}
+
+source_set("module_resolver_impl") {
+  sources = [
+    "module_resolver_impl.cc",
+    "module_resolver_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/module_resolver/fidl",
+  ]
+}
