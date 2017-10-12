@@ -63,6 +63,10 @@ class PciProtocolProxy {
     PciProtocolProxy(pci_protocol_t* proto)
       : ops_(proto->ops), ctx_(proto->ctx) {}
 
+    zx_status_t GetResource(uint32_t res_id, zx_pci_resource_t* out_res) {
+        return ops_->get_resource(ctx_, res_id, out_res);
+    }
+
     zx_status_t MapResource(uint32_t res_id, uint32_t cache_policy, void** vaddr, size_t* size,
                             zx_handle_t* out_handle) {
         return ops_->map_resource(ctx_, res_id, cache_policy, vaddr, size, out_handle);
@@ -94,6 +98,26 @@ class PciProtocolProxy {
 
     zx_status_t GetDeviceInfo(zx_pcie_device_info_t* out_info) {
         return ops_->get_device_info(ctx_, out_info);
+    }
+
+    uint32_t ConfigRead(uint8_t offset, size_t width) {
+        return ops_->config_read(ctx_, offset, width);
+    }
+
+    uint8_t ConfigRead8(uint8_t offset) {
+        return ConfigRead(offset, 8) & 0xff;
+    }
+
+    uint16_t ConfigRead16(uint8_t offset) {
+        return ConfigRead(offset, 16) & 0xffff;
+    }
+
+    uint8_t GetNextCapability(uint8_t type, uint8_t offset) {
+        return ops_->get_next_capability(ctx_, type, offset);
+    }
+
+    uint8_t GetFirstCapability(uint8_t type) {
+        return GetNextCapability(kPciCfgCapabilitiesPtr - 1u, type);
     }
 
   private:
