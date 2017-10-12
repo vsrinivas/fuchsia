@@ -175,6 +175,16 @@ public:
     }
 };
 
+class GpuFaultStatus : public RegisterBase {
+public:
+    static auto Get() { return RegisterAddr<GpuFaultStatus>(0x3c); }
+};
+
+class GpuFaultAddress : public RegisterPairBase {
+public:
+    static auto Get() { return RegisterAddr<GpuFaultAddress>(0x40); }
+};
+
 class AsTranslationTable : public RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x0;

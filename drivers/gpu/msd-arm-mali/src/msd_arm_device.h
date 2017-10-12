@@ -56,8 +56,16 @@ public:
         };
         std::vector<CorePowerState> power_states;
 
+        uint32_t gpu_fault_status;
+        uint64_t gpu_fault_address;
+
         uint32_t job_slot_status[16];
-        uint32_t address_space_status[16];
+        struct AddressSpaceStatus {
+            uint32_t status;
+            uint32_t fault_status;
+            uint64_t fault_address;
+        };
+        AddressSpaceStatus address_space_status[16];
     };
     static void DumpRegisters(RegisterIo* io, DumpState* dump_state);
     void Dump(DumpState* dump_state);

@@ -31,18 +31,22 @@ public:
         EXPECT_EQ(std::string("Present"), dump_state.power_states[0].status_type);
         EXPECT_EQ(1lu, dump_state.power_states[0].bitmask);
 
+        EXPECT_EQ(0u, dump_state.gpu_fault_status);
+        EXPECT_EQ(0u, dump_state.gpu_fault_address);
+
         for (size_t i = 0; i < arraysize(dump_state.job_slot_status); i++)
             EXPECT_EQ(0u, dump_state.job_slot_status[i]);
 
         for (size_t i = 0; i < arraysize(dump_state.address_space_status); i++)
-            EXPECT_EQ(0u, dump_state.address_space_status[i]);
+            EXPECT_EQ(0u, dump_state.address_space_status[i].status);
 
         std::string dump_string;
         device->FormatDump(dump_state, dump_string);
         EXPECT_NE(nullptr,
                   strstr(dump_string.c_str(), "Core type L2 Cache state Present bitmap: 0x1"));
         EXPECT_NE(nullptr, strstr(dump_string.c_str(), "Job slot 5 status 0"));
-        EXPECT_NE(nullptr, strstr(dump_string.c_str(), "AS 10 status 0"));
+        EXPECT_NE(nullptr, strstr(dump_string.c_str(),
+                                  "AS 10 status 0x0 fault status 0x0 fault address 0x0"));
     }
 
     void MockDump()
@@ -54,7 +58,13 @@ public:
         reg_io->Write32(offset, 2);
         reg_io->Write32(offset + 4, 5);
 
+        static constexpr uint64_t kFaultAddress = 0xffffffff88888888lu;
+        registers::GpuFaultAddress::Get().FromValue(kFaultAddress).WriteTo(reg_io.get());
+        registers::GpuFaultStatus::Get().FromValue(5).WriteTo(reg_io.get());
+
         registers::AsRegisters(7).Status().FromValue(5).WriteTo(reg_io.get());
+        registers::AsRegisters(7).FaultStatus().FromValue(12).WriteTo(reg_io.get());
+        registers::AsRegisters(7).FaultAddress().FromValue(kFaultAddress).WriteTo(reg_io.get());
         registers::JobSlotRegisters(2).Status().FromValue(10).WriteTo(reg_io.get());
 
         MsdArmDevice::DumpState dump_state;
@@ -67,7 +77,11 @@ public:
                 found = true;
             }
         }
-        EXPECT_EQ(5u, dump_state.address_space_status[7]);
+        EXPECT_EQ(5u, dump_state.gpu_fault_status);
+        EXPECT_EQ(kFaultAddress, dump_state.gpu_fault_address);
+        EXPECT_EQ(5u, dump_state.address_space_status[7].status);
+        EXPECT_EQ(12u, dump_state.address_space_status[7].fault_status);
+        EXPECT_EQ(kFaultAddress, dump_state.address_space_status[7].fault_address);
         EXPECT_EQ(10u, dump_state.job_slot_status[2]);
         EXPECT_TRUE(found);
     }

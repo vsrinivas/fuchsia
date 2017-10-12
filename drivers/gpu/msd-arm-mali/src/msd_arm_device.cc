@@ -368,14 +368,20 @@ void MsdArmDevice::DumpRegisters(RegisterIo* io, DumpState* dump_state)
         }
     }
 
+    dump_state->gpu_fault_status = registers::GpuFaultStatus::Get().ReadFrom(io).reg_value();
+    dump_state->gpu_fault_address = registers::GpuFaultAddress::Get().ReadFrom(io).reg_value();
+
     for (size_t i = 0; i < arraysize(dump_state->job_slot_status); i++) {
         dump_state->job_slot_status[i] =
             registers::JobSlotRegisters(i).Status().ReadFrom(io).reg_value();
     }
 
     for (size_t i = 0; i < arraysize(dump_state->address_space_status); i++) {
-        dump_state->address_space_status[i] =
-            registers::AsRegisters(i).Status().ReadFrom(io).reg_value();
+        auto* status = &dump_state->address_space_status[i];
+        auto as_regs = registers::AsRegisters(i);
+        status->status = as_regs.Status().ReadFrom(io).reg_value();
+        status->fault_status = as_regs.FaultStatus().ReadFrom(io).reg_value();
+        status->fault_address = as_regs.FaultAddress().ReadFrom(io).reg_value();
     }
 }
 
@@ -396,13 +402,17 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
         fxl::StringAppendf(&dump_string, "Core type %s state %s bitmap: 0x%lx\n", state.core_type,
                            state.status_type, state.bitmask);
     }
+    fxl::StringAppendf(&dump_string, "Gpu fault status 0x%x, address 0x%lx\n",
+                       dump_state.gpu_fault_status, dump_state.gpu_fault_address);
     for (size_t i = 0; i < arraysize(dump_state.job_slot_status); i++) {
         fxl::StringAppendf(&dump_string, "Job slot %zu status %x\n", i,
                            dump_state.job_slot_status[i]);
     }
     for (size_t i = 0; i < arraysize(dump_state.address_space_status); i++) {
-        fxl::StringAppendf(&dump_string, "AS %zu status %x\n", i,
-                           dump_state.address_space_status[i]);
+        auto* status = &dump_state.address_space_status[i];
+        fxl::StringAppendf(&dump_string,
+                           "AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n", i,
+                           status->status, status->fault_status, status->fault_address);
     }
 }
 
