@@ -173,6 +173,7 @@ class WlanmacProtocol : public internal::base_protocol {
         ops_.tx = Tx;
         ops_.set_channel = SetChannel;
         ops_.set_bss = SetBss;
+        ops_.set_key = SetKey;
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(this->ddk_proto_ops_ == nullptr);
@@ -204,6 +205,10 @@ class WlanmacProtocol : public internal::base_protocol {
 
     static zx_status_t SetBss(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type) {
         return static_cast<D*>(ctx)->WlanmacSetBss(options, mac, type);
+    }
+
+    static zx_status_t SetKey(void* ctx, uint32_t options, wlan_key_config_t* key_config) {
+        return static_cast<D*>(ctx)->WlanmacSetKey(options, key_config);
     }
 
     wlanmac_protocol_ops_t ops_ = {};
@@ -238,7 +243,11 @@ class WlanmacProtocolProxy {
     }
 
     zx_status_t SetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
-      return ops_->set_bss(ctx_, options, mac, type);
+        return ops_->set_bss(ctx_, options, mac, type);
+    }
+
+    zx_status_t SetKey(uint32_t options, wlan_key_config_t* key_config) {
+        return ops_->set_key(ctx_, options, key_config);
     }
 
   private:

@@ -75,6 +75,31 @@ enum {
     WLAN_RX_FLAGS_FCS_INVALID = (1 << 0),
 };
 
+enum {
+    WLAN_PROTECTION_NONE,
+    WLAN_PROTECTION_RX,
+    WLAN_PROTECTION_TX,
+    WLAN_PROTECTION_RX_TX,
+};
+
+enum {
+    WLAN_KEY_TYPE_PAIRWISE,
+    WLAN_KEY_TYPE_GROUP,
+    WLAN_KEY_TYPE_IGTK,
+    WLAN_KEY_TYPE_PEER,
+    // TODO(hahnr): Add additional types, e.g., TX/RX MIC for TKIP.
+};
+
+typedef struct wlan_key_config {
+    uint8_t protection;
+    uint8_t cipher_oui[3];
+    uint8_t cipher_type;
+    uint8_t peer_addr[6];
+    uint8_t key_type;
+    uint8_t key_len;
+    uint8_t key[32];
+} wlan_key_config_t;
+
 typedef struct wlanmac_ifc {
     // Report the status of the wlanmac device.
     void (*status)(void* cookie, uint32_t status);
@@ -107,6 +132,9 @@ typedef struct wlanmac_protocol_ops {
 
     // Sets the BSS the station is joining
     zx_status_t (*set_bss)(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type);
+
+    // Specify a key for frame protection. Callee must free allocated key_config.
+    zx_status_t (*set_key)(void* ctx, uint32_t options, wlan_key_config_t* key_config);
 } wlanmac_protocol_ops_t;
 
 typedef struct wlanmac_protocol {
