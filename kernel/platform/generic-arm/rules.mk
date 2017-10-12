@@ -11,9 +11,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
 	$(LOCAL_DIR)/platform.cpp \
 
-LINKER_SCRIPT += \
-	$(BUILDDIR)/system-onesegment.ld
-
 ARCH := arm64
 ARM_CPU := cortex-a53
 

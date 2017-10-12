@@ -131,18 +131,16 @@ ifeq ($(MEMVARS_SET),0)
 $(error missing MEMBASE or MEMSIZE variable, please set in target rules.mk)
 endif
 
+LINKER_SCRIPT := $(BUILDDIR)/kernel.ld
+
 # potentially generated files that should be cleaned out with clean make rule
-GENERATED += \
-	$(BUILDDIR)/system-onesegment.ld
+GENERATED += $(BUILDDIR)/kernel.ld
 
 # rules for generating the linker script
-$(BUILDDIR)/system-onesegment.ld: $(LOCAL_DIR)/system-onesegment.ld $(wildcard arch/*.ld) linkerscript.phony
+$(BUILDDIR)/kernel.ld: $(LOCAL_DIR)/kernel.ld FORCE
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/" < $< > $@.tmp
 	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
-
-linkerscript.phony:
-.PHONY: linkerscript.phony
 
 include make/module.mk
