@@ -37,8 +37,6 @@ def main():
     parser.add_argument("--lto", nargs='?', const='thin', choices=['full', 'thin'],
                         default=None, help="use link time optimization (LTO)")
     parser.add_argument("--thinlto-cache-dir", help="ThinLTO cache directory")
-    parser.add_argument("--omit-tests", help="omit tests from the output",
-                        action="store_true")
     parser.add_argument("--fuchsia-disable-vulkan", help="Disable Vulkan in Mozart, Skia, and Flutter",
                         action="store_true", default=False)
     parser.add_argument("--ignore-skia", help="Disable Skia settings - for Skia-less builds",
@@ -109,16 +107,6 @@ def main():
 
     if args.zircon_project:
         gn_args += " zircon_project=\"%s\"" % args.zircon_project
-
-    if args.omit_tests:
-        target = "//packages/gn:default"
-        desc_cmd = [
-            "desc", outdir_path, target, "deps",
-            "--all", "--testonly=true", "--format=json", "--as=output"
-        ]
-        output = subprocess.check_output(gn.GN_ARGS + desc_cmd + [gn_args])
-        tests = json.loads(output)[target]["deps"]
-        gn_args += " omit_files=\"" + ','.join(tests) + "\""
 
     gn_command += [gn_args]
     if passthrough:

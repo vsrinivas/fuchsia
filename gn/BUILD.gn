@@ -5,9 +5,6 @@
 import("//packages/gn/packages.gni")
 
 declare_args() {
-  # list of files omitted from user.bootfs
-  omit_files = ""
-
   # path to autorun script
   autorun = ""
 }
@@ -41,8 +38,6 @@ action("mkbootfs") {
                        system_manifest_file,
                        "--modules",
                        modules,
-                       "--omit-files",
-                       omit_files,
                        "--autorun",
                        autorun,
                        "--build-root",

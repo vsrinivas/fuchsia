@@ -37,7 +37,6 @@ class Amalgamation:
         self.config_paths = []
         self.component_urls = []
         self.build_root = ""
-        self.omit_files = []
         self.boot = Filesystem() # Files that will live in /boot
         self.system = Filesystem() # Files that will live in /system
         self.resources = []
@@ -70,24 +69,18 @@ class Amalgamation:
             self.deps.append(label)
         binaries_and_drivers = config.get("binaries", []) + config.get("drivers", [])
         for b in binaries_and_drivers:
-            if b["binary"] in self.omit_files:
-                continue
             file = {}
             file["file"] = os.path.join(self.build_root, b["binary"])
             file["bootfs_path"] = b["bootfs_path"]
             file["default"] = b.has_key("default")
             self.system.add_file(file)
         for d in config.get("early_boot", []):
-            if d["binary"] in self.omit_files:
-                continue
             file = {}
             file["file"] = os.path.join(self.build_root, d["binary"])
             file["bootfs_path"] = d["bootfs_path"]
             file["default"] = d.has_key("default")
             self.boot.add_file(file)
         for r in config.get("resources", []):
-            if r["file"] in self.omit_files:
-                continue
             file = {}
             source_path = os.path.join(paths.FUCHSIA_ROOT, r["file"])
             file["file"] = source_path
@@ -109,13 +102,12 @@ def detect_duplicate_keys(pairs):
     return result
 
 
-def resolve_imports(import_queue, omit_files, build_root):
+def resolve_imports(import_queue, build_root):
     # Hack: Add cpp manifest until we derive runtime information from the
     # package configs themselves.
     import_queue.append('packages/gn/cpp')
     imported = set(import_queue)
     amalgamation = Amalgamation()
-    amalgamation.omit_files = omit_files
     amalgamation.build_root = build_root
     while import_queue:
         config_name = import_queue.pop()
@@ -173,7 +165,7 @@ def main():
     parser.add_argument("--arch", help="architecture being targetted")
     args = parser.parse_args()
 
-    amalgamation = resolve_imports(args.modules.split(","), args.omit_files.split(","), args.build_root)
+    amalgamation = resolve_imports(args.modules.split(","), args.build_root)
     if not amalgamation:
         return 1
 
