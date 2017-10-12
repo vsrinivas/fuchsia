@@ -4,12 +4,25 @@
 
 module media;
 
+import "lib/media/fidl/audio_capturer.fidl";
 import "lib/media/fidl/audio_renderer.fidl";
 import "lib/media/fidl/media_renderer.fidl";
 
 [ServiceName="media::AudioServer"]
 interface AudioServer {
   CreateRenderer(AudioRenderer& audio_renderer, MediaRenderer& media_renderer);
+
+  // Create an audio capturer which either captures from the current default
+  // audio input device, or loops-back from the current default audio output
+  // device based on value passed for the the loopback flag.
+  //
+  // TODO(johngro): Get rid of the loopback flag ASAP.  Routing decisions (and
+  // security surrounding routing decisions) should be much more sophisticated
+  // than this.  This is just a placeholder until we have a design in place.
+  // Eventually, I suspect that all of this will move up into the audio policy
+  // manager and application clients will obtain capturers from and control
+  // through the policy manager.
+  CreateCapturer(AudioCapturer& audio_capturer, bool loopback);
 
   // Sets the master gain/attenuation of the mixer, expressed in dB.  Master
   // gain is applied to all active outputs.  Legal values are in the range

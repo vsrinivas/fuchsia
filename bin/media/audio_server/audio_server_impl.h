@@ -30,6 +30,8 @@ class AudioServerImpl : public AudioServer {
   void CreateRenderer(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer,
       fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
+  void CreateCapturer(fidl::InterfaceRequest<AudioCapturer> audio_capturer,
+                      bool loopback) override;
   void SetMasterGain(float db_gain) override;
   void GetMasterGain(const GetMasterGainCallback& cbk) override;
 

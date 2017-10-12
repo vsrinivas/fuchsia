@@ -6,6 +6,7 @@ import("//garnet/public/lib/fidl/fidl.gni")
 
 fidl("fidl") {
   sources = [
+    "audio_capturer.fidl",
     "audio_policy_service.fidl",
     "audio_renderer.fidl",
     "audio_server.fidl",

@@ -1,0 +1,323 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "lib/media/fidl/media_transport.fidl";
+import "lib/media/fidl/media_types.fidl";
+
+interface AudioCapturerClient {
+  // Called when an AudioCapturer operating in AsyncCapture mode has a packet's
+  // worth of data to deliver to the client.
+  OnPacketCaptured(MediaPacket packet);
+};
+
+// AudioCapturer
+//
+// An AudioCapturer is an interface returned from an AudioService's
+// CreateAudioCapturer method which may be used by clients to capture audio from
+// either the current default audio input device, or the current default audio
+// output device depending on the flags passed during creation.
+//
+// TODO(johngro): Routing policy needs to become more capable than this.
+// Clients will need to be able to request sets of inputs/outputs/renderers,
+// make changes to theses sets, have their requests vetted by policy (do they
+// have the permission to capture this private stream, do they have the
+// permission to capture at this frame rate, etc...).  Eventually, this
+// functionality will need to be expressed at the AudioPolicy level, not here.
+//
+// ** Format support **
+//
+// See (Get|Set)MediaType below.  By default, the captured media type will be
+// initially determined by the currently configured media type of the source
+// that the capturer was bound to at creation time.  Users may either fetch this
+// type using GetMediaType, or they may choose to have the media
+// resampled/converted to a type of their choosing by calling SetMediaType.
+// Note: the media type may only be set while the system is not running, meaning
+// that there are no pending capture regions (specified using CaptureAt) and
+// that the system is not currently running in 'async' capture mode.
+//
+// ** Buffers and memory management **
+//
+// Audio data is captured into a shared memory buffer (a VMO) supplied by the
+// user to the capturer during the SetPayloadBuffer call.  Please note the
+// following requirements related to the management of the payload buffer.
+//
+// ++ The payload buffer must be supplied before any capture operation may
+//    start.  Any attempt to start capture (via either CaptureAt or
+//    StartAsyncCapture) before a payload buffer has been established is an
+//    error.
+// ++ The payload buffer may not be changed while there are any capture
+//    operations pending.
+// ++ The media type may not be changed after the payload buffer has been set.
+// ++ The payload buffer must be an integral number of audio frame sizes (in
+//    bytes)
+// ++ When running in 'async' mode (see below), the payload buffer must be at
+//    least as large as the frames_per_packet size specified during
+//    StartAsyncCapture.
+// ++ The handle to the payload buffer supplied by the user must be readable,
+//    writable, and mappable.
+// ++ Users should always treat the payload buffer as read-only.
+//
+// ** Synchronous vs. Asynchronous capture mode **
+// 
+// The AudioCapturer interface can be used in one of two mutually exclusive
+// modes: Synchronous and Asynchronous.  A description of each mode and their
+// tradeoffs is given below.
+//
+// (TODO(johngro) : can we come up with better names than these?  Both are
+// really async modes under the hood).
+//
+// ** Synchronous mode **
+//
+// By default, AudioCapturer instances are running in 'sync' mode.  They will
+// only capture data when a user supplies at least one region to capture into
+// using the CaptureAt method.  Regions supplied in this way will be filled in
+// the order that they are received and returned to the client as MediaPackets
+// via the return value of the CaptureAt method.  If an AudioCapturer instance
+// has data to capture, but no place to put it (because there are no more
+// pending regions to fill), the next payload generated will indicate that their
+// has been an overflow by setting the Discontinuity flag on the next produced
+// MediaPacket.  Synchronous mode may not be used in conjunction with
+// Asynchronous mode.  It is an error to attempt to call StartAsyncCapture while
+// the system still regions supplied by CaptureAt waiting to be filled.
+//
+// If a user has supplied regions to be filled by the AudioCapturer instance in
+// the past, but wishes to reclaim those regions, they may do so using the Flush
+// method.  Calling the Flush method will cause all pending regions to be
+// returned, but with kNoTimestamp as their MediaPacket's PTS.  See "Timing and
+// Overflows", below, for a discussion of timestamps and discontinuity flags.
+// The final buffer returned after a flush operation will have the 'kFlagEos'
+// flag set on it.  While an AudioCapturer will never overwrite any region of
+// the payload buffer after a completed region is returned, it may overwrite
+// the unfilled portions of a partially filled buffer which has been returned as
+// a result of a flush operation.
+//
+// ** Asynchronous mode **
+//
+// While running in 'async' mode, clients do not need to explicitly supply
+// regions of the shared buffer to be filled by the AudioCapturer instance.
+// Instead, a client enters into 'async' mode by calling StartAsyncCapture and
+// supplying a callback interface, and a number of frames to capture
+// per-callback.  Once running in async mode, the AudioCapturer instance will
+// choose regions of the payload buffer to capture into, capture the specified
+// number of frames, then deliver those frames as MediaPackets using the
+// OnPacketCapture method of the AudioCapturerClient interface supplied by the
+// user.  Users may stop capturing are return the AudioCapturer instance to
+// 'sync' mode using the StopAsyncCapture method.  Likewise, closing the channel
+// underneath the supplied AudioCapturerClient will cause the AudioCapturer
+// instance to stop capturing and return to 'sync' mode (however this operation
+// is not synchronized with other operations and should not be used if the
+// client intends to either start capturing again at a future time).
+//
+// It is considered an error to attempt any of the following operations.
+//
+// ++ To attempt to enter 'async' capture mode when no payload buffer has been
+//    established.
+// ++ To specify a number of frames to capture per payload which does not evenly
+//    divide the number of frames in the established shared payload buffer.
+// ++ To send a region to capture into using the CaptureAt method while the
+//    AudioCapturer instance is running in 'async' mode.
+// ++ To attempt to call Flush while the AudioCapturer instance is running in
+//    'async' mode.
+// ++ To attempt to re-start 'async' mode capturing without having first
+//    stopped.
+// ++ To attempt any operation except for SetGain while in the process of
+//    stopping.
+//
+// ** Synchronizing with a StopAsyncCapture operation **
+//
+// Stopping asynchronous capture mode and returning to synchronous capture mode
+// is an operation which takes time.  Aside from SetGain, users may not call any
+// other methods on the AudioCapturer interface after calling StopAsyncCapture
+// (including calling StopAsyncCapture again) until after the stop operation has
+// completed.  Because of this, it is important for users to be able to
+// synchronize with the stop operation.  Two mechanisms are provided for doing
+// so.
+//
+// The first is to use the StopAsyncCaptureWithCallback method.  When the user's
+// callback has been called, they can be certain that stop operation is complete
+// and that the AudioCapturer instance has returned to synchronous operation
+// mode.
+//
+// The second way to determine that a stop operation has completed is to use the
+// flags on the packets which get delivered via the user-supplied
+// AudioCapturerCallback interface after calling StopAsyncCapture.  When
+// asked to stop, any partially filled packet will be returned to the user, and
+// the final packet returned will always have the end-of-stream flag (kFlagsEos)
+// set on it to indicate that this is the final frame in the sequence.  If
+// there is no partially filled packet to return, the AudioCapturer will
+// synthesize an empty packet with no timestamp, and offset/length set to zero,
+// in order to deliver a packet with the end-of-stream flag set on it.  Once
+// users have seen the end-of-stream flag after calling stop, the AudioCapturer
+// has finished the stop operation and returned to synchronous operating mode.
+//
+// ** Timing and Overflows **
+//
+// All media packets produced by an AudioCapturer instance will have their PTS
+// field filled out with the capture time of the audio expressed as a timestamp
+// given by the CLOCK_MONOTONIC timeline.  Note: this timestamp is actually a
+// capture timestamp, not a presentation timestamp (it is more of a CTS than a
+// PTS) and is meant to represent the underlying system's best estimate of the
+// capture time of the first frame of audio, including all outboard and hardware
+// introduced buffering delay.  As a result, all timestamps produced by an
+// AudioCapturer should be expected to be in the past relative to 'now' on the
+// CLOCK_MONOTONIC timeline.
+//
+// TODO(johngro) : Specify the way in which timestamps relative to a different
+// clock (such as an audio domain clock) may be delivered to a client.
+//
+// The one exception to the "everything has an explicit timestamp" rule is when
+// Flushing submitted regions while operating in synchronous mode.  Flushed
+// packets have no data in them, but FIDL demands that all pending
+// method-return-value callbacks be executed.  Because of this, the regions will
+// be returned to the user, but their timestamps will be set to
+// MediaPacket::kNoTimestamp, and their payload sizes will be set to zero.  Any
+// partially filled payload will have a valid timestamp, but a payload size
+// smaller than originally requested.  The final flushed payload (if there were
+// any to flush) will have the EOS flag set on it.
+//
+// Two MediaPackets delivered by an AudioCapturer instance are 'continuous' if
+// the first frame of audio contained in the second packet was capture exactly
+// one nominal frame time after the final frame of audio in the first packet.
+// If this relationship does not hold, the second MediaPacket will have the
+// 'kFlagDiscontinuous' flag set in it's flags field.
+//
+// Even though explicit timestamps are provided on every MediaPacket produced,
+// users who have very precise timing requirements are encouraged to always
+// reason about time by counting frames delivered since the last discontinuity
+// instead of simply using the raw capture timestamps.  This is because the
+// explicit timestamps written on continuous packets may have a small amount of
+// rounding error based on whether or not the units of the capture timeline
+// (CLOCK_MONOTONIC) are divisible by the chosen audio frame rate.
+//
+// Users should always expect the first MediaPacket produced by an AudioCapturer
+// to have the discontinuous flag set on it (as there is no previous packet to
+// be continuous with).  Similarly, the first MediaPacket after a Flush or a
+// Stop/Start cycle will always be discontinuous.  After that, there are only
+// two reasons that a MediaPacket will ever be discontinuous.
+//
+// 1) The user is operating an synchronous mode and does not supply regions to
+//    be filled quickly enough.  If the next continuous frame of data has not
+//    been captured by the time it needs to be purged from the source buffers,
+//    an overflow has occurred and the AudioCapturer will flag the next captured
+//    region as discontinuous.
+// 2) The user is operating in asynchronous mode and some internal error
+//    prevents the AudioCapturer instance from capturing the next frame of audio
+//    in a continuous fashion.  This might be high system load or a hardware
+//    error, but in general it is something which should never normally happen.
+//    In practice, however, if it does, the next produced packet will be flagged
+//    as being discontinuous.
+//
+// ** Synchronous vs. Asynchronous Trade-offs **
+//
+// The choice of operating in synchronous vs. asynchronous mode is up to the
+// user, and depending on the user's requirements, there are some advantages and
+// disadvantages to each choice.
+//
+// Synchronous mode requires only a single Zircon channel under the hood and can
+// achieve some small savings because of this.  In addition, the user has
+// complete control over the buffer management.  Users specify exactly where
+// audio will be captured to and in what order.  Because of this, if users do
+// not need to always be capturing, it is simple to stop and restart the capture
+// later (just by ceasing to supply packets, then resuming later on).  Payloads
+// do not need to be uniform in size either, clients may specify payloads of
+// whatever granularity is appropriate.
+//
+// The primary downside of operating in synchronous mode is that two messages
+// will need to be sent for every packet to be captured.  One to inform the
+// AudioCapturer of the instance to capture into, and one to inform the user
+// that the packet has been captured.  This may end up increasing overhead and
+// potentially complicating client designs.
+//
+// Asynchronous mode costs two Zircon channels (one for the AudioCapturer
+// interface and one for the AudioCapturerClient interface), but has the
+// advantage requiring only 1/2 of the messages which adds up to a significant
+// savings overall.  When operating in 'async' mode, AudioCapturer instances
+// have no way of knowing if a user is processing the MediaPackets being sent in
+// a timely fashion, and no way of automatically detecting an overflow
+// condition.  Users of 'async' mode should be careful to use a buffer large
+// enough to ensure that they will be able to process their data before an
+// AudioCapturer will be forced to overwrite it.
+//
+// ** Future Directions (aka TODOs) **
+//
+// ++ Consider adding a 'zero message' capture mode where the AudioCapturer
+//    simply supplies a linear transformation and some buffer parameters (max
+//    audio hold time) each time that it is started in 'async' mode, or each
+//    time an internal overflow occurs in 'async' mode.  Based on this
+//    information, client should know where the capture write pointer is at all
+//    times as a function of the transformation removing the need to send any
+//    buffer position messages.  This would reduce the operational overhead just
+//    about as low as it could go, and could allow for the lowest possible
+//    latency for capture clients.  OTOH - it might be better to achieve this
+//    simply by allowing clients to be granted direct, exclusive access to the
+//    driver level of capture if no resampling, reformatting, or sharing is
+//    needed.
+// ++ Consider providing some mechanism by which users may specify the exact
+//    time at which they want to capture data.
+// ++ Allow for more complex routing/mixing/AEC scenarios and place this under
+//    the control of the policy manager.
+// ++ Define and enforce access permissions and downsampling requirements for
+//    sensitive content.  Enforce using the policy manager.
+// ++ Consider allowing the mixer to produce compressed audio.
+//
+interface AudioCapturer {
+  // Gets the currently configured media type.  Note: for a capturer which was
+  // just created and has not had it's media type explicitly set yet, this will
+  // give the currently configured media type of the input or the output that
+  // the capturer was bound to at creation time.
+  //
+  // TODO(johngro) : Get rid of this.  Eventually, capturers will be bindable to
+  // a set of inputs/outputs/renderers, so the concept of a "native" media type
+  // will go away.  Mechanisms will need to be put in place to allow users to
+  // enumerate the configuration of these bind-able endpoints (and perhaps to
+  // exercise control over them), but it will be the user of the capturer's job
+  // to specify the format they want.
+  GetMediaType() => (MediaType media_type);
+
+  // Sets the media type of the stream to be delivered.  Causes the source
+  // material to be reformatted/resampled if needed in order to produce the
+  // requested media type.  Note that the media type may not be changed after
+  // the payload buffer has been established, and that the payload buffer which
+  // is set must be a multiple of audio frames in size.
+  SetMediaType(MediaType media_type);
+
+  // Set the gain (in dB) applied to the input.  Gain may be adjusted at any
+  // time, but must be on the range...
+  // [AudioRenderer::kMutedGain, AudioRenderer::kMaxGain]
+  SetGain(float gain);
+
+  // Set the shared buffer used to transport captured data.  Note that the size
+  // of the VMO must be a multiple of the configured audio frame size (in
+  // bytes).
+  //
+  // TODO(johngro) : consider extending this so that multiple payload buffers
+  // may be assigned if needed.
+  SetPayloadBuffer(handle<vmo> payload_buffer);
+
+  // Explicitly specify a region of the shared payload buffer for the audio
+  // capturer to capture into.  See the discussion of 'synchronous' vs.
+  // 'asynchronous` capture mode (above) for details.
+  CaptureAt(uint32 offset_frames, uint32 num_frames)
+    => (MediaPacket captured_packet);
+
+  // Flush all regions specified using CaptureAt from the internal queue of
+  // regions to be captured into and (optionally) deliver a callback which may
+  // be used by the client if explicit synchronization is needed.  It is illegal
+  // to call Flush while operating in asynchronous capture mode.
+  Flush();
+  FlushWithCallback() => ();
+
+  // Place the capturer into 'async' capture mode and begin to capture packets
+  // of exactly 'frames_per_packet' number of frames each.  The client-supplied
+  // AudioCapturerClient will be used to inform the client of captured packets.
+  StartAsyncCapture(AudioCapturerClient callback_target,
+                    uint32 frames_per_packet);
+
+  // Stop capturing in 'async' capture mode and (optionally) deliver a callback
+  // which may be used by the client if explicit synchronization is needed.
+  StopAsyncCapture();
+  StopAsyncCaptureWithCallback() => ();
+};

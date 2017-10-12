@@ -70,6 +70,12 @@ void AudioServerImpl::CreateRenderer(
       std::move(audio_renderer), std::move(media_renderer), this));
 }
 
+void AudioServerImpl::CreateCapturer(
+    fidl::InterfaceRequest<AudioCapturer> audio_capturer,
+    bool loopback) {
+  // TODO: implement me
+}
+
 void AudioServerImpl::SetMasterGain(float db_gain) {
   device_manager_.SetMasterGain(db_gain);
 }
