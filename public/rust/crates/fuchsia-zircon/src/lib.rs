@@ -561,6 +561,16 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
         self.into()
     }
 
+    /// Converts the handle into it's raw representation.
+    ///
+    /// The caller takes ownership over the raw handle, and must close or transfer it to avoid a handle leak.
+    fn into_raw(self) -> sys::zx_handle_t {
+        let h = self.into_handle();
+        let r = h.0;
+        std::mem::forget(h);
+        r
+   }
+
     /// Creates an instance of this type from a handle.
     ///
     /// This is a convenience function which simply forwards to the `From` trait.
@@ -729,6 +739,14 @@ mod tests {
         let ticks2 = ticks_get();
         // The number of ticks should have increased by at least 1 ms worth
         assert!(ticks2 > ticks1 + sleep_ns * ticks_per_second() / one_second_ns);
+    }
+
+    #[test]
+    fn into_raw() {
+        let vmo = Vmo::create(1, VmoOpts::Default).unwrap();
+        let h = vmo.into_raw();
+        let vmo2 = Vmo::from(unsafe { Handle::from_raw(h) });
+        assert!(vmo2.write(b"1", 0).is_ok());
     }
 
     #[test]
