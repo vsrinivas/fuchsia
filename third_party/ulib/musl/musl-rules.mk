@@ -281,7 +281,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/euidaccess.c \
     $(LOCAL_DIR)/src/legacy/futimes.c \
     $(LOCAL_DIR)/src/legacy/getdtablesize.c \
-    $(LOCAL_DIR)/src/legacy/getloadavg.c \
     $(LOCAL_DIR)/src/legacy/getpagesize.c \
     $(LOCAL_DIR)/src/legacy/getpass.c \
     $(LOCAL_DIR)/src/legacy/getusershell.c \
