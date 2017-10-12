@@ -23,9 +23,8 @@ USER_ASPACE_BASE   ?= 0x0000000001000000UL # 16MB
 # USER_ASPACE_BASE from that value gives the value for USER_ASPACE_SIZE
 # below.
 USER_ASPACE_SIZE   ?= 0x00007ffffefff000UL
-SUBARCH_DIR := $(LOCAL_DIR)/64
 
-SUBARCH_BUILDDIR := $(call TOBUILDDIR,$(SUBARCH_DIR))
+LOCAL_BUILDDIR := $(call TOBUILDDIR,$(LOCAL_DIR))
 
 KERNEL_DEFINES += \
 	ARCH_$(SUBARCH)=1 \
@@ -42,22 +41,14 @@ GLOBAL_DEFINES += \
 	USER_ASPACE_SIZE=$(USER_ASPACE_SIZE)
 
 MODULE_SRCS += \
-	$(SUBARCH_DIR)/start.S \
-	$(SUBARCH_DIR)/asm.S \
-	$(SUBARCH_DIR)/exceptions.S \
-	$(SUBARCH_DIR)/ops.S \
-	$(SUBARCH_DIR)/mexec.S \
-	$(SUBARCH_DIR)/syscall.S \
-	$(SUBARCH_DIR)/user_copy.S \
-	$(SUBARCH_DIR)/uspace_entry.S \
-\
 	$(LOCAL_DIR)/arch.cpp \
+	$(LOCAL_DIR)/asm.S \
 	$(LOCAL_DIR)/bp_percpu.c \
 	$(LOCAL_DIR)/cache.cpp \
 	$(LOCAL_DIR)/cpu_topology.cpp \
 	$(LOCAL_DIR)/debugger.cpp \
 	$(LOCAL_DIR)/descriptor.cpp \
-	$(LOCAL_DIR)/timer_freq.cpp \
+	$(LOCAL_DIR)/exceptions.S \
 	$(LOCAL_DIR)/faults.cpp \
 	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/gdt.S \
@@ -67,15 +58,22 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/ioapic.cpp \
 	$(LOCAL_DIR)/ioport.cpp \
 	$(LOCAL_DIR)/lapic.cpp \
+	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/mmu_mem_types.cpp \
 	$(LOCAL_DIR)/mmu_tests.cpp \
 	$(LOCAL_DIR)/mp.cpp \
+	$(LOCAL_DIR)/ops.S \
 	$(LOCAL_DIR)/proc_trace.cpp \
 	$(LOCAL_DIR)/registers.cpp \
+	$(LOCAL_DIR)/start.S \
+	$(LOCAL_DIR)/syscall.S \
 	$(LOCAL_DIR)/thread.cpp \
+	$(LOCAL_DIR)/timer_freq.cpp \
 	$(LOCAL_DIR)/tsc.cpp \
+	$(LOCAL_DIR)/user_copy.S \
 	$(LOCAL_DIR)/user_copy.cpp \
+	$(LOCAL_DIR)/uspace_entry.S \
 
 MODULE_DEPS += \
 	kernel/lib/bitmap \
@@ -86,9 +84,9 @@ MODULE_DEPS += \
 include $(LOCAL_DIR)/toolchain.mk
 
 MODULE_SRCS += \
-	$(SUBARCH_DIR)/bootstrap16.cpp \
-	$(SUBARCH_DIR)/smp.cpp \
-	$(SUBARCH_DIR)/start16.S
+	$(LOCAL_DIR)/bootstrap16.cpp \
+	$(LOCAL_DIR)/smp.cpp \
+	$(LOCAL_DIR)/start16.S
 
 # default to 16 cpu max support
 SMP_MAX_CPUS ?= 16
@@ -151,14 +149,14 @@ endif
 
 ARCH_OPTFLAGS := -O2
 
-LINKER_SCRIPT += $(SUBARCH_BUILDDIR)/kernel.ld
+LINKER_SCRIPT += $(LOCAL_BUILDDIR)/kernel.ld
 
 # potentially generated files that should be cleaned out with clean make rule
-GENERATED += $(SUBARCH_BUILDDIR)/kernel.ld
+GENERATED += $(LOCAL_BUILDDIR)/kernel.ld
 
 # rules for generating the linker script
 # force a rebuild every time in case something changes
-$(SUBARCH_BUILDDIR)/kernel.ld: $(SUBARCH_DIR)/kernel.ld FORCE
+$(LOCAL_BUILDDIR)/kernel.ld: $(LOCAL_DIR)/kernel.ld FORCE
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/;s/%HEADER_LOAD_OFFSET%/$(HEADER_LOAD_OFFSET)/;s/%PHYS_HEADER_LOAD_OFFSET%/$(PHYS_HEADER_LOAD_OFFSET)/;" < $< > $@.tmp
