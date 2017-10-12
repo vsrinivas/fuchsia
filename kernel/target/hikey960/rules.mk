@@ -41,4 +41,4 @@ PLATFORM_BOARD_NAME := hikey960
 MDI_SRCS := $(LOCAL_DIR)/hikey960.mdi
 
 # extra build rules for building kernel boot images
-include make/kernel_images.mk
+include make/kernel-images.mk
