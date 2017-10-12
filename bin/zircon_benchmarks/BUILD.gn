@@ -1,0 +1,26 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("benchmarks") {
+  testonly = true
+  sources = [
+    "channels.cc",
+    "events.cc",
+    "fifos.cc",
+    "main.cc",
+    "ports.cc",
+    "sockets.cc",
+    "syscalls.cc",
+    "threads.cc",
+    "vmo.cc",
+  ]
+  deps = [
+    "//third_party/benchmark",
+    "//third_party/gflags",
+  ]
+  libs = [
+    "launchpad",
+    "zircon",
+  ]
+}
