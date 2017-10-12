@@ -56,7 +56,7 @@ class Device : public WlanBaseDevice,
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     void EthmacStop() __TA_EXCLUDES(lock_);
-    void EthmacSend(uint32_t options, void* data, size_t length);
+    zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
 
     // DeviceInterface methods
     zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;

@@ -181,11 +181,12 @@ void Device::EthmacStop() {
     ethmac_proxy_.reset();
 }
 
-void Device::EthmacSend(uint32_t options, void* data, size_t length) {
+zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     // no debugfn() because it's too noisy
-    auto packet = PreparePacket(data, length, Packet::Peer::kEthernet);
+    auto packet = PreparePacket(netbuf->data, netbuf->len, Packet::Peer::kEthernet);
     zx_status_t status = QueuePacket(std::move(packet));
     if (status != ZX_OK) { warnf("could not queue outbound packet err=%d\n", status); }
+    return status;
 }
 
 void Device::WlanmacStatus(uint32_t status) {
