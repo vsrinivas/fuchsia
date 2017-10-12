@@ -233,6 +233,10 @@ static zx_status_t intel_serialio_compute_bus_timing(
     uint32_t clock_frequency = device->controller_freq;
 
     // These constants are from the i2c timing requirements
+    uint32_t fmp_hcnt = intel_serialio_compute_scl_hcnt(
+        clock_frequency, 260, 120);
+    uint32_t fmp_lcnt = intel_serialio_compute_scl_lcnt(
+        clock_frequency, 500, 120);
     uint32_t fs_hcnt = intel_serialio_compute_scl_hcnt(
         clock_frequency, 600, 300);
     uint32_t fs_lcnt = intel_serialio_compute_scl_lcnt(
@@ -243,6 +247,10 @@ static zx_status_t intel_serialio_compute_bus_timing(
         clock_frequency, 4700, 300);
 
     // Make sure the counts are within bounds.
+    if (fmp_hcnt >= (1 << 16) || fmp_hcnt < 6 ||
+        fmp_lcnt >= (1 << 16) || fmp_lcnt < 8) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
     if (fs_hcnt >= (1 << 16) || fs_hcnt < 6 ||
         fs_lcnt >= (1 << 16) || fs_lcnt < 8) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -252,6 +260,8 @@ static zx_status_t intel_serialio_compute_bus_timing(
         return ZX_ERR_OUT_OF_RANGE;
     }
 
+    device->fmp_scl_hcnt = fmp_hcnt;
+    device->fmp_scl_lcnt = fmp_lcnt;
     device->fs_scl_hcnt = fs_hcnt;
     device->fs_scl_lcnt = fs_lcnt;
     device->ss_scl_hcnt = ss_hcnt;
@@ -263,20 +273,21 @@ static zx_status_t intel_serialio_compute_bus_timing(
 static zx_status_t intel_serialio_i2c_set_bus_frequency(intel_serialio_i2c_device_t* device,
                                                         uint32_t frequency) {
     if (frequency != I2C_MAX_FAST_SPEED_HZ &&
-        frequency != I2C_MAX_STANDARD_SPEED_HZ) {
+        frequency != I2C_MAX_STANDARD_SPEED_HZ &&
+        frequency != I2C_MAX_FAST_PLUS_SPEED_HZ) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     mtx_lock(&device->mutex);
     device->bus_freq = frequency;
 
-    unsigned int speed = CTL_SPEED_STANDARD;
-    if (device->bus_freq == I2C_MAX_FAST_SPEED_HZ) {
-        speed = CTL_SPEED_FAST;
+    zx_status_t status = intel_serialio_i2c_reset_controller(device);
+    if (status != ZX_OK) {
+        mtx_unlock(&device->mutex);
+        return status;
     }
-    RMWREG32(&device->regs->ctl, CTL_SPEED, 2, speed);
-    mtx_unlock(&device->mutex);
 
+    mtx_unlock(&device->mutex);
     return ZX_OK;
 }
 
@@ -596,14 +607,21 @@ zx_status_t intel_serialio_i2c_reset_controller(
     RMWREG32(&device->regs->i2c_en, I2C_EN_ENABLE, 1, 0);
 
     // Reconfigure the bus timing
-    RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, device->fs_scl_hcnt);
-    RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, device->fs_scl_lcnt);
+    if (device->bus_freq == I2C_MAX_FAST_PLUS_SPEED_HZ) {
+        RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, device->fmp_scl_hcnt);
+        RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, device->fmp_scl_lcnt);
+    } else {
+        RMWREG32(&device->regs->fs_scl_hcnt, 0, 16, device->fs_scl_hcnt);
+        RMWREG32(&device->regs->fs_scl_lcnt, 0, 16, device->fs_scl_lcnt);
+    }
     RMWREG32(&device->regs->ss_scl_hcnt, 0, 16, device->ss_scl_hcnt);
     RMWREG32(&device->regs->ss_scl_lcnt, 0, 16, device->ss_scl_lcnt);
     RMWREG32(&device->regs->sda_hold, 0, 16, device->sda_hold);
 
     unsigned int speed = CTL_SPEED_STANDARD;
-    if (device->bus_freq == I2C_MAX_FAST_SPEED_HZ) {
+    if (device->bus_freq == I2C_MAX_FAST_SPEED_HZ ||
+        device->bus_freq == I2C_MAX_FAST_PLUS_SPEED_HZ) {
+
         speed = CTL_SPEED_FAST;
     }
 
