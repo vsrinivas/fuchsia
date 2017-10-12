@@ -50,6 +50,4 @@ struct CodePatchInfo {
             #name "End:\n"                                         \
             ".popsection");
 
-void apply_startup_code_patches();
-
 #endif

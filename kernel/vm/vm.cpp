@@ -13,7 +13,6 @@
 #include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <kernel/thread.h>
-#include <lib/code_patching.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lk/init.h>
@@ -149,10 +148,6 @@ void vm_init_preheap(uint level) {
 
 void vm_init_postheap(uint level) {
     LTRACE_ENTRY;
-
-    // This is just before we make the kernel code unwritable.  Apply
-    // kernel code patches while the kernel code segment is still writable.
-    apply_startup_code_patches();
 
     VmAspace* aspace = VmAspace::kernel_aspace();
 

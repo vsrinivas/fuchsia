@@ -79,6 +79,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
 	kernel/lib/bitmap \
+	kernel/lib/code_patching \
 	kernel/lib/fbl \
 	kernel/object
 
