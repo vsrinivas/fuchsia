@@ -548,7 +548,7 @@ template("fidl") {
       # up.
       disable_analysis = true
 
-      #analysis_options = "//topaz/public/lib/fidl/dart/analysis_options_fidl"
+      generated_code = true
 
       deps = [
         "//topaz/public/lib/fidl/dart",
