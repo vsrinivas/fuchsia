@@ -324,7 +324,7 @@ case $ARCH in
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host,migratable=no"
         else
-          ARGS+=" -cpu Haswell,+smap,-check"
+          ARGS+=" -cpu Haswell,+smap,-check,-fsgsbase"
         fi
         ;;
     *)
