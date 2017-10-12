@@ -42,12 +42,20 @@ namespace cloud_sync {
 // long as the lifetime of page storage and page sync is managed together.
 class BatchUpload {
  public:
+  // In case of error in BatchUpload, ErrorType defines whether the error that
+  // occurred is temporary (from cloud or auth provider), or permanent (from
+  // storage or from encryption).
+  enum class ErrorType {
+    PERMANENT,
+    TEMPORARY,
+  };
+
   BatchUpload(storage::PageStorage* storage,
               cloud_provider_firebase::PageCloudHandler* cloud_provider,
               auth_provider::AuthProvider* auth_provider,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
               fxl::Closure on_done,
-              fxl::Closure on_error,
+              std::function<void(ErrorType)> on_error,
               unsigned int max_concurrent_uploads = 10);
   ~BatchUpload();
 
@@ -80,7 +88,7 @@ class BatchUpload {
   auth_provider::AuthProvider* const auth_provider_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
   fxl::Closure on_done_;
-  fxl::Closure on_error_;
+  std::function<void(ErrorType)> on_error_;
   const unsigned int max_concurrent_uploads_;
 
   // Auth token to be used for uploading the objects and the commit. It is
@@ -99,6 +107,9 @@ class BatchUpload {
 
   bool started_ = false;
   bool errored_ = false;
+  // If an error has occurred while handling the objects, |error_types_|
+  // stores the type of error.
+  ErrorType error_type_ = ErrorType::TEMPORARY;
 
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;

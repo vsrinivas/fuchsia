@@ -136,23 +136,31 @@ void PageUpload::HandleUnsyncedCommits(
   FXL_DCHECK(!batch_upload_);
   FXL_DCHECK(commits_to_upload_);
   SetState(UPLOAD_IN_PROGRESS);
-  batch_upload_ =
-      std::make_unique<BatchUpload>(
-          storage_, cloud_provider_, auth_provider_, std::move(commits),
-          [this] {
-            // Upload succeeded, reset the backoff delay.
-            delegate_->Success();
-            batch_upload_.reset();
-            UploadUnsyncedCommits();
-          },
-          [this] {
+  batch_upload_ = std::make_unique<BatchUpload>(
+      storage_, cloud_provider_, auth_provider_, std::move(commits),
+      [this] {
+        // Upload succeeded, reset the backoff delay.
+        delegate_->Success();
+        batch_upload_.reset();
+        UploadUnsyncedCommits();
+      },
+      [this](BatchUpload::ErrorType error_type) {
+        switch (error_type) {
+          case BatchUpload::ErrorType::TEMPORARY: {
             FXL_LOG(WARNING)
                 << log_prefix_
                 << "commit upload failed due to a connection error, retrying.";
             SetState(UPLOAD_TEMPORARY_ERROR);
             batch_upload_.reset();
             delegate_->Retry([this] { UploadUnsyncedCommits(); });
-          });
+          } break;
+          case BatchUpload::ErrorType::PERMANENT: {
+            FXL_LOG(WARNING) << log_prefix_
+                             << "commit upload failed with a permanent error.";
+            SetState(UPLOAD_PERMANENT_ERROR);
+          } break;
+        }
+      });
   batch_upload_->Start();
 }
 

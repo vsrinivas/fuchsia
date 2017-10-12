@@ -242,17 +242,17 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
   std::unique_ptr<BatchUpload> MakeBatchUpload(
       std::vector<std::unique_ptr<const storage::Commit>> commits,
       unsigned int max_concurrent_uploads = 10) {
-    return std::make_unique<BatchUpload>(&storage_, &cloud_provider_,
-                                         &auth_provider_, std::move(commits),
-                                         [this] {
-                                           done_calls_++;
-                                           message_loop_.PostQuitTask();
-                                         },
-                                         [this] {
-                                           error_calls_++;
-                                           message_loop_.PostQuitTask();
-                                         },
-                                         max_concurrent_uploads);
+    return std::make_unique<BatchUpload>(
+        &storage_, &cloud_provider_, &auth_provider_, std::move(commits),
+        [this] {
+          done_calls_++;
+          message_loop_.PostQuitTask();
+        },
+        [this](BatchUpload::ErrorType /*error_type*/) {
+          error_calls_++;
+          message_loop_.PostQuitTask();
+        },
+        max_concurrent_uploads);
   }
 
   std::string DecryptCommit(std::string encrypted_commit) {

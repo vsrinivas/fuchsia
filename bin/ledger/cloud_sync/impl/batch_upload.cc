@@ -27,7 +27,7 @@ BatchUpload::BatchUpload(
     auth_provider::AuthProvider* auth_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
     fxl::Closure on_done,
-    fxl::Closure on_error,
+    std::function<void(ErrorType)> on_error,
     unsigned int max_concurrent_uploads)
     : storage_(storage),
       cloud_provider_(cloud_provider),
@@ -57,7 +57,11 @@ void BatchUpload::Start() {
         weak_ptr_factory_.GetWeakPtr(),
         [this](storage::Status status,
                std::vector<storage::ObjectDigest> object_digests) {
-          FXL_DCHECK(status == storage::Status::OK);
+          if (status != storage::Status::OK) {
+            errored_ = true;
+            on_error_(ErrorType::PERMANENT);
+            return;
+          }
           for (auto& object_digest : object_digests) {
             remaining_object_digests_.push(std::move(object_digest));
           }
@@ -70,6 +74,7 @@ void BatchUpload::Retry() {
   FXL_DCHECK(started_);
   FXL_DCHECK(errored_);
   errored_ = false;
+  error_type_ = ErrorType::TEMPORARY;
   RefreshAuthToken([this] { StartObjectUpload(); });
 }
 
@@ -129,7 +134,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
           remaining_object_digests_.push(std::move(digest));
 
           if (current_objects_handled_ == 0u) {
-            on_error_();
+            on_error_(ErrorType::PERMANENT);
           }
           return;
         }
@@ -139,15 +144,18 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
             digest,
             callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(), [this](storage::Status status) {
-                  FXL_DCHECK(status == storage::Status::OK);
-
                   FXL_DCHECK(current_objects_handled_ > 0);
                   current_objects_handled_--;
+
+                  if (status != storage::Status::OK) {
+                    errored_ = true;
+                    error_type_ = ErrorType::PERMANENT;
+                  }
 
                   // Notify the user about the error once all pending operations
                   // of the recent retry complete.
                   if (errored_ && current_objects_handled_ == 0u) {
-                    on_error_();
+                    on_error_(error_type_);
                     return;
                   }
 
@@ -218,7 +226,7 @@ void BatchUpload::UploadCommits() {
           std::vector<cloud_provider_firebase::Commit> commits) mutable {
         if (status != encryption::Status::OK) {
           errored_ = true;
-          on_error_();
+          on_error_(ErrorType::PERMANENT);
           return;
         }
         cloud_provider_->AddCommits(
@@ -231,7 +239,7 @@ void BatchUpload::UploadCommits() {
               FXL_DCHECK(!errored_);
               if (status != cloud_provider_firebase::Status::OK) {
                 errored_ = true;
-                on_error_();
+                on_error_(ErrorType::TEMPORARY);
                 return;
               }
               auto waiter = callback::StatusWaiter<storage::Status>::Create(
@@ -240,15 +248,20 @@ void BatchUpload::UploadCommits() {
               for (auto& id : commit_ids) {
                 storage_->MarkCommitSynced(id, waiter->NewCallback());
               }
-              waiter->Finalize(callback::MakeScoped(
-                  weak_ptr_factory_.GetWeakPtr(),
-                  [this](storage::Status status) {
-                    // TODO(nellyv): Handle IO errors. See LE-225.
-                    FXL_DCHECK(status == storage::Status::OK);
-                    // This object can be deleted in the on_done_() callback,
-                    // don't do anything after the call.
-                    on_done_();
-                  }));
+              waiter->Finalize(
+                  callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                                       [this](storage::Status status) {
+                                         if (status != storage::Status::OK) {
+                                           errored_ = true;
+                                           on_error_(ErrorType::PERMANENT);
+                                           return;
+                                         }
+
+                                         // This object can be deleted in the
+                                         // on_done_() callback, don't do
+                                         // anything after the call.
+                                         on_done_();
+                                       }));
             }));
       }));
 }
@@ -262,7 +275,7 @@ void BatchUpload::RefreshAuthToken(fxl::Closure on_refreshed) {
     if (auth_status != auth_provider::AuthStatus::OK) {
       FXL_LOG(ERROR) << "Failed to retrieve the auth token for upload.";
       errored_ = true;
-      on_error_();
+      on_error_(ErrorType::TEMPORARY);
       return;
     }
 
