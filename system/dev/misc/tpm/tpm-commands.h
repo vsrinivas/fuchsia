@@ -6,11 +6,11 @@
 
 #include <zircon/compiler.h>
 
-#define TPM_TAG_RQU_COMMAND 193
 #define TPM_TAG_RSP_COMMAND 196
 
-#define TPM_ORD_GETRANDOM 70
-#define TPM_ORD_SAVESTATE 152
+#define TPM_ST_NO_SESSIONS 0x8001
+#define TPM_CC_SHUTDOWN    0x00000145
+#define TPM_CC_GET_RANDOM  0x0000017B
 
 // All TPM fields are big-endian.
 // The init functions that return uint32_t return the number of bytes needed
@@ -35,19 +35,20 @@ struct tpm_resp_header {
 
 struct tpm_getrandom_cmd {
     struct tpm_cmd_header hdr;
-    uint32_t bytes_requested;
+    uint16_t bytes_requested;
 } __PACKED;
 struct tpm_getrandom_resp {
     struct tpm_resp_header hdr;
-    uint32_t bytes_returned;
+    uint16_t bytes_returned;
     uint8_t bytes[];
 } __PACKED;
-uint32_t tpm_init_getrandom(struct tpm_getrandom_cmd *cmd, uint32_t bytes_requested);
+uint32_t tpm_init_getrandom(struct tpm_getrandom_cmd *cmd, uint16_t bytes_requested);
 
-struct tpm_savestate_cmd {
+struct tpm_shutdown_cmd {
     struct tpm_cmd_header hdr;
+    uint16_t shutdown_type;
 } __PACKED;
-struct tpm_savestate_resp {
+struct tpm_shutdown_resp {
     struct tpm_resp_header hdr;
 } __PACKED;
-uint32_t tpm_init_savestate(struct tpm_savestate_cmd *cmd);
+uint32_t tpm_init_shutdown(struct tpm_shutdown_cmd *cmd, uint16_t type);

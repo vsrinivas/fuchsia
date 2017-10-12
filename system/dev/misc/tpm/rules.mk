@@ -12,13 +12,18 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
+    $(LOCAL_DIR)/i2c-cr50.cpp \
     $(LOCAL_DIR)/tpm.cpp \
     $(LOCAL_DIR)/tpm-commands.cpp \
     $(LOCAL_DIR)/tpm-proto.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/explicit-memory \
     system/ulib/fbl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/c \

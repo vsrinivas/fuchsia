@@ -5,18 +5,19 @@
 #include <endian.h>
 #include "tpm-commands.h"
 
-uint32_t tpm_init_getrandom(struct tpm_getrandom_cmd *cmd, uint32_t bytes_requested) {
-    cmd->hdr.tag = htobe16(TPM_TAG_RQU_COMMAND);
+uint32_t tpm_init_getrandom(struct tpm_getrandom_cmd *cmd, uint16_t bytes_requested) {
+    cmd->hdr.tag = htobe16(TPM_ST_NO_SESSIONS);
     cmd->hdr.total_len = htobe32(sizeof(*cmd));
-    cmd->hdr.cmd_code = htobe32(TPM_ORD_GETRANDOM);
-    cmd->bytes_requested = htobe32(bytes_requested);
+    cmd->hdr.cmd_code = htobe32(TPM_CC_GET_RANDOM);
+    cmd->bytes_requested = htobe16(bytes_requested);
 
     return static_cast<uint32_t>(sizeof(struct tpm_getrandom_resp)) + bytes_requested;
 }
 
-uint32_t tpm_init_savestate(struct tpm_savestate_cmd *cmd) {
-    cmd->hdr.tag = htobe16(TPM_TAG_RQU_COMMAND);
+uint32_t tpm_init_shutdown(struct tpm_shutdown_cmd *cmd, uint16_t type) {
+    cmd->hdr.tag = htobe16(TPM_ST_NO_SESSIONS);
     cmd->hdr.total_len = htobe32(sizeof(*cmd));
-    cmd->hdr.cmd_code = htobe32(TPM_ORD_SAVESTATE);
-    return static_cast<uint32_t>(sizeof(struct tpm_savestate_resp));
+    cmd->hdr.cmd_code = htobe32(TPM_CC_SHUTDOWN);
+    cmd->shutdown_type = htobe16(type);
+    return static_cast<uint32_t>(sizeof(struct tpm_shutdown_resp));
 }

@@ -837,6 +837,12 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         device->fmp_scl_hcnt = 0x001b;
         device->sda_hold = 0x24;
     } else if (pci_config->vendor_id == INTEL_VID &&
+        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID) {
+        // TODO(yky): These should all be extracted from FMCN in the ACPI tables.
+        device->fs_scl_lcnt = 0x00b6;
+        device->fs_scl_hcnt = 0x0059;
+        device->sda_hold = 0x24;
+    } else if (pci_config->vendor_id == INTEL_VID &&
                pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID) {
         // TODO: These should all be extracted from FMCN in the ACPI tables.
         device->fs_scl_lcnt = 0x00ba;
