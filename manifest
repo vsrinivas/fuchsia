@@ -5,10 +5,6 @@
              path="zircon"
              remote="https://fuchsia.googlesource.com/zircon"
              gerrithost="https://fuchsia-review.googlesource.com"/>
-    <project name="zircon/benchmarks"
-             path="zircon/benchmarks"
-             remote="https://fuchsia.googlesource.com/magenta/benchmarks"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/benchmark"
              path="third_party/benchmark"
              remote="https://fuchsia.googlesource.com/third_party/benchmark"
