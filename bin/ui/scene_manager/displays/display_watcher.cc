@@ -8,6 +8,8 @@
 
 #include <zircon/device/display.h>
 
+#include "garnet/bin/ui/scene_manager/displays/display_configuration.h"
+#include "garnet/bin/ui/scene_manager/displays/display_model.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 
@@ -40,7 +42,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
-    callback(false, 0, 0, 0.f);
+    callback(nullptr);
     return;
   }
 
@@ -49,34 +51,35 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   ssize_t result = ioctl_display_get_fb(fd.get(), &description);
   if (result < 0) {
     FXL_DLOG(ERROR) << "IOCTL_DISPLAY_GET_FB failed: result=" << result;
-    callback(false, 0, 0, 0.f);
+    callback(nullptr);
     return;
   }
   zx_handle_close(description.vmo);  // we don't need the vmo
 
-  // TODO(MZ-16): Need to have a database of ratios for different devices.
-  // Given a target of 1 DP = 1/160 inch, we can directly compute this value in
-  // cases where we know both the resolution and the physical dimensions of a
-  // display, but we often don't know the latter.
-  const uint32_t width = description.info.width;
-  const uint32_t height = description.info.height;
-  float device_pixel_ratio = 2.f;
-  if (width == 2400 && height == 1600) {
-    // We assume that the device is a Pixel.  Assuming a 12.246 inch screen with
-    // square pixels, this gives a device-pixel ratio of 1.472.
-    FXL_LOG(INFO) << "SceneManager: treating device as a Pixel.";
-    device_pixel_ratio = 1.472134279;
-  } else if (width == 2160 && height == 1440) {
-    // We assume that the device is an Acer Switch 12 Alpha.  Assuming a 12.246
-    // inch screen with square pixels, this gives a device-pixel ratio of 1.330.
-    FXL_LOG(INFO) << "SceneManager: treating device as an Acer Switch 12.";
-    // TODO(MZ-16): We've been asked to temporarily revert the DP-ratio to 2.0.
-    // device_pixel_ratio = 1.329916454;
-    device_pixel_ratio = 2.0;
-  }
+  // Calculate the display metrics.
+  DisplayModel model;
+  ConfigureDisplay(description.info.width, description.info.height, &model);
+  DisplayMetrics metrics = model.GetMetrics();
+  FXL_DLOG(INFO) << "SceneManager: Display metrics: "
+                 << "width_in_px=" << metrics.width_in_px()
+                 << ", height_in_px=" << metrics.height_in_px()
+                 << ", width_in_gr=" << metrics.width_in_gr()
+                 << ", height_in_gr=" << metrics.height_in_gr()
+                 << ", width_in_mm=" << metrics.width_in_mm()
+                 << ", height_in_mm=" << metrics.height_in_mm()
+                 << ", x_scale_in_px_per_gr=" << metrics.x_scale_in_px_per_gr()
+                 << ", y_scale_in_px_per_gr=" << metrics.y_scale_in_px_per_gr()
+                 << ", x_scale_in_gr_per_px=" << metrics.x_scale_in_gr_per_px()
+                 << ", y_scale_in_gr_per_px=" << metrics.y_scale_in_gr_per_px()
+                 << ", density_in_gr_per_mm=" << metrics.density_in_gr_per_mm()
+                 << ", density_in_mm_per_gr=" << metrics.density_in_mm_per_gr();
 
-  // Invoke the callback, passing the display attributes.
-  callback(true, width, height, device_pixel_ratio);
+  // TODO(MZ-16): We've been asked to temporarily revert the DP-ratio to 2.0.
+  DisplayMetrics fake_metrics = DisplayMetrics(
+      metrics.width_in_px(), metrics.height_in_px(), 2.f, 2.f, 0.f);
+
+  // Invoke the callback, passing the display metrics.
+  callback(&fake_metrics);
 }
 
 }  // namespace scene_manager

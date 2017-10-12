@@ -4,15 +4,15 @@
 
 #include "garnet/bin/ui/scene_manager/tests/scene_manager_test.h"
 
-#include "lib/ui/tests/test_with_message_loop.h"
 #include "lib/fxl/synchronization/waitable_event.h"
+#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scene_manager {
 namespace test {
 
 void SceneManagerTest::SetUp() {
   display_manager_.SetDefaultDisplayForTests(
-      std::make_unique<Display>(1280, 800, 1.f));
+      std::make_unique<Display>(DisplayMetrics(1280, 800, 1.f, 1.f, 0.f)));
 
   auto r = std::make_unique<ReleaseFenceSignallerForTest>(
       &command_buffer_sequencer_);

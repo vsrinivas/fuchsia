@@ -31,8 +31,13 @@ source_set("common") {
   sources = [
     "displays/display.cc",
     "displays/display.h",
+    "displays/display_configuration.cc",
+    "displays/display_configuration.h",
     "displays/display_manager.cc",
     "displays/display_manager.h",
+    "displays/display_metrics.h",
+    "displays/display_model.cc",
+    "displays/display_model.h",
     "displays/display_watcher.cc",
     "displays/display_watcher.h",
     "engine/display_swapchain.cc",

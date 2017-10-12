@@ -6,8 +6,9 @@
 
 #include <memory>
 
-#include "lib/fxl/macros.h"
+#include "garnet/bin/ui/scene_manager/displays/display_metrics.h"
 #include "lib/fsl/io/device_watcher.h"
+#include "lib/fxl/macros.h"
 
 namespace scene_manager {
 
@@ -15,14 +16,10 @@ namespace scene_manager {
 // attributes through a callback.
 class DisplayWatcher {
  public:
-  // Callback that accepts a success param, width, height, and a device pixel
-  // ratio.
-  // |success| is true if the display was acquired and the display info was
-  // read, or false otherwise.
-  using DisplayReadyCallback = std::function<void(bool success,
-                                                  uint32_t width,
-                                                  uint32_t height,
-                                                  float device_pixel_ratio)>;
+  // Callback that accepts display metrics.
+  // |metrics| may be null if the display was not successfully acquired.
+  using DisplayReadyCallback =
+      std::function<void(const DisplayMetrics* metrics)>;
 
   DisplayWatcher();
   ~DisplayWatcher();

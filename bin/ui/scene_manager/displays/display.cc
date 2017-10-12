@@ -10,11 +10,8 @@
 
 namespace scene_manager {
 
-Display::Display(uint32_t width, uint32_t height, float device_pixel_ratio)
-    : last_vsync_time_(zx_time_get(ZX_CLOCK_MONOTONIC)),
-      width_(width),
-      height_(height),
-      device_pixel_ratio_(device_pixel_ratio) {}
+Display::Display(DisplayMetrics metrics)
+    : last_vsync_time_(zx_time_get(ZX_CLOCK_MONOTONIC)), metrics_(metrics) {}
 
 zx_time_t Display::GetLastVsyncTime() {
   zx_time_t current_time = zx_time_get(ZX_CLOCK_MONOTONIC);

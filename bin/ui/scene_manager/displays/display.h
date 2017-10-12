@@ -7,6 +7,7 @@
 #include <zircon/types.h>
 #include <cstdint>
 
+#include "garnet/bin/ui/scene_manager/displays/display_metrics.h"
 #include "lib/fxl/macros.h"
 
 namespace scene_manager {
@@ -20,7 +21,7 @@ class Display {
   // (vsync).
   static constexpr uint64_t kHardcodedPresentationIntervalNanos = 16'666'667;
 
-  Display(uint32_t width, uint32_t height, float device_pixel_ratio);
+  Display(DisplayMetrics metrics);
 
   // Obtain the time of the last Vsync, in nanoseconds.
   zx_time_t GetLastVsyncTime();
@@ -33,9 +34,7 @@ class Display {
   void Claim();
   void Unclaim();
 
-  uint32_t width() const { return width_; }
-  uint32_t height() const { return height_; }
-  float device_pixel_ratio() const { return device_pixel_ratio_; }
+  const DisplayMetrics& metrics() const { return metrics_; }
 
  private:
   // Temporary friendship to allow FrameScheduler to feed back the Vsync timings
@@ -45,9 +44,7 @@ class Display {
   void set_last_vsync_time(zx_time_t vsync_time);
 
   zx_time_t last_vsync_time_;
-  uint32_t const width_;
-  uint32_t const height_;
-  float const device_pixel_ratio_;
+  DisplayMetrics const metrics_;
 
   bool claimed_ = false;
 

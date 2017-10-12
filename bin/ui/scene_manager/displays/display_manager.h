@@ -33,9 +33,7 @@ class DisplayManager {
   }
 
  private:
-  void CreateDefaultDisplay(uint32_t width,
-                            uint32_t height,
-                            float device_pixel_ratio);
+  void CreateDefaultDisplay(const DisplayMetrics* metrics);
 
   DisplayWatcher display_watcher_;
   std::unique_ptr<Display> default_display_;

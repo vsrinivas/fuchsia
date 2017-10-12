@@ -21,10 +21,12 @@ void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   Display* display = engine_->display_manager()->default_display();
   FXL_CHECK(display) << "There must be a default display.";
 
+  // TODO(MZ-16): Change the terminology used in the Scenic API and its clients
+  // to match the new definition of display metrics.
   auto info = scenic::DisplayInfo::New();
-  info->physical_width = display->width();
-  info->physical_height = display->height();
-  info->device_pixel_ratio = display->device_pixel_ratio();
+  info->physical_width = display->metrics().width_in_px();
+  info->physical_height = display->metrics().height_in_px();
+  info->device_pixel_ratio = display->metrics().x_scale_in_px_per_gr();
   callback(std::move(info));
 }
 
