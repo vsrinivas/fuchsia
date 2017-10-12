@@ -10,7 +10,49 @@ import "lib/media/fidl/media_types.fidl";
 // Describes a fragment of media content, including metadata and a locator for
 // the payload.
 struct MediaPacket {
+  // A special value which may be written into the PTS field in certain
+  // circumstances.  For example, depending on the specific scenario,
+  // kNoTimestamp may be used if...
+  //
+  // 1) The timestamp of a packet is simply not known.
+  // 2) A client wishes for the timestamp of a packet to be interpolated based
+  //    on nominal frame rate and previous packet timestamps.
+  // 3) A client wishes to schedule a packet or timeline transformation to take
+  //    place as soon as possible.
   const int64 kNoTimestamp = 0x7fffffffffffffff;
+
+  // Flags used to indicate properties of this payload.
+  //
+  //  ** EOS
+  //     This payload represents the end of a stream.  For example, EOS
+  //     may be set on a packet which represents the final payload in a stream
+  //     of compressed video, causing a video codec to flush out any remaining
+  //     frames it may be holding onto because of frame-reordering dependencies.
+  //
+  //  ** Keyframe
+  //     This packet represents a point in a compressed sequence which depends
+  //     on no other packets in the sequence.  In other words, this is a random
+  //     access point at which the decoder may start decoding.  For example, an
+  //     I-Frame in an MPEG2 video sequence is a "keyframe".  All audio payloads
+  //     in an MP1L3 sequences are independently decodable, and therefor
+  //     "keyframes".
+  //
+  //  ** Dropable
+  //     This packet represents data in a compressed sequence which no other
+  //     packets depend on.  For example, a B-Frame in an MPEG2 video sequence
+  //     produces no reference frames.
+  //
+  //  ** Discontinuous
+  //     This packet represents data which is discontinuous from a timing
+  //     perspective from the previous delivered packet in the sequence.  For
+  //     example packets containing audio frames with audio frame numbers
+  //     [0, 999], [1000, 1999] and [2500, 2999] are delivered, the first two
+  //     packets are continuous with each other, but the 3rd packet is
+  //     discontinuous relative to the 2nd.
+  const uint32 kFlagEos = 0x01;
+  const uint32 kFlagKeyframe = 0x02;
+  const uint32 kFlagDroppable = 0x04;
+  const uint32 kFlagDiscontinuous = 0x08;
 
   // Presentation timestamp. Time at which the media should be presented,
   // according to the media timeline.
@@ -27,11 +69,9 @@ struct MediaPacket {
   // PTS ticks. See pts_rate_ticks for more info.
   uint32 pts_rate_seconds;
 
-  // Indicates whether this packet is a keyframe.
-  bool keyframe;
-
-  // Indicates whether this is the last packet in the stream.
-  bool end_of_stream;
+  // A collection of flags (see constants above) describing properties of this
+  // packet.
+  uint32 flags = 0;
 
   // Identifier of the shared buffer that contains the payload for this packet.
   // This identifier must be established by a call to MediaPacketConsumer's

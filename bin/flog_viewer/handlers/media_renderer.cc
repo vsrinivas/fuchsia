@@ -355,7 +355,7 @@ void MediaRenderer::RecordPacketEarliness(
     return;
   }
 
-  end_of_stream_ = packet->packet_->end_of_stream;
+  end_of_stream_ = (packet->packet_->flags & media::MediaPacket::kFlagEos);
 
   earliness_prev_packet_label_ = packet->label_;
 

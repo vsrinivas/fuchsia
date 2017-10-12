@@ -88,8 +88,8 @@ FidlPacketConsumer::PacketImpl::PacketImpl(
     : Packet(supplied_packet->packet()->pts,
              TimelineRate(supplied_packet->packet()->pts_rate_ticks,
                           supplied_packet->packet()->pts_rate_seconds),
-             supplied_packet->packet()->keyframe,
-             supplied_packet->packet()->end_of_stream,
+             supplied_packet->packet()->flags & MediaPacket::kFlagKeyframe,
+             supplied_packet->packet()->flags & MediaPacket::kFlagEos,
              supplied_packet->payload_size(),
              supplied_packet->payload()),
       supplied_packet_(std::move(supplied_packet)) {

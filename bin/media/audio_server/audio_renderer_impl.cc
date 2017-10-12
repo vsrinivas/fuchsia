@@ -355,7 +355,7 @@ void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
     output->PushToPendingQueue(packet);
   }
 
-  if (packet->supplied_packet()->packet()->end_of_stream) {
+  if (packet->supplied_packet()->packet()->flags & MediaPacket::kFlagEos) {
     timeline_control_point_.SetEndOfStreamPts(
         (packet->end_pts() >> PTS_FRACTIONAL_BITS) /
         format_info_->frames_per_ns());

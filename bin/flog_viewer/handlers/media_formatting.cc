@@ -253,10 +253,10 @@ std::ostream& operator<<(std::ostream& os, const media::MediaPacket& value) {
        << value.pts_rate_seconds << ")"
        << " " << AsNsTime(pts_ns) << " (ns)\n";
   }
-  if (value.keyframe) {
+  if (value.flags & media::MediaPacket::kFlagKeyframe) {
     os << begl << "keyframe: true\n";
   }
-  if (value.end_of_stream) {
+  if (value.flags & media::MediaPacket::kFlagEos) {
     os << begl << "end_of_stream: true\n";
   }
   os << begl << "payload: " << value.payload_buffer_id << " offset "

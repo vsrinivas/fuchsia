@@ -137,7 +137,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   next_pts_ = start_pts + pts_delta;
   next_pts_known_ = true;
 
-  bool end_of_stream = supplied_packet->packet()->end_of_stream;
+  bool end_of_stream = supplied_packet->packet()->flags & MediaPacket::kFlagEos;
 
   // Send the packet along unless it falls outside the program range.
   if (next_pts_ >= min_pts_) {

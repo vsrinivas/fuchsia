@@ -113,14 +113,16 @@ void FakeRenderer::OnPacketSupplied(
              pts_rate_.subject_delta());
   FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
              pts_rate_.reference_delta());
-  if (supplied_packet->packet()->end_of_stream) {
+  if (supplied_packet->packet()->flags & MediaPacket::kFlagEos) {
     end_of_stream_ = true;
     SendStatusUpdates();
   }
 
   if (dump_packets_) {
     std::cerr << "{ " << supplied_packet->packet()->pts << ", "
-              << (supplied_packet->packet()->end_of_stream ? "true" : "false")
+              << ((supplied_packet->packet()->flags & MediaPacket::kFlagEos)
+                      ? "true"
+                      : "false")
               << ", " << supplied_packet->payload_size() << ", 0x" << std::hex
               << std::setw(16) << std::setfill('0')
               << Hash(supplied_packet->payload(),
@@ -136,7 +138,7 @@ void FakeRenderer::OnPacketSupplied(
 
     if (expected_packets_info_iter_->pts() != supplied_packet->packet()->pts ||
         expected_packets_info_iter_->end_of_stream() !=
-            supplied_packet->packet()->end_of_stream ||
+            (supplied_packet->packet()->flags & MediaPacket::kFlagEos) ||
         expected_packets_info_iter_->size() !=
             supplied_packet->payload_size() ||
         expected_packets_info_iter_->hash() !=

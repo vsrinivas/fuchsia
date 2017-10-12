@@ -174,8 +174,7 @@ media::MediaPacketPtr MediaApp::CreateMediaPacket(size_t payload_num) {
   packet->pts_rate_ticks = kRendererFrameRate;
   packet->pts_rate_seconds = 1;
   packet->pts = (payload_num == 0 ? 0 : media::MediaPacket::kNoTimestamp);
-  packet->keyframe = false;
-  packet->end_of_stream = false;
+  packet->flags = 0;
   packet->payload_buffer_id = kBufferId;
   packet->payload_size = kPayloadSize;
   packet->payload_offset = (payload_num % kNumPayloads) * kPayloadSize;

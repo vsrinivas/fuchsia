@@ -116,8 +116,8 @@ void MediaPacketProducerBase::ProducePacket(
   media_packet->pts = pts;
   media_packet->pts_rate_ticks = pts_rate.subject_delta();
   media_packet->pts_rate_seconds = pts_rate.reference_delta();
-  media_packet->keyframe = keyframe;
-  media_packet->end_of_stream = end_of_stream;
+  media_packet->flags = (keyframe ? MediaPacket::kFlagKeyframe : 0) |
+                        (end_of_stream ? MediaPacket::kFlagEos : 0);
   media_packet->revised_media_type = std::move(revised_media_type);
   media_packet->payload_buffer_id = locator.buffer_id();
   media_packet->payload_offset = locator.offset();

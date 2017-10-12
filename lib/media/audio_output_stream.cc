@@ -166,8 +166,7 @@ media::MediaPacketPtr AudioOutputStream::CreateMediaPacket(
 
   packet->pts_rate_ticks = sample_rate_;
   packet->pts_rate_seconds = 1;
-  packet->keyframe = false;
-  packet->end_of_stream = false;
+  packet->flags = 0u;
   packet->payload_buffer_id = kBufferId;
   packet->payload_size = payload_size;
   packet->payload_offset = payload_offset;

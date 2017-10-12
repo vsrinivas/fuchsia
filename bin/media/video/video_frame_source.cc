@@ -169,7 +169,7 @@ void VideoFrameSource::OnPacketSupplied(
   FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
              TimelineRate::NsPerSecond.reference_delta());
 
-  if (supplied_packet->packet()->end_of_stream) {
+  if (supplied_packet->packet()->flags & MediaPacket::kFlagEos) {
     if (prime_callback_) {
       // We won't get any more packets, so we're as primed as we're going to
       // get.
