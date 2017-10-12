@@ -1,6 +1,6 @@
 [package]
 name = "fuchsia-zircon-sys"
-version = "0.3.0"
+version = "0.3.1"
 license = "BSD-3-Clause"
 authors = ["Raph Levien <raph@google.com>"]
 description = "Low-level Rust bindings for the Zircon kernel"

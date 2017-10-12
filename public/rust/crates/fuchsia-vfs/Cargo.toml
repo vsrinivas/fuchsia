@@ -7,5 +7,5 @@ description = "Fuchsia VFS Server bindings"
 repository = "https://fuchsia.googlesource.com/garnet/"
 
 [dependencies]
-fuchsia-zircon = { path = "../fuchsia-zircon", version = "0.3" }
-fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys", version = "0.3" }
+fuchsia-zircon = { path = "../fuchsia-zircon" }
+fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }

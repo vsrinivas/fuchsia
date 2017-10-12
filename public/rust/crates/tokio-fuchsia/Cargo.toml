@@ -9,4 +9,4 @@ repository = "https://fuchsia.googlesource.com/tokio-fuchsia/"
 futures = "0.1"
 mio = "0.6"
 tokio-core = "0.1"
-fuchsia-zircon = { path = "../fuchsia-zircon", version = "0.3" }
+fuchsia-zircon = { path = "../fuchsia-zircon" }

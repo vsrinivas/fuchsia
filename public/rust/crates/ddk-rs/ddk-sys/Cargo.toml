@@ -8,4 +8,4 @@ repository = "https://fuchsia.googlesource.com/ddk-rs/"
 
 [dependencies]
 bitflags = "0.7.0"
-fuchsia-zircon-sys = { path = "../../fuchsia-zircon/fuchsia-zircon-sys", version = "0.3" }
+fuchsia-zircon-sys = { path = "../../fuchsia-zircon/fuchsia-zircon-sys" }

@@ -9,5 +9,5 @@ repository = "https://fuchsia.googlesource.com/mxruntime/"
 [dependencies]
 mxruntime-sys = { path = "mxruntime-sys", version = "0.1" }
 
-fuchsia-zircon = { path = "../fuchsia-zircon", version = "0.3" }
-fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys", version = "0.3" }
+fuchsia-zircon = { path = "../fuchsia-zircon" }
+fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }

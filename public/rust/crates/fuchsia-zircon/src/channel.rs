@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon channel objects.
 
-use {AsHandleRef, HandleBased, Handle, HandleRef, INVALID_HANDLE, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
+use {AsHandleRef, HandleBased, Handle, HandleRef, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
 use {sys, handle_drop, into_result};
 use std::mem;
 
@@ -219,10 +219,10 @@ impl MessageBuf {
     /// will happen if the index exceeds the number of handles available.
     pub fn take_handle(&mut self, index: usize) -> Option<Handle> {
         self.handles.get_mut(index).and_then(|handleref|
-            if *handleref == INVALID_HANDLE {
+            if *handleref == sys::ZX_HANDLE_INVALID {
                 None
             } else {
-                Some(Handle(mem::replace(handleref, INVALID_HANDLE)))
+                Some(Handle(mem::replace(handleref, sys::ZX_HANDLE_INVALID)))
             }
         )
     }

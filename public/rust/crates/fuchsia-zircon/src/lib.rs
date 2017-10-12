@@ -65,10 +65,6 @@ type Duration = sys::zx_duration_t;
 type Time = sys::zx_time_t;
 pub use zircon_sys::ZX_TIME_INFINITE;
 
-// A placeholder value used for handles that have been taken from the message buf.
-// We rely on the kernel never to produce any actual handles with this value.
-const INVALID_HANDLE: sys::zx_handle_t = 0;
-
 /// A status code returned from the Zircon kernel.
 ///
 /// See

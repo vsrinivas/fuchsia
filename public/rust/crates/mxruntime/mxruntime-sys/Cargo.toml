@@ -7,4 +7,4 @@ description = "Low-level Rust bindings for Zircon runtime services"
 repository = "https://fuchsia.googlesource.com/mxruntime/"
 
 [dependencies]
-fuchsia-zircon-sys = { path = "../../fuchsia-zircon/fuchsia-zircon-sys", version = "0.3" }
+fuchsia-zircon-sys = { path = "../../fuchsia-zircon/fuchsia-zircon-sys" }
