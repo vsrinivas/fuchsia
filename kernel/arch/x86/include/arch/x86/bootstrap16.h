@@ -47,7 +47,8 @@ struct __PACKED x86_bootstrap16_data {
     // Physical address of the kernel PML4
     uint32_t phys_kernel_pml4;
     // Physical address of GDTR
-    uint8_t phys_gdtr[10];
+    uint16_t phys_gdtr_limit;
+    uint64_t phys_gdtr_base;
     uint16_t __pad;
 
     // Ordering of these two matter; they should be usable by retfl
@@ -95,7 +96,8 @@ static_assert(sizeof(struct x86_realmode_entry_data) <= PAGE_SIZE, "");
 
 static_assert(__offsetof(struct x86_bootstrap16_data, phys_bootstrap_pml4) == BCD_PHYS_BOOTSTRAP_PML4_OFFSET, "");
 static_assert(__offsetof(struct x86_bootstrap16_data, phys_kernel_pml4) == BCD_PHYS_KERNEL_PML4_OFFSET, "");
-static_assert(__offsetof(struct x86_bootstrap16_data, phys_gdtr) == BCD_PHYS_GDTR_OFFSET, "");
+static_assert(__offsetof(struct x86_bootstrap16_data, phys_gdtr_limit) == BCD_PHYS_GDTR_OFFSET, "");
+static_assert(__offsetof(struct x86_bootstrap16_data, phys_gdtr_base) == BCD_PHYS_GDTR_OFFSET+2, "");
 static_assert(__offsetof(struct x86_bootstrap16_data, phys_long_mode_entry) == BCD_PHYS_LM_ENTRY_OFFSET, "");
 static_assert(__offsetof(struct x86_bootstrap16_data, long_mode_cs) == BCD_LM_CS_OFFSET, "");
 

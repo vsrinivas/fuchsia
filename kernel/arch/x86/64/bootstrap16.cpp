@@ -20,6 +20,8 @@
 #include <trace.h>
 #include <zircon/types.h>
 
+extern const int __code_start;
+
 zx_status_t x86_bootstrap16_prep(
         paddr_t bootstrap_phys_addr,
         uintptr_t entry64,
@@ -55,9 +57,7 @@ zx_status_t x86_bootstrap16_prep(
         }
     });
 
-    // GDTR referring to identity-mapped gdt
-    extern uint8_t _gdtr_phys;
-    // Actual GDT address, needed for computation below
+    // Actual GDT address.
     extern uint8_t _gdt;
     extern uint8_t _gdt_end;
 
@@ -135,9 +135,12 @@ zx_status_t x86_bootstrap16_prep(
 
     bootstrap_data->phys_bootstrap_pml4 = static_cast<uint32_t>(phys_bootstrap_pml4);
     bootstrap_data->phys_kernel_pml4 = static_cast<uint32_t>(phys_kernel_pml4);
-    memcpy(bootstrap_data->phys_gdtr,
-           &_gdtr_phys,
-           sizeof(bootstrap_data->phys_gdtr));
+    bootstrap_data->phys_gdtr_limit =
+        static_cast<uint16_t>(&_gdt_end - &_gdt - 1);
+    bootstrap_data->phys_gdtr_base =
+        reinterpret_cast<uintptr_t>(&_gdt) -
+        reinterpret_cast<uintptr_t>(&__code_start) +
+        MEMBASE + KERNEL_LOAD_OFFSET;
     bootstrap_data->phys_long_mode_entry = static_cast<uint32_t>(long_mode_entry);
     bootstrap_data->long_mode_cs = CODE_64_SELECTOR;
 

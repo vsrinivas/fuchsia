@@ -92,8 +92,14 @@ FUNCTION_LABEL(_multiboot_start)
     movl %ebx, PHYS(_multiboot_info)
 
 .Lcommon_boot:
-    /* load our new gdt by physical pointer */
-    lgdt PHYS(_gdtr_phys)
+    // Load our new GDT by physical pointer.
+    // _gdtr has it as a virtual pointer, so copy it and adjust.
+    movw PHYS(_gdtr), %ax
+    movl PHYS(_gdtr+2), %ecx
+    sub $PHYS_ADDR_DELTA, %ecx
+    movw %ax, -6(%esp)
+    movl %ecx, -4(%esp)
+    lgdt -6(%esp)
 
     /* load our data selectors */
     movw $DATA_SELECTOR, %ax
