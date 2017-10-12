@@ -49,6 +49,12 @@ declare_args() {
 #   extra_analyzer_sources (optional)
 #     Additional source paths to pass to the analyzer.
 #
+#   generated_code (optional)
+#     Boolean indicating that this package contains generated code. This option
+#     relaxes some constraints around package structure.
+#     Defaults to false.
+#     TODO(pylaligand): get rid of this option post-FIDL 2.0.
+#
 # Example of usage:
 #
 #   dart_package("baz") {
@@ -107,6 +113,11 @@ template("dart_package") {
       # This file contributes to the script and needs to be listed as an input.
       "//build/dart/label_to_package_name.py",
     ]
+    if (!defined(invoker.generated_code) || !invoker.generated_code) {
+      # Require a manifest file, allowing the analysis service to identify the
+      # package.
+      inputs += [ "pubspec.yaml" ]
+    }
     if (with_analysis) {
       # Require an options file. This allows the analysis service to pick the
       # correct set of options for this target.
