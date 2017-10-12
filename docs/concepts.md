@@ -110,8 +110,11 @@ any Handles they contained are closed.
 
 See: [channel_create](syscalls/channel_create.md),
 [channel_read](syscalls/channel_read.md),
-and [channel_write](syscalls/channel_write.md).
-
+[channel_write](syscalls/channel_write.md),
+[channel_call](syscalls/channel_call.md),
+[socket_create](syscalls/socket_create.md),
+[socket_read](syscalls/socket_read.md),
+and [socket_write](syscalls/socket_write.md).
 
 ## Objects and Signals
 
