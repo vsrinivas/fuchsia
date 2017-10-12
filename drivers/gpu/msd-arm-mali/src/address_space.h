@@ -23,8 +23,11 @@
 
 #endif
 
+// This should only be accessed on the connection thread (for now).
 class AddressSpace {
 public:
+    static constexpr uint32_t kVirtualAddressSize = 48;
+
     static std::unique_ptr<AddressSpace> Create();
 
     bool Insert(gpu_addr_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
@@ -35,7 +38,6 @@ public:
     bool ReadPteForTesting(gpu_addr_t addr, mali_pte_t* entry);
 
 private:
-    static constexpr uint32_t kVirtualAddressSize = 48;
     static constexpr uint32_t kPageTableEntries = PAGE_SIZE / sizeof(mali_pte_t);
     static constexpr uint32_t kPageTableMask = kPageTableEntries - 1;
     static constexpr uint32_t kPageOffsetBits = 9;

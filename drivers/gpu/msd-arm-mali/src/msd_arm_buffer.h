@@ -5,15 +5,22 @@
 #ifndef MSD_ARM_BUFFER_H
 #define MSD_ARM_BUFFER_H
 
+#include <unordered_set>
+
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "platform_buffer.h"
 #include "platform_event.h"
 
+class GpuMapping;
+
+// This can only be accessed on the connection thread.
 class MsdArmBuffer {
 public:
     static std::unique_ptr<MsdArmBuffer> Import(uint32_t handle);
     static std::unique_ptr<MsdArmBuffer> Create(uint64_t size, const char* name);
+
+    ~MsdArmBuffer();
 
     magma::PlatformBuffer* platform_buffer()
     {
@@ -21,10 +28,15 @@ public:
         return platform_buf_.get();
     }
 
+    void AddMapping(GpuMapping* mapping);
+    void RemoveMapping(GpuMapping* mapping);
+
 private:
     MsdArmBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
+
+    std::unordered_set<GpuMapping*> gpu_mappings_;
 };
 
 class MsdArmAbiBuffer : public msd_buffer_t {

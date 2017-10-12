@@ -12,6 +12,8 @@ source_set("src") {
     "device_request.h",
     "entry_stubs.cc",
     "gpu_features.h",
+    "gpu_mapping.cc",
+    "gpu_mapping.h",
     "job_scheduler.cc",
     "job_scheduler.h",
     "msd_arm_atom.h",

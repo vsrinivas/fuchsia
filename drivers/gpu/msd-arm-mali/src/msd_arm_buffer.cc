@@ -3,11 +3,26 @@
 // found in the LICENSE file.
 
 #include "msd_arm_buffer.h"
+
+#include "gpu_mapping.h"
 #include "msd.h"
+#include "msd_arm_connection.h"
 
 MsdArmBuffer::MsdArmBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
     : platform_buf_(std::move(platform_buf))
 {
+}
+
+MsdArmBuffer::~MsdArmBuffer()
+{
+    std::unordered_set<GpuMapping*> mappings;
+    // Make a copy, as removing each GpuMapping will call into RemoveMapping,
+    // which modifies gpu_mappings_.
+    mappings = gpu_mappings_;
+    for (auto mapping : mappings) {
+        mapping->Remove();
+    }
+    DASSERT(gpu_mappings_.empty());
 }
 
 std::unique_ptr<MsdArmBuffer> MsdArmBuffer::Import(uint32_t handle)
@@ -26,6 +41,18 @@ std::unique_ptr<MsdArmBuffer> MsdArmBuffer::Create(uint64_t size, const char* na
         return DRETP(nullptr, "MsdArmBuffer::Create: Could not create platform buffer from size");
 
     return std::unique_ptr<MsdArmBuffer>(new MsdArmBuffer(std::move(platform_buf)));
+}
+
+void MsdArmBuffer::AddMapping(GpuMapping* mapping)
+{
+    DASSERT(!gpu_mappings_.count(mapping));
+    gpu_mappings_.insert(mapping);
+}
+
+void MsdArmBuffer::RemoveMapping(GpuMapping* mapping)
+{
+    DASSERT(gpu_mappings_.count(mapping));
+    gpu_mappings_.erase(mapping);
 }
 
 //////////////////////////////////////////////////////////////////////////////
