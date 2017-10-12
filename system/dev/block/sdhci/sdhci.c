@@ -37,6 +37,8 @@
 
 #define SD_FREQ_SETUP_HZ  400000
 
+#define MAX_TUNING_COUNT 40
+
 #define HI32(val)   (((val) >> 32) & 0xffffffff)
 #define LO32(val)   ((val) & 0xffffffff)
 
@@ -219,15 +221,19 @@ static void sdhci_data_stage_read_ready_locked(sdhci_device_t* dev) {
     iotxn_t* txn = dev->pending;
     sdmmc_protocol_data_t* pdata = iotxn_pdata(txn, sdmmc_protocol_data_t);
 
-    // Sequentially read each block.
-    for (size_t byteid = 0; byteid < pdata->blocksize; byteid += 4) {
-        uint32_t wrd;
-        const size_t offset = pdata->blockid * pdata->blocksize + byteid;
-        wrd = dev->regs->data;
-        iotxn_copyto(txn, &wrd, sizeof(wrd), offset);
-        txn->actual += sizeof(wrd);
+    // MMC_SEND_TUNING_BLOCK has a block length but we never actually see the data
+    if (pdata->cmd != MMC_SEND_TUNING_BLOCK) {
+        // Sequentially read each block.
+        for (size_t byteid = 0; byteid < pdata->blocksize; byteid += 4) {
+            uint32_t wrd;
+            const size_t offset = pdata->blockid * pdata->blocksize + byteid;
+            wrd = dev->regs->data;
+            iotxn_copyto(txn, &wrd, sizeof(wrd), offset);
+            txn->actual += sizeof(wrd);
+        }
+        pdata->blockid += 1;
     }
-    pdata->blockid += 1;
+
     if (pdata->blockid == pdata->blockcount) {
         sdhci_complete_pending_locked(dev, ZX_OK, txn->actual);
     }
@@ -368,7 +374,7 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
 
     // Busy type commands must also wait for the DATA Inhibit to be 0 UNLESS
     // it's an abort command which can be issued with the data lines active.
-    if ((cmd & SDMMC_RESP_LEN_48B) && ((cmd & SDMMC_CMD_TYPE_ABORT) == 0)) {
+    if (((cmd & SDMMC_RESP_LEN_48B) == SDMMC_RESP_LEN_48B) && ((cmd & SDMMC_CMD_TYPE_ABORT) == 0)) {
         inhibit_mask |= SDHCI_STATE_DAT_INHIBIT;
     }
 
@@ -452,6 +458,8 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
         if (cmd & SDMMC_CMD_MULTI_BLK) {
             cmd |= SDMMC_CMD_AUTO12;
         }
+    } else if (cmd == MMC_SEND_TUNING_BLOCK) {
+        cmd |= SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ;
     }
 
     regs->blkcntsiz = (blksiz | (blkcnt << 16));
@@ -460,7 +468,8 @@ static zx_status_t sdhci_start_txn_locked(sdhci_device_t* dev, iotxn_t* txn) {
 
     // Unmask and enable command complete interrupt
     regs->irqmsk = error_interrupts | normal_interrupts;
-    regs->irqen = error_interrupts | SDHCI_IRQ_CMD_CPLT;
+    regs->irqen = error_interrupts | (pdata->cmd == MMC_SEND_TUNING_BLOCK
+            ? SDHCI_IRQ_BUFF_READ_READY : SDHCI_IRQ_CMD_CPLT);
 
     // Clear any pending interrupts before starting the transaction.
     regs->irq = regs->irqen;
@@ -585,6 +594,8 @@ static zx_status_t sdhci_set_timing(sdhci_device_t* dev, uint32_t timing) {
         ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_SDR104;
     } else if (timing == SDMMC_TIMING_HS400) {
         ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_HS400;
+    } else if (timing == SDMMC_TIMING_HSDDR) {
+        ctrl2 |= SDHCI_HOSTCTRL2_UHS_MODE_SELECT_DDR50;
     }
     dev->regs->ctrl2 = ctrl2;
 
@@ -682,6 +693,39 @@ static zx_status_t sdhci_set_signal_voltage(sdhci_device_t* dev, uint32_t new_vo
     return ZX_OK;
 }
 
+static zx_status_t sdhci_mmc_tuning(sdhci_device_t* dev) {
+    int count = 0;
+    iotxn_t* tune_txn = NULL;
+    zx_status_t st;
+
+    if ((st = iotxn_alloc(&tune_txn, IOTXN_ALLOC_CONTIGUOUS, 0)) != ZX_OK) {
+        dprintf(ERROR, "sdhci: failed to allocate iotxn for tuning");
+        return st;
+    }
+    tune_txn->offset = 0;
+    tune_txn->length = 0;
+
+    sdmmc_protocol_data_t* pdata = iotxn_pdata(tune_txn, sdmmc_protocol_data_t);
+    pdata->cmd = MMC_SEND_TUNING_BLOCK;
+    pdata->arg = 0;
+    pdata->blockcount = 0;
+    pdata->blocksize = (dev->regs->ctrl0 & SDHCI_HOSTCTRL_EXT_DATA_WIDTH) ? 128 : 64;
+
+    dev->regs->ctrl2 |= SDHCI_HOSTCTRL2_EXEC_TUNING;
+
+    do {
+        iotxn_queue(dev->zxdev, tune_txn);
+    } while ((dev->regs->ctrl2 & SDHCI_HOSTCTRL2_EXEC_TUNING) && count++ < MAX_TUNING_COUNT);
+
+    if ((dev->regs->ctrl2 & SDHCI_HOSTCTRL2_EXEC_TUNING)
+            || !(dev->regs->ctrl2 & SDHCI_HOSTCTRL2_CLOCK_SELECT)) {
+        dprintf(ERROR, "sdhci: tuning failed 0x%08x\n", dev->regs->ctrl2);
+        return ZX_ERR_IO;
+    }
+
+    return ZX_OK;
+}
+
 static zx_status_t sdhci_ioctl(void* ctx, uint32_t op,
                           const void* in_buf, size_t in_len,
                           void* out_buf, size_t out_len, size_t* out_actual) {
@@ -716,6 +760,8 @@ static zx_status_t sdhci_ioctl(void* ctx, uint32_t op,
     case IOCTL_SDMMC_HW_RESET:
         sdhci_hw_reset(dev);
         return ZX_OK;
+    case IOCTL_SDMMC_MMC_TUNING:
+        return sdhci_mmc_tuning(dev);
     }
 
     return ZX_ERR_NOT_SUPPORTED;

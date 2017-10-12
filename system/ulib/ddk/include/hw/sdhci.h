@@ -102,6 +102,8 @@ typedef struct sdhci_regs {
 #define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_DDR50   (4 << 16)
 #define SDHCI_HOSTCTRL2_UHS_MODE_SELECT_HS400   (5 << 16)
 #define SDHCI_HOSTCTRL2_1P8V_SIGNALLING_ENA     (1 << 19)
+#define SDHCI_HOSTCTRL2_EXEC_TUNING             (1 << 22)
+#define SDHCI_HOSTCTRL2_CLOCK_SELECT            (1 << 23)
 
     uint32_t caps0;         // 40h
 #define SDHCI_CORECFG_8_BIT_SUPPORT    (1 << 18)

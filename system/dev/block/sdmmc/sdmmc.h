@@ -28,8 +28,9 @@ typedef struct sdmmc {
     uint8_t timing;         // Bus timing
 #define SDMMC_TIMING_LEGACY 0
 #define SDMMC_TIMING_HS     1
-#define SDMMC_TIMING_HS200  2
-#define SDMMC_TIMING_HS400  3
+#define SDMMC_TIMING_HSDDR  2
+#define SDMMC_TIMING_HS200  3
+#define SDMMC_TIMING_HS400  4
 
     unsigned clock_rate;    // Bus clock rate
     uint64_t capacity;      // Card capacity
