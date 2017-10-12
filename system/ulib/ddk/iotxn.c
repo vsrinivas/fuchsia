@@ -390,11 +390,13 @@ void iotxn_release(iotxn_t* txn) {
 }
 
 void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
+#ifdef __aarch64__
     // Bail out if the syscall has nothing to do.
     if (length == 0 || txn->vmo_length == 0)
         return;
 
     zx_vmo_op_range(txn->vmo_handle, op, txn->vmo_offset + offset, length, NULL, 0);
+#endif
 }
 
 zx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size) {
