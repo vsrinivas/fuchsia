@@ -6,9 +6,11 @@
 
 #include "address_space.h"
 #include "gpu_mapping.h"
+#include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_context.h"
+#include "msd_arm_device.h"
 #include "platform_semaphore.h"
 
 #include <vector>
@@ -39,22 +41,80 @@ void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_
 {
 }
 
+void MsdArmConnection::ExecuteAtom(volatile magma_arm_mali_atom* atom)
+{
+
+    uint8_t atom_number = atom->atom_number;
+    uint32_t slot = atom->core_requirements & kAtomCoreRequirementFragmentShader ? 0 : 1;
+    if (slot == 0 && (atom->core_requirements &
+                      (kAtomCoreRequirementComputeShader | kAtomCoreRequirementTiler))) {
+        magma::log(magma::LOG_WARNING, "Invalid core requirements 0x%x\n", atom->core_requirements);
+        return;
+    }
+    auto msd_atom =
+        std::make_unique<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot, atom_number);
+    owner_->ScheduleAtom(std::move(msd_atom));
+}
+
+magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer_t* cmd_buf,
+                                                  msd_buffer_t** exec_resources,
+                                                  msd_semaphore_t** wait_semaphores,
+                                                  msd_semaphore_t** signal_semaphores)
+{
+    auto context = static_cast<MsdArmContext*>(ctx);
+    auto connection = context->connection().lock();
+    if (!connection)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Connection not valid");
+
+    auto buffer = MsdArmAbiBuffer::cast(exec_resources[0])->ptr();
+    void* addr;
+    if (!buffer->platform_buffer()->MapCpu(&addr))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Can't map buffer");
+
+    if (buffer->platform_buffer()->size() < sizeof(uint64_t)) {
+        buffer->platform_buffer()->UnmapCpu();
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer too small");
+    }
+    // This is marked as volatile to ensure the compiler only dereferences it
+    // once, so that the client can't increase the atom count after it's been
+    // validated and have the loop dereference memory outside of the buffer.
+    volatile uint64_t* atom_count_ptr = static_cast<volatile uint64_t*>(addr);
+    uint64_t atom_count = *atom_count_ptr;
+
+    uint64_t buffer_max_entries =
+        (buffer->platform_buffer()->size() - sizeof(uint64_t)) / sizeof(magma_arm_mali_atom);
+    if (buffer_max_entries < atom_count) {
+        buffer->platform_buffer()->UnmapCpu();
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer too small");
+    }
+
+    volatile magma_arm_mali_atom* atom =
+        reinterpret_cast<volatile magma_arm_mali_atom*>(atom_count_ptr + 1);
+    for (uint64_t i = 0; i < atom_count; i++) {
+        connection->ExecuteAtom(&atom[i]);
+    }
+
+    buffer->platform_buffer()->UnmapCpu();
+
+    return MAGMA_STATUS_OK;
+}
+
 magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, msd_buffer_t* buffer)
 {
     return MAGMA_STATUS_INVALID_ARGS;
 }
 
-std::unique_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t client_id)
+std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t client_id, Owner* owner)
 {
     auto address_space = AddressSpace::Create();
     if (!address_space)
         return DRETP(nullptr, "Couldn't create address space");
-    return std::make_unique<MsdArmConnection>(client_id, std::move(address_space));
+    return std::make_shared<MsdArmConnection>(client_id, std::move(address_space), owner);
 }
 
 MsdArmConnection::MsdArmConnection(msd_client_id_t client_id,
-                                   std::unique_ptr<AddressSpace> address_space)
-    : client_id_(client_id), address_space_(std::move(address_space))
+                                   std::unique_ptr<AddressSpace> address_space, Owner* owner)
+    : client_id_(client_id), address_space_(std::move(address_space)), owner_(owner)
 {
 }
 

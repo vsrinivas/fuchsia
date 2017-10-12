@@ -14,7 +14,7 @@ class TestConnection {
 public:
     void MapUnmap()
     {
-        auto connection = MsdArmConnection::Create(0);
+        auto connection = MsdArmConnection::Create(0, nullptr);
         EXPECT_TRUE(connection);
         constexpr uint64_t kBufferSize = PAGE_SIZE * 100;
 

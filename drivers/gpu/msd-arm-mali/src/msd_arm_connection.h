@@ -11,15 +11,24 @@
 #include "gpu_mapping.h"
 #include "magma_util/macros.h"
 #include "msd.h"
+#include "msd_arm_atom.h"
 
 class AddressSpace;
+struct magma_arm_mali_atom;
 
 // This can only be accessed on the connection thread.
-class MsdArmConnection : public GpuMapping::Owner {
+class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
+                         public GpuMapping::Owner {
 public:
-    static std::unique_ptr<MsdArmConnection> Create(msd_client_id_t client_id);
+    class Owner {
+    public:
+        virtual void ScheduleAtom(std::unique_ptr<MsdArmAtom> atom) = 0;
+    };
 
-    MsdArmConnection(msd_client_id_t client_id, std::unique_ptr<AddressSpace> address_space);
+    static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
+
+    MsdArmConnection(msd_client_id_t client_id, std::unique_ptr<AddressSpace> address_space,
+                     Owner* owner);
 
     virtual ~MsdArmConnection();
 
@@ -30,6 +39,7 @@ public:
     bool RemoveMapping(uint64_t gpu_va) override;
 
     bool AddMapping(std::unique_ptr<GpuMapping> mapping);
+    void ExecuteAtom(volatile magma_arm_mali_atom* atom);
 
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
@@ -38,6 +48,8 @@ private:
     std::unique_ptr<AddressSpace> address_space_;
     // Map GPU va to a mapping.
     std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+
+    Owner* owner_;
 };
 
 class MsdArmAbiConnection : public msd_connection_t {

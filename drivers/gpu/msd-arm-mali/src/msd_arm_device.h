@@ -29,7 +29,9 @@
 #include <thread>
 #include <vector>
 
-class MsdArmDevice : public msd_device_t, public JobScheduler::Owner {
+class MsdArmDevice : public msd_device_t,
+                     public JobScheduler::Owner,
+                     public MsdArmConnection::Owner {
 public:
     // Creates a device for the given |device_handle| and returns ownership.
     // If |start_device_thread| is false, then StartDeviceThread should be called
@@ -48,7 +50,7 @@ public:
     }
 
     bool Init(void* device_handle);
-    std::unique_ptr<MsdArmConnection> Open(msd_client_id_t client_id);
+    std::shared_ptr<MsdArmConnection> Open(msd_client_id_t client_id);
 
     struct DumpState {
         struct CorePowerState {
@@ -74,7 +76,9 @@ public:
     void DumpToString(std::string& dump_string);
     void FormatDump(DumpState& dump_state, std::string& dump_string);
     void DumpStatusToLog();
-    void ScheduleAtom(std::unique_ptr<MsdArmAtom> atom);
+
+    // MsdArmConnection::Owner implementation.
+    void ScheduleAtom(std::unique_ptr<MsdArmAtom> atom) override;
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -86,6 +90,8 @@ private:
 #define CHECK_THREAD_NOT_CURRENT(x)                                                                \
     if (x)                                                                                         \
     DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
+
+    friend class TestMsdArmDevice;
 
     class DumpRequest;
     class GpuInterruptRequest;
@@ -112,6 +118,8 @@ private:
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();
     magma::Status ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom);
+
+    void ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* registers);
 
     void RunAtom(MsdArmAtom* atom) override;
     void AtomCompleted(MsdArmAtom* atom) override;

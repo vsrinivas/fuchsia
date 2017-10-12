@@ -25,8 +25,7 @@ private:
 TEST(JobScheduler, RunBasic)
 {
     TestOwner owner;
-    std::shared_ptr<MsdArmConnection> connection =
-        std::shared_ptr<MsdArmConnection>(MsdArmConnection::Create(0));
+    std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
     EXPECT_EQ(0u, owner.run_list().size());
     JobScheduler scheduler(&owner, 1);
     auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
@@ -51,8 +50,7 @@ TEST(JobScheduler, RunBasic)
 TEST(JobScheduler, CancelJob)
 {
     TestOwner owner;
-    std::shared_ptr<MsdArmConnection> connection =
-        std::shared_ptr<MsdArmConnection>(MsdArmConnection::Create(0));
+    std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(0, nullptr);
     JobScheduler scheduler(&owner, 1);
 
     auto atom1 = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);

@@ -121,6 +121,43 @@ public:
 
         EXPECT_TRUE(processing_complete);
     }
+
+    void MockExecuteAtom()
+    {
+        std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+
+        std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), false);
+        EXPECT_NE(device, nullptr);
+        auto connection = MsdArmConnection::Create(0, device.get());
+
+        auto null_atom = std::make_unique<MsdArmAtom>(connection, 0, 0, 0);
+        device->scheduler_->EnqueueAtom(std::move(null_atom));
+        device->scheduler_->TryToSchedule();
+
+        // Atom has 0 job chain address and should be thrown out.
+        EXPECT_EQ(0u, device->scheduler_->GetAtomListSize());
+
+        constexpr uint32_t kJobSlot = 1;
+        MsdArmAtom atom(connection, 100, kJobSlot, 0);
+
+        device->ExecuteAtomOnDevice(&atom, reg_io.get());
+
+        registers::JobSlotRegisters regs(kJobSlot);
+        EXPECT_EQ(1u, regs.AffinityNext().ReadFrom(reg_io.get()).reg_value());
+        EXPECT_EQ(100u, regs.HeadNext().ReadFrom(reg_io.get()).reg_value());
+        constexpr uint32_t kCommandStart = registers::JobSlotCommand::kCommandStart;
+        EXPECT_EQ(kCommandStart, regs.CommandNext().ReadFrom(reg_io.get()).reg_value());
+        auto config_next = regs.ConfigNext().ReadFrom(reg_io.get());
+        EXPECT_EQ(0u, config_next.address_space().get());
+        EXPECT_EQ(1u, config_next.start_flush_clean().get());
+        EXPECT_EQ(1u, config_next.start_flush_invalidate().get());
+        EXPECT_EQ(0u, config_next.job_chain_flag().get());
+        EXPECT_EQ(1u, config_next.end_flush_clean().get());
+        EXPECT_EQ(1u, config_next.end_flush_invalidate().get());
+        EXPECT_EQ(0u, config_next.enable_flush_reduction().get());
+        EXPECT_EQ(0u, config_next.disable_descriptor_write_back().get());
+        EXPECT_EQ(8u, config_next.thread_priority().get());
+    }
 };
 
 TEST(MsdArmDevice, CreateAndDestroy)
@@ -145,4 +182,10 @@ TEST(MsdArmDevice, ProcessRequest)
 {
     TestMsdArmDevice test;
     test.ProcessRequest();
+}
+
+TEST(MsdArmDevice, MockExecuteAtom)
+{
+    TestMsdArmDevice test;
+    test.MockExecuteAtom();
 }

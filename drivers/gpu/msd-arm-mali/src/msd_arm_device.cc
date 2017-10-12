@@ -162,9 +162,9 @@ bool MsdArmDevice::Init(void* device_handle)
     return true;
 }
 
-std::unique_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id)
+std::shared_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id)
 {
-    return MsdArmConnection::Create(client_id);
+    return MsdArmConnection::Create(client_id, this);
 }
 
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
@@ -484,12 +484,39 @@ magma::Status MsdArmDevice::ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom
     return MAGMA_STATUS_OK;
 }
 
-void MsdArmDevice::RunAtom(MsdArmAtom* atom)
+void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io)
 {
-    // Skip atom if address space can't be assigned.
-    if (!address_manager_->AssignAddressSpace(register_io_.get(), atom))
+    DASSERT(atom->slot() < 2u);
+
+    if (!atom->gpu_address()) {
+        // Dependency-only jobs have a 0 gpu address, so skip them.
         scheduler_->JobCompleted(atom->slot());
+        return;
+    }
+
+    // Skip atom if address space can't be assigned.
+    if (!address_manager_->AssignAddressSpace(register_io, atom)) {
+        scheduler_->JobCompleted(atom->slot());
+        return;
+    }
+
+    registers::JobSlotRegisters slot(atom->slot());
+    slot.HeadNext().FromValue(atom->gpu_address()).WriteTo(register_io);
+    auto config = slot.ConfigNext().FromValue(0);
+    config.start_flush_clean().set(true);
+    config.start_flush_invalidate().set(true);
+    // TODO(MA-367): Enable flush reduction optimization.
+    config.thread_priority().set(8);
+    config.end_flush_clean().set(true);
+    config.end_flush_invalidate().set(true);
+    config.WriteTo(register_io);
+
+    // Execute on core 0, the only one powered on.
+    slot.AffinityNext().FromValue(1).WriteTo(register_io);
+    slot.CommandNext().FromValue(registers::JobSlotCommand::kCommandStart).WriteTo(register_io);
 }
+
+void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, register_io_.get()); }
 
 void MsdArmDevice::AtomCompleted(MsdArmAtom* atom)
 {

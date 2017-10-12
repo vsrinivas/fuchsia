@@ -37,6 +37,7 @@ source_set("tests_requiring_hardware") {
   testonly = true
 
   sources = [
+    "test_command_buffer.cc",
     "test_device.cc",
     "test_job_scheduler.cc",
     "test_power_manager.cc",
@@ -51,6 +52,7 @@ group("test_deps") {
   testonly = true
 
   public_deps = [
+    "../../include",
     "//garnet/drivers/gpu/msd-arm-mali/src",
     "//garnet/lib/magma/include:msd_abi",
     "//garnet/lib/magma/src/magma_util",
