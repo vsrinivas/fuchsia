@@ -40,7 +40,7 @@ union Noun {
   // EntityReference can acquired by calling Entity.getReference().
   // Entity.getTypes() will be used to set the constraints for this noun during
   // resolution.
-  EntityReference entity;
+  EntityReference entity_reference;
 
   // Set this if you have an unstructured blob of text. Module Resolution will
   // perform Entity extraction (see docs/module_resolution.md), from which it will
