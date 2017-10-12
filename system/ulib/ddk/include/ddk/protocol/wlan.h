@@ -44,6 +44,11 @@ enum {
     WLAN_CHAN_WIDTH_80_80MHZ,
 };
 
+enum {
+    WLAN_BSS_TYPE_INFRASTRUCTURE,
+    WLAN_BSS_TYPE_IBSS,
+};
+
 typedef struct wlan_rx_info {
     // Flags indicating which fields are valid in this struct. Reserved flags must be zero.
     uint32_t flags;
@@ -99,6 +104,9 @@ typedef struct wlanmac_protocol_ops {
 
     // Set the radio channel
     zx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);
+
+    // Sets the BSS the station is joining
+    zx_status_t (*set_bss)(void* ctx, uint32_t options, uint8_t mac[6], uint8_t type);
 } wlanmac_protocol_ops_t;
 
 typedef struct wlanmac_protocol {

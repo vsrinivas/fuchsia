@@ -104,6 +104,12 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         return ZX_OK;
     }
 
+    zx_status_t WlanmacSetBss(uint32_t options, uint8_t mac[6], uint8_t type) {
+        set_bss_this_ = get_this();
+        set_bss_called_ = true;
+        return ZX_OK;
+    }
+
     bool VerifyCalls() const {
         BEGIN_HELPER;
         EXPECT_EQ(this_, query_this_, "");
@@ -111,11 +117,13 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         EXPECT_EQ(this_, stop_this_, "");
         EXPECT_EQ(this_, tx_this_, "");
         EXPECT_EQ(this_, set_channel_this_, "");
+        EXPECT_EQ(this_, set_bss_this_, "");
         EXPECT_TRUE(query_called_, "");
         EXPECT_TRUE(start_called_, "");
         EXPECT_TRUE(stop_called_, "");
         EXPECT_TRUE(tx_called_, "");
         EXPECT_TRUE(set_channel_called_, "");
+        EXPECT_TRUE(set_bss_called_, "");
         END_HELPER;
     }
 
@@ -134,11 +142,13 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     uintptr_t start_this_ = 0u;
     uintptr_t tx_this_ = 0u;
     uintptr_t set_channel_this_ = 0u;
+    uintptr_t set_bss_this_ = 0u;
     bool query_called_ = false;
     bool stop_called_ = false;
     bool start_called_ = false;
     bool tx_called_ = false;
     bool set_channel_called_ = false;
+    bool set_bss_called_ = false;
 
     fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy_;
 };
@@ -189,6 +199,7 @@ static bool test_wlanmac_protocol() {
     EXPECT_EQ(ZX_OK, proto.ops->start(proto.ctx, nullptr, nullptr), "");
     proto.ops->tx(proto.ctx, 0, nullptr, 0);
     EXPECT_EQ(ZX_OK, proto.ops->set_channel(proto.ctx, 0, nullptr), "");
+    EXPECT_EQ(ZX_OK, proto.ops->set_bss(proto.ctx, 0, nullptr, 0), "");
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -216,6 +227,7 @@ static bool test_wlanmac_protocol_proxy() {
     EXPECT_EQ(ZX_OK, proxy.Start(&ifc_dev), "");
     proxy.Tx(0, nullptr, 0);
     proxy.SetChannel(0, nullptr);
+    proxy.SetBss(0, nullptr, 0);
 
     EXPECT_TRUE(protocol_dev.VerifyCalls(), "");
 

@@ -44,6 +44,7 @@ DECLARE_HAS_MEMBER_FN(has_wlanmac_stop, WlanmacStop);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_start, WlanmacStart);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_send, WlanmacTx);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_channel, WlanmacSetChannel);
+DECLARE_HAS_MEMBER_FN(has_wlanmac_set_bss, WlanmacSetBss);
 
 template <typename D>
 constexpr void CheckWlanmacProtocolSubclass() {
@@ -84,6 +85,14 @@ constexpr void CheckWlanmacProtocolSubclass() {
                                 zx_status_t (D::*)(uint32_t, wlan_channel_t*)>::value,
                   "WlanmacSetChannel must be a non-static member function with signature "
                   "'zx_status_t WlanmacSetChannel(uint32_t, wlan_channel_t*)', and be visible to "
+                  "ddk::WlanmacProtocol<D> (either because they are public, or because of "
+                  "friendship).");
+    static_assert(internal::has_wlanmac_set_bss<D>::value,
+                  "WlanmacProtocol subclasses must implement WlanmacSetBss");
+    static_assert(fbl::is_same<decltype(&D::WlanmacSetBss),
+                                zx_status_t (D::*)(uint32_t, uint8_t[6], uint8_t)>::value,
+                  "WlanmacSetBss must be a non-static member function with signature "
+                  "'zx_status_t WlanmacSetBss(uint32_t, uint8_t[6], uint8_t)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
 }
