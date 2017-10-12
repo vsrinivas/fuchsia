@@ -329,6 +329,40 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
     return ZX_OK;
 }
 
+zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t width,
+                                user_ptr<uint32_t> out_val) {
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<Dispatcher> dispatcher;
+
+    auto device = pci_device->device();
+    auto cfg_size = device->is_pcie() ? PCIE_EXTENDED_CONFIG_SIZE : PCIE_BASE_CONFIG_SIZE;
+    if (out_val.get() == nullptr || offset + (width / 8) > cfg_size) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Get the PciDeviceDispatcher from the handle passed in via the pci protocol
+    auto up = ProcessDispatcher::GetCurrent();
+    zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+                                                    &pci_device);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Based on the width passed in we can use the type safety of the PciConfig layer
+    // to ensure we're getting correctly sized data back and return errors in the PIO
+    // cases.
+    auto config = device->config();
+    switch(width) {
+    case 8u:  return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg8(offset))));
+    case 16u: return out_val.copy_to_user(static_cast<uint32_t>(config->Read(PciReg16(offset))));
+    case 32u: return out_val.copy_to_user(config->Read(PciReg32(offset)));
+    default: return ZX_ERR_INVALID_ARGS;
+    }
+
+    // If we reached this point then the width was invalid.
+    return ZX_ERR_INVALID_ARGS;
+}
+
 /* This is a transitional method to bootstrap legacy PIO access before
  * PCI moves to userspace.
  */
@@ -432,8 +466,12 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_ptr<z
 
     // Get bar info from the device via the dispatcher and make sure it makes sense
     const pcie_bar_info_t* info = pci_device->GetBar(bar_num);
-    if (info == nullptr || info->size == 0) {
+    if (info == nullptr) {
         return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (info->size == 0) {
+        return ZX_ERR_NOT_FOUND;
     }
 
     // A bar can be MMIO, PIO, or unused. In the MMIO case it can be passed
@@ -441,9 +479,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num, user_ptr<z
     memset(&bar, 0, sizeof(bar));
     bar.size = info->size;
     bar.type = (info->is_mmio) ? PCI_RESOURCE_TYPE_MMIO : PCI_RESOURCE_TYPE_PIO;
-    if (info->size == 0) {
-        bar.type = PCI_RESOURCE_TYPE_UNUSED;
-    } else if (info->is_mmio) {
+    if (info->is_mmio) {
         // Create a VMO mapping to the address / size of the mmio region this bar
         // was allocated at
         fbl::RefPtr<VmObject> vmo;
@@ -707,6 +743,16 @@ zx_status_t sys_pci_init(zx_handle_t, user_ptr<const zx_pci_init_arg_t>, uint32_
 }
 
 zx_status_t sys_pci_add_subtract_io_range(zx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t width,
+                                user_ptr<uint32_t> out_val) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uint8_t func,
+                               uint8_t offset, user_ptr<uint32_t> val, size_t width, bool write) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

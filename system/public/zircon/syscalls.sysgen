@@ -579,6 +579,10 @@ syscall pci_reset_device
     (handle: zx_handle_t)
     returns (zx_status_t);
 
+syscall pci_config_read
+    (handle: zx_handle_t, offset: uint16_t, width: size_t, out_val: uint32_t[1] OUT)
+    returns (zx_status_t);
+
 syscall pci_cfg_pio_rw
     (handle: zx_handle_t, bus: uint8_t, dev: uint8_t, func: uint8_t, offset: uint8_t,
         val: uint32_t[1] OUT, width: size_t, write: bool)

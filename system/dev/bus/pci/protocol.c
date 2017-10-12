@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <zircon/assert.h>
 #include <zircon/process.h>
 
 #include "kpci-private.h"
@@ -51,7 +52,49 @@ static zx_status_t do_resource_bookkeeping(zx_pci_resource_t* res) {
     return status;
 }
 
-static zx_status_t pci_get_resource(void* ctx, uint32_t res_id, zx_pci_resource_t* out_res) {
+
+// These reads are proxied directly over to the device's PciConfig object so the validity of the
+// widths and offsets will be validated on that end and then trickle back to this level of the
+// protocol.
+//
+// In the case of config and capability reads/writes, failure is a catastrophic occurrence
+// along the lines of hardware failure or a device being removed from the bus. Due to this,
+// those statuses will be asserted upon rather than forcing callers to add additional checks
+// every time they wish to do a config read / write.
+static uint32_t kpci_config_read(void* ctx, uint8_t offset, size_t width) {
+    ZX_DEBUG_ASSERT(ctx);
+    kpci_device_t* device = ctx;
+    uint32_t val;
+
+    // TODO(cja): Investigate whether config reads / writes should return status codes
+    // so that failures (largely around bad offsets) can be signaled.
+    zx_status_t status = zx_pci_config_read(device->handle, offset & 0xFFF, width, &val);
+    ZX_ASSERT_MSG(status == ZX_OK, "pci_config_read: %d\n", status);
+    return val;
+}
+
+static uint8_t kpci_get_next_capability(void* ctx, uint8_t offset, uint8_t type) {
+    uint8_t cap_offset = (uint8_t)kpci_config_read(ctx, offset + 1, 8);
+    uint8_t limit = 64;
+
+    // Walk the capability list looking for the type requested, starting at the offset
+    // passed in. limit acts as a barrier in case of an invalid capability pointer list
+    // that causes us to iterate forever otherwise.
+    while (cap_offset != 0 && limit--) {
+        uint8_t type_id = (uint8_t)kpci_config_read(ctx, cap_offset, 8);
+        if (type_id == type) {
+            return cap_offset;
+        }
+
+        // We didn't find the right type, move on
+        cap_offset = (uint8_t)kpci_config_read(ctx, cap_offset + 1, 8);
+    }
+
+    // No more entries are in the list
+    return 0;
+}
+
+static zx_status_t kpci_get_resource(void* ctx, uint32_t res_id, zx_pci_resource_t* out_res) {
     zx_status_t status = ZX_OK;
 
     if (!out_res || res_id >= PCI_RESOURCE_COUNT) {
@@ -98,7 +141,7 @@ static zx_status_t kpci_map_resource(void* ctx,
     }
 
     zx_pci_resource_t resource;
-    zx_status_t status = pci_get_resource(ctx, res_id, &resource);
+    zx_status_t status = kpci_get_resource(ctx, res_id, &resource);
     if (status != ZX_OK) {
         return status;
     }
@@ -188,9 +231,12 @@ static pci_protocol_ops_t _pci_protocol = {
     .enable_bus_master = kpci_enable_bus_master,
     .enable_pio = kpci_enable_pio,
     .reset_device = kpci_reset_device,
+    .get_resource = kpci_get_resource,
     .map_resource = kpci_map_resource,
     .map_interrupt = kpci_map_interrupt,
     .query_irq_mode_caps = kpci_query_irq_mode_caps,
     .set_irq_mode = kpci_set_irq_mode,
     .get_device_info = kpci_get_device_info,
+    .config_read = kpci_config_read,
+    .get_next_capability = kpci_get_next_capability,
 };
