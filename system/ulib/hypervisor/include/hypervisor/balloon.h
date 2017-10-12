@@ -4,13 +4,10 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <hypervisor/virtio.h>
 #include <virtio/balloon.h>
-#include <zircon/compiler.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 

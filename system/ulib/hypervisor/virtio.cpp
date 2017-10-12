@@ -2,18 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
+#include <hypervisor/virtio.h>
+
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <hypervisor/vcpu.h>
-#include <hypervisor/virtio.h>
-#include <zircon/syscalls/port.h>
-
-#include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
 #define QUEUE_SIZE 128u
@@ -278,44 +273,44 @@ zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
     return ring_has_avail(queue) ? ZX_ERR_NEXT : ZX_OK;
 }
 
-zx_status_t VirtioDevice::ReadConfig(uint64_t port, IoValue* value) {
+zx_status_t VirtioDevice::ReadConfig(uint64_t addr, IoValue* value) {
     fbl::AutoLock lock(&config_mutex_);
     switch (value->access_size) {
     case 1: {
         uint8_t* buf = reinterpret_cast<uint8_t*>(device_config_);
-        value->u8 = buf[port];
+        value->u8 = buf[addr];
         return ZX_OK;
     }
     case 2: {
         uint16_t* buf = reinterpret_cast<uint16_t*>(device_config_);
-        value->u16 = buf[port / 2];
+        value->u16 = buf[addr / 2];
         return ZX_OK;
     }
     case 4: {
         uint32_t* buf = reinterpret_cast<uint32_t*>(device_config_);
-        value->u32 = buf[port / 4];
+        value->u32 = buf[addr / 4];
         return ZX_OK;
     }
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioDevice::WriteConfig(uint64_t port, const IoValue& value) {
+zx_status_t VirtioDevice::WriteConfig(uint64_t addr, const IoValue& value) {
     fbl::AutoLock lock(&config_mutex_);
     switch (value.access_size) {
     case 1: {
         uint8_t* buf = reinterpret_cast<uint8_t*>(device_config_);
-        buf[port] = value.u8;
+        buf[addr] = value.u8;
         return ZX_OK;
     }
     case 2: {
         uint16_t* buf = reinterpret_cast<uint16_t*>(device_config_);
-        buf[port / 2] = value.u16;
+        buf[addr / 2] = value.u16;
         return ZX_OK;
     }
     case 4: {
         uint32_t* buf = reinterpret_cast<uint32_t*>(device_config_);
-        buf[port / 4] = value.u32;
+        buf[addr / 4] = value.u32;
         return ZX_OK;
     }
     }

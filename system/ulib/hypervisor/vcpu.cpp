@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hypervisor/vcpu.h>
+
 #include <stdio.h>
 #include <string.h>
 
 #include <hypervisor/address.h>
-#include <hypervisor/bits.h>
 #include <hypervisor/decode.h>
-#include <hypervisor/pci.h>
-#include <hypervisor/vcpu.h>
 #include <zircon/syscalls.h>
-
-#include "acpi_priv.h"
+#include <zircon/syscalls/hypervisor.h>
 
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT 13u

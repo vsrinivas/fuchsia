@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>

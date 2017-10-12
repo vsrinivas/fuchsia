@@ -5,7 +5,6 @@
 #include <hypervisor/pci.h>
 
 #include <stdio.h>
-#include <string.h>
 
 #include <fbl/auto_lock.h>
 #include <hw/pci.h>

@@ -2,22 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hypervisor/block.h>
+
 #include <fcntl.h>
-#include <limits.h>
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 
 #include <fbl/auto_lock.h>
-#include <hypervisor/block.h>
-#include <hypervisor/io_apic.h>
-#include <hypervisor/pci.h>
-#include <hypervisor/vcpu.h>
-#include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/hypervisor.h>
 
 zx_status_t VirtioBlock::HandleQueueNotify(uint16_t queue_sel) {
     if (queue_sel != 0)

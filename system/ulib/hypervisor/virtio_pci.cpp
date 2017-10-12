@@ -2,19 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
+#include <hypervisor/virtio_pci.h>
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hypervisor/bits.h>
-#include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
-#include <virtio/virtio.h>
-#include <virtio/virtio_ring.h>
-#include <zircon/syscalls/port.h>
 
 static uint8_t kPciCapTypeVendorSpecific = 0x9;
 
@@ -96,8 +90,8 @@ static_assert(is_aligned(kVirtioPciDeviceCfgBase, 4),
 /* Handle reads to the common configuration structure as defined in
  * Virtio 1.0 Section 4.1.4.3.
  */
-zx_status_t VirtioPci::CommonCfgRead(uint64_t port, IoValue* value) {
-    switch (port) {
+zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) {
+    switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
         fbl::AutoLock lock(&device_->mutex_);
         value->u32 = device_->driver_features_sel_;
@@ -179,7 +173,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t port, IoValue* value) {
         if (queue == nullptr)
             return ZX_ERR_BAD_STATE;
 
-        size_t word = (port - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
+        size_t word = (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
         fbl::AutoLock lock(&queue->mutex);
         value->u32 = queue->addr.words[word];
         value->access_size = 4;
@@ -205,10 +199,10 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t port, IoValue* value) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::ConfigBarRead(uint64_t port, IoValue* value) {
-    switch (port) {
+zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) {
+    switch (addr) {
     case kVirtioPciCommonCfgBase... kVirtioPciCommonCfgTop:
-        return CommonCfgRead(port - kVirtioPciCommonCfgBase, value);
+        return CommonCfgRead(addr - kVirtioPciCommonCfgBase, value);
     case kVirtioPciIsrCfgBase... kVirtioPciIsrCfgTop:
         fbl::AutoLock lock(&device_->mutex_);
         value->u8 = device_->isr_status_;
@@ -223,11 +217,11 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t port, IoValue* value) {
     }
 
     size_t device_config_top = kVirtioPciDeviceCfgBase + device_->device_config_size_;
-    if (port >= kVirtioPciDeviceCfgBase && port < device_config_top) {
-        uint64_t device_offset = port - kVirtioPciDeviceCfgBase;
+    if (addr >= kVirtioPciDeviceCfgBase && addr < device_config_top) {
+        uint64_t device_offset = addr - kVirtioPciDeviceCfgBase;
         return device_->ReadConfig(device_offset, value);
     }
-    fprintf(stderr, "Unhandled read %#lx\n", port);
+    fprintf(stderr, "Unhandled read %#lx\n", addr);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -240,8 +234,8 @@ static void virtio_queue_update_addr(virtio_queue_t* queue) {
 /* Handle writes to the common configuration structure as defined in
  * Virtio 1.0 Section 4.1.4.3.
  */
-zx_status_t VirtioPci::CommonCfgWrite(uint64_t port, const IoValue& value) {
-    switch (port) {
+zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
+    switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL: {
         if (value.access_size != 4)
             return ZX_ERR_IO_DATA_INTEGRITY;
@@ -305,7 +299,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t port, const IoValue& value) {
         if (queue == nullptr)
             return ZX_ERR_BAD_STATE;
 
-        size_t word = (port - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
+        size_t word = (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
         fbl::AutoLock lock(&queue->mutex);
         queue->addr.words[word] = value.u32;
         virtio_queue_update_addr(queue);
@@ -321,26 +315,26 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t port, const IoValue& value) {
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES:
     case VIRTIO_PCI_COMMON_CFG_CONFIG_GEN:
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES:
-        fprintf(stderr, "Unsupported write to %#lx\n", port);
+        fprintf(stderr, "Unsupported write to %#lx\n", addr);
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::ConfigBarWrite(uint64_t port, const IoValue& value) {
-    switch (port) {
+zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
+    switch (addr) {
     case kVirtioPciCommonCfgBase... kVirtioPciCommonCfgTop: {
-        uint64_t offset = port - kVirtioPciCommonCfgBase;
+        uint64_t offset = addr - kVirtioPciCommonCfgBase;
         return CommonCfgWrite(offset, value);
     }
     }
 
     size_t device_config_top = kVirtioPciDeviceCfgBase + device_->device_config_size_;
-    if (port >= kVirtioPciDeviceCfgBase && port < device_config_top) {
-        uint64_t device_offset = port - kVirtioPciDeviceCfgBase;
+    if (addr >= kVirtioPciDeviceCfgBase && addr < device_config_top) {
+        uint64_t device_offset = addr - kVirtioPciDeviceCfgBase;
         return device_->WriteConfig(device_offset, value);
     }
-    fprintf(stderr, "Unhandled write %#lx\n", port);
+    fprintf(stderr, "Unhandled write %#lx\n", addr);
     return ZX_ERR_NOT_SUPPORTED;
 }
 

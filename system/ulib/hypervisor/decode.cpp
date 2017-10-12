@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hypervisor/decode.h>
+
 #include <string.h>
 
-#include <hypervisor/decode.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 

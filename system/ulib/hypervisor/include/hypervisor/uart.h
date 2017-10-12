@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <hypervisor/guest.h>
@@ -49,9 +47,6 @@
 // clang-format on
 
 class IoApic;
-
-typedef struct zx_packet_guest_io zx_packet_guest_io_t;
-typedef struct zx_vcpu_io zx_vcpu_io_t;
 
 /* Stores the state of a UART. */
 class Uart : public IoHandler {

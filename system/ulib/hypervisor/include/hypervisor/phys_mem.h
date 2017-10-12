@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 #include <zx/vmo.h>
 

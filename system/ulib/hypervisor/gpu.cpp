@@ -5,23 +5,15 @@
 #include <hypervisor/gpu.h>
 
 #include <fcntl.h>
-#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
-#include <hypervisor/vcpu.h>
-#include <hypervisor/virtio.h>
-#include <virtio/gpu.h>
-#include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
 #include <zircon/pixelformat.h>
 #include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
 
 VirtioGpu::VirtioGpu(uintptr_t guest_physmem_addr, size_t guest_physmem_size)
     : VirtioDevice(VIRTIO_ID_GPU, &config_, sizeof(config_), queues_, VIRTIO_GPU_Q_COUNT,

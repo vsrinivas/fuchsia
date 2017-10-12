@@ -4,9 +4,7 @@
 
 #include <hypervisor/phys_mem.h>
 
-#include <fbl/alloc_checker.h>
 #include <zircon/process.h>
-#include <zircon/syscalls.h>
 #include <zx/vmar.h>
 
 static const uint32_t kMapFlags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;

@@ -5,7 +5,6 @@
 #include <hypervisor/input.h>
 
 #include <fcntl.h>
-#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -15,13 +14,7 @@
 #include <fbl/auto_lock.h>
 #include <fdio/watcher.h>
 #include <hypervisor/bits.h>
-#include <hypervisor/vcpu.h>
-#include <hypervisor/virtio.h>
-#include <virtio/input.h>
-#include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
 
 static const char* kInputDirPath = "/dev/class/input";
 
@@ -182,11 +175,11 @@ VirtioInput::VirtioInput(uintptr_t guest_physmem_addr, size_t guest_physmem_size
                    guest_physmem_addr, guest_physmem_size),
       device_name_(device_name), device_serial_(device_serial) {}
 
-zx_status_t VirtioInput::WriteConfig(uint64_t port, const IoValue& value) {
-    zx_status_t status = VirtioDevice::WriteConfig(port, value);
+zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
+    zx_status_t status = VirtioDevice::WriteConfig(addr, value);
     if (status != ZX_OK)
         return status;
-    if (port >= 2)
+    if (addr >= 2)
         return ZX_OK;
 
     //  A write to select or subselect modifies the contents of the config.u

@@ -5,16 +5,11 @@
 #include <hypervisor/uart.h>
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <fbl/auto_lock.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
-#include <hypervisor/vcpu.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/hypervisor.h>
 
 /* UART configuration masks. */
 static const uint8_t kUartInterruptIdNoFifoMask = bit_mask<uint8_t>(4);
@@ -175,12 +170,6 @@ zx_status_t Uart::Write(uint64_t port, const IoValue& io) {
     default:
         return ZX_ERR_INTERNAL;
     }
-}
-
-static zx_status_t uart_handler(zx_port_packet_t* packet, void* ctx) {
-    IoValue io;
-    io.u32 = packet->guest_io.u32;
-    return static_cast<Uart*>(ctx)->Write(packet->guest_io.port, io);
 }
 
 static int uart_empty_tx(void* arg) {

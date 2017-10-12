@@ -6,16 +6,10 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <hypervisor/pci.h>
 #include <hypervisor/virtio_pci.h>
 #include <virtio/virtio.h>
-#include <zircon/syscalls/hypervisor.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
-
-// clang-format off
-
-// clang-format on
 
 struct vring_desc;
 struct vring_avail;
@@ -23,8 +17,6 @@ struct vring_used;
 
 class VirtioDevice;
 
-typedef struct io_apic io_apic_t;
-typedef struct zx_vcpu_io zx_vcpu_io_t;
 typedef struct virtio_queue virtio_queue_t;
 
 /* Base class for all virtio devices. */
@@ -33,10 +25,10 @@ public:
     virtual ~VirtioDevice() = default;
 
     // Read a device-specific configuration field.
-    virtual zx_status_t ReadConfig(uint64_t port, IoValue* value);
+    virtual zx_status_t ReadConfig(uint64_t addr, IoValue* value);
 
     // Write a device-specific configuration field.
-    virtual zx_status_t WriteConfig(uint64_t port, const IoValue& value);
+    virtual zx_status_t WriteConfig(uint64_t addr, const IoValue& value);
 
     // Handle notify events for one of this devices queues.
     virtual zx_status_t HandleQueueNotify(uint16_t queue_sel) {

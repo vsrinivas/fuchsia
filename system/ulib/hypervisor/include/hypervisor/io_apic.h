@@ -4,13 +4,9 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/mutex.h>
-#include <hypervisor/decode.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 
 class LocalApic;

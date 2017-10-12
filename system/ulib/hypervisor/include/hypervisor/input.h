@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <hid/hid.h>
@@ -71,7 +69,7 @@ public:
     VirtioInput(uintptr_t guest_physmem_addr, size_t guest_physmem_size,
                 const char* device_name, const char* device_serial);
 
-    zx_status_t WriteConfig(uint64_t port, const IoValue& value) override;
+    zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
 
     virtio_queue_t& event_queue() { return queues_[VIRTIO_INPUT_Q_EVENTQ]; }
 

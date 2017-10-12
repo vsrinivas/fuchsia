@@ -4,18 +4,9 @@
 
 #include <hypervisor/balloon.h>
 
-#include <limits.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <fbl/auto_lock.h>
-#include <hypervisor/vcpu.h>
-#include <hypervisor/virtio.h>
-#include <virtio/balloon.h>
-#include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
 
 static zx_status_t decommit_pages(zx_handle_t vmo, uint64_t addr, uint64_t len) {
     return zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, addr, len, nullptr, 0);

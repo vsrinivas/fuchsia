@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/mutex.h>
 #include <hypervisor/virtio.h>
 #include <virtio/block.h>
@@ -27,7 +25,7 @@ public:
     zx_status_t Init(const char* path);
 
     // Our config space is read-only.
-    zx_status_t WriteConfig(uint64_t port, const IoValue& value) override {
+    zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override {
         return ZX_ERR_NOT_SUPPORTED;
     }
 

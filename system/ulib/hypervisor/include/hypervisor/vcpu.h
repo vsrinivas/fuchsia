@@ -4,11 +4,8 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <hypervisor/guest.h>
 #include <hypervisor/local_apic.h>
-#include <zircon/syscalls/hypervisor.h>
 
 typedef struct zx_port_packet zx_port_packet_t;
 

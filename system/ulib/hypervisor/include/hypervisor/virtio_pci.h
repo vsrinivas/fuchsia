@@ -11,7 +11,6 @@
 class VirtioDevice;
 
 typedef struct virtio_queue virtio_queue_t;
-typedef struct zx_vcpu_io zx_vcpu_io_t;
 
 static const size_t kVirtioPciNumCapabilities = 4;
 
@@ -27,15 +26,15 @@ public:
 
 private:
     // Handle accesses to the general configuration BAR.
-    zx_status_t ConfigBarRead(uint64_t port, IoValue* value);
-    zx_status_t ConfigBarWrite(uint64_t port, const IoValue& value);
+    zx_status_t ConfigBarRead(uint64_t addr, IoValue* value);
+    zx_status_t ConfigBarWrite(uint64_t addr, const IoValue& value);
 
     // Handle accesses to the common configuration region.
-    zx_status_t CommonCfgRead(uint64_t port, IoValue* value);
-    zx_status_t CommonCfgWrite(uint64_t port, const IoValue& value);
+    zx_status_t CommonCfgRead(uint64_t addr, IoValue* value);
+    zx_status_t CommonCfgWrite(uint64_t addr, const IoValue& value);
 
     // Handle writes to the notify BAR.
-    zx_status_t NotifyBarWrite(uint64_t port, const IoValue& value);
+    zx_status_t NotifyBarWrite(uint64_t addr, const IoValue& value);
 
     void SetupCaps();
     void SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
