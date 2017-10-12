@@ -8,8 +8,9 @@
 
 uint64_t _zx_ticks_get(void) {
 #if __aarch64__
+    // read the virtual counter
     uint64_t ticks;
-    __asm__ volatile("mrs %0, pmccntr_el0" : "=r" (ticks));
+    __asm__ volatile("mrs %0, cntvct_el0" : "=r" (ticks));
     return ticks;
 #elif __x86_64__
     uint32_t ticks_low;
