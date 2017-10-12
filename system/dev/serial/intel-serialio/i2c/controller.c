@@ -306,7 +306,7 @@ static zx_status_t intel_serialio_i2c_ioctl(
         if (in_len < sizeof(*args)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        intel_serialio_i2c_set_bus_frequency(device, args->frequency);
+        return intel_serialio_i2c_set_bus_frequency(device, args->frequency);
     }
     default:
         return ZX_ERR_INVALID_ARGS;
