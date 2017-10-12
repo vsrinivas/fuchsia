@@ -3,7 +3,7 @@
         "cpp"
     ],
     "labels": [
-        "//zircon/benchmarks"
+        "//garnet/bin/zircon_benchmarks:benchmarks"
     ],
     "binaries": [
         {
