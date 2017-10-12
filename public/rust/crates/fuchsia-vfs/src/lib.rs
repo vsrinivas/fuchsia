@@ -9,6 +9,7 @@ extern crate fdio;
 extern crate fuchsia_zircon as zircon;
 extern crate fuchsia_zircon_sys as zircon_sys;
 extern crate futures;
+extern crate libc;
 #[macro_use]
 extern crate tokio_core;
 extern crate tokio_fuchsia;
@@ -79,5 +80,7 @@ mod test {
         let e = core.run(rx).unwrap();
 
         assert_eq!(std::io::ErrorKind::Other, e.kind());
+
+        std::mem::drop(m);
     }
 }

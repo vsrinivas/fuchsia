@@ -14,6 +14,7 @@ tokio-fuchsia = { path = "../tokio-fuchsia" }
 futures = "0.1"
 tokio-core = "0.1"
 bytes = "0.4"
+libc = "0.2"
 
 [dev-dependencies]
 tempdir = "0.3"

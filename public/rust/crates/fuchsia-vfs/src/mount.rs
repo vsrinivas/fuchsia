@@ -4,7 +4,6 @@
 
 use zircon;
 use zircon_sys;
-use zircon::AsHandleRef;
 use zircon::HandleBased;
 use fdio;
 
@@ -15,11 +14,7 @@ use std::os::unix::io::IntoRawFd;
 use std::os::unix::io::FromRawFd;
 use std::path::Path;
 use std::os::unix::fs::OpenOptionsExt;
-
-// TODO(raggi): this should be able to come from libc instead.
-const O_DIRECTORY: ::std::os::raw::c_int = 0o0200000;
-const O_NOREMOTE: ::std::os::raw::c_int = 0o0100000000;
-const O_ADMIN: ::std::os::raw::c_int = 0o0200000000;
+use remoteio::{O_ADMIN, O_NOREMOTE, O_DIRECTORY};
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -100,6 +95,7 @@ pub fn mount(path: &Path, chan: zircon::Channel) -> Result<Mount, zircon::Status
 #[cfg(test)]
 mod test {
     use super::*;
+    use zircon::AsHandleRef;
 
     extern crate tempdir;
 

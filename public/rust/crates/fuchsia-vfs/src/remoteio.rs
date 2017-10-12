@@ -4,7 +4,13 @@
 
 use zircon_sys;
 
-use std::os::raw::c_uint;
+use std::os::raw::{c_int, c_uint};
+
+// TODO(raggi): this should be able to come from libc instead.
+pub(crate) const O_DIRECTORY: c_int = 0o0200000;
+pub(crate) const O_NOREMOTE: c_int = 0o0100000000;
+pub(crate) const O_ADMIN: c_int = 0o0200000000;
+pub(crate) const O_PIPELINE: c_int = 0o02000000000;
 
 const ZXRIO_ONE_HANDLE: c_uint = 0x00000100;
 
@@ -45,6 +51,14 @@ pub(crate) const ZXRIO_OBJECT_MINSIZE: usize = 8;
 
 pub(crate) const FDIO_MAX_HANDLES: usize = 3;
 pub(crate) const FDIO_CHUNK_SIZE: usize = 8192;
+
+pub(crate) const FDIO_PROTOCOL_UNDEFINED: u32 = 0;
+pub(crate) const FDIO_PROTOCOL_PIPE: u32 = 1;
+pub(crate) const FDIO_PROTOCOL_REMOTE: u32 = 2;
+pub(crate) const FDIO_PROTOCOL_VMOFILE: u32 = 3;
+pub(crate) const FDIO_PROTOCOL_SOCKET: u32 = 4;
+pub(crate) const FDIO_PROTOCOL_SERVICE: u32 = 5;
+pub(crate) const FDIO_PROTOCOL_SOCKET_CONNECTED: u32 = 6;
 
 pub(crate) const ZXRIO_HDR_SZ: usize = 48;
 pub(crate) const ZXRIO_MSG_SZ: usize = ZXRIO_HDR_SZ + FDIO_CHUNK_SIZE as usize;

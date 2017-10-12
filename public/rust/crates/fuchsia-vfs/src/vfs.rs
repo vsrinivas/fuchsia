@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use libc::PATH_MAX;
+
 use bytes;
 use bytes::BufMut;
 use std::sync::Arc;
@@ -13,6 +15,7 @@ use futures::Future;
 use std;
 use std::io;
 use std::borrow::Borrow;
+use std::os::unix::ffi::OsStrExt;
 
 use remoteio::*;
 
@@ -20,17 +23,10 @@ use remoteio::*;
 /// services. It fundamentally handles filesystem global concerns such as path
 /// walking through mounts, moves and links, watchers, and so on.
 pub trait Vfs {
-    /*
-TODOs:
-  // TODO(raggi): support remote node dance, returning a path too (open):
-  fn open(vn: Vnode, path: Path, flags: usize, mode: usize) -> Result<Vnode, zircon::Status>
-  fn unlink(vn: Vnode, path: Path) -> Result<(), zircon::Status>
-  fn ioctl(vn: Vnode, ...) -> Result<..., zircon::Status>
-
-  fn link()
-  fn rename()
-  fn readdir()
-  */
+    fn open(&self, _vn: &Arc<Vnode>, _path: std::path::PathBuf, _flags: i32, _mode: u32) -> Result<(Arc<Vnode>, std::path::PathBuf), zircon::Status> {
+        // TODO(raggi): ...
+        Err(zircon::Status::ErrNotSupported)
+    }
 
     fn register_connection(&self, c: Connection, handle: &tokio_core::reactor::Handle) {
         handle.spawn(c.map_err(|e| eprintln!("fuchsia-vfs: connection error {:?}", e)))
@@ -40,7 +36,18 @@ TODOs:
 /// Vnode represents a single addressable node in the filesystem (that may be
 /// addressable via more than one path). It may have file, directory, mount or
 /// device semantics.
-pub trait Vnode {}
+pub trait Vnode {
+    fn close(&self) -> zircon::Status {
+        zircon::Status::NoError
+    }
+
+    fn serve(&self, _vfs: Arc<Vfs>, _chan: tokio_fuchsia::Channel, _flags: i32) {
+        // TODO(raggi): ...
+        // TODO(raggi): ...
+        // TODO(raggi): ...
+        // TODO(raggi): ...
+    }
+}
 
 /// Connection represents a single client connection to a Vnode within a Vfs. It
 /// contains applicable IO state such as current position, as well as the channel
@@ -74,12 +81,12 @@ impl Connection {
         Ok(c)
     }
 
-    fn dispatch(&mut self) {
+    fn dispatch(&mut self) -> Result<(), std::io::Error> {
         let len = self.buf.bytes().len();
 
         if len < ZXRIO_HDR_SZ {
             eprintln!("vfs: channel read too short: {} {}", len, ZXRIO_HDR_SZ);
-            return;
+            return Err(zircon::Status::ErrIo.into());
         }
 
         // NOTE(raggi): we're explicitly and deliberately breaching the type and
@@ -96,47 +103,95 @@ impl Connection {
                 self.buf.n_handles(),
                 msg
             );
-            self.reply_status(&self.chan, zircon::Status::ErrInvalidArgs);
-            return;
+            self.reply_status(&self.chan, zircon::Status::ErrInvalidArgs)?;
+
+            return Err(zircon::Status::ErrInvalidArgs.into());
         }
 
         println!("{:?} <- {:?}", self.chan, msg);
 
         match ZXRIO_OP!(msg.op) {
-            // ZXRIO_OPEN => self.open(msg, chan, handle),
+            ZXRIO_OPEN => {
+                let chan = tokio_fuchsia::Channel::from_channel(
+                    // ZXRIO_HC! returns 1 for ZXRIO_OPEN, so n_handles must == 1
+                    zircon::Channel::from(self.buf.take_handle(0).expect("vfs: handle disappeared")),
+                    &self.handle,
+                )?;
+
+                // TODO(raggi): enforce O_ADMIN
+                if msg.datalen < 1 || msg.datalen > PATH_MAX as u32 {
+                    self.reply_status(&chan, zircon::Status::ErrInvalidArgs)?;
+                    return Err(zircon::Status::ErrInvalidArgs.into());
+                }
+
+                let path = std::path::PathBuf::from(std::ffi::OsStr::from_bytes(&msg.data[0..msg.datalen as usize]));
+
+                // TODO(raggi): verify if the protocol mistreatment of args signage is intentionally unchecked here:
+                self.open(chan, path, msg.arg, unsafe { msg.arg2.mode })?;
+            }
             // ZXRIO_STAT => self.stat(msg, chan, handle),
             // ZXRIO_CLOSE => self.close(msg, chan, handle),
-            _ => {
-                // TODO(raggi): remove this special case when open is implemented.
-                if msg.op == ZXRIO_OPEN {
-                    if let Some(h) = self.buf.take_handle(0) {
-                        let chan: tokio_fuchsia::Channel = tokio_fuchsia::Channel::from_channel(
-                            zircon::Channel::from(h),
-                            &self.handle,
-                        ).unwrap();
-
-                        self.reply_status(&chan, zircon::Status::ErrNotSupported);
-                    }
-                } else {
-                    self.reply_status(&self.chan, zircon::Status::ErrNotSupported);
-                }
-            }
+            _ => self.reply_status(&self.chan, zircon::Status::ErrNotSupported)?
         }
+
+        Ok(())
     }
 
-    fn reply_status(&self, chan: &tokio_fuchsia::Channel, status: zircon::Status) {
+    fn open(&self, chan: tokio_fuchsia::Channel, path: std::path::PathBuf, flags: i32, mode: u32) -> Result<(), std::io::Error> {
+        let pipeline = flags & O_PIPELINE != 0;
+        let open_flags = flags & !O_PIPELINE;
+
+        let mut status = zircon::Status::NoError;
+        let mut proto = FDIO_PROTOCOL_REMOTE;
+        let mut handles: Vec<zircon::Handle> = vec![];
+
+        match self.vfs.open(&self.vn, path, open_flags, mode) {
+            Ok((vn, _path)) => {
+                // TODO(raggi): get_handles (maybe call it get_extra?)
+
+                // protocols that return handles on open can't be pipelined.
+                if pipeline && handles.len() > 0 {
+                    vn.close();
+                    return Err(std::io::ErrorKind::InvalidInput.into());
+                }
+
+                if status != zircon::Status::NoError {
+                    return Err(std::io::ErrorKind::InvalidInput.into());
+                }
+
+                if !pipeline {
+                    self.write_zxrio_object(&chan, status, proto, &[], &mut handles).ok();
+                }
+
+                // TODO(raggi): construct connection...
+                vn.serve(Arc::clone(&self.vfs), chan, open_flags);
+                
+                return Ok(());
+            }
+            Err(e) => {
+                proto = 0;
+                status = e;
+                eprintln!("vfs: open error: {:?}", e);
+            }
+        }
+
+        if !pipeline {
+            return self.write_zxrio_object(&chan, status, proto, &[], &mut handles);
+        }
+        Ok(())
+    }
+
+    fn reply_status(&self, chan: &tokio_fuchsia::Channel, status: zircon::Status) -> Result<(), io::Error>  {
         println!("{:?} -> {:?}", &chan, status);
 
-        if let Err(e) = self.write_zxrio_object(chan, status, 0, &[], &mut vec![]) {
-            eprintln!("vfs: unable to write error {:?}", e);
-        }
+        self.write_zxrio_object(chan, status, 0, &[], &mut vec![])
     }
 
     fn write_zxrio_object(
         &self,
         chan: &tokio_fuchsia::Channel,
         status: zircon::Status,
-        typ: u32,
+        proto: u32,
         extra: &[u8],
         handles: &mut Vec<zircon::Handle>,
     ) -> Result<(), io::Error> {
@@ -146,7 +201,7 @@ impl Connection {
 
         let mut buf = bytes::BytesMut::with_capacity(ZXRIO_OBJECT_MINSIZE + extra.len());
         buf.put_i32::<bytes::LittleEndian>(status as i32);
-        buf.put_u32::<bytes::LittleEndian>(typ);
+        buf.put_u32::<bytes::LittleEndian>(proto);
         buf.put_slice(extra);
 
         chan.write(buf.borrow(), handles, 0)
@@ -160,7 +215,8 @@ impl Future for Connection {
     fn poll(&mut self) -> futures::Poll<Self::Item, Self::Error> {
         loop {
             try_nb!(self.chan.recv_from(0, &mut self.buf));
-            self.dispatch();
+            // Note: ignores errors, as they are sent on the protocol
+            let _ = self.dispatch();
             for i in 0..self.buf.n_handles() {
                 if let Some(h) = self.buf.take_handle(i) {
                     std::mem::drop(h);
