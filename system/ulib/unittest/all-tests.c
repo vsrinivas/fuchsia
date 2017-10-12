@@ -77,11 +77,10 @@ static bool unittest_run_all_tests_etc(
  * Runs all registered test cases.
  */
 bool unittest_run_all_tests(int argc, char** argv) {
-    int prev_verbosity_level = -1;
     int i = 1;
     while (i < argc) {
         if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
-            prev_verbosity_level = unittest_set_verbosity_level(argv[i][2] - '0');
+            unittest_set_verbosity_level(argv[i][2] - '0');
         }
         i++;
     }
@@ -96,9 +95,6 @@ bool unittest_run_all_tests(int argc, char** argv) {
     } else {
         test_type = atoi(test_type_str);
     }
-
-    if (prev_verbosity_level >= 0)
-        unittest_set_verbosity_level(prev_verbosity_level);
 
     return unittest_run_all_tests_etc(argv[0], test_type);
 }
