@@ -83,13 +83,17 @@ class FactoryServiceBase {
       }
     }
 
-    // Closes the binding and calls ReleaseFromOwner. This method can only
-    // be called after the first shared_ptr to the product is created.
-    void UnbindAndReleaseFromOwner() {
+    // Closes the binding.
+    void Unbind() {
       if (binding_.is_bound()) {
         binding_.Close();
       }
+    }
 
+    // Closes the binding and calls ReleaseFromOwner. This method can only
+    // be called after the first shared_ptr to the product is created.
+    void UnbindAndReleaseFromOwner() {
+      Unbind();
       ProductBase::ReleaseFromOwner();
     }
 
@@ -158,14 +162,18 @@ class FactoryServiceBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(FactoryServiceBase);
 };
 
-// For use by products when handling fidl requests.
-// Checks the condition, and, if it's false, unbinds, releases from the owner
-// and calls return. Doesn't support stream arguments.
+// For use by products when handling fidl requests. Checks the condition, and,
+// if it's false, unbinds, releases from the owner and calls return. Doesn't
+// support stream arguments.
 // TODO(dalesat): Support stream arguments.
+// The unbind happens synchronously to prevent any pending method calls from
+// happening. The release is deferred so that RCHECK works in a product
+// constructor.
 #define RCHECK(condition)                                             \
   if (!(condition)) {                                                 \
     FXL_LOG(ERROR) << "request precondition failed: " #condition "."; \
+    Unbind();                                                         \
     fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(          \
-        [this]() { UnbindAndReleaseFromOwner(); });                   \
+        [this]() { ReleaseFromOwner(); });                            \
     return;                                                           \
   }
