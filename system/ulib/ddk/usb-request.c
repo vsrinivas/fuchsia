@@ -124,6 +124,40 @@ size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
     return phys_iter_next(iter, out_paddr);
 }
 
+void usb_request_pool_init(usb_request_pool_t* pool) {
+    mtx_init(&pool->lock, mtx_plain);
+    list_initialize(&pool->free_reqs);
+}
+
+void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req) {
+    mtx_lock(&pool->lock);
+
+    list_add_tail(&pool->free_reqs, &req->node);
+
+    mtx_unlock(&pool->lock);
+}
+
+usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length) {
+    usb_request_t* req = NULL;
+    bool found = false;
+
+    mtx_lock(&pool->lock);
+    list_for_every_entry (&pool->free_reqs, req, usb_request_t, node) {
+        if (req->buffer.size == length) {
+            found = true;
+            break;
+        }
+    }
+    if (found) {
+        list_delete(&req->node);
+    }
+    mtx_unlock(&pool->lock);
+
+    return found ? req : NULL;
+}
+
+
+
 // Helper functions for converting a usb request to an iotxn.
 // TODO(jocelyndang): remove once all usb drivers have transitioned to usb requests.
 

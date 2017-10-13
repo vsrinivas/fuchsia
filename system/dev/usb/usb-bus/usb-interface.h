@@ -8,7 +8,6 @@
 #include <zircon/device/usb.h>
 #include <zircon/hw/usb.h>
 #include <sync/completion.h>
-#include <threads.h>
 
 // Represents an interface within a composite device
 typedef struct {
@@ -38,9 +37,8 @@ typedef struct {
     // mutex that protects the callback_* members above
     mtx_t callback_lock;
 
-    // list of requests that can be reused
-    list_node_t free_reqs;
-    mtx_t free_reqs_lock;
+    // pool of requests that can be reused
+    usb_request_pool_t free_reqs;
 
 } usb_interface_t;
 

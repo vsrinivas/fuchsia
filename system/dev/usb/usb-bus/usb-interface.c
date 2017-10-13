@@ -234,9 +234,7 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     usb_request_t* req = NULL;
     bool use_free_list = length == 0;
     if (use_free_list) {
-        mtx_lock(&intf->free_reqs_lock);
-        req = list_remove_head_type(&intf->free_reqs, usb_request_t, node);
-        mtx_unlock(&intf->free_reqs_lock);
+        req = usb_request_pool_get(&intf->free_reqs, length);
     }
 
     if (req == NULL) {
@@ -289,9 +287,7 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     }
 
     if (use_free_list) {
-        mtx_lock(&intf->free_reqs_lock);
-        list_add_tail(&intf->free_reqs, &req->node);
-        mtx_unlock(&intf->free_reqs_lock);
+        usb_request_pool_add(&intf->free_reqs, req);
     } else {
         usb_request_release(req);
     }
@@ -446,8 +442,7 @@ zx_status_t usb_device_add_interface(usb_device_t* device,
     completion_reset(&intf->callback_thread_completion);
     list_initialize(&intf->completed_reqs);
 
-    mtx_init(&intf->free_reqs_lock, mtx_plain);
-    list_initialize(&intf->free_reqs);
+    usb_request_pool_init(&intf->free_reqs);
 
     intf->device = device;
     intf->hci_zxdev = device->hci_zxdev;

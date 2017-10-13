@@ -11,6 +11,8 @@
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
+#include <threads.h>
+
 __BEGIN_CDECLS;
 
 typedef struct usb_request usb_request_t;
@@ -80,6 +82,11 @@ typedef struct usb_request {
     void (*release_cb)(usb_request_t* req);
 } usb_request_t;
 
+typedef struct {
+    list_node_t free_reqs;
+    mtx_t lock;
+} usb_request_pool_t;
+
 // usb_request_alloc() creates a new usb request with payload space of data_size.
 zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address);
 
@@ -126,6 +133,18 @@ void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t ma
 // returns the next physical address and length for the iterator up to size max_length.
 // return value is length, or zero if iteration is done.
 size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr);
+
+// usb_request_pool_init() initializes the given pool. A driver may use
+// a pool for recycling their own usb requests.
+void usb_request_pool_init(usb_request_pool_t* pool);
+
+// usb_request_pool_add() adds the request to the pool.
+void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req);
+
+// returns a request from the pool that has a buffer of the given length,
+// or null if no such request exists.
+// The request is not re-initialized in any way and should be set accordingly by the user.
+usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length);
 
 // usb_request_to_iotxn() converts a USB request to an iotxn.
 // The original USB request is not freed.

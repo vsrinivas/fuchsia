@@ -46,9 +46,37 @@ static bool test_alloc_vmo(void) {
     END_TEST;
 }
 
+static bool test_pool(void) {
+    BEGIN_TEST;
+    usb_request_t* req;
+    ASSERT_EQ(usb_request_alloc(&req, 8u, 1), ZX_OK, "");
+    ASSERT_NONNULL(req, "");
+    ASSERT_TRUE(io_buffer_is_valid(&req->buffer), "");
+
+    usb_request_t* zero_req;
+    ASSERT_EQ(usb_request_alloc(&zero_req, 0, 1), ZX_OK, "");
+    ASSERT_NONNULL(zero_req, "");
+
+    usb_request_pool_t pool;
+    usb_request_pool_init(&pool);
+
+    usb_request_pool_add(&pool, req);
+    usb_request_pool_add(&pool, zero_req);
+
+    ASSERT_EQ(usb_request_pool_get(&pool, 0), zero_req, "");
+    ASSERT_EQ(usb_request_pool_get(&pool, 0), NULL, "");
+    ASSERT_EQ(usb_request_pool_get(&pool, 8u), req, "");
+    ASSERT_EQ(usb_request_pool_get(&pool, 8u), NULL, "");
+
+    usb_request_release(req);
+    usb_request_release(zero_req);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(usb_request_tests)
 RUN_TEST(test_alloc_simple)
 RUN_TEST(test_alloc_vmo)
+RUN_TEST(test_pool)
 END_TEST_CASE(usb_request_tests)
 
 struct test_case_element* test_case_ddk_usb_request = TEST_CASE_ELEMENT(usb_request_tests);
