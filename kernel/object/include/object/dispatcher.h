@@ -139,6 +139,7 @@ protected:
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
     void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
+    void UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) TA_REQ(lock_);
 
     zx_signals_t GetSignalsState() const {
         ZX_DEBUG_ASSERT(has_state_tracker());
@@ -149,6 +150,12 @@ protected:
     fbl::Mutex lock_;
 
 private:
+    // The common implementation of UpdateState and UpdateStateLocked.
+    template <typename Mutex>
+    void UpdateStateHelper(zx_signals_t clear_mask,
+                           zx_signals_t set_mask,
+                           Mutex* mutex);
+
     // Returns flag kHandled if one of the observers have been signaled.
     StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) TA_REQ(lock_);
 

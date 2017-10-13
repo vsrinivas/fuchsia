@@ -145,15 +145,19 @@ bool Dispatcher::CancelByKey(Handle* handle, const void* port, uint64_t key) {
     return flags & StateObserver::kHandled;
 }
 
-void Dispatcher::UpdateState(zx_signals_t clear_mask,
-                             zx_signals_t set_mask) {
-    ZX_DEBUG_ASSERT(has_state_tracker());
-
+// Since this conditionally takes the dispatcher's |lock_|, based on
+// the type of Mutex (either fbl::Mutex or fbl::NullLock), the thread
+// safety analysis is unable to prove that the accesses to |signals_|
+// are always protected.
+template <typename Mutex>
+void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
+                                   zx_signals_t set_mask,
+                                   Mutex* mutex) TA_NO_THREAD_SAFETY_ANALYSIS {
     StateObserver::Flags flags;
-    ObserverList obs_to_remove;
+    Dispatcher::ObserverList obs_to_remove;
 
     {
-        AutoLock lock(&lock_);
+        AutoLock lock(mutex);
         auto previous_signals = signals_;
         signals_ &= ~clear_mask;
         signals_ |= set_mask;
@@ -170,6 +174,21 @@ void Dispatcher::UpdateState(zx_signals_t clear_mask,
 
     if (flags & StateObserver::kWokeThreads)
         thread_reschedule();
+}
+
+void Dispatcher::UpdateState(zx_signals_t clear_mask,
+                             zx_signals_t set_mask) {
+    ZX_DEBUG_ASSERT(has_state_tracker());
+
+    UpdateStateHelper(clear_mask, set_mask, &lock_);
+}
+
+void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
+                                   zx_signals_t set_mask) {
+    ZX_DEBUG_ASSERT(has_state_tracker());
+
+    fbl::NullLock mutex;
+    UpdateStateHelper(clear_mask, set_mask, &mutex);
 }
 
 zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
