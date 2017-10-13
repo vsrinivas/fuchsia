@@ -161,8 +161,7 @@ impl device_add_args_t {
             prop_count: 0,
             proto_id: 0,
             proto_ops: std::ptr::null_mut(),
-            busdev_args: std::ptr::null_mut(),
-            rsrc: 0,
+            proxy_args: std::ptr::null_mut(),
             flags: DEVICE_ADD_NON_BINDABLE,
         }
     }
