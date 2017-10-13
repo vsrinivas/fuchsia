@@ -72,9 +72,9 @@ made will be stopped and freed before this call returns.
 ### fuchsia_audio_manager_get_output_devices
 ```
 int fuchsia_audio_manager_get_output_devices(
-    fuchsia_audio_manager* audio_manager,
+    fuchsia_audio_manager*            audio_manager,
     fuchsia_audio_device_description* device_desc_buffer,
-    int num_device_descriptions
+    int                               num_device_descriptions
   );
 ```
 ##### Inputs
@@ -128,8 +128,8 @@ function call's return value would be 1.
 ### fuchsia_audio_manager_get_output_device_default_parameters
 ```
 int fuchsia_audio_manager_get_output_device_default_parameters(
-    fuchsia_audio_manager* audio_manager,
-    char* device_id,
+    fuchsia_audio_manager*    audio_manager,
+    char*                     device_id,
     fuchsia_audio_parameters* params_out
   );
 ```
@@ -137,8 +137,8 @@ int fuchsia_audio_manager_get_output_device_default_parameters(
 - **audio_manager**: pointer to an opaque *fuchsia_audio_manager* struct
 obtained from the system via a *fuchsia_audio_manager_create()* call.
 - **device_id**: string representing the unique device identifier, received
-from the system as part of that device's fuchsia_audio_device_description. If
-NULL or empty then parameters for the default output device are returned.
+from the system as part of that device's fuchsia_audio_device_description.  If
+NULL or empty, parameters for the default output device are returned.
 - **params_out**: pointer to memory allocated by the client, where system
 should copy default parameters for the specified device, via a
 *fuchsia_audio_parameters* struct.
@@ -167,9 +167,9 @@ complete list of devices).
 ### fuchsia_audio_manager_create_output_stream
 ```
 int fuchsia_audio_manager_create_output_stream(
-    fuchsia_audio_manager* audio_manager,
-    char* device_id,
-    fuchsia_audio_parameters* stream_params,
+    fuchsia_audio_manager*        audio_manager,
+    char*                         device_id,
+    fuchsia_audio_parameters*     stream_params,
     fuchsia_audio_output_stream** stream_out
   );
 ```
@@ -177,8 +177,8 @@ int fuchsia_audio_manager_create_output_stream(
 - **audio_manager**: pointer to an opaque *fuchsia_audio_manager* struct
 obtained from the system via a *fuchsia_audio_manager_create()* call.
 - **device_id**: string representing the unique device identifier, received
-from the system as part of that device's fuchsia_audio_device_description.
-If this parameter is NULL or empty then the stream should be created for the
+from the system as part of that device's fuchsia_audio_device_description. If
+this parameter is NULL or empty then the stream should be created for the
 default output device.
 - **stream_params**: pointer to an *fuchsia_audio_parameters* struct,
 containing the intended parameters/format for the output stream.
@@ -212,7 +212,7 @@ client can specify a different *num_samples* value in the
 ### fuchsia_audio_output_stream_free
 ```
 int fuchsia_audio_output_stream_free(
-    fuchsia_audio_output_stream*stream
+    fuchsia_audio_output_stream* stream
   );
 ```
 ##### Inputs
@@ -230,8 +230,8 @@ but not yet played, and will do so before the call returns.
 ### fuchsia_audio_output_stream_get_min_delay
 ```
 int fuchsia_audio_output_stream_get_min_delay(
-    fuchsia_audio_output_stream*stream,
-    zx_duration_t*delay_nsec_out
+    fuchsia_audio_output_stream* stream,
+    zx_duration_t*               delay_nsec_out
   );
 ```
 ##### Inputs
@@ -259,9 +259,9 @@ Note that *delay_nsec_out* is specified in the same units as the system clock
 ```
 int fuchsia_audio_output_stream_write(
     fuchsia_audio_output_stream* stream,
-    float* sample_buffer,
-    int num_samples,
-    zx_time_t pres_time
+    float*                       sample_buffer,
+    int                          num_samples,
+    zx_time_t                    pres_time
   );
 ```
 ##### Inputs

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
-
 #include <zircon/syscalls.h>
+#include <iostream>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -39,7 +39,9 @@ namespace media {
 namespace client_test {
 
 constexpr char UNKNOWN_DEVICE_STR[] = "unknown_device_id";
+constexpr char EMPTY_DEVICE_STR[] = "";
 constexpr char* UNKNOWN_DEVICE_ID = (char* const)UNKNOWN_DEVICE_STR;
+constexpr char* EMPTY_DEVICE_ID = (char* const)EMPTY_DEVICE_STR;
 constexpr int WRITE_BUFFER_NUM_SAMPLES = 16 * 3 * 5 * 7;  // Mods w/num_channels
 
 //
@@ -48,7 +50,7 @@ constexpr int WRITE_BUFFER_NUM_SAMPLES = 16 * 3 * 5 * 7;  // Mods w/num_channels
 void populate_audio_buffer(std::vector<float>* audio_buffer) {
   int buffer_size = audio_buffer->size();
   for (int idx = 0; idx < buffer_size; ++idx) {
-    (*audio_buffer)[idx] = static_cast<float>(idx) / 1024;
+    (*audio_buffer)[idx] = 0.0f;
   }
 }
 
@@ -130,7 +132,7 @@ TEST(media_client, audio_device_descs) {
   fuchsia_audio_manager_free(manager);
 }
 
-TEST(media_client, audio_device_default_params) {
+TEST(media_client, audio_device_params) {
   fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
   ASSERT_TRUE(manager);
 
@@ -157,7 +159,7 @@ TEST(media_client, audio_device_default_params) {
   fuchsia_audio_manager_free(manager);
 }
 
-TEST(media_client, audio_device_default_params_errors) {
+TEST(media_client, audio_device_params_errors) {
   fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
   ASSERT_TRUE(manager);
 
@@ -178,9 +180,12 @@ TEST(media_client, audio_device_default_params_errors) {
 }
 
 // Verify that nullptr can be passed as device_id.
-TEST(media_client, default_audio_device) {
+TEST(media_client, audio_device_default) {
   fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
   ASSERT_TRUE(manager);
+
+  int num_devices = fuchsia_audio_manager_get_output_devices(manager, NULL, 0);
+  ASSERT_GE(num_devices, 1) << "** No audio devices found!";
 
   fuchsia_audio_parameters params;
   ::memset(&params, 0, sizeof(params));
@@ -190,11 +195,12 @@ TEST(media_client, default_audio_device) {
   ASSERT_NE(0, params.num_channels);
   ASSERT_NE(0, params.buffer_size);
 
-  fuchsia_audio_output_stream* stream;
-  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
-                       manager, nullptr, &params, &stream));
-  ASSERT_TRUE(stream);
-  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
+  ::memset(&params, 0, sizeof(params));
+  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+                       manager, EMPTY_DEVICE_ID, &params));
+  ASSERT_NE(0, params.sample_rate);
+  ASSERT_NE(0, params.num_channels);
+  ASSERT_NE(0, params.buffer_size);
 
   fuchsia_audio_manager_free(manager);
 }
@@ -440,12 +446,7 @@ TEST(media_client, audio_stream_write_time_errors) {
   int buff_size = WRITE_BUFFER_NUM_SAMPLES;
   std::vector<float> audio_buffer(buff_size);
   populate_audio_buffer(&audio_buffer);
-
-  // Write with no pres_time for FIRST buffer
-  zx_time_t pres_time = FUCHSIA_AUDIO_NO_TIMESTAMP;
-  ASSERT_EQ(ZX_ERR_BAD_STATE,
-            fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
-                                              buff_size, pres_time));
+  zx_time_t pres_time;
 
   // Write with zero presentation time
   pres_time = 0;

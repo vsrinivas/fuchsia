@@ -7,13 +7,11 @@ import("//packages/package.gni")
 
 shared_library("c") {
   sources = [
-    "audio.cc",
     "audio.h",
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//garnet/lib/media",
   ]
 
   output_name = "media_client"
@@ -23,8 +21,9 @@ test("tests") {
   output_name = "media_client_tests"
 
   sources = [
-    "test/audio_wrapper.c",
+    "audio.h",
     "test/audio_test.cc",
+    "test/audio_wrapper.c",
   ]
 
   deps = [
