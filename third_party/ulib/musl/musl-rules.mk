@@ -447,7 +447,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/ffs.c \
     $(LOCAL_DIR)/src/misc/ffsl.c \
     $(LOCAL_DIR)/src/misc/ffsll.c \
-    $(LOCAL_DIR)/src/misc/forkpty.c \
     $(LOCAL_DIR)/src/misc/get_current_dir_name.c \
     $(LOCAL_DIR)/src/misc/getauxval.c \
     $(LOCAL_DIR)/src/misc/getdomainname.c \

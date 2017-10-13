@@ -8,7 +8,6 @@ extern "C" {
 #include <termios.h>
 
 int openpty(int*, int*, char*, const struct termios*, const struct winsize*);
-int forkpty(int*, char*, const struct termios*, const struct winsize*);
 
 #ifdef __cplusplus
 }
