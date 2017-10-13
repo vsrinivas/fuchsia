@@ -4,6 +4,7 @@
 
 group("lib") {
   public_deps = [
+    "//garnet/drivers/bluetooth/lib/att",
     "//garnet/drivers/bluetooth/lib/common",
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
