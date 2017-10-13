@@ -55,11 +55,19 @@ zx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_m
 
     // Initialize our VMAR with the provided VMO, mapped at address 0.
     fbl::RefPtr<VmMapping> mapping;
-    zx_status_t result = gpas->paspace_->RootVmar()->CreateVmMapping(
+    zx_status_t status = gpas->paspace_->RootVmar()->CreateVmMapping(
         0 /* mapping_offset */, guest_phys_mem->size(), /* align_pow2*/ 0, VMAR_FLAG_SPECIFIC,
         guest_phys_mem, /* vmo_offset */ 0, kMmuFlags, "guest_phys_mem_vmo", &mapping);
-    if (result != ZX_OK)
-        return result;
+    if (status != ZX_OK)
+        return status;
+
+#if ARCH_ARM64
+    // TODO(abdulla): Remove this temporary hack once ARM page-fault handling
+    // has been written.
+    status = mapping->MapRange(0, guest_phys_mem->size(), true);
+    if (status != ZX_OK)
+        return status;
+#endif
 
     *_gpas = fbl::move(gpas);
     return ZX_OK;
@@ -79,28 +87,28 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
 #if ARCH_X86_64
 zx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr) {
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t result = VmObjectPhysical::Create(host_paddr, PAGE_SIZE, &vmo);
-    if (result != ZX_OK)
-        return result;
+    zx_status_t status = VmObjectPhysical::Create(host_paddr, PAGE_SIZE, &vmo);
+    if (status != ZX_OK)
+        return status;
 
-    result = vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_CACHED);
-    if (result != ZX_OK)
-        return result;
+    status = vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_CACHED);
+    if (status != ZX_OK)
+        return status;
 
     // The root VMAR will maintain a reference to the VmMapping internally so
     // we don't need to maintain a long-lived reference to the mapping here.
     fbl::RefPtr<VmMapping> mapping;
-    result = paspace_->RootVmar()->CreateVmMapping(guest_paddr, vmo->size(), /* align_pow2*/ 0,
+    status = paspace_->RootVmar()->CreateVmMapping(guest_paddr, vmo->size(), /* align_pow2*/ 0,
                                                    VMAR_FLAG_SPECIFIC, vmo, /* vmo_offset */ 0,
                                                    kApicMmuFlags, "guest_apic_vmo", &mapping);
-    if (result != ZX_OK)
-        return result;
+    if (status != ZX_OK)
+        return status;
 
     // Write mapping to page table.
-    result = mapping->MapRange(0, vmo->size(), true);
-    if (result != ZX_OK) {
+    status = mapping->MapRange(0, vmo->size(), true);
+    if (status != ZX_OK) {
         mapping->Destroy();
-        return result;
+        return status;
     }
     return ZX_OK;
 }
