@@ -7,7 +7,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
@@ -45,7 +44,7 @@ typedef struct {
     uint8_t bulk_out_addr;
 
     // interrupt in request
-    usb_request_t* interrupt_req;
+    iotxn_t* interrupt_req;
     completion_t completion;
 
     // pool of free USB bulk requests
@@ -54,10 +53,10 @@ typedef struct {
 
     // Locks the tx_in_flight and pending_tx list.
     mtx_t tx_lock;
-    // Whether a request has been queued to the USB device.
+    // Whether an iotxn has been queued to the USB device.
     uint8_t tx_in_flight;
-    // List of requests that have pending data. Used to buffer data if a USB transaction is in flight.
-    // Additional data must be appended to the tail of the list, or if that's full, a request from
+    // List of iotxns that have pending data. Used to buffer data if a USB transaction is in flight.
+    // Additional data must be appended to the tail of the list, or if that's full, an iotxn from
     // free_write_reqs must be added to the list.
     list_node_t pending_tx;
 
@@ -208,22 +207,18 @@ static zx_status_t ax88179_configure_medium_mode(ax88179_t* eth) {
     return status;
 }
 
-static zx_status_t ax88179_recv(ax88179_t* eth, usb_request_t* request) {
-    dprintf(SPEW, "request len %" PRIu64"\n", request->response.actual);
+static zx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
+    dprintf(SPEW, "request len %" PRIu64"\n", request->actual);
 
-    if (request->response.actual < 4) {
+    if (request->actual < 4) {
         dprintf(ERROR, "ax88179_recv short packet\n");
         return ZX_ERR_INTERNAL;
     }
 
-    uint8_t* read_data;
-    zx_status_t status = usb_request_mmap(request, (void*)&read_data);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_mmap failed: %d\n", status);
-        return status;
-    }
+    uint8_t* read_data = NULL;
+    iotxn_mmap(request, (void*)&read_data);
 
-    ptrdiff_t rxhdr_off = request->response.actual - sizeof(ax88179_rx_hdr_t);
+    ptrdiff_t rxhdr_off = request->actual - sizeof(ax88179_rx_hdr_t);
     ax88179_rx_hdr_t* rxhdr = (ax88179_rx_hdr_t*)(read_data + rxhdr_off);
     dprintf(SPEW, "rxhdr offset %u, num %u\n", rxhdr->pkt_hdr_off, rxhdr->num_pkts);
     if (rxhdr->num_pkts < 1 || rxhdr->pkt_hdr_off >= rxhdr_off) {
@@ -285,71 +280,71 @@ static zx_status_t ax88179_recv(ax88179_t* eth, usb_request_t* request) {
     return ZX_OK;
 }
 
-static void ax88179_read_complete(usb_request_t* request, void* cookie) {
+static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
+        iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if (request->response.status == ZX_ERR_IO_REFUSED) {
+    if (request->status == ZX_ERR_IO_REFUSED) {
         dprintf(TRACE, "ax88179_read_complete usb_reset_endpoint\n");
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
-    } else if ((request->response.status == ZX_OK) && eth->ifc) {
+    } else if ((request->status == ZX_OK) && eth->ifc) {
         ax88179_recv(eth, request);
     }
 
     if (eth->online) {
-        usb_request_queue(&eth->usb, request);
+        iotxn_queue(eth->usb_device, request);
     } else {
         list_add_head(&eth->free_read_reqs, &request->node);
     }
     mtx_unlock(&eth->mutex);
 }
 
-static void ax88179_write_complete(usb_request_t* request, void* cookie) {
+static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     dprintf(DEBUG1, "ax88179: write complete\n");
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-        usb_request_release(request);
+    if (request->status == ZX_ERR_IO_NOT_PRESENT) {
+        iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->tx_lock);
     ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     list_add_tail(&eth->free_write_reqs, &request->node);
-    if (request->response.status == ZX_ERR_IO_REFUSED) {
+    if (request->status == ZX_ERR_IO_REFUSED) {
         dprintf(TRACE, "ax88179_write_complete usb_reset_endpoint\n");
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
 
-    usb_request_t* next = list_remove_head_type(&eth->pending_tx, usb_request_t, node);
+    iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
     if (next == NULL) {
         eth->tx_in_flight--;
-        dprintf(DEBUG1, "ax88179: no pending write reqs, %u outstanding\n", eth->tx_in_flight);
+        dprintf(DEBUG1, "ax88179: no pending write txns, %u outstanding\n", eth->tx_in_flight);
     } else {
-        dprintf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
-                 next, next->header.length, eth->tx_in_flight);
-        usb_request_queue(&eth->usb, next);
+        dprintf(DEBUG1, "ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
+                 next, next->length, eth->tx_in_flight);
+        iotxn_queue(eth->usb_device, next);
     }
     ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
 }
 
-static void ax88179_interrupt_complete(usb_request_t* request, void* cookie) {
+static void ax88179_interrupt_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
     completion_signal(&eth->completion);
 }
 
-static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
+static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
     mtx_lock(&eth->mutex);
-    if (request->response.status == ZX_OK && request->response.actual == sizeof(eth->status)) {
+    if (request->status == ZX_OK && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
-        usb_request_copyfrom(request, status, sizeof(status), 0);
+        iotxn_copyfrom(request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
             const uint8_t* b = status;
             dprintf(TRACE, "ax88179 status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
@@ -362,11 +357,11 @@ static void ax88179_handle_interrupt(ax88179_t* eth, usb_request_t* request) {
             if (online && !was_online) {
                 ax88179_configure_medium_mode(eth);
                 // Now that we are online, queue all our read requests
-                usb_request_t* req;
-                usb_request_t* prev;
-                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, usb_request_t, node) {
+                iotxn_t* req;
+                iotxn_t* prev;
+                list_for_every_entry_safe (&eth->free_read_reqs, req, prev, iotxn_t, node) {
                     list_delete(&req->node);
-                    usb_request_queue(&eth->usb, req);
+                    iotxn_queue(eth->usb_device, req);
                 }
                 dprintf(TRACE, "ax88179 now online\n");
                 if (eth->ifc) {
@@ -393,54 +388,54 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
 
     mtx_lock(&eth->tx_lock);
     ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
-    // 1. Find the request we will be writing into.
-    //   a) If pending_tx is empty, grab a request from free_write_reqs.
+    // 1. Find the iotxn we will be writing into.
+    //   a) If pending_tx is empty, grab an iotxn from free_write_reqs.
     //   b) Else take the tail of pending_tx.
-    // 2. If the alignment + sizeof(hdr) + length > USB_BUF_SIZE, grab a request from free_write_reqs
+    // 2. If the alignment + sizeof(hdr) + length > USB_BUF_SIZE, grab an iotxn from free_write_reqs
     //    and add it to the tail of pending_tx.
-    // 3. Write to the next 32-byte aligned offset in the request.
+    // 3. Write to the next 32-byte aligned offset in the iotxn.
     // 4. If ETHMAC_TX_OPT_MORE, return.
     // 5. If tx_in_flight, return.
     // 6. Otherwise, queue the head of pending_tx and set tx_in_flight.
 
-    usb_request_t* req = NULL;
+    iotxn_t* txn = NULL;
     if (list_is_empty(&eth->pending_tx)) {
-        dprintf(DEBUG1, "ax88179: no pending reqs, getting free write req\n");
-        req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
-        if (req == NULL) {
-            dprintf(DEBUG1, "ax88179: no free write reqs!\n");
+        dprintf(DEBUG1, "ax88179: no pending txns, getting free write req\n");
+        txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
+        if (txn == NULL) {
+            dprintf(DEBUG1, "ax88179: no free write txns!\n");
             mtx_unlock(&eth->tx_lock);
             return;
         }
-        req->header.length = 0;
-        list_add_tail(&eth->pending_tx, &req->node);
+        txn->length = 0;
+        list_add_tail(&eth->pending_tx, &txn->node);
     } else {
-        req = list_peek_tail_type(&eth->pending_tx, usb_request_t, node);
-        dprintf(DEBUG1, "ax88179: got tail req (%p)\n", req);
+        txn = list_peek_tail_type(&eth->pending_tx, iotxn_t, node);
+        dprintf(DEBUG1, "ax88179: got tail iotxn (%p)\n", txn);
     }
 
-    zx_off_t req_len = ALIGN(req->header.length, 4);
-    dprintf(DEBUG1, "ax88179: current req len=%lu, next packet len=%zu\n", req_len, length);
-    if (length > USB_BUF_SIZE - sizeof(ax88179_tx_hdr_t) - req_len) {
+    zx_off_t txn_len = ALIGN(txn->length, 4);
+    dprintf(DEBUG1, "ax88179: current iotxn len=%lu, next packet len=%zu\n", txn_len, length);
+    if (length > USB_BUF_SIZE - sizeof(ax88179_tx_hdr_t) - txn_len) {
         dprintf(DEBUG1, "ax88179: getting new write req\n");
-        req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
-        if (req == NULL) {
-            dprintf(DEBUG1, "ax88179: no free write reqs!\n");
+        txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
+        if (txn == NULL) {
+            dprintf(DEBUG1, "ax88179: no free write txns!\n");
             mtx_unlock(&eth->tx_lock);
             return;
         }
-        req->header.length = req_len = 0;
-        list_add_tail(&eth->pending_tx, &req->node);
+        txn->length = txn_len = 0;
+        list_add_tail(&eth->pending_tx, &txn->node);
     }
-    dprintf(DEBUG1, "ax88179: req=%p\n", req);
+    dprintf(DEBUG1, "ax88179: txn=%p\n", txn);
 
     ax88179_tx_hdr_t hdr = {
         .tx_len = htole16(length),
     };
 
-    usb_request_copyto(req, &hdr, sizeof(hdr), req_len);
-    usb_request_copyto(req, data, length, req_len + sizeof(hdr));
-    req->header.length = req_len + sizeof(hdr) + length;
+    iotxn_copyto(txn, &hdr, sizeof(hdr), txn_len);
+    iotxn_copyto(txn, data, length, txn_len + sizeof(hdr));
+    txn->length = txn_len + sizeof(hdr) + length;
 
     if (options & ETHMAC_TX_OPT_MORE) {
         dprintf(DEBUG1, "ax88179: waiting for more data, %u outstanding\n", eth->tx_in_flight);
@@ -452,10 +447,10 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
         mtx_unlock(&eth->tx_lock);
         return;
     }
-    req = list_remove_head_type(&eth->pending_tx, usb_request_t, node);
-    dprintf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
-             req, req->header.length, eth->tx_in_flight);
-    usb_request_queue(&eth->usb, req);
+    txn = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
+    dprintf(DEBUG1, "ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
+             txn, txn->length, eth->tx_in_flight);
+    iotxn_queue(eth->usb_device, txn);
     eth->tx_in_flight++;
     ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
@@ -467,17 +462,17 @@ static void ax88179_unbind(void* ctx) {
 }
 
 static void ax88179_free(ax88179_t* eth) {
-    usb_request_t* req;
-    while ((req = list_remove_head_type(&eth->free_read_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+    iotxn_t* txn;
+    while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
+        iotxn_release(txn);
     }
-    while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+    while ((txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node)) != NULL) {
+        iotxn_release(txn);
     }
-    while ((req = list_remove_head_type(&eth->pending_tx, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
+    while ((txn = list_remove_head_type(&eth->pending_tx, iotxn_t, node)) != NULL) {
+        iotxn_release(txn);
     }
-    usb_request_release(eth->interrupt_req);
+    iotxn_release(eth->interrupt_req);
 
     free(eth);
 }
@@ -700,16 +695,16 @@ static int ax88179_thread(void* arg) {
     }
 
     uint64_t count = 0;
-    usb_request_t* req = eth->interrupt_req;
+    iotxn_t* txn = eth->interrupt_req;
     while (true) {
         completion_reset(&eth->completion);
-        usb_request_queue(&eth->usb, req);
+        iotxn_queue(eth->usb_device, txn);
         completion_wait(&eth->completion, ZX_TIME_INFINITE);
-        if (req->response.status != ZX_OK) {
-            return req->response.status;
+        if (txn->status != ZX_OK) {
+            return txn->status;
         }
         count++;
-        ax88179_handle_interrupt(eth, req);
+        ax88179_handle_interrupt(eth, txn);
 #if AX88179_DEBUG_VERBOSE
         if (count % 32 == 0) {
             ax88179_dump_regs(eth);
@@ -787,30 +782,33 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
-        usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_in_addr);
-        if (status != ZX_OK) {
+        iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
+        if (!req) {
+            status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
+        req->length = USB_BUF_SIZE;
         req->complete_cb = ax88179_read_complete;
         req->cookie = eth;
         list_add_head(&eth->free_read_reqs, &req->node);
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
-        usb_request_t* req;
-        status = usb_request_alloc(&req, USB_BUF_SIZE, bulk_out_addr);
-        if (status != ZX_OK) {
+        iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
+        if (!req) {
+            status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
+        req->length = USB_BUF_SIZE;
         req->complete_cb = ax88179_write_complete;
         req->cookie = eth;
         list_add_head(&eth->free_write_reqs, &req->node);
     }
-    usb_request_t* int_req;
-    status = usb_request_alloc(&int_req, INTR_REQ_SIZE, intr_addr);
-    if (status != ZX_OK) {
+    iotxn_t* int_req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
+    if (!int_req) {
+        status = ZX_ERR_NO_MEMORY;
         goto fail;
     }
+    int_req->length = INTR_REQ_SIZE;
     int_req->complete_cb = ax88179_interrupt_complete;
     int_req->cookie = eth;
     eth->interrupt_req = int_req;
