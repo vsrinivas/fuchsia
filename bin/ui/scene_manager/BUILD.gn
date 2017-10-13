@@ -138,6 +138,8 @@ source_set("common") {
     "util/print_op.cc",
     "util/print_op.h",
     "util/unwrap.h",
+    "util/vulkan_utils.cc",
+    "util/vulkan_utils.h",
     "util/wrap.h",
   ]
 

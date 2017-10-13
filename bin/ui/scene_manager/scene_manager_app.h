@@ -4,19 +4,20 @@
 
 #pragma once
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/application_environment.fidl.h"
-#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include <vulkan/vulkan.hpp>
+
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/scene_manager_impl.h"
 #include "garnet/examples/escher/common/demo.h"
 #include "garnet/examples/escher/common/demo_harness_fuchsia.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/command_line.h"
+#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 
 namespace scene_manager {
 
-// TODO(MZ-142): SceneManagerApp should not rely on escher::DemoHarness.
 class SceneManagerApp {
  public:
   class Params {
@@ -24,17 +25,22 @@ class SceneManagerApp {
     bool Setup(const fxl::CommandLine& command_line) { return true; }
   };
 
-  SceneManagerApp(app::ApplicationContext* app_context,
-                  Params* params,
+  // Takes ownership of |surface|.
+  SceneManagerApp(Params* params,
                   DisplayManager* display_manager,
-                  std::unique_ptr<DemoHarness> harness);
+                  escher::VulkanInstancePtr vulkan_instance,
+                  escher::VulkanDeviceQueuesPtr vulkan_device,
+                  vk::SurfaceKHR surface);
   ~SceneManagerApp();
 
  private:
-  app::ApplicationContext* const application_context_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
 
-  std::unique_ptr<DemoHarness> demo_harness_;
+  escher::VulkanInstancePtr vulkan_instance_;
+  escher::VulkanDeviceQueuesPtr vulkan_device_queues_;
+  vk::SurfaceKHR surface_;
   escher::Escher escher_;
+
   std::unique_ptr<SceneManagerImpl> scene_manager_;
 
   fidl::BindingSet<scenic::SceneManager> bindings_;

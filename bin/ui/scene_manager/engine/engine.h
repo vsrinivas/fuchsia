@@ -12,7 +12,6 @@
 #include "lib/escher/renderer/simple_image_factory.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
-#include "garnet/examples/escher/common/demo_harness.h"
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"
@@ -37,15 +36,12 @@ class SessionHandler;
 // which belong to different engines to communicate with one another.
 class Engine : private FrameSchedulerDelegate {
  public:
-  Engine(DisplayManager* display_manager,
-         escher::Escher* escher,
-         std::unique_ptr<escher::VulkanSwapchain> swapchain);
+  Engine(DisplayManager* display_manager, escher::Escher* escher);
 
   ~Engine() override;
 
   DisplayManager* display_manager() const { return display_manager_; }
   escher::Escher* escher() const { return escher_; }
-  escher::VulkanSwapchain GetVulkanSwapchain() const;
 
   vk::Device vk_device() {
     return escher_ ? escher_->vulkan_context().device : vk::Device();
@@ -147,7 +143,6 @@ class Engine : private FrameSchedulerDelegate {
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
-  std::unique_ptr<escher::VulkanSwapchain> swapchain_;
   std::set<Compositor*> compositors_;
 
   // Map of all the sessions.

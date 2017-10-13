@@ -6,6 +6,9 @@
 
 #include "garnet/bin/ui/scene_manager/engine/swapchain.h"
 
+#include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/escher/vk/vulkan_swapchain.h"
 
 namespace scene_manager {
@@ -19,9 +22,12 @@ class DisplaySwapchain : public Swapchain {
  public:
   DisplaySwapchain(Display* display,
                    EventTimestamper* timestamper,
-                   escher::Escher* escher,
-                   escher::VulkanSwapchain swapchain);
+                   escher::Escher* escher);
   ~DisplaySwapchain() override;
+
+  void InitializeVulkanSwapchain(Display* display,
+                                 escher::VulkanDeviceQueues* device_queues,
+                                 escher::ResourceRecycler* recycler);
 
   // |Swapchain|
   bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
@@ -31,6 +37,7 @@ class DisplaySwapchain : public Swapchain {
   Display* const display_;
   EventTimestamper* const event_timestamper_;
   escher::VulkanSwapchain swapchain_;
+  uint32_t swapchain_image_count_ = 0;
   vk::Device device_;
   vk::Queue queue_;
 

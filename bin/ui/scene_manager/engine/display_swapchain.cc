@@ -11,19 +11,29 @@
 #include "garnet/bin/ui/scene_manager/util/escher_utils.h"
 
 #include "lib/escher/escher.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace scene_manager {
 
+namespace {
+
+#define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
+
+const uint32_t kDesiredSwapchainImageCount = 2;
+
+}  // namespace
+
 DisplaySwapchain::DisplaySwapchain(Display* display,
                                    EventTimestamper* timestamper,
-                                   escher::Escher* escher,
-                                   escher::VulkanSwapchain swapchain)
+                                   escher::Escher* escher)
     : display_(display),
       event_timestamper_(timestamper),
-      swapchain_(std::move(swapchain)),
       device_(escher->vk_device()),
       queue_(escher->device()->vk_main_queue()) {
   display_->Claim();
+
+  InitializeVulkanSwapchain(display_, escher->device(),
+                            escher->resource_recycler());
 
   image_available_semaphores_.reserve(swapchain_.images.size());
   render_finished_semaphores_.reserve(swapchain_.images.size());
@@ -42,11 +52,171 @@ DisplaySwapchain::DisplaySwapchain(Display* display,
   }
 }
 
-// TODO(MZ-142): We should manage the lifetime of the swapchain object, and
-// destroy it here.  However, we currently obtain the swapchain from the
-// escher::DemoHarness that eventually destroys it.
 DisplaySwapchain::~DisplaySwapchain() {
+  swapchain_.images.clear();
+
+  FXL_CHECK(swapchain_.swapchain);
+  device_.destroySwapchainKHR(swapchain_.swapchain);
+  swapchain_.swapchain = nullptr;
+
   display_->Unclaim();
+}
+
+void DisplaySwapchain::InitializeVulkanSwapchain(
+    Display* display,
+    escher::VulkanDeviceQueues* device_queues,
+    escher::ResourceRecycler* recycler) {
+  vk::PhysicalDevice physical_device = device_queues->vk_physical_device();
+  vk::SurfaceKHR surface = device_queues->vk_surface();
+  FXL_CHECK(!swapchain_.swapchain);
+  FXL_CHECK(swapchain_.images.empty());
+  FXL_CHECK(recycler);
+
+  vk::SurfaceCapabilitiesKHR surface_caps;
+  {
+    auto result = physical_device.getSurfaceCapabilitiesKHR(surface);
+    VK_CHECK_RESULT(result);
+    surface_caps = std::move(result.value);
+  }
+
+  std::vector<vk::PresentModeKHR> present_modes;
+  {
+    auto result = physical_device.getSurfacePresentModesKHR(surface);
+    VK_CHECK_RESULT(result);
+    present_modes = std::move(result.value);
+  }
+
+  // TODO: handle undefined width/height.
+  vk::Extent2D swapchain_extent = surface_caps.currentExtent;
+  constexpr uint32_t VK_UNDEFINED_WIDTH_OR_HEIGHT = 0xFFFFFFFF;
+  if (swapchain_extent.width == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
+    swapchain_extent.width = display->width();
+  }
+  if (swapchain_extent.height == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
+    swapchain_extent.height = display->height();
+  }
+  FXL_CHECK(swapchain_extent.width == display->width());
+  FXL_CHECK(swapchain_extent.height == display->height());
+
+  // FIFO mode is always available, but we will try to find a more efficient
+  // mode.
+  vk::PresentModeKHR swapchain_present_mode = vk::PresentModeKHR::eFifo;
+// TODO: Find out why these modes are causing lower performance on Skylake
+#if 0
+  for (auto& mode : present_modes) {
+    if (mode == vk::PresentModeKHR::eMailbox) {
+      // Best choice: lowest-latency non-tearing mode.
+      swapchain_present_mode = vk::PresentModeKHR::eMailbox;
+      break;
+    }
+    if (mode == vk::PresentModeKHR::eImmediate) {
+      // Satisfactory choice: fastest, but tears.
+      swapchain_present_mode = vk::PresentModeKHR::eImmediate;
+    }
+  }
+#endif
+
+  // Determine number of images in the swapchain.
+  swapchain_image_count_ = kDesiredSwapchainImageCount;
+  if (surface_caps.minImageCount > swapchain_image_count_) {
+    swapchain_image_count_ = surface_caps.minImageCount;
+  } else if (surface_caps.maxImageCount < swapchain_image_count_ &&
+             surface_caps.maxImageCount != 0) {  // 0 means "no limit"
+    swapchain_image_count_ = surface_caps.maxImageCount;
+  }
+
+  // TODO: choosing an appropriate pre-transform will probably be important on
+  // mobile devices.
+  auto pre_transform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
+
+  // Pick a format and color-space for the swap-chain.
+  vk::Format format = vk::Format::eUndefined;
+  vk::ColorSpaceKHR color_space = vk::ColorSpaceKHR::eSrgbNonlinear;
+  {
+    auto result = physical_device.getSurfaceFormatsKHR(surface);
+    VK_CHECK_RESULT(result);
+    for (auto& sf : result.value) {
+      if (sf.colorSpace != color_space)
+        continue;
+
+      // TODO: remove this once Magma supports SRGB swapchains.
+      if (sf.format == vk::Format::eB8G8R8A8Unorm) {
+        format = sf.format;
+        break;
+      }
+
+      if (sf.format == vk::Format::eB8G8R8A8Srgb) {
+        // eB8G8R8A8Srgb is our favorite!
+        format = sf.format;
+        break;
+      } else if (format == vk::Format::eUndefined) {
+        // Anything is better than eUndefined.
+        format = sf.format;
+      }
+    }
+  }
+  FXL_CHECK(format != vk::Format::eUndefined);
+
+  // TODO: old_swapchain will come into play (I think) when we support
+  // resizing the window.
+  vk::SwapchainKHR old_swapchain = nullptr;
+
+  // Create the swapchain.
+  vk::SwapchainKHR swapchain;
+  {
+    vk::SwapchainCreateInfoKHR info;
+    info.surface = surface;
+    info.minImageCount = swapchain_image_count_;
+    info.imageFormat = format;
+    info.imageColorSpace = color_space;
+    info.imageExtent = swapchain_extent;
+    info.imageArrayLayers = 1;  // TODO: what is this?
+    // Using eTransferDst allows us to blit debug info onto the surface.
+    // Using eSampled allows us to save memory by using the color attachment
+    // for intermediate computation.
+    info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
+                      vk::ImageUsageFlagBits::eTransferDst |
+                      vk::ImageUsageFlagBits::eSampled;
+    info.queueFamilyIndexCount = 1;
+    uint32_t queue_family_index = device_queues->vk_main_queue_family();
+    info.pQueueFamilyIndices = &queue_family_index;
+    info.preTransform = pre_transform;
+    info.presentMode = swapchain_present_mode;
+    info.oldSwapchain = old_swapchain;
+    info.clipped = true;
+
+    auto result = device_.createSwapchainKHR(info);
+    VK_CHECK_RESULT(result);
+    swapchain = result.value;
+  }
+
+  if (old_swapchain) {
+    // Note: destroying the swapchain also cleans up all its associated
+    // presentable images once the platform is done with them.
+    device_.destroySwapchainKHR(old_swapchain);
+  }
+
+  // Obtain swapchain images and buffers.
+  {
+    auto result = device_.getSwapchainImagesKHR(swapchain);
+    VK_CHECK_RESULT(result);
+
+    std::vector<vk::Image> images(std::move(result.value));
+    std::vector<escher::ImagePtr> escher_images;
+    escher_images.reserve(images.size());
+    for (auto& im : images) {
+      escher::ImageInfo image_info;
+      image_info.format = format;
+      image_info.width = swapchain_extent.width;
+      image_info.height = swapchain_extent.height;
+      image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
+      escher_images.push_back(fxl::MakeRefCounted<escher::Image>(
+          recycler, image_info, im, nullptr));
+    }
+    swapchain_ = escher::VulkanSwapchain(
+        swapchain, escher_images, swapchain_extent.width,
+        swapchain_extent.height, format, color_space);
+  }
 }
 
 bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,

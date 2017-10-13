@@ -8,18 +8,19 @@
 
 namespace scene_manager {
 
-SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
-                                 Params* params,
-                                 DisplayManager* display_manager,
-                                 std::unique_ptr<DemoHarness> demo_harness)
-    : application_context_(app_context),
-      demo_harness_(std::move(demo_harness)),
-      escher_(demo_harness_->device_queues()),
+SceneManagerApp::SceneManagerApp(
+    Params* params,
+    DisplayManager* display_manager,
+    escher::VulkanInstancePtr vulkan_instance,
+    escher::VulkanDeviceQueuesPtr vulkan_device_queues,
+    vk::SurfaceKHR surface)
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      vulkan_instance_(vulkan_instance),
+      vulkan_device_queues_(vulkan_device_queues),
+      surface_(surface),
+      escher_(vulkan_device_queues_),
       scene_manager_(std::make_unique<SceneManagerImpl>(
-          std::make_unique<Engine>(display_manager,
-                                   &escher_,
-                                   std::make_unique<escher::VulkanSwapchain>(
-                                       demo_harness_->GetVulkanSwapchain())))) {
+          std::make_unique<Engine>(display_manager, &escher_))) {
   FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<scenic::SceneManager>(
@@ -29,6 +30,11 @@ SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
       });
 }
 
-SceneManagerApp::~SceneManagerApp() {}
+SceneManagerApp::~SceneManagerApp() {
+  if (surface_) {
+    vulkan_instance_->vk_instance().destroySurfaceKHR(surface_);
+  }
+  surface_ = nullptr;
+}
 
 }  // namespace scene_manager

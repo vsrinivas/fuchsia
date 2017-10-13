@@ -19,9 +19,7 @@
 
 namespace scene_manager {
 
-Engine::Engine(DisplayManager* display_manager,
-               escher::Escher* escher,
-               std::unique_ptr<escher::VulkanSwapchain> swapchain)
+Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
     : display_manager_(display_manager),
       escher_(escher),
       paper_renderer_(fxl::MakeRefCounted<escher::PaperRenderer>(escher)),
@@ -32,11 +30,9 @@ Engine::Engine(DisplayManager* display_manager,
           std::make_unique<escher::RoundedRectFactory>(escher)),
       release_fence_signaller_(std::make_unique<ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
-      swapchain_(std::move(swapchain)),
       session_count_(0) {
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
-  FXL_DCHECK(swapchain_);
 
   InitializeFrameScheduler();
   paper_renderer_->set_sort_by_pipeline(false);
@@ -96,7 +92,7 @@ std::unique_ptr<DisplaySwapchain> Engine::CreateDisplaySwapchain(
     Display* display) {
   FXL_DCHECK(!display->is_claimed());
   return std::make_unique<DisplaySwapchain>(display, event_timestamper(),
-                                            escher(), GetVulkanSwapchain());
+                                            escher());
 }
 
 std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(
@@ -170,11 +166,6 @@ bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,
     }
   }
   return needs_render;
-}
-
-escher::VulkanSwapchain Engine::GetVulkanSwapchain() const {
-  FXL_DCHECK(swapchain_);
-  return *(swapchain_.get());
 }
 
 void Engine::AddCompositor(Compositor* compositor) {
