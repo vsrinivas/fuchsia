@@ -23,8 +23,8 @@
 namespace shadertoy_client {
 
 namespace {
-constexpr uint32_t kShapeWidth = 480;
-constexpr uint32_t kShapeHeight = 360;
+constexpr uint32_t kShapeWidth = 384;
+constexpr uint32_t kShapeHeight = 288;
 }  // namespace
 
 View::View(app::ApplicationContext* application_context,
@@ -163,7 +163,7 @@ void View::OnSceneInvalidated(scenic::PresentationInfoPtr presentation_info) {
 
     glm::vec3 translation =
         glm::mix(swirl_translation, quadrant_translation, transition_param);
-    float scale = 0.8f + 0.5f * transition_param;
+    float scale = 0.7f + 0.3f * transition_param;
 
     nodes_[i].SetTranslation(translation.x, translation.y, translation.z);
     nodes_[i].SetScale(scale, scale, scale);
