@@ -179,7 +179,7 @@ zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 // It is *not* an error if any of the above requested items don't
 // exist (eg, fd0 is closed)
 //
-// launchpad_clone_fd() and launchpad_trasnfer_fd() may be used to
+// launchpad_clone_fd() and launchpad_transfer_fd() may be used to
 // add additional file descriptors to the launched process.
 #define LP_CLONE_FDIO_NAMESPACE  (0x0001u)
 #define LP_CLONE_FDIO_CWD        (0x0002u)
