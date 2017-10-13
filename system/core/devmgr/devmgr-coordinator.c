@@ -1246,9 +1246,16 @@ static zx_status_t dh_suspend(device_t* dev, uint32_t flags) {
     msg.txid = 0;
     msg.op = DC_OP_SUSPEND;
     msg.value = flags;
-    uint32_t rpc = dev->proxy ? dev->proxy->hrpc : dev->hrpc;
-    r = zx_channel_write(rpc, 0, &msg, mlen, NULL, 0);
-    return r;
+    zx_handle_t rpc = dev->proxy ? dev->proxy->hrpc : dev->hrpc;
+    if ((r = zx_channel_write(rpc, 0, &msg, mlen, NULL, 0)) != ZX_OK) {
+        return r;
+    }
+
+    // Wait 5 seconds for the other side to finish up
+    // TODO(swetland/teisenbe): This should use a completion mechanism to get
+    // the response from the other side rather than just timing out.
+    zx_nanosleep(zx_deadline_after(ZX_SEC(5)));
+    return ZX_ERR_TIMED_OUT;
 }
 
 static zx_status_t dc_prepare_proxy(device_t* dev) {
