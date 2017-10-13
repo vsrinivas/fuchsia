@@ -292,6 +292,13 @@ class MacAddrDw1 : public Register<0x100c> {
     WLAN_BIT_FIELD(unicast_to_me_mask, 16, 8);
 };
 
+enum MultiBssIdMode : uint8_t {
+    k1BssIdMode = 0,
+    k2BssIdMode = 1,
+    k4BssIdMode = 2,
+    k8BssIdMode = 3,
+};
+
 class MacBssidDw0 : public Register<0x1010> {
  public:
   WLAN_BIT_FIELD(mac_addr_0, 0, 8);

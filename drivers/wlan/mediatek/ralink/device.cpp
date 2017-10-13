@@ -3267,6 +3267,27 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     return ZX_OK;
 }
 
+zx_status_t Device::WlanmacSetBss(uint32_t options, uint8_t mac[6], uint8_t type) {
+    if (options != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    MacBssidDw0 bss0;
+    MacBssidDw1 bss1;
+    bss0.set_mac_addr_0(mac[0]);
+    bss0.set_mac_addr_1(mac[1]);
+    bss0.set_mac_addr_2(mac[2]);
+    bss0.set_mac_addr_3(mac[3]);
+    bss1.set_mac_addr_4(mac[4]);
+    bss1.set_mac_addr_5(mac[5]);
+    bss1.set_multi_bss_mode(MultiBssIdMode::k1BssIdMode);
+    auto status = WriteRegister(bss0);
+    CHECK_WRITE(BSSID_DW0, status);
+    status = WriteRegister(bss1);
+    CHECK_WRITE(BSSID_DW1, status);
+    return ZX_OK;
+}
+
 void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
     if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
         usb_request_release(request);

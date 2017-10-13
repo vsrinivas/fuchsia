@@ -36,6 +36,7 @@ class Device : public TestBaseDevice, public ddk::WlanmacProtocol<Device> {
     zx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacTx(uint32_t options, const void* data, size_t length);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
+    zx_status_t WlanmacSetBss(uint32_t options, uint8_t mac[6], uint8_t type);
 
    private:
     ddk::TestProtocolProxy test_proxy_;
