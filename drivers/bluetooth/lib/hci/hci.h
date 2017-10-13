@@ -12,10 +12,17 @@
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
+#include "lib/fxl/macros.h"
+
 // This file contains general opcode/number and static packet definitions for
 // the Bluetooth Host-Controller Interface. Each packet payload structure
 // contains parameter descriptions based on their respective documentation in
 // the Bluetooth Core Specification version 5.0
+//
+// NOTE: Avoid casting raw buffer pointers to the packet payload structure types
+// below; use as template parameter to common::PacketView::payload() and
+// common::MutableBufferView::mutable_payload() instead. Take extra care when
+// accessing flexible array members.
 
 namespace bluetooth {
 namespace hci {
@@ -169,12 +176,18 @@ constexpr OpCode kReset = ControllerAndBasebandOpCode(0x0003);
 constexpr OpCode kWriteLocalName = ControllerAndBasebandOpCode(0x0013);
 
 struct WriteLocalNameCommandParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(WriteLocalNameCommandParams);
+
   // A UTF-8 encoded User Friendly Descriptive Name for the device. This can
   // contain up to 248 octets. If the name contained in the parameter is shorter
   // than 248 octets, the end of the name is indicated by a NULL octet (0x00),
   // and the following octets (to fill up 248 octets, which is the length of the
   // parameter) do not have valid values.
-  uint8_t local_name[0];
+  //
+  // NOTE: Contains at least 1 octet because an empty struct would be illegal in
+  // C++ (i.e. depending on compiler version). This struct mostly serves as
+  // documentation and its utility is questionable.
+  uint8_t local_name[1];
 } __PACKED;
 
 // =======================================
@@ -182,6 +195,8 @@ struct WriteLocalNameCommandParams {
 constexpr OpCode kReadLocalName = ControllerAndBasebandOpCode(0x0014);
 
 struct ReadLocalNameReturnParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ReadLocalNameReturnParams);
+
   // See enum Status in hci_constants.h.
   Status status;
 
@@ -190,7 +205,7 @@ struct ReadLocalNameReturnParams {
   // than 248 octets, the end of the name is indicated by a NULL octet (0x00),
   // and the following octets (to fill up 248 octets, which is the length of the
   // parameter) do not have valid values.
-  uint8_t local_name[0];
+  uint8_t local_name[];
 } __PACKED;
 
 // ============================================
@@ -530,6 +545,8 @@ struct ReadRemoteVersionInfoCompleteEventParams {
 constexpr EventCode kCommandCompleteEventCode = 0x0E;
 
 struct CommandCompleteEventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CommandCompleteEventParams);
+
   // The Number of HCI command packets which are allowed to be sent to the
   // Controller from the Host.
   uint8_t num_hci_command_packets;
@@ -541,7 +558,7 @@ struct CommandCompleteEventParams {
   // |command_opcode| event parameter. Refer to the Bluetooth Core Specification
   // v5.0, Vol 2, Part E for each command’s definition for the list of return
   // parameters associated with that command.
-  uint8_t return_parameters[0];
+  uint8_t return_parameters[];
 } __PACKED;
 
 // ===========================
@@ -581,8 +598,10 @@ struct NumberOfCompletedPacketsEventData {
 } __PACKED;
 
 struct NumberOfCompletedPacketsEventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(NumberOfCompletedPacketsEventParams);
+
   uint8_t number_of_handles;
-  NumberOfCompletedPacketsEventData data[0];
+  NumberOfCompletedPacketsEventData data[];
 } __PACKED;
 
 // ================================================================
@@ -604,11 +623,13 @@ struct EncryptionKeyRefreshCompleteEventParams {
 constexpr EventCode kLEMetaEventCode = 0x3E;
 
 struct LEMetaEventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEMetaEventParams);
+
   // The event code for the LE subevent.
   EventCode subevent_code;
 
   // Beginning of parameters that are specific to the LE subevent.
-  uint8_t subevent_parameters[0];
+  uint8_t subevent_parameters[];
 } __PACKED;
 
 // LE Connection Complete Event (v4.0) (LE)
@@ -651,6 +672,8 @@ struct LEConnectionCompleteSubeventParams {
 constexpr EventCode kLEAdvertisingReportSubeventCode = 0x02;
 
 struct LEAdvertisingReportData {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEAdvertisingReportData);
+
   // The event type.
   LEAdvertisingEventType event_type;
 
@@ -666,7 +689,7 @@ struct LEAdvertisingReportData {
 
   // The begining of |length_data| octets of advertising or scan response data
   // formatted as defined in Core Spec v5.0, Vol 3, Part C, Section 11.
-  uint8_t data[0];
+  uint8_t data[];
 
   // Immediately following |data| there is a single octet field containing the
   // received signal strength for this advertising report. Since |data| has a
@@ -680,6 +703,8 @@ struct LEAdvertisingReportData {
 } __PACKED;
 
 struct LEAdvertisingReportSubeventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEAdvertisingReportSubeventParams);
+
   // Number of LEAdvertisingReportData instances contained in the array
   // |reports|.
   uint8_t num_reports;
@@ -687,7 +712,7 @@ struct LEAdvertisingReportSubeventParams {
   // Beginning of LEAdvertisingReportData array. Since each report data has a
   // variable length, the contents of |reports| this is declared as an array of
   // uint8_t.
-  uint8_t reports[0];
+  uint8_t reports[];
 } __PACKED;
 
 // LE Connection Update Complete Event (v4.0) (LE)
@@ -884,12 +909,14 @@ struct LEDirectedAdvertisingReportData {
 } __PACKED;
 
 struct LEDirectedAdvertisingReportSubeventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEDirectedAdvertisingReportSubeventParams);
+
   // Number of LEAdvertisingReportData instances contained in the array
   // |reports|.
   uint8_t num_reports;
 
   // The report array parameters.
-  LEDirectedAdvertisingReportData reports[0];
+  LEDirectedAdvertisingReportData reports[];
 } __PACKED;
 
 // LE PHY Update Complete Event (v5.0) (LE)
@@ -915,6 +942,8 @@ struct LEPHYUpdateCompleteSubeventParams {
 constexpr EventCode kLEExtendedAdvertisingReportSubeventCode = 0x0D;
 
 struct LEExtendedAdvertisingReportData {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEExtendedAdvertisingReportData);
+
   // The advertising event type bitfield. For more information on how to
   // interpret this see kLEExtendedAdvEventType* constants in hci_constants.h
   // and Core Spec v5.0, Vol 2, Part E, Section 7.7.65.13.
@@ -969,17 +998,19 @@ struct LEExtendedAdvertisingReportData {
 
   // The beginning of |data_length| octets of advertising or scan response data
   // formatted as defined in Core Spec v5.0, Vol 3, Part C, Section 11.
-  uint8_t data[0];
+  uint8_t data[];
 } __PACKED;
 
 struct LEExtendedAdvertisingReportSubeventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEExtendedAdvertisingReportSubeventParams);
+
   // Number of separate reports in the event.
   uint8_t num_reports;
 
   // Beginning of LEExtendedAdvertisingReportData array. Since each report data
   // has a variable length, the contents of |reports| this is declared as an
   // array of uint8_t.
-  uint8_t reports[0];
+  uint8_t reports[];
 } __PACKED;
 
 // LE Periodic Advertising Sync Established Event (v5.0) (LE)
@@ -1019,6 +1050,8 @@ struct LEPeriodicAdvertisingSyncEstablishedSubeventParams {
 constexpr EventCode kLEPeriodicAdvertisingReportSubeventCode = 0x0F;
 
 struct LEPeriodicAdvertisingReportSubeventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEPeriodicAdvertisingReportSubeventParams);
+
   // (only the lower 12 bits are meaningful).
   PeriodicAdvertiserHandle sync_handle;
 
@@ -1043,7 +1076,7 @@ struct LEPeriodicAdvertisingReportSubeventParams {
   uint8_t data_length;
 
   // |data_length| octets of data received from a Periodic Advertising packet.
-  uint8_t data[0];
+  uint8_t data[];
 } __PACKED;
 
 // LE Periodic Advertising Sync Lost Event (v5.0) (LE)
@@ -1117,9 +1150,11 @@ struct NumberOfCompletedDataBlocksEventData {
 } __PACKED;
 
 struct NumberOfCompletedDataBlocksEventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(NumberOfCompletedDataBlocksEventParams);
+
   uint16_t total_num_data_blocks;
   uint8_t number_of_handles;
-  NumberOfCompletedDataBlocksEventData data[0];
+  NumberOfCompletedDataBlocksEventData data[];
 } __PACKED;
 
 // ================================================================
@@ -2173,6 +2208,8 @@ constexpr OpCode kLESetExtendedAdvertisingData =
     LEControllerCommandOpCode(0x0037);
 
 struct LESetExtendedAdvertisingDataCommandParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LESetExtendedAdvertisingDataCommandParams);
+
   // Handle used to identify an advertising set.
   AdvertisingHandle adv_handle;
 
@@ -2190,7 +2227,7 @@ struct LESetExtendedAdvertisingDataCommandParams {
   uint8_t adv_data_length;
 
   // Variable length advertising data.
-  uint8_t adv_data[0];
+  uint8_t adv_data[];
 } __PACKED;
 
 // ======================================================
@@ -2199,6 +2236,9 @@ constexpr OpCode kLESetExtendedScanResponseData =
     LEControllerCommandOpCode(0x0038);
 
 struct LESetExtendedScanResponseDataCommandParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(
+      LESetExtendedScanResponseDataCommandParams);
+
   // Handle used to identify an advertising set.
   AdvertisingHandle adv_handle;
 
@@ -2215,7 +2255,7 @@ struct LESetExtendedScanResponseDataCommandParams {
   uint8_t scan_rsp_data_length;
 
   // Variable length advertising data.
-  uint8_t scan_rsp_data[0];
+  uint8_t scan_rsp_data[];
 } __PACKED;
 
 // ======================================================
@@ -2243,6 +2283,9 @@ struct LESetExtendedAdvertisingEnableData {
 } __PACKED;
 
 struct LESetExtendedAdvertisingEnableCommandParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(
+      LESetExtendedAdvertisingEnableCommandParams);
+
   // Enable or Disable extended advertising.
   GenericEnableParam enable;
 
@@ -2253,7 +2296,7 @@ struct LESetExtendedAdvertisingEnableCommandParams {
 
   // The parameter array containing |number_of_sets| entries for each
   // advertising set included in this command.
-  LESetExtendedAdvertisingEnableData data[0];
+  LESetExtendedAdvertisingEnableData data[];
 } __PACKED;
 
 // ===========================================================
@@ -2320,6 +2363,8 @@ constexpr OpCode kLESetPeriodicAdvertisingData =
     LEControllerCommandOpCode(0x003F);
 
 struct LESetPeriodicAdvertisingDataCommandParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LESetPeriodicAdvertisingDataCommandParams);
+
   // Handle used to identify an advertising set.
   AdvertisingHandle adv_handle;
 
@@ -2332,7 +2377,7 @@ struct LESetPeriodicAdvertisingDataCommandParams {
   uint8_t adv_data_length;
 
   // Variable length advertising data.
-  uint8_t adv_data[0];
+  uint8_t adv_data[];
 } __PACKED;
 
 // ======================================================
@@ -2365,6 +2410,8 @@ struct LESetExtendedScanParametersData {
 } __PACKED;
 
 struct LESetExtendedScanParametersCommandParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LESetExtendedScanParametersCommandParams);
+
   // Indicates the type of address being used in the scan request packets (for
   // active scanning).
   LEOwnAddressType own_address_type;
@@ -2379,7 +2426,7 @@ struct LESetExtendedScanParametersCommandParams {
 
   // The number of array elements is determined by the number of bits set in the
   // scan_phys parameter.
-  LESetExtendedScanParametersData data[0];
+  LESetExtendedScanParametersData data[];
 } __PACKED;
 
 // ===============================================
@@ -2440,6 +2487,8 @@ struct LEExtendedCreateConnectionData {
 } __PACKED;
 
 struct LEExtendedCreateConnectionCommandParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(LEExtendedCreateConnectionCommandParams);
+
   GenericEnableParam initiator_filter_policy;
   LEOwnAddressType own_address_type;
   LEPeerAddressType peer_address_type;
@@ -2454,7 +2503,7 @@ struct LEExtendedCreateConnectionCommandParams {
 
   // The number of array elements is determined by the number of bits set in the
   // |initiating_phys| parameter.
-  LEExtendedCreateConnectionData data[0];
+  LEExtendedCreateConnectionData data[];
 } __PACKED;
 
 // NOTE on ReturnParams: No Command Complete event is sent by the Controller to
