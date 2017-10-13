@@ -62,9 +62,7 @@ void BatchUpload::Start() {
             on_error_(ErrorType::PERMANENT);
             return;
           }
-          for (auto& object_digest : object_digests) {
-            remaining_object_digests_.push(std::move(object_digest));
-          }
+          remaining_object_digests_ = std::move(object_digests);
           StartObjectUpload();
         }));
   });
@@ -97,9 +95,9 @@ void BatchUpload::UploadNextObject() {
   FXL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
   current_objects_handled_++;
-  auto object_digest_to_send = std::move(remaining_object_digests_.front());
+  auto object_digest_to_send = std::move(remaining_object_digests_.back());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
-  remaining_object_digests_.pop();
+  remaining_object_digests_.pop_back();
   storage_->GetPiece(object_digest_to_send,
                      callback::MakeScoped(
                          weak_ptr_factory_.GetWeakPtr(),
@@ -131,7 +129,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
           errored_ = true;
           // Re-enqueue the object for another upload attempt.
-          remaining_object_digests_.push(std::move(digest));
+          remaining_object_digests_.push_back(std::move(digest));
 
           if (current_objects_handled_ == 0u) {
             on_error_(ErrorType::PERMANENT);
