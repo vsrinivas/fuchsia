@@ -29,8 +29,8 @@ namespace modular {
 //
 // NOTE: Your application's class must implement:
 //
-//     // Called by AppDriver. Call |done| once shutdown sequence is complete,
-//     // at which point |this| will be deleted.
+//     // Called by AppDriver. Call |done| once shutdown sequence is complete
+//     // and |this| will be scheduled for deletion on the current MessageLoop.
 //     void Terminate(const std::function<void()>& done);
 //
 // Example:
@@ -43,7 +43,6 @@ namespace modular {
 //
 //   void Terminate(const std::function<void()>& done) {
 //     done();
-//     // |this| is deleted.
 //   }
 // };
 //
@@ -71,8 +70,14 @@ class AppDriver : LifecycleImpl::Delegate {
   // |LifecycleImpl::Delegate|
   void Terminate() override {
     impl_->Terminate([this] {
-      impl_.reset();
-      on_terminated_();
+      // Since this callback is called by |impl_|, we delay destroying it
+      // until the current stack rolls back up to the MessageLoop which
+      // guarantees impl_::Terminate() and anything that asynchronously
+      // invokes this callback are done running.
+      fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
+        impl_.reset();
+        on_terminated_();
+      });
     });
   }
 
