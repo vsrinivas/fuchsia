@@ -19,9 +19,10 @@ public:
 
     size_t size() const { return paspace_->size(); }
     fbl::RefPtr<VmAspace> aspace() const { return paspace_; }
+    // TODO(abdulla): Remove this function.
+    zx_paddr_t table_phys() { return paspace_->arch_aspace().arch_table_phys(); }
 
 #if ARCH_X86_64
-    paddr_t Pml4Address() { return paspace_->arch_aspace().pt_phys(); }
     zx_status_t MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr);
 #endif
     zx_status_t UnmapRange(vaddr_t guest_paddr, size_t size);

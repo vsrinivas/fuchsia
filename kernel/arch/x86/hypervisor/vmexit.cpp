@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "vmexit_priv.h"
+
 #include <bits.h>
 #include <inttypes.h>
 #include <string.h>
@@ -24,7 +26,6 @@
 #include <platform/pc/timer.h>
 
 #include "vcpu_priv.h"
-#include "vmexit_priv.h"
 
 #define LOCAL_TRACE 0
 
@@ -260,14 +261,14 @@ static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                         GuestState* guest_state, TrapMap& traps,
+                                         GuestState* guest_state, TrapMap* traps,
                                          zx_port_packet_t* packet) {
     IoInfo io_info(exit_info.exit_qualification);
     if (io_info.string || io_info.repeat)
         return ZX_ERR_NOT_SUPPORTED;
 
     Trap* trap;
-    zx_status_t status = traps.FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
+    zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
     if (status != ZX_OK)
         return status;
     next_rip(exit_info, vmcs);
@@ -409,8 +410,8 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
  * If the page address is for a large page, we additionally calculate the offset
  * to the correct guest physical page that backs the large page.
  */
-static paddr_t page_addr(paddr_t pt_addr, size_t level, vaddr_t guest_vaddr) {
-    paddr_t off = 0;
+static zx_paddr_t page_addr(zx_paddr_t pt_addr, size_t level, zx_vaddr_t guest_vaddr) {
+    zx_paddr_t off = 0;
     if (IS_LARGE_PAGE(pt_addr)) {
         if (level == 1) {
             off = guest_vaddr & PAGE_OFFSET_MASK_HUGE;
@@ -422,15 +423,15 @@ static paddr_t page_addr(paddr_t pt_addr, size_t level, vaddr_t guest_vaddr) {
 }
 
 static zx_status_t get_page(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpas,
-                            vaddr_t guest_vaddr, paddr_t* host_paddr) {
+                            zx_vaddr_t guest_vaddr, zx_paddr_t* host_paddr) {
     size_t indices[X86_PAGING_LEVELS] = {
         VADDR_TO_PML4_INDEX(guest_vaddr),
         VADDR_TO_PDP_INDEX(guest_vaddr),
         VADDR_TO_PD_INDEX(guest_vaddr),
         VADDR_TO_PT_INDEX(guest_vaddr),
     };
-    paddr_t pt_addr = vmcs.Read(VmcsFieldXX::GUEST_CR3);
-    paddr_t pa;
+    zx_paddr_t pt_addr = vmcs.Read(VmcsFieldXX::GUEST_CR3);
+    zx_paddr_t pa;
     for (size_t level = 0; level <= X86_PAGING_LEVELS; level++) {
         zx_status_t status = gpas->GetPage(page_addr(pt_addr, level - 1, guest_vaddr), &pa);
         if (status != ZX_OK)
@@ -447,12 +448,12 @@ static zx_status_t get_page(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpa
 }
 
 static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpas,
-                              vaddr_t guest_vaddr, uint8_t* data, size_t size) {
+                              zx_vaddr_t guest_vaddr, uint8_t* data, size_t size) {
     // TODO(abdulla): Make this handle a fetch that crosses more than two pages.
     if (size > PAGE_SIZE)
         return ZX_ERR_OUT_OF_RANGE;
 
-    paddr_t pa;
+    zx_paddr_t pa;
     zx_status_t status = get_page(vmcs, gpas, guest_vaddr, &pa);
     if (status != ZX_OK)
         return status;
@@ -475,14 +476,14 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
     return ZX_OK;
 }
 
-static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vaddr_t guest_paddr,
-                                 GuestPhysicalAddressSpace* gpas, TrapMap& traps,
+static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vaddr_t guest_paddr,
+                                 GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                                  zx_port_packet_t* packet) {
     if (exit_info.instruction_length > X86_MAX_INST_LEN)
         return ZX_ERR_INTERNAL;
 
     Trap* trap;
-    zx_status_t status = traps.FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
+    zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
     if (status != ZX_OK)
         return status;
     next_rip(exit_info, vmcs);
@@ -517,7 +518,7 @@ static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vadd
 
 static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                       LocalApicState* local_apic_state,
-                                      GuestPhysicalAddressSpace* gpas, TrapMap& traps,
+                                      GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                                       zx_port_packet_t* packet) {
     ApicAccessInfo apic_access_info(exit_info.exit_qualification);
     switch (apic_access_info.access_type) {
@@ -533,15 +534,15 @@ static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
         }
     /* fallthrough */
     case ApicAccessType::LINEAR_ACCESS_READ:
-        vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
+        zx_vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
         return handle_memory(exit_info, vmcs, guest_paddr, gpas, traps, packet);
     }
 }
 
 static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                        GuestPhysicalAddressSpace* gpas, TrapMap& traps,
+                                        GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                                         zx_port_packet_t* packet) {
-    vaddr_t guest_paddr = exit_info.guest_physical_address;
+    zx_vaddr_t guest_paddr = exit_info.guest_physical_address;
     zx_status_t status = handle_memory(exit_info, vmcs, guest_paddr, gpas, traps, packet);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
@@ -593,7 +594,7 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                           TrapMap& traps, zx_port_packet_t* packet) {
+                           TrapMap* traps, zx_port_packet_t* packet) {
     ExitInfo exit_info(*vmcs);
 
     switch (exit_info.exit_reason) {

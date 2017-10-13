@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <zircon/types.h>
 
 // clang-format off
 
@@ -39,14 +39,13 @@ enum class ApicAccessType : uint8_t {
 
 // clang-format on
 
+typedef struct zx_port_packet zx_port_packet_t;
+
 class AutoVmcs;
-class FifoDispatcher;
 class GuestPhysicalAddressSpace;
 struct GuestState;
-struct IoApicState;
 struct LocalApicState;
 class TrapMap;
-struct VmxState;
 
 /* Stores VM exit info from VMCS fields. */
 struct ExitInfo {
@@ -92,4 +91,4 @@ bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vect
                                  bool reschedule);
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
-                           TrapMap& traps, zx_port_packet_t* packet);
+                           TrapMap* traps, zx_port_packet_t* packet);

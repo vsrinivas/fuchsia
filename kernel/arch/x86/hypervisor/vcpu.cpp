@@ -553,7 +553,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
 // static
 zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                          paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                         GuestPhysicalAddressSpace* gpas, TrapMap& traps,
+                         GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                          fbl::unique_ptr<Vcpu>* out) {
     uint16_t vpid;
     zx_status_t status = alloc_vpid(&vpid);
@@ -607,7 +607,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
     region->revision_id = vmx_info.revision_id;
     status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, ip, cr3, virtual_apic_address,
-                       apic_access_address, msr_bitmaps_address, gpas->Pml4Address(),
+                       apic_access_address, msr_bitmaps_address, gpas->table_phys(),
                        &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
     if (status != ZX_OK)
         return status;
@@ -618,7 +618,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
 }
 
 Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, fbl::RefPtr<VmObject> apic_vmo,
-           GuestPhysicalAddressSpace* gpas, TrapMap& traps)
+           GuestPhysicalAddressSpace* gpas, TrapMap* traps)
     : thread_(thread), vpid_(vpid), apic_vmo_(apic_vmo), gpas_(gpas), traps_(traps),
       vmx_state_(/* zero-init */) {}
 
@@ -653,11 +653,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         }
         if (status != ZX_OK) {
             uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
-            dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
+            dprintf(SPEW, "VCPU resume failed: %#lx\n", error);
         } else {
             vmx_state_.resume = true;
-            GuestState* guest_state = &vmx_state_.guest_state;
-            status = vmexit_handler(&vmcs, guest_state, &local_apic_state_, gpas_, traps_, packet);
+            status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, gpas_,
+                                    traps_, packet);
         }
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;
@@ -757,7 +757,7 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
 
 zx_status_t x86_vcpu_create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                             paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                            GuestPhysicalAddressSpace* gpas, TrapMap& traps,
+                            GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                             fbl::unique_ptr<Vcpu>* out) {
     return Vcpu::Create(ip, cr3, apic_vmo, apic_access_address, msr_bitmaps_address, gpas, traps,
                         out);
