@@ -90,18 +90,15 @@ SECTIONS
         __rodata_end = .;
         __data_start = .;
         *(.data .data.* .gnu.linkonce.d.*)
-    }
-
-    /*
-     * extra linker scripts tend to insert sections just after .data,
-     * so we want to make sure this symbol comes after anything inserted above,
-     * but not aligned to the next section necessarily.
-     */
-    .dummy_post_data : {
         __data_end = .;
     }
 
-    _zero_page_sys_size = (__data_end - __code_start + 15) / 16;
+    /*
+     * Any writable orphan sections would be inserted here.
+     * But there's no way to put the __data_end symbol after
+     * them, so we cannot allow any such cases.  There is no
+     * good way to assert that, though.
+     */
 
     .bss : ALIGN(4096) {
         __bss_start = .;
