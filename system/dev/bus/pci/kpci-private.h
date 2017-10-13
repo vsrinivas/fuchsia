@@ -13,5 +13,4 @@ typedef struct kpci_device {
     zx_handle_t handle;
     uint32_t index;
     zx_pcie_device_info_t info;
-    zx_device_prop_t props[8];
 } kpci_device_t;

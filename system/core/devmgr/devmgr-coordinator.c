@@ -1159,7 +1159,21 @@ static zx_status_t dc_create_proxy(device_t* parent) {
 
     size_t namelen = strlen(parent->name);
     size_t liblen = strlen(parent->libname);
-    device_t* dev = calloc(1, sizeof(device_t) + namelen + liblen + 2);
+    size_t devlen = sizeof(device_t) + namelen + liblen + 2;
+
+    // non-immortal devices, use foo.proxy.so for
+    // their proxy devices instead of foo.so
+    bool proxylib = !(parent->flags & DEV_CTX_IMMORTAL);
+
+    if (proxylib) {
+        if (liblen < 3) {
+            return ZX_ERR_INTERNAL;
+        }
+        // space for ".proxy"
+        devlen += 6;
+    }
+
+    device_t* dev = calloc(1, devlen);
     if (dev == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1168,6 +1182,9 @@ static zx_status_t dc_create_proxy(device_t* parent) {
     dev->name = text;
     text += namelen + 1;
     memcpy(text, parent->libname, liblen + 1);
+    if (proxylib) {
+        memcpy(text + liblen - 3, ".proxy.so", 10);
+    }
     dev->libname = text;
 
     list_initialize(&dev->children);
@@ -1259,8 +1276,13 @@ static zx_status_t dh_suspend(device_t* dev, uint32_t flags) {
 }
 
 static zx_status_t dc_prepare_proxy(device_t* dev) {
-    // busdev args are "processname,args"
-    const char* arg0 = (dev->flags & DEV_CTX_PROXY) ? dev->parent->args : dev->args;
+    if (dev->flags & DEV_CTX_PROXY) {
+        log(ERROR, "devcoord: cannot proxy a proxy: %s\n", dev->name);
+        return ZX_ERR_INTERNAL;
+    }
+
+    // proxy args are "processname,args"
+    const char* arg0 = dev->args;
     const char* arg1 = strchr(arg0, ',');
     if (arg1 == NULL) {
         return ZX_ERR_INTERNAL;

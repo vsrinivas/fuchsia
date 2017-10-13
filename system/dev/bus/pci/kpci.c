@@ -36,10 +36,8 @@ static zx_protocol_device_t kpci_device_proto = {
     .release = kpci_release,
 };
 
-// initializes and optionally adds a new child device
-// device will be added if parent is not NULL
-static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool save_handle,
-                                   zx_device_t** out) {
+static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index,
+                                   bool save_handle, zx_device_t** out) {
     zx_pcie_device_info_t info;
     zx_handle_t handle;
 
@@ -68,6 +66,7 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
     char name[20];
     snprintf(name, sizeof(name), "%02x:%02x:%02x", info.bus_id, info.dev_id, info.func_id);
 
+#if !PROXY_DEVICE
     zx_device_prop_t device_props[] = {
         (zx_device_prop_t){ BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI },
         (zx_device_prop_t){ BIND_PCI_VID, 0, info.vendor_id },
@@ -80,11 +79,7 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
                                                                     info.dev_id,
                                                                     info.func_id) },
     };
-
-    static_assert(sizeof(device_props) == sizeof(device->props),
-                 "Invalid number of PCI properties in kpci_device_t!");
-
-    memcpy(device->props, device_props, sizeof(device->props));
+#endif
 
     if (parent) {
         char argstr[64];
@@ -99,10 +94,12 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
             .ops = &kpci_device_proto,
             .proto_id = ZX_PROTOCOL_PCI,
             .proto_ops = &_pci_protocol,
-            .props = device->props,
-            .prop_count = countof(device->props),
+#if !PROXY_DEVICE
+            .props = device_props,
+            .prop_count = countof(device_props),
             .proxy_args = argstr,
             .flags = DEVICE_ADD_MUST_ISOLATE,
+#endif
         };
 
         status = device_add(parent, &args, &device->zxdev);
@@ -122,38 +119,39 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index, bool sav
     return status;
 }
 
-static zx_status_t kpci_drv_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    zx_status_t status;
-    zx_device_t* pcidev;
-
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "pci",
-        .ops =  &kpci_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
-
-    if ((status = device_add(parent, &args, &pcidev)) < 0) {
-        return status;
-    }
-    for (uint32_t index = 0;; index++) {
-        zx_device_t* dev;
-        // don't hang onto the PCI handle - we don't need it any more
-        if (kpci_init_child(pcidev, index, false, &dev) != ZX_OK) {
-            break;
-        }
-    }
-    return ZX_OK;
-}
-
 static zx_status_t kpci_drv_create(void* ctx, zx_device_t* parent,
-                                   const char* name, const char* args, zx_handle_t resource) {
+                                   const char* name, const char* args,
+                                   zx_handle_t resource) {
     if (resource != ZX_HANDLE_INVALID) {
         zx_handle_close(resource);
     }
     uint32_t index = strtoul(args, NULL, 10);
     zx_device_t* dev;
     return kpci_init_child(parent, index, true, &dev);
+}
+
+#if PROXY_DEVICE
+
+static zx_driver_ops_t kpci_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .create = kpci_drv_create,
+};
+
+ZIRCON_DRIVER_BEGIN(pci, kpci_driver_ops, "zircon", "0.1", 1)
+    BI_ABORT_IF_AUTOBIND,
+ZIRCON_DRIVER_END(pci)
+
+#else
+
+static zx_status_t kpci_drv_bind(void* ctx, zx_device_t* parent, void** cookie) {
+    for (uint32_t index = 0;; index++) {
+        zx_device_t* dev;
+        // don't hang onto the PCI handle - we don't need it any more
+        if (kpci_init_child(parent, index, false, &dev) != ZX_OK) {
+            break;
+        }
+    }
+    return ZX_OK;
 }
 
 static zx_driver_ops_t kpci_driver_ops = {
@@ -170,3 +168,4 @@ ZIRCON_DRIVER_BEGIN(pci, kpci_driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_KPCI),
 ZIRCON_DRIVER_END(pci)
+#endif
