@@ -1798,7 +1798,11 @@ void __fdio_release(fdio_t* io) {
 // TODO: getrlimit(RLIMIT_NOFILE, ...)
 #define MAX_POLL_NFDS 1024
 
-int poll(struct pollfd* fds, nfds_t n, int timeout) {
+int ppoll(struct pollfd* fds, nfds_t n,
+          const struct timespec* timeout_ts, const sigset_t* sigmask) {
+    if (sigmask) {
+        return ERRNO(ENOSYS);
+    }
     if (n > MAX_POLL_NFDS) {
         return ERRNO(EINVAL);
     }
@@ -1845,7 +1849,16 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
 
     int nfds = 0;
     if (r == ZX_OK && nvalid > 0) {
-        zx_time_t tmo = (timeout >= 0) ? zx_deadline_after(ZX_MSEC(timeout)) : ZX_TIME_INFINITE;
+        zx_time_t tmo = ZX_TIME_INFINITE;
+        // Check for overflows on every operation.
+        if (timeout_ts && timeout_ts->tv_sec >= 0 && timeout_ts->tv_nsec >= 0 &&
+            (uint64_t)timeout_ts->tv_sec <= UINT64_MAX / ZX_SEC(1)) {
+            zx_duration_t seconds_duration = ZX_SEC(timeout_ts->tv_sec);
+            zx_duration_t duration = seconds_duration + timeout_ts->tv_nsec;
+            if (duration >= seconds_duration) {
+                tmo = zx_deadline_after(duration);
+            }
+        }
         r = zx_object_wait_many(items, nvalid, tmo);
         // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
         if (r == ZX_OK || r == ZX_ERR_TIMED_OUT) {
@@ -1880,6 +1893,12 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
     }
 
     return (r == ZX_OK || r == ZX_ERR_TIMED_OUT) ? nfds : ERROR(r);
+}
+
+int poll(struct pollfd* fds, nfds_t n, int timeout) {
+    struct timespec timeout_ts = {timeout / 1000, (timeout % 1000) * 1000000};
+    struct timespec* ts = timeout >= 0 ? &timeout_ts : NULL;
+    return ppoll(fds, n, ts, NULL);
 }
 
 int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict efds,
