@@ -29,7 +29,6 @@
 namespace storage {
 namespace btree {
 namespace {
-
 // Pre-determined node level function.
 uint8_t GetTestNodeLevel(convert::ExtendedStringView key) {
   if (key == "key03" || key == "key07" || key == "key30" || key == "key60" ||
@@ -79,20 +78,12 @@ class BTreeUtilsTest : public StorageTest {
   PageStorage* GetStorage() override { return &fake_storage_; }
 
   ObjectDigest CreateTree(const std::vector<EntryChange>& entries) {
-    ObjectDigest root_digest;
-    EXPECT_TRUE(GetEmptyNodeDigest(&root_digest));
+    ObjectDigest base_node_digest;
+    EXPECT_TRUE(GetEmptyNodeDigest(&base_node_digest));
 
-    Status status;
     ObjectDigest new_root_digest;
-    std::unordered_set<ObjectDigest> new_nodes;
-    ApplyChanges(
-        &coroutine_service_, &fake_storage_, root_digest,
-        std::make_unique<EntryChangeIterator>(entries.begin(), entries.end()),
-        callback::Capture(MakeQuitTask(), &status, &new_root_digest,
-                          &new_nodes),
-        &kTestNodeLevelCalculator);
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(
+        CreateTreeFromChanges(base_node_digest, entries, &new_root_digest));
     return new_root_digest;
   }
 
@@ -822,197 +813,6 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   ForEachEntry(&coroutine_service_, &fake_storage_, root_digest, prefix,
                on_next, on_done);
   ASSERT_FALSE(RunLoopWithTimeout());
-}
-
-TEST_F(BTreeUtilsTest, ForEachDiff) {
-  std::unique_ptr<const Object> object;
-  ASSERT_TRUE(AddObject("change1", &object));
-  ObjectDigest object_digest = object->GetDigest();
-
-  std::vector<EntryChange> changes;
-  ASSERT_TRUE(CreateEntryChanges(50, &changes));
-  ObjectDigest base_root_digest = CreateTree(changes);
-  changes.clear();
-  // Update value for key1.
-  changes.push_back(
-      EntryChange{Entry{"key1", object_digest, KeyPriority::LAZY}, false});
-  // Add entry key255.
-  changes.push_back(
-      EntryChange{Entry{"key255", object_digest, KeyPriority::LAZY}, false});
-  // Remove entry key40.
-  changes.push_back(EntryChange{Entry{"key40", "", KeyPriority::LAZY}, true});
-
-  Status status;
-  ObjectDigest other_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, base_root_digest,
-      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &other_root_digest,
-                        &new_nodes),
-      &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-
-  // ForEachDiff should return all changes just applied.
-  size_t current_change = 0;
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_digest,
-              other_root_digest, "",
-              [&changes, &current_change](EntryChange e) {
-                EXPECT_EQ(changes[current_change].deleted, e.deleted);
-                if (e.deleted) {
-                  EXPECT_EQ(changes[current_change].entry.key, e.entry.key);
-                } else {
-                  EXPECT_EQ(changes[current_change].entry, e.entry);
-                }
-                ++current_change;
-                return true;
-              },
-              callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(changes.size(), current_change);
-}
-
-TEST_F(BTreeUtilsTest, ForEachDiffWithMinKey) {
-  // Expected base tree layout (XX is key "keyXX"):
-  //                     [50]
-  //                   /     \
-  //       [03, 07, 30]      [65, 76]
-  //     /
-  // [01, 02]
-  std::vector<EntryChange> base_entries;
-  ASSERT_TRUE(CreateEntryChanges(
-      std::vector<size_t>({1, 2, 3, 7, 30, 50, 65, 76}), &base_entries));
-  // Expected other tree layout (XX is key "keyXX"):
-  //               [50, 75]
-  //             /    |    \
-  //    [03, 07, 30] [65]  [76]
-  //     /           /
-  // [01, 02]      [51]
-  std::vector<EntryChange> changes;
-  ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({51, 75}), &changes));
-
-  Status status;
-  ObjectDigest base_root_digest = CreateTree(base_entries);
-  ObjectDigest other_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, base_root_digest,
-      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &other_root_digest,
-                        &new_nodes),
-      &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-
-  // ForEachDiff with a "key0" as min_key should return both changes.
-  size_t current_change = 0;
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_digest,
-              other_root_digest, "key0",
-              [&changes, &current_change](EntryChange e) {
-                EXPECT_EQ(changes[current_change++].entry, e.entry);
-                return true;
-              },
-              callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(changes.size(), current_change);
-
-  // With "key60" as min_key, only key75 should be returned.
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_digest,
-              other_root_digest, "key60",
-              [&changes](EntryChange e) {
-                EXPECT_EQ(changes[1].entry, e.entry);
-                return true;
-              },
-              callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-}
-
-TEST_F(BTreeUtilsTest, ForEachDiffWithMinKeySkipNodes) {
-  // Expected base tree layout (XX is key "keyXX"):
-  //       [03, 07, 30]
-  //     /
-  // [01, 02]
-  std::vector<EntryChange> base_entries;
-  ASSERT_TRUE(
-      CreateEntryChanges(std::vector<size_t>({1, 2, 3, 7, 30}), &base_entries));
-  // Expected other tree layout (XX is key "keyXX"):
-  //               [50]
-  //             /
-  //    [03, 07, 30]
-  //     /
-  // [01, 02]
-  std::vector<EntryChange> changes;
-  ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({50}), &changes));
-
-  Status status;
-  ObjectDigest base_root_digest = CreateTree(base_entries);
-  ObjectDigest other_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, base_root_digest,
-      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &other_root_digest,
-                        &new_nodes),
-      &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_digest,
-              other_root_digest, "key01",
-              [&changes](EntryChange e) {
-                EXPECT_EQ(changes[0].entry, e.entry);
-                return true;
-              },
-              callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-}
-
-TEST_F(BTreeUtilsTest, ForEachDiffPriorityChange) {
-  std::vector<EntryChange> changes;
-  ASSERT_TRUE(CreateEntryChanges(50, &changes));
-  ObjectDigest base_root_digest = CreateTree(changes);
-  Entry base_entry = changes[10].entry;
-  changes.clear();
-  // Update priority for a key.
-  changes.push_back(EntryChange{
-      Entry{base_entry.key, base_entry.object_digest, KeyPriority::LAZY},
-      false});
-
-  Status status;
-  ObjectDigest other_root_digest;
-  std::unordered_set<ObjectDigest> new_nodes;
-  ApplyChanges(
-      &coroutine_service_, &fake_storage_, base_root_digest,
-      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture(MakeQuitTask(), &status, &other_root_digest,
-                        &new_nodes),
-      &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-
-  // ForEachDiff should return all changes just applied.
-  size_t change_count = 0;
-  EntryChange actual_change;
-  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_digest,
-              other_root_digest, "",
-              [&actual_change, &change_count](EntryChange e) {
-                actual_change = e;
-                ++change_count;
-                return true;
-              },
-              callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, change_count);
-  EXPECT_FALSE(actual_change.deleted);
-  EXPECT_EQ(base_entry.key, actual_change.entry.key);
-  EXPECT_EQ(base_entry.object_digest, actual_change.entry.object_digest);
-  EXPECT_EQ(KeyPriority::LAZY, actual_change.entry.priority);
 }
 
 }  // namespace

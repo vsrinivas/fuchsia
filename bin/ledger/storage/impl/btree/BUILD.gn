@@ -20,6 +20,7 @@ source_set("lib") {
     "diff.h",
     "encoding.cc",
     "encoding.h",
+    "entry_change_iterator.h",
     "iterator.cc",
     "iterator.h",
     "synchronous_storage.cc",
@@ -77,8 +78,8 @@ source_set("unittests") {
 
   sources = [
     "btree_utils_unittest.cc",
+    "diff_unittest.cc",
     "encoding_unittest.cc",
-    "entry_change_iterator.h",
     "tree_node_unittest.cc",
   ]
 

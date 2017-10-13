@@ -126,6 +126,13 @@ class StorageTest : public ::test::TestWithCoroutines {
       const std::vector<ObjectDigest>& children,
       std::unique_ptr<const btree::TreeNode>* node);
 
+  // Creates a BTree applying changes from the base node and gives back the
+  // digest of its new root node.
+  ::testing::AssertionResult CreateTreeFromChanges(
+      ObjectDigest base_node_digest,
+      const std::vector<EntryChange>& entries,
+      ObjectDigest* new_root_digest);
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(StorageTest);
 };

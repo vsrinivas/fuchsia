@@ -5,6 +5,26 @@
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
+namespace {
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& ptr) {
+  if (ptr) {
+    return os << *ptr;
+  }
+  return os;
+}
+
+template <typename T>
+bool EqualPtr(const std::unique_ptr<T>& lhs, const std::unique_ptr<T>& rhs) {
+  if (bool(lhs) != bool(rhs)) {
+    return false;
+  }
+  if (!lhs && !rhs) {
+    return true;
+  }
+  return *lhs == *rhs;
+}
+}  // namespace
 
 bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
   return std::tie(lhs.key_index, lhs.deletion_scope_id, lhs.object_digest) ==
@@ -29,6 +49,12 @@ bool operator!=(const Entry& lhs, const Entry& rhs) {
   return !(lhs == rhs);
 }
 
+std::ostream& operator<<(std::ostream& os, const Entry& e) {
+  return os << "Entry{key: " << e.key << ", value: " << e.object_digest
+            << ", priority: "
+            << (e.priority == KeyPriority::EAGER ? "EAGER" : "LAZY") << "}";
+}
+
 bool operator==(const EntryChange& lhs, const EntryChange& rhs) {
   return lhs.deleted == rhs.deleted &&
          (lhs.deleted ? lhs.entry.key == rhs.entry.key
@@ -37,6 +63,25 @@ bool operator==(const EntryChange& lhs, const EntryChange& rhs) {
 
 bool operator!=(const EntryChange& lhs, const EntryChange& rhs) {
   return !(lhs == rhs);
+}
+
+std::ostream& operator<<(std::ostream& os, const EntryChange& e) {
+  return os << "EntryChange{entry: " << e.entry << ", deleted: " << e.deleted
+            << "}";
+}
+
+bool operator==(const ThreeWayChange& lhs, const ThreeWayChange& rhs) {
+  return EqualPtr(lhs.base, rhs.base) && EqualPtr(lhs.left, rhs.left) &&
+         EqualPtr(lhs.right, rhs.right);
+}
+
+bool operator!=(const ThreeWayChange& lhs, const ThreeWayChange& rhs) {
+  return !(lhs == rhs);
+}
+
+std::ostream& operator<<(std::ostream& os, const ThreeWayChange& e) {
+  return os << "ThreeWayChange{base: " << e.base << ", left: " << e.left
+            << ", right: " << e.right << "}";
 }
 
 fxl::StringView StatusToString(Status status) {

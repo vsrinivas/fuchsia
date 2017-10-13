@@ -187,6 +187,19 @@ class PageStorage {
       std::function<bool(EntryChange)> on_next_diff,
       std::function<void(Status)> on_done) = 0;
 
+  // Computes the 3-way diff between a base commit and two other commits. Calls
+  // |on_next_diff| on found changed entries. Returning false from
+  // |on_next_diff| will immediately stop the iteration. |on_done| is called
+  // once, upon successfull completion, i.e. when there are no more differences
+  // or iteration was interrupted, or if an error occurs.
+  virtual void GetThreeWayContentsDiff(
+      const Commit& base_commit,
+      const Commit& left_commit,
+      const Commit& right_commit,
+      std::string min_key,
+      std::function<bool(ThreeWayChange)> on_next_diff,
+      std::function<void(Status)> on_done) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };

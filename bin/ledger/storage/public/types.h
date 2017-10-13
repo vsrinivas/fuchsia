@@ -49,6 +49,7 @@ struct Entry {
 
 bool operator==(const Entry& lhs, const Entry& rhs);
 bool operator!=(const Entry& lhs, const Entry& rhs);
+std::ostream& operator<<(std::ostream& os, const Entry& e);
 
 // A change between two commit contents.
 struct EntryChange {
@@ -58,6 +59,18 @@ struct EntryChange {
 
 bool operator==(const EntryChange& lhs, const EntryChange& rhs);
 bool operator!=(const EntryChange& lhs, const EntryChange& rhs);
+std::ostream& operator<<(std::ostream& os, const EntryChange& e);
+
+// A change between 3 commit contents.
+struct ThreeWayChange {
+  std::unique_ptr<Entry> base;
+  std::unique_ptr<Entry> left;
+  std::unique_ptr<Entry> right;
+};
+
+bool operator==(const ThreeWayChange& lhs, const ThreeWayChange& rhs);
+bool operator!=(const ThreeWayChange& lhs, const ThreeWayChange& rhs);
+std::ostream& operator<<(std::ostream& os, const ThreeWayChange& e);
 
 enum class ChangeSource { LOCAL, SYNC };
 

@@ -133,6 +133,12 @@ class PageStorageImpl : public PageStorage {
                              std::string min_key,
                              std::function<bool(EntryChange)> on_next_diff,
                              std::function<void(Status)> on_done) override;
+  void GetThreeWayContentsDiff(const Commit& base_commit,
+                               const Commit& left_commit,
+                               const Commit& right_commit,
+                               std::string min_key,
+                               std::function<bool(ThreeWayChange)> on_next_diff,
+                               std::function<void(Status)> on_done) override;
 
  private:
   friend class PageStorageImplAccessorForTest;
@@ -191,7 +197,7 @@ class PageStorageImpl : public PageStorage {
       coroutine::CoroutineHandler* handler,
       std::function<void(Args...)> callback) {
     handlers_.insert(handler);
-    return [this, handler, callback = std::move(callback)](Args... args) {
+    return [ this, handler, callback = std::move(callback) ](Args... args) {
       // Remove the handler before calling the final callback. Otherwise the
       // handler might be unnecessarily interrupted, if this PageStorage
       // destructor is called in the callback.

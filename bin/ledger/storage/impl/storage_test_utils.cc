@@ -11,6 +11,8 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
+#include "peridot/bin/ledger/storage/impl/btree/builder.h"
+#include "peridot/bin/ledger/storage/impl/btree/entry_change_iterator.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
@@ -49,6 +51,23 @@ std::string GetObjectDigest(std::string value) {
                   });
   return result;
 }
+
+// Pre-determined node level function.
+uint8_t GetTestNodeLevel(convert::ExtendedStringView key) {
+  if (key == "key03" || key == "key07" || key == "key30" || key == "key60" ||
+      key == "key89") {
+    return 1;
+  }
+
+  if (key == "key50" || key == "key75") {
+    return 2;
+  }
+
+  return 0;
+}
+
+constexpr btree::NodeLevelCalculator kTestNodeLevelCalculator = {
+    &GetTestNodeLevel};
 
 }  // namespace
 
@@ -245,6 +264,29 @@ StorageTest::~StorageTest(){};
            << "TreeNode::FromEntries failed with status " << status;
   }
   return CreateNodeFromDigest(digest, node);
+}
+
+::testing::AssertionResult StorageTest::CreateTreeFromChanges(
+    ObjectDigest base_node_digest,
+    const std::vector<EntryChange>& entries,
+    ObjectDigest* new_root_digest) {
+  Status status;
+  std::unordered_set<ObjectDigest> new_nodes;
+  btree::ApplyChanges(
+      &coroutine_service_, GetStorage(), base_node_digest,
+      std::make_unique<btree::EntryChangeIterator>(entries.begin(),
+                                                   entries.end()),
+      callback::Capture(MakeQuitTask(), &status, new_root_digest, &new_nodes),
+      &kTestNodeLevelCalculator);
+  if (RunLoopWithTimeout()) {
+    return ::testing::AssertionFailure()
+           << "btree::ApplyChanges callback was not executed.";
+  }
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "btree::ApplyChanges failed with status " << status;
+  }
+  return ::testing::AssertionSuccess();
 }
 
 }  // namespace storage

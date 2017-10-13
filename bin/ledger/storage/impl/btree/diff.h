@@ -27,6 +27,20 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done);
 
+// Iterates through the differences between three trees given their root ids and
+// calls |on_next| if any difference is found between any pair.
+// Returning false from |on_next| will immediately stop the iteration. |on_done|
+// is called once, upon successful completion, i.e. when there are no more
+// differences or iteration was interrupted, or if an error occurs.
+void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
+                         PageStorage* page_storage,
+                         ObjectDigestView base_root_digest,
+                         ObjectDigestView left_root_digest,
+                         ObjectDigestView right_root_digest,
+                         std::string min_key,
+                         std::function<bool(ThreeWayChange)> on_next,
+                         std::function<void(Status)> on_done);
+
 }  // namespace btree
 }  // namespace storage
 

@@ -169,5 +169,16 @@ void PageStorageEmptyImpl::GetCommitContentsDiff(
   on_done(Status::NOT_IMPLEMENTED);
 }
 
+void PageStorageEmptyImpl::GetThreeWayContentsDiff(
+    const Commit& /*base_commit*/,
+    const Commit& /*left_commit*/,
+    const Commit& /*right_commit*/,
+    std::string /*min_key*/,
+    std::function<bool(ThreeWayChange)> /*on_next_diff*/,
+    std::function<void(Status)> on_done) {
+  FXL_NOTIMPLEMENTED();
+  on_done(Status::NOT_IMPLEMENTED);
+}
+
 }  // namespace test
 }  // namespace storage

@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/diff.h"
 
+#include <utility>
+
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"
 #include "peridot/bin/ledger/storage/impl/btree/iterator.h"
 #include "peridot/bin/ledger/storage/impl/btree/synchronous_storage.h"
@@ -11,14 +13,14 @@
 namespace storage {
 namespace btree {
 namespace {
-
 // Aggregates 2 |BTreeIterator|s and allows to walk through these concurrently
-// to compute the diff.
+// to compute the diff. |on_next| will be called for each diff entry.
 class IteratorPair {
  public:
   IteratorPair(SynchronousStorage* storage,
-               const std::function<bool(EntryChange)>& on_next)
-      : on_next_(on_next), left_(storage), right_(storage) {}
+               std::function<bool(std::unique_ptr<Entry>,
+                                  std::unique_ptr<Entry>)> on_next)
+      : on_next_(std::move(on_next)), left_(storage), right_(storage) {}
 
   // Initialize the pair with the ids of both roots.
   Status Init(ObjectDigestView left_node_digest,
@@ -253,21 +255,248 @@ class IteratorPair {
 
   // Send a diff using the right iterator.
   bool SendRight() {
-    return on_next_({right_.CurrentEntry(), !diff_from_left_to_right_});
+    std::unique_ptr<Entry> left_entry, right_entry;
+    right_entry = std::make_unique<Entry>(right_.CurrentEntry());
+    if (!left_.Finished() && left_.HasValue() &&
+        left_.CurrentEntry().key == right_.CurrentEntry().key) {
+      left_entry = std::make_unique<Entry>(left_.CurrentEntry());
+    }
+    if (diff_from_left_to_right_) {
+      return on_next_(std::move(left_entry), std::move(right_entry));
+    } else {
+      return on_next_(std::move(right_entry), std::move(left_entry));
+    }
   }
 
-  // Send a diff using the left iterator.
   bool SendLeft() {
-    return on_next_({left_.CurrentEntry(), diff_from_left_to_right_});
+    std::unique_ptr<Entry> left_entry, right_entry;
+    left_entry = std::make_unique<Entry>(left_.CurrentEntry());
+    if (!right_.Finished() && right_.HasValue() &&
+        left_.CurrentEntry().key == right_.CurrentEntry().key) {
+      right_entry = std::make_unique<Entry>(right_.CurrentEntry());
+    }
+
+    if (diff_from_left_to_right_) {
+      return on_next_(std::move(left_entry), std::move(right_entry));
+    } else {
+      return on_next_(std::move(right_entry), std::move(left_entry));
+    }
   }
 
-  const std::function<bool(EntryChange)>& on_next_;
+  std::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)> on_next_;
   BTreeIterator left_;
   BTreeIterator right_;
   // Keep track whether the change is from left to right, or right to left.
   // This allows to switch left and right during the algorithm to handle less
   // cases.
   bool diff_from_left_to_right_ = true;
+};
+
+// Iterator that does a three-way diff by using two IteratorPair objects in
+// parallel.
+// Here is an attempt to convey what this iterator should be doing:
+// - It creates an IteratorPair (IP thereafter) for each side of the diff
+//   (base-to-left and base-to-right).
+// - At the initialization time, it advances each internal IP to their first
+//   diff. Each IP (as viewed from here) is on one key: the key of the latest
+//   diff it returned.
+// - We always advance the IP with the lowest key, or the one not finished yet.
+//   If both are on the same key, we advance both.
+// - The current key considered by the ThreeWayIterator is the lowest key of the
+//   latest left and right diffs. If one IP is finished, then the current key is
+//   the key of the other IP's diff.
+// - When sending the ThreeWayIterator diff, we consider the current key (per
+//   above). If both IPs are on the same key, the diff is easy (we just send
+//   everything). However, if the IPs are on different keys, or one of them is
+//   finished, we have to consider multiple cases:
+//   - If the base entry is present, it means the key/value was present in the
+//     base revision. Given that the other IP moved past this key, there is no
+//     diff on that side and we copy the base entry to that side entry within
+//     the tree-way diff change.
+//   - If the base entry is not present, it means the key/value was not present
+//     in the base revision and it is an addition.
+class ThreeWayIterator {
+ public:
+  ThreeWayIterator(SynchronousStorage* storage) {
+    base_left_iterators_ = std::make_unique<IteratorPair>(
+        storage,
+        [this](std::unique_ptr<Entry> base, std::unique_ptr<Entry> left) {
+          left_advanced_ = true;
+          base_left_.swap(base);
+          left_.swap(left);
+          return true;
+        });
+    base_right_iterators_ = std::make_unique<IteratorPair>(
+        storage,
+        [this](std::unique_ptr<Entry> base, std::unique_ptr<Entry> right) {
+          right_advanced_ = true;
+          base_right_.swap(base);
+          right_.swap(right);
+          return true;
+        });
+  }
+
+  Status Init(ObjectDigestView base_node_digest,
+              ObjectDigestView left_node_digest,
+              ObjectDigestView right_node_digest,
+              fxl::StringView min_key) {
+    RETURN_ON_ERROR(base_left_iterators_->Init(base_node_digest,
+                                               left_node_digest, min_key));
+    RETURN_ON_ERROR(base_right_iterators_->Init(base_node_digest,
+                                                right_node_digest, min_key));
+    if (!Finished()) {
+      RETURN_ON_ERROR(AdvanceLeft());
+      RETURN_ON_ERROR(AdvanceRight());
+    }
+    return Status::OK;
+  }
+
+  bool Finished() {
+    return base_left_iterators_->Finished() &&
+           base_right_iterators_->Finished();
+  }
+
+  Status Advance() {
+    FXL_DCHECK(!Finished());
+    if (base_left_iterators_->Finished()) {
+      RETURN_ON_ERROR(AdvanceRight());
+    } else if (base_right_iterators_->Finished()) {
+      RETURN_ON_ERROR(AdvanceLeft());
+    } else if (GetLeftKey() < GetRightKey()) {
+      RETURN_ON_ERROR(AdvanceLeft());
+    } else if (GetLeftKey() > GetRightKey()) {
+      RETURN_ON_ERROR(AdvanceRight());
+    } else {
+      RETURN_ON_ERROR(AdvanceLeft());
+      RETURN_ON_ERROR(AdvanceRight());
+    }
+    return Status::OK;
+  }
+
+  ThreeWayChange GetCurrentDiff() {
+    FXL_DCHECK(!Finished());
+    ThreeWayChange change;
+    change.base = GetBase();
+    change.left = GetLeft(change);
+    change.right = GetRight(change);
+    return change;
+  }
+
+ private:
+  // GetLeftKey (resp. GetRightKey) should not be called if the left (resp.
+  // right) IteratorPair is finished.
+  const std::string& GetLeftKey() {
+    FXL_DCHECK(base_left_ || left_);
+    if (base_left_) {
+      return base_left_->key;
+    }
+    return left_->key;
+  }
+
+  const std::string& GetRightKey() {
+    FXL_DCHECK(base_right_ || right_);
+    if (base_right_) {
+      return base_right_->key;
+    }
+    return right_->key;
+  }
+
+  Status AdvanceLeft() {
+    left_advanced_ = false;
+    while (!base_left_iterators_->Finished() && !left_advanced_) {
+      if (!base_left_iterators_->SendDiff()) {
+        return Status::OK;
+      }
+      RETURN_ON_ERROR(base_left_iterators_->Advance());
+    }
+    if (base_left_iterators_->Finished()) {
+      base_left_.reset();
+      left_.reset();
+    }
+    return Status::OK;
+  }
+
+  Status AdvanceRight() {
+    right_advanced_ = false;
+    while (!base_right_iterators_->Finished() && !right_advanced_) {
+      if (!base_right_iterators_->SendDiff()) {
+        return Status::OK;
+      }
+      RETURN_ON_ERROR(base_right_iterators_->Advance());
+    }
+    if (base_right_iterators_->Finished()) {
+      base_right_.reset();
+      right_.reset();
+    }
+    return Status::OK;
+  }
+
+  std::unique_ptr<Entry> GetBase() {
+    if (base_left_ && base_right_) {
+      if (base_left_->key < base_right_->key) {
+        return std::make_unique<Entry>(*base_left_);
+      }
+      return std::make_unique<Entry>(*base_right_);
+
+    } else if (!base_right_ && base_left_ &&
+               (!right_ || base_left_->key < right_->key)) {
+      return std::make_unique<Entry>(*base_left_);
+    } else if (!base_left_ && base_right_ &&
+               (!left_ || base_right_->key < left_->key)) {
+      return std::make_unique<Entry>(*base_right_);
+    } else {
+      return std::unique_ptr<Entry>();
+    }
+  }
+
+  std::unique_ptr<Entry> GetLeft(const ThreeWayChange& change) {
+    if (change.base) {
+      if (left_ && change.base->key == left_->key) {
+        return std::make_unique<Entry>(*left_);
+      }
+      if (left_ && change.base->key < left_->key) {
+        return std::make_unique<Entry>(*change.base);
+      }
+      if (base_left_iterators_->Finished()) {
+        return std::make_unique<Entry>(*change.base);
+      }
+      return std::unique_ptr<Entry>();
+    }
+    if (!left_ || (right_ && right_->key < left_->key)) {
+      return std::unique_ptr<Entry>();
+    }
+    return std::make_unique<Entry>(*left_);
+  }
+
+  std::unique_ptr<Entry> GetRight(const ThreeWayChange& change) {
+    if (change.base) {
+      if (right_ && change.base->key == right_->key) {
+        return std::make_unique<Entry>(*right_);
+      }
+      if (right_ && change.base->key < right_->key) {
+        return std::make_unique<Entry>(*change.base);
+      }
+      if (base_right_iterators_->Finished()) {
+        return std::make_unique<Entry>(*change.base);
+      }
+      return std::unique_ptr<Entry>();
+    }
+    if (!right_ || (left_ && left_->key < right_->key)) {
+      return std::unique_ptr<Entry>();
+    }
+    return std::make_unique<Entry>(*right_);
+  }
+
+  bool left_advanced_ = false;
+  bool right_advanced_ = false;
+
+  std::unique_ptr<Entry> base_left_;
+  std::unique_ptr<Entry> base_right_;
+  std::unique_ptr<Entry> left_;
+  std::unique_ptr<Entry> right_;
+
+  std::unique_ptr<IteratorPair> base_left_iterators_;
+  std::unique_ptr<IteratorPair> base_right_iterators_;
 };
 
 Status ForEachDiffInternal(SynchronousStorage* storage,
@@ -279,7 +508,16 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
     return Status::OK;
   }
 
-  IteratorPair iterators(storage, on_next);
+  auto wrapped_next = [on_next](std::unique_ptr<Entry> base,
+                                std::unique_ptr<Entry> other) {
+    if (other) {
+      return on_next({*other, false});
+    }
+    return on_next({*base, true});
+
+  };
+
+  IteratorPair iterators(storage, wrapped_next);
   RETURN_ON_ERROR(iterators.Init(left_node_digest, right_node_digest, min_key));
 
   while (!iterators.Finished()) {
@@ -287,6 +525,31 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
       return Status::OK;
     }
     RETURN_ON_ERROR(iterators.Advance());
+  }
+
+  return Status::OK;
+}  // namespace
+
+Status ForEachThreeWayDiffInternal(
+    SynchronousStorage* storage,
+    ObjectDigestView base_node_digest,
+    ObjectDigestView left_node_digest,
+    ObjectDigestView right_node_digest,
+    std::string min_key,
+    const std::function<bool(ThreeWayChange)>& on_next) {
+  if (left_node_digest == right_node_digest) {
+    return Status::OK;
+  }
+
+  ThreeWayIterator iterator(storage);
+  RETURN_ON_ERROR(iterator.Init(base_node_digest, left_node_digest,
+                                right_node_digest, min_key));
+
+  while (!iterator.Finished()) {
+    if (!on_next(iterator.GetCurrentDiff())) {
+      return Status::OK;
+    }
+    RETURN_ON_ERROR(iterator.Advance());
   }
 
   return Status::OK;
@@ -301,17 +564,37 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done) {
-  coroutine_service->StartCoroutine(
-      [page_storage, base_root_digest, other_root_digest,
-       on_next = std::move(on_next), min_key = std::move(min_key),
-       on_done =
-           std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
-        SynchronousStorage storage(page_storage, handler);
+  coroutine_service->StartCoroutine([
+    page_storage, base_root_digest, other_root_digest,
+    on_next = std::move(on_next), min_key = std::move(min_key),
+    on_done = std::move(on_done)
+  ](coroutine::CoroutineHandler * handler) mutable {
+    SynchronousStorage storage(page_storage, handler);
 
-        on_done(ForEachDiffInternal(&storage, base_root_digest,
-                                    other_root_digest, std::move(min_key),
-                                    on_next));
-      });
+    on_done(ForEachDiffInternal(&storage, base_root_digest, other_root_digest,
+                                std::move(min_key), on_next));
+  });
+}
+
+void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
+                         PageStorage* page_storage,
+                         ObjectDigestView base_root_digest,
+                         ObjectDigestView left_root_digest,
+                         ObjectDigestView right_root_digest,
+                         std::string min_key,
+                         std::function<bool(ThreeWayChange)> on_next,
+                         std::function<void(Status)> on_done) {
+  coroutine_service->StartCoroutine([
+    page_storage, base_root_digest, left_root_digest, right_root_digest,
+    on_next = std::move(on_next), min_key = std::move(min_key),
+    on_done = std::move(on_done)
+  ](coroutine::CoroutineHandler * handler) mutable {
+    SynchronousStorage storage(page_storage, handler);
+
+    on_done(ForEachThreeWayDiffInternal(&storage, base_root_digest,
+                                        left_root_digest, right_root_digest,
+                                        std::move(min_key), on_next));
+  });
 }
 
 }  // namespace btree
