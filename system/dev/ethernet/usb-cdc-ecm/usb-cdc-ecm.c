@@ -66,7 +66,8 @@ typedef struct {
     // Send context
     mtx_t tx_mutex;
     ecm_endpoint_t tx_endpoint;
-    list_node_t tx_txn_bufs;
+    list_node_t tx_txn_bufs;        // list of usb_request_t
+    list_node_t tx_pending_infos;   // list of ethmac_netbuf_t
     uint64_t tx_drop_notice_ticks;
 
     // Receive context
@@ -88,6 +89,13 @@ static void ecm_free(ecm_ctx_t* ctx) {
     usb_request_t* txn;
     while ((txn = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node)) != NULL) {
         usb_request_release(txn);
+    }
+    if (ctx->ethmac_ifc) {
+        ethmac_netbuf_t* netbuf;
+        while ((netbuf = list_remove_head_type(&ctx->tx_pending_infos, ethmac_netbuf_t, node)) !=
+               NULL) {
+            ctx->ethmac_ifc->complete_tx(ctx->ethmac_cookie, netbuf, ZX_ERR_PEER_CLOSED);
+        }
     }
     usb_request_release(ctx->int_txn_buf);
     mtx_destroy(&ctx->ethmac_mutex);
@@ -176,6 +184,58 @@ static zx_status_t ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* ethma
     return status;
 }
 
+static zx_status_t queue_request(ecm_ctx_t* ctx, uint8_t* data, size_t length, usb_request_t* req) {
+    req->header.length = length;
+    ssize_t bytes_copied = usb_request_copyto(req, data, length, 0);
+    if (bytes_copied < 0) {
+        printf("%s: failed to copy data into send txn (error %zd)\n", module_name, bytes_copied);
+        return ZX_ERR_IO;
+    }
+    usb_request_queue(&ctx->usb, req);
+    return ZX_OK;
+}
+
+static zx_status_t send_locked(ecm_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
+    uint8_t* byte_data = netbuf->data;
+    size_t length = netbuf->len;
+
+    // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
+    // transmission when the endpoint max packet size is a factor of the total transmission size.
+    bool send_terminal_packet = (length % ctx->tx_endpoint.max_packet_size == 0);
+
+    // Make sure that we can get all of the tx buffers we need to use
+    usb_request_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
+    if (tx_req == NULL) {
+        return ZX_ERR_SHOULD_WAIT;
+    }
+    usb_request_t* terminal_req;
+    if (send_terminal_packet) {
+        terminal_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
+        if (terminal_req == NULL) {
+            list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
+            return ZX_ERR_SHOULD_WAIT;
+        }
+    }
+
+    zx_status_t status;
+    if ((status = queue_request(ctx, byte_data, length, tx_req)) != ZX_OK) {
+        list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
+        if (send_terminal_packet) {
+            list_add_tail(&ctx->tx_txn_bufs, &terminal_req->node);
+        }
+        return status;
+    }
+
+    if (send_terminal_packet && (status = queue_request(ctx, byte_data, 0, tx_req)) != ZX_OK) {
+        // This leaves us in a very awkward situation, since failing to send the zero-length
+        // packet means the ethernet packet will be improperly terminated.
+        list_add_tail(&ctx->tx_txn_bufs, &terminal_req->node);
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 static void usb_write_complete(usb_request_t* request, void* cookie) {
     ecm_ctx_t* ctx = cookie;
 
@@ -194,7 +254,24 @@ static void usb_write_complete(usb_request_t* request, void* cookie) {
         usb_reset_endpoint(&ctx->usb, ctx->tx_endpoint.addr);
     }
 
+    bool additional_tx_queued = false;
+    ethmac_netbuf_t* netbuf;
+    zx_status_t send_status = ZX_OK;
+    if (!list_is_empty(&ctx->tx_pending_infos)) {
+        netbuf = list_peek_head_type(&ctx->tx_pending_infos, ethmac_netbuf_t, node);
+        if ((send_status = send_locked(ctx, netbuf)) != ZX_ERR_SHOULD_WAIT) {
+            list_remove_head(&ctx->tx_pending_infos);
+            additional_tx_queued = true;
+        }
+    }
+
     mtx_unlock(&ctx->tx_mutex);
+
+    mtx_lock(&ctx->ethmac_mutex);
+    if (additional_tx_queued && ctx->ethmac_ifc) {
+        ctx->ethmac_ifc->complete_tx(ctx->ethmac_cookie, netbuf, send_status);
+    }
+    mtx_unlock(&ctx->ethmac_mutex);
 
     // When the interface is offline, the transaction will complete with status set to
     // ZX_ERR_IO_NOT_PRESENT. There's not much we can do except ignore it.
@@ -243,23 +320,11 @@ static void usb_read_complete(usb_request_t* request, void* cookie) {
     usb_request_queue(&ctx->usb, request);
 }
 
-// Give a dropped packet notification, but limit ourselves to no more than 1 message/second.
-static void dropped_packet_notification(ecm_ctx_t* ctx) {
-    uint64_t now_ticks = zx_ticks_get();
-    if (now_ticks - ctx->tx_drop_notice_ticks >= ctx->ticks_per_second) {
-        printf("%s: no free write txns, dropping packets\n", module_name);
-        ctx->tx_drop_notice_ticks = now_ticks;
-    }
-}
-
 static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
-    zx_status_t status = ZX_OK;
     ecm_ctx_t* ctx = cookie;
     size_t length = netbuf->len;
-    uint8_t* byte_data = netbuf->data;
 
     if (length > ctx->mtu || length == 0) {
-        printf("%s: unsupported packet length %zu\n", module_name, length);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -268,59 +333,12 @@ static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf
 
     mtx_lock(&ctx->tx_mutex);
 
-    // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
-    // transmission when the endpoint max packet size is a factor of the total transmission size.
-    bool send_terminal_packet = (length % ctx->tx_endpoint.max_packet_size == 0);
-
-    // Make sure that we can get all of the tx buffers we need to use
-    usb_request_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
-    if (tx_req == NULL) {
-        dropped_packet_notification(ctx);
-        status = ZX_ERR_NO_RESOURCES;
-        goto done;
-    }
-    usb_request_t* tx_req2;
-    if (send_terminal_packet) {
-        tx_req2 = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
-        if (tx_req2 == NULL) {
-            dropped_packet_notification(ctx);
-            list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
-            status = ZX_ERR_NO_RESOURCES;
-            goto done;
-        }
+    zx_status_t status = send_locked(ctx, netbuf);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+        // No buffers available, queue it up
+        list_add_tail(&ctx->tx_pending_infos, &netbuf->node);
     }
 
-    // Send data
-    tx_req->header.length = length;
-    ssize_t bytes_copied = usb_request_copyto(tx_req, byte_data, tx_req->header.length, 0);
-    if (bytes_copied < 0) {
-        printf("%s: failed to copy data into send txn (error %zd)\n", module_name, bytes_copied);
-        list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
-        if (send_terminal_packet) {
-            list_add_tail(&ctx->tx_txn_bufs, &tx_req2->node);
-        }
-        status = ZX_ERR_IO;
-        goto done;
-    }
-    usb_request_queue(&ctx->usb, tx_req);
-
-    // Send zero-length terminal packet, if needed
-    if (send_terminal_packet) {
-        tx_req2->header.length = 0;
-        bytes_copied = usb_request_copyto(tx_req2, byte_data, 0, 0);
-        if (bytes_copied < 0) {
-            // This leaves us in a very awkward situation, since failing to send the zero-length
-            // packet means the ethernet packet will be improperly terminated.
-            printf("%s: failed to copy data into send txn (error %zd)\n",
-                   module_name, bytes_copied);
-            list_add_tail(&ctx->tx_txn_bufs, &tx_req2->node);
-            status = ZX_ERR_IO;
-            goto done;
-        }
-        usb_request_queue(&ctx->usb, tx_req2);
-    }
-
-done:
     mtx_unlock(&ctx->tx_mutex);
     return status;
 }
@@ -417,8 +435,8 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
     const size_t expected_str_size = sizeof(usb_string_descriptor_t) + ETH_MAC_SIZE * 4;
     char str_desc_buf[expected_str_size];
 
-    size_t out_length;
     // Read string descriptor for MAC address (string index is in iMACAddress field)
+    size_t out_length;
     zx_status_t result = usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress,
                                             str_desc_buf, sizeof(str_desc_buf), ZX_TIME_INFINITE,
                                             &out_length);
@@ -499,6 +517,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device, void** cookie) {
     ecm_ctx->usb_device = device;
     memcpy(&ecm_ctx->usb, &usb, sizeof(ecm_ctx->usb));
     list_initialize(&ecm_ctx->tx_txn_bufs);
+    list_initialize(&ecm_ctx->tx_pending_infos);
     mtx_init(&ecm_ctx->ethmac_mutex, mtx_plain);
     mtx_init(&ecm_ctx->tx_mutex, mtx_plain);
     ecm_ctx->ticks_per_second = zx_ticks_per_second();
