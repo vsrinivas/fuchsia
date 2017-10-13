@@ -42,7 +42,8 @@ interface DeviceShellContext {
 
 // These params are passed to |DeviceShell.Initialize|.
 struct DeviceShellParams {
-  mozart.Presentation presentation;
+  // TODO(jjosh): make this non-optional, if feasible.
+  mozart.Presentation? presentation;
 };
 
 // This interface is implemented by device shell. It is used to notify the
