@@ -160,7 +160,7 @@ Include the `lib.logging` package in your BUILD.gn target as a dependency:
 ```
 deps = [
   ...
-  "//topaz/lib/widgets/packages/logging:lib.logging",
+  "//topaz/public/dart/logging:lib.logging",
   ...
 ]
 ```
