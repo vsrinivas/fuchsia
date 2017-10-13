@@ -24,6 +24,7 @@ __BEGIN_CDECLS;
 // HiSilicon
 #define PDEV_VID_HI_SILICON         2
 #define PDEV_PID_HI3660             1
+#define PDEV_DID_HI3660_GPIO_TEST   1
 
 // Amlogic
 #define PDEV_VID_AMLOGIC            3

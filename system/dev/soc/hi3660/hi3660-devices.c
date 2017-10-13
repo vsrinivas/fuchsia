@@ -9,6 +9,8 @@
 #include "hi3660-bus.h"
 #include "hi3660-hw.h"
 
+//#define GPIO_TEST 1
+
 // TODO(voydanoff) Assign IDs to the mmios and irqs
 
 static const pbus_mmio_t dwc3_mmios[] = {
@@ -105,6 +107,20 @@ zx_status_t hi3360_add_devices(hi3660_bus_t* bus) {
         dprintf(ERROR, "hi3360_add_devices could not add mali_dev: %d\n", status);
         return status;
     }
+
+#if GPIO_TEST
+    const pbus_dev_t gpio_test_dev = {
+        .name = "gpio-test",
+        .vid = PDEV_VID_HI_SILICON,
+        .pid = PDEV_PID_HI3660,
+        .did = PDEV_DID_HI3660_GPIO_TEST,
+    };
+
+    if ((status = pbus_device_add(&bus->pbus, &gpio_test_dev, 0)) != ZX_OK) {
+        dprintf(ERROR, "hi3360_add_devices could not add gpio_test_dev: %d\n", status);
+        return status;
+    }
+#endif
 
     return ZX_OK;
 }

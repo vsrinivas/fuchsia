@@ -22,7 +22,6 @@
 #include "pl061.h"
 #include "hi3660-bus.h"
 #include "hi3660-hw.h"
-#include "hikey960-hw.h"
 
 static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, unsigned pin) {
     pl061_gpios_t* gpios;
@@ -161,28 +160,6 @@ static zx_protocol_device_t hi3660_device_protocol = {
     .release = hi3660_release,
 };
 
-// test thread that cycles the 4 LEDs on the hikey 960 board
-static int led_test_thread(void *arg) {
-    hi3660_bus_t* bus = arg;
-    gpio_protocol_t* gpio = &bus->gpio;
-
-    uint32_t led_gpios[] = { GPIO_USER_LED1, GPIO_USER_LED2, GPIO_USER_LED3, GPIO_USER_LED4 };
-
-    for (unsigned i = 0; i < countof(led_gpios); i++) {
-        gpio_config(gpio, led_gpios[i], GPIO_DIR_OUT);
-    }
-
-    while (1) {
-         for (unsigned i = 0; i < countof(led_gpios); i++) {
-            gpio_write(gpio, led_gpios[i], 1);
-            sleep(1);
-            gpio_write(gpio, led_gpios[i], 0);
-        }
-    }
-
-    return 0;
-}
-
 static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     hi3660_bus_t* bus = calloc(1, sizeof(hi3660_bus_t));
     if (!bus) {
@@ -241,11 +218,6 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     if ((status = hi3360_add_devices(bus)) != ZX_OK) {
         printf("hi3660_bind: hi3360_add_devices failed!\n");;
     }
-
-#if 0
-    thrd_t thrd;
-    thrd_create_with_name(&thrd, led_test_thread, bus, "led_test_thread");
-#endif
 
     // must be after pbus_set_interface
     if ((status = hi3360_usb_init(bus)) != ZX_OK) {

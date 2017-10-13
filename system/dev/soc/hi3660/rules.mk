@@ -20,3 +20,18 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).gpio-test
+
+MODULE_NAME := hi3660-gpio-test
+
+MODULE_TYPE := driver
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/hi3660-gpio-test.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+include make/module.mk
