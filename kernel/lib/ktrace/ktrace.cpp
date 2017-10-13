@@ -48,8 +48,8 @@ void ktrace_report_syscalls(ktrace_syscall_info* call) {
 
 static uint32_t probe_number = 1;
 
-extern ktrace_probe_info_t __start_ktrace_probe[] __WEAK;
-extern ktrace_probe_info_t __stop_ktrace_probe[] __WEAK;
+extern ktrace_probe_info_t* const __start_ktrace_probe[];
+extern ktrace_probe_info_t* const __stop_ktrace_probe[];
 
 static mutex_t probe_list_lock = MUTEX_INITIAL_VALUE(probe_list_lock);
 static ktrace_probe_info_t* probe_list TA_GUARDED(probe_list_lock);
@@ -217,10 +217,11 @@ void ktrace_init(unsigned level) {
     dprintf(INFO, "ktrace: buffer at %p (%u bytes)\n", ks->buffer, mb);
 
     // register all static probes
-    ktrace_probe_info_t *probe;
     mutex_acquire(&probe_list_lock);
-    for (probe = __start_ktrace_probe; probe != __stop_ktrace_probe; probe++) {
-        ktrace_add_probe(probe);
+    for (auto probe = __start_ktrace_probe;
+         probe != __stop_ktrace_probe;
+         ++probe) {
+        ktrace_add_probe(*probe);
     }
     mutex_release(&probe_list_lock);
 
@@ -241,6 +242,12 @@ void ktrace_init(unsigned level) {
 
     // report names of existing threads
     ktrace_report_live_threads();
+
+    // Report an event for "tracing is all set up now".  This also
+    // serves to ensure that there will be at least one static probe
+    // entry so that the __{start,stop}_ktrace_probe symbols above
+    // will be defined by the linker.
+    ktrace_probe0("ktrace_ready");
 }
 
 void ktrace_tiny(uint32_t tag, uint32_t arg) {

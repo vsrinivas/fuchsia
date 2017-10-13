@@ -31,20 +31,22 @@ static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint
         data[0] = a; data[1] = b; data[2] = c; data[3] = d;
     }
 }
-#define ktrace_probe0(_name) {                                  \
+#define _ktrace_probe_prologue(_name) \
+    static ktrace_probe_info_t info = { NULL, _name, 0 };       \
     __USED __SECTION("ktrace_probe")                            \
-    static ktrace_probe_info_t info = { .name = _name };        \
+    static ktrace_probe_info_t *const register_info = &info
+#define ktrace_probe0(_name) do {                               \
+    _ktrace_probe_prologue(_name);                              \
     ktrace_open(TAG_PROBE_16(info.num));                        \
-}
-#define ktrace_probe2(_name,arg0,arg1) {                     \
-    __USED __SECTION("ktrace_probe")                         \
-    static ktrace_probe_info_t info = { .name = _name };     \
+} while (0)
+#define ktrace_probe2(_name,arg0,arg1) do {                  \
+    _ktrace_probe_prologue(_name);                           \
     uint32_t* args = ktrace_open(TAG_PROBE_24(info.num));    \
     if (args) {                                              \
       args[0] = arg0;                                        \
       args[1] = arg1;                                        \
     }                                                        \
-}
+} while (0)
 void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name);
 int ktrace_read_user(void* ptr, uint32_t off, uint32_t len);
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);
