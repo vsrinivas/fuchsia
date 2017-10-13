@@ -196,7 +196,8 @@ zx_status_t Station::Associate(AssociateRequestPtr req) {
     }
     // TODO(tkilbourn): add extended rates support to get the rest of 802.11g rates.
     // TODO(tkilbourn): determine these rates based on hardware and the AP
-    std::vector<uint8_t> rates = {0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24};
+    std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
+
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
         SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -213,6 +214,16 @@ zx_status_t Station::Associate(AssociateRequestPtr req) {
     // Write RSNE from MLME-Association.request if available.
     if (req->rsn) {
         if (!w.write<RsnElement>(req->rsn.data(), req->rsn.size())) { return ZX_ERR_IO; }
+    }
+
+    if (IsHTReady()) {
+        HtCapabilities htc = BuildHtCapabilities();
+        if (!w.write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
+                                     htc.txbf_cap, htc.asel_cap)) {
+            errorf("could not write HtCapabilities\n");
+            SendAssocResponse(AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+            return ZX_ERR_IO;
+        }
     }
 
     // Validate the request in debug mode
@@ -949,6 +960,41 @@ uint16_t Station::next_seq() {
 zx_time_t Station::deadline_after_bcn_period(zx_duration_t tus) {
     ZX_DEBUG_ASSERT(!bss_.is_null());
     return timer_->Now() + WLAN_TU(bss_->beacon_period * tus);
+}
+
+bool Station::IsHTReady() const {
+    // TODO(porce): Placeholder.
+    // bool bss_is_ht_capable = true;
+    // bool client_is_ht_capable = true;
+    // bool client_is_ht_config = true;
+    // return bss_is_ht_capable && client_is_ht_capable && client_is_ht_config;
+
+    // TODO(porce): GoogleGuest-Legacy fails to offer DHCP upon
+    return false;
+}
+
+HtCapabilities Station::BuildHtCapabilities() const {
+    // TODO(porce): Find intersection of
+    // - BSS capabilities
+    // - Client radio capabilities
+    // - Client configuration
+
+    HtCapabilities htc;
+
+    // Static cooking for Proof-of-Concept
+    htc.ht_cap_info.set_ldpc_coding_cap(1);
+    htc.ht_cap_info.set_sm_power_save(HtCapabilityInfo::DISABLED);
+    htc.ht_cap_info.set_short_gi_20(1);
+    htc.ht_cap_info.set_tx_stbc(1);
+    htc.ht_cap_info.set_rx_stbc(1);
+
+    htc.ampdu_params.set_exponent(3);  // 65535 bytes
+    htc.ampdu_params.set_min_start_spacing(AmpduParams::SIXTEEN_USEC);
+    // htc.ampdu_params.set_min_start_spacing(AmpduParams::EIGHT_USEC);
+
+    htc.mcs_set.rx_mcs_head.set_bitmask(0xffff);  // MCS 0-15
+
+    return htc;  // 28 bytes.
 }
 
 }  // namespace wlan

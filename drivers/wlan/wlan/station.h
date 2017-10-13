@@ -6,14 +6,15 @@
 
 #include "device_interface.h"
 #include "mac_frame.h"
+#include "macaddr.h"
 
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
+#include "garnet/drivers/wlan/common/moving_average.h"
 #include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl-common.h"
-#include "garnet/drivers/wlan/common/moving_average.h"
 
 namespace wlan {
 
@@ -92,6 +93,9 @@ class Station {
 
     zx_time_t deadline_after_bcn_period(zx_duration_t tus);
     uint16_t next_seq();
+
+    bool IsHTReady() const;
+    HtCapabilities BuildHtCapabilities() const;
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;

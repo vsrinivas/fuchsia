@@ -250,7 +250,7 @@ class HtCapabilityInfo : public common::BitField<uint16_t> {
         : common::BitField<uint16_t>(ht_cap_info) {}
     constexpr HtCapabilityInfo() = default;
 
-    WLAN_BIT_FIELD(ldcp_coding_cap, 0, 1);
+    WLAN_BIT_FIELD(ldpc_coding_cap, 0, 1);
     WLAN_BIT_FIELD(chan_width_set, 1, 1);  // In spec: Supported Channel Width Set
     WLAN_BIT_FIELD(sm_power_save, 2, 2);   // Spatial Multiplexing Power Save
     WLAN_BIT_FIELD(greenfield, 4, 1);      // HT-Greenfield.
@@ -310,6 +310,7 @@ class AmpduParams : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
+   public:
     constexpr explicit SupportedMcsRxMcsHead(uint64_t val) : common::BitField<uint64_t>(val) {}
     constexpr SupportedMcsRxMcsHead() = default;
 
@@ -320,6 +321,7 @@ class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
+   public:
     constexpr explicit SupportedMcsRxMcsTail(uint32_t val) : common::BitField<uint32_t>(val) {}
     constexpr SupportedMcsRxMcsTail() = default;
 
@@ -331,6 +333,7 @@ class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsTxMcs : public common::BitField<uint32_t> {
+   public:
     constexpr explicit SupportedMcsTxMcs(uint32_t chunk) : common::BitField<uint32_t>(chunk) {}
     constexpr SupportedMcsTxMcs() = default;
 
@@ -361,6 +364,7 @@ struct SupportedMcsSet {
 
 // IEEE Std 802.11-2016, 9.4.2.56.5
 class HtExtCapabilities : public common::BitField<uint16_t> {
+   public:
     constexpr explicit HtExtCapabilities(uint16_t ht_ext_cap)
         : common::BitField<uint16_t>(ht_ext_cap) {}
     constexpr HtExtCapabilities() = default;
@@ -390,6 +394,7 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.56.6
 class TxBfCapability : public common::BitField<uint32_t> {
+   public:
     constexpr explicit TxBfCapability(uint32_t txbf_cap) : common::BitField<uint32_t>(txbf_cap) {}
     constexpr TxBfCapability() = default;
 
@@ -476,6 +481,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
 };
 
 class AselCapability : public common::BitField<uint8_t> {
+   public:
     constexpr explicit AselCapability(uint8_t asel_cap) : common::BitField<uint8_t>(asel_cap) {}
     constexpr AselCapability() = default;
 
@@ -511,6 +517,7 @@ struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabiliti
 // IEEE Std 802.11-2016, 9.4.2.57
 // Note this is a field within HtOperation element.
 class HtOpInfoHead : public common::BitField<uint32_t> {
+   public:
     constexpr explicit HtOpInfoHead(uint32_t op_info) : common::BitField<uint32_t>(op_info) {}
     constexpr HtOpInfoHead() = default;
 
