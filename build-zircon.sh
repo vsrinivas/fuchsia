@@ -19,7 +19,8 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-v] [-A] [-t target] [-o outdir]\n' "$0" && exit 1
+  printf '%s: [-c] [-v] [-V] [-A] [-t target] [-o outdir]\n' "$0"
+  printf 'Note: Passing extra arguments to make is not supported.\n'
 }
 
 build() {
@@ -49,21 +50,24 @@ build() {
   fi
 
   pushd "${ROOT_DIR}/zircon" > /dev/null
-  if [[ "${verbose}" = "true" ]]; then
-      export QUIET=0
-  else
-      export QUIET=1
-  fi
+  case "${verbose}" in
+    1) QUIET=0 ; V=0 ;;
+    2) QUIET=0 ; V=1 ;;
+    *) QUIET=1 ; V=0 ;;
+  esac
+  export QUIET
   # build host tools
-  make -j ${JOBS} \
+  make -j ${JOBS} V=${V} \
     BUILDDIR=${outdir}/build-zircon DEBUG_BUILDROOT=../../zircon tools
   # build zircon (including its portion of the sysroot) for the target architecture
-  make -j ${JOBS} ${zircon_build_type_flags:-} ${zircon_target} \
+  make -j ${JOBS} V=${V} \
+    ${zircon_build_type_flags:-} ${zircon_target} \
     BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
     TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_zircon} \
     BUILDDIR_SUFFIX=
   # Build the alternate shared libraries (ASan).
-  make -j ${JOBS} ${zircon_build_type_flags:-} ${zircon_target} \
+  make -j ${JOBS} V=${V} \
+    ${zircon_build_type_flags:-} ${zircon_target} \
     BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
     TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_ulib} \
     ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
@@ -74,16 +78,18 @@ declare ASAN="${ASAN:-false}"
 declare CLEAN="${CLEAN:-false}"
 declare TARGET="${TARGET:-x86_64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
-declare VERBOSE="${VERBOSE:-false}"
+declare VERBOSE="${VERBOSE:-0}"
 
-while getopts "Acd:ht:o:v" opt; do
+while getopts "Acht:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
+    h) usage ; exit 0 ;;
     o) OUTDIR="${OPTARG}" ;;
     t) TARGET="${OPTARG}" ;;
-    v) VERBOSE="true" ;;
-    *) usage;;
+    v) VERBOSE="1" ;;
+    V) VERBOSE="2" ;;
+    *) usage 1>&2 ; exit 1 ;;
   esac
 done
 
