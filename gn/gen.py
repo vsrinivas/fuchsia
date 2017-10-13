@@ -23,8 +23,10 @@ def main():
                         default=os.environ.get("ZIRCON_PROJECT"))
     parser.add_argument("--packages", "-p", help="comma separated list of packages",
                         default="packages/gn/default")
+    parser.add_argument("--debug", help="generate debug mode build files (default)",
+                        dest="variant", default="debug", action="store_const", const="debug")
     parser.add_argument("--release", "-r", help="generate release mode build files",
-                        action="store_true")
+                        dest="variant", action="store_const", const="release")
     parser.add_argument("--outdir", "-o", help="output directory")
     parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
                         choices=['x86-64', 'aarch64'])
@@ -40,10 +42,10 @@ def main():
     parser.add_argument("--with-dart-analysis", help="Run Dart analysis as part of the build",
                         action="store_true", default=False)
     parser.add_argument("--autorun", help="path to autorun script")
-    (args, passthrough) = parser.parse_known_args()
+    args = parser.parse_args()
 
     if not args.outdir:
-        args.outdir = "out/release" if args.release else "out/debug"
+        args.outdir = "out/%s" % args.variant
 
     # TODO: Do not clobber user specified output dir
     args.outdir += "-" + args.target_cpu
@@ -72,7 +74,7 @@ def main():
 
     gn_args += " fuchsia_packages=\"" + args.packages + "\""
 
-    if args.release:
+    if args.variant == "release":
         gn_args += " is_debug=false"
     if args.goma:
         gn_args += " use_goma=true"
@@ -100,11 +102,7 @@ def main():
     if args.zircon_project:
         gn_args += " zircon_project=\"%s\"" % args.zircon_project
 
-    gn_command += [gn_args]
-    if passthrough:
-        gn_command += passthrough
-
-    return subprocess.call([paths.GN_PATH] + gn_command)
+    return subprocess.call([paths.GN_PATH] + gn_command + [gn_args])
 
 
 if __name__ == "__main__":
