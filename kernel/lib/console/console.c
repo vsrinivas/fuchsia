@@ -61,14 +61,9 @@ static const char *prev_history(uint *cursor);
 static void dump_history(void);
 #endif
 
-/* list of installed commands */
-static cmd_block *command_list = NULL;
-
-/* a linear array of statically defined command blocks,
-   defined in the linker script.
- */
-extern cmd_block __start_commands[];
-extern cmd_block __stop_commands[];
+// A linear array of statically defined commands.
+extern const cmd __start_commands[];
+extern const cmd __stop_commands[];
 
 static int cmd_help(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_echo(int argc, const cmd_args *argv, uint32_t flags);
@@ -90,12 +85,6 @@ STATIC_COMMAND_END(help);
 
 static void console_init(uint level)
 {
-    /* add all the statically defined commands to the list */
-    cmd_block *block;
-    for (block = __start_commands; block != __stop_commands; block++) {
-        console_register_commands(block);
-    }
-
 #if CONSOLE_ENABLE_HISTORY
     init_history();
 #endif
@@ -198,21 +187,14 @@ static const char *prev_history(uint *cursor)
 
 static const cmd *match_command(const char *command, const uint8_t availability_mask)
 {
-    cmd_block *block;
-    size_t i;
-
-    for (block = command_list; block != NULL; block = block->next) {
-        const cmd *curr_cmd = block->list;
-        for (i = 0; i < block->count; i++) {
-            if ((availability_mask & curr_cmd[i].availability_mask) == 0) {
-                continue;
-            }
-            if (strcmp(command, curr_cmd[i].cmd_str) == 0) {
-                return &curr_cmd[i];
-            }
+    for (const cmd *curr_cmd = __start_commands;
+         curr_cmd != __stop_commands;
+         ++curr_cmd) {
+        if ((availability_mask & curr_cmd->availability_mask) != 0 &&
+            strcmp(command, curr_cmd->cmd_str) == 0) {
+            return curr_cmd;
         }
     }
-
     return NULL;
 }
 
@@ -756,36 +738,22 @@ console_cmd console_get_command_handler(const char *commandstr)
         return NULL;
 }
 
-void console_register_commands(cmd_block *block)
-{
-    DEBUG_ASSERT(block);
-    DEBUG_ASSERT(block->next == NULL);
-
-    block->next = command_list;
-    command_list = block;
-}
-
-
 static int cmd_help(int argc, const cmd_args *argv, uint32_t flags)
 {
     printf("command list:\n");
 
-    cmd_block *block;
-    size_t i;
-
     /* filter out commands based on if we're called at normal or panic time */
     uint8_t availability_mask = (flags & CMD_FLAG_PANIC) ? CMD_AVAIL_PANIC : CMD_AVAIL_NORMAL;
 
-    for (block = command_list; block != NULL; block = block->next) {
-        const cmd *curr_cmd = block->list;
-        for (i = 0; i < block->count; i++) {
-            if ((availability_mask & curr_cmd[i].availability_mask) == 0) {
-                // Skip commands that aren't available in the current shell.
-                continue;
-            }
-            if (curr_cmd[i].help_str)
-                printf("\t%-16s: %s\n", curr_cmd[i].cmd_str, curr_cmd[i].help_str);
+    for (const cmd *curr_cmd = __start_commands;
+         curr_cmd != __stop_commands;
+         ++curr_cmd) {
+        if ((availability_mask & curr_cmd->availability_mask) == 0) {
+            // Skip commands that aren't available in the current shell.
+            continue;
         }
+        if (curr_cmd->help_str)
+            printf("\t%-16s: %s\n", curr_cmd->cmd_str, curr_cmd->help_str);
     }
 
     return 0;

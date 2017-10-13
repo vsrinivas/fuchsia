@@ -40,12 +40,6 @@ typedef struct {
     uint8_t availability_mask;
 } cmd;
 
-typedef struct _cmd_block {
-    struct _cmd_block *next;
-    size_t count;
-    const cmd *list;
-} cmd_block;
-
 /* register a static block of commands at init time */
 #if WITH_LIB_CONSOLE
 
@@ -54,18 +48,10 @@ typedef struct _cmd_block {
 #define ENABLE_PANIC_SHELL 1
 #endif
 
-#define STATIC_COMMAND_START static const cmd _cmd_list[] = {
+#define STATIC_COMMAND_START \
+    __USED __SECTION("commands") static const cmd _cmd_list[] = {
 
 #define STATIC_COMMAND_END(name) };                                     \
-    __ALIGNED(sizeof(void *)) __USED __SECTION("commands")              \
-    static cmd_block _cmd_block_##name = {NULL, countof(_cmd_list), _cmd_list}
-
-#define STATIC_COMMAND_START_NAMED(name) static const cmd _cmd_list_##name[] = {
-
-#define STATIC_COMMAND_END_NAMED(name) };                       \
-    __ALIGNED(sizeof(void *)) __USED __SECTION("commands")      \
-    static cmd_block _cmd_block_##name = {                      \
-        NULL, countof(_cmd_list_##name), _cmd_list_##name }
 
 #define STATIC_COMMAND(command_str, help_str, func) { command_str, help_str, func, CMD_AVAIL_NORMAL },
 #define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) { command_str, help_str, func, availability_mask },
@@ -75,17 +61,11 @@ typedef struct _cmd_block {
 /* no command blocks, so null them out */
 #define STATIC_COMMAND_START
 #define STATIC_COMMAND_END(name)
-#define STATIC_COMMAND_START_NAMED(name)
-#define STATIC_COMMAND_END_NAMED(name)
-
 #define STATIC_COMMAND(command_str, help_str, func)
 
 #endif
 
-#define COMMAND_BLOCK_INIT_ITEM(cmd_block_ptr, cmd_ptr) {(cmd_block_ptr)->next = NULL; (cmd_block_ptr)->count = 1; (cmd_block_ptr)->list = cmd_ptr;}
-
 /* external api */
-void console_register_commands(cmd_block *block);
 int console_run_script(const char *string);
 int console_run_script_locked(const char *string); // special case from inside a command
 console_cmd console_get_command_handler(const char *command);
