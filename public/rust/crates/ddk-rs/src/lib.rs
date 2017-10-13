@@ -82,6 +82,14 @@ pub trait DeviceOps {
 
 pub type AddDeviceFlags = ddk_sys::device_add_flags_t;
 
+pub use ddk_sys::{
+    DEVICE_ADD_NONE,
+    DEVICE_ADD_NON_BINDABLE,
+    DEVICE_ADD_INSTANCE,
+    DEVICE_ADD_MUST_ISOLATE,
+    DEVICE_ADD_INVISIBLE,
+};
+
 pub fn add_device(device_ops: Box<DeviceOps>, flags: AddDeviceFlags) -> Result<Device, Status> {
     let device_name = device_ops.name();
     if device_name.len() > ddk_sys::ZX_DEVICE_NAME_MAX {

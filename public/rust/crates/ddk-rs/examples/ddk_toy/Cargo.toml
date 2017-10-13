@@ -8,8 +8,7 @@ repository = "https://fuchsia.googlesource.com/ddk-rs/"
 build = "build.rs"
 
 [dependencies]
-ddk-rs = { path = "../../../ddk-rs", version = "0.1.0" }
-ddk-sys = { path = "../../ddk-sys", version = "0.1.0" }
+ddk-rs = { path = "../../../ddk-rs" }
 fuchsia-zircon = { path = "../../../fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "../../../fuchsia-zircon/fuchsia-zircon-sys" }
 

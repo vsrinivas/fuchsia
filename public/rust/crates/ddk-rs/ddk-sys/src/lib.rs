@@ -126,10 +126,17 @@ pub struct zx_protocol_device_t {
 bitflags! {
     #[repr(C)]
     pub flags device_add_flags_t: u32 {
+        const DEVICE_ADD_NONE         = 0,
         const DEVICE_ADD_NON_BINDABLE = 1 << 0,
         const DEVICE_ADD_INSTANCE     = 1 << 1,
         const DEVICE_ADD_MUST_ISOLATE = 1 << 2,
         const DEVICE_ADD_INVISIBLE    = 1 << 3,
+    }
+}
+
+impl Default for device_add_flags_t {
+    fn default() -> Self {
+        DEVICE_ADD_NONE
     }
 }
 
