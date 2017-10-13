@@ -42,11 +42,10 @@
 uint8_t _kstack[PAGE_SIZE] __ALIGNED(16);
 
 /* save a pointer to the multiboot information coming in from whoever called us */
-/* make sure it lives in .data to avoid it being wiped out by bss clearing */
-__SECTION(".data") void *_multiboot_info;
+void *_multiboot_info;
 
 /* save a pointer to the bootdata, if present */
-__SECTION(".data") void *_bootdata_base;
+void *_bootdata_base;
 
 void arch_early_init(void)
 {

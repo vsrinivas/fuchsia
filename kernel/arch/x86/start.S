@@ -88,10 +88,10 @@
 .code32
 FUNCTION_LABEL(_multiboot_start)
     cmpl $MULTIBOOT_BOOTLOADER_MAGIC, %eax
-    jne .Lcommon_boot
-    movl %ebx, PHYS(_multiboot_info)
+    je 0f
+    xor %ebx,%ebx
+0:  // multiboot_info_t pointer is in %ebx.
 
-.Lcommon_boot:
     // Load our new GDT by physical pointer.
     // _gdtr has it as a virtual pointer, so copy it and adjust.
     movw PHYS(_gdtr), %ax
@@ -121,6 +121,9 @@ FUNCTION_LABEL(_multiboot_start)
     sub %edi, %ecx              // Compute the length of the bss in bytes.
     xor %eax, %eax
     rep stosb // while (ecx-- > 0) *edi++ = al;
+
+    // _multiboot_info is in bss, so now it's safe to set it.
+    movl %ebx, PHYS(_multiboot_info)
 
 paging_setup:
     /* Preparing 64 bit paging, we will use 2MB pages covering 1GB
@@ -225,7 +228,6 @@ high_entry:
     /* 64bit entry point from a secondary loader */
 .align 8
 FUNCTION_LABEL(_entry64)
-    mov %esi, PHYS(_bootdata_base)
     /* ensure the stack pointer is sane */
 
     /* This is enough space for the 2x push + lretq below.
@@ -241,6 +243,9 @@ FUNCTION_LABEL(_entry64)
     sub %rdi, %rcx              // Compute the length of the bss in bytes.
     xor %eax, %eax
     rep stosb // while (rcx-- > 0) *rdi++ = al;
+
+    // _bootdata_base is in bss, so now it's safe to set it.
+    mov %esi, PHYS(_bootdata_base)
 
 .Lpaging_setup64:
     /* initialize the default page tables */
