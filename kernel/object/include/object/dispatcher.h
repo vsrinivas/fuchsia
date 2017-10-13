@@ -145,6 +145,9 @@ protected:
         return signals_;
     }
 
+    // Dispatcher subtypes should use this lock to protect their internal state.
+    fbl::Mutex lock_;
+
 private:
     // Returns flag kHandled if one of the observers have been signaled.
     StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) TA_REQ(lock_);
@@ -160,7 +163,6 @@ private:
     // statically under this lock_, rather than maybe under this lock
     // or the more specific object lock.
     zx_signals_t signals_;
-    fbl::Mutex lock_;
 
     // Active observers are elements in |observers_|.
     ObserverList observers_ TA_GUARDED(lock_);
