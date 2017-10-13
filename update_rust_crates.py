@@ -30,11 +30,9 @@ CONFIGS = [
     "garnet/public/rust/crates/tokio-fuchsia",
     "third_party/xi-editor/rust/core-lib",
     "topaz/app/xi/modules/xi-core",
-    "topaz/examples/spinning-square-rs",
 ]
 
 NATIVE_LIBS = {
-    "cairo": "//third_party/cairo",
 }
 
 
