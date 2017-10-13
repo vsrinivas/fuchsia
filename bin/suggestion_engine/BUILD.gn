@@ -51,6 +51,7 @@ source_set("subscribers") {
 
 source_set("interfaces") {
   sources = [
+    "suggestion_subscriber.cc",
     "suggestion_subscriber.h",
   ]
 
@@ -91,6 +92,7 @@ source_set("state") {
 
 source_set("models") {
   sources = [
+    "ranked_suggestion.h",
     "suggestion_prototype.cc",
     "suggestion_prototype.h",
   ]

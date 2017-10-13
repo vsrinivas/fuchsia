@@ -18,11 +18,6 @@ struct SuggestionPrototype {
   ProposalPtr proposal;
 };
 
-struct RankedSuggestion {
-  SuggestionPrototype* prototype;
-  float rank;
-};
-
 std::string short_proposal_str(const SuggestionPrototype& prototype);
 
 }  // namespace maxwell
