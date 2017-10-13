@@ -19,7 +19,7 @@
     .if \size % (1 << PAGE_SIZE_SHIFT)
         .error "\name size \size is not multiple of PAGE_SIZE"
     .endif
-    .section \name,"a"
+    .section .rodata.rodso_image.\name,"a"
     .p2align PAGE_SIZE_SHIFT
 .endm
 

@@ -50,6 +50,13 @@ SECTIONS
     . = ALIGN(4096);
     __rodata_start = .;
 
+    /*
+     * These are page-aligned, so place them first.
+     */
+    .rodata.rodso_image : {
+        *(.rodata.rodso_image.*)
+    }
+
     .note.gnu.build-id : {
         __build_id_note_start = .;
         *(.note.gnu.build-id)
