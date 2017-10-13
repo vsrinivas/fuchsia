@@ -83,4 +83,15 @@ static inline zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t 
                            physmap, phys_count * sizeof(*physmap));
 }
 
+// Returns the buffer size available after the given offset, relative to the
+// io_buffer vmo offset.
+static inline size_t io_buffer_size(io_buffer_t* buffer, size_t offset) {
+    size_t remaining = buffer->size - buffer->offset - offset;
+    // May overflow.
+    if (remaining > buffer->size) {
+        remaining = 0;
+    }
+    return remaining;
+}
+
 __END_CDECLS;

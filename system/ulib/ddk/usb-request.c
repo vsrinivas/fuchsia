@@ -74,13 +74,13 @@ zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle, uint64_
 }
 
 ssize_t usb_request_copyfrom(usb_request_t* req, void* data, size_t length, size_t offset) {
-    length = MIN(req->buffer.size - req->buffer.offset - offset, length);
+    length = MIN(io_buffer_size(&req->buffer, offset), length);
     memcpy(data, io_buffer_virt(&req->buffer) + offset, length);
     return length;
 }
 
 ssize_t usb_request_copyto(usb_request_t* req, const void* data, size_t length, size_t offset) {
-    length = MIN(req->buffer.size - req->buffer.offset - offset, length);
+    length = MIN(io_buffer_size(&req->buffer, offset), length);
     memcpy(io_buffer_virt(&req->buffer) + offset, data, length);
     return length;
 }
