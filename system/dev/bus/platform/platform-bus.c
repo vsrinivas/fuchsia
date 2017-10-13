@@ -25,6 +25,7 @@ zx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
     memcpy(&bus->interface, interface, sizeof(bus->interface));
 
     pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->ums);
+    pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_GPIO, &bus->gpio);
 
     return ZX_OK;
 }

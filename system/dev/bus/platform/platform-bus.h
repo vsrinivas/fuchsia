@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <ddk/device.h>
+#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-mode-switch.h>
@@ -16,6 +17,7 @@ typedef struct {
     zx_device_t* zxdev;
     pbus_interface_t interface;
     usb_mode_switch_protocol_t ums;
+    gpio_protocol_t gpio;
     zx_handle_t resource;   // root resource for platform bus
     uint32_t vid;
     uint32_t pid;

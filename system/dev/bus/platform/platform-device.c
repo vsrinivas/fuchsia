@@ -62,6 +62,36 @@ static zx_status_t platform_dev_ums_set_mode(platform_dev_t* dev, usb_mode_t mod
     return usb_mode_switch_set_mode(&bus->ums, mode);
 }
 
+static zx_status_t platform_dev_gpio_config(platform_dev_t* dev, uint32_t index,
+                                            gpio_config_flags_t flags) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->gpio.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return gpio_config(&bus->gpio, index, flags);
+}
+
+static zx_status_t platform_dev_gpio_read(platform_dev_t* dev, uint32_t index, uint8_t* out_value) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->gpio.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    unsigned value;
+    zx_status_t status = gpio_read(&bus->gpio, index, &value);
+    if (status == ZX_OK) {
+        *out_value = value;
+    }
+    return status;
+}
+
+static zx_status_t platform_dev_gpio_write(platform_dev_t* dev, uint32_t index, uint8_t value) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->gpio.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return gpio_write(&bus->gpio, index, value);
+}
+
 static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     platform_dev_t* dev = ctx;
     pdev_req_t req;
@@ -93,6 +123,15 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_UMS_SET_MODE:
         resp.status = platform_dev_ums_set_mode(dev, req.usb_mode);
+        break;
+    case PDEV_GPIO_CONFIG:
+        resp.status = platform_dev_gpio_config(dev, req.index, req.gpio_flags);
+        break;
+    case PDEV_GPIO_READ:
+        resp.status = platform_dev_gpio_read(dev, req.index, &resp.gpio_value);
+        break;
+    case PDEV_GPIO_WRITE:
+        resp.status = platform_dev_gpio_write(dev, req.index, req.gpio_value);
         break;
     default:
         dprintf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req.op);

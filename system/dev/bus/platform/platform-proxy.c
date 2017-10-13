@@ -94,12 +94,64 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
     .set_mode = pdev_ums_set_mode,
 };
 
+static zx_status_t pdev_gpio_config(void* ctx, unsigned pin, gpio_config_flags_t flags) {
+    platform_dev_t* dev = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GPIO_CONFIG,
+        .index = pin,
+        .gpio_flags = flags,
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(dev, &req, &resp, NULL, 0);
+}
+
+static zx_status_t pdev_gpio_read(void* ctx, unsigned pin, unsigned* out_value) {
+    platform_dev_t* dev = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GPIO_READ,
+        .index = pin,
+    };
+    pdev_resp_t resp;
+
+    zx_status_t status = platform_dev_rpc(dev, &req, &resp, NULL, 0);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_value = resp.gpio_value;
+    return ZX_OK;
+}
+
+static zx_status_t pdev_gpio_write(void* ctx, unsigned pin, unsigned value) {
+    platform_dev_t* dev = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GPIO_WRITE,
+        .index = pin,
+        .gpio_value = value,
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(dev, &req, &resp, NULL, 0);
+}
+
+static gpio_protocol_ops_t gpio_ops = {
+    .config = pdev_gpio_config,
+    .read = pdev_gpio_read,
+    .write = pdev_gpio_write,
+};
+
 static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     switch (proto_id) {
     case ZX_PROTOCOL_USB_MODE_SWITCH: {
         usb_mode_switch_protocol_t* proto = out;
         proto->ctx = ctx;
         proto->ops = &usb_mode_switch_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_GPIO: {
+        gpio_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &gpio_ops;
         return ZX_OK;
     }
     default:
