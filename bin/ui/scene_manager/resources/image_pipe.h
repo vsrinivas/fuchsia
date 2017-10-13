@@ -15,7 +15,7 @@
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/resources/image_pipe_handler.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "garnet/bin/ui/scene_manager/sync/acquire_fence.h"
+#include "garnet/bin/ui/scene_manager/sync/fence_listener.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/tasks/message_loop_handler.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -88,7 +88,7 @@ class ImagePipe : public ImageBase {
   struct Frame {
     scenic::ResourceId image_id;
     uint64_t presentation_time;
-    std::unique_ptr<AcquireFenceSet> acquire_fences;
+    std::unique_ptr<FenceSetListener> acquire_fences;
     ::fidl::Array<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to

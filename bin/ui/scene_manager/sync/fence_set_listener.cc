@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/sync/acquire_fence_set.h"
+#include "garnet/bin/ui/scene_manager/sync/fence_set_listener.h"
 
 #include <zx/time.h>
 #include "lib/fsl/tasks/message_loop.h"
@@ -10,10 +10,10 @@
 
 namespace scene_manager {
 
-AcquireFenceSet::AcquireFenceSet(::fidl::Array<zx::event> acquire_fences)
-    : fences_(std::move(acquire_fences)) {}
+FenceSetListener::FenceSetListener(::fidl::Array<zx::event> fence_listeners)
+    : fences_(std::move(fence_listeners)) {}
 
-void AcquireFenceSet::WaitReadyAsync(fxl::Closure ready_callback) {
+void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
   if (!ready_callback)
     return;
 
@@ -37,7 +37,7 @@ void AcquireFenceSet::WaitReadyAsync(fxl::Closure ready_callback) {
         fence.get(),                              // handle
         kFenceSignalled                           // trigger
     );
-    wait->set_handler(std::bind(&AcquireFenceSet::OnFenceSignalled, this,
+    wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this,
                                 waiter_index, std::placeholders::_2,
                                 std::placeholders::_3));
     zx_status_t status = wait->Begin();
@@ -50,7 +50,7 @@ void AcquireFenceSet::WaitReadyAsync(fxl::Closure ready_callback) {
   ready_callback_ = std::move(ready_callback);
 }
 
-async_wait_result_t AcquireFenceSet::OnFenceSignalled(
+async_wait_result_t FenceSetListener::OnFenceSignalled(
     size_t waiter_index,
     zx_status_t status,
     const zx_packet_signal* signal) {
@@ -72,7 +72,7 @@ async_wait_result_t AcquireFenceSet::OnFenceSignalled(
     }
     return ASYNC_WAIT_FINISHED;
   } else {
-    FXL_LOG(ERROR) << "AcquireFenceSet::OnFenceSignalled received an "
+    FXL_LOG(ERROR) << "FenceSetListener::OnFenceSignalled received an "
                       "error status code: "
                    << status;
 

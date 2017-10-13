@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
-#include "garnet/bin/ui/scene_manager/sync/acquire_fence.h"
 #include "garnet/bin/ui/scene_manager/sync/fence.h"
 #include "garnet/bin/ui/scene_manager/tests/mocks.h"
 #include "garnet/bin/ui/scene_manager/tests/session_test.h"
@@ -35,46 +34,6 @@ class ImagePipeTest : public SessionTest, public escher::ResourceManager {
   escher::impl::CommandBufferSequencer command_buffer_sequencer_;
   ReleaseFenceSignallerForTest* mock_release_fence_signaller_;
 };
-
-TEST_F(ImagePipeTest, SimpleAcquireFenceSignalling) {
-  // Create an AcquireFence.
-  zx::event fence1 = CreateEvent();
-  AcquireFence buffer_fence1(CopyEvent(fence1));
-
-  // Expect that it is not signalled initially.
-  EXPECT_FALSE(buffer_fence1.ready());
-  EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
-
-  // Still should not be ready.
-  EXPECT_FALSE(buffer_fence1.ready());
-
-  // Signal the fence.
-  fence1.signal(0u, kFenceSignalled);
-
-  // Expect that it is signalled now.
-  EXPECT_TRUE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
-  EXPECT_TRUE(buffer_fence1.ready());
-}
-
-TEST_F(ImagePipeTest, AsyncAcquireFenceSignalling) {
-  // Create an AcquireFence.
-  zx::event fence1 = CreateEvent();
-  AcquireFence buffer_fence1(CopyEvent(fence1));
-
-  // Expect that it is not signalled initially.
-  EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
-  EXPECT_FALSE(buffer_fence1.ready());
-
-  bool signalled = false;
-  // Expect that it is signalled now.
-  buffer_fence1.WaitReadyAsync([&signalled]() { signalled = true; });
-
-  // Signal the fence.
-  fence1.signal(0u, kFenceSignalled);
-
-  RUN_MESSAGE_LOOP_UNTIL(buffer_fence1.ready());
-  EXPECT_TRUE(signalled);
-}
 
 fxl::RefPtr<fsl::SharedVmo> CreateVmoWithBuffer(
     size_t buffer_size,

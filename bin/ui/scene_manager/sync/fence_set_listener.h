@@ -16,13 +16,12 @@
 
 namespace scene_manager {
 
-// Provides access to the consumption fences associated with a call to
-// |Present|.
-class AcquireFenceSet {
+// Allows notification of when a set of fences has been signalled.
+class FenceSetListener {
  public:
   // Takes ownership of the fences.
-  // |acquire_fences| must be valid handles.
-  explicit AcquireFenceSet(::fidl::Array<zx::event> acquire_fences);
+  // |fence_listeners| must be valid handles.
+  explicit FenceSetListener(::fidl::Array<zx::event> fence_listeners);
 
   // Invokes the callback when all the fences have been signalled. The callback
   // will be invoked on the current message loop.
@@ -49,7 +48,7 @@ class AcquireFenceSet {
 
   fxl::Closure ready_callback_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(AcquireFenceSet);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FenceSetListener);
 };
 
 }  // namespace scene_manager

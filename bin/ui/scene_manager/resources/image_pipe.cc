@@ -130,17 +130,18 @@ void ImagePipe::PresentImage(
     return;
   }
 
-  auto acquire_fence_obj =
-      std::make_unique<AcquireFenceSet>(std::move(acquire_fences));
-  acquire_fence_obj->WaitReadyAsync(
-      [ weak = weak_ptr_factory_.GetWeakPtr(), presentation_time ] {
+  auto acquire_fences_listener =
+      std::make_unique<FenceSetListener>(std::move(acquire_fences));
+  acquire_fences_listener->WaitReadyAsync(
+      [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
         if (weak) {
           weak->session()->ScheduleImagePipeUpdate(presentation_time,
                                                    ImagePipePtr(weak.get()));
         }
       });
 
-  frames_.push(Frame{image_id, presentation_time, std::move(acquire_fence_obj),
+  frames_.push(Frame{image_id, presentation_time,
+                     std::move(acquire_fences_listener),
                      std::move(release_fences), callback});
 };
 

@@ -5,21 +5,21 @@
 #include "escher/impl/command_buffer_sequencer.h"
 #include "gtest/gtest.h"
 
-#include "garnet/bin/ui/scene_manager/sync/acquire_fence.h"
 #include "garnet/bin/ui/scene_manager/sync/fence.h"
+#include "garnet/bin/ui/scene_manager/sync/fence_listener.h"
 #include "garnet/bin/ui/scene_manager/tests/util.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scene_manager {
 namespace test {
 
-class AcquireFenceTest : public ::testing::Test {};
+class FenceListenerTest : public ::testing::Test {};
 
-TEST_F(AcquireFenceTest, SimpleAcquireFenceSignalling) {
-  // Create an AcquireFence.
+TEST_F(FenceListenerTest, SimpleFenceListenerSignalling) {
+  // Create an FenceListener.
   zx::event fence1;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
-  AcquireFence buffer_fence1(CopyEvent(fence1));
+  FenceListener buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
   EXPECT_FALSE(buffer_fence1.ready());
@@ -36,11 +36,11 @@ TEST_F(AcquireFenceTest, SimpleAcquireFenceSignalling) {
   EXPECT_TRUE(buffer_fence1.ready());
 }
 
-TEST_F(AcquireFenceTest, AsyncAcquireFenceSignalling) {
-  // Create an AcquireFence.
+TEST_F(FenceListenerTest, AsyncFenceListenerSignalling) {
+  // Create an FenceListener.
   zx::event fence1;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
-  AcquireFence buffer_fence1(CopyEvent(fence1));
+  FenceListener buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signalled initially.
   EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));

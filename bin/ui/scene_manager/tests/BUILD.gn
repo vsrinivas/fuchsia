@@ -63,8 +63,8 @@ executable("unittests") {
   testonly = true
 
   sources = [
-    "acquire_fence_set_unittest.cc",
-    "acquire_fence_unittest.cc",
+    "fence_set_listener_unittest.cc",
+    "fence_listener_unittest.cc",
     "event_timestamper_unittest.cc",
     "hittest_unittest.cc",
     "imagepipe_unittest.cc",

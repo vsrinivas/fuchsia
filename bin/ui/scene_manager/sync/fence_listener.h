@@ -16,11 +16,11 @@
 namespace scene_manager {
 
 // Provides access to the consumption fence associated with a call to |Present|.
-class AcquireFence {
+class FenceListener {
  public:
   // Takes ownership of the fence.
   // |fence| must be a valid handle.
-  explicit AcquireFence(zx::event fence);
+  explicit FenceListener(zx::event fence);
 
   // Waits for the fence to indicate that the buffer is ready or for the
   // timeout to expire, whichever comes first.
@@ -47,7 +47,7 @@ class AcquireFence {
   fxl::Closure ready_callback_;
   bool ready_ = false;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(AcquireFence);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FenceListener);
 };
 
 }  // namespace scene_manager

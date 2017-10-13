@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/sync/acquire_fence.h"
+#include "garnet/bin/ui/scene_manager/sync/fence_listener.h"
 
 #include <zx/time.h>
 #include "garnet/public/lib/fxl/functional/closure.h"
@@ -11,7 +11,7 @@
 
 namespace scene_manager {
 
-AcquireFence::AcquireFence(zx::event fence)
+FenceListener::FenceListener(zx::event fence)
     : fence_(std::move(fence)),
       waiter_(fsl::MessageLoop::GetCurrent()->async(),  // dispatcher
               fence_.get(),                             // handle
@@ -20,7 +20,7 @@ AcquireFence::AcquireFence(zx::event fence)
   FXL_DCHECK(fence_);
 }
 
-bool AcquireFence::WaitReady(fxl::TimeDelta timeout) {
+bool FenceListener::WaitReady(fxl::TimeDelta timeout) {
   zx_time_t zx_deadline;
   if (timeout <= fxl::TimeDelta::Zero())
     zx_deadline = 0u;
@@ -41,7 +41,7 @@ bool AcquireFence::WaitReady(fxl::TimeDelta timeout) {
   return ready_;
 }
 
-void AcquireFence::WaitReadyAsync(fxl::Closure ready_callback) {
+void FenceListener::WaitReadyAsync(fxl::Closure ready_callback) {
   if (!ready_callback)
     return;
 
@@ -54,14 +54,14 @@ void AcquireFence::WaitReadyAsync(fxl::Closure ready_callback) {
     return;
   }
 
-  waiter_.set_handler(std::bind(&AcquireFence::OnFenceSignalled, this,
+  waiter_.set_handler(std::bind(&FenceListener::OnFenceSignalled, this,
                                 std::placeholders::_2, std::placeholders::_3));
   zx_status_t status = waiter_.Begin();
   FXL_CHECK(status == ZX_OK);
   ready_callback_ = std::move(ready_callback);
 }
 
-async_wait_result_t AcquireFence::OnFenceSignalled(
+async_wait_result_t FenceListener::OnFenceSignalled(
     zx_status_t status,
     const zx_packet_signal* signal) {
   if (status == ZX_OK) {
@@ -76,7 +76,7 @@ async_wait_result_t AcquireFence::OnFenceSignalled(
     callback();
     return ASYNC_WAIT_FINISHED;
   } else {
-    FXL_LOG(ERROR) << "AcquireFence::OnFenceSignalled received an "
+    FXL_LOG(ERROR) << "FenceListener::OnFenceSignalled received an "
                       "error status code: "
                    << status;
 
