@@ -46,7 +46,7 @@ static bool on_device(device_info_t* device, void* cookie) {
 
 static void usage(void) {
     fprintf(stderr, "usage: %s [options] [hostname]\n", appname);
-    netboot_usage();
+    netboot_usage(false);
     fprintf(stderr, "    --fuchsia         Use fuchsia link local addresses.\n");
 }
 

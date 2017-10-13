@@ -294,8 +294,6 @@ static int push_file(int s, struct sockaddr_in6* addr, const char* dst,
     tftp_session_set_transport_interface(session, &transport_ifc);
 
     // Set our preferred transport options
-    uint16_t tftp_block_size = 1024;
-    uint16_t tftp_window_size = 1024;
     tftp_set_options(session, &tftp_block_size, NULL, &tftp_window_size);
 
     // Prepare buffers
@@ -326,8 +324,8 @@ static int push_file(int s, struct sockaddr_in6* addr, const char* dst,
 }
 
 static void usage(void) {
-    fprintf(stderr, "usage: %s [hostname:]src [hostname:]dst\n", appname);
-    netboot_usage();
+    fprintf(stderr, "usage: %s [options] [hostname:]src [hostname:]dst\n", appname);
+    netboot_usage(true);
 }
 
 int main(int argc, char** argv) {

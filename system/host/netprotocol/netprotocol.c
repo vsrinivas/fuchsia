@@ -27,6 +27,9 @@
 #include <errno.h>
 #include <stdint.h>
 
+uint16_t tftp_block_size = TFTP_DEFAULT_BLOCK_SZ;
+uint16_t tftp_window_size = TFTP_DEFAULT_WINDOW_SZ;
+
 static uint32_t cookie = 0x12345678;
 static int netboot_timeout = 250;
 static bool netboot_wait = true;
@@ -152,10 +155,12 @@ static bool netboot_receive_query(int socket, on_device_cb callback, void* data)
 }
 
 static struct option default_opts[] = {
-    {"help",    no_argument,       NULL, 'h'},
-    {"timeout", required_argument, NULL, 't'},
-    {"nowait",  no_argument,       NULL, 'n'},
-    {NULL,      0,                 NULL, 0},
+    {"help",        no_argument,       NULL, 'h'},
+    {"timeout",     required_argument, NULL, 't'},
+    {"nowait",      no_argument,       NULL, 'n'},
+    {"block-size",  required_argument, NULL, 'b'},
+    {"window-size", required_argument, NULL, 'w'},
+    {NULL,          0,                 NULL, 0},
 };
 
 static const struct option netboot_zero_opt = {NULL, 0, NULL, 0};
@@ -207,6 +212,12 @@ int netboot_handle_custom_getopt(int argc, char * const *argv,
             case 'n':
                 netboot_wait = false;
                 break;
+            case 'b':
+                tftp_block_size = atoi(optarg);
+                break;
+            case 'w':
+                tftp_window_size = atoi(optarg);
+                break;
             default:
                 if (opt_callback && opt_callback(ch, argc, argv)) {
                     break;
@@ -225,11 +236,17 @@ int netboot_handle_getopt(int argc, char * const *argv) {
     return netboot_handle_custom_getopt(argc, argv, NULL, 0, NULL);
 }
 
-void netboot_usage(void) {
+void netboot_usage(bool show_tftp_opts) {
     fprintf(stderr, "options:\n");
-    fprintf(stderr, "    --help            Print this message.\n");
-    fprintf(stderr, "    --timeout=<msec>  Set discovery timeout to <msec>.\n");
-    fprintf(stderr, "    --nowait          Do not wait for first packet before timing out.\n");
+    fprintf(stderr, "    --help              Print this message.\n");
+    fprintf(stderr, "    --timeout=<msec>    Set discovery timeout to <msec>.\n");
+    fprintf(stderr, "    --nowait            Do not wait for first packet before timing out.\n");
+    if (show_tftp_opts) {
+        fprintf(stderr, "    --block-size=<sz>   Set tftp block size (default=%d).\n",
+                TFTP_DEFAULT_BLOCK_SZ);
+        fprintf(stderr, "    --window-size=<sz>  Set tftp window size (default=%d).\n",
+                TFTP_DEFAULT_WINDOW_SZ);
+    }
 }
 
 int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* data) {

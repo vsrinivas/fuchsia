@@ -100,7 +100,7 @@ static bool on_device(device_info_t* device, void* cookie) {
 
 static void usage(void) {
     fprintf(stderr, "usage: %s [options]\n", appname);
-    netboot_usage();
+    netboot_usage(false);
 }
 
 int main(int argc, char** argv) {

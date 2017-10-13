@@ -19,7 +19,7 @@ static const char* appname;
 
 static void usage(void) {
     fprintf(stderr, "usage: %s [options] <hostname> <command>\n", appname);
-    netboot_usage();
+    netboot_usage(false);
 }
 
 int main(int argc, char** argv) {
