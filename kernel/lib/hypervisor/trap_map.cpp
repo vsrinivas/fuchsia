@@ -24,7 +24,7 @@ PortPacket* BlockingPortAllocator::BlockingAlloc(StateReloader* reloader) {
     zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE, &was_blocked);
     if (status != ZX_OK)
         return nullptr;
-    if (was_blocked)
+    if (was_blocked && reloader != nullptr)
         reloader->Reload();
     return Alloc();
 }
