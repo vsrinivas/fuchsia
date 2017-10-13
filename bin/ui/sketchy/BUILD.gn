@@ -36,7 +36,7 @@ executable("sketchy") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/fun/sketchy/fidl",
-    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher",
     "//zircon/system/ulib/trace-provider",
   ]
 

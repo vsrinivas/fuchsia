@@ -36,7 +36,7 @@ executable("service") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher",
     "//garnet/examples/escher/common",
     "//zircon/system/ulib/trace-provider",
     "//garnet/public/lib/vulkan",

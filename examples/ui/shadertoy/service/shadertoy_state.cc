@@ -9,7 +9,7 @@
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "garnet/examples/ui/shadertoy/service/view_shadertoy.h"
-#include "garnet/lib/escher/escher/resources/resource_recycler.h"
+#include "garnet/lib/escher/resources/resource_recycler.h"
 
 namespace shadertoy {
 

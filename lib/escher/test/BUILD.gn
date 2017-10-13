@@ -22,7 +22,7 @@ executable("escher_unittests") {
 
   deps = [
     "base:base_unittests",
-    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher",
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
     "//third_party/shaderc/third_party/glslang",

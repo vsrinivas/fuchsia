@@ -5,7 +5,7 @@
 #pragma once
 
 #include "lib/ui/scenic/fidl/types.fidl.h"
-#include "lib/escher/escher/geometry/transform.h"
+#include "lib/escher/geometry/transform.h"
 
 namespace scene_manager {
 

@@ -7,11 +7,11 @@
 #include <set>
 #include <vector>
 
-#include "lib/escher/escher/escher.h"
-#include "lib/escher/escher/impl/gpu_uploader.h"
-#include "lib/escher/escher/renderer/simple_image_factory.h"
-#include "lib/escher/escher/resources/resource_recycler.h"
-#include "lib/escher/escher/shape/rounded_rect_factory.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/gpu_uploader.h"
+#include "lib/escher/renderer/simple_image_factory.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/shape/rounded_rect_factory.h"
 #include "garnet/examples/escher/common/demo_harness.h"
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"

@@ -143,7 +143,7 @@ source_set("common") {
 
   public_deps = [
     "//garnet/examples/escher/common",
-    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",

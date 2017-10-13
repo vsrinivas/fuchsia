@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "lib/escher/escher/geometry/types.h"
+#include "lib/escher/geometry/types.h"
 
 namespace scene_manager {
 

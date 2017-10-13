@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "lib/escher/escher/geometry/transform.h"
+#include "lib/escher/geometry/transform.h"
 
 namespace scene_manager {
 
