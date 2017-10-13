@@ -20,6 +20,7 @@
     .fill size_in_bytes, 1, 0xcc;                                         \
     /* Add "struct CodePatchInfo" entry to the code_patch_table array. */ \
     .pushsection code_patch_table,"a",%progbits;                          \
+    .balign 8;                                                            \
     .quad patch_func; /* apply_func field */                              \
     .quad 0b; /* dest_addr field */                                       \
     .quad size_in_bytes; /* dest_size field */                            \
