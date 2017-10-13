@@ -34,7 +34,7 @@ typedef struct {
     // completion used for signalling callback_thread
     completion_t callback_thread_completion;
     // list of requests that need to have client's completion callback called
-    list_node_t completed_txns;
+    list_node_t completed_reqs;
     // mutex that protects the callback_* members above
     mtx_t callback_lock;
 

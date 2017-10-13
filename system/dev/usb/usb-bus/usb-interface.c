@@ -13,15 +13,15 @@
 #include "usb-interface.h"
 #include "util.h"
 
-// This thread is for calling the iotxn completion callback for iotxns received from our client.
-// We do this on a separate thread because it is unsafe to call out on our own completion callback,
-// which is called on the main thread of the USB HCI driver.
+// This thread is for calling the usb request completion callback for requests received from our
+// client. We do this on a separate thread because it is unsafe to call out on our own completion
+// callback, which is called on the main thread of the USB HCI driver.
 static int callback_thread(void* arg) {
     usb_interface_t* intf = (usb_interface_t *)arg;
     bool done = false;
 
     while (!done) {
-        // wait for new txns to complete or for signal to exit this thread
+        // wait for new usb requests to complete or for signal to exit this thread
         completion_wait(&intf->callback_thread_completion, ZX_TIME_INFINITE);
 
         mtx_lock(&intf->callback_lock);
@@ -29,16 +29,16 @@ static int callback_thread(void* arg) {
         completion_reset(&intf->callback_thread_completion);
         done = intf->callback_thread_stop;
 
-        // copy completed txns to a temp list so we can process them outside of our lock
+        // copy completed requests to a temp list so we can process them outside of our lock
         list_node_t temp_list = LIST_INITIAL_VALUE(temp_list);
-        list_move(&intf->completed_txns, &temp_list);
+        list_move(&intf->completed_reqs, &temp_list);
 
         mtx_unlock(&intf->callback_lock);
 
         // call completion callbacks outside of the lock
-        iotxn_t* txn;
-        while ((txn = list_remove_head_type(&temp_list, iotxn_t, node))) {
-            iotxn_complete(txn, txn->status, txn->actual);
+        usb_request_t* req;
+        while ((req = list_remove_head_type(&temp_list, usb_request_t, node))) {
+            usb_request_complete(req, req->response.status, req->response.actual);
         }
     }
 
@@ -60,40 +60,40 @@ static void stop_callback_thread(usb_interface_t* intf) {
     thrd_join(intf->callback_thread, NULL);
 }
 
-// iotxn completion for the cloned txns passed down to the HCI driver
-static void clone_complete(iotxn_t* clone, void* cookie) {
-    iotxn_t* txn = (iotxn_t *)cookie;
-    usb_interface_t* intf = (usb_interface_t *)txn->context;
+// usb request completion for the requests passed down to the HCI driver
+static void request_complete(usb_request_t* req, void* cookie) {
+    usb_interface_t* intf = (usb_interface_t *)req->cookie;
 
     mtx_lock(&intf->callback_lock);
-    // move original txn to completed_txns list so it can be completed on the callback_thread
-    txn->status = clone->status;
-    txn->actual = clone->actual;
-    list_add_tail(&intf->completed_txns, &txn->node);
+    // move original request to completed_reqs list so it can be completed on the callback_thread
+    req->complete_cb = req->saved_complete_cb;
+    req->cookie = req->saved_cookie;
+    list_add_tail(&intf->completed_reqs, &req->node);
     mtx_unlock(&intf->callback_lock);
     completion_signal(&intf->callback_thread_completion);
-
-    iotxn_release(clone);
 }
 
-static void usb_interface_iotxn_queue(void* ctx, iotxn_t* txn) {
+static void hci_queue(void* ctx, usb_request_t* req) {
     usb_interface_t* intf = ctx;
 
-    // clone the txn and pass it down to the HCI driver
-    iotxn_t* clone = NULL;
-    zx_status_t status = iotxn_clone(txn, &clone);
+    req->header.device_id = intf->device_id;
+    // save the existing callback and cookie, so we can replace them
+    // with our own before passing the request to the HCI driver.
+    req->saved_complete_cb = req->complete_cb;
+    req->saved_cookie = req->cookie;
+
+    req->complete_cb = request_complete;
+    // set intf as the cookie so we can get at it in request_complete()
+    req->cookie = intf;
+
+    iotxn_t* txn;
+    zx_status_t status = usb_request_to_iotxn(req, &txn);
     if (status != ZX_OK) {
-        iotxn_complete(txn, status, 0);
+        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
+        usb_request_complete(req, status, 0);
         return;
     }
-    usb_protocol_data_t* dest_data = iotxn_pdata(clone, usb_protocol_data_t);
-    dest_data->device_id = intf->device_id;
-
-    // stash intf in txn->context so we can get at it in clone_complete()
-    txn->context = intf;
-    clone->complete_cb = clone_complete;
-    clone->cookie = txn;
-    iotxn_queue(intf->hci_zxdev, clone);
+    iotxn_queue(intf->hci_zxdev, txn);
 }
 
 static zx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_buf,
@@ -146,7 +146,6 @@ static void usb_interface_release(void* ctx) {
 
 static zx_protocol_device_t usb_interface_proto = {
     .version = DEVICE_OPS_VERSION,
-    .iotxn_queue = usb_interface_iotxn_queue,
     .ioctl = usb_interface_ioctl,
     .unbind = usb_interface_unbind,
     .release = usb_interface_release,
@@ -223,7 +222,7 @@ static zx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     return status;
 }
 
-static void usb_control_complete(iotxn_t* txn, void* cookie) {
+static void usb_control_complete(usb_request_t* req, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
@@ -231,45 +230,47 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
                                          uint16_t value, uint16_t index, void* data,
                                          size_t length, zx_time_t timeout, size_t* out_length) {
     usb_interface_t* intf = ctx;
-    iotxn_t* txn;
 
-    uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
-    zx_status_t status = iotxn_alloc(&txn, flags, length);
-    if (status != ZX_OK) {
-        return status;
+    usb_request_t* req = NULL;
+    bool use_free_list = length == 0;
+    if (use_free_list) {
+        mtx_lock(&intf->free_reqs_lock);
+        req = list_remove_head_type(&intf->free_reqs, usb_request_t, node);
+        mtx_unlock(&intf->free_reqs_lock);
     }
-    txn->protocol = ZX_PROTOCOL_USB;
 
-    static_assert(sizeof(usb_protocol_data_t) <= sizeof(iotxn_proto_data_t), "");
-    usb_protocol_data_t* proto_data = iotxn_pdata(txn, usb_protocol_data_t);
+    if (req == NULL) {
+        zx_status_t status = usb_request_alloc(&req, length, 0);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
 
     // fill in protocol data
-    usb_setup_t* setup = &proto_data->setup;
+    usb_setup_t* setup = &req->setup;
     setup->bmRequestType = request_type;
     setup->bRequest = request;
     setup->wValue = value;
     setup->wIndex = index;
     setup->wLength = length;
-    proto_data->ep_address = 0;
-    proto_data->frame = 0;
 
     bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);
     if (length > 0 && out) {
-        iotxn_copyto(txn, data, length, 0);
+        usb_request_copyto(req, data, length, 0);
     }
 
     completion_t completion = COMPLETION_INIT;
 
-    txn->length = length;
-    txn->complete_cb = usb_control_complete;
-    txn->cookie = &completion;
-    iotxn_queue(intf->zxdev, txn);
-    status = completion_wait(&completion, timeout);
+    req->header.length = length;
+    req->complete_cb = usb_control_complete;
+    req->cookie = &completion;
+    hci_queue(ctx, req);
+    zx_status_t status = completion_wait(&completion, timeout);
 
     if (status == ZX_OK) {
-        status = txn->status;
+        status = req->response.status;
     } else if (status == ZX_ERR_TIMED_OUT) {
-        // cancel transactions and wait for txn to be completed
+        // cancel transactions and wait for request to be completed
         completion_reset(&completion);
         status = usb_hci_cancel_all(&intf->hci, intf->device_id, 0);
         if (status == ZX_OK) {
@@ -279,38 +280,26 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     }
     if (status == ZX_OK) {
         if (out_length != NULL) {
-            *out_length = txn->actual;
+            *out_length = req->response.actual;
         }
 
         if (length > 0 && !out) {
-            iotxn_copyfrom(txn, data, txn->actual, 0);
+            usb_request_copyfrom(req, data, req->response.actual, 0);
         }
     }
-    iotxn_release(txn);
+
+    if (use_free_list) {
+        mtx_lock(&intf->free_reqs_lock);
+        list_add_tail(&intf->free_reqs, &req->node);
+        mtx_unlock(&intf->free_reqs_lock);
+    } else {
+        usb_request_release(req);
+    }
     return status;
 }
 
 static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request) {
-    usb_interface_t* intf = ctx;
-    iotxn_t* txn;
-    zx_status_t status = usb_request_to_iotxn(usb_request, &txn);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
-        usb_request_complete(usb_request, status, 0);
-        return;
-    }
-    iotxn_queue(intf->zxdev, txn);
-}
-
-static void usb_interface_queue(void* ctx, iotxn_t* txn, uint8_t ep_address, uint64_t frame) {
-    usb_interface_t* intf = ctx;
-    txn->protocol = ZX_PROTOCOL_USB;
-    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
-
-    memset(data, 0, sizeof(*data));
-    data->ep_address = ep_address;
-    data->frame = frame;
-    iotxn_queue(intf->zxdev, txn);
+    hci_queue(ctx, usb_request);
 }
 
 static usb_speed_t usb_interface_get_speed(void* ctx) {
@@ -455,7 +444,10 @@ zx_status_t usb_device_add_interface(usb_device_t* device,
 
     mtx_init(&intf->callback_lock, mtx_plain);
     completion_reset(&intf->callback_thread_completion);
-    list_initialize(&intf->completed_txns);
+    list_initialize(&intf->completed_reqs);
+
+    mtx_init(&intf->free_reqs_lock, mtx_plain);
+    list_initialize(&intf->free_reqs);
 
     intf->device = device;
     intf->hci_zxdev = device->hci_zxdev;
@@ -535,7 +527,7 @@ zx_status_t usb_device_add_interface_association(usb_device_t* device,
 
     mtx_init(&intf->callback_lock, mtx_plain);
     completion_reset(&intf->callback_thread_completion);
-    list_initialize(&intf->completed_txns);
+    list_initialize(&intf->completed_reqs);
 
     intf->device = device;
     intf->hci_zxdev = device->hci_zxdev;
