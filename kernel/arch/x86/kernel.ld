@@ -66,11 +66,6 @@ SECTIONS
         KEEP(*(.init_array .ctors))
         __init_array_end = .;
     }
-    .fini_array : ALIGN(8) {
-        __fini_array_start = .;
-        KEEP(*(.fini_array .dtors))
-        __fini_array_end = .;
-    }
 
     /*
      * Any read-only data "orphan" sections will be inserted here.
