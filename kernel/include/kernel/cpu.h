@@ -43,4 +43,3 @@ static inline cpu_num_t lowest_cpu_set(cpu_mask_t mask) {
 
     return (cpu_num_t)(__builtin_ctz(mask));
 }
-

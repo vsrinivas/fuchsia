@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

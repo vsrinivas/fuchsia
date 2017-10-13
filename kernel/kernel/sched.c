@@ -52,7 +52,7 @@
 /* threads get 10ms to run before they use up their time slice and the scheduler is invoked */
 #define THREAD_INITIAL_TIME_SLICE ZX_MSEC(10)
 
-static bool local_migrate_if_needed(thread_t *curr_thread);
+static bool local_migrate_if_needed(thread_t* curr_thread);
 
 /* compute the effective priority of a thread */
 static int effec_priority(const thread_t* t) {
@@ -147,7 +147,7 @@ static cpu_mask_t find_cpu_mask(thread_t* t) {
     cpu_mask_t cpu_affinity = t->cpu_affinity;
 
     LTRACEF_LEVEL(2, "last %#x curr %#x aff %#x name %s\n",
-            last_ran_cpu_mask, curr_cpu_mask, cpu_affinity, t->name);
+                  last_ran_cpu_mask, curr_cpu_mask, cpu_affinity, t->name);
 
     /* get a list of idle cpus and mask off the ones that aren't in our affinity mask */
     cpu_mask_t idle_cpu_mask = mp_get_idle_mask();
@@ -226,7 +226,7 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) {
     struct percpu* c = &percpu[cpu];
     if (likely(c->run_queue_bitmap)) {
         uint highest_queue = HIGHEST_PRIORITY - __builtin_clz(c->run_queue_bitmap) -
-            (sizeof(c->run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
+                             (sizeof(c->run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
 
         thread_t* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
 
@@ -265,7 +265,7 @@ void sched_block(void) {
 /* find a cpu to run the thread on, put it in the run queue for that cpu, and accumulate a list
  * of cpus we'll need to reschedule, including the local cpu.
  */
-static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t *accum_cpu_mask) {
+static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t* accum_cpu_mask) {
     /* find a core to run it on */
     cpu_mask_t cpu = find_cpu_mask(t);
     cpu_num_t cpu_num;
@@ -441,7 +441,7 @@ void sched_reschedule(void) {
 }
 
 /* migrate the current thread to a new cpu and locally reschedule to seal the deal */
-static void migrate_current_thread(thread_t *current_thread) {
+static void migrate_current_thread(thread_t* current_thread) {
     bool local_resched = false;
     cpu_mask_t accum_cpu_mask = 0;
 
@@ -475,7 +475,7 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
 
 /* check to see if the current thread needs to migrate to a new core */
 /* the passed argument must be the current thread and must already be pushed into the READY state */
-static bool local_migrate_if_needed(thread_t *curr_thread) {
+static bool local_migrate_if_needed(thread_t* curr_thread) {
     DEBUG_ASSERT(curr_thread == get_current_thread());
     DEBUG_ASSERT(curr_thread->state == THREAD_READY);
 
@@ -490,7 +490,7 @@ static bool local_migrate_if_needed(thread_t *curr_thread) {
 /* potentially migrate a thread to a new core based on the affinity mask on the thread. If it's
  * running or in a scheduler queue, handle it.
  */
-void sched_migrate(thread_t *t) {
+void sched_migrate(thread_t* t) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     bool local_resched = false;

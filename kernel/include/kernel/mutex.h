@@ -12,9 +12,9 @@
 #include <debug.h>
 #include <kernel/atomic.h>
 #include <kernel/thread.h>
+#include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/thread_annotations.h>
-#include <stdint.h>
 
 __BEGIN_CDECLS
 

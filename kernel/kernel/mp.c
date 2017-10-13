@@ -48,27 +48,27 @@ void mp_reschedule(mp_ipi_target_t target, cpu_mask_t mask, uint flags) {
     LTRACEF("local %u, target %u, mask %#x\n", local_cpu, target, mask);
 
     switch (target) {
-        case MP_IPI_TARGET_ALL:
-        case MP_IPI_TARGET_ALL_BUT_LOCAL:
-            arch_mp_send_ipi(target, 0, MP_IPI_RESCHEDULE);
-            break;
-        case MP_IPI_TARGET_MASK:
-            if (mask == 0)
-                return;
+    case MP_IPI_TARGET_ALL:
+    case MP_IPI_TARGET_ALL_BUT_LOCAL:
+        arch_mp_send_ipi(target, 0, MP_IPI_RESCHEDULE);
+        break;
+    case MP_IPI_TARGET_MASK:
+        if (mask == 0)
+            return;
 
-            /* mask out cpus that are not active and the local cpu */
-            mask &= mp.active_cpus;
-            mask &= ~cpu_num_to_mask(local_cpu);
+        /* mask out cpus that are not active and the local cpu */
+        mask &= mp.active_cpus;
+        mask &= ~cpu_num_to_mask(local_cpu);
 
-            /* mask out cpus that are currently running realtime code */
-            if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
-                mask &= ~mp.realtime_cpus;
-            }
+        /* mask out cpus that are currently running realtime code */
+        if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
+            mask &= ~mp.realtime_cpus;
+        }
 
-            LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
+        LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
 
-            arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
-            break;
+        arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
+        break;
     }
 }
 
@@ -324,7 +324,7 @@ zx_status_t mp_unplug_cpu(uint cpu_id) {
         goto cleanup_mutex;
     }
 
-    /* Fall through.  Since the thread is scheduled, it should not be in any
+/* Fall through.  Since the thread is scheduled, it should not be in any
      * queues.  Since the CPU running this thread is now shutdown, we can just
      * erase the thread's existence. */
 cleanup_thread:

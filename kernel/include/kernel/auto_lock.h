@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include <kernel/mutex.h>
-#include <kernel/spinlock.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
+#include <kernel/mutex.h>
+#include <kernel/spinlock.h>
 
 // Various lock guard wrappers for kernel only locks
 // NOTE: wrapper for mutex_t is in fbl/auto_lock.h

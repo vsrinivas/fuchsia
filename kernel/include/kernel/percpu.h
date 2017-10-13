@@ -10,8 +10,8 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <list.h>
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

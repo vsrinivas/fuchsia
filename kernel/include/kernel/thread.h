@@ -96,7 +96,7 @@ typedef struct thread {
 
     /* current cpu the thread is either running on or in the ready queue, undefined otherwise */
     cpu_num_t curr_cpu;
-    cpu_num_t last_cpu;  /* last cpu the thread ran on, INVALID_CPU if it's never run */
+    cpu_num_t last_cpu;      /* last cpu the thread ran on, INVALID_CPU if it's never run */
     cpu_mask_t cpu_affinity; /* mask of cpus that this thread can run on */
 
     /* pointer to the kernel address space this thread is associated with */
@@ -330,4 +330,4 @@ private:
     spin_lock_saved_state_t state_;
 };
 
-#endif  // __cplusplus
+#endif // __cplusplus
