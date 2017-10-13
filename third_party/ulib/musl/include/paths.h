@@ -7,7 +7,6 @@
 #define _PATH_CONSOLE "/dev/console"
 #define _PATH_DEVNULL "/dev/null"
 #define _PATH_KLOG "/proc/kmsg"
-#define _PATH_LASTLOG "/var/log/lastlog"
 #define _PATH_MAILDIR "/var/mail"
 #define _PATH_MAN "/usr/share/man"
 #define _PATH_MNTTAB "/etc/fstab"
@@ -17,7 +16,6 @@
 #define _PATH_SHADOW "/etc/shadow"
 #define _PATH_SHELLS "/etc/shells"
 #define _PATH_TTY "/dev/tty"
-#define _PATH_UTMP "/dev/null/utmp"
 #define _PATH_VI "/usr/bin/vi"
 #define _PATH_WTMP "/dev/null/wtmp"
 

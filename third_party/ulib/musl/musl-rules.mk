@@ -294,7 +294,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/isastream.c \
     $(LOCAL_DIR)/src/legacy/lutimes.c \
     $(LOCAL_DIR)/src/legacy/ulimit.c \
-    $(LOCAL_DIR)/src/legacy/utmpx.c \
     $(LOCAL_DIR)/src/linux/adjtime.c \
     $(LOCAL_DIR)/src/linux/cache.c \
     $(LOCAL_DIR)/src/linux/flock.c \
@@ -460,7 +459,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/initgroups.c \
     $(LOCAL_DIR)/src/misc/issetugid.c \
     $(LOCAL_DIR)/src/misc/lockf.c \
-    $(LOCAL_DIR)/src/misc/login_tty.c \
     $(LOCAL_DIR)/src/misc/mntent.c \
     $(LOCAL_DIR)/src/misc/openpty.c \
     $(LOCAL_DIR)/src/misc/ptsname.c \
