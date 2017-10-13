@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "escher/impl/wobble_modifier_absorber.h"
 #include "escher/escher.h"
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/escher_impl.h"
-#include "escher/impl/wobble_modifier_absorber.h"
 #include "escher/resources/resource_recycler.h"
 
 namespace escher {

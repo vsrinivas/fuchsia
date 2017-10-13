@@ -6,6 +6,10 @@ executable("sketchy") {
   output_name = "sketchy_service"
 
   sources = [
+    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.cc",
+    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.h",
+    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.cc",
+    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.h",
     "app.cc",
     "app.h",
     "buffer.cc",
@@ -26,17 +30,13 @@ executable("sketchy") {
     "resources/stroke_group.cc",
     "resources/stroke_group.h",
     "resources/types.h",
-    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.cc",
-    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.h",
-    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.cc",
-    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.h",
   ]
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/escher",
     "//garnet/public/lib/ui/fun/sketchy/fidl",
-    "//garnet/lib/escher",
+    "//garnet/public/lib/ui/scenic:client",
     "//zircon/system/ulib/trace-provider",
   ]
 

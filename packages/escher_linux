@@ -3,7 +3,7 @@
         "cpp"
     ],
     "labels": [
-        "//garnet/lib/escher/build_linux:examples",
-        "//garnet/lib/escher/build_linux:tests"
+        "//garnet/public/lib/escher/build_linux:examples",
+        "//garnet/public/lib/escher/build_linux:tests"
     ]
 }

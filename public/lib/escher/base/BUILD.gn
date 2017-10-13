@@ -13,7 +13,7 @@ static_library("escher_base") {
     "typed_reffable.h",
   ]
 
-  public_configs = [ "//garnet/lib/escher:public_includes" ]
+  public_configs = [ "//garnet/public/lib/escher:public_includes" ]
   public_deps = [
     "//garnet/public/lib/fxl",
   ]

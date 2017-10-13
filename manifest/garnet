@@ -292,7 +292,7 @@
           action="drivers/wlan/mediatek/ralink/download-firmware.sh"/>
     <hook name="download-vulkan-sdk"
           project="garnet"
-          action="lib/escher/scripts/download-vulkan-sdk"/>
+          action="public/lib/escher/scripts/download-vulkan-sdk"/>
     <hook name="fonts-update"
           project="garnet"
           action="bin/fonts/update.sh"/>

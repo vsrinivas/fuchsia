@@ -19,9 +19,9 @@ executable("sketchy_demo") {
     "//garnet/examples/escher/sketchy/sketchy",
   ]
   include_dirs = [
-    "//lib",
-    "//garnet/lib/escher",
+    "//garnet/public/lib/escher",
     "//garnet/examples/escher/sketchy",
+    "//lib",
     "//third_party/glm",
   ]
 
@@ -30,6 +30,6 @@ executable("sketchy_demo") {
   }
 
   if (is_linux) {
-    configs += [ "//garnet/lib/escher:vulkan_linux" ]
+    configs += [ "//garnet/public/lib/escher:vulkan_linux" ]
   }
 }

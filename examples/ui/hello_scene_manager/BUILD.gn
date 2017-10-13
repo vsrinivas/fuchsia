@@ -12,19 +12,19 @@ executable("hello_scene_manager") {
   ]
 
   deps = [
+    "//garnet/bin/ui/scene_manager/tests:util",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/escher",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/scenic/fidl",
-    "//garnet/bin/ui/scene_manager/tests:util",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
-    "//garnet/lib/escher",
   ]
 
   include_dirs = [
-    "//garnet/lib/escher",
+    "//garnet/public/lib/escher",
     "//third_party/glm",
     "//lib",
   ]

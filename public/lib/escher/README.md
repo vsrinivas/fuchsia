@@ -32,7 +32,7 @@ Escher can also build on Linux.  In order to do so, you need to:
     into third_party/vulkansdk when Escher is pulled down by jiri as a part of Fuchsia)
   * set the VULKAN_SDK, VK_LAYER_PATH, and LD_LIBRARY_PATH environment variables, e.g.:
     ```
-    export VULKAN_SDK=$FUCHSIA_DIR/lib/escher/third_party/vulkansdk/x86_64
+    export VULKAN_SDK=$FUCHSIA_DIR/garnet/public/lib/escher/third_party/vulkansdk/x86_64
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VULKAN_SDK/lib
     export VK_LAYER_PATH=$VULKAN_SDK/etc/explicit_layer.d
     ```

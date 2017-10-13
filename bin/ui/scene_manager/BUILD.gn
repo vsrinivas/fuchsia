@@ -122,11 +122,11 @@ source_set("common") {
     "resources/shapes/shape.h",
     "scene_manager_impl.cc",
     "scene_manager_impl.h",
+    "sync/fence.h",
     "sync/fence_listener.cc",
     "sync/fence_listener.h",
     "sync/fence_set_listener.cc",
     "sync/fence_set_listener.h",
-    "sync/fence.h",
     "sync/release_fence_signaller.cc",
     "sync/release_fence_signaller.h",
     "util/error_reporter.cc",
@@ -143,8 +143,8 @@ source_set("common") {
 
   public_deps = [
     "//garnet/examples/escher/common",
-    "//garnet/lib/escher",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/escher",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -156,7 +156,7 @@ source_set("common") {
   public_configs = [ ":common_include_dirs" ]
 
   deps = [
-    "//zircon/system/ulib/trace",
     "//garnet/public/lib/vulkan",
+    "//zircon/system/ulib/trace",
   ]
 }

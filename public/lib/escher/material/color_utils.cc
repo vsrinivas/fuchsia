@@ -22,7 +22,7 @@ float SrgbToLinear(float srgb_color_channel) {
     return pow((srgb_color_channel + 0.055f) / 1.055f, 2.4f);
   }
 }
-}
+}  // namespace
 
 vec3 LinearToSrgb(vec3 linear_color) {
   return vec3(LinearToSrgb(linear_color.x), LinearToSrgb(linear_color.y),

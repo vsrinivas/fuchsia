@@ -21,14 +21,14 @@ static_library("sketchy") {
   ]
 
   deps = [
-    "//garnet/lib/escher",
     "//garnet/examples/escher/common",
+    "//garnet/public/lib/escher",
   ]
 
   include_dirs = [
-    "//lib",  # for fxl/
-    "//garnet/lib/escher",
     "//garnet/examples/escher/sketchy",
+    "//garnet/public/lib/escher",
+    "//lib",  # for fxl/
     "//third_party/glm",
   ]
 
@@ -37,6 +37,6 @@ static_library("sketchy") {
   }
 
   if (is_linux) {
-    configs += [ "//garnet/lib/escher:vulkan_linux" ]
+    configs += [ "//garnet/public/lib/escher:vulkan_linux" ]
   }
 }

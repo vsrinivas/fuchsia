@@ -3,19 +3,19 @@
 # found in the LICENSE file.
 
 # Escher can be developed for a Linux target only on a Linux host.  Putting
-# the following targets in //garnet/lib/escher/BUILD.gn caused problems on OS X hosts,
+# the following targets in //garnet/public/lib/escher/BUILD.gn caused problems on OS X hosts,
 # so they were moved into a separate file.
 
 group("examples") {
   deps = [
-    "//garnet/examples/escher/waterfall($host_toolchain)",
     "//garnet/examples/escher/sketchy($host_toolchain)",
+    "//garnet/examples/escher/waterfall($host_toolchain)",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "//garnet/lib/escher/test:escher_unittests($host_toolchain)",
+    "//garnet/public/lib/escher/test:escher_unittests($host_toolchain)",
   ]
 }

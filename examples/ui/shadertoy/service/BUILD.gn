@@ -30,21 +30,21 @@ executable("service") {
 
   deps = [
     "services",
+    "//garnet/examples/escher/common",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/escher",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/scenic/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
-    "//garnet/lib/escher",
-    "//garnet/examples/escher/common",
-    "//zircon/system/ulib/trace-provider",
     "//garnet/public/lib/vulkan",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   include_dirs = [
     "//lib",
-    "//garnet/lib/escher",
+    "//garnet/public/lib/escher",
     "//third_party/glm",
   ]
 }

@@ -24,13 +24,13 @@
 
 namespace escher {
 
-using glm::vec2;
-using glm::vec3;
-using glm::vec4;
 using glm::mat2;
 using glm::mat3;
 using glm::mat4;
 using glm::quat;
+using glm::vec2;
+using glm::vec3;
+using glm::vec4;
 
 ESCHER_DEBUG_PRINTABLE(vec2);
 ESCHER_DEBUG_PRINTABLE(vec3);

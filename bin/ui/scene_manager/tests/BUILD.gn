@@ -63,9 +63,9 @@ executable("unittests") {
   testonly = true
 
   sources = [
-    "fence_set_listener_unittest.cc",
-    "fence_listener_unittest.cc",
     "event_timestamper_unittest.cc",
+    "fence_listener_unittest.cc",
+    "fence_set_listener_unittest.cc",
     "hittest_unittest.cc",
     "imagepipe_unittest.cc",
     "import_unittest.cc",
@@ -100,7 +100,7 @@ executable("unittests_using_escher") {
   deps = [
     ":testing_deps",
     "//garnet/examples/escher/common",
-    "//garnet/lib/escher",
+    "//garnet/public/lib/escher",
     "//garnet/public/lib/test_runner/cpp/reporting",
   ]
 }

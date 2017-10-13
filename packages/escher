@@ -3,8 +3,8 @@
         "cpp"
     ],
     "labels": [
-        "//garnet/lib/escher:examples",
-        "//garnet/lib/escher:tests"
+        "//garnet/public/lib/escher:examples",
+        "//garnet/public/lib/escher:tests"
     ],
     "binaries": [
         {

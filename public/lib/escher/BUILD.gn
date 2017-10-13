@@ -12,15 +12,15 @@ group("examples") {
 group("tests") {
   testonly = true
   deps = [
-    "//garnet/lib/escher/test:escher_unittests",
+    "//garnet/public/lib/escher/test:escher_unittests",
   ]
 }
 
 # When targeting Linux, we use a LunarG Vulkan SDK that we download from
-# Google storage (see //garnet/lib/escher/scripts/).
+# Google storage (see //garnet/public/lib/escher/scripts/).
 if (is_linux) {
   config("vulkan_linux") {
-    vulkan_sdk = "//garnet/lib/escher/third_party/vulkansdk/x86_64"
+    vulkan_sdk = "//garnet/public/lib/escher/third_party/vulkansdk/x86_64"
     include_dirs = [ "$vulkan_sdk/include" ]
     lib_dirs = [ "$vulkan_sdk/lib" ]
     libs = [ "vulkan" ]
@@ -29,7 +29,7 @@ if (is_linux) {
 
 config("public_includes") {
   include_dirs = [
-    "//garnet/lib",
+    "//garnet/public/lib",
     "//third_party/glm",
   ]
 }
@@ -68,7 +68,7 @@ source_set("escher") {
   ]
 
   public_deps = [
-    "//garnet/lib/escher/base:escher_base",
+    "//garnet/public/lib/escher/base:escher_base",
     "//garnet/public/lib/fxl",
   ]
 
@@ -253,13 +253,13 @@ source_set("escher") {
   }
 
   if (is_linux) {
-    public_configs += [ "//garnet/lib/escher:vulkan_linux" ]
+    public_configs += [ "//garnet/public/lib/escher:vulkan_linux" ]
   }
 }
 
 group("unittests") {
   testonly = true
   deps = [
-    "//garnet/lib/escher/test:escher_unittests",
+    "//garnet/public/lib/escher/test:escher_unittests",
   ]
 }
