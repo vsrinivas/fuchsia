@@ -40,9 +40,13 @@ void SuggestionDebugImpl::OnSuggestionSelected(
     const SuggestionPrototype* selected_suggestion) {
   ask_proposal_listeners_.ForAllPtrs(
       [selected_suggestion](AskProposalListener* listener) {
-        ProposalSummaryPtr summary = ProposalSummary::New();
-        makeProposalSummary(selected_suggestion, &summary);
-        listener->OnProposalSelected(std::move(summary));
+        if (selected_suggestion) {
+          ProposalSummaryPtr summary = ProposalSummary::New();
+          makeProposalSummary(selected_suggestion, &summary);
+          listener->OnProposalSelected(std::move(summary));
+        } else {
+          listener->OnProposalSelected(nullptr);
+        }
       });
 }
 

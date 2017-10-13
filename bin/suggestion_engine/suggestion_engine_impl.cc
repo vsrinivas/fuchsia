@@ -149,9 +149,13 @@ void SuggestionEngineImpl::Query(
   // Step 2
   std::string query = input->text;
   if (!query.empty()) {
+    // Update context engine
     std::string formattedQuery;
     modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
+
+    // Update suggestion engine debug interface
+    debug_.OnAskStart(query, ask_suggestions_);
   }
 
   // Step 3
@@ -162,6 +166,7 @@ void SuggestionEngineImpl::Query(
           ask_suggestions_, std::move(listener), count);
 
   subscriber->set_connection_error_handler([this] {
+    debug_.OnSuggestionSelected(nullptr);
     CleanUpPreviousQuery();
   });  // called if the listener disconnects
 

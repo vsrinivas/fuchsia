@@ -21,7 +21,7 @@ interface AskProposalListener {
   OnAskStart(string query, array<ProposalSummary> proposals);
   // Receives notification of query completion or dismissal.
   // |selected_proposal| is null if query was dismissed
-  OnProposalSelected(ProposalSummary selected_proposal);
+  OnProposalSelected(ProposalSummary? selected_proposal);
 };
 
 interface InterruptionProposalListener {

@@ -86,6 +86,9 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
   // Rank includes an invalidate dispatch
   engine_->ask_dirty_ = false;
 
+  // Update the suggestion engine debug interface
+  engine_->debug_.OnAskStart(input_->text, engine_->ask_suggestions_);
+
   FXL_VLOG(1) << "Handler " << handler_url << " complete";
 
   outstanding_handlers_.erase(outstanding_handlers_.find(handler_url));
