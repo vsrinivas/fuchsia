@@ -48,6 +48,8 @@ constexpr char kFirmwareFile[] = "rt2870.bin";
 
 constexpr int kMaxBusyReads = 20;
 
+const uint8_t std_oui[3] = {0x00, 0x0F, 0xAC};
+
 // The <cstdlib> overloads confuse the compiler for <cstdint> types.
 template <typename T> constexpr T abs(T t) {
     return t < 0 ? -t : t;
@@ -3222,12 +3224,226 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
     bss1.set_mac_addr_4(mac[4]);
     bss1.set_mac_addr_5(mac[5]);
     bss1.set_multi_bss_mode(MultiBssIdMode::k1BssIdMode);
+
     auto status = WriteRegister(bss0);
     CHECK_WRITE(BSSID_DW0, status);
     status = WriteRegister(bss1);
     CHECK_WRITE(BSSID_DW1, status);
 
     return ZX_OK;
+}
+
+KeyMode Device::GetKeyMode(const uint8_t cipher_oui[3], uint8_t cipher_type) {
+    if (memcmp(cipher_oui, std_oui, 3)) {
+        return KeyMode::kUnsupported;
+    }
+
+    // IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
+    if (cipher_type == 4) {
+        return KeyMode::kAES;
+    }
+
+    return KeyMode::kUnsupported;
+}
+
+uint8_t Device::DeriveSharedKeyIndex(uint8_t bss_idx, uint8_t key_idx) {
+    return bss_idx * kGroupKeysPerBss + key_idx;
+}
+
+zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index) {
+    KeyEntry keyEntry = {};
+    if (key_len > sizeof(keyEntry.key)) {
+        return ZX_ERR_IO;
+    }
+    memcpy(keyEntry.key, key, key_len);
+
+    size_t out_len;
+    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
+                              index, &keyEntry, sizeof(keyEntry), ZX_TIME_INFINITE, &out_len);
+    if (status != ZX_OK || out_len < sizeof(keyEntry)) {
+        std::printf("Error writing Key Entry: %d\n", status);
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Device::WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len) {
+    uint16_t index = PAIRWISE_KEY_BASE + wcid * sizeof(KeyEntry);
+    return WriteKey(key, key_len, index);
+}
+
+zx_status_t Device::WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len) {
+    if (skey > kMaxSharedKeys) { return ZX_ERR_NOT_SUPPORTED; }
+
+    uint16_t index = SHARED_KEY_BASE + skey * sizeof(KeyEntry);
+    return WriteKey(key, key_len, index);
+}
+
+zx_status_t Device::WriteWcid(uint8_t wcid, const uint8_t mac[]) {
+    RxWcidEntry wcidEntry = {};
+    memset(wcidEntry.ba_sess_mask, 0xFF, sizeof(wcidEntry.ba_sess_mask));
+    memcpy(wcidEntry.mac, mac, sizeof(wcidEntry.mac));
+
+    size_t out_len;
+    uint16_t index = RX_WCID_BASE + wcid * sizeof(wcidEntry);
+    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
+                              index, &wcidEntry, sizeof(wcidEntry), ZX_TIME_INFINITE, &out_len);
+    if (status != ZX_OK || out_len < sizeof(wcidEntry)) {
+        std::printf("Error writing WCID Entry: %d\n", status);
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Device::WriteWcidAttribute(uint8_t bss_idx, uint8_t wcid, KeyMode mode, KeyType type) {
+    WcidAttrEntry wcidAttr = {};
+    wcidAttr.set_keyType(type);
+    wcidAttr.set_keyMode(mode & 0x07);
+    wcidAttr.set_keyModeExt((mode & 0x08) >> 3);
+    wcidAttr.set_bssIdx(bss_idx & 0x07);
+    wcidAttr.set_bssIdxExt((bss_idx & 0x08) >> 3);
+    wcidAttr.set_rxUsrDef(4);
+    auto value = wcidAttr.val();
+    auto status = WriteRegister(WCID_ATTR_BASE + wcid * sizeof(value), value);
+    CHECK_WRITE(WCID_ATTRIBUTE, status);
+    return ZX_OK;
+}
+
+zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
+    // TODO(hahnr): Use zero mac from MacAddr once it was moved to common/.
+    uint8_t zero_addr[6] = {};
+    WriteWcid(wcid, zero_addr);
+    WriteWcidAttribute(0, wcid, KeyMode::kNone, KeyType::kSharedKey);
+    ResetIvEiv(wcid);
+
+    uint8_t zero_key[16] = {};
+    switch (key_type) {
+    case WLAN_KEY_TYPE_PAIRWISE: {
+        WritePairwiseKey(wcid, zero_key, sizeof(zero_key));
+        break;
+    }
+    case WLAN_KEY_TYPE_GROUP: {
+        WriteSharedKey(skey, zero_key, sizeof(zero_key));
+        WriteSharedKeyMode(skey, KeyMode::kNone);
+        break;
+    }
+    default: { break; }
+    }
+    return ZX_OK;
+}
+
+zx_status_t Device::ResetIvEiv(uint8_t wcid) {
+    IvEivEntry ivEntry = { .iv = 1 };
+
+    size_t out_len;
+    uint16_t index = IV_EIV_BASE + wcid * sizeof(ivEntry);
+    auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
+                              index, &ivEntry, sizeof(ivEntry), ZX_TIME_INFINITE, &out_len);
+    if (status != ZX_OK || out_len < sizeof(ivEntry)) {
+        std::printf("Error writing IVEIV Entry: %d\n", status);
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+zx_status_t Device::WriteSharedKeyMode(uint8_t skey, KeyMode mode) {
+    if (skey > kMaxSharedKeys) { return ZX_ERR_NOT_SUPPORTED; }
+
+    SharedKeyModeEntry keyMode = {};
+
+    uint8_t skey_idx = skey % kKeyModesPerSharedKeyMode;
+    uint16_t offset = SHARED_KEY_MODE_BASE + (skey / kKeyModesPerSharedKeyMode) * 4;
+
+    // Due to key rotation, read in existing value.
+    auto status = ReadRegister(offset, &keyMode.value);
+    CHECK_READ(SHARED_KEY_MODE, status);
+
+    status = keyMode.set(skey_idx, mode);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = WriteRegister(offset, keyMode.value);
+    CHECK_WRITE(SHARED_KEY_MODE, status);
+    return ZX_OK;
+}
+
+zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config) {
+    fbl::MakeAutoCall([&](){ free(key_config); });
+
+    if (options != 0) { return ZX_ERR_INVALID_ARGS; }
+
+    auto keyMode = GetKeyMode(key_config->cipher_oui, key_config->cipher_type);
+    if (keyMode == KeyMode::kUnsupported) { return ZX_ERR_NOT_SUPPORTED; }
+
+    zx_status_t status = ZX_OK;
+
+    switch (key_config->key_type) {
+    case WLAN_KEY_TYPE_PAIRWISE: {
+        // The driver doesn't support multiple BSS yet. Always use bss index 0.
+        uint8_t bss_idx = 0;
+        uint8_t wcid = 1;
+
+        // Reset everything on failure.
+        auto reset = fbl::MakeAutoCall([&]() {
+          ResetWcid(wcid, 0, WLAN_KEY_TYPE_PAIRWISE);
+        });
+
+        auto status = WriteWcid(wcid, key_config->peer_addr);
+        if (status != ZX_OK) { break; }
+
+        status = WritePairwiseKey(wcid, key_config->key, key_config->key_len);
+        if (status != ZX_OK) { break; }
+
+        status = WriteWcidAttribute(bss_idx, wcid, keyMode, KeyType::kPairwiseKey);
+        if (status != ZX_OK) { break; }
+
+        status = ResetIvEiv(wcid);
+        if (status != ZX_OK) { break; }
+
+        reset.cancel();
+        break;
+    }
+    case WLAN_KEY_TYPE_GROUP: {
+        // The driver doesn't support multiple BSS yet. Always use bss index 0.
+        uint8_t bss_idx = 0;
+        uint8_t keyIdx = 2; // TODO(hahnr): Derive from GTK KDE KeyID.
+        uint8_t skey = DeriveSharedKeyIndex(bss_idx, keyIdx);
+        uint8_t wcid = 0;
+
+        // Reset everything on failure.
+        auto reset = fbl::MakeAutoCall([&]() {
+          ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP);
+        });
+
+        auto status = WriteSharedKey(skey, key_config->key, key_config->key_len);
+        if (status != ZX_OK) { break; }
+
+        status = WriteSharedKeyMode(skey, keyMode);
+        if (status != ZX_OK) { break; }
+
+        // TODO(hahnr): Use bcast_mac from MacAddr once it was moved to common/.
+        uint8_t bcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+        status = WriteWcid(wcid, bcast_addr);
+        if (status != ZX_OK) { break; }
+
+        status = WriteWcidAttribute(bss_idx, wcid, keyMode, KeyType::kSharedKey);
+        if (status != ZX_OK) { break; }
+
+        status = ResetIvEiv(wcid);
+        if (status != ZX_OK) { break; }
+
+        reset.cancel();
+        break;
+    }
+    default: {
+        errorf("unsupported key type: %d\n", key_config->key_type);
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+    }
+    }
+
+    return status;
 }
 
 void Device::ReadRequestComplete(usb_request_t* request, void* cookie) {
