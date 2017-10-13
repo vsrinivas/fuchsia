@@ -37,7 +37,7 @@ struct Daisy {
 // Resolution.
 union Noun {
   // Set this if you already have an EntityReference at runtime. An
-  // EntityReference can acquired by calling Entity.getReference().
+  // EntityReference can be acquired by calling Entity.getReference().
   // Entity.getTypes() will be used to set the constraints for this noun during
   // resolution.
   EntityReference entity_reference;
