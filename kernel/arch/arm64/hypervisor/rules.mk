@@ -13,5 +13,6 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/el2_cpu_state.cpp \
 	$(LOCAL_DIR)/guest.cpp \
 	$(LOCAL_DIR)/vcpu.cpp \
+	$(LOCAL_DIR)/vmexit.cpp \
 
 include make/module.mk

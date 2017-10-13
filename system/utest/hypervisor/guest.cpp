@@ -270,10 +270,11 @@ static bool guest_set_trap_with_io(void) {
 
 BEGIN_TEST_CASE(guest)
 RUN_TEST(vcpu_resume)
+#if __x86_64__
+// TODO(abdulla): Enable these tests for arm64.
 RUN_TEST(vcpu_read_write_state)
 RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
-#if __x86_64__
 RUN_TEST(guest_set_trap_with_io)
 #endif
 END_TEST_CASE(guest)
