@@ -973,7 +973,11 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent, void** cookie) {
     // Starting USB mode is determined by the platform bus driver.
     // We read initial value and store it in dev->usb_mode, but do not actually
     // enable it until after all of our functions have bound.
-    dev->usb_mode = usb_mode_switch_get_initial_mode(&dev->usb_mode_switch);
+    zx_status_t status = usb_mode_switch_get_initial_mode(&dev->usb_mode_switch, &dev->usb_mode);
+    if (status != ZX_OK) {
+        free(dev);
+        return status;
+    }
     // Set DCI mode to USB_MODE_NONE until we are ready
     usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
     dev->dci_usb_mode = USB_MODE_NONE;
@@ -987,7 +991,7 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent, void** cookie) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    zx_status_t status = device_add(parent, &args, &dev->zxdev);
+    status = device_add(parent, &args, &dev->zxdev);
     if (status != ZX_OK) {
         dprintf(ERROR, "usb_device_bind add_device failed %d\n", status);
         free(dev);

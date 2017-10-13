@@ -267,9 +267,9 @@ usb_dci_protocol_ops_t dwc_dci_protocol = {
     .ep_clear_stall = dwc3_clear_stall,
 };
 
-static usb_mode_t dwc3_get_initial_mode(void* ctx) {
+static zx_status_t dwc3_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
     dwc3_t* dwc = ctx;
-    return usb_mode_switch_get_initial_mode(&dwc->ums);
+    return usb_mode_switch_get_initial_mode(&dwc->ums, out_mode);
 }
 
 static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {

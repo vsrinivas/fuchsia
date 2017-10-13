@@ -2,43 +2,115 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "platform-bus.h"
+#include "platform-proxy.h"
 
-static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    platform_dev_t* pdev = ctx;
-    platform_bus_t* bus = pdev->bus;
+static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index,
+                                         zx_handle_t* out_handle, uint32_t* out_handle_count) {
+    platform_resources_t* resources = &dev->resources;
 
-    if (bus->interface.ops == NULL) {
+    if (index >= resources->mmio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    platform_mmio_t* mmio = &resources->mmios[index];
+    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, mmio->length,
+                                                out_handle);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
+        return status;
+    }
+    *out_handle_count = 1;
+    return ZX_OK;
+}
+
+static zx_status_t platform_dev_get_interrupt(platform_dev_t* dev, uint32_t index,
+                                              zx_handle_t* out_handle, uint32_t* out_handle_count) {
+    platform_resources_t* resources = &dev->resources;
+
+    if (index >= resources->irq_count || !out_handle) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    platform_irq_t* irq = &resources->irqs[index];
+    zx_status_t status = zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ, out_handle);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "platform_dev_get_interrupt: zx_interrupt_create failed %d\n", status);
+        return status;
+    }
+    *out_handle_count = 1;
+    return ZX_OK;
+}
+
+static zx_status_t platform_dev_ums_get_initial_mode(platform_dev_t* dev, usb_mode_t* out_mode) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->ums.ops) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    return pbus_interface_get_protocol(&bus->interface, proto_id, out);
+    return usb_mode_switch_get_initial_mode(&bus->ums, out_mode);
 }
 
-static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
-                                         void** vaddr, size_t* size, zx_handle_t* out_handle) {
-    platform_dev_t* pdev = ctx;
-    return platform_map_mmio(pdev, index, cache_policy, vaddr, size, out_handle);
+static zx_status_t platform_dev_ums_set_mode(platform_dev_t* dev, usb_mode_t mode) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->ums.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return usb_mode_switch_set_mode(&bus->ums, mode);
 }
 
-static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
-    platform_dev_t* pdev = ctx;
-    return platform_map_interrupt(pdev, index, out_handle);
-}
+static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
+    platform_dev_t* dev = ctx;
+    pdev_req_t req;
+    pdev_resp_t resp;
+    uint32_t len = sizeof(req);
 
-static platform_device_protocol_ops_t platform_dev_proto_ops = {
-    .get_protocol = platform_dev_get_protocol,
-    .map_mmio = platform_dev_map_mmio,
-    .map_interrupt = platform_dev_map_interrupt,
-};
+    zx_status_t status = zx_channel_read(channel, 0, &req, NULL, len, 0, &len, NULL);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
+        return status;
+    } else if (len != sizeof(req)) {
+        dprintf(ERROR, "platform_dev_rxrpc: req length wrong %u\n", len);
+        return ZX_ERR_INTERNAL;
+    }
+
+    resp.txid = req.txid;
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    uint32_t handle_count = 0;
+
+    switch (req.op) {
+    case PDEV_GET_MMIO:
+        resp.status = platform_dev_get_mmio(dev, req.index, &handle, &handle_count);
+        break;
+    case PDEV_GET_INTERRUPT:
+        resp.status = platform_dev_get_interrupt(dev, req.index, &handle, &handle_count);
+        break;
+    case PDEV_UMS_GET_INITIAL_MODE:
+        resp.status = platform_dev_ums_get_initial_mode(dev, &resp.usb_mode);
+        break;
+    case PDEV_UMS_SET_MODE:
+        resp.status = platform_dev_ums_set_mode(dev, req.usb_mode);
+        break;
+    default:
+        dprintf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req.op);
+        return ZX_ERR_INTERNAL;
+    }
+
+    // set op to match request so zx_channel_write will return our response
+    status = zx_channel_write(channel, 0, &resp, sizeof(resp), (handle_count == 1 ? &handle : NULL),
+                              handle_count);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);
+    }
+    return status;
+}
 
 void platform_dev_free(platform_dev_t* dev) {
     free(dev);
@@ -46,6 +118,7 @@ void platform_dev_free(platform_dev_t* dev) {
 
 static zx_protocol_device_t platform_dev_proto = {
     .version = DEVICE_OPS_VERSION,
+    .rxrpc = platform_dev_rxrpc,
     // Note that we do not have a release callback here because we
     // need to support re-adding platform devices when they are reenabled.
 };
@@ -104,15 +177,21 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             {BIND_PLATFORM_DEV_DID, 0, dev->did},
         };
 
+        char namestr[ZX_DEVICE_NAME_MAX];
+        snprintf(namestr, sizeof(namestr), "%04x:%04x:%04x", dev->vid, dev->pid, dev->did);
+        char argstr[64];
+        snprintf(argstr, sizeof(argstr), "pdev:%s,", namestr);
+
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,
-            .name = dev->name,
+            .name = namestr,
             .ctx = dev,
             .ops = &platform_dev_proto,
             .proto_id = ZX_PROTOCOL_PLATFORM_DEV,
-            .proto_ops = &platform_dev_proto_ops,
             .props = props,
             .prop_count = countof(props),
+            .proxy_args = argstr,
+            .flags = DEVICE_ADD_MUST_ISOLATE,
         };
         // add PCI root at top level
         zx_device_t* parent = dev->bus->zxdev;

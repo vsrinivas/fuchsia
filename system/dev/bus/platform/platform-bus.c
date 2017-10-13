@@ -24,6 +24,8 @@ zx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
     platform_bus_t* bus = ctx;
     memcpy(&bus->interface, interface, sizeof(bus->interface));
 
+    pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->ums);
+
     return ZX_OK;
 }
 
@@ -133,7 +135,7 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
 
     device_add_args_t add_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "platform-bus",
+        .name = "platform",
         .ctx = bus,
         .ops = &platform_bus_proto,
         .proto_id = ZX_PROTOCOL_PLATFORM_BUS,

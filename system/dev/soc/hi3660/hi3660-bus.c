@@ -99,8 +99,9 @@ static gpio_protocol_ops_t gpio_ops = {
     .int_clear = hi3660_gpio_int_clear,
 };
 
-static usb_mode_t hi3660_get_initial_mode(void* ctx) {
-    return USB_MODE_DEVICE;
+static zx_status_t hi3660_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
+    *out_mode = USB_MODE_DEVICE;
+    return ZX_OK;
 }
 
 static zx_status_t hi3660_set_mode(void* ctx, usb_mode_t mode) {
@@ -223,15 +224,15 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
         goto fail;
     }
 
-    pbus_interface_t intf;
-    intf.ops = &hi3660_bus_ops;
-    intf.ctx = bus;
-    pbus_set_interface(&bus->pbus, &intf);
-
     bus->gpio.ops = &gpio_ops;
     bus->gpio.ctx = bus;
     bus->usb_mode_switch.ops = &usb_mode_switch_ops;
     bus->usb_mode_switch.ctx = bus;
+
+    pbus_interface_t intf;
+    intf.ops = &hi3660_bus_ops;
+    intf.ctx = bus;
+    pbus_set_interface(&bus->pbus, &intf);
 
     if ((status = hi3360_add_gpios(bus)) != ZX_OK) {
         printf("hi3660_bind: hi3360_add_gpios failed!\n");;

@@ -11,64 +11,6 @@
 
 #include "platform-bus.h"
 
-zx_status_t platform_map_mmio(platform_dev_t* dev, uint32_t index, uint32_t cache_policy,
-                              void** vaddr, size_t* size, zx_handle_t* out_handle) {
-    platform_resources_t* resources = &dev->resources;
-
-    if (index >= resources->mmio_count) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    platform_mmio_t* mmio = &resources->mmios[index];
-    zx_handle_t vmo_handle;
-    zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, mmio->length,
-                                                &vmo_handle);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
-        return status;
-    }
-
-    size_t vmo_size;
-    status = zx_vmo_get_size(vmo_handle, &vmo_size);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_get_size failed %d\n", status);
-        goto fail;
-    }
-
-    status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
-        goto fail;
-    }
-
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, vmo_size,
-                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
-                         (uintptr_t*)vaddr);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
-        goto fail;
-    }
-
-    *size = vmo_size;
-    *out_handle = vmo_handle;
-    return ZX_OK;
-
-fail:
-    zx_handle_close(vmo_handle);
-    return status;
-}
-
-zx_status_t platform_map_interrupt(platform_dev_t* dev, uint32_t index, zx_handle_t* out_handle) {
-    platform_resources_t* resources = &dev->resources;
-
-    if (index >= resources->irq_count || !out_handle) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    platform_irq_t* irq = &resources->irqs[index];
-
-    return zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ, out_handle);
-}
-
 void platform_init_resources(platform_resources_t* resources, uint32_t mmio_count,
                              uint32_t irq_count) {
     resources->mmio_count = mmio_count;

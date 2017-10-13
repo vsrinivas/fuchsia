@@ -11,7 +11,7 @@
 __BEGIN_CDECLS;
 
 typedef struct {
-    usb_mode_t (*get_initial_mode)(void* ctx);
+    zx_status_t (*get_initial_mode)(void* ctx, usb_mode_t* out_mode);
     zx_status_t (*set_mode)(void* ctx, usb_mode_t mode);
 } usb_mode_switch_protocol_ops_t;
 
@@ -20,8 +20,9 @@ typedef struct {
     void* ctx;
 } usb_mode_switch_protocol_t;
 
-static inline usb_mode_t usb_mode_switch_get_initial_mode(usb_mode_switch_protocol_t* ums) {
-    return ums->ops->get_initial_mode(ums->ctx);
+static inline zx_status_t usb_mode_switch_get_initial_mode(usb_mode_switch_protocol_t* ums,
+                                                           usb_mode_t* out_mode) {
+    return ums->ops->get_initial_mode(ums->ctx, out_mode);
 }
 
 static inline zx_status_t usb_mode_switch_set_mode(usb_mode_switch_protocol_t* ums,

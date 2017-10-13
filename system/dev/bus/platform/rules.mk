@@ -20,3 +20,18 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 MODULE_LIBS := system/ulib/mdi system/ulib/driver system/ulib/zircon system/ulib/c
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).proxy
+
+MODULE_TYPE := driver
+
+MODULE_NAME := platform-bus.proxy
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/platform-proxy.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/mdi system/ulib/driver system/ulib/zircon system/ulib/c
+
+include make/module.mk
