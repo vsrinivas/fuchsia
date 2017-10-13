@@ -85,7 +85,7 @@ TEST(CondVarTest, Basic) {
       }
     } else {
       while (!condition) {
-        EXPECT_FALSE(cv.WaitWithTimeout(&mu, kTinyTimeout));
+        cv.WaitWithTimeout(&mu, kTinyTimeout);
         mu.AssertHeld();
       }
     }
