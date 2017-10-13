@@ -37,7 +37,7 @@ action("mkbootfs") {
                        "--system-manifest",
                        system_manifest_file,
                        "--modules",
-                       modules,
+                       fuchsia_packages,
                        "--autorun",
                        autorun,
                        "--build-root",

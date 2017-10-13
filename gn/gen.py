@@ -21,12 +21,10 @@ def main():
                         action="store_true")
     parser.add_argument("--zircon_project", "-z", help="zircon project",
                         default=os.environ.get("ZIRCON_PROJECT"))
-    parser.add_argument("--modules", "-m", help="[deprecated, use --packages instead] comma separated list of modules",
-                        default="packages/gn/default")
     parser.add_argument("--packages", "-p", help="comma separated list of packages",
-                        default=argparse.SUPPRESS)
+                        default="packages/gn/default")
     parser.add_argument("--release", "-r", help="generate release mode build files",
-        action="store_true")
+                        action="store_true")
     parser.add_argument("--outdir", "-o", help="output directory")
     parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
                         choices=['x86-64', 'aarch64'])
@@ -37,8 +35,6 @@ def main():
     parser.add_argument("--lto", nargs='?', const='thin', choices=['full', 'thin'],
                         default=None, help="use link time optimization (LTO)")
     parser.add_argument("--thinlto-cache-dir", help="ThinLTO cache directory")
-    parser.add_argument("--fuchsia-disable-vulkan", help="Disable Vulkan in Mozart, Skia, and Flutter",
-                        action="store_true", default=False)
     parser.add_argument("--ignore-skia", help="Disable Skia settings - for Skia-less builds",
                         action="store_true", default=False)
     parser.add_argument("--with-dart-analysis", help="Run Dart analysis as part of the build",
@@ -62,9 +58,6 @@ def main():
     cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
     gn_args = "--args=target_cpu=\"" + cpu_map[args.target_cpu]  + "\""
 
-    if args.fuchsia_disable_vulkan:
-        gn_args += " fuchsia_use_vulkan=false"
-
     if not args.ignore_skia:
         # Disable some Skia features not needed for host builds.
         # This is needed in order to build the Flutter shell.
@@ -77,8 +70,7 @@ def main():
     if args.with_dart_analysis:
         gn_args += " run_dart_analysis=true"
 
-    modules = args.packages if "packages" in args else args.modules
-    gn_args += " modules=\"" + modules + "\""
+    gn_args += " fuchsia_packages=\"" + args.packages + "\""
 
     if args.release:
         gn_args += " is_debug=false"
