@@ -18,6 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_point.h"
+#include "lib/netconnector/fidl/mdns.fidl.h"
 
 namespace netconnector {
 namespace mdns {
@@ -75,6 +76,13 @@ class Mdns : public MdnsAgent::Host {
   std::shared_ptr<MdnsAgent> SubscribeToService(
       const std::string& service_name,
       const ServiceInstanceCallback& callback);
+
+  // Adds a responder. Returns false if and only if the instance was already
+  // published.
+  bool AddResponder(const std::string& service_name,
+                    const std::string& instance_name,
+                    const std::vector<std::string>& announced_subtypes,
+                    fidl::InterfaceHandle<MdnsResponder> responder);
 
  private:
   template <typename T>

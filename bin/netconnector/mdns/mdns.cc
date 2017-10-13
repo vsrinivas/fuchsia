@@ -15,6 +15,7 @@
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
+#include "garnet/bin/netconnector/mdns/responder.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
@@ -168,6 +169,31 @@ void Mdns::UnpublishServiceInstance(const std::string& service_name,
   if (iter != instance_publishers_by_instance_full_name_.end()) {
     iter->second->Quit();
   }
+}
+
+bool Mdns::AddResponder(const std::string& service_name,
+                        const std::string& instance_name,
+                        const std::vector<std::string>& announced_subtypes,
+                        fidl::InterfaceHandle<MdnsResponder> responder) {
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
+
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  if (instance_publishers_by_instance_full_name_.find(instance_full_name) !=
+      instance_publishers_by_instance_full_name_.end()) {
+    return false;
+  }
+
+  std::shared_ptr<MdnsAgent> agent = std::make_shared<Responder>(
+      this, host_full_name_, service_name, instance_name, announced_subtypes,
+      std::move(responder));
+
+  AddAgent(agent);
+  instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
+
+  return true;
 }
 
 void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, fxl::TimePoint when) {

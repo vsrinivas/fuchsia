@@ -39,6 +39,25 @@ std::string Concatenate(std::initializer_list<std::string> strings) {
   return result;
 }
 
+// Determines if |left| occurs in |name| starting at |*index_in_out|. If so,
+// adds |left.size()| to |*index_in_out| and returns true. Otherwise leaves
+// |*index_in_out| unchanged and returns false. This function is useful for
+// scanning strings from left to right where |*index_in_out| is initially 0.
+bool MatchLeft(const std::string& name,
+               const std::string& left,
+               size_t* index_in_out) {
+  FXL_DCHECK(index_in_out);
+  size_t index = *index_in_out;
+
+  if (name.compare(index, left.size(), left) != 0) {
+    return false;
+  }
+
+  *index_in_out = index + left.size();
+
+  return true;
+}
+
 // Determines if |right| occurs in |name| immediately before |*index_in_out|.
 // If so, subtracts |right.size()| from |*index_in_out| and returns true.
 // Otherwise leaves |*index_in_out| unchanged and returns false. This function
@@ -82,12 +101,36 @@ std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
 }
 
 // static
+std::string MdnsNames::LocalServiceSubtypeFullName(
+    const std::string& service_name,
+    const std::string& subtype) {
+  FXL_DCHECK(IsValidServiceName(service_name));
+  FXL_DCHECK(IsValidOtherName(subtype));
+
+  return Concatenate(
+      {subtype, kSubtypeSeparator, service_name, kLocalDomainName});
+}
+
+// static
 std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
                                              const std::string& service_name) {
   FXL_DCHECK(IsValidOtherName(instance_name));
   FXL_DCHECK(IsValidServiceName(service_name));
 
   return Concatenate({instance_name, ".", service_name, kLocalDomainName});
+}
+
+// static
+std::string MdnsNames::LocalInstanceSubtypeFullName(
+    const std::string& instance_name,
+    const std::string& service_name,
+    const std::string& subtype) {
+  FXL_DCHECK(IsValidOtherName(instance_name));
+  FXL_DCHECK(IsValidServiceName(service_name));
+  FXL_DCHECK(IsValidOtherName(subtype));
+
+  return Concatenate({instance_name, ".", subtype, kSubtypeSeparator,
+                      service_name, kLocalDomainName});
 }
 
 // static
@@ -110,6 +153,69 @@ bool MdnsNames::ExtractInstanceName(const std::string& instance_full_name,
   return true;
 }
 
+// static
+bool MdnsNames::MatchServiceName(const std::string& name,
+                                 const std::string& service_name,
+                                 std::string* subtype_out) {
+  FXL_DCHECK(subtype_out);
+
+  // [ subtype kSubtypeSeparator ] service_name kLocalDomainName
+
+  size_t index = name.size();
+  if (!MatchRight(name, kLocalDomainName, &index) ||
+      !MatchRight(name, service_name, &index)) {
+    return false;
+  }
+
+  if (index == 0) {
+    *subtype_out = "";
+    return true;
+  }
+
+  if (!MatchRight(name, kSubtypeSeparator, &index) || index == 0) {
+    return false;
+  }
+
+  *subtype_out = name.substr(0, index);
+  return true;
+}
+
+// static
+bool MdnsNames::MatchInstanceName(const std::string& name,
+                                  const std::string& instance_name,
+                                  const std::string& service_name,
+                                  std::string* subtype_out) {
+  FXL_DCHECK(subtype_out);
+
+  // instance_name "." [ subtype, kSubtypeSeparator ] service_name
+  // kLocalDomainName
+
+  size_t left_index = 0;
+  if (!MatchLeft(name, instance_name, &left_index) ||
+      !MatchLeft(name, ".", &left_index)) {
+    return false;
+  }
+
+  size_t right_index = name.size();
+  if (!MatchRight(name, kLocalDomainName, &right_index) ||
+      !MatchRight(name, service_name, &right_index) ||
+      left_index > right_index) {
+    return false;
+  }
+
+  if (left_index == right_index) {
+    *subtype_out = "";
+    return true;
+  }
+
+  if (!MatchRight(name, kSubtypeSeparator, &right_index) ||
+      left_index >= right_index) {
+    return false;
+  }
+
+  *subtype_out = name.substr(left_index, right_index - left_index);
+  return true;
+}
 
 // static
 bool MdnsNames::IsValidHostName(const std::string& host_name) {

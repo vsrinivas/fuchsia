@@ -50,6 +50,11 @@ class MdnsServiceImpl : public MdnsService {
   void UnpublishServiceInstance(const fidl::String& service_name,
                                 const fidl::String& instance_name) override;
 
+  void AddResponder(const fidl::String& service_name,
+                    const fidl::String& instance_name,
+                    fidl::Array<fidl::String> announced_subtypes,
+                    fidl::InterfaceHandle<MdnsResponder> responder) override;
+
   void SetVerbose(bool value) override;
 
  private:
