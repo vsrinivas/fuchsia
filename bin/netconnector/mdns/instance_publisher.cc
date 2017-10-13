@@ -4,6 +4,7 @@
 
 #include "garnet/bin/netconnector/mdns/instance_publisher.h"
 
+#include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 
@@ -12,13 +13,14 @@ namespace mdns {
 
 InstancePublisher::InstancePublisher(MdnsAgent::Host* host,
                                      const std::string& host_full_name,
-                                     const std::string& instance_full_name,
-                                     const std::string& service_full_name,
+                                     const std::string& service_name,
+                                     const std::string& instance_name,
                                      IpPort port,
                                      const std::vector<std::string>& text)
     : host_(host),
-      instance_full_name_(instance_full_name),
-      service_full_name_(service_full_name),
+      instance_full_name_(
+          MdnsNames::LocalInstanceFullName(instance_name, service_name)),
+      service_full_name_(MdnsNames::LocalServiceFullName(service_name)),
       answer_(
           std::make_shared<DnsResource>(service_full_name_, DnsType::kPtr)) {
   answer_->ptr_.pointer_domain_name_ = instance_full_name_;
@@ -76,7 +78,7 @@ void InstancePublisher::Quit() {
 
   SendRecords(fxl::TimePoint::Now());
 
-  host_->RemoveAgent(service_full_name_);
+  host_->RemoveAgent(this, instance_full_name_);
 }
 
 void InstancePublisher::SendRecords(fxl::TimePoint when) {

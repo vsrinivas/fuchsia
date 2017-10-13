@@ -75,8 +75,9 @@ class MdnsServiceImpl : public MdnsService {
 
    private:
     MdnsServiceImpl* owner_;
+    std::shared_ptr<MdnsAgent> agent_;
     fidl::BindingSet<MdnsServiceSubscription> bindings_;
-    Mdns::ServiceInstanceCallback callback_;
+    Mdns::ServiceInstanceCallback callback_ = nullptr;
     media::FidlPublisher<GetInstancesCallback> instances_publisher_;
     std::unordered_map<std::string, MdnsServiceInstancePtr> instances_by_name_;
 

@@ -50,8 +50,7 @@ bool Mdns::Start(const std::string& host_name) {
       std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
 
   // Create an address responder agent to respond to simple address queries.
-  AddAgent(AddressResponder::kName,
-           std::make_shared<AddressResponder>(this, host_full_name_));
+  AddAgent(std::make_shared<AddressResponder>(this, host_full_name_));
 
   // Create a resource renewer agent to keep resources alive.
   resource_renewer_ = std::make_shared<ResourceRenewer>(this);
@@ -83,7 +82,7 @@ bool Mdns::Start(const std::string& host_name) {
         }
 
         resource_renewer_->EndOfMessage();
-        for (auto& pair : agents_by_name_) {
+        for (auto& pair : agents_) {
           pair.second->EndOfMessage();
         }
 
@@ -92,7 +91,7 @@ bool Mdns::Start(const std::string& host_name) {
       });
 
   if (started_) {
-    for (auto pair : agents_by_name_) {
+    for (auto pair : agents_) {
       pair.second->Start();
     }
 
@@ -111,54 +110,64 @@ void Mdns::Stop() {
 void Mdns::ResolveHostName(const std::string& host_name,
                            fxl::TimePoint timeout,
                            const ResolveHostNameCallback& callback) {
+  FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
   FXL_DCHECK(callback);
 
-  std::string host_full_name = MdnsNames::LocalHostFullName(host_name);
-
-  AddAgent(host_full_name,
-           std::make_shared<HostNameResolver>(this, host_name, host_full_name,
-                                              timeout, callback));
+  AddAgent(
+      std::make_shared<HostNameResolver>(this, host_name, timeout, callback));
 }
 
-void Mdns::SubscribeToService(const std::string& service_name,
-                              const ServiceInstanceCallback& callback) {
+std::shared_ptr<MdnsAgent> Mdns::SubscribeToService(
+    const std::string& service_name,
+    const ServiceInstanceCallback& callback) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(callback);
 
-  std::string service_full_name = MdnsNames::LocalServiceFullName(service_name);
+  std::shared_ptr<MdnsAgent> agent =
+      std::make_shared<InstanceSubscriber>(this, service_name, callback);
 
-  AddAgent(service_full_name,
-           std::make_shared<InstanceSubscriber>(this, service_name,
-                                                service_full_name, callback));
+  AddAgent(agent);
+  return agent;
 }
 
-void Mdns::UnsubscribeToService(const std::string& service_name) {
-  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
-
-  TellAgentToQuit(MdnsNames::LocalServiceFullName(service_name));
-}
-
-void Mdns::PublishServiceInstance(const std::string& service_name,
+bool Mdns::PublishServiceInstance(const std::string& service_name,
                                   const std::string& instance_name,
                                   IpPort port,
                                   const std::vector<std::string>& text) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
 
   std::string instance_full_name =
       MdnsNames::LocalInstanceFullName(instance_name, service_name);
 
-  std::string service_full_name = MdnsNames::LocalServiceFullName(service_name);
+  if (instance_publishers_by_instance_full_name_.find(instance_full_name) !=
+      instance_publishers_by_instance_full_name_.end()) {
+    return false;
+  }
 
-  AddAgent(instance_full_name, std::make_shared<InstancePublisher>(
-                                   this, host_full_name_, instance_full_name,
-                                   service_full_name, port, text));
+  std::shared_ptr<MdnsAgent> agent = std::make_shared<InstancePublisher>(
+      this, host_full_name_, service_name, instance_name, port, text);
+
+  AddAgent(agent);
+  instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
+
+  return true;
 }
 
-void Mdns::UnpublishServiceInstance(const std::string& instance_name,
-                                    const std::string& service_name) {
+void Mdns::UnpublishServiceInstance(const std::string& service_name,
+                                    const std::string& instance_name) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
-  TellAgentToQuit(
-      MdnsNames::LocalInstanceFullName(instance_name, service_name));
+  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
+
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  auto iter =
+      instance_publishers_by_instance_full_name_.find(instance_full_name);
+
+  if (iter != instance_publishers_by_instance_full_name_.end()) {
+    iter->second->Quit();
+  }
 }
 
 void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, fxl::TimePoint when) {
@@ -179,7 +188,7 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
 
   if (section == MdnsResourceSection::kExpired) {
     // Expirations are distributed to local agents.
-    for (auto& pair : agents_by_name_) {
+    for (auto& pair : agents_) {
       pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
     }
 
@@ -198,12 +207,33 @@ void Mdns::Renew(const DnsResource& resource) {
   resource_renewer_->Renew(resource);
 }
 
-void Mdns::RemoveAgent(const std::string& name) {
-  agents_by_name_.erase(name);
+void Mdns::RemoveAgent(MdnsAgent* agent,
+                       const std::string& published_instance_full_name) {
+  agents_.erase(agent);
+
+  reverse_priority_queue<WakeQueueEntry> temp;
+  wake_queue_.swap(temp);
+
+  while (!temp.empty()) {
+    if (temp.top().agent_.get() != agent) {
+      wake_queue_.emplace(temp.top().time_, temp.top().agent_);
+    }
+
+    temp.pop();
+  }
+
+  if (!published_instance_full_name.empty()) {
+    instance_publishers_by_instance_full_name_.erase(
+        published_instance_full_name);
+  }
+
+  // In case the agent sent an epitaph.
+  SendMessage();
 }
 
-void Mdns::AddAgent(const std::string& name, std::shared_ptr<MdnsAgent> agent) {
-  agents_by_name_.emplace(name, agent);
+void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
+  agents_.emplace(agent.get(), agent);
+
   if (started_) {
     agent->Start();
     SendMessage();
@@ -215,7 +245,8 @@ void Mdns::SendMessage() {
   // It's acceptable to send records a bit early, and this provides two
   // advantages:
   // 1) We get more records per message, which is more efficient.
-  // 2) Agents can schedule records in short sequences if sequence is important.
+  // 2) Agents can schedule records in short sequences if sequence is
+  // important.
   fxl::TimePoint now = fxl::TimePoint::Now() + kMessageAggregationWindowSize;
 
   DnsMessage message;
@@ -305,7 +336,7 @@ void Mdns::SendMessage() {
 
 void Mdns::ReceiveQuestion(const DnsQuestion& question) {
   // Renewer doesn't need questions.
-  for (auto& pair : agents_by_name_) {
+  for (auto& pair : agents_) {
     pair.second->ReceiveQuestion(question);
   }
 }
@@ -314,7 +345,7 @@ void Mdns::ReceiveResource(const DnsResource& resource,
                            MdnsResourceSection section) {
   // Renewer is always first.
   resource_renewer_->ReceiveResource(resource, section);
-  for (auto& pair : agents_by_name_) {
+  for (auto& pair : agents_) {
     pair.second->ReceiveResource(resource, section);
   }
 }
@@ -363,14 +394,6 @@ void Mdns::PostTask() {
         PostTask();
       },
       when);
-}
-
-void Mdns::TellAgentToQuit(const std::string& name) {
-  auto iter = agents_by_name_.find(name);
-
-  if (iter != agents_by_name_.end()) {
-    iter->second->Quit();
-  }
 }
 
 }  // namespace mdns

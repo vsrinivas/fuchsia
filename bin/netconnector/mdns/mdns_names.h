@@ -12,8 +12,6 @@ namespace netconnector {
 namespace mdns {
 
 struct MdnsNames {
-  static const std::string kLocalDomainName;
-
   // Constructs a local host name from a simple host name. For example, produces
   // "host.local." from "host". The simple host name must not end in a ".".
   static std::string LocalHostFullName(const std::string& host_name);
@@ -25,20 +23,26 @@ struct MdnsNames {
 
   // Constructs a local service instance name from a simple instance name and
   // a simple service name. For example, produces "myfoo._foo._tcp.local." from
-  // "myfoo" and "_foo._tcp.local.". The simple instance name must not end in a
-  // ".". The simple service name must end in ".".
+  // "myfoo" and "_foo._tcp.". The simple instance name must not end in a ".",
+  // and the simple service name must end in ".".
   static std::string LocalInstanceFullName(const std::string& instance_name,
                                            const std::string& service_name);
 
   // Extracts the simple instance name from an instance full name given the
-  // name of the service. Return true and deposits the instance name if
+  // name of the service. Returns true and deposits the instance name if
   // successful, return false if not.
   static bool ExtractInstanceName(const std::string& instance_full_name,
                                   const std::string& service_name,
                                   std::string* instance_name);
 
-  // Determines if |service\ is a valid simple service name.
+  // Determines if |host_name| is a valid host name.
+  static bool IsValidHostName(const std::string& host_name);
+
+  // Determines if |service_name| is a valid simple service name.
   static bool IsValidServiceName(const std::string& service_name);
+
+  // Determines if |instance_name| is a valid simple instance name.
+  static bool IsValidInstanceName(const std::string& instance_name);
 };
 
 }  // namespace mdns

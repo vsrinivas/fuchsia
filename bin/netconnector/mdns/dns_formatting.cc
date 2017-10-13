@@ -180,7 +180,7 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataPtr& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataTxt& value) {
-  return os << begl << "text: ";
+  os << begl << "text: ";
   os << indent;
   for (auto& string : value.strings_) {
     os << "\n" << begl << "\"" << string << "\"";

@@ -60,8 +60,9 @@ class Mdns : public MdnsAgent::Host {
                        fxl::TimePoint timeout,
                        const ResolveHostNameCallback& callback);
 
-  // Starts publishing the indicated service instance.
-  void PublishServiceInstance(const std::string& service_name,
+  // Starts publishing the indicated service instance. Returns false if and only
+  // if the instance was already published.
+  bool PublishServiceInstance(const std::string& service_name,
                               const std::string& instance_name,
                               IpPort port,
                               const std::vector<std::string>& text);
@@ -71,11 +72,9 @@ class Mdns : public MdnsAgent::Host {
                                 const std::string& instance_name);
 
   // Registers interest in the specified service.
-  void SubscribeToService(const std::string& service_name,
-                          const ServiceInstanceCallback& callback);
-
-  // Registers disinterest in the specified service.
-  void UnsubscribeToService(const std::string& service_name);
+  std::shared_ptr<MdnsAgent> SubscribeToService(
+      const std::string& service_name,
+      const ServiceInstanceCallback& callback);
 
  private:
   template <typename T>
@@ -136,10 +135,11 @@ class Mdns : public MdnsAgent::Host {
 
   void Renew(const DnsResource& resource) override;
 
-  void RemoveAgent(const std::string& name) override;
+  void RemoveAgent(MdnsAgent* agent,
+                   const std::string& published_instance_full_name) override;
 
   // Misc private.
-  void AddAgent(const std::string& name, std::shared_ptr<MdnsAgent> agent);
+  void AddAgent(std::shared_ptr<MdnsAgent> agent);
 
   void SendMessage();
 
@@ -149,8 +149,6 @@ class Mdns : public MdnsAgent::Host {
                        MdnsResourceSection section);
   void PostTask();
 
-  void TellAgentToQuit(const std::string& name);
-
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   MdnsTransceiver transceiver_;
   std::string host_full_name_;
@@ -159,7 +157,9 @@ class Mdns : public MdnsAgent::Host {
   reverse_priority_queue<WakeQueueEntry> wake_queue_;
   reverse_priority_queue<QuestionQueueEntry> question_queue_;
   reverse_priority_queue<ResourceQueueEntry> resource_queue_;
-  std::unordered_map<std::string, std::shared_ptr<MdnsAgent>> agents_by_name_;
+  std::unordered_map<MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
+  std::unordered_map<std::string, std::shared_ptr<MdnsAgent>>
+      instance_publishers_by_instance_full_name_;
   std::shared_ptr<DnsResource> address_placeholder_;
   bool verbose_ = false;
   std::shared_ptr<ResourceRenewer> resource_renewer_;

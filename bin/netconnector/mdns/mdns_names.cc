@@ -11,6 +11,17 @@ namespace mdns {
 
 namespace {
 
+static const std::string kLocalDomainName = "local.";
+static const std::string kSubtypeSeparator = "._sub.";
+static const std::string kTcpSuffix = "._tcp.";
+static const std::string kUdpSuffix = "._udp.";
+
+// Checks for valid host, instance or subtype name.
+bool IsValidOtherName(const std::string& name) {
+  return !name.empty() && name[name.size() - 1] != '.';
+}
+
+// Concatenates |strings|.
 std::string Concatenate(std::initializer_list<std::string> strings) {
   std::string result;
   size_t result_size = 0;
@@ -28,14 +39,38 @@ std::string Concatenate(std::initializer_list<std::string> strings) {
   return result;
 }
 
+// Determines if |right| occurs in |name| immediately before |*index_in_out|.
+// If so, subtracts |right.size()| from |*index_in_out| and returns true.
+// Otherwise leaves |*index_in_out| unchanged and returns false. This function
+// is useful for scanning strings from right to left where |*index_in_out| is
+// initially |name.size()|.
+bool MatchRight(const std::string& name,
+                const std::string& right,
+                size_t* index_in_out) {
+  FXL_DCHECK(index_in_out);
+  size_t index = *index_in_out;
+
+  if (index < right.size()) {
+    return false;
+  }
+
+  index -= right.size();
+
+  if (name.compare(index, right.size(), right) != 0) {
+    return false;
+  }
+
+  *index_in_out = index;
+
+  return true;
+}
+
 }  // namespace
 
 // static
-const std::string MdnsNames::kLocalDomainName = "local.";
-
-// static
 std::string MdnsNames::LocalHostFullName(const std::string& host_name) {
-  FXL_DCHECK(!host_name.empty());
+  FXL_DCHECK(IsValidOtherName(host_name));
+
   return Concatenate({host_name, ".", kLocalDomainName});
 }
 
@@ -49,7 +84,7 @@ std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
 // static
 std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
                                              const std::string& service_name) {
-  FXL_DCHECK(!instance_name.empty());
+  FXL_DCHECK(IsValidOtherName(instance_name));
   FXL_DCHECK(IsValidServiceName(service_name));
 
   return Concatenate({instance_name, ".", service_name, kLocalDomainName});
@@ -59,51 +94,43 @@ std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
 bool MdnsNames::ExtractInstanceName(const std::string& instance_full_name,
                                     const std::string& service_name,
                                     std::string* instance_name) {
-  // Long enough?
-  size_t size = instance_full_name.size();
-  if (size <= service_name.size() + kLocalDomainName.size() + 1) {
+  FXL_DCHECK(instance_name);
+
+  // instance_name "." service_name kLocalDomainName
+
+  size_t index = instance_full_name.size();
+  if (!MatchRight(instance_full_name, kLocalDomainName, &index) ||
+      !MatchRight(instance_full_name, service_name, &index) ||
+      !MatchRight(instance_full_name, ".", &index) || index == 0) {
     return false;
   }
 
-  // Ends with |kLocalDomainName|?
-  size -= kLocalDomainName.size();
-  if (instance_full_name.compare(size, kLocalDomainName.size(),
-                                 kLocalDomainName) != 0) {
-    return false;
-  }
-
-  // Ends with |service_name||kLocalDomainName|?
-  size -= service_name.size();
-  if (instance_full_name.compare(size, service_name.size(), service_name) !=
-      0) {
-    return false;
-  }
-
-  // Ends with .|service_name||kLocalDomainName|?
-  --size;
-  if (instance_full_name[size] != '.') {
-    return false;
-  }
-
-  // Well OK then.
-  *instance_name = instance_full_name.substr(0, size);
+  *instance_name = instance_full_name.substr(0, index);
 
   return true;
 }
 
+
+// static
+bool MdnsNames::IsValidHostName(const std::string& host_name) {
+  return IsValidOtherName(host_name);
+}
+
 // static
 bool MdnsNames::IsValidServiceName(const std::string& service_name) {
-  static const std::string kTcpSuffix = "._tcp.";
-  static const std::string kUdpSuffix = "._udp.";
+  size_t index = service_name.size();
 
-  if (service_name.size() < 8 || service_name[0] != '_') {
+  if (index == 0 || service_name[0] != '_') {
     return false;
   }
 
-  return service_name.compare(service_name.size() - kTcpSuffix.size(),
-                              kTcpSuffix.size(), kTcpSuffix) == 0 ||
-         service_name.compare(service_name.size() - kUdpSuffix.size(),
-                              kUdpSuffix.size(), kUdpSuffix) == 0;
+  return MatchRight(service_name, kTcpSuffix, &index) ||
+         MatchRight(service_name, kUdpSuffix, &index);
+}
+
+// static
+bool MdnsNames::IsValidInstanceName(const std::string& instance_name) {
+  return IsValidOtherName(instance_name);
 }
 
 }  // namespace mdns

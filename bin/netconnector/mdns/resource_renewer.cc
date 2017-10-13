@@ -10,9 +10,6 @@
 namespace netconnector {
 namespace mdns {
 
-// static
-const std::string ResourceRenewer::kName = "##resource renewer##";
-
 ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : host_(host) {}
 
 ResourceRenewer::~ResourceRenewer() {

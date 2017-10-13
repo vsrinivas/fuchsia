@@ -30,7 +30,6 @@ class InstanceSubscriber
   // Creates an |InstanceSubscriber|.
   InstanceSubscriber(MdnsAgent::Host* host,
                      const std::string& service_name,
-                     const std::string& service_full_name,
                      const ServiceInstanceCallback& callback);
 
   ~InstanceSubscriber() override;

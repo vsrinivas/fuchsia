@@ -18,8 +18,6 @@ namespace mdns {
 class AddressResponder : public MdnsAgent,
                          public std::enable_shared_from_this<AddressResponder> {
  public:
-  static const std::string kName;
-
   // Creates an |AddressResponder|.
   AddressResponder(MdnsAgent::Host* host, const std::string& host_full_name);
 

@@ -22,7 +22,6 @@ class HostNameResolver : public MdnsAgent,
   // Creates a |HostNameResolver|.
   HostNameResolver(MdnsAgent::Host* host,
                    const std::string& host_name,
-                   const std::string& host_full_name,
                    fxl::TimePoint timeout,
                    const Mdns::ResolveHostNameCallback& callback);
 

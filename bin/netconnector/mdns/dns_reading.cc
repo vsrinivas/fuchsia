@@ -156,6 +156,10 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
       return reader;
     }
 
+    if (length == 0 && reader.bytes_remaining() == 0) {
+      break;
+    }
+
     const char* start = reinterpret_cast<const char*>(reader.Bytes(length));
 
     std::string s(start, length);

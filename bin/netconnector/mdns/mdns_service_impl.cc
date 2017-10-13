@@ -50,6 +50,13 @@ void MdnsServiceImpl::PublishServiceInstance(
 void MdnsServiceImpl::ResolveHostName(const fidl::String& host_name,
                                       uint32_t timeout_ms,
                                       const ResolveHostNameCallback& callback) {
+  if (!MdnsNames::IsValidHostName(host_name)) {
+    FXL_LOG(ERROR) << "Client supplied invalid host name " << host_name
+                   << " in call to ResolveHostName, returning null result.";
+    callback(nullptr, nullptr);
+    return;
+  }
+
   mdns_.ResolveHostName(
       host_name,
       fxl::TimePoint::Now() + fxl::TimeDelta::FromMilliseconds(timeout_ms),
@@ -95,6 +102,12 @@ void MdnsServiceImpl::PublishServiceInstance(const fidl::String& service_name,
     return;
   }
 
+  if (!MdnsNames::IsValidInstanceName(instance_name)) {
+    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
+                   << " in call to PublishServiceInstance, ignoring.";
+    return;
+  }
+
   mdns_.PublishServiceInstance(service_name, instance_name,
                                IpPort::From_uint16_t(port),
                                text.To<std::vector<std::string>>());
@@ -105,6 +118,12 @@ void MdnsServiceImpl::UnpublishServiceInstance(
     const fidl::String& instance_name) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
     FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
+                   << " in call to UnpublishServiceInstance, ignoring.";
+    return;
+  }
+
+  if (!MdnsNames::IsValidInstanceName(instance_name)) {
+    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
                    << " in call to UnpublishServiceInstance, ignoring.";
     return;
   }
@@ -122,7 +141,9 @@ MdnsServiceImpl::MdnsServiceSubscriptionImpl::MdnsServiceSubscriptionImpl(
     : owner_(owner) {
   bindings_.set_on_empty_set_handler([this, service_name]() {
     if (!callback_) {
-      owner_->mdns_.UnsubscribeToService(service_name);
+      FXL_DCHECK(agent_);
+      FXL_DCHECK(owner_);
+      agent_->Quit();
       owner_->subscriptions_by_service_name_.erase(service_name);
     }
   });
@@ -139,7 +160,7 @@ MdnsServiceImpl::MdnsServiceSubscriptionImpl::MdnsServiceSubscriptionImpl(
         callback(version, std::move(instances));
       });
 
-  owner->mdns_.SubscribeToService(
+  agent_ = owner->mdns_.SubscribeToService(
       service_name,
       [this](const std::string& service, const std::string& instance,
              const SocketAddress& v4_address, const SocketAddress& v6_address,

@@ -39,8 +39,6 @@ namespace mdns {
 class ResourceRenewer : public MdnsAgent,
                         public std::enable_shared_from_this<ResourceRenewer> {
  public:
-  static const std::string kName;
-
   ResourceRenewer(MdnsAgent::Host* host);
 
   ~ResourceRenewer() override;

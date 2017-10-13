@@ -19,11 +19,10 @@ static constexpr fxl::TimeDelta kMaxQueryInterval =
 
 InstanceSubscriber::InstanceSubscriber(MdnsAgent::Host* host,
                                        const std::string& service_name,
-                                       const std::string& service_full_name,
                                        const ServiceInstanceCallback& callback)
     : host_(host),
       service_name_(service_name),
-      service_full_name_(service_full_name),
+      service_full_name_(MdnsNames::LocalServiceFullName(service_name)),
       callback_(callback),
       question_(
           std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {
@@ -145,7 +144,7 @@ void InstanceSubscriber::EndOfMessage() {
 }
 
 void InstanceSubscriber::Quit() {
-  host_->RemoveAgent(service_full_name_);
+  host_->RemoveAgent(this);
 }
 
 void InstanceSubscriber::ReceivePtrResource(const DnsResource& resource,

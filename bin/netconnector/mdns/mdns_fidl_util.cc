@@ -94,6 +94,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
 
   netstack::SocketAddressPtr result = netstack::SocketAddress::New();
   result->addr = netstack::NetAddress::New();
+  result->addr->family = netstack::NetAddressFamily::IPV4;
   result->addr->ipv4 = fidl::Array<uint8_t>::New(4);
   result->port = 0;
 
@@ -115,6 +116,7 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
 
   netstack::SocketAddressPtr result = netstack::SocketAddress::New();
   result->addr = netstack::NetAddress::New();
+  result->addr->family = netstack::NetAddressFamily::IPV6;
   result->addr->ipv6 = fidl::Array<uint8_t>::New(16);
   result->port = 0;
 

@@ -22,8 +22,8 @@ class InstancePublisher
   // Creates an |InstancePublisher|.
   InstancePublisher(MdnsAgent::Host* host,
                     const std::string& host_full_name,
-                    const std::string& instance_full_name,
-                    const std::string& service_full_name,
+                    const std::string& service_name,
+                    const std::string& instance_name,
                     IpPort port,
                     const std::vector<std::string>& text);
 

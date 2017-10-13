@@ -11,9 +11,6 @@
 namespace netconnector {
 namespace mdns {
 
-// static
-const std::string AddressResponder::kName = "##address responder##";
-
 AddressResponder::AddressResponder(MdnsAgent::Host* host,
                                    const std::string& host_full_name)
     : host_(host), host_full_name_(host_full_name) {}
@@ -37,7 +34,7 @@ void AddressResponder::ReceiveResource(const DnsResource& resource,
 void AddressResponder::EndOfMessage() {}
 
 void AddressResponder::Quit() {
-  host_->RemoveAgent(kName);
+  host_->RemoveAgent(this);
 }
 
 }  // namespace mdns

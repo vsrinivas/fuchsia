@@ -14,12 +14,11 @@ namespace mdns {
 HostNameResolver::HostNameResolver(
     MdnsAgent::Host* host,
     const std::string& host_name,
-    const std::string& host_full_name,
     fxl::TimePoint timeout,
     const Mdns::ResolveHostNameCallback& callback)
     : host_(host),
       host_name_(host_name),
-      host_full_name_(host_full_name),
+      host_full_name_(MdnsNames::LocalHostFullName(host_name)),
       timeout_(timeout),
       callback_(callback) {
   FXL_DCHECK(callback_);
@@ -42,7 +41,7 @@ void HostNameResolver::Wake() {
   if (callback_) {
     callback_(host_name_, v4_address_, v6_address_);
     callback_ = nullptr;
-    host_->RemoveAgent(host_full_name_);
+    host_->RemoveAgent(this);
   }
 }
 
@@ -67,7 +66,7 @@ void HostNameResolver::EndOfMessage() {
   if (v4_address_ || v6_address_) {
     callback_(host_name_, v4_address_, v6_address_);
     callback_ = nullptr;
-    host_->RemoveAgent(host_full_name_);
+    host_->RemoveAgent(this);
   }
 }
 
@@ -76,7 +75,7 @@ void HostNameResolver::Quit() {
   callback_(host_name_, v4_address_, v6_address_);
   callback_ = nullptr;
 
-  host_->RemoveAgent(host_full_name_);
+  host_->RemoveAgent(this);
 }
 
 }  // namespace mdns
