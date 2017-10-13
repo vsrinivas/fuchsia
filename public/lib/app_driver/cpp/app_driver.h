@@ -19,8 +19,21 @@
 
 namespace modular {
 
-// AppDriver provides a way to participate an application that participates in
-// the application lifecycle.
+// AppDriver is a wrapper that simplifies participating in lifecycle management
+// by the application's parent. It does this by exposing the Lifecycle service
+// in app::ApplicationContext::outgoing_services() and proxies the Terminate()
+// call of modular::Lifecycle to the Terminate() method on your application's
+// class instance.
+//
+// Usage:
+//
+// NOTE: Your application's class must implement:
+//
+//     // Called by AppDriver. Call |done| once shutdown sequence is complete,
+//     // at which point |this| will be deleted.
+//     void Terminate(const std::function<void()>& done);
+//
+// Example:
 //
 // class HelloWorldApp {
 //  public:
@@ -28,7 +41,6 @@ namespace modular {
 //     app_context->outgoing_services()->AddService<..>(...);
 //   }
 //
-//   // Called by AppDriver.
 //   void Terminate(const std::function<void()>& done) {
 //     done();
 //     // |this| is deleted.
