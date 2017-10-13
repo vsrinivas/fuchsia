@@ -17,6 +17,7 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <explicit-memory/bytes.h>
+#include <fbl/canary.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/auto_lock.h>
 #include <vm/fault.h>
@@ -41,6 +42,11 @@ static const uint32_t kLastExtendedStateComponent = 9;
 // From Volume 1, Section 13.4.
 static const uint32_t kXsaveLegacyRegionSize = 512;
 static const uint32_t kXsaveHeaderSize = 64;
+
+// Use hypervisor vendor string "ZirconZircon".
+constexpr uint64_t kHypVendorEbx = fbl::magic("Zirc");
+constexpr uint64_t kHypVendorEcx = fbl::magic("onZi");
+constexpr uint64_t kHypVendorEdx = fbl::magic("rcon");
 
 ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
     exit_reason = static_cast<ExitReason>(vmcs.Read(VmcsField32::EXIT_REASON));
@@ -242,6 +248,13 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rbx &= ~(1u << X86_FEATURE_PT.bit);
             break;
         }
+        return ZX_OK;
+    case X86_CPUID_HYP_VENDOR:
+        // This leaf is commonly used to identify a hypervisor via ebx:ecx:edx.
+        next_rip(exit_info, vmcs);
+        guest_state->rbx = kHypVendorEbx;
+        guest_state->rcx = kHypVendorEcx;
+        guest_state->rdx = kHypVendorEdx;
         return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
