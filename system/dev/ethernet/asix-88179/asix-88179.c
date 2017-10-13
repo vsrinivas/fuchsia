@@ -87,7 +87,7 @@ static zx_status_t ax88179_read_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t re
                                      ZX_TIME_INFINITE, &out_length);
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         dprintf(SPEW, "read mac %#x:\n", reg_addr);
-        if (status > 0) {
+        if (status == ZX_OK) {
             hexdump8(data, out_length);
         }
     }
