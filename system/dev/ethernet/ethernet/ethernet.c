@@ -24,6 +24,8 @@
 #define FIFO_ESIZE sizeof(eth_fifo_entry_t)
 #define DEVICE_NAME_LEN 16
 
+#define PAGE_MASK (PAGE_SIZE - 1)
+
 // This is used for signaling that eth_tx_thread() should exit.
 static const zx_signals_t kSignalFifoTerminate = ZX_USER_SIGNAL_0;
 
@@ -47,6 +49,12 @@ typedef struct ethdev0 {
     uint32_t status;
     zx_device_t* zxdev;
 } ethdev0_t;
+
+typedef struct tx_info {
+    struct ethdev* edev;
+    void* fifo_cookie;
+    ethmac_netbuf_t netbuf;
+} tx_info_t;
 
 // transmit thread has been created
 #define ETHDEV_TX_THREAD (1u)
@@ -87,6 +95,11 @@ typedef struct ethdev {
     zx_handle_t io_vmo;
     void* io_buf;
     size_t io_size;
+    zx_paddr_t* paddr_map;
+
+    tx_info_t all_tx_bufs[FIFO_DEPTH];
+    mtx_t lock;  // Protects free_tx_bufs
+    list_node_t free_tx_bufs;  // tx_info_t elements
 
     // fifo thread
     thrd_t tx_thr;
@@ -161,6 +174,22 @@ static void eth0_status(void* cookie, uint32_t status) {
     mtx_unlock(&edev0->lock);
 }
 
+static int tx_fifo_write(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
+    zx_status_t status;
+    uint32_t actual;
+    // Writing should never fail, or fail to write all entries
+    status = zx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * count, &actual);
+    if (status < 0) {
+        dprintf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
+        return -1;
+    }
+    if (actual != count) {
+        dprintf(ERROR, "eth [%s]: tx_fifo: only wrote %u of %u!\n", edev->name, actual, count);
+        return -1;
+    }
+    return 0;
+}
+
 // TODO: I think if this arrives at the wrong time during teardown we
 // can deadlock with the ethermac device
 static void eth0_recv(void* cookie, void* data, size_t len, uint32_t flags) {
@@ -174,9 +203,28 @@ static void eth0_recv(void* cookie, void* data, size_t len, uint32_t flags) {
     mtx_unlock(&edev0->lock);
 }
 
+static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
+    tx_info_t* tx_info = containerof(netbuf, tx_info_t, netbuf);
+    ethdev_t* edev = tx_info->edev;
+    eth_fifo_entry_t entry = {.offset = netbuf->data - edev->io_buf,
+                              .length = netbuf->len,
+                              .flags = status == ZX_OK ? ETH_FIFO_TX_OK : 0,
+                              .cookie = tx_info->fifo_cookie};
+
+    // Now that we've copied all pertinent data from the netbuf, return it to the free list so
+    // it is avaialble immediately for the next request.
+    mtx_lock(&edev->lock);
+    list_add_head(&edev->free_tx_bufs, &tx_info->netbuf.node);
+    mtx_unlock(&edev->lock);
+
+    // Send the eth_fifo_entry back to the client
+    tx_fifo_write(edev, &entry, 1);
+}
+
 static ethmac_ifc_t ethmac_ifc = {
     .status = eth0_status,
     .recv = eth0_recv,
+    .complete_tx = eth0_complete_tx,
 };
 
 static void eth_tx_echo(ethdev0_t* edev0, const void* data, size_t len) {
@@ -220,9 +268,54 @@ static zx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
     return ZX_OK;
 }
 
+static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
+    ethdev0_t* edev0 = edev->edev0;
+    for (eth_fifo_entry_t* e = entries; count > 0; e++) {
+        if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
+            e->flags = ETH_FIFO_INVALID;
+            tx_fifo_write(edev, e, 1);
+        } else {
+            zx_status_t status;
+            mtx_lock(&edev->lock);
+            tx_info_t* tx_info = list_remove_head_type(&edev->free_tx_bufs, tx_info_t, netbuf.node);
+            mtx_unlock(&edev->lock);
+            if (tx_info == NULL) {
+                 dprintf(ERROR, "eth [%s]: invalid tx_info pool\n", edev->name);
+                 return -1;
+            }
+            uint32_t opts = count > 1 ? ETHMAC_TX_OPT_MORE : 0u;
+            if (opts) {
+                dprintf(SPEW, "setting OPT_MORE (%u packets to go)\n", count);
+            }
+            tx_info->netbuf.data = edev->io_buf + e->offset;
+            if (edev0->info.features & ETHMAC_FEATURE_DMA) {
+                tx_info->netbuf.phys = edev->paddr_map[e->offset / PAGE_SIZE] +
+                                       (e->offset & PAGE_MASK);
+            }
+            tx_info->netbuf.len = e->length;
+            tx_info->fifo_cookie = e->cookie;
+            status = edev0->mac.ops->queue_tx(edev0->mac.ctx, opts, &tx_info->netbuf);
+            if (edev->state & ETHDEV_TX_LOOPBACK) {
+                eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
+            }
+            if (status != ZX_ERR_SHOULD_WAIT) {
+                // transaction completed, add buffer to free list and return fifo entry
+                // TODO: batch these so we can do a single fifo write
+                e->flags = status == ZX_OK ? ETH_FIFO_TX_OK : 0;
+                mtx_lock(&edev->lock);
+                list_add_head(&edev->free_tx_bufs, &tx_info->netbuf.node);
+                mtx_unlock(&edev->lock);
+                tx_fifo_write(edev, e, 1);
+                break;
+            }
+        }
+        count--;
+    }
+    return 0;
+}
+
 static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
-    ethdev0_t* edev0 = edev->edev0;
     eth_fifo_entry_t entries[FIFO_DEPTH / 2];
     zx_status_t status;
     uint32_t count;
@@ -249,37 +342,8 @@ static int eth_tx_thread(void* arg) {
             }
         }
 
-        uint32_t n = count;
-        for (eth_fifo_entry_t* e = entries; count > 0; e++) {
-            if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
-                e->flags = ETH_FIFO_INVALID;
-            } else {
-                uint32_t opt = count > 1 ? ETHMAC_TX_OPT_MORE : 0u;
-                if (opt) {
-                    dprintf(SPEW, "setting OPT_MORE (%u packets to go)\n", count);
-                }
-                edev0->mac.ops->send(edev0->mac.ctx, opt, edev->io_buf + e->offset, e->length);
-                e->flags = ETH_FIFO_TX_OK;
-                if (edev->state & ETHDEV_TX_LOOPBACK) {
-                    eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
-                }
-            }
-            count--;
-        }
-
-        if ((status = zx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {
-            if (status == ZX_ERR_SHOULD_WAIT) {
-                if ((edev->fail_tx_write++ % FAIL_REPORT_RATE) == 0) {
-                    dprintf(ERROR, "eth [%s]: no tx_fifo space available (%u times)\n",
-                           edev->name, edev->fail_tx_write);
-                }
-            } else {
-                dprintf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
-                break;
-            }
-        }
-        if (count != n) {
-            dprintf(ERROR, "eth [%s]: tx_fifo: only wrote %u of %u!\n", edev->name, count, n);
+        if (eth_send(edev, entries, count)) {
+            break;
         }
     }
 
@@ -345,12 +409,33 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
         goto fail;
     }
 
+    if (edev->edev0->info.features & ETHMAC_FEATURE_DMA) {
+        size_t paddr_map_size = (ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE) * sizeof(zx_paddr_t);
+        edev->paddr_map = malloc(paddr_map_size);
+        if (!edev->paddr_map) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        // TODO: pin memory
+        if ((status = zx_vmo_op_range(edev->io_vmo, ZX_VMO_OP_LOOKUP, 0, size, &edev->paddr_map,
+                                      paddr_map_size)) != ZX_OK) {
+            dprintf(ERROR, "eth [%s]: vmo_op_range failed, can't determine phys addr\n", edev->name);
+            goto fail;
+        }
+    }
+
     edev->io_vmo = vmo;
     edev->io_size = size;
 
     return ZX_OK;
 
 fail:
+    if (edev->io_buf) {
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
+        edev->io_buf = NULL;
+    }
+    free(edev->paddr_map);
+    edev->paddr_map = NULL;
     zx_handle_close(vmo);
     return status;
 }
@@ -575,11 +660,16 @@ static void eth_kill_locked(ethdev_t* edev) {
         zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
         edev->io_buf = NULL;
     }
+    free(edev->paddr_map);
+    edev->paddr_map = NULL;
     dprintf(TRACE, "eth [%s]: all resources released\n", edev->name);
 }
 
 static void eth_release(void* ctx) {
     ethdev_t* edev = ctx;
+    if (edev) {
+        free(edev->paddr_map);
+    }
     free(edev);
 }
 
@@ -610,6 +700,13 @@ static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
         return ZX_ERR_NO_MEMORY;
     }
     edev->edev0 = edev0;
+
+    list_initialize(&edev->free_tx_bufs);
+    for (size_t ndx = 0; ndx < FIFO_DEPTH; ndx++) {
+        edev->all_tx_bufs[ndx].edev = edev;
+        list_add_tail(&edev->free_tx_bufs, &edev->all_tx_bufs[ndx].netbuf.node);
+    }
+    mtx_init(&edev->lock, mtx_plain);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -666,8 +763,6 @@ static zx_protocol_device_t ethdev0_ops = {
     .release = eth0_release,
 };
 
-#define BAD_FEATURES (ETHMAC_FEATURE_RX_QUEUE | ETHMAC_FEATURE_TX_QUEUE)
-
 static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
     ethdev0_t* edev0;
     if ((edev0 = calloc(1, sizeof(ethdev0_t))) == NULL) {
@@ -683,13 +778,6 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev, void** cookie) {
 
     if ((status = edev0->mac.ops->query(edev0->mac.ctx, 0, &edev0->info)) < 0) {
         dprintf(ERROR, "eth: bind: ethermac query failed: %d\n", status);
-        goto fail;
-    }
-
-    if (edev0->info.features & BAD_FEATURES) {
-        dprintf(ERROR, "eth: bind: ethermac requires unsupported features: %08x\n",
-               edev0->info.features & BAD_FEATURES);
-        status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
     }
 

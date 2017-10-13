@@ -121,16 +121,17 @@ static zx_status_t eth_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
-static void eth_send(void* ctx, uint32_t options, void* data, size_t length) {
+static zx_status_t eth_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
     ethernet_device_t* edev = ctx;
-    eth_tx(&edev->eth, data, length);
+    // TODO: Add support for DMA directly from netbuf
+    return eth_tx(&edev->eth, netbuf->data, netbuf->len);
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = eth_query,
     .stop = eth_stop,
     .start = eth_start,
-    .send = eth_send,
+    .queue_tx = eth_queue_tx,
 };
 
 static void eth_release(void* ctx) {

@@ -93,9 +93,10 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         return ZX_OK;
     }
 
-    void EthmacSend(uint32_t options, void* data, size_t length) {
-        send_this_ = get_this();
-        send_called_ = true;
+    zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+        queue_tx_this_ = get_this();
+        queue_tx_called_ = true;
+        return ZX_OK;
     }
 
     bool VerifyCalls() const {
@@ -103,11 +104,11 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         EXPECT_EQ(this_, query_this_, "");
         EXPECT_EQ(this_, start_this_, "");
         EXPECT_EQ(this_, stop_this_, "");
-        EXPECT_EQ(this_, send_this_, "");
+        EXPECT_EQ(this_, queue_tx_this_, "");
         EXPECT_TRUE(query_called_, "");
         EXPECT_TRUE(start_called_, "");
         EXPECT_TRUE(stop_called_, "");
-        EXPECT_TRUE(send_called_, "");
+        EXPECT_TRUE(queue_tx_called_, "");
         END_HELPER;
     }
 
@@ -124,11 +125,11 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     uintptr_t query_this_ = 0u;
     uintptr_t stop_this_ = 0u;
     uintptr_t start_this_ = 0u;
-    uintptr_t send_this_ = 0u;
+    uintptr_t queue_tx_this_ = 0u;
     bool query_called_ = false;
     bool stop_called_ = false;
     bool start_called_ = false;
-    bool send_called_ = false;
+    bool queue_tx_called_ = false;
 
     fbl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
 };
@@ -178,7 +179,8 @@ static bool test_ethmac_protocol() {
     EXPECT_EQ(ZX_OK, proto.ops->query(proto.ctx, 0, nullptr), "");
     proto.ops->stop(proto.ctx);
     EXPECT_EQ(ZX_OK, proto.ops->start(proto.ctx, nullptr, nullptr), "");
-    proto.ops->send(proto.ctx, 0, nullptr, 0);
+    ethmac_netbuf_t netbuf = {};
+    proto.ops->queue_tx(proto.ctx, 0, &netbuf);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -204,7 +206,8 @@ static bool test_ethmac_protocol_proxy() {
     EXPECT_EQ(ZX_OK, proxy.Query(0, nullptr), "");
     proxy.Stop();
     EXPECT_EQ(ZX_OK, proxy.Start(&ifc_dev), "");
-    proxy.Send(0, nullptr, 0);
+    ethmac_netbuf_t netbuf = {};
+    proxy.QueueTx(0, &netbuf);
 
     EXPECT_TRUE(protocol_dev.VerifyCalls(), "");
 

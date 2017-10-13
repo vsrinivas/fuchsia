@@ -42,7 +42,7 @@ constexpr void CheckEthmacIfc() {
 DECLARE_HAS_MEMBER_FN(has_ethmac_query, EthmacQuery);
 DECLARE_HAS_MEMBER_FN(has_ethmac_stop, EthmacStop);
 DECLARE_HAS_MEMBER_FN(has_ethmac_start, EthmacStart);
-DECLARE_HAS_MEMBER_FN(has_ethmac_send, EthmacSend);
+DECLARE_HAS_MEMBER_FN(has_ethmac_queue_tx, EthmacQueueTx);
 
 template <typename D>
 constexpr void CheckEthmacProtocolSubclass() {
@@ -69,12 +69,12 @@ constexpr void CheckEthmacProtocolSubclass() {
                   "'zx_status_t EthmacStart(fbl::unique_ptr<EthmacIfcProxy>)', and be visible "
                   "to ddk::EthmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
-    static_assert(internal::has_ethmac_send<D>::value,
-                  "EthmacProtocol subclasses must implement EthmacSend");
-    static_assert(fbl::is_same<decltype(&D::EthmacSend),
-                                void (D::*)(uint32_t, void*, size_t)>::value,
-                  "EthmacSend must be a non-static member function with signature "
-                  "'zx_status_t EthmacSend(uint32_t, void*, size_t)', and be visible to "
+    static_assert(internal::has_ethmac_queue_tx<D>::value,
+                  "EthmacProtocol subclasses must implement EthmacQueueTx");
+    static_assert(fbl::is_same<decltype(&D::EthmacQueueTx),
+                                zx_status_t (D::*)(uint32_t, ethmac_netbuf_t*)>::value,
+                  "EthmacQueueTx must be a non-static member function with signature "
+                  "'zx_status_t EthmacQueueTx(uint32_t, ethmac_netbuf_t*)', and be visible to "
                   "ddk::EthmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
 }

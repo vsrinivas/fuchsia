@@ -39,7 +39,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     void EthmacStop();
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy);
-    void EthmacSend(uint32_t options, void* data, size_t length);
+    zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
 
     int Thread();
 

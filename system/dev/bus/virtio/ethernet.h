@@ -39,7 +39,7 @@ public:
     zx_status_t Query(uint32_t options, ethmac_info_t* info) TA_EXCL(state_lock_);
     void Stop() TA_EXCL(state_lock_);
     zx_status_t Start(ethmac_ifc_t* ifc, void* cookie) TA_EXCL(state_lock_);
-    void Send(uint32_t options, void* data, size_t length) TA_EXCL(state_lock_);
+    zx_status_t QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) TA_EXCL(state_lock_);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(EthernetDevice);

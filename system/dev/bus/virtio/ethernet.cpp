@@ -98,15 +98,13 @@ zx_status_t virtio_net_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return eth->Start(ifc, cookie);
 }
 
-void virtio_net_send(void* ctx, uint32_t options, void* data, size_t length) {
+zx_status_t virtio_net_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
     virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
-    eth->Send(options, data, length);
+    return eth->QueueTx(options, netbuf);
 }
 
 ethmac_protocol_ops_t kProtoOps = {
-    virtio_net_query, virtio_net_stop, virtio_net_start, virtio_net_send,
-    nullptr, // queue_rx
-    nullptr, // queue_tx
+    virtio_net_query, virtio_net_stop, virtio_net_start, virtio_net_queue_tx,
 };
 
 // I/O buffer helpers
@@ -371,12 +369,14 @@ zx_status_t EthernetDevice::Start(ethmac_ifc_t* ifc, void* cookie) {
     return ZX_OK;
 }
 
-void EthernetDevice::Send(uint32_t options, void* data, size_t length) {
+zx_status_t EthernetDevice::QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     LTRACE_ENTRY;
+    void* data = netbuf->data;
+    size_t length = netbuf->len;
     // First, validate the packet
     if (!data || length > sizeof(virtio_net_hdr_t) + kVirtioMtu) {
         LTRACEF("dropping packet; invalid packet\n");
-        return;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::AutoLock lock(&tx_lock_);
@@ -400,7 +400,7 @@ void EthernetDevice::Send(uint32_t options, void* data, size_t length) {
     }
     if (!desc) {
         LTRACEF("dropping packet; out of descriptors\n");
-        return;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // Add the data to be sent
@@ -420,6 +420,7 @@ void EthernetDevice::Send(uint32_t options, void* data, size_t length) {
         tx_.Kick();
         unkicked_ = 0;
     }
+    return ZX_OK;
 }
 
 } // namespace virtio

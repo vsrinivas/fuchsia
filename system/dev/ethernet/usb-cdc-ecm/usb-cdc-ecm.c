@@ -252,12 +252,15 @@ static void dropped_packet_notification(ecm_ctx_t* ctx) {
     }
 }
 
-static void ethmac_send(void* cookie, uint32_t options, void* data, size_t length) {
+static zx_status_t ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
+    zx_status_t status = ZX_OK;
     ecm_ctx_t* ctx = cookie;
-    uint8_t* byte_data = data;
+    size_t length = netbuf->len;
+    uint8_t* byte_data = netbuf->data;
 
     if (length > ctx->mtu || length == 0) {
-        return;
+        printf("%s: unsupported packet length %zu\n", module_name, length);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     xprintf("%s: sending %d bytes to endpoint 0x%"PRIx8"\n",
@@ -273,6 +276,7 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
     usb_request_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
     if (tx_req == NULL) {
         dropped_packet_notification(ctx);
+        status = ZX_ERR_NO_RESOURCES;
         goto done;
     }
     usb_request_t* tx_req2;
@@ -281,6 +285,7 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
         if (tx_req2 == NULL) {
             dropped_packet_notification(ctx);
             list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
+            status = ZX_ERR_NO_RESOURCES;
             goto done;
         }
     }
@@ -294,6 +299,7 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
         if (send_terminal_packet) {
             list_add_tail(&ctx->tx_txn_bufs, &tx_req2->node);
         }
+        status = ZX_ERR_IO;
         goto done;
     }
     usb_request_queue(&ctx->usb, tx_req);
@@ -308,6 +314,7 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
             printf("%s: failed to copy data into send txn (error %zd)\n",
                    module_name, bytes_copied);
             list_add_tail(&ctx->tx_txn_bufs, &tx_req2->node);
+            status = ZX_ERR_IO;
             goto done;
         }
         usb_request_queue(&ctx->usb, tx_req2);
@@ -315,13 +322,14 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
 
 done:
     mtx_unlock(&ctx->tx_mutex);
+    return status;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = ethmac_query,
     .stop = ethmac_stop,
     .start = ethmac_start,
-    .send = ethmac_send,
+    .queue_tx = ethmac_queue_tx,
 };
 
 static void ecm_interrupt_complete(usb_request_t* request, void* cookie) {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 #include <zircon/types.h>
 #include <zircon/device/ethernet.h>
 
@@ -12,26 +13,23 @@ __BEGIN_CDECLS;
 
 #define ETH_MAC_SIZE 6
 
-// The ethermac interface supports a simple copying interface
-// via proto->send() and ifc->recv() and a zero-copy interface
-// via proto->queue_?X() and ifc->complete_?x()
+// The ethermac interface supports both synchronous and asynchronous transmissions using the
+// proto->queue_tx() and ifc->complete_tx() methods.
 //
-// The FEATURE_?X_QUEUE flags indicate the use of the zero-copy
-// interface (which is selectable independently for transmit and
-// receive)
-//
-// TODO: Implement zero-copy interface in the ethernet common
-// middle layer driver.  Currently ethermac drivers that request
-// these will not be loaded.
+// Receive operations are supported with the ifc->recv() interface.
+// TODO: implement netbuf-based receive operations by implementing proto->queue_rx() and
+// ifc->complete_rx()
 //
 // The FEATURE_WLAN flag indicates a device that supports wlan operations.
 //
 // The FEATURE_SYNTH flag indicates a device that is not backed by hardware.
+//
+// The FEATURE_DMA flag indicates that the device can copy the buffer data using DMA and will ensure
+// that physical addresses are provided in netbufs.
 
-#define ETHMAC_FEATURE_RX_QUEUE (1u)
-#define ETHMAC_FEATURE_TX_QUEUE (2u)
-#define ETHMAC_FEATURE_WLAN     (4u)
-#define ETHMAC_FEATURE_SYNTH    (8u)
+#define ETHMAC_FEATURE_WLAN     (1u)
+#define ETHMAC_FEATURE_SYNTH    (2u)
+#define ETHMAC_FEATURE_DMA      (4u)
 
 typedef struct ethmac_info {
     uint32_t features;
@@ -41,15 +39,31 @@ typedef struct ethmac_info {
     uint32_t reserved1[4];
 } ethmac_info_t;
 
+typedef struct ethmac_netbuf {
+    // Provided by the generic ethernet driver
+    void* data;
+    zx_paddr_t phys;  // Only used if ETHMAC_FEATURE_DMA is available
+    uint16_t len;
+    uint16_t reserved;
+    uint32_t flags;
+
+    // Shared between the generic ethernet and ethmac drivers
+    list_node_t node;
+
+    // For use by the ethmac driver
+    union {
+        uint64_t val;
+        void* ptr;
+    };
+} ethmac_netbuf_t;
+
 typedef struct ethmac_ifc_virt {
     void (*status)(void* cookie, uint32_t status);
 
-    // recv() is invoked when FEATURE_RX_QUEUE is not present
     void (*recv)(void* cookie, void* data, size_t length, uint32_t flags);
 
-    // complete_?x() is invoked when FEATURE_?X_QUEUE is present
-    void (*complete_rx)(void* cookie, uint32_t length, uint32_t flags);
-    void (*complete_tx)(void* cookie, uint32_t count);
+    // complete_tx() is called to return ownership of a netbuf to the generic ethernet driver.
+    void (*complete_tx)(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status);
 } ethmac_ifc_t;
 
 // Indicates that additional data is available to be sent after this call finishes. Allows a ethmac
@@ -73,16 +87,18 @@ typedef struct ethmac_protocol_ops {
     // Callbacks on ifc may be invoked from now until stop() is called
     zx_status_t (*start)(void* ctx, ethmac_ifc_t* ifc, void* cookie);
 
-    // send() is valid if FEATURE_TX_QUEUE is not present, otherwise it is no-op
-    // This may be called at any time, and can be called from multiple
-    // threads simultaneously.
-    void (*send)(void* ctx, uint32_t options, void* data, size_t length);
-
-    // queue_?x() is valid if FEATURE_?X_QUEUE is present, otherwise they are no-op
-    void (*queue_tx)(void* ctx, uint32_t options,
-                     uintptr_t pa0, uintptr_t pa1, size_t length);
-    void (*queue_rx)(void* ctx, uint32_t options,
-                     uintptr_t pa0, uintptr_t pa1, size_t length);
+    // Request transmission of the packet in netbuf. Return status indicates disposition:
+    //   ZX_ERR_SHOULD_WAIT: Packet is being transmitted
+    //   ZX_OK: Packet has been transmitted
+    //   Other: Packet could not be transmitted
+    //
+    // In the SHOULD_WAIT case the driver takes ownership of the netbuf and must call complete_tx()
+    // to return it once the transmission is complete. complete_tx() MUST NOT be called from within
+    // the queue_tx() implementation.
+    //
+    // queue_tx() may be called at any time after start() is called including from multiple threads
+    // simultaneously.
+    zx_status_t (*queue_tx)(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf);
 } ethmac_protocol_ops_t;
 
 typedef struct ethmac_protocol {

@@ -128,7 +128,9 @@ zx_status_t TapDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     return ZX_OK;
 }
 
-void TapDevice::EthmacSend(uint32_t options, void* data, size_t length) {
+zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+    void* data = netbuf->data;
+    size_t length = netbuf->len;
     ZX_DEBUG_ASSERT(length <= mtu_);
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
         fbl::AutoLock lock(&lock_);
@@ -137,8 +139,10 @@ void TapDevice::EthmacSend(uint32_t options, void* data, size_t length) {
     }
     zx_status_t status = data_.write(0u, data, length, nullptr);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ethertap: EthmacSend error writing: %d\n", status);
+        dprintf(ERROR, "ethertap: EthmacQueueTx error writing: %d\n", status);
     }
+    // returning ZX_ERR_SHOULD_WAIT indicates that we will call complete_tx(), which we will not
+    return status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status;
 }
 
 int TapDevice::Thread() {

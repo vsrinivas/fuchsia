@@ -379,9 +379,12 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
     mtx_unlock(&eth->mutex);
 }
 
-static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length) {
+static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+    size_t length = netbuf->len;
+
     if (length > (AX88179_MTU + MAX_ETH_HDRS)) {
-        return;
+        dprintf(ERROR, "ax88179: unsupported packet length %zu\n", length);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ax88179_t* eth = ctx;
@@ -405,7 +408,7 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
         if (txn == NULL) {
             dprintf(DEBUG1, "ax88179: no free write txns!\n");
             mtx_unlock(&eth->tx_lock);
-            return;
+            return ZX_ERR_NO_RESOURCES;
         }
         txn->length = 0;
         list_add_tail(&eth->pending_tx, &txn->node);
@@ -422,7 +425,7 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
         if (txn == NULL) {
             dprintf(DEBUG1, "ax88179: no free write txns!\n");
             mtx_unlock(&eth->tx_lock);
-            return;
+            return ZX_ERR_NO_RESOURCES;
         }
         txn->length = txn_len = 0;
         list_add_tail(&eth->pending_tx, &txn->node);
@@ -434,18 +437,18 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
     };
 
     iotxn_copyto(txn, &hdr, sizeof(hdr), txn_len);
-    iotxn_copyto(txn, data, length, txn_len + sizeof(hdr));
+    iotxn_copyto(txn, netbuf->data, length, txn_len + sizeof(hdr));
     txn->length = txn_len + sizeof(hdr) + length;
 
     if (options & ETHMAC_TX_OPT_MORE) {
         dprintf(DEBUG1, "ax88179: waiting for more data, %u outstanding\n", eth->tx_in_flight);
         mtx_unlock(&eth->tx_lock);
-        return;
+        return ZX_OK;
     }
     if (eth->tx_in_flight == MAX_TX_IN_FLIGHT) {
         dprintf(DEBUG1, "ax88179: max outstanding tx, waiting\n");
         mtx_unlock(&eth->tx_lock);
-        return;
+        return ZX_OK;
     }
     txn = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
     dprintf(DEBUG1, "ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
@@ -454,6 +457,7 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
     eth->tx_in_flight++;
     ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
+    return ZX_OK;
 }
 
 static void ax88179_unbind(void* ctx) {
@@ -535,7 +539,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
     .query = ax88179_query,
     .stop = ax88179_stop,
     .start = ax88179_start,
-    .send = ax88179_send,
+    .queue_tx = ax88179_queue_tx,
 };
 
 

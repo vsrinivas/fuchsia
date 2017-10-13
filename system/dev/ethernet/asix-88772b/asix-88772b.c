@@ -250,7 +250,8 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) {
+static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+    size_t length = netbuf->len;
     ax88772b_t* eth = ctx;
 
     if (eth->dead) {
@@ -264,12 +265,13 @@ static zx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
         //TODO: block
-        status = ZX_ERR_BUFFER_TOO_SMALL;
+        status = ZX_ERR_NO_RESOURCES;
         goto out;
     }
     usb_request_t* request = containerof(node, usb_request_t, node);
 
     if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
+        printf("ax88772b: unsupported packet length %zu\n", length);
         status = ZX_ERR_INVALID_ARGS;
         goto out;
     }
@@ -284,7 +286,7 @@ static zx_status_t _ax88772b_send(void* ctx, const void* buffer, size_t length) 
     header[3] = hi ^ 0xFF;
 
     usb_request_copyto(request, header, ETH_HEADER_SIZE, 0);
-    usb_request_copyto(request, buffer, length, ETH_HEADER_SIZE);
+    usb_request_copyto(request, netbuf->data, length, ETH_HEADER_SIZE);
     request->header.length = length + ETH_HEADER_SIZE;
     usb_request_queue(&eth->usb, request);
 
@@ -367,15 +369,11 @@ static zx_status_t ax88772b_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
-static void ax88772b_send(void* ctx, uint32_t options, void* data, size_t length) {
-    _ax88772b_send(ctx, data, length);
-}
-
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = ax88772b_query,
     .stop = ax88772b_stop,
     .start = ax88772b_start,
-    .send = ax88772b_send,
+    .queue_tx = ax88772b_queue_tx,
 };
 
 static int ax88772b_start_thread(void* arg) {

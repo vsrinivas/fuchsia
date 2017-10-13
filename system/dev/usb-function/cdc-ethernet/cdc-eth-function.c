@@ -213,12 +213,13 @@ static zx_status_t cdc_ethmac_start(void* ctx_cookie, ethmac_ifc_t* ifc, void* e
     return status;
 }
 
-static void cdc_ethmac_send(void* cookie, uint32_t options, void* data, size_t length) {
+static zx_status_t cdc_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
     usb_cdc_t* cdc = cookie;
-    uint8_t* byte_data = data;
+    uint8_t* byte_data = netbuf->data;
+    size_t length = netbuf->len;
 
     if (!cdc->online || length > ETH_MTU || length == 0) {
-        return;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     dprintf(LTRACE, "%s: sending %zu bytes\n", __FUNCTION__, length);
@@ -230,7 +231,7 @@ static void cdc_ethmac_send(void* cookie, uint32_t options, void* data, size_t l
     if (tx_req == NULL) {
         dprintf(LINFO, "%s: no free write txns, dropping packet\n", __FUNCTION__);
         mtx_unlock(&cdc->tx_mutex);
-        return;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
@@ -242,7 +243,7 @@ static void cdc_ethmac_send(void* cookie, uint32_t options, void* data, size_t l
             dprintf(LINFO, "%s: no free write txns, dropping packet\n", __FUNCTION__);
             list_add_tail(&cdc->bulk_in_txns, &tx_req->node);
             mtx_unlock(&cdc->tx_mutex);
-            return;
+            return ZX_ERR_NO_RESOURCES;
         }
         zlp_txn->length = 0;
     }
@@ -258,7 +259,7 @@ static void cdc_ethmac_send(void* cookie, uint32_t options, void* data, size_t l
             list_add_tail(&cdc->bulk_in_txns, &zlp_txn->node);
         }
         mtx_unlock(&cdc->tx_mutex);
-        return;
+        return ZX_ERR_INTERNAL;
     }
 
     // unlock before queueing txns to avoid potential deadlocks
@@ -269,13 +270,14 @@ static void cdc_ethmac_send(void* cookie, uint32_t options, void* data, size_t l
     if (zlp_txn) {
         usb_function_queue(&cdc->function, zlp_txn, cdc->bulk_in_addr);
     }
+    return ZX_OK;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = cdc_ethmac_query,
     .stop = cdc_ethmac_stop,
     .start = cdc_ethmac_start,
-    .send = cdc_ethmac_send,
+    .queue_tx = cdc_ethmac_queue_tx,
 };
 
 static void cdc_intr_complete(iotxn_t* txn, void* cookie) {

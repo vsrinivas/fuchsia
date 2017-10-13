@@ -244,10 +244,11 @@ static zx_status_t rtl8111_start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
     return status;
 }
 
-static void rtl8111_send(void* ctx, uint32_t options, void* data, size_t length) {
+static zx_status_t rtl8111_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+    size_t length = netbuf->len;
     if (length > ETH_BUF_SIZE) {
         dprintf(ERROR, "rtl8111: Unsupported packet length %zu\n", length);
-        return;
+        return ZX_ERR_INVALID_ARGS;
     }
     ethernet_device_t* edev = ctx;
 
@@ -267,7 +268,7 @@ static void rtl8111_send(void* ctx, uint32_t options, void* data, size_t length)
         mtx_unlock(&edev->lock);
     }
 
-    memcpy(edev->txb + (edev->txd_idx * ETH_BUF_SIZE), data, length);
+    memcpy(edev->txb + (edev->txd_idx * ETH_BUF_SIZE), netbuf->data, length);
 
     bool is_end = edev->txd_idx == (ETH_BUF_COUNT - 1);
     edev->txd_ring[edev->txd_idx].status1 =
@@ -278,13 +279,14 @@ static void rtl8111_send(void* ctx, uint32_t options, void* data, size_t length)
     edev->txd_idx = (edev->txd_idx + 1) % ETH_BUF_COUNT;
 
     mtx_unlock(&edev->tx_lock);
+    return ZX_OK;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {
     .query = rtl8111_query,
     .stop = rtl8111_stop,
     .start = rtl8111_start,
-    .send = rtl8111_send,
+    .queue_tx = rtl8111_queue_tx,
 };
 
 static void rtl8111_release(void* ctx) {

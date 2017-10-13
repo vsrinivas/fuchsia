@@ -103,7 +103,7 @@
 //         return ZX_OK;
 //     }
 //
-//     void EthmacSend(uint32_t options, void* data, size_t length) {
+//     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
 //         // Send the data
 //     }
 //
@@ -150,6 +150,10 @@ class EthmacIfcProxy {
         ifc_->recv(cookie_, data, length, flags);
     }
 
+    void CompleteTx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
+        ifc_->complete_tx(cookie, netbuf, status);
+    }
+
   private:
     ethmac_ifc_t* ifc_;
     void* cookie_;
@@ -163,7 +167,7 @@ class EthmacProtocol : public internal::base_protocol {
         ops_.query = Query;
         ops_.stop = Stop;
         ops_.start = Start;
-        ops_.send = Send;
+        ops_.queue_tx = QueueTx;
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_ops_ == nullptr);
@@ -185,8 +189,8 @@ class EthmacProtocol : public internal::base_protocol {
         return static_cast<D*>(ctx)->EthmacStart(fbl::move(ifc_proxy));
     }
 
-    static void Send(void* ctx, uint32_t options, void* data, size_t length) {
-        static_cast<D*>(ctx)->EthmacSend(options, data, length);
+    static zx_status_t QueueTx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
+        return static_cast<D*>(ctx)->EthmacQueueTx(options, netbuf);
     }
 
     ethmac_protocol_ops_t ops_ = {};
@@ -212,8 +216,8 @@ class EthmacProtocolProxy {
         ops_->stop(ctx_);
     }
 
-    void Send(uint32_t options, void* data, size_t length) {
-        ops_->send(ctx_, options, data, length);
+    zx_status_t QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
+        return ops_->queue_tx(ctx_, options, netbuf);
     }
 
   private:

@@ -78,6 +78,7 @@ void eth_rx_ack(ethdev_t* eth) {
 
 status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     if ((len < 60) || (len > ETH_TXBUF_DSIZE)) {
+        printf("intel-eth: unsupported packet length %zu\n", len);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -106,7 +107,7 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     // obtain buffer, copy into it, setup descriptor
     framebuf_t *frame = list_remove_head_type(&eth->free_frames, framebuf_t, node);
     if (frame == NULL) {
-        status = ZX_ERR_NO_MEMORY;
+        status = ZX_ERR_NO_RESOURCES;
         goto out;
     }
 
