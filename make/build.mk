@@ -19,20 +19,22 @@ $(OUTLKBIN): $(OUTLKELF)
 	$(call BUILDECHO,generating image $@)
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
 
-LINKER_SCRIPT := $(BUILDDIR)/kernel.ld
-GENERATED += $(LINKER_SCRIPT)
-
-# rules for generating the linker script
-$(LINKER_SCRIPT): kernel/kernel.ld FORCE
+# Generate an input linker script to define as symbols all the
+# variables set in makefiles that the linker script needs to use.
+LINKER_SCRIPT_VARS := MEMBASE KERNEL_BASE KERNEL_LOAD_OFFSET
+DEFSYM_SCRIPT := $(BUILDDIR)/kernel-vars.ld
+$(DEFSYM_SCRIPT): FORCE
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
-	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/" < $< > $@.tmp
+	$(NOECHO)($(foreach var,$(LINKER_SCRIPT_VARS),\
+			    echo 'PROVIDE_HIDDEN($(var) = $($(var)));';)\
+		 ) > $@.tmp
 	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
+GENERATED += $(DEFSYM_SCRIPT)
 
-$(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
+$(OUTLKELF): kernel/kernel.ld $(DEFSYM_SCRIPT) $(ALLMODULE_OBJS) $(EXTRA_OBJS)
 	$(call BUILDECHO,linking $@)
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) -T $(LINKER_SCRIPT) \
-		$(ALLMODULE_OBJS) $(EXTRA_OBJS) -o $@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) -T $^ -o $@
 # enable/disable the size output based on a combination of ENABLE_BUILD_LISTFILES
 # and QUIET
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)

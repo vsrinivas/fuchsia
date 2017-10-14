@@ -12,10 +12,10 @@
 ENTRY(_start)
 SECTIONS
 {
-    . = %KERNEL_BASE% + %KERNEL_LOAD_OFFSET%;
+    . = KERNEL_BASE + KERNEL_LOAD_OFFSET;
     __code_start = .;
 
-    .text.boot0 : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
+    .text.boot0 : AT(MEMBASE + KERNEL_LOAD_OFFSET) {
         KEEP(*(.text.boot0))
     } :code
 
