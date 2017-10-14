@@ -18,6 +18,7 @@
 #include <lk/init.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/bootalloc.h>
 #include <vm/initial_map.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>

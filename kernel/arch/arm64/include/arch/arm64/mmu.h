@@ -96,6 +96,7 @@
 #error User address space size must be larger than page size
 #endif
 #define MMU_USER_PAGE_TABLE_ENTRIES_TOP (0x1 << (MMU_USER_SIZE_SHIFT - MMU_USER_TOP_SHIFT))
+#define MMU_USER_PAGE_TABLE_ENTRIES (0x1 << (MMU_USER_PAGE_SIZE_SHIFT - 3))
 
 #if MMU_KERNEL_SIZE_SHIFT > MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 0)
 #define MMU_KERNEL_TOP_SHIFT MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 0)
@@ -109,6 +110,7 @@
 #error Kernel address space size must be larger than page size
 #endif
 #define MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP (0x1 << (MMU_KERNEL_SIZE_SHIFT - MMU_KERNEL_TOP_SHIFT))
+#define MMU_KERNEL_PAGE_TABLE_ENTRIES (0x1 << (MMU_KERNEL_PAGE_SIZE_SHIFT - 3))
 
 #if MMU_IDENT_SIZE_SHIFT > MMU_LX_X(MMU_IDENT_PAGE_SIZE_SHIFT, 0)
 #define MMU_IDENT_TOP_SHIFT MMU_LX_X(MMU_IDENT_PAGE_SIZE_SHIFT, 0)
@@ -136,6 +138,7 @@
 #error Guest physical address space size must be larger than page size
 #endif
 #define MMU_GUEST_PAGE_TABLE_ENTRIES_TOP (0x1 << (MMU_GUEST_SIZE_SHIFT - MMU_GUEST_TOP_SHIFT))
+#define MMU_GUEST_PAGE_TABLE_ENTRIES (0x1 << (MMU_GUEST_PAGE_SIZE_SHIFT - 3))
 
 #define MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT      (30)
 

@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <vm/bootalloc.h>
+
 #include "vm_priv.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -28,9 +30,7 @@ constexpr paddr_t kernel_address_to_phys(uintptr_t addr) {
     // a simple subtraction of KERNEL_BASE is sufficient
     addr -= KERNEL_BASE;
 #elif __aarch64__
-    // kernel is already running out of the BKM, so subtract the BKM base off
-    addr -= KERNEL_ASPACE_BASE;
-    addr += MEMBASE;
+    // leave the address alone, start.S will call into boot_alloc_init which will initialize the values
 #else
 #error what architecture
 #endif
@@ -67,4 +67,23 @@ void* boot_alloc_mem(size_t len) {
     LTRACEF("len %zu, phys ptr %#" PRIxPTR " ptr %p\n", len, ptr, paddr_to_kvaddr(ptr));
 
     return paddr_to_kvaddr(ptr);
+}
+
+// called from arm64 start.S
+// run in physical space without the mmu set up, so stick to basic, relocatable code
+__NO_SAFESTACK
+paddr_t boot_alloc_page_phys() {
+    paddr_t ptr = ALIGN(boot_alloc_end, PAGE_SIZE);
+    boot_alloc_end = ptr + PAGE_SIZE;
+
+    return ptr;
+}
+
+// run in physical space without the mmu set up, so by computing the address of _end
+// and saving it, we've effectively computed the physical address of the end of the
+// kernel.
+__NO_SAFESTACK
+void boot_alloc_init() {
+    boot_alloc_start = reinterpret_cast<paddr_t>(&_end);
+    boot_alloc_end = reinterpret_cast<paddr_t>(&_end);
 }

@@ -37,9 +37,8 @@ page_table1             .req x21
 mmu_initial_mapping     .req x22
 vaddr                   .req x23
 paddr                   .req x24
-mapping_size            .req x25
-size                    .req x26
-attr                    .req x27
+size                    .req x25
+attr                    .req x26
 
 .section .text.boot, "ax", @progbits
 FUNCTION(arm_reset)
@@ -81,7 +80,6 @@ FUNCTION(arm_reset)
     movlit  x20, (MEMBASE + KERNEL_LOAD_OFFSET)
     br      x20
 .Lno_efi:
-
     adrp    tmp, boot_structure_paddr
     adrp    tmp2, arch_boot_el
     mrs     x2, CurrentEL
@@ -97,22 +95,31 @@ FUNCTION(arm_reset)
     orr     tmp, tmp, #(1<<2)  /* Enable dcache/ucache */
     msr     sctlr_el1, tmp
 
-    /* set up the mmu according to mmu_initial_mappings */
-
-    /* load the base of the translation table and clear the table */
+    /* load the base of the translation tables */
+    adr_global page_table0, tt_trampoline
     adr_global page_table1, arm64_kernel_translation_table
 
     /* Prepare tt_trampoline page table */
     /* Calculate pagetable physical addresses */
     adr_global page_table0, tt_trampoline
 
+    /* send secondary cpus over to a waiting spot for the primary to finish */
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lmmu_enable_secondary
 
-    mov     tmp, #0
+    /* set up a functional stack pointer */
+    adr_global tmp, boot_cpu_kstack_end
+    mov     sp, tmp
 
-    /* walk through all the entries in the translation table, setting them up */
+    /* make sure the boot allocator is given a chance to figure out where
+     * we are loaded in physical memory. */
+    bl      boot_alloc_init
+
+    /* set up the mmu according to mmu_initial_mappings */
+
+    /* clear out the kernel translation table */
+    mov     tmp, #0
 .Lclear_top_page_table_loop:
     str     xzr, [page_table1, tmp, lsl #3]
     add     tmp, tmp, #1
@@ -127,16 +134,8 @@ FUNCTION(arm_reset)
     ldp     paddr, vaddr, [mmu_initial_mapping, #__MMU_INITIAL_MAPPING_PHYS_OFFSET]
     ldp     size, tmp, [mmu_initial_mapping, #__MMU_INITIAL_MAPPING_SIZE_OFFSET]
 
-    tbzmask tmp, MMU_INITIAL_MAPPING_FLAG_DYNAMIC, .Lnot_dynamic
-    adr     paddr, _start
-    mov     size, x0
-    str     paddr, [mmu_initial_mapping, #__MMU_INITIAL_MAPPING_PHYS_OFFSET]
-    str     size, [mmu_initial_mapping, #__MMU_INITIAL_MAPPING_SIZE_OFFSET]
-
-.Lnot_dynamic:
     /* if size == 0, end of list, done with initial mapping */
     cbz     size, .Linitial_mapping_done
-    mov     mapping_size, size
 
     /* set up the flags */
     tbzmask tmp, MMU_INITIAL_MAPPING_FLAG_UNCACHED, .Lnot_uncached
@@ -148,50 +147,12 @@ FUNCTION(arm_reset)
     tbzmask tmp, MMU_INITIAL_MAPPING_FLAG_DEVICE, .Lnot_device
     movlit  attr, MMU_INITIAL_MAP_DEVICE
     b       .Lmem_type_done
+
 .Lnot_device:
-
-/* Determine the segment in which the memory resides and set appropriate
- *  attributes.  In order to handle offset kernels, the following rules are
- *  implemented below:
- *      KERNEL_BASE    to __code_start             -read/write (see note below)
- *      __code_start   to __rodata_start (.text)   -read only
- *      __rodata_start to __data_start   (.rodata) -read only, execute never
- *      __data_start   to .....          (.data)   -read/write
- *
- *  The space below __code_start is presently left as read/write (same as .data)
- *   mainly as a workaround for the raspberry pi boot process.  Boot vectors for
- *   secondary CPUs are in this area and need to be updated by cpu0 once the system
- *   is ready to boot the secondary processors.
- *   TODO: handle this via mmu_initial_mapping entries, which may need to be
- *         extended with additional flag types
- */
-.Lmapping_size_loop:
+    /* regular read/write no execute kernel data */
     movlit  attr, MMU_PTE_KERNEL_DATA_FLAGS
-    movabs  tmp, __code_start
-    subs    size, tmp, vaddr
-    /* If page is below  the entry point (_start) mark as kernel data */
-    b.hi    .Lmem_type_done
-
-    movlit  attr, MMU_PTE_KERNEL_RO_FLAGS
-    movabs  tmp, __rodata_start
-    subs    size, tmp, vaddr
-    b.hi    .Lmem_type_done
-    orr     attr, attr, #MMU_PTE_ATTR_PXN
-    movabs  tmp, __data_start
-    subs    size, tmp, vaddr
-    b.hi    .Lmem_type_done
-    movlit  attr, MMU_PTE_KERNEL_DATA_FLAGS
-    movabs  tmp, _end
-    subs    size, tmp, vaddr
-    b.lo    . /* Error: _end < vaddr */
-    cmp     mapping_size, size
-    b.lo    . /* Error: mapping_size < size => RAM size too small for data/bss */
-    mov     size, mapping_size
 
 .Lmem_type_done:
-    subs    mapping_size, mapping_size, size
-    b.lo    . /* Error: mapping_size < size (RAM size too small for code/rodata?) */
-
     /* Check that paddr, vaddr and size are page aligned */
     orr     tmp, vaddr, paddr
     orr     tmp, tmp, size
@@ -252,11 +213,6 @@ FUNCTION(arm_reset)
     /* TODO: add local loop if next entry is in the same page table */
     b.ne    .Lmap_range_top_loop /* size != 0 */
 
-    /* Restore top bits of virtual address (should be all set) */
-    eor     vaddr, vaddr, #(~0 << MMU_KERNEL_SIZE_SHIFT)
-    /* Move to next subtype of ram mmu_initial_mappings entry */
-    cbnz     mapping_size, .Lmapping_size_loop
-
     /* Move to next mmu_initial_mappings entry */
     add     mmu_initial_mapping, mmu_initial_mapping, __MMU_INITIAL_MAPPING_SIZE
     b       .Linitial_mapping_loop
@@ -267,7 +223,8 @@ FUNCTION(arm_reset)
     cbnz    new_page_table, .Lmap_range_has_page_table
 
     /* Allocate new page table */
-    calloc_bootmem_aligned new_page_table, tmp, tmp2, MMU_KERNEL_PAGE_SIZE_SHIFT
+    bl      boot_alloc_ptable
+    mov     new_page_table, x0
 
     /* Write page table entry (with allocated page table) */
     orr     new_page_table, new_page_table, #MMU_PTE_L012_DESCRIPTOR_TABLE
@@ -291,7 +248,9 @@ FUNCTION(arm_reset)
 
 .Linitial_mapping_done:
 
-    /* Prepare tt_trampoline page table */
+    /* Prepare tt_trampoline page table.
+     * this will identity map the 1GB page holding the physical address of this code.
+     * Used to temporarily help us get switched to the upper virtual address. */
 
     /* Zero tt_trampoline translation tables */
     mov     tmp, #0
@@ -308,6 +267,15 @@ FUNCTION(arm_reset)
     add     tmp2, tmp2, tmp, lsl #MMU_IDENT_TOP_SHIFT  /* tmp2 = pt entry */
 
     str     tmp2, [page_table0, tmp, lsl #3]  /* tt_trampoline[paddr index] = pt entry */
+
+    /* map the kernel to a fixed address */
+    /* void arm64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len); */
+    mov     x0, page_table1
+    movlit  x1, (KERNEL_BASE + KERNEL_LOAD_OFFSET)
+    adr_global x2, __code_start
+    adr_global x3, _end
+    sub     x3, x3, x2
+    bl      arm64_boot_map
 
     /* mark page tables as set up, so secondary cpus can fall through */
     adr_global tmp, page_tables_not_ready
@@ -388,6 +356,7 @@ FUNCTION(arm_reset)
     cbnz    tmp2, .L__bss_loop
 .L__bss_loop_done:
 
+    // set up the boot stack for real
     adr_global tmp, boot_cpu_kstack_end
     mov     sp, tmp
 

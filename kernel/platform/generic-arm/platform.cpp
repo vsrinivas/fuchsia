@@ -71,7 +71,7 @@ const struct mmu_initial_mapping mmu_initial_mappings[] = {
  /* sdram space */
  {
      .phys = MEMBASE,
-     .virt = KERNEL_BASE,
+     .virt = KERNEL_ASPACE_BASE,
      .size = MEMORY_APERTURE_SIZE,
      .flags = 0,
      .name = "memory"

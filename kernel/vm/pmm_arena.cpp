@@ -12,6 +12,7 @@
 #include <pretty/sizes.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/bootalloc.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)

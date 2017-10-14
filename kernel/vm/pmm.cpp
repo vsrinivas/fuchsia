@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/bootalloc.h>
 #include <vm/vm.h>
 
 #include "pmm_arena.h"

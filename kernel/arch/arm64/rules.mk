@@ -19,6 +19,7 @@ endif
 MODULE_SRCS += \
 	$(LOCAL_DIR)/arch.cpp \
 	$(LOCAL_DIR)/asm.S \
+	$(LOCAL_DIR)/boot-mmu.cpp \
 	$(LOCAL_DIR)/cache-ops.S \
 	$(LOCAL_DIR)/debugger.cpp \
 	$(LOCAL_DIR)/efi.cpp \
@@ -72,7 +73,8 @@ GLOBAL_DEFINES += \
 	USER_ASPACE_BASE=$(USER_ASPACE_BASE) \
 	USER_ASPACE_SIZE=$(USER_ASPACE_SIZE)
 
-KERNEL_BASE ?= $(KERNEL_ASPACE_BASE)
+# kernel is linked to run at the arbitrary address of -4GB
+KERNEL_BASE := 0xffffffff00000000
 KERNEL_LOAD_OFFSET ?= 0
 
 KERNEL_DEFINES += \

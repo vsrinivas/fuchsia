@@ -92,36 +92,6 @@ movk \reg, #:abs_g3:\symbol
 .endif
 .endm
 
-.macro calloc_bootmem_aligned, new_ptr, new_ptr_end, tmp, size_shift
-.if \size_shift < 4
-    .error "calloc_bootmem_aligned: Unsupported size_shift, \size_shift"
-.endif
-
-    /* load boot_alloc_end */
-    adrp    \tmp, boot_alloc_end
-    ldr     \new_ptr, [\tmp, #:lo12:boot_alloc_end]
-
-    /* align to page */
-.if \size_shift > 12
-    add     \new_ptr, \new_ptr, #(1 << \size_shift)
-    sub     \new_ptr, \new_ptr, #1
-.else
-    add     \new_ptr, \new_ptr, #(1 << \size_shift) - 1
-.endif
-    and     \new_ptr, \new_ptr, #~((1 << \size_shift) - 1)
-
-    /* add one page and store boot_alloc_end */
-    add     \new_ptr_end, \new_ptr, #(1 << \size_shift)
-    str     \new_ptr_end, [\tmp, #:lo12:boot_alloc_end]
-
-    /* clear page */
-    mov     \tmp, \new_ptr
-.Lcalloc_bootmem_aligned_clear_loop\@:
-    stp     xzr, xzr, [\tmp], #16
-    cmp     \tmp, \new_ptr_end
-    b.lo    .Lcalloc_bootmem_aligned_clear_loop\@
-.endm
-
 // For "functions" that are not normal functions in the ABI sense.
 // Treat all previous frame registers as having the same value.
 
