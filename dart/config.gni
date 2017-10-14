@@ -3,4 +3,4 @@
 # found in the LICENSE file.
 
 # Set the location of the Flutter engine project.
-flutter_root = "//flutter"
+flutter_root = "//third_party/flutter"

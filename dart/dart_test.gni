@@ -60,7 +60,7 @@ template("dart_test") {
   fuchsia_tester_out_dir = get_label_info(fuchsia_tester_label, "root_out_dir")
   fuchsia_tester_bin = "$fuchsia_tester_out_dir/dart-tools/fuchsia_tester"
 
-  flutter_shell_label = "//flutter/shell($host_toolchain)"
+  flutter_shell_label = "//third_party/flutter/shell($host_toolchain)"
   flutter_shell_out_dir = get_label_info(flutter_shell_label, "root_out_dir")
   flutter_shell_bin = "$flutter_shell_out_dir/flutter_tester"
 
