@@ -28,7 +28,7 @@
 #include "devhost.h"
 #include "log.h"
 
-uint32_t log_flags = LOG_ERROR | LOG_INFO | LOG_RPC_SDW;
+uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 struct proxy_iostate {
     zx_device_t* dev;
