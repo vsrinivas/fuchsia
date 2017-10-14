@@ -7,7 +7,9 @@
 #include "private.h"
 
 zx_time_t _zx_deadline_after(zx_duration_t nanoseconds) {
-    return nanoseconds + VDSO_zx_time_get(ZX_CLOCK_MONOTONIC);
+	auto now = VDSO_zx_time_get(ZX_CLOCK_MONOTONIC);
+    auto deadline = nanoseconds + now;
+    return (deadline < now) ? ZX_TIME_INFINITE : deadline;
 }
 
 VDSO_INTERFACE_FUNCTION(zx_deadline_after);

@@ -42,6 +42,8 @@ typedef uint64_t zx_duration_t;
 #define ZX_USEC(n) ((zx_duration_t)(1000ULL * (n)))
 #define ZX_MSEC(n) ((zx_duration_t)(1000000ULL * (n)))
 #define ZX_SEC(n)  ((zx_duration_t)(1000000000ULL * (n)))
+#define ZX_MIN(n)  (ZX_SEC(n) * 60ULL)
+#define ZX_HOUR(n) (ZX_MIN(n) * 60ULL)
 
 typedef uint32_t zx_signals_t;
 

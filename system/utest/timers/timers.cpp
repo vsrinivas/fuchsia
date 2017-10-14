@@ -13,6 +13,21 @@
 #include <unistd.h>
 #include <unittest/unittest.h>
 
+static bool deadline_test() {
+    BEGIN_TEST;
+    auto then = zx_time_get(ZX_CLOCK_MONOTONIC);
+    // The day we manage to boot and run this test in less than 1uS we need to fix this.
+    ASSERT_GT(then, 1000u);
+
+    auto one_hour_later = zx_deadline_after(ZX_HOUR(1));
+    EXPECT_LT(then, one_hour_later);
+
+    uint64_t too_big = UINT64_MAX - 100u;
+    auto clamped = zx_deadline_after(too_big);
+    EXPECT_EQ(clamped, ZX_TIME_INFINITE);
+    END_TEST;
+}
+
 static bool basic_test() {
     BEGIN_TEST;
     zx::timer timer;
@@ -171,6 +186,7 @@ static bool coalesce_test_late() {
 }
 
 BEGIN_TEST_CASE(timers_test)
+RUN_TEST(deadline_test)
 RUN_TEST(invalid_calls)
 RUN_TEST(basic_test)
 // Disabled: RUN_TEST(coalesce_test_late)
