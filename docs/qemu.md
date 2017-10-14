@@ -35,7 +35,7 @@ brew install pkg-config glib automake libtool
 cd $SRC
 git clone --recursive https://fuchsia.googlesource.com/third_party/qemu
 cd qemu
-./configure --target-list=arm-softmmu,aarch64-softmmu,x86_64-softmmu
+./configure --target-list=aarch64-softmmu,x86_64-softmmu
 make -j32
 sudo make install
 ```
