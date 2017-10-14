@@ -5,7 +5,7 @@
 #pragma once
 
 #include "lib/fxl/time/time_point.h"
-#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
 #include <functional>
 #include <limits>
@@ -13,12 +13,11 @@
 
 namespace maxwell {
 
-using RankingFunction = std::function<int64_t(const SuggestionPrototype*)>;
+// A ranking function sets properties on a |RankedSuggestion| based on the
+// |SuggestionPrototype| within the |RankedSuggestion|.
+using RankingFunction = std::function<void(RankedSuggestion*)>;
 
 constexpr int64_t kMaxRank = std::numeric_limits<int64_t>::max();
-
-int64_t RankBySubstring(std::string text, const std::string& query);
-int64_t GetDefaultRank(const SuggestionPrototype* prototype);
 
 namespace ranking {
 

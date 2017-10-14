@@ -8,9 +8,13 @@
 
 namespace maxwell {
 
+// |rank| and |adjusted_confidence| should satisfy the invariant that for any
+// sorted set of ranked suggestions, |rank| is increasing and
+// |adjusted_confidence| is nonincreasing.
 struct RankedSuggestion {
   SuggestionPrototype* prototype;
   float rank;
+  float adjusted_confidence;
 };
 
 }  // namespace maxwell

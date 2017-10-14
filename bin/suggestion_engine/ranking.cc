@@ -6,7 +6,14 @@
 
 namespace maxwell {
 
-int64_t RankBySubstring(std::string text, const std::string& query) {
+namespace {
+
+// This is a stand-in for an "agent usefulness" metric for the Kronk agent.
+constexpr float kKronkHandicap = .9f;
+constexpr float kDefaultConfidence = .7f;
+
+// TODO(jwnichols): dead code
+/*int64_t RankBySubstring(std::string text, const std::string& query) {
   std::transform(text.begin(), text.end(), text.begin(), ::tolower);
   auto pos = text.find(query);
   if (pos == std::string::npos)
@@ -16,67 +23,33 @@ int64_t RankBySubstring(std::string text, const std::string& query) {
   int overlap = text.size() - query.size();
   // minor: match position
   return static_cast<int64_t>(overlap + static_cast<float>(pos) / text.size());
-}
+}*/
 
-int64_t GetDefaultRank(const SuggestionPrototype* prototype) {
+void DefaultRank(RankedSuggestion* to_rank) {
+  to_rank->adjusted_confidence = to_rank->prototype->proposal->confidence;
+
   // TODO(andrewosh): Kronk suggestions are downranked for now (low quality).
-  if (prototype->source_url.find("kronk") != std::string::npos)
-    return kMaxRank;
-  return kMaxRank - prototype->timestamp.ToEpochDelta().ToNanoseconds();
+  if (to_rank->prototype->source_url.find("kronk") != std::string::npos) {
+    to_rank->adjusted_confidence *= kKronkHandicap;
+  } else if (to_rank->adjusted_confidence == 0) {
+    // no hint given
+    to_rank->adjusted_confidence = kDefaultConfidence;
+  }
+
+  to_rank->rank = (1 - to_rank->adjusted_confidence) * kMaxRank;
 }
 
-// TODO(andrewosh): Ross' comment copied from AskChannel.h
-//
-// Ranks a suggestion prototype. If the suggestion should be included, a //
-// meaningful rank is returned. Otherwise, |kExcludeRank| (see *.cc) is
-// returned.
-//
-// Note that these ranks may not be the ones ultimately published to
-// subscribers since ambiguous (equal) ranks for an equidistant Rank result
-// can lead to nondeterministic UI behavior unless the UI itself implements a
-// disambiguator.
-//
-// TODO(rosswang): This is not the case yet; these ranks may be ambiguous.
-// Rather than have complex logic to deal with this at all layers, let's
-// revise the interface to side-step this issue.
+}  // namespace
+
 namespace ranking {
 
-// Ranks based on substring. More complete substrings are ranked better (lower),
-// with a secondary rank preferring shorter prefixes.
-//
-// If a Suggestion is not relevant for a given Ask query (its RankBySubstring
-// is kMaxRank, the highest possible rank), then it's instead ranked by
-// timestamp.
-//
-// Since timestamps are much larger than substring ranks, these irrelevant
-// suggestions are effectively ranked as a separate partition, after relevant
-// suggestions.
-//
-// TODO(rosswang): Allow intersections and more generally edit distance with
-// substring discounting.
+// TODO(rosswang): use the default ranking for now
 RankingFunction GetAskRankingFunction(const std::string& query) {
-  return [query = std::move(query)](
-             const SuggestionPrototype* prototype) -> int64_t {
-    if (query.empty()) {
-      return GetDefaultRank(prototype);
-    }
-
-    const auto& display = prototype->proposal->display;
-    const int64_t substring_rank =
-        std::min(RankBySubstring(display->headline, query),
-                 std::min(RankBySubstring(display->subheadline, query),
-                          RankBySubstring(display->details, query)));
-    if (substring_rank == kMaxRank) {
-      return GetDefaultRank(prototype);
-    }
-    return substring_rank;
-  };
+  return DefaultRank;
 }
 
 RankingFunction GetNextRankingFunction() {
-  return [](const SuggestionPrototype* prototype) -> int64_t {
-    return GetDefaultRank(prototype);
-  };
+  return DefaultRank;
 }
 
 };  // namespace ranking

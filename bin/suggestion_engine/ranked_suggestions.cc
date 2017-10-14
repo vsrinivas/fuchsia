@@ -44,17 +44,16 @@ void RankedSuggestions::UpdateRankingFunction(
     RankingFunction ranking_function) {
   ranking_function_ = ranking_function;
   for (auto& suggestion : suggestions_) {
-    suggestion->rank = ranking_function(suggestion->prototype);
+    ranking_function(suggestion.get());
   }
   DoStableSort();
 }
 
 void RankedSuggestions::AddSuggestion(SuggestionPrototype* prototype) {
-  const int64_t rank = ranking_function_(prototype);
   std::unique_ptr<RankedSuggestion> ranked_suggestion =
       std::make_unique<RankedSuggestion>();
-  ranked_suggestion->rank = rank;
   ranked_suggestion->prototype = prototype;
+  ranking_function_(ranked_suggestion.get());
   suggestions_.push_back(std::move(ranked_suggestion));
   DoStableSort();
   channel_->DispatchInvalidate();
