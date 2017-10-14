@@ -84,7 +84,6 @@ struct pat_sync_task_context {
     volatile int barrier2;
 };
 
-extern void* boot_alloc_mem(size_t len);
 void x86_mmu_mem_type_init(void)
 {
     uint64_t caps = read_msr(X86_MSR_IA32_MTRRCAP);

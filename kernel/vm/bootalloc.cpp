@@ -11,23 +11,40 @@
 #include <sys/types.h>
 #include <trace.h>
 #include <vm/vm.h>
+#include <vm/pmm.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-/* cheezy allocator that chews up space just after the end of the kernel mapping */
+// Simple boot time allocator that starts by allocating physical memory off
+// the end of wherever the kernel is loaded in physical space.
+//
+// Pointers are returned from the Big Kernel Map (BKM) which is placed at the base of
+// kernel memory.
 
-/* track how much memory we've used */
+constexpr paddr_t kernel_address_to_phys(uintptr_t addr) {
+    // apply an offset to get from the address of a kernel symbol to a physical pointer
+#if __x86_64__
+    // kernel is running out of a double mapping of the first part of physical memory at KERNEL_BASE
+    // a simple subtraction of KERNEL_BASE is sufficient
+    addr -= KERNEL_BASE;
+#elif __aarch64__
+    // kernel is already running out of the BKM, so subtract the BKM base off
+    addr -= KERNEL_ASPACE_BASE;
+    addr += MEMBASE;
+#else
+#error what architecture
+#endif
+    return addr;
+}
+
 extern int _end;
 
-uintptr_t boot_alloc_start = (uintptr_t)&_end;
-uintptr_t boot_alloc_end = (uintptr_t)&_end;
+// store the start and current pointer to the boot allocator in physical address
+paddr_t boot_alloc_start = kernel_address_to_phys((uintptr_t)&_end);
+paddr_t boot_alloc_end = kernel_address_to_phys((uintptr_t)&_end);
 
-void boot_alloc_reserve(uintptr_t start, size_t len) {
+void boot_alloc_reserve(paddr_t start, size_t len) {
     uintptr_t end = ALIGN((start + len), PAGE_SIZE);
-
-    // Adjust physical addresses to kernel memory map
-    start += KERNEL_BASE;
-    end += KERNEL_BASE;
 
     if (end >= boot_alloc_start) {
         if ((start > boot_alloc_start) &&
@@ -47,7 +64,7 @@ void* boot_alloc_mem(size_t len) {
     ptr = ALIGN(boot_alloc_end, 8);
     boot_alloc_end = (ptr + ALIGN(len, 8));
 
-    LTRACEF("len %zu, ptr %p\n", len, (void*)ptr);
+    LTRACEF("len %zu, phys ptr %#" PRIxPTR " ptr %p\n", len, ptr, paddr_to_kvaddr(ptr));
 
-    return (void*)ptr;
+    return paddr_to_kvaddr(ptr);
 }

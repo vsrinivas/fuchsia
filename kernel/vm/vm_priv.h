@@ -19,9 +19,9 @@
 
 /* simple boot time allocator */
 extern "C" void* boot_alloc_mem(size_t len) __MALLOC;
-extern "C" void boot_alloc_reserve(uintptr_t phys, size_t len);
-extern uintptr_t boot_alloc_start;
-extern uintptr_t boot_alloc_end;
+extern "C" void boot_alloc_reserve(paddr_t phys, size_t len);
+extern paddr_t boot_alloc_start;
+extern paddr_t boot_alloc_end;
 
 // utility function to test that offset + len is entirely within a range
 // returns false if out of range

@@ -92,7 +92,7 @@ movk \reg, #:abs_g3:\symbol
 .endif
 .endm
 
-.macro calloc_bootmem_aligned, new_ptr, new_ptr_end, tmp, size_shift, phys_offset
+.macro calloc_bootmem_aligned, new_ptr, new_ptr_end, tmp, size_shift
 .if \size_shift < 4
     .error "calloc_bootmem_aligned: Unsupported size_shift, \size_shift"
 .endif
@@ -113,10 +113,6 @@ movk \reg, #:abs_g3:\symbol
     /* add one page and store boot_alloc_end */
     add     \new_ptr_end, \new_ptr, #(1 << \size_shift)
     str     \new_ptr_end, [\tmp, #:lo12:boot_alloc_end]
-
-    /* clear page */
-    sub     \new_ptr, \new_ptr, \phys_offset
-    sub     \new_ptr_end, \new_ptr_end, \phys_offset
 
     /* clear page */
     mov     \tmp, \new_ptr

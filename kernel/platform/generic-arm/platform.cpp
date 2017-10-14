@@ -68,7 +68,7 @@ static bool halt_on_panic = false;
 
 /* initial memory mappings. parsed by start.S */
 const struct mmu_initial_mapping mmu_initial_mappings[] = {
- /* 1GB of sdram space */
+ /* sdram space */
  {
      .phys = MEMBASE,
      .virt = KERNEL_BASE,

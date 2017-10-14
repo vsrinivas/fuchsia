@@ -78,8 +78,10 @@ void* pmm_alloc_kpage(paddr_t* pa, vm_page_t** p);
 
 size_t pmm_free_kpages(void* ptr, size_t count);
 
-// physical to virtual
-void* paddr_to_kvaddr(paddr_t pa);
+// physical to virtual, returning pointer into the big kernel map
+static inline void* paddr_to_kvaddr(paddr_t pa) {
+    return (void *)((uintptr_t)pa + KERNEL_ASPACE_BASE - MEMBASE);
+}
 
 // virtual to physical
 paddr_t vaddr_to_paddr(const void* va);

@@ -30,7 +30,6 @@ index                   .req x11
 index_shift             .req x12
 page_table              .req x13
 new_page_table          .req x14
-phys_offset             .req x15
 
 cpuid                   .req x19
 page_table0             .req x20
@@ -48,16 +47,17 @@ FUNCTION(arm_reset)
     ldr     x10, [x1]
     cmp     x9,x10
     bne     .Lno_efi
-/* We were launched by EFI with x1 containing system table
-     mmu is on, dcache is on, icache is on
-*/
+
+    /* We were launched by EFI with x1 containing system table
+         mmu is on, dcache is on, icache is on
+    */
     adr_global    x2, _start
     push_regs     x29, x30
     bl            efi_boot
     mov           x20, x0
     pop_regs      x29, x30
 
-        /* Turn off Dcache and MMU */
+    /* Turn off Dcache and MMU */
     mrs    x0, CurrentEL
     cmp    x0, #0x04
     b.ne   1f
@@ -266,14 +266,8 @@ FUNCTION(arm_reset)
     ldr     new_page_table, [page_table, index, lsl #3]
     cbnz    new_page_table, .Lmap_range_has_page_table
 
-    /* Calculate phys offset (needed for memory allocation) */
-.Lphys_offset:
-    adr     phys_offset, .Lphys_offset /* phys */
-    movabs  tmp, .Lphys_offset /* virt */
-    sub     phys_offset, tmp, phys_offset
-
     /* Allocate new page table */
-    calloc_bootmem_aligned new_page_table, tmp, tmp2, MMU_KERNEL_PAGE_SIZE_SHIFT, phys_offset
+    calloc_bootmem_aligned new_page_table, tmp, tmp2, MMU_KERNEL_PAGE_SIZE_SHIFT
 
     /* Write page table entry (with allocated page table) */
     orr     new_page_table, new_page_table, #MMU_PTE_L012_DESCRIPTOR_TABLE
@@ -313,14 +307,16 @@ FUNCTION(arm_reset)
     movlit  tmp2, MMU_PTE_IDENT_FLAGS
     add     tmp2, tmp2, tmp, lsl #MMU_IDENT_TOP_SHIFT  /* tmp2 = pt entry */
 
-    str     tmp2, [page_table0, tmp, lsl #3]     /* tt_trampoline[paddr index] = pt entry */
+    str     tmp2, [page_table0, tmp, lsl #3]  /* tt_trampoline[paddr index] = pt entry */
 
+    /* mark page tables as set up, so secondary cpus can fall through */
     adr_global tmp, page_tables_not_ready
     str     wzr, [tmp]
     b       .Lpage_tables_ready
 
 .Lmmu_enable_secondary:
     adr_global tmp, page_tables_not_ready
+    /* trap any secondary cpus until the primary has set up the page tables */
 .Lpage_tables_not_ready:
     ldr     wtmp2, [tmp]
     cbnz    wtmp2, .Lpage_tables_not_ready

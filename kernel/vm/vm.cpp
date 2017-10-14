@@ -122,7 +122,7 @@ void vm_init_preheap(uint level) {
         LTRACEF("marking boot alloc used from %#" PRIxPTR " to %#" PRIxPTR "\n", boot_alloc_start,
                 boot_alloc_end);
 
-        MarkPagesInUse(boot_alloc_start, boot_alloc_end - boot_alloc_start);
+        MarkPagesInUse((vaddr_t)paddr_to_kvaddr(boot_alloc_start), boot_alloc_end - boot_alloc_start);
     }
 
     // Reserve up to 15 pages as a random padding in the kernel physical mapping
@@ -180,12 +180,6 @@ void vm_init_postheap(uint level) {
             .name = "kernel_bss",
             .base = (vaddr_t)&__bss_start,
             .size = ROUNDUP((size_t)&_end - (size_t)&__bss_start, PAGE_SIZE),
-            .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-        },
-        {
-            .name = "kernel_bootalloc",
-            .base = (vaddr_t)boot_alloc_start,
-            .size = ROUNDUP(boot_alloc_end - boot_alloc_start, PAGE_SIZE),
             .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
         },
     };
@@ -264,19 +258,6 @@ void vm_init_postheap(uint level) {
     zx_status_t status = aspace->ReserveSpace("random_padding", random_size, end_first_mapping);
     ASSERT(status == ZX_OK);
     LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
-}
-
-void* paddr_to_kvaddr(paddr_t pa) {
-    // slow path to do reverse lookup
-    const struct mmu_initial_mapping* map = mmu_initial_mappings;
-    while (map->size > 0) {
-        if (!(map->flags & MMU_INITIAL_MAPPING_TEMPORARY) && pa >= map->phys &&
-            pa <= map->phys + map->size - 1) {
-            return (void*)(map->virt + (pa - map->phys));
-        }
-        map++;
-    }
-    return nullptr;
 }
 
 paddr_t vaddr_to_paddr(const void* ptr) {
