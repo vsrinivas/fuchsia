@@ -21,6 +21,7 @@
 #include <hypervisor/input.h>
 #include <hypervisor/io_apic.h>
 #include <hypervisor/io_port.h>
+#include <hypervisor/local_apic.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/tpm.h>
 #include <hypervisor/uart.h>
@@ -261,19 +262,37 @@ int main(int argc, char** argv) {
     // Setup IO APIC.
     IoApic io_apic;
     status = io_apic.Init(&guest);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create IO APIC\n");
         return status;
+    }
 #if __x86_64__
+    // Setup local APIC.
+    LocalApic local_apic(vcpu, apic_addr);
+    status = local_apic.Init(&guest);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create local APIC\n");
+        return status;
+    }
+    status = io_apic.RegisterLocalApic(0, &local_apic);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to register local APIC with IO APIC\n");
+        return status;
+    }
     // Setup IO ports.
     IoPort io_port;
     status = io_port.Init(&guest);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create IO ports\n");
         return status;
+    }
     // Setup TPM
     TpmHandler tpm;
     status = tpm.Init(&guest);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create TPM\n");
         return status;
+    }
 #endif
     // Setup PCI.
     PciBus bus(&guest, &io_apic);
@@ -285,8 +304,10 @@ int main(int argc, char** argv) {
     // Setup UART.
     Uart uart(&io_apic);
     status = uart.Start(&guest);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create UART\n");
         return status;
+    }
 
     // Setup block device.
     VirtioBlock block(physmem_addr, physmem_size);
@@ -329,21 +350,6 @@ int main(int argc, char** argv) {
             return status;
     }
 
-    // TODO: Move APIC initialization into a Vcpu factory method. This
-    // reduces the need for platform switches here.
-    vcpu_ctx_t vcpu_ctx(vcpu
-#if __x86_64__
-        , apic_addr
-#endif
-    );
-    vcpu_ctx.guest = &guest;
-    // Setup Local APIC.
-    status = io_apic.RegisterLocalApic(0, &vcpu_ctx.local_apic);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to register Local APIC with IO APIC\n");
-        return status;
-    }
-
     zx_vcpu_state_t vcpu_state;
     memset(&vcpu_state, 0, sizeof(vcpu_state));
 #if __x86_64__
@@ -355,5 +361,6 @@ int main(int argc, char** argv) {
         return status;
     }
 
+    vcpu_ctx_t vcpu_ctx(vcpu);
     return vcpu_loop(&vcpu_ctx);
 }

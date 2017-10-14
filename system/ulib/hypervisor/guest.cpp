@@ -107,8 +107,6 @@ zx_status_t Guest::IoThread() {
             break;
         }
 
-        IoMapping& mapping = trap_key_to_mapping(packet.key);
-
         uint64_t addr;
         IoValue value;
         switch (packet.type) {
@@ -128,7 +126,7 @@ zx_status_t Guest::IoThread() {
             return ZX_ERR_NOT_SUPPORTED;
         }
 
-        status = mapping.Write(addr, value);
+        status = trap_key_to_mapping(packet.key)->Write(addr, value);
         if (status != ZX_OK) {
             fprintf(stderr, "Unable to handle packet for device %d\n", status);
             break;

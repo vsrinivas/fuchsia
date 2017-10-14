@@ -20,7 +20,7 @@
 
 /* Local APIC memory range. */
 #define LOCAL_APIC_PHYS_BASE            0xfee00000
-#define LOCAL_APIC_PHYS_TOP             (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
+#define LOCAL_APIC_SIZE                 PAGE_SIZE
 
 /* IO APIC memory range. */
 #define IO_APIC_PHYS_BASE               0xfec00000

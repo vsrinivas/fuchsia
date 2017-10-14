@@ -4,23 +4,26 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <fbl/mutex.h>
-#include <hypervisor/decode.h>
-#include <zircon/syscalls/port.h>
+#include <hypervisor/io.h>
 #include <zircon/thread_annotations.h>
 
+class Guest;
+
 /* Stores the local APIC state. */
-class LocalApic {
+class LocalApic : public IoHandler {
 public:
-    /* Local APIC registers are all 128-bit aligned. */
+    // From Intel Volume 3, Section 10.4.1.: All 32-bit registers should be
+    // accessed using 128-bit aligned 32-bit loads or stores. Some processors
+    // may support loads and stores of less than 32 bits to some of the APIC
+    // registers. This is model specific behavior and is not guaranteed to work
+    // on all processors.
     union Register {
         uint32_t data[4];
         uint32_t u32;
     } __PACKED __ALIGNED(16);
 
-    /* Local APIC register map. */
+    // Local APIC register map.
     struct Registers {
         Register reserved1[2];
 
@@ -43,10 +46,13 @@ public:
     } __PACKED;
 
     LocalApic(zx_handle_t vcpu, uintptr_t apic_addr)
-        : vcpu_(vcpu),
-          regs_(reinterpret_cast<Registers*>(apic_addr)) {}
+        : vcpu_(vcpu), registers_(reinterpret_cast<Registers*>(apic_addr)) {}
 
-    zx_status_t Handler(const zx_packet_guest_mem_t* mem, instruction_t* inst);
+    zx_status_t Init(Guest* guest);
+
+    // IoHandler interface.
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
     // Sets the value of the id register.
     void set_id(uint32_t id);
@@ -60,7 +66,7 @@ public:
 private:
     mutable fbl::Mutex mutex_;
     // VCPU associated with this APIC.
-    const zx_handle_t vcpu_ = ZX_HANDLE_INVALID;
+    const zx_handle_t vcpu_;
     // Register accessors.
-    Registers* regs_ TA_GUARDED(mutex_);
+    Registers* registers_ TA_GUARDED(mutex_);
 };

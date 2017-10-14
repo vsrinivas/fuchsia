@@ -9,6 +9,7 @@
 
 #include <hypervisor/address.h>
 #include <hypervisor/io_apic.h>
+#include <hypervisor/local_apic.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <unittest/unittest.h>

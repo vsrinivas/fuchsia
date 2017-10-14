@@ -21,8 +21,8 @@
 zx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off);
 
 /* Convert a key from a port packet into a pointer to the mapping object. */
-static inline IoMapping& trap_key_to_mapping(uint64_t trap_key) {
-    return *reinterpret_cast<IoMapping*>(trap_key);
+static inline IoMapping* trap_key_to_mapping(uint64_t trap_key) {
+    return reinterpret_cast<IoMapping*>(trap_key);
 }
 
 enum class TrapType {

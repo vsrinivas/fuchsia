@@ -8,6 +8,7 @@
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
+#include <hypervisor/local_apic.h>
 #include <hypervisor/vcpu.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

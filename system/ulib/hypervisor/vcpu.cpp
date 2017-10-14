@@ -7,10 +7,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <hypervisor/address.h>
 #include <hypervisor/decode.h>
+#include <hypervisor/io.h>
+#include <hypervisor/guest.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
+#include <zircon/syscalls/port.h>
 
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT 13u
@@ -24,10 +26,9 @@ static zx_status_t unhandled_mem(const zx_packet_guest_mem_t* mem, const instruc
 
 static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
                                     uint8_t access_size, zx_vcpu_io_t* io) {
-    IoMapping& mapping = trap_key_to_mapping(trap_key);
     IoValue value = {};
     value.access_size = access_size;
-    zx_status_t status = mapping.Read(addr, &value);
+    zx_status_t status = trap_key_to_mapping(trap_key)->Read(addr, &value);
     if (status != ZX_OK)
         return status;
 
@@ -38,11 +39,10 @@ static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_
 
 static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, uint64_t trap_key, zx_vaddr_t addr,
                                      zx_vcpu_io_t* io) {
-    IoMapping& mapping = trap_key_to_mapping(trap_key);
     IoValue value;
     value.access_size = io->access_size;
     value.u32 = io->u32;
-    return mapping.Write(addr, value);
+    return trap_key_to_mapping(trap_key)->Write(addr, value);
 }
 
 static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem,
@@ -123,17 +123,9 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
 #endif // __x86_64__
         fprintf(stderr, "\n");
     } else {
-        switch (mem->addr) {
-        case LOCAL_APIC_PHYS_BASE... LOCAL_APIC_PHYS_TOP:
-            status = vcpu_ctx->local_apic.Handler(mem, &inst);
-            break;
-        default: {
-            status = handle_mmio(vcpu_ctx, mem, trap_key, &inst);
-            if (status == ZX_ERR_NOT_FOUND)
-                status = unhandled_mem(mem, &inst);
-            break;
-        }
-        }
+        status = handle_mmio(vcpu_ctx, mem, trap_key, &inst);
+        if (status == ZX_ERR_NOT_FOUND)
+            status = unhandled_mem(mem, &inst);
     }
 
     if (status != ZX_OK) {
@@ -146,13 +138,11 @@ static zx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t*
 }
 
 static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
-                                uint64_t key) {
+                                uint64_t trap_key) {
 #if __x86_64__
-    IoMapping& mapping = trap_key_to_mapping(key);
     IoValue value = {};
     value.access_size = io->access_size;
-    zx_status_t status = mapping.Read(io->port, &value);
-
+    zx_status_t status = trap_key_to_mapping(trap_key)->Read(io->port, &value);
     if (status != ZX_OK) {
         fprintf(stderr, "Unhandled port in %#x: %d\n", io->port, status);
         return status;
@@ -174,20 +164,20 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
 }
 
 static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
-                                 uint64_t key) {
+                                 uint64_t trap_key) {
 #if __x86_64__
-    IoMapping& mapping = trap_key_to_mapping(key);
     IoValue value;
     value.access_size = io->access_size;
     value.u32 = io->u32;
-    return mapping.Write(io->port, value);
+    return trap_key_to_mapping(trap_key)->Write(io->port, value);
 #else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 
-static zx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io, uint64_t key) {
-    return io->input ? handle_input(vcpu_ctx, io, key) : handle_output(vcpu_ctx, io, key);
+static zx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t* io,
+                             uint64_t trap_key) {
+    return io->input ? handle_input(vcpu_ctx, io, trap_key) : handle_output(vcpu_ctx, io, trap_key);
 }
 
 static zx_status_t vcpu_state_read(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
@@ -200,9 +190,8 @@ static zx_status_t vcpu_state_write(vcpu_ctx_t* vcpu_ctx, uint32_t kind, const v
     return zx_vcpu_write_state(vcpu_ctx->vcpu, kind, buffer, len);
 }
 
-vcpu_ctx::vcpu_ctx(zx_handle_t vcpu_, uintptr_t apic_addr_)
-    : vcpu(vcpu_), read_state(&vcpu_state_read), write_state(vcpu_state_write),
-      local_apic(vcpu_, apic_addr_) {}
+vcpu_ctx::vcpu_ctx(zx_handle_t vcpu_)
+    : vcpu(vcpu_), read_state(&vcpu_state_read), write_state(vcpu_state_write) {}
 
 zx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
     while (true) {

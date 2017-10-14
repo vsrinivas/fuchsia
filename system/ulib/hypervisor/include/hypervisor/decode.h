@@ -68,20 +68,6 @@ DEFINE_INST_WRITE(16);
 DEFINE_INST_WRITE(8);
 #undef DEFINE_INST_WRITE
 
-#define DEFINE_INST_RW(size)                                                                    \
-    static inline zx_status_t inst_rw##size(const instruction_t* inst, uint##size##_t* value) { \
-        if (inst->type == INST_MOV_READ) {                                                      \
-            return inst_read##size(inst, *value);                                               \
-        } else if (inst->type == INST_MOV_WRITE) {                                              \
-            return inst_write##size(inst, value);                                               \
-        } else {                                                                                \
-            return ZX_ERR_NOT_SUPPORTED;                                                        \
-        }                                                                                       \
-    }
-DEFINE_INST_RW(32);
-DEFINE_INST_RW(16);
-#undef DEFINE_INST_RW
-
 #if defined(__x86_64__)
 // Returns the flags that are assigned to the x86 flags register by an
 // 8-bit TEST instruction for the given two operand values.

@@ -46,14 +46,6 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
-    status = guest->gpas_->MapApicPage(APIC_PHYS_BASE, guest->apic_access_page_.PhysicalAddress());
-    if (status != ZX_OK)
-        return status;
-
-    status = guest->traps_.InsertTrap(ZX_GUEST_TRAP_MEM, APIC_PHYS_BASE, PAGE_SIZE, nullptr, 0);
-    if (status != ZX_OK)
-        return status;
-
     // Setup common MSR bitmaps.
     status = guest->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX);
     if (status != ZX_OK)
@@ -93,9 +85,20 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     case ZX_GUEST_TRAP_BELL: {
         if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = gpas_->UnmapRange(addr, len);
-        if (status != ZX_OK)
-            return status;
+        if (addr == APIC_PHYS_BASE) {
+            // Specialise traps for the local APIC, so that we can take
+            // advantage of hardware acceleration where possible.
+            if (len != PAGE_SIZE)
+                return ZX_ERR_INVALID_ARGS;
+            zx_status_t status = gpas_->MapApicPage(APIC_PHYS_BASE,
+                                                    apic_access_page_.PhysicalAddress());
+            if (status != ZX_OK)
+                return status;
+        } else {
+            zx_status_t status = gpas_->UnmapRange(addr, len);
+            if (status != ZX_OK)
+                return status;
+        }
         break;
     }
     case ZX_GUEST_TRAP_IO:

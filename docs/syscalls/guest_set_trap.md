@@ -78,6 +78,12 @@ handle to a port.
 
 *ZX_GUEST_TRAP_BELL* shares the same address space as *ZX_GUEST_TRAP_MEM*.
 
+On x86-64, if *kind* is *ZX_GUEST_TRAP_BELL* or *ZX_GUEST_TRAP_MEM* and *addr*
+is the address of the local APIC, then *len* must be equivalent to the size of a
+page. This is due to a special page being mapped when a trap is requested at the
+address of the local APIC. This allows us to take advantage of hardware
+acceleration when available.
+
 ## SEE ALSO
 
 [guest_create](guest_create.md),
