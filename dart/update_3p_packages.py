@@ -19,23 +19,22 @@ ROOT_PUBSPECS = [
     'dart/pkg/kernel',
     'dart/pkg/telemetry',
     'dart/pkg/typed_mock',
-    'flutter/sky/packages/sky_engine',
     'lib/flutter/examples/flutter_gallery',
     'lib/flutter/packages/flutter',
     'lib/flutter/packages/flutter_test',
     'lib/flutter/packages/flutter_tools',
+    'third_party/flutter/sky/packages/sky_engine',
 ]
 
 # These are the locations of yaml files listing the Dart dependencies of a git
 # project.
 PROJECT_DEPENDENCIES = [
-    'apps/modules/dashboard',
-    'apps/xi',
     'build/dart',
-    'lib/widgets',
     'topaz/app/chat',
+    'topaz/app/dashboard',
+    'topaz/app/xi',
+    'topaz/public/dart',
     'topaz/tools',
-    'third_party/dart-pkg',
 ]
 
 
@@ -49,13 +48,17 @@ def main():
         return 1
     pub_path = os.path.join(paths.FUCHSIA_ROOT, 'dart', 'tools', 'sdks',
                             platform, 'dart-sdk', 'bin', 'pub')
-    importer_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
-                                 'importer', 'importer.py')
+    importer_path = os.path.join(paths.FUCHSIA_ROOT, 'scripts', 'dart',
+                                 'package_importer.py')
+    output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
+                               'pub')
     flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'lib', 'flutter');
 
     args = [importer_path]
     args.append('--pub')
     args.append(pub_path)
+    args.append('--output')
+    args.append(output_path)
     args.append('--pubspecs')
     for root in ROOT_PUBSPECS:
         args.append(os.path.join(paths.FUCHSIA_ROOT, root))
