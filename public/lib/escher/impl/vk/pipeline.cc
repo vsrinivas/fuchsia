@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/vk/pipeline.h"
+#include "lib/escher/impl/vk/pipeline.h"
 
 namespace escher {
 namespace impl {

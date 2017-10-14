@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "escher/base/make.h"
+#include "lib/escher/base/make.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_ptr.h"
 

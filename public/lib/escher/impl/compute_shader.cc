@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/compute_shader.h"
+#include "lib/escher/impl/compute_shader.h"
 
-#include "escher/escher.h"
-#include "escher/impl/command_buffer.h"
-#include "escher/impl/glsl_compiler.h"
-#include "escher/impl/vk/pipeline.h"
-#include "escher/impl/vk/pipeline_spec.h"
-#include "escher/impl/vulkan_utils.h"
-#include "escher/renderer/texture.h"
-#include "escher/vk/buffer.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer.h"
+#include "lib/escher/impl/glsl_compiler.h"
+#include "lib/escher/impl/vk/pipeline.h"
+#include "lib/escher/impl/vk/pipeline_spec.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/texture.h"
+#include "lib/escher/vk/buffer.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
 namespace impl {

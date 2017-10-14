@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/scene/camera.h"
+#include "lib/escher/scene/camera.h"
 
-#include "escher/scene/viewing_volume.h"
-#include "escher/util/debug_print.h"
+#include "lib/escher/scene/viewing_volume.h"
+#include "lib/escher/util/debug_print.h"
 
 #include "lib/fxl/logging.h"
 

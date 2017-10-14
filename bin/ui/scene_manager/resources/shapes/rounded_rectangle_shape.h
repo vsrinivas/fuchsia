@@ -6,8 +6,8 @@
 
 #include "garnet/bin/ui/scene_manager/resources/shapes/planar_shape.h"
 
-#include "escher/forward_declarations.h"
-#include "escher/shape/rounded_rect.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/shape/rounded_rect.h"
 
 namespace scene_manager {
 

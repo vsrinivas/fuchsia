@@ -6,8 +6,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/gpu_mem_slab.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/impl/gpu_mem_slab.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
 

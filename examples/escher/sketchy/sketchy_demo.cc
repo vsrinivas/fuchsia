@@ -4,8 +4,8 @@
 
 #include "garnet/examples/escher/sketchy/sketchy_demo.h"
 
-#include "escher/renderer/paper_renderer.h"
-#include "escher/scene/camera.h"
+#include "lib/escher/renderer/paper_renderer.h"
+#include "lib/escher/scene/camera.h"
 
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 24.f;

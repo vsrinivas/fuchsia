@@ -8,7 +8,7 @@
 #include <queue>
 
 #include <zx/event.h>
-#include "escher/impl/command_buffer_sequencer.h"
+#include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/logging.h"
 

@@ -6,8 +6,8 @@
 
 #include <glm/glm.hpp>
 
-#include "escher/geometry/transform.h"
 #include "gtest/gtest.h"
+#include "lib/escher/geometry/transform.h"
 #include "lib/fxl/logging.h"
 
 namespace {

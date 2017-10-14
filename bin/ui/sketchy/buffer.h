@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include "lib/escher/vk/buffer_factory.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
-#include "escher/vk/buffer_factory.h"
 
 namespace sketchy_service {
 
@@ -20,11 +20,10 @@ enum class BufferType {
 // create the Scenic buffer.
 class Buffer {
  public:
-  static std::unique_ptr<Buffer> New(
-      scenic_lib::Session* session,
-      escher::BufferFactory* factory,
-      BufferType type,
-      vk::DeviceSize capacity);
+  static std::unique_ptr<Buffer> New(scenic_lib::Session* session,
+                                     escher::BufferFactory* factory,
+                                     BufferType type,
+                                     vk::DeviceSize capacity);
 
   Buffer(scenic_lib::Session* session,
          escher::BufferFactory* factory,

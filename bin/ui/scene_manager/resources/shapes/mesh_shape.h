@@ -7,7 +7,7 @@
 #include "garnet/bin/ui/scene_manager/resources/buffer.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/shape.h"
 
-#include "escher/shape/mesh.h"
+#include "lib/escher/shape/mesh.h"
 
 namespace scene_manager {
 

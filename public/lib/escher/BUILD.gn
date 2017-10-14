@@ -28,10 +28,7 @@ if (is_linux) {
 }
 
 config("public_includes") {
-  include_dirs = [
-    "//garnet/public/lib",
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//third_party/glm" ]
 }
 
 config("public_preprocessor_definitions") {

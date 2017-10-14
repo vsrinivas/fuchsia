@@ -6,13 +6,13 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/forward_declarations.h"
-#include "escher/impl/model_data.h"
-#include "escher/impl/model_display_list.h"
-#include "escher/impl/model_display_list_flags.h"
-#include "escher/impl/model_pipeline_spec.h"
-#include "escher/scene/model.h"
-#include "escher/scene/stage.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/impl/model_data.h"
+#include "lib/escher/impl/model_display_list.h"
+#include "lib/escher/impl/model_display_list_flags.h"
+#include "lib/escher/impl/model_pipeline_spec.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/stage.h"
 
 namespace escher {
 namespace impl {

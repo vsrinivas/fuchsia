@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/model_pipeline_cache.h"
+#include "lib/escher/impl/model_pipeline_cache.h"
 
-#include "escher/geometry/types.h"
-#include "escher/impl/mesh_shader_binding.h"
-#include "escher/impl/model_data.h"
-#include "escher/impl/model_pipeline.h"
-#include "escher/impl/vulkan_utils.h"
-#include "escher/util/trace_macros.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/impl/mesh_shader_binding.h"
+#include "lib/escher/impl/model_data.h"
+#include "lib/escher/impl/model_pipeline.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/util/trace_macros.h"
 
 namespace escher {
 namespace impl {

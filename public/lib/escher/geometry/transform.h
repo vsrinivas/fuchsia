@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/geometry/types.h"
-#include "escher/util/debug_print.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/util/debug_print.h"
 
 namespace escher {
 

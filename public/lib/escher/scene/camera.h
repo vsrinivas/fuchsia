@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/geometry/types.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/geometry/types.h"
 
 namespace escher {
 

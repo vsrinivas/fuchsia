@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/vk/gpu_mem.h"
-#include "escher/impl/gpu_mem_slab.h"
-#include "escher/vk/gpu_allocator.h"
-#include "escher/vk/naive_gpu_allocator.h"
+#include "lib/escher/vk/gpu_mem.h"
+#include "lib/escher/impl/gpu_mem_slab.h"
+#include "lib/escher/vk/gpu_allocator.h"
+#include "lib/escher/vk/naive_gpu_allocator.h"
 
 #include "gtest/gtest.h"
 

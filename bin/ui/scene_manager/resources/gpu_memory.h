@@ -8,7 +8,7 @@
 
 #include "garnet/bin/ui/scene_manager/resources/memory.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace scene_manager {
 

@@ -6,12 +6,12 @@
 
 #include <trace/event.h>
 
-#include "escher/impl/image_cache.h"
-#include "escher/renderer/image.h"
-#include "escher/renderer/paper_renderer.h"
-#include "escher/renderer/semaphore_wait.h"
-#include "escher/scene/model.h"
-#include "escher/scene/stage.h"
+#include "lib/escher/impl/image_cache.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/renderer/paper_renderer.h"
+#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/stage.h"
 
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/engine/swapchain.h"
@@ -152,13 +152,11 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
   escher::Model overlay_model(std::move(layer_objects));
 
   swapchain_->DrawAndPresentFrame(
-      frame_timings,
-      [
-        this, escher_renderer, layer = drawable_layers[0],
-        overlay = &overlay_model
-      ](const escher::ImagePtr& output_image,
-        const escher::SemaphorePtr& acquire_semaphore,
-        const escher::SemaphorePtr& frame_done_semaphore) {
+      frame_timings, [this, escher_renderer, layer = drawable_layers[0],
+                      overlay = &overlay_model](
+                         const escher::ImagePtr& output_image,
+                         const escher::SemaphorePtr& acquire_semaphore,
+                         const escher::SemaphorePtr& frame_done_semaphore) {
         output_image->SetWaitSemaphore(acquire_semaphore);
         DrawLayer(escher_renderer, layer, output_image, frame_done_semaphore,
                   overlay);

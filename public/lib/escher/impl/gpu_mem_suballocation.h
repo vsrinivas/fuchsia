@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace escher {
 namespace impl {

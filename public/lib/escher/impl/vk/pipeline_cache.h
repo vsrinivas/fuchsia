@@ -7,8 +7,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "escher/impl/vk/pipeline.h"
-#include "escher/impl/vk/pipeline_factory.h"
+#include "lib/escher/impl/vk/pipeline.h"
+#include "lib/escher/impl/vk/pipeline_factory.h"
 
 namespace escher {
 namespace impl {

@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "escher/shape/mesh.h"
+#include "lib/escher/shape/mesh.h"
 #include "sketchy/stroke_segment.h"
 
 namespace sketchy {

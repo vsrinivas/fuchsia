@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/base/typed_reffable.h"
-#include "escher/base/type_info.h"
+#include "lib/escher/base/typed_reffable.h"
+#include "lib/escher/base/type_info.h"
 
 #include "gtest/gtest.h"
 #include "lib/fxl/memory/ref_ptr.h"

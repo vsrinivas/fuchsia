@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/mesh_manager.h"
+#include "lib/escher/impl/mesh_manager.h"
 
 #include <iterator>
 
-#include "escher/geometry/types.h"
-#include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/vulkan_utils.h"
-#include "escher/resources/resource_recycler.h"
-#include "escher/vk/buffer.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/buffer.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
 namespace impl {

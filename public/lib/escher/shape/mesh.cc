@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/shape/mesh.h"
-#include "escher/resources/resource_recycler.h"
-#include "escher/vk/buffer.h"
+#include "lib/escher/shape/mesh.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/buffer.h"
 
 namespace escher {
 

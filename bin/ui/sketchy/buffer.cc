@@ -3,22 +3,22 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/buffer.h"
-#include "escher/escher.h"
-#include "escher/impl/command_buffer_pool.h"
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace {
 
 const vk::BufferUsageFlags kVertexBufferUsageFlags =
     vk::BufferUsageFlagBits::eVertexBuffer |
-        vk::BufferUsageFlagBits::eStorageBuffer |
-        vk::BufferUsageFlagBits::eTransferSrc |
-        vk::BufferUsageFlagBits::eTransferDst;
+    vk::BufferUsageFlagBits::eStorageBuffer |
+    vk::BufferUsageFlagBits::eTransferSrc |
+    vk::BufferUsageFlagBits::eTransferDst;
 
 const vk::BufferUsageFlags kIndexBufferUsageFlags =
     vk::BufferUsageFlagBits::eIndexBuffer |
-        vk::BufferUsageFlagBits::eTransferSrc |
-        vk::BufferUsageFlagBits::eTransferDst;
+    vk::BufferUsageFlagBits::eTransferSrc |
+    vk::BufferUsageFlagBits::eTransferDst;
 
 const vk::MemoryPropertyFlags kMemoryPropertyFlags =
     vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -42,12 +42,10 @@ std::unique_ptr<Buffer> Buffer::New(scenic_lib::Session* session,
                                     escher::BufferFactory* factory,
                                     BufferType type,
                                     vk::DeviceSize capacity) {
-  return std::make_unique<Buffer>(
-      session,
-      factory,
-      capacity,
-      type == BufferType::kVertex ?
-          kVertexBufferUsageFlags : kIndexBufferUsageFlags);
+  return std::make_unique<Buffer>(session, factory, capacity,
+                                  type == BufferType::kVertex
+                                      ? kVertexBufferUsageFlags
+                                      : kIndexBufferUsageFlags);
 }
 
 Buffer::Buffer(scenic_lib::Session* session,
@@ -73,8 +71,8 @@ void Buffer::Merge(escher::impl::CommandBuffer* command,
   // If there was not enough capacity, a new buffer must be allocated, and the
   // previously-existing data must be copied into it.
   if (new_capacity > capacity()) {
-    auto expanded_escher_buffer = factory->NewBuffer(
-        new_capacity, flags_, kMemoryPropertyFlags);
+    auto expanded_escher_buffer =
+        factory->NewBuffer(new_capacity, flags_, kMemoryPropertyFlags);
     command->CopyBuffer(escher_buffer_, expanded_escher_buffer, {0, 0, size_});
 
     escher_buffer_ = std::move(expanded_escher_buffer);

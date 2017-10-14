@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/util/debug_print.h"
+#include "lib/escher/util/debug_print.h"
 
 // These should only be called by operator<<, so it's safe to elide them.
 #if !defined(NDEBUG)
 
-#include "escher/geometry/bounding_box.h"
-#include "escher/geometry/transform.h"
-#include "escher/impl/model_pipeline_spec.h"
-#include "escher/renderer/image.h"
-#include "escher/scene/camera.h"
-#include "escher/scene/viewing_volume.h"
+#include "lib/escher/geometry/bounding_box.h"
+#include "lib/escher/geometry/transform.h"
+#include "lib/escher/impl/model_pipeline_spec.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/scene/camera.h"
+#include "lib/escher/scene/viewing_volume.h"
 
 namespace escher {
 

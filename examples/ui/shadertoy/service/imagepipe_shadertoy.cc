@@ -4,11 +4,11 @@
 
 #include "garnet/examples/ui/shadertoy/service/imagepipe_shadertoy.h"
 
-#include "escher/renderer/framebuffer.h"
-#include "escher/renderer/image.h"
-#include "escher/renderer/simple_image_factory.h"
 #include "garnet/examples/ui/shadertoy/service/escher_utils.h"
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
+#include "lib/escher/renderer/framebuffer.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/renderer/simple_image_factory.h"
 
 namespace {
 // TODO: Copied this constant from mozart/src/scene_manager/sync/fence.h.
@@ -145,7 +145,7 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
 
   // Present the image and request another frame.
   auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
-      scenic::PresentationInfoPtr info) {
+                                    scenic::PresentationInfoPtr info) {
     // Need this cast in order to call protected member of superclass.
     if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
       self->OnFramePresented(info);

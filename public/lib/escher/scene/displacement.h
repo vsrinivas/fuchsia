@@ -6,8 +6,8 @@
 
 #include <math.h>
 
-#include "escher/geometry/types.h"
-#include "escher/scene/binding.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/scene/binding.h"
 
 namespace escher {
 

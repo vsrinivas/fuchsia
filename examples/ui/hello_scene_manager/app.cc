@@ -20,18 +20,18 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "lib/app/cpp/connect.h"
-#include "escher/util/image_utils.h"
+#include "lib/escher/util/image_utils.h"
 
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
+#include "garnet/bin/ui/scene_manager/tests/util.h"
 #include "lib/ui/scenic/client/host_memory.h"
-#include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/scenic/types.h"
 #include "lib/ui/scenic/fidl/ops.fidl.h"
 #include "lib/ui/scenic/fidl/scene_manager.fidl.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"
-#include "garnet/bin/ui/scene_manager/tests/util.h"
+#include "lib/ui/scenic/fidl_helpers.h"
+#include "lib/ui/scenic/types.h"
 
 using namespace mozart;
 using namespace scenic_lib;

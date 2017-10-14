@@ -4,24 +4,24 @@
 
 #include "garnet/examples/escher/waterfall/scenes/ring_tricks1.h"
 
-#include "escher/geometry/tessellation.h"
-#include "escher/geometry/transform.h"
-#include "escher/geometry/types.h"
-#include "escher/material/material.h"
-#include "escher/renderer/image.h"
-#include "escher/scene/model.h"
-#include "escher/scene/stage.h"
-#include "escher/shape/modifier_wobble.h"
-#include "escher/util/stopwatch.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/geometry/tessellation.h"
+#include "lib/escher/geometry/transform.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/material/material.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/stage.h"
+#include "lib/escher/shape/modifier_wobble.h"
+#include "lib/escher/util/stopwatch.h"
+#include "lib/escher/vk/vulkan_context.h"
 
-using escher::vec2;
-using escher::vec3;
 using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
 using escher::Transform;
+using escher::vec2;
+using escher::vec3;
 
 RingTricks1::RingTricks1(Demo* demo) : Scene(demo) {}
 

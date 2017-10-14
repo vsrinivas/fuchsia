@@ -6,9 +6,9 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/gpu_uploader.h"
-#include "escher/renderer/image.h"
-#include "escher/renderer/image_factory.h"
+#include "lib/escher/impl/gpu_uploader.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/renderer/image_factory.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {

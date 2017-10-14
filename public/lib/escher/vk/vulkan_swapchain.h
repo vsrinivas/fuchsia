@@ -7,8 +7,8 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/forward_declarations.h"
-#include "escher/renderer/image.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/renderer/image.h"
 
 namespace escher {
 

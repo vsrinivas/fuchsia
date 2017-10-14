@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/scene/viewing_volume.h"
+#include "lib/escher/scene/viewing_volume.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <utility>

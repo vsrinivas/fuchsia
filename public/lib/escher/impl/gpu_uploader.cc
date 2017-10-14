@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/gpu_uploader.h"
+#include "lib/escher/impl/gpu_uploader.h"
 
 #include <algorithm>
 
-#include "escher/escher.h"
-#include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/escher_impl.h"
-#include "escher/impl/vulkan_utils.h"
-#include "escher/renderer/image.h"
-#include "escher/resources/resource_recycler.h"
-#include "escher/vk/gpu_allocator.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/impl/escher_impl.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/gpu_allocator.h"
 
 namespace escher {
 namespace impl {

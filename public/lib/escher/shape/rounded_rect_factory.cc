@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/shape/rounded_rect_factory.h"
+#include "lib/escher/shape/rounded_rect_factory.h"
 
-#include "escher/escher.h"
-#include "escher/impl/gpu_uploader.h"
-#include "escher/shape/mesh.h"
-#include "escher/shape/mesh_spec.h"
-#include "escher/vk/buffer_factory.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/gpu_uploader.h"
+#include "lib/escher/shape/mesh.h"
+#include "lib/escher/shape/mesh_spec.h"
+#include "lib/escher/vk/buffer_factory.h"
 
 namespace escher {
 

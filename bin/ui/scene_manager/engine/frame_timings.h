@@ -7,7 +7,7 @@
 #include <zx/time.h>
 #include <vector>
 
-#include "escher/base/reffable.h"
+#include "lib/escher/base/reffable.h"
 
 namespace scene_manager {
 

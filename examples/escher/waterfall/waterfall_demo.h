@@ -11,14 +11,14 @@
 #include "garnet/examples/escher/common/demo.h"
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
 
-#include "escher/escher.h"
+#include "lib/escher/escher.h"
 
-#include "escher/geometry/types.h"
-#include "escher/material/color_utils.h"
-#include "escher/renderer/paper_renderer.h"
-#include "escher/scene/stage.h"
-#include "escher/util/stopwatch.h"
-#include "escher/vk/vulkan_swapchain_helper.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/material/color_utils.h"
+#include "lib/escher/renderer/paper_renderer.h"
+#include "lib/escher/scene/stage.h"
+#include "lib/escher/util/stopwatch.h"
+#include "lib/escher/vk/vulkan_swapchain_helper.h"
 #include "lib/fxl/logging.h"
 
 class WaterfallDemo : public Demo {

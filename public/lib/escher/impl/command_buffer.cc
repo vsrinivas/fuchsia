@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/command_buffer.h"
-#include "escher/impl/descriptor_set_pool.h"
-#include "escher/impl/mesh_shader_binding.h"
-#include "escher/renderer/framebuffer.h"
-#include "escher/renderer/image.h"
-#include "escher/shape/mesh.h"
-#include "escher/util/trace_macros.h"
-#include "escher/vk/buffer.h"
+#include "lib/escher/impl/command_buffer.h"
+#include "lib/escher/impl/descriptor_set_pool.h"
+#include "lib/escher/impl/mesh_shader_binding.h"
+#include "lib/escher/renderer/framebuffer.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/shape/mesh.h"
+#include "lib/escher/util/trace_macros.h"
+#include "lib/escher/vk/buffer.h"
 
 #include "lib/fxl/macros.h"
 

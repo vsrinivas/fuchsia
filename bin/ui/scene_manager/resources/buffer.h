@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
-#include "escher/vk/buffer.h"
+#include "lib/escher/vk/buffer.h"
 
 namespace scene_manager {
 

@@ -13,7 +13,7 @@
 #include "garnet/examples/escher/waterfall/scenes/uber_scene3.h"
 #include "garnet/examples/escher/waterfall/scenes/wobbly_ocean_scene.h"
 #include "garnet/examples/escher/waterfall/scenes/wobbly_rings_scene.h"
-#include "escher/scene/camera.h"
+#include "lib/escher/scene/camera.h"
 
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 100.f;
@@ -191,10 +191,12 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
   switch (camera_projection_mode) {
     case 0:
       return escher::Camera::NewOrtho(volume);
+
     case 1:
       return escher::Camera::NewPerspective(
-          volume, glm::translate(
-                      vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
+          volume,
+          glm::translate(
+              vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
           glm::radians(8.f));
     case 2: {
       vec3 eye(volume.width() / 3, 6000, 3000);

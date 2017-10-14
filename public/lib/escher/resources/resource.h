@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "escher/base/ownable.h"
-#include "escher/base/owner.h"
-#include "escher/forward_declarations.h"
-#include "escher/resources/resource_type_info.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/base/ownable.h"
+#include "lib/escher/base/owner.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/resources/resource_type_info.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
 

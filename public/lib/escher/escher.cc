@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/escher.h"
-#include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/escher_impl.h"
-#include "escher/impl/glsl_compiler.h"
-#include "escher/impl/image_cache.h"
-#include "escher/impl/mesh_manager.h"
-#include "escher/renderer/paper_renderer.h"
-#include "escher/renderer/texture.h"
-#include "escher/resources/resource_recycler.h"
-#include "escher/util/image_utils.h"
-#include "escher/vk/gpu_allocator.h"
-#include "escher/vk/naive_gpu_allocator.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/impl/escher_impl.h"
+#include "lib/escher/impl/glsl_compiler.h"
+#include "lib/escher/impl/image_cache.h"
+#include "lib/escher/impl/mesh_manager.h"
+#include "lib/escher/renderer/paper_renderer.h"
+#include "lib/escher/renderer/texture.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/util/image_utils.h"
+#include "lib/escher/vk/gpu_allocator.h"
+#include "lib/escher/vk/naive_gpu_allocator.h"
 
 namespace escher {
 

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/scene_manager/util/escher_utils.h"
 
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace scene_manager {
 

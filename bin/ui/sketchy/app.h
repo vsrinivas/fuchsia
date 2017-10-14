@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "escher/escher.h"
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/escher/escher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/ui/fun/sketchy/fidl/canvas.fidl-common.h"

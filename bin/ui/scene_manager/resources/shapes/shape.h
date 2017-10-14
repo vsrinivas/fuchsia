@@ -5,8 +5,8 @@
 #pragma once
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "escher/geometry/types.h"
-#include "escher/scene/object.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/scene/object.h"
 
 namespace scene_manager {
 

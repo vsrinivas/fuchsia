@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/shadertoy/service/escher_utils.h"
 
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace shadertoy {
 

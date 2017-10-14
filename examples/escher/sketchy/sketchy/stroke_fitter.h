@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "escher/escher.h"
+#include "lib/escher/escher.h"
 #include "sketchy/page.h"
 #include "sketchy/stroke.h"
 

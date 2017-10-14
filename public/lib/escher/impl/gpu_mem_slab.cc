@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/gpu_mem_slab.h"
+#include "lib/escher/impl/gpu_mem_slab.h"
 
-#include "escher/impl/vulkan_utils.h"
-#include "escher/vk/gpu_allocator.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/vk/gpu_allocator.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

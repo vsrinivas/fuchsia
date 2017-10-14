@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/base/ownable.h"
+#include "lib/escher/base/ownable.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {

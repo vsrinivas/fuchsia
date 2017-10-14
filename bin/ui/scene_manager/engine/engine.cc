@@ -14,7 +14,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/compositor.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
-#include "escher/renderer/paper_renderer.h"
+#include "lib/escher/renderer/paper_renderer.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace scene_manager {
@@ -128,7 +128,7 @@ void Engine::TearDownSession(SessionId id) {
     // Don't destroy handler immediately, since it may be the one calling
     // TearDownSession().
     fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        fxl::MakeCopyable([handler = std::move(handler)]{}));
+        fxl::MakeCopyable([handler = std::move(handler)] {}));
   }
 }
 

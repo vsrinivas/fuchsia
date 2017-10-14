@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "escher/escher.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/escher/escher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"

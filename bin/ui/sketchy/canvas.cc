@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/command_buffer_pool.h"
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "garnet/bin/ui/sketchy/escher_utils.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
+#include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace sketchy_service {
@@ -35,8 +35,7 @@ void CanvasImpl::Present(uint64_t presentation_time,
   }
   ops_.reset();
 
-  auto command =
-      escher_->command_buffer_pool()->GetCommandBuffer();
+  auto command = escher_->command_buffer_pool()->GetCommandBuffer();
   while (!dirty_stroke_groups_.empty()) {
     const auto& stroke_group = *dirty_stroke_groups_.begin();
     dirty_stroke_groups_.erase(stroke_group);
@@ -92,8 +91,7 @@ bool CanvasImpl::ApplyCreateResourceOp(
 }
 
 bool CanvasImpl::CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke) {
-  return resource_map_.AddResource(
-      id, fxl::MakeRefCounted<Stroke>(escher_));
+  return resource_map_.AddResource(id, fxl::MakeRefCounted<Stroke>(escher_));
 }
 
 bool CanvasImpl::CreateStrokeGroup(

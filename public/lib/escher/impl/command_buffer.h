@@ -7,9 +7,9 @@
 #include <functional>
 #include <vector>
 
-#include "escher/forward_declarations.h"
-#include "escher/renderer/semaphore_wait.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 #include "lib/fxl/macros.h"
 
@@ -76,7 +76,8 @@ class CommandBuffer {
                  vk::ImageCopy* region);
 
   // Copy memory from one buffer to another.
-  void CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
+  void CopyBuffer(const BufferPtr& src,
+                  const BufferPtr& dst,
                   vk::BufferCopy region);
 
   // Transition the image between the two layouts; see section 11.4 of the

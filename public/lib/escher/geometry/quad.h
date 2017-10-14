@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "escher/geometry/types.h"
+#include "lib/escher/geometry/types.h"
 
 namespace escher {
 

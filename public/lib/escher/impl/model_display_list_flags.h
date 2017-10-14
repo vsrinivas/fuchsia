@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/util/debug_print.h"
+#include "lib/escher/util/debug_print.h"
 
 namespace escher {
 namespace impl {

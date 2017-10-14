@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "escher/scene/object.h"
+#include "lib/escher/scene/object.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {

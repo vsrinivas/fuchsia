@@ -6,7 +6,7 @@
 
 #include <future>
 
-#include "escher/impl/vk/pipeline.h"
+#include "lib/escher/impl/vk/pipeline.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {

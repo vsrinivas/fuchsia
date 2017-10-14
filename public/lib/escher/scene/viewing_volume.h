@@ -6,7 +6,7 @@
 
 #include <math.h>
 
-#include "escher/util/debug_print.h"
+#include "lib/escher/util/debug_print.h"
 
 namespace escher {
 

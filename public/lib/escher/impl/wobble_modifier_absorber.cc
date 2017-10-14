@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/wobble_modifier_absorber.h"
-#include "escher/escher.h"
-#include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/escher_impl.h"
-#include "escher/resources/resource_recycler.h"
+#include "lib/escher/impl/wobble_modifier_absorber.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/impl/escher_impl.h"
+#include "lib/escher/resources/resource_recycler.h"
 
 namespace escher {
 namespace impl {
@@ -113,11 +113,9 @@ WobbleModifierAbsorber::WobbleModifierAbsorber(Escher* escher)
       allocator_(escher->gpu_allocator()),
       recycler_(escher->resource_recycler()),
       kernel_(NewKernel()),
-      per_model_uniform_buffer_(
-          NewUniformBuffer(sizeof(ModelData::PerModel))),
-      per_model_uniform_data_(
-          reinterpret_cast<ModelData::PerModel*>(
-              per_model_uniform_buffer_->ptr())) {}
+      per_model_uniform_buffer_(NewUniformBuffer(sizeof(ModelData::PerModel))),
+      per_model_uniform_data_(reinterpret_cast<ModelData::PerModel*>(
+          per_model_uniform_buffer_->ptr())) {}
 
 void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
   // frag_coord_to_uv_multiplier is not used; won't populate.
@@ -140,9 +138,8 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
     // See ModelDisplayListBuilder::PrepareUniformBufferForWriteOfSize().
     auto per_object_uniform_buffer =
         NewUniformBuffer(sizeof(ModelData::PerObject));
-    auto per_object_uniform_data =
-        reinterpret_cast<ModelData::PerObject*>(
-            per_object_uniform_buffer->ptr());
+    auto per_object_uniform_data = reinterpret_cast<ModelData::PerObject*>(
+        per_object_uniform_buffer->ptr());
 
     // For memory transfer.
     CommandBuffer* command_buffer = command_buffer_pool_->GetCommandBuffer();
@@ -150,8 +147,8 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
     command_buffer->KeepAlive(compute_buffer);
 
     vk::BufferCopy region(0, 0, vertex_buffer->size());
-    command_buffer->get().copyBuffer(
-        vertex_buffer->get(), compute_buffer->get(), 1, &region);
+    command_buffer->get().copyBuffer(vertex_buffer->get(),
+                                     compute_buffer->get(), 1, &region);
 
     SemaphorePtr vertex_buffer_ready = vertex_buffer->TakeWaitSemaphore();
     command_buffer->AddWaitSemaphore(vertex_buffer_ready,
@@ -181,8 +178,7 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
     push_constants_[0] = static_cast<uint32_t>(compute_buffer->size());
     kernel_->Dispatch(
         std::vector<TexturePtr>{},
-        std::vector<BufferPtr>{compute_buffer,
-                               per_model_uniform_buffer_,
+        std::vector<BufferPtr>{compute_buffer, per_model_uniform_buffer_,
                                per_object_uniform_buffer},
         command_buffer, group_count, 1, 1, push_constants_.data());
 
@@ -192,14 +188,10 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
     command_buffer->AddSignalSemaphore(absorbed);
 
     MeshPtr original_mesh = object.shape().mesh();
-    MeshPtr modified_mesh =
-        fxl::MakeRefCounted<Mesh>(recycler_,
-                                  original_mesh->spec(),
-                                  original_mesh->bounding_box(),
-                                  original_mesh->num_vertices(),
-                                  original_mesh->num_indices(),
-                                  compute_buffer,
-                                  original_mesh->index_buffer());
+    MeshPtr modified_mesh = fxl::MakeRefCounted<Mesh>(
+        recycler_, original_mesh->spec(), original_mesh->bounding_box(),
+        original_mesh->num_vertices(), original_mesh->num_indices(),
+        compute_buffer, original_mesh->index_buffer());
     object.mutable_shape().set_mesh(modified_mesh);
     modified_mesh->SetWaitSemaphore(absorbed);
     command_buffer->Submit(vulkan_context_.queue, nullptr);
@@ -210,14 +202,11 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
 
 std::unique_ptr<ComputeShader> WobbleModifierAbsorber::NewKernel() {
   return std::make_unique<ComputeShader>(
-      escher_,
-      std::vector<vk::ImageLayout>{},
-      std::vector<vk::DescriptorType>{
-          vk::DescriptorType::eStorageBuffer,
-          vk::DescriptorType::eUniformBuffer,
-          vk::DescriptorType::eUniformBuffer},
-      sizeof(uint32_t) * push_constants_.size(),
-      g_compute_wobble_src);
+      escher_, std::vector<vk::ImageLayout>{},
+      std::vector<vk::DescriptorType>{vk::DescriptorType::eStorageBuffer,
+                                      vk::DescriptorType::eUniformBuffer,
+                                      vk::DescriptorType::eUniformBuffer},
+      sizeof(uint32_t) * push_constants_.size(), g_compute_wobble_src);
 }
 
 BufferPtr WobbleModifierAbsorber::NewUniformBuffer(vk::DeviceSize size) {
@@ -227,7 +216,8 @@ BufferPtr WobbleModifierAbsorber::NewUniformBuffer(vk::DeviceSize size) {
 }
 
 void WobbleModifierAbsorber::ApplyBarrierForUniformBuffer(
-    CommandBuffer *command_buffer, const BufferPtr &buffer_ptr) {
+    CommandBuffer* command_buffer,
+    const BufferPtr& buffer_ptr) {
   vk::BufferMemoryBarrier barrier;
   barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
   barrier.dstAccessMask = vk::AccessFlagBits::eUniformRead;

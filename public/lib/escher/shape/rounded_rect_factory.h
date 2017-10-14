@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/resources/resource_recycler.h"
-#include "escher/shape/rounded_rect.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/shape/rounded_rect.h"
 
 namespace escher {
 

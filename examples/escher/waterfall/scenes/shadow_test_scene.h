@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/scene/model.h"
-#include "escher/scene/viewing_volume.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/viewing_volume.h"
 #include "lib/fxl/macros.h"
 
 class ShadowTestScene {

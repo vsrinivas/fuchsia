@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/renderer/renderer.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/renderer/renderer.h"
 
 namespace escher {
 

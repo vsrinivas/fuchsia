@@ -6,7 +6,7 @@
 
 #include "garnet/bin/ui/scene_manager/engine/swapchain.h"
 
-#include "escher/vk/vulkan_swapchain.h"
+#include "lib/escher/vk/vulkan_swapchain.h"
 
 namespace scene_manager {
 

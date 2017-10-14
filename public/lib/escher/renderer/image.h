@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/renderer/semaphore_wait.h"
-#include "escher/resources/waitable_resource.h"
-#include "escher/util/debug_print.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/resources/waitable_resource.h"
+#include "lib/escher/util/debug_print.h"
 
 namespace escher {
 

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/model_display_list.h"
+#include "lib/escher/impl/model_display_list.h"
 
-#include "escher/renderer/texture.h"
-#include "escher/resources/resource_recycler.h"
+#include "lib/escher/renderer/texture.h"
+#include "lib/escher/resources/resource_recycler.h"
 
 namespace escher {
 namespace impl {

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/scene/shape.h"
+#include "lib/escher/scene/shape.h"
 
 namespace escher {
 

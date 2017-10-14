@@ -7,9 +7,9 @@
 #include <map>
 #include <unordered_set>
 
-#include "escher/escher.h"
-#include "escher/impl/wobble_modifier_absorber.h"
-#include "escher/util/stopwatch.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/wobble_modifier_absorber.h"
+#include "lib/escher/util/stopwatch.h"
 #include "sketchy/stroke.h"
 
 namespace sketchy {

@@ -6,8 +6,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/model_data.h"
-#include "escher/resources/resource.h"
+#include "lib/escher/impl/model_data.h"
+#include "lib/escher/resources/resource.h"
 
 namespace escher {
 namespace impl {

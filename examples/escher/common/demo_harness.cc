@@ -4,11 +4,11 @@
 
 #include "garnet/examples/escher/common/demo_harness.h"
 
-#include "escher/escher_process_init.h"
 #include "garnet/examples/escher/common/demo.h"
-#include "escher/renderer/image.h"
-#include "escher/vk/gpu_mem.h"
-#include "escher/vk/vulkan_instance.h"
+#include "lib/escher/escher_process_init.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/vk/gpu_mem.h"
+#include "lib/escher/vk/vulkan_instance.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_ptr.h"
 

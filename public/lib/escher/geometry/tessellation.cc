@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/geometry/tessellation.h"
+#include "lib/escher/geometry/tessellation.h"
 
 #include <math.h>
 #include <algorithm>
 
-#include "escher/impl/model_data.h"
-#include "escher/shape/mesh_builder.h"
-#include "escher/shape/mesh_builder_factory.h"
+#include "lib/escher/impl/model_data.h"
+#include "lib/escher/shape/mesh_builder.h"
+#include "lib/escher/shape/mesh_builder_factory.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

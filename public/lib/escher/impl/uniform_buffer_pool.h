@@ -7,9 +7,9 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/forward_declarations.h"
-#include "escher/resources/resource_manager.h"
-#include "escher/vk/buffer.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/vk/buffer.h"
 
 namespace escher {
 namespace impl {

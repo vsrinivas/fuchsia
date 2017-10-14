@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/util/image_utils.h"
+#include "lib/escher/util/image_utils.h"
 
 #include <random>
 
-#include "escher/impl/gpu_uploader.h"
-#include "escher/impl/vulkan_utils.h"
-#include "escher/renderer/image_factory.h"
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/impl/gpu_uploader.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/image_factory.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace {
 struct RGBA {

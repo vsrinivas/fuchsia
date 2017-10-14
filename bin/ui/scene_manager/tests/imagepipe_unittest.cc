@@ -2,8 +2,8 @@
 // Use of source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/util/image_utils.h"
 #include "gtest/gtest.h"
+#include "lib/escher/util/image_utils.h"
 
 #include "garnet/bin/ui/scene_manager/resources/image_pipe.h"
 #include "garnet/bin/ui/scene_manager/sync/fence.h"

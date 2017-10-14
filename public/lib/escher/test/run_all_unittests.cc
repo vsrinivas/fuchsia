@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 
-#include "escher/escher_process_init.h"
+#include "lib/escher/escher_process_init.h"
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

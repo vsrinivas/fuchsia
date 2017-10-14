@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/escher.h"
-#include "escher/shape/rounded_rect_factory.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/shape/rounded_rect_factory.h"
 
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
 

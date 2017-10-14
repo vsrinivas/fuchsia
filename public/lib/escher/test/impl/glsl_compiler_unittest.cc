@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/glsl_compiler.h"
+#include "lib/escher/impl/glsl_compiler.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 

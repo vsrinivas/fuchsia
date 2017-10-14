@@ -4,18 +4,18 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
+#include "lib/escher/forward_declarations.h"
 
 // Safely include <glm/glm.hpp> despite Zircon countof() macro.
-#include "escher/geometry/types.h"
+#include "lib/escher/geometry/types.h"
 
 namespace sketchy {
 
-using glm::vec2;
-using glm::vec3;
+using glm::dot;
 using glm::length;
 using glm::normalize;
-using glm::dot;
+using glm::vec2;
+using glm::vec3;
 
 // Compute distance between two points.
 template <typename VecT>

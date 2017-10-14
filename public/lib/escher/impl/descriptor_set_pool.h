@@ -7,8 +7,8 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/resources/resource.h"
-#include "escher/resources/resource_manager.h"
+#include "lib/escher/resources/resource.h"
+#include "lib/escher/resources/resource_manager.h"
 
 namespace escher {
 namespace impl {

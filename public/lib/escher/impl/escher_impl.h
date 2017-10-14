@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/status.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/status.h"
+#include "lib/escher/vk/vulkan_context.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {

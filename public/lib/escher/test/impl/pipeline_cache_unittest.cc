@@ -6,9 +6,9 @@
 #include <queue>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/vk/pipeline_cache.h"
-#include "escher/impl/vk/pipeline_factory.h"
 #include "gtest/gtest.h"
+#include "lib/escher/impl/vk/pipeline_cache.h"
+#include "lib/escher/impl/vk/pipeline_factory.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

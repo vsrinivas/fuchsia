@@ -4,12 +4,12 @@
 
 #include <trace-provider/provider.h>
 
-#include "escher/escher.h"
-#include "escher/escher_process_init.h"
-#include "escher/vk/vulkan_device_queues.h"
-#include "escher/vk/vulkan_instance.h"
 #include "garnet/examples/ui/shadertoy/service/app.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/escher_process_init.h"
+#include "lib/escher/vk/vulkan_device_queues.h"
+#include "lib/escher/vk/vulkan_instance.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 // This is the main() function for the service that implements the

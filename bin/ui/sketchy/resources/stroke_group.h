@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "escher/geometry/bounding_box.h"
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
+#include "lib/escher/geometry/bounding_box.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
 
 namespace sketchy_service {
 

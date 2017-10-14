@@ -6,10 +6,10 @@
 
 #include <trace/event.h>
 
-#include "escher/impl/ssdo_sampler.h"
-#include "escher/renderer/renderer.h"
-#include "escher/scene/model.h"
-#include "escher/scene/stage.h"
+#include "lib/escher/impl/ssdo_sampler.h"
+#include "lib/escher/renderer/renderer.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/stage.h"
 
 #include "garnet/bin/ui/scene_manager/resources/camera.h"
 #include "garnet/bin/ui/scene_manager/resources/dump_visitor.h"

@@ -7,9 +7,9 @@
 #include <memory>
 
 #include "garnet/examples/escher/common/demo.h"
-#include "escher/scene/stage.h"
-#include "escher/util/stopwatch.h"
-#include "escher/vk/vulkan_swapchain_helper.h"
+#include "lib/escher/scene/stage.h"
+#include "lib/escher/util/stopwatch.h"
+#include "lib/escher/vk/vulkan_swapchain_helper.h"
 #include "sketchy/page.h"
 #include "sketchy/stroke_fitter.h"
 

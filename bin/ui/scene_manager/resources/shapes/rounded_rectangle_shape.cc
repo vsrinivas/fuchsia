@@ -4,8 +4,8 @@
 
 #include "garnet/bin/ui/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 
-#include "escher/shape/mesh.h"
-#include "escher/shape/rounded_rect_factory.h"
+#include "lib/escher/shape/mesh.h"
+#include "lib/escher/shape/rounded_rect_factory.h"
 
 namespace scene_manager {
 

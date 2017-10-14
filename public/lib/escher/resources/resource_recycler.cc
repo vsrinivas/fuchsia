@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/resources/resource_recycler.h"
+#include "lib/escher/resources/resource_recycler.h"
 
-#include "escher/escher.h"
-#include "escher/impl/escher_impl.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/escher_impl.h"
 
 namespace escher {
 

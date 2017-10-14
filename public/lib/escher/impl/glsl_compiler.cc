@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/glsl_compiler.h"
+#include "lib/escher/impl/glsl_compiler.h"
 
 #include <string>
 #include <thread>
@@ -13,7 +13,7 @@
 #include "spirv-tools/libspirv.hpp"
 #include "spirv-tools/optimizer.hpp"
 
-#include "escher/util/trace_macros.h"
+#include "lib/escher/util/trace_macros.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

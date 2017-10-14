@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/shape/mesh.h"
+#include "lib/escher/shape/mesh.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {

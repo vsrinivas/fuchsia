@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/scene/shape.h"
+#include "lib/escher/scene/shape.h"
 
-#include "escher/geometry/tessellation.h"
+#include "lib/escher/geometry/tessellation.h"
 
 namespace escher {
 

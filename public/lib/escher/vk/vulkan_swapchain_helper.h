@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/vk/vulkan_swapchain.h"
+#include "lib/escher/vk/vulkan_swapchain.h"
 
 namespace escher {
 

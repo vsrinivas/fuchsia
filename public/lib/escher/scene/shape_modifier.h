@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/util/debug_print.h"
+#include "lib/escher/util/debug_print.h"
 
 namespace escher {
 
@@ -36,10 +36,9 @@ ESCHER_DEBUG_PRINTABLE(ShapeModifiers);
 
 namespace vk {
 
-template<> struct FlagTraits<escher::ShapeModifier> {
-  enum {
-    allFlags = VkFlags(escher::ShapeModifier::kWobble)
-  };
+template <>
+struct FlagTraits<escher::ShapeModifier> {
+  enum { allFlags = VkFlags(escher::ShapeModifier::kWobble) };
 };
 
 }  // namespace vk

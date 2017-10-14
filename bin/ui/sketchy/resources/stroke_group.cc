@@ -6,10 +6,10 @@
 
 #include "lib/ui/scenic/fidl_helpers.h"
 
-#include "escher/escher.h"
-#include "escher/geometry/tessellation.h"
-#include "escher/shape/mesh.h"
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/geometry/tessellation.h"
+#include "lib/escher/shape/mesh.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace {
 
@@ -34,10 +34,14 @@ StrokeGroup::StrokeGroup(scenic_lib::Session* session,
     : shape_node_(session),
       mesh_(session),
       material_(session),
-      vertex_buffer_(Buffer::New(
-          session, buffer_factory, BufferType::kVertex, kInitVertexBufferSize)),
-      index_buffer_(Buffer::New(
-          session, buffer_factory, BufferType::kIndex, kInitIndexBufferSize)),
+      vertex_buffer_(Buffer::New(session,
+                                 buffer_factory,
+                                 BufferType::kVertex,
+                                 kInitVertexBufferSize)),
+      index_buffer_(Buffer::New(session,
+                                buffer_factory,
+                                BufferType::kIndex,
+                                kInitIndexBufferSize)),
       num_vertices_(0),
       num_indices_(0) {
   material_.SetColor(255, 0, 255, 255);
@@ -69,15 +73,12 @@ void StrokeGroup::ApplyChanges(escher::impl::CommandBuffer* command,
   float bb_min_arr[] = {bb_min.x, bb_min.y, bb_min.z};
   float bb_max_arr[] = {bb_max.x, bb_max.y, bb_max.z};
   mesh_.BindBuffers(
-      index_buffer_->scenic_buffer(),
-      kMeshIndexFormat, 0 /* index_offset */, num_indices_,
-      vertex_buffer_->scenic_buffer(),
-      scenic_lib::NewMeshVertexFormat(
-          kMeshVertexPositionType,
-          kMeshVertexNormalType,
-          kMeshVertexTexCoodType),
-      0 /* vertex_offset */, num_vertices_,
-      bb_min_arr, bb_max_arr);
+      index_buffer_->scenic_buffer(), kMeshIndexFormat, 0 /* index_offset */,
+      num_indices_, vertex_buffer_->scenic_buffer(),
+      scenic_lib::NewMeshVertexFormat(kMeshVertexPositionType,
+                                      kMeshVertexNormalType,
+                                      kMeshVertexTexCoodType),
+      0 /* vertex_offset */, num_vertices_, bb_min_arr, bb_max_arr);
 }
 
 }  // namespace sketchy_service

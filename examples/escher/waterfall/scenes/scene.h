@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/escher.h"
 #include "garnet/examples/escher/common/demo.h"
+#include "lib/escher/escher.h"
 
 namespace escher {
 class Stopwatch;

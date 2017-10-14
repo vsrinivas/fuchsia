@@ -7,10 +7,10 @@
 #include <memory>
 #include <unordered_map>
 
-#include "escher/forward_declarations.h"
-#include "escher/impl/glsl_compiler.h"
-#include "escher/impl/model_pipeline_spec.h"
-#include "escher/util/hash.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/impl/glsl_compiler.h"
+#include "lib/escher/impl/model_pipeline_spec.h"
+#include "lib/escher/util/hash.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {

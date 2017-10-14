@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/command_buffer_sequencer.h"
 #include "gtest/gtest.h"
+#include "lib/escher/impl/command_buffer_sequencer.h"
 
 #include "garnet/bin/ui/scene_manager/sync/fence.h"
 #include "garnet/bin/ui/scene_manager/sync/fence_listener.h"

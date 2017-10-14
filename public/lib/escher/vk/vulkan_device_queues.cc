@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/vk/vulkan_device_queues.h"
+#include "lib/escher/vk/vulkan_device_queues.h"
 
 #include <set>
 
-#include "escher/impl/vulkan_utils.h"
+#include "lib/escher/impl/vulkan_utils.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

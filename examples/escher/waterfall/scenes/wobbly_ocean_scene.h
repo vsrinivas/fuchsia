@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/escher.h"
+#include "lib/escher/escher.h"
 
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
 

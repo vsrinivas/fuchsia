@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/renderer/semaphore_wait.h"
-#include "escher/resources/resource.h"
+#include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/resources/resource.h"
 
 namespace escher {
 

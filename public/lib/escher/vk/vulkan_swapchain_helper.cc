@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/vk/vulkan_swapchain_helper.h"
+#include "lib/escher/vk/vulkan_swapchain_helper.h"
 
-#include "escher/impl/vulkan_utils.h"
-#include "escher/renderer/framebuffer.h"
-#include "escher/renderer/paper_renderer.h"
-#include "escher/scene/camera.h"
-#include "escher/scene/stage.h"
-#include "escher/util/trace_macros.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/framebuffer.h"
+#include "lib/escher/renderer/paper_renderer.h"
+#include "lib/escher/scene/camera.h"
+#include "lib/escher/scene/stage.h"
+#include "lib/escher/util/trace_macros.h"
 
 namespace escher {
 

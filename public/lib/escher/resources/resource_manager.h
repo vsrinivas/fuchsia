@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "escher/base/owner.h"
-#include "escher/forward_declarations.h"
-#include "escher/resources/resource.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/base/owner.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/resources/resource.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
 

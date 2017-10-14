@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
+#include "lib/escher/forward_declarations.h"
 
 namespace escher {
 

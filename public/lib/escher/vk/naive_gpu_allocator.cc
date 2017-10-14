@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/vk/naive_gpu_allocator.h"
+#include "lib/escher/vk/naive_gpu_allocator.h"
 
 namespace escher {
 

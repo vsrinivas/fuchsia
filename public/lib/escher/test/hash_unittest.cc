@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/util/hash.h"
-#include "escher/impl/model_pipeline_spec.h"
+#include "lib/escher/util/hash.h"
+#include "lib/escher/impl/model_pipeline_spec.h"
 
 #include "gtest/gtest.h"
 

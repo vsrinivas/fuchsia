@@ -6,10 +6,10 @@
 
 #include <map>
 
-#include "escher/forward_declarations.h"
-#include "escher/geometry/bounding_box.h"
-#include "escher/resources/waitable_resource.h"
-#include "escher/shape/mesh_spec.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/geometry/bounding_box.h"
+#include "lib/escher/resources/waitable_resource.h"
+#include "lib/escher/shape/mesh_spec.h"
 
 namespace escher {
 

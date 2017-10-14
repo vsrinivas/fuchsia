@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/model_display_list_builder.h"
+#include "lib/escher/impl/model_display_list_builder.h"
 
 #include <glm/gtx/transform.hpp>
 
-#include "escher/impl/command_buffer.h"
-#include "escher/impl/model_pipeline_cache.h"
-#include "escher/impl/model_renderer.h"
-#include "escher/scene/camera.h"
-#include "escher/util/align.h"
+#include "lib/escher/impl/command_buffer.h"
+#include "lib/escher/impl/model_pipeline_cache.h"
+#include "lib/escher/impl/model_renderer.h"
+#include "lib/escher/scene/camera.h"
+#include "lib/escher/util/align.h"
 
 namespace escher {
 namespace impl {

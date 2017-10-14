@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/scene/shape.h"
-#include "escher/shape/mesh_spec.h"
+#include "lib/escher/scene/shape.h"
+#include "lib/escher/shape/mesh_spec.h"
 
 namespace escher {
 namespace impl {

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/escher_impl.h"
+#include "lib/escher/impl/escher_impl.h"
 
-#include "escher/escher.h"
-#include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/mesh_manager.h"
-#include "escher/impl/vk/pipeline_cache.h"
-#include "escher/profiling/timestamp_profiler.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/impl/mesh_manager.h"
+#include "lib/escher/impl/vk/pipeline_cache.h"
+#include "lib/escher/profiling/timestamp_profiler.h"
 
 namespace escher {
 namespace impl {

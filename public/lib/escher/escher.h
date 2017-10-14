@@ -6,11 +6,11 @@
 
 #include <memory>
 
-#include "escher/forward_declarations.h"
-#include "escher/shape/mesh_builder_factory.h"
-#include "escher/status.h"
-#include "escher/vk/vulkan_context.h"
-#include "escher/vk/vulkan_device_queues.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/shape/mesh_builder_factory.h"
+#include "lib/escher/status.h"
+#include "lib/escher/vk/vulkan_context.h"
+#include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 

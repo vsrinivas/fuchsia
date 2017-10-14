@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/base/reffable.h"
+#include "lib/escher/base/reffable.h"
 
 namespace escher {
 

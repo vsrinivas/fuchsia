@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
-#include "escher/material/material.h"
+#include "lib/escher/material/material.h"
 
 namespace scene_manager {
 

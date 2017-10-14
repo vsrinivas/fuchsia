@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/shape/mesh_spec.h"
+#include "lib/escher/shape/mesh_spec.h"
 
-#include "escher/geometry/types.h"
+#include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

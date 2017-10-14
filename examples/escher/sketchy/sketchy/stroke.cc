@@ -4,7 +4,7 @@
 
 #include "sketchy/stroke.h"
 
-#include "escher/shape/mesh_builder.h"
+#include "lib/escher/shape/mesh_builder.h"
 #include "sketchy/debug_print.h"
 #include "sketchy/page.h"
 

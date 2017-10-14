@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <iosfwd>
 
-#include "escher/renderer/image.h"
+#include "lib/escher/renderer/image.h"
 
 #include "garnet/bin/ui/scene_manager/resources/resource_visitor.h"
 

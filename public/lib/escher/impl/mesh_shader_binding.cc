@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/mesh_shader_binding.h"
+#include "lib/escher/impl/mesh_shader_binding.h"
 
-#include "escher/impl/mesh_manager.h"
-#include "escher/vk/buffer.h"
+#include "lib/escher/impl/mesh_manager.h"
+#include "lib/escher/vk/buffer.h"
 
 namespace escher {
 namespace impl {

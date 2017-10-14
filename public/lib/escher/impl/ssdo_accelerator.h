@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/forward_declarations.h"
+#include "lib/escher/forward_declarations.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {

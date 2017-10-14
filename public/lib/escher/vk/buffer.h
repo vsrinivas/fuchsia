@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/resources/waitable_resource.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/resources/waitable_resource.h"
 
 namespace escher {
 

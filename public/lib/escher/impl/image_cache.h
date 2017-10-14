@@ -8,12 +8,12 @@
 #include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/forward_declarations.h"
-#include "escher/renderer/image.h"
-#include "escher/renderer/image_factory.h"
-#include "escher/resources/resource_manager.h"
-#include "escher/util/hash.h"
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/renderer/image_factory.h"
+#include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/util/hash.h"
+#include "lib/escher/vk/gpu_mem.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 

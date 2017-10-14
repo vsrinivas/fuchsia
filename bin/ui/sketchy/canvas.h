@@ -6,13 +6,13 @@
 
 #include <unordered_map>
 
-#include "lib/ui/scenic/client/session.h"
-#include "lib/ui/fun/sketchy/fidl/canvas.fidl.h"
 #include "garnet/bin/ui/sketchy/resources/resource_map.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 #include "garnet/bin/ui/sketchy/resources/types.h"
-#include "escher/escher.h"
-#include "escher/vk/buffer_factory.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/vk/buffer_factory.h"
+#include "lib/ui/fun/sketchy/fidl/canvas.fidl.h"
+#include "lib/ui/scenic/client/session.h"
 
 namespace sketchy_service {
 

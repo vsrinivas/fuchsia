@@ -7,7 +7,7 @@
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/resources/gpu_memory.h"
 #include "garnet/bin/ui/scene_manager/resources/host_memory.h"
-#include "escher/util/image_utils.h"
+#include "lib/escher/util/image_utils.h"
 
 namespace scene_manager {
 

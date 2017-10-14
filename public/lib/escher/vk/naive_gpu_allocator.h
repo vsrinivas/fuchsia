@@ -6,9 +6,9 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/vk/gpu_allocator.h"
-#include "escher/vk/gpu_mem.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/vk/gpu_allocator.h"
+#include "lib/escher/vk/gpu_mem.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {
 

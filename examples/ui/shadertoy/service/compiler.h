@@ -11,8 +11,8 @@
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
-#include "escher/escher.h"
-#include "escher/impl/model_data.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/model_data.h"
 
 namespace fsl {
 class MessageLoop;

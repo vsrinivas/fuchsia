@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "escher/renderer/renderer.h"
+#include "lib/escher/renderer/renderer.h"
 
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
-#include "escher/geometry/types.h"
-#include "escher/impl/descriptor_set_pool.h"
-#include "escher/renderer/texture.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/impl/descriptor_set_pool.h"
+#include "lib/escher/renderer/texture.h"
 
 namespace shadertoy {
 

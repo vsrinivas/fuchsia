@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/material/color_utils.h"
+#include "lib/escher/material/color_utils.h"
 
 namespace escher {
 

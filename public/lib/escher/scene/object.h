@@ -6,9 +6,9 @@
 
 #include <unordered_map>
 
-#include "escher/geometry/transform.h"
-#include "escher/material/material.h"
-#include "escher/scene/shape.h"
+#include "lib/escher/geometry/transform.h"
+#include "lib/escher/material/material.h"
+#include "lib/escher/scene/shape.h"
 
 namespace escher {
 

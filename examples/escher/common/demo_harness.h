@@ -7,11 +7,11 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/resources/resource_manager.h"
-#include "escher/vk/vulkan_context.h"
-#include "escher/vk/vulkan_device_queues.h"
-#include "escher/vk/vulkan_instance.h"
-#include "escher/vk/vulkan_swapchain.h"
+#include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/vk/vulkan_context.h"
+#include "lib/escher/vk/vulkan_device_queues.h"
+#include "lib/escher/vk/vulkan_instance.h"
+#include "lib/escher/vk/vulkan_swapchain.h"
 
 class Demo;
 

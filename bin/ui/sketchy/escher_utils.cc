@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/sketchy/escher_utils.h"
 
-#include "escher/vk/gpu_mem.h"
+#include "lib/escher/vk/gpu_mem.h"
 
 namespace sketchy_service {
 
@@ -54,4 +54,4 @@ zx::vmo ExportMemoryAsVMO(escher::Escher* escher,
   return zx::vmo(result.value);
 }
 
-}  // namespace shadertoy
+}  // namespace sketchy_service

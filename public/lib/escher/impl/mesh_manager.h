@@ -11,10 +11,10 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/gpu_uploader.h"
-#include "escher/shape/mesh_builder.h"
-#include "escher/shape/mesh_builder_factory.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/impl/gpu_uploader.h"
+#include "lib/escher/shape/mesh_builder.h"
+#include "lib/escher/shape/mesh_builder_factory.h"
+#include "lib/escher/vk/vulkan_context.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace escher {

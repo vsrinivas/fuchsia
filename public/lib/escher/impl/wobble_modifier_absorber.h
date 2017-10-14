@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/impl/compute_shader.h"
-#include "escher/impl/model_data.h"
-#include "escher/scene/model.h"
-#include "escher/scene/object.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/impl/compute_shader.h"
+#include "lib/escher/impl/model_data.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/object.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {

@@ -6,11 +6,11 @@
 
 #include <algorithm>
 
-#include "escher/material/color_utils.h"
-#include "escher/scene/model.h"
-#include "escher/scene/object.h"
-#include "escher/scene/stage.h"
-#include "escher/shape/modifier_wobble.h"
+#include "lib/escher/material/color_utils.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/object.h"
+#include "lib/escher/scene/stage.h"
+#include "lib/escher/shape/modifier_wobble.h"
 #include "sketchy/stroke.h"
 
 namespace sketchy {

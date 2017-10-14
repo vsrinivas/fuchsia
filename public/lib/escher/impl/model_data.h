@@ -8,10 +8,10 @@
 #include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/geometry/types.h"
-#include "escher/impl/descriptor_set_pool.h"
-#include "escher/impl/uniform_buffer_pool.h"
-#include "escher/shape/modifier_wobble.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/impl/descriptor_set_pool.h"
+#include "lib/escher/impl/uniform_buffer_pool.h"
+#include "lib/escher/shape/modifier_wobble.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {

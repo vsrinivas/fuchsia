@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/model_pipeline_spec.h"
+#include "lib/escher/impl/model_pipeline_spec.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {

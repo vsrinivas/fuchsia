@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/resources/resource_manager.h"
+#include "lib/escher/resources/resource_manager.h"
 
-#include "escher/escher.h"
+#include "lib/escher/escher.h"
 
 namespace escher {
 

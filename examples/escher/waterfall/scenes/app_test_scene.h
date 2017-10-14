@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "escher/gl/mesh.h"
-#include "escher/scene/model.h"
-#include "escher/scene/viewing_volume.h"
+#include "lib/escher/gl/mesh.h"
+#include "lib/escher/scene/model.h"
+#include "lib/escher/scene/viewing_volume.h"
 #include "lib/fxl/macros.h"
 
 class AppTestScene {

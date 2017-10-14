@@ -5,15 +5,15 @@
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
-#include "escher/geometry/tessellation.h"
-#include "escher/impl/command_buffer.h"
-#include "escher/impl/escher_impl.h"
-#include "escher/impl/mesh_manager.h"
-#include "escher/renderer/framebuffer.h"
-#include "escher/renderer/image.h"
-#include "escher/renderer/simple_image_factory.h"
-#include "escher/renderer/texture.h"
-#include "escher/util/image_utils.h"
+#include "lib/escher/geometry/tessellation.h"
+#include "lib/escher/impl/command_buffer.h"
+#include "lib/escher/impl/escher_impl.h"
+#include "lib/escher/impl/mesh_manager.h"
+#include "lib/escher/renderer/framebuffer.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/renderer/simple_image_factory.h"
+#include "lib/escher/renderer/texture.h"
+#include "lib/escher/util/image_utils.h"
 
 using escher::Escher;
 

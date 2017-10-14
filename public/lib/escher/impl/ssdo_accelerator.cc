@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/ssdo_accelerator.h"
+#include "lib/escher/impl/ssdo_accelerator.h"
 
-#include "escher/escher.h"
-#include "escher/impl/command_buffer.h"
-#include "escher/impl/compute_shader.h"
-#include "escher/renderer/image.h"
-#include "escher/renderer/image_factory.h"
-#include "escher/renderer/texture.h"
-#include "escher/renderer/timestamper.h"
-#include "escher/resources/resource_recycler.h"
-#include "escher/util/trace_macros.h"
-#include "escher/vk/buffer.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer.h"
+#include "lib/escher/impl/compute_shader.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/renderer/image_factory.h"
+#include "lib/escher/renderer/texture.h"
+#include "lib/escher/renderer/timestamper.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/util/trace_macros.h"
+#include "lib/escher/vk/buffer.h"
 
 namespace escher {
 

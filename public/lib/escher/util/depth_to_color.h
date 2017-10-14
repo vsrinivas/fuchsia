@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/impl/compute_shader.h"
-#include "escher/renderer/timestamper.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/impl/compute_shader.h"
+#include "lib/escher/renderer/timestamper.h"
 
 namespace escher {
 

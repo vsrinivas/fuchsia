@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <utility>
 
-#include "escher/geometry/types.h"
+#include "lib/escher/geometry/types.h"
 
 namespace escher {
 

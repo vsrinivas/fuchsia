@@ -20,7 +20,7 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
 
-#include "escher/util/debug_print.h"
+#include "lib/escher/util/debug_print.h"
 
 namespace escher {
 

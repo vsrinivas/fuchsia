@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/model_data.h"
+#include "lib/escher/impl/model_data.h"
 
-#include "escher/escher.h"
-#include "escher/impl/command_buffer.h"
-#include "escher/impl/mesh_shader_binding.h"
-#include "escher/impl/vulkan_utils.h"
-#include "escher/vk/gpu_allocator.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer.h"
+#include "lib/escher/impl/mesh_shader_binding.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/vk/gpu_allocator.h"
 
 namespace escher {
 namespace impl {

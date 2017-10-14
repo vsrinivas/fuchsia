@@ -4,9 +4,9 @@
 
 #include <trace-provider/provider.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/ui/sketchy/app.h"
-#include "escher/escher.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/escher/escher.h"
 
 int main(int argc, const char** argv) {
   // Only enable Vulkan validation layers when in debug mode.

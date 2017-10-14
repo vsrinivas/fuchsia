@@ -10,8 +10,8 @@
 #include <zx/event.h>
 #include <zx/vmo.h>
 
-#include "escher/escher.h"
-#include "escher/renderer/semaphore_wait.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/renderer/semaphore_wait.h"
 
 namespace sketchy_service {
 
@@ -24,4 +24,4 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
 // Export the escher::GpuMem as a zx::vmo.
 zx::vmo ExportMemoryAsVMO(escher::Escher* escher, const escher::GpuMemPtr& mem);
 
-}  // namespace shadertoy
+}  // namespace sketchy_service

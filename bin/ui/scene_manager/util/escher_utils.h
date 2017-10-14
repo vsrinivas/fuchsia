@@ -10,8 +10,8 @@
 #include <zx/event.h>
 #include <zx/vmo.h>
 
-#include "escher/escher.h"
-#include "escher/renderer/semaphore_wait.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/renderer/semaphore_wait.h"
 
 namespace scene_manager {
 

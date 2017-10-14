@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/renderer/simple_image_factory.h"
+#include "lib/escher/renderer/simple_image_factory.h"
 
-#include "escher/resources/resource_manager.h"
-#include "escher/util/image_utils.h"
-#include "escher/vk/gpu_allocator.h"
+#include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/util/image_utils.h"
+#include "lib/escher/vk/gpu_allocator.h"
 
 namespace escher {
 

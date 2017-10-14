@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/escher.h"
-#include "escher/shape/mesh_builder.h"
-#include "escher/shape/mesh_spec.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_group.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/shape/mesh_builder.h"
+#include "lib/escher/shape/mesh_spec.h"
 
 namespace {
 
@@ -42,11 +42,10 @@ bool Stroke::SetPath(sketchy::StrokePathPtr path) {
   path_.reserve(path->segments.size());
   length_ = 0.f;
   for (auto& seg : path->segments) {
-    path_.push_back({sketchy::CubicBezier2f{{
-        {seg->pt0->x, seg->pt0->y},
-        {seg->pt1->x, seg->pt1->y},
-        {seg->pt2->x, seg->pt2->y},
-        {seg->pt3->x, seg->pt3->y}}}});
+    path_.push_back({sketchy::CubicBezier2f{{{seg->pt0->x, seg->pt0->y},
+                                             {seg->pt1->x, seg->pt1->y},
+                                             {seg->pt2->x, seg->pt2->y},
+                                             {seg->pt3->x, seg->pt3->y}}}});
     length_ += path_.back().length();
   }
   return true;
@@ -73,14 +72,15 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
   int index_count = vertex_count * 3;
 
   auto builder = escher_->NewMeshBuilder(
-      escher::MeshSpec{escher::MeshAttribute::kPosition2D |
-                       escher::MeshAttribute::kPositionOffset
-//                       escher::MeshAttribute::kUV |
-//                       escher::MeshAttribute::kPerimeterPos
-                       },
+      escher::MeshSpec{
+          escher::MeshAttribute::kPosition2D |
+          escher::MeshAttribute::kPositionOffset
+          //                       escher::MeshAttribute::kUV |
+          //                       escher::MeshAttribute::kPerimeterPos
+      },
       vertex_count, index_count);
 
-//  const float total_length_recip = 1.f / length_;
+  //  const float total_length_recip = 1.f / length_;
 
   // Use CPU to generate vertices for each Path segment.
   float segment_start_length = 0.f;
@@ -95,8 +95,8 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
     // reach 1.0, because this would evaluate to the same thing as a parameter
     // of 0.0 on the next segment.
     const float param_incr = (ii == path_.size() - 1)
-                             ? 1.0 / (seg_vert_count - 2)
-                             : 1.0 / seg_vert_count;
+                                 ? 1.0 / (seg_vert_count - 2)
+                                 : 1.0 / seg_vert_count;
 
     for (int i = 0; i < seg_vert_count; i += 2) {
       // We increment index by 2 each loop iteration, so the last iteration will
@@ -106,26 +106,27 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
       // Use arc-length reparameterization before evaluating the segment's
       // curve.
       auto point_and_normal = EvaluatePointAndNormal(bez, reparam.Evaluate(t));
-//      const float cumulative_length = segment_start_length + (t * seg.length());
+      //      const float cumulative_length = segment_start_length + (t *
+      //      seg.length());
 
       struct StrokeVertex {
         glm::vec2 pos;
         // TODO(MZ-269): It's supposed to be normal here, but ok now, as it's
         // not used. It will be helpful later when we support wobble.
         glm::vec2 pos_offset;
-//        glm::vec2 uv;
-//        float perimeter_pos;
+        //        glm::vec2 uv;
+        //        float perimeter_pos;
       } vertex;
 
       vertex.pos_offset = point_and_normal.second * kStrokeWidth * 0.5f;
       vertex.pos = point_and_normal.first + vertex.pos_offset;
-//      vertex.perimeter_pos = cumulative_length * total_length_recip;
-//      vertex.uv = glm::vec2(vertex.perimeter_pos, 1.f);
+      //      vertex.perimeter_pos = cumulative_length * total_length_recip;
+      //      vertex.uv = glm::vec2(vertex.perimeter_pos, 1.f);
       builder->AddVertex(vertex);
 
       vertex.pos_offset *= -1.f;
       vertex.pos = point_and_normal.first + vertex.pos_offset;
-//      vertex.uv = glm::vec2(vertex.perimeter_pos, 0.f);
+      //      vertex.uv = glm::vec2(vertex.perimeter_pos, 0.f);
       builder->AddVertex(vertex);
     }
 
@@ -143,10 +144,10 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
   auto mesh = builder->Build();
 
   // Start merging.
-  stroke_group->vertex_buffer_->Merge(
-      command, buffer_factory, mesh->vertex_buffer());
-  stroke_group->index_buffer_->Merge(
-      command, buffer_factory, mesh->index_buffer());
+  stroke_group->vertex_buffer_->Merge(command, buffer_factory,
+                                      mesh->vertex_buffer());
+  stroke_group->index_buffer_->Merge(command, buffer_factory,
+                                     mesh->index_buffer());
   stroke_group->num_vertices_ += mesh->num_vertices();
   stroke_group->num_indices_ += mesh->num_indices();
   stroke_group->bounding_box_.Join(mesh->bounding_box());

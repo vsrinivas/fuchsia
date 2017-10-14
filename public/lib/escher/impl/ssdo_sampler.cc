@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/ssdo_sampler.h"
+#include "lib/escher/impl/ssdo_sampler.h"
 
-#include "escher/escher.h"
-#include "escher/impl/command_buffer.h"
-#include "escher/impl/glsl_compiler.h"
-#include "escher/impl/mesh_shader_binding.h"
-#include "escher/impl/model_data.h"
-#include "escher/impl/model_pipeline.h"
-#include "escher/impl/vk/pipeline.h"
-#include "escher/impl/vk/pipeline_spec.h"
-#include "escher/impl/vulkan_utils.h"
-#include "escher/renderer/framebuffer.h"
-#include "escher/renderer/image.h"
-#include "escher/renderer/texture.h"
-#include "escher/resources/resource_recycler.h"
-#include "escher/shape/mesh.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer.h"
+#include "lib/escher/impl/glsl_compiler.h"
+#include "lib/escher/impl/mesh_shader_binding.h"
+#include "lib/escher/impl/model_data.h"
+#include "lib/escher/impl/model_pipeline.h"
+#include "lib/escher/impl/vk/pipeline.h"
+#include "lib/escher/impl/vk/pipeline_spec.h"
+#include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/framebuffer.h"
+#include "lib/escher/renderer/image.h"
+#include "lib/escher/renderer/texture.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/shape/mesh.h"
 
 namespace escher {
 namespace impl {

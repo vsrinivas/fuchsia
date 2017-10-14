@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "escher/escher.h"
+#include "lib/escher/escher.h"
 
-#include "escher/geometry/types.h"
 #include "garnet/examples/escher/waterfall/scenes/scene.h"
+#include "lib/escher/geometry/types.h"
 
 using escher::vec3;
 

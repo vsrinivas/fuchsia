@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "escher/escher.h"
-#include "escher/resources/resource.h"
-#include "escher/util/stopwatch.h"
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/resources/resource.h"
+#include "lib/escher/util/stopwatch.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/images/fidl/image_pipe.fidl.h"

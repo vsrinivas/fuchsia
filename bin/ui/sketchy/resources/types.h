@@ -5,7 +5,7 @@
 #pragma once
 
 #include <cstdint>
-#include "escher/base/type_info.h"
+#include "lib/escher/base/type_info.h"
 
 namespace sketchy_service {
 

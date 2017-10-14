@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/base/type_info.h"
+#include "lib/escher/base/type_info.h"
 
 namespace escher {
 

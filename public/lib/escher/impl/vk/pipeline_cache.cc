@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/vk/pipeline_cache.h"
+#include "lib/escher/impl/vk/pipeline_cache.h"
 
 namespace escher {
 namespace impl {
@@ -35,13 +35,14 @@ std::shared_future<PipelinePtr> PipelineCache::GetPipeline(
   map_[spec] = result;
 
   // Wait for the factory on another thread.
-  std::thread([ spec, factory, promise{move(promise)} ]() {
+  std::thread([spec, factory, promise{move(promise)}]() {
     auto pipeline = factory->NewPipeline(std::move(spec)).get();
     // If this fails, then subsequent requests for the same spec are
     // guaranteed to fail forever.
     FXL_DCHECK(pipeline);
     promise->set_value(std::move(pipeline));
-  }).detach();
+  })
+      .detach();
 
   return result;
 }

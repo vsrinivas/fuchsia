@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/forward_declarations.h"
-#include "escher/impl/descriptor_set_pool.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/impl/descriptor_set_pool.h"
 
 namespace escher {
 namespace impl {

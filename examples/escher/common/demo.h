@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "escher/escher.h"
 #include "garnet/examples/escher/common/demo_harness.h"
-#include "escher/vk/vulkan_context.h"
+#include "lib/escher/escher.h"
+#include "lib/escher/vk/vulkan_context.h"
 
 // Base class for Escher demos.
 class Demo {

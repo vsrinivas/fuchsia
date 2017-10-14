@@ -6,9 +6,9 @@
 
 #include <unordered_map>
 
-#include "escher/impl/command_buffer_sequencer.h"
-#include "escher/resources/resource_manager.h"
-#include "escher/resources/resource_recycler.h"
+#include "lib/escher/impl/command_buffer_sequencer.h"
+#include "lib/escher/resources/resource_manager.h"
+#include "lib/escher/resources/resource_recycler.h"
 
 namespace escher {
 

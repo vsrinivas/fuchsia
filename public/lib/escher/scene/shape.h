@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "escher/geometry/types.h"
-#include "escher/scene/shape_modifier.h"
-#include "escher/shape/mesh.h"
-#include "escher/util/debug_print.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/escher/scene/shape_modifier.h"
+#include "lib/escher/shape/mesh.h"
+#include "lib/escher/util/debug_print.h"
 
 #include "lib/fxl/logging.h"
 

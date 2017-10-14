@@ -6,8 +6,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/forward_declarations.h"
-#include "escher/resources/resource.h"
+#include "lib/escher/forward_declarations.h"
+#include "lib/escher/resources/resource.h"
 
 namespace escher {
 

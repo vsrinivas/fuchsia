@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "escher/resources/resource_recycler.h"
-#include "escher/vk/buffer.h"
+#include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/buffer.h"
 
 namespace escher {
 
