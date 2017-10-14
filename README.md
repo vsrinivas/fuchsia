@@ -29,13 +29,18 @@ This page is a non-comprehensive index of the zircon documentation.
 
 + [Getting Started](docs/getting_started.md)
 + [Contributing Patches](docs/contributing.md)
-+ [Testing](docs/testing.md)
-+ [Hacking notes](docs/hacking.md)
-+ [Memory usage analysis tools](docs/memory.md)
-+ [Relationship with LK](docs/zx_and_lk.md)
+
++ [Concepts Overview](docs/concepts.md)
 + [Kernel Objects](docs/objects.md)
 + [Process Objects](docs/objects/process.md)
 + [Thread Objects](docs/objects/thread.md)
 + [Handles](docs/handles.md)
 + [System Calls](docs/syscalls.md)
+
++ [Driver Development Kit](docs/ddk/overview.md)
+
++ [Testing](docs/testing.md)
++ [Hacking notes](docs/hacking.md)
++ [Memory usage analysis tools](docs/memory.md)
++ [Relationship with LK](docs/zx_and_lk.md)
 + [Micro-benchmarks](docs/benchmarks/microbenchmarks.md)

@@ -2,4 +2,5 @@
 * [Concepts](/docs/concepts.md)
 * [Objects](/docs/objects.md)
 * [Syscalls](/docs/syscalls.md)
+* [DDK](/docs/ddk/overview.md)
 * [Getting Started](/docs/getting_started.md)
