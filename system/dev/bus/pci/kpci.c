@@ -119,6 +119,8 @@ static zx_status_t kpci_init_child(zx_device_t* parent, uint32_t index,
     return status;
 }
 
+#if PROXY_DEVICE
+
 static zx_status_t kpci_drv_create(void* ctx, zx_device_t* parent,
                                    const char* name, const char* args,
                                    zx_handle_t resource) {
@@ -129,8 +131,6 @@ static zx_status_t kpci_drv_create(void* ctx, zx_device_t* parent,
     zx_device_t* dev;
     return kpci_init_child(parent, index, true, &dev);
 }
-
-#if PROXY_DEVICE
 
 static zx_driver_ops_t kpci_driver_ops = {
     .version = DRIVER_OPS_VERSION,
@@ -157,7 +157,6 @@ static zx_status_t kpci_drv_bind(void* ctx, zx_device_t* parent, void** cookie) 
 static zx_driver_ops_t kpci_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = kpci_drv_bind,
-    .create = kpci_drv_create,
 };
 
 // TODO(voydanoff): mdi driver should publish a device with ZX_PROTOCOL_PCIROOT

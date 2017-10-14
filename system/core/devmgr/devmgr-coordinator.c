@@ -1093,13 +1093,7 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     uint32_t mlen;
     zx_status_t r;
 
-    // Where to get information to send to devhost from?
-    // Proxy devices defer to the device they're proxying,
-    // otherwise we use the information from the device itself.
-    device_t* info = (dev->flags & DEV_CTX_PROXY) ? dev->parent : dev;
-    const char* libname = info->libname;
-
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, args)) < 0) {
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, dev->libname, args)) < 0) {
         return r;
     }
 
@@ -1110,8 +1104,8 @@ static zx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     }
     hcount++;
 
-    if (libname[0]) {
-        if ((r = libname_to_vmo(libname, handle + 1)) < 0) {
+    if (dev->libname[0]) {
+        if ((r = libname_to_vmo(dev->libname, handle + 1)) < 0) {
             goto fail;
         }
         hcount++;
