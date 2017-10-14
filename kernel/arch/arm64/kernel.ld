@@ -39,10 +39,6 @@ SECTIONS
         *(.text* .gnu.linkonce.t.*)
     }
 
-    .text.el2 : {
-        ASSERT(SIZEOF(.) <= 4096, "EL2 section must be smaller than a page");
-    }
-
     .dummy_post_text : {
         __code_end = .;
     }
