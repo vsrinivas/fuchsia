@@ -17,6 +17,7 @@ public:
     class Owner {
     public:
         virtual void RunAtom(MsdArmAtom* atom) = 0;
+        virtual void AtomCompleted(MsdArmAtom* atom) = 0;
     };
     JobScheduler(Owner* owner, uint32_t job_slots);
 

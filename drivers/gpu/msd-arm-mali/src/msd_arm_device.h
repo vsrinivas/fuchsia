@@ -10,6 +10,7 @@
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/platform-device.h>
 
+#include "address_manager.h"
 #include "device_request.h"
 #include "gpu_features.h"
 #include "job_scheduler.h"
@@ -111,7 +112,9 @@ private:
     magma::Status ProcessGpuInterrupt();
     magma::Status ProcessJobInterrupt();
     magma::Status ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom);
+
     void RunAtom(MsdArmAtom* atom) override;
+    void AtomCompleted(MsdArmAtom* atom) override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
@@ -138,6 +141,7 @@ private:
 
     std::unique_ptr<PowerManager> power_manager_;
     std::unique_ptr<JobScheduler> scheduler_;
+    std::unique_ptr<AddressManager> address_manager_;
 };
 
 #endif // MSD_ARM_DEVICE_H

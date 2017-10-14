@@ -21,6 +21,7 @@ source_set("tests_not_requiring_hardware") {
   testonly = true
 
   sources = [
+    "test_address_manager.cc",
     "test_address_space.cc",
     "test_connection.cc",
   ]
@@ -55,6 +56,7 @@ group("test_deps") {
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/tests/helper:command_buffer_helper",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
+    "//garnet/lib/magma/tests/mock:mmio",
     "//garnet/public/lib/fxl",
     "//third_party/gtest",
   ]

@@ -13,7 +13,9 @@ namespace {
 
 class TestOwner : public JobScheduler::Owner {
 public:
-    void RunAtom(MsdArmAtom* atom) { run_list_.push_back(atom); }
+    void RunAtom(MsdArmAtom* atom) override { run_list_.push_back(atom); }
+    void AtomCompleted(MsdArmAtom* atom) override {}
+
     std::vector<MsdArmAtom*>& run_list() { return run_list_; }
 
 private:

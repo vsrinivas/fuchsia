@@ -203,6 +203,16 @@ public:
 class AsCommand : public RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x18;
+
+    enum {
+        kCmdNop = 0x0,
+        kCmdUpdate = 0x1,
+        kCmdLock = 0x2,
+        kCmdUnlock = 0x3,
+        kCmdFlush = 0x4,
+        kCmdFlushPageTable = 0x4,
+        kCmdFlushMem = 0x5
+    };
 };
 
 class AsFaultStatus : public RegisterBase {
@@ -242,6 +252,8 @@ public:
     {
         DASSERT(address_space < kAddressSpacesCount);
     }
+
+    uint32_t address_space() const { return address_space_; }
 
     auto TranslationTable() { return GetReg<registers::AsTranslationTable>(); }
     auto MemoryAttributes() { return GetReg<registers::AsMemoryAttributes>(); }

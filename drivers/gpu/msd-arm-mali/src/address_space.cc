@@ -125,6 +125,18 @@ bool AddressSpace::ReadPteForTesting(uint64_t addr, mali_pte_t* entry)
     return true;
 }
 
+uint64_t AddressSpace::translation_table_entry() const
+{
+    enum LpaeAddressModes {
+        kLpaeAddressModeUnmapped = 0,
+        kLpaeAddressModeIdentity = 2u,
+        kLpaeAddressModeTable = 3u
+    };
+    constexpr uint64_t kLpaeReadInner = (1u << 2);
+
+    return root_page_directory_->page_bus_address() | kLpaeReadInner | kLpaeAddressModeTable;
+}
+
 AddressSpace::PageTable* AddressSpace::PageTable::GetPageTableLevel0(uint64_t page_number,
                                                                      bool create)
 {

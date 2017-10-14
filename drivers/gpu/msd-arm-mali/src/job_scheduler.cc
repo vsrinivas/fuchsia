@@ -55,6 +55,7 @@ void JobScheduler::JobCompleted(uint64_t slot)
     DASSERT(running_);
     DASSERT(!atoms_.empty());
     running_ = false;
+    owner_->AtomCompleted(atoms_.front().get());
     atoms_.pop_front();
     for (auto x : finished_callbacks_) {
         x();

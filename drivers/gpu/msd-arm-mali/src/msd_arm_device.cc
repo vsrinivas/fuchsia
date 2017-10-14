@@ -151,6 +151,7 @@ bool MsdArmDevice::Init(void* device_handle)
     power_manager_ = std::make_unique<PowerManager>();
 
     scheduler_ = std::make_unique<JobScheduler>(this, 3);
+    address_manager_ = std::make_unique<AddressManager>();
 
     if (!InitializeInterrupts())
         return false;
@@ -483,7 +484,17 @@ magma::Status MsdArmDevice::ProcessScheduleAtom(std::unique_ptr<MsdArmAtom> atom
     return MAGMA_STATUS_OK;
 }
 
-void MsdArmDevice::RunAtom(MsdArmAtom* atom) {}
+void MsdArmDevice::RunAtom(MsdArmAtom* atom)
+{
+    // Skip atom if address space can't be assigned.
+    if (!address_manager_->AssignAddressSpace(register_io_.get(), atom))
+        scheduler_->JobCompleted(atom->slot());
+}
+
+void MsdArmDevice::AtomCompleted(MsdArmAtom* atom)
+{
+    address_manager_->AtomFinished(register_io_.get(), atom);
+}
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
 {

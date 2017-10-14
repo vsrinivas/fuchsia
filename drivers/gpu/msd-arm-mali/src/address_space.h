@@ -37,6 +37,8 @@ public:
 
     bool ReadPteForTesting(gpu_addr_t addr, mali_pte_t* entry);
 
+    uint64_t translation_table_entry() const;
+
 private:
     static constexpr uint32_t kPageTableEntries = PAGE_SIZE / sizeof(mali_pte_t);
     static constexpr uint32_t kPageTableMask = kPageTableEntries - 1;
@@ -64,12 +66,13 @@ private:
 
         void WritePte(uint64_t page_index, mali_pte_t pte);
 
+        uint64_t page_bus_address() const { return page_bus_address_; }
+
     private:
         static mali_pte_t get_directory_entry(uint64_t physical_address);
 
         PageTable(uint32_t level, std::unique_ptr<magma::PlatformBuffer> buffer, PageTableGpu* gpu,
                   uint64_t page_bus_address);
-        uint64_t page_bus_address() { return page_bus_address_; }
 
         // The root page table has level 3, and the leaves have level 0.
         uint32_t level_;
