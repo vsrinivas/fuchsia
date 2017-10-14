@@ -43,8 +43,6 @@ size                    .req x26
 attr                    .req x27
 
 .section .text.boot, "ax", @progbits
-FUNCTION_LABEL(_start)
-#include "kernel-header.S"
 FUNCTION(arm_reset)
     movlit  x9, EFI_BOOT_SIGNATURE
     ldr     x10, [x1]
@@ -382,11 +380,10 @@ FUNCTION(arm_reset)
     cbnz    cpuid, .Lsecondary_boot
 
     // Clear out the bss excluding the kernel translation table ("prebss").
-    // NOTE: Relies on __post_prebss_bss_start and __bss_end
-    // being 16 byte aligned.
+    // NOTE: Relies on __post_prebss_bss_start and _end being 16 byte aligned.
 .L__do_bss:
     adr_global tmp, __post_prebss_bss_start
-    adr_global tmp2, __bss_end
+    adr_global tmp2, _end
     sub     tmp2, tmp2, tmp
     cbz     tmp2, .L__bss_loop_done
 .L__bss_loop:

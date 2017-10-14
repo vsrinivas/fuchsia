@@ -154,12 +154,4 @@ LINKER_SCRIPT += $(LOCAL_BUILDDIR)/kernel.ld
 # potentially generated files that should be cleaned out with clean make rule
 GENERATED += $(LOCAL_BUILDDIR)/kernel.ld
 
-# rules for generating the linker script
-# force a rebuild every time in case something changes
-$(LOCAL_BUILDDIR)/kernel.ld: $(LOCAL_DIR)/kernel.ld FORCE
-	$(call BUILDECHO,generating $@)
-	@$(MKDIR)
-	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/;s/%HEADER_LOAD_OFFSET%/$(HEADER_LOAD_OFFSET)/;s/%PHYS_HEADER_LOAD_OFFSET%/$(PHYS_HEADER_LOAD_OFFSET)/;" < $< > $@.tmp
-	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
-
 include make/module.mk

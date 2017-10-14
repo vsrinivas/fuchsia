@@ -19,7 +19,7 @@
 
 #include <zircon/boot/bootdata.h>
 
-.section .text.boot0, "ax", @progbits
+.section .text.boot0, "a", @progbits
 
 LOCAL_DATA(_setup_start)
 
@@ -56,7 +56,7 @@ LOCAL_DATA(_setup_start)
     .int 0
     .int 0
 #endif
-    .quad PHYS(_entry64)
+    .quad PHYS(_start)
     .quad 0
 
 
@@ -83,7 +83,7 @@ LOCAL_DATA(_multiboot_load_end_addr)
     .int PHYS(__data_end)
 LOCAL_DATA(_multiboot_bss_end_addr)
     /* bss_end_addr */
-    .int PHYS(__bss_end)
+    .int PHYS(_end)
 LOCAL_DATA(_multiboot_entry)
     /* entry_addr */
     .int PHYS(_multiboot_start)

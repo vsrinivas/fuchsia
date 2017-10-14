@@ -298,9 +298,6 @@ ALLOBJS :=
 # master source file list
 ALLSRCS :=
 
-# a linker script needs to be declared in one of the project/target/platform files
-LINKER_SCRIPT :=
-
 # anything you add here will be deleted in make clean
 GENERATED :=
 

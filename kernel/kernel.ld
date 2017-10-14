@@ -1,26 +1,26 @@
 /*
 // Copyright 2016 The Fuchsia Authors
+// Copyright (c) 2009 Corey Tabaka
+// Copyright (c) 2013 Travis Geiselbrecht
+// Copyright (c) 2015 Intel Corporation
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 */
 
-OUTPUT_FORMAT("elf64-littleaarch64", "elf64-bigaarch64", "elf64-littleaarch64")
-OUTPUT_ARCH(aarch64)
-
 ENTRY(_start)
 SECTIONS
 {
     . = %KERNEL_BASE% + %KERNEL_LOAD_OFFSET%;
+    __code_start = .;
 
-    /* text/read-only data */
-    /* set the load address to physical MEMBASE */
-    .text : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
-        __code_start = .;
-        KEEP(*(.text.boot))
+    .text.boot0 : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
+        KEEP(*(.text.boot0))
+    } :code
 
-        . = ALIGN(8);
+    . = ALIGN(8);
+    .buildsig : {
         buildsig = .;
         BYTE(0x42); BYTE(0x53); BYTE(0x49); BYTE(0x47); /* BSIG */
         BYTE(0x53); BYTE(0x54); BYTE(0x52); BYTE(0x54); /* STRT */
@@ -34,14 +34,18 @@ SECTIONS
         QUAD(__build_id_note_start);
         BYTE(0x42); BYTE(0x53); BYTE(0x49); BYTE(0x47); /* BSIG */
         BYTE(0x45); BYTE(0x4e); BYTE(0x44); BYTE(0x53); /* ENDS */
+     }
 
-        KEEP(*(.text.boot.vectab))
-        *(.text* .gnu.linkonce.t.*)
+    .text.boot : {
+        *(.text.boot)
     }
 
-    .dummy_post_text : {
-        __code_end = .;
+    .text : {
+        *(.text* .sram.text)
+        *(.gnu.linkonce.t.*)
     }
+
+    __code_end = .;
 
     . = ALIGN(4096);
     __rodata_start = .;
@@ -50,11 +54,11 @@ SECTIONS
         __build_id_note_start = .;
         *(.note.gnu.build-id)
         __build_id_note_end = .;
-    }
+    } :rodata :note
 
     .rodata : {
         *(.rodata* .gnu.linkonce.r.*)
-    }
+    } :rodata
 
     .init_array : ALIGN(8) {
         __init_array_start = .;
@@ -80,34 +84,38 @@ SECTIONS
         __rodata_end = .;
         __data_start = .;
         *(.data .data.* .gnu.linkonce.d.*)
-    }
+        __data_end = .;
+    } :data
 
     /*
-     * extra linker scripts tend to insert sections just after .data,
-     * so we want to make sure this symbol comes after anything inserted above,
-     * but not aligned to the next section necessarily.
+     * Any writable orphan sections would be inserted here.
+     * But there's no way to put the __data_end symbol after
+     * them, so we cannot allow any such cases.  There is no
+     * good way to assert that, though.
      */
-    .dummy_post_data : {
-        __data_end = .;
-    }
 
-    /* unintialized data (in same segment as writable data) */
     .bss : ALIGN(4096) {
         __bss_start = .;
         KEEP(*(.bss.prebss.*))
         . = ALIGN(16);
         __post_prebss_bss_start = .;
-        *(.bss .bss.*)
+        *(.bss*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
-        . = ALIGN(16);
-        __bss_end = .;
     }
 
-    /* Align the end to ensure anything after the kernel ends up on its own pages */
-    . = ALIGN(4096);
-    _end = .;
+    /*
+     * Any SHT_NOBITS (.bss-like) sections would be inserted here.
+     */
 
-    /* Strip unnecessary stuff */
-    /DISCARD/ : { *(.comment .note) }
+     . = ALIGN(4096);
+    _end = .;
+}
+
+PHDRS
+{
+    code PT_LOAD FLAGS(5); /* PF_R|PF_X */
+    rodata PT_LOAD FLAGS(4); /* PF_R */
+    data PT_LOAD FLAGS(6); /* PF_R|PF_W */
+    note PT_NOTE FLAGS(4); /* PF_R */
 }

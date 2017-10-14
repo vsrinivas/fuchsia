@@ -117,7 +117,7 @@ FUNCTION_LABEL(_multiboot_start)
 .Lfarjump:
     /* zero the bss section */
     movl $PHYS(__bss_start), %edi
-    movl $PHYS(__bss_end), %ecx
+    movl $PHYS(_end), %ecx
     sub %edi, %ecx              // Compute the length of the bss in bytes.
     xor %eax, %eax
     rep stosb // while (ecx-- > 0) *edi++ = al;
@@ -227,7 +227,7 @@ high_entry:
 
     /* 64bit entry point from a secondary loader */
 .align 8
-FUNCTION_LABEL(_entry64)
+FUNCTION_LABEL(_start)
     /* ensure the stack pointer is sane */
 
     /* This is enough space for the 2x push + lretq below.
@@ -239,7 +239,7 @@ FUNCTION_LABEL(_entry64)
 
     /* zero the bss */
     lea __bss_start(%rip), %rdi
-    lea __bss_end(%rip), %rcx
+    lea _end(%rip), %rcx
     sub %rdi, %rcx              // Compute the length of the bss in bytes.
     xor %eax, %eax
     rep stosb // while (rcx-- > 0) *rdi++ = al;

@@ -33,7 +33,6 @@ extern int __rodata_end;
 extern int __data_start;
 extern int __data_end;
 extern int __bss_start;
-extern int __bss_end;
 extern int _end;
 
 // boot time allocated page full of zeros
@@ -180,7 +179,7 @@ void vm_init_postheap(uint level) {
         {
             .name = "kernel_bss",
             .base = (vaddr_t)&__bss_start,
-            .size = ROUNDUP((size_t)&__bss_end - (size_t)&__bss_start, PAGE_SIZE),
+            .size = ROUNDUP((size_t)&_end - (size_t)&__bss_start, PAGE_SIZE),
             .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
         },
         {

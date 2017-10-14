@@ -25,6 +25,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/exceptions.S \
 	$(LOCAL_DIR)/exceptions_c.cpp \
 	$(LOCAL_DIR)/fpu.cpp \
+	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/spinlock.cpp \
@@ -130,17 +131,5 @@ endif
 ifeq ($(MEMVARS_SET),0)
 $(error missing MEMBASE or MEMSIZE variable, please set in target rules.mk)
 endif
-
-LINKER_SCRIPT := $(BUILDDIR)/kernel.ld
-
-# potentially generated files that should be cleaned out with clean make rule
-GENERATED += $(BUILDDIR)/kernel.ld
-
-# rules for generating the linker script
-$(BUILDDIR)/kernel.ld: $(LOCAL_DIR)/kernel.ld FORCE
-	$(call BUILDECHO,generating $@)
-	@$(MKDIR)
-	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/" < $< > $@.tmp
-	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
 
 include make/module.mk

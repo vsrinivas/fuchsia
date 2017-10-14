@@ -4,12 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <asm.h>
+
+.section .text.boot0, "a", @progbits
 
 // Optional header included in start.S needed to make fastboot happy
-_fastboot_start:
+FUNCTION(_start)
     // magic instruction that gives us UEFI "MZ" signature
     add x13, x18, #0x16
-    b header_end
+    b arm_reset
 
     // valid if the 'ARM\x64' signature below is valid
     .quad   KERNEL_LOAD_OFFSET              // image offset from start of ram
@@ -111,4 +114,4 @@ section_table:
     .align 12
 
 header_end:
-    // fall through to arm_reset
+END_FUNCTION(_start)

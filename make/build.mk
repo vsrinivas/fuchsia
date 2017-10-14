@@ -19,6 +19,16 @@ $(OUTLKBIN): $(OUTLKELF)
 	$(call BUILDECHO,generating image $@)
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
 
+LINKER_SCRIPT := $(BUILDDIR)/kernel.ld
+GENERATED += $(LINKER_SCRIPT)
+
+# rules for generating the linker script
+$(LINKER_SCRIPT): kernel/kernel.ld FORCE
+	$(call BUILDECHO,generating $@)
+	@$(MKDIR)
+	$(NOECHO)sed "s/%MEMBASE%/$(MEMBASE)/;s/%MEMSIZE%/$(MEMSIZE)/;s/%KERNEL_BASE%/$(KERNEL_BASE)/;s/%KERNEL_LOAD_OFFSET%/$(KERNEL_LOAD_OFFSET)/" < $< > $@.tmp
+	@$(call TESTANDREPLACEFILE,$@.tmp,$@)
+
 $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
 	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) -T $(LINKER_SCRIPT) \
