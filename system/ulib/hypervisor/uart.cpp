@@ -206,8 +206,9 @@ zx_status_t Uart::FillRx() {
     do {
         {
             fbl::AutoLock lock(&mutex_);
-            // Wait for a signal that the line is clear and interrupts are available.
-            while (!CanRaiseInterrupt() || line_status_ & UART_LINE_STATUS_DATA_READY)
+            // Wait for a signal that the line is clear.
+            // The locking here is okay, because we yield when we wait.
+            while (!CanRaiseInterrupt() && line_status_ & UART_LINE_STATUS_DATA_READY)
                 cnd_wait(&rx_cnd_, mutex_.GetInternal());
         }
 
