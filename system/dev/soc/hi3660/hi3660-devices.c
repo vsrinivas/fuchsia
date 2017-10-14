@@ -8,10 +8,9 @@
 
 #include "hi3660-bus.h"
 #include "hi3660-hw.h"
+#include "hikey960-hw.h"
 
 //#define GPIO_TEST 1
-
-// TODO(voydanoff) Assign IDs to the mmios and irqs
 
 static const pbus_mmio_t dwc3_mmios[] = {
     {
@@ -91,6 +90,32 @@ static const pbus_dev_t mali_dev = {
     .irq_count = countof(mali_irqs),
 };
 
+#if GPIO_TEST
+static const pbus_gpio_t gpio_test_gpios[] = {
+    {
+        .gpio = GPIO_USER_LED1,
+    },
+    {
+        .gpio = GPIO_USER_LED2,
+    },
+    {
+        .gpio = GPIO_USER_LED3,
+    },
+    {
+        .gpio = GPIO_USER_LED4,
+    },
+};
+
+static const pbus_dev_t gpio_test_dev = {
+    .name = "gpio-test",
+    .vid = PDEV_VID_HI_SILICON,
+    .pid = PDEV_PID_HI3660,
+    .did = PDEV_DID_HI3660_GPIO_TEST,
+    .gpios = gpio_test_gpios,
+    .gpio_count = countof(gpio_test_gpios),
+};
+#endif
+
 zx_status_t hi3360_add_devices(hi3660_bus_t* bus) {
     zx_status_t status;
 
@@ -109,13 +134,6 @@ zx_status_t hi3360_add_devices(hi3660_bus_t* bus) {
     }
 
 #if GPIO_TEST
-    const pbus_dev_t gpio_test_dev = {
-        .name = "gpio-test",
-        .vid = PDEV_VID_HI_SILICON,
-        .pid = PDEV_PID_HI3660,
-        .did = PDEV_DID_HI3660_GPIO_TEST,
-    };
-
     if ((status = pbus_device_add(&bus->pbus, &gpio_test_dev, 0)) != ZX_OK) {
         dprintf(ERROR, "hi3360_add_devices could not add gpio_test_dev: %d\n", status);
         return status;

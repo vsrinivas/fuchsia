@@ -94,11 +94,11 @@ usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
     .set_mode = pdev_ums_set_mode,
 };
 
-static zx_status_t pdev_gpio_config(void* ctx, unsigned pin, gpio_config_flags_t flags) {
+static zx_status_t pdev_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
     platform_dev_t* dev = ctx;
     pdev_req_t req = {
         .op = PDEV_GPIO_CONFIG,
-        .index = pin,
+        .index = index,
         .gpio_flags = flags,
     };
     pdev_resp_t resp;
@@ -106,11 +106,11 @@ static zx_status_t pdev_gpio_config(void* ctx, unsigned pin, gpio_config_flags_t
     return platform_dev_rpc(dev, &req, &resp, NULL, 0);
 }
 
-static zx_status_t pdev_gpio_read(void* ctx, unsigned pin, unsigned* out_value) {
+static zx_status_t pdev_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
     platform_dev_t* dev = ctx;
     pdev_req_t req = {
         .op = PDEV_GPIO_READ,
-        .index = pin,
+        .index = index,
     };
     pdev_resp_t resp;
 
@@ -122,11 +122,11 @@ static zx_status_t pdev_gpio_read(void* ctx, unsigned pin, unsigned* out_value) 
     return ZX_OK;
 }
 
-static zx_status_t pdev_gpio_write(void* ctx, unsigned pin, unsigned value) {
+static zx_status_t pdev_gpio_write(void* ctx, uint32_t index, uint8_t value) {
     platform_dev_t* dev = ctx;
     pdev_req_t req = {
         .op = PDEV_GPIO_WRITE,
-        .index = pin,
+        .index = index,
         .gpio_value = value,
     };
     pdev_resp_t resp;

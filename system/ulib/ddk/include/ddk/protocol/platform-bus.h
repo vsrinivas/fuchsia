@@ -12,13 +12,15 @@ __BEGIN_CDECLS;
 typedef struct {
     zx_paddr_t  base;
     size_t      length;
-    uint32_t    id;
 } pbus_mmio_t;
 
 typedef struct {
     uint32_t    irq;
-    uint32_t    id;
 } pbus_irq_t;
+
+typedef struct {
+    uint32_t    gpio;
+} pbus_gpio_t;
 
 typedef struct {
     const char* name;
@@ -26,9 +28,11 @@ typedef struct {
     uint32_t pid;
     uint32_t did;
     const pbus_mmio_t* mmios;
-    size_t mmio_count;
+    uint32_t mmio_count;
     const pbus_irq_t* irqs;
-    size_t irq_count;
+    uint32_t irq_count;
+    const pbus_gpio_t* gpios;
+    uint32_t gpio_count;
 } pbus_dev_t;
 
 // flags for pbus_device_add()

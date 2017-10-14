@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
@@ -23,43 +24,43 @@
 #include "hi3660-bus.h"
 #include "hi3660-hw.h"
 
-static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, unsigned pin) {
+static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, uint32_t index) {
     pl061_gpios_t* gpios;
     // TODO(voydanoff) consider using a fancier data structure here
     list_for_every_entry(&bus->gpios, gpios, pl061_gpios_t, node) {
-        if (pin >= gpios->gpio_start && pin < gpios->gpio_start + gpios->gpio_count) {
+        if (index >= gpios->gpio_start && index < gpios->gpio_start + gpios->gpio_count) {
             return gpios;
         }
     }
-    printf("find_gpio failed for pin %u\n", pin);
+    dprintf(ERROR, "find_gpio failed for index %u\n", index);
     return NULL;
 }
 
-static zx_status_t hi3660_gpio_config(void* ctx, unsigned pin, gpio_config_flags_t flags) {
+static zx_status_t hi3660_gpio_config(void* ctx, uint32_t index, gpio_config_flags_t flags) {
     hi3660_bus_t* bus = ctx;
-    pl061_gpios_t* gpios = find_gpio(bus, pin);
+    pl061_gpios_t* gpios = find_gpio(bus, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return pl061_proto_ops.config(gpios, pin, flags);
+    return pl061_proto_ops.config(gpios, index, flags);
 }
 
-static zx_status_t hi3660_gpio_read(void* ctx, unsigned pin, unsigned* out_value) {
+static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
     hi3660_bus_t* bus = ctx;
-    pl061_gpios_t* gpios = find_gpio(bus, pin);
+    pl061_gpios_t* gpios = find_gpio(bus, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return pl061_proto_ops.read(gpios, pin, out_value);
+    return pl061_proto_ops.read(gpios, index, out_value);
 }
 
-static zx_status_t hi3660_gpio_write(void* ctx, unsigned pin, unsigned value) {
+static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
     hi3660_bus_t* bus = ctx;
-    pl061_gpios_t* gpios = find_gpio(bus, pin);
+    pl061_gpios_t* gpios = find_gpio(bus, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return pl061_proto_ops.write(gpios, pin, value);
+    return pl061_proto_ops.write(gpios, index, value);
 }
 
 static gpio_protocol_ops_t gpio_ops = {
@@ -183,23 +184,23 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     pbus_set_interface(&bus->pbus, &intf);
 
     if ((status = hi3360_add_gpios(bus)) != ZX_OK) {
-        printf("hi3660_bind: hi3360_add_gpios failed!\n");;
+        dprintf(ERROR, "hi3660_bind: hi3360_add_gpios failed!\n");;
     }
 
     if ((status = hi3360_add_devices(bus)) != ZX_OK) {
-        printf("hi3660_bind: hi3360_add_devices failed!\n");;
+        dprintf(ERROR, "hi3660_bind: hi3360_add_devices failed!\n");;
     }
 
     // must be after pbus_set_interface
     if ((status = hi3360_usb_init(bus)) != ZX_OK) {
-        printf("hi3660_bind: hi3360_usb_init failed!\n");;
+        dprintf(ERROR, "hi3660_bind: hi3360_usb_init failed!\n");;
     }
     hi3660_usb_set_mode(bus, USB_MODE_NONE);
 
     return ZX_OK;
 
 fail:
-    printf("hi3660_bind failed %d\n", status);
+    dprintf(ERROR, "hi3660_bind failed %d\n", status);
     hi3660_release(bus);
     return status;
 }

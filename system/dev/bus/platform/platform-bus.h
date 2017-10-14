@@ -39,8 +39,10 @@ typedef struct {
 
     pbus_mmio_t* mmios;
     pbus_irq_t* irqs;
+    pbus_gpio_t* gpios;
     uint32_t mmio_count;
     uint32_t irq_count;
+    uint32_t gpio_count;
 } platform_dev_t;
 
 // platform-device.c

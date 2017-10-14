@@ -68,6 +68,11 @@ static zx_status_t platform_dev_gpio_config(platform_dev_t* dev, uint32_t index,
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
     }
+    if (index >= dev->gpio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    index = dev->gpios[index].gpio;
+
     return gpio_config(&bus->gpio, index, flags);
 }
 
@@ -76,12 +81,12 @@ static zx_status_t platform_dev_gpio_read(platform_dev_t* dev, uint32_t index, u
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    unsigned value;
-    zx_status_t status = gpio_read(&bus->gpio, index, &value);
-    if (status == ZX_OK) {
-        *out_value = value;
+    if (index >= dev->gpio_count) {
+        return ZX_ERR_INVALID_ARGS;
     }
-    return status;
+    index = dev->gpios[index].gpio;
+
+    return gpio_read(&bus->gpio, index, out_value);
 }
 
 static zx_status_t platform_dev_gpio_write(platform_dev_t* dev, uint32_t index, uint8_t value) {
@@ -89,6 +94,11 @@ static zx_status_t platform_dev_gpio_write(platform_dev_t* dev, uint32_t index, 
     if (!bus->gpio.ops) {
         return ZX_ERR_NOT_SUPPORTED;
     }
+    if (index >= dev->gpio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    index = dev->gpios[index].gpio;
+
     return gpio_write(&bus->gpio, index, value);
 }
 
@@ -150,6 +160,7 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
 void platform_dev_free(platform_dev_t* dev) {
     free(dev->mmios);
     free(dev->irqs);
+    free(dev->gpios);
     free(dev);
 }
 
@@ -190,6 +201,16 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         }
         memcpy(dev->irqs, pdev->irqs, size);
         dev->irq_count = pdev->irq_count;
+    }
+    if (pdev->gpio_count) {
+        size_t size = pdev->gpio_count * sizeof(*pdev->gpios);
+        dev->gpios = malloc(size);
+        if (!dev->gpios) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(dev->gpios, pdev->gpios, size);
+        dev->gpio_count = pdev->gpio_count;
     }
 
     dev->bus = bus;
