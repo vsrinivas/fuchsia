@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
     argc -= 2;
     argv += 2;
 
-    int fd = open("/dev/misc/tpm", O_RDWR);
+    int fd = open("/dev/class/tpm/000", O_RDWR);
     if (fd < 0) {
         printf("Error opening TPM device.\n");
         return 1;
