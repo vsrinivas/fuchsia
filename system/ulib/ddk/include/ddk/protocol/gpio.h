@@ -32,9 +32,6 @@ typedef struct {
     zx_status_t (*config)(void* ctx, unsigned pin, gpio_config_flags_t flags);
     zx_status_t (*read)(void* ctx, unsigned pin, unsigned* out_value);
     zx_status_t (*write)(void* ctx, unsigned pin, unsigned value);
-    zx_status_t (*int_enable)(void* ctx, unsigned pin, bool enable);
-    zx_status_t (*get_int_status)(void* ctx, unsigned pin, bool* out_status);
-    zx_status_t (*int_clear)(void* ctx, unsigned pin);
 } gpio_protocol_ops_t;
 
 typedef struct {
@@ -56,22 +53,6 @@ static inline zx_status_t gpio_read(gpio_protocol_t* gpio, unsigned pin, unsigne
 // sets the current value of the GPIO (any non-zero value maps to 1)
 static inline zx_status_t gpio_write(gpio_protocol_t* gpio, unsigned pin, unsigned value) {
     return gpio->ops->write(gpio->ctx, pin, value);
-}
-
-// enables or disables interrupts for the  GPIO
-static inline zx_status_t gpio_int_enable(gpio_protocol_t* gpio, unsigned pin, bool enable) {
-    return gpio->ops->int_enable(gpio->ctx, pin, enable);
-}
-
-// returns whether an interrupt is pending for the GPIO
-static inline zx_status_t gpio_get_int_status(gpio_protocol_t* gpio, unsigned pin,
-                                              bool* out_active) {
-    return gpio->ops->get_int_status(gpio->ctx, pin, out_active);
-}
-
-// clears the interrupt for a GPIO
-static inline zx_status_t gpio_int_clear(gpio_protocol_t* gpio, unsigned pin) {
-    return gpio->ops->int_clear(gpio->ctx, pin);
 }
 
 __END_CDECLS;

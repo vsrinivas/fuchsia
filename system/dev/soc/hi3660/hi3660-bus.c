@@ -62,40 +62,10 @@ static zx_status_t hi3660_gpio_write(void* ctx, unsigned pin, unsigned value) {
     return pl061_proto_ops.write(gpios, pin, value);
 }
 
-static zx_status_t hi3660_gpio_int_enable(void* ctx, unsigned pin, bool enable) {
-    hi3660_bus_t* bus = ctx;
-    pl061_gpios_t* gpios = find_gpio(bus, pin);
-    if (!gpios) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return pl061_proto_ops.int_enable(gpios, pin, enable);
-}
-
-static zx_status_t hi3660_gpio_get_int_status(void* ctx, unsigned pin, bool* out_status) {
-    hi3660_bus_t* bus = ctx;
-    pl061_gpios_t* gpios = find_gpio(bus, pin);
-    if (!gpios) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return pl061_proto_ops.get_int_status(gpios, pin, out_status);
-}
-
-static zx_status_t hi3660_gpio_int_clear(void* ctx, unsigned pin) {
-    hi3660_bus_t* bus = ctx;
-    pl061_gpios_t* gpios = find_gpio(bus, pin);
-    if (!gpios) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return pl061_proto_ops.int_clear(gpios, pin);
-}
-
 static gpio_protocol_ops_t gpio_ops = {
     .config = hi3660_gpio_config,
     .read = hi3660_gpio_read,
     .write = hi3660_gpio_write,
-    .int_enable = hi3660_gpio_int_enable,
-    .get_int_status = hi3660_gpio_get_int_status,
-    .int_clear = hi3660_gpio_int_clear,
 };
 
 static zx_status_t hi3660_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
