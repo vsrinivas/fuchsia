@@ -11,26 +11,6 @@
 #include <ddk/protocol/usb-mode-switch.h>
 #include <zircon/types.h>
 
-// represents an MMIO resource
-typedef struct {
-    zx_paddr_t base;
-    size_t length;
-} platform_mmio_t;
-
-// represents an IRQ resource
-typedef struct {
-    uint32_t irq;
-} platform_irq_t;
-
-// collection of resources, embedded in the platform_dev_t struct
-typedef struct {
-    platform_mmio_t* mmios;
-    platform_irq_t* irqs;
-    uint32_t mmio_count;
-    uint32_t irq_count;
-    uint8_t extra[];        // extra storage for mmios and irqs
-} platform_resources_t;
-
 // context structure for the platform bus
 typedef struct {
     zx_device_t* zxdev;
@@ -55,19 +35,13 @@ typedef struct {
     uint32_t did;
     bool enabled;
 
-    // resources must be last
-    platform_resources_t resources;
+    pbus_mmio_t* mmios;
+    pbus_irq_t* irqs;
+    uint32_t mmio_count;
+    uint32_t irq_count;
 } platform_dev_t;
 
 // platform-device.c
 void platform_dev_free(platform_dev_t* dev);
 zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* dev, uint32_t flags);
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable);
-
-// platform-resources.c
-void platform_init_resources(platform_resources_t* resources, uint32_t mmio_count,
-                             uint32_t irq_count);
-zx_status_t platform_bus_add_mmios(platform_bus_t* bus, platform_resources_t* resources,
-                                   const pbus_mmio_t* mmios, size_t mmio_count);
-zx_status_t platform_bus_add_irqs(platform_bus_t* bus, platform_resources_t* resources,
-                                  const pbus_irq_t* irqs, size_t irq_count);

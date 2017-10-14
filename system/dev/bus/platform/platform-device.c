@@ -16,13 +16,11 @@
 
 static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index,
                                          zx_handle_t* out_handle, uint32_t* out_handle_count) {
-    platform_resources_t* resources = &dev->resources;
-
-    if (index >= resources->mmio_count) {
+    if (index >= dev->mmio_count) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    platform_mmio_t* mmio = &resources->mmios[index];
+    pbus_mmio_t* mmio = &dev->mmios[index];
     zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, mmio->length,
                                                 out_handle);
     if (status != ZX_OK) {
@@ -35,12 +33,10 @@ static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index,
 
 static zx_status_t platform_dev_get_interrupt(platform_dev_t* dev, uint32_t index,
                                               zx_handle_t* out_handle, uint32_t* out_handle_count) {
-    platform_resources_t* resources = &dev->resources;
-
-    if (index >= resources->irq_count || !out_handle) {
+    if (index >= dev->irq_count || !out_handle) {
         return ZX_ERR_INVALID_ARGS;
     }
-    platform_irq_t* irq = &resources->irqs[index];
+    pbus_irq_t* irq = &dev->irqs[index];
     zx_status_t status = zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ, out_handle);
     if (status != ZX_OK) {
         dprintf(ERROR, "platform_dev_get_interrupt: zx_interrupt_create failed %d\n", status);
@@ -113,6 +109,8 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
 }
 
 void platform_dev_free(platform_dev_t* dev) {
+    free(dev->mmios);
+    free(dev->irqs);
     free(dev);
 }
 
@@ -124,35 +122,43 @@ static zx_protocol_device_t platform_dev_proto = {
 };
 
 zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uint32_t flags) {
-    platform_dev_t* dev = calloc(1, sizeof(platform_dev_t)
-                                 + pdev->mmio_count * sizeof(platform_mmio_t)
-                                 + pdev->irq_count * sizeof(platform_irq_t));
-    if (!dev) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    zx_status_t status = ZX_OK;
+
     if (flags & ~PDEV_ADD_DISABLED) {
         return ZX_ERR_INVALID_ARGS;
     }
+
+    platform_dev_t* dev = calloc(1, sizeof(platform_dev_t));
+    if (!dev) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    if (pdev->mmio_count) {
+        size_t size = pdev->mmio_count * sizeof(*pdev->mmios);
+        dev->mmios = malloc(size);
+        if (!dev->mmios) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(dev->mmios, pdev->mmios, size);
+        dev->mmio_count = pdev->mmio_count;
+    }
+    if (pdev->irq_count) {
+        size_t size = pdev->irq_count * sizeof(*pdev->irqs);
+        dev->irqs = malloc(size);
+        if (!dev->irqs) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(dev->irqs, pdev->irqs, size);
+        dev->irq_count = pdev->irq_count;
+    }
+
     dev->bus = bus;
     strlcpy(dev->name, pdev->name, sizeof(dev->name));
     dev->vid = pdev->vid;
     dev->pid = pdev->pid;
     dev->did = pdev->did;
 
-    zx_status_t status = ZX_OK;
-    platform_init_resources(&dev->resources, pdev->mmio_count, pdev->irq_count);
-    if (pdev->mmio_count) {
-        status = platform_bus_add_mmios(bus, &dev->resources, pdev->mmios, pdev->mmio_count);
-        if (status != ZX_OK) {
-            goto fail;
-        }
-    }
-    if (pdev->irq_count) {
-        status = platform_bus_add_irqs(bus, &dev->resources, pdev->irqs, pdev->irq_count);
-        if (status != ZX_OK) {
-            goto fail;
-        }
-    }
     list_add_tail(&bus->devices, &dev->node);
 
     if ((flags & PDEV_ADD_DISABLED) == 0) {

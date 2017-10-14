@@ -13,7 +13,6 @@ MODULE_NAME := platform-bus
 MODULE_SRCS := \
     $(LOCAL_DIR)/platform-bus.c \
     $(LOCAL_DIR)/platform-device.c \
-    $(LOCAL_DIR)/platform-resources.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 
