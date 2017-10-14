@@ -630,16 +630,13 @@ zx_status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
 }
 
 // External references to the quirks handler table.
-extern PcieBusDriver::QuirkHandler __start_pcie_quirk_handlers[] __WEAK;
-extern PcieBusDriver::QuirkHandler __stop_pcie_quirk_handlers[] __WEAK;
+extern const PcieBusDriver::QuirkHandler pcie_quirk_handlers[];
 void PcieBusDriver::RunQuirks(const fbl::RefPtr<PcieDevice>& dev) {
     if (dev && dev->quirks_done())
         return;
 
-    const PcieBusDriver::QuirkHandler* quirk;
-    for (quirk = __start_pcie_quirk_handlers; quirk < __stop_pcie_quirk_handlers; ++quirk) {
-        if (*quirk != nullptr)
-            (**quirk)(dev);
+    for (size_t i = 0; pcie_quirk_handlers[i] != nullptr; i++) {
+        pcie_quirk_handlers[i](dev);
     }
 
     if (dev != nullptr)

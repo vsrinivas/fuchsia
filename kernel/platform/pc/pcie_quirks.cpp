@@ -129,8 +129,6 @@ static void pcie_tolud_quirk(const fbl::RefPtr<PcieDevice>& dev) {
     found_chipset_device = true;
 }
 
-STATIC_PCIE_QUIRK_HANDLER(pcie_tolud_quirk);
-
 static void pcie_amd_topmem_quirk(const fbl::RefPtr<PcieDevice>& dev) {
     // only makes sense on AMD hardware
     if (x86_vendor != X86_VENDOR_AMD)
@@ -192,6 +190,10 @@ static void pcie_amd_topmem_quirk(const fbl::RefPtr<PcieDevice>& dev) {
     }
 }
 
-STATIC_PCIE_QUIRK_HANDLER(pcie_amd_topmem_quirk);
+extern const PcieBusDriver::QuirkHandler pcie_quirk_handlers[] = {
+    pcie_tolud_quirk,
+    pcie_amd_topmem_quirk,
+    nullptr,
+};
 
 #endif  // WITH_DEV_PCIE

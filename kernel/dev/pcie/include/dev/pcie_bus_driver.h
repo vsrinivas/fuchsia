@@ -27,7 +27,6 @@ class PcieRoot;
 class PcieUpstreamNode;
 class PciConfig;
 
-
 class PcieBusDriver : public fbl::RefCounted<PcieBusDriver> {
 public:
     // QuirkHandler
@@ -263,12 +262,3 @@ private:
     static fbl::RefPtr<PcieBusDriver>  driver_;
     static fbl::Mutex                  driver_lock_;
 };
-
-#if WITH_DEV_PCIE
-#define STATIC_PCIE_QUIRK_HANDLER(quirk_handler) \
-    [[gnu::used, gnu::section("pcie_quirk_handlers")]] \
-    alignas(void*) static const PcieBusDriver::QuirkHandler \
-        __pcie_quirk_handler_##quirk_handler = quirk_handler
-#else  // WITH_DEV_PCIE
-#define STATIC_PCIE_QUIRK_HANDLER(quirk_handler)
-#endif  // WITH_DEV_PCIE

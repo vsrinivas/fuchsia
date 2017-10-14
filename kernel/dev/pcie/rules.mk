@@ -16,6 +16,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/pcie_caps.cpp \
 	$(LOCAL_DIR)/pcie_device.cpp \
 	$(LOCAL_DIR)/pcie_irqs.cpp \
+	$(LOCAL_DIR)/pcie_quirks.cpp \
 	$(LOCAL_DIR)/pcie_root.cpp \
 	$(LOCAL_DIR)/pcie_upstream_node.cpp
 
