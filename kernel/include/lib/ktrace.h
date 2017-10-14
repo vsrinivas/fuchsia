@@ -33,7 +33,7 @@ static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint
 }
 #define _ktrace_probe_prologue(_name) \
     static ktrace_probe_info_t info = { NULL, _name, 0 };       \
-    __USED __SECTION("ktrace_probe")                            \
+    __USED __SECTION(".data.rel.ro.ktrace_probe")               \
     static ktrace_probe_info_t *const register_info = &info
 #define ktrace_probe0(_name) do {                               \
     _ktrace_probe_prologue(_name);                              \

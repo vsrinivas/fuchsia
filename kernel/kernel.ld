@@ -13,7 +13,7 @@ ENTRY(_start)
 SECTIONS
 {
     . = KERNEL_BASE + KERNEL_LOAD_OFFSET;
-    __code_start = .;
+    PROVIDE_HIDDEN(__code_start = .);
 
     .text.boot0 : AT(MEMBASE + KERNEL_LOAD_OFFSET) {
         KEEP(*(.text.boot0))
@@ -21,7 +21,7 @@ SECTIONS
 
     . = ALIGN(8);
     .buildsig : {
-        buildsig = .;
+        PROVIDE_HIDDEN(buildsig = .);
         BYTE(0x42); BYTE(0x53); BYTE(0x49); BYTE(0x47); /* BSIG */
         BYTE(0x53); BYTE(0x54); BYTE(0x52); BYTE(0x54); /* STRT */
         /*
@@ -45,10 +45,10 @@ SECTIONS
         *(.gnu.linkonce.t.*)
     }
 
-    __code_end = .;
+    PROVIDE_HIDDEN(__code_end = .);
 
     . = ALIGN(4096);
-    __rodata_start = .;
+    PROVIDE_HIDDEN(__rodata_start = .);
 
     /*
      * These are page-aligned, so place them first.
@@ -58,19 +58,67 @@ SECTIONS
     }
 
     .note.gnu.build-id : {
-        __build_id_note_start = .;
+        PROVIDE_HIDDEN(__build_id_note_start = .);
         *(.note.gnu.build-id)
-        __build_id_note_end = .;
+        PROVIDE_HIDDEN(__build_id_note_end = .);
     } :rodata :note
 
     .rodata : {
         *(.rodata* .gnu.linkonce.r.*)
     } :rodata
 
+    /*
+     * When compiling PIC, the compiler puts things into sections it
+     * thinks need to be writable until after dynamic relocation.  In
+     * the kernel, these things all go into the read-only segment.  But
+     * to the linker, they are writable and so the default "orphans"
+     * placement would put them after .data instead of here.  That's bad
+     * both because we want these things in the read-only segment (the
+     * kernel's self-relocation applies before the read-only-ness starts
+     * being enforced anyway), and because the orphans would wind up
+     * being after the __data_end symbol (see below).
+     *
+     * Therefore, we have to list all the special-case sections created
+     * by __SECTION("foo") uses in the kernel that are RELRO candidates,
+     * i.e. things that have address constants in their initializers.
+     * All such uses in the source use sections named ".data.rel.ro.foo"
+     * instead of just "foo" specifically to ensure we write them here.
+     * This avoids the magic linker behavior for an "orphan" section
+     * called "foo" of synthesizing "__start_foo" and "__stop_foo"
+     * symbols when the section name has no . characters in it, and so
+     * makes sure we'll get undefined symbol references if we omit such
+     * a section here.  The magic linker behavior is nice, but it only
+     * goes for orphans, and we can't abide the default placement of
+     * orphans that should be RELRO.
+     */
+    .data.rel.ro : ALIGN(8) {
+	PROVIDE_HIDDEN(__start_commands = .);
+	KEEP(*(.data.rel.ro.commands))
+	PROVIDE_HIDDEN(__stop_commands = .);
+
+	PROVIDE_HIDDEN(__start_ktrace_probe = .);
+	KEEP(*(.data.rel.ro.ktrace_probe))
+	PROVIDE_HIDDEN(__stop_ktrace_probe = .);
+
+	PROVIDE_HIDDEN(__start_lk_init = .);
+	KEEP(*(.data.rel.ro.lk_init))
+	PROVIDE_HIDDEN(__stop_lk_init = .);
+
+	PROVIDE_HIDDEN(__start_lk_pdev_init = .);
+	KEEP(*(.data.rel.ro.lk_pdev_init))
+	PROVIDE_HIDDEN(__stop_lk_pdev_init = .);
+
+	PROVIDE_HIDDEN(__start_unittest_testcases = .);
+	KEEP(*(.data.rel.ro.unittest_testcases))
+	PROVIDE_HIDDEN(__stop_unittest_testcases = .);
+
+        *(.data.rel.ro* .gnu.linkonce.d.rel.ro.*)
+    }
+
     .init_array : ALIGN(8) {
-        __init_array_start = .;
+        PROVIDE_HIDDEN(__init_array_start = .);
         KEEP(*(.init_array .ctors))
-        __init_array_end = .;
+        PROVIDE_HIDDEN(__init_array_end = .);
     }
 
     /*
@@ -88,10 +136,10 @@ SECTIONS
      */
 
     .data : ALIGN(4096) {
-        __rodata_end = .;
-        __data_start = .;
+        PROVIDE_HIDDEN(__rodata_end = .);
+        PROVIDE_HIDDEN(__data_start = .);
         *(.data .data.* .gnu.linkonce.d.*)
-        __data_end = .;
+        PROVIDE_HIDDEN(__data_end = .);
     } :data
 
     /*
@@ -102,10 +150,10 @@ SECTIONS
      */
 
     .bss : ALIGN(4096) {
-        __bss_start = .;
+        PROVIDE_HIDDEN(__bss_start = .);
         KEEP(*(.bss.prebss.*))
         . = ALIGN(16);
-        __post_prebss_bss_start = .;
+        PROVIDE_HIDDEN(__post_prebss_bss_start = .);
         *(.bss*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
@@ -116,7 +164,7 @@ SECTIONS
      */
 
      . = ALIGN(4096);
-    _end = .;
+    PROVIDE_HIDDEN(_end = .);
 }
 
 PHDRS

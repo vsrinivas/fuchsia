@@ -128,13 +128,14 @@ KERNEL_COMPILEFLAGS += -mno-80387 -mno-fp-ret-in-387
 endif
 KERNEL_DEFINES += WITH_NO_FP=1
 
-# Use -fno-pic on x86_64 as it was default everywhere before arm64 enabled PIE
-KERNEL_COMPILEFLAGS += -fno-pic
-
-KERNEL_COMPILEFLAGS += -mcmodel=kernel
+KERNEL_COMPILEFLAGS += -fPIE -include kernel/include/hidden.h
 KERNEL_COMPILEFLAGS += -mno-red-zone
 
-# Clang now supports -fsanitize=safe-stack with -mcmodel=kernel.
+# Clang needs -mcmodel=kernel to tell it to use the right safe-stack ABI for
+# the kernel.
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+KERNEL_COMPILEFLAGS += -mcmodel=kernel
+endif
 KERNEL_COMPILEFLAGS += $(SAFESTACK)
 
 # optimization: since fpu is disabled, do not pass flag in rax to varargs routines

@@ -342,7 +342,7 @@ typedef struct unitest_testcase_registration {
 
 #define UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup) \
     };  /* __unittest_table_##_global_id */                             \
-    __ALIGNED(sizeof(void *)) __USED __SECTION("unittest_testcases")    \
+    __ALIGNED(sizeof(void *)) __USED __SECTION(".data.rel.ro.unittest_testcases") \
     static const unittest_testcase_registration_t __unittest_case_##_global_id = \
     {                                                                   \
         .name = _name,                                                  \

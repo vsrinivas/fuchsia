@@ -49,7 +49,7 @@ typedef struct {
 #endif
 
 #define STATIC_COMMAND_START \
-    __USED __SECTION("commands") static const cmd _cmd_list[] = {
+    __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
 
 #define STATIC_COMMAND_END(name) };                                     \
 
