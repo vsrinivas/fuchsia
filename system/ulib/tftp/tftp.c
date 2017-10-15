@@ -172,13 +172,20 @@ tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, 
         xprintf(" -> Copying block #%d (size:%zu/%d) from %zu/%zu [%d/%d]\n",
                 session->block_number + session->window_index, len, session->block_size,
                 session->offset, session->file_size, session->window_index, session->window_size);
-        if (len > 0) {
+        void* buf = resp->data;
+        size_t len_remaining = len;
+        size_t off = session->offset;
+        while (len_remaining > 0) {
             // TODO(tkilbourn): assert that these function pointers are set
-            tftp_status s = session->file_interface.read(resp->data, &len, session->offset, cookie);
+            size_t rr = len_remaining;
+            tftp_status s = session->file_interface.read(buf, &rr, off, cookie);
             if (s < 0) {
                 xprintf("Err reading: %d\n", s);
                 return s;
             }
+            buf += rr;
+            off += rr;
+            len_remaining -= rr;
         }
         *outlen = sizeof(*resp) + len;
 
@@ -625,17 +632,21 @@ tftp_status tftp_handle_data(tftp_session* session,
             session->file_size - session->block_number * session->block_size);
     if (block_delta == 1) {
         xprintf("Advancing normally + 1\n");
-        size_t wr = msg_len - sizeof(tftp_data_msg);
-        if (wr > 0) {
+        void* buf = data->data;
+        size_t len = msg_len - sizeof(tftp_data_msg);
+        size_t off = session->block_number * session->block_size;
+        while (len > 0) {
             tftp_status ret;
             // TODO(tkilbourn): assert that these function pointers are set
-            ret = session->file_interface.write(data->data, &wr,
-                                                session->block_number * session->block_size,
-                                                cookie);
+            size_t wr = len;
+            ret = session->file_interface.write(buf, &wr, off, cookie);
             if (ret < 0) {
                 xprintf("Error writing: %d\n", ret);
                 return ret;
             }
+            buf += wr;
+            off += wr;
+            len -= wr;
         }
         session->block_number++;
         session->window_index++;

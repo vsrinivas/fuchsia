@@ -119,6 +119,11 @@ typedef tftp_status (*tftp_file_open_write_cb)(const char* filename,
 // tftp_file_read_cb is called by the library to read |length| bytes, starting
 // at |offset|, into |data|. |file_cookie| will be passed to this function from
 // the argument to tftp_process_msg.
+//
+// |length| is both an input and output parameter, and may be set as a value
+// less than or equal to the original value to indicate a partial read.
+// |length| is only used as an output parameter if the returned status is
+// TFTP_NO_ERROR.
 typedef tftp_status (*tftp_file_read_cb)(void* data,
                                          size_t* length,
                                          off_t offset,
@@ -127,6 +132,11 @@ typedef tftp_status (*tftp_file_read_cb)(void* data,
 // tftp_file_write_cb is called by the library to write |length| bytes,
 // starting at |offset|, into the destination. |file_cookie| will be passed to
 // this function from the argument to tftp_process_msg.
+//
+// |length| is both an input and output parameter, and may be set as a value
+// less than or equal to the original value to indicate a partial write.
+// |length| is only used as an output parameter if the returned status is
+// TFTP_NO_ERROR.
 typedef tftp_status (*tftp_file_write_cb)(const void* data,
                                           size_t* length,
                                           off_t offset,

@@ -85,6 +85,10 @@ tftp_status file_open_write(const char* filename,
     return TFTP_NO_ERROR;
 }
 
+// Every SHORT_READ_FREQ writes we will read a smaller amount instead, to verify behavior when
+// a read operation returns a length less than the requested amount.
+#define SHORT_READ_FREQ 10
+
 tftp_status file_read(void* data, size_t* length, off_t offset,
                       void* file_cookie) {
     file_info_t* file_info = file_cookie;
@@ -95,9 +99,17 @@ tftp_status file_read(void* data, size_t* length, off_t offset,
     if ((offset + *length) > file_info->filesz) {
         *length = file_info->filesz - offset;
     }
+    static size_t read_count = 0;
+    if (read_count++ % SHORT_READ_FREQ == 0) {
+        *length /= 2;
+    }
     memcpy(data, &file_info->buf[offset], *length);
     return TFTP_NO_ERROR;
 }
+
+// Every SHORT_WRITE_FREQ writes we will write a smaller amount instead, to verify behavior when
+// a write operation returns a length less than the requested amount.
+#define SHORT_WRITE_FREQ 10
 
 tftp_status file_write(const void* data, size_t* length, off_t offset,
                        void* file_cookie) {
@@ -105,6 +117,10 @@ tftp_status file_write(const void* data, size_t* length, off_t offset,
     if (((size_t)offset > file_info->filesz) || ((offset + *length) > file_info->filesz)) {
         // Something has gone wrong in libtftp
         return TFTP_ERR_INTERNAL;
+    }
+    static size_t write_count = 0;
+    if (write_count++ % SHORT_WRITE_FREQ == 0) {
+        *length /= 2;
     }
     memcpy(&file_info->buf[offset], data, *length);
     return TFTP_NO_ERROR;
