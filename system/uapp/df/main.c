@@ -175,21 +175,17 @@ int main(int argc, const char** argv) {
         }
     }
 
-    int flags = O_RDONLY | O_ADMIN;
-
     // Try to open path with O_ADMIN so we can query for underlying block devices.
     // If we fail, open directory without O_ADMIN. Block devices will not be returned.
     for (size_t i = 0; i < dircount; i++) {
         int fd;
-        if ((fd = open(dirs[i], flags)) < 0) {
-            flags ^= O_ADMIN;
-
-            if ((fd = open(dirs[i], flags)) < 0) {
-                fprintf(stderr, "df: Could not open target\n");
-                return -1;
+        bool admin = true;
+        if ((fd = open(dirs[i], O_RDONLY | O_ADMIN)) < 0) {
+            if ((fd = open(dirs[i], O_RDONLY)) < 0) {
+                fprintf(stderr, "df: Could not open target: %s\n", dirs[i]);
+                continue;
             }
-
-            fprintf(stderr, "df: Unable to acquire admin access to target\n");
+            admin = false;
         }
 
         vfs_query_info_wrapper_t wrapper;
@@ -202,7 +198,8 @@ int main(int argc, const char** argv) {
         }
 
         ssize_t s = ioctl_vfs_get_device_path(fd, device_path, sizeof(device_path));
-        print_fs_type(dirs[i], &options, name_len > 0 ? &wrapper.info : NULL, name_len, (s > 0 ? device_path : NULL));
+        const char* path = (s > 0 ? device_path : (admin ? NULL : "unknown; missing O_ADMIN"));
+        print_fs_type(dirs[i], &options, name_len > 0 ? &wrapper.info : NULL, name_len, path);
         close(fd);
     }
 
