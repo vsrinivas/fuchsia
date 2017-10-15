@@ -74,7 +74,8 @@ public:
     void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                        size_t* out_actual) final;
 
     bool AddService(fbl::StringPiece name, ServiceProvider* provider);
     bool RemoveService(fbl::StringPiece name);

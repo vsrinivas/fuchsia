@@ -105,14 +105,16 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDir(vfs, this, cmd);
 }
 
-zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) {
+zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len,
+                              size_t* out_actual) {
     dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(data, len);
 
     zx_status_t r = 0;
     if (c->last_id < 1) {
         if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
-            return df.BytesFilled();
+            *out_actual = df.BytesFilled();
+            return ZX_OK;
         }
         c->last_id = 1;
     }
@@ -123,12 +125,14 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
         }
         if ((r = df.Next(vn.name().ToStringPiece(),
                          VTYPE_TO_DTYPE(V_TYPE_FILE))) != ZX_OK) {
-            return df.BytesFilled();
+            *out_actual = df.BytesFilled();
+            return ZX_OK;
         }
         c->last_id = vn.node_id();
     }
 
-    return df.BytesFilled();
+    *out_actual = df.BytesFilled();
+    return ZX_OK;
 }
 
 bool VnodeDir::AddService(fbl::StringPiece name, ServiceProvider* provider) {

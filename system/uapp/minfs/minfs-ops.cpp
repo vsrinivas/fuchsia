@@ -1347,7 +1347,8 @@ typedef struct dircookie {
 static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
               "MinFS dircookie too large to fit in IO state");
 
-zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) {
+zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                                size_t* out_actual) {
     FS_TRACE(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
     dircookie_t* dc = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(dirents, len);
@@ -1405,9 +1406,9 @@ done:
     // save our place in the dircookie
     dc->off = off;
     dc->seqno = inode_.seq_num;
-    r = df.BytesFilled();
-    ZX_DEBUG_ASSERT(r <= len); // Otherwise, we're overflowing the input buffer.
-    return static_cast<zx_status_t>(r);
+    *out_actual = df.BytesFilled();
+    ZX_DEBUG_ASSERT(*out_actual <= len); // Otherwise, we're overflowing the input buffer.
+    return ZX_OK;
 
 fail:
     dc->off = 0;

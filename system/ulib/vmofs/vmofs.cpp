@@ -157,13 +157,15 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) {
+zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len,
+                              size_t* out_actual) {
     dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(data, len);
     zx_status_t r = 0;
     if (c->last_id < 1) {
         if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
-            return df.BytesFilled();
+            *out_actual = df.BytesFilled();
+            return ZX_OK;
         }
         c->last_id = 1;
     }
@@ -178,7 +180,8 @@ zx_status_t VnodeDir::Readdir(fs::vdircookie_t* cookie, void* data, size_t len) 
         c->last_id = i + 2;
     }
 
-    return df.BytesFilled();
+    *out_actual = df.BytesFilled();
+    return ZX_OK;
 }
 
 } // namespace vmofs

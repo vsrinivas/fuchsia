@@ -47,12 +47,13 @@ zx_status_t PseudoDir::WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDir(vfs, this, cmd);
 }
 
-zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len) {
+zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, size_t* out_actual) {
     fs::DirentFiller df(data, len);
     zx_status_t r = 0;
     if (cookie->n < kDotId) {
         if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR))) != ZX_OK) {
-            return df.BytesFilled();
+            *out_actual = df.BytesFilled();
+            return r;
         }
         cookie->n = kDotId;
     }
@@ -71,12 +72,14 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len) {
 
         if ((r = df.Next(entry.name().ToStringPiece(),
                          VTYPE_TO_DTYPE(attr.mode))) != ZX_OK) {
-            return df.BytesFilled();
+            *out_actual = df.BytesFilled();
+            return r;
         }
         cookie->n = entry.id();
     }
 
-    return df.BytesFilled();
+    *out_actual = df.BytesFilled();
+    return ZX_OK;
 }
 
 zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {

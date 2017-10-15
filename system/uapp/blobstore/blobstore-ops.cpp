@@ -55,12 +55,13 @@ zx_status_t VnodeBlob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) {
+zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                               size_t* out_actual) {
     if (!IsDirectory()) {
         return ZX_ERR_NOT_DIR;
     }
 
-    return blobstore_->Readdir(cookie, dirents, len);
+    return blobstore_->Readdir(cookie, dirents, len, out_actual);
 }
 
 zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actual) {

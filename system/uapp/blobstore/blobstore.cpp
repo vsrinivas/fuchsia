@@ -548,7 +548,8 @@ typedef struct dircookie {
 static_assert(sizeof(dircookie_t) <= sizeof(fs::vdircookie_t),
               "Blobstore dircookie too large to fit in IO state");
 
-zx_status_t Blobstore::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) {
+zx_status_t Blobstore::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                               size_t* out_actual) {
     fs::DirentFiller df(dirents, len);
     dircookie_t* c = reinterpret_cast<dircookie_t*>(cookie);
 
@@ -568,7 +569,8 @@ zx_status_t Blobstore::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
         }
     }
 
-    return df.BytesFilled();
+    *out_actual = df.BytesFilled();
+    return ZX_OK;
 }
 
 zx_status_t Blobstore::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {

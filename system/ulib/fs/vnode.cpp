@@ -62,7 +62,7 @@ zx_status_t Vnode::Setattr(const vnattr_t* a) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Readdir(vdircookie_t* cookie, void* dirents, size_t len) {
+zx_status_t Vnode::Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

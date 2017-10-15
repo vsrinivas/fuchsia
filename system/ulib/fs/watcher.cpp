@@ -97,19 +97,21 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, const vfs_watch_dir_
         {
             // Send "VFS_WATCH_EVT_EXISTING" for all entries in readdir
             while (true) {
+                size_t actual;
                 zx_status_t status = vfs->Readdir(vn, &dircookie, readdir_buf,
-                                                  sizeof(readdir_buf));
-                if (status <= 0) {
+                                                  sizeof(readdir_buf), &actual);
+                if (status != ZX_OK || actual == 0) {
                     break;
                 }
                 void* ptr = readdir_buf;
-                while (status > 0) {
+                while (actual >= sizeof(vdirent_t)) {
                     auto dirent = reinterpret_cast<vdirent_t*>(ptr);
                     if (dirent->name[0]) {
                         wb.AddMsg(watcher->h, VFS_WATCH_EVT_EXISTING,
                                   fbl::StringPiece(dirent->name));
                     }
-                    status -= dirent->size;
+                    ZX_ASSERT(dirent->size <= actual); // Prevent underflow
+                    actual -= dirent->size;
                     ptr = reinterpret_cast<void*>(
                             static_cast<uintptr_t>(dirent->size) +
                             reinterpret_cast<uintptr_t>(ptr));

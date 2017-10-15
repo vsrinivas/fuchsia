@@ -88,9 +88,9 @@ bool test_pseudo_dir() {
     {
         fs::vdircookie_t cookie = {};
         uint8_t buffer[4096];
-        zx_status_t length = dir->Readdir(&cookie, buffer, sizeof(buffer));
-        EXPECT_GT(length, ZX_OK);
-        DirentChecker dc(buffer, static_cast<size_t>(length));
+        size_t length;
+        EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+        DirentChecker dc(buffer, length);
         EXPECT_TRUE(dc.ExpectEntry(".", V_TYPE_DIR));
         EXPECT_TRUE(dc.ExpectEntry("subdir", V_TYPE_DIR));
         EXPECT_TRUE(dc.ExpectEntry("file1", V_TYPE_FILE));
@@ -105,9 +105,9 @@ bool test_pseudo_dir() {
     {
         fs::vdircookie_t cookie = {};
         uint8_t buffer[4096];
-        zx_status_t length = dir->Readdir(&cookie, buffer, sizeof(buffer));
-        EXPECT_GT(length, ZX_OK);
-        DirentChecker dc(buffer, static_cast<size_t>(length));
+        size_t length;
+        EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+        DirentChecker dc(buffer, length);
         EXPECT_TRUE(dc.ExpectEntry(".", V_TYPE_DIR));
         EXPECT_TRUE(dc.ExpectEnd());
     }

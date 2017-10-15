@@ -392,12 +392,13 @@ struct dirent* emu_readdir(DIR* dirp) {
             }
             dir->size = 0;
         }
-        zx_status_t status = dir->vn->Readdir(&dir->cookie, &dir->data, DIR_BUFSIZE);
-        if (status <= 0) {
+        size_t actual;
+        zx_status_t status = dir->vn->Readdir(&dir->cookie, &dir->data, DIR_BUFSIZE, &actual);
+        if (status != ZX_OK) {
             break;
         }
         dir->ptr = dir->data;
-        dir->size = status;
+        dir->size = actual;
     }
     return nullptr;
 }

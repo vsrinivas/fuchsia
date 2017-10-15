@@ -55,7 +55,7 @@ public:
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd) final;
-    zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
 
 private:
     static constexpr uint64_t kDotId = 1u;

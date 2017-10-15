@@ -58,7 +58,8 @@ public:
     zx_status_t Open(uint32_t flags, fbl::RefPtr<fs::Vnode>* vnode) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                        size_t* out_actual) final;
 
     uint32_t GetVType() final;
 

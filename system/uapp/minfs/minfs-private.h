@@ -218,7 +218,8 @@ private:
                        size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Setattr(const vnattr_t* a) final;
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                        size_t* out_actual) final;
     zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name,
                        uint32_t mode) final;
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;

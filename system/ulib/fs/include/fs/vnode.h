@@ -124,10 +124,11 @@ public:
 
     // Read directory entries of vn, error if not a directory.
     // FS-specific Cookie must be a buffer of vdircookie_t size or smaller.
-    // Cookie must be zero'd before first call and will be used by.
+    // Cookie must be zero'd before first call and will be used by
     // the readdir implementation to maintain state across calls.
     // To "rewind" and start from the beginning, cookie may be zero'd.
-    virtual zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len);
+    virtual zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len,
+                                size_t* out_actual);
 
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.

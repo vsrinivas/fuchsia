@@ -378,11 +378,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         if (msg->arg2.off == READDIR_CMD_RESET) {
             dircookie_.Reset();
         }
-        zx_status_t r = vfs_->Readdir(vnode_.get(), &dircookie_, msg->data, arg);
-        if (r >= 0) {
-            msg->datalen = r;
+        size_t actual;
+        zx_status_t r = vfs_->Readdir(vnode_.get(), &dircookie_, msg->data, arg, &actual);
+        if (r == ZX_OK) {
+            msg->datalen = static_cast<uint32_t>(actual);
         }
-        return r;
+        return r < 0 ? r : msg->datalen;
     }
     case ZXRIO_IOCTL_1H: {
         if ((len > FDIO_IOCTL_MAX_INPUT) ||

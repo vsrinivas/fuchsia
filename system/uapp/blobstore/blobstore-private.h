@@ -140,7 +140,8 @@ private:
     zx_status_t GetHandles(uint32_t flags, zx_handle_t* hnds, size_t* hcount, uint32_t* type,
                            void* extra, uint32_t* esize) final;
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len) final;
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                        size_t* out_actual) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t len, size_t offset,
                       size_t* out_actual) final;
@@ -237,7 +238,7 @@ public:
     // Removes blob from 'active' hashmap.
     zx_status_t ReleaseBlob(VnodeBlob* blob);
 
-    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len);
+    zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {

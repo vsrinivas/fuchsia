@@ -134,7 +134,7 @@ public:
     // Calls readdir on the Vnode while holding the vfs_lock, preventing path
     // modification operations for the duration of the operation.
     zx_status_t Readdir(Vnode* vn, vdircookie_t* cookie,
-                        void* dirents, size_t len) __TA_EXCLUDES(vfs_lock_);
+                        void* dirents, size_t len, size_t* out_actual) __TA_EXCLUDES(vfs_lock_);
 
     Vfs(async_t* async);
 
