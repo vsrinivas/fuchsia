@@ -47,6 +47,11 @@ zx_status_t HandoffOpenTransaction(zx_handle_t srv, zx::channel channel,
 void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
             zxrio_msg_t* msg, zx::channel channel,
             fbl::StringPiece path, uint32_t flags, uint32_t mode) {
+    // Filter out flags that are invalid when combined with O_PATH
+    if (IsPathOnly(flags)) {
+        flags &= O_PATH | O_DIRECTORY | O_NOFOLLOW | O_PIPELINE;
+    }
+
     // The pipeline directive instructs the VFS layer to open the vnode
     // immediately, rather than describing the VFS object to the caller.
     // We check it early so we can throw away the protocol part of flags.
@@ -75,6 +80,8 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
             vfs->UninstallRemote(vnode, &c);
         }
         return;
+    } else if (IsPathOnly(open_flags)) {
+        vnode->Vnode::GetHandles(flags, obj.handle, &hcount, &obj.type, obj.extra, &obj.esize);
     } else {
         // Acquire the handles to the VFS object
         r = vnode->GetHandles(flags, obj.handle, &hcount, &obj.type, obj.extra, &obj.esize);
@@ -109,7 +116,11 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent,
     }
 
     // We don't care about the result because we are handing off the channel.
-    vnode->Serve(vfs, fbl::move(channel), open_flags);
+    if (IsPathOnly(open_flags)) {
+        vnode->Vnode::Serve(vfs, fbl::move(channel), open_flags);
+    } else {
+        vnode->Serve(vfs, fbl::move(channel), open_flags);
+    }
 }
 
 } // namespace
@@ -217,7 +228,10 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return ERR_DISPATCHER_INDIRECT;
     }
     case ZXRIO_CLOSE: {
-        return vnode_->Close();
+        if (!IsPathOnly(flags_)) {
+            return vnode_->Close();
+        }
+        return ZX_OK;
     }
     case ZXRIO_CLONE: {
         zx::channel channel(msg->handle[0]); // take ownership
@@ -293,6 +307,9 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status;
     }
     case ZXRIO_SEEK: {
+        if (IsPathOnly(flags_)) {
+            return ZX_ERR_BAD_HANDLE;
+        }
         vnattr_t attr;
         zx_status_t r;
         if ((r = vnode_->Getattr(&attr)) < 0) {
@@ -354,6 +371,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return msg->datalen;
     }
     case ZXRIO_SETATTR: {
+        // TODO(smklein): Prevent read-only files from setting attributes,
+        // but allow attribute-setting on mutable directories.
+        // For context: ZX-1262, ZX-1065
+        if (IsPathOnly(flags_)) {
+            return ZX_ERR_BAD_HANDLE;
+        }
         zx_status_t r = vnode_->Setattr((vnattr_t*)msg->data);
         return r;
     }
@@ -372,6 +395,9 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
     }
     case ZXRIO_READDIR: {
+        if (IsPathOnly(flags_)) {
+            return ZX_ERR_BAD_HANDLE;
+        }
         if (arg > FDIO_CHUNK_SIZE) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -386,6 +412,10 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return r < 0 ? r : msg->datalen;
     }
     case ZXRIO_IOCTL_1H: {
+        if (IsPathOnly(flags_)) {
+            zx_handle_close(msg->handle[0]);
+            return ZX_ERR_BAD_HANDLE;
+        }
         if ((len > FDIO_IOCTL_MAX_INPUT) ||
             (arg > (ssize_t)sizeof(msg->data)) ||
             (IOCTL_KIND(msg->arg2.op) != IOCTL_KIND_SET_HANDLE)) {
@@ -427,6 +457,9 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status == ZX_OK ? static_cast<zx_status_t>(actual) : status;
     }
     case ZXRIO_IOCTL: {
+        if (IsPathOnly(flags_)) {
+            return ZX_ERR_BAD_HANDLE;
+        }
         if (len > FDIO_IOCTL_MAX_INPUT ||
             (arg > (ssize_t)sizeof(msg->data)) ||
             (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_SET_HANDLE)) {
@@ -529,6 +562,9 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         assert(false);
     }
     case ZXRIO_MMAP: {
+        if (IsPathOnly(flags_)) {
+            return ZX_ERR_BAD_HANDLE;
+        }
         if (len != sizeof(zxrio_mmap_data_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -549,6 +585,9 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         return status;
     }
     case ZXRIO_SYNC: {
+        if (IsPathOnly(flags_)) {
+            return ZX_ERR_BAD_HANDLE;
+        }
         return vnode_->Sync();
     }
     case ZXRIO_UNLINK:

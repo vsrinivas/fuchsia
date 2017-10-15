@@ -70,6 +70,9 @@ zx_status_t vfs_lookup(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
 // independently of the target node.
 zx_status_t vfs_prevalidate_flags(uint32_t flags) {
     switch (flags & O_ACCMODE) {
+    case O_PATH:
+        ZX_DEBUG_ASSERT((flags & (O_TRUNC | O_CREAT | O_RDWR)) == 0);
+        return ZX_OK;
     case O_RDONLY:
         if (flags & O_TRUNC) {
             return ZX_ERR_INVALID_ARGS;
@@ -192,12 +195,16 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
             return r;
         }
-        if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
-            return r;
-        }
-        if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
-            vn->Close();
-            return r;
+        // O_PATH requests that we don't actually open the underlying
+        // Vnode.
+        if (!IsPathOnly(flags)) {
+            if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
+                return r;
+            }
+            if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
+                vn->Close();
+                return r;
+            }
         }
     }
     FS_TRACE(VFS, "VfsOpen: vn=%p\n", vn.get());

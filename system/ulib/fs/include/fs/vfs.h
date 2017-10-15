@@ -49,6 +49,10 @@ inline constexpr bool IsReadable(uint32_t flags) {
     return mode == O_RDWR || mode == O_RDONLY;
 }
 
+inline constexpr bool IsPathOnly(uint32_t flags) {
+    return flags & O_PATH;
+}
+
 // A storage class for a vdircookie which is passed to Readdir.
 // Common vnode implementations may use this struct as scratch
 // space, or cast it to an alternative structure of the same

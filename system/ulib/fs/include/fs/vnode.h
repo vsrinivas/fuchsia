@@ -55,6 +55,7 @@ public:
     // different vnode.
     //
     // Flags will have already been validated by "ValidateFlags".
+    // Open should never be invoked if flags includes "O_PATH".
     //
     // If the implementation of |Open()| sets |out_redirect| to a non-null value.
     // all following I/O operations on the opened file will be redirected to the
@@ -67,6 +68,9 @@ public:
     //
     // The following operations will not be invoked unless the Vnode has
     // been "Open()"-ed successfully.
+    //
+    // For files opened with O_PATH (as a file descriptor only) the base
+    // classes' implementation of some of these functions may be invoked anyway.
 
 #ifdef __Fuchsia__
     // Serves a connection to the Vnode over the specified channel.
