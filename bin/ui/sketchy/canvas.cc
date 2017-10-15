@@ -28,6 +28,11 @@ void CanvasImpl::Enqueue(fidl::Array<sketchy::OpPtr> ops) {
 
 void CanvasImpl::Present(uint64_t presentation_time,
                          const PresentCallback& callback) {
+  // TODO(MZ-269): Present() should behave the same way as Scenic. Specifically,
+  // Ops shouldn't be applied immediately. Instead a frame-request should be
+  // triggered and the Ops enqueue; when the corresponding frame is processed
+  // all Ops that are scheduled for the current frame's presentation time are
+  // applied.
   for (auto& op : ops_) {
     if (!ApplyOp(op)) {
       fsl::MessageLoop::GetCurrent()->QuitNow();
@@ -47,7 +52,30 @@ void CanvasImpl::Present(uint64_t presentation_time,
   session_->EnqueueAcquireFence(std::move(pair.second));
 
   command->Submit(escher_->device()->vk_main_queue(), {});
-  session_->Present(presentation_time, callback);
+  callbacks_.push_back(std::move(callback));
+  RequestScenicPresent(presentation_time);
+}
+
+void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
+  if (is_scenic_present_requested_) {
+    return;
+  }
+  is_scenic_present_requested_ = true;
+
+  auto session_callback = [this, callbacks = std::move(callbacks_)]
+      (scenic::PresentationInfoPtr info) {
+    FXL_DCHECK(is_scenic_present_requested_);
+    is_scenic_present_requested_ = false;
+    for (auto& callback : callbacks) {
+      auto _info = scenic::PresentationInfo::New();
+      _info->presentation_time = _info->presentation_time;
+      _info->presentation_interval = _info->presentation_interval;
+      callback(std::move(_info));
+    }
+    RequestScenicPresent(info->presentation_time + info->presentation_interval);
+  };
+  callbacks_.clear();
+  session_->Present(presentation_time, std::move(session_callback));
 }
 
 bool CanvasImpl::ApplyOp(const sketchy::OpPtr& op) {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "garnet/bin/ui/sketchy/buffer.h"
+#include "garnet/bin/ui/sketchy/resources/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
 #include "lib/escher/geometry/bounding_box.h"
@@ -42,14 +43,9 @@ class StrokeGroup final : public Resource {
   scenic_lib::Mesh mesh_;
   scenic_lib::Material material_;
 
-  std::unique_ptr<Buffer> vertex_buffer_;
-  std::unique_ptr<Buffer> index_buffer_;
-  uint32_t num_vertices_;
-  uint32_t num_indices_;
-  escher::BoundingBox bounding_box_;
-
   std::set<StrokePtr> strokes_to_add_;
   std::set<StrokePtr> strokes_;
+  MeshBuffer mesh_buffer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
 };

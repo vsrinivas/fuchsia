@@ -56,7 +56,7 @@ bool Stroke::SetPath(sketchy::StrokePathPtr path) {
 // when we support wobble.
 void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
                                 escher::BufferFactory* buffer_factory,
-                                StrokeGroup* stroke_group) {
+                                MeshBuffer* mesh_buffer) {
   if (path_.empty()) {
     FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
     return;
@@ -136,7 +136,7 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
 
   // Generate indices.
   for (int i = 0; i < vertex_count - 2; i += 2) {
-    uint32_t j = i + stroke_group->num_vertices_;
+    uint32_t j = i + mesh_buffer->num_vertices_;
     builder->AddIndex(j).AddIndex(j + 1).AddIndex(j + 3);
     builder->AddIndex(j).AddIndex(j + 3).AddIndex(j + 2);
   }
@@ -144,13 +144,13 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
   auto mesh = builder->Build();
 
   // Start merging.
-  stroke_group->vertex_buffer_->Merge(command, buffer_factory,
-                                      mesh->vertex_buffer());
-  stroke_group->index_buffer_->Merge(command, buffer_factory,
-                                     mesh->index_buffer());
-  stroke_group->num_vertices_ += mesh->num_vertices();
-  stroke_group->num_indices_ += mesh->num_indices();
-  stroke_group->bounding_box_.Join(mesh->bounding_box());
+  mesh_buffer->vertex_buffer_->Merge(
+      command, buffer_factory, mesh->vertex_buffer());
+  mesh_buffer->index_buffer_->Merge(
+      command, buffer_factory, mesh->index_buffer());
+  mesh_buffer->num_vertices_ += mesh->num_vertices();
+  mesh_buffer->num_indices_ += mesh->num_indices();
+  mesh_buffer->bounding_box_.Join(mesh->bounding_box());
 }
 
 }  // namespace sketchy_service

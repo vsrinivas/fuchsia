@@ -17,7 +17,7 @@ class Canvas final {
  public:
   Canvas(app::ApplicationContext* context);
   Canvas(sketchy::CanvasPtr canvas);
-  void Present(uint64_t time);
+  void Present(uint64_t time, scenic_lib::Session::PresentCallback callback);
 
  private:
   friend class Resource;

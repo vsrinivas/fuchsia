@@ -59,7 +59,7 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
   node.AddChild(group);
 
   uint64_t time = zx_time_get(ZX_CLOCK_MONOTONIC);
-  canvas_->Present(time);
+  canvas_->Present(time, [](scenic::PresentationInfoPtr info) {});
   session_->Present(time, [](scenic::PresentationInfoPtr info) {});
 }
 

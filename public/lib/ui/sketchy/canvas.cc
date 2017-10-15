@@ -23,12 +23,12 @@ ResourceId Canvas::AllocateResourceId() {
   return next_resource_id_++;
 }
 
-void Canvas::Present(uint64_t time) {
+void Canvas::Present(uint64_t time,
+                     scenic_lib::Session::PresentCallback callback) {
   if (!ops_.empty()) {
     canvas_->Enqueue(std::move(ops_));
   }
-  // TODO: Use this callback to drive Present loop.
-  canvas_->Present(time, [](scenic::PresentationInfoPtr info) {});
+  canvas_->Present(time, std::move(callback));
 }
 
 }  // namespace sketchy_lib

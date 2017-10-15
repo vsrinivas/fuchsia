@@ -21,6 +21,8 @@ executable("sketchy") {
     "main.cc",
     "resources/import_node.cc",
     "resources/import_node.h",
+    "resources/mesh_buffer.cc",
+    "resources/mesh_buffer.h",
     "resources/resource.cc",
     "resources/resource.h",
     "resources/resource_map.cc",

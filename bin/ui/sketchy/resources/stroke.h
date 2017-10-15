@@ -8,6 +8,7 @@
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/buffer.h"
+#include "garnet/bin/ui/sketchy/resources/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "sketchy/stroke_segment.h"
 
@@ -30,7 +31,7 @@ class Stroke final : public Resource {
   // Tessellate and merge the mesh into larger buffers of |stroke_group|.
   void TessellateAndMerge(escher::impl::CommandBuffer* command,
                           escher::BufferFactory* buffer_factory,
-                          StrokeGroup* stroke_group);
+                          MeshBuffer* mesh_buffer);
 
  private:
   escher::Escher* const escher_;

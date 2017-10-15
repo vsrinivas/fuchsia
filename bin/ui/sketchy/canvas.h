@@ -28,6 +28,7 @@ class CanvasImpl final : public sketchy::Canvas {
 
  private:
   bool ApplyOp(const sketchy::OpPtr& op);
+  void RequestScenicPresent(uint64_t presentation_time);
 
   bool ApplyCreateResourceOp(const sketchy::CreateResourceOpPtr& op);
   bool ApplyReleaseResourceOp(const sketchy::ReleaseResourceOpPtr& op);
@@ -63,6 +64,8 @@ class CanvasImpl final : public sketchy::Canvas {
   ::fidl::Array<sketchy::OpPtr> ops_;
   ResourceMap resource_map_;
   std::set<StrokeGroupPtr> dirty_stroke_groups_;
+  bool is_scenic_present_requested_ = false;
+  std::vector<scenic_lib::Session::PresentCallback> callbacks_;
 };
 
 }  // namespace sketchy_service
