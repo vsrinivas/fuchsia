@@ -1401,7 +1401,7 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
     fdio_t* io;
     zx_status_t r;
 
-    if ((r = __fdio_open_at(&io, dirfd, fn, 0, 0)) < 0) {
+    if ((r = __fdio_open_at(&io, dirfd, fn, O_PATH, 0)) < 0) {
         return ERROR(r);
     }
     r = fdio_stat(io, s);
