@@ -361,13 +361,68 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inf
 // While this should perhaps take a launchpad_t* argument instead of the
 // inferior's handle, we later want to test attaching to an already running
 // inferior.
+// |max_threads| is the maximum number of threads the process is expected
+// to have in its lifetime. A real debugger would be more flexible of course.
+// N.B. |inferior| cannot be the result of launchpad_get_process_handle().
+// That handle is passed to the inferior when started and thus is lost to us.
+// Returns a boolean indicating success.
 
-zx_handle_t attach_inferior(zx_handle_t inferior)
+inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport,
+                                 size_t max_threads)
 {
-    zx_handle_t eport = tu_io_port_create();
+    // Fetch all current threads and attach async-waiters to them.
+    // N.B. We assume threads aren't being created as we're running.
+    // This is just a testcase so we can assume that. A real debugger
+    // would not have this assumption.
+    zx_koid_t* thread_koids = tu_malloc(max_threads * sizeof(zx_koid_t));
+    size_t num_threads = tu_process_get_threads(inferior, thread_koids, max_threads);
+    // For now require |max_threads| to be big enough.
+    if (num_threads > max_threads)
+        tu_fatal(__func__, ZX_ERR_BUFFER_TOO_SMALL);
+
     tu_set_exception_port(inferior, eport, exception_port_key, ZX_EXCEPTION_PORT_DEBUGGER);
+    tu_object_wait_async(inferior, eport, ZX_PROCESS_TERMINATED);
+
+    inferior_data_t* data = tu_malloc(sizeof(*data));
+    data->threads = tu_calloc(max_threads, sizeof(data->threads[0]));
+    data->inferior = inferior;
+    data->eport = eport;
+    data->max_num_threads = max_threads;
+
+    // Notification of thread termination and suspension is delivered by
+    // signals. So that we can continue to only have to wait on |eport|
+    // for inferior status change notification, install async-waiters
+    // for each thread.
+    size_t j = 0;
+    zx_signals_t thread_signals =
+        ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
+    for (size_t i = 0; i < num_threads; ++i) {
+        zx_handle_t thread = tu_process_get_thread(inferior, thread_koids[i]);
+        if (thread != ZX_HANDLE_INVALID) {
+            data->threads[j].tid = thread_koids[i];
+            data->threads[j].handle = thread;
+            tu_object_wait_async(thread, eport, thread_signals);
+            ++j;
+        }
+    }
+    free(thread_koids);
+
     unittest_printf("Attached to inferior\n");
-    return eport;
+    return data;
+}
+
+void detach_inferior(inferior_data_t* data, bool unbind_eport)
+{
+    if (unbind_eport) {
+        tu_set_exception_port(data->inferior, ZX_HANDLE_INVALID, exception_port_key,
+                              ZX_EXCEPTION_PORT_DEBUGGER);
+    }
+    for (size_t i = 0; i < data->max_num_threads; ++i) {
+        if (data->threads[i].handle != ZX_HANDLE_INVALID)
+            tu_handle_close(data->threads[i].handle);
+    }
+    free(data->threads);
+    free(data);
 }
 
 bool start_inferior(launchpad_t* lp)
@@ -470,18 +525,19 @@ bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior)
     END_HELPER;
 }
 
-// Wait for and receive an exception on |eport|.
+// Wait for and read an exception/signal on |eport|.
 
-bool read_exception(zx_handle_t eport, zx_handle_t inferior,
-                    zx_port_packet_t* packet)
+bool read_exception(zx_handle_t eport, zx_port_packet_t* packet)
 {
     BEGIN_HELPER;
 
-    unittest_printf("Waiting for exception on eport %d\n", eport);
+    unittest_printf("Waiting for exception/signal on eport %d\n", eport);
     ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 0), ZX_OK, "zx_port_wait failed");
-    ASSERT_EQ(packet->key, exception_port_key, "bad report key");
 
-    unittest_printf("read_exception: got exception %d\n", packet->type);
+    if (ZX_PKT_IS_EXCEPTION(packet->type))
+        ASSERT_EQ(packet->key, exception_port_key, "");
+
+    unittest_printf("read_exception: got exception/signal %d\n", packet->type);
 
     END_HELPER;
 }
@@ -489,6 +545,12 @@ bool read_exception(zx_handle_t eport, zx_handle_t inferior,
 // Wait for the thread to suspend
 // We could get a thread exit report from a previous test, so
 // we need to handle that, but no other exceptions are expected.
+//
+// The thread is assumed to be wait-async'd on |eport|. While we could just
+// wait on the |thread| for the appropriate signal, the signal will also be
+// sent to |eport| which our caller would then have to deal with. Keep things
+// simpler by doing all waiting via |eport|. It also makes us exercise doing
+// things this way, which is generally what debuggers will do.
 
 bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t eport) {
     BEGIN_HELPER;
@@ -500,14 +562,26 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
         zx_status_t status = zx_port_wait(eport, zx_deadline_after(ZX_SEC(1)), &packet, 0);
         if (status == ZX_ERR_TIMED_OUT) {
             // This shouldn't really happen unless the system is really loaded.
-            // Just flag it and try again.
+            // Just flag it and try again. The watchdog will catch failures.
             unittest_printf("%s: timed out???\n", __func__);
+            // Work around zx-1315. The SUSPENDED signal will get dropped if
+            // RUNNING is already queued.
+            zx_signals_t observed;
+            status = zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, 0u, &observed);
+            if (status == ZX_OK)
+                break;
             continue;
         }
         ASSERT_EQ(status, ZX_OK, "");
-        ASSERT_EQ(packet.key, exception_port_key, "");
-        zx_koid_t report_tid = packet.exception.tid;
-        if (report_tid != tid) {
+        if (ZX_PKT_IS_SIGNAL_REP(packet.type)) {
+            ASSERT_EQ(packet.key, tid, "");
+            if (packet.signal.observed & ZX_THREAD_SUSPENDED)
+                break;
+            ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING, "");
+        } else {
+            ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type), "");
+            zx_koid_t report_tid = packet.exception.tid;
+            ASSERT_NE(report_tid, tid, "");
             ASSERT_EQ(packet.type, (uint32_t) ZX_EXCP_THREAD_EXITING, "");
             // Note the thread may be completely gone by now.
             zx_handle_t other_thread;
@@ -516,10 +590,7 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
                 ASSERT_EQ(zx_task_resume(other_thread, ZX_RESUME_EXCEPTION), ZX_OK, "");
                 tu_handle_close(other_thread);
             }
-            continue;
         }
-        ASSERT_EQ(packet.type, (uint32_t) ZX_EXCP_THREAD_SUSPENDED, "");
-        break;
     }
 
     // Verify thread is suspended

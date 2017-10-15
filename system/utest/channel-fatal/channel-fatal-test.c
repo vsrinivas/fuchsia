@@ -146,27 +146,17 @@ static bool bad_channel_call_contract_violation(void) {
     ASSERT_EQ(zx_channel_read(chan, 0, msg, NULL, sizeof(msg), 0, &act_bytes, &act_handles),
               ZX_OK, "");
 
-    // Attach to debugger port so we can see ZX_EXCP_THREAD_SUSPENDED
-    zx_handle_t eport;
-    ASSERT_EQ(zx_port_create(0, &eport), ZX_OK, "");
-    ASSERT_EQ(zx_task_bind_exception_port(proc, eport, 0,
-                                          ZX_EXCEPTION_PORT_DEBUGGER),
-              ZX_OK, "");
-
     ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
 
     // Wait for the thread to suspend
-    zx_port_packet_t packet;
-    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0), ZX_OK, "");
-    ASSERT_EQ(packet.type, (uint32_t) ZX_EXCP_THREAD_SUSPENDED, "");
-    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
+    zx_signals_t observed = 0u;
+    ASSERT_EQ(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed), ZX_OK, "");
 
     // Resume the thread
     ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
 
     // Wait for signal 0 or 1, meaning either it's going to try its second call,
     // or something unexpected happened.
-    uint32_t observed;
     ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
                                  ZX_TIME_INFINITE, &observed), ZX_OK, "");
     ASSERT_TRUE(observed & ZX_USER_SIGNAL_1, "");

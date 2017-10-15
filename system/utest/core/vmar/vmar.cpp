@@ -77,6 +77,8 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
     alignas(16) static uint8_t thread_stack[PAGE_SIZE];
 
     zx_port_packet_t packet;
+    zx_info_handle_basic_t info;
+    zx_koid_t tid = ZX_KOID_INVALID;
     bool saw_page_fault = false;
 
     zx_handle_t thread = ZX_HANDLE_INVALID;
@@ -90,6 +92,13 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
         goto err;
     }
 
+    status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC,
+                                &info, sizeof(info), NULL, NULL);
+    if (status != ZX_OK) {
+        goto err;
+    }
+    tid = info.koid;
+
     // Create an exception port and bind it to the thread to prevent the
     // thread's illegal access from killing the process.
     status = zx_port_create(0, &port);
@@ -97,6 +106,11 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
         goto err;
     }
     status = zx_task_bind_exception_port(thread, port, 0, 0);
+    if (status != ZX_OK) {
+        goto err;
+    }
+    status = zx_object_wait_async(thread, port, tid, ZX_THREAD_TERMINATED,
+                                  ZX_WAIT_ASYNC_ONCE);
     if (status != ZX_OK) {
         goto err;
     }
@@ -110,12 +124,21 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
     // Wait for the thread to exit and identify its cause of death.
     // Keep looping until the thread is gone so that crashlogger doesn't
     // see the page fault.
-    do {
+    while (true) {
         zx_status_t s;
 
         s = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0);
         if (s != ZX_OK && status != ZX_OK) {
             status = s;
+            break;
+        }
+        if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
+            if (packet.key != tid ||
+                !(packet.signal.observed & ZX_THREAD_TERMINATED)) {
+                status = ZX_ERR_BAD_STATE;
+                break;
+            }
+            // Leave status as is.
             break;
         }
         if (!ZX_PKT_IS_EXCEPTION(packet.type)) {
@@ -127,15 +150,12 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
             saw_page_fault = true;
             // Leave status as is.
         }
-        else if (packet.type == ZX_EXCP_GONE) {
-            // Leave status as is.
-        }
         else {
             zx_task_kill(thread);
             if (status != ZX_OK)
                 status = ZX_ERR_BAD_STATE;
         }
-    } while (packet.type != ZX_EXCP_GONE);
+    }
 
     if (status == ZX_OK && !saw_page_fault)
         *success = true;

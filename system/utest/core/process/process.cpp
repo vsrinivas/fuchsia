@@ -111,7 +111,8 @@ bool kill_process_via_process_close() {
     zx_signals_t signals;
     EXPECT_EQ(zx_object_wait_one(
         thread, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
-    EXPECT_EQ(signals, ZX_TASK_TERMINATED);
+    // ZX_THREAD_RUNNING may also be present
+    EXPECT_EQ(signals & ~ZX_THREAD_RUNNING, ZX_TASK_TERMINATED);
 
     EXPECT_EQ(zx_handle_close(thread), ZX_OK);
     END_TEST;
@@ -223,7 +224,8 @@ bool kill_process_handle_cycle() {
 
     EXPECT_EQ(zx_object_wait_one(
         thread2, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
-    EXPECT_EQ(signals, ZX_TASK_TERMINATED);
+    // ZX_THREAD_RUNNING may also be present
+    EXPECT_EQ(signals & ~ZX_THREAD_RUNNING, ZX_TASK_TERMINATED);
 
     EXPECT_EQ(zx_handle_close(thread2), ZX_OK);
 
