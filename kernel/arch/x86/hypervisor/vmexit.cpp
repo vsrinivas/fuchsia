@@ -150,6 +150,10 @@ bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vect
 }
 
 static zx_status_t handle_external_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+    // If we are receiving an external interrupt because the thread is being
+    // killed, we should exit with an error.
+    if (get_current_thread()->signals & THREAD_SIGNAL_KILL)
+        return ZX_ERR_CANCELED;
     vmcs->InterruptibleReload();
     local_apic_maybe_interrupt(vmcs, local_apic_state);
     return ZX_OK;
