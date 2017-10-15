@@ -40,33 +40,35 @@ FUNCTION(arch_spin_lock)
     mov %gs:PERCPU_CPU_NUM_OFFSET, %rsi
     inc %rsi
 
+.Ltake_lock:
+    xor %rax, %rax
+    lock cmpxchg %rsi, (%rdi)
+    jnz .Lspin
+    ret
+
 .Lspin:
+    pause
     cmpq $0, (%rdi)
     je .Ltake_lock
-    pause
     jmp .Lspin
-.Ltake_lock:
-    mov %rsi, %rax
-    xchg %rax, (%rdi)
-    cmp $0, %rax // make sure we actually got the lock
-    jne .Lspin // if we lost the race, resume waiting
-    ret
 END_FUNCTION(arch_spin_lock)
 
 /* int arch_spin_trylock(unsigned long *lock) */
 FUNCTION(arch_spin_trylock)
     /* fetch the current cpu number + 1 */
-    mov %gs:PERCPU_CPU_NUM_OFFSET, %rax
-    inc %rax
+    mov %gs:PERCPU_CPU_NUM_OFFSET, %rsi
+    inc %rsi
 
-    xchg %rax, (%rdi)
-    ret // return 0 if we got the lock
+    xor %rax, %rax
+    lock cmpxchg %rsi, (%rdi)
+    /* we return 0 to indicate success. %rax contains the value found by cmpxchg,
+     * which is already 0 if we got the lock */
+    ret
 END_FUNCTION(arch_spin_trylock)
 
 /* void arch_spin_unlock(spin_lock_t *lock) */
 FUNCTION(arch_spin_unlock)
-    mov $0, %rax
-    xchg %rax, (%rdi)
+    movq $0, (%rdi)
     ret
 END_FUNCTION(arch_spin_unlock)
 
