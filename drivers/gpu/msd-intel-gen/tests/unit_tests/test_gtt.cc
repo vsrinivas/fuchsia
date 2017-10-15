@@ -103,20 +103,17 @@ public:
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(reg_size)));
         gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
 
-        bool ret = gtt->Init(gtt_size, platform_device.get());
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(gtt->Init(gtt_size, platform_device.get()));
 
         uint64_t scratch_bus_addr;
-        ret = TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr);
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr));
 
         auto mmio = platform_device->mmio();
         ASSERT_NE(mmio, nullptr);
 
         check_pte_entries_clear(mmio, 0, mmio->size(), scratch_bus_addr);
 
-        ret = TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1);
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1));
     }
 
     void Insert()
@@ -129,85 +126,67 @@ public:
         reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(bar0_size)));
         gtt = std::unique_ptr<Gtt>(new Gtt(GpuMappingCache::Create()));
 
-        bool ret = gtt->Init(gtt_size, platform_device.get());
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Init(gtt_size, platform_device.get()));
 
         uint64_t scratch_bus_addr;
-        ret = TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr);
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->MapPageRangeBus(0, 1, &scratch_bus_addr));
 
         // create some buffers
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
         buffer[0] = magma::PlatformBuffer::Create(1000, "test");
-        ret = gtt->Alloc(buffer[0]->size(), 0, &addr[0]);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Alloc(buffer[0]->size(), 0, &addr[0]));
 
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
-        ret = gtt->Alloc(buffer[1]->size(), 0, &addr[1]);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Alloc(buffer[1]->size(), 0, &addr[1]));
 
         // Try to insert without pinning
-        ret = gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
-        EXPECT_EQ(ret, false);
+        EXPECT_FALSE(gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
 
-        ret = buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE);
-        EXPECT_EQ(ret, true);
-        ret = buffer[1]->PinPages(0, buffer[1]->size() / PAGE_SIZE);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE));
+        EXPECT_TRUE(buffer[1]->PinPages(0, buffer[1]->size() / PAGE_SIZE));
 
         // Mismatch addr and buffer
-        ret = gtt->Insert(addr[1], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
-        EXPECT_EQ(ret, false);
+        EXPECT_FALSE(gtt->Insert(addr[1], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
 
         // Totally bogus addr
-        ret = gtt->Insert(0xdead1000, buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
-        EXPECT_EQ(ret, false);
+        EXPECT_FALSE(gtt->Insert(0xdead1000, buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
 
         // Correct
-        ret = gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
 
         check_pte_entries(platform_device->mmio(), buffer[0].get(), addr[0], scratch_bus_addr,
                           CACHING_NONE);
 
         // Also correct
-        ret = gtt->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(), CACHING_NONE);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(), CACHING_NONE));
 
         check_pte_entries(platform_device->mmio(), buffer[1].get(), addr[1], scratch_bus_addr,
                           CACHING_NONE);
 
         // Bogus addr
-        ret = gtt->Clear(0xdead1000);
-        EXPECT_EQ(ret, false);
+        EXPECT_FALSE(gtt->Clear(0xdead1000));
 
         // Cool
-        ret = gtt->Clear(addr[1]);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Clear(addr[1]));
 
         check_pte_entries_clear(platform_device->mmio(), addr[1], buffer[1]->size(),
                                 scratch_bus_addr);
 
-        ret = gtt->Clear(addr[0]);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Clear(addr[0]));
 
         check_pte_entries_clear(platform_device->mmio(), addr[0], buffer[0]->size(),
                                 scratch_bus_addr);
 
         // Bogus addr
-        ret = gtt->Free(0xdead1000);
-        EXPECT_EQ(ret, false);
+        EXPECT_FALSE(gtt->Free(0xdead1000));
 
         // Cool
-        ret = gtt->Free(addr[0]);
-        EXPECT_EQ(ret, true);
-        ret = gtt->Free(addr[1]);
-        EXPECT_EQ(ret, true);
+        EXPECT_TRUE(gtt->Free(addr[0]));
+        EXPECT_TRUE(gtt->Free(addr[1]));
 
-        ret = TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1);
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(TestGtt::scratch_buffer(gtt.get())->UnmapPageRangeBus(0, 1));
     }
 
     std::shared_ptr<MockPlatformPciDevice> platform_device;
@@ -215,28 +194,12 @@ public:
     std::unique_ptr<Gtt> gtt;
 };
 
-TEST(Gtt, Init)
-{
-    {
-        TestDevice device;
-        device.Init(3);
-    }
-    {
-        TestDevice device;
-        device.Init(2);
-    }
-    {
-        TestDevice device;
-        device.Init(1);
-    }
-}
+TEST(Gtt, Init3) { TestDevice().Init(3); }
 
-TEST(Gtt, Insert)
-{
-    {
-        TestDevice device;
-        device.Insert();
-    }
-}
+TEST(Gtt, Init2) { TestDevice().Init(2); }
+
+TEST(Gtt, Init1) { TestDevice().Init(1); }
+
+TEST(Gtt, Insert) { TestDevice().Insert(); }
 
 } // namespace
