@@ -44,12 +44,6 @@ public:
     zx_status_t SendPacket(ThreadDispatcher* thread, uint32_t type);
 
     void OnThreadStartForDebugger(ThreadDispatcher* thread);
-
-    void OnThreadSuspending(ThreadDispatcher* thread);
-    void OnThreadResuming(ThreadDispatcher* thread);
-
-    void OnProcessExit(ProcessDispatcher* process);
-    void OnThreadExit(ThreadDispatcher* thread);
     void OnThreadExitForDebugger(ThreadDispatcher* thread);
 
     // Records the target that the ExceptionPort is bound to, so it can

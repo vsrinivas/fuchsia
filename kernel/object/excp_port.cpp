@@ -288,64 +288,6 @@ void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
     }
 }
 
-void ExceptionPort::OnThreadSuspending(ThreadDispatcher* thread) {
-    canary_.Assert();
-
-    zx_koid_t pid = thread->process()->get_koid();
-    zx_koid_t tid = thread->get_koid();
-    LTRACEF("thread %" PRIu64 ".%" PRIu64 " suspending\n", pid, tid);
-
-    // A note on the tense of the words used here: suspending vs suspended.
-    // "suspending" is used in the internal context because we're still
-    // in the process of suspending the thread. "suspended" is used in the
-    // external context because once the debugger receives the "suspended"
-    // report it can assume the thread is, for its purposes, suspended.
-
-    // The result is ignored, not much else we can do.
-    SendPacket(thread, ZX_EXCP_THREAD_SUSPENDED);
-}
-
-void ExceptionPort::OnThreadResuming(ThreadDispatcher* thread) {
-    canary_.Assert();
-
-    zx_koid_t pid = thread->process()->get_koid();
-    zx_koid_t tid = thread->get_koid();
-    LTRACEF("thread %" PRIu64 ".%" PRIu64 " resuming\n", pid, tid);
-
-    // See OnThreadSuspending for a note on the tense of the words uses here:
-    // suspending vs suspended.
-
-    // The result is ignored, not much else we can do.
-    SendPacket(thread, ZX_EXCP_THREAD_RESUMED);
-}
-
-// This isn't called for every process's destruction, only for processes that
-// have a bound process or debugger exception export.
-
-void ExceptionPort::OnProcessExit(ProcessDispatcher* process) {
-    canary_.Assert();
-
-    zx_koid_t pid = process->get_koid();
-    LTRACEF("process %" PRIu64 " gone\n", pid);
-
-    // The result is ignored, not much else we can do.
-    SendPacketWorker(ZX_EXCP_GONE, pid, ZX_KOID_INVALID);
-}
-
-// This isn't called for every thread's destruction, only for threads that
-// have a thread-specific exception handler.
-
-void ExceptionPort::OnThreadExit(ThreadDispatcher* thread) {
-    canary_.Assert();
-
-    zx_koid_t pid = thread->process()->get_koid();
-    zx_koid_t tid = thread->get_koid();
-    LTRACEF("thread %" PRIu64 ".%" PRIu64 " gone\n", pid, tid);
-
-    // The result is ignored, not much else we can do.
-    SendPacket(thread, ZX_EXCP_GONE);
-}
-
 // This isn't called for every thread's destruction, only when a debugger
 // is attached.
 

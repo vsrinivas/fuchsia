@@ -41,47 +41,20 @@ typedef enum {
     // with zx_task_resume.
     ZX_EXCP_THREAD_STARTING = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 0),
 
-    // A thread has suspended.
-    // This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
-    // The thread is paused until it is resumed by the debugger
-    // with zx_task_resume. This resume is different though: it's not resuming
-    // from an exception, so don't pass ZX_RESUME_EXCEPTION, pass 0.
-    // A note on the word tense here: This is named "suspended" and not
-    // "suspending" because the thread has completely suspended at this point.
-    // N.B. This notification is not replied to.
-    ZX_EXCP_THREAD_SUSPENDED = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 1),
-
-    // A thread has resumed after being suspended.
-    // This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
-    // This is the counterpart to ZX_EXCP_THREAD_SUSPENDED.
-    // A note on the word tense here: This is named "resumed" and not
-    // "resuming" because the thread has completely resumed at this point.
-    // N.B. This notification is not replied to.
-    ZX_EXCP_THREAD_RESUMED = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 2),
-
     // A thread is exiting.
     // This exception is sent to debuggers only (ZX_EXCEPTION_PORT_DEBUGGER).
     // This exception is different from ZX_EXCP_GONE in that a debugger can
     // still examine thread state.
     // The thread is paused until it is resumed by the debugger
     // with zx_task_resume.
-    ZX_EXCP_THREAD_EXITING = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 3),
-
-    // A thread or process has exited or otherwise terminated.
-    // At this point thread/process state is no longer available.
-    // Process gone notifications are only sent to the process exception port
-    // or debugger exception port (if one is registered).
-    // Thread gone notifications are only sent to the thread exception port
-    // (if one is registered).
-    // N.B. This notification is not replied to.
-    ZX_EXCP_GONE = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 4),
+    ZX_EXCP_THREAD_EXITING = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 1),
 
     // This exception is generated when a syscall fails with a job policy
     // error (for example, an invalid handle argument is passed to the
     // syscall when the ZX_POL_BAD_HANDLE policy is enabled) and
     // ZX_POL_ACTION_EXCEPTION is set for the policy.  The thread that
     // invoked the syscall may be resumed with zx_task_resume().
-    ZX_EXCP_POLICY_ERROR = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 5),
+    ZX_EXCP_POLICY_ERROR = ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 2),
 } zx_excp_type_t;
 
 // Assuming |excp| is an exception type, return non-zero if it is an
