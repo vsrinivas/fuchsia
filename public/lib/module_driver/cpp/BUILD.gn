@@ -22,6 +22,7 @@ source_set("module_driver") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/lifecycle/cpp",
     "//peridot/public/lib/module/cpp",
     "//peridot/public/lib/module/fidl",

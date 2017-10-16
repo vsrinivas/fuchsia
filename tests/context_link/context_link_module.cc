@@ -20,8 +20,10 @@ constexpr char kLink[] = "context_link";
 
 class TestApp {
  public:
-  TestApp(modular::ModuleHost* module_host,
-          fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
+  TestApp(
+      modular::ModuleHost* module_host,
+      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
     module_host->module_context()->GetLink(kLink, link_.NewRequest());

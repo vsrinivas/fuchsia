@@ -24,8 +24,10 @@ constexpr char kTestAgent[] =
 
 class ParentApp {
  public:
-  ParentApp(modular::ModuleHost* module_host,
-            fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+  ParentApp(
+      modular::ModuleHost* module_host,
+      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();

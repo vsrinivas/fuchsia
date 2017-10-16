@@ -15,8 +15,10 @@ namespace {
 
 class ChildApp {
  public:
-  ChildApp(modular::ModuleHost* module_host,
-           fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
+  ChildApp(
+      modular::ModuleHost* module_host,
+      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     modular::testing::GetStore()->Put("child_module_init", "", [] {});
   }

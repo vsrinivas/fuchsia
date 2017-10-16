@@ -71,8 +71,10 @@ class CounterTrigger {
 
 class ParentApp {
  public:
-  ParentApp(modular::ModuleHost* module_host,
-            fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+  ParentApp(
+      modular::ModuleHost* module_host,
+      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : steps_(kTotalSimultaneousTests,
                [this, module_host] { module_host->module_context()->Done(); }),
         weak_ptr_factory_(this) {

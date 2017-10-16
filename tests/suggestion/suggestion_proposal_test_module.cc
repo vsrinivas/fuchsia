@@ -26,6 +26,7 @@ class SuggestionApp {
  public:
   SuggestionApp(
       modular::ModuleHost* module_host,
+      fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host_->application_context(), __FILE__);
