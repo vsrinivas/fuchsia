@@ -52,7 +52,7 @@ class Amalgamation:
             self.deps.append(packages[package])
 
         for c in config.get("components", []):
-            # See https://fuchsia.googlesource.com/modular/src/component_manager/ for what a component is.
+            # See https://fuchsia.googlesource.com/peridot/+/master/bin/component_manager/ for what a component is.
             manifest = component_manifest.ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
             self.component_urls.append(manifest.url)
             for component_file in manifest.files().values():
@@ -66,19 +66,12 @@ class Amalgamation:
         # and remove.
         for label in config.get("labels", []):
             self.deps.append(label)
-        binaries_and_drivers = config.get("binaries", []) + config.get("drivers", [])
-        for b in binaries_and_drivers:
+        for b in config.get("binaries", []):
             file = {}
             file["file"] = os.path.join(self.build_root, b["binary"])
             file["bootfs_path"] = b["bootfs_path"]
             file["default"] = b.has_key("default")
             self.system.add_file(file)
-        for d in config.get("early_boot", []):
-            file = {}
-            file["file"] = os.path.join(self.build_root, d["binary"])
-            file["bootfs_path"] = d["bootfs_path"]
-            file["default"] = d.has_key("default")
-            self.boot.add_file(file)
         for r in config.get("resources", []):
             file = {}
             source_path = os.path.join(paths.FUCHSIA_ROOT, r["file"])
@@ -87,8 +80,10 @@ class Amalgamation:
             file["bootfs_path"] = r["bootfs_path"]
             file["default"] = r.has_key("default")
             self.system.add_file(file)
-        if config.get("gopaths"):
-            raise Exception("The \"gopaths\" key is no longer supported")
+        for key in ["early_boot", "drivers", "gopaths"]:
+            if config.has_key(key):
+                raise Exception("The \"%s\" key is no longer supported" % key)
+
 
 def detect_duplicate_keys(pairs):
     keys = set()
