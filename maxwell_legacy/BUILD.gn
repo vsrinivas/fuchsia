@@ -30,29 +30,100 @@ package("maxwell") {
 
 # TODO(thatguy): This target is temporary while we tease apart the build
 # artifacts into packages.
-group("all") {
+package("maxwell_apps") {
+  app = true
+  testonly = true
+
   deps = [
     "//peridot/bin/acquirers",
     "//peridot/bin/action_log",
+    "//peridot/bin/agents:carmen_sandiego",
+    "//peridot/bin/agents:ideas",
     "//peridot/bin/agents",
     "//peridot/bin/context_engine",
+    "//peridot/bin/module_resolver",
     "//peridot/bin/resolver",
     "//peridot/bin/suggestion_engine",
     "//peridot/bin/user",
   ]
+
+  binaries = [
+    {
+      name = "acquirers/story_info_main"
+    },
+    {
+      name = "action_log"
+    },
+    {
+      name = "agents/carmen_sandiego"
+    },
+    {
+      name = "agents/ideas"
+    },
+    {
+      name = "agents/basic_text_listener"
+      dest = "agents/maxwell_btl"
+    },
+    {
+      name = "agents/maxwell_entity_selector"
+    },
+    {
+      name = "agents/maxwell_proposal_maker"
+    },
+    {
+      name = "module_resolver"
+    },
+    {
+      name = "context_engine"
+    },
+    {
+      name = "resolver"
+    },
+    {
+      name = "suggestion_engine"
+    },
+  ]
 }
 
-group("unittests") {
+package("maxwell_tests") {
   testonly = true
+
   deps = [
     "//peridot/bin/context_engine:context_index_unittest",
     "//peridot/bin/context_engine:context_repository_unittest",
   ]
+
+  tests = [
+    {
+      name = "context_index_unittest"
+      dest = "maxwell/context_index_unittest"
+    },
+    {
+      name = "context_repository_unittest"
+      dest = "maxwell/context_repository_unittest"
+    },
+  ]
 }
 
-group("integration_tests") {
+package("maxwell_integration_tests") {
   testonly = true
+
   deps = [
     "//peridot/tests/maxwell_integration",
+  ]
+
+  tests = [
+    {
+      name = "context_engine_test"
+      dest = "maxwell/context_engine_test"
+    },
+    {
+      name = "suggestion_engine_test"
+      dest = "maxwell/suggestion_engine_test"
+    },
+    {
+      name = "resolver_test"
+      dest = "maxwell/resolver_test"
+    },
   ]
 }

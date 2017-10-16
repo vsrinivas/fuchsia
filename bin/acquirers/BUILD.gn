@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("acquirers") {
-  deps = [
+  public_deps = [
     "story_info",
   ]
 }

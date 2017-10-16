@@ -5,7 +5,7 @@
 group("maxwell_integration") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":context_engine_test",
     ":suggestion_engine_test",
     ":resolver_test",

@@ -3,13 +3,10 @@
 # found in the LICENSE file.
 
 group("agents") {
-  deps = [
-    # If we don't include these explicitly here, for some reason it still
-    # produces the expected build products but is not sensitive to source file
-    # changes.
-    "//peridot/bin/agents/basic_text_listener",
-    "//peridot/bin/agents/entity_selector",
-    "//peridot/bin/agents/proposal_maker",
+  public_deps = [
+    "basic_text_listener",
+    "entity_selector",
+    "proposal_maker",
   ]
 }
 
