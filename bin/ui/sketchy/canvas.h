@@ -9,6 +9,7 @@
 #include "garnet/bin/ui/sketchy/resources/resource_map.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 #include "garnet/bin/ui/sketchy/resources/types.h"
+#include "garnet/bin/ui/sketchy/stroke_manager.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/vk/buffer_factory.h"
 #include "lib/ui/fun/sketchy/fidl/canvas.fidl.h"
@@ -60,10 +61,10 @@ class CanvasImpl final : public sketchy::Canvas {
   // TODO: use more sophisticated factory that suballocates from larger GPU
   // memory allocations, and recycles buffers when they are no longer used.
   escher::BufferFactory buffer_factory_;
+  StrokeManager stroke_manager_;
 
   ::fidl::Array<sketchy::OpPtr> ops_;
   ResourceMap resource_map_;
-  std::set<StrokeGroupPtr> dirty_stroke_groups_;
   bool is_scenic_present_requested_ = false;
   std::vector<scenic_lib::Session::PresentCallback> callbacks_;
 };

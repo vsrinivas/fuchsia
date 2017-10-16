@@ -19,16 +19,28 @@ class MeshBuffer final {
  public:
   MeshBuffer(scenic_lib::Session* session,
              escher::BufferFactory* buffer_factory);
+  // TODO: Return offsets instead when ComputeShader supports offset.
+  std::pair<escher::BufferPtr, escher::BufferPtr> Preserve(
+      escher::impl::CommandBuffer* command, escher::BufferFactory* factory,
+      uint32_t vertex_count, uint32_t index_count,
+      const escher::BoundingBox& bbox);
   void ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh);
+  // Resets |vertex_count_|, |index_count_|, |bbox_|. Vertex and index
+  // buffer won't be touched.
+  void Reset();
+
+  uint32_t vertex_count() const { return vertex_count_; }
+  const Buffer* vertex_buffer() const { return vertex_buffer_.get(); }
+  const Buffer* index_buffer() const { return index_buffer_.get(); }
 
  private:
   friend class Stroke;
 
   std::unique_ptr<Buffer> vertex_buffer_;
   std::unique_ptr<Buffer> index_buffer_;
-  uint32_t num_vertices_ = 0;
-  uint32_t num_indices_ = 0;
-  escher::BoundingBox bounding_box_;
+  uint32_t vertex_count_ = 0;
+  uint32_t index_count_ = 0;
+  escher::BoundingBox bbox_;
 };
 
 }  // namespace sketchy_service

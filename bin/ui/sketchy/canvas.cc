@@ -12,7 +12,10 @@
 namespace sketchy_service {
 
 CanvasImpl::CanvasImpl(scenic_lib::Session* session, escher::Escher* escher)
-    : session_(session), escher_(escher), buffer_factory_(escher) {}
+    : session_(session),
+      escher_(escher),
+      buffer_factory_(escher),
+      stroke_manager_(escher) {}
 
 void CanvasImpl::Init(fidl::InterfaceHandle<sketchy::CanvasListener> listener) {
   // TODO(MZ-269): unimplemented.
@@ -41,11 +44,7 @@ void CanvasImpl::Present(uint64_t presentation_time,
   ops_.reset();
 
   auto command = escher_->command_buffer_pool()->GetCommandBuffer();
-  while (!dirty_stroke_groups_.empty()) {
-    const auto& stroke_group = *dirty_stroke_groups_.begin();
-    dirty_stroke_groups_.erase(stroke_group);
-    stroke_group->ApplyChanges(command, &buffer_factory_);
-  }
+  stroke_manager_.Update(command, &buffer_factory_);
 
   auto pair = escher::NewSemaphoreEventPair(escher_);
   command->AddSignalSemaphore(std::move(pair.first));
@@ -119,7 +118,10 @@ bool CanvasImpl::ApplyCreateResourceOp(
 }
 
 bool CanvasImpl::CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke) {
-  return resource_map_.AddResource(id, fxl::MakeRefCounted<Stroke>(escher_));
+  return resource_map_.AddResource(
+      id,
+      fxl::MakeRefCounted<Stroke>(escher_,
+                                  stroke_manager_.stroke_tessellator()));
 }
 
 bool CanvasImpl::CreateStrokeGroup(
@@ -136,7 +138,12 @@ bool CanvasImpl::ApplyReleaseResourceOp(
 
 bool CanvasImpl::ApplySetPathOp(const sketchy::SetStrokePathOpPtr& op) {
   auto stroke = resource_map_.FindResource<Stroke>(op->stroke_id);
-  return stroke->SetPath(std::move(op->path));
+  if (!stroke) {
+    FXL_LOG(ERROR) << "No Stroke of id " << op->stroke_id << " was found!";
+    return false;
+  }
+  return stroke_manager_.SetStrokePath(
+      stroke, std::make_unique<StrokePath>(std::move(op->path)));
 }
 
 bool CanvasImpl::ApplyAddStrokeOp(const sketchy::AddStrokeOpPtr& op) {
@@ -150,8 +157,7 @@ bool CanvasImpl::ApplyAddStrokeOp(const sketchy::AddStrokeOpPtr& op) {
     FXL_LOG(ERROR) << "No StrokeGroup of id " << op->group_id << " was found!";
     return false;
   }
-  dirty_stroke_groups_.insert(group);
-  return group->AddStroke(std::move(stroke));
+  return stroke_manager_.AddStrokeToGroup(stroke, group);
 }
 
 bool CanvasImpl::ApplyRemoveStrokeOp(const sketchy::RemoveStrokeOpPtr& op) {

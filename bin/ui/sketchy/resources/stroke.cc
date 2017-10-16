@@ -3,29 +3,23 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
-#include "garnet/bin/ui/sketchy/resources/stroke_group.h"
 #include "lib/escher/escher.h"
+#include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/shape/mesh_builder.h"
-#include "lib/escher/shape/mesh_spec.h"
 
 namespace {
 
-static constexpr float kStrokeWidth = 60.f;  // pixels
+struct StrokeInfo {
+  uint32_t segment_count;
+  float half_width;
+  uint32_t base_vertex_index;
+  float pixels_per_division;
+  uint32_t division_count;
+  float total_length;
+};
 
-std::vector<size_t> ComputeVertexCounts(
-    const sketchy_service::StrokePath& path) {
-  std::vector<size_t> counts;
-  counts.reserve(path.size());
-  for (auto& seg : path) {
-    constexpr float kPixelsPerDivision = 4;
-    size_t divisions = static_cast<size_t>(seg.length() / kPixelsPerDivision);
-    // Each "division" of the stroke consists of two vertices, and we need at
-    // least 2 divisions or else Stroke::Tessellate() might barf when computing
-    // the "param_incr".
-    counts.push_back(std::max(divisions * 2, 4UL));
-  }
-  return counts;
-}
+constexpr float kStrokeHalfWidth = 30.f;  // pixels
+constexpr float kPixelsPerDivision = 4;
 
 }  // namespace
 
@@ -35,41 +29,153 @@ const ResourceTypeInfo Stroke::kTypeInfo("Stroke",
                                          ResourceType::kStroke,
                                          ResourceType::kResource);
 
-Stroke::Stroke(escher::Escher* escher) : escher_(escher) {}
+Stroke::Stroke(escher::Escher* escher, StrokeTessellator* tessellator)
+    : escher_(escher),
+      tessellator_(tessellator) {}
 
-bool Stroke::SetPath(sketchy::StrokePathPtr path) {
-  path_.clear();
-  path_.reserve(path->segments.size());
-  length_ = 0.f;
-  for (auto& seg : path->segments) {
-    path_.push_back({sketchy::CubicBezier2f{{{seg->pt0->x, seg->pt0->y},
-                                             {seg->pt1->x, seg->pt1->y},
-                                             {seg->pt2->x, seg->pt2->y},
-                                             {seg->pt3->x, seg->pt3->y}}}});
-    length_ += path_.back().length();
+bool Stroke::SetPath(std::unique_ptr<StrokePath> path) {
+  path_ = std::move(path);
+  bbox_ = escher::BoundingBox();
+  for (const auto& seg : path_->control_points()) {
+    glm::vec3 bmin = {
+        std::min({seg.pts[0].x, seg.pts[1].x, seg.pts[2].x, seg.pts[3].x}),
+        std::min({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}),
+        0};
+    glm::vec3 bmax = {
+        std::max({seg.pts[0].x, seg.pts[1].x, seg.pts[2].x, seg.pts[3].x}),
+        std::max({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}),
+        0};
+    bbox_.Join({bmin - kStrokeHalfWidth, bmax + kStrokeHalfWidth});
   }
+
+  vertex_count_ = 0;
+  vertex_counts_.clear();
+  vertex_counts_.reserve(path_->segment_count());
+  division_count_ = 0;
+  division_counts_.clear();
+  division_counts_.reserve(path_->segment_count());
+  cumulative_division_counts_.clear();
+  cumulative_division_counts_.reserve(path_->segment_count());
+  for (const auto& length : path_->segment_lengths()) {
+    uint32_t division_count = std::max(1U, static_cast<uint32_t>(
+        length / kPixelsPerDivision));
+    division_counts_.push_back(division_count);
+    cumulative_division_counts_.push_back(division_count_);
+    division_count_ += division_count;
+    uint32_t vertex_count = division_count * 2;
+    vertex_counts_.push_back(vertex_count);
+    vertex_count_ += vertex_count;
+  }
+  index_count_ = vertex_count_ * 3;
+
+  control_points_buffer_ = nullptr;
+  re_params_buffer_ = nullptr;
+  division_counts_buffer_ = nullptr;
+  cumulative_division_counts_buffer_ = nullptr;
   return true;
+}
+
+void Stroke::TessellateAndMergeWithGpu(escher::impl::CommandBuffer* command,
+                                       escher::BufferFactory* buffer_factory,
+                                       MeshBuffer* mesh_buffer) {
+  if (path_->empty()) {
+    FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
+    return;
+  }
+
+  uint32_t base_vertex_index = mesh_buffer->vertex_count();
+  auto pair = mesh_buffer->Preserve(
+      command, buffer_factory, vertex_count_, index_count_, bbox_);
+  auto vertex_buffer = std::move(pair.first);
+  auto index_buffer = std::move(pair.second);
+
+  StrokeInfo stroke_info = {
+      .segment_count = static_cast<uint32_t>(path_->segment_count()),
+      .half_width = kStrokeHalfWidth,
+      .base_vertex_index = base_vertex_index,
+      .pixels_per_division = kPixelsPerDivision,
+      .division_count = division_count_,
+      .total_length = path_->length()
+  };
+
+  tessellator_->Dispatch(
+      GetOrCreateUniformBuffer(
+          command, buffer_factory, stroke_info_buffer_,
+          &stroke_info, sizeof(StrokeInfo)),
+      GetOrCreateStorageBuffer(
+          command, buffer_factory, control_points_buffer_,
+          path_->control_points().data(), path_->control_points_size()),
+      GetOrCreateStorageBuffer(
+          command, buffer_factory, re_params_buffer_,
+          path_->re_params().data(), path_->re_params_size()),
+      GetOrCreateStorageBuffer(
+          command, buffer_factory, division_counts_buffer_,
+          division_counts_.data(),
+          division_counts_.size() * sizeof(uint32_t)),
+      GetOrCreateStorageBuffer(
+          command, buffer_factory, cumulative_division_counts_buffer_,
+          cumulative_division_counts_.data(),
+          cumulative_division_counts_.size() * sizeof(uint32_t)),
+      vertex_buffer, index_buffer,
+      command, division_count_);
+
+  // Dependency is pretty clear within the command buffer. The compute command
+  // depends on the copy command for input. No further command depends on the
+  // output of the compute command. Therefore, a barrier is not required here.
+}
+
+escher::BufferPtr Stroke::GetOrCreateUniformBuffer(
+    escher::impl::CommandBuffer* command,
+    escher::BufferFactory* buffer_factory,
+    escher::BufferPtr& buffer, const void* data, size_t size) {
+  FXL_CHECK(!path_->empty());
+  if (!buffer.get()) {
+    buffer = buffer_factory->NewBuffer(
+        size,
+        vk::BufferUsageFlagBits::eUniformBuffer,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent);
+    // TODO: Copy data every time it's called when we support dynamic data in
+    // it, e.g. time. For now it's static per stroke path.
+    memcpy(buffer->ptr(), data, size);
+  }
+  return buffer;
+}
+
+escher::BufferPtr Stroke::GetOrCreateStorageBuffer(
+    escher::impl::CommandBuffer* command,
+    escher::BufferFactory* buffer_factory,
+    escher::BufferPtr& buffer, const void* data, size_t size) {
+  FXL_CHECK(!path_->empty());
+  if (!buffer.get()) {
+    auto staging_buffer = buffer_factory->NewBuffer(
+        size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent);
+    memcpy(staging_buffer->ptr(), data, size);
+
+    buffer = buffer_factory->NewBuffer(
+        size,
+        vk::BufferUsageFlagBits::eStorageBuffer |
+            vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eDeviceLocal);
+    // Only need to copy buffer once for the same path.
+    command->CopyBuffer(staging_buffer, buffer, {0, 0, size});
+  }
+  return buffer;
 }
 
 // TODO(MZ-269): The scenic mesh API takes position, uv, normal in order. For
 // now only the position is used. The code that are commented out will be useful
 // when we support wobble.
-void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
-                                escher::BufferFactory* buffer_factory,
-                                MeshBuffer* mesh_buffer) {
-  if (path_.empty()) {
+void Stroke::TessellateAndMergeWithCpu(escher::impl::CommandBuffer* command,
+                                       escher::BufferFactory* buffer_factory,
+                                       MeshBuffer* mesh_buffer) {
+  if (path_->empty()) {
     FXL_LOG(INFO) << "Stroke::Tessellate() PATH IS EMPTY";
     return;
   }
-
-  std::vector<size_t> vertex_counts = ComputeVertexCounts(path_);
-  size_t total_vertex_count = 0;
-  for (size_t count : vertex_counts) {
-    FXL_DCHECK(count % 2 == 0);
-    total_vertex_count += count;
-  }
-  int vertex_count = total_vertex_count;
-  int index_count = vertex_count * 3;
 
   auto builder = escher_->NewMeshBuilder(
       escher::MeshSpec{
@@ -78,23 +184,22 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
           //                       escher::MeshAttribute::kUV |
           //                       escher::MeshAttribute::kPerimeterPos
       },
-      vertex_count, index_count);
+      vertex_count_, index_count_);
 
   //  const float total_length_recip = 1.f / length_;
 
   // Use CPU to generate vertices for each Path segment.
   float segment_start_length = 0.f;
-  for (size_t ii = 0; ii < path_.size(); ++ii) {
-    auto& seg = path_[ii];
-    auto& bez = seg.curve();
-    auto& reparam = seg.arc_length_parameterization();
+  for (size_t ii = 0; ii < path_->segment_count(); ++ii) {
+    auto& bez = path_->control_points()[ii];
+    auto& reparam = path_->re_params()[ii];
 
-    const int seg_vert_count = vertex_counts[ii];
+    const int seg_vert_count = vertex_counts_[ii];
 
     // On all segments but the last, we don't want the Bezier parameter to
     // reach 1.0, because this would evaluate to the same thing as a parameter
     // of 0.0 on the next segment.
-    const float param_incr = (ii == path_.size() - 1)
+    const float param_incr = (ii == path_->segment_count() - 1)
                                  ? 1.0 / (seg_vert_count - 2)
                                  : 1.0 / seg_vert_count;
 
@@ -118,7 +223,7 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
         //        float perimeter_pos;
       } vertex;
 
-      vertex.pos_offset = point_and_normal.second * kStrokeWidth * 0.5f;
+      vertex.pos_offset = point_and_normal.second * kStrokeHalfWidth;
       vertex.pos = point_and_normal.first + vertex.pos_offset;
       //      vertex.perimeter_pos = cumulative_length * total_length_recip;
       //      vertex.uv = glm::vec2(vertex.perimeter_pos, 1.f);
@@ -131,12 +236,12 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
     }
 
     // Prepare for next segment.
-    segment_start_length += seg.length();
+    segment_start_length += path_->segment_lengths()[ii];
   }
 
   // Generate indices.
-  for (int i = 0; i < vertex_count - 2; i += 2) {
-    uint32_t j = i + mesh_buffer->num_vertices_;
+  for (int i = 0; i < static_cast<int>(vertex_count_) - 2; i += 2) {
+    uint32_t j = i + mesh_buffer->vertex_count_;
     builder->AddIndex(j).AddIndex(j + 1).AddIndex(j + 3);
     builder->AddIndex(j).AddIndex(j + 3).AddIndex(j + 2);
   }
@@ -148,9 +253,9 @@ void Stroke::TessellateAndMerge(escher::impl::CommandBuffer* command,
       command, buffer_factory, mesh->vertex_buffer());
   mesh_buffer->index_buffer_->Merge(
       command, buffer_factory, mesh->index_buffer());
-  mesh_buffer->num_vertices_ += mesh->num_vertices();
-  mesh_buffer->num_indices_ += mesh->num_indices();
-  mesh_buffer->bounding_box_.Join(mesh->bounding_box());
+  mesh_buffer->vertex_count_ += mesh->num_vertices();
+  mesh_buffer->index_count_ += mesh->num_indices();
+  mesh_buffer->bbox_.Join(mesh->bounding_box());
 }
 
 }  // namespace sketchy_service

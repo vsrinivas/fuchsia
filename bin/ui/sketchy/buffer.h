@@ -36,6 +36,13 @@ class Buffer {
              escher::BufferFactory* factory,
              escher::BufferPtr new_escher_buffer);
 
+  // Preserve a chunk of |size| for use. If the required capacity exceeds the
+  // current capacity, the buffer will grow dynamically. The possible copy
+  // command will be recorded to |command|. Return the preserved buffer.
+  escher::BufferPtr PreserveBuffer(escher::impl::CommandBuffer* command,
+                                   escher::BufferFactory* factory,
+                                   vk::DeviceSize size);
+
   const escher::BufferPtr& escher_buffer() const { return escher_buffer_; }
   const scenic_lib::Buffer& scenic_buffer() const {
     return *scenic_buffer_.get();
@@ -44,6 +51,14 @@ class Buffer {
   vk::DeviceSize size() const { return size_; }
 
  private:
+  // Preserve a chunk of |size| for use. If the required capacity exceeds the
+  // current capacity, a larger buffer will be allocated, and the original data
+  // will be copied to the new buffer. The copy command will be recorded to
+  // |command|.
+  void PreserveSize(escher::impl::CommandBuffer* command,
+                    escher::BufferFactory* factory,
+                    vk::DeviceSize size);
+
   scenic_lib::Session* const session_;
   escher::BufferPtr escher_buffer_;
   std::unique_ptr<scenic_lib::Buffer> scenic_buffer_;

@@ -8,8 +8,6 @@ executable("sketchy") {
   sources = [
     "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.cc",
     "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.h",
-    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.cc",
-    "//garnet/examples/escher/sketchy/sketchy/stroke_segment.h",
     "app.cc",
     "app.h",
     "buffer.cc",
@@ -29,7 +27,13 @@ executable("sketchy") {
     "resources/stroke.h",
     "resources/stroke_group.cc",
     "resources/stroke_group.h",
+    "resources/stroke_path.cc",
+    "resources/stroke_path.h",
+    "resources/stroke_tessellator.cc",
+    "resources/stroke_tessellator.h",
     "resources/types.h",
+    "stroke_manager.cc",
+    "stroke_manager.h",
   ]
 
   deps = [

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <set>
 #include "garnet/bin/ui/sketchy/buffer.h"
 #include "garnet/bin/ui/sketchy/resources/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
@@ -30,14 +31,22 @@ class StrokeGroup final : public Resource {
   // TODO(MZ-269): Implement.
   // bool RemoveStroke(StrokePtr stroke);
 
-  // Record the applied changed to command buffer.
-  void ApplyChanges(escher::impl::CommandBuffer* command,
-                    escher::BufferFactory* buffer_factory);
+  void SetNeedsReTessellation() { needs_re_tessellation_ = true; }
+
+  // Record the command to update the mesh.
+  void UpdateMesh(escher::impl::CommandBuffer* command,
+                  escher::BufferFactory* buffer_factory);
 
   const scenic_lib::ShapeNode& shape_node() const { return shape_node_; }
 
  private:
-  friend class Stroke;
+  // Record the command to merge the strokes to add.
+  void MergeStrokes(escher::impl::CommandBuffer* command,
+                    escher::BufferFactory* buffer_factory);
+
+  // Record the command to re-tessellate the strokes.
+  void ReTessellateStrokes(escher::impl::CommandBuffer* command,
+                           escher::BufferFactory* buffer_factory);
 
   scenic_lib::ShapeNode shape_node_;
   scenic_lib::Mesh mesh_;
@@ -46,6 +55,7 @@ class StrokeGroup final : public Resource {
   std::set<StrokePtr> strokes_to_add_;
   std::set<StrokePtr> strokes_;
   MeshBuffer mesh_buffer_;
+  bool needs_re_tessellation_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StrokeGroup);
 };

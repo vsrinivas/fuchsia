@@ -62,10 +62,25 @@ Buffer::Buffer(scenic_lib::Session* session,
 void Buffer::Merge(escher::impl::CommandBuffer* command,
                    escher::BufferFactory* factory,
                    escher::BufferPtr new_escher_buffer) {
-  // Determine the capacity required to merge the new buffer with the existing
-  // one.
+  PreserveSize(command, factory, new_escher_buffer->size());
+  command->CopyBuffer(new_escher_buffer, escher_buffer_,
+                      {0, size_ - new_escher_buffer->size(),
+                       new_escher_buffer->size()});
+}
+
+escher::BufferPtr Buffer::PreserveBuffer(escher::impl::CommandBuffer* command,
+                                         escher::BufferFactory* factory,
+                                         vk::DeviceSize size) {
+  PreserveSize(command, factory, size);
+  return factory->NewBuffer(escher_buffer_->mem(), flags_, size, size_ - size);
+}
+
+void Buffer::PreserveSize(escher::impl::CommandBuffer* command,
+                          escher::BufferFactory* factory,
+                          vk::DeviceSize size) {
+  // Determine the capacity required to preserve for |size|.
   vk::DeviceSize new_capacity = capacity();
-  while (size_ + new_escher_buffer->size() > new_capacity) {
+  while (size_ + size > new_capacity) {
     new_capacity <<= 1;
   }
 
@@ -80,9 +95,8 @@ void Buffer::Merge(escher::impl::CommandBuffer* command,
     scenic_buffer_ = NewScenicBufferFromEscherBuffer(escher_buffer_, session_);
   }
 
-  command->CopyBuffer(new_escher_buffer, escher_buffer_,
-                      {0, size_, new_escher_buffer->size()});
-  size_ += new_escher_buffer->size();
+  // Preserve the size for use.
+  size_ += size;
 }
 
 }  // namespace sketchy_service
