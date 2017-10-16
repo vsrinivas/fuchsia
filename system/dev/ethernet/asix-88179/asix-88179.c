@@ -52,14 +52,17 @@ typedef struct {
     list_node_t free_read_reqs;
     list_node_t free_write_reqs;
 
-    // Locks the tx_in_flight and pending_tx list.
+    // Locks the usb_tx_in_flight, pending_usb_tx, and pending_netbuf lists.
     mtx_t tx_lock;
     // Whether a request has been queued to the USB device.
-    uint8_t tx_in_flight;
-    // List of requests that have pending data. Used to buffer data if a USB transaction is in flight.
-    // Additional data must be appended to the tail of the list, or if that's full, a request from
-    // free_write_reqs must be added to the list.
-    list_node_t pending_tx;
+    uint8_t usb_tx_in_flight;
+    // List of requests that have pending data. Used to buffer data if a USB transaction is in
+    // flight. Additional data must be appended to the tail of the list, or if that's full, a
+    // request from free_write_reqs must be added to the list.
+    list_node_t pending_usb_tx;
+    // List of netbufs that haven't been copied into a USB transaction yet. Should only contain
+    // entries if all allocated USB transactions are full.
+    list_node_t pending_netbuf;
 
     // callback interface to attached ethernet layer
     ethmac_ifc_t* ifc;
@@ -309,6 +312,20 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
+static zx_status_t ax88179_append_to_tx_req(usb_request_t* req, ethmac_netbuf_t* netbuf) {
+    zx_off_t offset = ALIGN(req->header.length, 4);
+    if (offset + sizeof(ax88179_tx_hdr_t) + netbuf->len > USB_BUF_SIZE) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    ax88179_tx_hdr_t hdr = {
+        .tx_len = htole16(netbuf->len),
+    };
+    usb_request_copyto(req, &hdr, sizeof(hdr), offset);
+    usb_request_copyto(req, netbuf->data, netbuf->len, offset + sizeof(hdr));
+    req->header.length = offset + sizeof(hdr) + netbuf->len;
+    return ZX_OK;
+}
+
 static void ax88179_write_complete(usb_request_t* request, void* cookie) {
     dprintf(DEBUG1, "ax88179: write complete\n");
     ax88179_t* eth = (ax88179_t*)cookie;
@@ -319,23 +336,42 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->tx_lock);
-    ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
-    list_add_tail(&eth->free_write_reqs, &request->node);
+    ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
+
+    if (!list_is_empty(&eth->pending_netbuf)) {
+        // If we have any pending netbufs, add them to the recently-freed usb request
+        request->header.length = 0;
+        ethmac_netbuf_t* next_netbuf = list_peek_head_type(&eth->pending_netbuf, ethmac_netbuf_t,
+                                                           node);
+        while (next_netbuf != NULL && ax88179_append_to_tx_req(request, next_netbuf) == ZX_OK) {
+            list_remove_head_type(&eth->pending_netbuf, ethmac_netbuf_t, node);
+            mtx_lock(&eth->mutex);
+            if (eth->ifc) {
+                eth->ifc->complete_tx(eth->cookie, next_netbuf, ZX_OK);
+            }
+            mtx_unlock(&eth->mutex);
+            next_netbuf = list_peek_head_type(&eth->pending_netbuf, ethmac_netbuf_t, node);
+        }
+        list_add_tail(&eth->pending_usb_tx, &request->node);
+    } else {
+        list_add_tail(&eth->free_write_reqs, &request->node);
+    }
+
     if (request->response.status == ZX_ERR_IO_REFUSED) {
         dprintf(TRACE, "ax88179_write_complete usb_reset_endpoint\n");
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
 
-    usb_request_t* next = list_remove_head_type(&eth->pending_tx, usb_request_t, node);
+    usb_request_t* next = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node);
     if (next == NULL) {
-        eth->tx_in_flight--;
-        dprintf(DEBUG1, "ax88179: no pending write reqs, %u outstanding\n", eth->tx_in_flight);
+        eth->usb_tx_in_flight--;
+        dprintf(DEBUG1, "ax88179: no pending write reqs, %u outstanding\n", eth->usb_tx_in_flight);
     } else {
         dprintf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
-                 next, next->header.length, eth->tx_in_flight);
+                 next, next->header.length, eth->usb_tx_in_flight);
         usb_request_queue(&eth->usb, next);
     }
-    ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
+    ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
 }
 
@@ -395,74 +431,70 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     ax88179_t* eth = ctx;
 
     mtx_lock(&eth->tx_lock);
-    ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
-    // 1. Find the request we will be writing into.
-    //   a) If pending_tx is empty, grab a request from free_write_reqs.
-    //   b) Else take the tail of pending_tx.
-    // 2. If the alignment + sizeof(hdr) + length > USB_BUF_SIZE, grab a request from free_write_reqs
-    //    and add it to the tail of pending_tx.
-    // 3. Write to the next 32-byte aligned offset in the request.
-    // 4. If ETHMAC_TX_OPT_MORE, return.
-    // 5. If tx_in_flight, return.
-    // 6. Otherwise, queue the head of pending_tx and set tx_in_flight.
+    ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
 
+    // If we already have entries in our pending_netbuf list we should put this one there, too.
+    // Otherwise, we may end up reordering packets.
+    if (!list_is_empty(&eth->pending_netbuf)) {
+        goto bufs_full;
+    }
+
+    // Find the last entry in the pending_usb_tx list
     usb_request_t* req = NULL;
-    if (list_is_empty(&eth->pending_tx)) {
+    if (list_is_empty(&eth->pending_usb_tx)) {
         dprintf(DEBUG1, "ax88179: no pending reqs, getting free write req\n");
         req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
         if (req == NULL) {
-            dprintf(DEBUG1, "ax88179: no free write reqs!\n");
-            mtx_unlock(&eth->tx_lock);
-            return ZX_ERR_NO_RESOURCES;
+            goto bufs_full;
         }
         req->header.length = 0;
-        list_add_tail(&eth->pending_tx, &req->node);
+        list_add_tail(&eth->pending_usb_tx, &req->node);
     } else {
-        req = list_peek_tail_type(&eth->pending_tx, usb_request_t, node);
+        req = list_peek_tail_type(&eth->pending_usb_tx, usb_request_t, node);
         dprintf(DEBUG1, "ax88179: got tail req (%p)\n", req);
     }
 
-    zx_off_t req_len = ALIGN(req->header.length, 4);
-    dprintf(DEBUG1, "ax88179: current req len=%lu, next packet len=%zu\n", req_len, length);
-    if (length > USB_BUF_SIZE - sizeof(ax88179_tx_hdr_t) - req_len) {
+    dprintf(DEBUG1, "ax88179: current req len=%lu, next packet len=%zu\n",
+            req->header.length, length);
+
+    if (ax88179_append_to_tx_req(req, netbuf) == ZX_ERR_BUFFER_TOO_SMALL) {
+        // Our data won't fit - grab a new request
         dprintf(DEBUG1, "ax88179: getting new write req\n");
         req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node);
         if (req == NULL) {
-            dprintf(DEBUG1, "ax88179: no free write reqs!\n");
-            mtx_unlock(&eth->tx_lock);
-            return ZX_ERR_NO_RESOURCES;
+            goto bufs_full;
         }
-        req->header.length = req_len = 0;
-        list_add_tail(&eth->pending_tx, &req->node);
-    }
-    dprintf(DEBUG1, "ax88179: req=%p\n", req);
-
-    ax88179_tx_hdr_t hdr = {
-        .tx_len = htole16(length),
-    };
-
-    usb_request_copyto(req, &hdr, sizeof(hdr), req_len);
-    usb_request_copyto(req, netbuf->data, length, req_len + sizeof(hdr));
-    req->header.length = req_len + sizeof(hdr) + length;
-
-    if (options & ETHMAC_TX_OPT_MORE) {
-        dprintf(DEBUG1, "ax88179: waiting for more data, %u outstanding\n", eth->tx_in_flight);
+        req->header.length = 0;
+        list_add_tail(&eth->pending_usb_tx, &req->node);
+        ax88179_append_to_tx_req(req, netbuf);
+    } else if (options & ETHMAC_TX_OPT_MORE) {
+        // Don't send data if we have more coming that might fit into the current request. If we
+        // already filled up a request, though, we should write it out if we can.
+        dprintf(DEBUG1, "ax88179: waiting for more data, %u outstanding\n", eth->usb_tx_in_flight);
         mtx_unlock(&eth->tx_lock);
         return ZX_OK;
     }
-    if (eth->tx_in_flight == MAX_TX_IN_FLIGHT) {
+
+    if (eth->usb_tx_in_flight == MAX_TX_IN_FLIGHT) {
         dprintf(DEBUG1, "ax88179: max outstanding tx, waiting\n");
         mtx_unlock(&eth->tx_lock);
         return ZX_OK;
     }
-    req = list_remove_head_type(&eth->pending_tx, usb_request_t, node);
+    req = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node);
     dprintf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
-             req, req->header.length, eth->tx_in_flight);
+             req, req->header.length, eth->usb_tx_in_flight);
     usb_request_queue(&eth->usb, req);
-    eth->tx_in_flight++;
-    ZX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
+    eth->usb_tx_in_flight++;
+    ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
     mtx_unlock(&eth->tx_lock);
     return ZX_OK;
+
+bufs_full:
+    list_add_tail(&eth->pending_netbuf, &netbuf->node);
+    dprintf(DEBUG1, "ax88179: buffers full, there are %zu pending netbufs\n",
+            list_length(&eth->pending_netbuf));
+    mtx_unlock(&eth->tx_lock);
+    return ZX_ERR_SHOULD_WAIT;
 }
 
 static void ax88179_unbind(void* ctx) {
@@ -478,7 +510,7 @@ static void ax88179_free(ax88179_t* eth) {
     while ((req = list_remove_head_type(&eth->free_write_reqs, usb_request_t, node)) != NULL) {
         usb_request_release(req);
     }
-    while ((req = list_remove_head_type(&eth->pending_tx, usb_request_t, node)) != NULL) {
+    while ((req = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node)) != NULL) {
         usb_request_release(req);
     }
     usb_request_release(eth->interrupt_req);
@@ -780,7 +812,8 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device, void** cookie) {
 
     list_initialize(&eth->free_read_reqs);
     list_initialize(&eth->free_write_reqs);
-    list_initialize(&eth->pending_tx);
+    list_initialize(&eth->pending_usb_tx);
+    list_initialize(&eth->pending_netbuf);
     mtx_init(&eth->tx_lock, mtx_plain);
     mtx_init(&eth->mutex, mtx_plain);
 
