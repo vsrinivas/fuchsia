@@ -1,0 +1,59 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is a temporary in-tree Module publishing rule, to be used until there is
+# a better packaging and publishing solution.
+#
+# In order to use this rule:
+#
+# 1) Build your binary as per normal.
+# 2) Include it on the device's bootfs, or deploy it to the cloud.
+# 3) Create a Module manifest file as per //peridot/docs/modular/manifests/module.md
+# 4) Point the 'binary' attribute in your manifest to the *runtime location*
+#    of your binary (being the location on bootfs, or the cloud URL).
+# 5) Include your public_module_manifest() rule in the `packages` section
+#    of your repository's packages file. If you don't, the manifest file will
+#    not be included on the device, and your Module won't be indexed.
+#
+# Example:
+#
+# import("//peridot/build/module_repository/publish.gni")
+#
+# publish_module_manifest(
+#   sources = [ 'my_module_manifest.json' ]
+# )
+
+import("//packages/package.gni")
+
+_target_directory = "module_manifest_repository"
+
+template("publish_module_manifest") {
+  assert(defined(invoker.sources), "'sources' must be defined for $target_name")
+
+  resources_entries = []
+
+  package_name = target_name
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+  foreach(file, invoker.sources) {
+    # TODO(thatguy): Add JSON schema validation of the manifest file.
+    # TODO(thatguy): Add verb semantic validation of the manifest file.
+    # TODO(thatguy): Ensure that the binary(s) referenced by the manifests
+    # appear on the bootfs in the correct place (if possible).
+
+    resources_entries += [ {
+      path = rebase_path(file)
+      dest = _target_directory + "/" + package_name + "_" + get_path_info(file, "file")
+    } ]
+  }
+
+  package(target_name) {
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    }
+
+    resources = resources_entries
+  }
+}
