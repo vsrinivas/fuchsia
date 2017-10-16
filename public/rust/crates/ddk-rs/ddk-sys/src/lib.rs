@@ -45,7 +45,7 @@ pub struct list_node_t {
 }
 
 impl Default for list_node_t {
-    fn default() -> list_node_t {
+    fn default() -> Self {
         list_node_t {
             prev: std::ptr::null_mut(),
             next: std::ptr::null_mut(),
@@ -178,6 +178,135 @@ pub struct zx_driver_rec {
     pub ops: *const zx_driver_ops_t,
     pub driver: *mut zx_driver_t,
     pub log_flags: u32,
+}
+
+// USB request types
+pub type usb_request_type_t = u8;
+
+multiconst!(usb_request_type_t, [
+    USB_DIR_OUT         = 0 << 7;
+    USB_DIR_IN          = 1 << 7;
+    USB_DIR_MASK        = 1 << 7;
+    USB_TYPE_STANDARD   = 0 << 5;
+    USB_TYPE_CLASS      = 1 << 5;
+    USB_TYPE_VENDOR     = 2 << 5;
+    USB_TYPE_MASK       = 3 << 5;
+    USB_RECIP_DEVICE    = 0 << 0;
+    USB_RECIP_INTERFACE = 1 << 0;
+    USB_RECIP_ENDPOINT  = 2 << 0;
+    USB_RECIP_OTHER     = 3 << 0;
+    USB_RECIP_MASK      = 0x1f << 0;
+]);
+
+// USB request values
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum usb_request_value_t {
+    USB_REQ_GET_STATUS        = 0x00,
+    USB_REQ_CLEAR_FEATURE     = 0x01,
+    USB_REQ_SET_FEATURE       = 0x03,
+    USB_REQ_SET_ADDRESS       = 0x05,
+    USB_REQ_GET_DESCRIPTOR    = 0x06,
+    USB_REQ_SET_DESCRIPTOR    = 0x07,
+    USB_REQ_GET_CONFIGURATION = 0x08,
+    USB_REQ_SET_CONFIGURATION = 0x09,
+    USB_REQ_GET_INTERFACE     = 0x0a,
+    USB_REQ_SET_INTERFACE     = 0x0b,
+    USB_REQ_SYNCH_FRAME       = 0x0c,
+}
+
+// USB device/interface classes
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum usb_class_t {
+    USB_CLASS_AUDIO      = 0x01,
+    USB_CLASS_COMM       = 0x02,
+    USB_CLASS_HID        = 0x03,
+    USB_CLASS_PHYSICAL   = 0x05,
+    USB_CLASS_IMAGING    = 0x06,
+    USB_CLASS_PRINTER    = 0x07,
+    USB_CLASS_MSC        = 0x08,
+    USB_CLASS_HUB        = 0x09,
+    USB_CLASS_CDC        = 0x0a,
+    USB_CLASS_CCID       = 0x0b,
+    USB_CLASS_SECURITY   = 0x0d,
+    USB_CLASS_VIDEO      = 0x0e,
+    USB_CLASS_HEALTHCARE = 0x0f,
+    USB_CLASS_DIAGNOSTIC = 0xdc,
+    USB_CLASS_WIRELESS   = 0xe0,
+    USB_CLASS_MISC       = 0xef,
+    USB_CLASS_VENDOR     = 0xff,
+}
+
+pub const USB_SUBCLASS_MSC_SCSI: u8      = 0x06;
+pub const USB_PROTOCOL_MSC_BULK_ONLY: u8 = 0x50;
+
+pub const ZX_PROTOCOL_USB: u32 = 0x70555342; // 'pUSB'
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum usb_speed_t {
+    USB_SPEED_UNDEFINED = 0,
+    USB_SPEED_FULL = 1,
+    USB_SPEED_LOW = 2,
+    USB_SPEED_HIGH = 3,
+    USB_SPEED_SUPER = 4,
+}
+
+// Opaque struct
+#[repr(u8)]
+pub enum usb_request_t {
+    variant1,
+}
+
+#[repr(C, packed)]
+pub struct usb_interface_descriptor_t {
+    bLength: u8,
+    bDescriptorType: u8,
+    bInterfaceNumber: u8,
+    bAlternateSetting: u8,
+    bNumEndpoints: u8,
+    bInterfaceClass: u8,
+    bInterfaceSubClass: u8,
+    bInterfaceProtocol: u8,
+    iInterface: u8,
+}
+
+#[repr(C)]
+pub struct usb_protocol_ops_t {
+    pub control: extern "C" fn (ctx: *mut u8, request_type: usb_request_type_t,
+        request: usb_request_value_t, value: u16, index: u16, data: *mut u8, length: usize,
+        timeout: sys::zx_time_t, out_length: *mut usize) -> sys::zx_status_t,
+    pub request_queue: extern "C" fn (ctx: *mut u8, usb_request: *mut usb_request_t),
+    pub get_speed: extern "C" fn (ctx: *mut u8) -> usb_speed_t,
+    pub set_interface: extern "C" fn (ctx: *mut u8, interface_number: i32, alt_setting: i32)
+        -> sys::zx_status_t,
+    pub set_configuration: extern "C" fn (ctx: *mut u8, configuration: i32) -> sys::zx_status_t,
+    pub reset_endpoint: extern "C" fn (ctx: *mut u8, ep_address: u8) -> sys::zx_status_t,
+    pub get_max_transfer_size: extern "C" fn (ctx: *mut u8, ep_address: u8) -> usize,
+    pub get_device_id: extern "C" fn (ctx: *mut u8) -> u32,
+    pub get_descriptor_list: extern "C" fn (ctx: *mut u8, out_descriptors: *mut *mut u8,
+        out_length: *mut usize) -> sys::zx_status_t,
+    pub get_additional_descriptor_list: extern "C" fn (ctx: *mut u8, out_descriptors: *mut *mut u8,
+        out_length: *mut usize) -> sys::zx_status_t,
+    pub claim_interface: extern "C" fn (ctx: *mut u8, intf: *mut usb_interface_descriptor_t,
+        length: usize) -> sys::zx_status_t,
+    pub cancel_all: extern "C" fn (ctx: *mut u8, ep_address: u8) -> sys::zx_status_t,
+}
+
+#[repr(C)]
+pub struct usb_protocol_t {
+    pub ops: *mut usb_protocol_ops_t,
+    pub ctx: *mut u8,
+}
+
+impl Default for usb_protocol_t {
+    fn default() -> Self {
+        usb_protocol_t {
+            ops: std::ptr::null_mut(),
+            ctx: std::ptr::null_mut(),
+        }
+    }
 }
 
 #[link(name = "ddk")]

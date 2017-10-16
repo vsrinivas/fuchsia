@@ -5,6 +5,10 @@
 extern crate ddk_sys;
 extern crate fuchsia_zircon as zircon;
 
+mod usb;
+
+pub use usb::UsbProtocol;
+
 use std::ffi::{CStr, CString};
 use zircon::Status;
 use zircon::sys as sys;
@@ -255,6 +259,18 @@ static mut DEVICE_OPS: ddk_sys::zx_protocol_device_t = ddk_sys::zx_protocol_devi
         suspend: Some(ddk_suspend),
         resume: Some(ddk_resume),
 };
+
+// Copied from fuchsia-zircon, as we don't want to make it part of the public API.
+fn into_result<T, F>(status: sys::zx_status_t, f: F) -> Result<T, Status>
+    where F: FnOnce() -> T {
+    // All non-negative values are assumed successful. Note: calls that don't try
+    // to multiplex success values into status return could be more strict here.
+    if status >= 0 {
+        Ok(f())
+    } else {
+        Err(Status::from_raw(status))
+    }
+}
 
 #[cfg(test)]
 mod tests {
