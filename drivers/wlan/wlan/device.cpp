@@ -264,6 +264,10 @@ void Device::SetStatusLocked(uint32_t status) {
     if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Status(status); }
 }
 
+zx_status_t Device::SetBss(const uint8_t mac[6], uint8_t type) {
+    return wlanmac_proxy_.SetBss(0u, mac, type);
+}
+
 fbl::RefPtr<DeviceState> Device::GetState() {
     return state_;
 }

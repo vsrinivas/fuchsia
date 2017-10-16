@@ -61,6 +61,10 @@ struct MockDevice : public DeviceInterface {
         return ZX_OK;
     }
 
+    zx_status_t SetBss(const uint8_t mac[6], uint8_t type) override final {
+        return ZX_OK;
+    }
+
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
     fbl::RefPtr<DeviceState> state;

@@ -69,6 +69,9 @@ zx_status_t Station::Join(JoinRequestPtr req) {
         Reset();
         SendJoinResponse();
     }
+
+    // TODO(hahnr): Update when other BSS types are supported.
+    device_->SetBss(address_.data(), WLAN_BSS_TYPE_INFRASTRUCTURE);
     return status;
 }
 

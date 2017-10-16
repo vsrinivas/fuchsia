@@ -90,6 +90,7 @@ class DeviceInterface {
 
     virtual zx_status_t SetChannel(wlan_channel_t chan) = 0;
     virtual zx_status_t SetStatus(uint32_t status) = 0;
+    virtual zx_status_t SetBss(const uint8_t mac[6], uint8_t type) = 0;
 
     virtual fbl::RefPtr<DeviceState> GetState() = 0;
 };

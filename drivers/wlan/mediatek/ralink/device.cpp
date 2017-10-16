@@ -3285,6 +3285,7 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
     CHECK_WRITE(BSSID_DW0, status);
     status = WriteRegister(bss1);
     CHECK_WRITE(BSSID_DW1, status);
+
     return ZX_OK;
 }
 
