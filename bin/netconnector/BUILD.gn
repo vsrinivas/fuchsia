@@ -77,16 +77,22 @@ executable("netconnector") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/svc/cpp",
-    "//garnet/public/lib/app/fidl",
     "//garnet/bin/media/util",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/netconnector/fidl",
     "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
+  ]
+}
+
+group("tools") {
+  public_deps = [
+    "//garnet/bin/mdns",
   ]
 }
 
@@ -97,18 +103,21 @@ package("package") {
 
   deps = [
     ":netconnector",
+    ":tools",
   ]
 
   binaries = [
     {
       name = "netconnector"
-    }
+    },
+
+    {
+      name = "mdns"
+    },
   ]
 
-  resources = [
-    {
-      path = rebase_path("netconnector.config")
-      dest = "netconnector/netconnector.config"
-    }
-  ]
+  resources = [ {
+        path = rebase_path("netconnector.config")
+        dest = "netconnector/netconnector.config"
+      } ]
 }

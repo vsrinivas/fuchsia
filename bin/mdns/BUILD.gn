@@ -1,0 +1,26 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("mdns") {
+  output_name = "mdns"
+
+  sources = [
+    "formatting.cc",
+    "formatting.h",
+    "main.cc",
+    "mdns_impl.cc",
+    "mdns_impl.h",
+    "mdns_params.cc",
+    "mdns_params.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/netconnector/fidl",
+  ]
+}
