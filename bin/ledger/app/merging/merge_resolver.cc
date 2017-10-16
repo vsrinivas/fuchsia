@@ -94,7 +94,7 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
     return;
   }
   check_conflicts_in_progress_ = true;
-  storage_->GetHeadCommitIds(
+  storage_->GetHeadCommitIds(task_runner_.MakeScoped(
       [this, delayed_status](storage::Status s,
                              std::vector<storage::CommitId> heads) {
         check_conflicts_in_progress_ = false;
@@ -112,7 +112,7 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
         merge_in_progress_ = true;
         heads.resize(2);
         ResolveConflicts(delayed_status, std::move(heads));
-      });
+      }));
 }
 
 void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
@@ -200,7 +200,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                   TRACE_CALLBACK(
                       std::function<void(storage::Status,
                                          std::unique_ptr<storage::Journal>)>(
-                          fxl::MakeCopyable([
+                          task_runner_.MakeScoped(fxl::MakeCopyable([
                             this, cleanup = std::move(cleanup),
                             tracing = std::move(tracing)
                           ](storage::Status status,
@@ -226,7 +226,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                                   // Report the merge.
                                   ReportEvent(CobaltEvent::COMMITS_MERGED);
                                 }));
-                          })),
+                          }))),
                       "ledger", "merge_same_commit_journal"));
               return;
             }
