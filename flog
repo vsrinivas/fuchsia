@@ -1,0 +1,318 @@
+#!/usr/bin/env python
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+"""flog is a developer friendly log listener with automatic crash symbol decoder.
+
+The crash is archived to /tmp/fuchsia-crash or a specified directory.
+Configurable keywords or lines with them can be color coded.
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from time import gmtime
+from time import strftime
+
+BEGINS = []
+ENDS = []
+SUPPRESSES = []
+CRASH_DIR = '/tmp/fuchsia_crash'
+
+COLOR_LINES = {'error': 'red'}
+COLOR_WORDS = {
+    'warn': 'white-on-red',
+    'error': 'white-on-red',
+    'fail': 'white-on-red',
+    'exception': 'white-on-red',
+    'address': 'green',
+    'did not add device in bind': 'green',
+}
+
+RESET = '\033[1;0m'
+
+COLORS = {
+    'WHITE-ON-RED': '\033[41;37m',
+    'RED': '\033[1;31m',
+    'GREEN': '\033[1;32m',
+    'YELLOW': '\033[1:33m',
+    'BLUE': '\033[1:34m',
+    'MAGENTA': '\033[1:35m',
+    'CYAN': '\033[1:36m',
+}
+
+
+def static_vars(**kwargs):
+
+  def decorate(func):
+    for k in kwargs:
+      setattr(func, k, kwargs[k])
+    return func
+
+  return decorate
+
+
+def now_str():
+  return strftime('%Y%m%d_%H%M%S', gmtime())
+
+
+def get_log_listener(args):
+  # return 'cat /tmp/z' # Unit test
+  listener = 'out/build-zircon/tools/loglistener'
+  fuchsia_dir = os.environ['FUCHSIA_DIR']
+  return '{}/{} {}'.format(fuchsia_dir, listener, ' '.join(x for x in args))
+
+
+@static_vars(crash_dump=[])
+@static_vars(is_crashing=False)
+def monitor_crash(line):
+  if '<==' in line and 'exception' in line:
+    monitor_crash.is_crashing = True
+
+  if monitor_crash.is_crashing is True:
+    monitor_crash.crash_dump.append(line)
+
+  if ': end' in line and 'bt#' in line:
+    decode_backtrace(monitor_crash.crash_dump, CRASH_DIR)
+    monitor_crash.crash_dump = []
+    monitor_crash.is_crashing = False
+
+
+def color(string, color_name):
+  if color_name.upper() not in COLORS:
+    return string
+
+  return COLORS[color_name.upper()] + string + RESET
+
+
+@static_vars(is_in_session=False)
+def is_suppressed(line):
+  """Test if the log may be printed or not.
+
+  Args:
+    line (str): A log line.
+
+  Returns:
+    True if the log line should be suppressed. False otherwise.
+  """
+  if not BEGINS or any(keyword in line for keyword in BEGINS):
+    if not is_suppressed.is_in_session:
+      print '\n' * 3
+      is_suppressed.is_in_session = True
+
+  if any(keyword in line for keyword in ENDS):
+    is_suppressed.is_in_session = False
+
+  if not is_suppressed.is_in_session:
+    return True
+
+  if any(keyword in line for keyword in SUPPRESSES):
+    return True
+
+  return False
+
+
+def colorize(line_incoming):
+  """Color-code the log line.
+
+  Args:
+    line_incoming: log line.
+
+  Returns:
+    color-coded log line
+  """
+
+  # TODO (porce): Case-insensitive search
+  # Treat "warn", "WARN", "wArN" in the same way.
+  line = line_incoming
+
+  if any(k in line for k in COLOR_LINES.keys()):
+    for k, v in COLOR_LINES.iteritems():
+      if k not in line:
+        continue
+      line = color(line, v)
+      break
+
+  if any(k in line for k in COLOR_WORDS.keys()):
+    rep = {}
+
+    for k, v in COLOR_WORDS.iteritems():
+      rep[k] = color(k, v)
+
+    rep = dict((re.escape(k), v) for k, v in rep.iteritems())
+    pattern = re.compile('|'.join(rep.keys()))
+    line = pattern.sub(lambda m: rep[re.escape(m.group(0))], line)
+
+  return line
+
+
+def print_log(line):
+  if is_suppressed(line):
+    return
+
+  print colorize(line),
+
+
+def hijack_stdout(cmd):
+  proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
+  return iter(proc.stdout.readline, '')
+
+
+def get_decode_cmd():
+  fuchsia_dir = os.environ['FUCHSIA_DIR']
+  zircon_build_dir = os.environ['ZIRCON_BUILD_DIR']
+  fuchsia_build_dir = os.environ['FUCHSIA_BUILD_DIR']
+
+  decode_cmd = '{}/zircon/scripts/symbolize --build-dir {} {}'.format(
+      fuchsia_dir, zircon_build_dir, fuchsia_build_dir)
+  return decode_cmd
+
+
+def print_bt(line):
+  """Print backtrace with some colors.
+
+  Args:
+    line (str): Backtrace line.
+  """
+  tokens = line.split(' at ')
+
+  methods = tokens[:-1]
+  methods.append('')
+  methods_text = ' at '.join(x for x in methods)
+
+  path = tokens[-1]
+  path_tokens = path.split('/')
+  paths = path_tokens[:-1]
+  paths.append('')
+
+  path_text = '/'.join(x for x in paths)
+  path_colored = path_text + color(path_tokens[-1], 'red')
+
+  print methods_text, path_colored,
+
+
+def decode_backtrace(crash_dump, dst_dir):
+  """A wrapper to fsymbolize.
+
+  Args:
+    crash_dump (array): array of log lines.
+    dst_dir    (str): directory to archive to.
+  """
+  os.system('mkdir -p {}'.format(dst_dir))
+  crash_file_path = '{}/{}.crash'.format(dst_dir, now_str())
+  tmp_file = '{}/tmp.dump'.format(dst_dir)
+
+  f = open(tmp_file, 'w')
+  for line in crash_dump:
+    f.write(line)
+  f.close()
+
+  cmd = '{} < {} > {}'.format(get_decode_cmd(), tmp_file, crash_file_path)
+  os.system(cmd)
+
+  print '\n\n'
+
+  is_start = False
+  with open(crash_file_path, 'r') as f:
+    for line in f:
+      if 'start of symbolized stack:' in line:
+        is_start = True
+
+      if is_start:
+        print_bt(line)
+  print '\n\n'
+
+
+def parse_color_map(string):
+  """Converted comma separated text into a color code map.
+
+  Args:
+    string (str): a text line
+
+  Returns:
+   Dictonary whose key is a text pattern and value is the color name.
+  """
+  m = {}
+  items = string.split(',')
+  for item in items:
+    sep = ':'
+    if sep not in item:
+      continue
+
+    idx = item.rfind(sep)
+    text = item[:idx]
+    color_name = item[idx + 1:]
+
+    if text.__len__() == 0:
+      continue
+
+    m[text] = color_name
+
+  return m
+
+
+def proc_cmdline():
+  """Argument parser.
+
+  Returns:
+    args.
+  """
+  example_commands = """
+
+  Pro tip: Use comma seperated texts for multiple matches
+
+  Example:
+  $ flog --begin \'my module starts,rare event\'
+         --end \'my module ends\'
+         --suppress \'verbose,chatty\'
+         --lines \'error msg:red,warn:blue\'
+         --words \'register 0x00:green,exit:yellow\'
+
+  """
+
+  p = argparse.ArgumentParser(
+      description='A friendly Fuchsia log listener',
+      epilog=example_commands,
+      formatter_class=argparse.RawDescriptionHelpFormatter)
+
+  p.add_argument('--begin', type=str, help='trigger texts to start logging')
+  p.add_argument('--end', type=str, help='trigger texts to end logging')
+  p.add_argument('--suppress', type=str, help='text to suppress the line')
+  p.add_argument('--lines', type=str, help='colorize the line. {text:color}')
+  p.add_argument('--words', type=str, help='colorize the word. {text:color}')
+  p.add_argument('--crashdir', type=str, help='directory to store crash files.')
+  p.add_argument(
+      'remainders',
+      nargs=argparse.REMAINDER,
+      help='arguments passed to loglistener')
+
+  args = p.parse_args()
+
+  if args.begin:
+    BEGINS.extend(args.begin.split(','))
+  if args.end:
+    ENDS.extend(args.end.split(','))
+  if args.suppress:
+    SUPPRESSES.extend(args.suppress.split(','))
+  if args.lines:
+    COLOR_LINES.update(parse_color_map(args.lines))
+  if args.words:
+    COLOR_WORDS.update(parse_color_map(args.words))
+  if args.crashdir:
+    global CRASH_DIR
+    CRASH_DIR = args.crashdir
+
+  return args
+
+
+def main():
+  args = proc_cmdline()
+  cmd = get_log_listener(args.remainders)
+  for line in hijack_stdout(cmd):
+    print_log(line)
+    monitor_crash(line)
+
+
+main()
