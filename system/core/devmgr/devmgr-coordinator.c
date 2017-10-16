@@ -1262,11 +1262,11 @@ static zx_status_t dh_suspend(device_t* dev, uint32_t flags) {
         return r;
     }
 
-    // Wait 5 seconds for the other side to finish up
+    // Wait 5 seconds for the other side to finish up.  Use zx_object_wait_one
+    // rather than just a nanosleep, so that on ARM this doesn't hang for 5s.
     // TODO(swetland/teisenbe): This should use a completion mechanism to get
     // the response from the other side rather than just timing out.
-    zx_nanosleep(zx_deadline_after(ZX_SEC(5)));
-    return ZX_ERR_TIMED_OUT;
+    return zx_object_wait_one(rpc, ZX_CHANNEL_PEER_CLOSED, zx_deadline_after(ZX_SEC(5)), NULL);
 }
 
 static zx_status_t dc_prepare_proxy(device_t* dev) {

@@ -68,8 +68,12 @@ static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
     switch (flags) {
     case DEVICE_SUSPEND_FLAG_REBOOT:
         reboot();
+        // Kill this driver so that the IPC channel gets closed; devmgr will
+        // perform a fallback that should shutdown or reboot the machine.
+        exit(0);
     case DEVICE_SUSPEND_FLAG_POWEROFF:
         poweroff();
+        exit(0);
     default:
         return ZX_ERR_NOT_SUPPORTED;
     };
