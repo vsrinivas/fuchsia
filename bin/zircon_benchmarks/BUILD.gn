@@ -16,6 +16,7 @@ executable("bin") {
     "ports.cc",
     "sockets.cc",
     "syscalls.cc",
+    "time_get.cc",
     "threads.cc",
     "vmo.cc",
   ]
