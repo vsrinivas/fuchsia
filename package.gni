@@ -72,6 +72,9 @@ declare_args() {
 #       name (string, required)
 #         Name of the test
 #
+#       dest (path, optional)
+#         Location the binary will be placed within "test/"
+#
 #       disabled (bool, optional)
 #         Whether to disable the test on continuous integration jobs. This can
 #         be used when a test is temporarily broken, or if it is too flaky or
@@ -199,10 +202,14 @@ template("package") {
       foreach(test, pkg.tests) {
         source = rebase_path("$root_build_dir/${test.name}")
         sources += [ "$root_build_dir/${test.name}" ]
+        basename = test.name
+        if (defined(test.dest)) {
+          basename = test.dest
+        }
         if (defined(test.disabled) && test.disabled) {
-          dest = "test/disabled/" + test.name
+          dest = "test/disabled/" + basename
         } else {
-          dest = "test/" + test.name
+          dest = "test/" + basename
         }
         package_manifest_contents += [ "$dest=$source" ]
       }
