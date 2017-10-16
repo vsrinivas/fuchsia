@@ -16,8 +16,7 @@ namespace ledger {
 
 class FakeCloudProvider : public cloud_provider::CloudProvider {
  public:
-  FakeCloudProvider(
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+  FakeCloudProvider();
   ~FakeCloudProvider() override;
 
  private:
@@ -33,11 +32,9 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
 
   void EraseAllData(const EraseAllDataCallback& callback) override;
 
-  fidl::Binding<cloud_provider::CloudProvider> binding_;
-
   callback::AutoCleanableSet<FakeDeviceSet> device_sets_;
 
-  callback::AutoCleanableSet<FakePageCloud> page_clouds_;
+  callback::AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudProvider);
 };

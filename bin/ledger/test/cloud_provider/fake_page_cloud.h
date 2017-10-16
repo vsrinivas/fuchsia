@@ -7,17 +7,20 @@
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/callback/auto_cleanable.h"
 
 namespace ledger {
 
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
-  FakePageCloud(fidl::InterfaceRequest<cloud_provider::PageCloud> request);
+  FakePageCloud();
   ~FakePageCloud() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
+
+  void Bind(fidl::InterfaceRequest<cloud_provider::PageCloud> request);
 
  private:
   void SendPendingCommits();
@@ -37,21 +40,15 @@ class FakePageCloud : public cloud_provider::PageCloud {
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
-  fidl::Binding<cloud_provider::PageCloud> binding_;
+  fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fxl::Closure on_empty_;
 
   fidl::Array<cloud_provider::CommitPtr> commits_;
   std::map<std::string, std::string> objects_;
 
-  // Watcher set by the client.
-  cloud_provider::PageCloudWatcherPtr watcher_;
-
-  // Whether we're still waiting for the watcher to ack the previous commit
-  // notification.
-  bool waiting_for_watcher_ack_ = false;
-
-  // Index of the first commit to be sent to the watcher.
-  size_t first_pending_commit_index_ = 0;
+  // Watchers set by the client.
+  class WatcherContainer;
+  callback::AutoCleanableSet<WatcherContainer> containers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakePageCloud);
 };

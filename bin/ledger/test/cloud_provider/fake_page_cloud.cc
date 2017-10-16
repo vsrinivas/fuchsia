@@ -34,11 +34,59 @@ bool TokenToPosition(const fidl::Array<uint8_t>& token, size_t* result) {
 
 }  // namespace
 
-FakePageCloud::FakePageCloud(
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request)
-    : binding_(this, std::move(request)) {
-  // The class shuts down when the client connection is disconnected.
-  binding_.set_connection_error_handler([this] {
+class FakePageCloud::WatcherContainer {
+ public:
+  WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher,
+                   size_t next_commit_index);
+
+  void SendCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+                   size_t next_commit_index,
+                   fxl::Closure on_ack);
+
+  size_t NextCommitIndex() { return next_commit_index_; }
+
+  bool WaitingForWatcherAck() { return waiting_for_watcher_ack_; }
+
+  void set_on_empty(fxl::Closure on_empty) {
+    watcher_.set_connection_error_handler(std::move(on_empty));
+  }
+
+ private:
+  cloud_provider::PageCloudWatcherPtr watcher_;
+  // Whether we're still waiting for the watcher to ack the previous commit
+  // notification.
+  bool waiting_for_watcher_ack_ = false;
+
+  // Index of the first commit to be sent to the watcher.
+  size_t next_commit_index_ = 0;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(WatcherContainer);
+};
+
+FakePageCloud::WatcherContainer::WatcherContainer(
+    cloud_provider::PageCloudWatcherPtr watcher,
+    size_t next_commit_index)
+    : watcher_(std::move(watcher)), next_commit_index_(next_commit_index) {}
+
+void FakePageCloud::WatcherContainer::SendCommits(
+    fidl::Array<cloud_provider::CommitPtr> commits,
+    size_t next_commit_index,
+    fxl::Closure on_ack) {
+  FXL_DCHECK(watcher_.is_bound());
+  FXL_DCHECK(!waiting_for_watcher_ack_);
+  FXL_DCHECK(commits.size() > 0u);
+
+  waiting_for_watcher_ack_ = true;
+  next_commit_index_ = next_commit_index;
+  watcher_->OnNewCommits(std::move(commits), PositionToToken(next_commit_index),
+                         [this, on_ack = std::move(on_ack)] {
+                           waiting_for_watcher_ack_ = false;
+                           on_ack();
+                         });
+}
+
+FakePageCloud::FakePageCloud() {
+  bindings_.set_on_empty_set_handler([this] {
     if (on_empty_) {
       on_empty_();
     }
@@ -47,26 +95,26 @@ FakePageCloud::FakePageCloud(
 
 FakePageCloud::~FakePageCloud() {}
 
-void FakePageCloud::SendPendingCommits() {
-  if (!watcher_ || first_pending_commit_index_ == commits_.size()) {
-    return;
-  }
+void FakePageCloud::Bind(
+    fidl::InterfaceRequest<cloud_provider::PageCloud> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
 
-  fidl::Array<cloud_provider::CommitPtr> commits;
-  for (size_t i = first_pending_commit_index_; i < commits_.size(); i++) {
-    commits.push_back(commits_[i].Clone());
+void FakePageCloud::SendPendingCommits() {
+  for (auto& container : containers_) {
+    if (container.WaitingForWatcherAck() ||
+        container.NextCommitIndex() == commits_.size()) {
+      continue;
+    }
+
+    fidl::Array<cloud_provider::CommitPtr> commits;
+    for (size_t i = container.NextCommitIndex(); i < commits_.size(); i++) {
+      commits.push_back(commits_[i].Clone());
+    }
+
+    container.SendCommits(std::move(commits), commits_.size(),
+                          [this] { SendPendingCommits(); });
   }
-  waiting_for_watcher_ack_ = true;
-  first_pending_commit_index_ = commits_.size();
-  // Token value of |commits_.size() - 1| will cause the last commit to be
-  // delivered again when the token is used for the next GetCommits() call. This
-  // is allowed by the FIDL contract and should be handled correctly by the
-  // client.
-  watcher_->OnNewCommits(std::move(commits),
-                         PositionToToken(commits_.size() - 1), [this] {
-                           waiting_for_watcher_ack_ = false;
-                           SendPendingCommits();
-                         });
 }
 
 void FakePageCloud::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
@@ -74,9 +122,7 @@ void FakePageCloud::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
   for (auto& commit : commits) {
     commits_.push_back(std::move(commit));
   }
-  if (watcher_.is_bound() && !waiting_for_watcher_ack_) {
-    SendPendingCommits();
-  }
+  SendPendingCommits();
   callback(cloud_provider::Status::OK);
 }
 
@@ -131,12 +177,15 @@ void FakePageCloud::SetWatcher(
     fidl::Array<uint8_t> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
-  watcher_ = cloud_provider::PageCloudWatcherPtr::Create(std::move(watcher));
-  if (!TokenToPosition(min_position_token, &first_pending_commit_index_)) {
+  auto watcher_ptr =
+      cloud_provider::PageCloudWatcherPtr::Create(std::move(watcher));
+
+  size_t first_pending_commit_index;
+  if (!TokenToPosition(min_position_token, &first_pending_commit_index)) {
     callback(cloud_provider::Status::ARGUMENT_ERROR);
-    watcher_.reset();
     return;
   }
+  containers_.emplace(std::move(watcher_ptr), first_pending_commit_index);
   SendPendingCommits();
   callback(cloud_provider::Status::OK);
 }

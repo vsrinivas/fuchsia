@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/test/cloud_provider/fake_cloud_provider.h"
 
+#include "peridot/bin/ledger/convert/convert.h"
+
 namespace ledger {
 
-FakeCloudProvider::FakeCloudProvider(
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
-    : binding_(this, std::move(request)) {}
+FakeCloudProvider::FakeCloudProvider() {}
 
 FakeCloudProvider::~FakeCloudProvider() {}
 
@@ -24,7 +24,19 @@ void FakeCloudProvider::GetPageCloud(
     fidl::Array<uint8_t> page_id,
     fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     const GetPageCloudCallback& callback) {
-  page_clouds_.emplace(std::move(page_cloud));
+  const std::string key =
+      convert::ToString(app_id) + "_" + convert::ToString(page_id);
+  auto it = page_clouds_.find(key);
+  if (it != page_clouds_.end()) {
+    it->second.Bind(std::move(page_cloud));
+    callback(cloud_provider::Status::OK);
+    return;
+  }
+
+  auto ret =
+      page_clouds_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
+                           std::forward_as_tuple());
+  ret.first->second.Bind(std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 }
 
