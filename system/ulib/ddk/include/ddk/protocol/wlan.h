@@ -106,7 +106,7 @@ typedef struct wlanmac_protocol_ops {
     zx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);
 
     // Sets the BSS the station is joining
-    zx_status_t (*set_bss)(void* ctx, uint32_t options, uint8_t mac[6], uint8_t type);
+    zx_status_t (*set_bss)(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type);
 } wlanmac_protocol_ops_t;
 
 typedef struct wlanmac_protocol {

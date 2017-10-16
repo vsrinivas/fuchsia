@@ -104,7 +104,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         return ZX_OK;
     }
 
-    zx_status_t WlanmacSetBss(uint32_t options, uint8_t mac[6], uint8_t type) {
+    zx_status_t WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
         set_bss_this_ = get_this();
         set_bss_called_ = true;
         return ZX_OK;

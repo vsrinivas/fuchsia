@@ -202,7 +202,7 @@ class WlanmacProtocol : public internal::base_protocol {
         return static_cast<D*>(ctx)->WlanmacSetChannel(options, chan);
     }
 
-    static zx_status_t SetBss(void* ctx, uint32_t options, uint8_t mac[6], uint8_t type) {
+    static zx_status_t SetBss(void* ctx, uint32_t options, const uint8_t mac[6], uint8_t type) {
         return static_cast<D*>(ctx)->WlanmacSetBss(options, mac, type);
     }
 
@@ -237,7 +237,7 @@ class WlanmacProtocolProxy {
         return ops_->set_channel(ctx_, options, chan);
     }
 
-    zx_status_t SetBss(uint32_t options, uint8_t mac[6], uint8_t type) {
+    zx_status_t SetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
       return ops_->set_bss(ctx_, options, mac, type);
     }
 

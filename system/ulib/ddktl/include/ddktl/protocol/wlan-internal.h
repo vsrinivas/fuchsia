@@ -90,9 +90,9 @@ constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_set_bss<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacSetBss");
     static_assert(fbl::is_same<decltype(&D::WlanmacSetBss),
-                                zx_status_t (D::*)(uint32_t, uint8_t[6], uint8_t)>::value,
+                                zx_status_t (D::*)(uint32_t, const uint8_t[6], uint8_t)>::value,
                   "WlanmacSetBss must be a non-static member function with signature "
-                  "'zx_status_t WlanmacSetBss(uint32_t, uint8_t[6], uint8_t)', and be visible to "
+                  "'zx_status_t WlanmacSetBss(uint32_t, const uint8_t[6], uint8_t)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
 }
