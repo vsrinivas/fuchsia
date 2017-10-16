@@ -5,7 +5,9 @@
 import("//build/go/go_binary.gni")
 import("//packages/package.gni")
 
-go_binary("amber") {
+go_binary("amber_bin") {
+  output_name = "amber"
+
   gopackage = "amber/cmd/amber"
 
   go_dependencies = [
@@ -32,19 +34,25 @@ go_binary("amber") {
     {
       source = "//third_party/golibs/github.com/golang/snappy"
       package = "github.com/golang/snappy"
-    }
+    },
   ]
 }
 
-package("amber_package") {
-  package_name = "amber"
-  deps = [ ":amber" ]
+package("amber") {
+  app = true
 
-  binaries = [
-    {
-      name = "amber"
-    }
+  deps = [
+    ":amber_bin",
   ]
+
+  binaries = [ {
+        name = "amber"
+      } ]
+
+  resources = [ {
+        path = rebase_path("keys/root_sig.json")
+        dest = "amber/keys"
+      } ]
 }
 
 go_binary("amber-publish") {
@@ -78,16 +86,19 @@ go_binary("amber-publish") {
     {
       source = "//third_party/golibs/github.com/golang/snappy"
       package = "github.com/golang/snappy"
-    }
+    },
   ]
 }
 
-copy("amber-keys") {
-  sources = [ "keys/root_sig.json" ]
-  outputs = [ "$root_out_dir/amber-keys" ]
-}
-
 copy("amber-srv-keys") {
-  sources = [ "keys/root.json","keys/snapshot.json","keys/targets.json","keys/timestamp.json", "keys/root_manifest.json" ]
-  outputs = [ "$root_out_dir/{{source_file_part}}" ]
+  sources = [
+    "keys/root.json",
+    "keys/root_manifest.json",
+    "keys/snapshot.json",
+    "keys/targets.json",
+    "keys/timestamp.json",
+  ]
+  outputs = [
+    "$root_out_dir/{{source_file_part}}",
+  ]
 }

@@ -2,18 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
-  deps = [
-    "//garnet/examples/escher/sketchy",
-    "//garnet/examples/escher/waterfall",
-  ]
-}
+import("//packages/package.gni")
 
-group("tests") {
+package("escher_tests") {
   testonly = true
+
   deps = [
-    "//garnet/public/lib/escher/test:escher_unittests",
+    "test:escher_unittests",
   ]
+
+  tests = [ {
+        name = "escher_unittests"
+      } ]
 }
 
 # When targeting Linux, we use a LunarG Vulkan SDK that we download from

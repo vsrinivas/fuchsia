@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("sketchy") {
-  deps = [
+  public_deps = [
     ":sketchy_demo",
   ]
 }

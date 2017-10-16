@@ -2,22 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//garnet/public/lib/escher:examples",
-        "//garnet/public/lib/escher:tests"
-    ],
-    "binaries": [
-        {
-            "binary": "waterfall",
-            "bootfs_path": "apps/waterfall"
-        },
-        {
-            "binary": "sketchy_demo",
-            "bootfs_path": "apps/sketchy"
-        },
-        {
-            "binary": "escher_unittests",
-            "bootfs_path": "test/escher_unittests"
-        }
-    ]
+    "packages": {
+        "escher_examples": "//garnet/examples/escher:escher_examples",
+        "escher_tests": "//garnet/public/lib/escher:escher_tests"
+    }
 }
