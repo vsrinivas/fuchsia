@@ -145,7 +145,7 @@ bootstrap_stage2() {
 }
 
 if [ "${SECOND_STAGE}" != "true" ]; then
-    check_args
+    check_args "$@"
 
     check_deps
 
