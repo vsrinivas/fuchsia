@@ -5,7 +5,7 @@
 import("//garnet/public/lib/fidl/fidl.gni")
 
 group("counter_cpp") {
-  deps = [
+  public_deps = [
     ":example_module1",
     ":example_module2",
     ":example_recipe",

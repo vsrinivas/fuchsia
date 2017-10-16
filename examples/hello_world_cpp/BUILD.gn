@@ -5,7 +5,7 @@
 import("//garnet/public/lib/fidl/fidl.gni")
 
 group("hello_world_cpp") {
-  deps = [
+  public_deps = [
     ":hello_app_child",
     ":hello_app_parent",
   ]

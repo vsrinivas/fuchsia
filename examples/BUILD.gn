@@ -2,9 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
+import("//packages/package.gni")
+
+package("modular_examples") {
+  app = true
+
   deps = [
-    "components_query",
     "counter_cpp",
     "hello_component",
     "hello_world_cpp",
@@ -12,4 +15,45 @@ group("examples") {
     "swap_cpp",
     "todo_cpp",
   ]
+
+  binaries = [
+    {
+      name = "hello_app_child"
+    },
+    {
+      name = "hello_app_parent"
+    },
+    {
+      name = "example_module1"
+    },
+    {
+      name = "example_module2"
+    },
+    {
+      name = "example_recipe"
+    },
+    {
+      name = "example_todo_headless"
+    },
+    {
+      name = "swap_module1"
+    },
+    {
+      name = "swap_module2"
+    },
+    {
+      name = "swap_recipe"
+    },
+  ]
+}
+
+package("components_query") {
+  deps = [
+    "components_query",
+  ]
+
+  binaries = [ {
+        name = "components_query"
+        dest = "components"
+      } ]
 }

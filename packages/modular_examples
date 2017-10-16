@@ -2,52 +2,11 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//peridot/examples"
-    ],
     "components": [
         "peridot/examples/hello_component/hello_component.json"
     ],
-    "binaries": [
-        {
-            "binary": "components_query",
-            "bootfs_path": "bin/components"
-        },
-        {
-            "binary": "hello_app_child",
-            "bootfs_path": "apps/hello_app_child"
-        },
-        {
-            "binary": "hello_app_parent",
-            "bootfs_path": "apps/hello_app_parent"
-        },
-        {
-            "binary": "example_module1",
-            "bootfs_path": "apps/example_module1"
-        },
-        {
-            "binary": "example_module2",
-            "bootfs_path": "apps/example_module2"
-        },
-        {
-            "binary": "example_recipe",
-            "bootfs_path": "apps/example_recipe"
-        },
-        {
-            "binary": "example_todo_headless",
-            "bootfs_path": "apps/example_todo_headless"
-        },
-        {
-            "binary": "swap_module1",
-            "bootfs_path": "apps/swap_module1"
-        },
-        {
-            "binary": "swap_module2",
-            "bootfs_path": "apps/swap_module2"
-        },
-        {
-            "binary": "swap_recipe",
-            "bootfs_path": "apps/swap_recipe"
-        }
-    ]
+    "packages": {
+        "modular_examples": "//peridot/examples:modular_examples",
+        "components_query": "//peridot/examples:components_query"
+    }
 }
