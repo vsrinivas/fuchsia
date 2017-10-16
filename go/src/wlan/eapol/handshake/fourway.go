@@ -46,10 +46,10 @@ type fourWayStateCompleted struct{}
 type messageNumber uint8
 
 const (
-	FIRST_MESSAGE  messageNumber = iota
-	SECOND_MESSAGE
-	THIRD_MESSAGE
-	FOURTH_MESSAGE
+	Message1 messageNumber = iota + 1
+	Message2
+	Message3
+	Message4
 )
 
 type FourWayConfig struct {
@@ -105,7 +105,7 @@ func (hs *FourWay) HandleEAPOLKeyFrame(f *eapol.KeyFrame) error {
 }
 
 func (s *fourWayStateIdle) isMessageAllowed(f *eapol.KeyFrame) bool {
-	return getMessageNumber(f) == FIRST_MESSAGE
+	return getMessageNumber(f) == Message1
 }
 
 // First state of the Handshake. Preceding state and integrity checks guarantee that only the first
@@ -168,7 +168,7 @@ func (s *fourWayStateIdle) sendMessage2(hs *FourWay, msg1 *eapol.KeyFrame) error
 
 func (s *fourWayStateWaitingGTK) isMessageAllowed(f *eapol.KeyFrame) bool {
 	messageNumber := getMessageNumber(f)
-	return messageNumber == FIRST_MESSAGE || messageNumber == THIRD_MESSAGE
+	return messageNumber == Message1 || messageNumber == Message3
 }
 
 // Second state of the Handshake can receive either the first or third message of the Handshake.
@@ -176,7 +176,7 @@ func (s *fourWayStateWaitingGTK) isMessageAllowed(f *eapol.KeyFrame) bool {
 // the Handshake continues.
 func (s *fourWayStateWaitingGTK) handleEAPOLKeyFrame(hs *FourWay, msg *eapol.KeyFrame) error {
 	// If first message was received, restart the handshake.
-	if getMessageNumber(msg) == FIRST_MESSAGE {
+	if getMessageNumber(msg) == Message1 {
 		hs.ptk = nil
 		hs.aNonce = [32]byte{}
 		hs.state = &fourWayStateIdle{}
@@ -296,7 +296,7 @@ func (s *fourWayStateCompleted) isMessageAllowed(f *eapol.KeyFrame) bool {
 }
 
 func (s *fourWayStateCompleted) handleEAPOLKeyFrame(hs *FourWay, f *eapol.KeyFrame) error {
-	// TODO(hahnr): Implement.
+	// TODO(hahnr): Implement re-keying for PTK and GTK.
 	return nil
 }
 
@@ -328,7 +328,7 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 
 	// Use the message's number to check for message specific information being set. E.g., the Install
 	// or MIC bit which both can only be set on the third message.
-	isFirstMsg := getMessageNumber(f) == FIRST_MESSAGE
+	isFirstMsg := getMessageNumber(f) == Message1
 	if isFirstMsg == f.Info.IsSet(eapol.KeyInfo_Encrypted_KeyData) {
 		return false, fmt.Errorf("unexpected secure state")
 	}
@@ -405,6 +405,11 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 // Note: This method will decrypt the key's data and write the decrypted data buffer to the frame's
 // data field.
 func (hs *FourWay) isStateCompliant(f *eapol.KeyFrame) (bool, error) {
+	messageNumber := getMessageNumber(f)
+	if !hs.state.isMessageAllowed(f) {
+		return false, fmt.Errorf("the current state \"%v\" did not expect message %d", hs.state, messageNumber)
+	}
+
 	// IEEE Std 802.11-2016, 12.7.2, d)
 	// Replay counter must be larger than the one from the last valid received Key frame.
 	// Only Key frames with a valid, non zero MIC increase the replay counter.
@@ -440,13 +445,8 @@ func (hs *FourWay) isStateCompliant(f *eapol.KeyFrame) (bool, error) {
 	}
 
 	// Third message must hold the same nonce as the first message.
-	messageNumber := getMessageNumber(f)
-	if messageNumber == THIRD_MESSAGE && bytes.Compare(f.Nonce[:], hs.aNonce[:]) != 0 {
+	if messageNumber == Message3 && bytes.Compare(f.Nonce[:], hs.aNonce[:]) != 0 {
 		return false, fmt.Errorf("invalid nonce received")
-	}
-
-	if !hs.state.isMessageAllowed(f) {
-		return false, fmt.Errorf("the current state \"%v\" did not expect the received message", hs.state)
 	}
 
 	// TODO(hahnr): Validate RSNE sent in third message with association RSNE.
@@ -520,9 +520,9 @@ func getMessageNumber(f *eapol.KeyFrame) messageNumber {
 	// out messages which we believe to be first messages but in fact are neither the first nor the
 	// third one.
 	if f.Info.IsSet(eapol.KeyInfo_Secure) {
-		return THIRD_MESSAGE
+		return Message3
 	}
-	return FIRST_MESSAGE
+	return Message1
 }
 
 func toMLMEKeyID(_ *elements.CipherSuite) mlme.KeyId {
