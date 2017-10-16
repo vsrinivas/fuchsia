@@ -7,10 +7,5 @@
 constexpr uint32_t HELPER_HANDLE_ID = 0x23011985;
 constexpr const char HELPER_PATH[] = "/system/bin/zircon-benchmarks";
 
-enum {
-  CHANNEL_READ,
-  CHANNEL_WRITE,
-};
-
 int channel_read(uint32_t num_bytes);
 int channel_write(uint32_t num_bytes);
