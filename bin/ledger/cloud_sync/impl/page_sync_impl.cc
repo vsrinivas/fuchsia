@@ -20,12 +20,14 @@ namespace cloud_sync {
 PageSyncImpl::PageSyncImpl(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     storage::PageStorage* storage,
+    encryption::EncryptionService* encryption_service,
     cloud_provider_firebase::PageCloudHandler* cloud_provider,
     auth_provider::AuthProvider* auth_provider,
     std::unique_ptr<backoff::Backoff> backoff,
     fxl::Closure on_error,
     std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : storage_(storage),
+      encryption_service_(encryption_service),
       cloud_provider_(cloud_provider),
       auth_provider_(auth_provider),
       backoff_(std::move(backoff)),
@@ -38,10 +40,10 @@ PageSyncImpl::PageSyncImpl(
   FXL_DCHECK(auth_provider_);
   // We need to initialize page_download_ after task_runner_, but task_runner_
   // must be the last field.
-  page_download_ = std::make_unique<PageDownload>(&task_runner_, storage_,
-                                                  cloud_provider_, this);
-  page_upload_ = std::make_unique<PageUpload>(storage_, cloud_provider_,
-                                              auth_provider_, this);
+  page_download_ = std::make_unique<PageDownload>(
+      &task_runner_, storage_, encryption_service_, cloud_provider_, this);
+  page_upload_ = std::make_unique<PageUpload>(
+      storage_, encryption_service_, cloud_provider_, auth_provider_, this);
 }
 
 PageSyncImpl::~PageSyncImpl() {

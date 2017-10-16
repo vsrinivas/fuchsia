@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 
 #include <flatbuffers/flatbuffers.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
 #include "peridot/bin/ledger/encryption/public/constants.h"
-#include "peridot/bin/ledger/encryption/public/encrypted_commit_generated.h"
 
 namespace encryption {
 namespace {
@@ -24,8 +23,15 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
 }
 }  // namespace
 
-void EncryptCommit(convert::ExtendedStringView commit_storage,
-                   std::function<void(Status, std::string)> callback) {
+EncryptionServiceImpl::EncryptionServiceImpl(
+    fxl::RefPtr<fxl::TaskRunner> task_runner)
+    : task_runner_(std::move(task_runner)) {}
+
+EncryptionServiceImpl::~EncryptionServiceImpl() {}
+
+void EncryptionServiceImpl::EncryptCommit(
+    convert::ExtendedStringView commit_storage,
+    std::function<void(Status, std::string)> callback) {
   flatbuffers::FlatBufferBuilder builder;
 
   auto storage = CreateEncryptedCommitStorage(
@@ -36,20 +42,22 @@ void EncryptCommit(convert::ExtendedStringView commit_storage,
       reinterpret_cast<const char*>(builder.GetBufferPointer()),
       builder.GetSize());
 
-  // TODO(qsr): This is temporary until this method is transferred to a real
-  // service. When done, it must not reference the task queue through a global
-  // variable.
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([
-    callback = std::move(callback),
-    encrypted_storage = std::move(encrypted_storage)
-  ]() mutable { callback(Status::OK, std::move(encrypted_storage)); });
+  // Ensures the callback is asynchronous.
+  // TODO(qsr): Replace with real encryption.
+  task_runner_.PostTask(
+      [callback = std::move(callback),
+       encrypted_storage = std::move(encrypted_storage)]() mutable {
+        callback(Status::OK, std::move(encrypted_storage));
+      });
 }
 
-void DecryptCommit(convert::ExtendedStringView storage_bytes,
-                   std::function<void(Status, std::string)> callback) {
+void EncryptionServiceImpl::DecryptCommit(
+    convert::ExtendedStringView storage_bytes,
+    std::function<void(Status, std::string)> callback) {
   if (!CheckValidSerialization(storage_bytes)) {
     FXL_LOG(WARNING) << "Received invalid data. Cannot decrypt commit.";
     callback(Status::INVALID_ARGUMENT, "");
+    return;
   }
 
   const EncryptedCommitStorage* encrypted_commit_storage =
@@ -58,12 +66,12 @@ void DecryptCommit(convert::ExtendedStringView storage_bytes,
   std::string commit_storage = convert::ToString(
       encrypted_commit_storage->serialized_encrypted_commit_storage());
 
-  // TODO(qsr): This is temporary until this method is transferred to a real
-  // service. When done, it must not reference the task queue through a global
-  // variable.
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([
-    callback = std::move(callback), commit_storage = std::move(commit_storage)
-  ]() mutable { callback(Status::OK, std::move(commit_storage)); });
+  // Ensures the callback is asynchronous.
+  // TODO(qsr): Replace with real decryption.
+  task_runner_.PostTask([callback = std::move(callback),
+                         commit_storage = std::move(commit_storage)]() mutable {
+    callback(Status::OK, std::move(commit_storage));
+  });
 }
 
 }  // namespace encryption

@@ -17,12 +17,12 @@
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit.h"
 #include "peridot/bin/ledger/cloud_provider/public/types.h"
-#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 
 namespace cloud_sync {
 
 BatchUpload::BatchUpload(
     storage::PageStorage* storage,
+    encryption::EncryptionService* encryption_service,
     cloud_provider_firebase::PageCloudHandler* cloud_provider,
     auth_provider::AuthProvider* auth_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
@@ -30,6 +30,7 @@ BatchUpload::BatchUpload(
     std::function<void(ErrorType)> on_error,
     unsigned int max_concurrent_uploads)
     : storage_(storage),
+      encryption_service_(encryption_service),
       cloud_provider_(cloud_provider),
       auth_provider_(auth_provider),
       commits_(std::move(commits)),
@@ -209,12 +210,15 @@ void BatchUpload::UploadCommits() {
           Create(encryption::Status::OK);
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
-    encryption::EncryptCommit(storage_commit->GetStorageBytes(), [
-      id, callback = waiter->NewCallback()
-    ](encryption::Status status, std::string encrypted_storage_bytes) mutable {
-      callback(status, cloud_provider_firebase::Commit(
-                           std::move(id), std::move(encrypted_storage_bytes)));
-    });
+    encryption_service_->EncryptCommit(
+        storage_commit->GetStorageBytes(),
+        [id, callback = waiter->NewCallback()](
+            encryption::Status status,
+            std::string encrypted_storage_bytes) mutable {
+          callback(status,
+                   cloud_provider_firebase::Commit(
+                       std::move(id), std::move(encrypted_storage_bytes)));
+        });
     ids.push_back(std::move(id));
   }
   waiter->Finalize(callback::MakeScoped(

@@ -19,6 +19,7 @@ source_set("public") {
     "//peridot/bin/ledger/auth_provider",
     "//peridot/bin/ledger/cloud_provider/public",
     "//peridot/bin/ledger/device_set",
+    "//peridot/bin/ledger/encryption/public",
     "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/gcs",
     "//peridot/bin/ledger/storage/public",

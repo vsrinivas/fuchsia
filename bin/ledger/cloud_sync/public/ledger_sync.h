@@ -12,6 +12,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/firebase/firebase.h"
 #include "peridot/bin/ledger/gcs/cloud_storage.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -23,6 +24,9 @@ struct PageSyncContext {
   std::unique_ptr<firebase::Firebase> firebase;
   std::unique_ptr<gcs::CloudStorage> cloud_storage;
   std::unique_ptr<cloud_provider_firebase::PageCloudHandler> cloud_provider;
+  // TODO(qsr): LE-330 Review the location of EncryptionService depending on
+  // where it is used.
+  std::unique_ptr<encryption::EncryptionService> encryption_service;
   std::unique_ptr<PageSync> page_sync;
 };
 

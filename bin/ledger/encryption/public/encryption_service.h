@@ -8,6 +8,7 @@
 #include <functional>
 #include <string>
 
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/convert/convert.h"
 
 namespace encryption {
@@ -20,13 +21,25 @@ enum class Status {
   INTERNAL_ERROR,
 };
 
-// Encrypt the given commit storage bytes for storing in the cloud.
-void EncryptCommit(convert::ExtendedStringView commit_storage,
-                   std::function<void(Status, std::string)> callback);
+// Handles all encryption for a page of the Ledger.
+class EncryptionService {
+ public:
+  EncryptionService() {}
+  virtual ~EncryptionService() {}
 
-// Decrypt the given encrypted commit storage bytes from the cloud.
-void DecryptCommit(convert::ExtendedStringView encrypted_commit_storage,
-                   std::function<void(Status, std::string)> callback);
+  // Encrypts the given commit storage bytes for storing in the cloud.
+  virtual void EncryptCommit(
+      convert::ExtendedStringView commit_storage,
+      std::function<void(Status, std::string)> callback) = 0;
+
+  // Decrypts the given encrypted commit storage bytes from the cloud.
+  virtual void DecryptCommit(
+      convert::ExtendedStringView storage_bytes,
+      std::function<void(Status, std::string)> callback) = 0;
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(EncryptionService);
+};
 
 }  // namespace encryption
 

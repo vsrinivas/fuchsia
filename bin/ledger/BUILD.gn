@@ -76,7 +76,7 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/coroutine:unittests",
     "//peridot/bin/ledger/coroutine/context:unittests",
     "//peridot/bin/ledger/device_set:unittests",
-    "//peridot/bin/ledger/encryption/public:unittests",
+    "//peridot/bin/ledger/encryption/impl:unittests",
     "//peridot/bin/ledger/environment:unittests",
     "//peridot/bin/ledger/firebase:unittests",
     "//peridot/bin/ledger/gcs:unittests",

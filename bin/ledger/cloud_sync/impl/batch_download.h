@@ -8,6 +8,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/cloud_provider/public/record.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace cloud_sync {
@@ -23,6 +24,7 @@ namespace cloud_sync {
 class BatchDownload {
  public:
   BatchDownload(storage::PageStorage* storage,
+                encryption::EncryptionService* encryption_service,
                 std::vector<cloud_provider_firebase::Record> records,
                 fxl::Closure on_done,
                 fxl::Closure on_error);
@@ -35,6 +37,7 @@ class BatchDownload {
   void UpdateTimestampAndQuit();
 
   storage::PageStorage* const storage_;
+  encryption::EncryptionService* const encryption_service_;
   std::vector<cloud_provider_firebase::Record> records_;
   fxl::Closure on_done_;
   fxl::Closure on_error_;

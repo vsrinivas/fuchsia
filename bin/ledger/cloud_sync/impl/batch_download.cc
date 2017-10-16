@@ -11,16 +11,17 @@
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "peridot/bin/ledger/callback/waiter.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
-#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 
 namespace cloud_sync {
 
 BatchDownload::BatchDownload(
     storage::PageStorage* storage,
+    encryption::EncryptionService* encryption_service,
     std::vector<cloud_provider_firebase::Record> records,
     fxl::Closure on_done,
     fxl::Closure on_error)
     : storage_(storage),
+      encryption_service_(encryption_service),
       records_(std::move(records)),
       on_done_(std::move(on_done)),
       on_error_(std::move(on_error)),
@@ -42,12 +43,13 @@ void BatchDownload::Start() {
       encryption::Status,
       storage::PageStorage::CommitIdAndBytes>::Create(encryption::Status::OK);
   for (auto& record : records_) {
-    encryption::DecryptCommit(record.commit.content, [
-      id = std::move(record.commit.id), callback = waiter->NewCallback()
-    ](encryption::Status status, std::string content) mutable {
-      callback(status, storage::PageStorage::CommitIdAndBytes(
-                           std::move(id), std::move(content)));
-    });
+    encryption_service_->DecryptCommit(
+        record.commit.content,
+        [id = std::move(record.commit.id), callback = waiter->NewCallback()](
+            encryption::Status status, std::string content) mutable {
+          callback(status, storage::PageStorage::CommitIdAndBytes(
+                               std::move(id), std::move(content)));
+        });
   }
   waiter->Finalize(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),

@@ -21,10 +21,12 @@ DownloadSyncState GetMergedState(DownloadSyncState commit_state,
 PageDownload::PageDownload(
     callback::ScopedTaskRunner* task_runner,
     storage::PageStorage* storage,
+    encryption::EncryptionService* encryption_service,
     cloud_provider_firebase::PageCloudHandler* cloud_provider,
     Delegate* delegate)
     : task_runner_(task_runner),
       storage_(storage),
+      encryption_service_(encryption_service),
       cloud_provider_(cloud_provider),
       delegate_(delegate),
       log_prefix_(fxl::Concatenate(
@@ -199,7 +201,8 @@ void PageDownload::DownloadBatch(
     fxl::Closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
-      storage_, std::move(records), [ this, on_done = std::move(on_done) ] {
+      storage_, encryption_service_, std::move(records),
+      [this, on_done = std::move(on_done)] {
         if (on_done) {
           on_done();
         }

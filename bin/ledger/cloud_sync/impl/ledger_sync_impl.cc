@@ -8,6 +8,7 @@
 #include "peridot/bin/ledger/cloud_provider/impl/page_cloud_handler_impl.h"
 #include "peridot/bin/ledger/cloud_provider/impl/paths.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_sync_impl.h"
+#include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 #include "peridot/bin/ledger/firebase/encoding.h"
 #include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "peridot/bin/ledger/gcs/cloud_storage_impl.h"
@@ -61,8 +62,13 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   result->cloud_provider =
       std::make_unique<cloud_provider_firebase::PageCloudHandlerImpl>(
           result->firebase.get(), result->cloud_storage.get());
+  // TODO(qsr): LE-330 Review how and where encryption services are created.
+  result->encryption_service =
+      std::make_unique<encryption::EncryptionServiceImpl>(
+          environment_->main_runner());
   auto page_sync = std::make_unique<PageSyncImpl>(
-      environment_->main_runner(), page_storage, result->cloud_provider.get(),
+      environment_->main_runner(), page_storage,
+      result->encryption_service.get(), result->cloud_provider.get(),
       user_config_->auth_provider,
       std::make_unique<backoff::ExponentialBackoff>(), error_callback,
       aggregator_.GetNewStateWatcher());

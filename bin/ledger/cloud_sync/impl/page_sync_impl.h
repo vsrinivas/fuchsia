@@ -23,6 +23,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/page_upload.h"
 #include "peridot/bin/ledger/cloud_sync/public/page_sync.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
@@ -59,6 +60,7 @@ class PageSyncImpl : public PageSync,
  public:
   PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                storage::PageStorage* storage,
+               encryption::EncryptionService* encryption_service,
                cloud_provider_firebase::PageCloudHandler* cloud_provider,
                auth_provider::AuthProvider* auth_provider,
                std::unique_ptr<backoff::Backoff> backoff,
@@ -110,6 +112,7 @@ class PageSyncImpl : public PageSync,
   void NotifyStateWatcher();
 
   storage::PageStorage* const storage_;
+  encryption::EncryptionService* const encryption_service_;
   cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;

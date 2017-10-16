@@ -2,45 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//third_party/flatbuffers/flatbuffer.gni")
-
 visibility = [ "//peridot/bin/ledger/*" ]
 
 source_set("public") {
   sources = [
     "constants.h",
-    "encryption_service.cc",
     "encryption_service.h",
-  ]
-
-  deps = [
-    ":encrypted_commit",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
   ]
 
   public_deps = [
     "//peridot/bin/ledger/convert",
-  ]
-}
-
-flatbuffer("encrypted_commit") {
-  sources = [
-    "encrypted_commit.fbs",
-  ]
-}
-
-source_set("unittests") {
-  testonly = true
-
-  sources = [
-    "encryption_service_unittest.cc",
-  ]
-
-  deps = [
-    ":public",
-    "//peridot/bin/ledger/callback",
-    "//peridot/bin/ledger/test:lib",
-    "//third_party/gtest",
   ]
 }

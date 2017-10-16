@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/callback/capture.h"
@@ -12,11 +12,14 @@ namespace encryption {
 namespace {
 
 class EncryptionServiceTest : public ::test::TestWithMessageLoop {
+ public:
+  EncryptionServiceTest() : encryption_service_(message_loop_.task_runner()) {}
+
  protected:
   void EncryptCommit(convert::ExtendedStringView commit_storage,
                      Status* status,
                      std::string* result) {
-    ::encryption::EncryptCommit(
+    encryption_service_.EncryptCommit(
         commit_storage, callback::Capture(MakeQuitTask(), status, result));
     EXPECT_FALSE(RunLoopWithTimeout());
   }
@@ -24,11 +27,13 @@ class EncryptionServiceTest : public ::test::TestWithMessageLoop {
   void DecryptCommit(convert::ExtendedStringView encrypted_commit_storage,
                      Status* status,
                      std::string* result) {
-    ::encryption::DecryptCommit(
+    encryption_service_.DecryptCommit(
         encrypted_commit_storage,
         callback::Capture(MakeQuitTask(), status, result));
     EXPECT_FALSE(RunLoopWithTimeout());
   }
+
+  EncryptionServiceImpl encryption_service_;
 };
 
 TEST_F(EncryptionServiceTest, EncryptionDescription) {

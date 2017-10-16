@@ -17,7 +17,7 @@
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/cloud_provider/test/page_cloud_handler_empty_impl.h"
-#include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -227,12 +227,14 @@ class TestPageCloudHandler
 class BatchUploadTest : public ::test::TestWithMessageLoop {
  public:
   BatchUploadTest()
-      : cloud_provider_(&message_loop_),
+      : encryption_service_(message_loop_.task_runner()),
+        cloud_provider_(&message_loop_),
         auth_provider_(message_loop_.task_runner()) {}
   ~BatchUploadTest() override {}
 
  protected:
   TestPageStorage storage_;
+  encryption::FakeEncryptionService encryption_service_;
   TestPageCloudHandler cloud_provider_;
   auth_provider::test::TestAuthProvider auth_provider_;
 
@@ -243,7 +245,8 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
       std::vector<std::unique_ptr<const storage::Commit>> commits,
       unsigned int max_concurrent_uploads = 10) {
     return std::make_unique<BatchUpload>(
-        &storage_, &cloud_provider_, &auth_provider_, std::move(commits),
+        &storage_, &encryption_service_, &cloud_provider_, &auth_provider_,
+        std::move(commits),
         [this] {
           done_calls_++;
           message_loop_.PostQuitTask();
@@ -253,16 +256,6 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
           message_loop_.PostQuitTask();
         },
         max_concurrent_uploads);
-  }
-
-  std::string DecryptCommit(std::string encrypted_commit) {
-    encryption::Status status;
-    std::string result;
-    encryption::DecryptCommit(
-        encrypted_commit, callback::Capture(MakeQuitTask(), &status, &result));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(encryption::Status::OK, status);
-    return result;
   }
 
  private:
@@ -283,8 +276,8 @@ TEST_F(BatchUploadTest, SingleCommit) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(1u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id", cloud_provider_.received_commits.front().id);
-  EXPECT_EQ("content",
-            DecryptCommit(cloud_provider_.received_commits.front().content));
+  EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
+                           cloud_provider_.received_commits.front().content));
   EXPECT_TRUE(cloud_provider_.received_objects.empty());
 
   // Verify the sync status in storage.
@@ -309,11 +302,11 @@ TEST_F(BatchUploadTest, MultipleCommits) {
   EXPECT_EQ(1u, cloud_provider_.add_commits_calls);
   ASSERT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id0", cloud_provider_.received_commits[0].id);
-  EXPECT_EQ("content0",
-            DecryptCommit(cloud_provider_.received_commits[0].content));
+  EXPECT_EQ("content0", encryption_service_.DecryptCommitSynchronous(
+                            cloud_provider_.received_commits[0].content));
   EXPECT_EQ("id1", cloud_provider_.received_commits[1].id);
-  EXPECT_EQ("content1",
-            DecryptCommit(cloud_provider_.received_commits[1].content));
+  EXPECT_EQ("content1", encryption_service_.DecryptCommitSynchronous(
+                            cloud_provider_.received_commits[1].content));
   EXPECT_TRUE(cloud_provider_.received_objects.empty());
 
   // Verify the sync status in storage.
@@ -342,8 +335,8 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(1u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id", cloud_provider_.received_commits.front().id);
-  EXPECT_EQ("content",
-            DecryptCommit(cloud_provider_.received_commits.front().content));
+  EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
+                           cloud_provider_.received_commits.front().content));
   EXPECT_EQ(2u, cloud_provider_.received_objects.size());
   EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_digest1"]);
   EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_digest2"]);
@@ -534,8 +527,8 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(1u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id", cloud_provider_.received_commits.front().id);
-  EXPECT_EQ("content",
-            DecryptCommit(cloud_provider_.received_commits.front().content));
+  EXPECT_EQ("content", encryption_service_.DecryptCommitSynchronous(
+                           cloud_provider_.received_commits.front().content));
   EXPECT_EQ(2u, cloud_provider_.received_objects.size());
   EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_digest1"]);
   EXPECT_EQ("obj_data2", cloud_provider_.received_objects["obj_digest2"]);

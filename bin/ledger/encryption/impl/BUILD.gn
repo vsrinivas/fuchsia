@@ -1,0 +1,45 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("impl") {
+  sources = [
+    "encryption_service_impl.cc",
+    "encryption_service_impl.h",
+  ]
+
+  deps = [
+    ":encrypted_commit",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/encryption/public",
+  ]
+}
+
+flatbuffer("encrypted_commit") {
+  sources = [
+    "encrypted_commit.fbs",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "encryption_service_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/test:lib",
+    "//third_party/gtest",
+  ]
+}

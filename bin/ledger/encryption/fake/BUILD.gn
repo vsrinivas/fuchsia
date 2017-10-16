@@ -4,9 +4,16 @@
 
 visibility = [ "//peridot/bin/ledger/*" ]
 
-group("encryption") {
-  deps = [
-    "//peridot/bin/ledger/encryption/impl",
+source_set("fake") {
+  testonly = true
+
+  sources = [
+    "fake_encryption_service.cc",
+    "fake_encryption_service.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/public",
   ]
 }

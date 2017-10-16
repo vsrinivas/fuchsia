@@ -15,6 +15,7 @@
 #include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
@@ -51,6 +52,7 @@ class BatchUpload {
   };
 
   BatchUpload(storage::PageStorage* storage,
+              encryption::EncryptionService* encryption_service,
               cloud_provider_firebase::PageCloudHandler* cloud_provider,
               auth_provider::AuthProvider* auth_provider,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
@@ -84,6 +86,7 @@ class BatchUpload {
   void RefreshAuthToken(fxl::Closure on_refreshed);
 
   storage::PageStorage* const storage_;
+  encryption::EncryptionService* const encryption_service_;
   cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;

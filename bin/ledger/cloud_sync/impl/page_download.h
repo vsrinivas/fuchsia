@@ -16,6 +16,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 
 namespace cloud_sync {
@@ -34,6 +35,7 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
 
   PageDownload(callback::ScopedTaskRunner* task_runner,
                storage::PageStorage* storage,
+               encryption::EncryptionService* encryption_service,
                cloud_provider_firebase::PageCloudHandler* cloud_provider,
                Delegate* delegate);
 
@@ -80,6 +82,7 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
   // Owned by whoever owns this class.
   callback::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
+  encryption::EncryptionService* const encryption_service_;
   cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
   Delegate* const delegate_;
 

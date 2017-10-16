@@ -12,7 +12,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
-#include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/test/page_storage_empty_impl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
@@ -64,21 +64,15 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
 class BatchDownloadTest : public test::TestWithMessageLoop {
  public:
-  BatchDownloadTest() : storage_(&message_loop_) {}
+  BatchDownloadTest()
+      : storage_(&message_loop_),
+        encryption_service_(message_loop_.task_runner()) {}
   ~BatchDownloadTest() override {}
 
  protected:
-  std::string EncryptCommit(std::string content) {
-    encryption::Status status;
-    std::string result;
-    encryption::EncryptCommit(
-        content, callback::Capture(MakeQuitTask(), &status, &result));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(encryption::Status::OK, status);
-    return result;
-  }
 
   TestPageStorage storage_;
+  encryption::FakeEncryptionService encryption_service_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchDownloadTest);
@@ -89,8 +83,11 @@ TEST_F(BatchDownloadTest, AddCommit) {
   int error_calls = 0;
   std::vector<cloud_provider_firebase::Record> records;
   records.emplace_back(
-      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
-  BatchDownload batch_download(&storage_, std::move(records),
+      cloud_provider_firebase::Commit(
+          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
+      "42");
+  BatchDownload batch_download(&storage_, &encryption_service_,
+                               std::move(records),
                                [this, &done_calls] {
                                  done_calls++;
                                  message_loop_.PostQuitTask();
@@ -111,10 +108,15 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   int error_calls = 0;
   std::vector<cloud_provider_firebase::Record> records;
   records.emplace_back(
-      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
+      cloud_provider_firebase::Commit(
+          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
+      "42");
   records.emplace_back(
-      cloud_provider_firebase::Commit("id2", EncryptCommit("content2")), "43");
-  BatchDownload batch_download(&storage_, std::move(records),
+      cloud_provider_firebase::Commit(
+          "id2", encryption_service_.EncryptCommitSynchronous("content2")),
+      "43");
+  BatchDownload batch_download(&storage_, &encryption_service_,
+                               std::move(records),
                                [this, &done_calls] {
                                  done_calls++;
                                  message_loop_.PostQuitTask();
@@ -136,8 +138,11 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   int error_calls = 0;
   std::vector<cloud_provider_firebase::Record> records;
   records.emplace_back(
-      cloud_provider_firebase::Commit("id1", EncryptCommit("content1")), "42");
-  BatchDownload batch_download(&storage_, std::move(records),
+      cloud_provider_firebase::Commit(
+          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
+      "42");
+  BatchDownload batch_download(&storage_, &encryption_service_,
+                               std::move(records),
                                [&done_calls] { done_calls++; },
                                [this, &error_calls] {
                                  error_calls++;

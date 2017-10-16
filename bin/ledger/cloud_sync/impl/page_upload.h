@@ -13,6 +13,7 @@
 #include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/types.h"
@@ -33,6 +34,7 @@ class PageUpload : public storage::CommitWatcher {
   };
 
   PageUpload(storage::PageStorage* storage,
+             encryption::EncryptionService* encryption_service,
              cloud_provider_firebase::PageCloudHandler* cloud_provider,
              auth_provider::AuthProvider* auth_provider,
              Delegate* delegate);
@@ -64,6 +66,7 @@ class PageUpload : public storage::CommitWatcher {
   void HandleError(const char error_description[]);
 
   storage::PageStorage* const storage_;
+  encryption::EncryptionService* const encryption_service_;
   cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
   auth_provider::AuthProvider* const auth_provider_;
   Delegate* const delegate_;
