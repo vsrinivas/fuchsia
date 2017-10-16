@@ -65,6 +65,7 @@ bool test_pseudo_dir() {
 
     // open as directory
     fbl::RefPtr<fs::Vnode> redirect;
+    EXPECT_EQ(ZX_OK, dir->ValidateFlags(O_DIRECTORY));
     EXPECT_EQ(ZX_OK, dir->Open(O_DIRECTORY, &redirect));
     EXPECT_NULL(redirect);
 

@@ -127,13 +127,14 @@ bool test_open() {
     {
         fs::VmoFile file(abc, 0u, 0u);
         fbl::RefPtr<fs::Vnode> redirect;
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_RDONLY));
         EXPECT_EQ(ZX_OK, file.Open(O_RDONLY, &redirect));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.Open(O_RDWR, &redirect));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateFlags(O_RDWR));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.Open(O_WRONLY, &redirect));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateFlags(O_WRONLY));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file.Open(O_DIRECTORY, &redirect));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(O_DIRECTORY));
         EXPECT_NULL(redirect);
     }
 
@@ -141,13 +142,16 @@ bool test_open() {
     {
         fs::VmoFile file(abc, 0u, 0u, true);
         fbl::RefPtr<fs::Vnode> redirect;
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_RDONLY));
         EXPECT_EQ(ZX_OK, file.Open(O_RDONLY, &redirect));
         EXPECT_NULL(redirect);
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_RDWR));
         EXPECT_EQ(ZX_OK, file.Open(O_RDWR, &redirect));
         EXPECT_NULL(redirect);
+        EXPECT_EQ(ZX_OK, file.ValidateFlags(O_WRONLY));
         EXPECT_EQ(ZX_OK, file.Open(O_WRONLY, &redirect));
         EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file.Open(O_DIRECTORY, &redirect));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateFlags(O_DIRECTORY));
         EXPECT_NULL(redirect);
     }
 

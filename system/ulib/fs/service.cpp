@@ -21,21 +21,15 @@ zx_status_t Service::ValidateFlags(uint32_t flags) {
 }
 
 zx_status_t Service::Getattr(vnattr_t* attr) {
-    // TODO(ZX-1151): V_IRUSR isn't right since we can't read from a service
-    // but the node must be readable for enumeration to work until O_PATH
-    // support is implemented in FDIO.
     // TODO(ZX-1152): V_TYPE_FILE isn't right, we should use a type for services
     memset(attr, 0, sizeof(vnattr_t));
-    attr->mode = V_TYPE_FILE | V_IRUSR;
+    attr->mode = V_TYPE_FILE;
     attr->nlink = 1;
     return ZX_OK;
 }
 
 zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, uint32_t flags) {
     ZX_DEBUG_ASSERT(!(flags & O_DIRECTORY)); // checked by Open
-
-    // TODO(ZX-1151): If the access mode is O_PATH then we should call the
-    // superclass Serve function instead of binding the channel.
 
     if (!connector_) {
         return ZX_ERR_NOT_SUPPORTED;

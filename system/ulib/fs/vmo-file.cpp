@@ -64,7 +64,7 @@ VmoFile::VmoFile(const zx::vmo& unowned_vmo,
 
 VmoFile::~VmoFile() {}
 
-zx_status_t VmoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t VmoFile::ValidateFlags(uint32_t flags) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }

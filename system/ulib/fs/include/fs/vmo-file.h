@@ -73,7 +73,7 @@ public:
     VmoSharing vmo_sharing() const { return vmo_sharing_; }
 
     // |Vnode| implementation:
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;

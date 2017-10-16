@@ -24,6 +24,7 @@ bool test_service() {
 
     // open
     fbl::RefPtr<fs::Vnode> redirect;
+    EXPECT_EQ(ZX_OK, svc->ValidateFlags(O_RDONLY));
     EXPECT_EQ(ZX_OK, svc->Open(O_RDONLY, &redirect));
     EXPECT_NULL(redirect);
     EXPECT_EQ(ZX_ERR_NOT_DIR, svc->ValidateFlags(O_DIRECTORY));
@@ -31,7 +32,7 @@ bool test_service() {
     // get attr
     vnattr_t attr;
     EXPECT_EQ(ZX_OK, svc->Getattr(&attr));
-    EXPECT_EQ(V_TYPE_FILE | V_IRUSR, attr.mode);
+    EXPECT_EQ(V_TYPE_FILE, attr.mode);
     EXPECT_EQ(1, attr.nlink);
 
     // make some channels we can use for testing
