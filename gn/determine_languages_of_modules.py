@@ -41,7 +41,7 @@ Package names are relative to the root of the source tree but the requested path
 did not contain a '/'. Did you mean 'packages/gn/%s' instead?
 """ % config_name)
             return None
-    return languages
+    return languages, imported
 
 
 def main():
@@ -49,12 +49,13 @@ def main():
     parser.add_argument("--modules", help="list of modules", default="packages/gn/default")
     args = parser.parse_args()
 
-    languages = resolve_imports(args.modules.split(","))
+    languages, imported = resolve_imports(args.modules.split(","))
     if languages is None:
         return -1
 
     for language in ["cpp", "dart", "go", "rust"]:
         sys.stdout.write("have_%s = %s\n" % (language, str(language in languages).lower()))
+    sys.stdout.write("imported = [%s]\n" % ",".join(map(lambda package: '"//%s"' % package, imported)))
     return 0
 
 if __name__ == "__main__":

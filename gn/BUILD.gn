@@ -49,7 +49,8 @@ action("mkbootfs") {
                        "--arch",
                        target_cpu,
                      ],
-                     "list lines")
+                     "list lines",
+                     rebase_path(packages_imported))
 
   script = "make_bootfs.py"
   system_bootfs = "$root_build_dir/user.bootfs"

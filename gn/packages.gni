@@ -18,3 +18,4 @@ packages_have_cpp = _languages.have_cpp
 packages_have_dart = _languages.have_dart
 packages_have_go = _languages.have_go
 packages_have_rust = _languages.have_rust
+packages_imported = _languages.imported
