@@ -1282,8 +1282,8 @@ Status PageStorageImpl::SynchronousAddCommits(
         }
 
         if (source == ChangeSource::LOCAL) {
-          s = db_->MarkCommitIdUnsynced(handler, commit->GetId(),
-                                        commit->GetGeneration());
+          s = batch->MarkCommitIdUnsynced(handler, commit->GetId(),
+                                          commit->GetGeneration());
           if (s != Status::OK) {
             return s;
           }
