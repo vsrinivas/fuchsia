@@ -121,7 +121,7 @@ tftp_status transport_send(void* data, size_t len, void* cookie) {
     } while ((send_result < 0) &&
              ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == ENOBUFS)));
     if (send_result < 0) {
-        fprintf(stderr, "\n%s: Send failed with errno = %d\n", appname, (int)errno);
+        fprintf(stderr, "\n%s: Send failed with errno = %d (%s)\n", appname, errno, strerror(errno));
         return TFTP_ERR_IO;
     }
     return TFTP_NO_ERROR;
