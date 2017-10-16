@@ -217,6 +217,43 @@ struct DisassociateIndication {
     // VendorSpecificInfo
 };
 
+// MLME-RESET.request (IEEE Std 802.11-2016, 6.3.10.2)
+
+struct ResetRequest {
+    array<uint8, 6> sta_address;
+    bool set_default_mib;
+};
+
+// MLME-START.request (IEEE Std 802.11-2016, 6.3.11.2)
+
+struct StartRequest {
+    string ssid;
+    BSSTypes bss_type;
+    uint32 beacon_period;
+    uint32 dtim_period;
+
+    // TODO(hahnr): Add additional elements.
+};
+
+// MLME-START.confirm (IEEE Std 802.11-2016, 6.3.11.3)
+
+enum StartResultCodes {
+    SUCCESS,
+    BSS_ALREADY_STARTED_OR_JOINED,
+    RESET_REQUIRED_BEFORE_START,
+    NOT_SUPPORTED,
+};
+
+struct StartResponse {
+    StartResultCodes result_code;
+};
+
+// MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2)
+
+struct StopRequest {
+    string ssid;
+};
+
 // MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
 
 enum KeyId {
