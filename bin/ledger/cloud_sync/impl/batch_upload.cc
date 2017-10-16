@@ -198,6 +198,12 @@ void BatchUpload::FilterAndUploadCommits() {
                   return commit_ids.count(commit->GetId()) == 0;
                 }),
             commits_.end());
+
+        if (commits_.empty()) {
+          // Return early, all commits are synced.
+          on_done_();
+          return;
+        }
         UploadCommits();
       }));
 }
