@@ -89,6 +89,7 @@ public:
 
     // Add an observer.
     void AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo);
+    void AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) TA_REQ(lock_);
 
     // Remove an observer (which must have been added).
     void RemoveObserver(StateObserver* observer);
@@ -155,6 +156,10 @@ private:
     void UpdateStateHelper(zx_signals_t clear_mask,
                            zx_signals_t set_mask,
                            Mutex* mutex);
+
+    // The common implementation of AddObserver and AddObserverLocked.
+    template <typename Mutex>
+    void AddObserverHelper(StateObserver* observer, const StateObserver::CountInfo* cinfo, Mutex* mutex);
 
     // Returns flag kHandled if one of the observers have been signaled.
     StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) TA_REQ(lock_);

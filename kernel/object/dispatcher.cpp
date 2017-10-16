@@ -93,13 +93,20 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
 
 }  // namespace
 
-void Dispatcher::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
+// Since this conditionally takes the dispatcher's |lock_|, based on
+// the type of Mutex (either fbl::Mutex or fbl::NullLock), the thread
+// safety analysis is unable to prove that the accesses to |signals_|
+// and to |observers_| are always protected.
+template <typename Mutex>
+void Dispatcher::AddObserverHelper(StateObserver* observer,
+                                   const StateObserver::CountInfo* cinfo,
+                                   Mutex* mutex) TA_NO_THREAD_SAFETY_ANALYSIS {
     ZX_DEBUG_ASSERT(has_state_tracker());
     DEBUG_ASSERT(observer != nullptr);
 
     StateObserver::Flags flags;
     {
-        AutoLock lock(&lock_);
+        AutoLock lock(mutex);
 
         flags = observer->OnInitialize(signals_, cinfo);
         if (!(flags & StateObserver::kNeedRemoval))
@@ -109,6 +116,15 @@ void Dispatcher::AddObserver(StateObserver* observer, const StateObserver::Count
         observer->OnRemoved();
     if (flags & StateObserver::kWokeThreads)
         thread_reschedule();
+}
+
+void Dispatcher::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
+    AddObserverHelper(observer, cinfo, &lock_);
+}
+
+void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
+    fbl::NullLock mutex;
+    AddObserverHelper(observer, cinfo, &mutex);
 }
 
 void Dispatcher::RemoveObserver(StateObserver* observer) {
