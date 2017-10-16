@@ -18,7 +18,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 
-constexpr int kControlMsgSize = 1024;
+constexpr size_t kControlMsgSize = 1024;
 
 class SocketDispatcher final : public Dispatcher {
 public:
@@ -51,7 +51,10 @@ public:
     void OnPeerZeroHandles();
 
 private:
-    explicit SocketDispatcher(uint32_t flags);
+    // The control_msg must be either nullptr or an allocation of
+    // size kControlMsgSize.
+    SocketDispatcher(zx_signals_t starting_signals, uint32_t flags,
+                     fbl::unique_ptr<char[]> control_msg);
     void Init(fbl::RefPtr<SocketDispatcher> other);
     zx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     zx_status_t WriteControlSelf(user_ptr<const void> src, size_t len);

@@ -39,34 +39,34 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
         return ZX_ERR_INVALID_ARGS;
 
     fbl::AllocChecker ac;
-    auto socket0 = fbl::AdoptRef(new (&ac) SocketDispatcher(flags));
+
+    zx_signals_t starting_signals = ZX_SOCKET_WRITABLE;
+    fbl::unique_ptr<char[]> control0;
+    fbl::unique_ptr<char[]> control1;
+
+    // TODO: use mbufs to avoid pinning control buffer memory.
+    if (flags & ZX_SOCKET_HAS_CONTROL) {
+        starting_signals |= ZX_SOCKET_CONTROL_WRITABLE;
+
+        control0.reset(new (&ac) char[kControlMsgSize]);
+        if (!ac.check())
+            return ZX_ERR_NO_MEMORY;
+
+        control1.reset(new (&ac) char[kControlMsgSize]);
+        if (!ac.check())
+            return ZX_ERR_NO_MEMORY;
+    }
+
+    auto socket0 = fbl::AdoptRef(new (&ac) SocketDispatcher(starting_signals, flags, fbl::move(control0)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto socket1 = fbl::AdoptRef(new (&ac) SocketDispatcher(flags));
+    auto socket1 = fbl::AdoptRef(new (&ac) SocketDispatcher(starting_signals, flags, fbl::move(control1)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     socket0->Init(socket1);
     socket1->Init(socket0);
-
-    // TODO: use mbufs to avoid pinning control buffer memory.
-    if (flags & ZX_SOCKET_HAS_CONTROL) {
-        // TODO: after moving to an mbuf pool, do this in Init
-        // to avoid the need to hold the mutex.
-        AutoLock lock0(&socket0->lock_);
-        socket0->control_msg_.reset(new (&ac) char[kControlMsgSize]);
-        if (!ac.check())
-            return ZX_ERR_NO_MEMORY;
-
-        AutoLock lock1(&socket1->lock_);
-        socket1->control_msg_.reset(new (&ac) char[kControlMsgSize]);
-        if (!ac.check())
-            return ZX_ERR_NO_MEMORY;
-
-        socket0->UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
-        socket1->UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
-    }
 
     *rights = ZX_DEFAULT_SOCKET_RIGHTS;
     *dispatcher0 = fbl::move(socket0);
@@ -74,10 +74,12 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
     return ZX_OK;
 }
 
-SocketDispatcher::SocketDispatcher(uint32_t flags)
-    : Dispatcher(ZX_SOCKET_WRITABLE),
+SocketDispatcher::SocketDispatcher(zx_signals_t starting_signals, uint32_t flags,
+                                   fbl::unique_ptr<char[]> control_msg)
+    : Dispatcher(starting_signals),
       flags_(flags),
       peer_koid_(0u),
+      control_msg_(fbl::move(control_msg)),
       control_msg_len_(0),
       read_disabled_(false) {
 }
