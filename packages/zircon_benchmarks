@@ -2,6 +2,9 @@
     "languages": [
         "cpp"
     ],
+    "imports": [
+        "garnet/packages/fxl"
+    ],
     "packages": {
         "zircon_benchmarks": "//garnet/bin/zircon_benchmarks"
     }
