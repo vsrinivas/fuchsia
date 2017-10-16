@@ -230,10 +230,10 @@ int AudioOutputStream::Write(float* sample_buffer,
   // media::kNoTimestamp, meaning that they should be presented immediately
   // after the previous packet.
   if (!received_first_frame_) {
+    subject_time = 0;
     if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP) {
       start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC) + min_delay_nsec_ +
                     kSyntheticStartTimeAdjustment;
-      subject_time = 0;
     } else {
       start_time_ = pres_time;
     }

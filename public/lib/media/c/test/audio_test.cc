@@ -419,57 +419,6 @@ TEST(media_client, audio_stream_write) {
   fuchsia_audio_manager_free(manager);
 }
 
-TEST(media_client, audio_stream_write_time_errors) {
-  fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
-  ASSERT_TRUE(manager);
-
-  ASSERT_GE(fuchsia_audio_manager_get_output_devices(manager, NULL, 0), 1)
-      << "** No audio devices found!";
-
-  fuchsia_audio_device_description dev_desc;
-  ASSERT_EQ(1, fuchsia_audio_manager_get_output_devices(manager, &dev_desc, 1));
-
-  fuchsia_audio_parameters params;
-  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
-                       manager, dev_desc.id, &params));
-
-  fuchsia_audio_output_stream* stream = NULL;
-  ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
-                       manager, dev_desc.id, &params, &stream));
-  ASSERT_TRUE(stream);
-
-  zx_duration_t delay_nsec = 0;
-  ASSERT_EQ(ZX_OK,
-            fuchsia_audio_output_stream_get_min_delay(stream, &delay_nsec));
-  ASSERT_TRUE(delay_nsec > 0);
-
-  int buff_size = WRITE_BUFFER_NUM_SAMPLES;
-  std::vector<float> audio_buffer(buff_size);
-  populate_audio_buffer(&audio_buffer);
-  zx_time_t pres_time;
-
-  // Write with zero presentation time
-  pres_time = 0;
-  ASSERT_EQ(ZX_ERR_IO_MISSED_DEADLINE,
-            fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
-                                              buff_size, pres_time));
-
-  // Write with no-delay presentation time
-  pres_time = zx_time_get(ZX_CLOCK_MONOTONIC);
-  ASSERT_EQ(ZX_ERR_IO_MISSED_DEADLINE,
-            fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
-                                              buff_size, pres_time));
-
-  // Write with insufficient-delay presentation time
-  pres_time = (delay_nsec / 2) + zx_time_get(ZX_CLOCK_MONOTONIC);
-  ASSERT_EQ(ZX_ERR_IO_MISSED_DEADLINE,
-            fuchsia_audio_output_stream_write(stream, audio_buffer.data(),
-                                              buff_size, pres_time));
-
-  ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream));
-  fuchsia_audio_manager_free(manager);
-}
-
 TEST(media_client, audio_stream_write_c) {
   fuchsia_audio_manager* manager = audio_manager_create();
   ASSERT_TRUE(manager);
