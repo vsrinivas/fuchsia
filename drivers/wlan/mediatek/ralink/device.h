@@ -46,7 +46,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     void WlanmacStop();
     void WlanmacTx(uint32_t options, const void* data, size_t len);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
-    zx_status_t WlanmacSetBss(uint32_t options, uint8_t mac[6], uint8_t type);
+    zx_status_t WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type);
 
   private:
     struct TxCalibrationValues {

@@ -3267,7 +3267,7 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     return ZX_OK;
 }
 
-zx_status_t Device::WlanmacSetBss(uint32_t options, uint8_t mac[6], uint8_t type) {
+zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
     if (options != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
