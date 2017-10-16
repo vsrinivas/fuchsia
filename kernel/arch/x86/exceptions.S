@@ -8,6 +8,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/x86/descriptor.h>
 
 #define NUM_INT 256
 
@@ -159,3 +160,40 @@ interrupt_common_iframe_set_up_for_debugger:
 
     iretq
 END_FUNCTION(interrupt_common)
+
+/* Call external interrupt handler manually without actually issuing interrupt.
+ *
+ * For external interrupts CPU doesn't store error code on stack so we use 0. We
+ * additionally use CODE_64_SELECTOR as CS, 0 as SS, RFLAGS value and current
+ * stack.
+ */
+FUNCTION(x86_call_external_interrupt_handler)
+    /* save current RFLAGS value */
+    pushfq
+    popq %r10
+
+    /* save current RSP value */
+    movq %rsp, %r11
+
+    /* calculate exit address */
+    leaq .Lexit(%rip), %rax
+
+    /* prepare interrupt stack frame in the from interrupt_common expects to see */
+    sub_from_sp 0x38
+    movq %rdi, 0x00(%rsp)              // rdi holds vector number
+    movq $0, 0x08(%rsp)                // error code
+    movq %rax, 0x10(%rsp)              // RIP (return address)
+    movq $CODE_64_SELECTOR, 0x18(%rsp) // CS
+    movq %r10, 0x20(%rsp)              // RFLAGS
+    movq %r11, 0x28(%rsp)              // RSP
+    movq $0, 0x30(%rsp)                // SS
+
+    /* we can actually avoid this jump if we put this code above
+     * interrupt_common and just fall through, but benefits of doing this are
+     * not obvious so for now for the sake of clarity keep this jump
+     */
+    jmp    interrupt_common
+
+.Lexit:
+    ret
+END_FUNCTION(x86_call_external_interrupt_handler)

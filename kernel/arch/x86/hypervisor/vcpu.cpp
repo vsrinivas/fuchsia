@@ -97,16 +97,6 @@ void AutoVmcs::Reload() {
     DEBUG_ASSERT(status == ZX_OK);
 }
 
-void AutoVmcs::InterruptibleReload() {
-    DEBUG_ASSERT(arch_ints_disabled());
-    // When we VM exit due to an external interrupt, we want to handle that
-    // interrupt. To do that, we temporarily re-enable interrupts. However,
-    // we must then reload the VMCS, in case it was changed in the interim.
-    arch_enable_ints();
-    arch_disable_ints();
-    Reload();
-}
-
 void AutoVmcs::InterruptWindowExiting(bool enable) {
     uint32_t controls = Read(VmcsField32::PROCBASED_CTLS);
     if (enable) {
@@ -343,7 +333,9 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
                                  // Save the guest IA32_EFER MSR on exit.
                                  EXIT_CTLS_SAVE_IA32_EFER |
                                  // Load the host IA32_EFER MSR on exit.
-                                 EXIT_CTLS_LOAD_IA32_EFER,
+                                 EXIT_CTLS_LOAD_IA32_EFER |
+                                 // Acknowledge external interrupt on exit.
+                                 EXIT_CTLS_ACK_INT_ON_EXIT,
                              0);
     if (status != ZX_OK)
         return status;

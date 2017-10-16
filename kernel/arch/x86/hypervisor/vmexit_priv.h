@@ -12,6 +12,7 @@
 
 /* VM exit reasons. */
 enum class ExitReason : uint32_t {
+    EXCEPTION                   = 0u,  // NMI is an exception too
     EXTERNAL_INTERRUPT          = 1u,
     INTERRUPT_WINDOW            = 7u,
     CPUID                       = 10u,
@@ -25,6 +26,14 @@ enum class ExitReason : uint32_t {
     APIC_ACCESS                 = 44u,
     EPT_VIOLATION               = 48u,
     XSETBV                      = 55u,
+};
+
+/* VM exit interruption type. */
+enum class InterruptionType : uint8_t {
+    EXTERNAL_INTERRUPT          = 0u,
+    NON_MASKABLE_INTERRUPT      = 2u,
+    HARDWARE_EXCEPTION          = 3u,
+    SOFTWARE_EXCEPTION          = 6u,
 };
 
 /* APIC access types. */
@@ -56,6 +65,15 @@ struct ExitInfo {
     uint64_t guest_rip;
 
     ExitInfo(const AutoVmcs& vmcs);
+};
+
+/* Sores VM exit interruption information (SDM 24.9.2). */
+struct ExitInterruptionInformation {
+    uint8_t vector;
+    InterruptionType interruption_type;
+    bool valid;
+
+    ExitInterruptionInformation(const AutoVmcs& vmcs);
 };
 
 /* Stores ept violation info from the VMCS exit qualification field. */

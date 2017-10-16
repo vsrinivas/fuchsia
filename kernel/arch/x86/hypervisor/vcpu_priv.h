@@ -45,6 +45,7 @@
 
 /* EXIT_CTLS flags */
 #define EXIT_CTLS_64BIT_MODE                    (1u << 9)
+#define EXIT_CTLS_ACK_INT_ON_EXIT               (1u << 15)
 #define EXIT_CTLS_SAVE_IA32_PAT                 (1u << 18)
 #define EXIT_CTLS_LOAD_IA32_PAT                 (1u << 19)
 #define EXIT_CTLS_SAVE_IA32_EFER                (1u << 20)
@@ -177,7 +178,6 @@ public:
     ~AutoVmcs();
 
     void Reload() override;
-    void InterruptibleReload();
     void InterruptWindowExiting(bool enable);
     void IssueInterrupt(uint32_t vector);
 

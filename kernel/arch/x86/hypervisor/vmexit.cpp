@@ -48,6 +48,8 @@ constexpr uint64_t kHypVendorEbx = fbl::magic("Zirc");
 constexpr uint64_t kHypVendorEcx = fbl::magic("onZi");
 constexpr uint64_t kHypVendorEdx = fbl::magic("rcon");
 
+extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
+
 ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
     exit_reason = static_cast<ExitReason>(vmcs.Read(VmcsField32::EXIT_REASON));
     exit_qualification = vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION);
@@ -69,6 +71,13 @@ ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
             vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
     LTRACEF("guest rip: %#" PRIx64 "\n", guest_rip);
 }
+
+ExitInterruptionInformation::ExitInterruptionInformation(const AutoVmcs& vmcs) {
+    uint32_t int_info = vmcs.Read(VmcsField32::EXIT_INTERRUPTION_INFORMATION);
+    vector = static_cast<uint8_t>(BITS(int_info, 7, 0));
+    interruption_type = static_cast<InterruptionType>(BITS_SHIFT(int_info, 10, 8));
+    valid = BIT(int_info, 31);
+};
 
 IoInfo::IoInfo(uint64_t qualification) {
     access_size = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
@@ -154,7 +163,13 @@ static zx_status_t handle_external_interrupt(AutoVmcs* vmcs, LocalApicState* loc
     // killed, we should exit with an error.
     if (get_current_thread()->signals & THREAD_SIGNAL_KILL)
         return ZX_ERR_CANCELED;
-    vmcs->InterruptibleReload();
+
+    ExitInterruptionInformation int_info(*vmcs);
+
+    DEBUG_ASSERT(int_info.valid);
+    DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
+    x86_call_external_interrupt_handler(int_info.vector);
+    vmcs->Reload();
     local_apic_maybe_interrupt(vmcs, local_apic_state);
     return ZX_OK;
 }
@@ -615,6 +630,11 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     ExitInfo exit_info(*vmcs);
 
     switch (exit_info.exit_reason) {
+    case ExitReason::EXCEPTION:
+        /* Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
+         * and handled by host via IDT as any other interrupt/exception.
+         */
+        return ZX_ERR_NOT_SUPPORTED;
     case ExitReason::EXTERNAL_INTERRUPT:
         return handle_external_interrupt(vmcs, local_apic_state);
     case ExitReason::INTERRUPT_WINDOW:
