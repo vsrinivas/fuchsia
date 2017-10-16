@@ -40,7 +40,6 @@ class Amalgamation:
         self.boot = Filesystem() # Files that will live in /boot
         self.system = Filesystem() # Files that will live in /system
         self.resources = []
-        self.gopaths = []
 
 
     def add_config(self, config, config_path):
@@ -89,7 +88,7 @@ class Amalgamation:
             file["default"] = r.has_key("default")
             self.system.add_file(file)
         if config.get("gopaths"):
-            self.gopaths.extend(config.get("gopaths"))
+            raise Exception("The \"gopaths\" key is no longer supported")
 
 def detect_duplicate_keys(pairs):
     keys = set()
@@ -128,17 +127,6 @@ def resolve_imports(import_queue, build_root):
     return amalgamation
 
 
-def update_gopath(maps, build_root):
-    for gopath in maps:
-        for src in gopath:
-            target = os.path.join(build_root, "src", gopath[src])
-            src = os.path.join(paths.FUCHSIA_ROOT, src)
-            if not os.path.exists(os.path.dirname(target)):
-                os.makedirs(os.path.dirname(target))
-            if os.path.lexists(target):
-                os.remove(target)
-            os.symlink(src, target)
-
 def write_manifest(manifest, files, autorun=None):
     manifest_dir = os.path.dirname(manifest)
     if not os.path.exists(manifest_dir):
@@ -171,8 +159,6 @@ def main():
 
     write_manifest(args.boot_manifest, amalgamation.boot.files)
     write_manifest(args.system_manifest, amalgamation.system.files, autorun=args.autorun)
-
-    update_gopath(amalgamation.gopaths, amalgamation.build_root)
 
     if args.depfile != "":
         with open(args.depfile, "w") as f:
