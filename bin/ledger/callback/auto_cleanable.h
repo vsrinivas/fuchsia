@@ -17,7 +17,7 @@ namespace callback {
 
 // List that will delete its elements when they call their on_empty_callback.
 // The elements must have a setter method:
-// |void set_on_empty(const fxl::Closure&)|.
+// |void set_on_empty(fxl::Closure on_empty)|.
 template <typename V>
 class AutoCleanableSet {
  public:
