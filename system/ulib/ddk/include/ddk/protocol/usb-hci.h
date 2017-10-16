@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/usb-request.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>
@@ -15,6 +16,8 @@ __BEGIN_CDECLS;
 typedef struct usb_bus_interface usb_bus_interface_t;
 
 typedef struct usb_hci_protocol_ops {
+    // queues a USB request
+    void (*request_queue)(void* ctx, usb_request_t* usb_request);
     void (*set_bus_interface)(void* ctx, usb_bus_interface_t* bus_intf);
     size_t (*get_max_device_count)(void* ctx);
     // enables or disables an endpoint using parameters derived from ep_desc
@@ -39,6 +42,10 @@ typedef struct usb_hci_protocol {
     usb_hci_protocol_ops_t* ops;
     void* ctx;
 } usb_hci_protocol_t;
+
+static inline void usb_hci_request_queue(usb_hci_protocol_t* hci, usb_request_t* usb_request) {
+    return hci->ops->request_queue(hci->ctx, usb_request);
+}
 
 static inline void usb_hci_set_bus_interface(usb_hci_protocol_t* hci, usb_bus_interface_t* intf) {
     hci->ops->set_bus_interface(hci->ctx, intf);

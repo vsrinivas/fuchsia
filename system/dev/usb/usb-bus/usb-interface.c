@@ -86,14 +86,7 @@ static void hci_queue(void* ctx, usb_request_t* req) {
     // set intf as the cookie so we can get at it in request_complete()
     req->cookie = intf;
 
-    iotxn_t* txn;
-    zx_status_t status = usb_request_to_iotxn(req, &txn);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
-        usb_request_complete(req, status, 0);
-        return;
-    }
-    iotxn_queue(intf->hci_zxdev, txn);
+    usb_hci_request_queue(&intf->hci, req);
 }
 
 static zx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_buf,
@@ -644,7 +637,7 @@ zx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interfa
     zx_status_t status = usb_interface_configure_endpoints(intf, interface_id, alt_setting);
     if (status != ZX_OK) return status;
 
-    return usb_device_control(intf->hci_zxdev, intf->device_id,
+    return usb_device_control(intf->device,
                               USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
                               USB_REQ_SET_INTERFACE, alt_setting, interface_id, NULL, 0);
 }

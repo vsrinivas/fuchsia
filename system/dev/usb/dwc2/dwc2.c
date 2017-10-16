@@ -540,6 +540,19 @@ static zx_protocol_device_t dwc_device_proto = {
     .release = dwc_release,
 };
 
+static void dwc_request_queue(void* ctx, usb_request_t* req) {
+    dwc_usb_t* dwc = ctx;
+
+    iotxn_t* txn;
+    zx_status_t status = usb_request_to_iotxn(req, &txn);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
+        usb_request_complete(req, status, 0);
+        return;
+    }
+    iotxn_queue(dwc->zxdev, txn);
+}
+
 static void dwc_set_bus_interface(void* ctx, usb_bus_interface_t* bus) {
     dwc_usb_t* dwc = ctx;
 
@@ -758,6 +771,7 @@ zx_status_t dwc_reset_endpoint(void* ctx, uint32_t device_id, uint8_t ep_address
 }
 
 static usb_hci_protocol_ops_t dwc_hci_protocol = {
+    .request_queue = dwc_request_queue,
     .set_bus_interface = dwc_set_bus_interface,
     .get_max_device_count = dwc_get_max_device_count,
     .enable_endpoint = dwc_enable_ep,

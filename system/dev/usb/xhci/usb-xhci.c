@@ -53,6 +53,19 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     usb_bus_remove_device(&xhci->bus, slot_id);
 }
 
+static void xhci_request_queue(void* ctx, usb_request_t* req) {
+    xhci_t* xhci = ctx;
+
+    iotxn_t* txn;
+    zx_status_t status = usb_request_to_iotxn(req, &txn);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
+        usb_request_complete(req, status, 0);
+        return;
+    }
+    iotxn_queue(xhci->zxdev, txn);
+}
+
 static void xhci_set_bus_interface(void* ctx, usb_bus_interface_t* bus) {
     xhci_t* xhci = ctx;
 
@@ -126,6 +139,7 @@ static zx_status_t xhci_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_add
 }
 
 usb_hci_protocol_ops_t xhci_hci_protocol = {
+    .request_queue = xhci_request_queue,
     .set_bus_interface = xhci_set_bus_interface,
     .get_max_device_count = xhci_get_max_device_count,
     .enable_endpoint = xhci_enable_ep,

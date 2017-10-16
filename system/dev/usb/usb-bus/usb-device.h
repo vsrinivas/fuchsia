@@ -44,6 +44,9 @@ typedef struct usb_device {
     list_node_t children;
 
     list_node_t node;
+
+    // pool of requests that can be reused
+    usb_request_pool_t free_reqs;
 } usb_device_t;
 
 zx_status_t usb_device_add(zx_device_t* hci_device, usb_hci_protocol_t* hci_protocol,
