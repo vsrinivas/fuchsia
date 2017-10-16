@@ -3,14 +3,14 @@
   <imports>
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="build"
-            name="build"/>
+            name="manifest"/>
     <import remote="https://fuchsia.googlesource.com/zircon"
             manifest="manifest"
             name="zircon"/>
     <!-- TODO(abarth): Remove Dart runtime once SEC-28 is fixed -->
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="runtimes/dart"
-            name="runtimes/dart"/>
+            name="manifest"/>
   </imports>
   <projects>
     <project name="garnet"
