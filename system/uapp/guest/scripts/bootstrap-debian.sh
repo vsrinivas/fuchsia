@@ -112,6 +112,9 @@ bootstrap_stage1() {
 # Stage2 is run from within the chroot of the new system so all system commands
 # modify the new system and not the host.
 bootstrap_stage2() {
+    # Setup linux and initrd.
+    apt -y install linux-image-amd64
+
     # Create default account.
     local username="bench"
     local default_password="password"
