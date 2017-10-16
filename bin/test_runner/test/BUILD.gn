@@ -5,7 +5,7 @@
 group("test") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":fake_command",
     ":fake_failing_test",
     ":fake_passing_test",

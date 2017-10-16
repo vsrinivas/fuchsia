@@ -2,13 +2,7 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//garnet/bin/zircon_benchmarks:benchmarks"
-    ],
-    "binaries": [
-        {
-            "binary": "benchmarks",
-            "bootfs_path": "bin/zircon-benchmarks"
-        }
-    ]
+    "packages": {
+        "zircon_benchmarks": "//garnet/bin/zircon_benchmarks"
+    }
 }

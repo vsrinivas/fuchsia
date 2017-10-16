@@ -2,38 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//garnet/bin/debugserver",
-        "//garnet/bin/debugserver:tests"
-    ],
-    "binaries": [
-        {
-            "binary": "debugserver",
-            "bootfs_path": "bin/debugserver"
-        },
-        {
-            "binary": "debugserver-unittests",
-            "bootfs_path": "test/debugserver-unittests"
-        },
-        {
-            "binary": "exit-test",
-            "bootfs_path": "test/debugserver/exit-test"
-        },
-        {
-            "binary": "crash-test",
-            "bootfs_path": "test/debugserver/crash-test"
-        },
-        {
-            "binary": "loop-test",
-            "bootfs_path": "test/debugserver/loop-test"
-        },
-        {
-            "binary": "syscall-test",
-            "bootfs_path": "test/debugserver/syscall-test"
-        },
-        {
-            "binary": "thread-test",
-            "bootfs_path": "test/debugserver/thread-test"
-        }
-    ]
+    "packages": {
+        "debugserver": "//garnet/bin/debugserver",
+        "debugserver_tests": "//garnet/bin/debugserver:debugserver_tests"
+    }
 }

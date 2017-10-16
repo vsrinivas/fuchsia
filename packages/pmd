@@ -1,11 +1,5 @@
 {
-    "labels": [
-        "//garnet/go/src/pm:pmd"
-    ],
-    "binaries": [
-        {
-            "binary": "pmd",
-            "bootfs_path": "apps/pmd"
-        }
-    ]
+    "packages": {
+        "pmd": "//garnet/go/src/pm:pmd"
+    }
 }

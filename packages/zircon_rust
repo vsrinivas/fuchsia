@@ -1,15 +1,8 @@
 {
     "languages": [
-        "cpp",
         "rust"
     ],
-    "labels": [
-        "//garnet/public/rust/crates/fuchsia-zircon/examples"
-    ],
-    "binaries": [
-        {
-            "binary": "zx_toy",
-            "bootfs_path": "bin/example_zx_toy"
-        }
-    ]
+    "packages": {
+        "zircon_rust_examples": "//garnet/public/rust/crates/fuchsia-zircon/examples:zircon_rust_examples"
+    }
 }

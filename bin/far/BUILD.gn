@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("far") {
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "far"
+
   sources = [
     "main.cc",
   ]
@@ -11,4 +15,13 @@ executable("far") {
     "//garnet/lib/far",
     "//garnet/public/lib/fxl",
   ]
+}
+
+package("far") {
+  deps = [
+    ":bin",
+  ]
+  binaries = [ {
+        name = "far"
+      } ]
 }

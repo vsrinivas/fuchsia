@@ -4,8 +4,10 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
+import("//packages/package.gni")
 
-go_binary("pm") {
+go_binary("pm_bin") {
+  output_name = "pm"
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
   go_dependencies = [
     {
@@ -14,11 +16,12 @@ go_binary("pm") {
     {
       package = "golang.org/x/crypto"
       source = "//third_party/golang/crypto"
-    }
+    },
   ]
 }
 
-go_binary("pmd") {
+go_binary("pmd_bin") {
+  output_name = "pmd"
   gopackage = "fuchsia.googlesource.com/pm/cmd/pmd"
   go_dependencies = [
     {
@@ -31,11 +34,12 @@ go_binary("pmd") {
     {
       package = "golang.org/x/crypto"
       source = "//third_party/golang/crypto"
-    }
+    },
   ]
 }
 
-go_test("pkgfs_test") {
+go_test("pkgfs_test_bin") {
+  output_name = "pkgfs_test"
   gopackage = "fuchsia.googlesource.com/pm/pkgfs"
   go_dependencies = [
     {
@@ -48,6 +52,40 @@ go_test("pkgfs_test") {
     {
       package = "golang.org/x/crypto"
       source = "//third_party/golang/crypto"
-    }
+    },
   ]
+}
+
+package("pm") {
+  app = true
+
+  deps = [
+    ":pm_bin",
+  ]
+
+  binaries = [ {
+        name = "pm"
+      } ]
+}
+
+package("pmd") {
+  app = true
+
+  deps = [
+    ":pmd_bin",
+  ]
+
+  binaries = [ {
+        name = "pmd"
+      } ]
+}
+
+package("pkgfs_test") {
+  deps = [
+    ":pkgfs_test_bin",
+  ]
+
+  tests = [ {
+        name = "pkgfs_test"
+      } ]
 }

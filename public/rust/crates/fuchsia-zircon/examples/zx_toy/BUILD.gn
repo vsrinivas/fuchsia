@@ -5,6 +5,7 @@
 import("//build/rust/rust_binary.gni")
 
 rust_binary("zx_toy") {
+  output_name = "example_zx_toy"
   deps = [
     "//garnet/public/rust/crates/fuchsia-zircon",
   ]

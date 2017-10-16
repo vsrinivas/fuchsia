@@ -6,10 +6,7 @@
         "//garnet/bin/insntrace",
         "//garnet/bin/insntrace:host_insntrace_print"
     ],
-    "binaries": [
-        {
-            "binary": "insntrace",
-            "bootfs_path": "bin/insntrace"
-        }
-    ]
+    "packages": {
+        "insntrace": "//garnet/bin/insntrace"
+    }
 }

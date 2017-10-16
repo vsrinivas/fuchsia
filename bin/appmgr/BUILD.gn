@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 source_set("lib") {
   visibility = [ ":*" ]
 
@@ -16,10 +18,10 @@ source_set("lib") {
     "application_runner_holder.h",
     "config.cc",
     "config.h",
-    "namespace_builder.cc",
-    "namespace_builder.h",
     "job_holder.cc",
     "job_holder.h",
+    "namespace_builder.cc",
+    "namespace_builder.h",
     "root_application_loader.cc",
     "root_application_loader.h",
     "root_environment_host.cc",
@@ -33,20 +35,22 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
     "//garnet/lib/farfs",
-    "//garnet/public/lib/svc/cpp",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//zircon/system/ulib/zx",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
     "//third_party/rapidjson",
+    "//zircon/system/ulib/zx",
   ]
 
   libs = [ "launchpad" ]
 }
 
-executable("appmgr") {
+executable("bin") {
+  output_name = "appmgr"
+
   sources = [
     "main.cc",
   ]
@@ -71,4 +75,23 @@ executable("tests") {
     ":lib",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
+}
+
+package("appmgr") {
+  deps = [
+    ":bin",
+  ]
+  binaries = [ {
+        name = "appmgr"
+      } ]
+}
+
+package("appmgr_tests") {
+  testonly = true
+  deps = [
+    ":tests",
+  ]
+  tests = [ {
+        name = "appmgr_unittests"
+      } ]
 }

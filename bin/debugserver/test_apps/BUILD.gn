@@ -5,7 +5,7 @@
 group("test_apps") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":crash-test",
     ":exit-test",
     ":loop-test",
@@ -45,9 +45,7 @@ executable("syscall-test") {
     "syscall-test.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }
 
 executable("thread-test") {

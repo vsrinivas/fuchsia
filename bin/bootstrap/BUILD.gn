@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bootstrap") {
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "bootstrap"
+
   sources = [
     "app.cc",
     "app.h",
@@ -15,11 +19,23 @@ executable("bootstrap") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/url",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//garnet/public/lib/url",
     "//third_party/rapidjson",
   ]
+}
+
+package("bootstrap") {
+  app = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [ {
+        name = "bootstrap"
+      } ]
 }

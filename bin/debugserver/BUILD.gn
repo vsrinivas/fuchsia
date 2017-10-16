@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("debugserver") {
+import("//packages/package.gni")
+
+executable("bin") {
   # This is called debugserver and not gdbserver because it is not intended
   # to be gdb specific. E.g., The GDB Remote Serial Protocol is used by other
   # debuggers, e.g., lldb.
+  output_name = "debugserver"
 
   sources = [
     "cmd_handler.cc",
@@ -26,8 +29,8 @@ executable("debugserver") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/lib/inferior_control",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/zx",
   ]
 
@@ -40,7 +43,7 @@ executable("debugserver") {
 group("tests") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":debugserver-unittests",
     "test_apps",
   ]
@@ -51,15 +54,15 @@ executable("debugserver-unittests") {
 
   sources = [
     "run_all_unittests.cc",
-    "stop_reply_packet_unittest.cc",
     "stop_reply_packet.cc",
     "stop_reply_packet.h",
-    "thread_action_list_unittest.cc",
+    "stop_reply_packet_unittest.cc",
     "thread_action_list.cc",
     "thread_action_list.h",
-    "util_unittest.cc",
+    "thread_action_list_unittest.cc",
     "util.cc",
     "util.h",
+    "util_unittest.cc",
   ]
 
   deps = [
@@ -69,4 +72,48 @@ executable("debugserver-unittests") {
   ]
 
   libs = [ "zircon" ]
+}
+
+package("debugserver") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [ {
+        name = "debugserver"
+      } ]
+}
+
+package("debugserver_tests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+  ]
+
+  tests = [
+    {
+      name = "debugserver-unittests"
+    },
+    {
+      name = "exit-test"
+      dest = "debugserver/exit-test"
+    },
+    {
+      name = "crash-test"
+      dest = "debugserver/crash-test"
+    },
+    {
+      name = "loop-test"
+      dest = "debugserver/loop-test"
+    },
+    {
+      name = "syscall-test"
+      dest = "debugserver/syscall-test"
+    },
+    {
+      name = "thread-test"
+      dest = "debugserver/thread-test"
+    },
+  ]
 }

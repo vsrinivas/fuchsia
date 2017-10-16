@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("benchmarks") {
+import("//packages/package.gni")
+
+executable("bin") {
+  output_name = "zircon_benchmarks"
+
   testonly = true
   sources = [
     "channels.cc",
@@ -23,4 +27,16 @@ executable("benchmarks") {
     "launchpad",
     "zircon",
   ]
+}
+
+package("zircon_benchmarks") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [ {
+        name = "zircon_benchmarks"
+      } ]
 }

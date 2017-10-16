@@ -5,21 +5,7 @@
     "imports": [
         "packages/gn/boot_test_runner"
     ],
-    "labels": [
-        "//garnet/bin/test_runner/test"
+    "packages": [
+        "test_runner_tests": "//garnet/bin/test_runner:test_runner_tests"
     ],
-    "binaries": [
-        {
-            "binary": "fake_command",
-            "bootfs_path": "test/fake_command"
-        },
-        {
-            "binary": "fake_failing_test",
-            "bootfs_path": "test/fake_failing_test"
-        },
-        {
-            "binary": "fake_passing_test",
-            "bootfs_path": "test/fake_passing_test"
-        }
-    ]
 }

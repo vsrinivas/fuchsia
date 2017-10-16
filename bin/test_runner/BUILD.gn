@@ -2,10 +2,52 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("test_runner") {
+import("//packages/package.gni")
+
+package("test_runner") {
+  app = true
+
+  deps = [
+    "server",
+  ]
+
+  binaries = [ {
+        name = "test_runner"
+      } ]
+}
+
+package("run_integration_tests") {
   deps = [
     "report_result",
     "run_integration_tests",
     "server",
+  ]
+
+  binaries = [ {
+        name = "report_result"
+      } ]
+
+  tests = [ {
+        name = "run_integration_tests"
+      } ]
+}
+
+package("test_runner_tests") {
+  testonly = true
+
+  deps = [
+    "test",
+  ]
+
+  tests = [
+    {
+      name = "fake_command"
+    },
+    {
+      name = "fake_failing_test"
+    },
+    {
+      name = "fake_passing_test"
+    },
   ]
 }

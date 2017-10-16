@@ -2,14 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 executable("lib_fidl_cpp_tests") {
   testonly = true
 
-  sources = ["run_all_unittests.cc"]
+  sources = [
+    "run_all_unittests.cc",
+  ]
 
   deps = [
     ":test_sources",
-    "//third_party/gtest"
+    "//third_party/gtest",
   ]
 }
 
@@ -52,6 +56,7 @@ source_set("test_sources") {
     "util/test_utils.h",
     "util/test_waiter.cc",
     "util/test_waiter.h",
+
     # TODO(vardhan): Fix the following unittests:
     # "validation_unittest.cc",
     # "synchronous_interface_ptr_unittest.cc",
@@ -162,3 +167,15 @@ source_set("test_sources") {
 #    "lib/fidl/compiler/interfaces/tests:versioning_test_client_interfaces",
 #  ]
 #}
+
+package("fidl_tests") {
+  testonly = true
+
+  deps = [
+    ":lib_fidl_cpp_tests",
+  ]
+
+  tests = [ {
+        name = "lib_fidl_cpp_tests"
+      } ]
+}

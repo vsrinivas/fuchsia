@@ -3,8 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//packages/package.gni")
 
-executable("insntrace") {
+executable("bin") {
+  output_name = "insntrace"
+
   if (current_cpu == "x64") {
     sources = [
       "control.cc",
@@ -22,8 +25,8 @@ executable("insntrace") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/lib/inferior_control",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 
   libs = [
@@ -39,4 +42,14 @@ install_host_tools("host_insntrace_print") {
   outputs = [
     "insntrace_print",
   ]
+}
+
+package("insntrace") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [ {
+        name = "insntrace"
+      } ]
 }
