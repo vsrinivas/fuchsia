@@ -92,12 +92,14 @@ void initialize_status(const char* name, size_t size) {
         base_name = name;
     }
 
-    char path[PATH_MAX];
-    strncpy(path, name, PATH_MAX);
-    path[PATH_MAX - 1] = '\0';
+    char path1[PATH_MAX]; // dirname(), basename() modify in situ.
+    char path2[PATH_MAX];
+    snprintf(path1, PATH_MAX, "%s", name);
+    snprintf(path2, PATH_MAX, "%s", name);
+
     log("Transfer starts   [%5.1f MB]   %s/%s%s%s (%zu bytes)",
         (float)size / 1024.0 / 1024.0,
-        dirname(path), ANSI(GREEN), basename(path), ANSI(RESET), size);
+        dirname(path1), ANSI(GREEN), basename(path2), ANSI(RESET), size);
 }
 
 void update_status(size_t bytes_so_far) {
