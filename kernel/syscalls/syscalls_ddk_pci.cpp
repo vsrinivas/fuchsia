@@ -334,18 +334,18 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
     fbl::RefPtr<PciDeviceDispatcher> pci_device;
     fbl::RefPtr<Dispatcher> dispatcher;
 
-    auto device = pci_device->device();
-    auto cfg_size = device->is_pcie() ? PCIE_EXTENDED_CONFIG_SIZE : PCIE_BASE_CONFIG_SIZE;
-    if (out_val.get() == nullptr || offset + (width / 8) > cfg_size) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     // Get the PciDeviceDispatcher from the handle passed in via the pci protocol
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                                                     &pci_device);
     if (status != ZX_OK) {
         return status;
+    }
+
+    auto device = pci_device->device();
+    auto cfg_size = device->is_pcie() ? PCIE_EXTENDED_CONFIG_SIZE : PCIE_BASE_CONFIG_SIZE;
+    if (out_val.get() == nullptr || offset + (width / 8) > cfg_size) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // Based on the width passed in we can use the type safety of the PciConfig layer
