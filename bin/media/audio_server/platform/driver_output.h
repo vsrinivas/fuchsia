@@ -4,12 +4,11 @@
 
 #pragma once
 
+#include <dispatcher-pool/dispatcher-channel.h>
 #include <zircon/device/audio.h>
 #include <zx/channel.h>
 #include <zx/vmo.h>
 #include <string>
-
-#include <dispatcher-pool/dispatcher-channel.h>
 
 #include "garnet/bin/media/audio_server/audio_driver.h"
 #include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"

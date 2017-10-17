@@ -7,6 +7,7 @@
 #include <fbl/algorithm.h>
 #include <string>
 
+#include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
@@ -59,14 +60,21 @@ void AudioDeviceManager::Shutdown() {
   // no longer care about devices coming and going.
   plug_detector_.Stop();
 
-  // Step #2: Shutdown all of the active renderers in the system.
+  // Step #2: Shutdown all of the active capturers in the system.
+  while (!capturers_.is_empty()) {
+    auto capturer =
+        fbl::RefPtr<AudioCapturerImpl>::Downcast(capturers_.pop_front());
+    capturer->Shutdown();
+  }
+
+  // Step #3: Shutdown all of the active renderers in the system.
   while (!renderers_.is_empty()) {
     auto renderer =
         fbl::RefPtr<AudioRendererImpl>::Downcast(renderers_.pop_front());
     renderer->Shutdown();
   }
 
-  // Step #3: Shut down each currently active device in the system.
+  // Step #4: Shut down each currently active device in the system.
   while (!devices_.is_empty()) {
     auto device = fbl::RefPtr<AudioDevice>::Downcast(devices_.pop_front());
     device->Shutdown();
@@ -195,6 +203,37 @@ void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
   }
 }
 
+void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer) {
+  FXL_DCHECK(capturer != nullptr);
+  capturers_.push_back(capturer);
+
+  fbl::RefPtr<AudioDevice> source;
+  if (capturer->loopback()) {
+    source = FindLastPluggedOutput(true);
+  } else {
+    source = FindLastPluggedInput(true);
+  }
+
+  if (source != nullptr) {
+    FXL_DCHECK(source->driver() != nullptr);
+    auto initial_format = source->driver()->GetSourceFormat();
+
+    if (!initial_format.is_null()) {
+      capturer->SetInitialFormat(std::move(initial_format));
+    }
+
+    if (source->plugged()) {
+      AudioObject::LinkObjects(source, capturer);
+    }
+  }
+}
+
+void AudioDeviceManager::RemoveCapturer(AudioCapturerImpl* capturer) {
+  FXL_DCHECK(capturer != nullptr);
+  FXL_DCHECK(capturer->in_object_list());
+  capturers_.erase(*capturer);
+}
+
 void AudioDeviceManager::ScheduleMessageLoopTask(const fxl::Closure& task) {
   FXL_DCHECK(server_);
   server_->ScheduleMessageLoopTask(task);
@@ -239,19 +278,47 @@ void AudioDeviceManager::OnDeviceUnplugged(
   // linked to.
   device->Unlink();
 
-  // If this is an output, and we we are applying 'last plugged output' policy,
-  // replace it with the new 'last plugged' output (if any)
-  if (device->is_output() &&
-      (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT)) {
+  if (device->is_output()) {
+    // This was an output.  If we are applying 'last plugged output' policy, go
+    // over our list of renderers and link them to the most recently plugged
+    // output (if any).  Then go over our list of capturers and do the same for
+    // each of the loopback capturers.
+    // Note: the current hack routing policy for inputs is always 'last plugged'
     FXL_DCHECK(static_cast<AudioOutput*>(device.get()) !=
                throttle_output_.get());
 
     fbl::RefPtr<AudioOutput> replacement = FindLastPluggedOutput();
     if (replacement) {
-      for (auto& obj : renderers_) {
-        FXL_DCHECK(obj.is_renderer());
-        auto renderer = static_cast<AudioRendererImpl*>(&obj);
-        LinkOutputToRenderer(replacement.get(), renderer);
+      if (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT) {
+        for (auto& obj : renderers_) {
+          FXL_DCHECK(obj.is_renderer());
+          auto renderer = static_cast<AudioRendererImpl*>(&obj);
+          LinkOutputToRenderer(replacement.get(), renderer);
+        }
+      }
+
+      for (auto& obj : capturers_) {
+        FXL_DCHECK(obj.is_capturer());
+        auto capturer = static_cast<AudioCapturerImpl*>(&obj);
+        if (capturer->loopback()) {
+          AudioObject::LinkObjects(replacement, fbl::WrapRefPtr(capturer));
+        }
+      }
+    }
+  } else {
+    // This was an input.  Find the new most recently plugged in input (if any),
+    // then go over our list of capturers and link all of the non-loopback
+    // capturers to the new input.
+    FXL_DCHECK(device->is_input());
+
+    fbl::RefPtr<AudioInput> replacement = FindLastPluggedInput();
+    if (replacement) {
+      for (auto& obj : capturers_) {
+        FXL_DCHECK(obj.is_capturer());
+        auto capturer = static_cast<AudioCapturerImpl*>(&obj);
+        if (!capturer->loopback()) {
+          AudioObject::LinkObjects(replacement, fbl::WrapRefPtr(capturer));
+        }
       }
     }
   }
@@ -261,37 +328,32 @@ void AudioDeviceManager::OnDevicePlugged(
     const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device && device->plugged());
 
-  // If this is an input, we currently have nothing special to do.
-  if (device->is_input()) {
-    return;
-  }
+  if (device->is_output()) {
+    // This new device is an output.  Go over our list of renderers and "do the
+    // right thing" based on our current routing policy.  If we are using last
+    // plugged policy, replace all of the renderers current output with this new
+    // one (assuming that this new one is actually the most recently plugged).
+    // Of we are using the "all plugged" policy, then just add this new output
+    // to all of the renderers.
+    //
+    // Then, apply last plugged policy to all of the capturers which are in
+    // loopback mode.
+    fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
+    auto output = static_cast<AudioOutput*>(device.get());
 
-  auto output = static_cast<AudioOutput*>(device.get());
+    FXL_DCHECK((routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT) ||
+               (routing_policy_ == RoutingPolicy::ALL_PLUGGED_OUTPUTS));
 
-  switch (routing_policy_) {
-    case RoutingPolicy::ALL_PLUGGED_OUTPUTS:
-      // If we are following the 'all plugged outputs' routing policy, simply
-      // add this newly plugged output to all of the active renderers.
+    bool lp_policy = (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT);
+    bool is_lp = (output == last_plugged.get());
+
+    if (!lp_policy) {
       for (auto& obj : renderers_) {
         FXL_DCHECK(obj.is_renderer());
         auto renderer = static_cast<AudioRendererImpl*>(&obj);
         LinkOutputToRenderer(output, renderer);
       }
-      break;
-
-    case RoutingPolicy::LAST_PLUGGED_OUTPUT:
-      // This output was just plugged in, deal with routing issues.  If we are
-      // using the 'last plugged' policy, unlink all of the active renderers
-      // from the outputs they are connected to, then link them to the newly
-      // plugged output.
-      //
-      // Note; we need to make sure that this is actually the last plugged
-      // output.  Because of the parallelized nature of plug detection and
-      // stream discovery, it is possible that two outputs might be plugged in
-      // at similar times, but we handle their plugged status out-of-order.
-      if (FindLastPluggedOutput().get() != output)
-        return;
-
+    } else if (is_lp) {
       for (auto& unlink_tgt : devices_) {
         if (unlink_tgt.is_output() && (&unlink_tgt != device.get())) {
           unlink_tgt.UnlinkSources();
@@ -303,7 +365,37 @@ void AudioDeviceManager::OnDevicePlugged(
         auto renderer = static_cast<AudioRendererImpl*>(&obj);
         LinkOutputToRenderer(output, renderer);
       }
-      break;
+    }
+
+    if (is_lp) {
+      for (auto& obj : capturers_) {
+        FXL_DCHECK(obj.is_capturer());
+        auto capturer = static_cast<AudioCapturerImpl*>(&obj);
+        if (capturer->loopback()) {
+          capturer->UnlinkSources();
+          AudioObject::LinkObjects(device, fbl::WrapRefPtr(capturer));
+        }
+      }
+    }
+  } else {
+    FXL_DCHECK(device->is_input());
+
+    // This new device is an input.  If it is the most recently plugged input,
+    // go over our list of capturers, and for each non-loopback capturer,
+    // replace their current sources with this input.
+    fbl::RefPtr<AudioInput> last_plugged = FindLastPluggedInput();
+    auto input = static_cast<AudioInput*>(device.get());
+
+    if (input == last_plugged.get()) {
+      for (auto& obj : capturers_) {
+        FXL_DCHECK(obj.is_capturer());
+        auto capturer = static_cast<AudioCapturerImpl*>(&obj);
+        if (!capturer->loopback()) {
+          capturer->UnlinkSources();
+          AudioObject::LinkObjects(device, fbl::WrapRefPtr(capturer));
+        }
+      }
+    }
   }
 }
 

@@ -19,6 +19,8 @@
 namespace media {
 namespace audio {
 
+class AudioCapturerImpl;
+
 class AudioDeviceManager {
  public:
   explicit AudioDeviceManager(AudioServerImpl* server);
@@ -64,6 +66,10 @@ class AudioDeviceManager {
 
   // Link an output to an audio renderer
   void LinkOutputToRenderer(AudioOutput* output, AudioRendererImpl* renderer);
+
+  // Add/remove a capturer to/from the set of active audio capturers.
+  void AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer);
+  void RemoveCapturer(AudioCapturerImpl* capturer);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
   void ScheduleMessageLoopTask(const fxl::Closure& task);
@@ -132,6 +138,7 @@ class AudioDeviceManager {
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
   AudioObject::List devices_;
+  AudioObject::List capturers_;
   AudioObject::List renderers_;
 
   // The special throttle output.  This output always exists, and is always used

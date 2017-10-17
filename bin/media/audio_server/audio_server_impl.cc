@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 
+#include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -71,9 +72,10 @@ void AudioServerImpl::CreateRenderer(
 }
 
 void AudioServerImpl::CreateCapturer(
-    fidl::InterfaceRequest<AudioCapturer> audio_capturer,
+    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
     bool loopback) {
-  // TODO: implement me
+  device_manager_.AddCapturer(AudioCapturerImpl::Create(
+      std::move(audio_capturer_request), this, loopback));
 }
 
 void AudioServerImpl::SetMasterGain(float db_gain) {

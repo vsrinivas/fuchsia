@@ -5,6 +5,7 @@
 executable("audio_server") {
   sources =
       [
+        "audio_capturer_impl.cc",
         "audio_device.cc",
         "audio_device_manager.cc",
         "audio_driver.cc",
@@ -38,6 +39,7 @@ executable("audio_server") {
           ]
 
       deps = [
+        "//garnet/public/lib/media/audio",
         "//garnet/bin/media/audio",
         "//garnet/bin/media/fidl",
         "//garnet/bin/media/util",

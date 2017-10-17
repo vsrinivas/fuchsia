@@ -15,6 +15,7 @@
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/media/fidl/audio_capturer.fidl.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
 
@@ -29,11 +30,12 @@ class AudioServerImpl : public AudioServer {
   // AudioServer
   void CreateRenderer(
       fidl::InterfaceRequest<AudioRenderer> audio_renderer,
-      fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
-  void CreateCapturer(fidl::InterfaceRequest<AudioCapturer> audio_capturer,
-                      bool loopback) override;
-  void SetMasterGain(float db_gain) override;
-  void GetMasterGain(const GetMasterGainCallback& cbk) override;
+      fidl::InterfaceRequest<MediaRenderer> media_renderer) final;
+  void CreateCapturer(
+      fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+      bool loopback) final;
+  void SetMasterGain(float db_gain) final;
+  void GetMasterGain(const GetMasterGainCallback& cbk) final;
 
   // Called (indirectly) by AudioOutputs to schedule the callback for a
   // MediaPacked which was queued to an AudioRenderer via. a media pipe.
