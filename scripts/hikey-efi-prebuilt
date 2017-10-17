@@ -9,7 +9,7 @@
 set -e
 
 UEFI_DIR=${1:-/tmp/hikey/uefi}
-UEFI_URL='http://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/14/hikey960/release/'
+UEFI_URL='http://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/25/hikey960/release/'
 
 echo Creating $UEFI_DIR...
 mkdir -p "$UEFI_DIR"
