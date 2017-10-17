@@ -11,6 +11,8 @@ SRC_DIR := $(ULIB_DIR)/crypto
 
 KERNEL_INCLUDES += $(ULIB_DIR)/include
 
+MODULE_COMPILEFLAGS += -DOPENSSL_NO_ASM
+
 MODULE_SRCS := \
     $(SRC_DIR)/chacha/chacha.c \
     $(SRC_DIR)/fipsmodule/sha/sha256.c \

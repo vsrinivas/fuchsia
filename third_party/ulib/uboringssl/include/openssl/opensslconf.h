@@ -58,12 +58,5 @@
 #define OPENSSL_NO_STORE
 #define OPENSSL_NO_WHIRLPOOL
 
-#ifdef __Fuchsia__
-#if _KERNEL
-#define OPENSSL_NO_THREADS
-#define OPENSSL_NO_ASM
-#endif /* _KERNEL */
-#define BORINGSSL_NO_CXX
-#endif /* __Fuchsia__ */
 
 #endif  /* OPENSSL_HEADER_OPENSSLCONF_H */

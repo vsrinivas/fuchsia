@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_COMPILEFLAGS += -fvisibility=hidden -DOPENSSL_NO_THREADS
+MODULE_COMPILEFLAGS += -fvisibility=hidden -Wa,--noexecstack
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/crypto/cpu-aarch64-zircon.cpp \
@@ -35,6 +35,10 @@ MODULE_SRCS += \
    $(LOCAL_DIR)/decrepit/xts/xts.c \
 
 ifeq ($(ARCH),arm64)
+# TODO(aarongreen): Workaround for the non-hidden OPENSSL_armcap_P symbol, which causes arm/clang to
+# fail to link.  Remove when resolved upstream.
+MODULE_COMPILEFLAGS += -DOPENSSL_NO_ASM
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/asm/aes-arm64.S \
     $(LOCAL_DIR)/asm/chacha-arm64.S \

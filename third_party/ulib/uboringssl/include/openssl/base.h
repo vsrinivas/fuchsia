@@ -6,7 +6,7 @@
  * are met:
  *
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer. 
+ *    notice, this list of conditions and the following disclaimer.
  *
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
@@ -127,7 +127,9 @@ extern "C" {
 #endif
 
 #if defined(__Fuchsia__)
+#define BORINGSSL_NO_CXX
 #define OPENSSL_FUCHSIA
+#define OPENSSL_NO_THREADS
 #endif
 
 #if defined(TRUSTY)
