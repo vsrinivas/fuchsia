@@ -184,8 +184,7 @@ class TestPageCloudHandler
     ASSERT_TRUE(fsl::StringFromVmo(data, &received_data));
     received_objects.insert(
         std::make_pair(object_digest.ToString(), received_data));
-    fxl::Closure report_result =
-        [ callback, status = object_status_to_return ] {
+    fxl::Closure report_result = [callback, status = object_status_to_return] {
       callback(status);
     };
     if (delay_add_object_callbacks) {
@@ -240,6 +239,7 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
 
   unsigned int done_calls_ = 0u;
   unsigned int error_calls_ = 0u;
+  BatchUpload::ErrorType last_error_type_ = BatchUpload::ErrorType::PERMANENT;
 
   std::unique_ptr<BatchUpload> MakeBatchUpload(
       std::vector<std::unique_ptr<const storage::Commit>> commits,
@@ -251,8 +251,9 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
           done_calls_++;
           message_loop_.PostQuitTask();
         },
-        [this](BatchUpload::ErrorType /*error_type*/) {
+        [this](BatchUpload::ErrorType error_type) {
           error_calls_++;
+          last_error_type_ = error_type;
           message_loop_.PostQuitTask();
         },
         max_concurrent_uploads);
@@ -451,6 +452,7 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
 
   // Verify that no commits were uploaded.
   EXPECT_EQ(0u, cloud_provider_.received_commits.size());
@@ -478,6 +480,7 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
 
   // Verify that the objects were uploaded to cloud provider and marked as
   // synced.
@@ -510,6 +513,7 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls_);
   EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(BatchUpload::ErrorType::TEMPORARY, last_error_type_);
 
   EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(0u, storage_.objects_marked_as_synced.size());
