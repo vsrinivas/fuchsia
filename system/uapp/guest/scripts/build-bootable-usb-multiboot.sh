@@ -193,7 +193,7 @@ echo -n "Copying fstab..."
 EFI_UUID=$(sudo blkid -s UUID -o value "${EFI_PARTITION_PATH}")
 FSTAB=$(mktemp)
 echo "" > "${FSTAB}"
-echo "UUID=${EFI_UUID} /boot vfat defaults,iversion,noauto,x-systemd.automount 0 1" > "${FSTAB}"
+echo "UUID=${EFI_UUID} /boot vfat defaults,iversion,nofail 0 1" > "${FSTAB}"
 sudo cp "${FSTAB}" "${MOUNT_PATH}/etc/fstab"
 rm "${FSTAB}"
 echo "SUCCESS"
