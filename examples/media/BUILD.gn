@@ -19,6 +19,7 @@ package("media") {
     "simple_sine_sync",
     "tones",
     "vu_meter",
+    "wav_record",
   ]
 
   binaries = [
@@ -48,6 +49,9 @@ package("media") {
     },
     {
       name = "vu_meter"
+    },
+    {
+      name = "wav_record"
     },
   ]
 }
