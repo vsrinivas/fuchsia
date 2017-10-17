@@ -565,10 +565,14 @@ void URLLoaderImpl::HTTPClient<T>::SendError(int error_code) {
 }  // namespace network
 
 #if defined(ASIO_NO_EXCEPTIONS)
-// ASIO doesn't provide this if exception is not enabled
+// If C++ exception is disabled, ASIO calls this function instead of throwing
+// an exception. Do not simply return from this function. The execution should
+// be aborted immediately.
+//
+// TODO: Abort the current thread only.
 template <typename Exception>
 void asio::detail::throw_exception(const Exception& e) {
-  FXL_VLOG(1) << "Exception occurred: " << e.what();
+  FXL_LOG(FATAL) << "Exception occurred: " << e.what();
 }
 #endif
 
