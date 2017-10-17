@@ -4,7 +4,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 
 #include "debug-logging.h"
 #include "realtek-codec.h"

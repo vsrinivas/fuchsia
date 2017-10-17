@@ -4,8 +4,8 @@
 
 group("codecs") {
   public_deps = [
-    "//drivers/audio/intel-hda/codecs/qemu:qemu-ihda-codec",
-    "//drivers/audio/intel-hda/codecs/realtek:realtek-ihda-codec",
-    "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
+    "//garnet/drivers/audio/intel-hda/codecs/qemu:qemu-ihda-codec",
+    "//garnet/drivers/audio/intel-hda/codecs/realtek:realtek-ihda-codec",
+    "//garnet/drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
   ]
 }

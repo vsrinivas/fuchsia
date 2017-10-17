@@ -14,7 +14,7 @@
 #include <fbl/limits.h>
 #include <string.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 
 #include "debug-logging.h"
 #include "usb-audio.h"

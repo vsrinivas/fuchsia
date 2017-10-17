@@ -4,7 +4,7 @@
 
 #include <zircon/syscalls/object.h>
 
-#include "drivers/audio/intel-hda/utils/utils.h"
+#include "garnet/drivers/audio/intel-hda/utils/utils.h"
 
 namespace audio {
 namespace intel_hda {

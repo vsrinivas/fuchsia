@@ -14,11 +14,11 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 
-#include "drivers/audio/audio-proto/audio-proto.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include "garnet/drivers/audio/audio-proto/audio-proto.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-commands.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
 namespace audio {
 namespace intel_hda {

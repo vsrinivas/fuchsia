@@ -12,7 +12,7 @@
 #include <fdio/io.h>
 #include <iomanip>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "lib/fxl/logging.h"
 

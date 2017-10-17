@@ -4,10 +4,10 @@
 
 #include <fbl/vector.h>
 
-#include "drivers/audio/intel-hda/utils/codec-caps.h"
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
-#include "drivers/audio/intel-hda/utils/codec-state.h"
-#include "drivers/audio/intel-hda/utils/utils.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-caps.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-commands.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-state.h"
+#include "garnet/drivers/audio/intel-hda/utils/utils.h"
 
 #include "debug-logging.h"
 #include "realtek-stream.h"

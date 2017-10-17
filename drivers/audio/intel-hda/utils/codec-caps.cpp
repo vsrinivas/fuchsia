@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "drivers/audio/intel-hda/utils/codec-caps.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-caps.h"
 
 namespace audio {
 namespace intel_hda {

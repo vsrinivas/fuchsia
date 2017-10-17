@@ -6,7 +6,7 @@ import("//packages/package.gni")
 
 package("audio_driver_examples") {
   deps = [
-    "//drivers/audio/examples/fx",
+    "//garnet/drivers/audio/examples/fx",
   ]
 
   binaries = [ {

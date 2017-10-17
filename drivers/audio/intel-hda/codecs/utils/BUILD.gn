@@ -15,12 +15,12 @@ source_set("ihda-codec-utils") {
     ]
 
     public_deps = [
-        "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+        "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
     ]
 
     deps = [
-        "//drivers/audio/audio-proto",
-        "//drivers/audio/intel-hda/utils:ihda-utils",
+        "//garnet/drivers/audio/audio-proto",
+        "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
         "//zircon/system/ulib/audio-proto-utils",
         "//zircon/system/ulib/zx",
         "//zircon/system/ulib/fbl",

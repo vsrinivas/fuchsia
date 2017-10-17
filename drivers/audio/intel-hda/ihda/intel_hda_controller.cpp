@@ -5,7 +5,7 @@
 #include <zircon/device/intel-hda.h>
 #include <fdio/io.h>
 
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-registers.h"
 
 #include "intel_hda_controller.h"
 

@@ -12,9 +12,9 @@
 #include <string.h>
 #include <threads.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-registers.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"

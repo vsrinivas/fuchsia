@@ -6,7 +6,7 @@
 #include <fbl/auto_lock.h>
 #include <string.h>
 
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-registers.h"
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"

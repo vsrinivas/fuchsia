@@ -9,10 +9,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 
-#include "drivers/audio/audio-proto/audio-proto.h"
-#include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
-#include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include "garnet/drivers/audio/audio-proto/audio-proto.h"
+#include "garnet/drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
+#include "garnet/drivers/audio/intel-hda/codecs/utils/stream-base.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
 #include "debug-logging.h"
 

@@ -16,7 +16,7 @@ executable("ihda_bin") {
   ]
 
   deps = [
-    "//drivers/audio/intel-hda/utils:ihda-utils",
+    "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/fbl",
   ]

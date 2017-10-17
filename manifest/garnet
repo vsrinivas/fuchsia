@@ -285,13 +285,6 @@
              path="third_party/golibs/github.com/flynn/go-tuf"
              remote="https://fuchsia.googlesource.com/third_party/go-tuf"
              gerrithost="https://fuchsia-review.googlesource.com"/>
-
-    <!-- TODO(abarth): Merge the following repos into //garnet -->
-
-    <project name="drivers/audio"
-             path="drivers/audio"
-             remote="https://fuchsia.googlesource.com/drivers/audio"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
   </projects>
   <hooks>
     <hook name="download-rt2870-bin"

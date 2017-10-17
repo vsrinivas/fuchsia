@@ -11,9 +11,9 @@ import("//packages/package.gni")
 # dependencies. Once we resolve that, this package should be broken up.
 package("audio") {
   deps = [
-    "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-    "//drivers/audio/intel-hda",
-    "//drivers/audio/usb-audio",
+    "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+    "//garnet/drivers/audio/intel-hda",
+    "//garnet/drivers/audio/usb-audio",
   ]
 
   drivers = [

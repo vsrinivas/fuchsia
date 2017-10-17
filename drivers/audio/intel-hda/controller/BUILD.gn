@@ -27,9 +27,9 @@ driver_module("ihda-controller") {
     ]
 
     deps = [
-        "//drivers/audio/audio-proto",
-        "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-        "//drivers/audio/intel-hda/utils:ihda-utils",
+        "//garnet/drivers/audio/audio-proto",
+        "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+        "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
         "//zircon/system/ulib/zx",
         "//zircon/system/ulib/fbl",
     ]

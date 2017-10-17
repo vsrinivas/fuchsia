@@ -15,11 +15,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-commands.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include "garnet/drivers/audio/intel-hda/utils/intel-hda-registers.h"
 
 #include "codec-cmd-job.h"
 #include "intel-hda-stream.h"

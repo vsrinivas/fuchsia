@@ -7,7 +7,7 @@
 #include <fbl/limits.h>
 #include <string.h>
 
-#include "drivers/audio/intel-hda/utils/utils.h"
+#include "garnet/drivers/audio/intel-hda/utils/utils.h"
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"

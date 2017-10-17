@@ -17,8 +17,8 @@ driver_module("realtek-ihda-codec") {
     ]
 
     deps = [
-        "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
-        "//drivers/audio/intel-hda/utils:ihda-utils",
+        "//garnet/drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
+        "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
         "//zircon/system/ulib/zx",
         "//zircon/system/ulib/fbl",
     ]

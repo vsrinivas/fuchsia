@@ -6,7 +6,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
+#include "garnet/drivers/audio/intel-hda/codecs/utils/stream-base.h"
 
 namespace audio {
 namespace intel_hda {

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "drivers/audio/dispatcher-pool/dispatcher-timer.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-timer.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/gain.h"

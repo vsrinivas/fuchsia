@@ -19,8 +19,8 @@ driver_module("usb-audio") {
   ]
 
   deps = [
-    "//drivers/audio/audio-proto",
-    "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+    "//garnet/drivers/audio/audio-proto",
+    "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/zx",

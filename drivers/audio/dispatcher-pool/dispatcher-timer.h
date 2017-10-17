@@ -9,7 +9,7 @@
 #include <zircon/types.h>
 #include <fbl/ref_ptr.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-event-source.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-event-source.h"
 
 namespace audio {
 namespace dispatcher {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "drivers/audio/audio-proto/audio-proto.h"
+#include "garnet/drivers/audio/audio-proto/audio-proto.h"
 
 namespace audio {
 namespace audio_proto {

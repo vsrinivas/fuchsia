@@ -11,7 +11,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
 
 namespace audio {
 namespace intel_hda {

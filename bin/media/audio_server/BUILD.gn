@@ -35,7 +35,7 @@ executable("audio_server") {
     "//garnet/public/lib/media/fidl",
     "//garnet/bin/media/audio",
     "//garnet/bin/media/util",
-    "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+    "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
     "//zircon/system/ulib/zx",

@@ -7,7 +7,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
 
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-commands.h"
 
 #include "codec_state.h"
 #include "intel_hda_device.h"

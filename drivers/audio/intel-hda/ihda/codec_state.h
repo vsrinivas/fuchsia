@@ -10,9 +10,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "drivers/audio/intel-hda/utils/codec-caps.h"
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
-#include "drivers/audio/intel-hda/utils/codec-state.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-caps.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-commands.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-state.h"
 
 namespace audio {
 namespace intel_hda {

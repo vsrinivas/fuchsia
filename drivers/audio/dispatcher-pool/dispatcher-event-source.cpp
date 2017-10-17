@@ -6,9 +6,9 @@
 #include <zircon/types.h>
 #include <fbl/auto_call.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-event-source.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-event-source.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 
 namespace audio {
 namespace dispatcher {

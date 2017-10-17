@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 
 #include "debug-logging.h"
 

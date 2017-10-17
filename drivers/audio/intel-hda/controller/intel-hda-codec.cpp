@@ -8,7 +8,7 @@
 #include <fbl/limits.h>
 #include <stdio.h>
 
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
+#include "garnet/drivers/audio/intel-hda/utils/codec-commands.h"
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"

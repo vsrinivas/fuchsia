@@ -6,8 +6,8 @@
 #include <zircon/types.h>
 #include <zx/timer.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-timer.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "garnet/drivers/audio/dispatcher-pool/dispatcher-timer.h"
 
 namespace audio {
 namespace dispatcher {
