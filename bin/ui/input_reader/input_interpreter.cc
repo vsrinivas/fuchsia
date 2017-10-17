@@ -84,6 +84,8 @@ bool InputInterpreter::Initialize() {
   } else if (protocol == INPUT_PROTO_MOUSE) {
     FXL_VLOG(2) << "Device " << name_ << " has mouse";
     has_mouse_ = true;
+    mouse_device_type_ = MouseDeviceType::BOOT;
+
     mouse_descriptor_ = mozart::MouseDescriptor::New();
     mouse_descriptor_->rel_x = mozart::Axis::New();
     mouse_descriptor_->rel_x->range = mozart::Range::New();
@@ -231,6 +233,35 @@ bool InputInterpreter::Initialize() {
       touchscreen_report_->touchscreen = mozart::TouchscreenReport::New();
 
       touch_device_type_ = TouchDeviceType::PARADISE;
+    } else if (is_paradise_touchpad_report_desc(desc.data(), desc.size())) {
+      zx_status_t setup_res = setup_paradise_touchpad(fd_);
+      if (setup_res != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to setup Paradise touchpad (res "
+                       << setup_res << ")";
+        return true;
+      }
+
+      FXL_VLOG(2) << "Device " << name_ << " has touchpad";
+      has_mouse_ = true;
+      mouse_device_type_ = MouseDeviceType::PARADISE;
+
+      mouse_descriptor_ = mozart::MouseDescriptor::New();
+      mouse_descriptor_->rel_x = mozart::Axis::New();
+      mouse_descriptor_->rel_x->range = mozart::Range::New();
+      mouse_descriptor_->rel_x->range->min = INT32_MIN;
+      mouse_descriptor_->rel_x->range->max = INT32_MAX;
+      mouse_descriptor_->rel_x->resolution = 1;
+
+      mouse_descriptor_->rel_y = mozart::Axis::New();
+      mouse_descriptor_->rel_y->range = mozart::Range::New();
+      mouse_descriptor_->rel_y->range->min = INT32_MIN;
+      mouse_descriptor_->rel_y->range->max = INT32_MAX;
+      mouse_descriptor_->rel_y->resolution = 1;
+
+      mouse_descriptor_->buttons |= kMouseButtonPrimary;
+
+      mouse_report_ = mozart::InputReport::New();
+      mouse_report_->mouse = mozart::MouseReport::New();
     } else {
       FXL_VLOG(2) << "Device " << name_ << " has unsupported HID device";
       return false;
@@ -297,11 +328,22 @@ bool InputInterpreter::Read(bool discard) {
     }
   }
 
-  if (has_mouse_) {
-    ParseMouseReport(report_.data(), rc);
-    if (!discard) {
-      input_device_->DispatchReport(mouse_report_.Clone());
-    }
+  switch (mouse_device_type_) {
+    case MouseDeviceType::BOOT:
+      ParseMouseReport(report_.data(), rc);
+      if (!discard) {
+        input_device_->DispatchReport(mouse_report_.Clone());
+      }
+      break;
+    case MouseDeviceType::PARADISE:
+      if (ParseParadiseTouchpadReport(report_.data(), rc)) {
+        if (!discard) {
+          input_device_->DispatchReport(mouse_report_.Clone());
+        }
+      }
+      break;
+    case MouseDeviceType::NONE:
+      break;
   }
 
   switch (touch_device_type_) {
@@ -504,6 +546,45 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
   }
 
   FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
+  return true;
+}
+
+bool InputInterpreter::ParseParadiseTouchpadReport(uint8_t* r, size_t len) {
+  if (len != sizeof(paradise_touchpad_t)) {
+    FXL_LOG(INFO) << "paradise wrong size " << len;
+    return false;
+  }
+
+  mouse_report_->event_time = InputEventTimestampNow();
+
+  const auto& report = *(reinterpret_cast<paradise_touchpad_t*>(r));
+  if (!report.fingers[0].tip_switch) {
+    mouse_report_->mouse->rel_x = 0;
+    mouse_report_->mouse->rel_y = 0;
+    mouse_report_->mouse->pressed_buttons = 0;
+
+    mouse_abs_x_ = -1;
+    return true;
+  }
+
+  // Each axis has a resolution of .00078125cm. 5/32 is a relatively arbitrary
+  // coefficient that gives decent sensitivity and a nice resolution of .005cm.
+  mouse_report_->mouse->rel_x =
+      mouse_abs_x_ != -1 ? 5 * (report.fingers[0].x - mouse_abs_x_) / 32 : 0;
+  mouse_report_->mouse->rel_y =
+      mouse_abs_x_ != -1 ? 5 * (report.fingers[0].y - mouse_abs_y_) / 32 : 0;
+  mouse_report_->mouse->pressed_buttons =
+      report.button ? kMouseButtonPrimary : 0;
+
+  // Don't update the abs position if there was no relative change, so that
+  // we don't drop fractional relative deltas.
+  if (mouse_report_->mouse->rel_y || mouse_abs_x_ == -1) {
+    mouse_abs_y_ = report.fingers[0].y;
+  }
+  if (mouse_report_->mouse->rel_x || mouse_abs_x_ == -1) {
+    mouse_abs_x_ = report.fingers[0].x;
+  }
+
   return true;
 }
 

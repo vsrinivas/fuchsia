@@ -48,6 +48,12 @@ class InputInterpreter {
     SAMSUNG,
   };
 
+  enum class MouseDeviceType {
+    NONE,
+    BOOT,
+    PARADISE,
+  };
+
   InputInterpreter(std::string name,
                    int fd,
                    mozart::InputDeviceRegistry* registry);
@@ -66,6 +72,7 @@ class InputInterpreter {
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
   bool ParseParadiseTouchscreenReport(uint8_t* report, size_t len);
+  bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
 
   const int fd_;
   const std::string name_;
@@ -87,6 +94,11 @@ class InputInterpreter {
   mozart::TouchscreenDescriptorPtr touchscreen_descriptor_;
 
   TouchDeviceType touch_device_type_ = TouchDeviceType::NONE;
+  MouseDeviceType mouse_device_type_ = MouseDeviceType::NONE;
+
+  // Used for converting absolute coords from paradise into relative deltas
+  int32_t mouse_abs_x_ = -1;
+  int32_t mouse_abs_y_ = -1;
 
   mozart::InputReportPtr keyboard_report_;
   mozart::InputReportPtr mouse_report_;
