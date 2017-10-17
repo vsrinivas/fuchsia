@@ -1,0 +1,42 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+# FIXME: Defining all of our audio drivers in one package doesn't make a lot of
+# sense as a particular target is likely to only care about a subset of the
+# drivers, but many of these drivers depend on common shared libraries and we
+# don't currently have a great way to handle multiple packages with shared
+# dependencies. Once we resolve that, this package should be broken up.
+package("audio") {
+  deps = [
+    "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+    "//drivers/audio/intel-hda",
+    "//drivers/audio/usb-audio",
+  ]
+
+  drivers = [
+    {
+      name = "ihda-controller.so"
+    },
+
+    {
+      name = "qemu-ihda-codec.so"
+    },
+
+    {
+      name = "realtek-ihda-codec.so"
+    },
+    {
+      name = "libusb-audio.so"
+    }
+  ]
+
+  libraries = [
+    {
+      name = "libaudio-dispatcher-pool.so"
+    }
+  ]
+}
+
