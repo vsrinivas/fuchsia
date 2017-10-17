@@ -43,6 +43,8 @@ COLORS = {
     'CYAN': '\033[1:36m',
 }
 
+FIRST_LOG_AFTER_BOOTUP = '[00000.000] 00000.00000> bootdata:'
+
 
 def static_vars(**kwargs):
 
@@ -97,6 +99,10 @@ def is_suppressed(line):
   Returns:
     True if the log line should be suppressed. False otherwise.
   """
+  if line.startswith(FIRST_LOG_AFTER_BOOTUP):
+    # A reboot occurs. Reset to default.
+    is_suppressed.is_in_session = False
+
   if not BEGINS or any(keyword in line for keyword in BEGINS):
     if not is_suppressed.is_in_session:
       print '\n' * 3
