@@ -549,7 +549,7 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     {
         fbl::RefPtr<ExceptionPort> debugger_port(t->process_->debugger_exception_port());
         if (debugger_port) {
-            debugger_port->OnThreadStart(t);
+            debugger_port->OnThreadStartForDebugger(t);
         }
     }
 

@@ -27,7 +27,7 @@ class ProcessDispatcher;
 class PortDispatcher;
 
 // Represents the binding of an exception port to a specific target
-// (system/process/thread). Multiple ExceptionPorts may exist for a
+// (job/process/thread). Multiple ExceptionPorts may exist for a
 // single underlying PortDispatcher.
 class ExceptionPort : public fbl::DoublyLinkedListable<fbl::RefPtr<ExceptionPort>>
                     , public fbl::RefCounted<ExceptionPort> {
@@ -43,7 +43,7 @@ public:
 
     zx_status_t SendPacket(ThreadDispatcher* thread, uint32_t type);
 
-    void OnThreadStart(ThreadDispatcher* thread);
+    void OnThreadStartForDebugger(ThreadDispatcher* thread);
 
     void OnThreadSuspending(ThreadDispatcher* thread);
     void OnThreadResuming(ThreadDispatcher* thread);

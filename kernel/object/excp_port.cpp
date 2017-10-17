@@ -263,8 +263,10 @@ void ExceptionPort::BuildArchReport(zx_exception_report_t* report, uint32_t type
     arch_fill_in_exception_context(arch_context, report);
 }
 
-void ExceptionPort::OnThreadStart(ThreadDispatcher* thread) {
+void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
     canary_.Assert();
+
+    DEBUG_ASSERT(type_ == Type::DEBUGGER);
 
     zx_koid_t pid = thread->process()->get_koid();
     zx_koid_t tid = thread->get_koid();
@@ -349,6 +351,8 @@ void ExceptionPort::OnThreadExit(ThreadDispatcher* thread) {
 
 void ExceptionPort::OnThreadExitForDebugger(ThreadDispatcher* thread) {
     canary_.Assert();
+
+    DEBUG_ASSERT(type_ == Type::DEBUGGER);
 
     zx_koid_t pid = thread->process()->get_koid();
     zx_koid_t tid = thread->get_koid();
