@@ -6,6 +6,7 @@
 
 #include <map>
 #include <memory>
+#include <unordered_map>
 
 #include <async/task.h>
 
@@ -13,6 +14,7 @@
 #include "garnet/drivers/bluetooth/lib/att/packet.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/linked_list.h"
+#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
@@ -123,8 +125,41 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // command or notification.
   bool SendWithoutResponse(std::unique_ptr<common::ByteBuffer> pdu);
 
+  // A Handler is a function that gets invoked when the Bearer receives a PDU
+  // that is not tied to a locally initiated transaction (see
+  // StartTransaction()).
+  //
+  //   * |tid| will be set to kInvalidTransactionId for command and notification
+  //     PDUs. These do not require a response and are not part of a
+  //     transaction.
+  //
+  //   * A valid |tid| will be provided for request and indication PDUs. These
+  //     require a response which can be sent by calling Reply().
+  using TransactionId = size_t;
+  static constexpr TransactionId kInvalidTransactionId = 0u;
+  using Handler =
+      std::function<void(TransactionId tid, const PacketReader& packet)>;
+
+  // Handler: called when |pdu| does not need flow control. This will be
+  // called for commands and notifications.
+  using HandlerId = size_t;
+  static constexpr HandlerId kInvalidHandlerId = 0u;
+  HandlerId RegisterHandler(OpCode opcode, const Handler& handler);
+
+  // Unregisters a handler. |id| cannot be zero.
+  void UnregisterHandler(HandlerId id);
+
+  // Ends a currently pending transaction with the given response or
+  // confirmation |pdu|. Returns false if |pdu| is malformed or if |id| and
+  // |pdu| do not match a pending transaction.
+  bool Reply(TransactionId tid, std::unique_ptr<common::ByteBuffer> pdu);
+
+  // Ends a request transaction with an error response.
+  bool ReplyWithError(TransactionId id, Handle handle, ErrorCode error_code);
+
   // Sets the transaction timeout interval. This is intended for unit tests.
   void set_transaction_timeout_ms(uint32_t value) {
+    FXL_DCHECK(value);
     transaction_timeout_ms_ = value;
   }
 
@@ -152,6 +187,15 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     std::unique_ptr<common::ByteBuffer> pdu;
   };
   using PendingTransactionPtr = std::unique_ptr<PendingTransaction>;
+
+  // Represents a remote initiated pending request or indication transaction.
+  struct PendingRemoteTransaction {
+    PendingRemoteTransaction(TransactionId id, OpCode opcode);
+    PendingRemoteTransaction() = default;
+
+    TransactionId id;
+    OpCode opcode;
+  };
 
   // Used the represent the state of active ATT protocol request and indication
   // transactions.
@@ -213,6 +257,27 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // Called when the peer sends us a response or confirmation PDU.
   void HandleEndTransaction(TransactionQueue* tq, const PacketReader& packet);
 
+  // Returns the next handler ID and increments the counter.
+  HandlerId NextHandlerId();
+
+  // Returns the next remote-initiated transaction ID.
+  TransactionId NextRemoteTransactionId();
+
+  using RemoteTransaction = common::Optional<PendingRemoteTransaction>;
+
+  // Called when the peer initiates a request or indication transaction.
+  void HandleBeginTransaction(RemoteTransaction* currently_pending,
+                              const PacketReader& packet);
+
+  // Returns any pending peer-initiated transaction that matches |id|. Returns
+  // nullptr otherwise.
+  RemoteTransaction* FindRemoteTransaction(TransactionId id);
+
+  // Called when the peer sends us a PDU that has no flow control (i.e. command
+  // or notification). Routes the packet to the corresponding handler. Drops the
+  // packet if no handler exists.
+  void HandlePDUWithoutResponse(const PacketReader& packet);
+
   // l2cap::Channel callbacks:
   void OnChannelClosed();
   void OnRxBFrame(const l2cap::SDU& sdu);
@@ -232,11 +297,24 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // transactions.
   uint32_t transaction_timeout_ms_;
 
-  // The state of outgoing ATT requests.
+  // The state of outgoing ATT requests and indications
   TransactionQueue request_queue_;
-
-  // The state of outgoing ATT indications.
   TransactionQueue indication_queue_;
+
+  // The transaction identifier that will be assigned to the next
+  // remote-initiated request or indication transaction.
+  TransactionId next_remote_transaction_id_;
+
+  // The next available remote-initiated PDU handler id.
+  HandlerId next_handler_id_;
+
+  // Data about currently registered handlers.
+  std::unordered_map<HandlerId, OpCode> handler_id_map_;
+  std::unordered_map<OpCode, Handler> handlers_;
+
+  // Remote-initiated transactions in progress.
+  RemoteTransaction remote_request_;
+  RemoteTransaction remote_indication_;
 
   fxl::ThreadChecker thread_checker_;
 
