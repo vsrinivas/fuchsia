@@ -47,8 +47,8 @@ class App : public modular::Lifecycle {
   void Terminate() override { loop_.PostQuitTask(); }
 
  private:
-  std::unique_ptr<app::ApplicationContext> application_context_;
   fsl::MessageLoop loop_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   trace::TraceProvider trace_provider_;
 
   ledger::NetworkServiceImpl network_service_;
