@@ -405,9 +405,6 @@ void ThreadDispatcher::Exiting() {
 
     LTRACE_ENTRY_OBJ;
 
-    // signal any waiters
-    UpdateState(0u, ZX_TASK_TERMINATED);
-
     {
         // TODO(ZX-814): This obtains |state_lock_| again (first time was in
         // above call to UpdateState). This will go away when ZX-814 lands:
@@ -447,6 +444,9 @@ void ThreadDispatcher::Exiting() {
         // put ourselves into the dead state
         SetStateLocked(State::DEAD);
     }
+
+    // signal any waiters
+    UpdateState(0u, ZX_TASK_TERMINATED);
 
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);

@@ -73,6 +73,19 @@ static bool suspend_thread_synchronous(zx_handle_t thread, zx_handle_t eport) {
     return true;
 }
 
+static bool wait_thread_exiting(zx_handle_t eport) {
+    zx_port_packet_t packet;
+    while (true) {
+        ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0), ZX_OK, "");
+        ASSERT_EQ(packet.key, kExceptionPortKey, "");
+        if (packet.type == ZX_EXCP_THREAD_RESUMED)
+            continue;
+        ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_EXITING, "");
+        break;
+    }
+    return true;
+}
+
 static bool start_thread(zxr_thread_entry_t entry, void* arg,
                          zxr_thread_t* thread_out, zx_handle_t* thread_h) {
     // TODO: Don't leak these when the thread dies.
@@ -396,6 +409,11 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(zx_task_resume(thread_h, 0), ZX_OK, "");
 
     ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_1, ZX_TIME_INFINITE, NULL), ZX_OK, "");
+
+    // Walk the thread past ZX_EXCP_THREAD_EXITING.
+    ASSERT_TRUE(wait_thread_exiting(eport), "");
+    ASSERT_EQ(zx_task_resume(thread_h, ZX_RESUME_EXCEPTION), ZX_OK, "");
+
     ASSERT_EQ(zx_object_wait_one(
         thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
@@ -617,10 +635,7 @@ static bool test_kill_suspended_thread(void) {
     EXPECT_EQ(arg.v, 100, "");
 
     // Check that the thread is reported as exiting and not as resumed.
-    zx_port_packet_t packet;
-    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0), ZX_OK, "");
-    ASSERT_EQ(packet.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_EXITING, "");
+    ASSERT_TRUE(wait_thread_exiting(eport), "");
 
     // Clean up.
     ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
@@ -691,6 +706,7 @@ static bool test_writing_register_state(void) {
     ASSERT_TRUE(set_debugger_exception_port(&eport),"");
 
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
 
     struct {
         // A small stack that is used for calling zx_thread_exit().
@@ -711,7 +727,6 @@ static bool test_writing_register_state(void) {
     EXPECT_TRUE(regs_expect_eq(&regs_to_set, &stack.regs_got), "");
 
     // Clean up.
-    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(thread_handle), ZX_OK, "");
 
     END_TEST;
@@ -756,6 +771,7 @@ static bool test_noncanonical_rip_address(void) {
     ASSERT_TRUE(set_debugger_exception_port(&eport),"");
 
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
+    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
 
     struct zx_x86_64_general_regs regs;
     uint32_t size_read;
@@ -802,7 +818,6 @@ static bool test_noncanonical_rip_address(void) {
     // Wait for the child thread to exit.
     ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE,
                                  NULL), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(event), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(thread_handle), ZX_OK, "");
 #endif
