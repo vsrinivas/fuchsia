@@ -26,7 +26,7 @@ typedef uint32_t BeaconHash;
 
 class Bss {
    public:
-    Bss(MacAddr bssid) : bssid_(bssid) {
+    Bss(const MacAddr& bssid) : bssid_(bssid) {
         memset(&cap_, 0, sizeof(cap_));
         supported_rates_.reserve(SupportedRatesElement::kMaxLen);
     }
@@ -56,7 +56,7 @@ class Bss {
 
     BSSDescriptionPtr ToFidl();
     fidl::String SsidToFidlString();
-    MacAddr bssid() { return bssid_; }
+    const MacAddr& bssid() { return bssid_; }
     zx_time_t ts_refreshed() { return ts_refreshed_; }
 
    private:

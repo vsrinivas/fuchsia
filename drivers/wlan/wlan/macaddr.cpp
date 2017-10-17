@@ -6,7 +6,7 @@
 
 namespace wlan {
 
-const MacAddr kZeroMac("00:00:00:00:00:00");
-const MacAddr kBcastMac("ff:ff:ff:ff:ff:ff");
+const MacAddr kZeroMac({0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+const MacAddr kBcastMac({0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
 
 }  // namespace wlan

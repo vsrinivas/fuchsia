@@ -20,9 +20,10 @@ struct MacAddr {
     uint8_t byte[kMacAddrLen];
 
     MacAddr() {}
-    MacAddr(const MacAddr& addr) { Set(addr); }
-    MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
-    MacAddr(const std::string& addr) { Set(addr); }
+    explicit MacAddr(const MacAddr& addr) { Set(addr); }
+    explicit MacAddr(const std::string& addr) { Set(addr); }
+    explicit MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
+    explicit MacAddr(std::initializer_list<uint8_t> addr) { Set(addr); }
 
     std::string ToString() const {
         char buf[17 + 1];
@@ -35,11 +36,10 @@ struct MacAddr {
 
     int Cmp(const MacAddr& addr) const { return memcmp(byte, addr.byte, kMacAddrLen); }
 
-    bool Equals(const MacAddr& addr) const { return Cmp(addr) == 0; }
-
-    bool Gt(const MacAddr& addr) const { return Cmp(addr) > 0; }
-
-    bool Lt(const MacAddr& addr) const { return Cmp(addr) < 0; }
+    bool operator==(const MacAddr& addr) const { return Cmp(addr) == 0; }
+    bool operator!=(const MacAddr& addr) const { return !(*this == addr); }
+    bool operator>(const MacAddr& addr) const { return Cmp(addr) > 0; }
+    bool operator<(const MacAddr& addr) const { return Cmp(addr) < 0; }
 
     bool IsZero() const {
         // Note kZeroMac not used here. struct forward declaration can't be used.
@@ -66,10 +66,13 @@ struct MacAddr {
         return byte[0] == 0x01 && byte[1] == 0x80 && byte[2] == 0xc2;
     }
 
-    // Overloaded initializer.
+    // Overloaded initializers.
     void Set(const MacAddr& addr) { std::memcpy(byte, addr.byte, kMacAddrLen); }
-    void Set(const uint8_t addr[kMacAddrLen]) { std::memcpy(byte, addr, kMacAddrLen); }
     void Set(const std::string& addr) { FromStr(addr); }
+    void Set(const uint8_t addr[kMacAddrLen]) { std::memcpy(byte, addr, kMacAddrLen); }
+    void Set(std::initializer_list<uint8_t> addr) {
+        if (addr.size() == kMacAddrLen) std::copy(addr.begin(), addr.end(), byte);
+    }
 
     bool FromStr(const std::string& str) {
         // Accepted format:   xx:xx:xx:xx:xx:xx
@@ -96,9 +99,7 @@ struct MacAddr {
         return m;
     }
 
-    bool operator==(const MacAddr& addr) const { return Cmp(addr) == 0; }
-}  // namespace wlan
-__PACKED;
+} __PACKED;
 
 struct MacAddrHasher {
     std::size_t operator()(const MacAddr& addr) const {

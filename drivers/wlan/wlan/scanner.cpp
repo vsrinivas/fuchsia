@@ -159,7 +159,7 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
     MacAddr bssid(hdr->addr3);
     MacAddr src_addr(hdr->addr2);
 
-    if (!bssid.Equals(src_addr)) {
+    if (bssid != src_addr) {
         // Undefined situation. Investigate if roaming needs this or this is a plain dark art.
         debugbcn("Rxed a beacon/probe_resp from the non-BSSID station: BSSID %s   SrcAddr %s\n",
                  bssid.ToString().c_str(), src_addr.ToString().c_str());
