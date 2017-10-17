@@ -39,7 +39,7 @@ VnodeSvc::VnodeSvc(uint64_t node_id,
 
 VnodeSvc::~VnodeSvc() = default;
 
-zx_status_t VnodeSvc::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t VnodeSvc::ValidateFlags(uint32_t flags) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
@@ -76,10 +76,6 @@ VnodeDir::VnodeDir()
     : next_node_id_(2) {}
 
 VnodeDir::~VnodeDir() = default;
-
-zx_status_t VnodeDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
-    return ZX_OK;
-}
 
 zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
     fbl::RefPtr<VnodeSvc> vn = nullptr;
@@ -172,10 +168,6 @@ VnodeProviderDir::VnodeProviderDir()
     : provider_(nullptr) {}
 
 VnodeProviderDir::~VnodeProviderDir() = default;
-
-zx_status_t VnodeProviderDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
-    return ZX_OK;
-}
 
 zx_status_t VnodeProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
     if (!IsValidServiceName(name)) {

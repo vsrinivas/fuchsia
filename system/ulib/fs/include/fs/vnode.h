@@ -48,15 +48,20 @@ class Vnode : public fbl::RefCounted<Vnode> {
 public:
     virtual ~Vnode();
 
-    // Ensures that it is valid to open the vnode with given flags and provides
-    // an opportunity to redirect subsequent I/O operations to a different vnode.
+    // Ensures that it is valid to access the vnode with given flags.
+    virtual zx_status_t ValidateFlags(uint32_t flags);
+
+    // Provides an opportunity to redirect subsequent I/O operations to a
+    // different vnode.
+    //
+    // Flags will have already been validated by "ValidateFlags".
     //
     // If the implementation of |Open()| sets |out_redirect| to a non-null value.
     // all following I/O operations on the opened file will be redirected to the
     // indicated vnode instead of being handled by this instance.
     //
     // |flags| are the open flags to be validated, such as |O_RDONLY| and |O_DIRECTORY|.
-    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) = 0;
+    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect);
 
     // METHODS FOR OPENED NODES
     //

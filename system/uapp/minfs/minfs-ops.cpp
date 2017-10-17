@@ -1074,8 +1074,8 @@ VnodeMinfs::~VnodeMinfs() {
 #endif
 }
 
-zx_status_t VnodeMinfs::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
-    FS_TRACE(MINFS, "minfs_open() vn=%p(#%u)\n", this, ino_);
+zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
+    FS_TRACE(MINFS, "VnodeMinfs::ValidateFlags(0x%x) vn=%p(#%u)\n", flags, this, ino_);
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ZX_ERR_NOT_DIR;
     }

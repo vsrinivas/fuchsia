@@ -210,7 +210,7 @@ private:
 
     // Implementing methods from the fs::Vnode, so MinFS vnodes may be utilized
     // by the VFS library.
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t len, size_t offset,
                       size_t* out_actual) final;

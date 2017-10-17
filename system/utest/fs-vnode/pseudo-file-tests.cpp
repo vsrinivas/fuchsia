@@ -111,50 +111,46 @@ bool test_open_validation_buffered() {
     // no read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile());
-        fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDWR, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_WRONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
     }
 
     // read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+
         fbl::RefPtr<fs::Vnode> redirect;
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
         EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
         EXPECT_NONNULL(redirect);
-        redirect.reset();
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDWR, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_WRONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
     }
 
     // no read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(nullptr, &DummyWriter));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDWR, &redirect));
-        EXPECT_NULL(redirect);
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
         EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
         EXPECT_NONNULL(redirect);
-        redirect.reset();
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
     }
 
     // read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader, &DummyWriter));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDONLY));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_OK, file->ValidateFlags(O_WRONLY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
+
         fbl::RefPtr<fs::Vnode> redirect;
         EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
         EXPECT_NONNULL(redirect);
@@ -164,9 +160,6 @@ bool test_open_validation_buffered() {
         redirect.reset();
         EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
         EXPECT_NONNULL(redirect);
-        redirect.reset();
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
     }
 
     END_TEST;
@@ -178,50 +171,38 @@ bool test_open_validation_unbuffered() {
     // no read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
-        fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDWR, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_WRONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
     }
 
     // read handler, no write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_WRONLY));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
         fbl::RefPtr<fs::Vnode> redirect;
         EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
         EXPECT_NONNULL(redirect);
-        redirect.reset();
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDWR, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_WRONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
     }
 
     // no read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(nullptr, &DummyWriter));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDONLY));
+        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateFlags(O_RDWR));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
         fbl::RefPtr<fs::Vnode> redirect;
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDONLY, &redirect));
-        EXPECT_NULL(redirect);
-        EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->Open(O_RDWR, &redirect));
-        EXPECT_NULL(redirect);
         EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
         EXPECT_NONNULL(redirect);
-        redirect.reset();
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
     }
 
     // read handler, write handler
     {
         auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader, &DummyWriter));
+        EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateFlags(O_DIRECTORY));
         fbl::RefPtr<fs::Vnode> redirect;
         EXPECT_EQ(ZX_OK, file->Open(O_RDONLY, &redirect));
         EXPECT_NONNULL(redirect);
@@ -231,9 +212,6 @@ bool test_open_validation_unbuffered() {
         redirect.reset();
         EXPECT_EQ(ZX_OK, file->Open(O_WRONLY, &redirect));
         EXPECT_NONNULL(redirect);
-        redirect.reset();
-        EXPECT_EQ(ZX_ERR_NOT_DIR, file->Open(O_DIRECTORY, &redirect));
-        EXPECT_NULL(redirect);
     }
 
     END_TEST;

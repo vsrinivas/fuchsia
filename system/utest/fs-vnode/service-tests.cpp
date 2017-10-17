@@ -26,8 +26,7 @@ bool test_service() {
     fbl::RefPtr<fs::Vnode> redirect;
     EXPECT_EQ(ZX_OK, svc->Open(O_RDONLY, &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_NOT_DIR, svc->Open(O_DIRECTORY, &redirect));
-    EXPECT_NULL(redirect);
+    EXPECT_EQ(ZX_ERR_NOT_DIR, svc->ValidateFlags(O_DIRECTORY));
 
     // get attr
     vnattr_t attr;

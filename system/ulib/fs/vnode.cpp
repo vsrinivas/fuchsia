@@ -34,6 +34,14 @@ zx_status_t Vnode::WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd) {
 
 void Vnode::Notify(fbl::StringPiece name, unsigned event) {}
 
+zx_status_t Vnode::ValidateFlags(uint32_t flags) {
+    return ZX_OK;
+}
+
+zx_status_t Vnode::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+    return ZX_OK;
+}
+
 zx_status_t Vnode::Close() {
     return ZX_OK;
 }

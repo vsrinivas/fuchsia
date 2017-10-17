@@ -30,7 +30,7 @@ public:
     ~Service() override;
 
     // |Vnode| implementation:
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
 

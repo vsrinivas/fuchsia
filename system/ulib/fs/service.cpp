@@ -13,7 +13,7 @@ Service::Service(Connector connector)
 
 Service::~Service() = default;
 
-zx_status_t Service::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t Service::ValidateFlags(uint32_t flags) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }

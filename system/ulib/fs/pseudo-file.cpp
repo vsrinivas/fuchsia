@@ -15,7 +15,7 @@ PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler)
 
 PseudoFile::~PseudoFile() = default;
 
-zx_status_t PseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t PseudoFile::ValidateFlags(uint32_t flags) {
     if (flags & O_DIRECTORY) {
         return ZX_ERR_NOT_DIR;
     }
@@ -47,14 +47,9 @@ BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler wr
 BufferedPseudoFile::~BufferedPseudoFile() = default;
 
 zx_status_t BufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
-    zx_status_t status = PseudoFile::Open(flags, out_redirect);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     fbl::String output;
     if (IsReadable(flags)) {
-        status = read_handler_(&output);
+        zx_status_t status = read_handler_(&output);
         if (status != ZX_OK) {
             return status;
         }
@@ -72,7 +67,7 @@ BufferedPseudoFile::Content::~Content() {
     delete[] input_data_;
 }
 
-zx_status_t BufferedPseudoFile::Content::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t BufferedPseudoFile::Content::ValidateFlags(uint32_t flags) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -169,11 +164,6 @@ UnbufferedPseudoFile::UnbufferedPseudoFile(ReadHandler read_handler, WriteHandle
 UnbufferedPseudoFile::~UnbufferedPseudoFile() = default;
 
 zx_status_t UnbufferedPseudoFile::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
-    zx_status_t status = PseudoFile::Open(flags, out_redirect);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     *out_redirect = fbl::AdoptRef(new Content(fbl::WrapRefPtr(this), flags));
     return ZX_OK;
 }

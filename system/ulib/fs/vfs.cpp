@@ -68,7 +68,7 @@ zx_status_t vfs_lookup(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
 
 // Validate open flags as much as they can be validated
 // independently of the target node.
-zx_status_t vfs_validate_flags(uint32_t flags) {
+zx_status_t vfs_prevalidate_flags(uint32_t flags) {
     switch (flags & O_ACCMODE) {
     case O_RDONLY:
         if (flags & O_TRUNC) {
@@ -127,7 +127,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
                             uint32_t flags, uint32_t mode) {
     FS_TRACE(VFS, "VfsOpen: path='%s' flags=%d\n", path.begin(), flags);
     zx_status_t r;
-    if ((r = vfs_validate_flags(flags)) != ZX_OK) {
+    if ((r = vfs_prevalidate_flags(flags)) != ZX_OK) {
         return r;
     }
     if ((r = Vfs::Walk(vndir, &vndir, path, &path)) < 0) {
@@ -189,7 +189,10 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 
         flags |= (must_be_dir ? O_DIRECTORY : 0);
 #endif
-        if ((r = OpenVnode(flags, &vn)) < 0) {
+        if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
+            return r;
+        }
+        if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
             return r;
         }
         if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
@@ -395,9 +398,11 @@ void Vfs::OnConnectionClosedRemotely(Connection* connection) {
 }
 
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) {
-    // Make sure the Vnode really is a directory.
+    uint32_t flags = O_DIRECTORY;
     zx_status_t r;
-    if ((r = OpenVnode(O_DIRECTORY, &vn)) != ZX_OK) {
+    if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
+        return r;
+    } else if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
         return r;
     }
 
