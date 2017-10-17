@@ -5,7 +5,7 @@
 #pragma once
 
 constexpr uint32_t HELPER_HANDLE_ID = 0x23011985;
-constexpr const char HELPER_PATH[] = "/system/bin/zircon-benchmarks";
+constexpr const char HELPER_PATH[] = "/system/bin/zircon_benchmarks";
 
 int channel_read(uint32_t num_bytes);
 int channel_write(uint32_t num_bytes);
