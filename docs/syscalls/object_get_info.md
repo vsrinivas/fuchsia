@@ -127,6 +127,13 @@ typedef struct zx_info_process {
 Returns an array of *zx_koid_t*, one for each running thread in the Process at
 that moment in time.
 
+N.B. Getting the list of threads is inherently racy.
+This can be somewhat mitigated by first suspending all the threads,
+but note that an external thread can create new threads.
+*actual* will contain the number of threads returned in *buffer*.
+*avail* will contain the total number of threads of the process at
+the time the list of threads was obtained, it could be larger than *actual*.
+
 ### ZX_INFO_RESOURCE_CHILDREN
 
 *handle* type: **Resource**
