@@ -23,8 +23,7 @@ class AudioOutputDevice {
                     const char* device_name,
                     int preferred_sample_rate,
                     int preferred_num_channels,
-                    int preferred_num_frames_in_buffer,
-                    zx_duration_t min_delay_nsec);
+                    int preferred_num_frames_in_buffer);
   ~AudioOutputDevice();
 
   const std::string& id() const { return id_; }
@@ -46,7 +45,6 @@ class AudioOutputDevice {
   int preferred_sample_rate_;
   int preferred_num_channels_;
   int preferred_num_frames_in_buffer_;
-  zx_duration_t min_delay_nsec_;
 };
 
 }  // namespace media_client

@@ -55,6 +55,9 @@ class MediaTimelineControllerImpl
       TimelineTransformPtr timeline_transform,
       const SetTimelineTransformCallback& callback) override;
 
+  void SetTimelineTransformAsync(
+      TimelineTransformPtr timeline_transform) override;
+
  private:
   static constexpr int64_t kDefaultLeadTime = Timeline::ns_from_ms(30);
 

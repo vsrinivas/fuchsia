@@ -12,12 +12,10 @@ AudioOutputDevice::AudioOutputDevice(const char* device_id,
                                      const char* device_name,
                                      int preferred_sample_rate,
                                      int preferred_num_channels,
-                                     int preferred_num_frames_in_buffer,
-                                     zx_duration_t min_delay_nsec)
+                                     int preferred_num_frames_in_buffer)
     : preferred_sample_rate_(preferred_sample_rate),
       preferred_num_channels_(preferred_num_channels),
-      preferred_num_frames_in_buffer_(preferred_num_frames_in_buffer),
-      min_delay_nsec_(min_delay_nsec) {
+      preferred_num_frames_in_buffer_(preferred_num_frames_in_buffer) {
   id_ = device_id;
   name_ = device_name;
 }
@@ -32,7 +30,7 @@ AudioOutputStream* AudioOutputDevice::CreateStream(
 
   AudioOutputStream* stream_ptr = nullptr;
 
-  if (stream->Initialize(stream_params, min_delay_nsec_, this)) {
+  if (stream->Initialize(stream_params, this)) {
     stream_ptr = stream.get();
     streams_.push_back(std::move(stream));
   }

@@ -194,6 +194,11 @@ void MediaTimelineControllerImpl::SetTimelineTransform(
   });
 }
 
+void MediaTimelineControllerImpl::SetTimelineTransformAsync(
+    TimelineTransformPtr timeline_transform) {
+  SetTimelineTransform(std::move(timeline_transform), [](bool completed) {});
+}
+
 void MediaTimelineControllerImpl::HandleControlPointEndOfStreamChange() {
   bool end_of_stream = true;
   for (const std::unique_ptr<ControlPointState>& control_point_state :

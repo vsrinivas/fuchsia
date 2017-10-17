@@ -73,6 +73,7 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
 
   // Implementation of AudioRenderer interface.
   void SetGain(float db_gain) override;
+  void GetMinDelay(const GetMinDelayCallback& callback) override;
 
   // MediaRenderer implementation.
   void GetSupportedMediaTypes(

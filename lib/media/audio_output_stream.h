@@ -8,6 +8,7 @@
 
 #include "garnet/lib/media/audio_output_device.h"
 #include "lib/media/c/audio.h"
+#include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 
@@ -18,9 +19,7 @@ class AudioOutputStream {
   AudioOutputStream();
   ~AudioOutputStream();
 
-  bool Initialize(fuchsia_audio_parameters* params,
-                  zx_time_t delay,
-                  AudioOutputDevice* device);
+  bool Initialize(fuchsia_audio_parameters* params, AudioOutputDevice* device);
   int Free() { return device_->FreeStream(this); }
 
   int GetMinDelay(zx_duration_t* delay_nsec_out);
@@ -42,6 +41,7 @@ class AudioOutputStream {
                                           size_t payload_size);
   bool SendMediaPacket(media::MediaPacketPtr packet);
 
+  media::AudioRendererSyncPtr audio_renderer_;
   media::MediaRendererSyncPtr media_renderer_;
   media::MediaPacketConsumerSyncPtr packet_consumer_;
   media::MediaTimelineControlPointSyncPtr timeline_control_point_;
@@ -55,7 +55,6 @@ class AudioOutputStream {
   AudioOutputDevice* device_ = nullptr;
   size_t num_channels_ = 0u;
   size_t sample_rate_ = 0u;
-  zx_time_t min_delay_nsec_ = 0u;
   bool received_first_frame_ = false;
   zx_time_t start_time_ = 0u;
   bool active_ = false;

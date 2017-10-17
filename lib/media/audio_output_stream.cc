@@ -13,6 +13,7 @@
 #include "garnet/public/lib/app/cpp/environment_services.h"
 #include "garnet/public/lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/time/time_point.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 #include "lib/media/fidl/audio_server.fidl.h"
 #include "lib/media/timeline/timeline.h"
@@ -26,7 +27,7 @@ constexpr size_t kBufferId = 0;
 // accidentally clip the start of the first sample during mixing. If the caller
 // specifies a start time for the first frame (which is the expected mode of
 // operation) we will use that value without adjustement.
-constexpr zx_duration_t kSyntheticStartTimeAdjustment = ZX_MSEC(5);
+constexpr zx_duration_t kSyntheticStartTimeAdjustment = ZX_MSEC(40);
 }  // namespace
 
 AudioOutputStream::AudioOutputStream() {}
@@ -36,7 +37,6 @@ AudioOutputStream::~AudioOutputStream() {
 }
 
 bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
-                                   zx_time_t delay,
                                    AudioOutputDevice* device) {
   FXL_DCHECK(params->num_channels >= kMinNumChannels);
   FXL_DCHECK(params->num_channels <= kMaxNumChannels);
@@ -46,7 +46,6 @@ bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
   num_channels_ = params->num_channels;
   sample_rate_ = params->sample_rate;
   bytes_per_frame_ = num_channels_ * sizeof(int16_t);
-  min_delay_nsec_ = delay;
   device_ = device;
   total_mapping_size_ = sample_rate_ * bytes_per_frame_;
 
@@ -71,9 +70,7 @@ bool AudioOutputStream::AcquireRenderer() {
   media::AudioServerSyncPtr audio_server;
   app::ConnectToEnvironmentService(GetSynchronousProxy(&audio_server));
 
-  // Only one of [AudioRenderer or MediaRenderer] must be kept open for playback
-  media::AudioRendererSyncPtr audio_renderer;
-  if (!audio_server->CreateRenderer(GetSynchronousProxy(&audio_renderer),
+  if (!audio_server->CreateRenderer(GetSynchronousProxy(&audio_renderer_),
                                     GetSynchronousProxy(&media_renderer_))) {
     return false;
   }
@@ -188,11 +185,20 @@ bool AudioOutputStream::SendMediaPacket(media::MediaPacketPtr packet) {
 int AudioOutputStream::GetMinDelay(zx_duration_t* delay_nsec_out) {
   FXL_DCHECK(delay_nsec_out);
 
+  Stop();
+  active_ = true;
+
   if (!active_) {
     return ZX_ERR_CONNECTION_ABORTED;
   }
 
-  *delay_nsec_out = min_delay_nsec_;
+  int64_t delay_ns = 0;
+  if (!audio_renderer_->GetMinDelay(&delay_ns)) {
+    return ZX_ERR_CONNECTION_ABORTED;
+  }
+
+  *delay_nsec_out = delay_ns;
+
   return ZX_OK;
 }
 
@@ -232,8 +238,8 @@ int AudioOutputStream::Write(float* sample_buffer,
   if (!received_first_frame_) {
     subject_time = 0;
     if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP) {
-      start_time_ = zx_time_get(ZX_CLOCK_MONOTONIC) + min_delay_nsec_ +
-                    kSyntheticStartTimeAdjustment;
+      start_time_ =
+          zx_time_get(ZX_CLOCK_MONOTONIC) + kSyntheticStartTimeAdjustment;
     } else {
       start_time_ = pres_time;
     }
@@ -268,10 +274,7 @@ bool AudioOutputStream::Start() {
   transform->reference_delta = 1;
   transform->subject_delta = 1;
 
-  bool completed;
-  bool set =
-      timeline_consumer->SetTimelineTransform(std::move(transform), &completed);
-  return set && completed;
+  return timeline_consumer->SetTimelineTransformAsync(std::move(transform));
 }
 
 void AudioOutputStream::Stop() {
@@ -288,8 +291,7 @@ void AudioOutputStream::Stop() {
   transform->reference_delta = 1;
   transform->subject_delta = 0;
 
-  bool completed;
-  timeline_consumer->SetTimelineTransform(std::move(transform), &completed);
+  timeline_consumer->SetTimelineTransformAsync(std::move(transform));
 }
 
 }  // namespace media_client

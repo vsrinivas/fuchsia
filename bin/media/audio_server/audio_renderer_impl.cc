@@ -275,6 +275,11 @@ void AudioRendererImpl::SetGain(float db_gain) {
   }
 }
 
+void AudioRendererImpl::GetMinDelay(const GetMinDelayCallback& callback) {
+  // TODO: Compute an actual value.
+  callback(ZX_MSEC(40));
+}
+
 void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FXL_DCHECK(link);

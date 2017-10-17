@@ -76,4 +76,7 @@ interface TimelineConsumer {
   // false.
   SetTimelineTransform(TimelineTransform timeline_transform) =>
       (bool completed);
+
+  // Same as above, but without the completion callback.
+  SetTimelineTransformAsync(TimelineTransform timeline_transform);
 };

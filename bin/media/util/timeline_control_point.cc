@@ -171,6 +171,24 @@ void TimelineControlPoint::SetTimelineTransform(
 
   fxl::MutexLocker locker(&mutex_);
 
+  SetTimelineTransformLocked(std::move(timeline_transform));
+
+  set_timeline_transform_callback_ = callback;
+}
+
+void TimelineControlPoint::SetTimelineTransformAsync(
+    TimelineTransformPtr timeline_transform) {
+  FLOG(log_channel_, ScheduleTimelineTransform(timeline_transform.Clone()));
+
+  fxl::MutexLocker locker(&mutex_);
+
+  SetTimelineTransformLocked(std::move(timeline_transform));
+}
+
+void TimelineControlPoint::SetTimelineTransformLocked(
+    TimelineTransformPtr timeline_transform) {
+  mutex_.AssertHeld();
+
   RCHECK(timeline_transform);
   RCHECK(timeline_transform->reference_delta != 0);
 
@@ -191,8 +209,6 @@ void TimelineControlPoint::SetTimelineTransform(
   pending_timeline_function_ = TimelineFunction(
       reference_time, subject_time, timeline_transform->reference_delta,
       timeline_transform->subject_delta);
-
-  set_timeline_transform_callback_ = callback;
 
   if (progress_started_callback_ && !was_progressing && ProgressingInternal()) {
     task_runner_->PostTask([this]() {

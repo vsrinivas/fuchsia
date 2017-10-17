@@ -204,6 +204,13 @@ void FakeRenderer::Prime(const PrimeCallback& callback) {
 void FakeRenderer::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
+  SetTimelineTransformAsync(std::move(timeline_transform));
+
+  set_timeline_transform_callback_ = callback;
+}
+
+void FakeRenderer::SetTimelineTransformAsync(
+    TimelineTransformPtr timeline_transform) {
   FXL_DCHECK(timeline_transform);
   FXL_DCHECK(timeline_transform->reference_delta != 0);
 
@@ -226,8 +233,6 @@ void FakeRenderer::SetTimelineTransform(
   pending_timeline_function_ = TimelineFunction(
       reference_time, subject_time, timeline_transform->reference_delta,
       timeline_transform->subject_delta);
-
-  set_timeline_transform_callback_ = callback;
 }
 
 void FakeRenderer::ClearPendingTimelineFunction(bool completed) {

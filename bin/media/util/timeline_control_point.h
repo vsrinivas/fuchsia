@@ -91,6 +91,9 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
       TimelineTransformPtr timeline_transform,
       const SetTimelineTransformCallback& callback) override;
 
+  void SetTimelineTransformAsync(
+      TimelineTransformPtr timeline_transform) override;
+
  private:
   // Applies pending_timeline_function_ if it's time to do so based on the
   // given reference time.
@@ -116,6 +119,9 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   // Determines if presentation time is progressing or a pending change will
   // cause it to progress.
   bool ProgressingInternal() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
+  void SetTimelineTransformLocked(TimelineTransformPtr timeline_transform)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
   fidl::Binding<TimelineConsumer> consumer_binding_;

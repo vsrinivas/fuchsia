@@ -17,4 +17,12 @@ interface AudioRenderer {
   // constant kMutedGain will result in the renderer becoming explicitly muted
   // (regardless of its underlying resolution or intensity).
   SetGain(float db_gain);
+
+  // Query the minimum possible presentation delay for this renderer, expressed
+  // in nanoseconds.
+
+  // This value depends on the media type and configuration of the renderer and
+  // what it is bound to, so in theory this should be queried again when either
+  // of these change. In practice, it's currently static.
+  GetMinDelay() => (int64 delay);
 };
