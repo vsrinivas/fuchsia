@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # Whether to run analysis on packages as part of the build.
-  run_dart_analysis = false
-}
-
 # Defines a Dart package
 #
 # Parameters
@@ -159,12 +154,7 @@ template("dart_package") {
 
   if (with_analysis) {
     invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
-
-    if (run_dart_analysis) {
-      invocation_target_name = "${target_name}_invocation"
-    } else {
-      invocation_target_name = target_name
-    }
+    invocation_target_name = "${target_name}_invocation"
 
     dart_sdk_dir = "//dart/tools/sdks/$host_os/dart-sdk"
     dart_analyzer_binary = "$dart_sdk_dir/bin/dartanalyzer"
@@ -214,53 +204,51 @@ template("dart_package") {
       }
     }
 
-    if (run_dart_analysis) {
-      action(target_name) {
-        runner_label = "//build/dart/analyzer($host_toolchain)"
-        runner_out_dir = get_label_info(runner_label, "root_out_dir")
-        script = "$runner_out_dir/dart-tools/analyzer"
+    action(target_name) {
+      runner_label = "//build/dart/analyzer($host_toolchain)"
+      runner_out_dir = get_label_info(runner_label, "root_out_dir")
+      script = "$runner_out_dir/dart-tools/analyzer"
 
-        server_label = "//dart/pkg/analysis_server:analysis_server_bin($host_toolchain)"
-        server_gen_dir = get_label_info(server_label, "target_gen_dir")
-        server_snaphost = "$server_gen_dir/analysis_server_bin.snapshot"
+      server_label = "//dart/pkg/analysis_server:analysis_server_bin($host_toolchain)"
+      server_gen_dir = get_label_info(server_label, "target_gen_dir")
+      server_snaphost = "$server_gen_dir/analysis_server_bin.snapshot"
 
-        depfile = "$target_gen_dir/$target_name.analysis.d"
+      depfile = "$target_gen_dir/$target_name.analysis.d"
 
-        output_file = "$target_gen_dir/$target_name.analyzed"
+      output_file = "$target_gen_dir/$target_name.analyzed"
 
-        inputs = [
-          options_file,
-        ]
+      inputs = [
+        options_file,
+      ]
 
-        pool = "//build/dart:analysis_pool($default_toolchain)"
+      pool = "//build/dart:analysis_pool($default_toolchain)"
 
-        outputs = [
-          output_file,
-        ]
+      outputs = [
+        output_file,
+      ]
 
-        args = [
-          "--package-root",
-          rebase_path("."),
-          "--source-dir",
-          rebase_path(source_dir, "."),
-          "--server-snapshot",
-          rebase_path(server_snaphost),
-          "--stamp",
-          rebase_path(output_file),
-          "--depname",
-          rebase_path(output_file, root_build_dir),
-          "--depfile",
-          rebase_path(depfile),
-          "--cache-path",
-          rebase_path("$root_out_dir/analysis-cache"),
-        ]
+      args = [
+        "--package-root",
+        rebase_path("."),
+        "--source-dir",
+        rebase_path(source_dir, "."),
+        "--server-snapshot",
+        rebase_path(server_snaphost),
+        "--stamp",
+        rebase_path(output_file),
+        "--depname",
+        rebase_path(output_file, root_build_dir),
+        "--depfile",
+        rebase_path(depfile),
+        "--cache-path",
+        rebase_path("$root_out_dir/analysis-cache"),
+      ]
 
-        deps = [
-          ":$invocation_target_name",
-          runner_label,
-          server_label,
-        ]
-      }
+      deps = [
+        ":$invocation_target_name",
+        runner_label,
+        server_label,
+      ]
     }
   }
 }
