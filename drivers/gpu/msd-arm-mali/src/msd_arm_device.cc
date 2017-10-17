@@ -496,6 +496,22 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out)
             *value_out = gpu_features_.l2_present;
             return MAGMA_STATUS_OK;
 
+        case kMsdArmVendorQueryMaxThreads:
+            *value_out = gpu_features_.thread_max_threads;
+            return MAGMA_STATUS_OK;
+
+        case kMsdArmVendorQueryThreadMaxBarrierSize:
+            *value_out = gpu_features_.thread_max_barrier_size;
+            return MAGMA_STATUS_OK;
+
+        case kMsdArmVendorQueryThreadMaxWorkgroupSize:
+            *value_out = gpu_features_.thread_max_workgroup_size;
+            return MAGMA_STATUS_OK;
+
+        case kMsdArmVendorQueryShaderPresent:
+            *value_out = gpu_features_.shader_present;
+            return MAGMA_STATUS_OK;
+
         default:
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
     }
