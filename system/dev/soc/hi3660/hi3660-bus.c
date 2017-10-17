@@ -160,6 +160,7 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "hi3660-bus",
+        .ctx = bus,
         .ops = &hi3660_device_protocol,
         // nothing should bind to this device
         // all interaction will be done via the pbus_interface_t
