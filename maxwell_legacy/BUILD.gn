@@ -91,6 +91,7 @@ package("maxwell_tests") {
   deps = [
     "//peridot/bin/context_engine:context_index_unittest",
     "//peridot/bin/context_engine:context_repository_unittest",
+    "//peridot/lib/module_manifest_repository:module_manifest_repository_unittest",
   ]
 
   tests = [
@@ -102,6 +103,10 @@ package("maxwell_tests") {
       name = "context_repository_unittest"
       dest = "maxwell/context_repository_unittest"
     },
+    {
+      name = "module_manifest_repository_unittest"
+      dest = "maxwell/module_manifest_repository_unittest"
+  }
   ]
 }
 
