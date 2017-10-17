@@ -26,7 +26,18 @@ void* tu_malloc(size_t size)
     void* result = malloc(size);
     if (result == NULL) {
         // TODO(dje): printf may try to malloc too ...
-        unittest_printf_critical("out of memory trying to allocate %zu bytes\n", size);
+        unittest_printf_critical("out of memory trying to malloc(%zu)\n", size);
+        exit(TU_FAIL_ERRCODE);
+    }
+    return result;
+}
+
+void* tu_calloc(size_t nmemb, size_t size)
+{
+    void* result = calloc(nmemb, size);
+    if (result == NULL) {
+        // TODO(dje): printf may try to malloc too ...
+        unittest_printf_critical("out of memory trying to calloc(%zu, %zu)\n", nmemb, size);
         exit(TU_FAIL_ERRCODE);
     }
     return result;
@@ -67,6 +78,16 @@ void tu_handle_close(zx_handle_t handle)
     if (status < 0) {
         tu_fatal(__func__, status);
     }
+}
+
+zx_handle_t tu_handle_duplicate(zx_handle_t handle)
+{
+    zx_handle_t copy = ZX_HANDLE_INVALID;
+    zx_status_t status =
+        zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &copy);
+    if (status < 0)
+        tu_fatal(__func__, status);
+    return copy;
 }
 
 // N.B. This creates a C11 thread.
@@ -250,6 +271,28 @@ int tu_process_wait_exit(zx_handle_t process)
     return tu_process_get_return_code(process);
 }
 
+zx_handle_t tu_process_get_thread(zx_handle_t process, zx_koid_t tid)
+{
+    zx_handle_t thread;
+    zx_status_t status = zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
+    if (status == ZX_ERR_NOT_FOUND)
+        return ZX_HANDLE_INVALID;
+    if (status < 0)
+        tu_fatal(__func__, status);
+    return thread;
+}
+
+size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t max_threads)
+{
+    size_t num_threads;
+    size_t buf_size = max_threads * sizeof(threads[0]);
+    zx_status_t status = zx_object_get_info(process, ZX_INFO_PROCESS_THREADS,
+                                            threads, buf_size, &num_threads, NULL);
+    if (status < 0)
+        tu_fatal(__func__, status);
+    return num_threads;
+}
+
 zx_handle_t tu_job_create(zx_handle_t job)
 {
     zx_handle_t child_job;
@@ -280,6 +323,15 @@ void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, 
     if (handle == 0)
         handle = zx_process_self();
     zx_status_t status = zx_task_bind_exception_port(handle, eport, key, options);
+    if (status < 0)
+        tu_fatal(__func__, status);
+}
+
+void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals)
+{
+    uint64_t key = tu_get_koid(handle);
+    uint32_t options = ZX_WAIT_ASYNC_REPEATING;
+    zx_status_t status = zx_object_wait_async(handle, port, key, signals, options);
     if (status < 0)
         tu_fatal(__func__, status);
 }

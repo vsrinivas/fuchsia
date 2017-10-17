@@ -37,10 +37,10 @@ __BEGIN_CDECLS
 // Obviously this must be reasonably larger than TU_WAIT_TIMEOUT_SECONDS.
 #define TU_WATCHDOG_TIMEOUT_TICKS 100  // 5 seconds
 
+// These malloc-using calls will terminate the process on ENOMEM.
 void* tu_malloc(size_t size);
-
+void* tu_calloc(size_t nmemb, size_t size);
 char* tu_strdup(const char* s);
-
 char* tu_asprintf(const char* fmt, ...);
 
 // Print a message saying a syscall (or similar) function failed,
@@ -53,6 +53,10 @@ void tu_fatal(const char *what, zx_status_t status);
 // A wrapper on zx_handle_close.
 
 void tu_handle_close(zx_handle_t handle);
+
+// A wrapper on zx_handle_duplicate.
+
+zx_handle_t tu_handle_duplicate(zx_handle_t handle);
 
 // A wrapper on launchpad_launch.
 
@@ -118,6 +122,19 @@ int tu_process_get_return_code(zx_handle_t process);
 
 int tu_process_wait_exit(zx_handle_t process);
 
+// Return the handle of thread |tid| in |process|.
+// Returns ZX_HANDLE_INVALID if the thread is not found (could have died).
+
+zx_handle_t tu_process_get_thread(zx_handle_t process, zx_koid_t tid);
+
+// Fetch the current threads of |process|.
+// |max_threads| is the size of the |threads| buffer.
+// Returns the actual number of threads at the point in time when the list
+// of threads is obtained. It could be larger than |max_threads|.
+// See discussion of ZX_INFO_PROCESS_THREADS in object_get_info.md.
+
+size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t max_threads);
+
 // Create a child job of |job|.
 
 zx_handle_t tu_job_create(zx_handle_t job);
@@ -133,6 +150,11 @@ void tu_set_system_exception_port(zx_handle_t eport, uint64_t key);
 // Set the exception port for |handle| which is a process or thread.
 
 void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, uint32_t options);
+
+// Add |handle| to the list of things |port| watches.
+// When |handle| is signaled with a signal in |signals| a zx_packet_signal_t
+// packet is sent to |port| with the key being the koid of |handle|.
+void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals);
 
 // Get basic handle info for |handle|.
 
