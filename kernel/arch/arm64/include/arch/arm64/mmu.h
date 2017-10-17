@@ -226,9 +226,21 @@
 #define MMU_PTE_ATTR_ATTR_INDEX(attrindex)      BM(2, 3, attrindex)
 #define MMU_PTE_ATTR_ATTR_INDEX_MASK            MMU_PTE_ATTR_ATTR_INDEX(7)
 
-#define MMU_PTE_PERMISSION_MASK (MMU_PTE_ATTR_AP_MASK | \
-                                 MMU_PTE_ATTR_UXN | \
-                                 MMU_PTE_ATTR_PXN)
+#define MMU_PTE_PERMISSION_MASK                 (MMU_PTE_ATTR_AP_MASK | \
+                                                 MMU_PTE_ATTR_UXN | \
+                                                 MMU_PTE_ATTR_PXN)
+
+#define MMU_S2_PTE_ATTR_XN                      BM(53, 2, 2)
+
+#define MMU_S2_PTE_ATTR_S2AP_RO                 BM(6, 2, 1)
+#define MMU_S2_PTE_ATTR_S2AP_RW                 BM(6, 2, 3)
+
+/* Normal, Outer Write-Back Cacheable, Inner Write-Back Cacheable. */
+#define MMU_S2_PTE_ATTR_NORMAL_MEMORY           BM(2, 4, 0xf)
+/* Device, Device-nGnRnE memory. */
+#define MMU_S2_PTE_ATTR_STRONGLY_ORDERED        BM(2, 4, 0x0)
+/* Device, Device-nGnRE memory. */
+#define MMU_S2_PTE_ATTR_DEVICE                  BM(2, 4, 0x1)
 
 /* Default configuration for main kernel page table:
  *    - do cached translation walks
