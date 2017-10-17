@@ -5,7 +5,7 @@
 group("link_data") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":test_link_data",
   ]
 }

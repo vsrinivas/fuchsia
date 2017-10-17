@@ -5,7 +5,7 @@
 group("suggestion") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":suggestion_proposal_test_module",
     ":suggestion_test_user_shell",
   ]
@@ -22,9 +22,9 @@ executable("suggestion_proposal_test_module") {
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/module_driver/cpp",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/module_driver/cpp",
   ]
 }
 

@@ -5,7 +5,7 @@
 group("user_shell") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":test_user_shell",
   ]
 }

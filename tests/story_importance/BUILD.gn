@@ -5,7 +5,7 @@
 group("story_importance") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":test_story_importance",
   ]
 }

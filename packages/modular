@@ -2,137 +2,19 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//peridot:modular_unittests",
-        "//peridot:modular"
-    ],
+    "packages": {
+        "modular": "//peridot:modular",
+        "modular_dev": "//peridot:modular_dev",
+        "modular_tests": "//peridot/tests:modular_tests",
+        "modular_unittests": "//peridot:modular_unittests"
+    },
     "components": [
         "peridot/bin/component_manager/component_manager.json"
     ],
     "binaries": [
         {
-            "binary": "agent_trigger_test",
-            "bootfs_path": "apps/modular_tests/agent_trigger_test"
-        },
-        {
-            "binary": "child_module",
-            "bootfs_path": "apps/modular_tests/child_module"
-        },
-        {
-            "binary": "context_link_module",
-            "bootfs_path": "apps/modular_tests/context_link_module"
-        },
-        {
-            "binary": "context_link_user_shell",
-            "bootfs_path": "apps/modular_tests/context_link_user_shell"
-        },
-        {
-            "binary": "component_context_test",
-            "bootfs_path": "apps/modular_tests/component_context_test"
-        },
-        {
-            "binary": "component_context_test_agent1",
-            "bootfs_path": "apps/modular_tests/component_context_test_agent1"
-        },
-        {
-            "binary": "component_context_test_agent2",
-            "bootfs_path": "apps/modular_tests/component_context_test_agent2"
-        },
-        {
-            "binary": "component_context_unstoppable_agent",
-            "bootfs_path": "apps/modular_tests/component_context_unstoppable_agent"
-        },
-        {
-            "binary": "component_manager_main",
-            "bootfs_path": "apps/component_manager"
-        },
-        {
-            "binary": "dev_user_shell",
-            "bootfs_path": "apps/dev_user_shell"
-        },
-        {
-            "binary": "device_runner",
-            "bootfs_path": "apps/device_runner"
-        },
-        {
-            "binary": "device_runner_monitor",
-            "bootfs_path": "apps/device_runner_monitor"
-        },
-        {
-            "binary": "dev_device_shell",
-            "bootfs_path": "apps/dev_device_shell"
-        },
-        {
-            "binary": "dev_story_shell",
-            "bootfs_path": "apps/dev_story_shell"
-        },
-        {
             "binary": "gen/component_index.json",
             "bootfs_path": "components/index.json"
-        },
-        {
-            "binary": "modular_tests.json",
-            "bootfs_path": "apps/modular_tests/modular_tests.json"
-        },
-        {
-            "binary": "parent_module",
-            "bootfs_path": "apps/modular_tests/parent_module"
-        },
-        {
-            "binary": "queue_persistence_test_agent",
-            "bootfs_path": "apps/modular_tests/queue_persistence_test_agent"
-        },
-        {
-            "binary": "queue_persistence_test_module",
-            "bootfs_path": "apps/modular_tests/queue_persistence_test_module"
-        },
-        {
-            "binary": "remote_invoker_test",
-            "bootfs_path": "apps/modular_tests/remote_invoker_test"
-        },
-        {
-            "binary": "modular_unittests",
-            "bootfs_path": "test/modular_unittests"
-        },
-        {
-            "binary": "null_module",
-            "bootfs_path": "apps/modular_tests/null_module"
-        },
-        {
-            "binary": "suggestion_proposal_test_module",
-            "bootfs_path": "apps/modular_tests/suggestion_proposal_test_module"
-        },
-        {
-            "binary": "suggestion_test_user_shell",
-            "bootfs_path": "apps/suggestion_test_user_shell"
-        },
-        {
-            "binary": "test_last_focus_time",
-            "bootfs_path": "apps/test_last_focus_time"
-        },
-        {
-            "binary": "test_link_data",
-            "bootfs_path": "apps/test_link_data"
-        },
-        {
-            "binary": "test_link_update",
-            "bootfs_path": "apps/test_link_update"
-        },
-        {
-            "binary": "test_story_importance",
-            "bootfs_path": "apps/test_story_importance"
-        },
-        {
-            "binary": "test_user_shell",
-            "bootfs_path": "apps/test_user_shell"
-        },
-        {
-            "binary": "trigger_test_agent",
-            "bootfs_path": "apps/modular_tests/trigger_test_agent"
-        },
-        {
-            "binary": "user_runner",
-            "bootfs_path": "apps/user_runner"
         }
     ],
     "resources": [

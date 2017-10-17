@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
+  public_deps = [
     ":dev_story_shell",
     ":story_runner",
   ]
@@ -43,7 +43,6 @@ source_set("story_runner") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:context",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/lib/async/cpp:operation",
     "//peridot/lib/fidl:proxy",
     "//peridot/lib/fidl:scope",
     "//peridot/lib/ledger_client:operations",
@@ -53,6 +52,7 @@ source_set("story_runner") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/util",
     "//peridot/lib/util:debug",
+    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/context/fidl",

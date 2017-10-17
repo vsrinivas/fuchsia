@@ -5,7 +5,7 @@
 group("last_focus_time") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":test_last_focus_time",
   ]
 }

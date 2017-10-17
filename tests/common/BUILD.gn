@@ -5,7 +5,7 @@
 group("common") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":null_module",
   ]
 }

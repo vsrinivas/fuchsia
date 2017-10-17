@@ -5,7 +5,7 @@
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 group("all") {
-  deps = [
+  public_deps = [
     ":dev_device_shell",
     ":device_runner",
     ":device_runner_monitor",

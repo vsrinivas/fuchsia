@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
+  public_deps = [
     ":dev_user_shell",
     ":user_runner",
   ]
@@ -40,7 +40,6 @@ executable("user_runner") {
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/lib/async/cpp:operation",
     "//peridot/lib/fidl:scope",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:operations",
@@ -51,6 +50,7 @@ executable("user_runner") {
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/agent/fidl",
     "//peridot/public/lib/agent/fidl/agent_controller",
+    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl/account",
     "//peridot/public/lib/config/fidl",
     "//peridot/public/lib/context/fidl",
@@ -98,12 +98,12 @@ source_set("focus") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/lib/async/cpp:operation",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/user/fidl:focus",
     "//peridot/public/lib/user/fidl:private",

@@ -2,8 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
+import("//packages/package.gni")
+
+package("modular_tests") {
   testonly = true
+  app = true
 
   deps = [
     ":modular_tests.json",
@@ -20,6 +23,93 @@ group("tests") {
     "suggestion",
     "triggers",
     "user_shell",
+  ]
+
+  # These should probably be tests, but they were previously in
+  # the "apps" directory rather than the tests directory.
+  binaries = [
+    {
+      name = "agent_trigger_test"
+      dest = "modular_tests/agent_trigger_test"
+    },
+    {
+      name = "child_module"
+      dest = "modular_tests/child_module"
+    },
+    {
+      name = "context_link_module"
+      dest = "modular_tests/context_link_module"
+    },
+    {
+      name = "context_link_user_shell"
+      dest = "modular_tests/context_link_user_shell"
+    },
+    {
+      name = "component_context_test"
+      dest = "modular_tests/component_context_test"
+    },
+    {
+      name = "component_context_test_agent1"
+      dest = "modular_tests/component_context_test_agent1"
+    },
+    {
+      name = "component_context_test_agent2"
+      dest = "modular_tests/component_context_test_agent2"
+    },
+    {
+      name = "component_context_unstoppable_agent"
+      dest = "modular_tests/component_context_unstoppable_agent"
+    },  # This should be a resource to avoid the extra copy() rule.
+    {
+      name = "modular_tests.json"
+      dest = "modular_tests/modular_tests.json"
+    },
+    {
+      name = "parent_module"
+      dest = "modular_tests/parent_module"
+    },
+    {
+      name = "queue_persistence_test_agent"
+      dest = "modular_tests/queue_persistence_test_agent"
+    },
+    {
+      name = "queue_persistence_test_module"
+      dest = "modular_tests/queue_persistence_test_module"
+    },
+    {
+      name = "remote_invoker_test"
+      dest = "modular_tests/remote_invoker_test"
+    },
+    {
+      name = "null_module"
+      dest = "modular_tests/null_module"
+    },
+    {
+      name = "suggestion_proposal_test_module"
+      dest = "modular_tests/suggestion_proposal_test_module"
+    },
+    {
+      name = "suggestion_test_user_shell"
+    },
+    {
+      name = "test_last_focus_time"
+    },
+    {
+      name = "test_link_data"
+    },
+    {
+      name = "test_link_update"
+    },
+    {
+      name = "test_story_importance"
+    },
+    {
+      name = "test_user_shell"
+    },
+    {
+      name = "trigger_test_agent"
+      dest = "modular_tests/trigger_test_agent"
+    },
   ]
 }
 

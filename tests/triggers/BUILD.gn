@@ -7,7 +7,7 @@ import("//garnet/public/lib/fidl/fidl.gni")
 group("triggers") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":agent_trigger_test",
     ":trigger_test_agent",
   ]

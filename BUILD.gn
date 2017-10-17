@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 config("internal") {
   include_dirs = [
     ".",
@@ -9,18 +11,55 @@ config("internal") {
   ]
 }
 
-group("modular") {
+package("modular") {
+  app = true
   testonly = true
 
   deps = [
-    ":modular_unittests",
     "bin",
-    "public/lib:services",
-    "tests",
+  ]
+
+  binaries = [
+    {
+      name = "component_manager_main"
+      dest = "component_manager"
+    },
+    {
+      name = "device_runner"
+    },
+    {
+      name = "device_runner_monitor"
+    },
+    {
+      name = "user_runner"
+    },
   ]
 }
 
-executable("modular_unittests") {
+package("modular_dev") {
+  app = true
+  testonly = true
+
+  deps = [
+    "bin",
+  ]
+
+  binaries = [
+    {
+      name = "dev_user_shell"
+    },
+    {
+      name = "dev_device_shell"
+    },
+    {
+      name = "dev_story_shell"
+    },
+  ]
+}
+
+executable("modular_unittests_bin") {
+  output_name = "modular_unittests"
+
   testonly = true
 
   deps = [
@@ -32,4 +71,16 @@ executable("modular_unittests") {
     "//peridot/examples/counter_cpp:unittests",
     "//peridot/lib:unittests",
   ]
+}
+
+package("modular_unittests") {
+  testonly = true
+
+  deps = [
+    ":modular_unittests_bin",
+  ]
+
+  tests = [ {
+        name = "modular_unittests"
+      } ]
 }

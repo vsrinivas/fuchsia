@@ -5,7 +5,7 @@
 group("link_update") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":test_link_update",
   ]
 }

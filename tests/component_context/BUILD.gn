@@ -7,7 +7,7 @@ import("//garnet/public/lib/fidl/fidl.gni")
 group("component_context") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":component_context_test",
     ":component_context_test_agent1",
     ":component_context_test_agent2",

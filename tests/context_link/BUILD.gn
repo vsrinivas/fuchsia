@@ -5,7 +5,7 @@
 group("context_link") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":context_link_module",
     ":context_link_user_shell",
   ]

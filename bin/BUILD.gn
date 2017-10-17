@@ -5,8 +5,9 @@
 group("bin") {
   testonly = true
 
-  deps = [
+  public_deps = [
     "component_manager",
+    "component_manager:component_manager_main",
     "device_runner:all",
     "entity",
     "module_resolver",

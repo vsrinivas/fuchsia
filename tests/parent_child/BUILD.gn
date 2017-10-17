@@ -5,7 +5,7 @@
 group("parent_child") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":child_module",
     ":parent_module",
   ]
