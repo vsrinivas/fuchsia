@@ -130,7 +130,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
                   remaining_object_digests_.push_back(std::move(digest));
 
                   if (current_objects_handled_ == 0u) {
-                    on_error_(ErrorType::TEMPORARY);
+                    on_error_(error_type_);
                   }
                   return;
                 }

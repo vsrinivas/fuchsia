@@ -114,8 +114,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
              std::move(unsynced_objects_to_return[object_digest.ToString()]));
   }
 
-  void MarkPieceSynced(storage::ObjectDigestView object_digest,
-                       std::function<void(storage::Status)> callback) override {
+  virtual void MarkPieceSynced(
+      storage::ObjectDigestView object_digest,
+      std::function<void(storage::Status)> callback) override {
     objects_marked_as_synced.insert(object_digest.ToString());
     callback(storage::Status::OK);
   }
@@ -148,6 +149,17 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
 };
 
+// Fake implementation of storage::PageStorage. Fails when trying to mark
+// objects as synced and can be used to verify behavior on object upload storage
+// errors.
+class TestPageStorageFailingToMarkPieces : public TestPageStorage {
+ public:
+  void MarkPieceSynced(storage::ObjectDigestView object_digest,
+                       std::function<void(storage::Status)> callback) override {
+    callback(storage::Status::NOT_IMPLEMENTED);
+  }
+};
+
 class BatchUploadTest : public ::test::TestWithMessageLoop {
  public:
   BatchUploadTest()
@@ -168,8 +180,16 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
   std::unique_ptr<BatchUpload> MakeBatchUpload(
       std::vector<std::unique_ptr<const storage::Commit>> commits,
       unsigned int max_concurrent_uploads = 10) {
+    return MakeBatchUploadWithStorage(&storage_, std::move(commits),
+                                      max_concurrent_uploads);
+  }
+
+  std::unique_ptr<BatchUpload> MakeBatchUploadWithStorage(
+      storage::PageStorage* storage,
+      std::vector<std::unique_ptr<const storage::Commit>> commits,
+      unsigned int max_concurrent_uploads = 10) {
     return std::make_unique<BatchUpload>(
-        &storage_, &encryption_service_, &page_cloud_ptr_, std::move(commits),
+        storage, &encryption_service_, &page_cloud_ptr_, std::move(commits),
         [this] {
           done_calls_++;
           message_loop_.PostQuitTask();
@@ -314,7 +334,7 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
 }
 
-// Test un upload that fails on uploading objects.
+// Test an upload that fails on uploading objects.
 TEST_F(BatchUploadTest, FailedObjectUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
@@ -420,6 +440,50 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
   EXPECT_EQ(2u, storage_.objects_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest1"));
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_digest2"));
+}
+
+// Test a commit upload that gets an error from storage.
+TEST_F(BatchUploadTest, FailedCommitUploadWitStorageError) {
+  storage::test::PageStorageEmptyImpl test_storage;
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content"));
+
+  auto batch_upload =
+      MakeBatchUploadWithStorage(&test_storage, std::move(commits));
+
+  batch_upload->Start();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(0u, done_calls_);
+  EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(BatchUpload::ErrorType::PERMANENT, last_error_type_);
+
+  // Verify that no commits were uploaded.
+  EXPECT_EQ(0u, page_cloud_.received_commits.size());
+}
+
+// Test objects upload that get an error from storage.
+TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
+  TestPageStorageFailingToMarkPieces test_storage;
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content"));
+
+  test_storage.unsynced_objects_to_return["obj_digest1"] =
+      std::make_unique<TestObject>("obj_digest1", "obj_data1");
+  test_storage.unsynced_objects_to_return["obj_digest2"] =
+      std::make_unique<TestObject>("obj_digest2", "obj_data2");
+
+  auto batch_upload =
+      MakeBatchUploadWithStorage(&test_storage, std::move(commits));
+
+  batch_upload->Start();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(0u, done_calls_);
+  EXPECT_EQ(1u, error_calls_);
+  EXPECT_EQ(BatchUpload::ErrorType::PERMANENT, last_error_type_);
+
+  // Verify that no commit or objects were uploaded.
+  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
+  EXPECT_EQ(0u, storage_.objects_marked_as_synced.size());
 }
 
 // Verifies that if only one of many uploads fails, we still stop and notify the
