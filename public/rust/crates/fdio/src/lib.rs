@@ -7,7 +7,9 @@
 extern crate fuchsia_zircon as zircon;
 extern crate fuchsia_zircon_sys as zircon_sys;
 
-mod fdio_sys;
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+pub mod fdio_sys;
 
 use zircon_sys as sys;
 
@@ -70,7 +72,7 @@ unsafe extern "C" fn watcher_cb<F>(
     _dirfd: raw::c_int,
     event: raw::c_int,
     fn_: *const raw::c_char,
-    watcher: *const raw::c_void,
+    watcher: *mut raw::c_void,
 ) -> sys::zx_status_t
 where
     F: Sized + FnMut(WatchEvent, &Path) -> Result<(), zircon::Status>,
@@ -103,7 +105,7 @@ where
     unsafe {
         zircon::Status::from_raw(fdio_sys::fdio_watch_directory(
             dir.as_raw_fd(),
-            watcher_cb::<F>,
+            &mut Some(watcher_cb::<F>),
             deadline,
             cb_ptr,
         ))
@@ -117,19 +119,9 @@ macro_rules! make_ioctl {
     };
 }
 /// Calculates an IOCTL value from kind, family and number.
-pub fn make_ioctl(kind: i32, family: i32, number: i32) -> i32 {
+pub fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int) -> raw::c_int {
     make_ioctl!(kind, family, number)
 }
 
-pub const IOCTL_KIND_DEFAULT: i32 = 0;
-pub const IOCTL_KIND_GET_HANDLE: i32 = 0x1;
-pub const IOCTL_KIND_SET_HANDLE: i32 = 0x3;
-
-pub const IOCTL_FAMILY_DEVICE: i32 = 0x01;
-pub const IOCTL_FAMILY_VFS: i32 = 0x2;
-pub const IOCTL_FAMILY_CONSOLE: i32 = 0x10;
-pub const IOCTL_FAMILY_INPUT: i32 = 0x11;
-pub const IOCTL_FAMILY_DISPLAY: i32 = 0x12;
-
-pub const IOCTL_VFS_MOUNT_FS: i32 = make_ioctl!(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 0);
-pub const IOCTL_VFS_UNMOUNT_NODE: i32 = make_ioctl!(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_VFS, 2);
+pub const IOCTL_VFS_MOUNT_FS: raw::c_int = make_ioctl!(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_VFS, 0);
+pub const IOCTL_VFS_UNMOUNT_NODE: raw::c_int = make_ioctl!(fdio_sys::IOCTL_KIND_GET_HANDLE, fdio_sys::IOCTL_FAMILY_VFS, 2);

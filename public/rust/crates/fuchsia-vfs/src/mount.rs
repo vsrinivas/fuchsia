@@ -43,7 +43,7 @@ impl Drop for Mount {
                 fdio::IOCTL_VFS_UNMOUNT_NODE,
                 std::ptr::null_mut(),
                 0,
-                &mut h as *mut _ as *mut u8,
+                &mut h as *mut _ as *mut std::os::raw::c_void,
                 std::mem::size_of::<zircon_sys::zx_handle_t>(),
             )
         };
@@ -82,7 +82,7 @@ pub fn mount(path: &Path, chan: zircon::Channel) -> Result<Mount, zircon::Status
         fdio::ioctl(
             mount.mountfd,
             fdio::IOCTL_VFS_MOUNT_FS,
-            &h as *const _ as *const u8,
+            &h as *const _ as *const std::os::raw::c_void,
             std::mem::size_of::<zircon_sys::zx_handle_t>(),
             std::ptr::null_mut(),
             0,
