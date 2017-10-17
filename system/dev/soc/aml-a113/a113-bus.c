@@ -21,6 +21,7 @@
 #include <zircon/assert.h>
 
 #include "a113-bus.h"
+#include <hw/reg.h>
 
 static zx_status_t a113_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -69,6 +70,14 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     pbus_set_interface(&bus->pbus, &intf);
 
     a113_audio_init(bus);
+
+    // Initialize Pin mux subsystem.
+    status = a113_init_pinmux(bus);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "a113_bus_bind: failed to initialize pinmux subsystem, "
+                "rc = %d\n", status);
+        // Don't think this is worthy of returning failure in bind.
+    }
 
     return ZX_OK;
 

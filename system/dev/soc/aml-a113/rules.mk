@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/a113-audio.c \
     $(LOCAL_DIR)/a113-bus.c \
+    $(LOCAL_DIR)/a113-pinmux.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 
