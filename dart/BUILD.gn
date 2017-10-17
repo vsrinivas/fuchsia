@@ -4,6 +4,6 @@
 
 if (current_toolchain == default_toolchain) {
   pool("analysis_pool") {
-    depth = 15
+    depth = 10
   }
 }

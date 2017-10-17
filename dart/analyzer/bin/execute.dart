@@ -71,7 +71,7 @@ Future<Null> main(List<String> args) async {
     }
   });
 
-  await client.server.onConnected.first.timeout(new Duration(seconds: 10));
+  await client.server.onConnected.first.timeout(new Duration(seconds: 30));
 
   // Handle errors.
   client.server.onError.listen((ServerError e) {
