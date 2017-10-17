@@ -42,6 +42,9 @@ EXTRA_PACKAGES=(
    # hdparm benchmark
    hdparm
 
+   # QEMU/KVM
+   qemu-kvm
+
    # Misc utilities
    ca-certificates
    curl

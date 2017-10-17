@@ -189,4 +189,36 @@ sudo cp "${GRUB_CONF}" "${EFI_MOUNT_PATH}/grub/grub.cfg"
 rm "${GRUB_CONF}"
 echo " SUCCESS"
 
+echo -n "Copying fstab..."
+EFI_UUID=$(sudo blkid -s UUID -o value "${EFI_PARTITION_PATH}")
+FSTAB=$(mktemp)
+echo "" > "${FSTAB}"
+echo "UUID=${EFI_UUID} /boot vfat defaults,iversion,noauto,x-systemd.automount 0 1" > "${FSTAB}"
+sudo cp "${FSTAB}" "${MOUNT_PATH}/etc/fstab"
+rm "${FSTAB}"
+echo "SUCCESS"
+
+echo -n "Copying run-qemu.sh..."
+RUN_QEMU=$(mktemp)
+cat > "${RUN_QEMU}" << EOF
+#!/bin/sh
+
+qemu-system-x86_64 \
+    -nographic \
+    -drive file=/dev/disk/by-uuid/${ROOT_UUID},readonly=on,format=raw,if=none,id=root \
+    -device virtio-blk-pci,drive=root \
+    -device virtio-serial-pci \
+    -net none \
+    -machine q35 \
+    -enable-kvm \
+    -cpu host,migratable=no \
+    -initrd /initrd.img \
+    -kernel /vmlinuz \
+    -append "root=/dev/disk/by-uuid/${ROOT_UUID} ro lockfs console=ttyS0"
+EOF
+sudo cp "${RUN_QEMU}" "${MOUNT_PATH}/opt/run-qemu.sh"
+sudo chmod +x "${MOUNT_PATH}/opt/run-qemu.sh"
+rm "${RUN_QEMU}"
+echo " SUCCESS"
+
 # Filesystems will be unmounted at exit by the trap set above.
