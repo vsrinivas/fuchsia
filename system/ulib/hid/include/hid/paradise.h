@@ -74,4 +74,29 @@ typedef struct paradise_stylus {
 extern bool is_paradise_touch_report_desc(const uint8_t* data, size_t len);
 extern zx_status_t setup_paradise_touch(int fd);
 
+typedef struct paradise_touchpad_finger {
+    uint8_t tip_switch : 1;
+    uint8_t in_range : 7;
+
+    uint16_t id;
+
+    uint16_t x;
+    uint16_t y;
+    uint16_t width;
+    uint16_t height;
+    uint8_t tip_pressure;
+} __attribute((packed)) paradise_touchpad_finger_t;
+
+typedef struct paradise_touchpad {
+    uint8_t report_id;
+
+    uint8_t button : 1;
+    uint8_t contact_count : 7;
+
+    paradise_touchpad_finger_t fingers[5];
+} __attribute((packed)) paradise_touchpad_t;
+
+extern bool is_paradise_touchpad_report_desc(const uint8_t* data, size_t len);
+extern zx_status_t setup_paradise_touchpad(int fd);
+
 __END_CDECLS
