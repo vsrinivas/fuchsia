@@ -11,7 +11,9 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
@@ -28,6 +30,7 @@ ledger::Status GetLedger(
     fsl::MessageLoop* loop,
     app::ApplicationContext* context,
     app::ApplicationControllerPtr* controller,
+    fxl::RefPtr<fxl::TaskRunner> services_task_runner,
     ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
         token_provider_impl,
     std::string ledger_name,

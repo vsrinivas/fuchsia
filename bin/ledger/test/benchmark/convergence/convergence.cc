@@ -10,6 +10,7 @@
 #include <trace/event.h>
 
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -59,6 +60,8 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
 }
 
 void ConvergenceBenchmark::Run() {
+  services_thread_ = fsl::CreateThread(&services_task_runner_);
+
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
   std::string alpha_path = alpha_tmp_dir_.path() + "/sync_user";
@@ -71,13 +74,15 @@ void ConvergenceBenchmark::Run() {
 
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &alpha_controller_, &token_provider_impl_, "sync", alpha_path,
-      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha_ledger_);
+      &alpha_controller_, services_task_runner_, &token_provider_impl_, "sync",
+      alpha_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_,
+      &alpha_ledger_);
   QuitOnError(status, "alpha ledger");
-  status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &beta_controller_, &token_provider_impl_, "sync", beta_path,
-      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta_ledger_);
+  status = test::GetLedger(fsl::MessageLoop::GetCurrent(),
+                           application_context_.get(), &beta_controller_,
+                           services_task_runner_, &token_provider_impl_, "sync",
+                           beta_path, test::SyncState::CLOUD_SYNC_ENABLED,
+                           server_id_, &beta_ledger_);
   QuitOnError(status, "beta ledger");
 
   ledger::PagePtr page;
@@ -167,6 +172,11 @@ void ConvergenceBenchmark::ShutDown() {
   beta_controller_->Kill();
   beta_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
+
+  services_task_runner_->PostTask(
+      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
+  services_thread_.join();
+
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 }  // namespace benchmark

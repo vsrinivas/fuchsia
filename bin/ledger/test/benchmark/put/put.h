@@ -6,9 +6,12 @@
 #define PERIDOT_BIN_LEDGER_TEST_BENCHMARK_PUT_PUT_H_
 
 #include <memory>
+#include <thread>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include "lib/fxl/memory/ref_ptr.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/data_generator.h"
@@ -91,6 +94,10 @@ class PutBenchmark {
 
   app::ApplicationControllerPtr application_controller_;
   ledger::PagePtr page_;
+
+  // Thread used to do services.
+  std::thread services_thread_;
+  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };

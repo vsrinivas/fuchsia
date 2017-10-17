@@ -10,6 +10,7 @@
 #include <trace/event.h>
 
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/threading/create_thread.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
@@ -67,6 +68,8 @@ SyncBenchmark::SyncBenchmark(size_t entry_count,
 }
 
 void SyncBenchmark::Run() {
+  services_thread_ = fsl::CreateThread(&services_task_runner_);
+
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
   std::string alpha_path = alpha_tmp_dir_.path() + "/sync_user";
@@ -80,15 +83,15 @@ void SyncBenchmark::Run() {
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &alpha_controller_, &token_provider_impl_, "sync", alpha_path,
-      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha);
+      &alpha_controller_, services_task_runner_, &token_provider_impl_, "sync",
+      alpha_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha);
   QuitOnError(status, "alpha ledger");
 
   ledger::LedgerPtr beta;
   status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &beta_controller_, &token_provider_impl_, "sync", beta_path,
-      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta);
+      &beta_controller_, services_task_runner_, &token_provider_impl_, "sync",
+      beta_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta);
   QuitOnError(status, "beta ledger");
 
   fidl::Array<uint8_t> id;
@@ -140,8 +143,9 @@ void SyncBenchmark::RunSingle(size_t i) {
     }
     alpha_page_->CreateReferenceFromVmo(
         std::move(vmo),
-        fxl::MakeCopyable([ this, key = std::move(key) ](
-            ledger::Status status, ledger::ReferencePtr reference) mutable {
+        fxl::MakeCopyable([this, key = std::move(key)](
+                              ledger::Status status,
+                              ledger::ReferencePtr reference) mutable {
           if (benchmark::QuitOnError(status, "Page::CreateReferenceFromVmo")) {
             return;
           }
@@ -162,8 +166,8 @@ void SyncBenchmark::Backlog() {
 
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &gamma_controller_, &token_provider_impl_, "sync", gamma_path,
-      test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &gamma_);
+      &gamma_controller_, services_task_runner_, &token_provider_impl_, "sync",
+      gamma_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &gamma_);
   QuitOnError(status, "backlog");
   TRACE_ASYNC_BEGIN("benchmark", "get and verify backlog", 0);
   gamma_->GetPage(page_id_.Clone(), gamma_page_.NewRequest(),
@@ -183,18 +187,19 @@ void SyncBenchmark::VerifyBacklog() {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
       nullptr, nullptr,
-      fxl::MakeCopyable([ this, snapshot = std::move(snapshot) ](
-          ledger::Status status, auto entries, auto next_token) {
-        if (benchmark::QuitOnError(status, "GetEntries")) {
-          return;
-        }
-        if (entries.size() == static_cast<size_t>(entry_count_)) {
-          TRACE_ASYNC_END("benchmark", "get and verify backlog", 0);
-        }
-        // If the number of entries does not match, don't record the end of the
-        // verify backlog even, which will fail the benchmark.
-        ShutDown();
-      }));
+      fxl::MakeCopyable(
+          [this, snapshot = std::move(snapshot)](
+              ledger::Status status, auto entries, auto next_token) {
+            if (benchmark::QuitOnError(status, "GetEntries")) {
+              return;
+            }
+            if (entries.size() == static_cast<size_t>(entry_count_)) {
+              TRACE_ASYNC_END("benchmark", "get and verify backlog", 0);
+            }
+            // If the number of entries does not match, don't record the end of
+            // the verify backlog even, which will fail the benchmark.
+            ShutDown();
+          }));
 }
 
 void SyncBenchmark::ShutDown() {
@@ -207,6 +212,11 @@ void SyncBenchmark::ShutDown() {
   gamma_controller_->Kill();
   gamma_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
+
+  services_task_runner_->PostTask(
+      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
+  services_thread_.join();
+
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 }  // namespace benchmark

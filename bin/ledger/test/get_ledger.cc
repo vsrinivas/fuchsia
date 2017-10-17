@@ -11,6 +11,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
@@ -24,6 +25,7 @@ ledger::Status GetLedger(
     fsl::MessageLoop* loop,
     app::ApplicationContext* context,
     app::ApplicationControllerPtr* controller,
+    fxl::RefPtr<fxl::TaskRunner> services_task_runner,
     ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
         token_provider_impl,
     std::string ledger_name,
@@ -54,7 +56,14 @@ ledger::Status GetLedger(
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   if (erase == Erase::ERASE_CLOUD) {
     modular::auth::TokenProviderPtr token_provider_ptr;
-    token_provider_impl->AddBinding(token_provider_ptr.NewRequest());
+    EXPECT_TRUE(callback::RunSynchronously(
+        services_task_runner,
+        fxl::MakeCopyable(
+            [token_provider_impl,
+             request = token_provider_ptr.NewRequest()]() mutable {
+              token_provider_impl->AddBinding(std::move(request));
+            }),
+        kTimeout));
     repository_factory->EraseRepository(
         ledger_repository_path, firebase_config.Clone(),
         std::move(token_provider_ptr), callback::Capture([] {}, &status));
@@ -66,7 +75,13 @@ ledger::Status GetLedger(
   }
 
   modular::auth::TokenProviderPtr token_provider_ptr;
-  token_provider_impl->AddBinding(token_provider_ptr.NewRequest());
+  EXPECT_TRUE(callback::RunSynchronously(
+      services_task_runner,
+      fxl::MakeCopyable([token_provider_impl,
+                         request = token_provider_ptr.NewRequest()]() mutable {
+        token_provider_impl->AddBinding(std::move(request));
+      }),
+      kTimeout));
   repository_factory->GetRepository(
       ledger_repository_path, std::move(firebase_config),
       std::move(token_provider_ptr), repository.NewRequest(),
