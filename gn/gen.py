@@ -70,7 +70,7 @@ def main():
         gn_args += " skia_use_sfntly=false"
 
     if args.with_dart_analysis:
-        gn_args += " run_dart_analysis=true"
+        print("--with-dart-analysis is deprecated as analysis is now always on.")
 
     gn_args += " fuchsia_packages=\"" + args.packages + "\""
 
