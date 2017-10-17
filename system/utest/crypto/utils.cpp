@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <string.h>
 
 #include <crypto/bytes.h>
+#include <crypto/digest.h>
+#include <crypto/hkdf.h>
+#include <crypto/hmac.h>
 #include <zircon/types.h>
 
 #include "utils.h"
@@ -38,6 +42,45 @@ fbl::unique_ptr<uint8_t[]> MakeRandPage() {
         block = fbl::move(bytes.Release());
     }
     return block;
+}
+
+zx_status_t HexToBytes(const char* hex, Bytes* out) {
+    zx_status_t rc;
+
+    if (!hex || !out) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    size_t len = strlen(hex);
+    if (len % 2 != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    out->Reset();
+    if ((rc = out->Resize(len / 2)) != ZX_OK) {
+        return rc;
+    }
+    size_t i = 0;
+    size_t j = 0;
+    uint8_t n;
+    while (i < len) {
+        char c = hex[i];
+        if ('0' <= c && c <= '9') {
+            n = static_cast<uint8_t>(c - '0');
+        } else if ('a' <= c && c <= 'f') {
+            n = static_cast<uint8_t>(c - 'a' + 10);
+        } else if ('A' <= c && c <= 'F') {
+            n = static_cast<uint8_t>(c - 'A' + 10) ;
+        } else {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (i % 2 == 0) {
+            (*out)[j] = static_cast<uint8_t>(n << 4);
+        } else {
+            (*out)[j] |= n & 0xF;
+            ++j;
+        }
+        ++i;
+    }
+    return ZX_OK;
 }
 
 } // namespace testing

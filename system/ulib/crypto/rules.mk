@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/digest.cpp \
     $(LOCAL_DIR)/error.cpp \
     $(LOCAL_DIR)/hkdf.cpp \
+    $(LOCAL_DIR)/hmac.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \

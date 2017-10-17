@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/bytes.cpp \
     $(LOCAL_DIR)/hkdf.cpp \
+    $(LOCAL_DIR)/hmac.cpp \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/utils.cpp \
 

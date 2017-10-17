@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <crypto/hkdf.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -40,6 +41,9 @@ fbl::unique_ptr<uint8_t[]> MakeZeroPage();
 
 // Returns a pointer to a freshly allocated buffer of |kBlockSize| random bytes.
 fbl::unique_ptr<uint8_t[]> MakeRandPage();
+
+// Resizes |out| and sets its contents to match the given |hex| string.
+zx_status_t HexToBytes(const char* hex, Bytes* out);
 
 } // namespace testing
 } // namespace crypto
