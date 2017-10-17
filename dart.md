@@ -64,7 +64,7 @@ dependencies:
   foo: ^4.0.0
   bar: >=0.1.0
 ```
-3. add a reference to the file in `//scripts/update_dart_packages.py`
+3. add a reference to the file in `//scripts/dart/update_3p_packages.py`
 4. run that script
 
 
@@ -250,7 +250,7 @@ their dependencies.
 
 [pub]: https://www.dartlang.org/tools/pub/get-started "Pub"
 [dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/master "Third-party dependencies"
-[dart-3p-script]: https://fuchsia.googlesource.com/scripts/+/master/update_dart_packages.py "Dependencies script"
+[dart-3p-script]: https://fuchsia.googlesource.com/scripts/+/master/dart/update_3p_packages.py "Dependencies script"
 [package-layout]: https://www.dartlang.org/tools/pub/package-layout "Package layout"
 [target-package]: https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni "dart_package target"
 [target-app]: https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni "dart_package app"
