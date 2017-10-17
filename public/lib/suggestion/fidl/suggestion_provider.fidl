@@ -95,13 +95,8 @@ struct Suggestion {
   // Uniquely and globally identifies this Suggestion.
   string uuid;
 
-  // Specifies the sort order for Suggestions within a single subscription.
-  // Lower ranks appear first.
-  float rank;
-
   // The probability that a given suggestion would be selected if it were the
-  // only suggestion shown to the user. This score tends to decrease as rank
-  // increases, but unlike rank this score may be the same between suggestions.
+  // only suggestion shown to the user.
   float confidence;
 
   // Display properties of the Suggestion

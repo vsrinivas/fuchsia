@@ -70,18 +70,18 @@ bool WindowedSuggestionSubscriber::IncludeSuggestion(
 
   const auto& suggestion_vector = ranked_suggestions_->Get();
 
-  float newRank = ranked_suggestion.rank;
+  double newRank = ranked_suggestion.confidence;
 
   const int32_t i = max_results_ - 1;
   auto it = suggestion_vector.begin() + i;
 
-  if (newRank < (*it)->rank)
+  if (newRank > (*it)->confidence)
     return true;
 
   // Else we might actually have to iterate. Iterate until the rank is less than
   // the new suggestion, at which point we can conclude that the new suggestion
   // has not made it into the window.
-  while (newRank == (*it)->rank) {
+  while (newRank == (*it)->confidence) {
     // Could also compare UUIDs
     if ((*it)->prototype == ranked_suggestion.prototype) {
       return true;

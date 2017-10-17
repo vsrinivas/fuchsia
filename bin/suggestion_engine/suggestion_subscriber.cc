@@ -18,8 +18,7 @@ SuggestionPtr SuggestionSubscriber::CreateSuggestion(
     const RankedSuggestion& suggestion_data) {
   auto suggestion = Suggestion::New();
   suggestion->uuid = suggestion_data.prototype->suggestion_id;
-  suggestion->rank = suggestion_data.rank;
-  suggestion->confidence = suggestion_data.adjusted_confidence;
+  suggestion->confidence = suggestion_data.confidence;
   suggestion->display = suggestion_data.prototype->proposal->display->Clone();
   if (!suggestion_data.prototype->proposal->on_selected.empty()) {
     // TODO(thatguy): Proposal.on_select should be single Action, not an array

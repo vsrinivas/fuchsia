@@ -13,8 +13,7 @@ namespace maxwell {
 // |adjusted_confidence| is nonincreasing.
 struct RankedSuggestion {
   SuggestionPrototype* prototype;
-  float rank;
-  float adjusted_confidence;
+  double confidence;
 };
 
 }  // namespace maxwell

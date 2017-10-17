@@ -13,7 +13,7 @@ std::ostream& operator<<(std::ostream& os, const SuggestionDisplay& o) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Suggestion& o) {
-  return os << "{ uuid: " << o.uuid << ", rank: " << o.rank
+  return os << "{ uuid: " << o.uuid << ", confidence: " << o.confidence
             << ", display: " << o.display << "}";
 }
 

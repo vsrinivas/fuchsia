@@ -24,6 +24,9 @@ MatchPredicate GetSuggestionMatcher(const std::string& suggestion_id) {
   };
 }
 
+RankedSuggestions::RankedSuggestions(SuggestionChannel* channel)
+    : channel_(channel), normalization_factor_(0.0) {}
+
 RankedSuggestion* RankedSuggestions::GetMatchingSuggestion(
     MatchPredicate matchFunction) const {
   auto findIter =
@@ -40,23 +43,38 @@ void RankedSuggestions::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
   channel_->DispatchInvalidate();
 }
 
-void RankedSuggestions::UpdateRankingFunction(
-    RankingFunction ranking_function) {
-  ranking_function_ = ranking_function;
+void RankedSuggestions::AddRankingFeature(
+    double weight,
+    std::shared_ptr<RankingFeature> ranking_feature) {
+  ranking_features_.emplace_back(weight, ranking_feature);
+  // only incorporate positive weights into the normalization factor
+  if (weight > 0.0)
+    normalization_factor_ += weight;
+}
+
+void RankedSuggestions::Rank(const QueryContext& query_context) {
   for (auto& suggestion : suggestions_) {
-    ranking_function(suggestion.get());
+    double confidence = 0.0;
+    for (auto& feature : ranking_features_) {
+      confidence += feature.first *
+                    feature.second->ComputeFeature(query_context, *suggestion);
+    }
+    // TODO(jwnichols): Reconsider this normalization approach.
+    // Weights may be negative, so there is some chance that the calculated
+    // confidence score will be negative.  We pull the calculated score up to
+    // zero to guarantee final confidence values stay within the 0-1 range.
+    FXL_CHECK(normalization_factor_ > 0.0);
+    suggestion->confidence = std::max(confidence, 0.0) / normalization_factor_;
   }
   DoStableSort();
+  channel_->DispatchInvalidate();
 }
 
 void RankedSuggestions::AddSuggestion(SuggestionPrototype* prototype) {
   std::unique_ptr<RankedSuggestion> ranked_suggestion =
       std::make_unique<RankedSuggestion>();
   ranked_suggestion->prototype = prototype;
-  ranking_function_(ranked_suggestion.get());
   suggestions_.push_back(std::move(ranked_suggestion));
-  DoStableSort();
-  channel_->DispatchInvalidate();
 }
 
 void RankedSuggestions::RemoveProposal(const std::string& component_url,
@@ -91,7 +109,7 @@ void RankedSuggestions::DoStableSort() {
   std::stable_sort(suggestions_.begin(), suggestions_.end(),
                    [](const std::unique_ptr<RankedSuggestion>& a,
                       const std::unique_ptr<RankedSuggestion>& b) {
-                     return a->rank < b->rank;
+                     return a->confidence > b->confidence;
                    });
 }
 

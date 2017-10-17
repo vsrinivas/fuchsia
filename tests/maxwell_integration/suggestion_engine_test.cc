@@ -776,6 +776,9 @@ TEST_F(AskTest, ChangeHeadlineRank) {
   CHECK_RESULT_COUNT(4);
 }
 
+/* These tests make an assumption that timestamp factors into ranking, which
+   it no longer does.  It could be re-enabled if that factor is included again.
+
 #define HEADLINE_EQ(expected, index) \
   EXPECT_EQ(expected, (*listener())[index]->display->headline)
 
@@ -846,7 +849,7 @@ TEST_F(AskTest, AskRanking) {
   HEADLINE_EQ("Compose E-mail", 0);
   EnsureDebugMatches();
 }
-
+*/
 class SuggestionFilteringTest : public NextTest {};
 
 TEST_F(SuggestionFilteringTest, Baseline) {

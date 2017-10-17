@@ -63,13 +63,23 @@ source_set("interfaces") {
 
 source_set("ranking") {
   sources = [
-    "ranking.cc",
-    "ranking.h",
+    "kronk_ranking_feature.cc",
+    "kronk_ranking_feature.h",
+    "proposal_hint_ranking_feature.cc",
+    "proposal_hint_ranking_feature.h",
+    "query_context.h",
+    "query_match_ranking_feature.cc",
+    "query_match_ranking_feature.h",
+    "ranking_feature.cc",
+    "ranking_feature.h",
+    "suggestion_filter.h",
   ]
 
   deps = [
     ":models",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/suggestion/fidl",
   ]
 }
 

@@ -8,7 +8,7 @@
 
 bool suggestion_less(const maxwell::Suggestion* a,
                      const maxwell::Suggestion* b) {
-  return a->rank < b->rank;
+  return a->confidence > b->confidence;
 }
 
 void TestSuggestionListener::OnAdd(

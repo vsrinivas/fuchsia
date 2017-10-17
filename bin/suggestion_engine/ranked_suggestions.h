@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include "peridot/bin/suggestion_engine/ranking.h"
+#include "peridot/bin/suggestion_engine/query_context.h"
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/suggestion_channel.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
@@ -17,9 +18,11 @@ using MatchPredicate =
 
 class RankedSuggestions {
  public:
-  RankedSuggestions(SuggestionChannel* channel) : channel_(channel) {}
+  RankedSuggestions(SuggestionChannel* channel);
 
-  void UpdateRankingFunction(RankingFunction ranking_function);
+  void AddRankingFeature(double weight,
+                         std::shared_ptr<RankingFeature> ranking_feature);
+  void Rank(const QueryContext& query_context = {NONE, ""});
 
   void AddSuggestion(SuggestionPrototype* const prototype);
 
@@ -42,8 +45,6 @@ class RankedSuggestions {
   RankedSuggestion* GetMatchingSuggestion(MatchPredicate matchFunction) const;
   void RemoveMatchingSuggestion(MatchPredicate matchFunction);
   void DoStableSort();
-  // The function that will rank all SuggestionPrototypes.
-  RankingFunction ranking_function_;
 
   // The channel to push addition/removal events into.
   SuggestionChannel* channel_;
@@ -55,6 +56,13 @@ class RankedSuggestions {
   // when requested?  I think I would lean toward the latter, since ranking
   // may be expensive.
   std::vector<std::unique_ptr<RankedSuggestion>> suggestions_;
+
+  // Ranking features as a list of (weight, feature) pairs
+  std::vector<std::pair<double, std::shared_ptr<RankingFeature>>>
+      ranking_features_;
+
+  // The sum of the weights stored in the ranking_features_ vector
+  double normalization_factor_;
 };
 
 }  // namespace maxwell

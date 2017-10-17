@@ -13,6 +13,10 @@
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/interruptions_subscriber.h"
+#include "peridot/bin/suggestion_engine/kronk_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/proposal_hint_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/query_match_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/windowed_subscriber.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
@@ -64,9 +68,24 @@ SuggestionEngineImpl::SuggestionEngineImpl()
     media_packet_producer_ = nullptr;
   });
 
-  // The Next suggestions are always ranked with a static ranking function.
-  next_suggestions_->UpdateRankingFunction(
-      maxwell::ranking::GetNextRankingFunction());
+  // Create common ranking features
+  std::shared_ptr<RankingFeature> proposal_hint_feature =
+      std::make_shared<ProposalHintRankingFeature>();
+  std::shared_ptr<RankingFeature> kronk_feature =
+      std::make_shared<KronkRankingFeature>();
+
+  // TODO(jwnichols): Replace the code configuration of the ranking features
+  // with a configuration file
+
+  // Set up the next ranking features
+  next_suggestions_->AddRankingFeature(1.0, proposal_hint_feature);
+  next_suggestions_->AddRankingFeature(-0.2, kronk_feature);
+
+  // Set up the query ranking features
+  ask_suggestions_->AddRankingFeature(1.0, proposal_hint_feature);
+  ask_suggestions_->AddRankingFeature(-0.2, kronk_feature);
+  ask_suggestions_->AddRankingFeature(
+      1.0, std::make_shared<QueryMatchRankingFeature>());
 }
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
@@ -83,11 +102,12 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
     // TODO(andrewosh): Subscribers should probably take SuggestionPrototypes.
     auto ranked_suggestion = new RankedSuggestion();
     ranked_suggestion->prototype = suggestion;
-    ranked_suggestion->rank = 0;
+    ranked_suggestion->confidence = kMaxConfidence;
     interruption_channel_.DispatchOnAddSuggestion(ranked_suggestion);
   }
 
   next_suggestions_->AddSuggestion(std::move(suggestion));
+  next_suggestions_->Rank();
   debug_.OnNextUpdate(next_suggestions_);
 }
 
@@ -151,19 +171,13 @@ void SuggestionEngineImpl::Query(
   // Step 4
   std::unique_ptr<WindowedSuggestionSubscriber> subscriber =
       std::make_unique<WindowedSuggestionSubscriber>(
-          ask_suggestions_,
-          std::move(listener),
-          count);
+          ask_suggestions_, std::move(listener), count);
 
   subscriber->set_connection_error_handler([this] {
     CleanUpPreviousQuery();
   });  // called if the listener disconnects
 
   ask_channel_.AddSubscriber(std::move(subscriber));
-
-  // TODO(jwnichols): Rethink the ranking subsystem
-  ask_suggestions_->UpdateRankingFunction(
-      maxwell::ranking::GetAskRankingFunction(query));
 
   if (query_handlers_.size() == 0) {
     return debug_.OnAskStart(query, ask_suggestions_);
@@ -229,6 +243,8 @@ void SuggestionEngineImpl::Query(
           for (auto& proposal : response->proposals) {
             AddAskProposal(url, std::move(proposal));
           }
+          // TODO(jwnichols): Assemble the appropriate QueryContext struct
+          ask_suggestions_->Rank({TEXT, query});
           (*remainingHandlers)--;
           if ((*remainingHandlers) == 0) {
             debug_.OnAskStart(query, ask_suggestions_);
@@ -279,9 +295,7 @@ void SuggestionEngineImpl::SubscribeToNext(
     int count) {
   std::unique_ptr<WindowedSuggestionSubscriber> subscriber =
       std::make_unique<WindowedSuggestionSubscriber>(
-          next_suggestions_,
-          std::move(listener),
-          count);
+          next_suggestions_, std::move(listener), count);
   next_channel_.AddSubscriber(std::move(subscriber));
 }
 
