@@ -41,7 +41,7 @@ SyncTest::NewLedgerAppInstance() {
   return app_factory_->NewLedgerAppInstance();
 }
 
-void ProcessCommandLine(int argc, char** argv) {
+bool ProcessCommandLine(int argc, char** argv) {
   FXL_DCHECK(!test::integration::sync::server_id);
 
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -51,9 +51,10 @@ void ProcessCommandLine(int argc, char** argv) {
   std::string server_id;
   if (!command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
     PrintUsage(argv[0]);
-    return;
+    return false;
   }
   test::integration::sync::server_id = new std::string(server_id);
+  return true;
 }
 }  // namespace sync
 }  // namespace integration

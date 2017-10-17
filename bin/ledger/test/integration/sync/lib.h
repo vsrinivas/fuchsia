@@ -43,7 +43,10 @@ class SyncTest : public ::test::TestWithMessageLoop {
   std::unique_ptr<LedgerAppInstanceFactory> app_factory_;
 };
 
-void ProcessCommandLine(int argc, char** argv);
+// Initializes test environment based on the command line arguments.
+//
+// Returns true iff the initialization was successful.
+bool ProcessCommandLine(int argc, char** argv);
 
 }  // namespace sync
 }  // namespace integration

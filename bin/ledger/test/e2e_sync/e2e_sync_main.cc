@@ -6,7 +6,8 @@
 #include "peridot/bin/ledger/test/integration/sync/lib.h"
 
 int main(int argc, char** argv) {
-  test::integration::sync::ProcessCommandLine(argc, argv);
-
+  if (!test::integration::sync::ProcessCommandLine(argc, argv)) {
+    return -1;
+  }
   return test::TestMain(argc, argv);
 }
