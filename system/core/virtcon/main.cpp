@@ -58,7 +58,8 @@ static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint3
     for (;;) {
         if ((status = zx_log_read(ph->handle, ZX_LOG_RECORD_MAX, rec, 0)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
-                return ZX_OK;
+                // return non-OK to avoid needlessly re-arming the repeating wait
+                return ZX_ERR_NEXT;
             }
             break;
         }
@@ -82,6 +83,9 @@ static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint3
     const char* oops = "<<LOG ERROR>>\n";
     vc_write(log_vc, oops, strlen(oops), 0);
 
+    // Error reading the log, no point in continuing to try to read
+    // log messages.
+    port_cancel(&port, &log_ph);
     return status;
 }
 
@@ -382,7 +386,10 @@ int main(int argc, char** argv) {
 
     log_ph.func = log_reader_cb;
     log_ph.waitfor = ZX_LOG_READABLE;
-    port_wait(&port, &log_ph);
+    // Use a repeating wait so that we don't add/remove observers for each
+    // log message (which is helpful when tracing the addition/removal of
+    // observers).
+    port_wait_repeating(&port, &log_ph);
 
     if ((new_vc_ph.handle = zx_get_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
         new_vc_ph.func = new_vc_cb;

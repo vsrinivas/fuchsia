@@ -140,10 +140,8 @@ static zx_status_t vc_timer_cb(port_handler_t* ph, zx_signals_t signals, uint32_
         zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
     }
 
-    // We've set this up as repeating so we always
-    // return an error to avoid the auto-re-arm behaviour
-    // of the port library
-    return ZX_ERR_STOP;
+    // return non-OK to avoid needlessly re-arming the repeating wait
+    return ZX_ERR_NEXT;
 }
 
 static zx_status_t vc_input_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {

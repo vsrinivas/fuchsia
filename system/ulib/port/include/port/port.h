@@ -14,6 +14,8 @@ typedef struct port_handler port_handler_t;
 struct port_handler {
     zx_handle_t handle;
     zx_signals_t waitfor;
+    // Note: By convention repeating mode handlers return ZX_ERR_NEXT to
+    // avoid the wait being re-armed.
     zx_status_t (*func)(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
 };
 
