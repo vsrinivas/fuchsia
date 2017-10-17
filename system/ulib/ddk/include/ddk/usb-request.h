@@ -164,8 +164,4 @@ void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req);
 // The request is not re-initialized in any way and should be set accordingly by the user.
 usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length);
 
-// usb_request_to_iotxn() converts a USB request to an iotxn.
-// The original USB request is not freed.
-zx_status_t usb_request_to_iotxn(usb_request_t* req, iotxn_t** out);
-
 __END_CDECLS;

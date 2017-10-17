@@ -20,11 +20,6 @@ zx_status_t usb_claim_additional_interfaces(usb_protocol_t *usb,
                                             bool (*want_interface)(usb_interface_descriptor_t*, void*),
                                             void* arg);
 
-// sets the frame number in a USB iotxn for scheduling an isochronous transfer
-static inline void usb_iotxn_set_frame(iotxn_t* txn, uint64_t frame) {
-    ((usb_protocol_data_t *)iotxn_pdata(txn, usb_protocol_data_t))->frame = frame;
-}
-
 // Utilities for iterating through descriptors within a device's USB configuration descriptor
 typedef struct {
     uint8_t* desc;      // start of configuration descriptor

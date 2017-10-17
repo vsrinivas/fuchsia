@@ -12,16 +12,6 @@
 
 __BEGIN_CDECLS;
 
-typedef struct iotxn iotxn_t;
-
-// protocol data for iotxns
-typedef struct usb_protocol_data {
-    usb_setup_t setup;      // for control transactions
-    uint64_t frame;         // frame number for scheduling isochronous transfers
-    uint32_t device_id;
-    uint8_t ep_address;     // bEndpointAddress from endpoint descriptor
-} usb_protocol_data_t;
-
 typedef struct usb_protocol_ops {
     zx_status_t (*control)(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
                            uint16_t index, void* data, size_t length, zx_time_t timeout,
