@@ -67,6 +67,7 @@ class Device : public WlanBaseDevice,
     zx_status_t SetChannel(wlan_channel_t chan) override final;
     zx_status_t SetStatus(uint32_t status) override final;
     zx_status_t SetBss(const MacAddr& mac, uint8_t type) override final;
+    zx_status_t SetKey(wlan_key_config_t* key_config) override final;
     fbl::RefPtr<DeviceState> GetState() override final;
 
    private:

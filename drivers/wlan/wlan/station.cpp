@@ -428,8 +428,6 @@ zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     assoc_timeout_ = 0;
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
-    // TODO(hahnr): For RSNs, only set link status after successfully authenticating with the RSN.
-    device_->SetStatus(ETH_STATUS_ONLINE);
     SendAssocResponse(AssociateResultCodes::SUCCESS);
 
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
@@ -444,6 +442,7 @@ zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     if (bss_->rsn.is_null()) {
         debugjoin("802.1X controlled port is now open\n");
         controlled_port_ = PortState::kOpen;
+        device_->SetStatus(ETH_STATUS_ONLINE);
     }
 
     std::printf("associated\n");
@@ -530,7 +529,7 @@ zx_status_t Station::HandleData(const Packet* packet) {
         return ZX_OK;
     }
 
-    // Drop packets if RSN was not yet authorized.
+    // Drop packets if RSNA was not yet established.
     if (controlled_port_ == PortState::kBlocked) { return ZX_OK; }
 
     // PS-POLL if there are more buffered unicast frames.
@@ -883,6 +882,62 @@ zx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const MacAddr&
         status = device_->SendService(std::move(packet));
     }
     return status;
+}
+
+zx_status_t Station::SetKeys(SetKeysRequestPtr req) {
+    debugfn();
+
+    ZX_DEBUG_ASSERT(!req.is_null());
+    for (auto &keyPtr: req->keylist){
+        if (keyPtr.is_null() || keyPtr->key.is_null()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        uint8_t key_type;
+        switch (keyPtr->key_type) {
+        case KeyType::PAIRWISE:
+            key_type = WLAN_KEY_TYPE_PAIRWISE;
+            break;
+        case KeyType::PEER_KEY:
+            key_type = WLAN_KEY_TYPE_PEER;
+            break;
+        case KeyType::IGTK:
+            key_type = WLAN_KEY_TYPE_IGTK;
+            break;
+        default:
+            key_type = WLAN_KEY_TYPE_GROUP;
+            break;
+        }
+
+        auto key_config = reinterpret_cast<wlan_key_config_t*>(malloc(sizeof(wlan_key_config_t)));
+        if (key_config == nullptr) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+        memcpy(key_config->key, keyPtr->key.data(), keyPtr->length);
+        key_config->key_type = key_type;
+        key_config->key_len = static_cast<uint8_t>(keyPtr->length);
+        key_config->protection = WLAN_PROTECTION_RX_TX;
+        key_config->cipher_type = keyPtr->cipher_suite_type;
+        memcpy(key_config->cipher_oui,
+               keyPtr->cipher_suite_oui.data(),
+               sizeof(key_config->cipher_oui));
+        if (!keyPtr->address.is_null()) {
+            memcpy(key_config->peer_addr, keyPtr->address.data(), sizeof(key_config->peer_addr));
+        }
+
+        auto status = device_->SetKey(key_config);
+        if (status != ZX_OK) {
+            errorf("Could not configure keys in hardware: %d\n", status);
+            return status;
+        }
+    }
+
+    // Once keys have been successfully configured, open controlled port and report link up status.
+    // TODO(hahnr): This is a very simplified assumption and we might need a little more logic to
+    // correctly track the port's state.
+    controlled_port_ = PortState::kOpen;
+    device_->SetStatus(ETH_STATUS_ONLINE);
+    return ZX_OK;
 }
 
 zx_status_t Station::PreChannelChange(wlan_channel_t chan) {

@@ -3175,6 +3175,8 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     Txwi3& txwi3 = packet->txwi3;
     txwi3.set_eiv(0);
 
+    // TODO(hahnr): Configure WCID when sending packets.
+
     // A TxPacket is laid out with 4 TXWI headers, so if there are more than that, we have to
     // consider them when determining the start of the payload.
     size_t payload_offset = txwi_len - 16;

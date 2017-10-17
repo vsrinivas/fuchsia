@@ -316,7 +316,14 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         break;
     }
     case Method::SETKEYS_request: {
-        // TODO(hahnr): Implement key management.
+        SetKeysRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::SETKEYS_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize SetKeysRequest: %d\n", status);
+            break;
+        }
+
+        if (IsStaValid()) { status = sta_->SetKeys(std::move(req)); }
         break;
     }
     default:

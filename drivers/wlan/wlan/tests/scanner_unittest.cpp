@@ -63,6 +63,10 @@ struct MockDevice : public DeviceInterface {
 
     zx_status_t SetBss(const MacAddr& mac, uint8_t type) override final { return ZX_OK; }
 
+    zx_status_t SetKey(wlan_key_config_t* key_config) override final {
+      return ZX_OK;
+    }
+
     fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
     fbl::RefPtr<DeviceState> state;

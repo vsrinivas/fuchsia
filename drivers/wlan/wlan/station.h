@@ -74,6 +74,7 @@ class Station {
     zx_status_t HandleTimeout();
 
     zx_status_t SendEapolRequest(EapolRequestPtr req);
+    zx_status_t SetKeys(SetKeysRequestPtr req);
 
     zx_status_t PreChannelChange(wlan_channel_t chan);
     zx_status_t PostChannelChange();

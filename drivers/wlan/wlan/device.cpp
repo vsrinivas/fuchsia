@@ -268,6 +268,10 @@ zx_status_t Device::SetBss(const MacAddr& mac, uint8_t type) {
     return wlanmac_proxy_.SetBss(0u, mac.byte, type);
 }
 
+zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
+    return wlanmac_proxy_.SetKey(0u, key_config);
+}
+
 fbl::RefPtr<DeviceState> Device::GetState() {
     return state_;
 }
