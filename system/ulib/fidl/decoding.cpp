@@ -61,9 +61,7 @@ private:
         // alignment here. For example, a pointer to a struct that is
         // 4 bytes still needs to advance the next out-of-line offset
         // by 8 to maintain the aligned-to-FIDL_ALIGNMENT property.
-        uint64_t new_data_offset = out_of_line_offset_ + size;
-        const uint32_t alignment_mask = FIDL_ALIGNMENT - 1;
-        uint64_t aligned_offset = (new_data_offset + alignment_mask) & ~alignment_mask;
+        uint64_t aligned_offset = fidl::FidlAlign(out_of_line_offset_ + size);
         if (aligned_offset > static_cast<uint64_t>(num_bytes_)) {
             return false;
         }
@@ -389,6 +387,9 @@ zx_status_t FidlDecoder::DecodeMessage() {
                 if (!frame->string_state.nullable) {
                     return WithError("message tried to decode an absent non-nullable string");
                 }
+                if (string_ptr->size != 0u) {
+                    return WithError("message tried to decode an absent string of non-zero length");
+                }
                 Pop();
                 continue;
             default:
@@ -439,6 +440,9 @@ zx_status_t FidlDecoder::DecodeMessage() {
             case FIDL_ALLOC_ABSENT:
                 if (!frame->vector_state.nullable) {
                     return WithError("message tried to decode an absent non-nullable vector");
+                }
+                if (vector_ptr->count != 0u) {
+                    return WithError("message tried to decode an absent vector of non-zero elements");
                 }
                 Pop();
                 continue;

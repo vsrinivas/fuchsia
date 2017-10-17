@@ -526,7 +526,7 @@ bool decode_absent_nullable_string() {
     BEGIN_TEST;
 
     unbounded_nullable_string_message_layout message = {};
-    message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
+    message.inline_struct.string = fidl_string_t{0, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
     const char* error = nullptr;
     auto status = fidl_decode(&unbounded_nullable_string_message_type, &message,
@@ -606,7 +606,7 @@ bool decode_absent_nullable_bounded_string() {
     BEGIN_TEST;
 
     bounded_32_nullable_string_message_layout message = {};
-    message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
+    message.inline_struct.string = fidl_string_t{0, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
     const char* error = nullptr;
     auto status = fidl_decode(&bounded_32_nullable_string_message_type, &message,
@@ -749,7 +749,7 @@ bool decode_absent_nullable_vector_of_handles() {
     BEGIN_TEST;
 
     unbounded_nullable_vector_of_handles_message_layout message = {};
-    message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
+    message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
     const char* error = nullptr;
     auto status = fidl_decode(&unbounded_nullable_vector_of_handles_message_type, &message,
@@ -853,7 +853,7 @@ bool decode_absent_nullable_bounded_vector_of_handles() {
     BEGIN_TEST;
 
     bounded_32_nullable_vector_of_handles_message_layout message = {};
-    message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
+    message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
     const char* error = nullptr;
     auto status = fidl_decode(&bounded_32_nullable_vector_of_handles_message_type, &message,
