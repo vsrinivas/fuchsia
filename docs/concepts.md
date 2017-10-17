@@ -66,6 +66,20 @@ system call closes a Handle, releasing the Object it refers to, if that Handle i
 the last one for that Object.
 
 
+## Kernel Object IDs
+
+Every object in the kernel has a "kernel object id" or "koid" for short.
+It is a 64 bit unsigned integer that can be used to identify the object
+and is unique for the lifetime of the running system.
+This means in particular that koids are never reused.
+
+There are two special koid values:
+
+*ZX_KOID_INVALID* Has the value zero and is used as a "null" sentinel.
+
+*ZX_KOID_KERNEL* There is only one kernel, and it has its own koid.
+
+
 ## Running Code: Jobs, Processes, and Threads.
 
 Threads represent threads of execution (CPU registers, stack, etc) within an
