@@ -11,14 +11,10 @@
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="runtimes/dart"
             name="manifest"/>
+    <localimport file="minimal"/>
     <localimport file="skia"/>
   </imports>
   <projects>
-    <project name="garnet"
-             path="garnet"
-             remote="https://fuchsia.googlesource.com/garnet"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
-
     <!-- Third Party -->
 
     <project name="external/github.com/catapult-project/catapult"

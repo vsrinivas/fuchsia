@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <projects>
+    <project name="garnet"
+             path="garnet"
+             remote="https://fuchsia.googlesource.com/garnet"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+  </projects>
+</manifest>
