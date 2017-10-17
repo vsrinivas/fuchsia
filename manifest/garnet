@@ -11,6 +11,7 @@
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="runtimes/dart"
             name="manifest"/>
+    <localimport file="skia"/>
   </imports>
   <projects>
     <project name="garnet"
@@ -214,10 +215,6 @@
              path="third_party/shaderc/third_party/googletest"
              remote="https://fuchsia.googlesource.com/third_party/googletest"
              gerrithost="https://fuchsia-review.googlesource.com"/>
-    <project name="external/skia.googlesource.com/skia"
-             path="third_party/skia"
-             remote="https://skia.googlesource.com/skia"
-             revision="ce6cb49967095859652279d614525b13301d58de"/>
     <project name="third_party/spirv-headers"
              path="third_party/shaderc/third_party/spirv-tools/external/spirv-headers"
              remote="https://fuchsia.googlesource.com/third_party/spirv-headers"
