@@ -3,7 +3,7 @@
         "cpp"
     ],
     "packages": {
-        "ihda": "//drivers/audio/intel-hda/ihda",
-        "audio": "//drivers/audio"
+        "ihda": "//garnet/drivers/audio/intel-hda/ihda",
+        "audio": "//garnet/drivers/audio"
     }
 }
