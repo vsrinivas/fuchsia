@@ -30,6 +30,10 @@ static int thread_func(void* arg);
 // argv[0]
 static char* program_path;
 
+// This is the key that is assigned to the port when bound.
+// This value appears in |packet.key| in all exception messages.
+static const uint64_t EXCEPTION_PORT_KEY = 0x6b6579; // "key"
+
 static const char test_child_name[] = "test-child";
 
 enum message {
@@ -146,7 +150,7 @@ static void resume_thread_from_exception(zx_handle_t process, zx_koid_t tid,
 static bool read_exception(zx_handle_t eport, zx_port_packet_t* packet)
 {
     ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 0), ZX_OK, "zx_port_wait failed");
-    ASSERT_EQ(packet->key, 0u, "bad report key");
+    ASSERT_EQ(packet->key, EXCEPTION_PORT_KEY, "bad report key");
     unittest_printf("exception received: pid %"
                     PRIu64 ", tid %" PRIu64 ", type %d\n",
                     packet->exception.pid, packet->exception.tid, packet->type);
@@ -160,6 +164,7 @@ static bool verify_exception(const zx_port_packet_t* packet,
                              zx_excp_type_t expected_type)
 {
     EXPECT_EQ(packet->type, expected_type, "unexpected exception type");
+    EXPECT_EQ(packet->key, EXCEPTION_PORT_KEY, "");
 
     // Verify the exception was from |process|.
     if (process != ZX_HANDLE_INVALID) {
@@ -407,7 +412,7 @@ static void setup_test_child_with_eport(zx_handle_t job, const char* arg,
     zx_handle_t eport = tu_io_port_create();
     // Note: child is a borrowed handle, launchpad still owns it at this point.
     zx_handle_t child = launchpad_get_process_handle(lp);
-    tu_set_exception_port(child, eport, 0, ZX_EXCEPTION_PORT_DEBUGGER);
+    tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
     child = tu_launch_fdio_fini(lp);
     // Now we own the child handle, and lp is destroyed.
     *out_child = child;
@@ -591,7 +596,7 @@ static bool dead_process_unbind_helper(bool debugger, bool bind_while_alive) {
             ASSERT_TRUE(ensure_child_running(our_channel), "");
         }
         eport = tu_io_port_create();
-        tu_set_exception_port(child, eport, 0, options);
+        tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, options);
     }
 
     // Tell the process to exit and wait for it.
@@ -680,7 +685,7 @@ static bool dead_thread_unbind_helper(bool bind_while_alive) {
     zx_handle_t eport = ZX_HANDLE_INVALID;
     if (bind_while_alive) {
         eport = tu_io_port_create();
-        tu_set_exception_port(thread, eport, 0, 0);
+        tu_set_exception_port(thread, eport, EXCEPTION_PORT_KEY, 0);
     }
 
     // Tell the thread to exit and wait for it.
@@ -748,7 +753,7 @@ static bool job_handler_test(void)
     zx_handle_t child, our_channel;
     start_test_child(job, NULL, &child, &our_channel);
     zx_handle_t eport = tu_io_port_create();
-    tu_set_exception_port(job, eport, 0, 0);
+    tu_set_exception_port(job, eport, EXCEPTION_PORT_KEY, 0);
     REGISTER_CRASH(child);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH, ZX_EXCEPTION_PORT_TYPE_JOB);
@@ -766,7 +771,7 @@ static bool grandparent_job_handler_test(void)
     zx_handle_t child, our_channel;
     start_test_child(job, NULL, &child, &our_channel);
     zx_handle_t eport = tu_io_port_create();
-    tu_set_exception_port(grandparent_job, eport, 0, 0);
+    tu_set_exception_port(grandparent_job, eport, EXCEPTION_PORT_KEY, 0);
     REGISTER_CRASH(child);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH, ZX_EXCEPTION_PORT_TYPE_JOB);
@@ -784,7 +789,7 @@ static bool process_handler_test(void)
     zx_handle_t child, our_channel;
     start_test_child(zx_job_default(), NULL, &child, &our_channel);
     zx_handle_t eport = tu_io_port_create();
-    tu_set_exception_port(child, eport, 0, 0);
+    tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, 0);
     REGISTER_CRASH(child);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH, ZX_EXCEPTION_PORT_TYPE_PROCESS);
@@ -803,7 +808,7 @@ static bool thread_handler_test(void)
     zx_handle_t thread;
     recv_msg_new_thread_handle(our_channel, &thread);
     if (thread != ZX_HANDLE_INVALID) {
-        tu_set_exception_port(thread, eport, 0, 0);
+        tu_set_exception_port(thread, eport, EXCEPTION_PORT_KEY, 0);
         REGISTER_CRASH(child);
         finish_basic_test(child, eport, our_channel, MSG_CRASH_AUX_THREAD, ZX_EXCEPTION_PORT_TYPE_THREAD);
         tu_handle_close(thread);
@@ -829,7 +834,7 @@ static bool debugger_handler_test(void)
     ASSERT_TRUE(ensure_child_running(our_channel), "");
 
     zx_handle_t eport = tu_io_port_create();
-    tu_set_exception_port(child, eport, 0, ZX_EXCEPTION_PORT_DEBUGGER);
+    tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH, ZX_EXCEPTION_PORT_TYPE_DEBUGGER);
     END_TEST;
@@ -896,7 +901,7 @@ static bool process_gone_notification_test(void)
     start_test_child(zx_job_default(), NULL, &child, &our_channel);
 
     zx_handle_t eport = tu_io_port_create();
-    tu_set_exception_port(child, eport, 0, 0);
+    tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, 0);
 
     send_msg(our_channel, MSG_DONE);
 
@@ -922,7 +927,7 @@ static bool thread_gone_notification_test(void)
     zx_handle_t thread_handle = thrd_get_zx_handle(thread);
     // Attach to the thread exception report as we're testing for ZX_EXCP_GONE
     // reports from the thread here.
-    tu_set_exception_port(thread_handle, eport, 0, 0);
+    tu_set_exception_port(thread_handle, eport, EXCEPTION_PORT_KEY, 0);
 
     send_msg(our_channel, MSG_DONE);
     // TODO(dje): The passing of "self" here is wip.
@@ -1132,12 +1137,12 @@ static bool walkthrough_setup(walkthrough_state_t* state)
     ASSERT_NE(state->thread, ZX_HANDLE_INVALID, "");
     state->tid = tu_get_koid(state->thread);
 
-    tu_set_exception_port(state->grandparent_job, state->grandparent_job_eport, 0, 0);
-    tu_set_exception_port(state->parent_job, state->parent_job_eport, 0, 0);
-    tu_set_exception_port(state->job, state->job_eport, 0, 0);
-    tu_set_exception_port(state->child, state->child_eport, 0, 0);
-    tu_set_exception_port(state->thread, state->thread_eport, 0, 0);
-    tu_set_exception_port(state->child, state->debugger_eport, 0, ZX_EXCEPTION_PORT_DEBUGGER);
+    tu_set_exception_port(state->grandparent_job, state->grandparent_job_eport, EXCEPTION_PORT_KEY, 0);
+    tu_set_exception_port(state->parent_job, state->parent_job_eport, EXCEPTION_PORT_KEY, 0);
+    tu_set_exception_port(state->job, state->job_eport, EXCEPTION_PORT_KEY, 0);
+    tu_set_exception_port(state->child, state->child_eport, EXCEPTION_PORT_KEY, 0);
+    tu_set_exception_port(state->thread, state->thread_eport, EXCEPTION_PORT_KEY, 0);
+    tu_set_exception_port(state->child, state->debugger_eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
 
     // Non-debugger exception ports don't get synthetic exceptions like
     // ZX_EXCP_THREAD_STARTING. We have to trigger an architectural exception.
@@ -1326,7 +1331,7 @@ static bool unbind_rebind_while_stopped_test(void)
     // Rebind and fetch the exception report, it should match the one
     // we just got.
 
-    tu_set_exception_port(child, eport, 0, ZX_EXCEPTION_PORT_DEBUGGER);
+    tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
 
     // Verify exception report matches current exception.
     zx_exception_report_t report;
