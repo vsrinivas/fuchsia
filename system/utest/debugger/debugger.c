@@ -30,14 +30,6 @@ typedef bool (wait_inferior_exception_handler_t)(zx_handle_t inferior,
                                                  const zx_port_packet_t* packet,
                                                  void* handler_arg);
 
-// Sleep interval in the watchdog thread. Make this short so we don't need to
-// wait too long when tearing down in the success case.  This is especially
-// helpful when running "while /boot/test/debugger-test; do true; done".
-#define WATCHDOG_DURATION_TICK ((int64_t)ZX_MSEC(30))  // 0.03 seconds
-
-// Number of sleep intervals until the watchdog fires.
-#define WATCHDOG_DURATION_TICKS 100  // 3 seconds
-
 #define TEST_MEMORY_SIZE 8
 #define TEST_DATA_ADJUST 0x10
 
@@ -65,15 +57,6 @@ static const char test_inferior_child_name[] = "inferior";
 static const char test_segfault_child_name[] = "segfault";
 // Used for testing the s/w breakpoint insn.
 static const char test_swbreak_child_name[] = "swbreak";
-
-// Setting to true when done turns off the watchdog timer.  This
-// must be an atomic so that the compiler does not assume anything
-// about when it can be touched.  Otherwise, since the compiler
-// knows that vDSO calls don't make direct callbacks, it assumes
-// that nothing can happen inside the watchdog loop that would touch
-// this variable.  In fact, it will be touched in parallel by
-// another thread.
-static volatile atomic_bool done_tests;
 
 static atomic_int extra_thread_count = ATOMIC_VAR_INIT(0);
 
@@ -184,20 +167,6 @@ static int wait_inferior_thread_func(void* arg)
 
     bool pass = wait_inferior_thread_worker(inferior, eport, handler, handler_arg);
     return pass ? 0 : -1;
-}
-
-static int watchdog_thread_func(void* arg)
-{
-    for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i) {
-        zx_nanosleep(zx_deadline_after(WATCHDOG_DURATION_TICK));
-        if (atomic_load(&done_tests))
-            return 0;
-    }
-    unittest_printf_critical("\n\n*** WATCHDOG TIMER FIRED ***\n");
-    // This kills the entire process, not just this thread.
-    // TODO(dbort): Figure out why the shell sometimes reports a zero
-    // exit status when we expect to see '5'.
-    exit(5);
 }
 
 static thrd_t start_wait_inf_thread(zx_handle_t inferior,
@@ -1136,7 +1105,7 @@ static bool msg_loop(zx_handle_t channel)
 
     bool my_done_tests = false;
 
-    while (!atomic_load(&done_tests) && !my_done_tests)
+    while (!my_done_tests)
     {
         enum message msg;
         ASSERT_TRUE(recv_msg(channel, &msg), "Error while receiving msg");
@@ -1195,7 +1164,6 @@ void test_inferior(void)
     if (!msg_loop(channel))
         exit(20);
 
-    atomic_store(&done_tests, true);
     unittest_printf("Inferior done\n");
     exit(1234);
 }
@@ -1268,13 +1236,15 @@ RUN_TEST(suspended_in_channel_call_reg_access_test)
 RUN_TEST(suspended_in_exception_reg_access_test)
 END_TEST_CASE(debugger_tests)
 
-static void check_verbosity(int argc, char** argv)
+static void scan_argv(int argc, char** argv)
 {
     for (int i = 1; i < argc; ++i) {
         if (strncmp(argv[i], "v=", 2) == 0) {
             int verbosity = atoi(argv[i] + 2);
             unittest_set_verbosity_level(verbosity);
-            break;
+        } else if (strncmp(argv[i], "ts=", 3) == 0) {
+            int scale = atoi(argv[i] + 3);
+            tu_set_timeout_scale(scale);
         }
     }
 }
@@ -1282,27 +1252,24 @@ static void check_verbosity(int argc, char** argv)
 int main(int argc, char **argv)
 {
     program_path = argv[0];
+    scan_argv(argc, argv);
 
     if (argc >= 2 && strcmp(argv[1], test_inferior_child_name) == 0) {
-        check_verbosity(argc, argv);
         test_inferior();
         return 0;
     }
     if (argc >= 2 && strcmp(argv[1], test_segfault_child_name) == 0) {
-        check_verbosity(argc, argv);
         return test_segfault();
     }
     if (argc >= 2 && strcmp(argv[1], test_swbreak_child_name) == 0) {
-        check_verbosity(argc, argv);
         return test_swbreak();
     }
 
-    thrd_t watchdog_thread;
-    tu_thread_create_c11(&watchdog_thread, watchdog_thread_func, NULL, "watchdog-thread");
+    tu_watchdog_start();
 
     bool success = unittest_run_all_tests(argc, argv);
 
-    atomic_store(&done_tests, true);
-    thrd_join(watchdog_thread, NULL);
+    tu_watchdog_cancel();
+
     return success ? 0 : -1;
 }

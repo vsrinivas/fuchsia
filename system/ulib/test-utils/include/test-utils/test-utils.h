@@ -22,9 +22,20 @@
 
 __BEGIN_CDECLS
 
-// Basic watchdog/timeout duration.
-#define TU_WATCHDOG_DURATION_SECONDS 2
-#define TU_WATCHDOG_DURATION_NANOSECONDS ((int64_t) TU_WATCHDOG_DURATION_SECONDS * 1000 * 1000 * 1000)
+// Basic timeout duration.
+// This is for things like waiting for a process to exit or a channel to
+// be readable.
+#define TU_WAIT_TIMEOUT_SECONDS 2
+#define TU_WAIT_TIMEOUT_NANOSECONDS ((int64_t) TU_WAIT_TIMEOUT_SECONDS * 1000 * 1000 * 1000)
+
+// Sleep interval in the watchdog thread. Make this short so we don't need to
+// wait too long when tearing down in the success case.  This is especially
+// helpful when running "while /boot/test/sys/debugger-test; do true; done".
+#define TU_WATCHDOG_TICK_DURATION ((int64_t)ZX_MSEC(50))  // 0.05 seconds
+
+// Number of sleep intervals until the watchdog fires.
+// Obviously this must be reasonably larger than TU_WAIT_TIMEOUT_SECONDS.
+#define TU_WATCHDOG_TIMEOUT_TICKS 100  // 5 seconds
 
 void* tu_malloc(size_t size);
 
@@ -87,11 +98,11 @@ void tu_channel_read(zx_handle_t handle, uint32_t flags, void* bytes, uint32_t* 
 
 // Wait for |channel| to be readable.
 // Returns true if the channel is readable, and false if the peer has closed its end.
-// The call fails and the process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
+// The call fails and the process terminates if the call times out within TU_WAIT_TIMEOUT_NANOSECONDS.
 bool tu_channel_wait_readable(zx_handle_t channel);
 
 // Wait for |process| to be signaled (ZX_PROCESS_TERMINATED).
-// The call fails and the calling process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
+// The call fails and the calling process terminates if the call times out within TU_WAIT_TIMEOUT_NANOSECONDS.
 
 void tu_process_wait_signaled(zx_handle_t process);
 
@@ -152,5 +163,24 @@ int tu_run_program(const char *progname, int argc, const char** argv);
 // A wrapper for /bin/sh -c <command>.
 
 int tu_run_command(const char* progname, const char* cmd);
+
+// Set the scaling factor for timeouts.
+// The default is 1. A value of 2 waits twice as long, and so on.
+// This is useful when running tests under a debugger or with a
+// massive amount of tracing turned on.
+// If 0 is passed no change is made.
+// Returns the previous value.
+
+int tu_set_timeout_scale(int scale);
+
+// Start the watchdog thread.
+// If the watchdog timer expires before it is canceled with
+// tu_watchdog_cancel() then the test fails and the process is terminated.
+
+void tu_watchdog_start(void);
+
+// Cancel the watchdog and "join" the watchdog thread.
+
+void tu_watchdog_cancel(void);
 
 __END_CDECLS

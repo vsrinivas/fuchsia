@@ -25,26 +25,12 @@
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
-// 0.5 seconds
-#define WATCHDOG_DURATION_TICK ZX_MSEC(500)
-// 5 seconds
-#define WATCHDOG_DURATION_TICKS 10
-
 static int thread_func(void* arg);
 
 // argv[0]
 static char* program_path;
 
 static const char test_child_name[] = "test-child";
-
-// Setting to true when done turns off the watchdog timer.  This
-// must be an atomic so that the compiler does not assume anything
-// about when it can be touched.  Otherwise, since the compiler
-// knows that vDSO calls don't make direct callbacks, it assumes
-// that nothing can happen inside the watchdog loop that would touch
-// this variable.  In fact, it will be touched in parallel by
-// another thread.
-static volatile atomic_bool done_tests;
 
 enum message {
     // Make the type of this enum signed so that we don't get a compile failure
@@ -294,7 +280,7 @@ static void msg_loop(zx_handle_t channel)
     bool my_done_tests = false;
     zx_handle_t channel_to_thread = ZX_HANDLE_INVALID;
 
-    while (!done_tests && !my_done_tests)
+    while (!my_done_tests)
     {
         enum message msg;
         if (!recv_msg(channel, &msg)) {
@@ -426,19 +412,6 @@ static void setup_test_child_with_eport(zx_handle_t job, const char* arg,
     // Now we own the child handle, and lp is destroyed.
     *out_child = child;
     *out_eport = eport;
-}
-
-static int watchdog_thread_func(void* arg)
-{
-    for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i)
-    {
-        zx_nanosleep(zx_deadline_after(WATCHDOG_DURATION_TICK));
-        if (atomic_load(&done_tests))
-            return 0;
-    }
-    unittest_printf_critical("\n\n*** WATCHDOG TIMER FIRED ***\n");
-    // This should *cleanly* kill the entire process, not just this thread.
-    exit(5);
 }
 
 // Tests binding and unbinding behavior.
@@ -1523,13 +1496,15 @@ RUN_TEST_ENABLE_CRASH_HANDLER(self_death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(multiple_threads_registered_death_test);
 END_TEST_CASE(exceptions_tests)
 
-static void check_verbosity(int argc, char** argv)
+static void scan_argv(int argc, char** argv)
 {
     for (int i = 1; i < argc; ++i) {
         if (strncmp(argv[i], "v=", 2) == 0) {
             int verbosity = atoi(argv[i] + 2);
             unittest_set_verbosity_level(verbosity);
-            break;
+        } else if (strncmp(argv[i], "ts=", 3) == 0) {
+            int scale = atoi(argv[i] + 3);
+            tu_set_timeout_scale(scale);
         }
     }
 }
@@ -1548,9 +1523,9 @@ static const char* check_trigger(int argc, char** argv)
 int main(int argc, char **argv)
 {
     program_path = argv[0];
+    scan_argv(argc, argv);
 
     if (argc >= 2 && strcmp(argv[1], test_child_name) == 0) {
-        check_verbosity(argc, argv);
         const char* excp_name = check_trigger(argc, argv);
         if (excp_name)
             test_child_trigger(excp_name);
@@ -1559,13 +1534,11 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    thrd_t watchdog_thread;
-    tu_thread_create_c11(&watchdog_thread, watchdog_thread_func, NULL, "watchdog-thread");
+    tu_watchdog_start();
 
     bool success = unittest_run_all_tests(argc, argv);
 
-    atomic_store(&done_tests, true);
-    // TODO: Add an alarm as thrd_join doesn't provide a timeout.
-    thrd_join(watchdog_thread, NULL);
+    tu_watchdog_cancel();
+
     return success ? 0 : -1;
 }
