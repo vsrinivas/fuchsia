@@ -10,6 +10,8 @@
 
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/convert/convert.h"
+#include "peridot/bin/ledger/storage/public/object.h"
+#include "peridot/bin/ledger/storage/public/types.h"
 
 namespace encryption {
 
@@ -35,6 +37,25 @@ class EncryptionService {
   // Decrypts the given encrypted commit storage bytes from the cloud.
   virtual void DecryptCommit(
       convert::ExtendedStringView storage_bytes,
+      std::function<void(Status, std::string)> callback) = 0;
+
+  // Returns the obfuscated object name for the given identifier.
+  //
+  // This method is used to translate a local object identifier to the name that
+  // is used to refer the object in the cloud provider.
+  virtual void GetObjectName(
+      storage::ObjectIdentifier object_identifier,
+      std::function<void(Status, std::string)> callback) = 0;
+
+  // Encrypts the given object.
+  virtual void EncryptObject(
+      std::unique_ptr<const storage::Object> object,
+      std::function<void(Status, std::string)> callback) = 0;
+
+  // Decrypts the given object.
+  virtual void DecryptObject(
+      storage::ObjectIdentifier object_identifier,
+      std::string encrypted_data,
       std::function<void(Status, std::string)> callback) = 0;
 
  private:

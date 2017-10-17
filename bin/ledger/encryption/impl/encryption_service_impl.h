@@ -27,6 +27,16 @@ class EncryptionServiceImpl : public EncryptionService {
   void DecryptCommit(
       convert::ExtendedStringView storage_bytes,
       std::function<void(Status, std::string)> callback) override;
+  void GetObjectName(
+      storage::ObjectIdentifier object_identifier,
+      std::function<void(Status, std::string)> callback) override;
+  void EncryptObject(
+      std::unique_ptr<const storage::Object> object,
+      std::function<void(Status, std::string)> callback) override;
+  void DecryptObject(
+      storage::ObjectIdentifier object_identifier,
+      std::string encrypted_data,
+      std::function<void(Status, std::string)> callback) override;
 
  private:
   callback::ScopedTaskRunner task_runner_;

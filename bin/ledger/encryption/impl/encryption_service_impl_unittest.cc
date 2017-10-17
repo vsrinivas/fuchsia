@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/callback/capture.h"
+#include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace encryption {
@@ -33,10 +34,37 @@ class EncryptionServiceTest : public ::test::TestWithMessageLoop {
     EXPECT_FALSE(RunLoopWithTimeout());
   }
 
+  void GetObjectName(storage::ObjectIdentifier object_identifier,
+                     Status* status,
+                     std::string* result) {
+    encryption_service_.GetObjectName(
+        std::move(object_identifier),
+        callback::Capture(MakeQuitTask(), status, result));
+    EXPECT_FALSE(RunLoopWithTimeout());
+  }
+
+  void EncryptObject(std::unique_ptr<const storage::Object> object,
+                     Status* status,
+                     std::string* result) {
+    encryption_service_.EncryptObject(
+        std::move(object), callback::Capture(MakeQuitTask(), status, result));
+    EXPECT_FALSE(RunLoopWithTimeout());
+  }
+
+  void DecryptObject(storage::ObjectIdentifier object_identifier,
+                     std::string encrypted_data,
+                     Status* status,
+                     std::string* result) {
+    encryption_service_.DecryptObject(
+        std::move(object_identifier), std::move(encrypted_data),
+        callback::Capture(MakeQuitTask(), status, result));
+    EXPECT_FALSE(RunLoopWithTimeout());
+  }
+
   EncryptionServiceImpl encryption_service_;
 };
 
-TEST_F(EncryptionServiceTest, EncryptionDescription) {
+TEST_F(EncryptionServiceTest, EncryptDecryptCommit) {
   fxl::StringView contents[] = {
       "",
       "Hello",
@@ -53,6 +81,33 @@ TEST_F(EncryptionServiceTest, EncryptionDescription) {
     ASSERT_EQ(Status::OK, status);
     EXPECT_EQ(content, value);
   }
+}
+
+TEST_F(EncryptionServiceTest, GetName) {
+  storage::ObjectIdentifier identifier{42u, 42u, std::string(33u, '\0')};
+  Status status;
+  std::string name;
+  GetObjectName(identifier, &status, &name);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(name.empty());
+}
+
+TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
+  storage::ObjectIdentifier identifier{42u, 42u, std::string(33u, '\0')};
+  std::string content(256u, '\0');
+
+  Status status;
+  std::string encrypted_bytes;
+  EncryptObject(std::make_unique<storage::fake::FakeObject>(
+                    identifier.object_digest, content),
+                &status, &encrypted_bytes);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(encrypted_bytes.empty());
+
+  std::string decrypted_bytes;
+  DecryptObject(identifier, encrypted_bytes, &status, &decrypted_bytes);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(content, decrypted_bytes);
 }
 
 }  // namespace

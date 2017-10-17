@@ -6,6 +6,7 @@
 
 #include <flatbuffers/flatbuffers.h>
 
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
 #include "peridot/bin/ledger/encryption/public/constants.h"
@@ -20,6 +21,14 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
       storage_bytes.size());
 
   return VerifyEncryptedCommitStorageBuffer(verifier);
+}
+
+Status ToEncryptionStatus(storage::Status status) {
+  if (status == storage::Status::OK) {
+    return Status::OK;
+  }
+
+  return Status::INTERNAL_ERROR;
 }
 }  // namespace
 
@@ -71,6 +80,42 @@ void EncryptionServiceImpl::DecryptCommit(
   task_runner_.PostTask([callback = std::move(callback),
                          commit_storage = std::move(commit_storage)]() mutable {
     callback(Status::OK, std::move(commit_storage));
+  });
+}
+
+void EncryptionServiceImpl::GetObjectName(
+    storage::ObjectIdentifier object_identifier,
+    std::function<void(Status, std::string)> callback) {
+  // Ensures the callback is asynchronous.
+  // TODO(qsr): Replace with real hash.
+  task_runner_.PostTask([callback = std::move(callback),
+                         name = object_identifier.object_digest]() mutable {
+    callback(Status::OK, std::move(name));
+  });
+}
+
+void EncryptionServiceImpl::EncryptObject(
+    std::unique_ptr<const storage::Object> object,
+    std::function<void(Status, std::string)> callback) {
+  // Ensures the callback is asynchronous.
+  // TODO(qsr): Replace with real encryption.
+  task_runner_.PostTask(fxl::MakeCopyable(
+      [callback = std::move(callback), object = std::move(object)]() mutable {
+        fxl::StringView data;
+        Status status = ToEncryptionStatus(object->GetData(&data));
+        callback(status, data.ToString());
+      }));
+}
+
+void EncryptionServiceImpl::DecryptObject(
+    storage::ObjectIdentifier object_identifier,
+    std::string encrypted_data,
+    std::function<void(Status, std::string)> callback) {
+  // Ensures the callback is asynchronous.
+  // TODO(qsr): Replace with real decryption.
+  task_runner_.PostTask([callback = std::move(callback),
+                         encrypted_data = std::move(encrypted_data)]() mutable {
+    callback(Status::OK, encrypted_data);
   });
 }
 

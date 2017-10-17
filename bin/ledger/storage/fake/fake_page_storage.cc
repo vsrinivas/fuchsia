@@ -16,27 +16,12 @@
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 #include "peridot/bin/ledger/storage/fake/fake_commit.h"
 #include "peridot/bin/ledger/storage/fake/fake_journal.h"
+#include "peridot/bin/ledger/storage/fake/fake_object.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 
 namespace storage {
 namespace fake {
 namespace {
-
-class FakeObject : public Object {
- public:
-  FakeObject(ObjectDigestView digest, fxl::StringView content)
-      : digest_(digest.ToString()), content_(content.ToString()) {}
-  ~FakeObject() override {}
-  ObjectDigest GetDigest() const override { return digest_; }
-  Status GetData(fxl::StringView* data) const override {
-    *data = content_;
-    return Status::OK;
-  }
-
- private:
-  ObjectDigest digest_;
-  std::string content_;
-};
 
 storage::ObjectDigest ComputeObjectDigest(fxl::StringView value) {
   return glue::SHA256WithLengthHash(value);

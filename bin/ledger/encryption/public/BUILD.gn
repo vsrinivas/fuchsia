@@ -12,5 +12,6 @@ source_set("public") {
 
   public_deps = [
     "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/storage/public",
   ]
 }

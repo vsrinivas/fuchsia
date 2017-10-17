@@ -22,6 +22,8 @@ source_set("lib") {
     "fake_journal.h",
     "fake_journal_delegate.cc",
     "fake_journal_delegate.h",
+    "fake_object.cc",
+    "fake_object.h",
     "fake_page_storage.cc",
     "fake_page_storage.h",
   ]

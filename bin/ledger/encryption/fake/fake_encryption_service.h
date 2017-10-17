@@ -26,6 +26,16 @@ class FakeEncryptionService : public EncryptionService {
   void DecryptCommit(
       convert::ExtendedStringView storage_bytes,
       std::function<void(Status, std::string)> callback) override;
+  void GetObjectName(
+      storage::ObjectIdentifier object_identifier,
+      std::function<void(Status, std::string)> callback) override;
+  void EncryptObject(
+      std::unique_ptr<const storage::Object> object,
+      std::function<void(Status, std::string)> callback) override;
+  void DecryptObject(
+      storage::ObjectIdentifier object_identifier,
+      std::string encrypted_data,
+      std::function<void(Status, std::string)> callback) override;
 
   // Synchronously encrypts the given commit.
   std::string EncryptCommitSynchronous(
@@ -34,6 +44,19 @@ class FakeEncryptionService : public EncryptionService {
   // Synchronously decrypts the given commit.
   std::string DecryptCommitSynchronous(
       convert::ExtendedStringView storage_bytes);
+
+  // Synchronously gets the object name.
+  std::string GetObjectNameSynchronous(
+      storage::ObjectIdentifier object_identifier);
+
+  // Synchronously encrypts the object.
+  std::string EncryptObjectSynchronous(
+      std::unique_ptr<const storage::Object> object);
+
+  // Synchronously decrypts the object.
+  std::string DecryptObjectSynchronous(
+      storage::ObjectIdentifier object_identifier,
+      std::string encrypted_data);
 
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
