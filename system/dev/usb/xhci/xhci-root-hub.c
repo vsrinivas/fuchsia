@@ -380,7 +380,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     uint16_t value = le16toh(setup->wValue);
     uint16_t index = le16toh(setup->wIndex);
 
-    dprintf(TRACE, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
+    dprintf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
             request_type, request, value, index, le16toh(setup->wLength));
 
     if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
@@ -451,7 +451,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
 }
 
 static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
-    dprintf(TRACE, "xhci_rh_handle_intr_req\n");
+    dprintf(SPEW, "xhci_rh_handle_intr_req\n");
     uint8_t status_bits[128 / 8];
     bool have_status = 0;
     uint8_t* ptr = status_bits;
@@ -483,7 +483,7 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
 }
 
 zx_status_t xhci_rh_iotxn_queue(xhci_t* xhci, iotxn_t* txn, int rh_index) {
-    dprintf(TRACE, "xhci_rh_iotxn_queue rh_index: %d\n", rh_index);
+    dprintf(SPEW, "xhci_rh_iotxn_queue rh_index: %d\n", rh_index);
 
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];

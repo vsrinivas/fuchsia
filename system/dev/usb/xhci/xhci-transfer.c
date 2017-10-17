@@ -465,7 +465,7 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, iotxn_t* txn) {
     uint8_t ep_index = xhci_endpoint_index(proto_data->ep_address);
     __UNUSED usb_setup_t* setup = (ep_index == 0 ? &proto_data->setup : NULL);
 
-    dprintf(LTRACE, "xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu\n",
+    dprintf(LSPEW, "xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu\n",
             slot_id, setup, ep_index, txn->length);
 
     int rh_index = xhci_get_root_hub_index(xhci, slot_id);
