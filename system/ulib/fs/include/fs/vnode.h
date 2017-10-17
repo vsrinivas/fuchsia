@@ -48,6 +48,21 @@ class Vnode : public fbl::RefCounted<Vnode> {
 public:
     virtual ~Vnode();
 
+    // Ensures that it is valid to open the vnode with given flags and provides
+    // an opportunity to redirect subsequent I/O operations to a different vnode.
+    //
+    // If the implementation of |Open()| sets |out_redirect| to a non-null value.
+    // all following I/O operations on the opened file will be redirected to the
+    // indicated vnode instead of being handled by this instance.
+    //
+    // |flags| are the open flags to be validated, such as |O_RDONLY| and |O_DIRECTORY|.
+    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) = 0;
+
+    // METHODS FOR OPENED NODES
+    //
+    // The following operations will not be invoked unless the Vnode has
+    // been "Open()"-ed successfully.
+
 #ifdef __Fuchsia__
     // Serves a connection to the Vnode over the specified channel.
     //
@@ -77,19 +92,9 @@ public:
     virtual zx_status_t WatchDir(Vfs* vfs, const vfs_watch_dir_t* cmd);
 #endif
 
-    virtual void Notify(fbl::StringPiece name, unsigned event);
-
-    // Ensures that it is valid to open the vnode with given flags and provides
-    // an opportunity to redirect subsequent I/O operations to a different vnode.
+    // Closes vn. Will be called once for each successful Open().
     //
-    // If the implementation of |Open()| sets |out_redirect| to a non-null value.
-    // all following I/O operations on the opened file will be redirected to the
-    // indicated vnode instead of being handled by this instance.
-    //
-    // |flags| are the open flags to be validated, such as |O_RDONLY| and |O_DIRECTORY|.
-    virtual zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) = 0;
-
-    // Closes vn. Typically, most Vnodes simply return "ZX_OK".
+    // Typically, most Vnodes simply return "ZX_OK".
     virtual zx_status_t Close();
 
     // Read data from vn at offset.
@@ -112,49 +117,16 @@ public:
     virtual zx_status_t Append(const void* data, size_t len, size_t* out_end,
                                size_t* out_actual);
 
-    // Attempt to find child of vn, child returned on success.
-    // Name is len bytes long, and does not include a null terminator.
-    virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name);
-
-    // Read attributes of vn.
-    virtual zx_status_t Getattr(vnattr_t* a);
+    // Change the size of vn
+    virtual zx_status_t Truncate(size_t len);
 
     // Set attributes of vn.
     virtual zx_status_t Setattr(const vnattr_t* a);
-
-    // Read directory entries of vn, error if not a directory.
-    // FS-specific Cookie must be a buffer of vdircookie_t size or smaller.
-    // Cookie must be zero'd before first call and will be used by
-    // the readdir implementation to maintain state across calls.
-    // To "rewind" and start from the beginning, cookie may be zero'd.
-    virtual zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len,
-                                size_t* out_actual);
-
-    // Create a new node under vn.
-    // Name is len bytes long, and does not include a null terminator.
-    // Mode specifies the type of entity to create.
-    virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, fbl::StringPiece name, uint32_t mode);
 
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
     virtual zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                               void* out_buf, size_t out_len, size_t* out_actual);
-
-    // Removes name from directory vn
-    virtual zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir);
-
-    // Change the size of vn
-    virtual zx_status_t Truncate(size_t len);
-
-    // Renames the path at oldname in olddir to the path at newname in newdir.
-    // Called on the "olddir" vnode.
-    // Unlinks any prior newname if it already exists.
-    virtual zx_status_t Rename(fbl::RefPtr<Vnode> newdir,
-                               fbl::StringPiece oldname, fbl::StringPiece newname,
-                               bool src_must_be_dir, bool dst_must_be_dir);
-
-    // Creates a hard link to the 'target' vnode with a provided name in vndir
-    virtual zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<Vnode> target);
 
     // Acquire a vmo from a vnode.
     //
@@ -166,6 +138,47 @@ public:
 
     // Syncs the vnode with its underlying storage
     virtual zx_status_t Sync();
+
+    // Read directory entries of vn, error if not a directory.
+    // FS-specific Cookie must be a buffer of vdircookie_t size or smaller.
+    // Cookie must be zero'd before first call and will be used by
+    // the readdir implementation to maintain state across calls.
+    // To "rewind" and start from the beginning, cookie may be zero'd.
+    virtual zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len,
+                                size_t* out_actual);
+
+    // METHODS FOR OPENED OR UNOPENED NODES
+    //
+    // The following operations may be invoked on a Vnode, even if it has
+    // not been "Open()"-ed.
+
+    // Attempt to find child of vn, child returned on success.
+    // Name is len bytes long, and does not include a null terminator.
+    virtual zx_status_t Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name);
+
+    // Read attributes of vn.
+    virtual zx_status_t Getattr(vnattr_t* a);
+
+    // Create a new node under vn.
+    // Name is len bytes long, and does not include a null terminator.
+    // Mode specifies the type of entity to create.
+    virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, fbl::StringPiece name, uint32_t mode);
+
+    // Removes name from directory vn
+    virtual zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir);
+
+    // Renames the path at oldname in olddir to the path at newname in newdir.
+    // Called on the "olddir" vnode.
+    // Unlinks any prior newname if it already exists.
+    virtual zx_status_t Rename(fbl::RefPtr<Vnode> newdir,
+                               fbl::StringPiece oldname, fbl::StringPiece newname,
+                               bool src_must_be_dir, bool dst_must_be_dir);
+
+    // Creates a hard link to the 'target' vnode with a provided name in vndir
+    virtual zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<Vnode> target);
+
+    // Invoked by the VFS layer whenever files are added or removed.
+    virtual void Notify(fbl::StringPiece name, unsigned event);
 
 #ifdef __Fuchsia__
     // Attaches a handle to the vnode, if possible. Otherwise, returns an error.

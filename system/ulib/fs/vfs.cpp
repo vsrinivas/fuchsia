@@ -193,6 +193,7 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             return r;
         }
         if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
+            vn->Close();
             return r;
         }
     }
