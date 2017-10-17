@@ -180,7 +180,7 @@ menuentry "Debian" {
   fi
 
   echo "Loading linux..."
-  linux ${LINUX_PATH} root=/dev/disk/by-uuid/${ROOT_UUID} rw rootwait
+  linux ${LINUX_PATH} root=/dev/disk/by-uuid/${ROOT_UUID} ro rootwait lockfs
   echo "Loading initrd..."
   initrd ${INITRD_PATH}
 }

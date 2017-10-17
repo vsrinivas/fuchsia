@@ -27,6 +27,10 @@ EXTRA_PACKAGES=(
    libsdl1.2-dev
    build-essential
 
+   # Allows mounting the root fs as RO with a ramdisk overlay for ephemeral
+   # writes.
+   bilibop-lockfs
+
    # Unixbench deps:
    libx11-dev
    libgl1-mesa-dev
