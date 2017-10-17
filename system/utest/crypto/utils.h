@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <crypto/cipher.h>
 #include <crypto/hkdf.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -29,6 +30,31 @@
 #define EXPECT_OK(expr) UT_ZX(expr, ZX_OK, DONOT_RET)
 #define ASSERT_OK(expr) UT_ZX(expr, ZX_OK, RET_FALSE)
 
+// Value-parameterized tests: Consumers of this file can define an 'EACH_PARAM' macro as follows:
+//   #define EACH_PARAM(OP, Test)
+//   OP(Test, Class, Param1)
+//   OP(Test, Class, Param2)
+//   ...
+//   OP(Test, Class, ParamN)
+// where |Param1| corresponds to an enum constant |Class::kParam1|, etc.
+//
+// Consumers can then use the following macros to automatically define and run tests for each
+// parameter:
+//   bool TestSomething(Param param) {
+//       BEGIN_TEST;
+//       ...
+//       END_TEST;
+//   }
+//   DEFINE_EACH(TestSomething)
+//   ...
+//   BEGIN_TEST_CASE(SomeTest)
+//   RUN_EACH(TestSomething)
+//   END_TEST_CASE(SomeTest)
+#define DEFINE_TEST_PARAM(Test, Class, Param) bool Test ## _ ## Param(void) { return Test(Class::k ## Param); }
+#define RUN_TEST_PARAM(Test, Class, Param) RUN_TEST(Test ## _ ## Param)
+#define DEFINE_EACH(Test) EACH_PARAM(DEFINE_TEST_PARAM, Test)
+#define RUN_EACH(Test) EACH_PARAM(RUN_TEST_PARAM, Test)
+
 namespace crypto {
 namespace testing {
 
@@ -44,6 +70,10 @@ fbl::unique_ptr<uint8_t[]> MakeRandPage();
 
 // Resizes |out| and sets its contents to match the given |hex| string.
 zx_status_t HexToBytes(const char* hex, Bytes* out);
+
+// Fills the given |key| and |iv| with as much random data as indicated by |Cipher::GetKeyLen| and
+// |Cipher::GetIVLen| for the given |cipher|. |iv| may be null.
+zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Bytes* key, Bytes* iv);
 
 } // namespace testing
 } // namespace crypto

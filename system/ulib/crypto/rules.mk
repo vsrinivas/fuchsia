@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bytes.cpp \
+    $(LOCAL_DIR)/cipher.cpp \
     $(LOCAL_DIR)/digest.cpp \
     $(LOCAL_DIR)/error.cpp \
     $(LOCAL_DIR)/hkdf.cpp \
