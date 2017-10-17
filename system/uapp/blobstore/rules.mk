@@ -75,12 +75,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
 
-ifeq ($(HOST_PLATFORM),darwin)
-MODULE_DEFINES := O_PATH=010000000
-else
-MODULE_DEFINES := _POSIX_C_SOURCE=200809L
-endif
-
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 
 include make/module.mk

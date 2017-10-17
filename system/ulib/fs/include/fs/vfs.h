@@ -34,6 +34,19 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 
+// Ensure O_PATH and O_DIRECTORY are explicitly defined
+// for host-side tools. They are not a part of standard Posix,
+// so they are not guaranteed to exist in an arbitrary host-side
+// C library.
+
+#ifndef O_PATH
+#define O_PATH 010000000
+#endif
+
+#ifndef O_DIRECTORY
+#define O_DIRECTORY 0200000
+#endif
+
 namespace fs {
 
 class Connection;
