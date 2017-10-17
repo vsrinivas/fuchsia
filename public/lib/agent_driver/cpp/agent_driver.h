@@ -14,6 +14,7 @@
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
@@ -97,9 +98,12 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     agent_impl_.reset();
     if (impl_) {
       impl_->Terminate([this] {
-        impl_.reset();
-        on_terminated_();
-      });
+          // Cf. AppDriver::Terminate().
+          fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
+              impl_.reset();
+              on_terminated_();
+            });
+        });
     } else {
       on_terminated_();
     }
