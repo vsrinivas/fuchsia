@@ -7,7 +7,7 @@ description = "Library and runtime for Rust fidl bindings"
 repository = "https://fuchsia.googlesource.com/fidl/"
 
 [dependencies]
-byteorder = "0.5.3"
+byteorder = "1.1.0"
 fuchsia-zircon = { path = "../../../../rust/crates/fuchsia-zircon" }
 futures = "0.1"
 tokio-core = "0.1"
