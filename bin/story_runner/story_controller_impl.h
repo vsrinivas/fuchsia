@@ -10,7 +10,9 @@
 #ifndef PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -194,6 +196,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void AddModuleWatcher(ModuleControllerPtr module_controller,
                         const fidl::Array<fidl::String>& module_path);
   void OnRootStateChange(ModuleState state);
+  void ProcessPendingViews();
 
   // The ID of the story, its state and the context to obtain it from and
   // persist it to.
@@ -231,6 +234,20 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
     ModuleControllerPtr module_controller;
   };
   std::vector<ExternalModule> external_modules_;
+
+  // The module instances (identified by their serialized module paths) already
+  // known to story shell. Does not include modules whose views are pending and
+  // not yet sent to story shell.
+  std::set<std::string> connected_views_;
+
+  // Holds a running module (that is displayed by story shell) 's view until its
+  // parent is connected to story shell.
+  struct ModuleView {
+    std::string parent_view_id;
+    mozart::ViewOwnerPtr view_owner;
+    SurfaceRelationPtr surface_relation;
+  };
+  std::map<std::string, ModuleView> pending_views_;
 
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.

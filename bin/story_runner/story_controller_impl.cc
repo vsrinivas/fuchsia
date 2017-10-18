@@ -1077,20 +1077,57 @@ void StoryControllerImpl::StartModuleInShell(
   // If this is called during Stop(), story_shell_ might already have been
   // reset. TODO(mesch): Then the whole operation should fail.
   if (story_shell_) {
-    // TODO(alhaad): When this piece of code gets run as a result of story
-    // re-inflation, it is possible that module |id| gets connected before
-    // module |parent_id|, which crashes story shell. This does not currently
-    // happen by coincidence.
-    fidl::String parent_view_id = PathString(parent_module_path);
-    story_shell_->ConnectView(std::move(view_owner), view_id, parent_view_id,
-                              std::move(surface_relation));
-    if (focus) {
-      story_shell_->FocusView(view_id, parent_view_id);
+    const fidl::String parent_view_id = PathString(parent_module_path);
+
+    // We only add a module to story shell if its either a root module or its
+    // parent is already known to story shell.
+    if (parent_view_id == "" || connected_views_.count(parent_view_id)) {
+      story_shell_->ConnectView(std::move(view_owner), view_id, parent_view_id,
+                                std::move(surface_relation));
+      connected_views_.insert(view_id);
+      ProcessPendingViews();
+      if (focus) {
+        story_shell_->FocusView(view_id, parent_view_id);
+      }
+    } else {
+      // TODO(alhaad): We need to remove this if the module is stopped while its
+      // view is still on this buffer.
+      pending_views_.emplace(
+          std::make_pair(view_id.get(),
+                         ModuleView{parent_view_id.get(),
+                           std::move(view_owner),
+          std::move(surface_relation)}));
     }
   }
 
   if (module_source == ModuleSource::EXTERNAL) {
     AddModuleWatcher(std::move(module_controller), module_path);
+  }
+}
+
+void StoryControllerImpl::ProcessPendingViews() {
+  std::vector<std::string> added_keys;
+
+  for (auto& kv : pending_views_) {
+    if (!connected_views_.count(kv.second.parent_view_id)) {
+      continue;
+    }
+
+    if (story_shell_) {
+      auto& c = kv.second;
+      story_shell_->ConnectView(std::move(c.view_owner), kv.first,
+                                c.parent_view_id,
+                                std::move(c.surface_relation));
+      connected_views_.insert(kv.first);
+      added_keys.push_back(kv.first);
+    }
+  }
+
+  if (added_keys.size()) {
+    for (auto& key : added_keys) {
+      pending_views_.erase(key);
+    }
+    ProcessPendingViews();
   }
 }
 
