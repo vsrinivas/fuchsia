@@ -4,28 +4,28 @@
 
 executable("sparser") {
   sources = [
-    "sparse.c"
+    "sparse.c",
   ]
 
   deps = [
-    "//zircon/system/uapp/installer/lib:sparse"
+    "//zircon/system/uapp/installer/lib:sparse",
   ]
 }
 
 group("sparser_host") {
   deps = [
-    ":sparser(//build/toolchain:host_x64)"
+    ":sparser(//build/toolchain:host_x64)",
   ]
 }
 
 executable("install-fuchsia") {
   sources = [
-    "install-fuchsia.c"
+    "install-fuchsia.c",
   ]
 
   libs = [
     "fs-management",
-    "zircon"
+    "zircon",
   ]
 
   deps = [
