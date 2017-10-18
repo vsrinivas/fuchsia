@@ -205,53 +205,41 @@ template("dart_package") {
     }
 
     action(target_name) {
-      runner_label = "//build/dart/analyzer($host_toolchain)"
-      runner_out_dir = get_label_info(runner_label, "root_out_dir")
-      script = "$runner_out_dir/dart-tools/analyzer"
-
-      server_label = "//dart/pkg/analysis_server:analysis_server_bin($host_toolchain)"
-      server_gen_dir = get_label_info(server_label, "target_gen_dir")
-      server_snaphost = "$server_gen_dir/analysis_server_bin.snapshot"
+      script = "//build/dart/run_analysis.py"
 
       depfile = "$target_gen_dir/$target_name.analysis.d"
 
       output_file = "$target_gen_dir/$target_name.analyzed"
 
-      log_file = "$target_gen_dir/$target_name.analysis_logs"
-
       inputs = [
         options_file,
       ]
-
-      pool = "//build/dart:analysis_pool($default_toolchain)"
 
       outputs = [
         output_file,
       ]
 
       args = [
-        "--package-root",
-        rebase_path("."),
         "--source-dir",
-        rebase_path(source_dir, "."),
-        "--server-snapshot",
-        rebase_path(server_snaphost),
+        rebase_path(source_dir),
+        "--dot-packages",
+        rebase_path(dot_packages_file),
+        "--dartanalyzer",
+        rebase_path(dart_analyzer_binary),
+        "--dart-sdk",
+        rebase_path(dart_sdk_dir),
+        "--options",
+        rebase_path(options_file),
         "--stamp",
         rebase_path(output_file),
         "--depname",
         rebase_path(output_file, root_build_dir),
         "--depfile",
         rebase_path(depfile),
-        "--cache-path",
-        rebase_path("$root_out_dir/analysis-cache"),
-        "--log-file",
-        rebase_path(log_file),
       ]
 
       deps = [
         ":$invocation_target_name",
-        runner_label,
-        server_label,
       ]
     }
   }
