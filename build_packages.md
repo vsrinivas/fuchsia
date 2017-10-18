@@ -1,6 +1,6 @@
 ### Packages
 
-**Top level packages** are defined in json files which can be found at:
+**Top level packages** are defined in JSON files which can be found at:
 
 * Primary Packages Dir: [`//packages/gn`][packages-source]
 * Garnet Layer Packages: [`//garnet/packages/`][garnet-packages-source].
@@ -8,24 +8,16 @@
 * Topaz Layer Packages: [`//topaz/packages/`][topaz-packages-source].
 
 A top level package file contains references to other top level packages it builds
-on top of (`imports`), the GN targets it needs built (`labels`), and how to pack
-the build outputs into the final image (`binaries`):
+on top of (`imports`) and the GN packages it includes (`packages`):
 ``` json
 {
     "imports": [
         "packages/gn/foo_framework”,
         “packages/gn/some_extra_data”
     ],
-    "labels": [
-        "//my/stuff/depends_on_foo",
-        "//my/stuff/api_for_others"
-    ],
-    "binaries": [
-        {
-            "binary": "path/in/output/tree/my_foo_base_stuff",
-            "bootfs_path": "apps/best_app_ever"
-        }
-    ]
+    "packages": {
+        "my_package": "//my/stuff/my_package"
+    }
 }
 ```
 
@@ -44,7 +36,7 @@ package("my_package") {
     "//path/to/some/dep"
   ],
   binaries = [{
-    name = "hello_world_bin"
+    name = "hello_world"
   }]
 }
 ```
@@ -64,7 +56,9 @@ here:
 
 # Executable defines a c++ binary, the label of the executable target will
 # be the same as the name of the produced binary file.
-executable("hello_world_bin") {
+executable("bin") {
+  output_name = "hello_world"
+
   sources = [
     "my_source_file.cc",
   ]
@@ -77,14 +71,14 @@ executable("hello_world_bin") {
 }
 ```
 
-The above executable target will output a binary of the name `hello_world_bin`
+The above executable target will output a binary of the name `hello_world`
 
 What the `binaries` field in a `package` target does do is let GN know to deploy
 this binary onto fuchsia when you run your built image. This means that you should
 be able to run your binary from inside the fuchsia shell like so:
 
 ```
-$ hello_world_bin
+$ hello_world
 Hello World!
 $
 ```
