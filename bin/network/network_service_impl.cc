@@ -19,12 +19,16 @@
 
 namespace network {
 
+// Number of file descriptors each UrlLoader instance uses. (This
+// depends on the implementation of the reactor in third_party/asio:
+// currently 2 for pipe, 1 for socket)
+constexpr size_t kNumFDPerConnection = 3;
+// Number of reserved file descriptors for stdio.
+constexpr size_t kNumFDReserved = 3;
+// This is some random margin.
+constexpr size_t kMargin = 4;
 // Maximum number of slots used to run network requests concurrently.
-// The reasoning of the following formula is:
-// 1. Each UrlLoader instance consumes 3 file descriptors (2 for pipe, 1 for socket)
-// 2. 3 descriptors (fd 0-2) are reserved for stdio
-// 3. some random margin 4
-constexpr size_t kMaxSlots = ((FDIO_MAX_FD - 3) / 3) - 4;
+constexpr size_t kMaxSlots = ((FDIO_MAX_FD - kNumFDReserved) / kNumFDPerConnection) - kMargin;
 
 // Container for the url loader implementation. The loader is run on his own
 // thread.
