@@ -178,7 +178,12 @@ pub fn test_handle_repr() {
     for h in v.into_iter() {
         ::std::mem::forget(h);
     }
+}
 
+impl AsRef<Channel> for Channel {
+    fn as_ref(&self) -> &Self {
+        &self
+    }
 }
 
 /// Options for creating a channel.

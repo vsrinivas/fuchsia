@@ -4,6 +4,8 @@
 
 /// rio provides some utilities for working with the Zircon RemoteIO protocol.
 
+use bytes;
+use bytes::BufMut;
 use zircon;
 use fdio_sys::*;
 use std::os::raw::c_uint;
@@ -139,6 +141,24 @@ impl<'a> Message<'a> {
 
 //TODO(raggi): implement Debug for Message
 
+/// write_object writes a zxrio_object_t to the given channel, along with any given extra data and handles. extra must not exceed ZXRIO_OBJECT_EXTRA, and handles must not exceed FDIO_MAX_HANDLES.
+pub fn write_object<C: AsRef<zircon::Channel>>(chan: C, status: zircon::Status, type_: u32, extra: &[u8], handles: &mut Vec<zircon::Handle>) -> Result<(), zircon::Status> {
+  if extra.len() > ZXRIO_OBJECT_EXTRA as usize {
+    return Err(zircon::Status::ErrInvalidArgs)
+  }
+  if handles.len() > FDIO_MAX_HANDLES as usize {
+    return Err(zircon::Status::ErrInvalidArgs)
+  }
+
+  let mut buf = bytes::BytesMut::with_capacity(ZXRIO_OBJECT_MINSIZE + extra.len());
+
+  buf.put_i32::<bytes::LittleEndian>(status as i32);
+  buf.put_u32::<bytes::LittleEndian>(type_);
+
+  buf.put_slice(extra);
+
+  chan.as_ref().write(buf.as_ref(), handles, 0)
+}
 
 #[cfg(test)]
 mod test {
@@ -238,5 +258,23 @@ mod test {
     let buf = zircon::MessageBuf::new_with(v, vec![zircon::Handle::invalid()]);
     let m = Message::create(&buf);
     assert!(m.is_err());
+  }
+
+  #[test]
+  fn test_write_object() {
+    let (tx, rx) = zircon::Channel::create(zircon::ChannelOpts::default()).unwrap();
+
+    let h = zircon::Vmo::create(10, zircon::VmoOpts::default()).unwrap();
+
+    write_object(&tx, zircon::Status::ErrBadPath, FDIO_PROTOCOL_REMOTE, &[1, 2, 3, 4], &mut vec![h.into()]).unwrap();
+
+    let mut buf = zircon::MessageBuf::new();
+
+    rx.read(0, &mut buf).unwrap();
+
+    let ptr = buf.bytes().as_ptr();
+    assert_eq!(zircon::Status::ErrBadPath as i32, unsafe { *(ptr as *const i32) });
+    assert_eq!(FDIO_PROTOCOL_REMOTE, unsafe { *(ptr.offset(4) as *const u32) });
+    assert_eq!([1,2,3,4], unsafe { ::std::slice::from_raw_parts(ptr.offset(8) as *const u8, 4) });
   }
 }

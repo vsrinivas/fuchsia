@@ -55,6 +55,9 @@ pub const O_PIPELINE: raw::c_int = 0o02000000000;
 pub const ZXRIO_HDR_SZ: usize = 48;
 pub const ZXRIO_MSG_SZ: usize = ZXRIO_HDR_SZ + FDIO_CHUNK_SIZE as usize;
 
+pub const ZXRIO_OBJECT_MINSIZE: usize = 8;
+pub const ZXRIO_OBJECT_MAXSIZE: usize = ZXRIO_OBJECT_MINSIZE + ZXRIO_OBJECT_EXTRA as usize;
+
 #[test]
 fn zxrio_msg_size() {
     assert_eq!(::std::mem::size_of::<zxrio_msg_t>(), ZXRIO_MSG_SZ);

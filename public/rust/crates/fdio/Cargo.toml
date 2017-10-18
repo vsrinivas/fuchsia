@@ -9,3 +9,4 @@ repository = "https://fuchsia.googlesource.com/fdio-rs/"
 [dependencies]
 fuchsia-zircon = { path = "../fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }
+bytes = "0.4"

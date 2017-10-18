@@ -21,6 +21,12 @@ pub struct Channel {
     evented: PollEvented<EventedHandle>,
 }
 
+impl AsRef<zircon::Channel> for Channel {
+    fn as_ref(&self) -> &zircon::Channel {
+        &self.channel
+    }
+}
+
 impl AsHandleRef for Channel {
     fn as_handle_ref(&self) -> zircon::HandleRef {
         self.channel.as_handle_ref()

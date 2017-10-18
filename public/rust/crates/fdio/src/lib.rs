@@ -6,6 +6,7 @@
 
 extern crate fuchsia_zircon as zircon;
 extern crate fuchsia_zircon_sys as zircon_sys;
+extern crate bytes;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
