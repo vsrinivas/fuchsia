@@ -160,7 +160,11 @@ void io_buffer_release(io_buffer_t* buffer) {
 
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const zx_off_t offset, const size_t size) {
-    return zx_vmo_op_range(buffer->vmo_handle, op, offset, size, NULL, 0);
+    if (size > 0) {
+        return zx_vmo_op_range(buffer->vmo_handle, op, buffer->offset + offset, size, NULL, 0);
+    } else {
+        return ZX_OK;
+    }
 }
 
 zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
