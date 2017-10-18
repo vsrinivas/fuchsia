@@ -11,4 +11,4 @@ typedef struct {
     zx_device_t* zxdev;
     platform_device_protocol_t pdev;
     // more stuff will be added here
-} gauss_audio_t;
+} gauss_pdm_input_t;

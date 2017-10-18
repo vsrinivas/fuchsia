@@ -10,9 +10,22 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/gauss-pdm-input.c \
+    $(LOCAL_DIR)/gauss-pdm-input-stream.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_LIBS := \
+  system/ulib/c \
+  system/ulib/driver \
+  system/ulib/zircon \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_STATIC_LIBS := \
+  system/ulib/audio-proto-utils \
+  system/ulib/audio-driver-proto \
+  system/ulib/ddk \
+  system/ulib/ddktl \
+  system/ulib/dispatcher-pool \
+  system/ulib/fbl \
+  system/ulib/sync \
+  system/ulib/zx \
+  system/ulib/zxcpp \
 
 include make/module.mk
