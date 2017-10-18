@@ -11,6 +11,8 @@ source_set("lib") {
   testonly = true
 
   sources = [
+    "cloud_provider_firebase_factory.cc",
+    "cloud_provider_firebase_factory.h",
     "data_generator.cc",
     "data_generator.h",
     "fake_token_provider.cc",
@@ -28,9 +30,11 @@ source_set("lib") {
     "//garnet/public/lib/fidl/cpp/bindings:serialization",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/test/token_provider",
     "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/cloud_provider/fidl",
     "//peridot/public/lib/ledger/fidl",
     "//third_party/gtest",
   ]
