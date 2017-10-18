@@ -46,7 +46,7 @@ static void process_exception(crash_list_t crash_list,
     // The crash was not registered. We should let crashlogger print out the
     // details and then fail the test.
     if (match == ZX_HANDLE_INVALID) {
-        UNITTEST_TRACEF(
+        UNITTEST_FAIL_TRACEF(
             "FATAL: process [%" PRIu64 "] crashed but was not registered\n",
             exception->pid);
         zx_handle_t process;
@@ -55,7 +55,7 @@ static void process_exception(crash_list_t crash_list,
                                                  ZX_RIGHT_SAME_RIGHTS,
                                                  &process);
         if (status != ZX_OK) {
-            UNITTEST_TRACEF(
+            UNITTEST_FAIL_TRACEF(
                 "FATAL: failed to get a handle to [%" PRIu64 "] : error %s\n",
                 exception->pid, zx_status_get_string(status));
             exit(ZX_ERR_INTERNAL);
@@ -64,7 +64,7 @@ static void process_exception(crash_list_t crash_list,
         status = zx_object_get_child(process, exception->tid,
                                      ZX_RIGHT_SAME_RIGHTS, &thread);
         if (status != ZX_OK) {
-            UNITTEST_TRACEF(
+            UNITTEST_FAIL_TRACEF(
                 "FATAL: failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %s\n",
                 exception->pid, exception->tid, zx_status_get_string(status));
             zx_handle_close(process);
@@ -78,7 +78,7 @@ static void process_exception(crash_list_t crash_list,
             // thread.
             zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
         } else {
-            UNITTEST_TRACEF(
+            UNITTEST_FAIL_TRACEF(
                 "FATAL: could not pass exception from [%" PRIu64 ".%" PRIu64 "] : error %s\n",
                 exception->pid, exception->tid, zx_status_get_string(status));
         }
@@ -91,7 +91,7 @@ static void process_exception(crash_list_t crash_list,
     }
     zx_status_t status = zx_task_kill(match);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF(
+        UNITTEST_FAIL_TRACEF(
             "FATAL: failed to kill [%" PRIu64 ".%" PRIu64 "]  : error %s\n",
             exception->pid, exception->tid, zx_status_get_string(status));
         exit(ZX_ERR_INTERNAL);
@@ -101,8 +101,8 @@ static void process_exception(crash_list_t crash_list,
     // there is no race condition with when we unbind the exception port.
     status = zx_object_wait_one(match, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF("FATAL: failed to wait for termination  : error %s\n",
-                        zx_status_get_string(status));
+        UNITTEST_FAIL_TRACEF("FATAL: failed to wait for termination  : error %s\n",
+                             zx_status_get_string(status));
         exit(ZX_ERR_INTERNAL);
     }
     zx_handle_close(match);
@@ -115,8 +115,8 @@ static test_result_t watch_test_thread(zx_handle_t port, crash_list_t crash_list
     while (true) {
         zx_status_t status = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0);
         if (status != ZX_OK) {
-            UNITTEST_TRACEF("failed to wait on port: error %s\n",
-                            zx_status_get_string(status));
+            UNITTEST_FAIL_TRACEF("failed to wait on port: error %s\n",
+                                 zx_status_get_string(status));
             exit(ZX_ERR_INTERNAL);
         }
         switch (packet.key) {
@@ -129,8 +129,8 @@ static test_result_t watch_test_thread(zx_handle_t port, crash_list_t crash_list
             } else if (packet.signal.observed & TEST_FAILED_SIGNAL) {
                 return TEST_FAILED;
             } else {
-                UNITTEST_TRACEF("unknown test ended event signal: %u\n",
-                                packet.signal.observed);
+                UNITTEST_FAIL_TRACEF("unknown test ended event signal: %u\n",
+                                     packet.signal.observed);
                 exit(ZX_ERR_INTERNAL);
             }
         case TEST_THREAD_TERMINATED_KEY:
@@ -175,7 +175,7 @@ static int run_test(void* arg) {
                                               ZX_THREAD_TERMINATED,
                                               ZX_WAIT_ASYNC_ONCE);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF(
+        UNITTEST_FAIL_TRACEF(
             "FATAL: failed to wait on test thread termination : error %s\n",
             zx_status_get_string(status));
         exit(ZX_ERR_INTERNAL);
@@ -187,8 +187,8 @@ static int run_test(void* arg) {
         status = zx_task_bind_exception_port(self, data->port,
                                              EXCEPTION_PORT_KEY, 0);
         if (status != ZX_OK) {
-            UNITTEST_TRACEF("FATAL: failed to bind to exception port: error %s\n",
-                            zx_status_get_string(status));
+            UNITTEST_FAIL_TRACEF("FATAL: failed to bind to exception port: error %s\n",
+                                zx_status_get_string(status));
             exit(ZX_ERR_INTERNAL);
         }
         crash_list_register(data->crash_list, self);
@@ -202,8 +202,8 @@ static int run_test(void* arg) {
     uint32_t signal = test_result ? TEST_PASSED_SIGNAL : TEST_FAILED_SIGNAL;
     status = zx_object_signal(data->test_ended_event, 0, signal);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF("FATAL: failed to signal test result : error %s\n",
-                        zx_status_get_string(status));
+        UNITTEST_FAIL_TRACEF("FATAL: failed to signal test result : error %s\n",
+                             zx_status_get_string(status));
         exit(ZX_ERR_INTERNAL);
     }
     return 0;
@@ -222,16 +222,16 @@ zx_status_t run_with_crash_handler(crash_list_t crash_list,
     zx_handle_t port;
     zx_status_t status = zx_port_create(0, &port);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF("failed to create port: error %s\n",
-                        zx_status_get_string(status));
+        UNITTEST_FAIL_TRACEF("failed to create port: error %s\n",
+                             zx_status_get_string(status));
         return status;
     }
     if (bind_to_job) {
         status = zx_task_bind_exception_port(zx_job_default(), port,
                                              EXCEPTION_PORT_KEY, 0);
         if (status != ZX_OK) {
-            UNITTEST_TRACEF("failed to bind to exception port: error %s\n",
-                            zx_status_get_string(status));
+            UNITTEST_FAIL_TRACEF("failed to bind to exception port: error %s\n",
+                                 zx_status_get_string(status));
             zx_handle_close(port);
             return status;
         }
@@ -240,8 +240,8 @@ zx_status_t run_with_crash_handler(crash_list_t crash_list,
     zx_handle_t test_ended_event;
     status = zx_event_create(0, &test_ended_event);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF("failed to create event: error %s\n",
-                        zx_status_get_string(status));
+        UNITTEST_FAIL_TRACEF("failed to create event: error %s\n",
+                            zx_status_get_string(status));
         zx_handle_close(port);
         return status;
     }
@@ -249,7 +249,7 @@ zx_status_t run_with_crash_handler(crash_list_t crash_list,
                                   TEST_PASSED_SIGNAL | TEST_FAILED_SIGNAL,
                                   ZX_WAIT_ASYNC_ONCE);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF(
+        UNITTEST_FAIL_TRACEF(
             "failed to wait on test_ended_event: error %s\n",
             zx_status_get_string(status));
         zx_handle_close(port);
@@ -269,7 +269,7 @@ zx_status_t run_with_crash_handler(crash_list_t crash_list,
 
     int thrd_res = thrd_create(&test_thread, run_test, (void*)&test_data);
     if (thrd_res != thrd_success) {
-        UNITTEST_TRACEF("failed to create test thread\n");
+        UNITTEST_FAIL_TRACEF("failed to create test thread\n");
         zx_handle_close(port);
         zx_handle_close(test_ended_event);
         return thrd_status_to_zx_status(thrd_res);

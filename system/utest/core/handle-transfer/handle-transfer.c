@@ -90,7 +90,7 @@ static int thread(void* arg) {
     zx_handle_t* B = A + 2;
     zx_status_t status = zx_channel_write(B[1], 0, NULL, 0u, &A[0], 1);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF("failed to write message with handle A0 to B1: %d\n", status);
+        UNITTEST_FAIL_TRACEF("failed to write message with handle A0 to B1: %d\n", status);
         goto thread_exit;
     }
 
@@ -99,7 +99,7 @@ static int thread(void* arg) {
     uint32_t num_handles = 1;
     status = zx_channel_read(B[0], 0, NULL, &H, 0, num_handles, NULL, &num_handles);
     if (status != ZX_OK || num_handles < 1) {
-        UNITTEST_TRACEF("failed to read message handle H from B0: %d\n", status);
+        UNITTEST_FAIL_TRACEF("failed to read message handle H from B0: %d\n", status);
     }
 
 thread_exit:

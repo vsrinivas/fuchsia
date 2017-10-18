@@ -32,7 +32,7 @@ bool bad_access_test(void) {
 static void try_bad_syscall(void* arg) {
     uint64_t num = (uintptr_t)arg;
     zx_status_t status = bad_syscall(num);
-    UNITTEST_TRACEF("bad syscall %#" PRIx64 " returned %d", num, status);
+    UNITTEST_FAIL_TRACEF("bad syscall %#" PRIx64 " returned %d", num, status);
 }
 
 #define TRY_BAD_SYSCALL(num) \

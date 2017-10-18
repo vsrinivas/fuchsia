@@ -119,13 +119,24 @@ void unittest_printf_critical(const char* format, ...)
     __attribute__((format (printf, 1, 2)));
 
 /*
- * Printf dedicated to the unittest library which output
- * depends on the verbosity level.
+ * Printf dedicated to the unittest library, prints output if
+ * verbosity of any level is enabled.
  */
 
 #define unittest_printf(format, ...)                           \
     do {                                                       \
         if (utest_verbosity_level > 0)                         \
+            unittest_printf_critical(format, ##__VA_ARGS__);   \
+    } while (0)
+
+/*
+ * Printf dedicated to the unittest library which output
+ * depends on the verbosity level.
+ */
+
+#define unittest_level_printf(level, format, ...)              \
+    do {                                                       \
+        if (utest_verbosity_level >= (level))                  \
             unittest_printf_critical(format, ##__VA_ARGS__);   \
     } while (0)
 
@@ -142,13 +153,25 @@ void unittest_set_output_function(test_output_func fun, void* arg);
 int unittest_set_verbosity_level(int new_level);
 
 /*
- * Macros to format the error string
+ * Format the error string
  */
-#define UNITTEST_TRACEF(str, x...)                                            \
+#define UNITTEST_FAIL_TRACEF(str, x...)                                       \
     do {                                                                      \
         unittest_printf_critical(                                             \
             " [FAILED] \n        %s:%d:%s:\n        " str,                    \
             __FILE__, __LINE__, __PRETTY_FUNCTION__, ##x);                    \
+    } while (0)
+
+/*
+ * Format a tracing message
+ */
+#define UNITTEST_TRACEF(level, str, x...)                            \
+    do {                                                             \
+        if (utest_verbosity_level >= (level)) {                      \
+            unittest_printf_critical(                                \
+                "%s:%d:%s:\n        " str,                           \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, ##x);       \
+        }                                                            \
     } while (0)
 
 /*
@@ -320,10 +343,11 @@ int unittest_set_verbosity_level(int new_level);
 #define UT_CMP(op, lhs, rhs, lhs_str, rhs_str, ret, ...)                \
     do {                                                                \
         UT_ASSERT_VALID_TEST_STATE;                                     \
+        UNITTEST_TRACEF(2, "%s %s %s\n", lhs_str, #op, rhs_str);        \
         const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                      \
         const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                      \
         if (!(_lhs_val op _rhs_val)) {                                  \
-            UNITTEST_TRACEF(                                            \
+            UNITTEST_FAIL_TRACEF(                                       \
                 "%s:\n"                                                 \
                 "        Comparison failed: %s %s %s is false\n"        \
                 "        Specifically, %lld (0x%llx) %s %lld (0x%llx) is false\n", \
@@ -340,10 +364,11 @@ int unittest_set_verbosity_level(int new_level);
 #define UT_TRUE(actual, ret, ...)                                       \
     do {                                                                \
         UT_ASSERT_VALID_TEST_STATE;                                     \
+        UNITTEST_TRACEF(2, "%s\n", #actual);                            \
         if (!(actual)) {                                                \
-            UNITTEST_TRACEF("%s: %s is false\n",                        \
-                            unittest_get_message(__VA_ARGS__),          \
-                            #actual);                                   \
+            UNITTEST_FAIL_TRACEF("%s: %s is false\n",                   \
+                                 unittest_get_message(__VA_ARGS__),     \
+                                 #actual);                              \
             current_test_info->all_ok = false;                          \
             ret;                                                        \
         }                                                               \
@@ -352,10 +377,11 @@ int unittest_set_verbosity_level(int new_level);
 #define UT_FALSE(actual, ret, ...)                                      \
     do {                                                                \
         UT_ASSERT_VALID_TEST_STATE;                                     \
+        UNITTEST_TRACEF(2, "!(%s)\n", #actual);                         \
         if (actual) {                                                   \
-            UNITTEST_TRACEF("%s: %s is true\n",                         \
-                            unittest_get_message(__VA_ARGS__),          \
-                            #actual);                                   \
+            UNITTEST_FAIL_TRACEF("%s: %s is true\n",                    \
+                                 unittest_get_message(__VA_ARGS__),     \
+                                 #actual);                              \
             current_test_info->all_ok = false;                          \
             ret;                                                        \
         }                                                               \
@@ -364,30 +390,34 @@ int unittest_set_verbosity_level(int new_level);
 #define UT_NULL(actual, ret, ...)                                   \
     do {                                                            \
         UT_ASSERT_VALID_TEST_STATE;                                 \
+        UNITTEST_TRACEF(2, "(%s) == NULL\n", #actual);              \
         if (actual != NULL) {                                       \
-            UNITTEST_TRACEF("%s: %s is non-null!\n",                \
-                            unittest_get_message(__VA_ARGS__),      \
-                            #actual);                               \
+            UNITTEST_FAIL_TRACEF("%s: %s is non-null!\n",           \
+                                 unittest_get_message(__VA_ARGS__), \
+                                 #actual);                          \
             current_test_info->all_ok = false;                      \
             ret;                                                    \
         }                                                           \
     } while (0)
 
-#define UT_NONNULL(actual, ret, ...)                            \
-    do {                                                        \
-        UT_ASSERT_VALID_TEST_STATE;                             \
-        if (actual == NULL) {                                   \
-            UNITTEST_TRACEF("%s: %s is null!\n",                \
-                            unittest_get_message(__VA_ARGS__),  \
-                            #actual);                           \
-            current_test_info->all_ok = false;                  \
-            ret;                                                \
-        }                                                       \
+#define UT_NONNULL(actual, ret, ...)                                \
+    do {                                                            \
+        UT_ASSERT_VALID_TEST_STATE;                                 \
+        UNITTEST_TRACEF(2, "(%s) != NULL\n", #actual);              \
+        if (actual == NULL) {                                       \
+            UNITTEST_FAIL_TRACEF("%s: %s is null!\n",               \
+                                 unittest_get_message(__VA_ARGS__), \
+                                 #actual);                          \
+            current_test_info->all_ok = false;                      \
+            ret;                                                    \
+        }                                                           \
     } while (0)
 
 #define UT_BYTES_EQ(expected, actual, length, msg, ret)                       \
     do {                                                                      \
         UT_ASSERT_VALID_TEST_STATE;                                           \
+        UNITTEST_TRACEF(2, "bytes_eq(%s, %s, %s)\n",                          \
+                        #expected, #actual, #length);                         \
         if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
             current_test_info->all_ok = false;                                \
             ret;                                                              \
@@ -397,12 +427,15 @@ int unittest_set_verbosity_level(int new_level);
 #define UT_BYTES_NE(bytes1, bytes2, length, msg, ret) \
     do {                                              \
         UT_ASSERT_VALID_TEST_STATE;                   \
-        if (!memcmp(bytes1, bytes2, length)) {        \
-            UNITTEST_TRACEF(                          \
+        UNITTEST_TRACEF(2, "bytes_ne(%s, %s, %s)\n",  \
+                        #bytes1, #bytes2, #length);   \
+        size_t _length = (length);                    \
+        if (!memcmp(bytes1, bytes2, _length)) {       \
+            UNITTEST_FAIL_TRACEF(                     \
                 "%s: %s and %s are the same; "        \
                 "expected different\n",               \
                 msg, #bytes1, #bytes2);               \
-            hexdump8(bytes1, length);                 \
+            hexdump8(bytes1, _length);                \
             current_test_info->all_ok = false;        \
             ret;                                      \
         }                                             \
@@ -411,34 +444,40 @@ int unittest_set_verbosity_level(int new_level);
 #define UT_STR_EQ(expected, actual, length, msg, ret)                       \
     do {                                                                    \
         UT_ASSERT_VALID_TEST_STATE;                                         \
+        UNITTEST_TRACEF(2, "str_eq(%s, %s, %s)\n",                          \
+                        #expected, #actual, #length);                       \
         if (!unittest_expect_str_eq((expected), (actual), (length), msg)) { \
             current_test_info->all_ok = false;                              \
             ret;                                                            \
         }                                                                   \
     } while (0)
 
-#define UT_STR_NE(str1, str2, length, msg, ret) \
-    do {                                        \
-        UT_ASSERT_VALID_TEST_STATE;             \
-        if (!strncmp(str1, str2, length)) {     \
-            UNITTEST_TRACEF(                    \
-                "%s: %s and %s are the same; "  \
-                "expected different:\n"         \
-                "        '%s'\n",               \
-                msg, #str1, #str2, str1);       \
-            current_test_info->all_ok = false;  \
-            ret;                                \
-        }                                       \
+#define UT_STR_NE(str1, str2, length, msg, ret)      \
+    do {                                             \
+        UT_ASSERT_VALID_TEST_STATE;                  \
+        UNITTEST_TRACEF(2, "str_ne(%s, %s, %s)\n",   \
+                        #str1, #str2, #length);      \
+        if (!strncmp(str1, str2, (length))) {        \
+            UNITTEST_FAIL_TRACEF(                    \
+                "%s: %s and %s are the same; "       \
+                "expected different:\n"              \
+                "        '%s'\n",                    \
+                msg, #str1, #str2, str1);            \
+            current_test_info->all_ok = false;       \
+            ret;                                     \
+        }                                            \
     } while (0)
 
 /* For comparing uint64_t, like hw_id_t. */
 #define UT_EQ_LL(expected, actual, msg, ret)                                  \
     do {                                                                      \
         UT_ASSERT_VALID_TEST_STATE;                                           \
+        UNITTEST_TRACEF(2, "eq_ll(%s, %s)\n", #expected, #actual);            \
         const AUTO_TYPE_VAR(expected) _e = (expected);                        \
         const AUTO_TYPE_VAR(actual) _a = (actual);                            \
         if (_e != _a) {                                                       \
-            UNITTEST_TRACEF("%s: expected %llu, actual %llu\n", msg, _e, _a); \
+            UNITTEST_FAIL_TRACEF(                                             \
+                "%s: expected %llu, actual %llu\n", msg, _e, _a);             \
             current_test_info->all_ok = false;                                \
             ret;                                                              \
         }                                                                     \
@@ -473,13 +512,13 @@ int unittest_set_verbosity_level(int new_level);
  * The ASSERT_* macros are similar to the EXPECT_* macros except that
  * they return on failure.
  */
-#define ASSERT_NOT_NULL(p)                            \
-    do {                                              \
-        UT_ASSERT_VALID_TEST_STATE;                   \
-        if (!p) {                                     \
-            UNITTEST_TRACEF("ERROR: NULL pointer\n"); \
-            return false;                             \
-        }                                             \
+#define ASSERT_NOT_NULL(p)                                 \
+    do {                                                   \
+        UT_ASSERT_VALID_TEST_STATE;                        \
+        if (!p) {                                          \
+            UNITTEST_FAIL_TRACEF("ERROR: NULL pointer\n"); \
+            return false;                                  \
+        }                                                  \
     } while (0)
 
 #define ASSERT_CMP(op, lhs, rhs, lhs_str, rhs_str, ...) \

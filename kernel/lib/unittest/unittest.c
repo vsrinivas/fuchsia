@@ -50,7 +50,7 @@ bool unittest_expect_bytes(const uint8_t* expected,
                            bool expect_eq) {
     if (!memcmp(expected, actual, len) != expect_eq) {
 
-        unittest_printf(UNITTEST_TRACEF_FORMAT "%s:\n%s %s %s, but %s!\n",
+        unittest_printf(UNITTEST_FAIL_TRACEF_FORMAT "%s:\n%s %s %s, but %s!\n",
                         func, line, msg,
                         expected_name,
                         expect_eq ? "does not match" : "matches",

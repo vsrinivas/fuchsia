@@ -149,11 +149,11 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
             bool missing_crash = crash_list_delete(test_info.crash_list);
             if (missing_crash) {
                 // TODO: display which expected crash did not occur.
-                UNITTEST_TRACEF("Expected crash did not occur\n");
+                UNITTEST_FAIL_TRACEF("Expected crash did not occur\n");
                 test_info.all_ok = false;
             }
 #else // UNITTEST_CRASH_HANDLER_SUPPORTED
-            UNITTEST_TRACEF("Crash tests not supported\n");
+            UNITTEST_FAIL_TRACEF("Crash tests not supported\n");
             test_info.all_ok = false;
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
         } else if (!test()) {

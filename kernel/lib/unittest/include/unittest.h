@@ -101,10 +101,10 @@ int unittest_printf(const char* format, ...);
  * Macros to format the error string
  */
 #define EXPECTED_STRING "%s:\n        expected "
-#define UNITTEST_TRACEF_FORMAT "\n        [FAILED]\n        %s:%d:\n        "
-#define UNITTEST_TRACEF(str, x...)                                             \
+#define UNITTEST_FAIL_TRACEF_FORMAT "\n        [FAILED]\n        %s:%d:\n        "
+#define UNITTEST_FAIL_TRACEF(str, x...)                                        \
     do {                                                                       \
-        unittest_printf(UNITTEST_TRACEF_FORMAT str,                            \
+        unittest_printf(UNITTEST_FAIL_TRACEF_FORMAT str,                       \
                         __PRETTY_FUNCTION__, __LINE__, ##x);                   \
     } while (0)
 
@@ -132,7 +132,7 @@ int unittest_printf(const char* format, ...);
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e != _a) {                                                        \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
+            UNITTEST_FAIL_TRACEF(EXPECTED_STRING                               \
                             "%s (%ld), "                                       \
                             "actual %s (%ld)\n",                               \
                             msg, #expected, (long)_e, #actual, (long)_a);      \
@@ -144,7 +144,7 @@ int unittest_printf(const char* format, ...);
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         if (_e == (actual)) {                                                  \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
+            UNITTEST_FAIL_TRACEF(EXPECTED_STRING                               \
                             "%s (%ld), %s"                                     \
                             " to differ, but they are the same %ld\n",         \
                             msg, #expected, (long)_e, #actual);                \
@@ -157,7 +157,7 @@ int unittest_printf(const char* format, ...);
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e > _a) {                                                         \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
+            UNITTEST_FAIL_TRACEF(EXPECTED_STRING                               \
                             "%s (%ld) to be"                                   \
                             " less-than-or-equal-to actual %s (%ld)\n",        \
                             msg, #expected, (long)_e, #actual, (long)_a);      \
@@ -170,7 +170,7 @@ int unittest_printf(const char* format, ...);
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e >= _a) {                                                        \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
+            UNITTEST_FAIL_TRACEF(EXPECTED_STRING                               \
                             "%s (%ld) to be"                                   \
                             " less-than actual %s (%ld)\n",                    \
                             msg, #expected, (long)_e, #actual, (long)_a);      \
@@ -183,7 +183,7 @@ int unittest_printf(const char* format, ...);
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e < _a) {                                                         \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
+            UNITTEST_FAIL_TRACEF(EXPECTED_STRING                               \
                             "%s (%ld) to be"                                   \
                             " greater-than-or-equal-to actual %s (%ld)\n",     \
                             msg, #expected, (long)_e, #actual, (long)_a);      \
@@ -196,7 +196,7 @@ int unittest_printf(const char* format, ...);
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         const AUTO_TYPE_VAR(actual) _a = (actual);                             \
         if (_e <= _a) {                                                        \
-            UNITTEST_TRACEF(EXPECTED_STRING                                    \
+            UNITTEST_FAIL_TRACEF(EXPECTED_STRING                               \
                             "%s (%ld) to be"                                   \
                             " greater-than actual %s (%ld)\n",                 \
                             msg, #expected, (long)_e, #actual, (long)_a);      \
@@ -206,25 +206,25 @@ int unittest_printf(const char* format, ...);
 
 #define UTCHECK_TRUE(actual, msg, term)                                        \
     if (!(actual)) {                                                           \
-        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual);                    \
+        UNITTEST_FAIL_TRACEF("%s: %s is false\n", msg, #actual);               \
         if (term) return false; else all_ok = false;                           \
     }
 
 #define UTCHECK_FALSE(actual, msg, term)                                       \
     if (actual) {                                                              \
-        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual);                     \
+        UNITTEST_FAIL_TRACEF("%s: %s is true\n", msg, #actual);                \
         if (term) return false; else all_ok = false;                           \
     }
 
 #define UTCHECK_NULL(actual, msg, term)                                        \
     if (actual != NULL) {                                                      \
-        UNITTEST_TRACEF("%s: %s is non-null!\n", msg, #actual);                \
+        UNITTEST_FAIL_TRACEF("%s: %s is non-null!\n", msg, #actual);           \
         if (term) return false; else all_ok = false;                           \
     }
 
 #define UTCHECK_NONNULL(actual, msg, term)                                     \
     if (actual == NULL) {                                                      \
-        UNITTEST_TRACEF("%s: %s is null!\n", msg, #actual);                    \
+        UNITTEST_FAIL_TRACEF("%s: %s is null!\n", msg, #actual);               \
         if (term) return false; else all_ok = false;                           \
     }
 

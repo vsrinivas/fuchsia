@@ -30,12 +30,12 @@ struct crash_list {
 crash_list_t crash_list_new(void) {
     crash_list_t crash_list = malloc(sizeof(struct crash_list));
     if (crash_list == NULL) {
-        UNITTEST_TRACEF("FATAL: could not malloc crash list\n");
+        UNITTEST_FAIL_TRACEF("FATAL: could not malloc crash list\n");
         exit(ZX_ERR_INTERNAL);
     }
     int ret = mtx_init(&crash_list->mutex, mtx_plain);
     if (ret != thrd_success) {
-        UNITTEST_TRACEF("FATAL: could not create crash list mutex : error %s\n",
+        UNITTEST_FAIL_TRACEF("FATAL: could not create crash list mutex : error %s\n",
             zx_status_get_string(ret));
         exit(ZX_ERR_INTERNAL);
     }
@@ -46,27 +46,27 @@ crash_list_t crash_list_new(void) {
 
 void crash_list_register(crash_list_t crash_list, zx_handle_t handle) {
     if (crash_list == NULL) {
-        UNITTEST_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
+        UNITTEST_FAIL_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
         exit(ZX_ERR_INTERNAL);
     }
     zx_info_handle_basic_t info;
     zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC,
                                             &info, sizeof(info), NULL, NULL);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF("FATAL: could not get handle info : error %s\n",
+        UNITTEST_FAIL_TRACEF("FATAL: could not get handle info : error %s\n",
             zx_status_get_string(status));
         exit(ZX_ERR_INTERNAL);
     }
     zx_handle_t copy;
     status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &copy);
     if (status != ZX_OK) {
-        UNITTEST_TRACEF("FATAL: could not duplicate handle : error %s\n",
+        UNITTEST_FAIL_TRACEF("FATAL: could not duplicate handle : error %s\n",
             zx_status_get_string(status));
         exit(ZX_ERR_INTERNAL);
     }
     crash_proc_t* crash_proc = malloc(sizeof(crash_proc_t));
     if (crash_list == NULL) {
-        UNITTEST_TRACEF("FATAL: could not malloc crash proc\n");
+        UNITTEST_FAIL_TRACEF("FATAL: could not malloc crash proc\n");
         exit(ZX_ERR_INTERNAL);
     }
     crash_proc->handle = copy;
@@ -80,7 +80,7 @@ void crash_list_register(crash_list_t crash_list, zx_handle_t handle) {
 zx_handle_t crash_list_delete_koid(crash_list_t crash_list,
                                    zx_koid_t koid) {
     if (crash_list == NULL) {
-        UNITTEST_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
+        UNITTEST_FAIL_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
         exit(ZX_ERR_INTERNAL);
     }
     zx_handle_t deleted_proc = ZX_HANDLE_INVALID;
@@ -102,7 +102,7 @@ zx_handle_t crash_list_delete_koid(crash_list_t crash_list,
 
 bool crash_list_delete(crash_list_t crash_list) {
     if (crash_list == NULL) {
-        UNITTEST_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
+        UNITTEST_FAIL_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
         exit(ZX_ERR_INTERNAL);
     }
     crash_proc_t* cur = NULL;
