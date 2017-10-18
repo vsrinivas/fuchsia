@@ -3,8 +3,7 @@
   <imports>
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="build"
-            name="manifest"
-            revision="f9c493868464610d43044f4f8b910fea838cb017"/>
+            name="manifest"/>
     <import remote="https://fuchsia.googlesource.com/zircon"
             manifest="manifest"
             name="zircon"/>
