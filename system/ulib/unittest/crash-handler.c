@@ -34,7 +34,48 @@
  * and then the test will be terminated.
  */
 static void process_exception(crash_list_t crash_list,
-                              const zx_packet_exception_t* exception) {
+                              const zx_port_packet_t* packet) {
+    const zx_packet_exception_t* exception = &packet->exception;
+
+    // Check for exceptions from registered processes that are not really crashes.
+    switch (packet->type) {
+    case ZX_EXCP_GONE:
+        return;
+    case ZX_EXCP_THREAD_STARTING:
+    case ZX_EXCP_THREAD_EXITING: {
+        zx_handle_t process = crash_list_lookup_koid(crash_list, exception->pid);
+        zx_handle_t thread = ZX_HANDLE_INVALID;
+        if (process == ZX_HANDLE_INVALID) {
+            // The test may have registered a thread handle instead.
+            thread = crash_list_lookup_koid(crash_list, exception->tid);
+        }
+        if (process != ZX_HANDLE_INVALID || thread != ZX_HANDLE_INVALID) {
+            zx_status_t status;
+            if (thread == ZX_HANDLE_INVALID) {
+                status = zx_object_get_child(process, exception->tid,
+                                                         ZX_RIGHT_SAME_RIGHTS, &thread);
+                if (status != ZX_OK) {
+                    UNITTEST_FAIL_TRACEF(
+                        "FATAL: failed to get a handle to [%" PRIu64 "%." PRIu64 "] : error %s\n",
+                        exception->pid, exception->tid, zx_status_get_string(status));
+                    exit(ZX_ERR_INTERNAL);
+                }
+            }
+            status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
+            if (status != ZX_OK) {
+                UNITTEST_FAIL_TRACEF(
+                    "FATAL: failed to resume [%" PRIu64 ".%" PRIu64 "] : error %s\n",
+                    exception->pid, exception->tid, zx_status_get_string(status));
+                exit(ZX_ERR_INTERNAL);
+            }
+            return;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
     // Check if the crashed process is in the registered list and remove
     // it if so.
     zx_handle_t match = crash_list_delete_koid(crash_list, exception->pid);
@@ -47,8 +88,8 @@ static void process_exception(crash_list_t crash_list,
     // details and then fail the test.
     if (match == ZX_HANDLE_INVALID) {
         UNITTEST_FAIL_TRACEF(
-            "FATAL: process [%" PRIu64 "] crashed but was not registered\n",
-            exception->pid);
+            "FATAL: [%" PRIu64 ".%" PRIu64 "] crashed with exception 0x%x but was not registered\n",
+            exception->pid, exception->tid, packet->type);
         zx_handle_t process;
         zx_status_t status = zx_object_get_child(ZX_HANDLE_INVALID,
                                                  exception->pid,
@@ -121,7 +162,7 @@ static test_result_t watch_test_thread(zx_handle_t port, crash_list_t crash_list
         }
         switch (packet.key) {
         case EXCEPTION_PORT_KEY:
-            process_exception(crash_list, &packet.exception);
+            process_exception(crash_list, &packet);
             break;
         case TEST_ENDED_EVENT_KEY:
             if (packet.signal.observed & TEST_PASSED_SIGNAL) {

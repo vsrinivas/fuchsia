@@ -19,6 +19,13 @@ crash_list_t crash_list_new(void);
 void crash_list_register(crash_list_t crash_list, zx_handle_t handle);
 
 /**
+ * Lookup the given koid and returns the process or thread handle, or
+ * ZX_HANDLE_INVALID if no match was found.
+ */
+zx_handle_t crash_list_lookup_koid(crash_list_t crash_list,
+                                   zx_koid_t koid);
+
+/**
  * Deletes the node with the given koid and returns the process or thread handle, or
  * ZX_HANDLE_INVALID if no match was found.
  */

@@ -77,6 +77,26 @@ void crash_list_register(crash_list_t crash_list, zx_handle_t handle) {
     mtx_unlock(&crash_list->mutex);
 }
 
+zx_handle_t crash_list_lookup_koid(crash_list_t crash_list,
+                                   zx_koid_t koid) {
+    if (crash_list == NULL) {
+        UNITTEST_FAIL_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
+        exit(ZX_ERR_INTERNAL);
+    }
+    zx_handle_t proc = ZX_HANDLE_INVALID;
+    crash_proc_t* cur = NULL;
+
+    mtx_lock(&crash_list->mutex);
+    list_for_every_entry(&crash_list->should_crash_procs, cur, crash_proc_t, node) {
+        if (cur->koid == koid) {
+            proc = cur->handle;
+            break;
+        }
+    }
+    mtx_unlock(&crash_list->mutex);
+    return proc;
+}
+
 zx_handle_t crash_list_delete_koid(crash_list_t crash_list,
                                    zx_koid_t koid) {
     if (crash_list == NULL) {
