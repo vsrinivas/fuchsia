@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define _ALL_SOURCE
 #include "libc.h"
 #include "pthread_impl.h"
 #include <stdint.h>
