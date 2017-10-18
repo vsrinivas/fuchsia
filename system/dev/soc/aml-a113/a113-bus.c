@@ -23,8 +23,31 @@
 #include "a113-bus.h"
 #include <hw/reg.h>
 
+static zx_status_t a113_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
+    *out_mode = USB_MODE_HOST;
+    return ZX_OK;
+}
+
+static zx_status_t a113_set_mode(void* ctx, usb_mode_t mode) {
+    a113_bus_t* bus = ctx;
+    return a113_usb_set_mode(bus, mode);
+}
+
+usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
+    .get_initial_mode = a113_get_initial_mode,
+    .set_mode = a113_set_mode,
+};
+
 static zx_status_t a113_bus_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-    return ZX_ERR_NOT_SUPPORTED;
+    a113_bus_t* bus = ctx;
+
+    switch (proto_id) {
+    case ZX_PROTOCOL_USB_MODE_SWITCH:
+        memcpy(out, &bus->usb_mode_switch, sizeof(bus->usb_mode_switch));
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 static pbus_interface_ops_t a113_bus_bus_ops = {
@@ -52,9 +75,13 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    bus->usb_mode_switch.ops = &usb_mode_switch_ops;
+    bus->usb_mode_switch.ctx = bus;
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "a113-bus",
+        .ctx = bus,
         .ops = &a113_bus_device_protocol,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
@@ -69,7 +96,12 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     intf.ctx = bus;
     pbus_set_interface(&bus->pbus, &intf);
 
-    a113_audio_init(bus);
+    if ((status = a113_usb_init(bus)) != ZX_OK) {
+        dprintf(ERROR, "a113_bus_bind failed: %d\n", status);
+    }
+    if ((status = a113_audio_init(bus)) != ZX_OK) {
+        dprintf(ERROR, "a113_audio_init failed: %d\n", status);
+    }
 
     // Initialize Pin mux subsystem.
     status = a113_init_pinmux(bus);
