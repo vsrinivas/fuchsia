@@ -2,29 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//zircon/system/uapp/installer/app:install-fuchsia",
-        "//zircon/system/uapp/installer/tests:install-fuchsia-tests",
-        "//zircon/system/uapp/installer/app:sparser_host",
-        "//zircon/system/uapp/installer/app:sparser",
-        "//zircon/system/uapp/installer/tests:install-fuchsia-sparse-tests"
-    ],
-    "binaries": [
-        {
-            "binary": "install-fuchsia",
-            "bootfs_path": "apps/install-fuchsia"
-        },
-        {
-            "binary": "install-fuchsia-tests",
-            "bootfs_path": "test/install-fuchsia-tests"
-        },
-        {
-            "binary": "sparser",
-            "bootfs_path": "apps/sparser"
-        },
-        {
-            "binary": "install-fuchsia-sparse-tests",
-            "bootfs_path": "test/install-fuchsia-sparse-tests"
-        }
-    ]
+    "packages": {
+        "installer": "//zircon/system/uapp/installer",
+        "installer_tests": "//zircon/system/uapp/installer:installer_tests"
+    }
 }
