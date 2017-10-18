@@ -138,6 +138,8 @@ private:
         KILLING,
     };
 
+    using LiveRefsArray = fbl::Array<fbl::RefPtr<Dispatcher>>;
+
     JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
 
     // Like get_importance(), but does not resolve inheritance; i.e., this
@@ -147,39 +149,15 @@ private:
     bool AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
 
-    // Calls the provided |zx_status_t func(fbl::RefPtr<DISPATCHER_TYPE>)|
-    // function on all live elements of |children|, which must be one of |jobs_|
-    // or |procs_|. Stops iterating early if |func| returns a value other than
-    // ZX_OK, returning that value from this method. |lock_| must be held when
-    // calling this method, and it will still be held while the callback is
-    // called.
-    template <typename T, typename Fn>
-    zx_status_t ForEachChildInLocked(T& children, Fn func) TA_REQ(lock_) {
-        // Convert child raw pointers into RefPtrs. This is tricky and requires
-        // special logic on the RefPtr class to handle a ref count that can be
-        // zero.
-        //
-        // The main requirement is that |lock_| is both controlling child
-        // list lookup and also making sure that the child destructor cannot
-        // make progress when doing so. In other words, when inspecting the
-        // |children| list we can be sure that a given child process or child
-        // job is either
-        //   - alive, with refcount > 0
-        //   - in destruction process but blocked, refcount == 0
-        for (auto& craw : children) {
-            auto cref = ::fbl::internal::MakeRefPtrUpgradeFromRaw(&craw, lock_);
-            if (cref) {
-                zx_status_t s = func(fbl::move(cref));
-                if (s != ZX_OK) {
-                    return s;
-                }
-            }
-        }
-        return ZX_OK;
-    }
-
     void UpdateSignalsIncrementLocked() TA_REQ(lock_);
     void UpdateSignalsDecrementLocked() TA_REQ(lock_);
+
+    template <typename T, typename Fn>
+     __attribute__((warn_unused_result)) LiveRefsArray ForEachChildInLocked(
+        T& children, zx_status_t* status, Fn func) TA_REQ(lock_);
+
+    template <typename T>
+    uint32_t ChildCountLocked() const TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("JOBD")> canary_;
 
