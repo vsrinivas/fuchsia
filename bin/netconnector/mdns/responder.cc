@@ -33,6 +33,19 @@ Responder::Responder(MdnsAgent::Host* host,
   });
 }
 
+Responder::Responder(MdnsAgent::Host* host,
+                     const std::string& host_full_name,
+                     const std::string& service_name,
+                     const std::string& instance_name,
+                     MdnsPublicationPtr publication)
+    : host_(host),
+      host_full_name_(host_full_name),
+      service_name_(service_name),
+      instance_name_(instance_name),
+      instance_full_name_(
+          MdnsNames::LocalInstanceFullName(instance_name, service_name)),
+      publication_(std::move(publication)) {}
+
 Responder::~Responder() {}
 
 void Responder::Start() {
@@ -85,20 +98,35 @@ void Responder::ReceiveResource(const DnsResource& resource,
 void Responder::EndOfMessage() {}
 
 void Responder::Quit() {
+  if (publication_) {
+    // Send epitaph.
+    publication_->text.reset();
+    publication_->ptr_ttl_seconds = 0;
+    publication_->srv_ttl_seconds = 0;
+    publication_->txt_ttl_seconds = 0;
+    SendPublication("", *publication_);
+  }
+
   host_->RemoveAgent(this, instance_full_name_);
 }
 
 void Responder::GetAndSendPublication(bool query,
                                       const std::string& subtype) const {
-  FXL_DCHECK(responder_);
+  if (responder_) {
+    responder_->GetPublication(
+        query, subtype.empty() ? fidl::String() : fidl::String(subtype),
+        [this, subtype](MdnsPublicationPtr publication) {
+          if (publication) {
+            SendPublication(subtype, *publication);
+          }
+        });
+    return;
+  }
 
-  responder_->GetPublication(
-      query, subtype.empty() ? fidl::String() : fidl::String(subtype),
-      [this, subtype](MdnsPublicationPtr publication) {
-        if (publication) {
-          SendPublication(subtype, *publication);
-        }
-      });
+  FXL_DCHECK(publication_);
+  if (subtype.empty()) {
+    SendPublication(subtype, *publication_);
+  }
 }
 
 void Responder::SendPublication(const std::string& subtype,

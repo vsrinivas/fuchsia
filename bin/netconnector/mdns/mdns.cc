@@ -10,7 +10,6 @@
 #include "garnet/bin/netconnector/mdns/address_responder.h"
 #include "garnet/bin/netconnector/mdns/dns_formatting.h"
 #include "garnet/bin/netconnector/mdns/host_name_resolver.h"
-#include "garnet/bin/netconnector/mdns/instance_publisher.h"
 #include "garnet/bin/netconnector/mdns/instance_subscriber.h"
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
@@ -146,8 +145,13 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
     return false;
   }
 
-  std::shared_ptr<MdnsAgent> agent = std::make_shared<InstancePublisher>(
-      this, host_full_name_, service_name, instance_name, port, text);
+  MdnsPublicationPtr publication = MdnsPublication::New();
+  publication->port = port.as_uint16_t();
+  publication->text = fidl::Array<fidl::String>::From(text);
+
+  std::shared_ptr<MdnsAgent> agent =
+      std::make_shared<Responder>(this, host_full_name_, service_name,
+                                  instance_name, std::move(publication));
 
   AddAgent(agent);
   instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);

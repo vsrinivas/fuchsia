@@ -19,13 +19,24 @@ namespace mdns {
 class Responder : public MdnsAgent,
                   public std::enable_shared_from_this<Responder> {
  public:
-  // Creates an |Responder|.
+  // Creates an |Responder|. Subtypes in |announced_subtypes| are announced
+  // initially. The |MdnsResponder| referenced by |responder_handle| is
+  // consulted to determine how queries are handled.
   Responder(MdnsAgent::Host* host,
             const std::string& host_full_name,
             const std::string& service_name,
             const std::string& instance_name,
             const std::vector<std::string>& announced_subtypes,
             fidl::InterfaceHandle<MdnsResponder> responder_handle);
+
+  // Creates an |Responder|. No subtypes are announced. Queries for
+  // |service_name| are responded to using the information in |publication|.
+  // Queries for subtypes of |service_name| are ignored.
+  Responder(MdnsAgent::Host* host,
+            const std::string& host_full_name,
+            const std::string& service_name,
+            const std::string& instance_name,
+            MdnsPublicationPtr publication);
 
   ~Responder() override;
 
@@ -61,6 +72,7 @@ class Responder : public MdnsAgent,
   std::string instance_full_name_;
   std::vector<std::string> announced_subtypes_;
   MdnsResponderPtr responder_;
+  MdnsPublicationPtr publication_;
   uint32_t announcement_interval_ = 1;
 };
 
