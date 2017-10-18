@@ -72,6 +72,10 @@ void MergeResolver::SetPageManager(PageManager* page_manager) {
   page_manager_ = page_manager;
 }
 
+void MergeResolver::RegisterNoConflictCallback(fxl::Closure callback) {
+  no_conflict_callbacks_.push_back(std::move(callback));
+}
+
 void MergeResolver::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
     storage::ChangeSource source) {
@@ -104,6 +108,12 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
           if (s != storage::Status::OK) {
             FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
           }
+          else {
+            for (auto& callback : no_conflict_callbacks_) {
+              callback();
+            }
+            no_conflict_callbacks_.clear();
+          }
           if (on_empty_callback_) {
             on_empty_callback_();
           }
@@ -131,7 +141,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
           has_next_strategy_ = false;
         }
         PostCheckConflicts(delayed_status);
-        // Call on_empty_callback_ at the very end as this might delete this.
+        // Call on_empty_callback_ at the very end as it might delete the
+        // resolver.
         if (on_empty_callback_) {
           on_empty_callback_();
         }

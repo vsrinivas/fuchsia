@@ -120,4 +120,10 @@ void PageImpl::SetSyncStateWatcher(
   delegate_->SetSyncStateWatcher(std::move(watcher), callback);
 }
 
+// WaitForConflictResolution() => ();
+void PageImpl::WaitForConflictResolution(
+    const WaitForConflictResolutionCallback& callback) {
+  delegate_->WaitForConflictResolution(callback);
+}
+
 }  // namespace ledger

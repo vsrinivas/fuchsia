@@ -15,6 +15,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/branch_tracker.h"
 #include "peridot/bin/ledger/app/page_impl.h"
+#include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/callback/operation_serializer.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
@@ -38,6 +39,7 @@ class PageDelegate {
   PageDelegate(coroutine::CoroutineService* coroutine_service,
                PageManager* manager,
                storage::PageStorage* storage,
+               MergeResolver* merge_resolver,
                fidl::InterfaceRequest<Page> request,
                SyncWatcherSet* watchers);
   ~PageDelegate();
@@ -84,6 +86,9 @@ class PageDelegate {
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                            const Page::SetSyncStateWatcherCallback& callback);
 
+  void WaitForConflictResolution(
+      const Page::WaitForConflictResolutionCallback& callback);
+
  private:
   using StatusCallback = std::function<void(Status)>;
 
@@ -112,6 +117,7 @@ class PageDelegate {
 
   PageManager* manager_;
   storage::PageStorage* storage_;
+  MergeResolver* merge_resolver_;
 
   fidl::InterfaceRequest<Page> request_;
   fidl_helpers::BoundInterface<Page, PageImpl> interface_;

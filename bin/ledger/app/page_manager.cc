@@ -68,7 +68,7 @@ void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
   if (sync_backlog_downloaded_) {
     pages_
         .emplace(environment_->coroutine_service(), this, page_storage_.get(),
-                 std::move(page_request), &watchers_)
+                 merge_resolver_.get(), std::move(page_request), &watchers_)
         .Init(std::move(on_done));
     return;
   }

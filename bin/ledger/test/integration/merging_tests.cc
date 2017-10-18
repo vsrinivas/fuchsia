@@ -1611,6 +1611,91 @@ TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
       fidl::Array<ledger::MergedValuePtr>::New(0)));
 }
 
+TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
+  auto instance = NewLedgerAppInstance();
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  // Create a conflict: two pointers to the same page.
+  ledger::PagePtr page1 = instance->GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
+
+  // Parallel put in transactions.
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(
+      convert::ToArray("email"), convert::ToArray("alice@example.org"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Check that we have a resolver and pending conflict resolution request.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl->requests.size());
+
+  // Try to wait for conflicts resolution.
+  bool merged = false;
+  bool conflicts_resolved_callback_called = false;
+  auto conflicts_resolved_callback =
+      [&merged, &conflicts_resolved_callback_called]() {
+        conflicts_resolved_callback_called = true;
+        EXPECT_TRUE(merged);
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      };
+  page1->WaitForConflictResolution(conflicts_resolved_callback);
+
+  // Check that conflicts_resolved_callback is not called, as there are merge
+  // requests pending.
+  EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(250)));
+  EXPECT_FALSE(conflicts_resolved_callback_called);
+
+  // Merge manually.
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
+                                               MergeType::SIMPLE));
+  merged = true;
+
+  // Now conflict_resolved_callback can run.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(conflicts_resolved_callback_called);
+}
+
 }  // namespace
 }  // namespace integration
 }  // namespace test

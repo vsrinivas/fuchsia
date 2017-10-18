@@ -515,5 +515,54 @@ TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
   EXPECT_EQ(0u, merge_strategy_ptr->merge_calls);
 }
 
+TEST_F(MergeResolverTest, DelayedUntilEmpty) {
+  // Set up conflict
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "bar"));
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
+      std::make_unique<LastOneWinsMergeStrategy>();
+  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
+                         std::make_unique<test::TestBackoff>(nullptr));
+  resolver.SetMergeStrategy(std::move(strategy));
+  resolver.set_on_empty(MakeQuitTaskOnce());
+
+  storage::Status status;
+  std::vector<storage::CommitId> ids;
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(2u, ids.size());
+
+  size_t callback_calls = 0;
+  auto conflicts_resolved_callback = [&resolver, &callback_calls]() {
+    EXPECT_TRUE(resolver.IsEmpty());
+    callback_calls++;
+  };
+  resolver.RegisterNoConflictCallback(conflicts_resolved_callback);
+  resolver.RegisterNoConflictCallback(conflicts_resolved_callback);
+
+  // Check that the callback was called 2 times.
+  EXPECT_TRUE(RunLoopUntil([&] { return callback_calls >= 2; }));
+  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_EQ(2u, callback_calls);
+
+  ids.clear();
+  page_storage_->GetHeadCommitIds(
+      callback::Capture(MakeQuitTask(), &status, &ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(1u, ids.size());
+
+  callback_calls = 0;
+  CreateCommit(ids[0], AddKeyValueToJournal("foo", "baw"));
+  CreateCommit(ids[0], AddKeyValueToJournal("foo", "bat"));
+  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+
+  // Check that callback wasn't called (callback queue cleared after all the
+  // callbacks in it were called).
+  EXPECT_FALSE(RunLoopUntil([&] { return callback_calls > 0; }, fxl::TimeDelta::FromMilliseconds(50)));
+}
+
 }  // namespace
 }  // namespace ledger

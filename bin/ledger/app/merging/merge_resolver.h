@@ -42,6 +42,10 @@ class MergeResolver : public storage::CommitWatcher {
 
   void SetPageManager(PageManager* page_manager);
 
+  // Adds an action to perform when all the pending conflicts are resolved
+  // (once).
+  void RegisterNoConflictCallback(fxl::Closure callback);
+
  private:
   // DelayedStatus allows us to avoid merge storms (several devices battling
   // to merge branches but not agreeing). We use the following algorithm:
@@ -88,6 +92,7 @@ class MergeResolver : public storage::CommitWatcher {
   bool in_delay_ = false;
   fxl::Closure on_empty_callback_;
   fxl::Closure on_destroyed_;
+  std::vector<fxl::Closure> no_conflict_callbacks_;
 
   // ScopedTaskRunner must be the last member of the class.
   callback::ScopedTaskRunner task_runner_;

@@ -24,10 +24,12 @@ namespace ledger {
 PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
                            PageManager* manager,
                            storage::PageStorage* storage,
+                           MergeResolver* merge_resolver,
                            fidl::InterfaceRequest<Page> request,
                            SyncWatcherSet* watchers)
     : manager_(manager),
       storage_(storage),
+      merge_resolver_(merge_resolver),
       request_(std::move(request)),
       interface_(this),
       branch_tracker_(coroutine_service, manager, storage),
@@ -310,6 +312,15 @@ void PageDelegate::SetSyncStateWatcher(
   SyncWatcherPtr watcher_ptr = SyncWatcherPtr::Create(std::move(watcher));
   watcher_set_->AddSyncWatcher(std::move(watcher_ptr));
   callback(Status::OK);
+}
+
+void PageDelegate::WaitForConflictResolution(
+    const Page::WaitForConflictResolutionCallback& callback) {
+  if (merge_resolver_->IsEmpty()) {
+    callback();
+    return;
+  }
+  merge_resolver_->RegisterNoConflictCallback(callback);
 }
 
 const storage::CommitId& PageDelegate::GetCurrentCommitId() {

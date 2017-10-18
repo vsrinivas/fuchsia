@@ -31,7 +31,6 @@
 
 namespace ledger {
 namespace {
-
 std::string ToString(const zx::vmo& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(vmo, &value);
@@ -57,6 +56,7 @@ class PageImplTest : public test::TestWithMessageLoop {
         std::make_unique<backoff::ExponentialBackoff>(
             fxl::TimeDelta::FromSeconds(0), 1u,
             fxl::TimeDelta::FromSeconds(0)));
+    resolver_ = resolver.get();
 
     manager_ = std::make_unique<PageManager>(
         &environment_, std::move(fake_storage), nullptr, std::move(resolver),
@@ -153,6 +153,7 @@ class PageImplTest : public test::TestWithMessageLoop {
   storage::PageId page_id1_;
   storage::fake::FakePageStorage* fake_storage_;
   std::unique_ptr<PageManager> manager_;
+  MergeResolver* resolver_;
 
   PagePtr page_ptr_;
   Environment environment_;
@@ -1352,6 +1353,29 @@ TEST_F(PageImplTest, SerializedOperations) {
   CommitFirstPendingJournal(fake_storage_->GetJournals());
   // The operation can now succeed.
   EXPECT_FALSE(RunLoopWithTimeout());
+}
+
+TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
+  bool callback_called = false;
+
+  auto conflicts_resolved_callback =
+      [this, &callback_called]() {
+        EXPECT_TRUE(resolver_->IsEmpty());
+        callback_called = true;
+        message_loop_.PostQuitTask();
+      };
+
+  page_ptr_->WaitForConflictResolution(conflicts_resolved_callback);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_TRUE(callback_called);
+
+  // Special case: no changes from the previous call; event OnEmpty is not
+  // triggered, but WaitForConflictResolution should return right away, as there
+  // are no pending merges.
+  callback_called = false;
+  page_ptr_->WaitForConflictResolution(conflicts_resolved_callback);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_TRUE(callback_called);
 }
 
 }  // namespace

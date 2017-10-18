@@ -62,6 +62,9 @@ class PageImpl : public Page {
       fidl::InterfaceHandle<SyncWatcher> watcher,
       const SetSyncStateWatcherCallback& callback) override;
 
+  void WaitForConflictResolution(
+      const WaitForConflictResolutionCallback& callback) override;
+
   PageDelegate* delegate_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);

@@ -161,6 +161,16 @@ interface Page {
   // current state is immediately sent to the watcher when this method is
   // called.
   SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
+
+  // Conflict resolution.
+  //
+  // Waits until all conflicts are resolved before calling the callback.
+  // The client can call this method multiple times, even before the previous
+  // calls are completed. Callbacks will be executed in the order they were
+  // added.
+  // If there are no pending conflicts at the time this is called, the callback
+  // gets executed right away.
+  WaitForConflictResolution() => ();
 };
 
 // The synchronization priority of a reference.
