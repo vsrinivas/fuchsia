@@ -34,12 +34,10 @@ if [ $(dirname "$(dirname "$script_dir")")/"$expected_path" != "$script_dir" ]; 
   exit -1
 fi
 
-DEFAULT_SIZE_SYSTEM=4
 DEFAULT_SIZE_EFI=1
 BLOCK_SIZE=1024
 STAGING_DIR="${script_dir}/../../out/build-installer"
 # TODO take a size for the zircon partition as well
-bytes_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024 * 1024))
 # FAT wants the sector count to be a multiple of 63 (for total sectors) and of
 # 32 (sectors per track) and this value gets us close to 1GiB
 bytes_efi=$(($DEFAULT_SIZE_EFI * 512 * 1040 * 32 * 63))
@@ -59,13 +57,8 @@ extras=("")
 
 while (( "$#" )); do
   case $1 in
-    "-u")
-      shift
-      bytes_sys=$(($1 * 1024 * 1024 * 1024))
-      ;;
     "-h")
-      echo "build-installable-usersfs.sh -u <SIZE> [-r|-d] [-p] [-b <BUILD DIR>]"
-      echo "-u: size of system partition in GB"
+      echo "build-installable-usersfs.sh [-r|-d] [-p] [-b <BUILD DIR>]"
       echo "-e: size of the EFI partition in GB"
       echo "-r: use the release build directory, should not be used with -d"
       echo "-d: use the debug build directory, should not be used with -r"
@@ -278,10 +271,6 @@ sys_out="${script_dir}/../../out/installer-system-${build_arch}"
 "${script_dir}/../../${ninja_path}" -C "$sys_out"
 
 # create a suitably large file
-echo "Creating system disk image, this may take some time..."
-emptyfile "$disk_path" "$bytes_sys"
-"$minfs_path" "$disk_path" mkfs
-
 echo "Creating EFI disk image, this may take some time..."
 emptyfile "$disk_path_efi" "$bytes_efi"
 
