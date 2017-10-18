@@ -50,8 +50,8 @@ static_library("inferior_control") {
 
   deps = [
     "//garnet/lib/debugger_utils",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/zx",
   ]
 

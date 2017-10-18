@@ -8,9 +8,9 @@ static_library("debugger_utils") {
   sources = [
     "build_ids.cc",
     "build_ids.h",
+    "byte_block.h",
     "byte_block_file.cc",
     "byte_block_file.h",
-    "byte_block.h",
     "elf_reader.cc",
     "elf_reader.h",
     "elf_symtab.cc",
@@ -64,10 +64,10 @@ executable("util-unittests") {
 
   sources = [
     "run_all_unittests.cc",
-    "util_zx.cc",
-    "util_unittest.cc",
     "util.cc",
     "util.h",
+    "util_unittest.cc",
+    "util_zx.cc",
   ]
 
   deps = [

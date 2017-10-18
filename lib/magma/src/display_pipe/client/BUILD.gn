@@ -1,4 +1,3 @@
-
 group("client") {
   deps = [
     ":display_pipe_client",
@@ -13,9 +12,9 @@ executable("display_pipe_client") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
     "//garnet/lib/magma/src/display_pipe/services",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 }

@@ -6,8 +6,8 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("display_pipe") {
   deps = [
-    "client",
     ":display_pipe_service",
+    "client",
   ]
 }
 
@@ -30,11 +30,11 @@ executable("display_pipe_service") {
     "$magma_build_root:libmagma",
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
-    "//garnet/public/lib/images/fidl",
+    "//garnet/lib/magma/src/display_pipe/services",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/images/fidl",
     "//zircon/system/ulib/zx",
-    "//garnet/lib/magma/src/display_pipe/services",
   ]
 
   libs = [

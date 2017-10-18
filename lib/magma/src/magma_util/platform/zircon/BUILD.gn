@@ -13,9 +13,9 @@ source_set("buffer") {
 
   deps = [
     ":object",
-    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
+    "$zircon_build_root/system/ulib/zx",
   ]
 
   libs = [
@@ -44,8 +44,8 @@ source_set("mmio") {
   ]
 
   public_deps = [
-    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/system/ulib/zx",
   ]
 }
 
@@ -55,9 +55,9 @@ source_set("device") {
   sources = [
     "zircon_platform_device.cc",
     "zircon_platform_device.h",
+    "zircon_platform_interrupt.h",
     "zircon_platform_pci_device.cc",
     "zircon_platform_pci_device.h",
-    "zircon_platform_interrupt.h",
   ]
 
   deps = [
@@ -100,9 +100,9 @@ source_set("connection") {
 
   deps = [
     ":event",
-    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/system/ulib/zx",
   ]
 
   libs = [
@@ -130,8 +130,8 @@ source_set("event") {
   ]
 
   deps = [
-    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/system/ulib/zx",
   ]
 }
 
@@ -143,8 +143,8 @@ source_set("object") {
   ]
 
   deps = [
-    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/system/ulib/zx",
   ]
 }
 
@@ -157,9 +157,9 @@ source_set("semaphore") {
 
   deps = [
     ":object",
-    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
+    "$zircon_build_root/system/ulib/zx",
   ]
 }
 
@@ -171,8 +171,8 @@ source_set("port") {
   ]
 
   deps = [
-    "$zircon_build_root/system/ulib/zx",
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/system/ulib/zx",
   ]
 }
 
@@ -192,10 +192,10 @@ source_set("trace") {
 
   if (magma_enable_tracing) {
     public_deps = [
-      "//garnet/public/lib/fsl",
       "$zircon_build_root/system/ulib/async:loop",
       "$zircon_build_root/system/ulib/trace",
       "$zircon_build_root/system/ulib/trace-provider",
+      "//garnet/public/lib/fsl",
     ]
   }
 

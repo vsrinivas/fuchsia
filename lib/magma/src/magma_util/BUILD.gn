@@ -110,11 +110,11 @@ source_set("registers") {
 
   sources = [
     "register_bitfields.h",
-    "register_io.h",
     "register_io.cc",
+    "register_io.h",
   ]
 
   public_deps = [
-    "platform:mmio"
+    "platform:mmio",
   ]
 }

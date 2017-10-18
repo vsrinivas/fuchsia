@@ -11,8 +11,8 @@ executable("vkext") {
 
   sources = [
     "main.cc",
-    "vk_external_semaphore_fuchsia.cc",
     "vk_ext_tiling.cc",
+    "vk_external_semaphore_fuchsia.cc",
   ]
 
   deps = [
@@ -24,8 +24,6 @@ executable("vkext") {
   if (use_vulkan_loader) {
     deps += [ "$magma_build_root:vulkan" ]
   } else {
-    deps += [
-      "$magma_build_root/tests/vulkan_shim",
-    ]
+    deps += [ "$magma_build_root/tests/vulkan_shim" ]
   }
 }

@@ -11,9 +11,9 @@ source_set("farfs") {
   public_deps = [
     "//garnet/lib/far",
     "//garnet/lib/far:far_vmo",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//zircon/system/ulib/zx",
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/vmofs",
+    "//zircon/system/ulib/zx",
   ]
 }
