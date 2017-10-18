@@ -1530,18 +1530,20 @@ int pipe2(int pipefd[2], int flags) {
     }
     pipefd[0] = fdio_bind_to_fd(a, -1, 0);
     if (pipefd[0] < 0) {
+        int errno_ = errno;
         fdio_close(a);
         fdio_release(a);
         fdio_close(b);
         fdio_release(b);
-        return ERROR(pipefd[0]);
+        return ERRNO(errno_);
     }
     pipefd[1] = fdio_bind_to_fd(b, -1, 0);
     if (pipefd[1] < 0) {
+        int errno_ = errno;
         close(pipefd[0]);
         fdio_close(b);
         fdio_release(b);
-        return ERROR(pipefd[1]);
+        return ERRNO(errno_);
     }
     return 0;
 }
