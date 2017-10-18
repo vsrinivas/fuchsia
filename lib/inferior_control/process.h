@@ -39,7 +39,8 @@ class Process final {
    public:
     virtual ~Delegate() = default;
 
-    // Called when a new that is part of this process has been started.
+    // Called when a new thread that is part of this process has been started.
+    // This is indicated by ZX_EXCP_THREAD_STARTING.
     virtual void OnThreadStarting(Process* process,
                                   Thread* thread,
                                   const zx_exception_context_t& context) = 0;

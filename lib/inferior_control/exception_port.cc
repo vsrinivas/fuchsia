@@ -10,9 +10,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "garnet/lib/debugger_utils/util.h"
 
@@ -267,6 +268,25 @@ void PrintException(FILE* out, Thread* thread, zx_excp_type_t type,
       break;
     }
   }
+}
+
+void PrintSignals(FILE* out, Thread* thread, zx_signals_t signals) {
+  std::string description;
+  if (signals & ZX_THREAD_RUNNING)
+    description += ", running";
+  if (signals & ZX_THREAD_SUSPENDED)
+    description += ", suspended";
+  if (signals & ZX_THREAD_TERMINATED)
+    description += ", terminated";
+  zx_signals_t mask = (ZX_THREAD_RUNNING |
+                       ZX_THREAD_SUSPENDED |
+                       ZX_THREAD_TERMINATED);
+  if (signals & ~mask)
+    description += fxl::StringPrintf(", unknown (0x%x)", signals & ~mask);
+  if (description.length() == 0)
+    description = ", none";
+  fprintf(out, "Thread %s got signals: %s\n", thread->GetDebugName().c_str(),
+          description.c_str() + 2);
 }
 
 }  // namespace debugserver
