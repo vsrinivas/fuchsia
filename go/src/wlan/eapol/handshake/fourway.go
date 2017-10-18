@@ -76,6 +76,7 @@ type FourWay struct {
 	sNonce           [32]byte
 	ptk              *crypto.PTK
 	gtk              []byte
+	gtkIdx           uint8
 	state            fourWayState
 }
 
@@ -227,8 +228,10 @@ func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFram
 	}
 	if debug {
 		log.Println("GTK: ", hex.EncodeToString(gtkKDE.GTK))
+		log.Println("GTK Index: ", gtkKDE.KeyID)
 	}
 	hs.gtk = gtkKDE.GTK
+	hs.gtkIdx = gtkKDE.KeyID
 	return nil
 }
 
@@ -264,6 +267,7 @@ func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
 			KeyId:           toMLMEKeyID(cipher),
 			CipherSuiteOui:  cipher.OUI,
 			CipherSuiteType: uint8(cipher.Type),
+			KeyIdx:					 hs.gtkIdx,
 		})
 	}
 

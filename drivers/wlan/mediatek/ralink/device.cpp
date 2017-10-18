@@ -3409,8 +3409,8 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
     case WLAN_KEY_TYPE_GROUP: {
         // The driver doesn't support multiple BSS yet. Always use bss index 0.
         uint8_t bss_idx = 0;
-        uint8_t keyIdx = 2; // TODO(hahnr): Derive from GTK KDE KeyID.
-        uint8_t skey = DeriveSharedKeyIndex(bss_idx, keyIdx);
+        uint8_t key_idx = key_config->key_idx;
+        uint8_t skey = DeriveSharedKeyIndex(bss_idx, key_idx);
         uint8_t wcid = 0;
 
         // Reset everything on failure.

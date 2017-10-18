@@ -919,6 +919,7 @@ zx_status_t Station::SetKeys(SetKeysRequestPtr req) {
         memcpy(key_config->key, keyPtr->key.data(), keyPtr->length);
         key_config->key_type = key_type;
         key_config->key_len = static_cast<uint8_t>(keyPtr->length);
+        key_config->key_idx = keyPtr->key_idx;
         key_config->protection = WLAN_PROTECTION_RX_TX;
         key_config->cipher_type = keyPtr->cipher_suite_type;
         memcpy(key_config->cipher_oui,

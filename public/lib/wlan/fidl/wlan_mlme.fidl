@@ -284,6 +284,12 @@ struct SetKeyDescriptor {
     array<uint8, 8> rsc;
     array<uint8, 3> cipher_suite_oui;
     uint8 cipher_suite_type;
+
+    // Non-IEEE specified fields:
+
+    // Support for indexing rotating keys such as the group key. The index must be handed down to
+    // the MLME to correctly setup key rotation.
+    uint8 key_idx;
 };
 
 struct SetKeysRequest {
