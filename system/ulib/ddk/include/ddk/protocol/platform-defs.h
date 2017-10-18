@@ -30,5 +30,7 @@ __BEGIN_CDECLS;
 #define PDEV_VID_AMLOGIC            3
 #define PDEV_PID_AMLOGIC_S905       1
 #define PDEV_PID_AMLOGIC_A113       2
+// Device ID for Gauss audio
+#define PDEV_DID_AMLOGIC_GAUSS_AUDIO 1
 
 __END_CDECLS;

@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <ddk/protocol/platform-bus.h>
+#include <ddk/device.h>
+#include <ddk/protocol/platform-device.h>
 
 typedef struct {
-    platform_bus_protocol_t pbus;
-    // more coming soon
-} a113_bus_t;
-
-// a113-audio.c
-zx_status_t a113_audio_init(a113_bus_t* bus);
+    zx_device_t* zxdev;
+    platform_device_protocol_t pdev;
+    // more stuff will be added here
+} gauss_audio_t;

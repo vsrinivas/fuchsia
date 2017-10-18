@@ -68,6 +68,8 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     intf.ctx = bus;
     pbus_set_interface(&bus->pbus, &intf);
 
+    a113_audio_init(bus);
+
     return ZX_OK;
 
 fail:
