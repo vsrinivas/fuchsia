@@ -97,6 +97,7 @@ typedef struct wlan_key_config {
     uint8_t peer_addr[6];
     uint8_t key_type;
     uint8_t key_len;
+    uint8_t key_idx;
     uint8_t key[32];
 } wlan_key_config_t;
 
