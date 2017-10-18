@@ -176,7 +176,7 @@ void TimelineControlPoint::SetTimelineTransform(
   set_timeline_transform_callback_ = callback;
 }
 
-void TimelineControlPoint::SetTimelineTransformAsync(
+void TimelineControlPoint::SetTimelineTransformNoReply(
     TimelineTransformPtr timeline_transform) {
   FLOG(log_channel_, ScheduleTimelineTransform(timeline_transform.Clone()));
 

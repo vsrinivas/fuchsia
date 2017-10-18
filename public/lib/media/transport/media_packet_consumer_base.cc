@@ -229,7 +229,7 @@ void MediaPacketConsumerBase::SupplyPacket(
       label, std::move(media_packet), payload, callback, counter_)));
 }
 
-void MediaPacketConsumerBase::SupplyPacketNoDemand(
+void MediaPacketConsumerBase::SupplyPacketNoReply(
     MediaPacketPtr media_packet) {
   SupplyPacket(std::move(media_packet), SupplyPacketCallback());
 }

@@ -127,7 +127,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   void SupplyPacket(MediaPacketPtr packet,
                     const SupplyPacketCallback& callback) final;
 
-  void SupplyPacketNoDemand(MediaPacketPtr packet) final;
+  void SupplyPacketNoReply(MediaPacketPtr packet) final;
 
   void Flush(bool hold_frame, const FlushCallback& callback) final;
 

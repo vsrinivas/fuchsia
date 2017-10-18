@@ -204,12 +204,12 @@ void FakeRenderer::Prime(const PrimeCallback& callback) {
 void FakeRenderer::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
-  SetTimelineTransformAsync(std::move(timeline_transform));
+  SetTimelineTransformNoReply(std::move(timeline_transform));
 
   set_timeline_transform_callback_ = callback;
 }
 
-void FakeRenderer::SetTimelineTransformAsync(
+void FakeRenderer::SetTimelineTransformNoReply(
     TimelineTransformPtr timeline_transform) {
   FXL_DCHECK(timeline_transform);
   FXL_DCHECK(timeline_transform->reference_delta != 0);

@@ -194,7 +194,7 @@ void MediaTimelineControllerImpl::SetTimelineTransform(
   });
 }
 
-void MediaTimelineControllerImpl::SetTimelineTransformAsync(
+void MediaTimelineControllerImpl::SetTimelineTransformNoReply(
     TimelineTransformPtr timeline_transform) {
   SetTimelineTransform(std::move(timeline_transform), [](bool completed) {});
 }

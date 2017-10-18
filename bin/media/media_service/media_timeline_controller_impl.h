@@ -55,7 +55,7 @@ class MediaTimelineControllerImpl
       TimelineTransformPtr timeline_transform,
       const SetTimelineTransformCallback& callback) override;
 
-  void SetTimelineTransformAsync(
+  void SetTimelineTransformNoReply(
       TimelineTransformPtr timeline_transform) override;
 
  private:

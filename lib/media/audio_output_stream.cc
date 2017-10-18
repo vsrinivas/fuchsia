@@ -179,7 +179,7 @@ media::MediaPacketPtr AudioOutputStream::CreateMediaPacket(
 bool AudioOutputStream::SendMediaPacket(media::MediaPacketPtr packet) {
   FXL_DCHECK(packet_consumer_);
 
-  return packet_consumer_->SupplyPacketNoDemand(std::move(packet));
+  return packet_consumer_->SupplyPacketNoReply(std::move(packet));
 }
 
 int AudioOutputStream::GetMinDelay(zx_duration_t* delay_nsec_out) {
@@ -274,7 +274,7 @@ bool AudioOutputStream::Start() {
   transform->reference_delta = 1;
   transform->subject_delta = 1;
 
-  return timeline_consumer->SetTimelineTransformAsync(std::move(transform));
+  return timeline_consumer->SetTimelineTransformNoReply(std::move(transform));
 }
 
 void AudioOutputStream::Stop() {
@@ -291,7 +291,7 @@ void AudioOutputStream::Stop() {
   transform->reference_delta = 1;
   transform->subject_delta = 0;
 
-  timeline_consumer->SetTimelineTransformAsync(std::move(transform));
+  timeline_consumer->SetTimelineTransformNoReply(std::move(transform));
 }
 
 }  // namespace media_client
