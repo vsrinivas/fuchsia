@@ -46,11 +46,13 @@ driver_module("ath10k_driver") {
 # TODO(tkilbourn): copy firmware
 
 package("ath10k") {
-  deps = [ ":ath10k_driver" ]
+  deps = [
+    ":ath10k_driver",
+  ]
 
   drivers = [ {
         name = "ath10k.so"
-     } ]
+      } ]
 
   # TODO(tkilbourn): firmware
 }

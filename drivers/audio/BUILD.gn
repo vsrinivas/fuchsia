@@ -30,13 +30,10 @@ package("audio") {
     },
     {
       name = "libusb-audio.so"
-    }
+    },
   ]
 
-  libraries = [
-    {
-      name = "libaudio-dispatcher-pool.so"
-    }
-  ]
+  libraries = [ {
+        name = "libaudio-dispatcher-pool.so"
+      } ]
 }
-

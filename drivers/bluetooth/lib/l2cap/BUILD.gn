@@ -15,9 +15,9 @@ static_library("l2cap") {
     "logical_link.h",
     "pdu.cc",
     "pdu.h",
-    "sdu.h",
     "recombiner.cc",
     "recombiner.h",
+    "sdu.h",
   ]
 
   deps = [

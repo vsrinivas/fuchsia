@@ -13,15 +13,15 @@ driver_module("ralink_driver") {
     "device.cpp",
     "device.h",
     "driver.cpp",
-    "register.h",
     "ralink.h",
+    "register.h",
   ]
 
   deps = [
     "//garnet/drivers/wlan/common",
     "//zircon/system/ulib/ddktl",
-    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   libs = [

@@ -3,30 +3,28 @@
 # found in the LICENSE file.
 
 source_set("ihda-codec-utils") {
-    public = [
-        "codec-driver-base.h",
-        "stream-base.h",
-    ]
+  public = [
+    "codec-driver-base.h",
+    "stream-base.h",
+  ]
 
-    sources = [
-        "codec-driver-base.cpp",
-        "debug-logging.h",
-        "stream-base.cpp",
-    ]
+  sources = [
+    "codec-driver-base.cpp",
+    "debug-logging.h",
+    "stream-base.cpp",
+  ]
 
-    public_deps = [
-        "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-    ]
+  public_deps = [
+    "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+  ]
 
-    deps = [
-        "//garnet/drivers/audio/audio-proto",
-        "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
-        "//zircon/system/ulib/audio-proto-utils",
-        "//zircon/system/ulib/zx",
-        "//zircon/system/ulib/fbl",
-    ]
+  deps = [
+    "//garnet/drivers/audio/audio-proto",
+    "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
 
-    libs = [
-        "driver",
-    ]
+  libs = [ "driver" ]
 }

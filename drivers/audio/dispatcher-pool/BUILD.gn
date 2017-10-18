@@ -23,8 +23,8 @@ shared_library("audio-dispatcher-pool") {
   ]
 
   deps = [
-    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]

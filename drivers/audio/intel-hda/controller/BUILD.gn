@@ -5,38 +5,36 @@
 import("//build/config/fuchsia/rules.gni")
 
 driver_module("ihda-controller") {
-    public = [ ]
+  public = []
 
-    sources = [
-        "binding.c",
-        "codec-cmd-job.cpp",
-        "codec-cmd-job.h",
-        "debug.cpp",
-        "debug-logging.h",
-        "intel-hda-codec.cpp",
-        "intel-hda-codec.h",
-        "intel-hda-controller-init.cpp",
-        "intel-hda-controller.cpp",
-        "intel-hda-controller.h",
-        "intel-hda-stream.cpp",
-        "intel-hda-stream.h",
-        "irq-thread.cpp",
-        "thread-annotations.h",
-        "utils.cpp",
-        "utils.h",
-    ]
+  sources = [
+    "binding.c",
+    "codec-cmd-job.cpp",
+    "codec-cmd-job.h",
+    "debug-logging.h",
+    "debug.cpp",
+    "intel-hda-codec.cpp",
+    "intel-hda-codec.h",
+    "intel-hda-controller-init.cpp",
+    "intel-hda-controller.cpp",
+    "intel-hda-controller.h",
+    "intel-hda-stream.cpp",
+    "intel-hda-stream.h",
+    "irq-thread.cpp",
+    "thread-annotations.h",
+    "utils.cpp",
+    "utils.h",
+  ]
 
-    deps = [
-        "//garnet/drivers/audio/audio-proto",
-        "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-        "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
-        "//zircon/system/ulib/zx",
-        "//zircon/system/ulib/fbl",
-    ]
+  deps = [
+    "//garnet/drivers/audio/audio-proto",
+    "//garnet/drivers/audio/dispatcher-pool:audio-dispatcher-pool",
+    "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
 
-    libs = [
-      "driver",
-    ]
+  libs = [ "driver" ]
 
-    cflags = [ "-Wno-address-of-packed-member" ]
+  cflags = [ "-Wno-address-of-packed-member" ]
 }

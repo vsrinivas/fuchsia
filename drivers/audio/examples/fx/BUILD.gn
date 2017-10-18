@@ -3,16 +3,15 @@
 # found in the LICENSE file.
 
 executable("fx") {
-    sources = [
-        "fx.cpp",
-    ]
+  sources = [
+    "fx.cpp",
+  ]
 
-    deps = [
-        "//application/lib/app",
-        "//apps/media/lib/timeline",
-        "//apps/media/services",
-        "//zircon/system/ulib/audio-utils",
-        "//lib/mtl",
-    ]
+  deps = [
+    "//application/lib/app",
+    "//apps/media/lib/timeline",
+    "//apps/media/services",
+    "//lib/mtl",
+    "//zircon/system/ulib/audio-utils",
+  ]
 }
-

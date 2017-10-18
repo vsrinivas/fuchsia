@@ -3,18 +3,18 @@
 # found in the LICENSE file.
 
 source_set("ihda-utils") {
-    sources = [
-        "codec-caps.cpp",
-        "codec-caps.h",
-        "codec-commands.h",
-        "intel-hda-proto.h",
-        "intel-hda-registers.h",
-        "utils.cpp",
-        "utils.h",
-    ]
+  sources = [
+    "codec-caps.cpp",
+    "codec-caps.h",
+    "codec-commands.h",
+    "intel-hda-proto.h",
+    "intel-hda-registers.h",
+    "utils.cpp",
+    "utils.h",
+  ]
 
-    deps = [
-        "//zircon/system/ulib/zx",
-        "//zircon/system/ulib/fbl",
-    ]
+  deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
 }

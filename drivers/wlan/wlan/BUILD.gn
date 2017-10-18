@@ -40,10 +40,10 @@ source_set("mlme") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/wlan/fidl:mlme_data_only",
     "//garnet/drivers/wlan/common",
-    "//zircon/system/ulib/zx",
+    "//garnet/public/lib/wlan/fidl:mlme_data_only",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ ":wlan_config" ]
@@ -62,8 +62,8 @@ driver_module("wlan_driver") {
   deps = [
     ":mlme",
     "//zircon/system/ulib/ddktl",
-    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   libs = [ "driver" ]

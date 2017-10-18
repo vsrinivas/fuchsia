@@ -11,8 +11,8 @@ driver_module("msd_intel") {
   output_name = "libmsd_intel"
 
   deps = [
-    "src:main",
     "src",
+    "src:main",
   ]
 
   ldflags = [ "$shared_ldflags" ]
@@ -24,8 +24,8 @@ driver_module("msd_intel_test") {
   output_name = "libmsd_intel_test"
 
   deps = [
-    "src:test_driver",
     "src",
+    "src:test_driver",
   ]
 
   ldflags = [ "$shared_ldflags" ]

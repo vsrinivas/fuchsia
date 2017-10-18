@@ -5,23 +5,23 @@
 import("//build/config/fuchsia/rules.gni")
 
 driver_module("qemu-ihda-codec") {
-    public = [ ]
+  public = []
 
-    sources = [
-        "binding.c",
-        "debug-logging.h",
-        "qemu-codec.cpp",
-        "qemu-codec.h",
-        "qemu-stream.cpp",
-        "qemu-stream.h",
-    ]
+  sources = [
+    "binding.c",
+    "debug-logging.h",
+    "qemu-codec.cpp",
+    "qemu-codec.h",
+    "qemu-stream.cpp",
+    "qemu-stream.h",
+  ]
 
-    deps = [
-        "//garnet/drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
-        "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
-        "//zircon/system/ulib/zx",
-        "//zircon/system/ulib/fbl",
-    ]
+  deps = [
+    "//garnet/drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
+    "//garnet/drivers/audio/intel-hda/utils:ihda-utils",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
 
-    libs = [ ]
+  libs = []
 }

@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 source_set("common") {
-    sources = [
-        "bitfield.h",
-        "moving_average.h",
-    ]
+  sources = [
+    "bitfield.h",
+    "moving_average.h",
+  ]
 }

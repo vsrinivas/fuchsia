@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 source_set("audio-proto") {
-    sources = [
-        "audio-proto.cpp",
-        "audio-proto.h",
-    ]
+  sources = [
+    "audio-proto.cpp",
+    "audio-proto.h",
+  ]
 }

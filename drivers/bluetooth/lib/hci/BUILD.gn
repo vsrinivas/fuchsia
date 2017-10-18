@@ -37,8 +37,8 @@ static_library("hci") {
 
   public_deps = [
     "//garnet/drivers/bluetooth/lib/common",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

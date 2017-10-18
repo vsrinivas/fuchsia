@@ -19,9 +19,7 @@ driver_module("wlan-testdev") {
     "test-device.h",
   ]
 
-  defines = [
-    "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
-  ]
+  defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
 
   cflags = [
     "-Wthread-safety",
@@ -30,8 +28,8 @@ driver_module("wlan-testdev") {
 
   deps = [
     "//zircon/system/ulib/ddktl",
-    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   libs = [
@@ -46,7 +44,7 @@ executable("wlan-testutil") {
   ]
 
   deps = [
-    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
