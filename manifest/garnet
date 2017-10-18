@@ -279,15 +279,4 @@
              remote="https://fuchsia.googlesource.com/third_party/go-tuf"
              gerrithost="https://fuchsia-review.googlesource.com"/>
   </projects>
-  <hooks>
-    <hook name="download-rt2870-bin"
-          project="garnet"
-          action="drivers/wlan/mediatek/ralink/download-firmware.sh"/>
-    <hook name="download-vulkan-sdk"
-          project="garnet"
-          action="public/lib/escher/scripts/download-vulkan-sdk"/>
-    <hook name="fonts-update"
-          project="garnet"
-          action="bin/fonts/update.sh"/>
-  </hooks>
 </manifest>
