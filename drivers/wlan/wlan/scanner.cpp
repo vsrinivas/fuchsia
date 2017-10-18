@@ -162,7 +162,7 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
     if (bssid != src_addr) {
         // Undefined situation. Investigate if roaming needs this or this is a plain dark art.
         debugbcn("Rxed a beacon/probe_resp from the non-BSSID station: BSSID %s   SrcAddr %s\n",
-                 bssid.ToString().c_str(), src_addr.ToString().c_str());
+                 MACSTR(bssid), MACSTR(src_addr));
         return ZX_OK;  // Do not process.
     }
 
@@ -173,7 +173,7 @@ zx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
 
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
-                 bssid.ToString().c_str(), beacon->timestamp);
+                 MACSTR(bssid), beacon->timestamp);
     }
 
     return ZX_OK;
@@ -263,7 +263,7 @@ zx_status_t Scanner::SendProbeRequest() {
     fbl::unique_ptr<Buffer> buffer = GetBuffer(probe_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    const DeviceAddress& mymac = device_->GetState()->address();
+    const MacAddr& mymac = device_->GetState()->address();
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), probe_len));
     packet->clear();
@@ -272,9 +272,10 @@ zx_status_t Scanner::SendProbeRequest() {
     hdr->fc.set_type(kManagement);
     hdr->fc.set_subtype(kProbeRequest);
 
-    std::memset(hdr->addr1, 0xFF, sizeof(hdr->addr1));
-    std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
-    std::memcpy(hdr->addr3, req_->bssid.data(), sizeof(hdr->addr3));
+    hdr->addr1 = kBcastMac;
+    hdr->addr2 = mymac;
+    hdr->addr3 = MacAddr(req_->bssid.data());
+
     // TODO(hahnr): keep reference to last sequence #?
     uint16_t seq = device_->GetState()->next_seq();
     hdr->sc.set_seq(seq);

@@ -14,9 +14,13 @@
 
 namespace wlan {
 
+// This macro provides memory safe C-style string.
+#define MACSTR(mac_addr) (mac_addr).ToString().c_str()
+
 constexpr size_t kMacAddrLen = 6;  // bytes
 
 struct MacAddr {
+    // Consider if this should be private. Pay attention to byte alignment.
     uint8_t byte[kMacAddrLen];
 
     MacAddr() {}
@@ -36,6 +40,7 @@ struct MacAddr {
 
     int Cmp(const MacAddr& addr) const { return memcmp(byte, addr.byte, kMacAddrLen); }
 
+    // TODO(porce): inline
     bool operator==(const MacAddr& addr) const { return Cmp(addr) == 0; }
     bool operator!=(const MacAddr& addr) const { return !(*this == addr); }
     bool operator>(const MacAddr& addr) const { return Cmp(addr) > 0; }
@@ -57,7 +62,9 @@ struct MacAddr {
         return true;
     }
 
-    bool IsMcast() const { return byte[0] & 0x01; }
+    bool IsUcast() const { return (byte[0] & 0x01) == 0; }
+
+    bool IsMcast() const { return !IsUcast(); }
 
     bool IsLocalAdmin() const { return byte[0] & 0x02; }
 
@@ -90,7 +97,6 @@ struct MacAddr {
     }
 
     uint64_t ToU64() const {
-        // Refer to DeviceAddress::to_u64()
         uint64_t m = 0;
         for (size_t idx = 0; idx < kMacAddrLen; idx++) {
             m <<= 8;
@@ -99,6 +105,7 @@ struct MacAddr {
         return m;
     }
 
+    inline void* CopyTo(void* dst) const { return memcpy(dst, byte, kMacAddrLen); }
 } __PACKED;
 
 struct MacAddrHasher {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "element.h"
+#include "macaddr.h"
 
 #include <fbl/type_support.h>
 #include <zircon/compiler.h>
@@ -339,9 +340,9 @@ class FrameControl : public common::BitField<uint16_t> {
 struct MgmtFrameHeader {
     FrameControl fc;
     uint16_t duration;
-    uint8_t addr1[6];
-    uint8_t addr2[6];
-    uint8_t addr3[6];
+    MacAddr addr1;
+    MacAddr addr2;
+    MacAddr addr3;
     SequenceControl sc;
 
     // Use accessors for optional field.
@@ -475,13 +476,13 @@ struct Disassociation {
 struct DataFrameHeader {
     FrameControl fc;
     uint16_t duration;
-    uint8_t addr1[6];
-    uint8_t addr2[6];
-    uint8_t addr3[6];
+    MacAddr addr1;
+    MacAddr addr2;
+    MacAddr addr3;
     SequenceControl sc;
 
     // Use accessors for optional fields.
-    // uint8_t addr4[6];
+    // MacAddr addr4;
     // uint8_t qos_ctrl[2];
     // HtControl* ht_ctrl;
 
@@ -530,8 +531,8 @@ struct DataFrameHeader {
 struct PsPollFrame {
     FrameControl fc;
     uint16_t aid;
-    uint8_t bssid[6];
-    uint8_t ta[6];
+    MacAddr bssid;
+    MacAddr ta;
 } __PACKED;
 
 // IEEE Std 802.2, 1998 Edition, 3.2
@@ -555,8 +556,8 @@ static_assert(kDataPayloadHeader == 32, "check the data payload header size");
 
 // IEEE Std 802.3-2015, 3.1.1
 struct EthernetII {
-    uint8_t dest[6];
-    uint8_t src[6];
+    MacAddr dest;
+    MacAddr src;
     uint16_t ether_type;
     uint8_t payload[];
 } __PACKED;

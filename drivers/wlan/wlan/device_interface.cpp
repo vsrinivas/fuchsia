@@ -6,15 +6,4 @@
 
 #include <cstring>
 
-namespace wlan {
-
-uint64_t DeviceAddress::to_u64() const {
-    uint64_t m = addr_[0];
-    for (size_t i = 1; i < DeviceAddress::kSize; i++) {
-        m <<= 8;
-        m |= addr_[i];
-    }
-    return m;
-}
-
-}  // namespace wlan
+namespace wlan {}  // namespace wlan

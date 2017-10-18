@@ -22,6 +22,7 @@ static constexpr zx_duration_t kSignalReportTimeoutTu = 10;
 Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     : device_(device), timer_(std::move(timer)) {
     (void)assoc_timeout_;
+    bssid_.Reset();
 }
 
 void Station::Reset() {
@@ -33,6 +34,7 @@ void Station::Reset() {
     join_timeout_ = 0;
     auth_timeout_ = 0;
     last_seen_ = 0;
+    bssid_.Reset();
 }
 
 zx_status_t Station::Join(JoinRequestPtr req) {
@@ -52,7 +54,7 @@ zx_status_t Station::Join(JoinRequestPtr req) {
     }
 
     bss_ = std::move(req->selected_bss);
-    address_.set_data(bss_->bssid.data());
+    bssid_.Set(bss_->bssid.data());
     debugjoin("setting channel to %u\n", bss_->channel);
     zx_status_t status = device_->SetChannel(wlan_channel_t{bss_->channel});
     if (status != ZX_OK) {
@@ -71,7 +73,7 @@ zx_status_t Station::Join(JoinRequestPtr req) {
     }
 
     // TODO(hahnr): Update when other BSS types are supported.
-    device_->SetBss(address_.data(), WLAN_BSS_TYPE_INFRASTRUCTURE);
+    device_->SetBss(bssid_, WLAN_BSS_TYPE_INFRASTRUCTURE);
     return status;
 }
 
@@ -101,14 +103,14 @@ zx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
         return SendAuthResponse(AuthenticateResultCodes::REFUSED);
     }
 
-    debugjoin("authenticating to " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(address_.data()));
+    debugjoin("authenticating to %s\n", MACSTR(bssid_));
 
     // TODO(tkilbourn): better size management
     size_t auth_len = sizeof(MgmtFrameHeader) + sizeof(Authentication);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(auth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    const DeviceAddress& mymac = device_->GetState()->address();
+    const MacAddr& mymac = device_->GetState()->address();
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), auth_len));
     packet->clear();
@@ -116,9 +118,11 @@ zx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     auto hdr = packet->mut_field<MgmtFrameHeader>(0);
     hdr->fc.set_type(kManagement);
     hdr->fc.set_subtype(kAuthentication);
-    std::memcpy(hdr->addr1, address_.data(), sizeof(hdr->addr1));
-    std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
-    std::memcpy(hdr->addr3, address_.data(), sizeof(hdr->addr3));
+
+    hdr->addr1 = bssid_;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid_;
+
     hdr->sc.set_seq(next_seq());
 
     auto auth = packet->mut_field<Authentication>(sizeof(MgmtFrameHeader));
@@ -165,14 +169,14 @@ zx_status_t Station::Associate(AssociateRequestPtr req) {
         warnf("already authenticated; sending request anyway\n");
     }
 
-    debugjoin("associating to " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(address_.data()));
+    debugjoin("associating to %s\n", MACSTR(bssid_));
 
     // TODO(tkilbourn): better size management; for now reserve 128 bytes for Association elements
     size_t assoc_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + 128;
     fbl::unique_ptr<Buffer> buffer = GetBuffer(assoc_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    const DeviceAddress& mymac = device_->GetState()->address();
+    const MacAddr& mymac = device_->GetState()->address();
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), assoc_len));
     packet->clear();
@@ -180,9 +184,11 @@ zx_status_t Station::Associate(AssociateRequestPtr req) {
     auto hdr = packet->mut_field<MgmtFrameHeader>(0);
     hdr->fc.set_type(kManagement);
     hdr->fc.set_subtype(kAssociationRequest);
-    std::memcpy(hdr->addr1, address_.data(), sizeof(hdr->addr1));
-    std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
-    std::memcpy(hdr->addr3, address_.data(), sizeof(hdr->addr3));
+
+    hdr->addr1 = bssid_;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid_;
+
     hdr->sc.set_seq(next_seq());
 
     // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
@@ -269,7 +275,8 @@ zx_status_t Station::HandleBeacon(const Packet* packet) {
     ZX_DEBUG_ASSERT(rxinfo);
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
-    if (DeviceAddress(hdr->addr3) != bss_->bssid.data()) {
+
+    if (hdr->addr3 != MacAddr(bss_->bssid.data())) {
         // Not our beacon -- this shouldn't happen because the Mlme should not have routed this
         // packet to this Station.
         ZX_DEBUG_ASSERT(false);
@@ -323,9 +330,10 @@ zx_status_t Station::HandleAuthentication(const Packet* packet) {
         return ZX_OK;
     }
 
+    MacAddr bssid(bss_->bssid.data());
     auto hdr = packet->field<MgmtFrameHeader>(0);
     ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAuthentication);
-    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->addr3 == bssid);
 
     auto auth = packet->field<Authentication>(sizeof(MgmtFrameHeader));
     if (!auth) {
@@ -354,7 +362,7 @@ zx_status_t Station::HandleAuthentication(const Packet* packet) {
         return ZX_ERR_BAD_STATE;
     }
 
-    debugjoin("authenticated to " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(bss_->bssid.data()));
+    debugjoin("authenticated to %s\n", MACSTR(bssid));
     state_ = WlanState::kAuthenticated;
     auth_timeout_ = 0;
     timer_->CancelTimer();
@@ -370,9 +378,10 @@ zx_status_t Station::HandleDeauthentication(const Packet* packet) {
         return ZX_OK;
     }
 
+    MacAddr bssid(bss_->bssid.data());
     auto hdr = packet->field<MgmtFrameHeader>(0);
     ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDeauthentication);
-    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->addr3 == bssid);
 
     auto deauth = packet->field<Deauthentication>(sizeof(MgmtFrameHeader));
     if (!deauth) {
@@ -395,9 +404,10 @@ zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
         return ZX_OK;
     }
 
+    MacAddr bssid(bss_->bssid.data());
     auto hdr = packet->field<MgmtFrameHeader>(0);
     ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
-    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->addr3 == bssid);
 
     auto assoc = packet->field<AssociationResponse>(sizeof(MgmtFrameHeader));
     if (!assoc) {
@@ -413,7 +423,7 @@ zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
         return ZX_ERR_BAD_STATE;
     }
 
-    debugjoin("associated with " MAC_ADDR_FMT "\n", MAC_ADDR_ARGS(bss_->bssid.data()));
+    debugjoin("associated with %s\n", MACSTR(bssid));
     state_ = WlanState::kAssociated;
     assoc_timeout_ = 0;
     aid_ = assoc->aid & kAidMask;
@@ -431,7 +441,10 @@ zx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     SendSignalReportIndication(rxinfo->rssi);
 
     // Open port if user connected to an open network.
-    if (bss_->rsn.is_null()) controlled_port_ = PortState::kOpen;
+    if (bss_->rsn.is_null()) {
+        debugjoin("802.1X controlled port is now open\n");
+        controlled_port_ = PortState::kOpen;
+    }
 
     std::printf("associated\n");
 
@@ -447,15 +460,17 @@ zx_status_t Station::HandleDisassociation(const Packet* packet) {
     }
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
+    MacAddr bssid(bss_->bssid.data());
     ZX_DEBUG_ASSERT(hdr->fc.subtype() == ManagementSubtype::kDisassociation);
-    ZX_DEBUG_ASSERT(DeviceAddress(hdr->addr3) == bss_->bssid.data());
+    ZX_DEBUG_ASSERT(hdr->addr3 == bssid);
 
     auto disassoc = packet->field<Disassociation>(sizeof(MgmtFrameHeader));
     if (!disassoc) {
         errorf("disassociation packet too small len=%zu\n", packet->len());
         return ZX_ERR_IO;
     }
-    infof("disassociating from %s, reason=%u\n", bss_->ssid.data(), disassoc->reason_code);
+    infof("disassociating from %s(%s), reason=%u\n", MACSTR(bssid), bss_->ssid.data(),
+          disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
@@ -483,8 +498,12 @@ zx_status_t Station::HandleData(const Packet* packet) {
     ZX_DEBUG_ASSERT(hdr != nullptr);
     debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n", hdr->fc.val(), hdr->duration,
              hdr->sc.seq(), hdr->sc.frag());
-    debughdr("dest: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "\n",
-             MAC_ADDR_ARGS(hdr->addr1), MAC_ADDR_ARGS(hdr->addr2), MAC_ADDR_ARGS(hdr->addr3));
+
+    const MacAddr& dest = hdr->addr1;
+    const MacAddr& bssid = hdr->addr2;
+    const MacAddr& src = hdr->addr3;
+
+    debughdr("dest: %s bssid: %s source: %s\n", MACSTR(dest), MACSTR(bssid), MACSTR(src));
 
     if (hdr->fc.subtype() != 0) {
         warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
@@ -515,8 +534,7 @@ zx_status_t Station::HandleData(const Packet* packet) {
     if (controlled_port_ == PortState::kBlocked) { return ZX_OK; }
 
     // PS-POLL if there are more buffered unicast frames.
-    bool unicast = !(hdr->addr1[0] & 1);
-    if (hdr->fc.more_data() && unicast) { SendPsPoll(); }
+    if (hdr->fc.more_data() && hdr->addr1.IsUcast()) { SendPsPoll(); }
 
     const size_t eth_len = packet->len() - kDataPayloadHeader + sizeof(EthernetII);
     auto buffer = GetBuffer(eth_len);
@@ -526,8 +544,10 @@ zx_status_t Station::HandleData(const Packet* packet) {
     // no need to clear the packet since every byte is overwritten
     eth_packet->set_peer(Packet::Peer::kEthernet);
     auto eth = eth_packet->mut_field<EthernetII>(0);
-    std::memcpy(eth->dest, hdr->addr1, DeviceAddress::kSize);
-    std::memcpy(eth->src, hdr->addr3, DeviceAddress::kSize);
+
+    eth->dest = hdr->addr1;
+    eth->src = hdr->addr3;
+
     eth->ether_type = llc->protocol_id;
     std::memcpy(eth->payload, llc->payload, packet->len() - kDataPayloadHeader);
 
@@ -561,14 +581,18 @@ zx_status_t Station::HandleEth(const Packet* packet) {
     std::memset(hdr, 0, sizeof(DataFrameHeader));
     hdr->fc.set_type(kData);
     hdr->fc.set_to_ds(1);
-    std::memcpy(hdr->addr1, bss_->bssid.data(), DeviceAddress::kSize);
-    std::memcpy(hdr->addr2, eth->src, DeviceAddress::kSize);
-    std::memcpy(hdr->addr3, eth->dest, DeviceAddress::kSize);
+
+    hdr->addr1 = MacAddr(bss_->bssid.data());
+    hdr->addr2 = eth->src;
+    hdr->addr3 = eth->dest;
+
     hdr->sc.set_seq(next_seq());
     debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n", hdr->fc.val(), hdr->duration,
              hdr->sc.seq(), hdr->sc.frag());
-    debughdr("dest: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "\n",
-             MAC_ADDR_ARGS(hdr->addr1), MAC_ADDR_ARGS(hdr->addr2), MAC_ADDR_ARGS(hdr->addr3));
+
+    // TODO(porce): Fix this inconsistency. See how addr1,2,3 are assigned.
+    debughdr("dest: %s source: %s bssid: %s\n", MACSTR(hdr->addr1), MACSTR(hdr->addr2),
+             MACSTR(hdr->addr3));
 
     auto llc = wlan_packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
     llc->dsap = kLlcSnapExtension;
@@ -642,8 +666,10 @@ zx_status_t Station::SendJoinResponse() {
 zx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     debugfn();
     auto resp = AuthenticateResponse::New();
-    resp->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
-    std::memcpy(resp->peer_sta_address.data(), bss_->bssid.data(), DeviceAddress::kSize);
+    resp->peer_sta_address = fidl::Array<uint8_t>::New(kMacAddrLen);
+
+    MacAddr bssid(bss_->bssid.data());
+    bssid.CopyTo(resp->peer_sta_address.data());
     // TODO(tkilbourn): set this based on the actual auth type
     resp->auth_type = AuthenticationTypes::OPEN_SYSTEM;
     resp->result_code = code;
@@ -667,8 +693,9 @@ zx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
 zx_status_t Station::SendDeauthIndication(uint16_t code) {
     debugfn();
     auto ind = DeauthenticateIndication::New();
-    ind->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
-    std::memcpy(ind->peer_sta_address.data(), bss_->bssid.data(), DeviceAddress::kSize);
+    ind->peer_sta_address = fidl::Array<uint8_t>::New(kMacAddrLen);
+    MacAddr bssid(bss_->bssid.data());
+    bssid.CopyTo(ind->peer_sta_address.data());
     ind->reason_code = code;
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
@@ -712,8 +739,9 @@ zx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
 zx_status_t Station::SendDisassociateIndication(uint16_t code) {
     debugfn();
     auto ind = DisassociateIndication::New();
-    ind->peer_sta_address = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
-    std::memcpy(ind->peer_sta_address.data(), bss_->bssid.data(), DeviceAddress::kSize);
+    ind->peer_sta_address = fidl::Array<uint8_t>::New(kMacAddrLen);
+    MacAddr bssid(bss_->bssid.data());
+    bssid.CopyTo(ind->peer_sta_address.data());
     ind->reason_code = code;
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
@@ -778,9 +806,10 @@ zx_status_t Station::SendEapolRequest(EapolRequestPtr req) {
     // TODO(hahnr): Address 1 should be the BSSID as well, however, our setup somehow is not able
     // to send such packets. Sending 0xFF...FF is just a dirty work around until the actual problem
     // is fixed.
-    std::memset(hdr->addr1, 0xFF, sizeof(hdr->addr1));
-    std::memcpy(hdr->addr2, req->src_addr.data(), sizeof(hdr->addr2));
-    std::memcpy(hdr->addr3, req->dst_addr.data(), sizeof(hdr->addr3));
+    hdr->addr1.Set(kBcastMac);
+    hdr->addr2.Set(req->src_addr.data());
+    hdr->addr3.Set(req->dst_addr.data());
+
     hdr->sc.set_seq(device_->GetState()->next_seq());
 
     auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
@@ -825,8 +854,8 @@ zx_status_t Station::SendEapolResponse(EapolResultCodes result_code) {
     return status;
 }
 
-zx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
-                                         const uint8_t dst[]) {
+zx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const MacAddr& src,
+                                         const MacAddr& dst) {
     debugfn();
 
     // Limit EAPOL packet size. The EAPOL packet's size depends on the link transport protocol and
@@ -839,10 +868,10 @@ zx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t 
     auto ind = EapolIndication::New();
     ind->data = ::fidl::Array<uint8_t>::New(len);
     std::memcpy(ind->data.data(), eapol, len);
-    ind->src_addr = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
-    std::memcpy(ind->src_addr.data(), src, DeviceAddress::kSize);
-    ind->dst_addr = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
-    std::memcpy(ind->dst_addr.data(), dst, DeviceAddress::kSize);
+    ind->src_addr = fidl::Array<uint8_t>::New(kMacAddrLen);
+    ind->dst_addr = fidl::Array<uint8_t>::New(kMacAddrLen);
+    src.CopyTo(ind->src_addr.data());
+    dst.CopyTo(ind->dst_addr.data());
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
@@ -891,7 +920,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
         return ZX_OK;
     }
 
-    const DeviceAddress& mymac = device_->GetState()->address();
+    const MacAddr& mymac = device_->GetState()->address();
     size_t len = sizeof(DataFrameHeader);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
@@ -904,9 +933,11 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     hdr->fc.set_pwr_mgmt(ps_mode);
     hdr->fc.set_to_ds(1);
 
-    std::memcpy(hdr->addr1, bss_->bssid.data(), sizeof(hdr->addr1));
-    std::memcpy(hdr->addr2, mymac.data(), sizeof(hdr->addr2));
-    std::memcpy(hdr->addr3, bss_->bssid.data(), sizeof(hdr->addr3));
+    MacAddr bssid(bss_->bssid.data());
+    hdr->addr1 = bssid;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid;
+
     uint16_t seq = device_->GetState()->next_seq();
     hdr->sc.set_seq(seq);
 
@@ -926,7 +957,7 @@ zx_status_t Station::SendPsPoll() {
         return ZX_OK;
     }
 
-    const DeviceAddress& mymac = device_->GetState()->address();
+    const MacAddr& mymac = device_->GetState()->address();
     size_t len = sizeof(PsPollFrame);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
@@ -937,8 +968,9 @@ zx_status_t Station::SendPsPoll() {
     frame->fc.set_type(kControl);
     frame->fc.set_subtype(kPsPoll);
     frame->aid = aid_;
-    std::memcpy(frame->bssid, bss_->bssid.data(), sizeof(frame->bssid));
-    std::memcpy(frame->ta, mymac.data(), sizeof(frame->ta));
+
+    frame->bssid = MacAddr(bss_->bssid.data());
+    frame->ta = mymac;
 
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {

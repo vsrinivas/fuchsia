@@ -43,9 +43,13 @@ class Station {
 
     void Reset();
 
-    const DeviceAddress* bssid() const {
+    const MacAddr* bssid() const {
+        // TODO(porce): Distinguish cases
+        // (1) if no Bss Descriptor came down from SME.
+        // (2) if bssid_ is uninitlized.
+        // (3) if bssid_ is kZeroMac.
         if (bss_.is_null()) { return nullptr; }
-        return &address_;
+        return &bssid_;
     }
 
     uint16_t aid() const { return aid_; }
@@ -85,8 +89,8 @@ class Station {
 
     zx_status_t SendSignalReportIndication(uint8_t rssi);
     zx_status_t SendEapolResponse(EapolResultCodes result_code);
-    zx_status_t SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
-                                    const uint8_t dst[]);
+    zx_status_t SendEapolIndication(const EapolFrame* eapol, const MacAddr& src,
+                                    const MacAddr& dst);
 
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
@@ -100,7 +104,7 @@ class Station {
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
     BSSDescriptionPtr bss_;
-    DeviceAddress address_;
+    MacAddr bssid_;
     uint16_t last_seq_ = kMaxSequenceNumber;
 
     WlanState state_ = WlanState::kUnjoined;

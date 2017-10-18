@@ -59,7 +59,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         errorf("could not query wlanmac device: %d\n", status);
         return status;
     }
-    state_->set_address(DeviceAddress(ethmac_info_.mac));
+    state_->set_address(MacAddr(ethmac_info_.mac));
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
@@ -264,8 +264,8 @@ void Device::SetStatusLocked(uint32_t status) {
     if (ethmac_proxy_ != nullptr) { ethmac_proxy_->Status(status); }
 }
 
-zx_status_t Device::SetBss(const uint8_t mac[6], uint8_t type) {
-    return wlanmac_proxy_.SetBss(0u, mac, type);
+zx_status_t Device::SetBss(const MacAddr& mac, uint8_t type) {
+    return wlanmac_proxy_.SetBss(0u, mac.byte, type);
 }
 
 fbl::RefPtr<DeviceState> Device::GetState() {

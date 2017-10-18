@@ -5,6 +5,7 @@
 #pragma once
 
 #include "device_interface.h"
+#include "macaddr.h"
 #include "mlme.h"
 #include "packet.h"
 
@@ -65,7 +66,7 @@ class Device : public WlanBaseDevice,
     zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final;
     zx_status_t SetChannel(wlan_channel_t chan) override final;
     zx_status_t SetStatus(uint32_t status) override final;
-    zx_status_t SetBss(const uint8_t mac[6], uint8_t type) override final;
+    zx_status_t SetBss(const MacAddr& mac, uint8_t type) override final;
     fbl::RefPtr<DeviceState> GetState() override final;
 
    private:

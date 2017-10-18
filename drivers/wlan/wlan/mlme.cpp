@@ -22,8 +22,8 @@
 #include <cstring>
 #include <sstream>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 #include "garnet/drivers/wlan/common/bitfield.h"
+#include "lib/wlan/fidl/wlan_mlme.fidl-common.h"
 
 namespace wlan {
 
@@ -147,8 +147,10 @@ zx_status_t Mlme::HandlePortPacket(uint64_t key) {
             break;
         case to_enum_type(ObjectTarget::kStation):
             ZX_DEBUG_ASSERT(sta_ != nullptr);
-            if (id.mac() != sta_->bssid()->to_u64()) {
-                warnf("timeout for unknown bssid: %" PRIu64 "\n", id.mac());
+            // TODO(porce): Fix this crash point.  bssid() can be nullptr.
+            if (id.mac() != sta_->bssid()->ToU64()) {
+                warnf("timeout for unknown bssid: %s (%" PRIu64 ")\n", MACSTR(*(sta_->bssid())),
+                      id.mac());
                 break;
             }
             sta_->HandleTimeout();
@@ -192,8 +194,12 @@ zx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     }
     debughdr("Frame control: %04x  duration: %u  seq: %u frag: %u\n", hdr->fc.val(), hdr->duration,
              hdr->sc.seq(), hdr->sc.frag());
-    debughdr("dest: " MAC_ADDR_FMT "  source: " MAC_ADDR_FMT "  bssid: " MAC_ADDR_FMT "\n",
-             MAC_ADDR_ARGS(hdr->addr1), MAC_ADDR_ARGS(hdr->addr2), MAC_ADDR_ARGS(hdr->addr3));
+
+    const MacAddr& dst = hdr->addr1;
+    const MacAddr& src = hdr->addr2;
+    const MacAddr& bssid = hdr->addr3;
+
+    debughdr("dest: %s source: %s bssid: %s\n", MACSTR(dst), MACSTR(src), MACSTR(bssid));
 
     switch (hdr->fc.subtype()) {
     case ManagementSubtype::kBeacon:
@@ -255,7 +261,7 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         ObjectId timer_id;
         timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
         timer_id.set_target(to_enum_type(ObjectTarget::kStation));
-        timer_id.set_mac(DeviceAddress(req->selected_bss->bssid.data()).to_u64());
+        timer_id.set_mac(MacAddr(req->selected_bss->bssid.data()).ToU64());
         status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
         if (status != ZX_OK) {
             errorf("could not create station timer: %d\n", status);
@@ -374,6 +380,7 @@ zx_status_t Mlme::HandleDisassociation(const Packet* packet) {
 }
 
 bool Mlme::IsStaValid() const {
+    // TODO(porce): Redefine the notion of the station validity.
     return sta_ != nullptr && sta_->bssid() != nullptr;
 }
 
