@@ -686,8 +686,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/stdio/asprintf.c \
     $(LOCAL_DIR)/src/stdio/clearerr.c \
     $(LOCAL_DIR)/src/stdio/dprintf.c \
-    $(LOCAL_DIR)/src/stdio/ext.c \
-    $(LOCAL_DIR)/src/stdio/ext2.c \
     $(LOCAL_DIR)/src/stdio/fclose.c \
     $(LOCAL_DIR)/src/stdio/feof.c \
     $(LOCAL_DIR)/src/stdio/ferror.c \
