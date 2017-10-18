@@ -59,6 +59,7 @@ zx_status_t LocalApic::Read(uint64_t addr, IoValue* value) {
         return ZX_OK;
     }
     case LOCAL_APIC_REGISTER_DFR:
+    case LOCAL_APIC_REGISTER_LVT_CMCI:
     case LOCAL_APIC_REGISTER_ICR_31_0... LOCAL_APIC_REGISTER_ICR_63_32:
     case LOCAL_APIC_REGISTER_ID:
     case LOCAL_APIC_REGISTER_LDR:
