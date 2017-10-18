@@ -11,6 +11,8 @@ extern crate fuchsia_zircon_sys as zircon_sys;
 #[allow(non_snake_case)]
 pub mod fdio_sys;
 
+pub mod rio;
+
 use zircon_sys as sys;
 
 use std::ffi::CStr;

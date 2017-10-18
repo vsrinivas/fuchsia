@@ -680,10 +680,19 @@ impl Drop for Handle {
 }
 
 impl Handle {
+    /// Initialize a handle backed by ZX_HANDLE_INVALID, the only safe non-handle.
+    pub fn invalid() -> Handle {
+        Handle(sys::ZX_HANDLE_INVALID)
+    }
+
     /// If a raw handle is obtained from some other source, this method converts
     /// it into a type-safe owned handle.
     pub unsafe fn from_raw(raw: sys::zx_handle_t) -> Handle {
         Handle(raw)
+    }
+
+    pub fn is_invalid(&self) -> bool {
+        self.0 == sys::ZX_HANDLE_INVALID
     }
 
     pub fn replace(self, rights: Rights) -> Result<Handle, Status> {

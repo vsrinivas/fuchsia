@@ -192,6 +192,14 @@ impl MessageBuf {
         Default::default()
     }
 
+    /// Create a new non-empty message buffer.
+    pub fn new_with(v: Vec<u8>, mut h: Vec<Handle>) -> Self {
+        Self{
+            bytes: v,
+            handles: h.drain(0..).map(|h| h.into_raw()).collect(),
+        }
+    }
+
     /// Ensure that the buffer has the capacity to hold at least `n_bytes` bytes.
     pub fn ensure_capacity_bytes(&mut self, n_bytes: usize) {
         ensure_capacity(&mut self.bytes, n_bytes);
@@ -222,7 +230,7 @@ impl MessageBuf {
             if *handleref == sys::ZX_HANDLE_INVALID {
                 None
             } else {
-                Some(Handle(mem::replace(handleref, sys::ZX_HANDLE_INVALID)))
+                Some(unsafe { Handle::from_raw(mem::replace(handleref, sys::ZX_HANDLE_INVALID)) })
             }
         )
     }
