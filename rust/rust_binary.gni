@@ -24,6 +24,9 @@ import("//build/rust/rust_artifact.gni")
 #     Builds tests associated with the binary. This will create a
 #     `<name>-bin-test` test file in the output directory.
 #
+#   output_name (optional)
+#     Name of the output file.
+#
 # Example of usage:
 #
 #   rust_binary("foo") {
@@ -35,6 +38,7 @@ template("rust_binary") {
                            [
                              "deps",
                              "name",
+                             "output_name",
                              "source_dir",
                              "with_tests",
                            ])

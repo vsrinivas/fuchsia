@@ -88,8 +88,13 @@ template("rust_artifact") {
         output_file,
       ]
 
+      if (defined(invoker.output_name)) {
+        final_output_file = "$root_out_dir/${invoker.output_name}"
+      } else {
+        final_output_file = "$root_out_dir/$name"
+      }
       outputs = [
-        "$root_out_dir/$name",
+        final_output_file,
       ]
 
       deps = [
