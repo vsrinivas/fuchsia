@@ -425,7 +425,7 @@ enum class SupportedCommand : uint8_t {
 
   // Octet 26
   kLESetScanResponseData    = (1 << 0),
-  kLESetAdvertiseEnable     = (1 << 1),
+  kLESetAdvertisingEnable   = (1 << 1),
   kLESetScanParameters      = (1 << 2),
   kLESetScanEnable          = (1 << 3),
   kLECreateConnection       = (1 << 4),

@@ -76,6 +76,24 @@ class FakeController : public FakeControllerBase {
     hci::LEScanFilterPolicy filter_policy;
   };
 
+  // Current device basic advertising state
+  struct LEAdvertisingState final {
+    LEAdvertisingState();
+
+    bool enabled;
+    hci::LEAdvertisingType adv_type;
+    uint8_t length;
+    uint8_t data[hci::kMaxLEAdvertisingDataLength];
+    uint8_t scan_rsp_length;
+    uint8_t scan_rsp_data[hci::kMaxLEAdvertisingDataLength];
+    common::BufferView advertised_view() const {
+      return common::BufferView(data, length);
+    }
+    common::BufferView scan_rsp_view() const {
+      return common::BufferView(scan_rsp_data, scan_rsp_length);
+    }
+  };
+
   // Constructor initializes the controller with the minimal default settings
   // (equivalent to calling Settings::ApplyDefaults()).
   FakeController(zx::channel cmd_channel, zx::channel acl_data_channel);
@@ -91,6 +109,15 @@ class FakeController : public FakeControllerBase {
 
   // Returns the current LE scan state.
   const LEScanState& le_scan_state() const { return le_scan_state_; }
+
+  // Returns the current LE advertising state.
+  const LEAdvertisingState& le_advertising_state() const {
+    return le_adv_state_;
+  }
+
+  const common::DeviceAddress& le_random_address() const {
+    return le_random_address_;
+  }
 
   // Adds a fake remote device. This device will be used to during LE scan and
   // connection procedures.
@@ -137,6 +164,10 @@ class FakeController : public FakeControllerBase {
                                   const void* return_params,
                                   uint8_t return_params_size);
 
+  // Sends a HCI_Command_Complete event with "Success" status in response to the
+  // command with |opcode|.
+  void RespondWithSuccess(hci::OpCode opcode);
+
   // Sends a HCI_Command_Status event in response to the command with |opcode|
   // and using the given data as the parameter payload.
   void RespondWithCommandStatus(hci::OpCode opcode, hci::Status status);
@@ -169,6 +200,11 @@ class FakeController : public FakeControllerBase {
 
   Settings settings_;
   LEScanState le_scan_state_;
+  LEAdvertisingState le_adv_state_;
+
+  // Used for Advertising, Create Connection, and Active Scanning
+  // Set by HCI_LE_Set_Random_Address
+  common::DeviceAddress le_random_address_;
 
   // Variables used for
   // HCI_LE_Create_Connection/HCI_LE_Create_Connection_Cancel.

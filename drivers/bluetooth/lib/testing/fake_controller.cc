@@ -75,6 +75,14 @@ void FakeController::Settings::ApplyLEOnlyDefaults() {
   SetBit(supported_commands + 25, hci::SupportedCommand::kLEReadBufferSize);
   SetBit(supported_commands + 25,
          hci::SupportedCommand::kLEReadLocalSupportedFeatures);
+  SetBit(supported_commands + 25, hci::SupportedCommand::kLESetRandomAddress);
+  SetBit(supported_commands + 25,
+         hci::SupportedCommand::kLESetAdvertisingParameters);
+  SetBit(supported_commands + 25, hci::SupportedCommand::kLESetAdvertisingData);
+  SetBit(supported_commands + 26,
+         hci::SupportedCommand::kLESetScanResponseData);
+  SetBit(supported_commands + 26,
+         hci::SupportedCommand::kLESetAdvertisingEnable);
   SetBit(supported_commands + 26, hci::SupportedCommand::kLECreateConnection);
   SetBit(supported_commands + 26,
          hci::SupportedCommand::kLECreateConnectionCancel);
@@ -102,6 +110,11 @@ FakeController::LEScanState::LEScanState()
       scan_window(0),
       filter_duplicates(false),
       filter_policy(hci::LEScanFilterPolicy::kNoWhiteList) {}
+
+FakeController::LEAdvertisingState::LEAdvertisingState()
+    : enabled(false), length(0) {
+  std::memset(data, 0, sizeof(data));
+}
 
 FakeController::FakeController(zx::channel cmd_channel,
                                zx::channel acl_data_channel)
@@ -187,6 +200,12 @@ void FakeController::RespondWithCommandComplete(hci::OpCode opcode,
   std::memcpy(payload->return_parameters, return_params, return_params_size);
 
   SendCommandChannelPacket(buffer);
+}
+
+void FakeController::RespondWithSuccess(hci::OpCode opcode) {
+  hci::SimpleReturnParams out_params;
+  out_params.status = hci::Status::kSuccess;
+  RespondWithCommandComplete(opcode, &out_params, sizeof(out_params));
 }
 
 void FakeController::RespondWithCommandStatus(hci::OpCode opcode,
@@ -521,6 +540,59 @@ void FakeController::OnCommandPacketReceived(
                                  sizeof(params));
       break;
     }
+    case hci::kLESetRandomAddress: {
+      const auto& in_params =
+          command_packet.payload<hci::LESetRandomAddressCommandParams>();
+      le_random_address_ = common::DeviceAddress(
+          common::DeviceAddress::Type::kLERandom, in_params.random_address);
+
+      RespondWithSuccess(opcode);
+      break;
+    }
+    case hci::kLESetAdvertisingParameters: {
+      const auto& in_params =
+          command_packet
+              .payload<hci::LESetAdvertisingParametersCommandParams>();
+      // TODO(jamuraa): when we parse advertising params, return Invalid HCI
+      // Command Parameters when apporopriate (Vol 2, Part E, 7.8.9 p1259)
+      if (le_adv_state_.enabled) {
+        hci::SimpleReturnParams out_params;
+        out_params.status = hci::Status::kCommandDisallowed;
+        RespondWithCommandComplete(opcode, &out_params, sizeof(out_params));
+      }
+      le_adv_state_.adv_type = in_params.adv_type;
+
+      RespondWithSuccess(opcode);
+      break;
+    }
+    case hci::kLESetAdvertisingData: {
+      const auto& in_params =
+          command_packet.payload<hci::LESetAdvertisingDataCommandParams>();
+      le_adv_state_.length = in_params.adv_data_length;
+      std::memcpy(le_adv_state_.data, in_params.adv_data, le_adv_state_.length);
+
+      RespondWithSuccess(opcode);
+      break;
+    }
+    case hci::kLESetScanResponseData: {
+      const auto& in_params =
+          command_packet.payload<hci::LESetScanResponseDataCommandParams>();
+      le_adv_state_.scan_rsp_length = in_params.scan_rsp_data_length;
+      std::memcpy(le_adv_state_.scan_rsp_data, in_params.scan_rsp_data,
+                  le_adv_state_.scan_rsp_length);
+
+      RespondWithSuccess(opcode);
+      break;
+    }
+    case hci::kLESetAdvertisingEnable: {
+      const auto& in_params =
+          command_packet.payload<hci::LESetAdvertisingEnableCommandParams>();
+      le_adv_state_.enabled =
+          (in_params.advertising_enable == hci::GenericEnableParam::kEnable);
+
+      RespondWithSuccess(opcode);
+      break;
+    }
     case hci::kReadBDADDR: {
       hci::ReadBDADDRReturnParams params;
       params.status = hci::Status::kSuccess;
@@ -611,9 +683,7 @@ void FakeController::OnCommandPacketReceived(
           command_packet.payload<hci::SetEventMaskCommandParams>();
       settings_.event_mask = le64toh(in_params.event_mask);
 
-      hci::SimpleReturnParams params;
-      params.status = hci::Status::kSuccess;
-      RespondWithCommandComplete(hci::kSetEventMask, &params, sizeof(params));
+      RespondWithSuccess(opcode);
       break;
     }
     case hci::kLESetEventMask: {
@@ -621,9 +691,7 @@ void FakeController::OnCommandPacketReceived(
           command_packet.payload<hci::LESetEventMaskCommandParams>();
       settings_.le_event_mask = le64toh(in_params.le_event_mask);
 
-      hci::SimpleReturnParams params;
-      params.status = hci::Status::kSuccess;
-      RespondWithCommandComplete(hci::kLESetEventMask, &params, sizeof(params));
+      RespondWithSuccess(opcode);
       break;
     }
     case hci::kReadLocalExtendedFeatures: {
@@ -696,9 +764,7 @@ void FakeController::OnCommandPacketReceived(
         ] { cb(enabled); });
       }
 
-      hci::SimpleReturnParams out_params;
-      out_params.status = hci::Status::kSuccess;
-      RespondWithCommandComplete(opcode, &out_params, sizeof(out_params));
+      RespondWithSuccess(opcode);
 
       if (le_scan_state_.enabled)
         SendAdvertisingReports();
@@ -706,9 +772,7 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kReset:
     case hci::kWriteLEHostSupport: {
-      hci::SimpleReturnParams params;
-      params.status = hci::Status::kSuccess;
-      RespondWithCommandComplete(opcode, &params, sizeof(params));
+      RespondWithSuccess(opcode);
       break;
     }
     default: {
