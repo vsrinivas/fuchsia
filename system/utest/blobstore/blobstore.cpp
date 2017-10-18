@@ -1019,7 +1019,7 @@ static bool NoSpace(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 16, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 17, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     fbl::unique_ptr<blob_info_t> last_info = nullptr;
 

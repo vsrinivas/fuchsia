@@ -79,7 +79,10 @@ zx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
 
         size_t dat_blocks_needed = DataBlocks(*info);
         size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
-        if (dat_blocks_needed > dat_blocks_allocated) {
+        if (dat_blocks_needed < kStartBlockMinimum) {
+            FS_TRACE_ERROR("blobstore: Partition too small; no space left for data blocks\n");
+            return ZX_ERR_INVALID_ARGS;
+        } else if (dat_blocks_needed > dat_blocks_allocated) {
             FS_TRACE_ERROR("blobstore: Not enough slices for data blocks\n");
             return ZX_ERR_INVALID_ARGS;
         } else if (dat_blocks_allocated + DataStartBlock(*info) >
@@ -201,8 +204,6 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
                                                  / kBlobstoreInodeSize);
         info.block_count = static_cast<uint32_t>(info.dat_slices * info.slice_size
                                                  / kBlobstoreBlockSize);
-    } else {
-        info.block_count -= DataStartBlock(info);
     }
 #endif
 
@@ -225,6 +226,10 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
         fprintf(stderr, "Couldn't shrink blobstore block map\n");
         return -1;
     }
+
+    // Reserve first 2 data blocks
+    abm.Set(0, kStartBlockMinimum);
+    info.alloc_block_count += kStartBlockMinimum;
 
     if (info.inode_count * sizeof(blobstore_inode_t) != nbm_blocks * kBlobstoreBlockSize) {
         fprintf(stderr, "For simplicity, inode table block must be entirely filled\n");

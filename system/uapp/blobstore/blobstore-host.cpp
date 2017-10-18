@@ -75,14 +75,14 @@ int add_blob_commit(int fd, const blobstore_inode_t* inode, size_t ino_bno,
     // Write back merkle tree and data
     for (size_t n = 0; n < MerkleTreeBlocks(*inode); n++) {
         const void* data = fs::GetBlock<kBlobstoreBlockSize>(merkle_tree, n);
-        uint64_t bno = inode->start_block + n;
+        uint64_t bno = DataStartBlock(*info) + inode->start_block + n;
         if (writeblk(fd, bno, data) < 0) {
             return -1;
         }
     }
     for (size_t n = 0; n < BlobDataBlocks(*inode); n++) {
         const void* data = fs::GetBlock<kBlobstoreBlockSize>(blob_data, n);
-        uint64_t bno = inode->start_block + MerkleTreeBlocks(*inode) + n;
+        uint64_t bno = DataStartBlock(*info) + inode->start_block + MerkleTreeBlocks(*inode) + n;
         if (writeblk(fd, bno, data) < 0) {
             return -1;
         }
@@ -196,7 +196,7 @@ int blobstore_add_blob(int fd, int data_fd) {
     if (block_map.Set(blkno, blkno + inode->num_blocks) != ZX_OK) {
         return -1;
     }
-    inode->start_block = blkno + DataStartBlock(*info);
+    inode->start_block = blkno;
     if (add_blob_commit(fd, inode, ino_bno, ino_block, merkle_tree.get(),
                         blob_data, block_map, info_block)) {
         fprintf(stderr, "error: Could not commit blob update to disk\n");

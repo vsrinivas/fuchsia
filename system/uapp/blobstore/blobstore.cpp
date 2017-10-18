@@ -80,7 +80,8 @@ zx_status_t VnodeBlob::InitVmos() {
     }
 
     ReadTxn txn(blobstore_.get());
-    txn.Enqueue(vmoid_, 0, inode->start_block, BlobDataBlocks(*inode) + MerkleTreeBlocks(*inode));
+    txn.Enqueue(vmoid_, 0, inode->start_block + DataStartBlock(blobstore_->info_),
+                BlobDataBlocks(*inode) + MerkleTreeBlocks(*inode));
     return txn.Flush();
 }
 
@@ -156,7 +157,7 @@ zx_status_t VnodeBlob::WriteShared(WriteTxn* txn, size_t start, size_t len, uint
     // Write as many 'entire blocks' as possible
     uint64_t n = start / kBlobstoreBlockSize;
     uint64_t n_end = (start + len + kBlobstoreBlockSize - 1) / kBlobstoreBlockSize;
-    txn->Enqueue(vmoid_, n, n + start_block, n_end - n);
+    txn->Enqueue(vmoid_, n, n + start_block + DataStartBlock(blobstore_->info_), n_end - n);
     return txn->Flush();
 }
 
@@ -395,14 +396,12 @@ zx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
     status = block_map_.Set(*blkno_out, *blkno_out + nblocks);
     assert(status == ZX_OK);
     info_.alloc_block_count += nblocks;
-    *blkno_out += DataStartBlock(info_);
     return ZX_OK;
 }
 
 // Frees Blocks IN MEMORY
 void Blobstore::FreeBlocks(size_t nblocks, size_t blkno) {
-    zx_status_t status = block_map_.Clear(blkno - DataStartBlock(info_),
-                                          blkno - DataStartBlock(info_) + nblocks);
+    zx_status_t status = block_map_.Clear(blkno, blkno + nblocks);
     info_.alloc_block_count -= nblocks;
     assert(status == ZX_OK);
 }
@@ -456,8 +455,8 @@ zx_status_t Blobstore::Unmount() {
 }
 
 zx_status_t Blobstore::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
-    uint64_t bbm_start_block = (start_block - DataStartBlock(info_)) / kBlobstoreBlockBits;
-    uint64_t bbm_end_block = fbl::round_up(start_block - DataStartBlock(info_) + nblocks,
+    uint64_t bbm_start_block = start_block / kBlobstoreBlockBits;
+    uint64_t bbm_end_block = fbl::round_up(start_block + nblocks,
                                            kBlobstoreBlockBits) / kBlobstoreBlockBits;
 
     // Write back the block allocation bitmap

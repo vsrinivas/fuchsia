@@ -33,7 +33,7 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 constexpr uint64_t kBlobstoreMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobstoreMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobstoreVersion = 0x00000003;
+constexpr uint32_t kBlobstoreVersion = 0x00000004;
 
 constexpr uint32_t kBlobstoreFlagClean      = 1;
 constexpr uint32_t kBlobstoreFlagDirty      = 2;
