@@ -401,7 +401,7 @@ void FxProcessor::ProcessInput(bool first_time) {
         start->subject_time = 0;
         start->reference_delta = 1u;
         start->subject_delta = 1u;
-        output_timeline_consumer_->SetTimelineTransform(std::move(start), [](bool) { });
+        output_timeline_consumer_->SetTimelineTransformNoReply(std::move(start));
     }
 
     // If the input has been closed by the driver, shutdown.

@@ -351,8 +351,7 @@ void LpcmOutputStream::SetTimelineTransform(
 
   if (started_) {
     local_to_presentation_frames_ = TimelineFunction();
-    timeline_consumer_->SetTimelineTransform(timeline_transform.Clone(),
-                                             [](bool completed) {});
+    timeline_consumer_->SetTimelineTransformNoReply(timeline_transform.Clone());
   } else {
     Start(timeline_transform.To<TimelineFunction>());
   }
@@ -374,8 +373,8 @@ void LpcmOutputStream::Start(const TimelineFunction& timeline) {
 
   sends_pending_ready_.clear();
 
-  timeline_consumer_->SetTimelineTransform(TimelineTransform::From(timeline),
-                                           [](bool completed) {});
+  timeline_consumer_->SetTimelineTransformNoReply(
+      TimelineTransform::From(timeline));
 }
 
 void LpcmOutputStream::Restart() {
@@ -392,8 +391,8 @@ void LpcmOutputStream::Restart() {
   timeline_transform->reference_delta = 0;
   timeline_transform->subject_delta = 1;
 
-  timeline_consumer_->SetTimelineTransform(std::move(timeline_transform),
-                                           [](bool completed) {});
+  timeline_consumer_->SetTimelineTransformNoReply(
+      std::move(timeline_transform));
 
   local_to_presentation_frames_ = TimelineFunction();
 
