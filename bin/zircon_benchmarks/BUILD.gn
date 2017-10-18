@@ -12,6 +12,7 @@ executable("bin") {
     "channels.cc",
     "events.cc",
     "fifos.cc",
+    "filesystem.cc",
     "main.cc",
     "ports.cc",
     "round_trips.cc",
