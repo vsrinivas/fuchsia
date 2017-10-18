@@ -519,4 +519,12 @@ void Presentation::Shutdown() {
   shutdown_callback_();
 }
 
+void Presentation::SetRendererParams(
+    ::fidl::Array<scenic::RendererParamPtr> params) {
+  for (auto& param : params) {
+    renderer_.SetParam(std::move(param));
+  }
+  session_.Present(0, [](scenic::PresentationInfoPtr info) {});
+}
+
 }  // namespace root_presenter

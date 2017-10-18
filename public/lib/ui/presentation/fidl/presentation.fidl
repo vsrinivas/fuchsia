@@ -4,6 +4,8 @@
 
 module mozart;
 
+import "lib/ui/scenic/fidl/renderer.fidl";
+
 // Allows clients of Presenter.Present() to control a presentation.
 // Experimental.
 interface Presentation {
@@ -13,4 +15,8 @@ interface Presentation {
 
   UseOrthographicView();
   UsePerspectiveView();
+
+  // Set parameters such as the shadow algorithm used to render the scene.
+  // NOTE: a single param would be better than an array; see TO-529.
+  SetRendererParams(array<scenic.RendererParam> params);
 };

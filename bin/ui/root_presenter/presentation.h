@@ -87,6 +87,10 @@ class Presentation : private mozart::ViewTreeListener,
   // |Presentation|
   void UsePerspectiveView() override;
 
+  // |Presentation|
+  void SetRendererParams(
+      ::fidl::Array<scenic::RendererParamPtr> params) override;
+
   void CreateViewTree(
       mozart::ViewOwnerPtr view_owner,
       fidl::InterfaceRequest<mozart::Presentation> presentation_request,
