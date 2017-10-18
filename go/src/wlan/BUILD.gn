@@ -78,26 +78,24 @@ go_test("keywrap_test_bin") {
 go_test("elements_test_bin") {
   output_name = "elements_test"
   gopackage = "wlan/wlan/elements"
-  go_dependencies = [
-      {
-          package = "wlan/wlan/elements"
-          source = "wlan/elements"
-      },
-  ]
+  go_dependencies = [ {
+        package = "wlan/wlan/elements"
+        source = "wlan/elements"
+      } ]
 }
 
 go_test("eapol_crypto_test_bin") {
   output_name = "eapol_crypto_test"
   gopackage = "wlan/eapol/crypto"
   go_dependencies = [
-      {
-          package = "wlan/eapol/crypto"
-          source = "eapol/crypto"
-      },
-      {
-        source = "//third_party/golang/crypto"
-        package = "golang.org/x/crypto"
-      },
+    {
+      package = "wlan/eapol/crypto"
+      source = "eapol/crypto"
+    },
+    {
+      source = "//third_party/golang/crypto"
+      package = "golang.org/x/crypto"
+    },
   ]
 }
 
@@ -105,9 +103,9 @@ go_binary("wlanstack_bin") {
   output_name = "wlanstack"
   gopackage = "wlanstack"
   deps = [
+    "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/wlan/fidl",
     "//garnet/public/lib/wlan/fidl:mlme",
-    "//garnet/public/lib/netstack/fidl",
   ]
   go_dependencies = wlan_go_dependencies
 }
@@ -116,9 +114,9 @@ go_binary("wlantool_bin") {
   output_name = "wlantool"
   gopackage = "wlantool"
   deps = [
-    "//garnet/public/lib/wlan/fidl",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/netstack/fidl",
+    "//garnet/public/lib/wlan/fidl",
   ]
   go_dependencies = [
     {
@@ -156,8 +154,8 @@ go_test("wlanstack_test_bin") {
   output_name = "wlanstack_test"
   gopackage = "wlan/wlan"
   deps = [
-    "//garnet/public/lib/wlan/fidl:mlme",
     "//garnet/public/lib/netstack/fidl",
+    "//garnet/public/lib/wlan/fidl:mlme",
   ]
   go_dependencies = wlan_go_dependencies
 }
@@ -189,8 +187,8 @@ package("wlantool") {
 
 package("wlanstack_test") {
   deps = [
-    ":elements_test_bin",
     ":eapol_crypto_test_bin",
+    ":elements_test_bin",
     ":keywrap_test_bin",
     ":wlanstack_test_bin",
   ]

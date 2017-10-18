@@ -8,8 +8,8 @@ package("netstack_tests") {
   testonly = true
 
   deps = [
-    "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
     "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
+    "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
   ]
 
   tests = [
@@ -26,13 +26,13 @@ package("netstack_manual_tests") {
   testonly = true
 
   deps = [
-    "//garnet/go/src/netstack/tests/manual:sockettest",
     "//garnet/go/src/netstack/tests/manual:closetest",
     "//garnet/go/src/netstack/tests/manual:mctest",
     "//garnet/go/src/netstack/tests/manual:nbiotest",
     "//garnet/go/src/netstack/tests/manual:passfdtest",
     "//garnet/go/src/netstack/tests/manual:polltest",
     "//garnet/go/src/netstack/tests/manual:selecttest",
+    "//garnet/go/src/netstack/tests/manual:sockettest",
     "//garnet/go/src/netstack/tests/manual:sockopttest",
     "//garnet/go/src/netstack/tests/manual:udptest",
   ]

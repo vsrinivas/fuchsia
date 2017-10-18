@@ -8,12 +8,10 @@ import("//packages/package.gni")
 go_binary("thinfs_bin") {
   output_name = "thinfs"
   gopackage = "thinfs/cmd/thinfs"
-  go_dependencies = [
-    {
-      package = "thinfs"
-      source = "//garnet/go/src/thinfs"
-    }
-  ]
+  go_dependencies = [ {
+        package = "thinfs"
+        source = "//garnet/go/src/thinfs"
+      } ]
 }
 
 package("thinfs") {
