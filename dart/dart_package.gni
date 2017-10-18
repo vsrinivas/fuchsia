@@ -217,6 +217,8 @@ template("dart_package") {
 
       output_file = "$target_gen_dir/$target_name.analyzed"
 
+      log_file = "$target_gen_dir/$target_name.analysis_logs"
+
       inputs = [
         options_file,
       ]
@@ -242,6 +244,8 @@ template("dart_package") {
         rebase_path(depfile),
         "--cache-path",
         rebase_path("$root_out_dir/analysis-cache"),
+        "--log-file",
+        rebase_path(log_file),
       ]
 
       deps = [

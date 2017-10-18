@@ -25,6 +25,7 @@ const String _optionStamp = 'stamp';
 const String _optionDepName = 'depname';
 const String _optionDepFile = 'depfile';
 const String _optionPackageRoot = 'package-root';
+const String _optionLogFile = 'log-file';
 const List<String> _requiredOptions = const [
   _optionServerSnapshot,
   _optionSourceDir,
@@ -33,6 +34,7 @@ const List<String> _requiredOptions = const [
   _optionDepName,
   _optionDepFile,
   _optionPackageRoot,
+  _optionLogFile,
 ];
 
 Future<Null> main(List<String> args) async {
@@ -47,7 +49,8 @@ Future<Null> main(List<String> args) async {
     ..addOption(_optionCachePath, help: 'Path to the analysis cache')
     ..addOption(_optionStamp, help: 'Stamp file to update on success')
     ..addOption(_optionDepName, help: 'Name of the target in the dep file')
-    ..addOption(_optionDepFile, help: 'Path to the depfile to write');
+    ..addOption(_optionDepFile, help: 'Path to the depfile to write')
+    ..addOption(_optionLogFile, help: 'Path to the logs');
   final argResults = parser.parse(args);
   if (_requiredOptions
       .any((String option) => !argResults.options.contains(option))) {
@@ -57,11 +60,18 @@ Future<Null> main(List<String> args) async {
 
   final stopwatch = new Stopwatch()..start();
 
+  final logFile = new Uri.file(path.canonicalize(argResults[_optionLogFile]));
+
   final client = await AnalysisServer.create(
     scriptPath: path.canonicalize(argResults[_optionServerSnapshot]),
     clientId: 'Fuchsia Dart build analyzer',
     clientVersion: '0.1',
-    serverArgs: ['--cache', path.canonicalize(argResults[_optionCachePath])],
+    serverArgs: [
+        '--cache',
+        path.canonicalize(argResults[_optionCachePath]),
+        '--new-analysis-driver-log',
+        logFile.toString(),
+    ],
   );
 
   final completer = new Completer();
