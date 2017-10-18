@@ -57,8 +57,7 @@ pub enum MessageError {
 /// Message, given a zircon::MessageBuf that has received a zxrio_msg_t in
 /// buf.bytes, provides access to the values in the zxrio_msg_t.
 pub struct Message<'a> {
-  _buf: &'a zircon::MessageBuf,
-  ptr: *const u8,
+  msg: &'a zxrio_msg_t,
 }
 
 impl<'a> Message<'a> {
@@ -67,75 +66,76 @@ impl<'a> Message<'a> {
   /// an invalid message or is too short. Note that the zxrio_msg_t.handles field
   /// is ignored in validation, as users should only consume handles from buf
   /// directly, where the operation is safe.
-  pub fn create(buf: &'a zircon::MessageBuf) -> Result<Self, MessageError> {
-    let bytes = buf.bytes();
-    let ptr = bytes.as_ptr();
+  pub fn create(buf: &'a mut zircon::MessageBuf) -> Result<Self, MessageError> {
+    buf.ensure_capacity_bytes(ZXRIO_MSG_SZ);
 
-    if bytes.len() < ZXRIO_HDR_SZ {
+    if buf.bytes().len() < ZXRIO_HDR_SZ {
       return Err(MessageError::TooShort);
     }
 
-    let datalen = unsafe { *(ptr.offset(8) as *const u32) };
+    let msg: &'a zxrio_msg_t = unsafe { &*(buf.bytes().as_ptr() as *const _) };
 
-    if bytes.len() != ZXRIO_HDR_SZ + datalen as usize {
+    if buf.bytes().len() != ZXRIO_HDR_SZ + msg.datalen as usize {
       return Err(MessageError::BadDataSize);
     }
 
-    let hcount = unsafe { *(ptr.offset(28) as *const u32) };
-
-    if buf.n_handles() != ZXRIO_HC!(unsafe { *(ptr.offset(4) as *const u32) }) as usize || buf.n_handles() != hcount as usize {
+    if buf.n_handles() != ZXRIO_HC!(msg.op) as usize || buf.n_handles() != msg.hcount as usize {
       return Err(MessageError::BadHandleCount);
     }
 
-    Ok(Self{_buf: buf, ptr: ptr})
+
+    Ok(Self{msg: msg})
   }
 
   pub fn txid(&self) -> zx_txid_t {
-    unsafe { *(self.ptr.offset(0) as *const zx_txid_t) }
+    self.msg.txid
   }
 
   /// op returns the type of IO operation requested
   pub fn op(&self) -> c_uint {
-    unsafe { *(self.ptr.offset(4) as *const c_uint) }
+    self.msg.op
   }
 
   pub fn datalen(&self) -> c_uint {
-    unsafe { *(self.ptr.offset(8) as *const c_uint) }
+    self.msg.datalen
   }
 
-  pub fn arg(&self) -> c_uint {
-    unsafe { *(self.ptr.offset(12) as *const c_uint) }
+  pub fn arg(&self) -> i32 {
+    self.msg.arg
   }
 
+  // NOTE: these arg2 union fields are always being extracted from the result of
+  // a buffer read, meaning they have always been initialized.
   pub fn off(&self) -> i64 {
-    unsafe { *(self.ptr.offset(16) as *const i64) }
+    unsafe { self.msg.arg2.off }
   }
 
   pub fn mode(&self) -> u32 {
-    unsafe { *(self.ptr.offset(16) as *const u32) }
+    unsafe { self.msg.arg2.mode }
   }
 
   pub fn protocol(&self) -> u32 {
-    unsafe { *(self.ptr.offset(16) as *const u32) }
+    unsafe { self.msg.arg2.protocol }
   }
 
   pub fn arg2op(&self) -> u32 {
-    unsafe { *(self.ptr.offset(16) as *const u32) }
+    unsafe { self.msg.arg2.op }
   }
 
   pub fn reserved(&self) -> i32 {
-    unsafe { *(self.ptr.offset(24) as *const i32) }
+    self.msg.reserved
   }
+
   pub fn hcount(&self) -> u32 {
-    unsafe { *(self.ptr.offset(28) as *const u32) }
+    self.msg.hcount
   }
 
   pub fn opname(&self) -> &'static str {
     unsafe { ::std::ffi::CStr::from_ptr(fdio_opname(self.op())) }.to_str().unwrap()
   }
 
-  pub fn data(&self) -> &[u8] {
-    unsafe { ::std::slice::from_raw_parts(self.ptr.offset(ZXRIO_HDR_SZ as isize) as *const u8, self.datalen() as usize) }
+  pub fn data(&self) -> &'a [u8] {
+    &self.msg.data[0..self.msg.datalen as usize]
   }
 }
 
@@ -190,8 +190,8 @@ mod test {
 
   #[test]
   fn test_getters() {
-    let buf = zircon::MessageBuf::new_with(newmsg().into(), vec![zircon::Handle::invalid()]);
-    let m = Message::create(&buf).unwrap();
+    let mut buf = zircon::MessageBuf::new_with(newmsg().into(), vec![zircon::Handle::invalid()]);
+    let m = Message::create(&mut buf).unwrap();
     assert_eq!(m.txid(), 2);
     assert_eq!(m.op(), ZXRIO_OPEN);
     assert_eq!(m.datalen(), 1);
@@ -206,23 +206,23 @@ mod test {
   fn test_arg2_getters() {
     let mut msg = newmsg();
 
-    let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
-    let m = Message::create(&buf).unwrap();
+    let mut buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
+    let m = Message::create(&mut buf).unwrap();
     assert_eq!(m.mode(), fdio_sys::O_PIPELINE as u32);
 
     msg.arg2.off = 10;
-    let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
-    let m = Message::create(&buf).unwrap();
+    let mut buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
+    let m = Message::create(&mut buf).unwrap();
     assert_eq!(m.off(), 10);
 
     msg.arg2.protocol = FDIO_PROTOCOL_SERVICE;
-    let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
-    let m = Message::create(&buf).unwrap();
+    let mut buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
+    let m = Message::create(&mut buf).unwrap();
     assert_eq!(m.protocol(), FDIO_PROTOCOL_SERVICE);
 
     msg.arg2.op = ZXRIO_CLOSE;
-    let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
-    let m = Message::create(&buf).unwrap();
+    let mut buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
+    let m = Message::create(&mut buf).unwrap();
     assert_eq!(m.arg2op(), ZXRIO_CLOSE);
   }
 
@@ -230,14 +230,14 @@ mod test {
   fn test_opname() {
     let mut msg = newmsg();
 
-    let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
-    let m = Message::create(&buf).unwrap();
+    let mut buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![zircon::Handle::invalid()]);
+    let m = Message::create(&mut buf).unwrap();
     assert_eq!(m.opname(), "open");
 
     msg.op = ZXRIO_CLOSE;
     msg.hcount = 0;
-    let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![]);
-    let m = Message::create(&buf).unwrap();
+    let mut buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![]);
+    let m = Message::create(&mut buf).unwrap();
     assert_eq!(m.opname(), "close");
   }
 
@@ -246,8 +246,8 @@ mod test {
     let msg = newmsg();
 
     // this message is missing a required handle
-    let buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![]);
-    let m = Message::create(&buf);
+    let mut buf = zircon::MessageBuf::new_with(msg.clone().into(), vec![]);
+    let m = Message::create(&mut buf);
     assert!(m.is_err());
 
     // this message is missing a byte from the data
@@ -255,8 +255,8 @@ mod test {
     let short = v.len() - 1;
     v.truncate(short);
 
-    let buf = zircon::MessageBuf::new_with(v, vec![zircon::Handle::invalid()]);
-    let m = Message::create(&buf);
+    let mut buf = zircon::MessageBuf::new_with(v, vec![zircon::Handle::invalid()]);
+    let m = Message::create(&mut buf);
     assert!(m.is_err());
   }
 
