@@ -37,7 +37,9 @@ public:
     // note: the implementation of this function is required to be threadsafe
     virtual bool CommitPages(uint32_t start_page_index, uint32_t page_count) const = 0;
 
-    virtual bool MapCpu(void** addr_out) = 0;
+    // If |alignment| isn't 0, it must be a power of 2 and page-aligned. It's
+    // invalid to map the same buffer twice with different alignments.
+    virtual bool MapCpu(void** addr_out, uintptr_t alignment = 0) = 0;
     virtual bool UnmapCpu() = 0;
 
     virtual bool PinPages(uint32_t start_page_index, uint32_t page_count) = 0;

@@ -254,6 +254,23 @@ public:
         EXPECT_TRUE(buffer->CommitPages(0, num_pages));
     }
 
+    static void MapAligned(uint32_t num_pages)
+    {
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(num_pages * PAGE_SIZE, "test");
+
+        void* address;
+        // Alignment not page-aligned.
+        EXPECT_FALSE(buffer->MapCpu(&address, 2048));
+        // Alignment isn't a power of 2.
+        EXPECT_FALSE(buffer->MapCpu(&address, PAGE_SIZE * 3));
+
+        constexpr uintptr_t kAlignment = (1 << 24);
+        EXPECT_TRUE(buffer->MapCpu(&address, kAlignment));
+        EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(address) & (kAlignment - 1));
+        EXPECT_TRUE(buffer->UnmapCpu());
+    }
+
     static void CleanCache(bool invalidate)
     {
         const uint64_t kNumPages = 100;
@@ -293,6 +310,13 @@ TEST(PlatformBuffer, Commit)
     TestPlatformBuffer::CommitPages(1);
     TestPlatformBuffer::CommitPages(16);
     TestPlatformBuffer::CommitPages(1024);
+}
+
+TEST(PlatformBuffer, MapAligned)
+{
+    TestPlatformBuffer::MapAligned(1);
+    TestPlatformBuffer::MapAligned(16);
+    TestPlatformBuffer::MapAligned(1024);
 }
 
 TEST(PlatformBuffer, CleanCache)

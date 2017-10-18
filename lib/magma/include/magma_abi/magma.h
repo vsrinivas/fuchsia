@@ -45,6 +45,9 @@ magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_
 
 magma_status_t magma_map(struct magma_connection_t* connection, magma_buffer_t buffer,
                          void** addr_out);
+// alignment must be a power of 2 and at least PAGE_SIZE.
+magma_status_t magma_map_aligned(struct magma_connection_t* connection, magma_buffer_t buffer,
+                                 uint64_t alignment, void** addr_out);
 magma_status_t magma_unmap(struct magma_connection_t* connection, magma_buffer_t buffer);
 
 // Maps the buffer onto the GPU in the connection's address space at |gpu_va|. |map_flags| is a set
