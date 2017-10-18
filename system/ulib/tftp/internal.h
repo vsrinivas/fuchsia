@@ -108,7 +108,7 @@ struct tftp_session_t {
     size_t offset;
     uint32_t consecutive_timeouts;
     uint8_t opcode_prefix;
-    uint32_t block_number;
+    uint64_t block_number;
     uint32_t window_index;
 
     // Maximum number of times we will retransmit a single msg before aborting
