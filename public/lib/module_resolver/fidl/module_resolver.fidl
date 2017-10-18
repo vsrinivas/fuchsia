@@ -5,7 +5,6 @@
 module modular;
 
 import "daisy.fidl";
-import "../../entity/fidl/entity_reference.fidl";
 
 [ServiceName="modular.ModuleResolver"]
 interface ModuleResolver {
@@ -51,8 +50,9 @@ struct ModuleResolverResult {
   // The initial set of noun Entities to set on the Link to this Module once it
   // is initialized. This map is keyed by the noun's name as given in the
   // `verb_template` file referenced by the `module` metadata file for
-  // |package_id| where |local_name| is defined.
-  map<string, EntityReference> initial_nouns;
+  // |package_id| where |local_name| is defined. The value is a JSON string
+  // that either encodes an Entity reference, or static data.
+  map<string, string> initial_nouns;
 
   // TODO(thatguy): Schema information for the Link. This can be derived by the
   // client by looking at both |package_id| and |local_name|.

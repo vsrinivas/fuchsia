@@ -26,6 +26,7 @@ source_set("module_resolver_impl") {
   deps = [
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/entity/fidl",
+    "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/module_resolver/fidl",
     "//peridot/lib/module_manifest_repository",
   ]

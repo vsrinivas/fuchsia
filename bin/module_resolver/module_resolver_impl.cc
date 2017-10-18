@@ -4,6 +4,8 @@
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
+#include "peridot/public/lib/entity/cpp/json.h"
+
 namespace maxwell {
 
 namespace {
@@ -15,11 +17,17 @@ void CopyNounsToModuleResolverResult(const modular::DaisyPtr& daisy,
     const auto& name = entry.GetKey();
     const auto& noun = entry.GetValue();
 
-    // Ignore 'text' and 'entity_type' nouns for now.
-    // TODO(thatguy): Don't ignore these types.
     if (noun->is_entity_reference()) {
-      (*result)->initial_nouns[name] = noun->get_entity_reference().Clone();
+      // TODO(thatguy): EntityReference, the struct, will go away and be
+      // replaced by a string. We simply use the |internal_value| attribute of
+      // the struct in its place for now.
+      (*result)->initial_nouns[name] = modular::EntityReferenceToJson(
+          noun->get_entity_reference()->internal_value);
+    } else if (noun->is_json()) {
+      (*result)->initial_nouns[name] = noun->get_json();
     }
+    // There's nothing to copy over from 'entity_types', since it only
+    // specifies noun constraint information, and no actual content.
   }
 }
 

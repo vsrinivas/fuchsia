@@ -42,10 +42,11 @@ union Noun {
   // resolution.
   EntityReference entity_reference;
 
-  // Set this if you have an unstructured blob of text. Module Resolution will
-  // perform Entity extraction (see docs/module_resolution.md), from which it will
-  // derive a set of Entity types to use as constraints during resolution.
-  string text;
+  // Set this if you have structured JSON data. Values typically are a JSON
+  // object with a "@type" attribute and other associated data.  TODO(thatguy):
+  // We need to decide if we want to keep this in place, or deprecate this
+  // eventually and move entirely to using Entity references.
+  string json;
 
   // Set this if you want to explicitly define this noun's allowed types. This
   // is also useful in the cases where the noun has a 'direction' of type

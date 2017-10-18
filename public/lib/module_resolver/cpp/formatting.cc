@@ -16,8 +16,8 @@ std::ostream& operator<<(std::ostream& os, const Daisy& daisy) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Noun& noun) {
-  if (noun.is_text()) {
-    os << "\"" << noun.get_text() << "\"";
+  if (noun.is_json()) {
+    os << noun.get_json();
   } else if (noun.is_entity_reference()) {
     os << "[ref: " << noun.get_entity_reference()->internal_value << "]";
   } else if (noun.is_entity_type()) {
