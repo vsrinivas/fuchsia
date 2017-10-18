@@ -5,6 +5,7 @@
 #include "network_service_impl.h"
 
 #include <utility>
+#include <fdio/limits.h>
 
 #include "garnet/bin/network/net_adapters.h"
 #include "garnet/bin/network/net_errors.h"
@@ -19,7 +20,11 @@
 namespace network {
 
 // Maximum number of slots used to run network requests concurrently.
-constexpr size_t kMaxSlots = 255;
+// The reasoning of the following formula is:
+// 1. Each UrlLoader instance consumes 3 file descriptors (2 for pipe, 1 for socket)
+// 2. 3 descriptors (fd 0-2) are reserved for stdio
+// 3. some random margin 4
+constexpr size_t kMaxSlots = ((FDIO_MAX_FD - 3) / 3) - 4;
 
 // Container for the url loader implementation. The loader is run on his own
 // thread.
