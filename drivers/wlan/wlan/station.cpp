@@ -372,8 +372,7 @@ zx_status_t Station::HandleAuthentication(const Packet* packet) {
 
 zx_status_t Station::HandleDeauthentication(const Packet* packet) {
     debugfn();
-
-    if (state_ != WlanState::kAssociated || state_ != WlanState::kAuthenticated) {
+    if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
         debugjoin("got spurious deauthenticate; ignoring\n");
         return ZX_OK;
     }
@@ -391,6 +390,9 @@ zx_status_t Station::HandleDeauthentication(const Packet* packet) {
     infof("deauthenticating from %s, reason=%u\n", bss_->ssid.data(), deauth->reason_code);
 
     state_ = WlanState::kAuthenticated;
+    device_->SetStatus(0);
+    controlled_port_ = PortState::kBlocked;
+
     return SendDeauthIndication(deauth->reason_code);
 }
 
@@ -473,6 +475,7 @@ zx_status_t Station::HandleDisassociation(const Packet* packet) {
 
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
+    controlled_port_ = PortState::kBlocked;
 
     signal_report_timeout_ = 0;
     timer_->CancelTimer();
