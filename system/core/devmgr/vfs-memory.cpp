@@ -50,7 +50,8 @@ fbl::unique_ptr<async::Loop> global_loop;
 
 }
 
-constexpr size_t kMemfsMaxFileSize = (8192 * 8192);
+// Artificially cap the maximum in-memory file size to 512MB.
+constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
 static fbl::RefPtr<VnodeDir> vfs_root = nullptr;
 static fbl::RefPtr<VnodeDir> memfs_root = nullptr;
