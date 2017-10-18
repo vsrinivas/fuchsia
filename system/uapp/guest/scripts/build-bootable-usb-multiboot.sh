@@ -167,7 +167,7 @@ menuentry "Zircon" {
   chainloader /EFI/BOOT/gigaboot.efi
 }
 
-menuentry "Debian" {
+function load_video {
   insmod efi_gop
   insmod efi_uga
 
@@ -178,9 +178,22 @@ menuentry "Debian" {
     set gfxpayload=keep
     terminal_output gfxterm
   fi
+}
+
+menuentry "Debian (KVM Host)" {
+  load_video
 
   echo "Loading linux..."
   linux ${LINUX_PATH} root=/dev/disk/by-uuid/${ROOT_UUID} ro rootwait lockfs
+  echo "Loading initrd..."
+  initrd ${INITRD_PATH}
+}
+
+menuentry "Debian (Native)" {
+  load_video
+
+  echo "Loading linux..."
+  linux ${LINUX_PATH} root=/dev/disk/by-uuid/${ROOT_UUID} ro rootwait lockfs maxcpus=1 mem=1G
   echo "Loading initrd..."
   initrd ${INITRD_PATH}
 }
@@ -210,6 +223,8 @@ qemu-system-x86_64 \
     -device virtio-serial-pci \
     -net none \
     -machine q35 \
+    -m 1G \
+    -smp 1 \
     -enable-kvm \
     -cpu host,migratable=no \
     -initrd /initrd.img \
