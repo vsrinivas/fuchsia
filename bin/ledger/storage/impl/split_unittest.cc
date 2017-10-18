@@ -79,10 +79,11 @@ struct SplitResult {
 
 void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
   auto result = std::make_unique<SplitResult>();
-  SplitDataSource(source, fxl::MakeCopyable([
-                    result = std::move(result), callback = std::move(callback)
-                  ](IterationStatus status, ObjectDigest digest,
-                          std::unique_ptr<DataSource::DataChunk> data) mutable {
+  SplitDataSource(
+      source, fxl::MakeCopyable(
+                  [result = std::move(result), callback = std::move(callback)](
+                      IterationStatus status, ObjectDigest digest,
+                      std::unique_ptr<DataSource::DataChunk> data) mutable {
                     ASSERT_TRUE(result);
                     if (status == IterationStatus::IN_PROGRESS) {
                       EXPECT_LE(data->Get().size(), kMaxChunkSize);

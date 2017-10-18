@@ -26,13 +26,13 @@ void LedgerMergeManager::SetFactory(
       ConflictResolverFactoryPtr::Create(std::move(factory));
   for (const auto& item : resolvers_) {
     item.second->SetMergeStrategy(nullptr);
-    GetResolverStrategyForPage(item.first, [
-      this, page_id = item.first
-    ](std::unique_ptr<MergeStrategy> strategy) mutable {
-      if (resolvers_.find(page_id) != resolvers_.end()) {
-        resolvers_[page_id]->SetMergeStrategy(std::move(strategy));
-      }
-    });
+    GetResolverStrategyForPage(
+        item.first, [this, page_id = item.first](
+                        std::unique_ptr<MergeStrategy> strategy) mutable {
+          if (resolvers_.find(page_id) != resolvers_.end()) {
+            resolvers_[page_id]->SetMergeStrategy(std::move(strategy));
+          }
+        });
   }
 }
 

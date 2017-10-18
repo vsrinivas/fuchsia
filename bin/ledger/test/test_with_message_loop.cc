@@ -16,7 +16,7 @@ bool RunGivenLoopWithTimeout(fsl::MessageLoop* message_loop,
   bool timed_out = false;
   message_loop->task_runner()->PostDelayedTask(
       fxl::MakeCopyable(
-          [ message_loop, canceled = std::move(canceled), &timed_out ] {
+          [message_loop, canceled = std::move(canceled), &timed_out] {
             if (*canceled) {
               return;
             }
@@ -61,7 +61,7 @@ fxl::Closure TestWithMessageLoop::MakeQuitTask() {
 }
 
 fxl::Closure TestWithMessageLoop::MakeQuitTaskOnce() {
-  return fxl::MakeCopyable([ this, called = false ]() mutable {
+  return fxl::MakeCopyable([this, called = false]() mutable {
     if (!called) {
       called = true;
       message_loop_.PostQuitTask();

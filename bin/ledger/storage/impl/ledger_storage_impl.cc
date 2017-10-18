@@ -61,16 +61,17 @@ void LedgerStorageImpl::CreatePageStorage(
   }
   auto result = std::make_unique<PageStorageImpl>(coroutine_service_, path,
                                                   std::move(page_id));
-  result->Init(fxl::MakeCopyable([
-    callback = std::move(callback), result = std::move(result)
-  ](Status status) mutable {
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
-      callback(status, nullptr);
-      return;
-    }
-    callback(Status::OK, std::move(result));
-  }));
+  result->Init(
+      fxl::MakeCopyable([callback = std::move(callback),
+                         result = std::move(result)](Status status) mutable {
+        if (status != Status::OK) {
+          FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: "
+                         << status;
+          callback(status, nullptr);
+          return;
+        }
+        callback(Status::OK, std::move(result));
+      }));
 }
 
 void LedgerStorageImpl::GetPageStorage(
@@ -80,15 +81,15 @@ void LedgerStorageImpl::GetPageStorage(
   if (files::IsDirectory(path)) {
     auto result = std::make_unique<PageStorageImpl>(coroutine_service_, path,
                                                     std::move(page_id));
-    result->Init(fxl::MakeCopyable([
-      callback = std::move(callback), result = std::move(result)
-    ](Status status) mutable {
-      if (status != Status::OK) {
-        callback(status, nullptr);
-        return;
-      }
-      callback(status, std::move(result));
-    }));
+    result->Init(
+        fxl::MakeCopyable([callback = std::move(callback),
+                           result = std::move(result)](Status status) mutable {
+          if (status != Status::OK) {
+            callback(status, nullptr);
+            return;
+          }
+          callback(status, std::move(result));
+        }));
     return;
   }
   // TODO(nellyv): Maybe the page exists but is not synchronized, yet. We need

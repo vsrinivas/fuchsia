@@ -143,16 +143,15 @@ class App : public LedgerController,
       std::function<void(bool)> callback) override {
     auto managed_operation =
         managed_container_.Manage(std::move(erase_remote_repository_operation));
-    managed_operation->Start(fxl::MakeCopyable([
-      this, managed_operation = std::move(managed_operation),
-      callback = std::move(callback)
-    ](bool succeeded) mutable {
-      callback(succeeded);
-      // This lambda is deleted in |call()|, don't access captured members
-      // afterwards.
-      managed_operation.reset();
-      CheckPendingOperations();
-    }));
+    managed_operation->Start(fxl::MakeCopyable(
+        [this, managed_operation = std::move(managed_operation),
+         callback = std::move(callback)](bool succeeded) mutable {
+          callback(succeeded);
+          // This lambda is deleted in |call()|, don't access captured members
+          // afterwards.
+          managed_operation.reset();
+          CheckPendingOperations();
+        }));
   }
 
   void CheckPendingOperations() {

@@ -15,13 +15,12 @@ bool RunSynchronously(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
                       fxl::TimeDelta timeout) {
   bool ran = false;
   std::timed_mutex mutex;
-  task_runner->PostTask(fxl::MakeCopyable([
-    guard = std::make_unique<std::lock_guard<std::timed_mutex>>(mutex),
-    task = std::move(task), &ran
-  ] {
-    task();
-    ran = true;
-  }));
+  task_runner->PostTask(fxl::MakeCopyable(
+      [guard = std::make_unique<std::lock_guard<std::timed_mutex>>(mutex),
+       task = std::move(task), &ran] {
+        task();
+        ran = true;
+      }));
   if (mutex.try_lock_for(std::chrono::nanoseconds(timeout.ToNanoseconds()))) {
     mutex.unlock();
   }

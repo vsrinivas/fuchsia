@@ -85,9 +85,8 @@ AutoMergeStrategy::AutoMerger::~AutoMerger() {}
 void AutoMergeStrategy::AutoMerger::Start() {
   std::unique_ptr<std::vector<storage::EntryChange>> changes(
       new std::vector<storage::EntryChange>());
-  auto on_next =
-      [ weak_this = weak_factory_.GetWeakPtr(),
-        changes = changes.get() ](storage::EntryChange change) {
+  auto on_next = [weak_this = weak_factory_.GetWeakPtr(),
+                  changes = changes.get()](storage::EntryChange change) {
     if (!weak_this) {
       return false;
     }
@@ -100,16 +99,16 @@ void AutoMergeStrategy::AutoMerger::Start() {
     return true;
   };
 
-  auto callback =
-      callback::MakeScoped(weak_factory_.GetWeakPtr(), fxl::MakeCopyable([
-                             this, changes = std::move(changes)
-                           ](storage::Status status) mutable {
-                             if (cancelled_) {
-                               Done(Status::INTERNAL_ERROR);
-                               return;
-                             }
-                             OnRightChangeReady(status, std::move(changes));
-                           }));
+  auto callback = callback::MakeScoped(
+      weak_factory_.GetWeakPtr(),
+      fxl::MakeCopyable(
+          [this, changes = std::move(changes)](storage::Status status) mutable {
+            if (cancelled_) {
+              Done(Status::INTERNAL_ERROR);
+              return;
+            }
+            OnRightChangeReady(status, std::move(changes));
+          }));
 
   storage_->GetCommitContentsDiff(*ancestor_, *right_, "", std::move(on_next),
                                   std::move(callback));
@@ -142,41 +141,42 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
 
   std::unique_ptr<PageChangeIndex> index(new PageChangeIndex());
 
-  auto on_next = fxl::MakeCopyable([
-    weak_this = weak_factory_.GetWeakPtr(), index = index.get(),
-    right_change = right_change.get()
-  ](storage::EntryChange change) {
-    if (!weak_this || weak_this->cancelled_) {
-      return false;
-    }
+  auto on_next = fxl::MakeCopyable(
+      [weak_this = weak_factory_.GetWeakPtr(), index = index.get(),
+       right_change = right_change.get()](storage::EntryChange change) {
+        if (!weak_this || weak_this->cancelled_) {
+          return false;
+        }
 
-    while (change.entry.key > (*right_change)[index->entry_index].entry.key) {
-      index->entry_index++;
-      if (index->entry_index >= right_change->size()) {
-        return false;
-      }
-    }
-    if (change.entry.key == (*right_change)[index->entry_index].entry.key) {
-      if (change == (*right_change)[index->entry_index]) {
+        while (change.entry.key >
+               (*right_change)[index->entry_index].entry.key) {
+          index->entry_index++;
+          if (index->entry_index >= right_change->size()) {
+            return false;
+          }
+        }
+        if (change.entry.key == (*right_change)[index->entry_index].entry.key) {
+          if (change == (*right_change)[index->entry_index]) {
+            return true;
+          }
+          index->distinct = false;
+          return false;
+        }
         return true;
-      }
-      index->distinct = false;
-      return false;
-    }
-    return true;
-  });
+      });
 
   // |callback| is called when the full diff is computed.
   auto callback = callback::MakeScoped(
-      weak_factory_.GetWeakPtr(), fxl::MakeCopyable([
-        this, right_change = std::move(right_change), index = std::move(index)
-      ](storage::Status status) mutable {
-        if (cancelled_) {
-          Done(Status::INTERNAL_ERROR);
-          return;
-        }
-        OnComparisonDone(status, std::move(right_change), index->distinct);
-      }));
+      weak_factory_.GetWeakPtr(),
+      fxl::MakeCopyable(
+          [this, right_change = std::move(right_change),
+           index = std::move(index)](storage::Status status) mutable {
+            if (cancelled_) {
+              Done(Status::INTERNAL_ERROR);
+              return;
+            }
+            OnComparisonDone(status, std::move(right_change), index->distinct);
+          }));
 
   storage_->GetCommitContentsDiff(*ancestor_, *left_, "", std::move(on_next),
                                   std::move(callback));
@@ -224,20 +224,22 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
       left_->GetId(), right_->GetId(),
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
-          fxl::MakeCopyable([ this, right_changes = std::move(right_changes) ](
-              storage::Status s,
-              std::unique_ptr<storage::Journal> journal) mutable {
-            if (cancelled_) {
-              Done(Status::INTERNAL_ERROR);
-              return;
-            }
-            if (s != storage::Status::OK) {
-              FXL_LOG(ERROR) << "Unable to start merge commit: " << s;
-              Done(PageUtils::ConvertStatus(s));
-              return;
-            }
-            ApplyDiffOnJournal(std::move(journal), std::move(right_changes));
-          })));
+          fxl::MakeCopyable(
+              [this, right_changes = std::move(right_changes)](
+                  storage::Status s,
+                  std::unique_ptr<storage::Journal> journal) mutable {
+                if (cancelled_) {
+                  Done(Status::INTERNAL_ERROR);
+                  return;
+                }
+                if (s != storage::Status::OK) {
+                  FXL_LOG(ERROR) << "Unable to start merge commit: " << s;
+                  Done(PageUtils::ConvertStatus(s));
+                  return;
+                }
+                ApplyDiffOnJournal(std::move(journal),
+                                   std::move(right_changes));
+              })));
 }
 
 void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
@@ -254,34 +256,34 @@ void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
     }
   }
 
-  waiter->Finalize(fxl::MakeCopyable([
-    weak_this = weak_factory_.GetWeakPtr(), journal = std::move(journal)
-  ](storage::Status s) mutable {
-    if (!weak_this) {
-      return;
-    }
-    if (weak_this->cancelled_) {
-      weak_this->Done(Status::INTERNAL_ERROR);
-      return;
-    }
-    if (s != storage::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-      weak_this->Done(PageUtils::ConvertStatus(s));
-      return;
-    }
-    weak_this->storage_->CommitJournal(
-        std::move(journal), [weak_this = std::move(weak_this)](
-                                storage::Status s,
-                                std::unique_ptr<
-                                    const storage::Commit> /*commit*/) {
-          if (s != storage::Status::OK) {
-            FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-          }
-          if (weak_this) {
-            weak_this->Done(PageUtils::ConvertStatus(s));
-          }
-        });
-  }));
+  waiter->Finalize(fxl::MakeCopyable(
+      [weak_this = weak_factory_.GetWeakPtr(),
+       journal = std::move(journal)](storage::Status s) mutable {
+        if (!weak_this) {
+          return;
+        }
+        if (weak_this->cancelled_) {
+          weak_this->Done(Status::INTERNAL_ERROR);
+          return;
+        }
+        if (s != storage::Status::OK) {
+          FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+          weak_this->Done(PageUtils::ConvertStatus(s));
+          return;
+        }
+        weak_this->storage_->CommitJournal(
+            std::move(journal),
+            [weak_this = std::move(weak_this)](
+                storage::Status s,
+                std::unique_ptr<const storage::Commit> /*commit*/) {
+              if (s != storage::Status::OK) {
+                FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+              }
+              if (weak_this) {
+                weak_this->Done(PageUtils::ConvertStatus(s));
+              }
+            });
+      }));
 }
 
 void AutoMergeStrategy::AutoMerger::Cancel() {
@@ -333,7 +335,7 @@ void AutoMergeStrategy::Merge(storage::PageStorage* storage,
   in_progress_merge_ = std::make_unique<AutoMergeStrategy::AutoMerger>(
       storage, page_manager, conflict_resolver_.get(), std::move(head_2),
       std::move(head_1), std::move(ancestor),
-      [ this, callback = std::move(callback) ](Status status) {
+      [this, callback = std::move(callback)](Status status) {
         in_progress_merge_.reset();
         callback(status);
       });

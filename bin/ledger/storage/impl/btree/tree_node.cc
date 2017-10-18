@@ -40,17 +40,18 @@ void TreeNode::FromDigest(
     ObjectDigestView digest,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   std::unique_ptr<const Object> object;
-  page_storage->GetObject(digest, PageStorage::Location::NETWORK, [
-    page_storage, callback = std::move(callback)
-  ](Status status, std::unique_ptr<const Object> object) {
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
-    std::unique_ptr<const TreeNode> node;
-    status = FromObject(page_storage, std::move(object), &node);
-    callback(status, std::move(node));
-  });
+  page_storage->GetObject(
+      digest, PageStorage::Location::NETWORK,
+      [page_storage, callback = std::move(callback)](
+          Status status, std::unique_ptr<const Object> object) {
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        std::unique_ptr<const TreeNode> node;
+        status = FromObject(page_storage, std::move(object), &node);
+        callback(status, std::move(node));
+      });
 }
 
 void TreeNode::Empty(PageStorage* page_storage,

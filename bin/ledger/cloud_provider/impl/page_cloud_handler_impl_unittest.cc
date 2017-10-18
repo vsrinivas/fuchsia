@@ -60,7 +60,7 @@ class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
     message_loop_.task_runner()->PostTask(
-        [ this, callback = std::move(callback) ] {
+        [this, callback = std::move(callback)] {
           callback(download_status_, download_response_size_,
                    std::move(download_response_));
         });
@@ -75,7 +75,7 @@ class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
     get_keys_.push_back(key);
     get_queries_.push_back(query_params);
     message_loop_.task_runner()->PostTask(
-        [ this, callback = std::move(callback) ] {
+        [this, callback = std::move(callback)] {
           callback(firebase::Status::OK, *get_response_);
           message_loop_.PostQuitTask();
         });
@@ -88,7 +88,7 @@ class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
     put_keys_.push_back(key);
     put_data_.push_back(data);
     message_loop_.task_runner()->PostTask(
-        [ this, callback = std::move(callback) ] {
+        [this, callback = std::move(callback)] {
           callback(firebase::Status::OK);
           message_loop_.PostQuitTask();
         });
@@ -102,7 +102,7 @@ class PageCloudHandlerImplTest : public test::TestWithMessageLoop,
     patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
     message_loop_.task_runner()->PostTask(
-        [ this, callback = std::move(callback) ] {
+        [this, callback = std::move(callback)] {
           callback(firebase::Status::OK);
           message_loop_.PostQuitTask();
         });

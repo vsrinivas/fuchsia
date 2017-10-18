@@ -319,7 +319,7 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
       TreeNode::FromEntries(
           page_storage->page_storage(), child->level_, child->entries_,
           children,
-          [ new_digests, child, callback = waiter->NewCallback() ](
+          [new_digests, child, callback = waiter->NewCallback()](
               Status status, ObjectDigest object_digest) {
             if (status == Status::OK) {
               child->type_ = BuilderType::EXISTING_NODE;
@@ -630,42 +630,42 @@ void ApplyChanges(
     std::function<void(Status, ObjectDigest, std::unordered_set<ObjectDigest>)>
         callback,
     const NodeLevelCalculator* node_level_calculator) {
-  coroutine_service->StartCoroutine(fxl::MakeCopyable([
-    page_storage, root_digest = root_digest.ToString(),
-    changes = std::move(changes), callback = std::move(callback),
-    node_level_calculator
-  ](coroutine::CoroutineHandler * handler) mutable {
-    SynchronousStorage storage(page_storage, handler);
+  coroutine_service->StartCoroutine(fxl::MakeCopyable(
+      [page_storage, root_digest = root_digest.ToString(),
+       changes = std::move(changes), callback = std::move(callback),
+       node_level_calculator](coroutine::CoroutineHandler* handler) mutable {
+        SynchronousStorage storage(page_storage, handler);
 
-    NodeBuilder root;
-    Status status =
-        NodeBuilder::FromDigest(&storage, std::move(root_digest), &root);
-    if (status != Status::OK) {
-      callback(status, "", {});
-      return;
-    }
-    ObjectDigest object_digest;
-    std::unordered_set<ObjectDigest> new_digests;
-    status =
-        ApplyChangesOnRoot(node_level_calculator, &storage, std::move(root),
-                           std::move(changes), &object_digest, &new_digests);
-    if (status != Status::OK) {
-      callback(status, "", {});
-      return;
-    }
+        NodeBuilder root;
+        Status status =
+            NodeBuilder::FromDigest(&storage, std::move(root_digest), &root);
+        if (status != Status::OK) {
+          callback(status, "", {});
+          return;
+        }
+        ObjectDigest object_digest;
+        std::unordered_set<ObjectDigest> new_digests;
+        status = ApplyChangesOnRoot(node_level_calculator, &storage,
+                                    std::move(root), std::move(changes),
+                                    &object_digest, &new_digests);
+        if (status != Status::OK) {
+          callback(status, "", {});
+          return;
+        }
 
-    if (!object_digest.empty()) {
-      callback(Status::OK, std::move(object_digest), std::move(new_digests));
-      return;
-    }
+        if (!object_digest.empty()) {
+          callback(Status::OK, std::move(object_digest),
+                   std::move(new_digests));
+          return;
+        }
 
-    TreeNode::Empty(
-        page_storage, [callback = std::move(callback)](
-                          Status status, ObjectDigest object_digest) {
+        TreeNode::Empty(page_storage, [callback = std::move(callback)](
+                                          Status status,
+                                          ObjectDigest object_digest) {
           std::unordered_set<ObjectDigest> new_digests({object_digest});
           callback(status, std::move(object_digest), std::move(new_digests));
         });
-  }));
+      }));
 }
 
 }  // namespace btree

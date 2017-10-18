@@ -260,18 +260,18 @@ TEST_F(PageImplTest, PutKeyTooLarge) {
   std::string key = GetKey(1, key_size);
   std::string value("a small value");
   auto callback = [this](Status status) {
-      EXPECT_EQ(Status::KEY_TOO_LARGE, status);
+    EXPECT_EQ(Status::KEY_TOO_LARGE, status);
 
-      // Make sure no entries or journals were added (operation has failed).
-      auto objects = fake_storage_->GetObjects();
-      EXPECT_EQ(0u, objects.size());
+    // Make sure no entries or journals were added (operation has failed).
+    auto objects = fake_storage_->GetObjects();
+    EXPECT_EQ(0u, objects.size());
 
-      const std::map<std::string,
-                     std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-          journals = fake_storage_->GetJournals();
-      EXPECT_EQ(0u, journals.size());
-      message_loop_.PostQuitTask();
-    };
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+        journals = fake_storage_->GetJournals();
+    EXPECT_EQ(0u, journals.size());
+    message_loop_.PostQuitTask();
+  };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback);
   EXPECT_FALSE(RunLoopWithTimeout());
 }
@@ -287,21 +287,21 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   reference->opaque_id = convert::ToArray(object_digest);
 
   auto callback = [this](Status status) {
-      EXPECT_EQ(Status::KEY_TOO_LARGE, status);
+    EXPECT_EQ(Status::KEY_TOO_LARGE, status);
 
-      // We manually created an object above, so there should be one object in
-      // storage.
-      auto objects = fake_storage_->GetObjects();
-      EXPECT_EQ(1u, objects.size());
+    // We manually created an object above, so there should be one object in
+    // storage.
+    auto objects = fake_storage_->GetObjects();
+    EXPECT_EQ(1u, objects.size());
 
-      // But there should be no operations pending (an attempt to put a new
-      // key-value pair failed).
-      const std::map<std::string,
-                     std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-          journals = fake_storage_->GetJournals();
-      EXPECT_EQ(0u, journals.size());
-      message_loop_.PostQuitTask();
-    };
+    // But there should be no operations pending (an attempt to put a new
+    // key-value pair failed).
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+        journals = fake_storage_->GetJournals();
+    EXPECT_EQ(0u, journals.size());
+    message_loop_.PostQuitTask();
+  };
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::LAZY, callback);
   EXPECT_FALSE(RunLoopWithTimeout());

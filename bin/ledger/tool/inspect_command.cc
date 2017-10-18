@@ -109,31 +109,35 @@ void InspectCommand::ListPages(fxl::Closure on_done) {
   auto waiter = callback::CompletionWaiter::Create();
   for (const storage::PageId& page_id : page_ids) {
     ledger_storage->GetPageStorage(
-        page_id, fxl::MakeCopyable([
-          completer = fxl::MakeAutoCall(waiter->NewCallback()),
-          page_id = page_id
-        ](storage::Status status,
-                 std::unique_ptr<storage::PageStorage> storage) mutable {
-          if (status != storage::Status::OK) {
-            FXL_LOG(FATAL) << "Unable to retrieve page "
-                           << convert::ToHex(page_id) << " due to error "
-                           << status;
-          }
-          storage->GetHeadCommitIds(fxl::MakeCopyable([
-            completer = std::move(completer), page_id = std::move(page_id)
-          ](storage::Status get_status, std::vector<storage::CommitId> heads) {
-            std::cout << "Page " << convert::ToHex(page_id) << std::endl;
-            if (get_status != storage::Status::OK) {
-              FXL_LOG(FATAL)
-                  << "Unable to retrieve commits for page "
-                  << convert::ToHex(page_id) << " due to error " << get_status;
-            }
-            for (const storage::CommitId& commit_id : heads) {
-              std::cout << " head commit " << convert::ToHex(commit_id)
-                        << std::endl;
-            }
-          }));
-        }));
+        page_id,
+        fxl::MakeCopyable(
+            [completer = fxl::MakeAutoCall(waiter->NewCallback()),
+             page_id = page_id](
+                storage::Status status,
+                std::unique_ptr<storage::PageStorage> storage) mutable {
+              if (status != storage::Status::OK) {
+                FXL_LOG(FATAL)
+                    << "Unable to retrieve page " << convert::ToHex(page_id)
+                    << " due to error " << status;
+              }
+              storage->GetHeadCommitIds(
+                  fxl::MakeCopyable([completer = std::move(completer),
+                                     page_id = std::move(page_id)](
+                                        storage::Status get_status,
+                                        std::vector<storage::CommitId> heads) {
+                    std::cout << "Page " << convert::ToHex(page_id)
+                              << std::endl;
+                    if (get_status != storage::Status::OK) {
+                      FXL_LOG(FATAL) << "Unable to retrieve commits for page "
+                                     << convert::ToHex(page_id)
+                                     << " due to error " << get_status;
+                    }
+                    for (const storage::CommitId& commit_id : heads) {
+                      std::cout << " head commit " << convert::ToHex(commit_id)
+                                << std::endl;
+                    }
+                  }));
+            }));
   }
   waiter->Finalize(std::move(on_done));
 }
@@ -155,7 +159,7 @@ void InspectCommand::DisplayCommit(fxl::Closure on_done) {
   }
 
   ledger_storage->GetPageStorage(
-      page_id, [ this, commit_id, on_done = std::move(on_done) ](
+      page_id, [this, commit_id, on_done = std::move(on_done)](
                    storage::Status status,
                    std::unique_ptr<storage::PageStorage> storage) mutable {
         if (status != storage::Status::OK) {
@@ -166,7 +170,7 @@ void InspectCommand::DisplayCommit(fxl::Closure on_done) {
         storage_ = std::move(storage);
         storage_->GetCommit(
             commit_id,
-            [ this, commit_id, on_done = std::move(on_done) ](
+            [this, commit_id, on_done = std::move(on_done)](
                 storage::Status status,
                 std::unique_ptr<const storage::Commit> commit) mutable {
               if (status != storage::Status::OK) {
@@ -191,43 +195,48 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
     std::cout << " parent " << convert::ToHex(parent_commit) << std::endl;
   }
   std::cout << "Page state at this commit: " << std::endl;
-  coroutine_service_.StartCoroutine(fxl::MakeCopyable([
-    this, commit = std::move(commit), on_done = std::move(on_done)
-  ](coroutine::CoroutineHandler * handler) mutable {
-    storage_->GetCommitContents(
-        *commit, "",
-        [this, handler](storage::Entry entry) {
-          storage::Status status;
-          std::unique_ptr<const storage::Object> object;
-          if (coroutine::SyncCall(
-                  handler,
-                  [this, &entry](
-                      std::function<void(
-                          storage::Status,
-                          std::unique_ptr<const storage::Object>)> callback) {
-                    storage_->GetObject(entry.object_digest,
-                                        storage::PageStorage::Location::LOCAL,
-                                        std::move(callback));
-                  },
-                  &status, &object)) {
-            FXL_NOTREACHED();
-          }
-          std::string priority_str =
-              entry.priority == storage::KeyPriority::EAGER ? "EAGER" : "LAZY";
-          fxl::StringView data;
-          object->GetData(&data);
-          std::cout << " Key " << entry.key << " (" << priority_str << "): ";
-          std::cout << ToPrintable(data) << std::endl;
-          return true;
-        },
-        [on_done = std::move(on_done)](storage::Status status) {
-          if (status != storage::Status::OK) {
-            FXL_LOG(FATAL) << "Unable to retrieve commit contents due to error "
-                           << status;
-          }
-          on_done();
-        });
-  }));
+  coroutine_service_.StartCoroutine(fxl::MakeCopyable(
+      [this, commit = std::move(commit), on_done = std::move(on_done)](
+          coroutine::CoroutineHandler* handler) mutable {
+        storage_->GetCommitContents(
+            *commit, "",
+            [this, handler](storage::Entry entry) {
+              storage::Status status;
+              std::unique_ptr<const storage::Object> object;
+              if (coroutine::SyncCall(
+                      handler,
+                      [this,
+                       &entry](std::function<void(
+                                   storage::Status,
+                                   std::unique_ptr<const storage::Object>)>
+                                   callback) {
+                        storage_->GetObject(
+                            entry.object_digest,
+                            storage::PageStorage::Location::LOCAL,
+                            std::move(callback));
+                      },
+                      &status, &object)) {
+                FXL_NOTREACHED();
+              }
+              std::string priority_str =
+                  entry.priority == storage::KeyPriority::EAGER ? "EAGER"
+                                                                : "LAZY";
+              fxl::StringView data;
+              object->GetData(&data);
+              std::cout << " Key " << entry.key << " (" << priority_str
+                        << "): ";
+              std::cout << ToPrintable(data) << std::endl;
+              return true;
+            },
+            [on_done = std::move(on_done)](storage::Status status) {
+              if (status != storage::Status::OK) {
+                FXL_LOG(FATAL)
+                    << "Unable to retrieve commit contents due to error "
+                    << status;
+              }
+              on_done();
+            });
+      }));
 }
 
 void InspectCommand::DisplayCommitGraph(fxl::Closure on_done) {
@@ -240,7 +249,7 @@ void InspectCommand::DisplayCommitGraph(fxl::Closure on_done) {
     return;
   }
   ledger_storage->GetPageStorage(
-      page_id, [ this, page_id, on_done = std::move(on_done) ](
+      page_id, [this, page_id, on_done = std::move(on_done)](
                    storage::Status status,
                    std::unique_ptr<storage::PageStorage> storage) mutable {
         if (status != storage::Status::OK) {
@@ -249,11 +258,11 @@ void InspectCommand::DisplayCommitGraph(fxl::Closure on_done) {
           return;
         }
         storage_ = std::move(storage);
-        coroutine_service_.StartCoroutine(fxl::MakeCopyable([
-          this, page_id = std::move(page_id), on_done = std::move(on_done)
-        ](coroutine::CoroutineHandler * handler) mutable {
-          DisplayGraphCoroutine(handler, page_id, std::move(on_done));
-        }));
+        coroutine_service_.StartCoroutine(fxl::MakeCopyable(
+            [this, page_id = std::move(page_id), on_done = std::move(on_done)](
+                coroutine::CoroutineHandler* handler) mutable {
+              DisplayGraphCoroutine(handler, page_id, std::move(on_done));
+            }));
       });
 }
 

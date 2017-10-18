@@ -38,12 +38,11 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   void GetFirebaseAuthToken(
       const fidl::String& /*firebase_api_key*/,
       const GetFirebaseAuthTokenCallback& callback) override {
-    task_runner_->PostTask(fxl::MakeCopyable([
-      token_to_return = token_to_return.Clone(),
-      error_to_return = error_to_return.Clone(), callback
-    ]() mutable {
-      callback(std::move(token_to_return), std::move(error_to_return));
-    }));
+    task_runner_->PostTask(fxl::MakeCopyable(
+        [token_to_return = token_to_return.Clone(),
+         error_to_return = error_to_return.Clone(), callback]() mutable {
+          callback(std::move(token_to_return), std::move(error_to_return));
+        }));
   }
 
   void GetClientId(const GetClientIdCallback& /*callback*/) override {

@@ -68,8 +68,8 @@ void PageDownload::StartDownload() {
         }
 
         delegate_->GetAuthToken(
-            [ this, last_commit_ts =
-                        std::move(last_commit_ts) ](std::string auth_token) {
+            [this, last_commit_ts =
+                       std::move(last_commit_ts)](std::string auth_token) {
               // TODO(ppi): handle pagination when the response is huge.
               cloud_provider_->GetCommits(
                   auth_token, last_commit_ts,
@@ -142,7 +142,7 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
         }
 
         delegate_->GetAuthToken(
-            [ this, is_retry, last_commit_ts = std::move(last_commit_ts) ](
+            [this, is_retry, last_commit_ts = std::move(last_commit_ts)](
                 std::string auth_token) {
               cloud_provider_->WatchCommits(auth_token, last_commit_ts, this);
               SetCommitState(DOWNLOAD_IDLE);
@@ -228,11 +228,11 @@ void PageDownload::GetObject(
         callback) {
   current_get_object_calls_++;
   delegate_->GetAuthToken(
-      [ this, object_digest = object_digest.ToString(),
-        callback ](std::string auth_token) mutable {
+      [this, object_digest = object_digest.ToString(),
+       callback](std::string auth_token) mutable {
         cloud_provider_->GetObject(
             auth_token, object_digest,
-            [ this, object_digest, callback = std::move(callback) ](
+            [this, object_digest, callback = std::move(callback)](
                 cloud_provider_firebase::Status status, uint64_t size,
                 zx::socket data) mutable {
               if (status == cloud_provider_firebase::Status::NETWORK_ERROR) {
@@ -240,10 +240,11 @@ void PageDownload::GetObject(
                                  << "GetObject() failed due to a connection "
                                     "error, retrying.";
                 current_get_object_calls_--;
-                delegate_->Retry([
-                  this, object_digest = std::move(object_digest),
-                  callback = std::move(callback)
-                ] { GetObject(object_digest, callback); });
+                delegate_->Retry([this,
+                                  object_digest = std::move(object_digest),
+                                  callback = std::move(callback)] {
+                  GetObject(object_digest, callback);
+                });
                 return;
               }
 

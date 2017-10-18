@@ -62,16 +62,16 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
   // PageDownload::Delegate:
   void GetAuthToken(std::function<void(std::string)> on_token_ready,
                     fxl::Closure on_failed) override {
-    auto request = auth_provider_.GetFirebaseToken([
-      on_token_ready = std::move(on_token_ready),
-      on_failed = std::move(on_failed)
-    ](auth_provider::AuthStatus auth_status, std::string auth_token) {
-      if (auth_status != auth_provider::AuthStatus::OK) {
-        on_failed();
-        return;
-      }
-      on_token_ready(std::move(auth_token));
-    });
+    auto request = auth_provider_.GetFirebaseToken(
+        [on_token_ready = std::move(on_token_ready),
+         on_failed = std::move(on_failed)](
+            auth_provider::AuthStatus auth_status, std::string auth_token) {
+          if (auth_status != auth_provider::AuthStatus::OK) {
+            on_failed();
+            return;
+          }
+          on_token_ready(std::move(auth_token));
+        });
     auth_token_requests_.emplace(request);
   }
 

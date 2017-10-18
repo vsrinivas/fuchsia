@@ -104,8 +104,8 @@ void ConflictResolverClient::OnNextMergeResult(
       std::string key = convert::ToString(merged_value->key);
       storage_->GetEntryFromCommit(
           *right_, key,
-          [ key, callback = waiter->NewCallback() ](storage::Status status,
-                                                    storage::Entry entry) {
+          [key, callback = waiter->NewCallback()](storage::Status status,
+                                                  storage::Entry entry) {
             if (status != storage::Status::OK) {
               if (status == storage::Status::NOT_FOUND) {
                 FXL_LOG(ERROR)
@@ -125,7 +125,8 @@ void ConflictResolverClient::OnNextMergeResult(
             storage::DataSource::Create(
                 std::move(merged_value->new_value->get_bytes())),
             fxl::MakeCopyable([callback = waiter->NewCallback()](
-                storage::Status status, storage::ObjectDigest object_digest) {
+                                  storage::Status status,
+                                  storage::ObjectDigest object_digest) {
               callback(status, std::move(object_digest));
             }));
       } else {
@@ -209,10 +210,9 @@ void ConflictResolverClient::GetDiff(
 void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
                                    const MergeCallback& callback) {
   operation_serializer_.Serialize<Status>(
-      callback, fxl::MakeCopyable([
-        weak_this = weak_factory_.GetWeakPtr(),
-        merged_values = std::move(merged_values)
-      ](MergeCallback callback) mutable {
+      callback, fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(),
+                                   merged_values = std::move(merged_values)](
+                                      MergeCallback callback) mutable {
         if (!weak_this) {
           callback(Status::INTERNAL_ERROR);
           return;
@@ -226,36 +226,36 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
         for (const MergedValuePtr& merged_value : merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
         }
-        waiter->Finalize(fxl::MakeCopyable(fxl::MakeCopyable([
-          weak_this, merged_values = std::move(merged_values),
-          callback = std::move(callback)
-        ](storage::Status status,
-          std::vector<storage::ObjectDigest> object_digests) {
-          if (!weak_this) {
-            callback(Status::INTERNAL_ERROR);
-            return;
-          }
-          if (!weak_this->IsInValidStateAndNotify(callback, status)) {
-            return;
-          }
+        waiter->Finalize(fxl::MakeCopyable(fxl::MakeCopyable(
+            [weak_this, merged_values = std::move(merged_values),
+             callback = std::move(callback)](
+                storage::Status status,
+                std::vector<storage::ObjectDigest> object_digests) {
+              if (!weak_this) {
+                callback(Status::INTERNAL_ERROR);
+                return;
+              }
+              if (!weak_this->IsInValidStateAndNotify(callback, status)) {
+                return;
+              }
 
-          auto waiter = callback::StatusWaiter<storage::Status>::Create(
-              storage::Status::OK);
-          for (size_t i = 0; i < object_digests.size(); ++i) {
-            if (object_digests[i].empty()) {
-              continue;
-            }
-            weak_this->journal_->Put(
-                merged_values[i]->key, object_digests[i],
-                merged_values[i]->priority == Priority::EAGER
-                    ? storage::KeyPriority::EAGER
-                    : storage::KeyPriority::LAZY,
-                waiter->NewCallback());
-          }
-          waiter->Finalize([callback](storage::Status status) {
-            callback(PageUtils::ConvertStatus(status));
-          });
-        })));
+              auto waiter = callback::StatusWaiter<storage::Status>::Create(
+                  storage::Status::OK);
+              for (size_t i = 0; i < object_digests.size(); ++i) {
+                if (object_digests[i].empty()) {
+                  continue;
+                }
+                weak_this->journal_->Put(
+                    merged_values[i]->key, object_digests[i],
+                    merged_values[i]->priority == Priority::EAGER
+                        ? storage::KeyPriority::EAGER
+                        : storage::KeyPriority::LAZY,
+                    waiter->NewCallback());
+              }
+              waiter->Finalize([callback](storage::Status status) {
+                callback(PageUtils::ConvertStatus(status));
+              });
+            })));
       }));
 }
 

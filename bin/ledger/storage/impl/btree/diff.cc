@@ -301,16 +301,17 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done) {
-  coroutine_service->StartCoroutine([
-    page_storage, base_root_digest, other_root_digest,
-    on_next = std::move(on_next), min_key = std::move(min_key),
-    on_done = std::move(on_done)
-  ](coroutine::CoroutineHandler * handler) mutable {
-    SynchronousStorage storage(page_storage, handler);
+  coroutine_service->StartCoroutine(
+      [page_storage, base_root_digest, other_root_digest,
+       on_next = std::move(on_next), min_key = std::move(min_key),
+       on_done =
+           std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
+        SynchronousStorage storage(page_storage, handler);
 
-    on_done(ForEachDiffInternal(&storage, base_root_digest, other_root_digest,
-                                std::move(min_key), on_next));
-  });
+        on_done(ForEachDiffInternal(&storage, base_root_digest,
+                                    other_root_digest, std::move(min_key),
+                                    on_next));
+      });
 }
 
 }  // namespace btree

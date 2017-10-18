@@ -73,9 +73,8 @@ void PutBenchmark::Run() {
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &application_controller_, services_task_runner_,
-      &token_provider_impl_, "put", tmp_dir_.path(), test::SyncState::DISABLED,
-      "", &ledger);
+      &application_controller_, services_task_runner_, &token_provider_impl_,
+      "put", tmp_dir_.path(), test::SyncState::DISABLED, "", &ledger);
   QuitOnError(status, "GetLedger");
 
   InitializeKeys(

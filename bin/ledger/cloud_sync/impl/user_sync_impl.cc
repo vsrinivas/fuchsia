@@ -46,7 +46,7 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
 
   auto result = std::make_unique<LedgerSyncImpl>(
       environment_, &user_config_, app_id, aggregator_.GetNewStateWatcher());
-  result->set_on_delete([ this, ledger_sync = result.get() ]() {
+  result->set_on_delete([this, ledger_sync = result.get()]() {
     active_ledger_syncs_.erase(ledger_sync);
   });
   active_ledger_syncs_.insert(result.get());

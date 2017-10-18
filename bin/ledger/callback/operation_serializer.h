@@ -57,10 +57,9 @@ class OperationSerializer {
       std::function<
           void(std::function<typename internal::Signature<C...>::CallbackType>)>
           operation) {
-    auto closure = [
-      this, callback = std::move(callback), operation = std::move(operation)
-    ] {
-      operation([ this, callback = std::move(callback) ](C... args) {
+    auto closure = [this, callback = std::move(callback),
+                    operation = std::move(operation)] {
+      operation([this, callback = std::move(callback)](C... args) {
         callback(std::forward<C>(args)...);
         queued_operations_.pop();
         if (!queued_operations_.empty()) {

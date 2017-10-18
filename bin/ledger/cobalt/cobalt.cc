@@ -113,7 +113,7 @@ void CobaltContext::SendEvents() {
     auto callback = waiter->NewCallback();
     encoder_->AddIndexObservation(
         kCobaltMetricId, kCobaltEncodingId, static_cast<uint32_t>(event),
-        [ this, event, callback = std::move(callback) ](cobalt::Status status) {
+        [this, event, callback = std::move(callback)](cobalt::Status status) {
           auto cleanup = fxl::MakeAutoCall(callback);
 
           switch (status) {

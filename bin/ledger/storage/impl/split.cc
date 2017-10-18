@@ -296,7 +296,7 @@ void CollectPiecesInternal(ObjectDigestView root,
     return;
   }
 
-  state->data_accessor(root, [ state, on_done = std::move(on_done) ](
+  state->data_accessor(root, [state, on_done = std::move(on_done)](
                                  Status status, fxl::StringView data) mutable {
     if (!state->running) {
       on_done();
@@ -333,11 +333,12 @@ void SplitDataSource(
                        ObjectDigest,
                        std::unique_ptr<DataSource::DataChunk>)> callback) {
   SplitContext context(std::move(callback));
-  source->Get(fxl::MakeCopyable([context = std::move(context)](
-      std::unique_ptr<DataSource::DataChunk> chunk,
-      DataSource::Status status) mutable {
-    context.AddChunk(std::move(chunk), status);
-  }));
+  source->Get(
+      fxl::MakeCopyable([context = std::move(context)](
+                            std::unique_ptr<DataSource::DataChunk> chunk,
+                            DataSource::Status status) mutable {
+        context.AddChunk(std::move(chunk), status);
+      }));
 }
 
 Status ForEachPiece(fxl::StringView index_content,

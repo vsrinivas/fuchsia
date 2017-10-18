@@ -19,9 +19,10 @@ fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
-  task_runner_->PostTask([
-    this, callback = cancellable->WrapCallback(callback)
-  ] { callback(status_to_return, token_to_return); });
+  task_runner_->PostTask(
+      [this, callback = cancellable->WrapCallback(callback)] {
+        callback(status_to_return, token_to_return);
+      });
   return cancellable;
 }
 
@@ -29,9 +30,10 @@ fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
-  task_runner_->PostTask([
-    this, callback = cancellable->WrapCallback(callback)
-  ] { callback(status_to_return, user_id_to_return); });
+  task_runner_->PostTask(
+      [this, callback = cancellable->WrapCallback(callback)] {
+        callback(status_to_return, user_id_to_return);
+      });
   return cancellable;
 }
 

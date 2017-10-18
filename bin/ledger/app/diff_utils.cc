@@ -51,10 +51,9 @@ void ComputePageChange(
   }
 
   // |on_next| is called for each change on the diff
-  auto on_next = [
-    storage, waiter, prefix_key = std::move(prefix_key),
-    context = context.get(), pagination_behavior
-  ](storage::EntryChange change) {
+  auto on_next = [storage, waiter, prefix_key = std::move(prefix_key),
+                  context = context.get(),
+                  pagination_behavior](storage::EntryChange change) {
     if (!PageUtils::MatchesPrefix(change.entry.key, prefix_key)) {
       return false;
     }
@@ -96,10 +95,10 @@ void ComputePageChange(
   };
 
   // |on_done| is called when the full diff is computed.
-  auto on_done = fxl::MakeCopyable([
-    waiter = std::move(waiter), context = std::move(context),
-    callback = std::move(callback)
-  ](storage::Status status) mutable {
+  auto on_done = fxl::MakeCopyable([waiter = std::move(waiter),
+                                    context = std::move(context),
+                                    callback = std::move(callback)](
+                                       storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
@@ -118,9 +117,11 @@ void ComputePageChange(
     // We need to retrieve the values for each changed key/value pair in order
     // to send it inside the PageChange object. |waiter| collates these
     // asynchronous calls and |result_callback| processes them.
-    auto result_callback = fxl::MakeCopyable([
-      context = std::move(context), callback = std::move(callback)
-    ](Status status, std::vector<zx::vmo> results) mutable {
+    auto result_callback = fxl::MakeCopyable([context = std::move(context),
+                                              callback = std::move(callback)](
+                                                 Status status,
+                                                 std::vector<zx::vmo>
+                                                     results) mutable {
       if (status != Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "

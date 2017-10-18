@@ -38,7 +38,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       return;
     }
     message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
-        [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() mutable {
+        [this, ids_and_bytes = std::move(ids_and_bytes), callback]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
           }
@@ -70,7 +70,6 @@ class BatchDownloadTest : public test::TestWithMessageLoop {
   ~BatchDownloadTest() override {}
 
  protected:
-
   TestPageStorage storage_;
   encryption::FakeEncryptionService encryption_service_;
 

@@ -45,13 +45,12 @@ void TestPageStorage::SetSyncDelegate(
 void TestPageStorage::GetHeadCommitIds(
     std::function<void(storage::Status, std::vector<storage::CommitId>)>
         callback) {
-  message_loop_->task_runner()->PostTask(
-      [ this, callback = std::move(callback) ] {
-        // Current tests only rely on the number of heads, not on the actual
-        // ids.
-        callback(storage::Status::OK,
-                 std::vector<storage::CommitId>(head_count));
-      });
+  message_loop_->task_runner()->PostTask([this,
+                                          callback = std::move(callback)] {
+    // Current tests only rely on the number of heads, not on the actual
+    // ids.
+    callback(storage::Status::OK, std::vector<storage::CommitId>(head_count));
+  });
 }
 
 void TestPageStorage::GetCommit(
@@ -65,11 +64,11 @@ void TestPageStorage::GetCommit(
     return;
   }
 
-  message_loop_->task_runner()->PostTask([
-    this, commit_id = commit_id.ToString(), callback = std::move(callback)
-  ] {
-    callback(storage::Status::OK, std::move(new_commits_to_return[commit_id]));
-  });
+  message_loop_->task_runner()->PostTask(
+      [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
+        callback(storage::Status::OK,
+                 std::move(new_commits_to_return[commit_id]));
+      });
   new_commits_to_return.erase(commit_id.ToString());
 }
 
@@ -84,24 +83,25 @@ void TestPageStorage::AddCommitsFromSync(
     return;
   }
 
-  fxl::Closure confirm = fxl::MakeCopyable([
-    this, ids_and_bytes = std::move(ids_and_bytes), callback
-  ]() mutable {
-    for (auto& commit : ids_and_bytes) {
-      received_commits[commit.id] = std::move(commit.bytes);
-      unsynced_commits_to_return.erase(
-          std::remove_if(
-              unsynced_commits_to_return.begin(),
-              unsynced_commits_to_return.end(),
-              [commit_id = std::move(commit.id)](
-                  const std::unique_ptr<const storage::Commit>& commit) {
-                return commit->GetId() == commit_id;
-              }),
-          unsynced_commits_to_return.end());
-    }
-    message_loop_->task_runner()->PostTask(
-        [callback = std::move(callback)] { callback(storage::Status::OK); });
-  });
+  fxl::Closure confirm = fxl::MakeCopyable(
+      [this, ids_and_bytes = std::move(ids_and_bytes), callback]() mutable {
+        for (auto& commit : ids_and_bytes) {
+          received_commits[commit.id] = std::move(commit.bytes);
+          unsynced_commits_to_return.erase(
+              std::remove_if(
+                  unsynced_commits_to_return.begin(),
+                  unsynced_commits_to_return.end(),
+                  [commit_id = std::move(commit.id)](
+                      const std::unique_ptr<const storage::Commit>& commit) {
+                    return commit->GetId() == commit_id;
+                  }),
+              unsynced_commits_to_return.end());
+        }
+        message_loop_->task_runner()->PostTask(
+            [callback = std::move(callback)] {
+              callback(storage::Status::OK);
+            });
+      });
   if (should_delay_add_commit_confirmation) {
     delayed_add_commit_confirmations.push_back(move(confirm));
     return;
@@ -147,9 +147,10 @@ void TestPageStorage::GetUnsyncedCommits(
                  [](const std::unique_ptr<const storage::Commit>& commit) {
                    return commit->Clone();
                  });
-  message_loop_->task_runner()->PostTask(fxl::MakeCopyable([
-    results = std::move(results), callback = std::move(callback)
-  ]() mutable { callback(storage::Status::OK, std::move(results)); }));
+  message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
+      [results = std::move(results), callback = std::move(callback)]() mutable {
+        callback(storage::Status::OK, std::move(results));
+      }));
 }
 
 void TestPageStorage::MarkCommitSynced(
@@ -186,9 +187,10 @@ void TestPageStorage::GetSyncMetadata(
     });
     return;
   }
-  message_loop_->task_runner()->PostTask([
-    callback = std::move(callback), metadata = it->second
-  ] { callback(storage::Status::OK, metadata); });
+  message_loop_->task_runner()->PostTask(
+      [callback = std::move(callback), metadata = it->second] {
+        callback(storage::Status::OK, metadata);
+      });
 }
 
 }  // namespace test

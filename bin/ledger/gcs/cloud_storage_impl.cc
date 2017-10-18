@@ -96,39 +96,40 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
     return;
   }
 
-  auto request_factory = fxl::MakeCopyable([
-    auth_token = std::move(auth_token), url = std::move(url),
-    task_runner = task_runner_, data = std::move(data), data_size
-  ] {
-    network::URLRequestPtr request(network::URLRequest::New());
-    request->url = url;
-    request->method = "POST";
-    request->auto_follow_redirects = true;
+  auto request_factory = fxl::MakeCopyable(
+      [auth_token = std::move(auth_token), url = std::move(url),
+       task_runner = task_runner_, data = std::move(data), data_size] {
+        network::URLRequestPtr request(network::URLRequest::New());
+        request->url = url;
+        request->method = "POST";
+        request->auto_follow_redirects = true;
 
-    // Authorization header.
-    if (!auth_token.empty()) {
-      request->headers.push_back(MakeAuthorizationHeader(auth_token));
-    }
+        // Authorization header.
+        if (!auth_token.empty()) {
+          request->headers.push_back(MakeAuthorizationHeader(auth_token));
+        }
 
-    // Content-Length header.
-    network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
-    content_length_header->name = kContentLengthHeader;
-    content_length_header->value = fxl::NumberToString(data_size);
-    request->headers.push_back(std::move(content_length_header));
+        // Content-Length header.
+        network::HttpHeaderPtr content_length_header =
+            network::HttpHeader::New();
+        content_length_header->name = kContentLengthHeader;
+        content_length_header->value = fxl::NumberToString(data_size);
+        request->headers.push_back(std::move(content_length_header));
 
-    zx::vmo duplicated_data;
-    data.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ,
-                   &duplicated_data);
-    request->body = network::URLBody::New();
-    request->body->set_buffer(std::move(duplicated_data));
-    return request;
-  });
+        zx::vmo duplicated_data;
+        data.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ,
+                       &duplicated_data);
+        request->body = network::URLBody::New();
+        request->body->set_buffer(std::move(duplicated_data));
+        return request;
+      });
 
-  Request(std::move(request_factory), [callback = std::move(callback)](
-                                          Status status, network::URLResponsePtr
-                                                             response) mutable {
-    RunUploadObjectCallback(std::move(callback), status, std::move(response));
-  });
+  Request(std::move(request_factory),
+          [callback = std::move(callback)](
+              Status status, network::URLResponsePtr response) mutable {
+            RunUploadObjectCallback(std::move(callback), status,
+                                    std::move(response));
+          });
 }
 
 void CloudStorageImpl::DownloadObject(
@@ -138,21 +139,22 @@ void CloudStorageImpl::DownloadObject(
         callback) {
   std::string url = GetDownloadUrl(key);
 
-  Request([ auth_token = std::move(auth_token), url = std::move(url) ] {
-    network::URLRequestPtr request(network::URLRequest::New());
-    request->url = url;
-    request->method = "GET";
-    request->auto_follow_redirects = true;
-    if (!auth_token.empty()) {
-      request->headers.push_back(MakeAuthorizationHeader(auth_token));
-    }
-    return request;
-  },
-          [ this, callback = std::move(callback) ](
-              Status status, network::URLResponsePtr response) mutable {
-            OnDownloadResponseReceived(std::move(callback), status,
-                                       std::move(response));
-          });
+  Request(
+      [auth_token = std::move(auth_token), url = std::move(url)] {
+        network::URLRequestPtr request(network::URLRequest::New());
+        request->url = url;
+        request->method = "GET";
+        request->auto_follow_redirects = true;
+        if (!auth_token.empty()) {
+          request->headers.push_back(MakeAuthorizationHeader(auth_token));
+        }
+        return request;
+      },
+      [this, callback = std::move(callback)](
+          Status status, network::URLResponsePtr response) mutable {
+        OnDownloadResponseReceived(std::move(callback), status,
+                                   std::move(response));
+      });
 }
 
 std::string CloudStorageImpl::GetDownloadUrl(fxl::StringView key) {
@@ -169,11 +171,12 @@ void CloudStorageImpl::Request(
     std::function<network::URLRequestPtr()> request_factory,
     std::function<void(Status status, network::URLResponsePtr response)>
         callback) {
-  requests_.emplace(network_service_->Request(std::move(request_factory), [
-    this, callback = std::move(callback)
-  ](network::URLResponsePtr response) mutable {
-    OnResponse(std::move(callback), std::move(response));
-  }));
+  requests_.emplace(network_service_->Request(
+      std::move(request_factory),
+      [this, callback = std::move(callback)](
+          network::URLResponsePtr response) mutable {
+        OnResponse(std::move(callback), std::move(response));
+      }));
 }
 
 void CloudStorageImpl::OnResponse(

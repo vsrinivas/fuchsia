@@ -180,7 +180,7 @@ void CommitImpl::Empty(
     PageStorage* page_storage,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   btree::TreeNode::Empty(
-      page_storage, [ page_storage, callback = std::move(callback) ](
+      page_storage, [page_storage, callback = std::move(callback)](
                         Status s, ObjectDigest root_node_digest) {
         if (s != Status::OK) {
           callback(s, nullptr);

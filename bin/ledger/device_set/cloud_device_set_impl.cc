@@ -63,8 +63,8 @@ void CloudDeviceSetImpl::SetFingerprint(std::string auth_token,
   }
 
   user_firebase_->Put(
-      GetDeviceMapKey(fingerprint), query_params,
-      "true", [callback = std::move(callback)](firebase::Status status) {
+      GetDeviceMapKey(fingerprint), query_params, "true",
+      [callback = std::move(callback)](firebase::Status status) {
         if (status != firebase::Status::OK) {
           FXL_LOG(WARNING) << "Unable to set local version on the cloud.";
           callback(Status::NETWORK_ERROR);
@@ -102,8 +102,8 @@ void CloudDeviceSetImpl::EraseAllFingerprints(
   }
 
   user_firebase_->Delete(
-      kDeviceMapRelpath,
-      query_params, [callback = std::move(callback)](firebase::Status status) {
+      kDeviceMapRelpath, query_params,
+      [callback = std::move(callback)](firebase::Status status) {
         if (status != firebase::Status::OK) {
           callback(Status::NETWORK_ERROR);
           return;

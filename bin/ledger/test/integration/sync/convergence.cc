@@ -69,11 +69,13 @@ class PageWatcherImpl : public ledger::PageWatcher {
     // We need to make sure the PageSnapshotPtr used to make the |GetInline|
     // call survives as long as the call is active, even if a new snapshot
     // arrives in between.
-    (*current_snapshot_)->GetInline(std::move(key), [
-      snapshot = current_snapshot_.Clone(), callback = std::move(callback)
-    ](ledger::Status status, fidl::Array<uint8_t> value) mutable {
-      callback(status, std::move(value));
-    });
+    (*current_snapshot_)
+        ->GetInline(std::move(key), [snapshot = current_snapshot_.Clone(),
+                                     callback = std::move(callback)](
+                                        ledger::Status status,
+                                        fidl::Array<uint8_t> value) mutable {
+          callback(status, std::move(value));
+        });
   }
 
  private:
@@ -154,38 +156,38 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
                      fidl::Array<uint8_t> next_token) {
           callback(status, std::move(change));
         });
-    waiter->Finalize(fxl::MakeCopyable([merge_result_provider =
-                                            std::move(merge_result_provider)](
-        ledger::Status status,
-        std::vector<ledger::PageChangePtr> changes) mutable {
-      ASSERT_EQ(ledger::Status::OK, status);
-      ASSERT_EQ(2u, changes.size());
+    waiter->Finalize(fxl::MakeCopyable(
+        [merge_result_provider = std::move(merge_result_provider)](
+            ledger::Status status,
+            std::vector<ledger::PageChangePtr> changes) mutable {
+          ASSERT_EQ(ledger::Status::OK, status);
+          ASSERT_EQ(2u, changes.size());
 
-      EXPECT_EQ(convert::ExtendedStringView(changes[0]->changes[0]->key),
-                convert::ExtendedStringView(changes[1]->changes[0]->key));
+          EXPECT_EQ(convert::ExtendedStringView(changes[0]->changes[0]->key),
+                    convert::ExtendedStringView(changes[1]->changes[0]->key));
 
-      double d1, d2;
-      EXPECT_TRUE(VmoToDouble(changes[0]->changes[0]->value, &d1));
-      EXPECT_TRUE(VmoToDouble(changes[1]->changes[0]->value, &d2));
-      double new_value = (4 * d1 + d2) / 3;
-      ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
-      merged_value->key = std::move(changes[0]->changes[0]->key);
-      merged_value->source = ledger::ValueSource::NEW;
-      merged_value->new_value = ledger::BytesOrReference::New();
-      merged_value->new_value->set_bytes(DoubleToArray(new_value));
-      fidl::Array<ledger::MergedValuePtr> merged_values;
-      merged_values.push_back(std::move(merged_value));
-      ledger::Status merge_status;
-      merge_result_provider->Merge(std::move(merged_values),
-                                   callback::Capture([] {}, &merge_status));
-      ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
-          fxl::TimeDelta::FromSeconds(1)));
-      ASSERT_EQ(ledger::Status::OK, merge_status);
-      merge_result_provider->Done(callback::Capture([] {}, &merge_status));
-      ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
-          fxl::TimeDelta::FromSeconds(1)));
-      ASSERT_EQ(ledger::Status::OK, merge_status);
-    }));
+          double d1, d2;
+          EXPECT_TRUE(VmoToDouble(changes[0]->changes[0]->value, &d1));
+          EXPECT_TRUE(VmoToDouble(changes[1]->changes[0]->value, &d2));
+          double new_value = (4 * d1 + d2) / 3;
+          ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
+          merged_value->key = std::move(changes[0]->changes[0]->key);
+          merged_value->source = ledger::ValueSource::NEW;
+          merged_value->new_value = ledger::BytesOrReference::New();
+          merged_value->new_value->set_bytes(DoubleToArray(new_value));
+          fidl::Array<ledger::MergedValuePtr> merged_values;
+          merged_values.push_back(std::move(merged_value));
+          ledger::Status merge_status;
+          merge_result_provider->Merge(std::move(merged_values),
+                                       callback::Capture([] {}, &merge_status));
+          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
+              fxl::TimeDelta::FromSeconds(1)));
+          ASSERT_EQ(ledger::Status::OK, merge_status);
+          merge_result_provider->Done(callback::Capture([] {}, &merge_status));
+          ASSERT_TRUE(merge_result_provider.WaitForIncomingResponseWithTimeout(
+              fxl::TimeDelta::FromSeconds(1)));
+          ASSERT_EQ(ledger::Status::OK, merge_status);
+        }));
   }
 
   fidl::Binding<ledger::ConflictResolver> binding_;

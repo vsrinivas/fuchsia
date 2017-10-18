@@ -196,12 +196,10 @@ TEST_F(NetworkServiceImplTest, SimpleRequest) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [
-        this, destroy_watcher = DestroyWatcher::Create([&callback_destroyed] {
-                callback_destroyed = true;
-              }),
-        &response
-      ](network::URLResponsePtr received_response) {
+      [this, destroy_watcher = DestroyWatcher::Create([&callback_destroyed] {
+               callback_destroyed = true;
+             }),
+       &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
         message_loop_.PostQuitTask();
       });
@@ -221,13 +219,11 @@ TEST_F(NetworkServiceImplTest, CancelRequest) {
         SetStringResponse("Hello", 200);
         return NewRequest("GET", "http://example.com");
       },
-      [
-        this, &received_response,
-        destroy_watcher = DestroyWatcher::Create([this, &callback_destroyed] {
-          callback_destroyed = true;
-          message_loop_.PostQuitTask();
-        })
-      ](network::URLResponsePtr) {
+      [this, &received_response,
+       destroy_watcher = DestroyWatcher::Create([this, &callback_destroyed] {
+         callback_destroyed = true;
+         message_loop_.PostQuitTask();
+       })](network::URLResponsePtr) {
         received_response = true;
         message_loop_.PostQuitTask();
       });

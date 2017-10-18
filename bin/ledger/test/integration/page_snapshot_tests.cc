@@ -254,9 +254,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetKeys().
-    keys[i] = RandomArray(
-        key_size,
-        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    keys[i] = RandomArray(key_size, {static_cast<uint8_t>(i >> 8),
+                                     static_cast<uint8_t>(i & 0xFF)});
   }
 
   for (auto& key : keys) {
@@ -387,9 +386,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
-    keys[i] = RandomArray(
-        key_size,
-        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    keys[i] = RandomArray(key_size, {static_cast<uint8_t>(i >> 8),
+                                     static_cast<uint8_t>(i & 0xFF)});
     values[i] = RandomArray(value_size);
   }
 

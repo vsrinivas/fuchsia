@@ -219,9 +219,8 @@ class VerifyingMergeStrategy : public MergeStrategy {
       // Fail
       EXPECT_EQ(head2_, actual_head2_id);
     }
-    task_runner_->PostTask([callback = std::move(callback)]() {
-      callback(Status::OK);
-    });
+    task_runner_->PostTask(
+        [callback = std::move(callback)]() { callback(Status::OK); });
   }
 
   void Cancel() override{};

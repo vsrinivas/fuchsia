@@ -55,10 +55,9 @@ fxl::RefPtr<callback::Cancellable> FakeNetworkService::Request(
     return cancellable;
   }
 
-  task_runner_->PostTask([
-    this, cancelled_ptr, callback = cancellable->WrapCallback(callback),
-    request_factory = std::move(request_factory)
-  ] {
+  task_runner_->PostTask([this, cancelled_ptr,
+                          callback = cancellable->WrapCallback(callback),
+                          request_factory = std::move(request_factory)] {
     if (!*cancelled_ptr) {
       request_received_ = request_factory();
       callback(std::move(response_to_return_));

@@ -90,24 +90,22 @@ FXL_WARN_UNUSED_RESULT bool SyncCall(CoroutineHandler* handler,
         }
         handler->Continue(true);
       });
-  async_call(
-      callback::Capture(fxl::MakeCopyable([
-                          termination_sentinel, &sync_state, &callback_called,
-                          handler, unblocker = std::move(unblocker)
-                        ]() mutable {
-                          if (termination_sentinel->terminated) {
-                            return;
-                          }
+  async_call(callback::Capture(
+      fxl::MakeCopyable([termination_sentinel, &sync_state, &callback_called,
+                         handler, unblocker = std::move(unblocker)]() mutable {
+        if (termination_sentinel->terminated) {
+          return;
+        }
 
-                          unblocker.cancel();
-                          callback_called = true;
-                          if (sync_state) {
-                            sync_state = false;
-                            return;
-                          }
-                          handler->Continue(false);
-                        }),
-                        parameters...));
+        unblocker.cancel();
+        callback_called = true;
+        if (sync_state) {
+          sync_state = false;
+          return;
+        }
+        handler->Continue(false);
+      }),
+      parameters...));
   // If sync_state is still true, the callback was not called. Yield until it
   // is.
   if (sync_state) {

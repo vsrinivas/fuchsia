@@ -112,7 +112,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
     ObjectDigest digest = object_digest.ToString();
     std::string& value = digest_to_value_[digest];
     object_requests.insert(digest);
-    on_get_object_([ callback = std::move(callback), value ] {
+    on_get_object_([callback = std::move(callback), value] {
       callback(Status::OK, value.size(), fsl::WriteStringToSocket(value));
     });
   }
@@ -747,9 +747,9 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
           [this](ObjectDigestView digest,
                  std::function<void(Status, fxl::StringView)> callback) {
             storage_->GetPiece(
-                digest, [callback = std::move(callback)](
-                            Status status,
-                            std::unique_ptr<const Object> object) {
+                digest,
+                [callback = std::move(callback)](
+                    Status status, std::unique_ptr<const Object> object) {
                   if (status != Status::OK) {
                     callback(status, "");
                     return;

@@ -102,9 +102,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Done(Status status) {
 void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
   auto waiter =
       callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
-  auto on_next =
-      [ weak_this = weak_factory_.GetWeakPtr(),
-        waiter = waiter.get() ](storage::EntryChange change) {
+  auto on_next = [weak_this = weak_factory_.GetWeakPtr(),
+                  waiter = waiter.get()](storage::EntryChange change) {
     if (!weak_this || weak_this->cancelled_) {
       // No need to call Done, as it will be called in the on_done callback.
       return false;
@@ -119,9 +118,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
     return true;
   };
 
-  auto on_diff_done =
-      [ weak_this = weak_factory_.GetWeakPtr(),
-        waiter = std::move(waiter) ](storage::Status s) {
+  auto on_diff_done = [weak_this = weak_factory_.GetWeakPtr(),
+                       waiter = std::move(waiter)](storage::Status s) {
     if (!weak_this) {
       return;
     }
@@ -184,7 +182,7 @@ void LastOneWinsMergeStrategy::Merge(
   in_progress_merge_ =
       std::make_unique<LastOneWinsMergeStrategy::LastOneWinsMerger>(
           storage, std::move(head_1), std::move(head_2), std::move(ancestor),
-          [ this, callback = std::move(callback) ](Status status) {
+          [this, callback = std::move(callback)](Status status) {
             in_progress_merge_.reset();
             callback(status);
           });

@@ -39,12 +39,11 @@ void IntegrationTest::TearDown() {
 
 zx::socket IntegrationTest::StreamDataToSocket(std::string data) {
   glue::SocketPair sockets;
-  socket_task_runner_->PostTask(fxl::MakeCopyable([
-    socket = std::move(sockets.socket1), data = std::move(data)
-  ]() mutable {
-    auto writer = new glue::StringSocketWriter();
-    writer->Start(std::move(data), std::move(socket));
-  }));
+  socket_task_runner_->PostTask(fxl::MakeCopyable(
+      [socket = std::move(sockets.socket1), data = std::move(data)]() mutable {
+        auto writer = new glue::StringSocketWriter();
+        writer->Start(std::move(data), std::move(socket));
+      }));
   return std::move(sockets.socket2);
 }
 

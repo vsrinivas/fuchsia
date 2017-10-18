@@ -71,10 +71,9 @@ class TracingLambda {
       TRACE_ASYNC_END(category_, name_, id_);
       TRACE_ASYNC_BEGIN(category_, callback_name_, id_);
     }
-    auto guard = fxl::MakeAutoCall([
-      trace_enabled = trace_enabled_, id = id_, category = category_,
-      callback_name = callback_name_
-    ] {
+    auto guard = fxl::MakeAutoCall([trace_enabled = trace_enabled_, id = id_,
+                                    category = category_,
+                                    callback_name = callback_name_] {
       if (trace_enabled) {
         TRACE_ASYNC_END(category, callback_name, id);
       }

@@ -177,15 +177,15 @@ void GetObjectDigests(
     object_digests->insert(e.node_digest);
     return true;
   };
-  auto on_done = fxl::MakeCopyable([
-    object_digests = std::move(object_digests), callback = std::move(callback)
-  ](Status status) {
-    if (status != Status::OK) {
-      callback(status, std::set<ObjectDigest>());
-      return;
-    }
-    callback(status, std::move(*object_digests));
-  });
+  auto on_done =
+      fxl::MakeCopyable([object_digests = std::move(object_digests),
+                         callback = std::move(callback)](Status status) {
+        if (status != Status::OK) {
+          callback(status, std::set<ObjectDigest>());
+          return;
+        }
+        callback(status, std::move(*object_digests));
+      });
   ForEachEntry(coroutine_service, page_storage, root_digest, "",
                std::move(on_next), std::move(on_done));
 }
@@ -205,16 +205,17 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
     }
     return true;
   };
-  auto on_done =
-      [ callback = std::move(callback), waiter_ ](Status status) mutable {
+  auto on_done = [callback = std::move(callback),
+                  waiter_](Status status) mutable {
     if (status != Status::OK) {
       callback(status);
       return;
     }
-    waiter_->Finalize([callback = std::move(callback)](
-        Status s, std::vector<std::unique_ptr<const Object>> objects) {
-      callback(s);
-    });
+    waiter_->Finalize(
+        [callback = std::move(callback)](
+            Status s, std::vector<std::unique_ptr<const Object>> objects) {
+          callback(s);
+        });
   };
   ForEachEntry(coroutine_service, page_storage, root_digest, "",
                std::move(on_next), std::move(on_done));
@@ -227,14 +228,14 @@ void ForEachEntry(coroutine::CoroutineService* coroutine_service,
                   std::function<bool(EntryAndNodeDigest)> on_next,
                   std::function<void(Status)> on_done) {
   FXL_DCHECK(!root_digest.empty());
-  coroutine_service->StartCoroutine([
-    page_storage, root_digest, min_key = std::move(min_key),
-    on_next = std::move(on_next), on_done = std::move(on_done)
-  ](coroutine::CoroutineHandler * handler) {
-    SynchronousStorage storage(page_storage, handler);
+  coroutine_service->StartCoroutine(
+      [page_storage, root_digest, min_key = std::move(min_key),
+       on_next = std::move(on_next),
+       on_done = std::move(on_done)](coroutine::CoroutineHandler* handler) {
+        SynchronousStorage storage(page_storage, handler);
 
-    on_done(ForEachEntryInternal(&storage, root_digest, min_key, on_next));
-  });
+        on_done(ForEachEntryInternal(&storage, root_digest, min_key, on_next));
+      });
 }
 
 }  // namespace btree

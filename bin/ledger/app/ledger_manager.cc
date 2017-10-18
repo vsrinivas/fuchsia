@@ -118,7 +118,7 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
 
   storage_->GetPageStorage(
       page_id.ToString(),
-      [ this, page_id = page_id.ToString(), container ](
+      [this, page_id = page_id.ToString(), container](
           storage::Status storage_status,
           std::unique_ptr<storage::PageStorage> page_storage) mutable {
         Status status = PageUtils::ConvertStatus(storage_status, Status::OK);

@@ -32,21 +32,21 @@ TestWithPageStorage::~TestWithPageStorage() {}
 std::function<void(storage::Journal*)>
 TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
                                           std::string value) {
-  return [ this, key,
-           value = std::move(value) ](storage::Journal * journal) mutable {
-    storage::Status status;
-    storage::ObjectDigest object_digest;
-    page_storage()->AddObjectFromLocal(
-        storage::DataSource::Create(std::move(value)),
-        callback::Capture(MakeQuitTask(), &status, &object_digest));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(storage::Status::OK, status);
+  return
+      [this, key, value = std::move(value)](storage::Journal* journal) mutable {
+        storage::Status status;
+        storage::ObjectDigest object_digest;
+        page_storage()->AddObjectFromLocal(
+            storage::DataSource::Create(std::move(value)),
+            callback::Capture(MakeQuitTask(), &status, &object_digest));
+        EXPECT_FALSE(RunLoopWithTimeout());
+        EXPECT_EQ(storage::Status::OK, status);
 
-    journal->Put(key, object_digest, storage::KeyPriority::EAGER,
-                 callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(storage::Status::OK, status);
-  };
+        journal->Put(key, object_digest, storage::KeyPriority::EAGER,
+                     callback::Capture(MakeQuitTask(), &status));
+        EXPECT_FALSE(RunLoopWithTimeout());
+        EXPECT_EQ(storage::Status::OK, status);
+      };
 }
 
 std::function<void(storage::Journal*)>

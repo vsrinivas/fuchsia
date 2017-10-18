@@ -228,7 +228,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
   token_provider_ptr.set_connection_error_handler(
-      [ this, name = repository_information.name ] {
+      [this, name = repository_information.name] {
         FXL_LOG(ERROR) << "Lost connection to TokenProvider, "
                        << "shutting down the repository.";
         auto find_repository = repositories_.find(name);
@@ -249,23 +249,25 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), callback);
 
-  auto request = auth_provider_ptr->GetFirebaseUserId(fxl::MakeCopyable([
-    this, repository_information, firebase_config = std::move(firebase_config),
-    auth_provider_ptr, container
-  ](auth_provider::AuthStatus auth_status, std::string user_id) {
-    if (auth_status != auth_provider::AuthStatus::OK) {
-      FXL_LOG(ERROR) << "Failed to retrieve Firebase user ID from the token "
-                     << " manager, shutting down the repository.";
-      container->SetRepository(Status::AUTHENTICATION_ERROR, nullptr);
-      return;
-    }
+  auto request = auth_provider_ptr->GetFirebaseUserId(fxl::MakeCopyable(
+      [this, repository_information,
+       firebase_config = std::move(firebase_config), auth_provider_ptr,
+       container](auth_provider::AuthStatus auth_status, std::string user_id) {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          FXL_LOG(ERROR)
+              << "Failed to retrieve Firebase user ID from the token "
+              << " manager, shutting down the repository.";
+          container->SetRepository(Status::AUTHENTICATION_ERROR, nullptr);
+          return;
+        }
 
-    cloud_sync::UserConfig user_config =
-        GetUserConfig(environment_, firebase_config, user_id,
-                      repository_information.content_path, auth_provider_ptr);
-    CreateRepository(container, repository_information, std::move(user_config));
+        cloud_sync::UserConfig user_config = GetUserConfig(
+            environment_, firebase_config, user_id,
+            repository_information.content_path, auth_provider_ptr);
+        CreateRepository(container, repository_information,
+                         std::move(user_config));
 
-  }));
+      }));
   auth_provider_requests_.emplace(std::move(request));
 }
 
@@ -287,9 +289,9 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     find_repository->second.Detach();
   }
 
-  auto final_callback =
-      [ this, callback,
-        repository_name = repository_information.name ](Status status) {
+  auto final_callback = [this, callback,
+                         repository_name =
+                             repository_information.name](Status status) {
     auto delete_repository = repositories_.find(repository_name);
     if (delete_repository != repositories_.end()) {
       repositories_.erase(delete_repository);
@@ -317,10 +319,10 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
           environment_->main_runner(), environment_->network_service(),
           firebase_config->server_id, firebase_config->api_key,
           std::move(token_provider_ptr)),
-      fxl::MakeCopyable([final_callback =
-                             std::move(final_callback)](bool succeeded) {
-        final_callback(succeeded ? Status::OK : Status::INTERNAL_ERROR);
-      }));
+      fxl::MakeCopyable(
+          [final_callback = std::move(final_callback)](bool succeeded) {
+            final_callback(succeeded ? Status::OK : Status::INTERNAL_ERROR);
+          }));
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(

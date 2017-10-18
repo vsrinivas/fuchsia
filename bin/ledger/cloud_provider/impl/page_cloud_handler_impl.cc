@@ -90,8 +90,8 @@ void PageCloudHandlerImpl::AddObject(const std::string& auth_token,
   // encoding, as it happens to produce valid GCS object names. To be revisited
   // when we redo the encoding in LE-118.
   cloud_storage_->UploadObject(
-      auth_token, firebase::EncodeKey(object_digest),
-      std::move(data), [callback = std::move(callback)](gcs::Status status) {
+      auth_token, firebase::EncodeKey(object_digest), std::move(data),
+      [callback = std::move(callback)](gcs::Status status) {
         callback(ConvertGcsStatus(status));
       });
 }

@@ -33,7 +33,7 @@ std::function<network::URLRequestPtr()> MakeRequest(
   }
 
   return fxl::MakeCopyable(
-      [ url, method, body = std::move(body), stream_request ]() {
+      [url, method, body = std::move(body), stream_request]() {
         network::URLRequestPtr request(network::URLRequest::New());
         request->url = url;
         request->method = method;
@@ -84,7 +84,7 @@ void FirebaseImpl::Get(
     std::function<void(Status status, const rapidjson::Value& value)>
         callback) {
   auto request_callback = [callback = std::move(callback)](
-      Status status, const std::string& response) {
+                              Status status, const std::string& response) {
     if (status != Status::OK) {
       callback(status, rapidjson::Value());
       return;

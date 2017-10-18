@@ -76,7 +76,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
     page_sync->EnableUpload();
   }
   active_page_syncs_.insert(page_sync.get());
-  page_sync->set_on_delete([ this, page_sync = page_sync.get() ]() {
+  page_sync->set_on_delete([this, page_sync = page_sync.get()]() {
     active_page_syncs_.erase(page_sync);
   });
   result->page_sync = std::move(page_sync);

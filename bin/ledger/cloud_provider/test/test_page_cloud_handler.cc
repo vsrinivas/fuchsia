@@ -22,9 +22,10 @@ void TestPageCloudHandler::DeliverRemoteCommits() {
     return;
   }
 
-  task_runner_->PostTask(fxl::MakeCopyable([
-    this, records = std::move(notifications_to_deliver)
-  ]() mutable { watcher->OnRemoteCommits(std::move(records)); }));
+  task_runner_->PostTask(fxl::MakeCopyable(
+      [this, records = std::move(notifications_to_deliver)]() mutable {
+        watcher->OnRemoteCommits(std::move(records));
+      }));
 }
 
 void TestPageCloudHandler::AddCommits(
@@ -37,7 +38,7 @@ void TestPageCloudHandler::AddCommits(
               std::back_inserter(received_commits));
   }
   task_runner_->PostTask(
-      [ status = status_to_return, callback ] { callback(status); });
+      [status = status_to_return, callback] { callback(status); });
 }
 
 void TestPageCloudHandler::WatchCommits(const std::string& auth_token,
@@ -60,9 +61,11 @@ void TestPageCloudHandler::GetCommits(
     std::function<void(Status, std::vector<Record>)> callback) {
   get_commits_calls++;
   get_commits_auth_tokens.push_back(auth_token);
-  task_runner_->PostTask(fxl::MakeCopyable([
-    callback, status = status_to_return, records = std::move(records_to_return)
-  ]() mutable { callback(status, std::move(records)); }));
+  task_runner_->PostTask(
+      fxl::MakeCopyable([callback, status = status_to_return,
+                         records = std::move(records_to_return)]() mutable {
+        callback(status, std::move(records));
+      }));
 }
 
 void TestPageCloudHandler::AddObject(const std::string& auth_token,
@@ -76,9 +79,10 @@ void TestPageCloudHandler::AddObject(const std::string& auth_token,
     return;
   }
   added_objects[object_digest.ToString()] = data_str;
-  task_runner_->PostTask([
-    status = status_to_return, callback = std::move(callback)
-  ] { callback(status); });
+  task_runner_->PostTask(
+      [status = status_to_return, callback = std::move(callback)] {
+        callback(status);
+      });
 }
 
 void TestPageCloudHandler::GetObject(
@@ -89,14 +93,14 @@ void TestPageCloudHandler::GetObject(
   get_object_calls++;
   get_object_auth_tokens.push_back(auth_token);
   if (status_to_return != Status::OK) {
-    task_runner_->PostTask([ status = status_to_return, callback ] {
+    task_runner_->PostTask([status = status_to_return, callback] {
       callback(status, 0, zx::socket());
     });
     return;
   }
 
   task_runner_->PostTask(
-      [ this, object_digest = object_digest.ToString(), callback ]() {
+      [this, object_digest = object_digest.ToString(), callback]() {
         callback(Status::OK, objects_to_return[object_digest].size(),
                  fsl::WriteStringToSocket(objects_to_return[object_digest]));
       });

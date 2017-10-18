@@ -123,9 +123,9 @@ void FillEntries(
   std::string start = token
                           ? convert::ToString(token)
                           : std::max(key_prefix, convert::ToString(key_start));
-  auto on_next = fxl::MakeCopyable([
-    page_storage, &key_prefix, context = context.get(), waiter
-  ](storage::Entry entry) {
+  auto on_next = fxl::MakeCopyable([page_storage, &key_prefix,
+                                    context = context.get(),
+                                    waiter](storage::Entry entry) {
     if (!PageUtils::MatchesPrefix(entry.key, key_prefix)) {
       return false;
     }
@@ -140,7 +140,7 @@ void FillEntries(
     context->entries.push_back(CreateEntry<EntryType>(entry));
     page_storage->GetObject(
         entry.object_digest, storage::PageStorage::Location::LOCAL,
-        [ priority = entry.priority, waiter_callback = waiter->NewCallback() ](
+        [priority = entry.priority, waiter_callback = waiter->NewCallback()](
             storage::Status status,
             std::unique_ptr<const storage::Object> object) {
           if (status == storage::Status::NOT_FOUND &&
@@ -153,9 +153,9 @@ void FillEntries(
     return true;
   });
 
-  auto on_done = fxl::MakeCopyable([
-    waiter, context = std::move(context), callback = std::move(timed_callback)
-  ](storage::Status status) mutable {
+  auto on_done = fxl::MakeCopyable([waiter, context = std::move(context),
+                                    callback = std::move(timed_callback)](
+                                       storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Error while reading.";
       callback(Status::IO_ERROR, nullptr, nullptr);
@@ -163,64 +163,67 @@ void FillEntries(
     }
     std::function<void(storage::Status,
                        std::vector<std::unique_ptr<const storage::Object>>)>
-        result_callback = fxl::MakeCopyable([
-          callback = std::move(callback), context = std::move(context)
-        ](storage::Status status,
-          std::vector<std::unique_ptr<const storage::Object>> results) mutable {
-          if (status != storage::Status::OK) {
-            FXL_LOG(ERROR) << "Error while reading.";
-            callback(Status::IO_ERROR, nullptr, nullptr);
-            return;
-          }
-          FXL_DCHECK(context->entries.size() == results.size());
-          size_t real_size = 0;
-          size_t i = 0;
-          for (; i < results.size(); i++) {
-            fidl::StructPtr<EntryType>& entry_ptr = context->entries[i];
-            if (!results[i]) {
-              size_t entry_size = ComputeEntrySize(entry_ptr);
-              if (real_size + entry_size >
-                  fidl_serialization::kMaxInlineDataSize) {
-                break;
+        result_callback = fxl::MakeCopyable(
+            [callback = std::move(callback), context = std::move(context)](
+                storage::Status status,
+                std::vector<std::unique_ptr<const storage::Object>>
+                    results) mutable {
+              if (status != storage::Status::OK) {
+                FXL_LOG(ERROR) << "Error while reading.";
+                callback(Status::IO_ERROR, nullptr, nullptr);
+                return;
               }
-              real_size += entry_size;
-              // We don't have the object locally, but we decided not to abort.
-              // This means this object is a value of a lazy key and the client
-              // should ask to retrieve it over the network if they need it.
-              // Here, we just leave the value part of the entry null.
-              continue;
-            }
+              FXL_DCHECK(context->entries.size() == results.size());
+              size_t real_size = 0;
+              size_t i = 0;
+              for (; i < results.size(); i++) {
+                fidl::StructPtr<EntryType>& entry_ptr = context->entries[i];
+                if (!results[i]) {
+                  size_t entry_size = ComputeEntrySize(entry_ptr);
+                  if (real_size + entry_size >
+                      fidl_serialization::kMaxInlineDataSize) {
+                    break;
+                  }
+                  real_size += entry_size;
+                  // We don't have the object locally, but we decided not to
+                  // abort. This means this object is a value of a lazy key and
+                  // the client should ask to retrieve it over the network if
+                  // they need it. Here, we just leave the value part of the
+                  // entry null.
+                  continue;
+                }
 
-            storage::Status read_status =
-                FillSingleEntry(*results[i], &entry_ptr);
-            size_t entry_size = ComputeEntrySize(entry_ptr);
-            if (real_size + entry_size >
-                fidl_serialization::kMaxInlineDataSize) {
-              break;
-            }
-            real_size += entry_size;
-            if (read_status != storage::Status::OK) {
-              callback(PageUtils::ConvertStatus(read_status), nullptr, nullptr);
-              return;
-            }
-          }
-          if (i != results.size()) {
-            if (i == 0) {
-              callback(Status::VALUE_TOO_LARGE, nullptr, nullptr);
-              return;
-            }
-            // We had to bail out early because the result would be too big
-            // otherwise.
-            context->next_token = std::move(context->entries[i]->key);
-            context->entries.resize(i);
-          }
-          if (!context->next_token.empty()) {
-            callback(Status::PARTIAL_RESULT, std::move(context->entries),
-                     std::move(context->next_token));
-            return;
-          }
-          callback(Status::OK, std::move(context->entries), nullptr);
-        });
+                storage::Status read_status =
+                    FillSingleEntry(*results[i], &entry_ptr);
+                size_t entry_size = ComputeEntrySize(entry_ptr);
+                if (real_size + entry_size >
+                    fidl_serialization::kMaxInlineDataSize) {
+                  break;
+                }
+                real_size += entry_size;
+                if (read_status != storage::Status::OK) {
+                  callback(PageUtils::ConvertStatus(read_status), nullptr,
+                           nullptr);
+                  return;
+                }
+              }
+              if (i != results.size()) {
+                if (i == 0) {
+                  callback(Status::VALUE_TOO_LARGE, nullptr, nullptr);
+                  return;
+                }
+                // We had to bail out early because the result would be too big
+                // otherwise.
+                context->next_token = std::move(context->entries[i]->key);
+                context->entries.resize(i);
+              }
+              if (!context->next_token.empty()) {
+                callback(Status::PARTIAL_RESULT, std::move(context->entries),
+                         std::move(context->next_token));
+                return;
+              }
+              callback(Status::OK, std::move(context->entries), nullptr);
+            });
     waiter->Finalize(result_callback);
   });
   page_storage->GetCommitContents(*commit, std::move(start), std::move(on_next),
@@ -272,8 +275,8 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get_keys");
 
   auto context = std::make_unique<Context>();
-  auto on_next = fxl::MakeCopyable(
-      [ this, context = context.get() ](storage::Entry entry) {
+  auto on_next =
+      fxl::MakeCopyable([this, context = context.get()](storage::Entry entry) {
         if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
           return false;
         }
@@ -285,16 +288,16 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
         context->keys.push_back(convert::ToArray(entry.key));
         return true;
       });
-  auto on_done = fxl::MakeCopyable([
-    context = std::move(context), callback = std::move(timed_callback)
-  ](storage::Status s) {
-    if (context->next_token.empty()) {
-      callback(Status::OK, std::move(context->keys), nullptr);
-    } else {
-      callback(Status::PARTIAL_RESULT, std::move(context->keys),
-               convert::ToArray(context->next_token));
-    }
-  });
+  auto on_done = fxl::MakeCopyable(
+      [context = std::move(context),
+       callback = std::move(timed_callback)](storage::Status s) {
+        if (context->next_token.empty()) {
+          callback(Status::OK, std::move(context->keys), nullptr);
+        } else {
+          callback(Status::PARTIAL_RESULT, std::move(context->keys),
+                   convert::ToArray(context->next_token));
+        }
+      });
   if (token.is_null()) {
     page_storage_->GetCommitContents(
         *commit_, std::max(convert::ToString(key_start), key_prefix_),
@@ -310,20 +313,21 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
                            const GetCallback& callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get");
 
-  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
-    this, callback = std::move(timed_callback)
-  ](storage::Status status, storage::Entry entry) mutable {
-    if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               zx::vmo());
-      return;
-    }
-    PageUtils::GetPartialReferenceAsBuffer(
-        page_storage_, entry.object_digest, 0u,
-        std::numeric_limits<int64_t>::max(),
-        storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
-        std::move(callback));
-  });
+  page_storage_->GetEntryFromCommit(
+      *commit_, convert::ToString(key),
+      [this, callback = std::move(timed_callback)](
+          storage::Status status, storage::Entry entry) mutable {
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+                   zx::vmo());
+          return;
+        }
+        PageUtils::GetPartialReferenceAsBuffer(
+            page_storage_, entry.object_digest, 0u,
+            std::numeric_limits<int64_t>::max(),
+            storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
+            std::move(callback));
+      });
 }
 
 void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
@@ -331,49 +335,51 @@ void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "snapshot_get_inline");
 
-  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
-    this, callback = std::move(timed_callback)
-  ](storage::Status status, storage::Entry entry) mutable {
-    if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               nullptr);
-      return;
-    }
-    PageUtils::GetReferenceAsStringView(
-        page_storage_, entry.object_digest,
-        storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
-        [callback = std::move(callback)](Status status,
-                                         fxl::StringView data_view) {
-          if (fidl_serialization::GetByteArraySize(data_view.size()) +
-                  // Size of the Status.
-                  fidl_serialization::kEnumSize >
-              fidl_serialization::kMaxInlineDataSize) {
-            callback(Status::VALUE_TOO_LARGE, nullptr);
-            return;
-          }
-          callback(status, convert::ToArray(data_view));
-        });
-  });
+  page_storage_->GetEntryFromCommit(
+      *commit_, convert::ToString(key),
+      [this, callback = std::move(timed_callback)](
+          storage::Status status, storage::Entry entry) mutable {
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+                   nullptr);
+          return;
+        }
+        PageUtils::GetReferenceAsStringView(
+            page_storage_, entry.object_digest,
+            storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
+            [callback = std::move(callback)](Status status,
+                                             fxl::StringView data_view) {
+              if (fidl_serialization::GetByteArraySize(data_view.size()) +
+                      // Size of the Status.
+                      fidl_serialization::kEnumSize >
+                  fidl_serialization::kMaxInlineDataSize) {
+                callback(Status::VALUE_TOO_LARGE, nullptr);
+                return;
+              }
+              callback(status, convert::ToArray(data_view));
+            });
+      });
 }
 
 void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
                              const FetchCallback& callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_fetch");
 
-  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
-    this, callback = std::move(timed_callback)
-  ](storage::Status status, storage::Entry entry) {
-    if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               zx::vmo());
-      return;
-    }
-    PageUtils::GetPartialReferenceAsBuffer(
-        page_storage_, entry.object_digest, 0u,
-        std::numeric_limits<int64_t>::max(),
-        storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
-        callback);
-  });
+  page_storage_->GetEntryFromCommit(
+      *commit_, convert::ToString(key),
+      [this, callback = std::move(timed_callback)](storage::Status status,
+                                                   storage::Entry entry) {
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+                   zx::vmo());
+          return;
+        }
+        PageUtils::GetPartialReferenceAsBuffer(
+            page_storage_, entry.object_digest, 0u,
+            std::numeric_limits<int64_t>::max(),
+            storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
+            callback);
+      });
 }
 
 void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
@@ -383,20 +389,21 @@ void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "snapshot_fetch_partial");
 
-  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
-    this, offset, max_size, callback = std::move(timed_callback)
-  ](storage::Status status, storage::Entry entry) {
-    if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-               zx::vmo());
-      return;
-    }
+  page_storage_->GetEntryFromCommit(
+      *commit_, convert::ToString(key),
+      [this, offset, max_size, callback = std::move(timed_callback)](
+          storage::Status status, storage::Entry entry) {
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+                   zx::vmo());
+          return;
+        }
 
-    PageUtils::GetPartialReferenceAsBuffer(
-        page_storage_, entry.object_digest, offset, max_size,
-        storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
-        callback);
-  });
+        PageUtils::GetPartialReferenceAsBuffer(
+            page_storage_, entry.object_digest, offset, max_size,
+            storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
+            callback);
+      });
 }
 
 }  // namespace ledger

@@ -77,9 +77,7 @@ void FakePageStorage::GetCommit(
   }
 
   message_loop_->task_runner()->PostDelayedTask(
-      [
-        this, commit_id = commit_id.ToString(), callback = std::move(callback)
-      ] {
+      [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
       },
@@ -118,28 +116,30 @@ void FakePageStorage::CommitJournal(
     std::unique_ptr<Journal> journal,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  static_cast<FakeJournal*>(journal.get())->Commit([
-    this, callback = std::move(callback)
-  ](Status status, std::unique_ptr<const storage::Commit> commit) {
-    for (storage::CommitIdView parent_id : commit->GetParentIds()) {
-      auto it = heads_.find(parent_id.ToString());
-      if (it != heads_.end()) {
-        heads_.erase(it);
-      }
-    }
-    heads_.emplace(commit->GetId());
-    if (!drop_commit_notifications_) {
-      for (CommitWatcher* watcher : watchers_) {
-        message_loop_->task_runner()->PostTask(
-            fxl::MakeCopyable([ watcher, commit = commit->Clone() ]() mutable {
-              std::vector<std::unique_ptr<const Commit>> commits;
-              commits.push_back(std::move(commit));
-              watcher->OnNewCommits(std::move(commits), ChangeSource::LOCAL);
-            }));
-      }
-    }
-    callback(status, std::move(commit));
-  });
+  static_cast<FakeJournal*>(journal.get())
+      ->Commit(
+          [this, callback = std::move(callback)](
+              Status status, std::unique_ptr<const storage::Commit> commit) {
+            for (storage::CommitIdView parent_id : commit->GetParentIds()) {
+              auto it = heads_.find(parent_id.ToString());
+              if (it != heads_.end()) {
+                heads_.erase(it);
+              }
+            }
+            heads_.emplace(commit->GetId());
+            if (!drop_commit_notifications_) {
+              for (CommitWatcher* watcher : watchers_) {
+                message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
+                    [watcher, commit = commit->Clone()]() mutable {
+                      std::vector<std::unique_ptr<const Commit>> commits;
+                      commits.push_back(std::move(commit));
+                      watcher->OnNewCommits(std::move(commits),
+                                            ChangeSource::LOCAL);
+                    }));
+              }
+            }
+            callback(status, std::move(commit));
+          });
 }
 
 void FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal,
@@ -165,23 +165,23 @@ void FakePageStorage::AddObjectFromLocal(
     std::function<void(Status, ObjectDigest)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
-  data_source_ptr->Get(fxl::MakeCopyable([
-    this, data_source = std::move(data_source), value = std::move(value),
-    callback = std::move(callback)
-  ](std::unique_ptr<DataSource::DataChunk> chunk,
-    DataSource::Status status) mutable {
-    if (status == DataSource::Status::ERROR) {
-      callback(Status::IO_ERROR, "");
-      return;
-    }
-    auto view = chunk->Get();
-    value->append(view.data(), view.size());
-    if (status == DataSource::Status::DONE) {
-      std::string object_digest = ComputeObjectDigest(*value);
-      objects_[object_digest] = std::move(*value);
-      callback(Status::OK, std::move(object_digest));
-    }
-  }));
+  data_source_ptr->Get(fxl::MakeCopyable(
+      [this, data_source = std::move(data_source), value = std::move(value),
+       callback = std::move(callback)](
+          std::unique_ptr<DataSource::DataChunk> chunk,
+          DataSource::Status status) mutable {
+        if (status == DataSource::Status::ERROR) {
+          callback(Status::IO_ERROR, "");
+          return;
+        }
+        auto view = chunk->Get();
+        value->append(view.data(), view.size());
+        if (status == DataSource::Status::DONE) {
+          std::string object_digest = ComputeObjectDigest(*value);
+          objects_[object_digest] = std::move(*value);
+          callback(Status::OK, std::move(object_digest));
+        }
+      }));
 }
 
 void FakePageStorage::GetObject(
@@ -194,10 +194,8 @@ void FakePageStorage::GetObject(
 void FakePageStorage::GetPiece(
     ObjectDigestView object_digest,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  object_requests_.emplace_back([
-    this, object_digest = object_digest.ToString(),
-    callback = std::move(callback)
-  ] {
+  object_requests_.emplace_back([this, object_digest = object_digest.ToString(),
+                                 callback = std::move(callback)] {
     auto it = objects_.find(object_digest);
     if (it == objects_.end()) {
       callback(Status::NOT_FOUND, nullptr);

@@ -88,13 +88,12 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           std::move(repository_factory_ptr),
           std::move(services_task_runner)) {
   thread_ = fsl::CreateThread(&task_runner_);
-  task_runner_->PostTask(fxl::MakeCopyable([
-    this, request = std::move(repository_factory_request),
-    network_factory = std::move(network_factory)
-  ]() mutable {
-    factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-        task_runner_, std::move(network_factory), std::move(request));
-  }));
+  task_runner_->PostTask(fxl::MakeCopyable(
+      [this, request = std::move(repository_factory_request),
+       network_factory = std::move(network_factory)]() mutable {
+        factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
+            task_runner_, std::move(network_factory), std::move(request));
+      }));
 }
 
 LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
@@ -142,7 +141,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   auto network_factory = [this]() {
     network::NetworkServicePtr result;
     services_task_runner_->PostTask(
-        fxl::MakeCopyable([ this, request = result.NewRequest() ]() mutable {
+        fxl::MakeCopyable([this, request = result.NewRequest()]() mutable {
           network_service_.AddBinding(std::move(request));
         }));
     return result;

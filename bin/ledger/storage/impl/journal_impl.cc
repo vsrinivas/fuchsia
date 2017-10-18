@@ -76,21 +76,21 @@ void JournalImpl::Commit(
           return;
         }
 
-        GetParents([
-          this, callback = std::move(callback)
-        ](Status status,
-          std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
+        GetParents([this, callback = std::move(callback)](
+                       Status status,
+                       std::vector<std::unique_ptr<const storage::Commit>>
+                           parents) mutable {
           if (status != Status::OK) {
             callback(status, nullptr);
             return;
           }
           page_storage_->GetJournalEntries(
               id_,
-              fxl::MakeCopyable([
-                this, parents = std::move(parents),
-                callback = std::move(callback)
-              ](Status status,
-                std::unique_ptr<Iterator<const EntryChange>> changes) mutable {
+              fxl::MakeCopyable([this, parents = std::move(parents),
+                                 callback = std::move(callback)](
+                                    Status status,
+                                    std::unique_ptr<Iterator<const EntryChange>>
+                                        changes) mutable {
                 if (status != Status::OK) {
                   callback(status, nullptr);
                   return;
@@ -113,37 +113,37 @@ void JournalImpl::Put(convert::ExtendedStringView key,
                       ObjectDigestView object_digest,
                       KeyPriority priority,
                       std::function<void(Status)> callback) {
-  serializer_.Serialize<Status>(std::move(callback), [
-    this, key = key.ToString(), object_digest = object_digest.ToString(),
-    priority
-  ](std::function<void(Status)> callback) {
-    if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
-      callback(Status::ILLEGAL_STATE);
-      return;
-    }
-    page_storage_->AddJournalEntry(
-        id_, key, object_digest, priority,
-        [ this, callback = std::move(callback) ](Status s) {
-          if (s != Status::OK) {
-            failed_operation_ = true;
-          }
-          callback(s);
-        });
-  });
+  serializer_.Serialize<Status>(
+      std::move(callback),
+      [this, key = key.ToString(), object_digest = object_digest.ToString(),
+       priority](std::function<void(Status)> callback) {
+        if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
+          callback(Status::ILLEGAL_STATE);
+          return;
+        }
+        page_storage_->AddJournalEntry(
+            id_, key, object_digest, priority,
+            [this, callback = std::move(callback)](Status s) {
+              if (s != Status::OK) {
+                failed_operation_ = true;
+              }
+              callback(s);
+            });
+      });
 }
 
 void JournalImpl::Delete(convert::ExtendedStringView key,
                          std::function<void(Status)> callback) {
   serializer_.Serialize<Status>(
       std::move(callback),
-      [ this, key = key.ToString() ](std::function<void(Status)> callback) {
+      [this, key = key.ToString()](std::function<void(Status)> callback) {
         if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
           callback(Status::ILLEGAL_STATE);
           return;
         }
 
         page_storage_->RemoveJournalEntry(
-            id_, key, [ this, callback = std::move(callback) ](Status s) {
+            id_, key, [this, callback = std::move(callback)](Status s) {
               if (s != Status::OK) {
                 failed_operation_ = true;
               }
@@ -174,10 +174,11 @@ void JournalImpl::CreateCommitFromChanges(
   btree::ApplyChanges(
       coroutine_service_, page_storage_, parents[0]->GetRootDigest(),
       std::move(changes),
-      fxl::MakeCopyable([
-        this, parents = std::move(parents), callback = std::move(callback)
-      ](Status status, ObjectDigest object_digest,
-        std::unordered_set<ObjectDigest> new_nodes) mutable {
+      fxl::MakeCopyable([this, parents = std::move(parents),
+                         callback = std::move(callback)](
+                            Status status, ObjectDigest object_digest,
+                            std::unordered_set<ObjectDigest>
+                                new_nodes) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
           return;
@@ -189,18 +190,23 @@ void JournalImpl::CreateCommitFromChanges(
           // We are in an operation from the serializer: make sure not to sent
           // the rollback operation in the serializer as well, or a deadlock
           // will be created.
-          RollbackInternal(fxl::MakeCopyable([
-            parent = std::move(parents.front()), callback = std::move(callback)
-          ](Status status) mutable { callback(status, std::move(parent)); }));
+          RollbackInternal(fxl::MakeCopyable(
+              [parent = std::move(parents.front()),
+               callback = std::move(callback)](Status status) mutable {
+                callback(status, std::move(parent));
+              }));
           return;
         }
         std::unique_ptr<const storage::Commit> commit =
             CommitImpl::FromContentAndParents(page_storage_, object_digest,
                                               std::move(parents));
-        GetObjectsToSync(fxl::MakeCopyable([
-          this, new_nodes = std::move(new_nodes), commit = std::move(commit),
-          callback = std::move(callback)
-        ](Status status, std::vector<ObjectDigest> objects_to_sync) mutable {
+        GetObjectsToSync(fxl::MakeCopyable([this,
+                                            new_nodes = std::move(new_nodes),
+                                            commit = std::move(commit),
+                                            callback = std::move(callback)](
+                                               Status status,
+                                               std::vector<ObjectDigest>
+                                                   objects_to_sync) mutable {
           if (status != Status::OK) {
             callback(status, nullptr);
             return;
@@ -212,18 +218,19 @@ void JournalImpl::CreateCommitFromChanges(
           objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
                                  new_nodes.end());
           page_storage_->AddCommitFromLocal(
-              commit->Clone(), std::move(objects_to_sync), fxl::MakeCopyable([
-                this, commit = std::move(commit), callback = std::move(callback)
-              ](Status status) mutable {
+              commit->Clone(), std::move(objects_to_sync),
+              fxl::MakeCopyable([this, commit = std::move(commit),
+                                 callback = std::move(callback)](
+                                    Status status) mutable {
                 valid_ = false;
                 if (status != Status::OK) {
                   callback(status, nullptr);
                   return;
                 }
                 page_storage_->RemoveJournal(
-                    id_, fxl::MakeCopyable([
-                      commit = std::move(commit), callback = std::move(callback)
-                    ](Status status) mutable {
+                    id_, fxl::MakeCopyable([commit = std::move(commit),
+                                            callback = std::move(callback)](
+                                               Status status) mutable {
                       if (status != Status::OK) {
                         FXL_LOG(INFO)
                             << "Commit created, but failed to delete journal.";
@@ -239,50 +246,52 @@ void JournalImpl::GetObjectsToSync(
     std::function<void(Status status,
                        std::vector<ObjectDigest> objects_to_sync)> callback) {
   page_storage_->GetJournalEntries(
-      id_, fxl::MakeCopyable([ this, callback = std::move(callback) ](
-               Status s, std::unique_ptr<Iterator<const EntryChange>> entries) {
-        if (s != Status::OK) {
-          callback(s, {});
-          return;
-        }
-        // Compute the key-value pairs added in this journal.
-        std::map<std::string, ObjectDigest> key_values;
-        while (entries->Valid()) {
-          const Entry& entry = (*entries)->entry;
-          if ((*entries)->deleted) {
-            key_values.erase(entry.key);
-          } else {
-            key_values[entry.key] = entry.object_digest;
-          }
-          entries->Next();
-        }
-        auto waiter = callback::Waiter<Status, bool>::Create(Status::OK);
-        for (const auto& key_value : key_values) {
-          page_storage_->ObjectIsUntracked(key_value.second,
-                                           waiter->NewCallback());
-        }
-        waiter->Finalize([
-          key_values = std::move(key_values), callback = std::move(callback)
-        ](Status s, std::vector<bool> is_untracked) {
-          if (s != Status::OK) {
-            callback(s, {});
-            return;
-          }
-          // Compute the set of values.
-          std::set<ObjectDigest> result_set;
-          size_t i = 0;
-          for (const auto& key_value : key_values) {
-            // Only untracked objects should be synced.
-            if (is_untracked[i++]) {
-              result_set.insert(key_value.second);
+      id_,
+      fxl::MakeCopyable(
+          [this, callback = std::move(callback)](
+              Status s, std::unique_ptr<Iterator<const EntryChange>> entries) {
+            if (s != Status::OK) {
+              callback(s, {});
+              return;
             }
-          }
-          std::vector<ObjectDigest> objects_to_sync;
-          std::copy(result_set.begin(), result_set.end(),
-                    std::back_inserter(objects_to_sync));
-          callback(Status::OK, std::move(objects_to_sync));
-        });
-      }));
+            // Compute the key-value pairs added in this journal.
+            std::map<std::string, ObjectDigest> key_values;
+            while (entries->Valid()) {
+              const Entry& entry = (*entries)->entry;
+              if ((*entries)->deleted) {
+                key_values.erase(entry.key);
+              } else {
+                key_values[entry.key] = entry.object_digest;
+              }
+              entries->Next();
+            }
+            auto waiter = callback::Waiter<Status, bool>::Create(Status::OK);
+            for (const auto& key_value : key_values) {
+              page_storage_->ObjectIsUntracked(key_value.second,
+                                               waiter->NewCallback());
+            }
+            waiter->Finalize([key_values = std::move(key_values),
+                              callback = std::move(callback)](
+                                 Status s, std::vector<bool> is_untracked) {
+              if (s != Status::OK) {
+                callback(s, {});
+                return;
+              }
+              // Compute the set of values.
+              std::set<ObjectDigest> result_set;
+              size_t i = 0;
+              for (const auto& key_value : key_values) {
+                // Only untracked objects should be synced.
+                if (is_untracked[i++]) {
+                  result_set.insert(key_value.second);
+                }
+              }
+              std::vector<ObjectDigest> objects_to_sync;
+              std::copy(result_set.begin(), result_set.end(),
+                        std::back_inserter(objects_to_sync));
+              callback(Status::OK, std::move(objects_to_sync));
+            });
+          }));
 }
 
 void JournalImpl::RollbackInternal(std::function<void(Status)> callback) {
@@ -291,7 +300,7 @@ void JournalImpl::RollbackInternal(std::function<void(Status)> callback) {
     return;
   }
   page_storage_->RemoveJournal(
-      id_, [ this, callback = std::move(callback) ](Status s) {
+      id_, [this, callback = std::move(callback)](Status s) {
         if (s == Status::OK) {
           valid_ = false;
         }

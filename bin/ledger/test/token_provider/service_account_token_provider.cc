@@ -223,12 +223,12 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
   in_progress_callbacks_[firebase_api_key].push_back(callback);
 
   in_progress_requests_.emplace(network_service_->Request(
-      [
-        this, firebase_api_key = firebase_api_key.get(),
-        custom_token = std::move(custom_token)
-      ] { return GetIdentityRequest(firebase_api_key, custom_token); },
-      [ this, firebase_api_key =
-                  firebase_api_key.get() ](network::URLResponsePtr response) {
+      [this, firebase_api_key = firebase_api_key.get(),
+       custom_token = std::move(custom_token)] {
+        return GetIdentityRequest(firebase_api_key, custom_token);
+      },
+      [this, firebase_api_key =
+                 firebase_api_key.get()](network::URLResponsePtr response) {
         HandleIdentityResponse(firebase_api_key, std::move(response));
       }));
 }

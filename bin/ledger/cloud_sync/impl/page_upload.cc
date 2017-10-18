@@ -102,9 +102,10 @@ void PageUpload::VerifyUnsyncedCommits(
   }
 
   storage_->GetHeadCommitIds(callback::MakeScoped(
-      weak_ptr_factory_.GetWeakPtr(), fxl::MakeCopyable([
-        this, commits = std::move(commits)
-      ](storage::Status status, std::vector<storage::CommitId> heads) mutable {
+      weak_ptr_factory_.GetWeakPtr(),
+      fxl::MakeCopyable([this, commits = std::move(commits)](
+                            storage::Status status,
+                            std::vector<storage::CommitId> heads) mutable {
         if (status != storage::Status::OK) {
           HandleError("Failed to retrieve the current heads");
           return;

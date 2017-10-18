@@ -29,7 +29,7 @@ fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
   }
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken([callback = cancellable->WrapCallback(callback)](
-      auto status, auto token) { callback(status, token->id_token); });
+               auto status, auto token) { callback(status, token->id_token); });
   return cancellable;
 }
 
@@ -37,7 +37,7 @@ fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
     std::function<void(auth_provider::AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken([callback = cancellable->WrapCallback(callback)](
-      auto status, auto token) { callback(status, token->local_id); });
+               auto status, auto token) { callback(status, token->local_id); });
   return cancellable;
 }
 
@@ -45,7 +45,7 @@ void AuthProviderImpl::GetToken(
     std::function<void(auth_provider::AuthStatus,
                        modular::auth::FirebaseTokenPtr)> callback) {
   token_provider_->GetFirebaseAuthToken(
-      api_key_, [ this, callback = std::move(callback) ](
+      api_key_, [this, callback = std::move(callback)](
                     modular::auth::FirebaseTokenPtr token,
                     modular::auth::AuthErrPtr error) mutable {
         if (!token || error->status != modular::auth::Status::OK) {
@@ -62,7 +62,7 @@ void AuthProviderImpl::GetToken(
                 << error->status << ", '" << error->message << "', retrying.";
           }
           task_runner_.PostDelayedTask(
-              [ this, callback = std::move(callback) ]() mutable {
+              [this, callback = std::move(callback)]() mutable {
                 GetToken(std::move(callback));
               },
               backoff_->GetNext());

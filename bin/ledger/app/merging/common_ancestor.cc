@@ -98,15 +98,15 @@ void FindCommonAncestor(
     std::unique_ptr<const storage::Commit> head2,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  coroutine_service->StartCoroutine(fxl::MakeCopyable([
-    storage, head1 = std::move(head1), head2 = std::move(head2),
-    callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
-    std::unique_ptr<const storage::Commit> result;
-    storage::Status status = FindCommonAncestorSync(
-        handler, storage, std::move(head1), std::move(head2), &result);
-    callback(PageUtils::ConvertStatus(status), std::move(result));
-  }));
+  coroutine_service->StartCoroutine(fxl::MakeCopyable(
+      [storage, head1 = std::move(head1), head2 = std::move(head2),
+       callback =
+           std::move(callback)](coroutine::CoroutineHandler* handler) mutable {
+        std::unique_ptr<const storage::Commit> result;
+        storage::Status status = FindCommonAncestorSync(
+            handler, storage, std::move(head1), std::move(head2), &result);
+        callback(PageUtils::ConvertStatus(status), std::move(result));
+      }));
 }
 
 }  // namespace ledger

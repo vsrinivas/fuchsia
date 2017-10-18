@@ -45,9 +45,11 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
 
   modular::auth::TokenProviderPtr token_provider;
   EXPECT_TRUE(callback::RunSynchronously(
-      services_task_runner_, fxl::MakeCopyable([
-        this, request = token_provider.NewRequest()
-      ]() mutable { token_provider_impl_.AddBinding(std::move(request)); }),
+      services_task_runner_,
+      fxl::MakeCopyable(
+          [this, request = token_provider.NewRequest()]() mutable {
+            token_provider_impl_.AddBinding(std::move(request));
+          }),
       kTimeout));
 
   ledger::Status status;
@@ -63,9 +65,11 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
 void LedgerAppInstanceFactory::LedgerAppInstance::EraseTestLedgerRepository() {
   modular::auth::TokenProviderPtr token_provider;
   EXPECT_TRUE(callback::RunSynchronously(
-      services_task_runner_, fxl::MakeCopyable([
-        this, request = token_provider.NewRequest()
-      ]() mutable { token_provider_impl_.AddBinding(std::move(request)); }),
+      services_task_runner_,
+      fxl::MakeCopyable(
+          [this, request = token_provider.NewRequest()]() mutable {
+            token_provider_impl_.AddBinding(std::move(request));
+          }),
       kTimeout));
 
   ledger::Status status;

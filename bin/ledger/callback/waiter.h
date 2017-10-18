@@ -36,10 +36,8 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
       return [](Args...) {};
     }
     ++pending_callbacks_;
-    return [
-      waiter_ref = fxl::RefPtr<BaseWaiter<A, R, Args...>>(this),
-      token = accumulator_.PrepareCall()
-    ](Args && ... args) mutable {
+    return [waiter_ref = fxl::RefPtr<BaseWaiter<A, R, Args...>>(this),
+            token = accumulator_.PrepareCall()](Args&&... args) mutable {
       waiter_ref->ReturnResult(std::move(token), std::forward<Args>(args)...);
     };
   }
@@ -199,7 +197,7 @@ class Waiter : public internal::BaseWaiter<internal::ResultAccumulator<S, T>,
                          std::pair<S, std::vector<T>>, S,
                          T>::Finalize([callback =
                                            std::move(callback)](
-        std::pair<S, std::vector<T>> result) {
+                                          std::pair<S, std::vector<T>> result) {
       callback(result.first, std::move(result.second));
     });
   }
@@ -259,7 +257,7 @@ class Promise : public internal::BaseWaiter<internal::PromiseAccumulator<S, V>,
     internal::BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<S, V>, S,
                          V>::Finalize([callback =
                                            std::move(callback)](
-        std::pair<S, V> result) {
+                                          std::pair<S, V> result) {
       callback(result.first, std::move(result.second));
     });
   }
@@ -283,10 +281,8 @@ class CompletionWaiter
   }
 
   void Finalize(std::function<void()> callback) {
-    internal::BaseWaiter<internal::CompletionAccumulator,
-                         bool>::Finalize([callback =
-                                              std::move(callback)](
-        bool result) { callback(); });
+    internal::BaseWaiter<internal::CompletionAccumulator, bool>::Finalize(
+        [callback = std::move(callback)](bool result) { callback(); });
   }
 
  private:

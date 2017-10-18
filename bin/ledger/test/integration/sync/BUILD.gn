@@ -24,9 +24,9 @@ source_set("sync") {
   ]
 
   public_deps = [
-  "//third_party/gtest",
-  "//peridot/bin/ledger/test:ledger_instance_factory",
+    "//peridot/bin/ledger/test:ledger_instance_factory",
     "//peridot/bin/ledger/test:lib",
+    "//third_party/gtest",
     "//zircon/system/ulib/trace-provider",
   ]
 

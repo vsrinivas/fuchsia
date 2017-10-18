@@ -45,7 +45,7 @@ void CustomMergeStrategy::Merge(storage::PageStorage* storage,
   in_progress_merge_ = std::make_unique<ConflictResolverClient>(
       storage, page_manager, conflict_resolver_.get(), std::move(head_2),
       std::move(head_1), std::move(ancestor),
-      [ this, callback = std::move(callback) ](Status status) {
+      [this, callback = std::move(callback)](Status status) {
         in_progress_merge_.reset();
         callback(status);
       });
