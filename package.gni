@@ -157,6 +157,7 @@ template("package") {
     assert(pkg.drivers == [] || !pkg.archive)
 
     mkfs_target = target_name + "_mkfs"
+    extract_buildids_target = target_name + "_extract_buildids"
 
     # This action assembles an image containing all binaries, tests, drivers,
     # libraries, and resources defined in the package.
@@ -300,11 +301,46 @@ template("package") {
         args = [ rebase_path(output) ]
       }
     }
+
+    # This action extracts build ids from all binaries and libraries in the
+    # package and writes them into a ids.txt file in a predictable location.
+    action(extract_buildids_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+
+      id_file = "$pkg_out_dir/ids.txt"
+
+      script = "//packages/gn/read_build_ids.py"
+      outputs = [
+        id_file,
+      ]
+
+      args = [ rebase_path(id_file) ]
+      foreach(binary, pkg.binaries) {
+        args += [ rebase_path("$root_build_dir/${binary.name}") ]
+      }
+      foreach(test, pkg.tests) {
+        args += [ rebase_path("$root_build_dir/${test.name}") ]
+      }
+      foreach(driver, pkg.drivers) {
+        driver_path = rebase_path("$root_build_dir/${driver.name}")
+        args += [ rebase_path(driver_path) ]
+      }
+      foreach(library, pkg.libraries) {
+        library_path = "$shared_toolchain_out_dir/${library.name}"
+        args += [ rebase_path(library_path) ]
+      }
+    }
+
     group(target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
       deps = [
         ":" + mkfs_target,
+        ":" + extract_buildids_target,
       ]
     }
   } else {
