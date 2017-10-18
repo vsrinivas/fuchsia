@@ -139,7 +139,7 @@ def colorize(line_incoming):
       if k not in line:
         continue
       line = color(line, v)
-      break
+      return line
 
   if any(k in line for k in COLOR_WORDS.keys()):
     rep = {}
