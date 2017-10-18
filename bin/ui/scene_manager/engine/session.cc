@@ -125,6 +125,8 @@ bool Session::ApplyOp(const scenic::OpPtr& op) {
       return ApplySetLayerStackOp(op->get_set_layer_stack());
     case scenic::Op::Tag::SET_RENDERER:
       return ApplySetRendererOp(op->get_set_renderer());
+    case scenic::Op::Tag::SET_RENDERER_PARAM:
+      return ApplySetRendererParamOp(op->get_set_renderer_param());
     case scenic::Op::Tag::SET_EVENT_MASK:
       return ApplySetEventMaskOp(op->get_set_event_mask());
     case scenic::Op::Tag::SET_LABEL:
@@ -463,6 +465,21 @@ bool Session::ApplySetRendererOp(const scenic::SetRendererOpPtr& op) {
 
   if (layer && renderer) {
     return layer->SetRenderer(std::move(renderer));
+  }
+  return false;
+}
+
+bool Session::ApplySetRendererParamOp(const scenic::SetRendererParamOpPtr& op) {
+  auto renderer = resources_.FindResource<Renderer>(op->renderer_id);
+  if (renderer) {
+    switch (op->param->which()) {
+      case scenic::RendererParam::Tag::SHADOW_TECHNIQUE:
+        return renderer->SetShadowTechnique(op->param->get_shadow_technique());
+      case scenic::RendererParam::Tag::__UNKNOWN__:
+        error_reporter_->ERROR()
+            << "scene_manager::Session::ApplySetRendererParamOp(): "
+               "unknown param.";
+    }
   }
   return false;
 }

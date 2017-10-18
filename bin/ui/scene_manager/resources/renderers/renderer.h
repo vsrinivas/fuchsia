@@ -6,8 +6,8 @@
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 #include "garnet/bin/ui/scene_manager/resources/resource_visitor.h"
-
 #include "lib/escher/scene/object.h"
+#include "lib/ui/scenic/fidl/renderer.fidl.h"
 
 namespace scene_manager {
 
@@ -37,6 +37,10 @@ class Renderer : public Resource {
   // Nothing will be rendered unless a camera has been set, and the camera
   // points at a scene.
   void SetCamera(CameraPtr camera);
+
+  // Set the shadow algorithm that the |Renderer| should use when lighting
+  // the scene.
+  bool SetShadowTechnique(scenic::ShadowTechnique technique);
 
   // Set whether clipping is disabled; false by default.
   void DisableClipping(bool disable_clipping);
@@ -83,6 +87,8 @@ class Renderer : public Resource {
 
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
+  scenic::ShadowTechnique shadow_technique_ =
+      scenic::ShadowTechnique::SCREEN_SPACE;
   bool disable_clipping_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

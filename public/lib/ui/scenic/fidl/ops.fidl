@@ -5,6 +5,7 @@
 module scenic;
 
 import "lib/ui/scenic/fidl/events.fidl";
+import "lib/ui/scenic/fidl/renderer.fidl";
 import "lib/ui/scenic/fidl/resources.fidl";
 
 // Operations that are used to modify the state of a |Session|.
@@ -48,10 +49,11 @@ union Op {
   // Mesh operations.
   BindMeshBuffersOp bind_mesh_buffers;
 
-  // Layer operations.
+  // Layer and renderer operations.
   AddLayerOp add_layer;
   SetLayerStackOp set_layer_stack;
   SetRendererOp set_renderer;
+  SetRendererParamOp set_renderer_param;
 
   // Events.
   SetEventMaskOp set_event_mask;
@@ -476,6 +478,15 @@ struct SetLayerStackOp {
 struct SetRendererOp {
   uint32 layer_id;
   uint32 renderer_id;
+};
+
+// Sets a parameter that affects how a renderer renders a scene.
+//
+// |renderer_id| refs the Renderer that is being modified.
+// |param| describes the parameter that should be set, and to what.
+struct SetRendererParamOp {
+  uint32 renderer_id;
+  RendererParam param;
 };
 
 // Sets which events a resource should deliver to the session listener.

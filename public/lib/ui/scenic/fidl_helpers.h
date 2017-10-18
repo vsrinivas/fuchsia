@@ -163,6 +163,8 @@ scenic::OpPtr NewAddLayerOp(uint32_t layer_stack_id, uint32_t layer_id);
 scenic::OpPtr NewSetLayerStackOp(uint32_t compositor_id,
                                  uint32_t layer_stack_id);
 scenic::OpPtr NewSetRendererOp(uint32_t layer_id, uint32_t renderer_id);
+scenic::OpPtr NewSetRendererParamOp(uint32_t renderer_id,
+                                    scenic::RendererParamPtr param);
 scenic::OpPtr NewSetSizeOp(uint32_t node_id, const float size[2]);
 
 // Event operations.

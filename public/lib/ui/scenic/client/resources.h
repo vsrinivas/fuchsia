@@ -400,6 +400,8 @@ class Renderer final : public Resource {
   void SetCamera(const Camera& camera) { SetCamera(camera.id()); }
   void SetCamera(uint32_t camera_id);
 
+  void SetParam(scenic::RendererParamPtr param);
+
   // Set whether clipping is disabled for this renderer.
   // NOTE: disabling clipping only has a visual effect; hit-testing is not
   // affected.

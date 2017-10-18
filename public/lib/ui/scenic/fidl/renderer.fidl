@@ -1,0 +1,24 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module scenic;
+
+// These are all of the types of parameters that can be set to configure a
+// |Renderer|.
+union RendererParam {
+  ShadowTechnique shadow_technique;
+};
+
+// Represents the shadow algorithm that the |Renderer| should use when lighting
+// the scene.
+enum ShadowTechnique {
+  // No shadows.
+  UNSHADOWED = 0,
+  // Default.  Screen-space, depth-buffer based shadows; SSDO-ish.
+  SCREEN_SPACE,
+  // Basic shadow map.
+  SHADOW_MAP,
+  // Moment shadow map (see http://momentsingraphics.de).
+  MOMENT_SHADOW_MAP,
+};

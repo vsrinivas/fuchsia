@@ -709,6 +709,17 @@ scenic::OpPtr NewSetRendererOp(uint32_t layer_id, uint32_t renderer_id) {
   return op;
 }
 
+scenic::OpPtr NewSetRendererParamOp(uint32_t renderer_id,
+                                    scenic::RendererParamPtr param) {
+  auto param_op = scenic::SetRendererParamOp::New();
+  param_op->renderer_id = renderer_id;
+  param_op->param = std::move(param);
+
+  auto op = scenic::Op::New();
+  op->set_set_renderer_param(std::move(param_op));
+  return op;
+}
+
 scenic::OpPtr NewSetSizeOp(uint32_t node_id, const float size[2]) {
   auto set_size = scenic::SetSizeOp::New();
   set_size->id = node_id;

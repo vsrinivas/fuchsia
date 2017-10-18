@@ -142,6 +142,7 @@ struct Camera {
 // A Renderer renders a Scene via a Camera.  The following operations may be
 // applied to a Renderer (see ops.fidl):
 //   - SetCamera
+//   - SetRendererParam
 struct Renderer {
 };
 

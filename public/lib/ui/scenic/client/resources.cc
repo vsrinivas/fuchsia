@@ -350,6 +350,10 @@ void Renderer::SetCamera(uint32_t camera_id) {
   session()->Enqueue(NewSetCameraOp(id(), camera_id));
 }
 
+void Renderer::SetParam(scenic::RendererParamPtr param) {
+  session()->Enqueue(NewSetRendererParamOp(id(), std::move(param)));
+}
+
 void Renderer::SetDisableClipping(bool disable_clipping) {
   session()->Enqueue(NewSetDisableClippingOp(id(), disable_clipping));
 }

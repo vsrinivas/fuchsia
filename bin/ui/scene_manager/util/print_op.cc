@@ -8,7 +8,9 @@ namespace scene_manager {
 
 using scenic::Op;
 using scenic::OpPtr;
+using scenic::RendererParam;
 using scenic::Resource;
+using scenic::ShadowTechnique;
 using scenic::Value;
 
 std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
@@ -67,6 +69,8 @@ std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
       return stream << "SET_LAYER_STACK";
     case Op::Tag::SET_RENDERER:
       return stream << "SET_RENDERER";
+    case Op::Tag::SET_RENDERER_PARAM:
+      return stream << op->get_set_renderer_param();
     case Op::Tag::SET_EVENT_MASK:
       return stream << "SET_EVENT_MASK";
     case Op::Tag::SET_LABEL:
@@ -146,6 +150,34 @@ std::ostream& operator<<(std::ostream& stream,
       stream << "Variable";
       break;
     case Resource::Tag::__UNKNOWN__:
+      stream << "__UNKNOWN__";
+      break;
+  }
+  return stream << ")";
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const scenic::SetRendererParamOpPtr& op) {
+  stream << "SetRendererParamOp(id=" << op->renderer_id << " ";
+  switch (op->param->which()) {
+    case RendererParam::Tag::SHADOW_TECHNIQUE:
+      stream << "shadow_technique=";
+      switch (op->param->get_shadow_technique()) {
+        case ShadowTechnique::UNSHADOWED:
+          stream << "UNSHADOWED";
+          break;
+        case ShadowTechnique::SCREEN_SPACE:
+          stream << "SCREEN_SPACE";
+          break;
+        case ShadowTechnique::SHADOW_MAP:
+          stream << "SHADOW_MAP";
+          break;
+        case ShadowTechnique::MOMENT_SHADOW_MAP:
+          stream << "MOMENT_SHADOW_MAP";
+          break;
+      }
+      break;
+    case RendererParam::Tag::__UNKNOWN__:
       stream << "__UNKNOWN__";
       break;
   }

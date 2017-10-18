@@ -12,6 +12,8 @@ namespace scene_manager {
 std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op);
 std::ostream& operator<<(std::ostream& stream,
                          const scenic::CreateResourceOpPtr& op);
+std::ostream& operator<<(std::ostream& stream,
+                         const scenic::SetRendererParamOpPtr& op);
 std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag);
 
 }  // namespace scene_manager

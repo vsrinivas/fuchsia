@@ -145,6 +145,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyAddLayerOp(const scenic::AddLayerOpPtr& op);
   bool ApplySetLayerStackOp(const scenic::SetLayerStackOpPtr& op);
   bool ApplySetRendererOp(const scenic::SetRendererOpPtr& op);
+  bool ApplySetRendererParamOp(const scenic::SetRendererParamOpPtr& op);
   bool ApplySetEventMaskOp(const scenic::SetEventMaskOpPtr& op);
   bool ApplySetLabelOp(const scenic::SetLabelOpPtr& op);
   bool ApplySetDisableClippingOp(const scenic::SetDisableClippingOpPtr& op);
