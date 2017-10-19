@@ -893,8 +893,20 @@ mod tests {
     fn cprng() {
         let mut buffer = [0; 20];
         assert_eq!(cprng_draw(&mut buffer), Ok(20));
-        assert_ne!(buffer[0], 0);
-        assert_ne!(buffer[19], 0);
+        let mut first_zero = 0;
+        let mut last_zero = 0;
+        for _ in 0..30 {
+            let mut buffer = [0; 20];
+            assert_eq!(cprng_draw(&mut buffer), Ok(20));
+            if buffer[0] == 0 {
+                first_zero += 1;
+            }
+            if buffer[19] == 0 {
+                last_zero += 1;
+            }
+        }
+        assert_ne!(first_zero, 30);
+        assert_ne!(last_zero, 30);
     }
 
     #[test]
