@@ -51,6 +51,8 @@ class Settings {
         "user_runner", "file:///system/apps/user_runner");
     user_shell.url = command_line.GetOptionValueWithDefault(
         "user_shell", "file:///system/apps/armadillo_user_shell");
+    account_provider.url = command_line.GetOptionValueWithDefault(
+        "account_provider", "file:///system/apps/oauth_token_manager");
 
     ignore_monitor = command_line.HasOption("ignore_monitor");
     no_minfs = command_line.HasOption("no_minfs");
@@ -91,6 +93,7 @@ class Settings {
       --user_shell_args=SHELL_ARGS
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
+      --account_provider=ACCOUNT_PROVIDER
       --ignore_monitor
       --no_minfs
       --test
@@ -106,13 +109,17 @@ class Settings {
     STORY_SHELL: URL of the story shell to run.
                 Defaults to 'file:///system/apps/mondrian'.
                 For integration testing use "dev_story_shell".
-    SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
+    SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.
+    ACCOUNT_PROVIDER: URL of the account provider to use.
+                Defaults to 'file:///system/apps/oauth_token_manager'.
+                For integration tests use ""dev_token_manager".)USAGE";
   }
 
   AppConfig device_shell;
   AppConfig story_shell;
   AppConfig user_runner;
   AppConfig user_shell;
+  AppConfig account_provider;
 
   std::string test_name;
   bool ignore_monitor;
@@ -264,7 +271,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
     // 3. Start OAuth Token Manager App.
     AppConfigPtr token_manager_config = AppConfig::New();
-    token_manager_config->url = "file:///system/apps/oauth_token_manager";
+    token_manager_config->url = settings_.account_provider.url;
     token_manager_ = std::make_unique<AppClient<auth::AccountProvider>>(
         app_context_->launcher().get(), std::move(token_manager_config),
         "/data/modular/ACCOUNT_MANAGER");

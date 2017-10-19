@@ -6,7 +6,7 @@
     },
     {
       "name":"user_shell",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_user_shell --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=test_user_shell --story_shell=dev_story_shell",
       "copy":{
         "/system/apps":[
           "test_user_shell"
@@ -15,7 +15,7 @@
     },
     {
       "name":"link_data",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_link_data --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=test_link_data --story_shell=dev_story_shell",
       "copy":{
         "/system/apps":[
           "test_link_data"
@@ -24,7 +24,7 @@
     },
     {
       "name":"link_update",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_link_update --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=test_link_update --story_shell=dev_story_shell",
       "copy":{
         "/system/apps":[
           "test_link_update"
@@ -33,7 +33,7 @@
     },
     {
       "name":"story_importance",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_story_importance --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=test_story_importance --story_shell=dev_story_shell",
       "copy":{
         "/system/apps":[
           "test_story_importance"
@@ -42,7 +42,7 @@
     },
     {
       "name":"last_focus_time",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_last_focus_time --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=test_last_focus_time --story_shell=dev_story_shell",
       "copy":{
         "/system/apps":[
           "test_last_focus_time"
@@ -51,7 +51,7 @@
     },
     {
       "name":"parent_child",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
       "copy":{
         "/system/apps/modular_tests":[
           "parent_module",
@@ -61,7 +61,7 @@
     },
     {
       "name":"component_context",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
       "copy":{
         "/system/apps/modular_tests":[
           "component_context_test",
@@ -73,7 +73,7 @@
     },
     {
       "name":"context_link",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=/system/apps/modular_tests/context_link_user_shell --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/apps/modular_tests/context_link_user_shell --story_shell=dev_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "context_link_user_shell",
@@ -83,7 +83,7 @@
     },
     {
       "name":"triggers",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test --story_shell=dev_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "agent_trigger_test",
@@ -93,7 +93,7 @@
     },
     {
       "name":"queue_persistence",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/queue_persistence_test_module --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/queue_persistence_test_module --story_shell=dev_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "queue_persistence_test_agent",
@@ -103,7 +103,7 @@
     },
     {
       "name":"remote",
-      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/remote_invoker_test --story_shell=dev_story_shell",
+      "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/remote_invoker_test --story_shell=dev_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "remote_invoker_test"
