@@ -156,7 +156,7 @@ template("dart_package") {
     invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
     invocation_target_name = "${target_name}_invocation"
 
-    dart_sdk_dir = "//dart/tools/sdks/$host_os/dart-sdk"
+    dart_sdk_dir = "//third_party/dart/tools/sdks/$host_os/dart-sdk"
     dart_analyzer_binary = "$dart_sdk_dir/bin/dartanalyzer"
 
     action(invocation_target_name) {

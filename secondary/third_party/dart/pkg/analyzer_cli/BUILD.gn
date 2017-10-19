@@ -10,9 +10,9 @@ dart_package("analyzer_cli") {
   disable_analysis = true
 
   deps = [
-    "//dart/pkg/analyzer",
-    "//dart/pkg/telemetry",
-    "//dart/third_party/pkg/linter",
+    "//third_party/dart/pkg/analyzer",
+    "//third_party/dart/pkg/telemetry",
+    "//third_party/dart/third_party/pkg/linter",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/bazel_worker",
     "//third_party/dart-pkg/pub/cli_util",

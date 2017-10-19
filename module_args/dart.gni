@@ -3,4 +3,4 @@
 # found in the LICENSE file.
 
 # This variable should point to the Dart SDK.
-dart_sdk_root = "///dart/sdk"
+dart_sdk_root = "///third_party/dart/sdk"

@@ -51,7 +51,7 @@ template("dart_tool") {
     }
   }
 
-  dart_sdk_dir = "//dart/tools/sdks/$host_os/dart-sdk"
+  dart_sdk_dir = "//third_party/dart/tools/sdks/$host_os/dart-sdk"
   dart_binary = "$dart_sdk_dir/bin/dart"
 
   snapshot_path = "$target_gen_dir/${target_name}.snapshot"
