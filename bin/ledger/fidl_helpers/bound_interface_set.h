@@ -24,12 +24,8 @@ class BoundInterfaceSet : public SetBoundable<Interface> {
 
   void CloseAllBindings() { binding_.CloseAllBindings(); }
 
-  void set_on_empty(const fxl::Closure& on_empty_callback) {
-    binding_.set_connection_error_handler([this, on_empty_callback]() {
-      binding_.Close();
-      if (on_empty_callback)
-        on_empty_callback();
-    });
+  void set_on_empty(fxl::Closure on_empty) {
+    binding_.set_on_empty_set_handler(std::move(on_empty));
   }
 
   bool is_bound() { return binding_.is_bound(); }
