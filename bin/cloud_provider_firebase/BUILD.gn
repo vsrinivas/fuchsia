@@ -58,7 +58,6 @@ executable("cloud_provider_firebase_unittests") {
   sources = [
     "cloud_provider_impl_unittest.cc",
     "device_set_impl_unittest.cc",
-    "factory_impl_unittest.cc",
     "page_cloud_impl_unittest.cc",
   ]
 

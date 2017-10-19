@@ -21,6 +21,10 @@ AuthProviderImpl::AuthProviderImpl(
       backoff_(std::move(backoff)),
       task_runner_(std::move(task_runner)) {}
 
+void AuthProviderImpl::set_connection_error_handler(fxl::Closure on_error) {
+  token_provider_.set_connection_error_handler(std::move(on_error));
+}
+
 fxl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
     std::function<void(auth_provider::AuthStatus, std::string)> callback) {
   if (api_key_.empty()) {

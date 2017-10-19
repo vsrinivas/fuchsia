@@ -29,7 +29,6 @@ class App : public modular::Lifecycle {
             }),
         factory_impl_(loop_.task_runner(), &network_service_) {
     FXL_DCHECK(application_context_);
-    factory_impl_.set_on_empty([this] { loop_.PostQuitTask(); });
   }
 
   void Run() {

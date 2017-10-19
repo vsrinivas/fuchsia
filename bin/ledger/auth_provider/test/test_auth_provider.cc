@@ -15,6 +15,10 @@ namespace test {
 TestAuthProvider::TestAuthProvider(fxl::RefPtr<fxl::TaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {}
 
+void TestAuthProvider::set_connection_error_handler(fxl::Closure on_error) {
+  error_handler_ = on_error;
+}
+
 fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
@@ -35,6 +39,10 @@ fxl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
         callback(status_to_return, user_id_to_return);
       });
   return cancellable;
+}
+
+void TestAuthProvider::TriggerConnectionErrorHandler() {
+  error_handler_();
 }
 
 }  // namespace test

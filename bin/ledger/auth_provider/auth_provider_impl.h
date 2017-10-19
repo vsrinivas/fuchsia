@@ -36,6 +36,8 @@ class AuthProviderImpl : public AuthProvider {
                    std::unique_ptr<backoff::Backoff> backoff);
 
   // AuthProvider:
+  void set_connection_error_handler(fxl::Closure on_error) override;
+
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(auth_provider::AuthStatus, std::string)> callback)
       override;

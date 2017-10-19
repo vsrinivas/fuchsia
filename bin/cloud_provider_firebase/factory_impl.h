@@ -24,8 +24,6 @@ class FactoryImpl : public Factory {
 
   ~FactoryImpl() override;
 
-  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
-
  private:
   // Factory:
   void GetCloudProvider(
@@ -42,8 +40,6 @@ class FactoryImpl : public Factory {
   ledger::NetworkService* const network_service_;
   callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;
-
-  fxl::Closure on_empty_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FactoryImpl);
 };

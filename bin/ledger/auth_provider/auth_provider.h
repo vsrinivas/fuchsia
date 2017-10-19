@@ -27,6 +27,8 @@ class AuthProvider {
   AuthProvider() {}
   virtual ~AuthProvider() {}
 
+  virtual void set_connection_error_handler(fxl::Closure on_error) {}
+
   // Retrieves the Firebase ID token suitable to use with Firebase Real-time
   // Database and Firebase Storage.
   virtual fxl::RefPtr<callback::Cancellable> GetFirebaseToken(

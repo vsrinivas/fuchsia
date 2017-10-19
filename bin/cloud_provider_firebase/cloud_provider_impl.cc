@@ -38,6 +38,14 @@ CloudProviderImpl::CloudProviderImpl(
       on_empty_();
     }
   });
+  // The class also shuts down when the auth provider is disconnected.
+  auth_provider_->set_connection_error_handler([this] {
+    FXL_LOG(ERROR) << "Lost connection to the token provider, "
+                   << "shutting down the cloud provider.";
+    if (on_empty_) {
+      on_empty_();
+    }
+  });
 }
 
 CloudProviderImpl::~CloudProviderImpl() {}

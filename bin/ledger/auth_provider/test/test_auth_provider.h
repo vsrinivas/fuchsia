@@ -17,11 +17,15 @@ class TestAuthProvider : public AuthProvider {
   explicit TestAuthProvider(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // AuthProvider:
+  void set_connection_error_handler(fxl::Closure on_error) override;
+
   fxl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(AuthStatus, std::string)> callback) override;
 
   fxl::RefPtr<callback::Cancellable> GetFirebaseUserId(
       std::function<void(AuthStatus, std::string)> callback) override;
+
+  void TriggerConnectionErrorHandler();
 
   std::string token_to_return;
 
@@ -31,6 +35,8 @@ class TestAuthProvider : public AuthProvider {
 
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
+
+  fxl::Closure error_handler_;
 };
 
 }  // namespace test

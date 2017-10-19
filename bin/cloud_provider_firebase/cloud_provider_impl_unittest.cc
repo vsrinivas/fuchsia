@@ -57,13 +57,24 @@ class CloudProviderImplTest : public test::TestWithMessageLoop {
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
 };
 
-TEST_F(CloudProviderImplTest, EmptyWhenDisconnected) {
+TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
   bool on_empty_called = false;
   cloud_provider_impl_.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
     message_loop_.PostQuitTask();
   });
   cloud_provider_.reset();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(on_empty_called);
+}
+
+TEST_F(CloudProviderImplTest, EmptyWhenAuthProviderDisconnected) {
+  bool on_empty_called = false;
+  cloud_provider_impl_.set_on_empty([this, &on_empty_called] {
+    on_empty_called = true;
+    message_loop_.PostQuitTask();
+  });
+  auth_provider_->TriggerConnectionErrorHandler();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }
