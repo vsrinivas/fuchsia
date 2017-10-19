@@ -627,10 +627,6 @@ pub trait Cookied: HandleBased {
     }
 }
 
-fn handle_drop(handle: sys::zx_handle_t) {
-    let _ = unsafe { sys::zx_handle_close(handle) };
-}
-
 /// Wait on multiple handles.
 /// The success return value is a bool indicating whether one or more of the
 /// provided handle references was closed during the wait.
@@ -675,7 +671,9 @@ impl HandleBased for Handle {}
 
 impl Drop for Handle {
     fn drop(&mut self) {
-        handle_drop(self.0)
+        if self.0 != sys::ZX_HANDLE_INVALID {
+            unsafe { sys::zx_handle_close(self.0) };
+        }
     }
 }
 

@@ -5,7 +5,7 @@
 //! Type-safe bindings for Zircon channel objects.
 
 use {AsHandleRef, HandleBased, Handle, HandleRef, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
-use {sys, handle_drop, into_result};
+use {sys, into_result};
 use std::mem;
 
 /// An object representing a Zircon
@@ -46,12 +46,12 @@ impl Channel {
         -> Result<Result<(), Status>, (usize, usize)>
     {
         unsafe {
-            buf.reset_handles();
+            buf.clear();
             let raw_handle = self.raw_handle();
             let mut num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
             let mut num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
             let status = sys::zx_channel_read(raw_handle, opts,
-                buf.bytes.as_mut_ptr(), buf.handles.as_mut_ptr(),
+                buf.bytes.as_mut_ptr(), buf.handles.as_mut_ptr() as *mut _,
                 num_bytes, num_handles, &mut num_bytes, &mut num_handles);
             if status == sys::ZX_ERR_BUFFER_TOO_SMALL {
                 Err((num_bytes as usize, num_handles as usize))
@@ -120,14 +120,14 @@ impl Channel {
             |_| (Status::ErrOutOfRange, Status::NoError)));
         let write_num_handles = try!(usize_into_u32(handles.len()).map_err(
             |_| (Status::ErrOutOfRange, Status::NoError)));
-        buf.reset_handles();
+        buf.clear();
         let read_num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
         let read_num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
         let args = sys::zx_channel_call_args_t {
             wr_bytes: bytes.as_ptr(),
             wr_handles: handles.as_ptr() as *const sys::zx_handle_t,
             rd_bytes: buf.bytes.as_mut_ptr(),
-            rd_handles: buf.handles.as_mut_ptr(),
+            rd_handles: buf.handles.as_mut_ptr() as *mut _,
             wr_num_bytes: write_num_bytes,
             wr_num_handles: write_num_handles,
             rd_num_bytes: read_num_bytes,
@@ -158,6 +158,29 @@ impl Channel {
     }
 }
 
+#[test]
+pub fn test_handle_repr() {
+    assert_eq!(::std::mem::size_of::<sys::zx_handle_t>(), 4);
+    assert_eq!(::std::mem::size_of::<Handle>(), 4);
+    assert_eq!(::std::mem::align_of::<sys::zx_handle_t>(), ::std::mem::align_of::<Handle>());
+
+    // This test asserts that repr(transparent) still works for Handle -> zx_handle_t
+
+    let n: Vec<sys::zx_handle_t> = vec![0, 100, 2<<32-1];
+    let v: Vec<Handle> = n.iter().map(|h| unsafe { Handle::from_raw(*h) } ).collect();
+
+    for (handle, raw) in v.iter().zip(n.iter()) {
+        unsafe {
+            assert_eq!(*(handle as *const _ as *const [u8; 4]), *(raw as *const _ as *const [u8; 4]));
+        }
+    }
+
+    for h in v.into_iter() {
+        ::std::mem::forget(h);
+    }
+
+}
+
 /// Options for creating a channel.
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -183,7 +206,7 @@ impl Default for ChannelOpts {
 #[derive(Debug)]
 pub struct MessageBuf {
     bytes: Vec<u8>,
-    handles: Vec<sys::zx_handle_t>,
+    handles: Vec<Handle>,
 }
 
 impl MessageBuf {
@@ -193,10 +216,10 @@ impl MessageBuf {
     }
 
     /// Create a new non-empty message buffer.
-    pub fn new_with(v: Vec<u8>, mut h: Vec<Handle>) -> Self {
+    pub fn new_with(v: Vec<u8>, h: Vec<Handle>) -> Self {
         Self{
             bytes: v,
-            handles: h.drain(0..).map(|h| h.into_raw()).collect(),
+            handles: h,
         }
     }
 
@@ -226,32 +249,20 @@ impl MessageBuf {
     /// method is called again with the same index, it will return `None`, as
     /// will happen if the index exceeds the number of handles available.
     pub fn take_handle(&mut self, index: usize) -> Option<Handle> {
-        self.handles.get_mut(index).and_then(|handleref|
-            if *handleref == sys::ZX_HANDLE_INVALID {
+        self.handles.get_mut(index).and_then(|handle|
+            if handle.is_invalid() {
                 None
             } else {
-                Some(unsafe { Handle::from_raw(mem::replace(handleref, sys::ZX_HANDLE_INVALID)) })
+                Some(mem::replace(handle, Handle::invalid()))
             }
         )
     }
 
-    fn drop_handles(&mut self) {
-        for &handle in &self.handles {
-            if handle != 0 {
-                handle_drop(handle);
-            }
-        }
-    }
-
-    fn reset_handles(&mut self) {
-        self.drop_handles();
+    /// Clear the bytes and handles contained in the buf. This will drop any
+    /// contained handles, resulting in their resources being freed.
+    pub fn clear(&mut self) {
+        self.bytes.clear();
         self.handles.clear();
-    }
-}
-
-impl Drop for MessageBuf {
-    fn drop(&mut self) {
-        self.drop_handles();
     }
 }
 
