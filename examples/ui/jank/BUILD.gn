@@ -12,15 +12,15 @@ executable("jank") {
   ]
 
   deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/ui/skia:fonts",
     "//garnet/public/lib/ui/view_framework:skia",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
-    "//zircon/system/ulib/trace-provider",
     "//third_party/skia",
+    "//zircon/system/ulib/trace-provider",
   ]
 }

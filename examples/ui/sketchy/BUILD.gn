@@ -15,12 +15,10 @@ executable("sketchy") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/sketchy",
-    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 
-  include_dirs = [
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//third_party/glm" ]
 }

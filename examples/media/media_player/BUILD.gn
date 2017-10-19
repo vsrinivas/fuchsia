@@ -12,11 +12,11 @@ executable("media_player") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/view_framework:skia",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/lib/fsl",
     "//third_party/skia",
   ]
 }

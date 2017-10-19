@@ -12,9 +12,7 @@ package("netconnector") {
     "netconnector_example",
   ]
 
-  binaries = [
-    {
-      name = "netconnector_example"
-    },
-  ]
+  binaries = [ {
+        name = "netconnector_example"
+      } ]
 }

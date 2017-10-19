@@ -12,13 +12,13 @@ executable("spinning_square") {
   ]
 
   deps = [
-    "//garnet/public/lib/ui/scenic:client",
-    "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/lib/ui/scenic/fidl",
-    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/views/fidl",
     "//zircon/system/ulib/trace-provider",
   ]
 }

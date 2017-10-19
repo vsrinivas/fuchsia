@@ -24,7 +24,7 @@ package("echo_client_rust") {
     ":echo_client_rust_bin",
   ]
 
-  binaries = [{
-    name = "echo_client_rust"
-  }]
+  binaries = [ {
+        name = "echo_client_rust"
+      } ]
 }

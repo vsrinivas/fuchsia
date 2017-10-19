@@ -12,11 +12,11 @@ executable("echo_client_cpp_bin") {
   ]
 
   deps = [
+    "//garnet/examples/fidl/services",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/examples/fidl/services",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 }
 

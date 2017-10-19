@@ -12,11 +12,11 @@ executable("vu_meter") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/transport",
     "//garnet/public/lib/ui/view_framework:skia",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/lib/fsl",
     "//third_party/skia",
   ]
 }

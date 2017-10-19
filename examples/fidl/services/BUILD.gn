@@ -8,6 +8,6 @@ fidl("services") {
   sources = [
     "echo.fidl",
     "geometry.fidl",
-    "hello.fidl"
+    "hello.fidl",
   ]
 }
