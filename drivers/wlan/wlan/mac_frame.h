@@ -304,7 +304,6 @@ enum StatusCode : uint16_t {
 // IEEE Std 802.11-2016 9.2.3
 // Length of optional fields
 const uint16_t kHtCtrlLen = 4;
-const uint16_t kAddr4Len = 4;
 const uint16_t kQosCtrlLen = 2;
 const uint16_t kFcsLen = 4;
 
@@ -491,25 +490,25 @@ struct DataFrameHeader {
 
     uint16_t len() {
         uint16_t hdr_len = sizeof(DataFrameHeader);
-        if (HasAddr4()) hdr_len += kAddr4Len;
+        if (HasAddr4()) hdr_len += kMacAddrLen;
         if (HasQosCtrl()) hdr_len += kQosCtrlLen;
         if (fc.HasHtCtrl()) hdr_len += kHtCtrlLen;
 
         return hdr_len;
     }
 
-    uint8_t* addr4() {
+    MacAddr* addr4() {
         if (!HasAddr4()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
 
-        return raw() + offset;
+        return reinterpret_cast<MacAddr*>(raw() + offset);
     }
 
     // TODO(porce): Cast to QoSControl struct.
     uint8_t* qos_ctrl() {
         if (!HasQosCtrl()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
-        if (HasAddr4()) { offset += kAddr4Len; }
+        if (HasAddr4()) { offset += kMacAddrLen; }
 
         return raw() + offset;
     }
@@ -517,7 +516,7 @@ struct DataFrameHeader {
     HtControl* ht_ctrl() {
         if (!fc.HasHtCtrl()) return nullptr;
         uint16_t offset = sizeof(DataFrameHeader);
-        if (HasAddr4()) { offset += kAddr4Len; }
+        if (HasAddr4()) { offset += kMacAddrLen; }
         if (HasQosCtrl()) { offset += kQosCtrlLen; }
 
         return reinterpret_cast<HtControl*>(raw() + offset);
