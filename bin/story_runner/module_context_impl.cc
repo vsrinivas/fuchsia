@@ -7,6 +7,7 @@
 #include <string>
 
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
@@ -27,7 +28,8 @@ ModuleContextImpl::ModuleContextImpl(
                                   info.story_controller_impl->GetStoryId()),
                               EncodeModulePath(module_data_->module_path),
                               module_data_->module_url),
-      user_intelligence_provider_(info.user_intelligence_provider) {
+      user_intelligence_provider_(info.user_intelligence_provider),
+      module_resolver_(info.module_resolver) {
   service_provider_impl_.AddService<ModuleContext>(
       [this](fidl::InterfaceRequest<ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -90,7 +92,25 @@ void ModuleContextImpl::StartDaisyInShell(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation) {
-  FXL_NOTIMPLEMENTED();
+  module_resolver_->FindModules(
+      std::move(daisy), nullptr,
+      fxl::MakeCopyable([this, name, link_name,
+                         outgoing_services = std::move(outgoing_services),
+                         incoming_services = std::move(incoming_services),
+                         module_controller = std::move(module_controller),
+                         surface_relation = std::move(surface_relation)](
+                            FindModulesResultPtr result) mutable {
+        // We assume that we get atleast one result back and run the first
+        // moudle in story shell.
+        // TODO(alhaad/thatguy): Revisit the assumption.
+        FXL_CHECK(result->modules.size() > 0);
+        auto query = std::move(result->modules[0]->module_id);
+        story_controller_impl_->StartModuleInShell(
+            module_data_->module_path, name, query, link_name,
+            std::move(outgoing_services), std::move(incoming_services),
+            std::move(module_controller), std::move(surface_relation),
+            true /* focus */, ModuleSource::INTERNAL);
+      }));
 }
 
 void ModuleContextImpl::GetComponentContext(

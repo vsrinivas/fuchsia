@@ -125,6 +125,8 @@ class ModuleContextImpl : ModuleContext {
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
 
+  ModuleResolver* const module_resolver_;  // Not owned
+
   fidl::BindingSet<ModuleContext> bindings_;
 
   // A service provider that represents the services to be added into an

@@ -19,7 +19,9 @@ interface ModuleResolver {
   //
   // For detailed information on the resolution process, see
   // docs/module_resolution.md.
-  FindModules(Daisy daisy, ResolverScoringInfo scoring_info) => (FindModulesResult result);
+  // TODO(thatguy): Make |scoring_info| required, when we do ranking.
+  FindModules(Daisy daisy, ResolverScoringInfo? scoring_info) =>
+      (FindModulesResult result);
 };
 
 // TODO(thatguy): Placeholder to define the exact data (either directly contain
