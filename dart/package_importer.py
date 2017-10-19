@@ -11,8 +11,7 @@ import subprocess
 import sys
 import tempfile
 
-sys.path += [os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
-                          'importer', 'third_party', 'PyYAML-3.12', 'lib')]
+sys.path += [os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 import yaml
 
 
