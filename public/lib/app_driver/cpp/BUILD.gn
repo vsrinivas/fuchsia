@@ -5,7 +5,9 @@
 import("//garnet/public/lib/fidl/fidl.gni")
 
 group("cpp") {
-  public_deps = [":app_driver"]
+  public_deps = [
+    ":app_driver",
+  ]
 }
 
 source_set("app_driver") {

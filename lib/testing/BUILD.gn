@@ -57,8 +57,8 @@ source_set("test_with_ledger") {
   ]
 
   public_deps = [
-    ":test_with_message_loop",
     ":ledger_repository_for_testing",
+    ":test_with_message_loop",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

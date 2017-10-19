@@ -5,13 +5,15 @@
 import("//garnet/public/lib/fidl/fidl.gni")
 
 group("cpp") {
-  public_deps = [":module_impl"]
+  public_deps = [
+    ":module_impl",
+  ]
 }
 
 source_set("module_impl") {
   sources = [
-    "module_impl.h",
     "module_impl.cc",
+    "module_impl.h",
   ]
 
   deps = [

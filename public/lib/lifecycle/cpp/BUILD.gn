@@ -5,13 +5,15 @@
 import("//garnet/public/lib/fidl/fidl.gni")
 
 group("cpp") {
-  public_deps = [":lifecycle_impl"]
+  public_deps = [
+    ":lifecycle_impl",
+  ]
 }
 
 source_set("lifecycle_impl") {
   sources = [
-    "lifecycle_impl.h",
     "lifecycle_impl.cc",
+    "lifecycle_impl.h",
   ]
 
   deps = [

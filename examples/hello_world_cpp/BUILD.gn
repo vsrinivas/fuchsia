@@ -14,9 +14,9 @@ group("hello_world_cpp") {
 executable("hello_app_parent") {
   deps = [
     ":interfaces",
-    "//peridot/public/lib/app_driver/cpp",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/app_driver/cpp",
   ]
 
   sources = [
@@ -27,9 +27,9 @@ executable("hello_app_parent") {
 executable("hello_app_child") {
   deps = [
     ":interfaces",
-    "//peridot/public/lib/app_driver/cpp",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/app_driver/cpp",
   ]
 
   sources = [

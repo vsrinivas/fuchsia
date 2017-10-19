@@ -37,9 +37,9 @@ package("maxwell_apps") {
   deps = [
     "//peridot/bin/acquirers",
     "//peridot/bin/action_log",
+    "//peridot/bin/agents",
     "//peridot/bin/agents:carmen_sandiego",
     "//peridot/bin/agents:ideas",
-    "//peridot/bin/agents",
     "//peridot/bin/context_engine",
     "//peridot/bin/module_resolver",
     "//peridot/bin/resolver",
