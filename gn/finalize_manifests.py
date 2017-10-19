@@ -236,6 +236,10 @@ def collect_binaries(manifest, aux_binaries, examined):
 # Take an iterable of binary_entry, and return list of manifest_entry (all
 # stripped files) and a list of binary_info (all debug files).
 def strip_binary_manifest(manifest, stripped_dir, examined):
+    def file_older(output, input):
+        return (not os.path.exists(output) or
+                os.path.getmtime(output) < os.path.getmtime(input))
+
     def find_debug_file(filename):
         # In the Zircon makefile build, the file to be installed is called
         # foo.strip and the unstripped file is called foo.  In the GN build,
@@ -266,10 +270,12 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
     def make_debug_file(entry, info):
         debug = info
         stripped = os.path.join(stripped_dir, entry.target)
-        dir = os.path.dirname(stripped)
-        if not os.path.isdir(dir):
-            os.makedirs(dir)
-        info.strip(stripped)
+        # If a newer stripped file already exists, just use it.
+        if file_older(stripped, debug.filename):
+            dir = os.path.dirname(stripped)
+            if not os.path.isdir(dir):
+                os.makedirs(dir)
+            info.strip(stripped)
         info = binary_info(stripped)
         assert info, ("Stripped file '%s' for '%s' is invalid" %
                       (stripped, debug.filename))
