@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <projects>
+    <project name="peridot"
+             path="peridot"
+             remote="https://fuchsia.googlesource.com/peridot"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+  </projects>
+</manifest>
