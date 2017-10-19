@@ -9,11 +9,7 @@ extern "C" {
 #define __NEED_uint32_t
 #include <bits/alltypes.h>
 
-#if UINTPTR_MAX > 0xffffffff
 #define ElfW(type) Elf64_##type
-#else
-#define ElfW(type) Elf32_##type
-#endif
 
 /* this is the same everywhere except alpha and s390 */
 typedef uint32_t Elf_Symndx;

@@ -39,13 +39,8 @@ struct elf_prpsinfo {
     char pr_zomb;
     char pr_nice;
     unsigned long int pr_flag;
-#if UINTPTR_MAX == 0xffffffff
-    unsigned short int pr_uid;
-    unsigned short int pr_gid;
-#else
     unsigned int pr_uid;
     unsigned int pr_gid;
-#endif
     int pr_pid, pr_ppid, pr_pgrp, pr_sid;
     char pr_fname[16];
     char pr_psargs[ELF_PRARGSZ];
