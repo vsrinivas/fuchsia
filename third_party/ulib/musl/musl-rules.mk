@@ -283,7 +283,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/getdtablesize.c \
     $(LOCAL_DIR)/src/legacy/getpagesize.c \
     $(LOCAL_DIR)/src/legacy/getpass.c \
-    $(LOCAL_DIR)/src/legacy/getusershell.c \
     $(LOCAL_DIR)/src/legacy/isastream.c \
     $(LOCAL_DIR)/src/legacy/lutimes.c \
     $(LOCAL_DIR)/src/legacy/ulimit.c \
