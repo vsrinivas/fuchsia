@@ -55,6 +55,9 @@ TEST_F(MacAddrTest, Constructors) {
     MacAddr addr6("01:02:03:04:05:06");
 
     MacAddr addr7(addr6);
+    const MacAddr& addr8 = addr7;
+    MacAddr addr9;
+    addr9 = addr8;
 
     EXPECT_EQ(true, addr1 == addr2);
     EXPECT_EQ(false, addr1 != addr2);
@@ -64,6 +67,23 @@ TEST_F(MacAddrTest, Constructors) {
     EXPECT_EQ(true, addr5 == addr6);
     EXPECT_EQ(true, addr6 == addr7);
     EXPECT_EQ(true, addr7 == addr1);
+    EXPECT_EQ(true, addr8 == MacAddr(arr));
+    EXPECT_EQ(true, addr9 == addr8);
+}
+
+TEST_F(MacAddrTest, Conversion) {
+    uint8_t arr[kMacAddrLen] = {0x00};
+
+    MacAddr addr({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
+    addr.CopyTo(arr);
+
+    EXPECT_EQ(true, arr[0] == 0x11 && arr[1] == 0x22 && arr[2] == 0x33 && arr[3] == 0x44 &&
+                        arr[4] == 0x55 && arr[5] == 0x66);
+    EXPECT_EQ(true, memcmp(addr.byte, arr, kMacAddrLen) == 0);
+
+    MacAddr addr2;
+    addr2.Set(arr);
+    EXPECT_EQ(true, addr == addr2);
 }
 
 }  // namespace
