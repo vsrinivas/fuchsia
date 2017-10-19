@@ -15,9 +15,9 @@ constexpr size_t kNumChannels = 2;
 // For this example, feed audio to the system in payloads of 10 milliseconds.
 constexpr size_t kNumFramesPerBuffer = 480;
 constexpr size_t kNumSamplesPerBuffer = kNumFramesPerBuffer * kNumChannels;
-// Play a sine wave that is 439 Hz, at 1/8 of full-scale volume.
+// Play a sine wave that is 439 Hz, at approximately 1/8 of full-scale volume.
 constexpr float kFrequency = 439.0f;
-constexpr float kAmplitudeScalar = 0.125f;
+constexpr float kOutputGain = -18.0f;
 constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererFrameRate;
 // Loop for 2 seconds.
 constexpr size_t kTotalDurationSecs = 2;
@@ -70,11 +70,18 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
+  status = fuchsia_audio_output_stream_set_gain(stream, kOutputGain);
+  if (status < 0) {
+    std::cout << "stream_set_gain failed: " << status << "\n";
+    fuchsia_audio_manager_free(manager);
+    return -1;
+  }
+
   auto buffer =
       std::make_unique<float[]>(kNumSamplesPerBuffer * kNumBuffersToSend);
   for (size_t frame = 0; frame < kNumFramesPerBuffer * kNumBuffersToSend;
        ++frame) {
-    float val = kAmplitudeScalar * sin(kFrequencyScalar * frame);
+    float val = sin(kFrequencyScalar * frame);
 
     for (size_t chan_num = 0; chan_num < kNumChannels; ++chan_num) {
       buffer[frame * kNumChannels + chan_num] = val;

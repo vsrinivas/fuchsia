@@ -205,6 +205,26 @@ int AudioOutputStream::GetMinDelay(zx_duration_t* delay_nsec_out) {
   return ZX_OK;
 }
 
+int AudioOutputStream::SetGain(float db_gain) {
+  if (!active_) {
+    return ZX_ERR_CONNECTION_ABORTED;
+  }
+
+  if (db_gain > media::AudioRenderer::kMaxGain) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (db_gain != renderer_db_gain_) {
+    if (!audio_renderer_->SetGain(db_gain)) {
+      Stop();
+      FXL_LOG(ERROR) << "SetGain failed";
+      return ZX_ERR_CONNECTION_ABORTED;
+    }
+    renderer_db_gain_ = db_gain;
+  }
+  return ZX_OK;
+}
+
 int AudioOutputStream::Write(float* client_buffer,
                              int num_samples,
                              zx_time_t pres_time) {

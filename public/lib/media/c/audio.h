@@ -16,7 +16,7 @@
 __BEGIN_CDECLS
 
 const size_t FUCHSIA_AUDIO_MAX_DEVICE_NAME_LENGTH = 256;
-
+const float FUCHSIA_AUDIO_MAX_OUTPUT_GAIN = 20.0f;
 // zx_time_t is a uint64, but we limit it to only the bottom half of the range,
 // to smoothly interface with int64 timestamps elsewhere in the system. Hence
 // the highest possible timestamp (reserved by the system to signify 'whatever
@@ -68,6 +68,10 @@ MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_free(
 MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_get_min_delay(
     fuchsia_audio_output_stream* stream,
     zx_duration_t* delay_nsec_out);
+
+MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_set_gain(
+    fuchsia_audio_output_stream* stream,
+    float db_gain);
 
 MEDIA_CLIENT_EXPORT int fuchsia_audio_output_stream_write(
     fuchsia_audio_output_stream* stream,

@@ -90,6 +90,13 @@ int fuchsia_audio_output_stream_get_min_delay(
   return stream_obj->GetMinDelay(delay_nsec_out);
 }
 
+int fuchsia_audio_output_stream_set_gain(fuchsia_audio_output_stream* stream,
+                                         float db_gain) {
+  FXL_DCHECK(stream);
+  auto stream_obj = reinterpret_cast<media_client::AudioOutputStream*>(stream);
+  return stream_obj->SetGain(db_gain);
+}
+
 int fuchsia_audio_output_stream_write(fuchsia_audio_output_stream* stream,
                                       float* sample_buffer,
                                       int num_samples,

@@ -29,6 +29,8 @@ int audio_manager_create_output_stream(
 int audio_output_stream_free(fuchsia_audio_output_stream* stream);
 int audio_output_stream_get_min_delay(fuchsia_audio_output_stream* stream,
                                       zx_duration_t* delay_nsec_out);
+int audio_output_stream_set_gain(fuchsia_audio_output_stream* stream,
+                                 float db_gain);
 int audio_output_stream_write(fuchsia_audio_output_stream* stream,
                               float* sample_buffer,
                               int num_samples,
@@ -365,6 +367,76 @@ TEST(media_client, audio_stream_delay) {
   fuchsia_audio_manager_free(manager);
 }
 
+TEST(media_client, audio_stream_gain) {
+  fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
+  ASSERT_TRUE(manager);
+
+  int num_devices = fuchsia_audio_manager_get_output_devices(manager, NULL, 0);
+  ASSERT_GE(num_devices, 1) << "** No audio devices found!";
+
+  std::vector<fuchsia_audio_device_description> dev_list(num_devices);
+  ASSERT_EQ(num_devices, fuchsia_audio_manager_get_output_devices(
+                             manager, dev_list.data(), num_devices));
+
+  std::vector<fuchsia_audio_parameters> param_list(num_devices);
+  std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
+  std::vector<zx_duration_t> delay_list(num_devices, 0);
+
+  for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+                         manager, dev_list[dev_num].id, &param_list[dev_num]));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
+                         manager, dev_list[dev_num].id, &param_list[dev_num],
+                         &stream_list[dev_num]));
+    ASSERT_TRUE(stream_list[dev_num]);
+    // Should allow set gain to max value
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_set_gain(
+                         stream_list[dev_num], FUCHSIA_AUDIO_MAX_OUTPUT_GAIN));
+    // Should allow set gain to a very low value
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_set_gain(stream_list[dev_num],
+                                                          -200.0f));
+  }
+
+  for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
+  }
+  fuchsia_audio_manager_free(manager);
+}
+
+TEST(media_client, audio_stream_gain_errors) {
+  fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
+  ASSERT_TRUE(manager);
+
+  int num_devices = fuchsia_audio_manager_get_output_devices(manager, NULL, 0);
+  ASSERT_GE(num_devices, 1) << "** No audio devices found!";
+
+  std::vector<fuchsia_audio_device_description> dev_list(num_devices);
+  ASSERT_EQ(num_devices, fuchsia_audio_manager_get_output_devices(
+                             manager, dev_list.data(), num_devices));
+
+  std::vector<fuchsia_audio_parameters> param_list(num_devices);
+  std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
+  std::vector<zx_duration_t> delay_list(num_devices, 0);
+
+  for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
+                         manager, dev_list[dev_num].id, &param_list[dev_num]));
+    ASSERT_EQ(ZX_OK, fuchsia_audio_manager_create_output_stream(
+                         manager, dev_list[dev_num].id, &param_list[dev_num],
+                         &stream_list[dev_num]));
+    ASSERT_TRUE(stream_list[dev_num]);
+    // Should not allow set gain to above max value
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
+              fuchsia_audio_output_stream_set_gain(
+                  stream_list[dev_num], FUCHSIA_AUDIO_MAX_OUTPUT_GAIN + 1.0f));
+  }
+
+  for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_free(stream_list[dev_num]));
+  }
+  fuchsia_audio_manager_free(manager);
+}
+
 TEST(media_client, audio_stream_write) {
   fuchsia_audio_manager* manager = fuchsia_audio_manager_create();
   ASSERT_TRUE(manager);
@@ -441,6 +513,8 @@ TEST(media_client, audio_stream_write_c) {
   zx_duration_t delay_nsec = 0;
   ASSERT_EQ(ZX_OK, audio_output_stream_get_min_delay(stream, &delay_nsec));
   ASSERT_TRUE(delay_nsec > 0);
+
+  ASSERT_EQ(ZX_OK, audio_output_stream_set_gain(stream, 0.0f));
 
   std::vector<float> audio_buffer(WRITE_BUFFER_NUM_SAMPLES);
   populate_audio_buffer(&audio_buffer);

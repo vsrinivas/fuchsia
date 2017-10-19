@@ -46,6 +46,11 @@ int audio_output_stream_get_min_delay(fuchsia_audio_output_stream* stream,
   return fuchsia_audio_output_stream_get_min_delay(stream, delay_nsec_out);
 }
 
+int audio_output_stream_set_gain(fuchsia_audio_output_stream* stream,
+                                 float db_gain) {
+  return fuchsia_audio_output_stream_set_gain(stream, db_gain);
+}
+
 int audio_output_stream_write(fuchsia_audio_output_stream* stream,
                               float* sample_buffer,
                               int num_samples,

@@ -255,6 +255,30 @@ played without glitches or excessive latency.
 Note that *delay_nsec_out* is specified in the same units as the system clock
 (ZX_CLOCK_MONOTONIC).
 
+### fuchsia_audio_output_stream_set_gain
+```
+int fuchsia_audio_output_stream_set_gain(
+  fuchsia_audio_output_stream* stream,
+  float                        db_gain);
+  );
+```
+##### Inputs
+- **stream**: pointer to an *fuchsia_audio_output_stream* received from the
+system.
+- **db_gain**: float value, representing playback gain for this output stream.
+
+##### Returns
+- **ZX_ERR_OUT_OF_RANGE**: the client specified a db_gain value that was greater
+than the maximum allowed output gain *FUCHSIA_AUDIO_MAX_OUTPUT_GAIN*.
+- **ZX_OK**: call succeeded.
+
+##### Notes
+This call sets the output gain for this specific stream. This setting is
+per-stream and does not affect any other output streams. Note that this output
+gain stage is applied during final system mixing. As a result, all audio samples
+provided by the *fuchsia_audio_output_stream_write* API must be no greater than
+1.0 and no less than -1.0, regardless of the output stream's gain.
+
 ### fuchsia_audio_output_stream_write
 ```
 int fuchsia_audio_output_stream_write(
@@ -268,7 +292,8 @@ int fuchsia_audio_output_stream_write(
 - **stream**: pointer to an *fuchsia_audio_output_stream* received from the
 system.
 - **sample_buffer**: pointer to memory allocated by the client, containing
-samples of audio data to be played. Audio samples are in *float* format.
+samples of audio data to be played. Audio samples are in *float* format, and
+each must have a value no greater than 1.0 and no less than -1.0.
 - **num_samples**: total number of audio samples found in sample_buffer. This
 should be a multiple of the num_channels used when creating this stream.
 - **pres_time**: when to present the first audio sample in this buffer, as
@@ -315,6 +340,12 @@ previously-submitted buffer can be resubmitted with the later timestamp.
 Either way, once this amended *fuchsia_audio_output_stream_write()* call
 succeeds, then all subsequent calls to *fuchsia_audio_output_stream_write()*
 can again send a value of *FUCHSIA_AUDIO_NO_TIMESTAMP* for *pres_time*.
+
+The client must provide audio samples in the float format, within the range of
+[-1.0, 1.0]. Values greater than 1.0 will be clamped to 1.0, and values less
+than -1.0 will be clamped to -1.0, without any notification to the client. Note
+that these limits apply *regardless* of the per-stream gain specified by the
+*fuchsia_audio_output_stream_set_gain* call.
 
 
 ## Structs
@@ -402,16 +433,25 @@ Below are constant values used with the Media Client structs and APIs:
 
 ### FUCHSIA_AUDIO_MAX_DEVICE_NAME_LENGTH
 ```
-#define FUCHSIA_AUDIO_MAX_DEVICE_NAME_LENGTH 256
+const size_t FUCHSIA_AUDIO_MAX_DEVICE_NAME_LENGTH = 256;
 ```
 This value is used as an outer limit on the lengths of the name and unique ID
 for each audio output device found. This const is important because it
 determines the effective size of the *fuchsia_audio_device_description* struct
 (see above).
 
+### FUCHSIA_AUDIO_MAX_OUTPUT_GAIN
+```
+const float FUCHSIA_AUDIO_MAX_OUTPUT_GAIN = 20.0f;
+```
+This is the maximum value accepted by the *fuchsia_audio_output_stream_set_gain*
+call. If a client sends values greater than this to
+*fuchsia_audio_output_stream_set_gain*, the call will fail with error
+*ZX_ERR_OUT_OF_RANGE*, and no change will be made to the stream's output gain.
+
 ### FUCHSIA_AUDIO_NO_TIMESTAMP
 ```
-#define FUCHSIA_AUDIO_NO_TIMESTAMP INT64_MAX
+const zx_time_t FUCHSIA_AUDIO_NO_TIMESTAMP = INT64_MAX;
 ```
 This value is used to signify that the system should calculate and apply the
 appropriate presentation timestamp so that the buffer of audio data being

@@ -260,7 +260,7 @@ void AudioRendererImpl::GetTimelineControlPoint(
 }
 
 void AudioRendererImpl::SetGain(float db_gain) {
-  if (db_gain >= AudioRenderer::kMaxGain) {
+  if (db_gain > AudioRenderer::kMaxGain) {
     FXL_LOG(ERROR) << "Gain value too large (" << db_gain
                    << ") for audio renderer.";
     Shutdown();
