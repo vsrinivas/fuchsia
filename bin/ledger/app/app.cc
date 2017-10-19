@@ -29,7 +29,6 @@
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/network/network_service_impl.h"
-#include "peridot/bin/ledger/network/no_network_service.h"
 
 namespace ledger {
 
@@ -39,14 +38,12 @@ constexpr fxl::StringView kPersistentFileSystem = "/data";
 constexpr fxl::StringView kMinFsName = "minfs";
 constexpr fxl::TimeDelta kMaxPollingDelay = fxl::TimeDelta::FromSeconds(10);
 constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
-constexpr fxl::StringView kNoNetworkForTesting = "no_network_for_testing";
 constexpr fxl::StringView kNoStatisticsReporting =
     "no_statistics_reporting_for_testing";
 constexpr fxl::StringView kTriggerCloudErasedForTesting =
     "trigger_cloud_erased_for_testing";
 
 struct AppParams {
-  bool no_network_for_testing = false;
   bool trigger_cloud_erased_for_testing = false;
   bool disable_statistics = false;
 };
@@ -84,16 +81,11 @@ class App : public LedgerController,
   ~App() override {}
 
   bool Start() {
-    if (app_params_.no_network_for_testing) {
-      network_service_ =
-          std::make_unique<ledger::NoNetworkService>(loop_.task_runner());
-    } else {
-      network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
-          loop_.task_runner(), [this] {
-            return application_context_
-                ->ConnectToEnvironmentService<network::NetworkService>();
-          });
-    }
+    network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
+        loop_.task_runner(), [this] {
+          return application_context_
+              ->ConnectToEnvironmentService<network::NetworkService>();
+        });
     environment_ = std::make_unique<Environment>(loop_.task_runner(),
                                                  network_service_.get());
     if (app_params_.trigger_cloud_erased_for_testing) {
@@ -208,8 +200,6 @@ int main(int argc, const char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line);
 
   ledger::AppParams app_params;
-  app_params.no_network_for_testing =
-      command_line.HasOption(ledger::kNoNetworkForTesting);
   app_params.trigger_cloud_erased_for_testing =
       command_line.HasOption(ledger::kTriggerCloudErasedForTesting);
   app_params.disable_statistics =

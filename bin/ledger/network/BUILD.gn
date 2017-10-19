@@ -12,8 +12,6 @@ source_set("network") {
     "network_service.h",
     "network_service_impl.cc",
     "network_service_impl.h",
-    "no_network_service.cc",
-    "no_network_service.h",
   ]
 
   public_deps = [
