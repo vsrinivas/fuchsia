@@ -23,25 +23,21 @@
 // Pointers are returned from the Big Kernel Map (BKM) which is placed at the base of
 // kernel memory.
 
-constexpr paddr_t kernel_address_to_phys(uintptr_t addr) {
-    // apply an offset to get from the address of a kernel symbol to a physical pointer
-#if __x86_64__
-    // kernel is running out of a double mapping of the first part of physical memory at KERNEL_BASE
-    // a simple subtraction of KERNEL_BASE is sufficient
-    addr -= KERNEL_BASE;
-#elif __aarch64__
-    // leave the address alone, start.S will call into boot_alloc_init which will initialize the values
-#else
-#error what architecture
-#endif
-    return addr;
-}
-
 extern int _end;
 
 // store the start and current pointer to the boot allocator in physical address
-paddr_t boot_alloc_start = kernel_address_to_phys((uintptr_t)&_end);
-paddr_t boot_alloc_end = kernel_address_to_phys((uintptr_t)&_end);
+// put these in the .data section since they're used before bss is zeroed out on arm64
+__SECTION(".data") paddr_t boot_alloc_start;
+__SECTION(".data") paddr_t boot_alloc_end;
+
+// run in physical space without the mmu set up, so by computing the address of _end
+// and saving it, we've effectively computed the physical address of the end of the
+// kernel.
+__NO_SAFESTACK
+void boot_alloc_init() {
+    boot_alloc_start = reinterpret_cast<paddr_t>(&_end);
+    boot_alloc_end = reinterpret_cast<paddr_t>(&_end);
+}
 
 void boot_alloc_reserve(paddr_t start, size_t len) {
     uintptr_t end = ALIGN((start + len), PAGE_SIZE);
@@ -69,7 +65,7 @@ void* boot_alloc_mem(size_t len) {
     return paddr_to_kvaddr(ptr);
 }
 
-// called from arm64 start.S
+// called from arch start.S
 // run in physical space without the mmu set up, so stick to basic, relocatable code
 __NO_SAFESTACK
 paddr_t boot_alloc_page_phys() {
@@ -79,11 +75,3 @@ paddr_t boot_alloc_page_phys() {
     return ptr;
 }
 
-// run in physical space without the mmu set up, so by computing the address of _end
-// and saving it, we've effectively computed the physical address of the end of the
-// kernel.
-__NO_SAFESTACK
-void boot_alloc_init() {
-    boot_alloc_start = reinterpret_cast<paddr_t>(&_end);
-    boot_alloc_end = reinterpret_cast<paddr_t>(&_end);
-}

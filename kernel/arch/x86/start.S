@@ -125,6 +125,9 @@ FUNCTION_LABEL(_multiboot_start)
     // _multiboot_info is in bss, so now it's safe to set it.
     movl %ebx, PHYS(_multiboot_info)
 
+    /* Start using the zircon stack from its physical address. */
+    mov $PHYS(_kstack_end), %esp
+
 paging_setup:
     /* Preparing 64 bit paging, we will use 2MB pages covering 1GB
      * for initial bootstrap, this page table will be 1 to 1
@@ -156,9 +159,6 @@ paging_setup:
     btsl $(31), %eax
     mov %eax,  %cr0
 
-    /* Start using the zircon stack from its physical address. */
-    mov $PHYS(_kstack + 4096), %esp
-
     /* Using another long jump to be on 64 bit mode
     after this we will be on real 64 bit mode */
     pushl $CODE_64_SELECTOR     /*Need to put it in a the right CS*/
@@ -168,6 +168,9 @@ paging_setup:
 .align 8
 .code64
 farjump64:
+    /* give the boot allocator a chance to compute the physical address of the kernel */
+    call boot_alloc_init
+
     /* branch to our high address */
     mov  $high_entry, %rax
     jmp  *%rax
@@ -182,7 +185,7 @@ high_entry:
     mov %eax, %ss
 
     /* load the high kernel stack */
-    mov  $(_kstack + 4096), %rsp
+    mov  $_kstack_end, %rsp
 
     /* reload the gdtr */
     lgdt _gdtr
@@ -228,14 +231,8 @@ high_entry:
     /* 64bit entry point from a secondary loader */
 .align 8
 FUNCTION_LABEL(_start)
-    /* ensure the stack pointer is sane */
-
-    /* This is enough space for the 2x push + lretq below.
-     * After, we switch to _kstack + 4096.
-     * But for some reason using _kstack + 4096 here causes
-     * crashes on some UEFI platforms...
-     */
-    mov $PHYS(farjump64), %rsp
+    /* set up a temporary stack pointer */
+    mov $PHYS(_kstack_end), %rsp
 
     /* zero the bss */
     lea __bss_start(%rip), %rdi
@@ -246,6 +243,9 @@ FUNCTION_LABEL(_start)
 
     // _bootdata_base is in bss, so now it's safe to set it.
     mov %esi, PHYS(_bootdata_base)
+
+    /* give the boot allocator a chance to compute the physical address of the kernel */
+    call boot_alloc_init
 
 .Lpaging_setup64:
     /* initialize the default page tables */
@@ -269,3 +269,9 @@ FUNCTION_LABEL(_start)
     push  $CODE_64_SELECTOR
     push  $high_entry
     lretq
+
+.bss
+.align 16
+DATA(_kstack)
+    .skip 4096
+DATA(_kstack_end)

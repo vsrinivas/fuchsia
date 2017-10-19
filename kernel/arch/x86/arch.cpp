@@ -38,9 +38,6 @@
 
 #define LOCAL_TRACE 0
 
-/* early stack */
-uint8_t _kstack[PAGE_SIZE] __ALIGNED(16);
-
 /* save a pointer to the multiboot information coming in from whoever called us */
 void *_multiboot_info;
 
