@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from contextlib import contextmanager
 from collections import namedtuple
 import mmap
 import os
@@ -234,6 +235,21 @@ ELF_MACHINE_TO_CPU = {elf: cpu(elf, llvm, gn) for elf, llvm, gn in [
 ]}
 
 
+@contextmanager
+def mmapper(filename):
+    """A context manager that yields (fd, file_contents) given a file name.
+This ensures that the mmap and file objects are closed at the end of the
+'with' statement."""
+    fileobj = open(filename, 'rb')
+    fd = fileobj.fileno()
+    mmapobj = mmap.mmap(fd, 0, access=mmap.ACCESS_READ)
+    try:
+        yield fd, mmapobj
+    finally:
+        mmapobj.close()
+        fileobj.close()
+
+
 # elf_info objects are only created by `get_elf_info` or the `copy` or
 # `rename` methods.
 class elf_info(
@@ -267,8 +283,8 @@ class elf_info(
         raise Exception("uninitialized elf_info object!")
 
     def strip(self, stripped_filename):
-        with open(self.filename, 'rb') as fileobj:
-            file = mmap.mmap(fileobj.fileno(), 0, access=mmap.ACCESS_READ)
+        with mmapper(self.filename) as mapped:
+            fd, file = mapped
             ehdr = self.elf.Ehdr.read(file)
 
             stripped_ehdr = ehdr._replace(e_shoff=0, e_shnum=0, e_shstrndx=0)
@@ -281,7 +297,7 @@ class elf_info(
             # Create the new file with the same mode as the original.
             with os.fdopen(os.open(stripped_filename,
                                    os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-                                   os.fstat(fileobj.fileno()).st_mode & 0777),
+                                   os.fstat(fd).st_mode & 0777),
                            'wb') as stripped_file:
                 stripped_file.write(self.elf.Ehdr.pack(stripped_ehdr))
                 stripped_file.write(file[self.elf.Ehdr.size:stripped_size])
@@ -483,10 +499,9 @@ def get_elf_info(filename, match_notes=False):
         info.get_sources = lambda: sources_cache
         return sources_cache
 
-    with open(filename, 'rb') as fileobj:
-        # Map in the whole file's contents and use it as a string.
-        file = mmap.mmap(fileobj.fileno(), 0, access=mmap.ACCESS_READ)
-
+    # Map in the whole file's contents and use it as a string.
+    with mmapper(filename) as mapped:
+        fd, file = mapped
         elf = get_elf_accessor(file)
         if elf is not None:
             # ELF header leads to program headers.
