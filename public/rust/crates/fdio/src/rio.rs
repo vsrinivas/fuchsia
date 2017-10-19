@@ -55,21 +55,21 @@ pub struct Message {
 impl Message {
     pub fn validate(&self) -> Result<(), zircon::Status> {
         if self.buf.bytes().len() < ZXRIO_HDR_SZ {
-            return Err(zircon::Status::ErrIo);
+            return Err(zircon::Status::IO);
         }
 
         if self.buf.bytes().len() > ZXRIO_MSG_SZ {
-            return Err(zircon::Status::ErrIo);
+            return Err(zircon::Status::IO);
         }
 
         if self.buf.bytes().len() != ZXRIO_HDR_SZ + unsafe { *self.msg }.datalen as usize {
-            return Err(zircon::Status::ErrIo);
+            return Err(zircon::Status::IO);
         }
 
         if self.buf.n_handles() != ZXRIO_HC!(unsafe { *self.msg }.op) as usize ||
             self.buf.n_handles() != unsafe { *self.msg }.hcount as usize
         {
-            return Err(zircon::Status::ErrInvalidArgs);
+            return Err(zircon::Status::INVALID_ARGS);
         }
 
         Ok(())
@@ -183,15 +183,15 @@ pub fn write_object<C: AsRef<zircon::Channel>>(
     handles: &mut Vec<zircon::Handle>,
 ) -> Result<(), zircon::Status> {
     if extra.len() > ZXRIO_OBJECT_EXTRA as usize {
-        return Err(zircon::Status::ErrInvalidArgs);
+        return Err(zircon::Status::INVALID_ARGS);
     }
     if handles.len() > FDIO_MAX_HANDLES as usize {
-        return Err(zircon::Status::ErrInvalidArgs);
+        return Err(zircon::Status::INVALID_ARGS);
     }
 
     let mut buf = bytes::BytesMut::with_capacity(ZXRIO_OBJECT_MINSIZE + extra.len());
 
-    buf.put_i32::<bytes::LittleEndian>(status as i32);
+    buf.put_i32::<bytes::LittleEndian>(status.into_raw());
     buf.put_u32::<bytes::LittleEndian>(type_);
 
     buf.put_slice(extra);
@@ -346,7 +346,7 @@ mod test {
 
         write_object(
             &tx,
-            zircon::Status::ErrBadPath,
+            zircon::Status::BAD_PATH,
             FDIO_PROTOCOL_REMOTE,
             &[1, 2, 3, 4],
             &mut vec![h.into()],
@@ -357,9 +357,9 @@ mod test {
         rx.read(0, &mut buf).unwrap();
 
         let ptr = buf.bytes().as_ptr();
-        assert_eq!(zircon::Status::ErrBadPath as i32, unsafe {
+        assert_eq!(zircon::Status::BAD_PATH, zircon::Status::from_raw(unsafe {
             *(ptr as *const i32)
-        });
+        }));
         assert_eq!(FDIO_PROTOCOL_REMOTE, unsafe {
             *(ptr.offset(4) as *const u32)
         });

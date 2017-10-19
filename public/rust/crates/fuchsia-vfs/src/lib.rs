@@ -7,7 +7,6 @@
 extern crate bytes;
 extern crate fdio;
 extern crate fuchsia_zircon as zircon;
-extern crate fuchsia_zircon_sys as zircon_sys;
 extern crate futures;
 extern crate libc;
 #[macro_use]
@@ -32,8 +31,8 @@ pub fn mount(
     let (c1, c2) = zircon::Channel::create(zircon::ChannelOpts::default())?;
     let m = mount::mount(path, c1)?;
     c2.signal_handle(
-        zircon::ZX_SIGNAL_NONE,
-        zircon::ZX_USER_SIGNAL_0,
+        zircon::Signals::NONE,
+        zircon::Signals::USER_0,
     )?;
     let c = Connection::new(Arc::clone(&vfs), vn, c2, handle)?;
     vfs.register_connection(c, handle);

@@ -63,21 +63,21 @@ impl Channel {
     }
 
     /// Receives a message on the channel and registers this `Channel` as
-    /// needing a read on receiving a `zircon::Status::ErrShouldWait`.
-    pub fn recv_from(&self, opts: ChannelOpts, buf: &mut MessageBuf) -> io::Result<()> {
+    /// needing a read on receiving a `zircon::Status::SHOULD_WAIT`.
+    pub fn recv_from(&self, opts: u32, buf: &mut MessageBuf) -> io::Result<()> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
-                          zircon::ZX_CHANNEL_READABLE |
-                          zircon::ZX_CHANNEL_PEER_CLOSED).into());
+                          zircon::Signals::CHANNEL_READABLE |
+                          zircon::Signals::CHANNEL_PEER_CLOSED).into());
 
         match signals {
             Async::NotReady => Err(would_block()),
             Async::Ready(ready) => {
-                let signals = FuchsiaReady::from(ready).into_zx_signals();
-                if zircon::ZX_CHANNEL_PEER_CLOSED.intersects(signals) {
+                let signals = FuchsiaReady::from(ready).into_signals();
+                if zircon::Signals::CHANNEL_PEER_CLOSED.intersects(signals) {
                     Err(io::ErrorKind::ConnectionAborted.into())
                 } else {
                     let res = self.channel.read(opts, buf);
-                    if res == Err(zircon::Status::ErrShouldWait) {
+                    if res == Err(zircon::Status::SHOULD_WAIT) {
                         self.evented.need_read();
                     }
                     res.map_err(io::Error::from)

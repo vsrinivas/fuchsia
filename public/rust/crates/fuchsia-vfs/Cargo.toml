@@ -9,7 +9,6 @@ repository = "https://fuchsia.googlesource.com/garnet/"
 [dependencies]
 fdio = { path = "../fdio" }
 fuchsia-zircon = { path = "../fuchsia-zircon" }
-fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }
 tokio-fuchsia = { path = "../tokio-fuchsia" }
 futures = "0.1"
 tokio-core = "0.1"

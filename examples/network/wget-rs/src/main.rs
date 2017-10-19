@@ -15,7 +15,7 @@ use fidl::FidlService;
 use fuchsia_app::client::ApplicationContext;
 use garnet_public_lib_network_fidl as netsvc;
 use tokio_core::reactor;
-use zircon::{AsHandleRef, ZX_SOCKET_READABLE, ZX_SOCKET_PEER_CLOSED, ZX_TIME_INFINITE};
+use zircon::AsHandleRef;
 
 fn print_response(resp: netsvc::URLResponse) -> Result<(), zircon::Status> {
     if let Some(e) = resp.error {
@@ -56,17 +56,17 @@ fn print_body(sock: &zircon::Socket) -> Result<(), zircon::Status> {
     // TODO(tkilbourn): this is doing blocking work, rather than using the tokio reactor. Once
     // tokio-fuchsia supports zircon sockets, rewrite this method to use futures instead.
     const BUFSIZE: usize = 4096;
-    let wait_sigs = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED;
+    let wait_sigs = zircon::Signals::SOCKET_READABLE | zircon::Signals::SOCKET_PEER_CLOSED;
     let mut buf: [u8; BUFSIZE] = [0; BUFSIZE];
     loop {
         match sock.read(zircon::SocketReadOpts::Default, &mut buf) {
             Ok(num_read) => print!("{}", String::from_utf8_lossy(&buf[..num_read])),
             Err(e) => {
                 match e {
-                    zircon::Status::ErrShouldWait => {
-                        let _ = sock.as_handle_ref().wait(wait_sigs, ZX_TIME_INFINITE)?;
+                    zircon::Status::SHOULD_WAIT => {
+                        let _ = sock.as_handle_ref().wait(wait_sigs, zircon::Time::INFINITE)?;
                     }
-                    zircon::Status::ErrPeerClosed => break,  // not an error
+                    zircon::Status::PEER_CLOSED => break,  // not an error
                     _ => {
                         println!("\nUnexpected error reading response {:?}", e);
                         break;

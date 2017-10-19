@@ -5,7 +5,7 @@
 //! Type-safe bindings for Zircon vmo objects.
 
 use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
-use {sys, into_result};
+use {sys, ok};
 use std::{mem, ptr};
 
 /// An object representing a Zircon
@@ -28,8 +28,10 @@ impl Vmo {
     pub fn create(size: u64, options: VmoOpts) -> Result<Vmo, Status> {
         let mut handle = 0;
         let status = unsafe { sys::zx_vmo_create(size, options as u32, &mut handle) };
-        into_result(status, ||
-            Vmo::from(Handle(handle)))
+        ok(status)?;
+        unsafe {
+            Ok(Vmo::from(Handle::from_raw(handle)))
+        }
     }
 
     /// Read from a virtual memory object.
@@ -40,7 +42,7 @@ impl Vmo {
             let mut actual = 0;
             let status = sys::zx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
                 offset, data.len(), &mut actual);
-            into_result(status, || actual)
+            ok(status).map(|()| actual)
         }
     }
 
@@ -52,7 +54,7 @@ impl Vmo {
             let mut actual = 0;
             let status = sys::zx_vmo_write(self.raw_handle(), data.as_ptr(),
                 offset, data.len(), &mut actual);
-            into_result(status, || actual)
+            ok(status).map(|()| actual)
         }
     }
 
@@ -62,7 +64,7 @@ impl Vmo {
     pub fn get_size(&self) -> Result<u64, Status> {
         let mut size = 0;
         let status = unsafe { sys::zx_vmo_get_size(self.raw_handle(), &mut size) };
-        into_result(status, || size)
+        ok(status).map(|()| size)
     }
 
     /// Attempt to change the size of a virtual memory object.
@@ -70,7 +72,7 @@ impl Vmo {
     /// Wraps the `zx_vmo_set_size` syscall.
     pub fn set_size(&self, size: u64) -> Result<(), Status> {
         let status = unsafe { sys::zx_vmo_set_size(self.raw_handle(), size) };
-        into_result(status, || ())
+        ok(status)
     }
 
     /// Perform an operation on a range of a virtual memory object.
@@ -80,9 +82,9 @@ impl Vmo {
     /// syscall.
     pub fn op_range(&self, op: VmoOp, offset: u64, size: u64) -> Result<(), Status> {
         let status = unsafe {
-            sys::zx_vmo_op_range(self.raw_handle(), op as u32, offset, size, ptr::null_mut(), 0)
+            sys::zx_vmo_op_range(self.raw_handle(), op.into_raw(), offset, size, ptr::null_mut(), 0)
         };
-        into_result(status, || ())
+        ok(status)
     }
 
     /// Look up a list of physical addresses corresponding to the pages held by the VMO from
@@ -95,10 +97,10 @@ impl Vmo {
         -> Result<(), Status>
     {
         let status = unsafe {
-            sys::zx_vmo_op_range(self.raw_handle(), sys::ZX_VMO_OP_LOOKUP, offset, size,
+            sys::zx_vmo_op_range(self.raw_handle(), VmoOp::LOOKUP.into_raw(), offset, size,
                 buffer.as_mut_ptr() as *mut u8, buffer.len() * mem::size_of::<sys::zx_paddr_t>())
         };
-        into_result(status, || ())
+        ok(status)
     }
 
     /// Create a new virtual memory object that clones a range of this one.
@@ -111,7 +113,8 @@ impl Vmo {
         let status = unsafe {
             sys::zx_vmo_clone(self.raw_handle(), options as u32, offset, size, &mut out)
         };
-        into_result(status, || Vmo::from(Handle(out)))
+        ok(status)?;
+        unsafe { Ok(Vmo::from(Handle::from_raw(out))) }
     }
 }
 
@@ -131,27 +134,6 @@ impl Default for VmoOpts {
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum VmoOp {
-    /// Commit `size` bytes worth of pages starting at byte `offset` for the VMO.
-    Commit = sys::ZX_VMO_OP_COMMIT,
-    /// Release a range of pages previously committed to the VMO from `offset` to `offset`+`size`.
-    Decommit = sys::ZX_VMO_OP_DECOMMIT,
-    // Presently unsupported.
-    Lock = sys::ZX_VMO_OP_LOCK,
-    // Presently unsupported.
-    Unlock = sys::ZX_VMO_OP_UNLOCK,
-    /// Perform a cache sync operation.
-    CacheSync = sys::ZX_VMO_OP_CACHE_SYNC,
-    /// Perform a cache invalidation operation.
-    CacheInvalidate = sys::ZX_VMO_OP_CACHE_INVALIDATE,
-    /// Perform a cache clean operation.
-    CacheClean = sys::ZX_VMO_OP_CACHE_CLEAN,
-    /// Perform cache clean and invalidation operations together.
-    CacheCleanInvalidate = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
-}
-
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum VmoCloneOpts {
     /// Create a copy-on-write clone.
     CopyOnWrite = sys::ZX_VMO_CLONE_COPY_ON_WRITE,
@@ -162,6 +144,32 @@ impl Default for VmoCloneOpts {
         VmoCloneOpts::CopyOnWrite
     }
 }
+
+/// VM Object opcodes
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct VmoOp(u32);
+impl VmoOp {
+    pub fn from_raw(raw: u32) -> VmoOp {
+        VmoOp(raw)
+    }
+    pub fn into_raw(self) -> u32 {
+        self.0
+    }
+}
+
+assoc_consts!(VmoOp, [
+    COMMIT =           sys::ZX_VMO_OP_COMMIT;
+    DECOMMIT =         sys::ZX_VMO_OP_DECOMMIT;
+    LOCK =             sys::ZX_VMO_OP_LOCK;
+    UNLOCK =           sys::ZX_VMO_OP_UNLOCK;
+    LOOKUP =           sys::ZX_VMO_OP_LOOKUP;
+    CACHE_SYNC =       sys::ZX_VMO_OP_CACHE_SYNC;
+    CACHE_INVALIDATE = sys::ZX_VMO_OP_CACHE_INVALIDATE;
+    CACHE_CLEAN =      sys::ZX_VMO_OP_CACHE_CLEAN;
+    CACHE_CLEAN_INVALIDATE = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
+]);
+
 
 #[cfg(test)]
 mod tests {
@@ -203,8 +211,8 @@ mod tests {
     #[test]
     fn vmo_op_range_unsupported() {
         let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
-        assert_eq!(vmo.op_range(VmoOp::Lock, 0, 1), Err(Status::ErrNotSupported));
-        assert_eq!(vmo.op_range(VmoOp::Unlock, 0, 1), Err(Status::ErrNotSupported));
+        assert_eq!(vmo.op_range(VmoOp::LOCK, 0, 1), Err(Status::NOT_SUPPORTED));
+        assert_eq!(vmo.op_range(VmoOp::UNLOCK, 0, 1), Err(Status::NOT_SUPPORTED));
     }
 
     #[test]
@@ -213,17 +221,17 @@ mod tests {
         let mut buffer = vec![0; 2];
 
         // Lookup will fail as it is not committed yet.
-        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::ErrNoMemory));
+        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::NO_MEMORY));
 
-        // Commit and try again.
-        assert_eq!(vmo.op_range(VmoOp::Commit, 0, 12), Ok(()));
+        // COMMIT and try again.
+        assert_eq!(vmo.op_range(VmoOp::COMMIT, 0, 12), Ok(()));
         assert_eq!(vmo.lookup(0, 12, &mut buffer), Ok(()));
         assert_ne!(buffer[0], 0);
         assert_eq!(buffer[1], 0);
 
         // If we decommit then lookup should go back to failing.
-        assert_eq!(vmo.op_range(VmoOp::Decommit, 0, 12), Ok(()));
-        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::ErrNoMemory));
+        assert_eq!(vmo.op_range(VmoOp::DECOMMIT, 0, 12), Ok(()));
+        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::NO_MEMORY));
     }
 
     #[test]
@@ -231,10 +239,10 @@ mod tests {
         let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
 
         // Cache operations should all succeed.
-        assert_eq!(vmo.op_range(VmoOp::CacheSync, 0, 12), Ok(()));
-        assert_eq!(vmo.op_range(VmoOp::CacheInvalidate, 0, 12), Ok(()));
-        assert_eq!(vmo.op_range(VmoOp::CacheClean, 0, 12), Ok(()));
-        assert_eq!(vmo.op_range(VmoOp::CacheCleanInvalidate, 0, 12), Ok(()));
+        assert_eq!(vmo.op_range(VmoOp::CACHE_SYNC, 0, 12), Ok(()));
+        assert_eq!(vmo.op_range(VmoOp::CACHE_INVALIDATE, 0, 12), Ok(()));
+        assert_eq!(vmo.op_range(VmoOp::CACHE_CLEAN, 0, 12), Ok(()));
+        assert_eq!(vmo.op_range(VmoOp::CACHE_CLEAN_INVALIDATE, 0, 12), Ok(()));
     }
 
     #[test]

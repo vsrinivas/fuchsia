@@ -5,7 +5,7 @@
 // This file was generated with bindgen, then modified to consume already bound
 // types and remove various bindgen-isms that we don't want.
 
-use zircon_sys::*;
+use zircon::sys::*;
 use std::os::raw;
 
 #[repr(C)]

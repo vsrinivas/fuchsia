@@ -27,7 +27,7 @@ pub trait Vfs {
         _mode: u32,
     ) -> Result<(Arc<Vnode>, std::path::PathBuf), zircon::Status> {
         // TODO(raggi): ...
-        Err(zircon::Status::ErrNotSupported)
+        Err(zircon::Status::NOT_SUPPORTED)
     }
 
     fn register_connection(&self, c: Connection, handle: &tokio_core::reactor::Handle) {
@@ -42,7 +42,7 @@ pub trait Vfs {
 /// device semantics.
 pub trait Vnode {
     fn close(&self) -> zircon::Status {
-        zircon::Status::NoError
+        zircon::Status::OK
     }
 
     fn serve(&self, _vfs: Arc<Vfs>, _chan: tokio_fuchsia::Channel, _flags: i32) {
@@ -101,8 +101,8 @@ impl Connection {
 
                 // TODO(raggi): enforce O_ADMIN
                 if msg.datalen() < 1 || msg.datalen() > PATH_MAX as u32 {
-                    self.reply_status(&chan, zircon::Status::ErrInvalidArgs)?;
-                    return Err(zircon::Status::ErrInvalidArgs.into());
+                    self.reply_status(&chan, zircon::Status::INVALID_ARGS)?;
+                    return Err(zircon::Status::INVALID_ARGS.into());
                 }
 
                 let path = std::path::PathBuf::from(std::ffi::OsStr::from_bytes(msg.data()));
@@ -115,7 +115,7 @@ impl Connection {
             _ => {
                 self.reply_status(
                     &self.chan,
-                    zircon::Status::ErrNotSupported,
+                    zircon::Status::NOT_SUPPORTED,
                 )?
             }
         }
@@ -133,7 +133,7 @@ impl Connection {
         let pipeline = flags & fdio::fdio_sys::O_PIPELINE != 0;
         let open_flags = flags & !fdio::fdio_sys::O_PIPELINE;
 
-        let mut status = zircon::Status::NoError;
+        let mut status = zircon::Status::OK;
         let mut proto = fdio::fdio_sys::FDIO_PROTOCOL_REMOTE;
         let mut handles: Vec<zircon::Handle> = vec![];
 
@@ -147,7 +147,7 @@ impl Connection {
                     return Err(std::io::ErrorKind::InvalidInput.into());
                 }
 
-                if status != zircon::Status::NoError {
+                if status != zircon::Status::OK {
                     return Err(std::io::ErrorKind::InvalidInput.into());
                 }
 
@@ -180,7 +180,6 @@ impl Connection {
         status: zircon::Status,
     ) -> Result<(), io::Error> {
         println!("{:?} -> {:?}", &chan, status);
-
         fdio::rio::write_object(chan, status, 0, &[], &mut vec![]).map_err(Into::into)
     }
 }

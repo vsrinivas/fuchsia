@@ -4,11 +4,10 @@
 
 extern crate ddk_sys;
 extern crate fuchsia_zircon as zircon;
-extern crate fuchsia_zircon_sys as zircon_sys;
 
 use std::ffi::{CStr, CString};
 use zircon::Status;
-use zircon_sys as sys;
+use zircon::sys as sys;
 use std::slice;
 use std::os::raw::c_char;
 
@@ -40,27 +39,27 @@ pub trait DeviceOps {
     }
 
     fn open_at(&mut self, _path: &str, _flags: u32) -> Result<Option<Device>, Status> {
-        Err(Status::ErrNotSupported)
+        Err(Status::NOT_SUPPORTED)
     }
 
     fn close(&mut self, _flags: u32) -> Status {
-        Status::NoError
+        Status::OK
     }
 
     fn unbind(&mut self) -> Status {
-        Status::NoError
+        Status::OK
     }
 
     fn release(&mut self) -> Status {
-        Status::ErrNotSupported
+        Status::NOT_SUPPORTED
     }
 
     fn read(&mut self, _buf: &mut [u8], _offset: u64) -> Result<usize, Status> {
-        Err(Status::ErrNotSupported)
+        Err(Status::NOT_SUPPORTED)
     }
 
     fn write(&mut self, _buf: &[u8], _offset: u64) -> Result<usize, Status> {
-        Err(Status::ErrNotSupported)
+        Err(Status::NOT_SUPPORTED)
     }
 
     fn get_size(&mut self) -> u64 {
@@ -68,15 +67,15 @@ pub trait DeviceOps {
     }
 
     fn ioctl(&mut self, _op: u32, _in_buf: &[u8], _out_buf: &mut [u8]) -> Result<usize, Status> {
-        Err(Status::ErrNotSupported)
+        Err(Status::NOT_SUPPORTED)
     }
 
     fn suspend(&mut self, _flags: u32) -> Status {
-        Status::ErrNotSupported
+        Status::NOT_SUPPORTED
     }
 
     fn resume(&mut self, _flags: u32) -> Status {
-        Status::ErrNotSupported
+        Status::NOT_SUPPORTED
     }
 }
 
@@ -93,7 +92,7 @@ pub use ddk_sys::{
 pub fn add_device(device_ops: Box<DeviceOps>, flags: AddDeviceFlags) -> Result<Device, Status> {
     let device_name = device_ops.name();
     if device_name.len() > ddk_sys::ZX_DEVICE_NAME_MAX {
-        return Err(Status::ErrInvalidArgs)
+        return Err(Status::INVALID_ARGS)
     }
 
     let mut device_add_args: ddk_sys::device_add_args_t = ddk_sys::device_add_args_t::new();
@@ -127,7 +126,7 @@ extern fn ddk_get_protocol(ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sy
 
 fn open_result(ret: Result<Option<Device>, Status>, dev_out: *mut *mut ddk_sys::zx_device_t) -> sys::zx_status_t {
     match ret {
-      Err(status) => status as sys::zx_status_t,
+      Err(status) => status.into_raw() as sys::zx_status_t,
       Ok(None) => sys::ZX_OK,
       Ok(Some(new_device)) => {
         // TODO(qwandor): This assumes that the implementor of DeviceOps.open has already called
@@ -157,7 +156,7 @@ extern fn ddk_close(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
     let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
     let ret = device.close(flags);
     let _ = Box::into_raw(device);
-    ret as sys::zx_status_t
+    ret.into_raw()
 }
 
 extern fn ddk_unbind(ctx: *mut u8) {
@@ -181,7 +180,7 @@ extern fn ddk_read(ctx: *mut u8, buf: *mut u8, count: usize, off: sys::zx_off_t,
                 sys::ZX_OK
             },
         // TODO(qwandor): Investigate adding a to_raw method for Status.
-        Err(status) => status as sys::zx_status_t
+        Err(status) => status.into_raw()
     };
     let _ = Box::into_raw(device);
     ret
@@ -195,7 +194,7 @@ extern fn ddk_write(ctx: *mut u8, buf: *const u8, count: usize, off: sys::zx_off
                 unsafe { *actual = r };
                 sys::ZX_OK
             },
-        Err(status) => status as sys::zx_status_t
+        Err(status) => status.into_raw()
     };
     let _ = Box::into_raw(device);
     ret
@@ -220,7 +219,7 @@ extern fn ddk_ioctl(ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out
             unsafe { *out_actual = bytes_written };
             sys::ZX_OK
         }
-        Err(status) => status as sys::zx_status_t
+        Err(status) => status.into_raw()
     };
     let _ = Box::into_raw(device);
     status
@@ -230,14 +229,14 @@ extern fn ddk_suspend(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
     let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
     let status = device.suspend(flags);
     let _ = Box::into_raw(device);
-    status as sys::zx_status_t
+    status.into_raw()
 }
 
 extern fn ddk_resume(ctx: *mut u8, flags: u32) -> sys::zx_status_t {
     let mut device: Box<Box<DeviceOps>> = unsafe { Box::from_raw(ctx as *mut Box<DeviceOps>) };
     let status = device.resume(flags);
     let _ = Box::into_raw(device);
-    status as sys::zx_status_t
+    status.into_raw()
 }
 
 static mut DEVICE_OPS: ddk_sys::zx_protocol_device_t = ddk_sys::zx_protocol_device_t {

@@ -5,7 +5,6 @@
 //! Bindings for the Zircon fdio library
 
 extern crate fuchsia_zircon as zircon;
-extern crate fuchsia_zircon_sys as zircon_sys;
 extern crate bytes;
 
 #[allow(non_camel_case_types)]
@@ -14,7 +13,7 @@ pub mod fdio_sys;
 
 pub mod rio;
 
-use zircon_sys as sys;
+use zircon::sys as sys;
 
 use std::ffi::CStr;
 use std::fs::File;
@@ -84,7 +83,7 @@ where
     let filename = ffi::OsStr::from_bytes(CStr::from_ptr(fn_).to_bytes());
     match cb(WatchEvent::from(event), Path::new(filename)) {
         Ok(()) => sys::ZX_OK,
-        Err(e) => e as i32,
+        Err(e) => e.into_raw(),
     }
 }
 

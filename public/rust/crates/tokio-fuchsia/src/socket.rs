@@ -71,18 +71,18 @@ impl Socket {
     /// needing a read on receiving a `zircon::Status::ErrShouldWait`.
     pub fn read_from(&self, opts: zircon::SocketReadOpts, buf: &mut [u8]) -> io::Result<usize> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
-                          zircon::ZX_SOCKET_READABLE |
-                          zircon::ZX_SOCKET_PEER_CLOSED).into());
+                          zircon::Signals::SOCKET_READABLE |
+                          zircon::Signals::CHANNEL_PEER_CLOSED).into());
 
         match signals {
             Async::NotReady => Err(would_block()),
             Async::Ready(ready) => {
-                let signals = FuchsiaReady::from(ready).into_zx_signals();
-                if zircon::ZX_SOCKET_PEER_CLOSED.intersects(signals) {
+                let signals = FuchsiaReady::from(ready).into_signals();
+                if zircon::Signals::SOCKET_PEER_CLOSED.intersects(signals) {
                     Err(io::ErrorKind::ConnectionAborted.into())
                 } else {
                     let res = self.socket.read(opts, buf);
-                    if res == Err(zircon::Status::ErrShouldWait) {
+                    if res == Err(zircon::Status::SHOULD_WAIT) {
                         self.evented.need_read();
                     }
                     res.map_err(io::Error::from)
@@ -113,18 +113,18 @@ impl Socket {
     /// needing a write on receiving a `zircon::Status::ErrShouldWait`.
     pub fn write_into(&self, opts: zircon::SocketWriteOpts, buf: &[u8]) -> io::Result<usize> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
-                          zircon::ZX_SOCKET_WRITABLE |
-                          zircon::ZX_SOCKET_PEER_CLOSED).into());
+                          zircon::Signals::SOCKET_WRITABLE |
+                          zircon::Signals::SOCKET_PEER_CLOSED).into());
 
         match signals {
             Async::NotReady => Err(would_block()),
             Async::Ready(ready) => {
-                let signals = FuchsiaReady::from(ready).into_zx_signals();
-                if zircon::ZX_SOCKET_PEER_CLOSED.intersects(signals) {
+                let signals = FuchsiaReady::from(ready).into_signals();
+                if zircon::Signals::SOCKET_PEER_CLOSED.intersects(signals) {
                     Err(io::ErrorKind::ConnectionAborted.into())
                 } else {
                     let res = self.socket.write(opts, buf);
-                    if res == Err(zircon::Status::ErrShouldWait) {
+                    if res == Err(zircon::Status::SHOULD_WAIT) {
                         self.evented.need_write();
                     }
                     res.map_err(io::Error::from)

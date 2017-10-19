@@ -5,7 +5,7 @@
 //! Type-safe bindings for Zircon sockets.
 
 use {AsHandleRef, HandleBased, Handle, HandleRef, Peered};
-use {sys, Status, into_result};
+use {sys, Status, ok};
 
 use std::ptr;
 
@@ -72,9 +72,11 @@ impl Socket {
             let mut out0 = 0;
             let mut out1 = 0;
             let status = sys::zx_socket_create(opts as u32, &mut out0, &mut out1);
-            into_result(status, ||
-                (Self::from(Handle(out0)),
-                    Self::from(Handle(out1))))
+            ok(status)?;
+            Ok((
+                Self::from(Handle::from_raw(out0)),
+                Self::from(Handle::from_raw(out1))
+            ))
         }
     }
 
@@ -89,7 +91,7 @@ impl Socket {
             sys::zx_socket_write(self.raw_handle(), opts as u32, bytes.as_ptr(), bytes.len(),
                 &mut actual)
         };
-        into_result(status, || actual)
+        ok(status).map(|()| actual)
     }
 
     /// Read the given bytes from the socket.
@@ -103,12 +105,14 @@ impl Socket {
             sys::zx_socket_read(self.raw_handle(), opts as u32, bytes.as_mut_ptr(),
                 bytes.len(), &mut actual)
         };
-        if status != sys::ZX_OK {
-            // If an error is returned then actual is undefined, so to be safe we set it to 0 and
-            // ignore any data that is set in bytes.
-            actual = 0;
-        }
-        into_result(status, || actual)
+        ok(status)
+            .map(|()| actual)
+            .map_err(|status| {
+                // If an error is returned then actual is undefined, so to be safe
+                // we set it to 0 and ignore any data that is set in bytes.
+                actual = 0;
+                status
+            })
     }
 
     /// Close half of the socket, so attempts by the other side to write will fail.
@@ -118,7 +122,7 @@ impl Socket {
     pub fn half_close(&self) -> Result<(), Status> {
         let status = unsafe { sys::zx_socket_write(self.raw_handle(), sys::ZX_SOCKET_HALF_CLOSE,
             ptr::null(), 0, ptr::null_mut()) };
-        into_result(status, || ())
+        ok(status)
     }
 
     pub fn outstanding_read_bytes(&self) -> Result<usize, Status> {
@@ -126,7 +130,7 @@ impl Socket {
         let status = unsafe {
             sys::zx_socket_read(self.raw_handle(), 0, ptr::null_mut(), 0, &mut outstanding)
         };
-        into_result(status, || outstanding)
+        ok(status).map(|()| outstanding)
     }
 }
 
@@ -146,15 +150,15 @@ mod tests {
         assert_eq!(&read_vec[0..5], b"hello");
 
         // Try reading when there is nothing to read.
-        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrShouldWait));
+        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::SHOULD_WAIT));
 
         // Close the socket from one end.
         assert!(s1.half_close().is_ok());
-        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrBadState));
-        assert_eq!(s1.write(SocketWriteOpts::Default, b"fail"), Err(Status::ErrBadState));
+        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::BAD_STATE));
+        assert_eq!(s1.write(SocketWriteOpts::Default, b"fail"), Err(Status::BAD_STATE));
 
         // Writing in the other direction should still work.
-        assert_eq!(s1.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrShouldWait));
+        assert_eq!(s1.read(SocketReadOpts::Default, &mut read_vec), Err(Status::SHOULD_WAIT));
         assert_eq!(s2.write(SocketWriteOpts::Default, b"back").unwrap(), 4);
         assert_eq!(s1.read(SocketReadOpts::Default, &mut read_vec).unwrap(), 4);
         assert_eq!(&read_vec[0..4], b"back");

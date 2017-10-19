@@ -9,4 +9,3 @@ repository = "https://fuchsia.googlesource.com/ddk-rs/"
 [dependencies]
 ddk-sys = { path = "ddk-sys" }
 fuchsia-zircon = { path = "../fuchsia-zircon" }
-fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }

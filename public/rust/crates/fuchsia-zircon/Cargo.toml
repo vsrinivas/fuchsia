@@ -7,4 +7,5 @@ description = "Rust bindings for the Zircon kernel"
 repository = "https://fuchsia.googlesource.com/garnet/"
 
 [dependencies]
+bitflags = "1.0.0"
 fuchsia-zircon-sys = { path = "fuchsia-zircon-sys" }

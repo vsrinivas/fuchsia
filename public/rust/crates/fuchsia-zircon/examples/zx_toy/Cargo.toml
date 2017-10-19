@@ -3,3 +3,4 @@ name = "zx_toy"
 version = "0.1.0"
 
 [dependencies]
+fuchsia-zircon = { path = "../../." }
