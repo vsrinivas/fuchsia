@@ -14,9 +14,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/iotxn.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb-function.h>
+#include <ddk/usb-request.h>
 #include <inet6/inet6.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
@@ -24,7 +24,7 @@
 #include <zircon/device/usb-device.h>
 #include <zircon/hw/usb-cdc.h>
 
-#define BULK_TXN_SIZE   2048
+#define BULK_REQ_SIZE   2048
 #define BULK_TX_COUNT   16
 #define BULK_RX_COUNT   16
 
@@ -37,8 +37,8 @@ typedef struct {
     zx_device_t* zxdev;
     usb_function_protocol_t function;
 
-    list_node_t bulk_out_txns;
-    list_node_t bulk_in_txns;
+    list_node_t bulk_out_reqs;
+    list_node_t bulk_in_reqs;
 
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
@@ -227,48 +227,48 @@ static zx_status_t cdc_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_ne
     mtx_lock(&cdc->tx_mutex);
 
     // Make sure that we can get all of the tx buffers we need to use
-    iotxn_t* tx_req = list_remove_head_type(&cdc->bulk_in_txns, iotxn_t, node);
+    usb_request_t* tx_req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node);
     if (tx_req == NULL) {
-        dprintf(LINFO, "%s: no free write txns, dropping packet\n", __FUNCTION__);
+        dprintf(LINFO, "%s: no free write reqs, dropping packet\n", __FUNCTION__);
         mtx_unlock(&cdc->tx_mutex);
         return ZX_ERR_NO_RESOURCES;
     }
 
     // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
     // transmission when the endpoint max packet size is a factor of the total transmission size.
-    iotxn_t* zlp_txn = NULL;
+    usb_request_t* zlp_req = NULL;
     if (length % cdc->bulk_max_packet == 0) {
-        zlp_txn = list_remove_head_type(&cdc->bulk_in_txns, iotxn_t, node);
-        if (zlp_txn == NULL) {
-            dprintf(LINFO, "%s: no free write txns, dropping packet\n", __FUNCTION__);
-            list_add_tail(&cdc->bulk_in_txns, &tx_req->node);
+        zlp_req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node);
+        if (zlp_req == NULL) {
+            dprintf(LINFO, "%s: no free write reqs, dropping packet\n", __FUNCTION__);
+            list_add_tail(&cdc->bulk_in_reqs, &tx_req->node);
             mtx_unlock(&cdc->tx_mutex);
             return ZX_ERR_NO_RESOURCES;
         }
-        zlp_txn->length = 0;
+        zlp_req->header.length = 0;
     }
 
     // Send data
-    tx_req->length = length;
-    ssize_t bytes_copied = iotxn_copyto(tx_req, byte_data, tx_req->length, 0);
+    tx_req->header.length = length;
+    ssize_t bytes_copied = usb_request_copyto(tx_req, byte_data, tx_req->header.length, 0);
     if (bytes_copied < 0) {
-        dprintf(LERROR, "%s: failed to copy data into send txn (error %zd)\n", __FUNCTION__,
+        dprintf(LERROR, "%s: failed to copy data into send req (error %zd)\n", __FUNCTION__,
                 bytes_copied);
-        list_add_tail(&cdc->bulk_in_txns, &tx_req->node);
-        if (zlp_txn) {
-            list_add_tail(&cdc->bulk_in_txns, &zlp_txn->node);
+        list_add_tail(&cdc->bulk_in_reqs, &tx_req->node);
+        if (zlp_req) {
+            list_add_tail(&cdc->bulk_in_reqs, &zlp_req->node);
         }
         mtx_unlock(&cdc->tx_mutex);
         return ZX_ERR_INTERNAL;
     }
 
-    // unlock before queueing txns to avoid potential deadlocks
+    // unlock before queueing reqs to avoid potential deadlocks
     mtx_unlock(&cdc->tx_mutex);
 
-    usb_function_queue(&cdc->function, tx_req, cdc->bulk_in_addr);
+    usb_function_queue(&cdc->function, tx_req);
     // Send zero-length terminal packet, if needed
-    if (zlp_txn) {
-        usb_function_queue(&cdc->function, zlp_txn, cdc->bulk_in_addr);
+    if (zlp_req) {
+        usb_function_queue(&cdc->function, zlp_req);
     }
     return ZX_OK;
 }
@@ -280,29 +280,29 @@ static ethmac_protocol_ops_t ethmac_ops = {
     .queue_tx = cdc_ethmac_queue_tx,
 };
 
-static void cdc_intr_complete(iotxn_t* txn, void* cookie) {
-    dprintf(TRACE, "%s %d %ld\n", __FUNCTION__, txn->status, txn->actual);
-    iotxn_release(txn);
+static void cdc_intr_complete(usb_request_t* req, void* cookie) {
+    dprintf(TRACE, "%s %d %ld\n", __FUNCTION__, req->response.status, req->response.actual);
+    usb_request_release(req);
 }
 
-static zx_status_t cdc_alloc_interrupt_txn(usb_cdc_t* cdc, iotxn_t** out_txn) {
-    iotxn_t* txn;
-    zx_status_t status = iotxn_alloc(&txn, 0, INTR_MAX_PACKET);
+static zx_status_t cdc_alloc_interrupt_req(usb_cdc_t* cdc, usb_request_t** out_req) {
+    usb_request_t* req;
+    zx_status_t status = usb_request_alloc(&req, INTR_MAX_PACKET, cdc->intr_addr);
     if (status != ZX_OK) {
-        dprintf(ERROR, "%s: iotxn_alloc failed %d\n", __FUNCTION__, status);
+        dprintf(ERROR, "%s: usb_request_alloc failed %d\n", __FUNCTION__, status);
         return status;
     }
-    txn->complete_cb = cdc_intr_complete;
-    txn->cookie = cdc;
-    *out_txn = txn;
+    req->complete_cb = cdc_intr_complete;
+    req->cookie = cdc;
+    *out_req = req;
     return ZX_OK;
 }
 
 // sends network connection and speed change notifications on the interrupt endpoint
-// we only do this once per USB connect, so instead of pooling iotxns we just allocate
+// we only do this once per USB connect, so instead of pooling usb requests we just allocate
 // them here and release them when they complete.
 static zx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
-    iotxn_t* txn;
+    usb_request_t* req;
     zx_status_t status;
 
     usb_cdc_notification_t network_notification = {
@@ -325,56 +325,57 @@ static zx_status_t cdc_send_notifications(usb_cdc_t* cdc) {
         .uplink_br = CDC_BITRATE,
     };
 
-    status = cdc_alloc_interrupt_txn(cdc, &txn);
+    status = cdc_alloc_interrupt_req(cdc, &req);
     if (status != ZX_OK) return status;
-    iotxn_copyto(txn, &network_notification, sizeof(network_notification), 0);
-    txn->length = sizeof(network_notification);
-    usb_function_queue(&cdc->function, txn, cdc->intr_addr);
+    usb_request_copyto(req, &network_notification, sizeof(network_notification), 0);
+    req->header.length = sizeof(network_notification);
+    usb_function_queue(&cdc->function, req);
 
-    status = cdc_alloc_interrupt_txn(cdc, &txn);
+    status = cdc_alloc_interrupt_req(cdc, &req);
     if (status != ZX_OK) return status;
-    iotxn_copyto(txn, &speed_notification, sizeof(speed_notification), 0);
-    txn->length = sizeof(speed_notification);
-    usb_function_queue(&cdc->function, txn, cdc->intr_addr);
+    usb_request_copyto(req, &speed_notification, sizeof(speed_notification), 0);
+    req->header.length = sizeof(speed_notification);
+    usb_function_queue(&cdc->function, req);
 
     return ZX_OK;
 }
 
-static void cdc_rx_complete(iotxn_t* txn, void* cookie) {
+static void cdc_rx_complete(usb_request_t* req, void* cookie) {
     usb_cdc_t* cdc = cookie;
 
-    dprintf(LTRACE, "%s %d %ld\n", __FUNCTION__, txn->status, txn->actual);
+    dprintf(LTRACE, "%s %d %ld\n", __FUNCTION__, req->response.status, req->response.actual);
 
-    if (txn->status == ZX_ERR_IO_NOT_PRESENT) {
+    if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
         mtx_lock(&cdc->rx_mutex);
-        list_add_head(&cdc->bulk_out_txns, &txn->node);
+        list_add_head(&cdc->bulk_out_reqs, &req->node);
         mtx_unlock(&cdc->rx_mutex);
         return;
     }
-    if (txn->status != ZX_OK) {
-        dprintf(ERROR, "%s: usb_read_complete called with status %d\n", __FUNCTION__, txn->status);
+    if (req->response.status != ZX_OK) {
+        dprintf(ERROR, "%s: usb_read_complete called with status %d\n",
+                __FUNCTION__, req->response.status);
     }
 
-    if (txn->status == ZX_OK) {
+    if (req->response.status == ZX_OK) {
         mtx_lock(&cdc->ethmac_mutex);
         if (cdc->ethmac_ifc) {
             uint8_t* data = NULL;
-            iotxn_mmap(txn, (void*)&data);
-            cdc->ethmac_ifc->recv(cdc->ethmac_cookie, data, txn->actual, 0);
+            usb_request_mmap(req, (void*)&data);
+            cdc->ethmac_ifc->recv(cdc->ethmac_cookie, data, req->response.actual, 0);
         }
         mtx_unlock(&cdc->ethmac_mutex);
     }
 
-    usb_function_queue(&cdc->function, txn, cdc->bulk_out_addr);
+    usb_function_queue(&cdc->function, req);
 }
 
-static void cdc_tx_complete(iotxn_t* txn, void* cookie) {
+static void cdc_tx_complete(usb_request_t* req, void* cookie) {
     usb_cdc_t* cdc = cookie;
 
-    dprintf(LTRACE, "%s %d %ld\n", __FUNCTION__, txn->status, txn->actual);
+    dprintf(LTRACE, "%s %d %ld\n", __FUNCTION__, req->response.status, req->response.actual);
 
     mtx_lock(&cdc->tx_mutex);
-    list_add_tail(&cdc->bulk_in_txns, &txn->node);
+    list_add_tail(&cdc->bulk_in_reqs, &req->node);
     mtx_unlock(&cdc->tx_mutex);
 }
 
@@ -454,11 +455,11 @@ static zx_status_t cdc_set_interface(void* ctx, unsigned interface, unsigned alt
     if (alt_setting && status == ZX_OK) {
         online = true;
 
-        // queue our OUT txns
+        // queue our OUT reqs
         mtx_lock(&cdc->rx_mutex);
-        iotxn_t* txn;
-        while ((txn = list_remove_head_type(&cdc->bulk_out_txns, iotxn_t, node)) != NULL) {
-            usb_function_queue(&cdc->function, txn, cdc->bulk_out_addr);
+        usb_request_t* req;
+        while ((req = list_remove_head_type(&cdc->bulk_out_reqs, usb_request_t, node)) != NULL) {
+            usb_function_queue(&cdc->function, req);
         }
         mtx_unlock(&cdc->rx_mutex);
 
@@ -492,13 +493,13 @@ static void usb_cdc_unbind(void* ctx) {
 static void usb_cdc_release(void* ctx) {
     dprintf(TRACE, "%s\n", __FUNCTION__);
     usb_cdc_t* cdc = ctx;
-    iotxn_t* txn;
+    usb_request_t* req;
 
-    while ((txn = list_remove_head_type(&cdc->bulk_out_txns, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&cdc->bulk_out_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
-    while ((txn = list_remove_head_type(&cdc->bulk_in_txns, iotxn_t, node)) != NULL) {
-        iotxn_release(txn);
+    while ((req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
     }
     mtx_destroy(&cdc->ethmac_mutex);
     mtx_destroy(&cdc->tx_mutex);
@@ -526,8 +527,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent, void** cookie) {
         return status;
     }
 
-    list_initialize(&cdc->bulk_out_txns);
-    list_initialize(&cdc->bulk_in_txns);
+    list_initialize(&cdc->bulk_out_reqs);
+    list_initialize(&cdc->bulk_in_reqs);
     mtx_init(&cdc->ethmac_mutex, mtx_plain);
     mtx_init(&cdc->tx_mutex, mtx_plain);
     mtx_init(&cdc->rx_mutex, mtx_plain);
@@ -573,27 +574,26 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent, void** cookie) {
         goto fail;
     }
 
-    // allocate bulk out iotxns
-    iotxn_t* txn;
+    // allocate bulk out usb requests
+    usb_request_t* req;
     for (int i = 0; i < BULK_TX_COUNT; i++) {
-        status = iotxn_alloc(&txn, 0, BULK_TXN_SIZE);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }
-        txn->length = BULK_TXN_SIZE;
-        txn->complete_cb = cdc_rx_complete;
-        txn->cookie = cdc;
-        list_add_head(&cdc->bulk_out_txns, &txn->node);
+        req->complete_cb = cdc_rx_complete;
+        req->cookie = cdc;
+        list_add_head(&cdc->bulk_out_reqs, &req->node);
     }
-    // allocate bulk in iotxns
+    // allocate bulk in usb requests
     for (int i = 0; i < BULK_RX_COUNT; i++) {
-        status = iotxn_alloc(&txn, 0, BULK_TXN_SIZE);
+        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }
-        txn->complete_cb = cdc_tx_complete;
-        txn->cookie = cdc;
-        list_add_head(&cdc->bulk_in_txns, &txn->node);
+        req->complete_cb = cdc_tx_complete;
+        req->cookie = cdc;
+        list_add_head(&cdc->bulk_in_reqs, &req->node);
     }
 
     device_add_args_t args = {

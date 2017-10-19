@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddk/iotxn.h>
+#include <ddk/usb-request.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>
@@ -78,7 +78,7 @@ typedef struct {
                              usb_ss_ep_comp_descriptor_t* ss_comp_desc);
     zx_status_t (*disable_ep)(void* ctx, uint8_t ep_addr);
     zx_status_t (*alloc_string_desc)(void* ctx, const char* string, uint8_t* out_index);
-    void (*queue)(void* ctx, iotxn_t* txn, uint8_t ep_address);
+    void (*queue)(void* ctx, usb_request_t* req);
     zx_status_t (*ep_set_stall)(void* ctx, uint8_t ep_address);
     zx_status_t (*ep_clear_stall)(void* ctx, uint8_t ep_address);
 } usb_function_protocol_ops_t;
@@ -127,10 +127,9 @@ static inline zx_status_t usb_function_alloc_string_desc(usb_function_protocol_t
     return func->ops->alloc_string_desc(func->ctx, string, out_index);
 }
 
-// helper for queueing an iotxn on an endpoint.
-static inline void usb_function_queue(usb_function_protocol_t* func, iotxn_t* txn,
-                                      uint8_t ep_address) {
-    return func->ops->queue(func->ctx, txn, ep_address);
+// helper for queueing a usb request on an endpoint.
+static inline void usb_function_queue(usb_function_protocol_t* func, usb_request_t* req) {
+    return func->ops->queue(func->ctx, req);
 }
 
 // stalls an endpoint

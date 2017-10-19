@@ -91,28 +91,16 @@ typedef struct {
     uint8_t bulk_in_addr;
 } usb_ums_t;
 
-// TODO(jocelyndang): remove this once usb_function_queue takes a usb_request.
-static void usb_function_queue_req(usb_function_protocol_t* usb_func, usb_request_t* req) {
-    uint8_t ep_address = req->header.ep_address;
-    iotxn_t* txn;
-    zx_status_t status = usb_request_to_iotxn(req, &txn);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
-    }
-    memset(txn->protocol_data, 0, sizeof(iotxn_proto_data_t));
-    usb_function_queue(usb_func, txn, ep_address);
-}
-
 static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
     ums->data_length += req->header.length;
     req->header.ep_address = ums->current_cbw.bmCBWFlags & USB_DIR_IN ?
         ums->bulk_in_addr : ums->bulk_out_addr;
-    usb_function_queue_req(&ums->function, req);
+    usb_function_queue(&ums->function, req);
 }
 
 static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
     // first queue next cbw so it is ready to go
-    usb_function_queue_req(&ums->function, ums->cbw_req);
+    usb_function_queue(&ums->function, ums->cbw_req);
 
     usb_request_t* req = ums->csw_req;
     ums_csw_t* csw;
@@ -125,7 +113,7 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
     csw->bmCSWStatus = status;
 
     req->header.length = sizeof(ums_csw_t);
-    usb_function_queue_req(&ums->function, ums->csw_req);
+    usb_function_queue(&ums->function, ums->csw_req);
 }
 
 static void ums_continue_transfer(usb_ums_t* ums) {
@@ -460,7 +448,7 @@ static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t sp
 
     if (configured && status == ZX_OK) {
         // queue first read on OUT endpoint
-        usb_function_queue_req(&ums->function, ums->cbw_req);
+        usb_function_queue(&ums->function, ums->cbw_req);
     }
     return status;
 }

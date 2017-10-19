@@ -166,15 +166,8 @@ static zx_status_t usb_device_alloc_string_desc(usb_device_t* dev, const char* s
     return ZX_OK;
 }
 
-static void usb_function_iotxn_queue(void* ctx, iotxn_t* txn) {
-    usb_function_t* function = ctx;
-    // pass down to the DCI driver
-    iotxn_queue(function->dci_dev, txn);
-}
-
 static zx_protocol_device_t function_proto = {
     .version = DEVICE_OPS_VERSION,
-    .iotxn_queue = usb_function_iotxn_queue,
     // Note that we purposely do not have a release callback for USB functions.
     // The functions are kept on a list when not active so they can be re-added
     // when reentering device mode.
@@ -367,11 +360,21 @@ static zx_status_t usb_func_alloc_string_desc(void* ctx, const char* string, uin
     return usb_device_alloc_string_desc(function->dev, string, out_index);
 }
 
-static void usb_func_queue(void* ctx, iotxn_t* txn, uint8_t ep_address) {
+static void usb_func_queue(void* ctx, usb_request_t* req) {
     usb_function_t* function = ctx;
+
+    iotxn_t* txn;
+    zx_status_t status = usb_request_to_iotxn(req, &txn);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
+        return;
+    }
     txn->protocol = ZX_PROTOCOL_USB_FUNCTION;
+
+    memset(txn->protocol_data, 0, sizeof(iotxn_proto_data_t));
     usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
-    data->ep_address = ep_address;
+    data->ep_address = req->header.ep_address;
+
     iotxn_queue(function->dci_dev, txn);
 }
 
