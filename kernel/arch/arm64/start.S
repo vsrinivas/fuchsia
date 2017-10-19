@@ -271,7 +271,7 @@ FUNCTION(arm_reset)
     /* map the kernel to a fixed address */
     /* void arm64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len); */
     mov     x0, page_table1
-    movlit  x1, (KERNEL_BASE + KERNEL_LOAD_OFFSET)
+    movlit  x1, KERNEL_BASE
     adr_global x2, __code_start
     adr_global x3, _end
     sub     x3, x3, x2

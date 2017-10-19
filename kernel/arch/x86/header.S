@@ -74,10 +74,10 @@ LOCAL_DATA(_multiboot_checksum)
 
 LOCAL_DATA(_multiboot_header_addr)
     /* header_addr */
-    .int PHYS_LOAD_ADDRESS - PHYS_HEADER_LOAD_OFFSET + (_multiboot_header - _setup_start)
+    .int PHYS_LOAD_ADDRESS + (_multiboot_header - _setup_start)
 LOCAL_DATA(_multiboot_load_addr)
     /* load_addr */
-    .int PHYS_LOAD_ADDRESS - PHYS_HEADER_LOAD_OFFSET
+    .int PHYS_LOAD_ADDRESS
 LOCAL_DATA(_multiboot_load_end_addr)
     /* load_end_addr */
     .int PHYS(__data_end)

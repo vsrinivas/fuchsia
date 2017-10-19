@@ -48,7 +48,7 @@ volatile pt_entry_t linear_map_pdp[(64ULL * GB) / (2 * MB)] __ALIGNED(PAGE_SIZE)
 #define KERNEL_PT pml4
 
 /* kernel base top level page table in physical space */
-static const paddr_t kernel_pt_phys = (vaddr_t)KERNEL_PT - KERNEL_BASE;
+static const paddr_t kernel_pt_phys = (vaddr_t)KERNEL_PT - KERNEL_BASE + KERNEL_LOAD_OFFSET;
 
 /* valid EPT MMU flags */
 static const uint kValidEptFlags =

@@ -12,7 +12,7 @@
 ENTRY(_start)
 SECTIONS
 {
-    . = KERNEL_BASE + KERNEL_LOAD_OFFSET;
+    . = KERNEL_BASE;
     PROVIDE_HIDDEN(__code_start = .);
 
     .text.boot0 : AT(MEMBASE + KERNEL_LOAD_OFFSET) {

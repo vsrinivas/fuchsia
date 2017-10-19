@@ -72,7 +72,7 @@ const struct mmu_initial_mapping mmu_initial_mappings[] = {
      * that this will be replaced with mappings of the correct privileges. */
     {
         .phys = MEMBASE,
-        .virt = KERNEL_BASE,
+        .virt = KERNEL_BASE - KERNEL_LOAD_OFFSET,
         .size = KERNEL_SIZE, /* x86 maps first KERNEL_SIZE by default */
         .flags = MMU_INITIAL_MAPPING_TEMPORARY,
         .name = "kernel_temp"
