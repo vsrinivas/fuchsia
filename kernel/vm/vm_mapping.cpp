@@ -443,9 +443,10 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         // Only perform the MMU mapping if the pages have non-empty permissions
         if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_RWX_MASK) {
             size_t mapped;
-            auto ret = aspace_->arch_aspace().Map(va, pa, 1, arch_mmu_flags_, &mapped);
-            if (ret < 0) {
+            zx_status_t ret = aspace_->arch_aspace().Map(va, pa, 1, arch_mmu_flags_, &mapped);
+            if (ret != ZX_OK) {
                 TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
+                return ret;
             }
             DEBUG_ASSERT(mapped == 1);
         }
