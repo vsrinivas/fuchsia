@@ -15,8 +15,8 @@ source_set("io") {
   libs = [ "zircon" ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl/tasks",
+    "//garnet/public/lib/fxl",
     "//zircon/system/ulib/zx",
   ]
 }

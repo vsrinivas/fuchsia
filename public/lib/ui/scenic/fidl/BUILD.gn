@@ -19,8 +19,8 @@ fidl("fidl") {
 
   public_deps = [
     ":presentation_info",
-    "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/images/fidl",
+    "//garnet/public/lib/ui/geometry/fidl",
   ]
 }
 

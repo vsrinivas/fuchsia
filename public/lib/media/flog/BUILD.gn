@@ -22,9 +22,9 @@ source_set("flog") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/fidl/flog",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl/flog",
     "//zircon/system/ulib/trace",
   ]
 

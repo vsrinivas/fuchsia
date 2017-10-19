@@ -26,9 +26,9 @@ fidl("test_interfaces") {
     "test_arrays.fidl",
     "test_constants.fidl",
     "test_enums.fidl",
+    "test_handles.fidl",
     "test_included_unions.fidl",
     "test_structs.fidl",
-    "test_handles.fidl",
     "test_unions.fidl",
     "validation_test_interfaces.fidl",
   ]
@@ -55,7 +55,6 @@ fidl("versioning_test_client_interfaces") {
 # Generates a static library which C binaries or languages with a C FFI
 # can link against to get a parser for the validation test "golden files".
 #
-
 #static_library("validation_parser") {
 #  testonly = true
 #  complete_static_lib = true

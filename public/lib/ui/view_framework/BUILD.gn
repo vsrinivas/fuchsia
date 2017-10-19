@@ -11,16 +11,18 @@ source_set("view_framework") {
   public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/ui/scenic:client",
-    "//garnet/public/lib/ui/scenic:fidl_helpers",
-    "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/scenic/fidl",
-    "//garnet/public/lib/ui/views/fidl",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/fidl",
   ]
 
-  deps = [ "//zircon/system/ulib/trace" ]
+  deps = [
+    "//zircon/system/ulib/trace",
+  ]
 }
 
 source_set("view_provider") {

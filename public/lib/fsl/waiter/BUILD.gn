@@ -10,8 +10,8 @@ source_set("waiter") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl/tasks",
     "//garnet/public/lib/fidl/cpp/waiter",
+    "//garnet/public/lib/fsl/tasks",
+    "//garnet/public/lib/fxl",
   ]
 }

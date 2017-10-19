@@ -6,9 +6,9 @@ import("../../fidl.gni")
 
 fidl("interfaces") {
   sources = [
-    "interface_control_messages.fidl",
     "fidl_files.fidl",
     "fidl_types.fidl",
+    "interface_control_messages.fidl",
     "service_describer.fidl",
   ]
 }

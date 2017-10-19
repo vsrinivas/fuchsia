@@ -12,7 +12,7 @@ fidl("fidl") {
 
   public_deps = [
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/netstack/fidl:net_address",
+    "//garnet/public/lib/network/fidl",
   ]
 }

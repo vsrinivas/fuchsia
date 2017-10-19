@@ -14,11 +14,9 @@ source_set("sketchy") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/fun/sketchy/fidl",
+    "//garnet/public/lib/ui/scenic:client",
   ]
 
-  include_dirs = [
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//third_party/glm" ]
 }

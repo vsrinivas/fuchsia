@@ -13,7 +13,7 @@ rust_library("fuchsia-app") {
     "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon",
     "//garnet/public/rust/crates/mxruntime:mxruntime",
     "//third_party/rust-crates:futures-0.1.16",
-    "//third_party/rust-mirrors/tokio-core",
     "//third_party/rust-mirrors/mio",
+    "//third_party/rust-mirrors/tokio-core",
   ]
 }

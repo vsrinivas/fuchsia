@@ -13,7 +13,11 @@ package("rust-crates-tests") {
   ]
 
   tests = [
-    { name = "fuchsia_vfs-lib-test" },
-    { name = "fuchsia_zircon-lib-test" },
+    {
+      name = "fuchsia_vfs-lib-test"
+    },
+    {
+      name = "fuchsia_zircon-lib-test"
+    },
   ]
 }

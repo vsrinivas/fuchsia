@@ -15,8 +15,8 @@ source_set("timeline") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
   ]
 }
 
