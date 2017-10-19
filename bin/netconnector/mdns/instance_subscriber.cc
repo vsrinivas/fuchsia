@@ -36,7 +36,7 @@ void InstanceSubscriber::Start() {
 }
 
 void InstanceSubscriber::Wake() {
-  host_->SendQuestion(question_, fxl::TimePoint::Now());
+  host_->SendQuestion(question_);
 
   if (query_delay_ == fxl::TimeDelta::Zero()) {
     query_delay_ = fxl::TimeDelta::FromSeconds(1);

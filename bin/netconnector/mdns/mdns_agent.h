@@ -27,22 +27,16 @@ class MdnsAgent {
     virtual void WakeAt(std::shared_ptr<MdnsAgent> agent,
                         fxl::TimePoint when) = 0;
 
-    // Sends a question to the multicast address at the specified time.
-    virtual void SendQuestion(std::shared_ptr<DnsQuestion> question,
-                              fxl::TimePoint when) = 0;
+    // Sends a question to the multicast address.
+    virtual void SendQuestion(std::shared_ptr<DnsQuestion> question) = 0;
 
-    // Sends a resource to the multicast address at the specified time. After
-    // a resource is sent with a TTL of zero, the resource is marked so that
-    // it won't get resent. This is useful if the agent has queued up resources
-    // to send in the future and later decides to cancel them by setting their
-    // TTLs to zero and resending.
+    // Sends a resource to the multicast address. After a resource is sent with
+    // a TTL of zero, the resource is marked so that it won't get resent.
     virtual void SendResource(std::shared_ptr<DnsResource> resource,
-                              MdnsResourceSection section,
-                              fxl::TimePoint when) = 0;
+                              MdnsResourceSection section) = 0;
 
-    // Sends address resources to the multicast address at the specified time.
-    virtual void SendAddresses(MdnsResourceSection section,
-                               fxl::TimePoint when) = 0;
+    // Sends address resources to the multicast address.
+    virtual void SendAddresses(MdnsResourceSection section) = 0;
 
     // Registers the resource for renewal. Before the resource's TTL expires,
     // an attempt will be made to renew the resource by issuing queries for it.

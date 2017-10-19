@@ -101,45 +101,15 @@ class Mdns : public MdnsAgent::Host {
     }
   };
 
-  struct QuestionQueueEntry {
-    QuestionQueueEntry(fxl::TimePoint time,
-                       std::shared_ptr<DnsQuestion> question)
-        : time_(time), question_(question) {}
-
-    fxl::TimePoint time_;
-    std::shared_ptr<DnsQuestion> question_;
-
-    bool operator>(const QuestionQueueEntry& other) const {
-      return time_ > other.time_;
-    }
-  };
-
-  struct ResourceQueueEntry {
-    ResourceQueueEntry(fxl::TimePoint time,
-                       std::shared_ptr<DnsResource> resource,
-                       MdnsResourceSection section)
-        : time_(time), resource_(resource), section_(section) {}
-
-    fxl::TimePoint time_;
-    std::shared_ptr<DnsResource> resource_;
-    MdnsResourceSection section_;
-
-    bool operator>(const ResourceQueueEntry& other) const {
-      return time_ > other.time_;
-    }
-  };
-
   // MdnsAgent::Host implementation.
   void WakeAt(std::shared_ptr<MdnsAgent> agent, fxl::TimePoint when) override;
 
-  void SendQuestion(std::shared_ptr<DnsQuestion> question,
-                    fxl::TimePoint when) override;
+  void SendQuestion(std::shared_ptr<DnsQuestion> question) override;
 
   void SendResource(std::shared_ptr<DnsResource> resource,
-                    MdnsResourceSection section,
-                    fxl::TimePoint when) override;
+                    MdnsResourceSection section) override;
 
-  void SendAddresses(MdnsResourceSection section, fxl::TimePoint when) override;
+  void SendAddresses(MdnsResourceSection section) override;
 
   void Renew(const DnsResource& resource) override;
 
@@ -163,8 +133,7 @@ class Mdns : public MdnsAgent::Host {
   bool started_ = false;
   reverse_priority_queue<fxl::TimePoint> post_task_queue_;
   reverse_priority_queue<WakeQueueEntry> wake_queue_;
-  reverse_priority_queue<QuestionQueueEntry> question_queue_;
-  reverse_priority_queue<ResourceQueueEntry> resource_queue_;
+  DnsMessage outbound_message_;
   std::unordered_map<MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
   std::unordered_map<std::string, std::shared_ptr<MdnsAgent>>
       instance_publishers_by_instance_full_name_;

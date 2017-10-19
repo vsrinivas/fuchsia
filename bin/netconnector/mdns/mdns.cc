@@ -21,15 +21,6 @@
 
 namespace netconnector {
 namespace mdns {
-namespace {
-
-static constexpr uint32_t kCancelTimeToLive =
-    std::numeric_limits<uint32_t>::max();
-
-static const fxl::TimeDelta kMessageAggregationWindowSize =
-    fxl::TimeDelta::FromMilliseconds(100);
-
-}  // namespace
 
 Mdns::Mdns() : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
 
@@ -205,32 +196,36 @@ void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, fxl::TimePoint when) {
   wake_queue_.emplace(when, agent);
 }
 
-void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question,
-                        fxl::TimePoint when) {
+void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
   FXL_DCHECK(question);
-  question_queue_.emplace(when, question);
+  outbound_message_.questions_.push_back(question);
 }
 
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
-                        MdnsResourceSection section,
-                        fxl::TimePoint when) {
+                        MdnsResourceSection section) {
   FXL_DCHECK(resource);
 
-  if (section == MdnsResourceSection::kExpired) {
-    // Expirations are distributed to local agents.
-    for (auto& pair : agents_) {
-      pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
-    }
-
-    return;
+  switch (section) {
+    case MdnsResourceSection::kAnswer:
+      outbound_message_.answers_.push_back(resource);
+      break;
+    case MdnsResourceSection::kAuthority:
+      outbound_message_.authorities_.push_back(resource);
+      break;
+    case MdnsResourceSection::kAdditional:
+      outbound_message_.additionals_.push_back(resource);
+      break;
+    case MdnsResourceSection::kExpired:
+      // Expirations are distributed to local agents.
+      for (auto& pair : agents_) {
+        pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
+      }
+      break;
   }
-
-  resource_queue_.emplace(when, resource, section);
 }
 
-void Mdns::SendAddresses(MdnsResourceSection section, fxl::TimePoint when) {
-  // Placeholder for address resource record.
-  resource_queue_.emplace(when, address_placeholder_, section);
+void Mdns::SendAddresses(MdnsResourceSection section) {
+  SendResource(address_placeholder_, section);
 }
 
 void Mdns::Renew(const DnsResource& resource) {
@@ -272,96 +267,26 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
 }
 
 void Mdns::SendMessage() {
-  // It's acceptable to send records a bit early, and this provides two
-  // advantages:
-  // 1) We get more records per message, which is more efficient.
-  // 2) Agents can schedule records in short sequences if sequence is
-  // important.
-  fxl::TimePoint now = fxl::TimePoint::Now() + kMessageAggregationWindowSize;
+  outbound_message_.UpdateCounts();
 
-  DnsMessage message;
-
-  bool empty = true;
-
-  while (!question_queue_.empty() && question_queue_.top().time_ <= now) {
-    message.questions_.push_back(question_queue_.top().question_);
-    question_queue_.pop();
-    empty = false;
-  }
-
-  // TODO(dalesat): Fully implement traffic mitigation.
-  // For now, we just make sure we don't send the same record instance twice.
-  std::unordered_set<DnsResource*> resources_added;
-
-  while (!resource_queue_.empty() && resource_queue_.top().time_ <= now) {
-    if (resource_queue_.top().resource_->time_to_live_ == kCancelTimeToLive) {
-      // Cancelled while in the queue.
-      resource_queue_.pop();
-      continue;
-    }
-
-    if (resources_added.count(resource_queue_.top().resource_.get()) != 0) {
-      // Already added to this message.
-      resource_queue_.pop();
-      continue;
-    }
-
-    resources_added.insert(resource_queue_.top().resource_.get());
-
-    switch (resource_queue_.top().section_) {
-      case MdnsResourceSection::kAnswer:
-        message.answers_.push_back(resource_queue_.top().resource_);
-        break;
-      case MdnsResourceSection::kAuthority:
-        message.authorities_.push_back(resource_queue_.top().resource_);
-        break;
-      case MdnsResourceSection::kAdditional:
-        message.additionals_.push_back(resource_queue_.top().resource_);
-        break;
-      case MdnsResourceSection::kExpired:
-        FXL_DCHECK(false);
-        break;
-    }
-
-    resource_queue_.pop();
-    empty = false;
-  }
-
-  if (empty) {
-    return;
-  }
-
-  message.UpdateCounts();
-
-  if (message.questions_.empty()) {
-    message.header_.SetResponse(true);
-    message.header_.SetAuthoritativeAnswer(true);
+  if (outbound_message_.questions_.empty()) {
+    outbound_message_.header_.SetResponse(true);
+    outbound_message_.header_.SetAuthoritativeAnswer(true);
   }
 
   if (verbose_) {
-    FXL_LOG(INFO) << "Outbound message: " << message;
+    FXL_LOG(INFO) << "Outbound message: " << outbound_message_;
   }
 
-  // V6 interface transceivers will treat this as |kV6Multicast|.
-  transceiver_.SendMessage(&message, MdnsAddresses::kV4Multicast, 0);
+  transceiver_.SendMessage(&outbound_message_, MdnsAddresses::kV4Multicast, 0);
 
-  for (auto resource : message.answers_) {
-    if (resource->time_to_live_ == 0) {
-      resource->time_to_live_ = kCancelTimeToLive;
-    }
-  }
-
-  for (auto resource : message.authorities_) {
-    if (resource->time_to_live_ == 0) {
-      resource->time_to_live_ = kCancelTimeToLive;
-    }
-  }
-
-  for (auto resource : message.additionals_) {
-    if (resource->time_to_live_ == 0) {
-      resource->time_to_live_ = kCancelTimeToLive;
-    }
-  }
+  // Reset |outbound_message_|.
+  // TODO(dalesat): Replace this awkwardness when unicast reply is implemented.
+  outbound_message_.header_.flags_ = 0;
+  outbound_message_.questions_.clear();
+  outbound_message_.answers_.clear();
+  outbound_message_.authorities_.clear();
+  outbound_message_.additionals_.clear();
 }
 
 void Mdns::ReceiveQuestion(const DnsQuestion& question) {
@@ -385,14 +310,6 @@ void Mdns::PostTask() {
 
   if (!wake_queue_.empty()) {
     when = wake_queue_.top().time_;
-  }
-
-  if (!question_queue_.empty() && when > question_queue_.top().time_) {
-    when = question_queue_.top().time_;
-  }
-
-  if (!resource_queue_.empty() && when > resource_queue_.top().time_) {
-    when = resource_queue_.top().time_;
   }
 
   if (when == fxl::TimePoint::Max()) {

@@ -63,12 +63,12 @@ void ResourceRenewer::Wake() {
           std::make_shared<DnsResource>(entry->name_, entry->type_);
       resource->time_to_live_ = 0;
       entries_.erase(entry);
-      host_->SendResource(resource, MdnsResourceSection::kExpired, now);
+      host_->SendResource(resource, MdnsResourceSection::kExpired);
       delete entry;
     } else {
       // Need to query.
       host_->SendQuestion(
-          std::make_shared<DnsQuestion>(entry->name_, entry->type_), now);
+          std::make_shared<DnsQuestion>(entry->name_, entry->type_));
       entry->SetNextQueryOrExpiration();
       Schedule(entry);
     }

@@ -130,10 +130,6 @@ void Responder::GetAndSendPublication(bool query,
 
 void Responder::SendPublication(const std::string& subtype,
                                 const MdnsPublication& publication) const {
-  // We schedule the resources a nanosecond apart to ensure proper sequence.
-  int64_t sequence = 0;
-  fxl::TimePoint when = fxl::TimePoint::Now();
-
   std::string service_full_name =
       subtype.empty()
           ? MdnsNames::LocalServiceFullName(service_name_)
@@ -143,25 +139,22 @@ void Responder::SendPublication(const std::string& subtype,
       std::make_shared<DnsResource>(service_full_name, DnsType::kPtr);
   ptr_resource->time_to_live_ = publication.ptr_ttl_seconds;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
-  host_->SendResource(ptr_resource, MdnsResourceSection::kAnswer, when);
+  host_->SendResource(ptr_resource, MdnsResourceSection::kAnswer);
 
   auto srv_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
   srv_resource->time_to_live_ = publication.srv_ttl_seconds;
   srv_resource->srv_.port_ = IpPort::From_uint16_t(publication.port);
   srv_resource->srv_.target_ = host_full_name_;
-  host_->SendResource(srv_resource, MdnsResourceSection::kAdditional,
-                      when + fxl::TimeDelta::FromNanoseconds(++sequence));
+  host_->SendResource(srv_resource, MdnsResourceSection::kAdditional);
 
   auto txt_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
   txt_resource->time_to_live_ = publication.txt_ttl_seconds;
   txt_resource->txt_.strings_ = publication.text.To<std::vector<std::string>>();
-  host_->SendResource(txt_resource, MdnsResourceSection::kAdditional,
-                      when + fxl::TimeDelta::FromNanoseconds(++sequence));
+  host_->SendResource(txt_resource, MdnsResourceSection::kAdditional);
 
-  host_->SendAddresses(MdnsResourceSection::kAdditional,
-                       when + fxl::TimeDelta::FromNanoseconds(++sequence));
+  host_->SendAddresses(MdnsResourceSection::kAdditional);
 }
 
 }  // namespace mdns

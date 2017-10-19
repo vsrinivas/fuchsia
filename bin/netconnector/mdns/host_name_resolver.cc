@@ -28,11 +28,9 @@ HostNameResolver::~HostNameResolver() {}
 
 void HostNameResolver::Start() {
   host_->SendQuestion(
-      std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA),
-      fxl::TimePoint::Now());
+      std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA));
   host_->SendQuestion(
-      std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa),
-      fxl::TimePoint::Now());
+      std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa));
 
   host_->WakeAt(shared_from_this(), timeout_);
 }
