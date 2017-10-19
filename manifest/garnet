@@ -7,7 +7,7 @@
     <import remote="https://fuchsia.googlesource.com/zircon"
             manifest="manifest"
             name="zircon"
-            revision="e5ed3f12980ca3eaccb080e6c3e985fe1650a34a"/>
+            revision="40a9d8d39b2c98e802840bf2332254c8060ff68a"/>
     <!-- TODO(abarth): Remove Dart runtime once SEC-28 is fixed -->
     <import remote="https://fuchsia.googlesource.com/manifest"
             manifest="runtimes/dart"
