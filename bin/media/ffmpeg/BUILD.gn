@@ -30,17 +30,17 @@ source_set("ffmpeg") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/timeline",
-    "//garnet/public/lib/media/fidl",
     "//garnet/bin/media/audio",
     "//garnet/bin/media/decode",
     "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
-    "//zircon/system/ulib/trace",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/timeline",
     "//third_party/ffmpeg",
+    "//zircon/system/ulib/trace",
   ]
 
   defines = [

@@ -27,14 +27,14 @@ executable("network") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/network/fidl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/netstack/fidl:net_address",
+    "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/url",
-    "//zircon/system/ulib/zx",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

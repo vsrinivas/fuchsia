@@ -17,9 +17,7 @@ package("package") {
 
   package_name = "cowsay"
 
-  binaries = [
-    {
-      name = "cowsay"
-    },
-  ]
+  binaries = [ {
+        name = "cowsay"
+      } ]
 }

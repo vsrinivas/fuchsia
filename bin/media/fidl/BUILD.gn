@@ -23,13 +23,13 @@ source_set("fidl") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/transport",
-    "//garnet/public/lib/media/fidl",
     "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
-    "//garnet/public/lib/network/fidl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/network/fidl",
   ]
 }

@@ -9,9 +9,9 @@ executable("vol") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/audio",
     "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }

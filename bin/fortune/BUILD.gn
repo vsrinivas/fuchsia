@@ -13,10 +13,10 @@ executable("fortune_bin") {
 }
 
 package("fortune") {
-  deps = [ ":fortune_bin" ]
-  binaries = [
-    {
-      name = "fortune"
-    }
+  deps = [
+    ":fortune_bin",
   ]
+  binaries = [ {
+        name = "fortune"
+      } ]
 }

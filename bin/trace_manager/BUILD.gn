@@ -24,9 +24,9 @@ executable("bin") {
   ]
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/tracing/fidl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/tracing/fidl",
     "//third_party/rapidjson",
   ]
 }

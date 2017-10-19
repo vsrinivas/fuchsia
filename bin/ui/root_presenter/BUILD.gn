@@ -12,19 +12,19 @@ executable("root_presenter") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/ui/input",
-    "//garnet/public/lib/ui/scenic:client",
-    "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/lib/ui/presentation/fidl",
-    "//garnet/public/lib/ui/scenic/fidl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/ui/views/cpp",
     "//garnet/bin/ui/input_reader",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/input",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/input/fidl",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/views/cpp",
+    "//garnet/public/lib/ui/views/fidl",
     "//zircon/system/ulib/trace-provider",
   ]
 

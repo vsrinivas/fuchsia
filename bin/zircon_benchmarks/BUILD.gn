@@ -18,8 +18,8 @@ executable("bin") {
     "round_trips.cc",
     "sockets.cc",
     "syscalls.cc",
-    "time_get.cc",
     "threads.cc",
+    "time_get.cc",
     "vmo.cc",
   ]
   deps = [

@@ -18,11 +18,11 @@ executable("bluetoothcli") {
   ]
 
   deps = [
+    "//garnet/bin/bluetooth_tools/lib",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/bluetooth/fidl",
-    "//garnet/bin/bluetooth_tools/lib",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//zircon/third_party/ulib/linenoise",
   ]
 }

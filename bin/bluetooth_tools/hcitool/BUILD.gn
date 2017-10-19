@@ -12,8 +12,8 @@ executable("hcitool") {
   ]
 
   deps = [
+    "//garnet/bin/bluetooth_tools/lib",
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
-    "//garnet/bin/bluetooth_tools/lib",
   ]
 }

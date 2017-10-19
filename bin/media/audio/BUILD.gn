@@ -34,9 +34,9 @@ source_set("audio") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/timeline",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
+    "//garnet/public/lib/media/timeline",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/audio-utils",
   ]
@@ -56,7 +56,7 @@ test("tests") {
 
   deps = [
     ":audio",
-    "//garnet/public/lib/media/timeline",
     "//garnet/bin/media/framework_create",
+    "//garnet/public/lib/media/timeline",
   ]
 }

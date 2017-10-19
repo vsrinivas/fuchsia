@@ -9,9 +9,9 @@ executable("launch") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/presentation/fidl",
     "//garnet/public/lib/ui/views/fidl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fsl",
   ]
 }

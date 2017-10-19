@@ -12,7 +12,9 @@ executable("sysinfo") {
     "launchpad",
     "zircon",
   ]
-  deps = [ "//garnet/public/lib/netstack/c" ]
+  deps = [
+    "//garnet/public/lib/netstack/c",
+  ]
 }
 
 package("package") {

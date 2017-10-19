@@ -41,13 +41,13 @@ source_set("trace_app") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/network/fidl",
     "//garnet/lib/measure",
     "//garnet/lib/trace_converters:chromium",
-    "//garnet/public/lib/tracing/fidl",
-    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
+    "//garnet/public/lib/tracing/fidl",
     "//zircon/system/ulib/trace-reader",
   ]
 
@@ -86,15 +86,14 @@ package("trace") {
   ]
 }
 
-
 executable("trace_tests_bin") {
   testonly = true
 
   output_name = "trace_tests"
 
   deps = [
-    "//garnet/lib/measure:unittests",
     "//garnet/bin/trace:unittests",
+    "//garnet/lib/measure:unittests",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
 }
@@ -106,12 +105,10 @@ package("trace_tests") {
     ":trace_tests_bin",
   ]
 
-  tests = [
-    {
-      name = "trace_tests"
+  tests = [ {
+        name = "trace_tests"
 
-      # Disabled because several tests are crashing on release builds.
-      disabled = true
-    },
-  ]
+        # Disabled because several tests are crashing on release builds.
+        disabled = true
+      } ]
 }

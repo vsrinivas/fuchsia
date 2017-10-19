@@ -16,10 +16,10 @@ executable("flog_service") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/media/fidl/flog",
     "//garnet/bin/media/util",
-    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl/flog",
   ]
 }

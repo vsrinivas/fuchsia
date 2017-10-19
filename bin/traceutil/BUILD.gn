@@ -33,8 +33,7 @@ go_binary("bin") {
     {
       package = "golang.org/x/crypto"
       source = "//third_party/golang/crypto"
-    }
-
+    },
   ]
 }
 

@@ -6,16 +6,17 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 
 flatbuffer("credentials") {
   sources = [
-      "credentials.fbs",
+    "credentials.fbs",
   ]
 }
 
 source_set("lib") {
   sources = [
     "auth_db.h",
-#    "auth_db.cc",
-    "auth_db_file_impl.h",
     "auth_db_file_impl.cc",
+
+    #    "auth_db.cc",
+    "auth_db_file_impl.h",
   ]
 
   deps = [

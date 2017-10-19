@@ -9,10 +9,10 @@ executable("input") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/input/cpp",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/input/fidl",
   ]
 
   libs = [ "hid" ]

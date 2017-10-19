@@ -10,10 +10,10 @@ executable("bin") {
   sources = [
     "adapter_fidl_impl.cc",
     "adapter_fidl_impl.h",
-    "adapter_manager_fidl_impl.cc",
-    "adapter_manager_fidl_impl.h",
     "adapter_manager.cc",
     "adapter_manager.h",
+    "adapter_manager_fidl_impl.cc",
+    "adapter_manager_fidl_impl.h",
     "app.cc",
     "app.h",
     "fidl_helpers.cc",
@@ -26,8 +26,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/app/cpp",
     "//garnet/drivers/bluetooth/lib",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/bluetooth/fidl",
     "//garnet/public/lib/fsl",
   ]
@@ -80,9 +80,7 @@ package("bluetooth_tests") {
     ":bluetooth_unittests",
   ]
 
-  tests = [
-    {
-      name = "bluetooth_unittests"
-    },
-  ]
+  tests = [ {
+        name = "bluetooth_unittests"
+      } ]
 }

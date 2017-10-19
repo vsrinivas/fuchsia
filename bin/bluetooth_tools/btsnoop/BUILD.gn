@@ -6,9 +6,9 @@ executable("btsnoop") {
   output_name = "btsnoop"
 
   sources = [
+    "main.cc",
     "sniffer.cc",
     "sniffer.h",
-    "main.cc",
   ]
 
   deps = [

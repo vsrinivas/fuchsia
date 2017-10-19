@@ -11,12 +11,12 @@ source_set("input_reader") {
   ]
 
   deps = [
-    "//garnet/public/lib/ui/input",
-    "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/fsl",
-    "//zircon/system/ulib/zx",
+    "//garnet/public/lib/ui/input",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/input/fidl",
     "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/zx",
   ]
 
   libs = [

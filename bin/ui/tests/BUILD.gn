@@ -10,7 +10,7 @@ source_set("main") {
   ]
 
   deps = [
-    "//garnet/public/lib/ui/tests",
     "//garnet/public/lib/test_runner/cpp/reporting",
+    "//garnet/public/lib/ui/tests",
   ]
 }

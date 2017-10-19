@@ -9,9 +9,7 @@ executable("uname") {
     "uname.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }
 
 package("package") {
@@ -21,9 +19,7 @@ package("package") {
 
   package_name = "uname"
 
-  binaries = [
-    {
-      name = "uname"
-    },
-  ]
+  binaries = [ {
+        name = "uname"
+      } ]
 }
