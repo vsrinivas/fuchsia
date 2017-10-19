@@ -36,6 +36,7 @@ executable("suggestion_engine") {
 
 source_set("subscribers") {
   sources = [
+    "interruptions_subscriber.cc",
     "interruptions_subscriber.h",
     "windowed_subscriber.cc",
     "windowed_subscriber.h",

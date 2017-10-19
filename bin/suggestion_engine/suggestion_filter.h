@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_FILTER_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_FILTER_H_
 
 #import <vector>
 
@@ -18,3 +19,5 @@ class SuggestionFilter {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_FILTER_H_

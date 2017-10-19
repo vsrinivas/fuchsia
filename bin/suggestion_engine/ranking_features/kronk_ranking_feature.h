@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
@@ -19,3 +20,5 @@ class KronkRankingFeature : public RankingFeature {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_

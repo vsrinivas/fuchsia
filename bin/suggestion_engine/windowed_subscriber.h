@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_WINDOWED_SUBSCRIBER_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_WINDOWED_SUBSCRIBER_H_
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/bin/suggestion_engine/suggestion_subscriber.h"
@@ -37,12 +39,8 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
   WindowedSuggestionSubscriber(
       const RankedSuggestions* ranked_suggestions,
       fidl::InterfaceHandle<SuggestionListener> listener,
-      int32_t count)
-      : SuggestionSubscriber(std::move(listener)),
-        max_results_(count),
-        ranked_suggestions_(ranked_suggestions) {}
-
-  virtual ~WindowedSuggestionSubscriber() = default;
+      int32_t count);
+  virtual ~WindowedSuggestionSubscriber();
 
   void OnSubscribe() override;
 
@@ -57,9 +55,7 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
   void OnProcessingChange(bool processing) override;
 
  private:
-  bool IsFull() const {
-    return (ranked_suggestions_->Get()).size() > (size_t)max_results_;
-  }
+  bool IsFull() const;
 
   bool IncludeSuggestion(const RankedSuggestion& suggestion) const;
 
@@ -70,3 +66,5 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_WINDOWED_SUBSCRIBER_H_

@@ -6,6 +6,16 @@
 
 namespace maxwell {
 
+WindowedSuggestionSubscriber::WindowedSuggestionSubscriber(
+    const RankedSuggestions* ranked_suggestions,
+    fidl::InterfaceHandle<SuggestionListener> listener,
+    int32_t count)
+    : SuggestionSubscriber(std::move(listener)),
+      max_results_(count),
+      ranked_suggestions_(ranked_suggestions) {}
+
+WindowedSuggestionSubscriber::~WindowedSuggestionSubscriber() = default;
+
 void WindowedSuggestionSubscriber::OnSubscribe() {
   auto& suggestions = ranked_suggestions_->Get();
   for (size_t i = 0; i < (size_t)max_results_ && i < suggestions.size(); i++) {
@@ -52,6 +62,11 @@ void WindowedSuggestionSubscriber::Invalidate() {
 
 void WindowedSuggestionSubscriber::OnProcessingChange(bool processing) {
   listener()->OnProcessingChange(processing);
+}
+
+bool WindowedSuggestionSubscriber::IsFull() const {
+  return (ranked_suggestions_->Get()).size() >
+      static_cast<size_t>(max_results_);
 }
 
 // A suggestion should be included if its sorted index (by rank) is less than

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_
 
 #include "lib/suggestion/fidl/proposal.fidl.h"
 
@@ -27,3 +28,5 @@ class TimelineStoriesFilter {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_

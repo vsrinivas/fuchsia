@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_
 
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 
@@ -26,16 +27,9 @@ class SuggestionEngineImpl;
 class ProposalPublisherImpl : public ProposalPublisher {
  public:
   ProposalPublisherImpl(SuggestionEngineImpl* engine,
-                        const std::string& component_url)
-      : engine_(engine),
-        component_url_(component_url),
-        bindings_(this),
-        weak_ptr_factory_(this) {}
+                        const std::string& component_url);
 
-  void AddBinding(fidl::InterfaceRequest<ProposalPublisher> request) {
-    bindings_.emplace(
-        new fidl::Binding<ProposalPublisher>(this, std::move(request)));
-  }
+  void AddBinding(fidl::InterfaceRequest<ProposalPublisher> request);
 
   void Propose(ProposalPtr proposal) override;
   void Remove(const fidl::String& proposal_id) override;
@@ -45,7 +39,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
  private:
   class BindingSet : public maxwell::BindingSet<ProposalPublisher> {
    public:
-    BindingSet(ProposalPublisherImpl* impl) : impl_(impl) {}
+    BindingSet(ProposalPublisherImpl* impl);
 
    protected:
     void OnConnectionError(fidl::Binding<ProposalPublisher>* binding) override;
@@ -54,9 +48,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
     ProposalPublisherImpl* const impl_;
   };
 
-  bool ShouldEraseSelf() const {
-    return bindings_.empty() && !weak_ptr_factory_.HasWeakPtrs();
-  }
+  bool ShouldEraseSelf() const;
   void EraseSelf();
 
   SuggestionEngineImpl* const engine_;
@@ -67,3 +59,5 @@ class ProposalPublisherImpl : public ProposalPublisher {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_

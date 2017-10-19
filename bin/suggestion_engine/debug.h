@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_DEBUG_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_DEBUG_H_
 
 #include <list>
 #include <vector>
@@ -52,3 +53,5 @@ class SuggestionDebugImpl : public SuggestionDebug {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_DEBUG_H_

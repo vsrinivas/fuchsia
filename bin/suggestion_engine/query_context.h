@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_CONTEXT_H_
+#define PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_CONTEXT_H_
 
 #include "lib/suggestion/fidl/user_input.fidl.h"
 
@@ -18,3 +19,5 @@ struct QueryContext {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_CONTEXT_H_
