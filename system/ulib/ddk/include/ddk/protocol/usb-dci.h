@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <ddk/usb-request.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/hw/usb.h>
@@ -41,6 +42,7 @@ static inline void usb_dci_set_speed(usb_dci_interface_t* intf, usb_speed_t spee
 }
 
 typedef struct {
+    void (*request_queue)(void* ctx, usb_request_t* req);
     zx_status_t (*set_interface)(void* ctx, usb_dci_interface_t* interface);
     zx_status_t (*config_ep)(void* ctx, usb_endpoint_descriptor_t* ep_desc,
                              usb_ss_ep_comp_descriptor_t* ss_comp_desc);
@@ -53,6 +55,10 @@ typedef struct {
     usb_dci_protocol_ops_t* ops;
     void* ctx;
 } usb_dci_protocol_t;
+
+static inline void usb_dci_request_queue(usb_dci_protocol_t* dci, usb_request_t* req) {
+    dci->ops->request_queue(dci->ctx, req);
+}
 
 // registers callback interface with the controller driver
 static inline void usb_dci_set_interface(usb_dci_protocol_t* dci, usb_dci_interface_t* intf) {

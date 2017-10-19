@@ -362,20 +362,7 @@ static zx_status_t usb_func_alloc_string_desc(void* ctx, const char* string, uin
 
 static void usb_func_queue(void* ctx, usb_request_t* req) {
     usb_function_t* function = ctx;
-
-    iotxn_t* txn;
-    zx_status_t status = usb_request_to_iotxn(req, &txn);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
-        return;
-    }
-    txn->protocol = ZX_PROTOCOL_USB_FUNCTION;
-
-    memset(txn->protocol_data, 0, sizeof(iotxn_proto_data_t));
-    usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
-    data->ep_address = req->header.ep_address;
-
-    iotxn_queue(function->dci_dev, txn);
+    usb_dci_request_queue(&function->dev->usb_dci, req);
 }
 
 static zx_status_t usb_func_ep_set_stall(void* ctx, uint8_t ep_address) {

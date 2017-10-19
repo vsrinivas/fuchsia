@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-dci.h>
+#include <ddk/protocol/usb-function.h>
 
 #include <zircon/types.h>
 #include <stdio.h>
@@ -48,6 +50,24 @@ void usb_virtual_device_control(usb_virtual_device_t* device, iotxn_t* txn) {
     iotxn_complete(txn, status, actual);
 }
 
+static void device_request_queue(void* ctx, usb_request_t* req) {
+    usb_virtual_device_t* device = ctx;
+
+    iotxn_t* txn;
+    zx_status_t status = usb_request_to_iotxn(req, &txn);
+    if (status != ZX_OK) {
+        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
+        return;
+    }
+    txn->protocol = ZX_PROTOCOL_USB_FUNCTION;
+
+    memset(txn->protocol_data, 0, sizeof(iotxn_proto_data_t));
+    usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
+    data->ep_address = req->header.ep_address;
+
+    iotxn_queue(device->bus->zxdev, txn);
+}
+
 static zx_status_t device_set_interface(void* ctx, usb_dci_interface_t* dci_intf) {
     usb_virtual_device_t* device = ctx;
     memcpy(&device->dci_intf, dci_intf, sizeof(device->dci_intf));
@@ -74,6 +94,7 @@ static zx_status_t device_ep_clear_stall(void* ctx, uint8_t ep_address) {
 }
 
 usb_dci_protocol_ops_t virt_device_dci_protocol = {
+    .request_queue = device_request_queue,
     .set_interface = device_set_interface,
     .config_ep = device_config_ep,
     .disable_ep = device_disable_ep,
@@ -119,11 +140,6 @@ static zx_status_t virt_device_open(void* ctx, zx_device_t** dev_out, uint32_t f
     return ZX_OK;
 }
 
-static void virt_device_iotxn_queue(void* ctx, iotxn_t* txn) {
-    usb_virtual_device_t* device = ctx;
-    iotxn_queue(device->bus->zxdev, txn);
-}
-
 static void virt_device_unbind(void* ctx) {
     usb_virtual_device_t* device = ctx;
     device_remove(device->zxdev);
@@ -138,7 +154,6 @@ static zx_protocol_device_t usb_virtual_device_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = virt_device_get_protocol,
     .open = virt_device_open,
-    .iotxn_queue = virt_device_iotxn_queue,
     .unbind = virt_device_unbind,
     .release = virt_device_release,
 };

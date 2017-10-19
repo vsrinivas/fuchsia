@@ -232,6 +232,20 @@ void dwc3_reset_configuration(dwc3_t* dwc) {
     }
 }
 
+static void dwc3_request_queue(void* ctx, usb_request_t* req) {
+    dwc3_t* dwc = ctx;
+
+    dprintf(LTRACE, "dwc3_request_queue ep: %u\n", req->header.ep_address);
+    unsigned ep_num = dwc3_ep_num(req->header.ep_address);
+    if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
+        dprintf(ERROR, "dwc3_request_queue: bad ep address 0x%02X\n", req->header.ep_address);
+        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
+        return;
+    }
+
+    dwc3_ep_queue(dwc, ep_num, req);
+}
+
 static zx_status_t dwc3_set_interface(void* ctx, usb_dci_interface_t* dci_intf) {
     dwc3_t* dwc = ctx;
     memcpy(&dwc->dci_intf, dci_intf, sizeof(dwc->dci_intf));
@@ -260,6 +274,7 @@ static zx_status_t dwc3_clear_stall(void* ctx, uint8_t ep_address) {
 }
 
 usb_dci_protocol_ops_t dwc_dci_protocol = {
+    .request_queue = dwc3_request_queue,
     .set_interface = dwc3_set_interface,
     .config_ep = dwc3_config_ep,
     .disable_ep = dwc3_disable_ep,
@@ -353,25 +368,6 @@ static zx_status_t dwc3_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     }
 }
 
-static void dwc3_iotxn_queue(void* ctx, iotxn_t* txn) {
-    dwc3_t* dwc = ctx;
-
-    if (txn->protocol != ZX_PROTOCOL_USB_FUNCTION) {
-        iotxn_complete(txn, ZX_ERR_NOT_SUPPORTED, 0);
-        return;
-    }
-    usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
-    dprintf(LTRACE, "dwc3_iotxn_queue ep: %u\n", data->ep_address);
-    unsigned ep_num = dwc3_ep_num(data->ep_address);
-    if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
-        dprintf(ERROR, "dwc3_iotxn_queue: bad ep address 0x%02X\n", data->ep_address);
-        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
-        return;
-    }
-
-    dwc3_ep_queue(dwc, ep_num, txn);
-}
-
 static void dwc3_release(void* ctx) {
     dwc3_t* dwc = ctx;
 
@@ -389,7 +385,6 @@ static void dwc3_release(void* ctx) {
 static zx_protocol_device_t dwc3_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = dwc3_get_protocol,
-    .iotxn_queue = dwc3_iotxn_queue,
     .release = dwc3_release,
 };
 
@@ -417,7 +412,7 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
         dwc3_endpoint_t* ep = &dwc->eps[i];
         ep->ep_num = i;
         mtx_init(&ep->lock, mtx_plain);
-        list_initialize(&ep->queued_txns);
+        list_initialize(&ep->queued_reqs);
     }
     dwc->parent = parent;
     dwc->usb_mode = USB_MODE_NONE;

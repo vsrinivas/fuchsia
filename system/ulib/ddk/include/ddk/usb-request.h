@@ -146,6 +146,12 @@ void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t ma
 // return value is length, or zero if iteration is done.
 size_t usb_request_phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr);
 
+// Returns the physical address of the first page of the usb request, taking into
+// account the buffer vmo offset.
+static inline zx_paddr_t usb_request_phys(usb_request_t* req) {
+    return io_buffer_phys(&req->buffer);
+}
+
 // usb_request_pool_init() initializes the given pool. A driver may use
 // a pool for recycling their own usb requests.
 void usb_request_pool_init(usb_request_pool_t* pool);

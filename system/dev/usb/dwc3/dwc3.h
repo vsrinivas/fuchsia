@@ -53,9 +53,9 @@ typedef struct {
 
 typedef struct {
     dwc3_fifo_t fifo;
-    list_node_t queued_txns;    // iotxns waiting to be processed
-    iotxn_t* current_txn;       // iotxn currently being processed
-    unsigned rsrc_id;           // resource ID for current_txn
+    list_node_t queued_reqs;    // requests waiting to be processed
+    usb_request_t* current_req; // request currently being processed
+    unsigned rsrc_id;           // resource ID for current_req
 
     // Used for synchronizing endpoint state
     // and ep specific hardware registers
@@ -136,7 +136,7 @@ zx_status_t dwc3_ep_config(dwc3_t* dwc, usb_endpoint_descriptor_t* ep_desc,
 void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable);
 zx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr);
 void dwc3_start_eps(dwc3_t* dwc);
-void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, iotxn_t* txn);
+void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req);
 void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_paddr_t buffer,
                             size_t length);
 void dwc3_ep_xfer_started(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id);

@@ -98,20 +98,20 @@ void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_padd
 }
 
 static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
-    iotxn_t* txn;
+    usb_request_t* req;
 
-    if (ep->current_txn == NULL && ep->got_not_ready &&
-        (txn = list_remove_head_type(&ep->queued_txns, iotxn_t, node)) != NULL) {
-        ep->current_txn = txn;
+    if (ep->current_req == NULL && ep->got_not_ready &&
+        (req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+        ep->current_req = req;
         ep->got_not_ready = false;
         if (EP_IN(ep->ep_num)) {
-            iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txn->length);
+            usb_request_cacheop(req, USB_REQUEST_CACHE_CLEAN, 0, req->header.length);
         }
 
         // TODO(voydanoff) scatter/gather support
-        iotxn_physmap(txn);
-        zx_paddr_t phys = iotxn_phys(txn);
-        dwc3_ep_start_transfer(dwc, ep->ep_num, TRB_TRBCTL_NORMAL, phys, txn->length);
+        usb_request_physmap(req);
+        zx_paddr_t phys = usb_request_phys(req);
+        dwc3_ep_start_transfer(dwc, ep->ep_num, TRB_TRBCTL_NORMAL, phys, req->header.length);
     }
 }
 
@@ -174,14 +174,14 @@ zx_status_t dwc3_ep_disable(dwc3_t* dwc, uint8_t ep_addr) {
     return ZX_OK;
 }
 
-void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, iotxn_t* txn) {
+void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
     // OUT transactions must have length > 0 and multiple of max packet size
     if (EP_OUT(ep_num)) {
-        if (txn->length == 0 || txn->length % ep->max_packet_size != 0) {
+        if (req->header.length == 0 || req->header.length % ep->max_packet_size != 0) {
             dprintf(ERROR, "dwc3_ep_queue: OUT transfers must be multiple of max packet size\n");
-            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+            usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
             return;
         }
     }
@@ -190,11 +190,11 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, iotxn_t* txn) {
 
     if (!ep->enabled) {
         mtx_unlock(&ep->lock);
-        iotxn_complete(txn, ZX_ERR_BAD_STATE, 0);
+        usb_request_complete(req, ZX_ERR_BAD_STATE, 0);
         return;
     }
 
-    list_add_tail(&ep->queued_txns, &txn->node);
+    list_add_tail(&ep->queued_reqs, &req->node);
 
     if (dwc->configured) {
         dwc3_ep_queue_next_locked(dwc, ep);
@@ -282,10 +282,10 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
         dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
         mtx_lock(&ep->lock);
-        iotxn_t* txn = ep->current_txn;
-        ep->current_txn = NULL;
+        usb_request_t* req = ep->current_req;
+        ep->current_req = NULL;
 
-        if (txn) {
+        if (req) {
             dwc3_trb_t  trb;
             dwc_ep_read_trb(ep, ep->fifo.current, &trb);
             ep->fifo.current = NULL;
@@ -293,18 +293,18 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
                 dprintf(ERROR, "TRB_HWO still set in dwc3_ep_xfer_complete\n");
             }
 
-            zx_off_t actual = txn->length - TRB_BUFSIZ(trb.status);
+            zx_off_t actual = req->header.length - TRB_BUFSIZ(trb.status);
 //            dwc3_ep_queue_next_locked(dwc, ep);
 
             mtx_unlock(&ep->lock);
 
             if (EP_OUT(ep_num)) {
-                iotxn_cacheop(txn, ZX_VMO_OP_CACHE_INVALIDATE, 0, actual);
+                usb_request_cacheop(req, USB_REQUEST_CACHE_INVALIDATE, 0, actual);
             }
-            iotxn_complete(txn, ZX_OK, actual);
+            usb_request_complete(req, ZX_OK, actual);
         } else {
             mtx_unlock(&ep->lock);
-            dprintf(ERROR, "dwc3_ep_xfer_complete: no iotxn found to complete!\n");
+            dprintf(ERROR, "dwc3_ep_xfer_complete: no usb request found to complete!\n");
         }
     }
 }
@@ -336,15 +336,15 @@ void dwc3_ep_end_transfers(dwc3_t* dwc, unsigned ep_num, zx_status_t reason) {
     dwc3_endpoint_t* ep = &dwc->eps[ep_num];
     mtx_lock(&ep->lock);
 
-    if (ep->current_txn) {
+    if (ep->current_req) {
         dwc3_cmd_ep_end_transfer(dwc, ep_num);
-        iotxn_complete(ep->current_txn, reason, 0);
-        ep->current_txn = NULL;
+        usb_request_complete(ep->current_req, reason, 0);
+        ep->current_req = NULL;
     }
 
-    iotxn_t* txn;
-    while ((txn = list_remove_head_type(&ep->queued_txns, iotxn_t, node)) != NULL) {
-        iotxn_complete(txn, reason, 0);
+    usb_request_t* req;
+    while ((req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+        usb_request_complete(req, reason, 0);
     }
 
     mtx_unlock(&ep->lock);
