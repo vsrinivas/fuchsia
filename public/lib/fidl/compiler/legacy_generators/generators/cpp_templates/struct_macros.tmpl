@@ -151,7 +151,7 @@
                        should_return_errors = should_return_errors,
                        indent_size = 10)}}
 {%-     elif kind|is_union_kind %}
-  internal::{{kind.name}}_Data* {{name}}_ptr = &{{output}}->{{name}};
+  {{kind|cpp_field_type}}* {{name}}_ptr = &{{output}}->{{name}};
   {{call_serialize_union(input = input_field ~ ".get()",
                          buffer = buffer,
                          output = "&%s_ptr"|format(name),
