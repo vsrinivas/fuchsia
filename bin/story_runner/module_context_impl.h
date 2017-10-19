@@ -15,6 +15,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
+#include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
@@ -30,6 +31,7 @@ struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider;
+  ModuleResolver* const module_resolver;
 };
 
 // ModuleContextImpl keeps a single connection from a module instance in

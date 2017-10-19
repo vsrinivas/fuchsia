@@ -517,7 +517,8 @@ StoryProviderImpl::StoryProviderImpl(
     const ComponentContextInfo& component_context_info,
     FocusProviderPtr focus_provider,
     maxwell::IntelligenceServices* const intelligence_services,
-    maxwell::UserIntelligenceProvider* const user_intelligence_provider)
+    maxwell::UserIntelligenceProvider* const user_intelligence_provider,
+    ModuleResolver* module_resolver)
     : PageClient("StoryProviderImpl",
                  ledger_client,
                  std::move(root_page_id),
@@ -528,6 +529,7 @@ StoryProviderImpl::StoryProviderImpl(
       story_shell_(std::move(story_shell)),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
+      module_resolver_(module_resolver),
       context_handler_(intelligence_services),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this) {

@@ -17,6 +17,7 @@
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/story/fidl/story_data.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/story/fidl/story_shell.fidl.h"
@@ -49,7 +50,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       const ComponentContextInfo& component_context_info,
       FocusProviderPtr focus_provider,
       maxwell::IntelligenceServices* intelligence_services,
-      maxwell::UserIntelligenceProvider* user_intelligence_provider);
+      maxwell::UserIntelligenceProvider* user_intelligence_provider,
+      ModuleResolver* module_resolver);
 
   ~StoryProviderImpl() override;
 
@@ -71,6 +73,11 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Called by StoryControllerImpl.
   maxwell::UserIntelligenceProvider* user_intelligence_provider() {
     return user_intelligence_provider_;
+  }
+
+  // Called by StoryControllerImpl.
+  ModuleResolver* module_resolver() {
+    return module_resolver_;
   }
 
   // Called by StoryControllerImpl.
@@ -216,6 +223,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
+
+  ModuleResolver* const module_resolver_;  // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
   // a record of the current context in the story page. So we need to watch the
