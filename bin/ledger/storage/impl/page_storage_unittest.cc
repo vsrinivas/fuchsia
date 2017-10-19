@@ -1467,17 +1467,22 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
                                  commit->GetStorageBytes().ToString());
   storage_->AddCommitsFromSync(std::move(commits_and_bytes),
                                callback::Capture(MakeQuitTask(), &status));
-  // Make the run loop stop before the process finishes.
+
+  // Make the loop run until GetObject is called in sync, and before
+  // AddCommitsFromSync finishes.
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Add the local commit.
   storage_->AddCommitFromLocal(std::move(commit), {},
                                callback::Capture(MakeQuitTask(), &status));
-  // Let the two add commit finish.
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+
   EXPECT_TRUE(sync_delegate_call);
   sync_delegate_call();
+
+  // Let the two AddCommit finish.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 

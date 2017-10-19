@@ -149,30 +149,41 @@ void PageStorageImpl::GetCommit(
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                                          std::vector<ObjectDigest> new_objects,
                                          std::function<void(Status)> callback) {
-  coroutine_service_->StartCoroutine(fxl::MakeCopyable(
-      [this, commit = std::move(commit), new_objects = std::move(new_objects),
-       final_callback =
-           std::move(callback)](CoroutineHandler* handler) mutable {
-        auto callback =
-            UpdateActiveHandlersCallback(handler, std::move(final_callback));
+  commit_serializer_.Serialize<Status>(
+      std::move(callback),
+      fxl::MakeCopyable([this, commit = std::move(commit),
+                         new_objects = std::move(new_objects)](
+                            std::function<void(Status)> callback) mutable {
+        coroutine_service_->StartCoroutine(
+            fxl::MakeCopyable([this, commit = std::move(commit),
+                               new_objects = std::move(new_objects),
+                               final_callback = std::move(callback)](
+                                  CoroutineHandler* handler) mutable {
+              auto callback = UpdateActiveHandlersCallback(
+                  handler, std::move(final_callback));
 
-        callback(SynchronousAddCommitFromLocal(handler, std::move(commit),
-                                               std::move(new_objects)));
+              callback(SynchronousAddCommitFromLocal(handler, std::move(commit),
+                                                     std::move(new_objects)));
+            }));
       }));
 }
 
 void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes,
     std::function<void(Status)> callback) {
-  coroutine_service_->StartCoroutine(
-      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
-                         final_callback = std::move(callback)](
-                            CoroutineHandler* handler) mutable {
-        auto callback =
-            UpdateActiveHandlersCallback(handler, std::move(final_callback));
-
-        callback(
-            SynchronousAddCommitsFromSync(handler, std::move(ids_and_bytes)));
+  commit_serializer_.Serialize<Status>(
+      std::move(callback),
+      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes)](
+                            std::function<void(Status)> callback) mutable {
+        coroutine_service_->StartCoroutine(
+            fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
+                               final_callback = std::move(callback)](
+                                  CoroutineHandler* handler) mutable {
+              auto callback = UpdateActiveHandlersCallback(
+                  handler, std::move(final_callback));
+              callback(SynchronousAddCommitsFromSync(handler,
+                                                     std::move(ids_and_bytes)));
+            }));
       }));
 }
 
@@ -1220,6 +1231,18 @@ Status PageStorageImpl::SynchronousAddCommits(
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
     std::vector<ObjectDigest> new_objects) {
+#ifndef NDEBUG
+  // Make sure that only one AddCommits operation is executed at a time.
+  // Otherwise, if db_ operations are asynchronous, ContainsCommit (below) may
+  // return NOT_FOUND while another commit is added, and batch->Execute() will
+  // break the invariants of this system (in particular, that synced commits
+  // cannot become unsynced).
+  FXL_DCHECK(!commit_in_progress_);
+  commit_in_progress_ = true;
+
+  auto cleanup = fxl::MakeAutoCall([this] { commit_in_progress_ = false; });
+#endif
+
   // Apply all changes atomically.
   std::unique_ptr<PageDb::Batch> batch;
   Status status = db_->StartBatch(handler, &batch);
@@ -1282,11 +1305,6 @@ Status PageStorageImpl::SynchronousAddCommits(
 
       continue_trying = true;
 
-      // NOTE(etiennej, 2017-08-04): This code works because db_ operations
-      // are synchronous. If they are not, then ContainsCommit may return
-      // NOT_FOUND while a commit is added, and batch->Execute() will break
-      // the invariants of this system (in particular, that synced commits
-      // cannot become unsynced).
       s = ContainsCommit(handler, commit->GetId());
       if (s == Status::NOT_FOUND) {
         s = batch->AddCommitStorageBytes(handler, commit->GetId(),

@@ -14,6 +14,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/callback/managed_container.h"
+#include "peridot/bin/ledger/callback/operation_serializer.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
@@ -246,6 +247,15 @@ class PageStorageImpl : public PageStorage {
       commits_to_send_;
   // The set of active handlers.
   std::unordered_set<coroutine::CoroutineHandler*> handlers_;
+
+  callback::OperationSerializer commit_serializer_;
+
+#ifndef NDEBUG
+  // Only one commit insertion should be in progress at a time in storage.
+  // |commit_in_progress_| keeps track of whether such an insertion is in
+  // progress.
+  bool commit_in_progress_ = false;
+#endif
 };
 
 }  // namespace storage
