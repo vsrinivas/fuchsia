@@ -10,18 +10,18 @@
 #include <memory>
 #include <unordered_set>
 
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/firebase/firebase.h"
 
 namespace cloud_sync {
 
-class UserSyncImpl : public UserSync {
+class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
  public:
   // Parameters:
   //   |on_version_mismatch| is called when the local state is detected to be
@@ -43,12 +43,16 @@ class UserSyncImpl : public UserSync {
   std::string GetFingerprintPath();
 
  private:
+  // cloud_provider::DeviceSetWatcher:
+  void OnCloudErased() override;
+
+  void OnNetworkError() override;
+
   // Checks that the cloud was not erased since the last sync using the device
   // fingerprint.
   void CheckCloudNotErased();
   void CreateFingerprint();
-  void HandleCheckCloudResult(
-      cloud_provider_firebase::CloudDeviceSet::Status status);
+  void HandeDeviceSetResult(cloud_provider::Status status);
 
   // Sets a watcher to detect that the cloud is cleared while sync is running.
   void SetCloudErasedWatcher();
@@ -68,12 +72,11 @@ class UserSyncImpl : public UserSync {
   // Whether uploads should be enabled. It is false until the cloud version has
   // been checked.
   bool upload_enabled_ = false;
+  cloud_provider::DeviceSetPtr device_set_;
+  fidl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
   // Fingerprint of the device in the cloud device list.
   std::string fingerprint_;
   std::unordered_set<LedgerSyncImpl*> active_ledger_syncs_;
-
-  // Pending auth token requests to be cancelled when this class goes away.
-  callback::CancellableContainer auth_token_requests_;
 
   // Aggregates the synchronization state of multiple ledgers into one
   // notification stream.

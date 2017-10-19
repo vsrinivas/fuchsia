@@ -8,16 +8,13 @@
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 
 namespace cloud_sync {
-PageUpload::PageUpload(
-    storage::PageStorage* storage,
-    encryption::EncryptionService* encryption_service,
-    cloud_provider_firebase::PageCloudHandler* cloud_provider,
-    auth_provider::AuthProvider* auth_provider,
-    Delegate* delegate)
+PageUpload::PageUpload(storage::PageStorage* storage,
+                       encryption::EncryptionService* encryption_service,
+                       cloud_provider::PageCloudPtr* page_cloud,
+                       Delegate* delegate)
     : storage_(storage),
       encryption_service_(encryption_service),
-      cloud_provider_(cloud_provider),
-      auth_provider_(auth_provider),
+      page_cloud_(page_cloud),
       delegate_(delegate),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) +
                   " upload sync: "),
@@ -140,8 +137,7 @@ void PageUpload::HandleUnsyncedCommits(
   FXL_DCHECK(commits_to_upload_);
   SetState(UPLOAD_IN_PROGRESS);
   batch_upload_ = std::make_unique<BatchUpload>(
-      storage_, encryption_service_, cloud_provider_, auth_provider_,
-      std::move(commits),
+      storage_, encryption_service_, page_cloud_, std::move(commits),
       [this] {
         // Upload succeeded, reset the backoff delay.
         delegate_->Success();

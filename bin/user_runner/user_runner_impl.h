@@ -11,6 +11,7 @@
 
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
 #include "lib/auth/fidl/account/account.fidl.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
@@ -27,6 +28,7 @@
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/entity/entity_repository.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/fidl/app_client.h"
@@ -102,6 +104,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   void SetupLedger();
 
+  cloud_provider::CloudProviderPtr GetCloudProvider();
+
   std::unique_ptr<fidl::Binding<UserRunner>> binding_;
   std::shared_ptr<app::ApplicationContext> application_context_;
   const bool test_;
@@ -109,6 +113,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   UserContextPtr user_context_;
+  std::unique_ptr<AppClient<Lifecycle>> cloud_provider_client_;
+  cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_client_;
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   ledger::LedgerRepositoryPtr ledger_repository_;

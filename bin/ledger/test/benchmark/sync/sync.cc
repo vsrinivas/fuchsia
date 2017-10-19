@@ -9,8 +9,8 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
@@ -52,24 +52,20 @@ SyncBenchmark::SyncBenchmark(size_t entry_count,
                              ReferenceStrategy reference_strategy,
                              std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      cloud_provider_firebase_factory_(application_context_.get()),
       entry_count_(entry_count),
       value_size_(value_size),
       reference_strategy_(reference_strategy),
       server_id_(std::move(server_id)),
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
-      beta_tmp_dir_(kStoragePath),
-      token_provider_impl_("",
-                           "sync_user",
-                           "sync_user@google.com",
-                           "client_id") {
+      beta_tmp_dir_(kStoragePath) {
   FXL_DCHECK(entry_count > 0);
   FXL_DCHECK(value_size > 0);
+  cloud_provider_firebase_factory_.Init();
 }
 
 void SyncBenchmark::Run() {
-  services_thread_ = fsl::CreateThread(&services_task_runner_);
-
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
   std::string alpha_path = alpha_tmp_dir_.path() + "/sync_user";
@@ -80,18 +76,22 @@ void SyncBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FXL_DCHECK(ret);
 
+  cloud_provider::CloudProviderPtr cloud_provider_alpha =
+      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &alpha_controller_, services_task_runner_, &token_provider_impl_, "sync",
-      alpha_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &alpha);
+      &alpha_controller_, std::move(cloud_provider_alpha), "sync", alpha_path,
+      &alpha);
   QuitOnError(status, "alpha ledger");
 
+  cloud_provider::CloudProviderPtr cloud_provider_beta =
+      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
   ledger::LedgerPtr beta;
-  status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &beta_controller_, services_task_runner_, &token_provider_impl_, "sync",
-      beta_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &beta);
+  status =
+      test::GetLedger(fsl::MessageLoop::GetCurrent(),
+                      application_context_.get(), &beta_controller_,
+                      std::move(cloud_provider_beta), "sync", beta_path, &beta);
   QuitOnError(status, "beta ledger");
 
   fidl::Array<uint8_t> id;
@@ -164,10 +164,12 @@ void SyncBenchmark::Backlog() {
   bool ret = files::CreateDirectory(gamma_path);
   FXL_DCHECK(ret);
 
+  cloud_provider::CloudProviderPtr cloud_provider_gamma =
+      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &gamma_controller_, services_task_runner_, &token_provider_impl_, "sync",
-      gamma_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_, &gamma_);
+      &gamma_controller_, std::move(cloud_provider_gamma), "sync", gamma_path,
+      &gamma_);
   QuitOnError(status, "backlog");
   TRACE_ASYNC_BEGIN("benchmark", "get and verify backlog", 0);
   gamma_->GetPage(page_id_.Clone(), gamma_page_.NewRequest(),
@@ -212,10 +214,6 @@ void SyncBenchmark::ShutDown() {
   gamma_controller_->Kill();
   gamma_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
-
-  services_task_runner_->PostTask(
-      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-  services_thread_.join();
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

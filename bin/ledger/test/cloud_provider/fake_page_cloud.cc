@@ -103,7 +103,7 @@ void FakePageCloud::Bind(
 void FakePageCloud::SendPendingCommits() {
   for (auto& container : containers_) {
     if (container.WaitingForWatcherAck() ||
-        container.NextCommitIndex() == commits_.size()) {
+        container.NextCommitIndex() >= commits_.size()) {
       continue;
     }
 

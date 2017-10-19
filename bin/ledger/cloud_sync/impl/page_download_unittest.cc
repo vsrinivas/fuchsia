@@ -13,11 +13,10 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/capture.h"
-#include "peridot/bin/ledger/cloud_provider/test/test_page_cloud_handler.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
+#include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_storage.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -35,11 +34,10 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
   PageDownloadTest()
       : storage_(&message_loop_),
         encryption_service_(message_loop_.task_runner()),
-        cloud_provider_(message_loop_.task_runner()),
-        auth_provider_(message_loop_.task_runner()),
+        page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(message_loop_.task_runner()) {
     page_download_ = std::make_unique<PageDownload>(
-        &task_runner_, &storage_, &encryption_service_, &cloud_provider_, this);
+        &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this);
   }
   ~PageDownloadTest() override {}
 
@@ -50,31 +48,15 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
 
   test::TestPageStorage storage_;
   encryption::FakeEncryptionService encryption_service_;
-  cloud_provider_firebase::test::TestPageCloudHandler cloud_provider_;
-  auth_provider::test::TestAuthProvider auth_provider_;
+  cloud_provider::PageCloudPtr page_cloud_ptr_;
+  test::TestPageCloud page_cloud_;
   int backoff_get_next_calls_ = 0;
   std::vector<DownloadSyncState> states_;
   std::unique_ptr<PageDownload> page_download_;
   int error_callback_calls_ = 0;
-  callback::CancellableContainer auth_token_requests_;
 
  private:
   // PageDownload::Delegate:
-  void GetAuthToken(std::function<void(std::string)> on_token_ready,
-                    fxl::Closure on_failed) override {
-    auto request = auth_provider_.GetFirebaseToken(
-        [on_token_ready = std::move(on_token_ready),
-         on_failed = std::move(on_failed)](
-            auth_provider::AuthStatus auth_status, std::string auth_token) {
-          if (auth_status != auth_provider::AuthStatus::OK) {
-            on_failed();
-            return;
-          }
-          on_token_ready(std::move(auth_token));
-        });
-    auth_token_requests_.emplace(request);
-  }
-
   void Retry(fxl::Closure callable) override {
     message_loop_.task_runner()->PostDelayedTask(
         std::move(callable), fxl::TimeDelta::FromMilliseconds(50));
@@ -104,21 +86,17 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
-      "42");
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id2", encryption_service_.EncryptCommitSynchronous("content2")),
-      "43");
+  page_cloud_.commits_to_return.push_back(
+      test::MakeCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(
+      test::MakeCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.position_token_to_return = convert::ToArray("43");
 
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_IDLE) {
       message_loop_.PostQuitTask();
     }
   });
-  auth_provider_.token_to_return = "some-token";
   page_download_->StartDownload();
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -128,25 +106,6 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
   EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
   EXPECT_EQ(DOWNLOAD_IDLE, states_.back());
-  EXPECT_EQ(std::vector<std::string>{"some-token"},
-            cloud_provider_.get_commits_auth_tokens);
-}
-
-// Verifies that if auth provider fails to provide the auth token, the error
-// status is returned.
-TEST_F(PageDownloadTest, DownloadBacklogAuthError) {
-  auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
-  auth_provider_.token_to_return = "";
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_EQ(std::vector<std::string>{},
-            cloud_provider_.get_commits_auth_tokens);
 }
 
 // Verifies that callbacks are correctly run after downloading an empty backlog
@@ -167,15 +126,11 @@ TEST_F(PageDownloadTest, DownloadEmptyBacklog) {
 // Verifies that the cloud watcher is registered for the timestamp of the most
 // recent commit downloaded from the backlog.
 TEST_F(PageDownloadTest, RegisterWatcher) {
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
-      "42");
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id2", encryption_service_.EncryptCommitSynchronous("content2")),
-      "43");
-  auth_provider_.token_to_return = "some-token";
+  page_cloud_.commits_to_return.push_back(
+      test::MakeCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(
+      test::MakeCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.position_token_to_return = convert::ToArray("43");
 
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_IDLE) {
@@ -184,46 +139,34 @@ TEST_F(PageDownloadTest, RegisterWatcher) {
   });
   page_download_->StartDownload();
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(std::vector<std::string>{"some-token"},
-            cloud_provider_.watch_commits_auth_tokens);
-  ASSERT_EQ(1u, cloud_provider_.watch_call_min_timestamps.size());
-  EXPECT_EQ("43", cloud_provider_.watch_call_min_timestamps.front());
-}
-
-// Verifies that if auth provider fails to provide the auth token, the watcher
-// is not set and the error callback is called.
-TEST_F(PageDownloadTest, RegisterWatcherAuthError) {
-  auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
-  auth_provider_.token_to_return = "";
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
-  ASSERT_EQ(0u, cloud_provider_.watch_call_min_timestamps.size());
+  ASSERT_EQ(1u, page_cloud_.set_watcher_position_tokens.size());
+  EXPECT_EQ("43", page_cloud_.set_watcher_position_tokens.front());
 }
 
 // Verifies that commit notifications about new commits in cloud provider are
 // received and passed to storage.
 TEST_F(PageDownloadTest, ReceiveNotifications) {
+  // Start download and wait until idle.
+  SetOnNewStateCallback([this] {
+    if (states_.back() == DOWNLOAD_IDLE) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  page_download_->StartDownload();
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Deliver a remote notification.
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
-
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
-      "42");
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id2", encryption_service_.EncryptCommitSynchronous("content2")),
-      "43");
-  page_download_->StartDownload();
-
+  fidl::Array<cloud_provider::CommitPtr> commits;
+  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  commits.push_back(test::MakeCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
+                                        convert::ToArray("43"), [] {});
   EXPECT_TRUE(
       RunLoopUntil([this] { return storage_.received_commits.size() == 2u; }));
 
+  // Verify that the remote commits were added to storage.
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
@@ -236,59 +179,54 @@ TEST_F(PageDownloadTest, RetryRemoteWatcher) {
   page_download_->StartDownload();
   EXPECT_EQ(0u, storage_.received_commits.size());
 
-  EXPECT_TRUE(RunLoopUntil([this] {
-    return cloud_provider_.watch_call_min_timestamps.size() == 1u;
-  }));
+  EXPECT_TRUE(RunLoopUntil(
+      [this] { return page_cloud_.set_watcher_position_tokens.size() == 1u; }));
 
-  cloud_provider_.watcher->OnConnectionError();
-  EXPECT_TRUE(RunLoopUntil([this] {
-    return cloud_provider_.watch_call_min_timestamps.size() == 2u;
-  }));
+  page_cloud_.set_watcher->OnError(cloud_provider::Status::NETWORK_ERROR);
+  EXPECT_TRUE(RunLoopUntil(
+      [this] { return page_cloud_.set_watcher_position_tokens.size() == 2u; }));
 
-  cloud_provider_.watcher->OnTokenExpired();
-  EXPECT_TRUE(RunLoopUntil([this] {
-    return cloud_provider_.watch_call_min_timestamps.size() == 3u;
-  }));
+  page_cloud_.set_watcher->OnError(cloud_provider::Status::AUTH_ERROR);
+  EXPECT_TRUE(RunLoopUntil(
+      [this] { return page_cloud_.set_watcher_position_tokens.size() == 3u; }));
 }
 
 // Verifies that if multiple remote commits are received while one batch is
 // already being downloaded, the new remote commits are added to storage in one
 // request.
 TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
-  EXPECT_EQ(0u, storage_.received_commits.size());
-
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
-      "42");
+  // Start download and wait until idle.
+  SetOnNewStateCallback([this] {
+    if (states_.back() == DOWNLOAD_IDLE) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  page_download_->StartDownload();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   // Make the storage delay requests to add remote commits.
   storage_.should_delay_add_commit_confirmation = true;
-  page_download_->StartDownload();
-  bool posted_quit_task = false;
-  message_loop_.SetAfterTaskCallback([this, &posted_quit_task] {
-    if (posted_quit_task) {
-      return;
-    }
 
-    if (storage_.delayed_add_commit_confirmations.size() == 1u) {
-      message_loop_.PostQuitTask();
-      posted_quit_task = true;
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  // Deliver a remote notification.
+  EXPECT_EQ(0u, storage_.received_commits.size());
+  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
+  fidl::Array<cloud_provider::CommitPtr> commits;
+  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
+                                        convert::ToArray("42"), [] {});
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return storage_.delayed_add_commit_confirmations.size() == 1u;
+  }));
   EXPECT_EQ(1u, storage_.delayed_add_commit_confirmations.size());
 
   // Add two more remote commits, before storage confirms adding the first one.
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id2", encryption_service_.EncryptCommitSynchronous("content2")),
-      "43");
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id3", encryption_service_.EncryptCommitSynchronous("content3")),
-      "44");
-  cloud_provider_.DeliverRemoteCommits();
+  fidl::Array<cloud_provider::CommitPtr> more_commits;
+  more_commits.push_back(
+      test::MakeCommit(&encryption_service_, "id2", "content2"));
+  more_commits.push_back(
+      test::MakeCommit(&encryption_service_, "id3", "content3"));
+  page_cloud_.set_watcher->OnNewCommits(std::move(more_commits),
+                                        convert::ToArray("44"), [] {});
 
   // Make storage confirm adding the first commit.
   storage_.should_delay_add_commit_confirmation = false;
@@ -309,20 +247,18 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
 // Verifies that failing attempts to download the backlog of unsynced commits
 // are retried.
 TEST_F(PageDownloadTest, RetryDownloadBacklog) {
-  cloud_provider_.status_to_return =
-      cloud_provider_firebase::Status::NETWORK_ERROR;
+  page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   page_download_->StartDownload();
 
   // Loop through five attempts to download the backlog.
   EXPECT_TRUE(
-      RunLoopUntil([this] { return cloud_provider_.get_commits_calls >= 5u; }));
+      RunLoopUntil([this] { return page_cloud_.get_commits_calls >= 5u; }));
   EXPECT_EQ(0u, storage_.received_commits.size());
 
-  cloud_provider_.status_to_return = cloud_provider_firebase::Status::OK;
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
-      "42");
+  page_cloud_.status_to_return = cloud_provider::Status::OK;
+  page_cloud_.commits_to_return.push_back(
+      test::MakeCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.position_token_to_return = convert::ToArray("42");
   EXPECT_TRUE(
       RunLoopUntil([this] { return storage_.received_commits.size() == 1u; }));
 
@@ -334,37 +270,40 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
 // Verifies that a failure to persist the remote commit stops syncing remote
 // commits and the error status is returned.
 TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
-  EXPECT_FALSE(cloud_provider_.watcher_removed);
+  // Start download and wait until idle.
+  SetOnNewStateCallback([this] {
+    if (states_.back() == DOWNLOAD_IDLE) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  page_download_->StartDownload();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(page_cloud_.set_watcher.is_bound());
 
-  cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
-      "42");
   storage_.should_fail_add_commit_from_sync = true;
+  fidl::Array<cloud_provider::CommitPtr> commits;
+  commits.push_back(test::MakeCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
+                                        convert::ToArray("42"), [] {});
 
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
       message_loop_.PostQuitTask();
     }
   });
-
-  page_download_->StartDownload();
   EXPECT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_TRUE(cloud_provider_.watcher_removed);
+  EXPECT_TRUE(RunLoopUntil(
+      [this] { return page_cloud_.set_watcher.encountered_error(); }));
 }
 
 // Verifies that the idle status is returned when there is no download in
 // progress.
 TEST_F(PageDownloadTest, DownloadIdleCallback) {
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id1", encryption_service_.EncryptCommitSynchronous("content1")),
-      "42");
-  cloud_provider_.records_to_return.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id2", encryption_service_.EncryptCommitSynchronous("content2")),
-      "43");
+  page_cloud_.commits_to_return.push_back(
+      test::MakeCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(
+      test::MakeCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.position_token_to_return = convert::ToArray("43");
 
   int on_idle_calls = 0;
   SetOnNewStateCallback([this, &on_idle_calls] {
@@ -385,12 +324,10 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
-  std::vector<cloud_provider_firebase::Record> records;
-  records.emplace_back(
-      cloud_provider_firebase::Commit(
-          "id3", encryption_service_.EncryptCommitSynchronous("content3")),
-      "44");
-  cloud_provider_.watcher->OnRemoteCommits(std::move(records));
+  fidl::Array<cloud_provider::CommitPtr> commits;
+  commits.push_back(test::MakeCommit(&encryption_service_, "id3", "content3"));
+  page_cloud_.set_watcher->OnNewCommits(std::move(commits),
+                                        convert::ToArray("44"), [] {});
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(3u, storage_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
@@ -399,8 +336,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
 // Verifies that sync correctly fetches objects from the cloud provider.
 TEST_F(PageDownloadTest, GetObject) {
-  cloud_provider_.objects_to_return["object_digest"] = "content";
-  auth_provider_.token_to_return = "some-token";
+  page_cloud_.objects_to_return["object_digest"] = "content";
   page_download_->StartDownload();
 
   storage::Status status;
@@ -412,47 +348,15 @@ TEST_F(PageDownloadTest, GetObject) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(std::vector<std::string>{"some-token"},
-            cloud_provider_.get_object_auth_tokens);
   EXPECT_EQ(7u, size);
   std::string content;
   EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &content));
   EXPECT_EQ("content", content);
 }
 
-// Verifies that if auth provider fails to provide the auth token, GetObject()
-// returns an error, but the sync is not stopped.
-TEST_F(PageDownloadTest, GetObjectAuthError) {
-  cloud_provider_.objects_to_return["object_digest"] = "content";
-  auth_provider_.token_to_return = "some-token";
-  SetOnNewStateCallback([this] {
-    if (states_.back() == DOWNLOAD_IDLE) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  page_download_->StartDownload();
-  EXPECT_FALSE(RunLoopWithTimeout());
-
-  auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
-  auth_provider_.token_to_return = "";
-  storage::Status status;
-  uint64_t size;
-  zx::socket data;
-  storage_.page_sync_delegate_->GetObject(
-      storage::ObjectDigestView("object_digest"),
-      callback::Capture(MakeQuitTask(), &status, &size, &data));
-  EXPECT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_EQ(0, error_callback_calls_);
-  EXPECT_EQ(storage::Status::IO_ERROR, status);
-  EXPECT_EQ(std::vector<std::string>{}, cloud_provider_.get_object_auth_tokens);
-  EXPECT_FALSE(data);
-}
-
 // Verifies that sync retries GetObject() attempts upon connection error.
 TEST_F(PageDownloadTest, RetryGetObject) {
-  cloud_provider_.status_to_return =
-      cloud_provider_firebase::Status::NETWORK_ERROR;
+  page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   SetOnNewStateCallback([this] {
     if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
       message_loop_.PostQuitTask();
@@ -463,9 +367,9 @@ TEST_F(PageDownloadTest, RetryGetObject) {
 
   message_loop_.SetAfterTaskCallback([this] {
     // Allow the operation to succeed after looping through five attempts.
-    if (cloud_provider_.get_object_calls == 5u) {
-      cloud_provider_.status_to_return = cloud_provider_firebase::Status::OK;
-      cloud_provider_.objects_to_return["object_digest"] = "content";
+    if (page_cloud_.get_object_calls == 5u) {
+      page_cloud_.status_to_return = cloud_provider::Status::OK;
+      page_cloud_.objects_to_return["object_digest"] = "content";
     }
   });
   storage::Status status;
@@ -476,7 +380,7 @@ TEST_F(PageDownloadTest, RetryGetObject) {
       callback::Capture(MakeQuitTask(), &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(6u, cloud_provider_.get_object_calls);
+  EXPECT_EQ(6u, page_cloud_.get_object_calls);
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(7u, size);
   std::string content;

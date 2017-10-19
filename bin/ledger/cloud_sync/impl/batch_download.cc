@@ -14,15 +14,16 @@
 
 namespace cloud_sync {
 
-BatchDownload::BatchDownload(
-    storage::PageStorage* storage,
-    encryption::EncryptionService* encryption_service,
-    std::vector<cloud_provider_firebase::Record> records,
-    fxl::Closure on_done,
-    fxl::Closure on_error)
+BatchDownload::BatchDownload(storage::PageStorage* storage,
+                             encryption::EncryptionService* encryption_service,
+                             fidl::Array<cloud_provider::CommitPtr> commits,
+                             fidl::Array<uint8_t> position_token,
+                             fxl::Closure on_done,
+                             fxl::Closure on_error)
     : storage_(storage),
       encryption_service_(encryption_service),
-      records_(std::move(records)),
+      commits_(std::move(commits)),
+      position_token_(std::move(position_token)),
       on_done_(std::move(on_done)),
       on_error_(std::move(on_error)),
       weak_ptr_factory_(this) {
@@ -42,10 +43,10 @@ void BatchDownload::Start() {
   auto waiter = callback::Waiter<
       encryption::Status,
       storage::PageStorage::CommitIdAndBytes>::Create(encryption::Status::OK);
-  for (auto& record : records_) {
+  for (auto& commit : commits_) {
     encryption_service_->DecryptCommit(
-        record.commit.content,
-        [id = std::move(record.commit.id), callback = waiter->NewCallback()](
+        convert::ToString(commit->data),
+        [id = convert::ToString(commit->id), callback = waiter->NewCallback()](
             encryption::Status status, std::string content) mutable {
           callback(status, storage::PageStorage::CommitIdAndBytes(
                                std::move(id), std::move(content)));
@@ -76,7 +77,7 @@ void BatchDownload::Start() {
 
 void BatchDownload::UpdateTimestampAndQuit() {
   storage_->SetSyncMetadata(
-      kTimestampKey, records_.back().timestamp,
+      kTimestampKey, convert::ToString(position_token_),
       callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                            [this](storage::Status status) {
                              if (status != storage::Status::OK) {

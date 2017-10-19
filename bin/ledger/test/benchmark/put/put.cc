@@ -7,7 +7,6 @@
 #include <trace/event.h>
 
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -36,10 +35,6 @@ PutBenchmark::PutBenchmark(int entry_count,
     : generator_(seed),
       tmp_dir_(kStoragePath),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      token_provider_impl_("",
-                           "sync_user",
-                           "sync_user@google.com",
-                           "client_id"),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -69,12 +64,10 @@ void PutBenchmark::Run() {
                 << " --transaction-size=" << transaction_size_
                 << " --key-size=" << key_size_
                 << " --value-size=" << value_size_ << (update_ ? "update" : "");
-  services_thread_ = fsl::CreateThread(&services_task_runner_);
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &application_controller_, services_task_runner_, &token_provider_impl_,
-      "put", tmp_dir_.path(), test::SyncState::DISABLED, "", &ledger);
+      &application_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
   QuitOnError(status, "GetLedger");
 
   InitializeKeys(
@@ -225,10 +218,6 @@ void PutBenchmark::ShutDown() {
   application_controller_->Kill();
   application_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
-
-  services_task_runner_->PostTask(
-      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-  services_thread_.join();
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

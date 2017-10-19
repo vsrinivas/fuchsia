@@ -37,7 +37,7 @@ LedgerRepositoryForTesting::~LedgerRepositoryForTesting() = default;
 ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(
-        tmp_dir_.path(), nullptr, nullptr, ledger_repo_.NewRequest(),
+        tmp_dir_.path(), nullptr, ledger_repo_.NewRequest(),
         [this](ledger::Status status) {
           FXL_CHECK(status == ledger::Status::OK);
         });
@@ -48,7 +48,7 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
 
 void LedgerRepositoryForTesting::Reset(std::function<void()> done) {
   if (ledger_repo_) {
-    ledger_repo_factory_->EraseRepository(tmp_dir_.path(), nullptr, nullptr,
+    ledger_repo_factory_->EraseRepository(tmp_dir_.path(), nullptr,
                                           [this, done](ledger::Status status) {
                                             ledger_repo_.reset();
                                             done();

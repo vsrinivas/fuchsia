@@ -12,8 +12,8 @@
 #include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/backoff/test/test_backoff.h"
+#include "peridot/bin/ledger/cloud_sync/impl/test/test_cloud_provider.h"
 #include "peridot/bin/ledger/device_set/cloud_device_set.h"
-#include "peridot/bin/ledger/device_set/test/test_cloud_device_set.h"
 #include "peridot/bin/ledger/network/fake_network_service.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
@@ -34,19 +34,10 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   UserSyncImplTest()
       : network_service_(message_loop_.task_runner()),
         environment_(message_loop_.task_runner(), &network_service_),
-        auth_provider_(message_loop_.task_runner()) {
+        cloud_provider_(cloud_provider_ptr_.NewRequest()) {
     UserConfig user_config;
-    user_config.server_id = "server-id";
-    user_config.user_id = "user-id";
     user_config.user_directory = tmp_dir.path();
-    user_config.auth_provider = &auth_provider_;
-    user_config.cloud_device_set =
-        std::make_unique<cloud_provider_firebase::TestCloudDeviceSet>(
-            message_loop_.task_runner());
-
-    cloud_device_set_ =
-        static_cast<cloud_provider_firebase::TestCloudDeviceSet*>(
-            user_config.cloud_device_set.get());
+    user_config.cloud_provider = std::move(cloud_provider_ptr_);
 
     user_sync_ = std::make_unique<UserSyncImpl>(
         &environment_, std::move(user_config),
@@ -67,10 +58,10 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   files::ScopedTempDir tmp_dir;
   ledger::FakeNetworkService network_service_;
   ledger::Environment environment_;
-  auth_provider::test::TestAuthProvider auth_provider_;
+  cloud_provider::CloudProviderPtr cloud_provider_ptr_;
+  test::TestCloudProvider cloud_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;
   TestSyncStateWatcher sync_state_watcher_;
-  cloud_provider_firebase::TestCloudDeviceSet* cloud_device_set_;
 
   int on_version_mismatch_calls_ = 0;
 
@@ -82,8 +73,8 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
 // be erased from the cloud.
 TEST_F(UserSyncImplTest, CloudCheckErased) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return =
-      cloud_provider_firebase::CloudDeviceSet::Status::ERASED;
+  cloud_provider_.device_set.status_to_return =
+      cloud_provider::Status::NOT_FOUND;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -94,8 +85,7 @@ TEST_F(UserSyncImplTest, CloudCheckErased) {
 // is enabled in LedgerSync.
 TEST_F(UserSyncImplTest, CloudCheckOk) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return =
-      cloud_provider_firebase::CloudDeviceSet::Status::OK;
+  cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
@@ -105,7 +95,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
   EXPECT_TRUE(
       RunLoopUntil([ledger_a_ptr] { return ledger_a_ptr->IsUploadEnabled(); }));
   EXPECT_EQ(0, on_version_mismatch_calls_);
-  EXPECT_EQ("some-value", cloud_device_set_->checked_fingerprint);
+  EXPECT_EQ("some-value", cloud_provider_.device_set.checked_fingerprint);
 
   // Verify that newly created LedgerSyncs also have the upload enabled.
   auto ledger_b = user_sync_->CreateLedgerSync("app-id");
@@ -117,8 +107,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
 // cloud.
 TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_FALSE(files::IsFile(user_sync_->GetFingerprintPath()));
-  cloud_device_set_->status_to_return =
-      cloud_provider_firebase::CloudDeviceSet::Status::OK;
+  cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
@@ -128,48 +117,38 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_TRUE(
       RunLoopUntil([ledger_ptr] { return ledger_ptr->IsUploadEnabled(); }));
   EXPECT_EQ(0, on_version_mismatch_calls_);
-  EXPECT_FALSE(cloud_device_set_->set_fingerprint.empty());
+  EXPECT_FALSE(cloud_provider_.device_set.set_fingerprint.empty());
 
   // Verify that the fingerprint file was created.
   EXPECT_TRUE(files::IsFile(user_sync_->GetFingerprintPath()));
 }
 
 // Verifies that the cloud watcher for the fingerprint is set and triggers the
-// mismatch callback if cloud erase is detected.
+// mismatch callback when cloud erase is detected.
 TEST_F(UserSyncImplTest, WatchErase) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return =
-      cloud_provider_firebase::CloudDeviceSet::Status::OK;
+  cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   user_sync_->Start();
 
   EXPECT_TRUE(RunLoopUntil(
-      [this] { return cloud_device_set_->watch_callback != nullptr; }));
-  EXPECT_EQ("some-value", cloud_device_set_->watched_fingerprint);
+      [this] { return cloud_provider_.device_set.set_watcher.is_bound(); }));
+  EXPECT_EQ("some-value", cloud_provider_.device_set.watched_fingerprint);
   EXPECT_EQ(0, on_version_mismatch_calls_);
 
-  cloud_device_set_->watch_callback(
-      cloud_provider_firebase::CloudDeviceSet::Status::ERASED);
+  cloud_provider_.device_set.set_watcher->OnCloudErased();
+  EXPECT_TRUE(RunLoopUntil([this] { return on_version_mismatch_calls_ == 1; }));
   EXPECT_EQ(1, on_version_mismatch_calls_);
 }
 
 // Verifies that setting the cloud watcher for is retried on network errors.
 TEST_F(UserSyncImplTest, WatchRetry) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return =
-      cloud_provider_firebase::CloudDeviceSet::Status::OK;
+  cloud_provider_.device_set.set_watcher_status_to_return =
+      cloud_provider::Status::NETWORK_ERROR;
   user_sync_->Start();
 
   EXPECT_TRUE(RunLoopUntil(
-      [this] { return cloud_device_set_->watch_callback != nullptr; }));
-
-  auto copied_callback = cloud_device_set_->watch_callback;
-  cloud_device_set_->watch_callback = nullptr;
-  copied_callback(
-      cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR);
-
-  EXPECT_TRUE(RunLoopUntil(
-      [this] { return cloud_device_set_->watch_callback != nullptr; }));
-  EXPECT_EQ(0, on_version_mismatch_calls_);
+      [this] { return cloud_provider_.device_set.set_watcher_calls > 1; }));
 }
 
 }  // namespace

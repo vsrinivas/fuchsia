@@ -7,6 +7,8 @@
 
 namespace modular {
 
+constexpr char kCloudProviderFirebaseAppUrl[] =
+    "file:///system/apps/cloud_provider_firebase";
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerNoMinfsWaitFlag[] = "--no_minfs_wait";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";

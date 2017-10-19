@@ -17,33 +17,33 @@
 
 namespace cloud_sync {
 
-PageSyncImpl::PageSyncImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
-    storage::PageStorage* storage,
-    encryption::EncryptionService* encryption_service,
-    cloud_provider_firebase::PageCloudHandler* cloud_provider,
-    auth_provider::AuthProvider* auth_provider,
-    std::unique_ptr<backoff::Backoff> backoff,
-    fxl::Closure on_error,
-    std::unique_ptr<SyncStateWatcher> ledger_watcher)
+PageSyncImpl::PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                           storage::PageStorage* storage,
+                           encryption::EncryptionService* encryption_service,
+                           cloud_provider::PageCloudPtr page_cloud,
+                           std::unique_ptr<backoff::Backoff> backoff,
+                           fxl::Closure on_error,
+                           std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : storage_(storage),
       encryption_service_(encryption_service),
-      cloud_provider_(cloud_provider),
-      auth_provider_(auth_provider),
+      page_cloud_(std::move(page_cloud)),
       backoff_(std::move(backoff)),
       on_error_(std::move(on_error)),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       ledger_watcher_(std::move(ledger_watcher)),
       task_runner_(std::move(task_runner)) {
   FXL_DCHECK(storage_);
-  FXL_DCHECK(cloud_provider_);
-  FXL_DCHECK(auth_provider_);
+  FXL_DCHECK(page_cloud_);
   // We need to initialize page_download_ after task_runner_, but task_runner_
   // must be the last field.
   page_download_ = std::make_unique<PageDownload>(
-      &task_runner_, storage_, encryption_service_, cloud_provider_, this);
-  page_upload_ = std::make_unique<PageUpload>(
-      storage_, encryption_service_, cloud_provider_, auth_provider_, this);
+      &task_runner_, storage_, encryption_service_, &page_cloud_, this);
+  page_upload_ = std::make_unique<PageUpload>(storage_, encryption_service_,
+                                              &page_cloud_, this);
+  page_cloud_.set_connection_error_handler([] {
+    FXL_LOG(ERROR) << "Page cloud disconnected unexpectedly.";
+    // TODO(ppi): we should probably shut down page download and upload.
+  });
 }
 
 PageSyncImpl::~PageSyncImpl() {
@@ -173,21 +173,6 @@ void PageSyncImpl::SetUploadState(UploadSyncState next_upload_state) {
 
 bool PageSyncImpl::IsDownloadIdle() {
   return page_download_->IsIdle();
-}
-
-void PageSyncImpl::GetAuthToken(std::function<void(std::string)> on_token_ready,
-                                fxl::Closure on_failed) {
-  auto request = auth_provider_->GetFirebaseToken(
-      [on_token_ready = std::move(on_token_ready),
-       on_failed = std::move(on_failed)](auth_provider::AuthStatus auth_status,
-                                         std::string auth_token) {
-        if (auth_status != auth_provider::AuthStatus::OK) {
-          on_failed();
-          return;
-        }
-        on_token_ready(std::move(auth_token));
-      });
-  auth_token_requests_.emplace(request);
 }
 
 }  // namespace cloud_sync

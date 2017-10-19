@@ -10,6 +10,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
@@ -18,7 +19,6 @@
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
 namespace test {
-enum SyncState { DISABLED = 0, CLOUD_SYNC_ENABLED };
 enum Erase { KEEP_DATA = 0, ERASE_CLOUD };
 
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
@@ -26,19 +26,14 @@ enum Erase { KEEP_DATA = 0, ERASE_CLOUD };
 // Creates a new Ledger application instance and returns a LedgerPtr connection
 // to it. If |erase_first| is true, an EraseRepository command is issued first
 // before connecting, ensuring a clean state before proceeding.
-ledger::Status GetLedger(
-    fsl::MessageLoop* loop,
-    app::ApplicationContext* context,
-    app::ApplicationControllerPtr* controller,
-    fxl::RefPtr<fxl::TaskRunner> services_task_runner,
-    ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
-        token_provider_impl,
-    std::string ledger_name,
-    std::string ledger_repository_path,
-    SyncState sync,
-    std::string server_id,
-    ledger::LedgerPtr* ledger_ptr,
-    Erase erase = KEEP_DATA);
+ledger::Status GetLedger(fsl::MessageLoop* loop,
+                         app::ApplicationContext* context,
+                         app::ApplicationControllerPtr* controller,
+                         cloud_provider::CloudProviderPtr cloud_provider,
+                         std::string ledger_name,
+                         std::string ledger_repository_path,
+                         ledger::LedgerPtr* ledger_ptr,
+                         Erase erase = KEEP_DATA);
 
 // Retrieves the requested page of the given Ledger instance and calls the
 // callback only after executing a GetId() call on the page, ensuring that it is

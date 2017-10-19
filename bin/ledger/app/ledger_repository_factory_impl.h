@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "lib/auth/fidl/token_provider.fidl.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
@@ -47,14 +47,12 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
   // LedgerRepositoryFactory:
   void GetRepository(
       const fidl::String& repository_path,
-      FirebaseConfigPtr firebase_config,
-      fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
       fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
   void EraseRepository(
       const fidl::String& repository_path,
-      FirebaseConfigPtr firebase_config,
-      fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
       const EraseRepositoryCallback& callback) override;
 
   void CreateRepository(LedgerRepositoryContainer* container,
@@ -71,9 +69,6 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
 
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
       repositories_;
-
-  // Pending auth provider requests to be cancelled when this class goes away.
-  callback::CancellableContainer auth_provider_requests_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };

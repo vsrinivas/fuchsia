@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
+#include "garnet/public/lib/fidl/cpp/bindings/array.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/cloud_provider/public/record.h"
@@ -25,7 +27,8 @@ class BatchDownload {
  public:
   BatchDownload(storage::PageStorage* storage,
                 encryption::EncryptionService* encryption_service,
-                std::vector<cloud_provider_firebase::Record> records,
+                fidl::Array<cloud_provider::CommitPtr> commits,
+                fidl::Array<uint8_t> position_token,
                 fxl::Closure on_done,
                 fxl::Closure on_error);
   ~BatchDownload();
@@ -38,7 +41,8 @@ class BatchDownload {
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  std::vector<cloud_provider_firebase::Record> records_;
+  fidl::Array<cloud_provider::CommitPtr> commits_;
+  fidl::Array<uint8_t> position_token_;
   fxl::Closure on_done_;
   fxl::Closure on_error_;
   bool started_ = false;

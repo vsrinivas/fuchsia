@@ -21,6 +21,7 @@ executable("e2e_local") {
     "//peridot/bin/ledger/test:app_test",
     "//peridot/bin/ledger/test:app_test_main",
     "//peridot/bin/ledger/test:lib",
+    "//peridot/bin/ledger/test/cloud_provider",
     "//peridot/public/lib/ledger/fidl",
     "//third_party/gtest",
   ]

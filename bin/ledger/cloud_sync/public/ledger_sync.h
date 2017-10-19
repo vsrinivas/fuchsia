@@ -21,9 +21,6 @@ namespace cloud_sync {
 
 // Page sync along with associated objects that it uses.
 struct PageSyncContext {
-  std::unique_ptr<firebase::Firebase> firebase;
-  std::unique_ptr<gcs::CloudStorage> cloud_storage;
-  std::unique_ptr<cloud_provider_firebase::PageCloudHandler> cloud_provider;
   // TODO(qsr): LE-330 Review the location of EncryptionService depending on
   // where it is used.
   std::unique_ptr<encryption::EncryptionService> encryption_service;

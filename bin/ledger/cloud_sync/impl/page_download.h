@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -22,7 +24,7 @@
 namespace cloud_sync {
 // PageDownload handles all the download operations (commits and objects) for a
 // page.
-class PageDownload : public cloud_provider_firebase::CommitWatcher,
+class PageDownload : public cloud_provider::PageCloudWatcher,
                      public storage::PageSyncDelegate {
  public:
   // Delegate ensuring coordination between PageDownload and the class that owns
@@ -36,7 +38,7 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
   PageDownload(callback::ScopedTaskRunner* task_runner,
                storage::PageStorage* storage,
                encryption::EncryptionService* encryption_service,
-               cloud_provider_firebase::PageCloudHandler* cloud_provider,
+               cloud_provider::PageCloudPtr* page_cloud,
                Delegate* delegate);
 
   ~PageDownload() override;
@@ -49,12 +51,16 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
   bool IsIdle();
 
  private:
-  // cloud_provider_firebase::CommitWatcher:
-  void OnRemoteCommits(
-      std::vector<cloud_provider_firebase::Record> records) override;
-  void OnConnectionError() override;
-  void OnTokenExpired() override;
-  void OnMalformedNotification() override;
+  // cloud_provider::PageCloudWatcher:
+  void OnNewCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+                    fidl::Array<uint8_t> position_token,
+                    const OnNewCommitsCallback& callback) override;
+
+  void OnNewObject(fidl::Array<uint8_t> id,
+                   zx::vmo data,
+                   const OnNewObjectCallback& callback) override;
+
+  void OnError(cloud_provider::Status status) override;
 
   // Called when the initial commit backlog is downloaded.
   void BacklogDownloaded();
@@ -63,7 +69,8 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
   void SetRemoteWatcher(bool is_retry);
 
   // Downloads the given batch of commits.
-  void DownloadBatch(std::vector<cloud_provider_firebase::Record> records,
+  void DownloadBatch(fidl::Array<cloud_provider::CommitPtr> commits,
+                     fidl::Array<uint8_t> position_token,
                      fxl::Closure on_done);
 
   // storage::PageSyncDelegate:
@@ -83,7 +90,7 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
   callback::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
+  cloud_provider::PageCloudPtr* const page_cloud_;
   Delegate* const delegate_;
 
   const std::string log_prefix_;
@@ -92,12 +99,15 @@ class PageDownload : public cloud_provider_firebase::CommitWatcher,
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
-  std::vector<cloud_provider_firebase::Record> commits_to_download_;
+  fidl::Array<cloud_provider::CommitPtr> commits_to_download_;
+  fidl::Array<uint8_t> position_token_;
 
   // State:
   // Commit download state.
   DownloadSyncState commit_state_ = DOWNLOAD_STOPPED;
   int current_get_object_calls_ = 0;
+
+  fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDownload);
 };

@@ -14,7 +14,6 @@
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/firebase/firebase.h"
 #include "peridot/bin/ledger/network/network_service.h"
 
 namespace cloud_sync {
@@ -45,12 +44,8 @@ class LedgerSyncImpl : public LedgerSync {
  private:
   ledger::Environment* const environment_;
   const UserConfig* const user_config_;
+  const std::string app_id_;
   bool upload_enabled_ = false;
-  const std::string app_gcs_prefix_;
-  // Firebase path under which the data of this Ledger instance is stored.
-  const std::string app_firebase_path_;
-  // Firebase instance scoped to |app_path_|.
-  std::unique_ptr<firebase::Firebase> app_firebase_;
   std::unordered_set<PageSyncImpl*> active_page_syncs_;
   // Called on destruction.
   std::function<void()> on_delete_;

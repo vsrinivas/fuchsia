@@ -25,6 +25,7 @@
 #include "lib/user/fidl/user_runner.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/story_runner/link_impl.h"
@@ -63,8 +64,8 @@ constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kUserShellLinkName[] = "user-shell-link";
 
-ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
-  auto firebase_config = ledger::FirebaseConfig::New();
+cloud_provider_firebase::ConfigPtr GetLedgerFirebaseConfig() {
+  auto firebase_config = cloud_provider_firebase::Config::New();
   firebase_config->server_id = kFirebaseServerId;
   firebase_config->api_key = kFirebaseApiKey;
   return firebase_config;
@@ -451,14 +452,8 @@ void UserRunnerImpl::Logout() {
 }
 
 void UserRunnerImpl::LogoutAndResetLedgerState() {
-  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;
-  token_provider_factory_->GetTokenProvider(
-      kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
-  auto firebase_config = GetLedgerFirebaseConfig();
   ledger_repository_factory_->EraseRepository(
-      "/data", std::move(firebase_config),
-      std::move(ledger_token_provider_for_erase),
-      [this](ledger::Status status) {
+      "/data", GetCloudProvider(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR) << "EraseRepository failed: " << status
                          << "Logging out.";
@@ -481,14 +476,19 @@ void UserRunnerImpl::SetupLedger() {
     Logout();
   });
 
-  // Get a token provider instance to pass to ledger.
-  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
-  token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
-                                            ledger_token_provider.NewRequest());
-
-  ledger::FirebaseConfigPtr firebase_config;
+  cloud_provider::CloudProviderPtr cloud_provider;
   if (account_) {
-    firebase_config = GetLedgerFirebaseConfig();
+    // If not running in Guest mode, spin up a cloud provider for Ledger to use
+    // for syncing.
+    AppConfigPtr cloud_provider_config = AppConfig::New();
+    cloud_provider_config->url = kCloudProviderFirebaseAppUrl;
+    cloud_provider_config->args = fidl::Array<fidl::String>::New(0);
+    cloud_provider_client_ = std::make_unique<AppClient<Lifecycle>>(
+        user_scope_->GetLauncher(), std::move(cloud_provider_config));
+    ConnectToService(cloud_provider_client_->services(),
+                     cloud_provider_factory_.NewRequest());
+
+    cloud_provider = GetCloudProvider();
   }
 
   ConnectToService(ledger_app_client_->services(),
@@ -497,8 +497,8 @@ void UserRunnerImpl::SetupLedger() {
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
   ledger_repository_factory_->GetRepository(
-      "/data", std::move(firebase_config), std::move(ledger_token_provider),
-      ledger_repository_.NewRequest(), [this](ledger::Status status) {
+      "/data", std::move(cloud_provider), ledger_repository_.NewRequest(),
+      [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FXL_LOG(ERROR)
               << "LedgerRepositoryFactory.GetRepository() failed: "
@@ -517,6 +517,23 @@ void UserRunnerImpl::SetupLedger() {
         FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
         Logout();
       }));
+}
+
+cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
+  cloud_provider::CloudProviderPtr cloud_provider;
+  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
+  token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
+                                            ledger_token_provider.NewRequest());
+  auto firebase_config = GetLedgerFirebaseConfig();
+
+  cloud_provider_factory_->GetCloudProvider(
+      std::move(firebase_config), std::move(ledger_token_provider),
+      cloud_provider.NewRequest(), [](cloud_provider::Status status) {
+        if (status != cloud_provider::Status::OK) {
+          FXL_LOG(ERROR) << "Failed to create a cloud provider: " << status;
+        }
+      });
+  return cloud_provider;
 }
 
 }  // namespace modular

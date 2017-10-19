@@ -20,7 +20,7 @@
 #include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/app_test.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
+#include "peridot/bin/ledger/test/cloud_provider/fake_cloud_provider.h"
 
 namespace test {
 namespace e2e_local {
@@ -160,8 +160,7 @@ TEST_F(LedgerAppTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
   files::ScopedTempDir tmp_dir;
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), nullptr, nullptr,
-      fidl::GetSynchronousProxy(&ledger_repository),
+      tmp_dir.path(), nullptr, fidl::GetSynchronousProxy(&ledger_repository),
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(ledger::Status::OK, status);
@@ -202,7 +201,7 @@ TEST_F(LedgerAppTest, Terminate) {
 //  - Ledger disconnects the clients
 //  - the repository directory is cleared
 TEST_F(LedgerAppTest, CloudErasedRecovery) {
-  Init({"--no_network_for_testing", "--trigger_cloud_erased_for_testing"});
+  Init({"--trigger_cloud_erased_for_testing"});
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
@@ -215,17 +214,12 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
   ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
   ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
 
-  ledger::FirebaseConfigPtr firebase_config = ledger::FirebaseConfig::New();
-  firebase_config->server_id = "network_is_disabled_anyway";
-  firebase_config->api_key = "abc";
-  test::FakeTokenProvider token_provider("id_token", "local_id", "email",
-                                         "client_id");
-  modular::auth::TokenProviderPtr token_provider_ptr;
-  fidl::BindingSet<modular::auth::TokenProvider> token_provider_bindings;
-  token_provider_bindings.AddBinding(&token_provider,
-                                     token_provider_ptr.NewRequest());
+  cloud_provider::CloudProviderPtr cloud_provider_ptr;
+  ledger::FakeCloudProvider cloud_provider;
+  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+      &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), std::move(firebase_config), std::move(token_provider_ptr),
+      tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -248,8 +242,8 @@ TEST_F(LedgerAppTest, CloudErasedRecovery) {
   EXPECT_FALSE(ledger_shut_down);
 }
 
-TEST_F(LedgerAppTest, EraseRepository) {
-  Init({"--no_network_for_testing"});
+TEST_F(LedgerAppTest, EraseRepositoryWithCloud) {
+  Init({});
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
@@ -261,21 +255,15 @@ TEST_F(LedgerAppTest, EraseRepository) {
   ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
   ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
 
-  ledger::FirebaseConfigPtr firebase_config = ledger::FirebaseConfig::New();
-  firebase_config->server_id = "network_is_disabled_anyway";
-  firebase_config->api_key = "abc";
-  test::FakeTokenProvider token_provider("id_token", "local_id", "email",
-                                         "client_id");
-  fidl::BindingSet<modular::auth::TokenProvider> token_provider_bindings;
-
   // Connect to the repository, so that we can verify that we're disconnected
   // when the erase method is called.
   ledger::LedgerRepositoryPtr ledger_repository;
-  modular::auth::TokenProviderPtr token_provider_ptr_1;
-  token_provider_bindings.AddBinding(&token_provider,
-                                     token_provider_ptr_1.NewRequest());
+  cloud_provider::CloudProviderPtr cloud_provider_ptr_1;
+  ledger::FakeCloudProvider cloud_provider_1;
+  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding_1(
+      &cloud_provider_1, cloud_provider_ptr_1.NewRequest());
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), firebase_config.Clone(), std::move(token_provider_ptr_1),
+      tmp_dir.path(), std::move(cloud_provider_ptr_1),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -285,16 +273,19 @@ TEST_F(LedgerAppTest, EraseRepository) {
   ledger_repository.set_connection_error_handler(
       [&repo_disconnected] { repo_disconnected = true; });
 
-  // Erase the repository - this is expected to fail as network is disabled for
-  // this test, but it should still erase the local storage and disconnect the
-  // client.
-  modular::auth::TokenProviderPtr token_provider_ptr_2;
-  token_provider_bindings.AddBinding(&token_provider,
-                                     token_provider_ptr_2.NewRequest());
+  // Erase the repository - this is expected to fail as fake cloud provider
+  // returns INTERNAL_ERROR when handling EraseRepository.
+  cloud_provider::CloudProviderPtr cloud_provider_ptr_2;
+  ledger::FakeCloudProvider cloud_provider_2;
+  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding_2(
+      &cloud_provider_2, cloud_provider_ptr_2.NewRequest());
   ledger_repository_factory_->EraseRepository(
-      tmp_dir.path(), firebase_config.Clone(), std::move(token_provider_ptr_2),
+      tmp_dir.path(), std::move(cloud_provider_ptr_2),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  // This waits for 5s, because erasing the remote repository takes 3s.
+  // TODO(ppi): deprecate the on-device Ledger erase flow and drop this API
+  // altogether.
+  EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(5)));
   ASSERT_EQ(ledger::Status::INTERNAL_ERROR, status);
 
   // Verify that the local storage was cleared and the client was disconnected.
@@ -309,8 +300,8 @@ TEST_F(LedgerAppTest, EraseRepository) {
   EXPECT_FALSE(ledger_shut_down);
 }
 
-TEST_F(LedgerAppTest, EraseRepositoryNoFirebaseConfiguration) {
-  Init({"--no_network_for_testing"});
+TEST_F(LedgerAppTest, EraseRepositoryNoCloud) {
+  Init({});
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
@@ -321,7 +312,7 @@ TEST_F(LedgerAppTest, EraseRepositoryNoFirebaseConfiguration) {
   // when the erase method is called.
   ledger::LedgerRepositoryPtr ledger_repository;
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), nullptr, nullptr, ledger_repository.NewRequest(),
+      tmp_dir.path(), nullptr, ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(ledger::Status::OK, status);
@@ -349,8 +340,7 @@ TEST_F(LedgerAppTest, EraseRepositoryNoFirebaseConfiguration) {
 
   // Erase the repository.
   ledger_repository_factory_->EraseRepository(
-      tmp_dir.path(), nullptr, nullptr,
-      callback::Capture(MakeQuitTask(), &status));
+      tmp_dir.path(), nullptr, callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(ledger::Status::OK, status);
 
@@ -364,7 +354,7 @@ TEST_F(LedgerAppTest, EraseRepositoryNoFirebaseConfiguration) {
 
   ledger::LedgerRepositoryPtr ledger_repository_2;
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), nullptr, nullptr, ledger_repository_2.NewRequest(),
+      tmp_dir.path(), nullptr, ledger_repository_2.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(ledger::Status::OK, status);
@@ -377,6 +367,38 @@ TEST_F(LedgerAppTest, EraseRepositoryNoFirebaseConfiguration) {
 
   // Verify that the Ledger app didn't crash.
   EXPECT_FALSE(ledger_shut_down);
+}
+
+TEST_F(LedgerAppTest, ShutDownWhenCloudProviderDisconnects) {
+  Init({});
+  bool ledger_app_shut_down = false;
+  RegisterShutdownCallback(
+      [&ledger_app_shut_down] { ledger_app_shut_down = true; });
+  ledger::Status status;
+  files::ScopedTempDir tmp_dir;
+
+  cloud_provider::CloudProviderPtr cloud_provider_ptr;
+  ledger::LedgerRepositoryPtr ledger_repository;
+  ledger::FakeCloudProvider cloud_provider;
+  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+      &cloud_provider, cloud_provider_ptr.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), std::move(cloud_provider_ptr),
+      ledger_repository.NewRequest(),
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  bool repo_disconnected = false;
+  ledger_repository.set_connection_error_handler(
+      [&repo_disconnected] { repo_disconnected = true; });
+
+  cloud_provider_binding.Close();
+
+  EXPECT_TRUE(RunLoopUntil([&repo_disconnected] { return repo_disconnected; }));
+
+  // Verify that the Ledger app didn't crash.
+  EXPECT_FALSE(ledger_app_shut_down);
 }
 
 }  // namespace

@@ -10,7 +10,6 @@
 #include <trace/event.h>
 
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -44,10 +43,7 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
                                            int value_size,
                                            std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      token_provider_impl_("",
-                           "sync_user",
-                           "sync_user@google.com",
-                           "client_id"),
+      cloud_provider_firebase_factory_(application_context_.get()),
       entry_count_(entry_count),
       value_size_(value_size),
       server_id_(std::move(server_id)),
@@ -57,11 +53,10 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
       beta_tmp_dir_(kStoragePath) {
   FXL_DCHECK(entry_count > 0);
   FXL_DCHECK(value_size > 0);
+  cloud_provider_firebase_factory_.Init();
 }
 
 void ConvergenceBenchmark::Run() {
-  services_thread_ = fsl::CreateThread(&services_task_runner_);
-
   // Name of the storage directory currently identifies the user. Ensure the
   // most nested directory has the same name to make the ledgers sync.
   std::string alpha_path = alpha_tmp_dir_.path() + "/sync_user";
@@ -72,17 +67,20 @@ void ConvergenceBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FXL_DCHECK(ret);
 
+  cloud_provider::CloudProviderPtr cloud_provider_alpha =
+      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
   ledger::Status status = test::GetLedger(
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &alpha_controller_, services_task_runner_, &token_provider_impl_, "sync",
-      alpha_path, test::SyncState::CLOUD_SYNC_ENABLED, server_id_,
+      &alpha_controller_, std::move(cloud_provider_alpha), "sync", alpha_path,
       &alpha_ledger_);
   QuitOnError(status, "alpha ledger");
+
+  cloud_provider::CloudProviderPtr cloud_provider_beta =
+      cloud_provider_firebase_factory_.MakeCloudProvider(server_id_, "");
   status = test::GetLedger(fsl::MessageLoop::GetCurrent(),
                            application_context_.get(), &beta_controller_,
-                           services_task_runner_, &token_provider_impl_, "sync",
-                           beta_path, test::SyncState::CLOUD_SYNC_ENABLED,
-                           server_id_, &beta_ledger_);
+                           std::move(cloud_provider_beta), "sync", beta_path,
+                           &beta_ledger_);
   QuitOnError(status, "beta ledger");
 
   ledger::PagePtr page;
@@ -172,10 +170,6 @@ void ConvergenceBenchmark::ShutDown() {
   beta_controller_->Kill();
   beta_controller_.WaitForIncomingResponseWithTimeout(
       fxl::TimeDelta::FromSeconds(5));
-
-  services_task_runner_->PostTask(
-      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-  services_thread_.join();
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }

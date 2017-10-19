@@ -6,16 +6,7 @@
 module ledger;
 
 import "lib/ledger/fidl/ledger.fidl";
-import "lib/auth/fidl/token_provider.fidl";
-
-// Sync configuration.
-struct FirebaseConfig {
-  // ID of the Firebase instance.
-  string server_id;
-
-  // API key to use when connecting to Firebase.
-  string api_key;
-};
+import "lib/cloud_provider/fidl/cloud_provider.fidl";
 
 // Entry interface implemented by the Ledger application, intended to be used by
 // the process setting up the user environment to obtain repositories for
@@ -31,15 +22,11 @@ interface LedgerRepositoryFactory {
   // |repository_path| absolute path of the disk directory where the
   //     repository is stored. At any given time, at most one repository
   //     instance backed by the same disk directory can be running concurrently.
-  // |firebase_config| sync configuration, passing null disables sync.
-  // |token_provider| is used by the Ledger to get the appropriate auth tokens
-  //     associated with the user for whom |repository| is being created.
-  //     Passing null will only sync with an unprotected cloud instance. If the
-  //     |token_provider| sent here is disconnected, Ledger shuts down the
+  // |cloud_provider| is used by the Ledger to synchronize data through the
+  //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
   //     repository and disconnects all clients.
   GetRepository(string repository_path,
-                FirebaseConfig? firebase_config,
-                modular.auth.TokenProvider? token_provider,
+                cloud_provider.CloudProvider? cloud_provider,
                 LedgerRepository& repository) => (Status status);
 
   // Erases the data stored in the given repository, both locally and in the
@@ -49,13 +36,10 @@ interface LedgerRepositoryFactory {
   // caller needs to ensure that this is only called when intended.
   //
   // Parameters:
-  // |firebase_config| sync configuration, passing null only clears the local
-  // state.
-  // |token_provider| is used by the Ledger to get user auth tokens, passing
-  // null only clears the local state.
+  // |cloud_provider| is used by the Ledger to synchronize data through the
+  //     cloud, passing null only clears the local state.
   EraseRepository(string repository_path,
-                  FirebaseConfig? firebase_config,
-                  modular.auth.TokenProvider? token_provider) => (Status status);
+                  cloud_provider.CloudProvider? cloud_provider) => (Status status);
 };
 
 // Controller interface for the Ledger application lifecycle.

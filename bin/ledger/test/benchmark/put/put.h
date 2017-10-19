@@ -6,16 +6,12 @@
 #define PERIDOT_BIN_LEDGER_TEST_BENCHMARK_PUT_PUT_H_
 
 #include <memory>
-#include <thread>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/data_generator.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
 
 namespace test {
 namespace benchmark {
@@ -82,9 +78,6 @@ class PutBenchmark {
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<app::ApplicationContext> application_context_;
-  ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
-                                          test::FakeTokenProvider>
-      token_provider_impl_;
   const int entry_count_;
   const int transaction_size_;
   const int key_size_;
@@ -94,10 +87,6 @@ class PutBenchmark {
 
   app::ApplicationControllerPtr application_controller_;
   ledger::PagePtr page_;
-
-  // Thread used to do services.
-  std::thread services_thread_;
-  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };

@@ -18,6 +18,7 @@ executable("e2e_sync") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/ledger/callback",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/fidl_helpers",

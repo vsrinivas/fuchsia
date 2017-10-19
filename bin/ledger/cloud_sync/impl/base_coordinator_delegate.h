@@ -14,11 +14,6 @@ namespace cloud_sync {
 // access to shared resources.
 class BaseCoordinatorDelegate {
  public:
-  // Gets an auth token suitable to talk to the cloud sync service.
-  // TODO(LE-316): Have only one callback here.
-  virtual void GetAuthToken(std::function<void(std::string)> on_token_ready,
-                            fxl::Closure on_failed) = 0;
-
   // Executes |callable| at a later time, subject to exponential backoff.
   // TODO(LE-317): Move this out of the delegate into individual components.
   virtual void Retry(fxl::Closure callable) = 0;

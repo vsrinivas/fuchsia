@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
@@ -35,8 +36,7 @@ class PageUpload : public storage::CommitWatcher {
 
   PageUpload(storage::PageStorage* storage,
              encryption::EncryptionService* encryption_service,
-             cloud_provider_firebase::PageCloudHandler* cloud_provider,
-             auth_provider::AuthProvider* auth_provider,
+             cloud_provider::PageCloudPtr* page_cloud,
              Delegate* delegate);
 
   ~PageUpload() override;
@@ -67,8 +67,7 @@ class PageUpload : public storage::CommitWatcher {
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
-  auth_provider::AuthProvider* const auth_provider_;
+  cloud_provider::PageCloudPtr* const page_cloud_;
   Delegate* const delegate_;
   const std::string log_prefix_;
 

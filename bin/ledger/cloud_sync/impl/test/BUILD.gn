@@ -8,8 +8,14 @@ source_set("test") {
   testonly = true
 
   sources = [
+    "test_cloud_provider.cc",
+    "test_cloud_provider.h",
     "test_commit.cc",
     "test_commit.h",
+    "test_device_set.cc",
+    "test_device_set.h",
+    "test_page_cloud.cc",
+    "test_page_cloud.h",
     "test_page_storage.cc",
     "test_page_storage.h",
   ]
@@ -18,6 +24,7 @@ source_set("test") {
     "//peridot/bin/ledger/cloud_provider/impl",
     "//peridot/bin/ledger/cloud_provider/public",
     "//peridot/bin/ledger/cloud_sync/public",
+    "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/test",
   ]

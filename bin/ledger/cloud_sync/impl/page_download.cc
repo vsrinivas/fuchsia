@@ -18,25 +18,22 @@ DownloadSyncState GetMergedState(DownloadSyncState commit_state,
 }
 }  // namespace
 
-PageDownload::PageDownload(
-    callback::ScopedTaskRunner* task_runner,
-    storage::PageStorage* storage,
-    encryption::EncryptionService* encryption_service,
-    cloud_provider_firebase::PageCloudHandler* cloud_provider,
-    Delegate* delegate)
+PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner,
+                           storage::PageStorage* storage,
+                           encryption::EncryptionService* encryption_service,
+                           cloud_provider::PageCloudPtr* page_cloud,
+                           Delegate* delegate)
     : task_runner_(task_runner),
       storage_(storage),
       encryption_service_(encryption_service),
-      cloud_provider_(cloud_provider),
+      page_cloud_(page_cloud),
       delegate_(delegate),
       log_prefix_(fxl::Concatenate(
-          {"Page ", convert::ToHex(storage->GetId()), " download sync: "})) {}
+          {"Page ", convert::ToHex(storage->GetId()), " download sync: "})),
+      watcher_binding_(this) {}
 
 PageDownload::~PageDownload() {
   storage_->SetSyncDelegate(nullptr);
-  if (commit_state_ != DOWNLOAD_PERMANENT_ERROR) {
-    cloud_provider_->UnwatchCommits(this);
-  }
 }
 
 void PageDownload::StartDownload() {
@@ -67,56 +64,54 @@ void PageDownload::StartDownload() {
                       << last_commit_ts;
         }
 
-        delegate_->GetAuthToken(
-            [this, last_commit_ts =
-                       std::move(last_commit_ts)](std::string auth_token) {
-              // TODO(ppi): handle pagination when the response is huge.
-              cloud_provider_->GetCommits(
-                  auth_token, last_commit_ts,
-                  [this](cloud_provider_firebase::Status cloud_status,
-                         std::vector<cloud_provider_firebase::Record> records) {
-                    if (cloud_status != cloud_provider_firebase::Status::OK) {
-                      // Fetching the remote commits failed, schedule a retry.
-                      FXL_LOG(WARNING)
-                          << log_prefix_
-                          << "fetching the remote commits failed due to a "
-                          << "connection error, status: " << cloud_status
-                          << ", retrying.";
-                      SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
-                      delegate_->Retry([this] { StartDownload(); });
-                      return;
-                    }
-                    delegate_->Success();
+        fidl::Array<uint8_t> position_token;
+        if (!last_commit_ts.empty()) {
+          position_token = convert::ToArray(last_commit_ts);
+        }
+        // TODO(ppi): handle pagination when the response is huge.
+        (*page_cloud_)
+            ->GetCommits(
+                std::move(position_token),
+                [this](cloud_provider::Status cloud_status,
+                       fidl::Array<cloud_provider::CommitPtr> commits,
+                       fidl::Array<uint8_t> position_token) {
+                  if (cloud_status != cloud_provider::Status::OK) {
+                    // Fetching the remote commits failed, schedule a retry.
+                    FXL_LOG(WARNING)
+                        << log_prefix_
+                        << "fetching the remote commits failed due to a "
+                        << "connection error, status: " << cloud_status
+                        << ", retrying.";
+                    SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
+                    delegate_->Retry([this] { StartDownload(); });
+                    return;
+                  }
+                  delegate_->Success();
 
-                    if (records.empty()) {
-                      // If there is no remote commits to add, announce that
-                      // we're done.
-                      FXL_VLOG(1)
-                          << log_prefix_
-                          << "initial sync finished, no new remote commits";
-                      BacklogDownloaded();
-                    } else {
-                      FXL_VLOG(1)
-                          << log_prefix_ << "retrieved " << records.size()
-                          << " (possibly) new remote commits, "
-                          << "adding them to storage.";
-                      // If not, fire the backlog download callback when the
-                      // remote commits are downloaded.
-                      const auto record_count = records.size();
-                      DownloadBatch(std::move(records), [this, record_count] {
-                        FXL_VLOG(1)
-                            << log_prefix_ << "initial sync finished, added "
-                            << record_count << " remote commits.";
-                        BacklogDownloaded();
-                      });
-                    }
-                  });
-            },
-            [this] {
-              HandleError(
-                  "Failed to retrieve the auth token to download commit "
-                  "backlog.");
-            });
+                  if (commits.empty()) {
+                    // If there is no remote commits to add, announce that
+                    // we're done.
+                    FXL_VLOG(1)
+                        << log_prefix_
+                        << "initial sync finished, no new remote commits";
+                    BacklogDownloaded();
+                  } else {
+                    FXL_VLOG(1) << log_prefix_ << "retrieved " << commits.size()
+                                << " (possibly) new remote commits, "
+                                << "adding them to storage.";
+                    // If not, fire the backlog download callback when the
+                    // remote commits are downloaded.
+                    const auto commit_count = commits.size();
+                    DownloadBatch(std::move(commits), std::move(position_token),
+                                  [this, commit_count] {
+                                    FXL_VLOG(1)
+                                        << log_prefix_
+                                        << "initial sync finished, added "
+                                        << commit_count << " remote commits.";
+                                    BacklogDownloaded();
+                                  });
+                  }
+                });
       }));
 }
 
@@ -141,67 +136,90 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
           return;
         }
 
-        delegate_->GetAuthToken(
-            [this, is_retry, last_commit_ts = std::move(last_commit_ts)](
-                std::string auth_token) {
-              cloud_provider_->WatchCommits(auth_token, last_commit_ts, this);
-              SetCommitState(DOWNLOAD_IDLE);
-              if (is_retry) {
-                FXL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
-              }
-            },
-            [this] {
-              HandleError(
-                  "Failed to retrieve the auth token to set a cloud watcher.");
-            });
+        fidl::Array<uint8_t> position_token;
+        if (!last_commit_ts.empty()) {
+          position_token = convert::ToArray(last_commit_ts);
+        }
+        cloud_provider::PageCloudWatcherPtr watcher;
+        watcher_binding_.Bind(watcher.NewRequest());
+        (*page_cloud_)
+            ->SetWatcher(
+                std::move(position_token), std::move(watcher),
+                [this](auto status) {
+                  // This should always succeed - any errors are reported
+                  // through OnError().
+                  if (status != cloud_provider::Status::OK) {
+                    HandleError(
+                        "Unexpected error when setting the PageCloudWatcher.");
+                  }
+                });
+        SetCommitState(DOWNLOAD_IDLE);
+        if (is_retry) {
+          FXL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
+        }
       }));
 }
 
-void PageDownload::OnRemoteCommits(
-    std::vector<cloud_provider_firebase::Record> records) {
+void PageDownload::OnNewCommits(fidl::Array<cloud_provider::CommitPtr> commits,
+                                fidl::Array<uint8_t> position_token,
+                                const OnNewCommitsCallback& callback) {
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
-    std::move(records.begin(), records.end(),
-              std::back_inserter(commits_to_download_));
+    for (auto& commit : commits) {
+      commits_to_download_.push_back(std::move(commit));
+    }
+    position_token_ = std::move(position_token);
+    callback();
     return;
   }
   SetCommitState(DOWNLOAD_IN_PROGRESS);
-  DownloadBatch(std::move(records), nullptr);
+  DownloadBatch(std::move(commits), std::move(position_token), callback);
 }
 
-void PageDownload::OnConnectionError() {
+void PageDownload::OnNewObject(fidl::Array<uint8_t> id,
+                               zx::vmo data,
+                               const OnNewObjectCallback& callback) {
+  // No known cloud provider implementations use this method.
+  // TODO(ppi): implement this method when we have such cloud provider
+  // implementations.
+  FXL_NOTIMPLEMENTED();
+}
+
+void PageDownload::OnError(cloud_provider::Status status) {
   FXL_DCHECK(commit_state_ == DOWNLOAD_IDLE ||
              commit_state_ == DOWNLOAD_IN_PROGRESS);
-  // Reset the watcher and schedule a retry.
-  cloud_provider_->UnwatchCommits(this);
-  SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
-  FXL_LOG(WARNING)
-      << log_prefix_
-      << "Connection error in the remote commit watcher, retrying.";
-  delegate_->Retry([this] { SetRemoteWatcher(true); });
+  if (status == cloud_provider::Status::NETWORK_ERROR ||
+      status == cloud_provider::Status::AUTH_ERROR) {
+    // Reset the watcher and schedule a retry.
+    if (watcher_binding_.is_bound()) {
+      watcher_binding_.Close();
+    }
+    SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
+    FXL_LOG(WARNING)
+        << log_prefix_
+        << "Connection error in the remote commit watcher, retrying.";
+    delegate_->Retry([this] { SetRemoteWatcher(true); });
+    return;
+  }
+
+  if (status == cloud_provider::Status::PARSE_ERROR) {
+    HandleError("Received a malformed remote commit notification.");
+    return;
+  }
+
+  FXL_LOG(WARNING) << "Received unexpected error from PageCloudWatcher: "
+                   << status;
+  HandleError("Received unexpected error from PageCloudWatcher.");
 }
 
-void PageDownload::OnTokenExpired() {
-  FXL_DCHECK(commit_state_ == DOWNLOAD_IDLE ||
-             commit_state_ == DOWNLOAD_IN_PROGRESS);
-  // Reset the watcher and schedule a retry.
-  cloud_provider_->UnwatchCommits(this);
-  SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
-  FXL_LOG(INFO) << log_prefix_ << "Firebase token expired, refreshing.";
-  delegate_->Retry([this] { SetRemoteWatcher(true); });
-}
-
-void PageDownload::OnMalformedNotification() {
-  HandleError("Received a malformed remote commit notification.");
-}
-
-void PageDownload::DownloadBatch(
-    std::vector<cloud_provider_firebase::Record> records,
-    fxl::Closure on_done) {
+void PageDownload::DownloadBatch(fidl::Array<cloud_provider::CommitPtr> commits,
+                                 fidl::Array<uint8_t> position_token,
+                                 fxl::Closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
-      storage_, encryption_service_, std::move(records),
+      storage_, encryption_service_, std::move(commits),
+      std::move(position_token),
       [this, on_done = std::move(on_done)] {
         if (on_done) {
           on_done();
@@ -209,14 +227,16 @@ void PageDownload::DownloadBatch(
         batch_download_.reset();
 
         if (commits_to_download_.empty()) {
-          if (!on_done) {
+          // Don't set to idle if we're in process of setting the remote
+          // watcher.
+          if (commit_state_ == DOWNLOAD_IN_PROGRESS) {
             SetCommitState(DOWNLOAD_IDLE);
           }
           return;
         }
         auto commits = std::move(commits_to_download_);
-        commits_to_download_.clear();
-        DownloadBatch(std::move(commits), nullptr);
+        commits_to_download_ = fidl::Array<cloud_provider::CommitPtr>::New(0);
+        DownloadBatch(std::move(commits), std::move(position_token_), nullptr);
       },
       [this] { HandleError("Failed to persist a remote commit in storage"); });
   batch_download_->Start();
@@ -227,55 +247,46 @@ void PageDownload::GetObject(
     std::function<void(storage::Status status, uint64_t size, zx::socket data)>
         callback) {
   current_get_object_calls_++;
-  delegate_->GetAuthToken(
-      [this, object_digest = object_digest.ToString(),
-       callback](std::string auth_token) mutable {
-        cloud_provider_->GetObject(
-            auth_token, object_digest,
-            [this, object_digest, callback = std::move(callback)](
-                cloud_provider_firebase::Status status, uint64_t size,
-                zx::socket data) mutable {
-              if (status == cloud_provider_firebase::Status::NETWORK_ERROR) {
-                FXL_LOG(WARNING) << log_prefix_
-                                 << "GetObject() failed due to a connection "
-                                    "error, retrying.";
-                current_get_object_calls_--;
-                delegate_->Retry([this,
-                                  object_digest = std::move(object_digest),
-                                  callback = std::move(callback)] {
-                  GetObject(object_digest, callback);
-                });
-                return;
-              }
-
-              delegate_->Success();
-              if (status != cloud_provider_firebase::Status::OK) {
-                FXL_LOG(WARNING)
-                    << log_prefix_
-                    << "Fetching remote object failed with status: " << status;
-                callback(storage::Status::IO_ERROR, 0, zx::socket());
-                current_get_object_calls_--;
-                return;
-              }
-
-              callback(storage::Status::OK, size, std::move(data));
+  auto object_digest_str = object_digest.ToString();
+  (*page_cloud_)
+      ->GetObject(
+          convert::ToArray(object_digest_str),
+          [this, object_digest_str, callback = std::move(callback)](
+              cloud_provider::Status status, uint64_t size,
+              zx::socket data) mutable {
+            if (status == cloud_provider::Status::NETWORK_ERROR ||
+                status == cloud_provider::Status::AUTH_ERROR) {
+              FXL_LOG(WARNING) << log_prefix_
+                               << "GetObject() failed due to a connection "
+                                  "error or stale auth token, retrying.";
               current_get_object_calls_--;
-            });
-      },
-      [this, callback] {
-        FXL_LOG(ERROR) << log_prefix_ << "Failed to retrieve the auth token, "
-                       << "cannot download the object.";
-        callback(storage::Status::IO_ERROR, 0, zx::socket());
-        // Auth errors in object retrieval are ignored. For some reason.
-        // See LE-315.
-        current_get_object_calls_--;
-      });
+              delegate_->Retry([this,
+                                object_digest = std::move(object_digest_str),
+                                callback = std::move(callback)] {
+                GetObject(object_digest, callback);
+              });
+              return;
+            }
+
+            delegate_->Success();
+            if (status != cloud_provider::Status::OK) {
+              FXL_LOG(WARNING)
+                  << log_prefix_
+                  << "Fetching remote object failed with status: " << status;
+              callback(storage::Status::IO_ERROR, 0, zx::socket());
+              current_get_object_calls_--;
+              return;
+            }
+
+            callback(storage::Status::OK, size, std::move(data));
+            current_get_object_calls_--;
+          });
 }
 
 void PageDownload::HandleError(const char error_description[]) {
   FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
-  if (commit_state_ == DOWNLOAD_IDLE || commit_state_ == DOWNLOAD_IN_PROGRESS) {
-    cloud_provider_->UnwatchCommits(this);
+  if (watcher_binding_.is_bound()) {
+    watcher_binding_.Close();
   }
   storage_->SetSyncDelegate(nullptr);
   SetCommitState(DOWNLOAD_PERMANENT_ERROR);

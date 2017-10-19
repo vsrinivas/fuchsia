@@ -30,6 +30,7 @@ executable("user_runner") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/bin/agent_runner",
+    "//peridot/bin/cloud_provider_firebase/fidl",
     "//peridot/bin/component",
     "//peridot/bin/entity",
     "//peridot/bin/ledger/fidl",

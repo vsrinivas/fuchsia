@@ -8,12 +8,11 @@
 #include <functional>
 #include <queue>
 
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
-#include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/cloud_provider/public/commit_watcher.h"
 #include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
@@ -61,8 +60,7 @@ class PageSyncImpl : public PageSync,
   PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                storage::PageStorage* storage,
                encryption::EncryptionService* encryption_service,
-               cloud_provider_firebase::PageCloudHandler* cloud_provider,
-               auth_provider::AuthProvider* auth_provider,
+               cloud_provider::PageCloudPtr page_cloud,
                std::unique_ptr<backoff::Backoff> backoff,
                fxl::Closure on_error,
                std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
@@ -93,12 +91,6 @@ class PageSyncImpl : public PageSync,
 
   void CheckIdle();
 
-  // PageDownload::Delegate and PageUpload::Delegate:
-  // Retrieves the auth token from token provider and executes the given
-  // callback. Fails hard and stops the sync if the token can't be retrieved.
-  void GetAuthToken(std::function<void(std::string)> on_token_ready,
-                    fxl::Closure on_failed) override;
-
   // Schedules the given closure to execute after the delay determined by
   // |backoff_|, but only if |this| still is valid and |errored_| is not set.
   void Retry(fxl::Closure callable) override;
@@ -113,8 +105,7 @@ class PageSyncImpl : public PageSync,
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
-  auth_provider::AuthProvider* const auth_provider_;
+  cloud_provider::PageCloudPtr page_cloud_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const fxl::Closure on_error_;
   const std::string log_prefix_;

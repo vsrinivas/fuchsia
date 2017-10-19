@@ -10,6 +10,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/convert/convert.h"
@@ -21,19 +22,14 @@ namespace {
 constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(10);
 }  // namespace
 
-ledger::Status GetLedger(
-    fsl::MessageLoop* loop,
-    app::ApplicationContext* context,
-    app::ApplicationControllerPtr* controller,
-    fxl::RefPtr<fxl::TaskRunner> services_task_runner,
-    ledger::fidl_helpers::SetBoundable<modular::auth::TokenProvider>*
-        token_provider_impl,
-    std::string ledger_name,
-    std::string ledger_repository_path,
-    SyncState sync,
-    std::string server_id,
-    ledger::LedgerPtr* ledger_ptr,
-    Erase erase) {
+ledger::Status GetLedger(fsl::MessageLoop* loop,
+                         app::ApplicationContext* context,
+                         app::ApplicationControllerPtr* controller,
+                         cloud_provider::CloudProviderPtr cloud_provider,
+                         std::string ledger_name,
+                         std::string ledger_repository_path,
+                         ledger::LedgerPtr* ledger_ptr,
+                         Erase erase) {
   ledger::LedgerRepositoryFactoryPtr repository_factory;
   app::ServiceProviderPtr child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -46,46 +42,22 @@ ledger::Status GetLedger(
                                          controller->NewRequest());
   app::ConnectToService(child_services.get(), repository_factory.NewRequest());
   ledger::LedgerRepositoryPtr repository;
-  ledger::FirebaseConfigPtr firebase_config;
-  if (sync == SyncState::CLOUD_SYNC_ENABLED) {
-    firebase_config = ledger::FirebaseConfig::New();
-    firebase_config->server_id = server_id;
-    firebase_config->api_key = "";
-  }
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   if (erase == Erase::ERASE_CLOUD) {
-    modular::auth::TokenProviderPtr token_provider_ptr;
-    EXPECT_TRUE(callback::RunSynchronously(
-        services_task_runner,
-        fxl::MakeCopyable(
-            [token_provider_impl,
-             request = token_provider_ptr.NewRequest()]() mutable {
-              token_provider_impl->AddBinding(std::move(request));
-            }),
-        kTimeout));
-    repository_factory->EraseRepository(
-        ledger_repository_path, firebase_config.Clone(),
-        std::move(token_provider_ptr), callback::Capture([] {}, &status));
+    cloud_provider::Status cloud_provider_status;
+    cloud_provider->EraseAllData(
+        callback::Capture([] {}, &cloud_provider_status));
     if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout) ||
-        status != ledger::Status::OK) {
+        cloud_provider_status != cloud_provider::Status::OK) {
       FXL_LOG(ERROR) << "Unable to erase repository.";
       return ledger::Status::INTERNAL_ERROR;
     }
   }
 
-  modular::auth::TokenProviderPtr token_provider_ptr;
-  EXPECT_TRUE(callback::RunSynchronously(
-      services_task_runner,
-      fxl::MakeCopyable([token_provider_impl,
-                         request = token_provider_ptr.NewRequest()]() mutable {
-        token_provider_impl->AddBinding(std::move(request));
-      }),
-      kTimeout));
   repository_factory->GetRepository(
-      ledger_repository_path, std::move(firebase_config),
-      std::move(token_provider_ptr), repository.NewRequest(),
-      callback::Capture([] {}, &status));
+      ledger_repository_path, std::move(cloud_provider),
+      repository.NewRequest(), callback::Capture([] {}, &status));
   if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout)) {
     FXL_LOG(ERROR) << "Unable to get repository.";
     return ledger::Status::INTERNAL_ERROR;

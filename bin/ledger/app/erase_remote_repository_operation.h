@@ -8,11 +8,10 @@
 #include <memory>
 #include <string>
 
-#include "lib/auth/fidl/token_provider.fidl.h"
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/firebase/firebase_impl.h"
 
@@ -24,10 +23,7 @@ class EraseRemoteRepositoryOperation {
  public:
   EraseRemoteRepositoryOperation(
       fxl::RefPtr<fxl::TaskRunner> task_runner,
-      ledger::NetworkService* network_service,
-      std::string server_id,
-      std::string api_key,
-      modular::auth::TokenProviderPtr token_provider);
+      cloud_provider::CloudProviderPtr cloud_provider);
   ~EraseRemoteRepositoryOperation();
 
   EraseRemoteRepositoryOperation(EraseRemoteRepositoryOperation&& other);
@@ -42,18 +38,10 @@ class EraseRemoteRepositoryOperation {
   void EraseRemote();
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  ledger::NetworkService* network_service_;
-  std::string server_id_;
-  std::string api_key_;
-  std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
+  cloud_provider::CloudProviderPtr cloud_provider_;
+  cloud_provider::DeviceSetPtr device_set_;
 
   std::function<void(bool)> on_done_;
-  std::string user_id_;
-  std::string auth_token_;
-  std::unique_ptr<firebase::FirebaseImpl> firebase_;
-
-  // Pending auth provider requests to be cancelled when this class goes away.
-  callback::CancellableContainer auth_provider_requests_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EraseRemoteRepositoryOperation);
 };

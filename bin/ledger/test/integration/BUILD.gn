@@ -14,7 +14,6 @@ executable("integration") {
     "integration_test.h",
     "integration_test_tests.cc",
     "ledger_app_instance_factory_integration.cc",
-    "ledger_repository_tests.cc",
     "merging_tests.cc",
     "page_snapshot_tests.cc",
     "page_tests.cc",

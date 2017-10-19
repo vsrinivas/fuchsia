@@ -9,12 +9,11 @@
 #include <memory>
 #include <vector>
 
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/ledger/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -53,8 +52,7 @@ class BatchUpload {
 
   BatchUpload(storage::PageStorage* storage,
               encryption::EncryptionService* encryption_service,
-              cloud_provider_firebase::PageCloudHandler* cloud_provider,
-              auth_provider::AuthProvider* auth_provider,
+              cloud_provider::PageCloudPtr* page_cloud,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
               fxl::Closure on_done,
               std::function<void(ErrorType)> on_error,
@@ -83,20 +81,13 @@ class BatchUpload {
   // Uploads the commits.
   void UploadCommits();
 
-  void RefreshAuthToken(fxl::Closure on_refreshed);
-
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  cloud_provider_firebase::PageCloudHandler* const cloud_provider_;
-  auth_provider::AuthProvider* const auth_provider_;
+  cloud_provider::PageCloudPtr* const page_cloud_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
   fxl::Closure on_done_;
   std::function<void(ErrorType)> on_error_;
   const unsigned int max_concurrent_uploads_;
-
-  // Auth token to be used for uploading the objects and the commit. It is
-  // refreshed each time Start() or Retry() is called.
-  std::string auth_token_;
 
   // All remaining object ids to be uploaded along with this batch of commits.
   std::vector<storage::ObjectDigest> remaining_object_digests_;

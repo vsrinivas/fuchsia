@@ -31,6 +31,7 @@ UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),
       on_version_mismatch_(std::move(on_version_mismatch)),
+      watcher_binding_(this),
       aggregator_(watcher),
       task_runner_(environment_->main_runner()) {
   FXL_DCHECK(on_version_mismatch_);
@@ -60,16 +61,35 @@ std::string UserSyncImpl::GetFingerprintPath() {
   return fxl::Concatenate({user_config_.user_directory, "/fingerprint"});
 }
 
+void UserSyncImpl::OnCloudErased() {
+  // |this| can be deleted within on_version_mismatch_() - don't
+  // access member variables afterwards.
+  on_version_mismatch_();
+}
+
+void UserSyncImpl::OnNetworkError() {
+  task_runner_.PostDelayedTask([this] { SetCloudErasedWatcher(); },
+                               backoff_->GetNext());
+}
+
 void UserSyncImpl::Start() {
   FXL_DCHECK(!started_);
 
-  CheckCloudNotErased();
+  user_config_.cloud_provider->GetDeviceSet(
+      device_set_.NewRequest(), [this](auto status) {
+        if (status != cloud_provider::Status::OK) {
+          FXL_LOG(ERROR) << "Failed to retrieve the device map: " << status
+                         << ", sync upload will not work.";
+          return;
+        }
+        CheckCloudNotErased();
+      });
 
   started_ = true;
 }
 
 void UserSyncImpl::CheckCloudNotErased() {
-  FXL_DCHECK(user_config_.auth_provider);
+  FXL_DCHECK(device_set_);
 
   std::string fingerprint_path = GetFingerprintPath();
   if (!files::IsFile(fingerprint_path)) {
@@ -83,24 +103,9 @@ void UserSyncImpl::CheckCloudNotErased() {
     return;
   }
 
-  auto request =
-      user_config_.auth_provider->GetFirebaseToken(
-          [this](auth_provider::AuthStatus auth_status,
-                 std::string auth_token) {
-            if (auth_status != auth_provider::AuthStatus::OK) {
-              FXL_LOG(ERROR)
-                  << "Failed to retrieve the auth token for version check, "
-                  << "sync upload will not work.";
-              return;
-            }
-
-            user_config_.cloud_device_set->CheckFingerprint(
-                std::move(auth_token), fingerprint_,
-                [this](cloud_provider_firebase::CloudDeviceSet::Status status) {
-                  HandleCheckCloudResult(status);
-                });
-          });
-  auth_token_requests_.emplace(request);
+  device_set_->CheckFingerprint(
+      convert::ToArray(fingerprint_),
+      [this](cloud_provider::Status status) { HandeDeviceSetResult(status); });
 }
 
 void UserSyncImpl::CreateFingerprint() {
@@ -110,97 +115,69 @@ void UserSyncImpl::CreateFingerprint() {
   fingerprint_ =
       convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
 
-  auto request = user_config_.auth_provider->GetFirebaseToken(
-      [this](auth_provider::AuthStatus auth_status, std::string auth_token) {
-        if (auth_status != auth_provider::AuthStatus::OK) {
-          FXL_LOG(ERROR)
-              << "Failed to retrieve the auth token for fingerprint check, "
-              << "sync upload will not work.";
-          return;
+  device_set_->SetFingerprint(
+      convert::ToArray(fingerprint_), [this](cloud_provider::Status status) {
+        if (status == cloud_provider::Status::OK) {
+          // Persist the new fingerprint.
+          FXL_DCHECK(!fingerprint_.empty());
+          if (!files::WriteFile(GetFingerprintPath(), fingerprint_.data(),
+                                fingerprint_.size())) {
+            FXL_LOG(ERROR) << "Failed to persist the fingerprint, "
+                           << "sync upload will not work.";
+            return;
+          }
         }
-
-        user_config_.cloud_device_set->SetFingerprint(
-            std::move(auth_token), fingerprint_,
-            [this](cloud_provider_firebase::CloudDeviceSet::Status status) {
-              if (status ==
-                  cloud_provider_firebase::CloudDeviceSet::Status::OK) {
-                // Persist the new fingerprint.
-                FXL_DCHECK(!fingerprint_.empty());
-                if (!files::WriteFile(GetFingerprintPath(), fingerprint_.data(),
-                                      fingerprint_.size())) {
-                  FXL_LOG(ERROR) << "Failed to persist the fingerprint, "
-                                 << "sync upload will not work.";
-                  return;
-                }
-              }
-              HandleCheckCloudResult(status);
-            });
+        HandeDeviceSetResult(status);
       });
-  auth_token_requests_.emplace(request);
 }
 
-void UserSyncImpl::HandleCheckCloudResult(
-    cloud_provider_firebase::CloudDeviceSet::Status status) {
-  // HACK: in order to test this codepath in an apptest, we expose a hook
-  // that forces the cloud erased recovery closure to run.
+void UserSyncImpl::HandeDeviceSetResult(cloud_provider::Status status) {
+  // HACK: in order to test this codepath in an e2e test, we expose a hook that
+  // forces the cloud erased recovery closure to run.
   if (environment_->TriggerCloudErasedForTesting()) {
     on_version_mismatch_();
     return;
   }
 
   switch (status) {
-    case cloud_provider_firebase::CloudDeviceSet::Status::OK:
+    case cloud_provider::Status::OK:
       backoff_->Reset();
       SetCloudErasedWatcher();
       EnableUpload();
       return;
-    case cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR:
+    case cloud_provider::Status::NETWORK_ERROR:
       // Retry after some backoff time.
       task_runner_.PostDelayedTask([this] { CheckCloudNotErased(); },
                                    backoff_->GetNext());
       return;
-    case cloud_provider_firebase::CloudDeviceSet::Status::ERASED:
+    case cloud_provider::Status::NOT_FOUND:
       // |this| can be deleted within on_version_mismatch_() - don't
       // access member variables afterwards.
       on_version_mismatch_();
+      return;
+    default:
+      FXL_LOG(ERROR) << "Unexpected status returned from device set: " << status
+                     << ", sync upload will not work.";
       return;
   }
 }
 
 void UserSyncImpl::SetCloudErasedWatcher() {
-  auto request = user_config_.auth_provider->GetFirebaseToken(
-      [this](auth_provider::AuthStatus auth_status, std::string auth_token) {
-        if (auth_status != auth_provider::AuthStatus::OK) {
-          FXL_LOG(ERROR) << "Failed to retrieve the auth token for fingerprint "
-                         << "watcher.";
-          return;
-        }
-
-        user_config_.cloud_device_set->WatchFingerprint(
-            std::move(auth_token), fingerprint_,
-            [this](cloud_provider_firebase::CloudDeviceSet::Status status) {
-              HandleWatcherResult(status);
-            });
-      });
-  auth_token_requests_.emplace(request);
-}
-
-void UserSyncImpl::HandleWatcherResult(
-    cloud_provider_firebase::CloudDeviceSet::Status status) {
-  switch (status) {
-    case cloud_provider_firebase::CloudDeviceSet::Status::OK:
-      backoff_->Reset();
-      return;
-    case cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR:
-      task_runner_.PostDelayedTask([this] { SetCloudErasedWatcher(); },
-                                   backoff_->GetNext());
-      return;
-    case cloud_provider_firebase::CloudDeviceSet::Status::ERASED:
-      // |this| can be deleted within on_version_mismatch_() - don't
-      // access member variables afterwards.
-      on_version_mismatch_();
-      return;
+  cloud_provider::DeviceSetWatcherPtr watcher;
+  if (watcher_binding_.is_bound()) {
+    watcher_binding_.Close();
   }
+  watcher_binding_.Bind(watcher.NewRequest());
+  device_set_->SetWatcher(convert::ToArray(fingerprint_), std::move(watcher),
+                          [this](cloud_provider::Status status) {
+                            if (status == cloud_provider::Status::OK) {
+                              backoff_->Reset();
+                            }
+                            // Don't handle errors - in case of error, the
+                            // corresponding call is made on the watcher
+                            // itself and handled there (OnCloudErased(),
+                            // OnNetworkError()).
+                          });
 }
 
 void UserSyncImpl::EnableUpload() {

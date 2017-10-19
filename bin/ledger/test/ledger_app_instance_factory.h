@@ -5,16 +5,16 @@
 #ifndef PERIDOT_BIN_LEDGER_TEST_LEDGER_APP_INSTANCE_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_TEST_LEDGER_APP_INSTANCE_FACTORY_H_
 
+#include <functional>
 #include <memory>
 
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
 
 namespace test {
 
@@ -28,10 +28,8 @@ class LedgerAppInstanceFactory {
   class LedgerAppInstance {
    public:
     LedgerAppInstance(
-        ledger::FirebaseConfigPtr firebase_config,
         fidl::Array<uint8_t> test_ledger_name,
-        ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
-        fxl::RefPtr<fxl::TaskRunner> services_task_runner);
+        ledger::LedgerRepositoryFactoryPtr ledger_repository_factory);
     virtual ~LedgerAppInstance();
 
     // Returns the LedgerRepositoryFactory associated with this application
@@ -53,17 +51,12 @@ class LedgerAppInstanceFactory {
     // Deletes the given page on the default Ledger object.
     void DeletePage(const fidl::Array<uint8_t>& page_id,
                     ledger::Status expected_status);
-    // Unbinds current connections to the token provider.
-    void UnbindTokenProvider();
 
    private:
-    ledger::FirebaseConfigPtr firebase_config_;
+    virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
+
     fidl::Array<uint8_t> test_ledger_name_;
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
-    ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
-                                            FakeTokenProvider>
-        token_provider_impl_;
-    fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
     files::ScopedTempDir dir_;
 

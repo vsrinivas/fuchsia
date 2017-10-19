@@ -6,14 +6,11 @@
 #define PERIDOT_BIN_LEDGER_TEST_BENCHMARK_SYNC_SYNC_H_
 
 #include <memory>
-#include <thread>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
+#include "peridot/bin/ledger/test/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/test/data_generator.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 
@@ -62,6 +59,7 @@ class SyncBenchmark : public ledger::PageWatcher {
 
   test::DataGenerator generator_;
   std::unique_ptr<app::ApplicationContext> application_context_;
+  test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const size_t entry_count_;
   const size_t value_size_;
   ReferenceStrategy reference_strategy_;
@@ -73,18 +71,11 @@ class SyncBenchmark : public ledger::PageWatcher {
   app::ApplicationControllerPtr alpha_controller_;
   app::ApplicationControllerPtr beta_controller_;
   app::ApplicationControllerPtr gamma_controller_;
-  ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
-                                          test::FakeTokenProvider>
-      token_provider_impl_;
   ledger::LedgerPtr gamma_;
   fidl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
   ledger::PagePtr gamma_page_;
-
-  // Thread used to do services.
-  std::thread services_thread_;
-  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncBenchmark);
 };

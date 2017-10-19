@@ -16,11 +16,12 @@
 #include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/callback/synchronous_task.h"
+#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/glue/socket/socket_writer.h"
 #include "peridot/bin/ledger/network/network_service_impl.h"
+#include "peridot/bin/ledger/test/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/test/cloud_server/fake_cloud_network_service.h"
-#include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
 
 namespace test {
@@ -31,11 +32,13 @@ class LedgerAppInstanceImpl final
   LedgerAppInstanceImpl(
       fxl::RefPtr<fxl::TaskRunner> services_task_runner,
       std::function<network::NetworkServicePtr()> network_factory,
-      ledger::FirebaseConfigPtr firebase_config,
       fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
           repository_factory_request,
       fidl::InterfacePtr<ledger::LedgerRepositoryFactory>
-          repository_factory_ptr);
+          repository_factory_ptr,
+      ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                              ledger::FakeCloudProvider>*
+          cloud_provider);
   ~LedgerAppInstanceImpl() override;
 
  private:
@@ -70,23 +73,31 @@ class LedgerAppInstanceImpl final
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
 
+  cloud_provider::CloudProviderPtr MakeCloudProvider() override;
+
+  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   std::thread thread_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                          ledger::FakeCloudProvider>* const
+      cloud_provider_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fxl::RefPtr<fxl::TaskRunner> services_task_runner,
     std::function<network::NetworkServicePtr()> network_factory,
-    ledger::FirebaseConfigPtr firebase_config,
     fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
         repository_factory_request,
-    fidl::InterfacePtr<ledger::LedgerRepositoryFactory> repository_factory_ptr)
+    fidl::InterfacePtr<ledger::LedgerRepositoryFactory> repository_factory_ptr,
+    ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                            ledger::FakeCloudProvider>*
+        cloud_provider)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          std::move(firebase_config),
           integration::RandomArray(1),
-          std::move(repository_factory_ptr),
-          std::move(services_task_runner)) {
+          std::move(repository_factory_ptr)),
+      services_task_runner_(std::move(services_task_runner)),
+      cloud_provider_(cloud_provider) {
   thread_ = fsl::CreateThread(&task_runner_);
   task_runner_->PostTask(fxl::MakeCopyable(
       [this, request = std::move(repository_factory_request),
@@ -94,6 +105,15 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
         factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
             task_runner_, std::move(network_factory), std::move(request));
       }));
+}
+
+cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
+  cloud_provider::CloudProviderPtr cloud_provider;
+  services_task_runner_->PostTask(fxl::MakeCopyable(
+      [this, request = cloud_provider.NewRequest()]() mutable {
+        cloud_provider_->AddBinding(std::move(request));
+      }));
+  return cloud_provider;
 }
 
 LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
@@ -120,6 +140,9 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
   ledger::FakeCloudNetworkService network_service_;
   std::string server_id_ = "server-id";
+  ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
+                                          ledger::FakeCloudProvider>
+      cloud_provider_;
 };
 
 void LedgerAppInstanceFactoryImpl::Init() {
@@ -146,10 +169,6 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
         }));
     return result;
   };
-  ledger::FirebaseConfigPtr firebase_config;
-  firebase_config = ledger::FirebaseConfig::New();
-  firebase_config->server_id = server_id_;
-  firebase_config->api_key = "api-key";
 
   ledger::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
@@ -157,8 +176,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(
       services_task_runner_, std::move(network_factory),
-      std::move(firebase_config), std::move(repository_factory_request),
-      std::move(repository_factory_ptr));
+      std::move(repository_factory_request), std::move(repository_factory_ptr),
+      &cloud_provider_);
   return result;
 }
 
