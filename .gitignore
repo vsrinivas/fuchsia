@@ -21,3 +21,4 @@ cscope.*
 tags
 target
 go/pkg
+*.orig
