@@ -392,7 +392,7 @@ class XdrContext {
           return;
         }
 
-        data->reserve(value_->Size());
+        data->resize(value_->Size());
 
         for (size_t i = 0; i < value_->Size(); ++i) {
           Element(i).Value(&data->at(i), filter);
