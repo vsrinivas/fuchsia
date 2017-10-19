@@ -22,12 +22,6 @@ namespace media_client {
 
 namespace {
 constexpr size_t kBufferId = 0;
-// If we're asked to synthesize a start time for the first frame, add this
-// adjustment to the minimum delay time to reduce the chance that we
-// accidentally clip the start of the first sample during mixing. If the caller
-// specifies a start time for the first frame (which is the expected mode of
-// operation) we will use that value without adjustement.
-constexpr zx_duration_t kSyntheticStartTimeAdjustment = ZX_MSEC(40);
 }  // namespace
 
 AudioOutputStream::AudioOutputStream() {}
@@ -45,9 +39,8 @@ bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
 
   num_channels_ = params->num_channels;
   sample_rate_ = params->sample_rate;
-  bytes_per_frame_ = num_channels_ * sizeof(int16_t);
   device_ = device;
-  total_mapping_size_ = sample_rate_ * bytes_per_frame_;
+  total_mapping_samples_ = sample_rate_ * num_channels_;
 
   if (!AcquireRenderer()) {
     FXL_LOG(ERROR) << "AcquireRenderer failed";
@@ -101,7 +94,8 @@ bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
 }
 
 bool AudioOutputStream::CreateMemoryMapping() {
-  zx_status_t status = zx::vmo::create(total_mapping_size_, 0, &vmo_);
+  zx_status_t status =
+      zx::vmo::create(total_mapping_samples_ * sizeof(int16_t), 0, &vmo_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx::vmo::create failed - " << status;
     return false;
@@ -109,7 +103,7 @@ bool AudioOutputStream::CreateMemoryMapping() {
 
   uintptr_t mapped_address;
   status = zx::vmar::root_self().map(
-      0, vmo_, 0, total_mapping_size_,
+      0, vmo_, 0, total_mapping_samples_ * sizeof(int16_t),
       ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_READ, &mapped_address);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_vmar_map failed - " << status;
@@ -142,12 +136,15 @@ bool AudioOutputStream::CreateMemoryMapping() {
   return true;
 }
 
-void AudioOutputStream::FillBuffer(float* sample_buffer, int num_samples) {
+void AudioOutputStream::PullFromClientBuffer(float* client_buffer,
+                                             int num_samples) {
+  FXL_DCHECK(current_sample_offset_ + num_samples <= total_mapping_samples_);
+
   const float kAmplitudeScalar = std::numeric_limits<int16_t>::max();
   for (int idx = 0; idx < num_samples; ++idx) {
     // TODO(MTWN-44): Since we're passing int16 samples to the mixer, we need to
     // clamp potentially out-of-bounds values here to the specified range.
-    float value = sample_buffer[idx];
+    float value = client_buffer[idx];
     if (value < -1.0f) {
       value = -1.0f;
     } else if (value > 1.0f) {
@@ -156,6 +153,8 @@ void AudioOutputStream::FillBuffer(float* sample_buffer, int num_samples) {
     buffer_[idx + current_sample_offset_] =
         static_cast<int16_t>(value * kAmplitudeScalar);
   }
+  current_sample_offset_ =
+      (current_sample_offset_ + num_samples) % total_mapping_samples_;
 }
 
 media::MediaPacketPtr AudioOutputStream::CreateMediaPacket(
@@ -184,68 +183,60 @@ bool AudioOutputStream::SendMediaPacket(media::MediaPacketPtr packet) {
 int AudioOutputStream::GetMinDelay(zx_duration_t* delay_nsec_out) {
   FXL_DCHECK(delay_nsec_out);
 
-  Stop();
-  active_ = true;
-
   if (!active_) {
     return ZX_ERR_CONNECTION_ABORTED;
   }
 
   int64_t delay_ns = 0;
   if (!audio_renderer_->GetMinDelay(&delay_ns)) {
+    Stop();
+    FXL_LOG(ERROR) << "GetMinDelay failed";
     return ZX_ERR_CONNECTION_ABORTED;
   }
 
   *delay_nsec_out = delay_ns;
-
   return ZX_OK;
 }
 
-int AudioOutputStream::Write(float* sample_buffer,
+int AudioOutputStream::Write(float* client_buffer,
                              int num_samples,
                              zx_time_t pres_time) {
-  FXL_DCHECK(sample_buffer);
+  FXL_DCHECK(client_buffer);
   FXL_DCHECK(pres_time <= FUCHSIA_AUDIO_NO_TIMESTAMP);
   FXL_DCHECK(num_samples > 0);
   FXL_DCHECK(num_samples % num_channels_ == 0);
 
-  if (!active_) {
+  if (!active_)
     return ZX_ERR_CONNECTION_ABORTED;
-  }
 
-  if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP && !received_first_frame_) {
+  if (num_samples > total_mapping_samples_)
+    return ZX_ERR_OUT_OF_RANGE;
+
+  if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP && !received_first_frame_)
     return ZX_ERR_BAD_STATE;
+
+  // Don't copy beyond our internal buffer. Track the excess; handle it later.
+  size_t overflow_samples = 0;
+  if (current_sample_offset_ + num_samples > total_mapping_samples_) {
+    overflow_samples =
+        current_sample_offset_ + num_samples - total_mapping_samples_;
+    num_samples -= overflow_samples;
   }
 
-  size_t num_frames = num_samples / num_channels_;
-  FillBuffer(sample_buffer, num_samples);
-  size_t buffer_offset = current_sample_offset_ * sizeof(int16_t);
+  // PullFromClientBuffer updates current_sample_offset_, so capture it here.
+  size_t current_byte_offset = current_sample_offset_ * sizeof(int16_t);
+  PullFromClientBuffer(client_buffer, num_samples);
 
-  if ((current_sample_offset_ + num_samples) * sizeof(int16_t) >=
-      total_mapping_size_) {
-    current_sample_offset_ = 0;
-  } else {
-    current_sample_offset_ += num_samples;
-  }
-
+  // On first packet, establish a timeline starting at given presentation time.
+  // Others get kNoTimestamp, indicating 'play without gap after the previous'.
   zx_time_t subject_time = media::MediaPacket::kNoTimestamp;
-  // On the first packet of a stream, we establish a time line with a start time
-  // based on either the specified presentation time or a synthetic one we make
-  // up if the caller didn't supply one. Packets past the first receive a PTS of
-  // media::kNoTimestamp, meaning that they should be presented immediately
-  // after the previous packet.
   if (!received_first_frame_) {
     subject_time = 0;
-    if (pres_time == FUCHSIA_AUDIO_NO_TIMESTAMP) {
-      start_time_ =
-          zx_time_get(ZX_CLOCK_MONOTONIC) + kSyntheticStartTimeAdjustment;
-    } else {
-      start_time_ = pres_time;
-    }
+    start_time_ = pres_time;
   }
 
-  if (!SendMediaPacket(CreateMediaPacket(subject_time, buffer_offset,
-                                         num_frames * bytes_per_frame_))) {
+  if (!SendMediaPacket(CreateMediaPacket(subject_time, current_byte_offset,
+                                         num_samples * sizeof(int16_t)))) {
     Stop();
     FXL_LOG(ERROR) << "SendMediaPacket failed";
     return ZX_ERR_CONNECTION_ABORTED;
@@ -257,6 +248,13 @@ int AudioOutputStream::Write(float* sample_buffer,
       return ZX_ERR_CONNECTION_ABORTED;
     }
     received_first_frame_ = true;
+  }
+
+  // TODO(mpuryear): don't recurse; refactor to a helper func & call it twice.
+  // For samples we couldn't send earlier, send them now (since we've wrapped)
+  if (overflow_samples > 0) {
+    return Write(client_buffer + num_samples, overflow_samples,
+                 FUCHSIA_AUDIO_NO_TIMESTAMP);
   }
 
   return ZX_OK;

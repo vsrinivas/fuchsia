@@ -293,7 +293,7 @@ TEST(media_client, audio_stream_params) {
     ASSERT_TRUE(stream1);
 
     params.num_channels = 2;
-    params.sample_rate = 96000;
+    params.sample_rate = 48000;
     params.buffer_size = 12800;
 
     fuchsia_audio_output_stream* stream2 = NULL;

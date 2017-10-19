@@ -35,7 +35,7 @@ class AudioOutputStream {
   bool SetMediaType(int num_channels, int sample_rate);
   bool CreateMemoryMapping();
 
-  void FillBuffer(float* sample_buffer, int num_samples);
+  void PullFromClientBuffer(float* client_buffer, int num_samples);
   media::MediaPacketPtr CreateMediaPacket(zx_time_t pts,
                                           size_t payload_offset,
                                           size_t payload_size);
@@ -47,14 +47,13 @@ class AudioOutputStream {
   media::MediaTimelineControlPointSyncPtr timeline_control_point_;
 
   zx::vmo vmo_;
-  size_t bytes_per_frame_ = 0u;
-  size_t total_mapping_size_ = 0u;
+  int total_mapping_samples_ = 0;
   int16_t* buffer_ = nullptr;
-  size_t current_sample_offset_ = 0u;
+  int current_sample_offset_ = 0;
 
   AudioOutputDevice* device_ = nullptr;
-  size_t num_channels_ = 0u;
-  size_t sample_rate_ = 0u;
+  int num_channels_ = 0;
+  int sample_rate_ = 0;
   bool received_first_frame_ = false;
   zx_time_t start_time_ = 0u;
   bool active_ = false;
