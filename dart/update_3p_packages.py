@@ -13,16 +13,16 @@ import sys
 # error out and the conflicts will have to be resolved before the packages can
 # be updated.
 ROOT_PUBSPECS = [
-    'dart/pkg/analysis_server',
-    'dart/pkg/analyzer',
-    'dart/pkg/analyzer_cli',
-    'dart/pkg/kernel',
-    'dart/pkg/telemetry',
-    'dart/pkg/typed_mock',
     'lib/flutter/examples/flutter_gallery',
     'lib/flutter/packages/flutter',
     'lib/flutter/packages/flutter_test',
     'lib/flutter/packages/flutter_tools',
+    'third_party/dart/pkg/analysis_server',
+    'third_party/dart/pkg/analyzer',
+    'third_party/dart/pkg/analyzer_cli',
+    'third_party/dart/pkg/kernel',
+    'third_party/dart/pkg/telemetry',
+    'third_party/dart/pkg/typed_mock',
     'third_party/flutter/sky/packages/sky_engine',
 ]
 
@@ -46,8 +46,8 @@ def main():
     else:
         print('Unsupported platform: %s' % sys.platform)
         return 1
-    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'dart', 'tools', 'sdks',
-                            platform, 'dart-sdk', 'bin', 'pub')
+    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart', 'tools',
+                            'sdks', platform, 'dart-sdk', 'bin', 'pub')
     importer_path = os.path.join(paths.FUCHSIA_ROOT, 'scripts', 'dart',
                                  'package_importer.py')
     output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',

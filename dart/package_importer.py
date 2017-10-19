@@ -22,16 +22,16 @@ LICENSE_FILES = ['LICENSE', 'LICENSE.txt']
 IGNORED_EXTENSIONS = ['css', 'html', 'jpg', 'js', 'log', 'old', 'out', 'png', 'zip']
 
 LOCAL_PACKAGES = {
-  'analyzer': '//dart/pkg/analyzer',
-  'analysis_server': '//dart/pkg/analysis_server',
+  'analyzer': '//third_party/dart/pkg/analyzer',
+  'analysis_server': '//third_party/dart/pkg/analysis_server',
   'flutter': '//lib/flutter/packages/flutter',
   'flutter_test': '//lib/flutter/packages/flutter_test',
-  'front_end': '//dart/pkg/front_end',
-  'func' : '//dart/third_party/pkg/func',
-  'kernel': '//dart/pkg/kernel',
-  'linter': '//dart/third_party/pkg/linter',
-  'telemetry': '//dart/pkg/telemetry',
-  'typed_mock': '//dart/pkg/typed_mock',
+  'front_end': '//third_party/dart/pkg/front_end',
+  'func' : '//third_party/dart/third_party/pkg/func',
+  'kernel': '//third_party/dart/pkg/kernel',
+  'linter': '//third_party/dart/third_party/pkg/linter',
+  'telemetry': '//third_party/dart/pkg/telemetry',
+  'typed_mock': '//third_party/dart/pkg/typed_mock',
 }
 
 FORBIDDEN_PACKAGES = ['mojo', 'mojo_services']
