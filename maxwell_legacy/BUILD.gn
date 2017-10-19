@@ -42,7 +42,6 @@ package("maxwell_apps") {
     "//peridot/bin/agents:ideas",
     "//peridot/bin/context_engine",
     "//peridot/bin/module_resolver",
-    "//peridot/bin/resolver",
     "//peridot/bin/suggestion_engine",
     "//peridot/bin/user",
   ]
@@ -75,9 +74,6 @@ package("maxwell_apps") {
     },
     {
       name = "context_engine"
-    },
-    {
-      name = "resolver"
     },
     {
       name = "suggestion_engine"
