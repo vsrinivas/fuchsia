@@ -9,8 +9,8 @@ package("installer") {
 
   deps = [
     "app:install-fuchsia",
-    "app:sparser_host",
     "app:sparser",
+    "app:sparser_host",
   ]
 
   binaries = [
