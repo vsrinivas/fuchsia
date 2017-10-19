@@ -83,6 +83,15 @@ class ModuleContextImpl : ModuleContext {
       SurfaceRelationPtr surface_relation,
       bool focus) override;
   // |ModuleContext|
+  void StartDaisyInShell(
+      const fidl::String& name,
+      DaisyPtr daisy,
+      const fidl::String& link_name,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      SurfaceRelationPtr surface_relation) override;
+  // |ModuleContext|
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> context_request) override;
   // |ModuleContext|

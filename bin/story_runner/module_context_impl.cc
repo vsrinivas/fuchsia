@@ -82,6 +82,17 @@ void ModuleContextImpl::StartModuleInShell(
       ModuleSource::INTERNAL);
 }
 
+void ModuleContextImpl::StartDaisyInShell(
+    const fidl::String& name,
+    DaisyPtr daisy,
+    const fidl::String& link_name,
+    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    SurfaceRelationPtr surface_relation) {
+  FXL_NOTIMPLEMENTED();
+}
+
 void ModuleContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> context_request) {
   component_context_bindings_.AddBinding(&component_context_impl_,

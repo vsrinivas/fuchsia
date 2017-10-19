@@ -10,6 +10,7 @@ import "lib/component/fidl/component_context.fidl";
 import "lib/story/fidl/link.fidl";
 import "lib/surface/fidl/surface.fidl";
 import "lib/module/fidl/module_controller.fidl";
+import "lib/module_resolver/fidl/daisy.fidl";
 import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
@@ -81,16 +82,13 @@ interface ModuleContext {
   // When |daisy.verb| is not set, the calling Module will have a read-only
   // view of the Link |link_name|.
   //
-  // TODO(thatguy): Remove this comment:
-  // NOTE: When the resolution results are available, and a mozart.ViewOwner is
-  // made available by the shell, the Mod must be wrapped in a DaisyView.
   // TODO(thatguy): Add a return value that indicates success or error. Example
   // of error: no Modules could be resolved for |daisy|.
-  // StartDaisyInShell(string name, Daisy daisy, string? link_name,
-  //                   app.ServiceProvider? outgoing_services,
-  //                   app.ServiceProvider&? incoming_services,
-  //                   ModuleController& module_controller,
-  //                   SurfaceRelation? surface_relation);
+  StartDaisyInShell(string name, Daisy daisy, string? link_name,
+                    app.ServiceProvider? outgoing_services,
+                    app.ServiceProvider&? incoming_services,
+                    ModuleController& module_controller,
+                    SurfaceRelation? surface_relation);
 
   // Gets the ComponentContext instance associated with this Module
   // instance. This ComponentContext instance is unique to this
