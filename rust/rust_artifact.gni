@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/sysroot.gni")
+import("//build/toolchain/clang_toolchain.gni")
+
 # Defines a Rust artifact
 #
 # Only for internal use, supporting rust_library and rust_binary.
@@ -151,11 +154,6 @@ template("rust_artifact") {
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }
-    if (is_fuchsia) {
-      clang_wrapper_target =
-          "//garnet/public/rust/crates/fuchsia-zircon/tools:clang_wrapper($host_toolchain)"
-      deps += [ clang_wrapper_target ]
-    }
 
     args = [
              "--type",
@@ -204,10 +202,11 @@ template("rust_artifact") {
     }
 
     if (is_fuchsia) {
-      wrapper_dir = get_label_info(clang_wrapper_target, "root_out_dir")
       args += [
-        "--linker",
-        rebase_path("$wrapper_dir/$target_triple-cc"),
+        "--clang_prefix",
+        rebase_path(clang_prefix, "", root_out_dir),
+        "--sysroot",
+        rebase_path(sysroot),
       ]
     }
   }

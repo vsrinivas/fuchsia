@@ -203,8 +203,11 @@ def main():
     parser.add_argument("--cargo",
                         help="Path to the cargo tool",
                         required=True)
-    parser.add_argument("--linker",
-                        help="Path to the Rust linker",
+    parser.add_argument("--sysroot",
+                        help="Path to the sysroot",
+                        required=False)
+    parser.add_argument("--clang_prefix",
+                        help="Path to the clang prefix",
                         required=False)
     parser.add_argument("--rustc",
                         help="Path to the rustc binary",
@@ -238,8 +241,9 @@ def main():
     dependency_infos = gather_dependency_infos(args.root_gen_dir, args.deps)
 
     env = os.environ.copy()
-    if args.linker is not None:
-        env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = args.linker
+    if args.sysroot is not None:
+        env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = args.clang_prefix + '/clang'
+        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target_triple.replace("-", "_").upper()] = "-Clink-arg=--target=" + args.target_triple + " -Clink-arg=--sysroot=" + args.sysroot
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["RUSTC"] = args.rustc
     env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
