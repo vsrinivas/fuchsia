@@ -19,6 +19,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
@@ -125,6 +126,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   auth::AccountPtr account_;
 
   std::unique_ptr<AppClient<maxwell::UserIntelligenceProviderFactory>> maxwell_;
+  std::unique_ptr<AppClient<Lifecycle>> module_resolver_;
   std::unique_ptr<AppClient<UserShell>> user_shell_;
 
   std::unique_ptr<EntityRepository> entity_repository_;
@@ -147,6 +149,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
   fidl::InterfacePtr<maxwell::IntelligenceServices> intelligence_services_;
+  ModuleResolverPtr module_resolver_service_;
 
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;

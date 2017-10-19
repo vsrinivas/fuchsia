@@ -59,6 +59,7 @@ namespace {
 constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
+constexpr char kModuleResolverUrl[] = "file:///system/apps/module_resolver";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
@@ -248,6 +249,13 @@ void UserRunnerImpl::Initialize(
           user_intelligence_provider_->GetResolver(std::move(request));
         }
       });
+
+  auto module_resolver_config = AppConfig::New();
+  module_resolver_config->url = kModuleResolverUrl;
+  module_resolver_ = std::make_unique<AppClient<Lifecycle>>(
+      user_scope_->GetLauncher(), std::move(module_resolver_config));
+  ConnectToService(module_resolver_->services(),
+                   module_resolver_service_.NewRequest());
   // End init maxwell.
 
   user_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
@@ -323,36 +331,38 @@ void UserRunnerImpl::Terminate() {
 
       user_intelligence_provider_.reset();
       maxwell_->Teardown(kBasicTimeout, [this] {
-        FXL_DLOG(INFO) << "- Maxwell down";
-        maxwell_.reset();
+        module_resolver_->Teardown(kBasicTimeout, [this] {
+          FXL_DLOG(INFO) << "- Maxwell down";
+          maxwell_.reset();
 
-        maxwell_component_context_binding_.reset();
-        maxwell_component_context_impl_.reset();
+          maxwell_component_context_binding_.reset();
+          maxwell_component_context_impl_.reset();
 
-        agent_runner_.Teardown(kAgentRunnerTimeout, [this] {
-          FXL_DLOG(INFO) << "- AgentRunner down";
-          agent_runner_storage_.reset();
+          agent_runner_.Teardown(kAgentRunnerTimeout, [this] {
+            FXL_DLOG(INFO) << "- AgentRunner down";
+            agent_runner_storage_.reset();
 
-          entity_repository_.reset();
-          message_queue_manager_.reset();
-          remote_invoker_impl_.reset();
-          device_map_impl_.reset();
+            entity_repository_.reset();
+            message_queue_manager_.reset();
+            remote_invoker_impl_.reset();
+            device_map_impl_.reset();
 
-          ledger_client_.reset();
-          ledger_repository_.reset();
-          ledger_repository_factory_.reset();
-          ledger_app_client_->Teardown(kBasicTimeout, [this] {
-            FXL_DLOG(INFO) << "- Ledger down";
-            ledger_app_client_.reset();
+            ledger_client_.reset();
+            ledger_repository_.reset();
+            ledger_repository_factory_.reset();
+            ledger_app_client_->Teardown(kBasicTimeout, [this] {
+              FXL_DLOG(INFO) << "- Ledger down";
+              ledger_app_client_.reset();
 
-            user_shell_.reset();
-            user_scope_.reset();
-            account_.reset();
-            user_context_.reset();
-            token_provider_factory_.reset();
+              user_shell_.reset();
+              user_scope_.reset();
+              account_.reset();
+              user_context_.reset();
+              token_provider_factory_.reset();
 
-            FXL_LOG(INFO) << "UserRunner::Terminate(): done";
-            fsl::MessageLoop::GetCurrent()->QuitNow();
+              FXL_LOG(INFO) << "UserRunner::Terminate(): done";
+              fsl::MessageLoop::GetCurrent()->QuitNow();
+            });
           });
         });
       });
