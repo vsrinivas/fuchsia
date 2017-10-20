@@ -89,7 +89,7 @@ def find_variant(info, build_dir=''):
         if asan.matches(info):
             variant = asan
     if variant:
-        assert variant.matches(info), "%r vs %r" % (variant, info)
+        assert variant.matches(info, True), "%r vs %r" % (variant, info)
         return variant, variant_file
     return make_variant(None, info), variant_file
 

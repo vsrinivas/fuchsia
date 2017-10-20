@@ -236,10 +236,6 @@ def collect_binaries(manifest, aux_binaries, examined):
 # Take an iterable of binary_entry, and return list of manifest_entry (all
 # stripped files) and a list of binary_info (all debug files).
 def strip_binary_manifest(manifest, stripped_dir, examined):
-    def file_older(output, input):
-        return (not os.path.exists(output) or
-                os.path.getmtime(output) < os.path.getmtime(input))
-
     def find_debug_file(filename):
         # In the Zircon makefile build, the file to be installed is called
         # foo.strip and the unstripped file is called foo.  In the GN build,
@@ -270,12 +266,10 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
     def make_debug_file(entry, info):
         debug = info
         stripped = os.path.join(stripped_dir, entry.target)
-        # If a newer stripped file already exists, just use it.
-        if file_older(stripped, debug.filename):
-            dir = os.path.dirname(stripped)
-            if not os.path.isdir(dir):
-                os.makedirs(dir)
-            info.strip(stripped)
+        dir = os.path.dirname(stripped)
+        if not os.path.isdir(dir):
+            os.makedirs(dir)
+        info.strip(stripped)
         info = binary_info(stripped)
         assert info, ("Stripped file '%s' for '%s' is invalid" %
                       (stripped, debug.filename))
@@ -353,6 +347,10 @@ def emit_manifests(outputs, build_id_file, depfile, selected, unselected):
 
 
 class input_manifest_action(argparse.Action):
+    def __init__(self, *args, **kwargs):
+        super(input_manifest_action, self).__init__(*args, **kwargs)
+        self.optional = False
+
     def __call__(self, parser, namespace, values, option_string=None):
         inputs = getattr(namespace, self.dest, None)
         if inputs is None:
@@ -368,10 +366,18 @@ class input_manifest_action(argparse.Action):
         else:
             groups = set(group if group else None
                          for group in namespace.groups.split(','))
+
         cwd = getattr(namespace, 'cwd', '')
         output_group = None if outputs is None else len(outputs) - 1
 
-        inputs.append(input_manifest(file, cwd, groups, output_group))
+        if not self.optional or os.path.exists(file):
+            inputs.append(input_manifest(file, cwd, groups, output_group))
+
+
+class optional_input_manifest_action(input_manifest_action):
+    def __init__(self, *args, **kwargs):
+        super(optional_input_manifest_action, self).__init__(*args, **kwargs)
+        self.optional = True
 
 
 def parse_args():
@@ -396,7 +402,11 @@ shared libraries and the like.
                         help='Input entries are relative to this directory')
     parser.add_argument('--groups',
                         help='"all" or comma-separated groups to include')
-    parser.add_argument('--manifest', action=input_manifest_action)
+    parser.add_argument('--manifest', action=input_manifest_action,
+                        help='Input manifest file (must exist)')
+    parser.add_argument('--optional-manifest', dest='manifest',
+                        action=optional_input_manifest_action,
+                        help='Input manifest file (if it exists)')
     return parser.parse_args()
 
 
@@ -410,7 +420,7 @@ def main():
             input.file, input.cwd, input.groups, '.', input.output_group)
 
         if not isinstance(input.groups, bool):
-            unused_groups = input.groups - groups_seen
+            unused_groups = input.groups - groups_seen - set([None])
             if unused_groups:
                 raise Exception(
                     '%s not found in %r; try one of: %s' %
