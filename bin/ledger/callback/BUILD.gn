@@ -51,6 +51,7 @@ source_set("unittests") {
     "destruction_sentinel_unittest.cc",
     "ensure_copyable_unittest.cc",
     "managed_container_unittest.cc",
+    "operation_serializer_unittests.cc",
     "scoped_callback_unittest.cc",
     "scoped_task_runner_unittest.cc",
     "synchronous_task_unittest.cc",

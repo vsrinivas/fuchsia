@@ -11,6 +11,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace callback {
 
@@ -40,7 +41,7 @@ struct Signature {
 //                                  });
 class OperationSerializer {
  public:
-  OperationSerializer() {}
+  OperationSerializer() : weak_factory_(this) {}
   ~OperationSerializer() {}
 
   // Queues operations so that they are serialized: an operation is executed
@@ -59,14 +60,14 @@ class OperationSerializer {
           operation) {
     auto closure = [this, callback = std::move(callback),
                     operation = std::move(operation)] {
-      operation([this, callback = std::move(callback)](C... args) {
+      operation([weak_ptr_ = weak_factory_.GetWeakPtr(),
+                 callback = std::move(callback)](C... args) {
+        // First run the callback and then, make sure this has not been deleted.
         callback(std::forward<C>(args)...);
-        queued_operations_.pop();
-        if (!queued_operations_.empty()) {
-          queued_operations_.front()();
-        } else if (on_empty_) {
-          on_empty_();
+        if (!weak_ptr_) {
+          return;
         }
+        weak_ptr_->UpdateOperationsAndCallNext();
       });
     };
     queued_operations_.emplace(std::move(closure));
@@ -82,8 +83,20 @@ class OperationSerializer {
   void set_on_empty(fxl::Closure on_empty) { on_empty_ = on_empty; }
 
  private:
+  void UpdateOperationsAndCallNext() {
+    queued_operations_.pop();
+    if (!queued_operations_.empty()) {
+      queued_operations_.front()();
+    } else if (on_empty_) {
+      on_empty_();
+    }
+  }
+
   std::queue<fxl::Closure> queued_operations_;
   fxl::Closure on_empty_;
+
+  // This must be the last member of the class.
+  fxl::WeakPtrFactory<OperationSerializer> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(OperationSerializer);
 };
