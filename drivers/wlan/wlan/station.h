@@ -60,6 +60,8 @@ class Station {
         return wlan_channel_t{bss_->channel};
     }
 
+    zx_status_t SendKeepAliveResponse();
+
     zx_status_t Join(JoinRequestPtr req);
     zx_status_t Authenticate(AuthenticateRequestPtr req);
     zx_status_t Associate(AssociateRequestPtr req);

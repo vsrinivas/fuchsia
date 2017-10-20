@@ -16,6 +16,8 @@
 
 namespace wlan {
 
+// TODO(hahnr): Revisit frame construction to reduce boilerplate code.
+
 static constexpr zx_duration_t kAssocTimeoutTu = 20;
 static constexpr zx_duration_t kSignalReportTimeoutTu = 10;
 
@@ -372,6 +374,7 @@ zx_status_t Station::HandleAuthentication(const Packet* packet) {
 
 zx_status_t Station::HandleDeauthentication(const Packet* packet) {
     debugfn();
+
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
         debugjoin("got spurious deauthenticate; ignoring\n");
         return ZX_OK;
@@ -507,6 +510,13 @@ zx_status_t Station::HandleData(const Packet* packet) {
 
     debughdr("dest: %s bssid: %s source: %s\n", MACSTR(dest), MACSTR(bssid), MACSTR(src));
 
+    if (hdr->fc.subtype() == kNull) {
+        // Some AP's such as Netgear Routers send periodic NULL data frames to test whether a client
+        // timed out. The client must respond with a NULL data frame itself to not get
+        // deauthenticated.
+        SendKeepAliveResponse();
+        return ZX_OK;
+    }
     if (hdr->fc.subtype() != 0) {
         warnf("unsupported data subtype %02x\n", hdr->fc.subtype());
         return ZX_OK;
@@ -690,6 +700,39 @@ zx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     }
 
     return status;
+}
+
+zx_status_t Station::SendKeepAliveResponse() {
+    if (state_ != WlanState::kAssociated) {
+        warnf("cannot send keep alive response before being associated\n");
+        return ZX_OK;
+    }
+
+    const MacAddr &mymac = device_->GetState()->address();
+    size_t len = sizeof(DataFrameHeader);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<DataFrameHeader>(0);
+    hdr->fc.set_type(kData);
+    hdr->fc.set_subtype(kNull);
+    hdr->fc.set_to_ds(1);
+
+    MacAddr bssid(bss_->bssid.data());
+    hdr->addr1 = bssid;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid;
+    hdr->sc.set_seq(next_seq());
+
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
+        errorf("could not send keep alive packet: %d\n", status);
+        return status;
+    }
+    return ZX_OK;
 }
 
 zx_status_t Station::SendDeauthIndication(uint16_t code) {
