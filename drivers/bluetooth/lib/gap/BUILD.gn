@@ -46,7 +46,7 @@ source_set("tests") {
     "low_energy_connection_manager_unittest.cc",
     "low_energy_discovery_manager_unittest.cc",
     "random_address_generator_unittest.cc",
-    "remote_device_cache_unittest.cc"
+    "remote_device_cache_unittest.cc",
   ]
 
   deps = [

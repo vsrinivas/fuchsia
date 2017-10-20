@@ -49,7 +49,6 @@ fidl("versioning_test_client_interfaces") {
     "versioning_test_client.fidl",
   ]
 }
-
 # Declare the validation parser library with a C interface.
 #
 # Generates a static library which C binaries or languages with a C FFI
