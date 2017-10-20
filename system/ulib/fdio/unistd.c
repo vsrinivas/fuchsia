@@ -631,6 +631,10 @@ zx_status_t fdio_clone_root(zx_handle_t* handles, uint32_t* types) {
     return r;
 }
 
+zx_status_t fdio_clone_cwd(zx_handle_t* handles, uint32_t* types) {
+    return fdio_cwd_handle->ops->clone(fdio_cwd_handle, handles, types);
+}
+
 zx_status_t fdio_clone_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types) {
     zx_status_t r;
     fdio_t* io;
