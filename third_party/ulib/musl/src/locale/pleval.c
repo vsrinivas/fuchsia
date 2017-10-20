@@ -43,7 +43,7 @@ static const char* evalprim(struct st* st, const char* s, int d) {
     s = skipspace(s);
     if (isdigit(*s)) {
         st->r = strtoul(s, &e, 10);
-        if (e == s || st->r == -1)
+        if (e == s || st->r == -1ul)
             return "";
         return skipspace(e);
     }

@@ -60,12 +60,12 @@ unsigned long long __intscan(FILE* f, unsigned base, int pok, unsigned long long
         }
     }
     if (base == 10) {
-        for (x = 0; c - '0' < 10U && x <= UINT_MAX / 10 - 1; c = shgetc(f))
+        for (x = 0; c >= '0' && c <= '9' && x <= UINT_MAX / 10 - 1; c = shgetc(f))
             x = x * 10 + (c - '0');
-        for (y = x; c - '0' < 10U && y <= ULLONG_MAX / 10 && 10 * y <= ULLONG_MAX - (c - '0');
+        for (y = x; c >= '0' && c <= '9' && y <= ULLONG_MAX / 10 && 10 * y <= ULLONG_MAX - (c - '0');
              c = shgetc(f))
             y = y * 10 + (c - '0');
-        if (c - '0' >= 10U)
+        if (c < '0' || c > '9')
             goto done;
     } else if (!(base & (base - 1))) {
         int bs = "\0\1\2\4\7\3\6\5"[(0x17 * base) >> 5 & 7];

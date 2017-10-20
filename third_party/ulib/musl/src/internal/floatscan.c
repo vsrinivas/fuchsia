@@ -46,18 +46,18 @@ static long long scanexp(FILE* f, int pok) {
     if (c == '+' || c == '-') {
         neg = (c == '-');
         c = shgetc(f);
-        if (c - '0' >= 10U && pok)
+        if ((unsigned)(c - '0') >= 10U && pok)
             shunget(f);
     }
-    if (c - '0' >= 10U) {
+    if ((unsigned)(c - '0') >= 10U) {
         shunget(f);
         return LLONG_MIN;
     }
-    for (x = 0; c - '0' < 10U && x < INT_MAX / 10; c = shgetc(f))
+    for (x = 0; c >= '0' && c <= '9' && x < INT_MAX / 10; c = shgetc(f))
         x = 10 * x + c - '0';
-    for (y = x; c - '0' < 10U && y < LLONG_MAX / 100; c = shgetc(f))
+    for (y = x; c >= '0' && c <= '9' && y < LLONG_MAX / 100; c = shgetc(f))
         y = 10 * y + c - '0';
-    for (; c - '0' < 10U; c = shgetc(f))
+    for (; c >= '0' && c <= '9'; c = shgetc(f))
         ;
     shunget(f);
     return neg ? -y : y;
@@ -93,7 +93,7 @@ static long double decfloat(FILE* f, int c, int bits, int emin, int sign, int po
     }
 
     x[0] = 0;
-    for (; c - '0' < 10U || c == '.'; c = shgetc(f)) {
+    for (; (c >= '0' && c <= '9') || c == '.'; c = shgetc(f)) {
         if (c == '.') {
             if (gotrad)
                 break;
@@ -353,7 +353,7 @@ static long double hexfloat(FILE* f, int bits, int emin, int sign, int pok) {
             gotdig = 1;
     }
 
-    for (; c - '0' < 10U || (c | 32) - 'a' < 6U || c == '.'; c = shgetc(f)) {
+    for (; (c >= '0' && c <= '9') || (unsigned)((c | 32) - 'a') < 6U || c == '.'; c = shgetc(f)) {
         if (c == '.') {
             if (gotrad)
                 break;
@@ -505,7 +505,7 @@ long double __floatscan(FILE* f, int prec, int pok) {
         }
         for (i = 1;; i++) {
             c = shgetc(f);
-            if (c - '0' < 10U || c - 'A' < 26U || c - 'a' < 26U || c == '_')
+            if ((c >= '0' && c <= '9') || (unsigned)(c - 'A') < 26U || (unsigned)(c - 'a') < 26U || c == '_')
                 continue;
             if (c == ')')
                 return NAN;
