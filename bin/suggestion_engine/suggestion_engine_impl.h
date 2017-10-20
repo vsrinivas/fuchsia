@@ -12,7 +12,6 @@
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/filter.h"
-#include "peridot/bin/suggestion_engine/proposal_hint_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"

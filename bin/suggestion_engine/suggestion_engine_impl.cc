@@ -13,10 +13,10 @@
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/interruptions_subscriber.h"
-#include "peridot/bin/suggestion_engine/kronk_ranking_feature.h"
-#include "peridot/bin/suggestion_engine/proposal_hint_ranking_feature.h"
-#include "peridot/bin/suggestion_engine/query_match_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/windowed_subscriber.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
