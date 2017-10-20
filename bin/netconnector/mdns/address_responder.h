@@ -15,30 +15,17 @@ namespace netconnector {
 namespace mdns {
 
 // Responds to address resolution requests.
-class AddressResponder : public MdnsAgent,
-                         public std::enable_shared_from_this<AddressResponder> {
+class AddressResponder : public MdnsAgent {
  public:
   // Creates an |AddressResponder|.
   AddressResponder(MdnsAgent::Host* host, const std::string& host_full_name);
 
   ~AddressResponder() override;
 
-  // MdnsAgent implementation.
-  void Start() override;
-
-  void Wake() override;
-
+  // MdnsAgent overrides.
   void ReceiveQuestion(const DnsQuestion& question) override;
 
-  void ReceiveResource(const DnsResource& resource,
-                       MdnsResourceSection section) override;
-
-  void EndOfMessage() override;
-
-  void Quit() override;
-
  private:
-  MdnsAgent::Host* host_;
   std::string host_full_name_;
 };
 

@@ -20,7 +20,7 @@ static constexpr fxl::TimeDelta kMaxQueryInterval =
 InstanceSubscriber::InstanceSubscriber(MdnsAgent::Host* host,
                                        const std::string& service_name,
                                        const ServiceInstanceCallback& callback)
-    : host_(host),
+    : MdnsAgent(host),
       service_name_(service_name),
       service_full_name_(MdnsNames::LocalServiceFullName(service_name)),
       callback_(callback),
@@ -32,25 +32,8 @@ InstanceSubscriber::InstanceSubscriber(MdnsAgent::Host* host,
 InstanceSubscriber::~InstanceSubscriber() {}
 
 void InstanceSubscriber::Start() {
-  Wake();
+  SendQuery();
 }
-
-void InstanceSubscriber::Wake() {
-  host_->SendQuestion(question_);
-
-  if (query_delay_ == fxl::TimeDelta::Zero()) {
-    query_delay_ = fxl::TimeDelta::FromSeconds(1);
-  } else {
-    query_delay_ = query_delay_ * 2;
-    if (query_delay_ > kMaxQueryInterval) {
-      query_delay_ = kMaxQueryInterval;
-    }
-  }
-
-  host_->WakeAt(shared_from_this(), fxl::TimePoint::Now() + query_delay_);
-}
-
-void InstanceSubscriber::ReceiveQuestion(const DnsQuestion& question) {}
 
 void InstanceSubscriber::ReceiveResource(const DnsResource& resource,
                                          MdnsResourceSection section) {
@@ -143,8 +126,20 @@ void InstanceSubscriber::EndOfMessage() {
   }
 }
 
-void InstanceSubscriber::Quit() {
-  host_->RemoveAgent(this);
+void InstanceSubscriber::SendQuery() {
+  SendQuestion(question_);
+
+  if (query_delay_ == fxl::TimeDelta::Zero()) {
+    query_delay_ = fxl::TimeDelta::FromSeconds(1);
+  } else {
+    query_delay_ = query_delay_ * 2;
+    if (query_delay_ > kMaxQueryInterval) {
+      query_delay_ = kMaxQueryInterval;
+    }
+  }
+
+  PostTaskForTime([this]() { SendQuery(); },
+                  fxl::TimePoint::Now() + query_delay_);
 }
 
 void InstanceSubscriber::ReceivePtrResource(const DnsResource& resource,
@@ -171,7 +166,7 @@ void InstanceSubscriber::ReceivePtrResource(const DnsResource& resource,
     pair.first->second.instance_name_ = instance_name;
   }
 
-  host_->Renew(resource);
+  Renew(resource);
 }
 
 void InstanceSubscriber::ReceiveSrvResource(const DnsResource& resource,
@@ -197,7 +192,7 @@ void InstanceSubscriber::ReceiveSrvResource(const DnsResource& resource,
     instance_info->dirty_ = true;
   }
 
-  host_->Renew(resource);
+  Renew(resource);
 }
 
 void InstanceSubscriber::ReceiveTxtResource(const DnsResource& resource,
@@ -224,7 +219,7 @@ void InstanceSubscriber::ReceiveTxtResource(const DnsResource& resource,
     }
   }
 
-  host_->Renew(resource);
+  Renew(resource);
 }
 
 void InstanceSubscriber::ReceiveAResource(const DnsResource& resource,
@@ -244,7 +239,7 @@ void InstanceSubscriber::ReceiveAResource(const DnsResource& resource,
     target_info->dirty_ = true;
   }
 
-  host_->Renew(resource);
+  Renew(resource);
 }
 
 void InstanceSubscriber::ReceiveAaaaResource(const DnsResource& resource,
@@ -264,7 +259,7 @@ void InstanceSubscriber::ReceiveAaaaResource(const DnsResource& resource,
     target_info->dirty_ = true;
   }
 
-  host_->Renew(resource);
+  Renew(resource);
 }
 
 void InstanceSubscriber::RemoveInstance(const std::string& instance_full_name) {

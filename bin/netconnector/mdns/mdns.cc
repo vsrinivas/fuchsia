@@ -78,7 +78,6 @@ bool Mdns::Start(const std::string& host_name) {
         }
 
         SendMessage();
-        PostTask();
       });
 
   if (started_) {
@@ -87,7 +86,6 @@ bool Mdns::Start(const std::string& host_name) {
     }
 
     SendMessage();
-    PostTask();
   }
 
   return started_;
@@ -140,7 +138,7 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
   publication->port = port.as_uint16_t();
   publication->text = fidl::Array<fidl::String>::From(text);
 
-  std::shared_ptr<MdnsAgent> agent =
+  std::shared_ptr<Responder> agent =
       std::make_shared<Responder>(this, host_full_name_, service_name,
                                   instance_name, std::move(publication));
 
@@ -150,7 +148,7 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
   return true;
 }
 
-void Mdns::UnpublishServiceInstance(const std::string& service_name,
+bool Mdns::UnpublishServiceInstance(const std::string& service_name,
                                     const std::string& instance_name) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
@@ -161,9 +159,13 @@ void Mdns::UnpublishServiceInstance(const std::string& service_name,
   auto iter =
       instance_publishers_by_instance_full_name_.find(instance_full_name);
 
-  if (iter != instance_publishers_by_instance_full_name_.end()) {
-    iter->second->Quit();
+  if (iter == instance_publishers_by_instance_full_name_.end()) {
+    return false;
   }
+
+  iter->second->Quit();
+
+  return true;
 }
 
 bool Mdns::AddResponder(const std::string& service_name,
@@ -181,7 +183,7 @@ bool Mdns::AddResponder(const std::string& service_name,
     return false;
   }
 
-  std::shared_ptr<MdnsAgent> agent = std::make_shared<Responder>(
+  std::shared_ptr<Responder> agent = std::make_shared<Responder>(
       this, host_full_name_, service_name, instance_name, announced_subtypes,
       std::move(responder));
 
@@ -191,9 +193,11 @@ bool Mdns::AddResponder(const std::string& service_name,
   return true;
 }
 
-void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, fxl::TimePoint when) {
-  FXL_DCHECK(agent);
-  wake_queue_.emplace(when, agent);
+void Mdns::PostTaskForTime(MdnsAgent* agent,
+                           fxl::Closure task,
+                           fxl::TimePoint target_time) {
+  task_queue_.emplace(agent, task, target_time);
+  PostTask();
 }
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
@@ -232,16 +236,18 @@ void Mdns::Renew(const DnsResource& resource) {
   resource_renewer_->Renew(resource);
 }
 
-void Mdns::RemoveAgent(MdnsAgent* agent,
+void Mdns::RemoveAgent(const MdnsAgent* agent,
                        const std::string& published_instance_full_name) {
   agents_.erase(agent);
 
-  reverse_priority_queue<WakeQueueEntry> temp;
-  wake_queue_.swap(temp);
+  // Remove all pending tasks posted by this agent.
+  std::priority_queue<TaskQueueEntry> temp;
+  task_queue_.swap(temp);
 
   while (!temp.empty()) {
-    if (temp.top().agent_.get() != agent) {
-      wake_queue_.emplace(temp.top().time_, temp.top().agent_);
+    if (temp.top().agent_ != agent) {
+      task_queue_.emplace(temp.top().agent_, temp.top().task_,
+                          temp.top().time_);
     }
 
     temp.pop();
@@ -262,7 +268,6 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   if (started_) {
     agent->Start();
     SendMessage();
-    PostTask();
   }
 }
 
@@ -306,41 +311,35 @@ void Mdns::ReceiveResource(const DnsResource& resource,
 }
 
 void Mdns::PostTask() {
-  fxl::TimePoint when = fxl::TimePoint::Max();
+  FXL_DCHECK(!task_queue_.empty());
 
-  if (!wake_queue_.empty()) {
-    when = wake_queue_.top().time_;
-  }
-
-  if (when == fxl::TimePoint::Max()) {
+  if (task_queue_.top().time_ >= posted_task_time_) {
     return;
   }
 
-  if (!post_task_queue_.empty() && post_task_queue_.top() <= when) {
-    // We're already scheduled to wake up by |when|.
-    return;
-  }
-
-  post_task_queue_.push(when);
+  posted_task_time_ = task_queue_.top().time_;
 
   task_runner_->PostTaskForTime(
-      [this, when]() {
-        while (!post_task_queue_.empty() && post_task_queue_.top() <= when) {
-          post_task_queue_.pop();
-        }
+      [this]() {
+        // Suppress recursive calls to this method.
+        posted_task_time_ = fxl::TimePoint::Min();
 
         fxl::TimePoint now = fxl::TimePoint::Now();
 
-        while (!wake_queue_.empty() && wake_queue_.top().time_ <= now) {
-          std::shared_ptr<MdnsAgent> agent = wake_queue_.top().agent_;
-          wake_queue_.pop();
-          agent->Wake();
+        while (!task_queue_.empty() && task_queue_.top().time_ <= now) {
+          fxl::Closure task = task_queue_.top().task_;
+          task_queue_.pop();
+          task();
         }
 
         SendMessage();
-        PostTask();
+
+        posted_task_time_ = fxl::TimePoint::Max();
+        if (!task_queue_.empty()) {
+          PostTask();
+        }
       },
-      when);
+      posted_task_time_);
 }
 
 }  // namespace mdns

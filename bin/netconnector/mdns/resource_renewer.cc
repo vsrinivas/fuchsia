@@ -10,7 +10,7 @@
 namespace netconnector {
 namespace mdns {
 
-ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : host_(host) {}
+ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : MdnsAgent(host) {}
 
 ResourceRenewer::~ResourceRenewer() {
   FXL_DCHECK(entries_.size() == schedule_.size());
@@ -32,7 +32,7 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
     Schedule(entry);
 
     if (entry == schedule_.top()) {
-      host_->WakeAt(shared_from_this(), entry->schedule_time_);
+      PostTaskForTime([this]() { SendRenewals(); }, entry->schedule_time_);
     }
 
     entries_.insert(std::move(entry));
@@ -42,9 +42,23 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
   }
 }
 
-void ResourceRenewer::Start() {}
+void ResourceRenewer::ReceiveResource(const DnsResource& resource,
+                                      MdnsResourceSection section) {
+  FXL_DCHECK(section != MdnsResourceSection::kExpired);
 
-void ResourceRenewer::Wake() {
+  Entry key(resource.name_.dotted_string_, resource.type_);
+  auto iter = entries_.find(&key);
+  if (iter != entries_.end()) {
+    (*iter)->delete_ = true;
+  }
+}
+
+void ResourceRenewer::Quit() {
+  // This never gets called.
+  FXL_DCHECK(false);
+}
+
+void ResourceRenewer::SendRenewals() {
   fxl::TimePoint now = fxl::TimePoint::Now();
 
   while (!schedule_.empty() && schedule_.top()->schedule_time_ <= now) {
@@ -63,40 +77,20 @@ void ResourceRenewer::Wake() {
           std::make_shared<DnsResource>(entry->name_, entry->type_);
       resource->time_to_live_ = 0;
       entries_.erase(entry);
-      host_->SendResource(resource, MdnsResourceSection::kExpired);
+      SendResource(resource, MdnsResourceSection::kExpired);
       delete entry;
     } else {
       // Need to query.
-      host_->SendQuestion(
-          std::make_shared<DnsQuestion>(entry->name_, entry->type_));
+      SendQuestion(std::make_shared<DnsQuestion>(entry->name_, entry->type_));
       entry->SetNextQueryOrExpiration();
       Schedule(entry);
     }
   }
 
   if (!schedule_.empty()) {
-    host_->WakeAt(shared_from_this(), schedule_.top()->schedule_time_);
+    PostTaskForTime([this]() { SendRenewals(); },
+                    schedule_.top()->schedule_time_);
   }
-}
-
-void ResourceRenewer::ReceiveQuestion(const DnsQuestion& question) {}
-
-void ResourceRenewer::ReceiveResource(const DnsResource& resource,
-                                      MdnsResourceSection section) {
-  FXL_DCHECK(section != MdnsResourceSection::kExpired);
-
-  Entry key(resource.name_.dotted_string_, resource.type_);
-  auto iter = entries_.find(&key);
-  if (iter != entries_.end()) {
-    (*iter)->delete_ = true;
-  }
-}
-
-void ResourceRenewer::EndOfMessage() {}
-
-void ResourceRenewer::Quit() {
-  // This never gets called.
-  FXL_DCHECK(false);
 }
 
 void ResourceRenewer::Schedule(Entry* entry) {

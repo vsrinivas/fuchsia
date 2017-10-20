@@ -36,26 +36,18 @@ namespace mdns {
 // loses interest in a record, it should imply stop renewing the incoming
 // resource records. This approach will cause some unneeded renewals, but avoids
 // difficult cleanup issues associated with a persistent renewal scheme.
-class ResourceRenewer : public MdnsAgent,
-                        public std::enable_shared_from_this<ResourceRenewer> {
+class ResourceRenewer : public MdnsAgent {
  public:
   ResourceRenewer(MdnsAgent::Host* host);
 
   ~ResourceRenewer() override;
 
+  // Attempts to renew |resource| before its TTL expires.
   void Renew(const DnsResource& resource);
 
-  // MdnsAgent implementation.
-  void Start() override;
-
-  void Wake() override;
-
-  void ReceiveQuestion(const DnsQuestion& question) override;
-
+  // MdnsAgent overrides.
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section) override;
-
-  void EndOfMessage() override;
 
   void Quit() override;
 
@@ -120,9 +112,12 @@ class ResourceRenewer : public MdnsAgent,
     }
   };
 
+  // Sends current renewals and schedules another call to |SendRenewals|, as
+  // appropriate.
+  void SendRenewals();
+
   void Schedule(Entry* entry);
 
-  MdnsAgent::Host* host_;
   std::unordered_set<Entry*, Hash, Equals> entries_;
   std::priority_queue<Entry*, std::vector<Entry*>, LaterScheduleTime> schedule_;
 };

@@ -13,28 +13,16 @@ namespace mdns {
 
 AddressResponder::AddressResponder(MdnsAgent::Host* host,
                                    const std::string& host_full_name)
-    : host_(host), host_full_name_(host_full_name) {}
+    : MdnsAgent(host), host_full_name_(host_full_name) {}
 
 AddressResponder::~AddressResponder() {}
 
-void AddressResponder::Start() {}
-
-void AddressResponder::Wake() {}
-
 void AddressResponder::ReceiveQuestion(const DnsQuestion& question) {
-  if ((question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa) &&
+  if ((question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa ||
+       question.type_ == DnsType::kAny) &&
       question.name_.dotted_string_ == host_full_name_) {
-    host_->SendAddresses(MdnsResourceSection::kAnswer);
+    SendAddresses(MdnsResourceSection::kAnswer);
   }
-}
-
-void AddressResponder::ReceiveResource(const DnsResource& resource,
-                                       MdnsResourceSection section) {}
-
-void AddressResponder::EndOfMessage() {}
-
-void AddressResponder::Quit() {
-  host_->RemoveAgent(this);
 }
 
 }  // namespace mdns

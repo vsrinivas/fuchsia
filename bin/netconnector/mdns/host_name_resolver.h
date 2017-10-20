@@ -16,8 +16,7 @@ namespace netconnector {
 namespace mdns {
 
 // Requests host name resolution.
-class HostNameResolver : public MdnsAgent,
-                         public std::enable_shared_from_this<HostNameResolver> {
+class HostNameResolver : public MdnsAgent {
  public:
   // Creates a |HostNameResolver|.
   HostNameResolver(MdnsAgent::Host* host,
@@ -27,12 +26,8 @@ class HostNameResolver : public MdnsAgent,
 
   ~HostNameResolver() override;
 
-  // MdnsAgent implementation.
+  // MdnsAgent overrides.
   void Start() override;
-
-  void Wake() override;
-
-  void ReceiveQuestion(const DnsQuestion& question) override;
 
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section) override;
@@ -42,7 +37,6 @@ class HostNameResolver : public MdnsAgent,
   void Quit() override;
 
  private:
-  MdnsAgent::Host* host_;
   std::string host_name_;
   std::string host_full_name_;
   fxl::TimePoint timeout_;

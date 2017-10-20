@@ -16,8 +16,7 @@ namespace netconnector {
 namespace mdns {
 
 // Dynamically publishes an instance of a service type.
-class Responder : public MdnsAgent,
-                  public std::enable_shared_from_this<Responder> {
+class Responder : public MdnsAgent {
  public:
   // Creates an |Responder|. Subtypes in |announced_subtypes| are announced
   // initially. The |MdnsResponder| referenced by |responder_handle| is
@@ -40,32 +39,27 @@ class Responder : public MdnsAgent,
 
   ~Responder() override;
 
-  // MdnsAgent implementation.
+  // MdnsAgent overrides.
   void Start() override;
 
-  void Wake() override;
-
   void ReceiveQuestion(const DnsQuestion& question) override;
-
-  void ReceiveResource(const DnsResource& resource,
-                       MdnsResourceSection section) override;
-
-  void EndOfMessage() override;
 
   void Quit() override;
 
  private:
   static constexpr uint32_t kMaxAnnouncementInterval = 4;
 
+  // Sends an announcement and schedules the next announcement, as appropriate.
+  void SendAnnouncement();
+
   // Gets an |MdnsPublication| from |responder_| and, if not null, sends it.
   // An empty |subtype| indicates no subtype.
-  void GetAndSendPublication(bool query, const std::string& subtype) const;
+  void GetAndSendPublication(bool query, const std::string& subtype = "") const;
 
   // Sends a publication. An empty |subtype| indicates no subtype.
   void SendPublication(const std::string& subtype,
                        const MdnsPublication& publication) const;
 
-  MdnsAgent::Host* host_;
   std::string host_full_name_;
   std::string service_name_;
   std::string instance_name_;

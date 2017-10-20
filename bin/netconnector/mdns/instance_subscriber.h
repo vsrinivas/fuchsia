@@ -16,9 +16,7 @@ namespace netconnector {
 namespace mdns {
 
 // Searches for instances of a service type.
-class InstanceSubscriber
-    : public MdnsAgent,
-      public std::enable_shared_from_this<InstanceSubscriber> {
+class InstanceSubscriber : public MdnsAgent {
  public:
   using ServiceInstanceCallback =
       std::function<void(const std::string& service,
@@ -34,19 +32,13 @@ class InstanceSubscriber
 
   ~InstanceSubscriber() override;
 
-  // MdnsAgent implementation.
+  // MdnsAgent overrides.
   void Start() override;
-
-  void Wake() override;
-
-  void ReceiveQuestion(const DnsQuestion& question) override;
 
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section) override;
 
   void EndOfMessage() override;
-
-  void Quit() override;
 
  private:
   struct InstanceInfo {
@@ -63,6 +55,9 @@ class InstanceSubscriber
     bool keep_ = false;
     bool dirty_ = false;
   };
+
+  // Sends a query for instances and schedules the next query, as appropriate.
+  void SendQuery();
 
   void ReceivePtrResource(const DnsResource& resource,
                           MdnsResourceSection section);
@@ -85,7 +80,6 @@ class InstanceSubscriber
 
   void RemoveInstance(const std::string& instance_full_name);
 
-  MdnsAgent::Host* host_;
   std::string service_name_;
   std::string service_full_name_;
   ServiceInstanceCallback callback_;

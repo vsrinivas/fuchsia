@@ -16,7 +16,7 @@ HostNameResolver::HostNameResolver(
     const std::string& host_name,
     fxl::TimePoint timeout,
     const Mdns::ResolveHostNameCallback& callback)
-    : host_(host),
+    : MdnsAgent(host),
       host_name_(host_name),
       host_full_name_(MdnsNames::LocalHostFullName(host_name)),
       timeout_(timeout),
@@ -27,23 +27,19 @@ HostNameResolver::HostNameResolver(
 HostNameResolver::~HostNameResolver() {}
 
 void HostNameResolver::Start() {
-  host_->SendQuestion(
-      std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA));
-  host_->SendQuestion(
-      std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa));
+  SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA));
+  SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa));
 
-  host_->WakeAt(shared_from_this(), timeout_);
+  PostTaskForTime(
+      [this]() {
+        if (callback_) {
+          callback_(host_name_, v4_address_, v6_address_);
+          callback_ = nullptr;
+          RemoveSelf();
+        }
+      },
+      timeout_);
 }
-
-void HostNameResolver::Wake() {
-  if (callback_) {
-    callback_(host_name_, v4_address_, v6_address_);
-    callback_ = nullptr;
-    host_->RemoveAgent(this);
-  }
-}
-
-void HostNameResolver::ReceiveQuestion(const DnsQuestion& question) {}
 
 void HostNameResolver::ReceiveResource(const DnsResource& resource,
                                        MdnsResourceSection section) {
@@ -64,7 +60,7 @@ void HostNameResolver::EndOfMessage() {
   if (v4_address_ || v6_address_) {
     callback_(host_name_, v4_address_, v6_address_);
     callback_ = nullptr;
-    host_->RemoveAgent(this);
+    RemoveSelf();
   }
 }
 
@@ -72,8 +68,7 @@ void HostNameResolver::Quit() {
   FXL_DCHECK(callback_);
   callback_(host_name_, v4_address_, v6_address_);
   callback_ = nullptr;
-
-  host_->RemoveAgent(this);
+  RemoveSelf();
 }
 
 }  // namespace mdns

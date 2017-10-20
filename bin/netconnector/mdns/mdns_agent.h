@@ -7,6 +7,9 @@
 #include <memory>
 
 #include "garnet/bin/netconnector/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/mdns_addresses.h"
+#include "garnet/bin/netconnector/socket_address.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/time/time_point.h"
 
 namespace netconnector {
@@ -16,71 +19,106 @@ namespace mdns {
 // resource section.
 enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional, kExpired };
 
-// Abstract class for objects that drive mDNS question and record traffic.
-class MdnsAgent {
+// Base class for objects that drive mDNS question and record traffic.
+class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
  public:
   class Host {
    public:
     virtual ~Host() {}
 
-    // Schedules a call to |agent->Wake| at the specified time.
-    virtual void WakeAt(std::shared_ptr<MdnsAgent> agent,
-                        fxl::TimePoint when) = 0;
+    // Posts a task to be executed at the specified time. Scheduled tasks posted
+    // by agents that have since been removed are not executed.
+    virtual void PostTaskForTime(MdnsAgent* agent,
+                                 fxl::Closure task,
+                                 fxl::TimePoint target_time) = 0;
 
     // Sends a question to the multicast address.
     virtual void SendQuestion(std::shared_ptr<DnsQuestion> question) = 0;
 
-    // Sends a resource to the multicast address. After a resource is sent with
-    // a TTL of zero, the resource is marked so that it won't get resent.
+    // Sends a resource to the multicast address.
     virtual void SendResource(std::shared_ptr<DnsResource> resource,
                               MdnsResourceSection section) = 0;
 
     // Sends address resources to the multicast address.
     virtual void SendAddresses(MdnsResourceSection section) = 0;
 
-    // Registers the resource for renewal. Before the resource's TTL expires,
-    // an attempt will be made to renew the resource by issuing queries for it.
-    // If the renewal is successful, the agent will receive the renewed resource
-    // (via |ReceiveResource|) and may choose to renew the resource again.
-    // If the renewal fails, the agent will receive a resource record with the
-    // same name and type but with a TTL of zero. The section parameter
-    // accompanying that resource record will be kExpired.
-    //
-    // The effect if this call is transient, and there is no way to cancel the
-    // renewal. When an agent loses interest in a particular resource, it should
-    // simply refrain from renewing the incoming records.
+    // Registers the resource for renewal. See |MdnsAgent::Renew|.
     virtual void Renew(const DnsResource& resource) = 0;
 
     // Removes the specified agent. |published_instance_full_name| is used for
     // instance publishers only and indicates the full name of a published
     // instance.
     virtual void RemoveAgent(
-        MdnsAgent* agent,
-        const std::string& published_instance_full_name = "") = 0;
+        const MdnsAgent* agent,
+        const std::string& published_instance_full_name) = 0;
   };
 
   virtual ~MdnsAgent() {}
 
   // Starts the agent. This method is never called before a shared pointer to
   // the agent is created, so |shared_from_this| is safe to call.
-  virtual void Start() = 0;
-
-  // Wakes the agent as requested via |Host::WakeAt|.
-  virtual void Wake() = 0;
+  virtual void Start() {}
 
   // Presents a received question.
-  virtual void ReceiveQuestion(const DnsQuestion& question) = 0;
+  virtual void ReceiveQuestion(const DnsQuestion& question){};
 
   // Presents a received resource.
   virtual void ReceiveResource(const DnsResource& resource,
-                               MdnsResourceSection section) = 0;
+                               MdnsResourceSection section){};
 
   // Signals the end of a message.
-  virtual void EndOfMessage() = 0;
+  virtual void EndOfMessage(){};
 
-  // Tells the agent to quit. The agent should call |Host::RemoveAgent| shortly
-  // thereafter.
-  virtual void Quit() = 0;
+  // Tells the agent to quit. The agent should call |RemoveSelf| shortly
+  // thereafter. The default calls |RemoveSelf|.
+  virtual void Quit() { RemoveSelf(); }
+
+ protected:
+  MdnsAgent(Host* host) : host_(host) { FXL_DCHECK(host_); }
+
+  // Posts a task to be executed at the specified time. Scheduled tasks posted
+  // by agents that have since been removed are not executed.
+  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time) {
+    host_->PostTaskForTime(this, task, target_time);
+  }
+
+  // Sends a question to the multicast address.
+  void SendQuestion(std::shared_ptr<DnsQuestion> question) const {
+    host_->SendQuestion(question);
+  }
+
+  // Sends a resource to the multicast address.
+  void SendResource(std::shared_ptr<DnsResource> resource,
+                    MdnsResourceSection section) const {
+    host_->SendResource(resource, section);
+  }
+
+  // Sends address resources to the multicast address.
+  void SendAddresses(MdnsResourceSection section) const {
+    host_->SendAddresses(section);
+  }
+
+  // Registers the resource for renewal. Before the resource's TTL expires,
+  // an attempt will be made to renew the resource by issuing queries for it.
+  // If the renewal is successful, the agent will receive the renewed resource
+  // (via |ReceiveResource|) and may choose to renew the resource again.
+  // If the renewal fails, the agent will receive a resource record with the
+  // same name and type but with a TTL of zero. The section parameter
+  // accompanying that resource record will be kExpired.
+  //
+  // The effect if this call is transient, and there is no way to cancel the
+  // renewal. When an agent loses interest in a particular resource, it should
+  // simply refrain from renewing the incoming records.
+  void Renew(const DnsResource& resource) const { host_->Renew(resource); }
+
+  // Removes this agent. |published_instance_full_name| is used for instance
+  // publishers only and indicates the full name of a published instance.
+  void RemoveSelf(const std::string& published_instance_full_name = "") const {
+    host_->RemoveAgent(this, published_instance_full_name);
+  }
+
+ private:
+  Host* host_;
 };
 
 }  // namespace mdns
