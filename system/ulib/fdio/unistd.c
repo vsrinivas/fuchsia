@@ -488,9 +488,6 @@ void __libc_extensions_init(uint32_t handle_count,
         }
 
         switch (PA_HND_TYPE(handle_info[n])) {
-        case PA_FDIO_CWD:
-            fdio_cwd_handle = fdio_remote_create(h, 0);
-            break;
         case PA_FDIO_REMOTE:
             // remote objects may have a second handle
             // which is for signaling events
@@ -547,12 +544,10 @@ void __libc_extensions_init(uint32_t handle_count,
     // Set up thread local storage for rchannels.
     __fdio_rchannel_init();
 
-    // TODO(abarth): The cwd path string should be more tightly coupled with
-    // the cwd handle.
     const char* cwd = getenv("PWD");
-    if (cwd != NULL) {
-        update_cwd_path(cwd);
-    }
+    cwd = (cwd == NULL) ? "/" : cwd;
+
+    update_cwd_path(cwd);
 
     fdio_t* use_for_stdio = (stdio_fd >= 0) ? fdio_fdtab[stdio_fd] : NULL;
 
@@ -581,9 +576,7 @@ void __libc_extensions_init(uint32_t handle_count,
     }
     if (fdio_root_handle) {
         fdio_root_init = true;
-        if(!fdio_cwd_handle) {
-            __fdio_open(&fdio_cwd_handle, fdio_cwd_path, O_RDONLY | O_DIRECTORY, 0);
-        }
+        __fdio_open(&fdio_cwd_handle, fdio_cwd_path, O_RDONLY | O_DIRECTORY, 0);
     } else {
         // placeholder null handle
         fdio_root_handle = fdio_null_create();
@@ -634,14 +627,6 @@ zx_status_t fdio_clone_root(zx_handle_t* handles, uint32_t* types) {
     zx_status_t r = fdio_root_handle->ops->clone(fdio_root_handle, handles, types);
     if (r > 0) {
         *types = PA_FDIO_REMOTE;
-    }
-    return r;
-}
-
-zx_status_t fdio_clone_cwd(zx_handle_t* handles, uint32_t* types) {
-    zx_status_t r = fdio_cwd_handle->ops->clone(fdio_cwd_handle, handles, types);
-    if (r > 0) {
-        *types = PA_FDIO_CWD;
     }
     return r;
 }

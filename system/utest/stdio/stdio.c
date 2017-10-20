@@ -72,7 +72,7 @@ static bool stdio_launchpad_pipe_test(void)
               ZX_OK, "launchpad_arguments failed");
     ASSERT_EQ(launchpad_add_vdso_vmo(lp), ZX_OK,
               "launchpad_add_vdso_vmo failed");
-    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_CWD),
+    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE),
               ZX_OK, "launchpad_clone failed");
 
     zx_handle_t vmo;

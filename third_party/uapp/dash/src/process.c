@@ -26,7 +26,7 @@ static void prepare_launch(launchpad_t* lp, const char* filename, int argc,
     launchpad_load_from_file(lp, filename);
     launchpad_set_args(lp, argc, argv);
     launchpad_set_environ(lp, envp);
-    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_FDIO_CWD);
+    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE);
 
     if (fds) {
         launchpad_clone_fd(lp, fds[0], STDIN_FILENO);

@@ -19,7 +19,6 @@ typedef struct fdio fdio_t;
 // Utilities to help assemble handles for a new process
 // may return up to FDIO_MAX_HANDLES
 zx_status_t fdio_clone_root(zx_handle_t* handles, uint32_t* types);
-zx_status_t fdio_clone_cwd(zx_handle_t* handles, uint32_t* types);
 zx_status_t fdio_clone_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types);
 zx_status_t fdio_pipe_pair_raw(zx_handle_t* handles, uint32_t* types);
 zx_status_t fdio_transfer_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types);

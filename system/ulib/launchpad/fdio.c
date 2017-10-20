@@ -48,9 +48,6 @@ zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
             return status;
         }
     }
-    if (what & LP_CLONE_FDIO_CWD && (status = fdio_clone_cwd(handles, types)) > 0) {
-        add_fdio(lp, handles, types, status);
-    }
     if (what & LP_CLONE_FDIO_STDIO) {
         for (int fd = 0; fd < 3; fd++) {
             add_fdio(lp, handles, types, fdio_clone_fd(fd, fd, handles, types));

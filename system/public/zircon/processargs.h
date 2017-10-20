@@ -139,7 +139,6 @@ struct zx_proc_args {
 // Used by libfdio for passing fdtable, fsroot, etc
 
 // Handle types the fdio library uses
-#define PA_FDIO_CWD              0x31
 #define PA_FDIO_REMOTE           0x32
 #define PA_FDIO_PIPE             0x33
 #define PA_FDIO_EVENT            0x34
