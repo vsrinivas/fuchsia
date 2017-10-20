@@ -52,6 +52,7 @@ MODULE_TYPE := hostapp
 MODULE_SRCS := \
     $(LOCAL_DIR)/blobstore-common.cpp \
     $(LOCAL_DIR)/blobstore-host.cpp \
+    $(LOCAL_DIR)/blobstore-check.cpp \
     $(LOCAL_DIR)/main.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/digest/digest.cpp \

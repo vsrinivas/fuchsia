@@ -49,21 +49,17 @@ int do_blobstore_mount(int fd, bool readonly) {
     return 0;
 }
 
-int do_blobstore_check(int fd, int argc, char** argv) {
-    fbl::RefPtr<blobstore::Blobstore> vn;
-    if (blobstore::blobstore_create(&vn, fd) < 0) {
-        return -1;
-    }
-
-    return blobstore::blobstore_check(vn);
-}
-
 #else
 
 int do_blobstore_add_blob(int fd, int argc, char** argv) {
     if (argc < 1) {
         fprintf(stderr, "Adding a blob requires an additional file argument\n");
         close(fd);
+        return -1;
+    }
+
+    fbl::RefPtr<blobstore::Blobstore> bs;
+    if (blobstore_create(&bs, fd) < 0) {
         return -1;
     }
 
@@ -74,7 +70,7 @@ int do_blobstore_add_blob(int fd, int argc, char** argv) {
         return -1;
     }
     int r;
-    if ((r = blobstore::blobstore_add_blob(fd, data_fd)) != 0) {
+    if ((r = blobstore::blobstore_add_blob(bs.get(), data_fd)) != 0) {
         fprintf(stderr, "blobstore: Failed to add blob '%s'\n", argv[0]);
     }
     close(fd);
@@ -82,7 +78,7 @@ int do_blobstore_add_blob(int fd, int argc, char** argv) {
     return r;
 }
 
-zx_status_t process_manifest_line(FILE* manifest, int blob_fd) {
+zx_status_t process_manifest_line(FILE* manifest, blobstore::Blobstore* bs) {
     size_t size = 0;
     char* line = nullptr;
 
@@ -121,7 +117,7 @@ zx_status_t process_manifest_line(FILE* manifest, int blob_fd) {
         return ZX_ERR_IO;
     }
 
-    zx_status_t status = blobstore::blobstore_add_blob(blob_fd, data_fd.get());
+    zx_status_t status = blobstore::blobstore_add_blob(bs, data_fd.get());
     if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
         fprintf(stderr, "error: failed to add blob '%s'\n", src);
         return ZX_ERR_INTERNAL;
@@ -137,7 +133,11 @@ int do_blobstore_add_manifest(int fd, int argc, char** argv) {
         return -1;
     }
 
-    fbl::unique_fd blob_fd(fd);
+    fbl::RefPtr<blobstore::Blobstore> bs;
+    if (blobstore_create(&bs, fd) < 0) {
+        return -1;
+    }
+
     fbl::unique_fd manifest_fd(open(argv[0], O_RDONLY, 0644));
     if (!manifest_fd) {
         fprintf(stderr, "error: cannot open '%s'\n", argv[0]);
@@ -146,7 +146,7 @@ int do_blobstore_add_manifest(int fd, int argc, char** argv) {
 
     FILE* manifest = fdopen(manifest_fd.release(), "r");
     while (true) {
-        zx_status_t status = process_manifest_line(manifest, blob_fd.get());
+        zx_status_t status = process_manifest_line(manifest, bs.get());
         if (status == ZX_ERR_OUT_OF_RANGE) {
             fclose(manifest);
             return 0;
@@ -168,6 +168,15 @@ int do_blobstore_mkfs(int fd, int argc, char** argv) {
     return blobstore::blobstore_mkfs(fd, block_count);
 }
 
+int do_blobstore_check(int fd, int argc, char** argv) {
+    fbl::RefPtr<blobstore::Blobstore> vn;
+    if (blobstore::blobstore_create(&vn, fd) < 0) {
+        return -1;
+    }
+
+    return blobstore::blobstore_check(vn);
+}
+
 struct {
     const char* name;
     int (*func)(int fd, int argc, char** argv);
@@ -175,10 +184,9 @@ struct {
 } CMDS[] = {
     {"create", do_blobstore_mkfs, "initialize filesystem"},
     {"mkfs", do_blobstore_mkfs, "initialize filesystem"},
-#ifdef __Fuchsia__
     {"check", do_blobstore_check, "check filesystem integrity"},
     {"fsck", do_blobstore_check, "check filesystem integrity"},
-#else
+#ifndef __Fuchsia__
     {"add", do_blobstore_add_blob, "add a blob to a blobstore image"},
     {"manifest", do_blobstore_add_manifest, "add all blobs in manifest to a blobstore image"},
 #endif

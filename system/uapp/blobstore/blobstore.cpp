@@ -898,6 +898,7 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
         return status;
     }
 
+
     if ((status = Blobstore::Create(blockfd, info, out)) != ZX_OK) {
         fprintf(stderr, "blobstore: mount failed; could not create blobstore\n");
         return status;

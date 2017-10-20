@@ -59,7 +59,6 @@ constexpr BlobFlags kBlobFlagDirectory    = 0x00000400; // This node represents 
 constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
 // clang-format on
-
 #ifdef __Fuchsia__
 
 class VnodeBlob final : public fs::Vnode {
@@ -300,6 +299,95 @@ private:
     vmoid_t info_vmoid_{};
 };
 
+#else
+
+typedef union {
+    uint8_t block[kBlobstoreBlockSize];
+    blobstore_info_t info;
+} info_block_t;
+
+// Stores pointer to an inode's metadata and the matching block number
+class InodeBlock {
+public:
+    InodeBlock(size_t bno, blobstore_inode_t* inode, const Digest& digest)
+              : bno_(bno) {
+        inode_ = inode;
+        digest.CopyTo(inode_->merkle_root_hash, sizeof(inode_->merkle_root_hash));
+    }
+
+    size_t GetBno() const {
+        return bno_;
+    }
+
+    blobstore_inode_t* GetInode() {
+        return inode_;
+    }
+
+    void SetSize(size_t size);
+
+private:
+    size_t bno_;
+    blobstore_inode_t* inode_;
+};
+
+class Blobstore : public fbl::RefCounted<Blobstore> {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Blobstore);
+
+    static zx_status_t Create(fbl::unique_fd blockfd, const info_block_t& info_block,
+                              fbl::RefPtr<Blobstore>* out);
+
+    ~Blobstore() {}
+
+    // Checks to see if a blob already exists, and if not allocates a new node
+    zx_status_t NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out);
+
+    // Allocate |nblocks| starting at |*blkno_out| in memory
+    zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
+
+    zx_status_t WriteData(blobstore_inode_t* inode, void* merkle_data, void* blob_data);
+    zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
+    zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
+    zx_status_t WriteInfo();
+
+private:
+    typedef struct {
+        size_t bno;
+        uint8_t blk[kBlobstoreBlockSize];
+    } block_cache_t;
+
+    friend class BlobstoreChecker;
+
+    Blobstore(fbl::unique_fd fd, const info_block_t& info_block);
+    zx_status_t LoadBitmap();
+
+    // Access the |index|th inode
+    blobstore_inode_t* GetNode(size_t index);
+
+    // Read data from block |bno| into the block cache.
+    // If the block cache already contains data from the specified bno, nothing happens.
+    // Cannot read while a dirty block is pending.
+    zx_status_t ReadBlock(size_t bno);
+
+    // Write |data| into block |bno|
+    zx_status_t WriteBlock(size_t bno, const void* data);
+
+    RawBitmap block_map_{};
+
+    fbl::unique_fd blockfd_;
+    bool dirty_;
+
+    union {
+        blobstore_info_t info_;
+        uint8_t info_block_[kBlobstoreBlockSize];
+    };
+
+    // Caches the most recent block read from disk
+    block_cache_t cache_;
+};
+
+#endif
+
 class BlobstoreChecker {
 public:
     BlobstoreChecker();
@@ -315,20 +403,20 @@ private:
     uint32_t alloc_blocks_;
 };
 
-#endif
-
 int blobstore_mkfs(int fd, uint64_t block_count);
 
 // Exclusively host-side functionality
 #ifndef __Fuchsia__
-int blobstore_add_blob(int fd, int data_fd);
+int blobstore_add_blob(Blobstore* bs, int data_fd);
 #endif
 
+//TODO(planders): Update blobstore to use unique_fd.
 zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd);
 zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd);
 zx_status_t blobstore_check(fbl::RefPtr<Blobstore> vnode);
 
 uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode);
+
 // Get a pointer to the nth block of the bitmap.
 inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
     assert(n * kBlobstoreBlockSize < bm.size());                  // Accessing beyond end of bitmap

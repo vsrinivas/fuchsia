@@ -14,6 +14,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_free_ptr.h>
 
 #include <zircon/types.h>
