@@ -137,7 +137,7 @@ zx::process CreateProcess(const zx::job& job,
                           ApplicationLaunchInfoPtr launch_info,
                           fdio_flat_namespace_t* flat) {
   return Launch(job, GetLabelFromURL(launch_info->url),
-                LP_CLONE_FDIO_CWD | LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON,
+                LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON,
                 GetArgv(launch_info), flat, TakeAppServices(launch_info),
                 std::move(launch_info->service_request),
                 std::move(package->data));
