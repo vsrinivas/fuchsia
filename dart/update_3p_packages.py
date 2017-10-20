@@ -13,16 +13,16 @@ import sys
 # error out and the conflicts will have to be resolved before the packages can
 # be updated.
 ROOT_PUBSPECS = [
-    'lib/flutter/examples/flutter_gallery',
-    'lib/flutter/packages/flutter',
-    'lib/flutter/packages/flutter_test',
-    'lib/flutter/packages/flutter_tools',
     'third_party/dart/pkg/analysis_server',
     'third_party/dart/pkg/analyzer',
     'third_party/dart/pkg/analyzer_cli',
     'third_party/dart/pkg/kernel',
     'third_party/dart/pkg/telemetry',
     'third_party/dart/pkg/typed_mock',
+    'third_party/dart-pkg/git/flutter/examples/flutter_gallery',
+    'third_party/dart-pkg/git/flutter/packages/flutter',
+    'third_party/dart-pkg/git/flutter/packages/flutter_test',
+    'third_party/dart-pkg/git/flutter/packages/flutter_tools',
     'third_party/flutter/sky/packages/sky_engine',
 ]
 
@@ -52,7 +52,8 @@ def main():
                                  'package_importer.py')
     output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
                                'pub')
-    flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'lib', 'flutter');
+    flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
+                                'git', 'flutter');
 
     args = [importer_path]
     args.append('--pub')

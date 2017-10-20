@@ -23,8 +23,8 @@ IGNORED_EXTENSIONS = ['css', 'html', 'jpg', 'js', 'log', 'old', 'out', 'png', 'z
 LOCAL_PACKAGES = {
   'analyzer': '//third_party/dart/pkg/analyzer',
   'analysis_server': '//third_party/dart/pkg/analysis_server',
-  'flutter': '//lib/flutter/packages/flutter',
-  'flutter_test': '//lib/flutter/packages/flutter_test',
+  'flutter': '//third_party/dart-pkg/git/flutter/packages/flutter',
+  'flutter_test': '//third_party/dart-pkg/git/flutter/packages/flutter_test',
   'front_end': '//third_party/dart/pkg/front_end',
   'func': '//third_party/dart/third_party/pkg/func',
   'intl': '//third_party/dart/third_party/pkg/intl',
