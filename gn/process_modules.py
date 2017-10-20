@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 import argparse
-import component_manifest
 import json
 import os
 import paths
@@ -51,16 +50,6 @@ class Amalgamation:
             self.packages.append(package)
             self.deps.append(packages[package])
 
-        for c in config.get("components", []):
-            # See https://fuchsia.googlesource.com/peridot/+/master/bin/component_manager/ for what a component is.
-            manifest = component_manifest.ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
-            self.component_urls.append(manifest.url)
-            for component_file in manifest.files().values():
-                self.system.add_file({
-                    'file': os.path.join(self.build_root, 'components', component_file.url_as_path),
-                    'bootfs_path': os.path.join('components', component_file.url_as_path),
-                    'default': False
-                })
         # TODO(jamesr): Everything below here is deprecated and no longer needed
         # when all package configurations are written in GN template. Migrate
         # and remove.
@@ -74,7 +63,7 @@ class Amalgamation:
             file["bootfs_path"] = r["bootfs_path"]
             file["default"] = r.has_key("default")
             self.system.add_file(file)
-        for key in ["binaries", "drivers", "early_boot", "gopaths"]:
+        for key in ["binaries", "components", "drivers", "early_boot", "gopaths"]:
             if config.has_key(key):
                 raise Exception("The \"%s\" key is no longer supported" % key)
 
@@ -138,7 +127,6 @@ def main():
     parser.add_argument("--autorun", help="path to autorun script", default="")
     parser.add_argument("--build-root", help="path to root of build directory")
     parser.add_argument("--depfile", help="path to depfile to generate")
-    parser.add_argument("--component-index", help="path to component index to generate")
     parser.add_argument("--arch", help="architecture being targetted")
     args = parser.parse_args()
 
@@ -157,10 +145,6 @@ def main():
                 f.write(" " + path)
             for resource in amalgamation.resources:
                 f.write(" " + resource)
-
-    if args.component_index != "":
-        with open(args.component_index, "w") as f:
-            json.dump(amalgamation.component_urls, f)
 
     with open(args.packages, "w") as f:
         f.write("\n".join(amalgamation.packages))

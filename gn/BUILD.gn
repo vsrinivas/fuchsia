@@ -26,7 +26,6 @@ action("mkbootfs") {
   system_manifest_file =
       rebase_path("system.bootfs.manifest", "", target_gen_dir)
   depfile = "$target_gen_dir/mkbootfs.d"
-  component_index = "$root_gen_dir/component_index.json"
 
   deps = exec_script("process_modules.py",
                      [
@@ -44,8 +43,6 @@ action("mkbootfs") {
                        rebase_path(root_build_dir),
                        "--depfile",
                        rebase_path(depfile),
-                       "--component-index",
-                       rebase_path(component_index),
                        "--arch",
                        target_cpu,
                      ],
@@ -58,7 +55,6 @@ action("mkbootfs") {
   outputs = [
     system_bootfs,
     build_id_file,
-    component_index,
   ]
 
   zircon_bootdata = "//out/build-zircon/build-$zircon_project/bootdata.bin"
