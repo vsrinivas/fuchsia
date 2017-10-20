@@ -219,19 +219,21 @@ will make all log statements appear in the console.
 
 The Dart SDK built in the Fuchsia tree has a version of the analysis service
 which understands the structure of the Fuchsia directory. In the `dartlang` Atom
-plugin, set the Dart SDK as `//dart/tools/sdks/<linux|mac>/dart-sdk`. Packages
-and apps with build targets should now be error-free.
-Note that in order for the plugin to locate a Dart package, it needs a marker:
-add an empty `pubspec.yaml` file at the root of the package.
+plugin, set the Dart SDK as
+`//third_party/dart/tools/sdks/<linux|mac>/dart-sdk`. Packages and apps with
+build targets should now be error-free. Note that in order for the plugin to
+locate a Dart package, it needs a marker: add an empty `pubspec.yaml` file at
+the root of the package.
 
 ### Troubleshooting
+
 When you find the Dart analysis is not working properly in your IDE, try the
- following:
-- Delete `~/fuchsia/out` and rebuild. Specifically, a release build overrides a
-debug build. This means that if you have a broken release build, any release
-build overrides a debug build. With a broken release build, no amount of correct
- rebuilding on debug will solve the issue until you delete
-`~/fuchsia/out/release-x86-64`
+following:
+- Delete `//out` and rebuild. Specifically, a release build overrides a debug
+  build. This means that if you have a broken release build, any release build
+  overrides a debug build. With a broken release build, no amount of correct
+  rebuilding on debug will solve the issue until you delete
+  `//out/release-x86-64`
 - Delete the .packages file in your project and rebuild
 
 
