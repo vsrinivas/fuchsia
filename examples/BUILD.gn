@@ -9,9 +9,7 @@ package("modular_examples") {
 
   deps = [
     "counter_cpp",
-    "hello_component",
     "hello_world_cpp",
-    "request_components",
     "swap_cpp",
     "todo_cpp",
   ]
@@ -45,15 +43,4 @@ package("modular_examples") {
       name = "swap_recipe"
     },
   ]
-}
-
-package("components_query") {
-  deps = [
-    "components_query",
-  ]
-
-  binaries = [ {
-        name = "components_query"
-        dest = "components"
-      } ]
 }

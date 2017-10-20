@@ -21,10 +21,6 @@ package("modular") {
 
   binaries = [
     {
-      name = "component_manager_main"
-      dest = "component_manager"
-    },
-    {
       name = "device_runner"
     },
     {

@@ -2,11 +2,7 @@
     "languages": [
         "cpp"
     ],
-    "components": [
-        "peridot/examples/hello_component/hello_component.json"
-    ],
     "packages": {
-        "modular_examples": "//peridot/examples:modular_examples",
-        "components_query": "//peridot/examples:components_query"
+        "modular_examples": "//peridot/examples:modular_examples"
     }
 }
