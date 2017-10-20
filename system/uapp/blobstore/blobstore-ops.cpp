@@ -41,14 +41,14 @@ VnodeBlob::~VnodeBlob() {
 zx_status_t VnodeBlob::ValidateFlags(uint32_t flags) {
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ZX_ERR_NOT_DIR;
-    } else if (IsDirectory() && ((flags & O_ACCMODE) != 0)) {
-        return ZX_ERR_NOT_FILE;
     }
 
     switch (flags & O_ACCMODE) {
     case O_WRONLY:
     case O_RDWR:
-        if (GetState() != kBlobStateEmpty) {
+        if (IsDirectory()) {
+            return ZX_ERR_NOT_FILE;
+        } else if (GetState() != kBlobStateEmpty) {
             return ZX_ERR_ACCESS_DENIED;
         }
     }
@@ -114,7 +114,8 @@ zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 }
 
 zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
-    a->mode = IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
+    memset(a, 0, sizeof(vnattr_t));
+    a->mode = (IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE) | V_IRUSR;
     a->inode = 0;
     a->size = IsDirectory() ? 0 : SizeData();
     a->blksize = kBlobstoreBlockSize;
