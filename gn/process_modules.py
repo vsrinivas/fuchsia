@@ -66,12 +66,6 @@ class Amalgamation:
         # and remove.
         for label in config.get("labels", []):
             self.deps.append(label)
-        for b in config.get("binaries", []):
-            file = {}
-            file["file"] = os.path.join(self.build_root, b["binary"])
-            file["bootfs_path"] = b["bootfs_path"]
-            file["default"] = b.has_key("default")
-            self.system.add_file(file)
         for r in config.get("resources", []):
             file = {}
             source_path = os.path.join(paths.FUCHSIA_ROOT, r["file"])
@@ -80,7 +74,7 @@ class Amalgamation:
             file["bootfs_path"] = r["bootfs_path"]
             file["default"] = r.has_key("default")
             self.system.add_file(file)
-        for key in ["early_boot", "drivers", "gopaths"]:
+        for key in ["binaries", "drivers", "early_boot", "gopaths"]:
             if config.has_key(key):
                 raise Exception("The \"%s\" key is no longer supported" % key)
 
