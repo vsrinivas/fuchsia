@@ -11,12 +11,14 @@
 
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace storage {
 
 class LevelDb : public Db {
  public:
-  explicit LevelDb(std::string db_path);
+  explicit LevelDb(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                   std::string db_path);
 
   ~LevelDb() override;
 
@@ -50,6 +52,9 @@ class LevelDb : public Db {
           iterator) override;
 
  private:
+  bool MakeEmptySyncCallAndCheck(coroutine::CoroutineHandler* handler);
+
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   const std::string db_path_;
   std::unique_ptr<leveldb::DB> db_;
 

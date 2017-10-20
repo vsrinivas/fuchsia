@@ -38,32 +38,45 @@ class BatchImpl : public Db::Batch {
   // leveldb. If the destructor is called without a previous execution of the
   // batch, |callback| will be called with a |nullptr|.
   BatchImpl(
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
       std::unique_ptr<leveldb::WriteBatch> batch,
       leveldb::DB* db,
       std::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
-      : batch_(std::move(batch)), db_(db), callback_(std::move(callback)) {}
+      : task_runner_(std::move(task_runner)),
+        batch_(std::move(batch)),
+        db_(db),
+        callback_(std::move(callback)) {}
 
   ~BatchImpl() override {
     if (batch_)
       callback_(nullptr);
   }
 
-  Status Put(CoroutineHandler* /*handler*/,
+  Status Put(CoroutineHandler* handler,
              convert::ExtendedStringView key,
              fxl::StringView value) override {
     FXL_DCHECK(batch_);
+    if (MakeEmptySyncCallAndCheck(handler)) {
+      return Status::INTERRUPTED;
+    }
     batch_->Put(key, convert::ToSlice(value));
     return Status::OK;
   }
 
-  Status Delete(CoroutineHandler* /*handler*/,
+  Status Delete(CoroutineHandler* handler,
                 convert::ExtendedStringView key) override {
     FXL_DCHECK(batch_);
     batch_->Delete(key);
+    if (coroutine::SyncCall(handler, [this](fxl::Closure on_done) {
+          task_runner_->PostTask(
+              [on_done = std::move(on_done)]() { on_done(); });
+        })) {
+      return Status::INTERRUPTED;
+    }
     return Status::OK;
   }
 
-  Status DeleteByPrefix(CoroutineHandler* /*handler*/,
+  Status DeleteByPrefix(CoroutineHandler* handler,
                         convert::ExtendedStringView prefix) override {
     FXL_DCHECK(batch_);
     std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
@@ -71,15 +84,34 @@ class BatchImpl : public Db::Batch {
          it->Next()) {
       batch_->Delete(it->key());
     }
+    if (coroutine::SyncCall(handler, [this](fxl::Closure on_done) {
+          task_runner_->PostTask(
+              [on_done = std::move(on_done)]() { on_done(); });
+        })) {
+      return Status::INTERRUPTED;
+    }
     return ConvertStatus(it->status());
   }
 
-  Status Execute(CoroutineHandler* /*handler*/) override {
+  Status Execute(CoroutineHandler* handler) override {
     FXL_DCHECK(batch_);
+    if (coroutine::SyncCall(handler, [this](fxl::Closure on_done) {
+          task_runner_->PostTask(
+              [on_done = std::move(on_done)]() { on_done(); });
+        })) {
+      return Status::INTERRUPTED;
+    }
     return callback_(std::move(batch_));
   }
 
+  bool MakeEmptySyncCallAndCheck(coroutine::CoroutineHandler* handler) {
+    return coroutine::SyncCall(handler, [this](fxl::Closure on_done) {
+      task_runner_->PostTask([on_done = std::move(on_done)]() { on_done(); });
+    });
+  }
+
  private:
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::unique_ptr<leveldb::WriteBatch> batch_;
 
   const leveldb::ReadOptions read_options_;
@@ -146,7 +178,8 @@ class RowIterator
 
 }  // namespace
 
-LevelDb::LevelDb(std::string db_path) : db_path_(std::move(db_path)) {}
+LevelDb::LevelDb(fxl::RefPtr<fxl::TaskRunner> task_runner, std::string db_path)
+    : task_runner_(std::move(task_runner)), db_path_(std::move(db_path)) {}
 
 LevelDb::~LevelDb() {
   FXL_DCHECK(!active_batches_count_)
@@ -195,7 +228,7 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
   auto db_batch = std::make_unique<leveldb::WriteBatch>();
   active_batches_count_++;
   *batch = std::make_unique<BatchImpl>(
-      std::move(db_batch), db_.get(),
+      task_runner_, std::move(db_batch), db_.get(),
       [this](std::unique_ptr<leveldb::WriteBatch> db_batch) {
         active_batches_count_--;
         if (db_batch) {
@@ -208,26 +241,35 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
         }
         return Status::OK;
       });
+  if (MakeEmptySyncCallAndCheck(handler)) {
+    return Status::INTERRUPTED;
+  }
   return Status::OK;
 }
 
-Status LevelDb::Get(CoroutineHandler* /*handler*/,
+Status LevelDb::Get(CoroutineHandler* handler,
                     convert::ExtendedStringView key,
                     std::string* value) {
+  if (MakeEmptySyncCallAndCheck(handler)) {
+    return Status::INTERRUPTED;
+  }
   return ConvertStatus(db_->Get(read_options_, key, value));
 }
 
-Status LevelDb::HasKey(CoroutineHandler* /*handler*/,
+Status LevelDb::HasKey(CoroutineHandler* handler,
                        convert::ExtendedStringView key,
                        bool* has_key) {
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
 
   *has_key = iterator->Valid() && iterator->key() == key;
+  if (MakeEmptySyncCallAndCheck(handler)) {
+    return Status::INTERRUPTED;
+  }
   return Status::OK;
 }
 
-Status LevelDb::GetObject(CoroutineHandler* /*handler*/,
+Status LevelDb::GetObject(CoroutineHandler* handler,
                           convert::ExtendedStringView key,
                           ObjectDigest object_digest,
                           std::unique_ptr<const Object>* object) {
@@ -242,10 +284,13 @@ Status LevelDb::GetObject(CoroutineHandler* /*handler*/,
     *object = std::make_unique<LevelDBObject>(std::move(object_digest),
                                               std::move(iterator));
   }
+  if (MakeEmptySyncCallAndCheck(handler)) {
+    return Status::INTERRUPTED;
+  }
   return Status::OK;
 }
 
-Status LevelDb::GetByPrefix(CoroutineHandler* /*handler*/,
+Status LevelDb::GetByPrefix(CoroutineHandler* handler,
                             convert::ExtendedStringView prefix,
                             std::vector<std::string>* key_suffixes) {
   std::vector<std::string> result;
@@ -260,11 +305,14 @@ Status LevelDb::GetByPrefix(CoroutineHandler* /*handler*/,
     return ConvertStatus(it->status());
   }
   key_suffixes->swap(result);
+  if (MakeEmptySyncCallAndCheck(handler)) {
+    return Status::INTERRUPTED;
+  }
   return Status::OK;
 }
 
 Status LevelDb::GetEntriesByPrefix(
-    CoroutineHandler* /*handler*/,
+    CoroutineHandler* handler,
     convert::ExtendedStringView prefix,
     std::vector<std::pair<std::string, std::string>>* entries) {
   std::vector<std::pair<std::string, std::string>> result;
@@ -279,11 +327,14 @@ Status LevelDb::GetEntriesByPrefix(
     return ConvertStatus(it->status());
   }
   entries->swap(result);
+  if (MakeEmptySyncCallAndCheck(handler)) {
+    return Status::INTERRUPTED;
+  }
   return Status::OK;
 }
 
 Status LevelDb::GetIteratorAtPrefix(
-    CoroutineHandler* /*handler*/,
+    CoroutineHandler* handler,
     convert::ExtendedStringView prefix,
     std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                              convert::ExtendedStringView>>>*
@@ -299,7 +350,16 @@ Status LevelDb::GetIteratorAtPrefix(
                                                      prefix.ToString());
     iterator->swap(row_iterator);
   }
+  if (MakeEmptySyncCallAndCheck(handler)) {
+    return Status::INTERRUPTED;
+  }
   return Status::OK;
+}
+
+bool LevelDb::MakeEmptySyncCallAndCheck(coroutine::CoroutineHandler* handler) {
+  return coroutine::SyncCall(handler, [this](fxl::Closure on_done) {
+    task_runner_->PostTask([on_done = std::move(on_done)]() { on_done(); });
+  });
 }
 
 }  // namespace storage

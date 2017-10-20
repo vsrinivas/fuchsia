@@ -20,7 +20,10 @@ namespace {
 class LedgerStorageTest : public test::TestWithMessageLoop {
  public:
   LedgerStorageTest()
-      : storage_(&coroutine_service_, tmp_dir_.path(), "test_app") {}
+      : storage_(message_loop_.task_runner(),
+                 &coroutine_service_,
+                 tmp_dir_.path(),
+                 "test_app") {}
 
   ~LedgerStorageTest() override {}
 

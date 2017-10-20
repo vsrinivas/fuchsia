@@ -27,7 +27,8 @@ namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(coroutine::CoroutineService* coroutine_service,
+  PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                  coroutine::CoroutineService* coroutine_service,
                   std::string page_dir,
                   PageId page_id);
   ~PageStorageImpl() override;
@@ -136,7 +137,8 @@ class PageStorageImpl : public PageStorage {
  private:
   friend class PageStorageImplAccessorForTest;
 
-  PageStorageImpl(coroutine::CoroutineService* coroutine_service,
+  PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                  coroutine::CoroutineService* coroutine_service,
                   std::unique_ptr<PageDb> page_db,
                   PageId page_id);
 
@@ -236,6 +238,7 @@ class PageStorageImpl : public PageStorage {
                       std::unique_ptr<DataSource::DataChunk> data,
                       ChangeSource source);
 
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
   coroutine::CoroutineService* const coroutine_service_;
   const PageId page_id_;
   std::unique_ptr<PageDb> db_;

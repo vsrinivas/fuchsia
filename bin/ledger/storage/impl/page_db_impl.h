@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
@@ -22,7 +23,7 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(std::string db_path);
+  PageDbImpl(fxl::RefPtr<fxl::TaskRunner> task_runner, std::string db_path);
   ~PageDbImpl() override;
 
   Status Init() override;

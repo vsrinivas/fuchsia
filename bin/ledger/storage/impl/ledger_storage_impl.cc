@@ -40,10 +40,12 @@ std::string GetId(fxl::StringView bytes) {
 }  // namespace
 
 LedgerStorageImpl::LedgerStorageImpl(
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     coroutine::CoroutineService* coroutine_service,
     const std::string& base_storage_dir,
     const std::string& ledger_name)
-    : coroutine_service_(coroutine_service) {
+    : task_runner_(std::move(task_runner)),
+      coroutine_service_(coroutine_service) {
   storage_dir_ = fxl::Concatenate({base_storage_dir, "/", kSerializationVersion,
                                    "/", GetDirectoryName(ledger_name)});
 }
@@ -59,8 +61,8 @@ void LedgerStorageImpl::CreatePageStorage(
     callback(Status::INTERNAL_IO_ERROR, nullptr);
     return;
   }
-  auto result = std::make_unique<PageStorageImpl>(coroutine_service_, path,
-                                                  std::move(page_id));
+  auto result = std::make_unique<PageStorageImpl>(
+      task_runner_, coroutine_service_, path, std::move(page_id));
   result->Init(
       fxl::MakeCopyable([callback = std::move(callback),
                          result = std::move(result)](Status status) mutable {
@@ -79,8 +81,8 @@ void LedgerStorageImpl::GetPageStorage(
     std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   std::string path = GetPathFor(page_id);
   if (files::IsDirectory(path)) {
-    auto result = std::make_unique<PageStorageImpl>(coroutine_service_, path,
-                                                    std::move(page_id));
+    auto result = std::make_unique<PageStorageImpl>(
+        task_runner_, coroutine_service_, path, std::move(page_id));
     result->Init(
         fxl::MakeCopyable([callback = std::move(callback),
                            result = std::move(result)](Status status) mutable {

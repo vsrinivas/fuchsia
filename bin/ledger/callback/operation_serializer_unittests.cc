@@ -63,12 +63,12 @@ TEST(OperationSerializer, DontContinueAfterDestruction) {
   std::function<void()> execute_later;
   {
     OperationSerializer operation_serializer;
-    operation_serializer.Serialize<>(std::move(op_1),
-                                     [&execute_later](std::function<void()> operation) {
-                                       // Store the operation to execute it
-                                       // later.
-                                       execute_later = std::move(operation);
-                                     });
+    operation_serializer.Serialize<>(
+        std::move(op_1), [&execute_later](std::function<void()> operation) {
+          // Store the operation to execute it
+          // later.
+          execute_later = std::move(operation);
+        });
     operation_serializer.Serialize<>(
         std::move(op_2), [](std::function<void()> operation) { operation(); });
 

@@ -60,11 +60,13 @@ class PageStorageImplAccessorForTest {
   }
 
   static std::unique_ptr<PageStorageImpl> CreateStorage(
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
       coroutine::CoroutineService* coroutine_service,
       std::unique_ptr<PageDb> page_db,
       PageId page_id) {
-    return std::unique_ptr<PageStorageImpl>(new PageStorageImpl(
-        coroutine_service, std::move(page_db), std::move(page_id)));
+    return std::unique_ptr<PageStorageImpl>(
+        new PageStorageImpl(std::move(task_runner), coroutine_service,
+                            std::move(page_db), std::move(page_id)));
   }
 };
 
@@ -163,8 +165,8 @@ class PageStorageTest : public StorageTest {
     ::test::TestWithMessageLoop::SetUp();
 
     PageId id = RandomString(10);
-    storage_ = std::make_unique<PageStorageImpl>(&coroutine_service_,
-                                                 tmp_dir_.path(), id);
+    storage_ = std::make_unique<PageStorageImpl>(
+        message_loop_.task_runner(), &coroutine_service_, tmp_dir_.path(), id);
 
     Status status;
     storage_->Init(callback::Capture(MakeQuitTask(), &status));
@@ -785,8 +787,8 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
     // with journal entry update, to fail with a NOT_IMPLEMENTED error.
     std::unique_ptr<PageStorageImpl> test_storage =
         PageStorageImplAccessorForTest::CreateStorage(
-            &coroutine_service_, std::make_unique<FakePageDbImpl>(),
-            RandomString(10));
+            message_loop_.task_runner(), &coroutine_service_,
+            std::make_unique<FakePageDbImpl>(), RandomString(10));
 
     Status status;
     std::unique_ptr<Journal> journal;

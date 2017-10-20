@@ -43,8 +43,11 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 class PageDbTest : public ::test::TestWithCoroutines {
  public:
   PageDbTest()
-      : page_storage_(&coroutine_service_, tmp_dir_.path(), "page_id"),
-        page_db_(tmp_dir_.path()) {}
+      : page_storage_(message_loop_.task_runner(),
+                      &coroutine_service_,
+                      tmp_dir_.path(),
+                      "page_id"),
+        page_db_(message_loop_.task_runner(), tmp_dir_.path()) {}
 
   ~PageDbTest() override {}
 
