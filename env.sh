@@ -53,8 +53,8 @@ env.sh functions:
 zircon functions:
   zboot, zbuild, zcheck, zgo, zrun, zset, zsymbolize
 fuchsia functions:
-  fboot, fbuild, fbuild-sysroot, fcheck, fcmd, fcp, fgen,
-  fgen-if-changed, fgo, finstall, freboot, frun, fset, fsymbolize
+  fboot, fbuild, fbuild-sysroot, fcheck, fcmd, fcp, fgo, finstall, freboot,
+  frun, fset, fsymbolize
 END
     return
   fi
@@ -257,14 +257,6 @@ Sets fuchsia build options.
 END
 }
 
-function fset-add-gen-arg() {
-  export FUCHSIA_GEN_ARGS="${FUCHSIA_GEN_ARGS} $*"
-}
-
-function fset-add-ninja-arg() {
-  export FUCHSIA_NINJA_ARGS="${FUCHSIA_NINJA_ARGS} $*"
-}
-
 function fset() {
   if [[ $# -lt 1 ]]; then
     fset-usage
@@ -272,8 +264,7 @@ function fset() {
   fi
 
   local settings="$*"
-  export FUCHSIA_GEN_ARGS=
-  export FUCHSIA_NINJA_ARGS=
+  local gen_args=
   export FUCHSIA_VARIANT=debug
 
   case $1 in
@@ -290,7 +281,7 @@ function fset() {
       fset-usage
       return 1
   esac
-  fset-add-gen-arg --target_cpu "${FUCHSIA_GEN_TARGET}"
+  gen_args="${gen_args} --target_cpu ${FUCHSIA_GEN_TARGET}"
   shift
 
   local goma
@@ -300,7 +291,7 @@ function fset() {
   while [[ $# -ne 0 ]]; do
     case $1 in
       --release)
-        fset-add-gen-arg --release
+        gen_args="${gen_args} --release"
         export FUCHSIA_VARIANT=release
         ;;
       --packages)
@@ -308,7 +299,7 @@ function fset() {
           fset-usage
           return 1
         fi
-        fset-add-gen-arg --packages $2
+        gen_args="${gen_args} --packages $2"
         shift
         ;;
       --goma)
@@ -346,10 +337,10 @@ function fset() {
   done
 
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
-  export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
-  export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
+
+  # TODO(abarth): Remove.
   export GOPATH="${FUCHSIA_BUILD_DIR}:${FUCHSIA_DIR}/garnet/go"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
@@ -358,8 +349,6 @@ function fset() {
   else
     export FUCHSIA_GOMA_DIR=~/goma
   fi
-
-  fset-add-ninja-arg -C "${FUCHSIA_BUILD_DIR}"
 
   # Automatically detect goma and ccache if not specified explicitly.
   if [[ -z "${goma}" ]] && [[ -z "${ccache}" ]]; then
@@ -373,23 +362,20 @@ function fset() {
   # Add --goma or --ccache as appropriate.
   local builder=
   if [[ "${goma}" -eq 1 ]]; then
-    fset-add-gen-arg --goma "${FUCHSIA_GOMA_DIR}"
-    # macOS needs a lower value of -j parameter, because it has a limit on the
-    # number of open file descriptors. Use 4 * cpu_count, which works well in
-    # practice.
-    if [[ "$(uname -s)" = "Darwin" ]]; then
-      numjobs=$(( $(sysctl -n hw.ncpu) * 4 ))
-      fset-add-ninja-arg -j ${numjobs}
-    else
-      fset-add-ninja-arg -j 1000
-    fi
+    gen_args="${gen_args} --goma ${FUCHSIA_GOMA_DIR}"
     builder="-goma"
   elif [[ "${ccache}" -eq 1 ]]; then
-    fset-add-gen-arg --ccache
+    gen_args="${gen_args} --ccache"
     builder="-ccache"
   fi
 
   export ENVPROMPT_INFO="${ENVPROMPT_INFO}-${FUCHSIA_VARIANT}${builder}"
+
+  if [[ -n "${ZSH_VERSION}" ]]; then
+    "${FUCHSIA_DIR}/packages/gn/gen.py" ${=gen_args} "$@"
+  else
+    "${FUCHSIA_DIR}/packages/gn/gen.py" ${gen_args} "$@"
+  fi
 }
 
 ### fcheck: checks whether fset was run
@@ -409,66 +395,22 @@ function fcheck() {
   return 0
 }
 
-### fgen: generate ninja build files
-
-function fgen-usage() {
-  cat >&2 <<END
-Usage: fgen [extra gen.py args...]
-Generates ninja build files for fuchsia.
-END
-}
-
-function fgen-internal() {
-  if [[ -n "${ZSH_VERSION}" ]]; then
-    "${FUCHSIA_DIR}/packages/gn/gen.py" ${=FUCHSIA_GEN_ARGS} "$@"
-  else
-    "${FUCHSIA_DIR}/packages/gn/gen.py" ${FUCHSIA_GEN_ARGS} "$@"
-  fi
-}
-
 function fgen() {
-  fcheck || return 1
-
-  echo "Generating ninja files..."
-  rm -f "${FUCHSIA_GEN_ARGS_CACHE}"
-  zbuild \
-    && fgen-internal "$@" \
-    && (echo "${FUCHSIA_GEN_ARGS}" > "${FUCHSIA_GEN_ARGS_CACHE}")
-}
-
-### fgen-if-changed: only generate ninja build files if stale
-
-function fgen-if-changed-usage() {
-  cat >&2 <<END
-Usage: fgen-if-changed [extra gen.py args...]
-Generates ninja build files for fuchsia only if gen args have changed.
-END
+  echo "Deprecated - just run fset"
 }
 
 function fgen-if-changed() {
-  fcheck || return 1
-
-  local last_gen_args
-  if [[ -f "${FUCHSIA_GEN_ARGS_CACHE}" ]]; then
-    last_gen_args=$(cat "${FUCHSIA_GEN_ARGS_CACHE}")
-  fi
-
-  if ! ([[ -f "${FUCHSIA_BUILD_NINJA}" ]] \
-      && [[ "${FUCHSIA_GEN_ARGS}" == "${last_gen_args}" ]]); then
-    fgen "$@"
-  fi
+  echo "Deprecated - just run fset"
 }
 
 ### fsysroot: build sysroot
 
 function fbuild-sysroot() {
   echo "Deprecated - just run fbuild"
-  zbuild
 }
 
 function fbuild-sysroot-if-changed() {
   echo "Deprecated - just run zbuild"
-  zbuild
 }
 
 ### fbuild: build fuchsia
@@ -480,29 +422,37 @@ Builds fuchsia.
 END
 }
 
-function fbuild-goma-ensure-start() {
-  if ([[ "${FUCHSIA_GEN_ARGS}" == *--goma* ]] \
-      && [[ "${FUCHSIA_ENSURE_GOMA}" -eq 1 ]]); then
-    "${FUCHSIA_GOMA_DIR}"/goma_ctl.py ensure_start
-  fi
-}
-
-function fbuild-internal() {
-  if [[ -n "${ZSH_VERSION}" ]]; then
-    "${FUCHSIA_DIR}/buildtools/ninja" ${=FUCHSIA_NINJA_ARGS} "$@"
-  else
-    "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "$@"
-  fi
-}
-
 function fbuild() {
   fcheck || return 1
 
-  zbuild \
-    && fgen-if-changed \
-    && fbuild-goma-ensure-start \
-    && echo "Building fuchsia..." \
-    && fbuild-internal "$@"
+  grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"
+  local use_goma_result="$?"
+
+  if [[ use_goma_result -eq 0 ]] && [[ "${FUCHSIA_ENSURE_GOMA}" -eq 1 ]]; then
+    "${FUCHSIA_GOMA_DIR}/goma_ctl.py" ensure_start || return $?
+  fi
+
+  zbuild || return $?
+
+  # macOS needs a lower value of -j parameter, because it has a limit on the
+  # number of open file descriptors. Use 4 * cpu_count, which works well in
+  # practice.
+  local concurrency_args=
+  if [[ use_goma_result  -eq 0 ]]; then
+    if [[ "$(uname -s)" = "Darwin" ]]; then
+      numjobs=$(( $(sysctl -n hw.ncpu) * 4 ))
+      concurrency_args="-j ${numjobs}"
+    else
+      concurrency_args="-j 1000"
+    fi
+  fi
+
+  if [[ -n "${ZSH_VERSION}" ]]; then
+    "${FUCHSIA_DIR}/buildtools/ninja" ${=concurrency_args} -C "${FUCHSIA_BUILD_DIR}" "$@"
+  else
+    "${FUCHSIA_DIR}/buildtools/ninja" ${concurrency_args} -C "${FUCHSIA_BUILD_DIR}" "$@"
+  fi
+
 }
 
 function __fbuild_make_batch() {
@@ -836,7 +786,7 @@ function ftest() {
   fi
   local target="$1"
 
-  fbuild-internal "${target}"
+  fbuild "${target}"
   if [[ $? -ne 0 ]]; then
     return 1
   fi
