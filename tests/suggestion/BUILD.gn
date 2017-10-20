@@ -21,8 +21,8 @@ executable("suggestion_proposal_test_module") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/component/fidl",
-    "//peridot/public/lib/module_driver/cpp",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/suggestion/fidl",
   ]

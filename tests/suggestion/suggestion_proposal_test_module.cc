@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/module/fidl/module.fidl.h"
-#include "lib/module_driver/cpp/module_driver.h"
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/lib/testing/reporting.h"

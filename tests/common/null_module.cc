@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/public/lib/module_driver/cpp/module_driver.h"
 
 using modular::testing::TestPoint;
 

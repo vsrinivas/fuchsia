@@ -6,7 +6,25 @@ import("//garnet/public/lib/fidl/fidl.gni")
 
 group("cpp") {
   public_deps = [
+    ":agent_driver",
     ":app_driver",
+    ":module_driver",
+  ]
+}
+
+source_set("agent_driver") {
+  sources = [
+    "agent_driver.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/agent/cpp",
+    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/lifecycle/cpp",
   ]
 }
 
@@ -24,5 +42,22 @@ source_set("app_driver") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/lifecycle/cpp",
+  ]
+}
+
+source_set("module_driver") {
+  sources = [
+    "module_driver.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/public/lib/lifecycle/cpp",
+    "//peridot/public/lib/module/cpp",
+    "//peridot/public/lib/module/fidl",
   ]
 }

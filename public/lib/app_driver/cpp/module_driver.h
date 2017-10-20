@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
-#define LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
+#ifndef LIB_APP_DRIVER_CPP_MODULE_DRIVER_H_
+#define LIB_APP_DRIVER_CPP_MODULE_DRIVER_H_
 
 #include <memory>
 
@@ -156,4 +156,4 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
 
 }  // namespace modular
 
-#endif  // LIB_MODULE_DRIVER_CPP_MODULE_DRIVER_H_
+#endif  // LIB_APP_DRIVER_CPP_MODULE_DRIVER_H_

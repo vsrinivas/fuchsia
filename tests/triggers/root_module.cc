@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/module_driver.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/module/fidl/module.fidl.h"
-#include "lib/module_driver/cpp/module_driver.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/lib/util/weak_callback.h"

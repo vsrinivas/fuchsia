@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_AGENT_DRIVER_CPP_AGENT_DRIVER_H_
-#define LIB_AGENT_DRIVER_CPP_AGENT_DRIVER_H_
+#ifndef LIB_APP_DRIVER_CPP_AGENT_DRIVER_H_
+#define LIB_APP_DRIVER_CPP_AGENT_DRIVER_H_
 
 #include <memory>
 
@@ -121,4 +121,4 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
 
 }  // namespace modular
 
-#endif  // LIB_AGENT_DRIVER_CPP_AGENT_DRIVER_H_
+#endif  // LIB_APP_DRIVER_CPP_AGENT_DRIVER_H_

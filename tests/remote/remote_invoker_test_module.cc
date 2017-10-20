@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/module_driver.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -11,7 +12,6 @@
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
-#include "lib/module_driver/cpp/module_driver.h"
 #include "lib/remote/fidl/remote_invoker.fidl.h"
 #include "lib/user/fidl/device_map.fidl.h"
 #include "peridot/lib/testing/reporting.h"

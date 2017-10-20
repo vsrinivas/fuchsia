@@ -5,12 +5,12 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
-#include "lib/app_driver/cpp/app_driver.h"
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
