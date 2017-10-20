@@ -103,12 +103,12 @@ import("//third_party/flutter/build/flutter_app.gni")
 flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
   deps = [
-    "//topaz/public/lib/app/dart",               # needed for ApplicationContext
-    "//peridot/public/lib/module/fidl:fidl_dart", # module fidl dart bindings
-    "//peridot/public/lib/story/fidl:fidl_dart", # story fidl dart bindings
-    "//garnet/public/lib/ui/views/fidl:fidl_dart",  # view fidl dart bindings
-    "//topaz/public/lib/fidl/dart",            # fidl dart libraries
-    "//lib/flutter/packages/flutter",           # flutter package
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",         # view fidl dart bindings
+    "//peridot/public/lib/module/fidl:fidl_dart",          # module fidl dart bindings
+    "//peridot/public/lib/story/fidl:fidl_dart",           # story fidl dart bindings
+    "//third_party/dart-pkg/git/flutter/packages/flutter", # flutter package
+    "//topaz/public/lib/app/dart",                         # needed for ApplicationContext
+    "//topaz/public/lib/fidl/dart",                        # fidl dart libraries
   ]
 }
 ```
@@ -236,7 +236,7 @@ Also, for flutter projects, the following line should be manually added to the
 `.packages` file manually (fill in the fuchsia root dir of yours):
 
 ```
-sky_engine:file:///<abs_fuchsia_root>/lib/flutter/bin/cache/pkg/sky_engine/lib/
+sky_engine:file:///<abs_fuchsia_root>/third_party/dart-pkg/git/flutter/bin/cache/pkg/sky_engine/lib/
 ```
 
 You might have to relaunch Atom to get everything working correctly. With this
