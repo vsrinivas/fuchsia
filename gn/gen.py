@@ -21,9 +21,8 @@ def main():
                         action="store_true")
     parser.add_argument("--zircon_project", "-z", help="zircon project",
                         default=os.environ.get("ZIRCON_PROJECT"))
-    parser.add_argument("--layer", help="build a specific layer of the system",
-                        choices=['garnet', 'peridot', 'topaz'])
-    parser.add_argument("--packages", "-p", help="comma separated list of packages")
+    parser.add_argument("--packages", "-p", help="comma separated list of packages",
+                        default="packages/gn/default")
     parser.add_argument("--debug", help="generate debug mode build files (default)",
                         dest="variant", default="debug", action="store_const", const="debug")
     parser.add_argument("--release", "-r", help="generate release mode build files",
@@ -73,14 +72,7 @@ def main():
     if args.with_dart_analysis:
         print("--with-dart-analysis is deprecated as analysis is now always on.")
 
-    fuchsia_packages = [ "packages/gn/default" ]
-    if args.layer:
-        fuchsia_packages = [ args.layer + "/packages/default" ]
-
-    if args.packages:
-        fuchsia_packages += args.packages.split(",")
-
-    gn_args += " fuchsia_packages=\"" + ",".join(fuchsia_packages) + "\""
+    gn_args += " fuchsia_packages=\"" + args.packages + "\""
 
     if args.variant == "release":
         gn_args += " is_debug=false"
