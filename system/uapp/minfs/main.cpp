@@ -331,11 +331,6 @@ int main(int argc, char** argv) {
     return usage();
 found:
     if ((fd = open(fn, flags, 0644)) < 0) {
-        if (flags & O_CREAT) {
-            // temporary workaround for Zircon devfs issue
-            flags &= (~O_CREAT);
-            goto found;
-        }
         fprintf(stderr, "error: cannot open '%s'\n", fn);
         return -1;
     }
