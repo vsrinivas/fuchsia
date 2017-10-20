@@ -48,6 +48,9 @@ echo "Package : $package_name"
 $dartanalyzer \\
   --packages=$dot_packages \\
   --dart-sdk=$dart_sdk \\
+  --fatal-warnings \\
+  --fatal-hints \\
+  --fatal-lints \\
   $options_argument \\
   $source_dir $extra_sources_string \\
   "$$@"
