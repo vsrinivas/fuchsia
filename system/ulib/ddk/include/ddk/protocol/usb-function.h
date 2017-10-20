@@ -13,11 +13,6 @@ __BEGIN_CDECLS;
 
 // This protocol is used for USB peripheral function functions
 
-// protocol data for iotxns
-typedef struct {
-    uint8_t ep_address;     // bEndpointAddress from endpoint descriptor
-} usb_function_protocol_data_t;
-
 // callbacks implemented by the function driver
 typedef struct {
     // return the descriptor list for the function

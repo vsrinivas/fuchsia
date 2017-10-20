@@ -35,15 +35,7 @@ typedef struct usb_virtual_host {
 
 static void virt_host_request_queue(void* ctx, usb_request_t* req) {
     usb_virtual_host_t* host = ctx;
-
-    iotxn_t* txn;
-    zx_status_t status = usb_request_to_iotxn(req, &txn);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
-        usb_request_complete(req, status, 0);
-        return;
-    }
-    iotxn_queue(host->bus->zxdev, txn);
+    usb_virtual_bus_host_queue(host->bus, req);
 }
 
 static void virt_host_set_bus_interface(void* ctx, usb_bus_interface_t* bus_intf) {
@@ -113,11 +105,6 @@ static usb_hci_protocol_ops_t virtual_host_protocol = {
     .get_max_transfer_size = virt_host_get_max_transfer_size,
 };
 
-static void virt_host_iotxn_queue(void* ctx, iotxn_t* txn) {
-    usb_virtual_host_t* host = ctx;
-    iotxn_queue(host->bus->zxdev, txn);
-}
-
 static void virt_host_unbind(void* ctx) {
     printf("virt_host_unbind\n");
     usb_virtual_host_t* host = ctx;
@@ -134,7 +121,6 @@ static void virt_host_release(void* ctx) {
 
 static zx_protocol_device_t virt_host_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .iotxn_queue = virt_host_iotxn_queue,
     .unbind = virt_host_unbind,
     .release = virt_host_release,
 };

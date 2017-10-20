@@ -24,9 +24,8 @@ typedef struct usb_virtual_device {
     usb_dci_interface_t dci_intf;
 } usb_virtual_device_t;
 
-void usb_virtual_device_control(usb_virtual_device_t* device, iotxn_t* txn) {
-    usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
-    usb_setup_t* setup = &data->setup;
+void usb_virtual_device_control(usb_virtual_device_t* device, usb_request_t* req) {
+    usb_setup_t* setup = &req->setup;
     zx_status_t status;
     size_t length = le16toh(setup->wLength);
     size_t actual = 0;
@@ -39,7 +38,7 @@ void usb_virtual_device_control(usb_virtual_device_t* device, iotxn_t* txn) {
         void* buffer = NULL;
 
         if (length > 0) {
-            iotxn_mmap(txn, &buffer);
+            usb_request_mmap(req, &buffer);
         }
 
         status = usb_dci_control(&device->dci_intf, setup, buffer, length, &actual);
@@ -47,25 +46,12 @@ void usb_virtual_device_control(usb_virtual_device_t* device, iotxn_t* txn) {
         status = ZX_ERR_UNAVAILABLE;
     }
 
-    iotxn_complete(txn, status, actual);
+    usb_request_complete(req, status, actual);
 }
 
 static void device_request_queue(void* ctx, usb_request_t* req) {
     usb_virtual_device_t* device = ctx;
-
-    iotxn_t* txn;
-    zx_status_t status = usb_request_to_iotxn(req, &txn);
-    if (status != ZX_OK) {
-        dprintf(ERROR, "usb_request_to_iotxn failed: %d\n", status);
-        return;
-    }
-    txn->protocol = ZX_PROTOCOL_USB_FUNCTION;
-
-    memset(txn->protocol_data, 0, sizeof(iotxn_proto_data_t));
-    usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
-    data->ep_address = req->header.ep_address;
-
-    iotxn_queue(device->bus->zxdev, txn);
+    usb_virtual_bus_device_queue(device->bus, req);
 }
 
 static zx_status_t device_set_interface(void* ctx, usb_dci_interface_t* dci_intf) {

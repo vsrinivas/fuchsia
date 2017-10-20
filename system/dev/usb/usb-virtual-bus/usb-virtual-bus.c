@@ -34,42 +34,42 @@ static int usb_virtual_bus_thread(void* arg) {
         mtx_lock(&bus->lock);
 
         // special case endpoint zero
-        iotxn_t* txn = list_remove_head_type(&bus->eps[0].host_txns, iotxn_t, node);
-        if (txn) {
-            usb_virtual_device_control(bus->device, txn);
+        usb_request_t* req = list_remove_head_type(&bus->eps[0].host_reqs, usb_request_t, node);
+        if (req) {
+            usb_virtual_device_control(bus->device, req);
         }
 
         for (unsigned i = 1; i < USB_MAX_EPS; i++) {
             usb_virtual_ep_t* ep = &bus->eps[i];
             bool out = (i < IN_EP_START);
 
-            while ((txn = list_peek_head_type(&ep->host_txns, iotxn_t, node)) != NULL) {
-                iotxn_t* device_txn = list_remove_head_type(&ep->device_txns, iotxn_t, node);
+            while ((req = list_peek_head_type(&ep->host_reqs, usb_request_t, node)) != NULL) {
+                usb_request_t* device_req = list_remove_head_type(&ep->device_reqs, usb_request_t, node);
 
-                if (device_txn) {
-                    zx_off_t offset = ep->txn_offset;
-                    size_t length = txn->length - offset;
-                    if (length > device_txn->length) {
-                        length = device_txn->length;
+                if (device_req) {
+                    zx_off_t offset = ep->req_offset;
+                    size_t length = req->header.length - offset;
+                    if (length > device_req->header.length) {
+                        length = device_req->header.length;
                     }
 
                     void* device_buffer;
-                    iotxn_mmap(device_txn, &device_buffer);
+                    usb_request_mmap(device_req, &device_buffer);
 
                     if (out) {
-                        iotxn_copyfrom(txn, device_buffer, length, offset);
+                        usb_request_copyfrom(req, device_buffer, length, offset);
                     } else {
-                        iotxn_copyto(txn, device_buffer, length, offset);
+                        usb_request_copyto(req, device_buffer, length, offset);
                     }
-                    iotxn_complete(device_txn, ZX_OK, length);
+                    usb_request_complete(device_req, ZX_OK, length);
 
                     offset += length;
-                    if (offset < txn->length) {
-                        ep->txn_offset = offset;
+                    if (offset < req->header.length) {
+                        ep->req_offset = offset;
                     } else {
-                        list_delete(&txn->node);
-                        iotxn_complete(txn, ZX_OK, length);
-                        ep->txn_offset = 0;
+                        list_delete(&req->node);
+                        usb_request_complete(req, ZX_OK, length);
+                        ep->req_offset = 0;
                     }
                 } else {
                     break;
@@ -106,54 +106,51 @@ zx_status_t usb_virtual_bus_set_stall(usb_virtual_bus_t* bus, uint8_t ep_address
     usb_virtual_ep_t* ep = &bus->eps[index];
     ep->stalled = stall;
 
-    iotxn_t* txn = NULL;
+    usb_request_t* req = NULL;
     if (stall) {
-        txn = list_remove_head_type(&ep->host_txns, iotxn_t, node);
+        req = list_remove_head_type(&ep->host_reqs, usb_request_t, node);
     }
     mtx_unlock(&bus->lock);
 
-    if (txn) {
-        iotxn_complete(txn, ZX_ERR_IO_REFUSED, 0);
+    if (req) {
+        usb_request_complete(req, ZX_ERR_IO_REFUSED, 0);
     }
 
     return ZX_OK;
 }
 
-static void usb_bus_iotxn_queue(void* ctx, iotxn_t* txn) {
-    usb_virtual_bus_t* bus = ctx;
-
-    if (txn->protocol == ZX_PROTOCOL_USB) {
-        usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
-        uint8_t index = ep_address_to_index(data->ep_address);
-        if (index >= USB_MAX_EPS) {
-            printf("usb_bus_iotxn_queue bad endpoint %u\n", data->ep_address);
-            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
-            return;
-        }
-        usb_virtual_ep_t* ep = &bus->eps[index];
-
-        if (ep->stalled) {
-            iotxn_complete(txn, ZX_ERR_IO_REFUSED, 0);
-            return;
-        }
-        list_add_tail(&ep->host_txns, &txn->node);
-        completion_signal(&bus->completion);
-    } else if (txn->protocol == ZX_PROTOCOL_USB_FUNCTION) {
-        usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
-        uint8_t index = ep_address_to_index(data->ep_address);
-        if (index == 0 || index >= USB_MAX_EPS) {
-            printf("usb_bus_iotxn_queue bad endpoint %u\n", data->ep_address);
-            iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
-            return;
-        }
-        usb_virtual_ep_t* ep = &bus->eps[index];
-
-        list_add_tail(&ep->device_txns, &txn->node);
-        completion_signal(&bus->completion);
-    } else {
-        printf("usb_bus_iotxn_queue bad protocol 0x%x\n", txn->protocol);
-        iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
+void usb_virtual_bus_device_queue(usb_virtual_bus_t* bus, usb_request_t* req) {
+    uint8_t index = ep_address_to_index(req->header.ep_address);
+    if (index == 0 || index >= USB_MAX_EPS) {
+        printf("usb_virtual_bus_device_queue bad endpoint %u\n", req->header.ep_address);
+        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
+        return;
     }
+
+    usb_virtual_ep_t* ep = &bus->eps[index];
+
+    list_add_tail(&ep->device_reqs, &req->node);
+
+    completion_signal(&bus->completion);
+}
+
+void usb_virtual_bus_host_queue(usb_virtual_bus_t* bus, usb_request_t* req) {
+    uint8_t index = ep_address_to_index(req->header.ep_address);
+    if (index >= USB_MAX_EPS) {
+        printf("usb_virtual_bus_host_queue bad endpoint %u\n", req->header.ep_address);
+        usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
+        return;
+    }
+
+    usb_virtual_ep_t* ep = &bus->eps[index];
+
+    if (ep->stalled) {
+        usb_request_complete(req, ZX_ERR_IO_REFUSED, 0);
+        return;
+    }
+    list_add_tail(&ep->host_reqs, &req->node);
+
+    completion_signal(&bus->completion);
 }
 
 static zx_status_t usb_bus_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
@@ -228,7 +225,6 @@ static void usb_bus_release(void* ctx) {
 
 static zx_protocol_device_t usb_virtual_bus_proto = {
     .version = DEVICE_OPS_VERSION,
-    .iotxn_queue = usb_bus_iotxn_queue,
     .ioctl = usb_bus_ioctl,
     .unbind = usb_bus_unbind,
     .release = usb_bus_release,
@@ -243,8 +239,8 @@ printf("usb_virtual_bus_bind\n");
 
     for (unsigned i = 0; i < USB_MAX_EPS; i++) {
         usb_virtual_ep_t* ep = &bus->eps[i];
-        list_initialize(&ep->host_txns);
-        list_initialize(&ep->device_txns);
+        list_initialize(&ep->host_reqs);
+        list_initialize(&ep->device_reqs);
     }
     mtx_init(&bus->lock, mtx_plain);
     completion_reset(&bus->completion);
