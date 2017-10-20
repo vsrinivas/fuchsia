@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <thread>
+#include <vector>
 
 #include <benchmark/benchmark.h>
 #include <launchpad/launchpad.h>
@@ -10,6 +11,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
 #include "channels.h"
 #include "round_trips.h"
@@ -51,7 +53,7 @@ void ChannelServe(zx_handle_t channel) {
   }
 }
 
-typedef void (*ThreadFunc)(zx_handle_t handle);
+typedef void (*ThreadFunc)(std::vector<zx_handle_t> handles);
 ThreadFunc GetThreadFunc(const char* name);
 
 enum MultiProc {
@@ -74,7 +76,8 @@ class ThreadOrProcess {
   }
 
   void Launch(const char* func_name,
-              zx_handle_t handle_arg,
+              zx_handle_t* handles,
+              uint32_t handle_count,
               MultiProc multiproc) {
     if (multiproc == MultiProcess) {
       const char* args[] = {HELPER_PATH, "--subprocess", func_name};
@@ -83,14 +86,16 @@ class ThreadOrProcess {
       launchpad_load_from_file(lp, args[0]);
       launchpad_set_args(lp, countof(args), args);
       launchpad_clone(lp, LP_CLONE_ALL);
-      zx_handle_t handles[] = {handle_arg};
-      uint32_t handle_types[] = {PA_HND(PA_USER0, 0)};
-      launchpad_add_handles(lp, countof(handles), handles, handle_types);
+      uint32_t handle_types[handle_count];
+      for (uint32_t i = 0; i < handle_count; ++i)
+        handle_types[i] = PA_HND(PA_USER0, i);
+      launchpad_add_handles(lp, handle_count, handles, handle_types);
       const char* errmsg;
       if (launchpad_go(lp, &subprocess_, &errmsg) != ZX_OK)
         FXL_LOG(FATAL) << "Subprocess launch failed: " << errmsg;
     } else {
-      thread_ = std::thread(GetThreadFunc(func_name), handle_arg);
+      std::vector<zx_handle_t> handle_vector(handles, handles + handle_count);
+      thread_ = std::thread(GetThreadFunc(func_name), handle_vector);
     }
   }
 
@@ -106,13 +111,15 @@ class BasicChannelTest {
   BasicChannelTest(MultiProc multiproc) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
-    thread_or_process_.Launch("BasicChannelTest::ThreadFunc", server,
+    thread_or_process_.Launch("BasicChannelTest::ThreadFunc", &server, 1,
                               multiproc);
   }
 
   ~BasicChannelTest() { zx_handle_close(client_); }
 
-  static void ThreadFunc(zx_handle_t channel) {
+  static void ThreadFunc(std::vector<zx_handle_t> handles) {
+    FXL_CHECK(handles.size() == 1);
+    zx_handle_t channel = handles[0];
     ChannelServe(channel);
     zx_handle_close(channel);
   }
@@ -137,7 +144,8 @@ class ChannelCallTest {
   ChannelCallTest(MultiProc multiproc) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
-    thread_or_process_.Launch("ChannelCallTest::ThreadFunc", server, multiproc);
+    thread_or_process_.Launch("ChannelCallTest::ThreadFunc", &server, 1,
+                              multiproc);
 
     msg_ = 0;
     args_.wr_bytes = reinterpret_cast<void*>(&msg_);
@@ -152,7 +160,9 @@ class ChannelCallTest {
 
   ~ChannelCallTest() { zx_handle_close(client_); }
 
-  static void ThreadFunc(zx_handle_t channel) {
+  static void ThreadFunc(std::vector<zx_handle_t> handles) {
+    FXL_CHECK(handles.size() == 1);
+    zx_handle_t channel = handles[0];
     ChannelServe(channel);
     zx_handle_close(channel);
   }
@@ -175,6 +185,61 @@ class ChannelCallTest {
   zx_channel_call_args_t args_;
 };
 
+// Test IPC round trips using Zircon ports, where the client and server
+// send each other user packets.  This is not a normal use case for ports,
+// but it is useful for measuring the overhead of ports.
+class PortTest {
+ public:
+  PortTest(MultiProc multiproc) {
+    FXL_CHECK(zx_port_create(0, &ports_[0]) == ZX_OK);
+    FXL_CHECK(zx_port_create(0, &ports_[1]) == ZX_OK);
+
+    zx_handle_t ports_dup[2];
+    for (int i = 0; i < 2; ++i) {
+      FXL_CHECK(zx_handle_duplicate(ports_[i], ZX_RIGHT_SAME_RIGHTS,
+                                    &ports_dup[i]) == ZX_OK);
+    }
+    thread_or_process_.Launch("PortTest::ThreadFunc", ports_dup,
+                              countof(ports_dup), multiproc);
+  }
+
+  ~PortTest() {
+    // Tell the server to shut down.
+    zx_port_packet_t packet = {};
+    packet.type = ZX_PKT_TYPE_USER;
+    packet.user.u32[0] = 1;
+    FXL_CHECK(zx_port_queue(ports_[0], &packet, 0) == ZX_OK);
+
+    zx_handle_close(ports_[0]);
+    zx_handle_close(ports_[1]);
+  }
+
+  static void ThreadFunc(std::vector<zx_handle_t> ports) {
+    FXL_CHECK(ports.size() == 2);
+    for (;;) {
+      zx_port_packet_t packet;
+      FXL_CHECK(zx_port_wait(ports[0], ZX_TIME_INFINITE, &packet, 0) == ZX_OK);
+      // Check for a request to shut down.
+      if (packet.user.u32[0])
+        break;
+      FXL_CHECK(zx_port_queue(ports[1], &packet, 0) == ZX_OK);
+    }
+    zx_handle_close(ports[0]);
+    zx_handle_close(ports[1]);
+  }
+
+  void Run() {
+    zx_port_packet_t packet = {};
+    packet.type = ZX_PKT_TYPE_USER;
+    FXL_CHECK(zx_port_queue(ports_[0], &packet, 0) == ZX_OK);
+    FXL_CHECK(zx_port_wait(ports_[1], ZX_TIME_INFINITE, &packet, 0) == ZX_OK);
+  }
+
+ private:
+  zx_handle_t ports_[2];
+  ThreadOrProcess thread_or_process_;
+};
+
 struct ThreadFuncEntry {
   const char* name;
   ThreadFunc func;
@@ -184,6 +249,7 @@ const ThreadFuncEntry thread_funcs[] = {
 #define DEF_FUNC(FUNC) { #FUNC, FUNC },
   DEF_FUNC(BasicChannelTest::ThreadFunc)
   DEF_FUNC(ChannelCallTest::ThreadFunc)
+  DEF_FUNC(PortTest::ThreadFunc)
 #undef DEF_FUNC
 };
 
@@ -226,9 +292,32 @@ void RoundTrip_ChannelCall_MultiProcess(benchmark::State& state) {
 }
 BENCHMARK(RoundTrip_ChannelCall_MultiProcess);
 
+void RoundTrip_Port_SingleProcess(benchmark::State& state) {
+  PortTest test(SingleProcess);
+  while (state.KeepRunning())
+    test.Run();
+}
+BENCHMARK(RoundTrip_Port_SingleProcess);
+
+void RoundTrip_Port_MultiProcess(benchmark::State& state) {
+  PortTest test(MultiProcess);
+  while (state.KeepRunning())
+    test.Run();
+}
+BENCHMARK(RoundTrip_Port_MultiProcess);
+
 }  // namespace
 
 void RunSubprocess(const char* func_name) {
   auto func = GetThreadFunc(func_name);
-  func(zx_get_startup_handle(PA_HND(PA_USER0, 0)));
+  // Retrieve the handles.
+  std::vector<zx_handle_t> handles;
+  for (;;) {
+    zx_handle_t handle =
+        zx_get_startup_handle(PA_HND(PA_USER0, handles.size()));
+    if (handle == ZX_HANDLE_INVALID)
+      break;
+    handles.push_back(handle);
+  }
+  func(handles);
 }
