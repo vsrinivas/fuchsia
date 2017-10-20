@@ -872,7 +872,7 @@ func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) zx.Status {
 			if ifs.nic.Addr == header.IPv4Loopback {
 				continue
 			}
-			rep.info[index].index = uint16(index)
+			rep.info[index].index = uint16(index + 1)
 			rep.info[index].flags |= NETC_IFF_UP
 			copy(rep.info[index].name[:], []byte(fmt.Sprintf("en%d", nicid)))
 			writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr})
