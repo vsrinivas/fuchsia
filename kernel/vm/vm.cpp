@@ -120,7 +120,7 @@ void vm_init_preheap(uint level) {
 
     // mark the physical pages used by the boot time allocator
     if (boot_alloc_end != boot_alloc_start) {
-        LTRACEF("marking boot alloc used from %#" PRIxPTR " to %#" PRIxPTR "\n", boot_alloc_start,
+        dprintf(INFO, "VM: marking boot alloc used range [%#" PRIxPTR ", %#" PRIxPTR ")\n", boot_alloc_start,
                 boot_alloc_end);
 
         MarkPagesInUse((vaddr_t)paddr_to_kvaddr(boot_alloc_start), boot_alloc_end - boot_alloc_start);
@@ -189,7 +189,7 @@ void vm_init_postheap(uint level) {
         temp_region* region = &regions[i];
         ASSERT(IS_PAGE_ALIGNED(region->base));
 
-        dprintf(INFO, "VM: reserving kernel region [%016" PRIxPTR ", %016" PRIxPTR ") flags %#x name '%s'\n",
+        dprintf(INFO, "VM: reserving kernel region [%#" PRIxPTR ", %#" PRIxPTR ") flags %#x name '%s'\n",
                 region->base, region->base + region->size, region->arch_mmu_flags, region->name);
 
         zx_status_t status = aspace->ReserveSpace(region->name, region->size, region->base);
@@ -233,7 +233,7 @@ void vm_init_postheap(uint level) {
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
-                    dprintf(INFO, "VM: freeing region [%016" PRIxPTR ", %016" PRIxPTR ")\n", vaddr, next_kernel_region);
+                    dprintf(INFO, "VM: freeing region [%#" PRIxPTR ", %#" PRIxPTR ")\n", vaddr, next_kernel_region);
                     status = aspace->FreeRegion(vaddr);
                     ASSERT(status == ZX_OK);
                 } else {
