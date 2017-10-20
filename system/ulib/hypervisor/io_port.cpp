@@ -106,7 +106,7 @@ zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) {
         value->u16 = enable_;
         break;
     }
-    defaut:
+    default:
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;
@@ -130,7 +130,7 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
         }
         break;
     }
-    defaut:
+    default:
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;

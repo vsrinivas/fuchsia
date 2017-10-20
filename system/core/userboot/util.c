@@ -126,7 +126,6 @@ bad_format:
         fmt++;
     }
 
-done:
     if ((log == ZX_HANDLE_INVALID) ||
         (zx_log_write(log, p - buffer, buffer, 0) != ZX_OK)) {
         zx_debug_write(buffer, p - buffer);
@@ -148,5 +147,3 @@ void fail(zx_handle_t log, const char* fmt, ...) {
     va_end(ap);
     zx_process_exit(-1);
 }
-
-

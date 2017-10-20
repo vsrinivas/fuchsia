@@ -237,7 +237,9 @@ void resume_thread_from_exception(zx_handle_t thread,
         return;
     }
 
+#if !defined(__x86_64__)
   Fail:
+#endif
     // Tell the o/s to "resume" the thread by killing the process, the
     // exception has not been handled.
     resume_thread(thread, false);

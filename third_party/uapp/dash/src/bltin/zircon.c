@@ -204,7 +204,6 @@ static int cp_here(const char *src_name, const char *dest_name,
         }
         count += r;
     }
-done:
     close(fdi);
     close(fdo);
     return r;
