@@ -31,6 +31,11 @@ void ConfigureDisplay(uint32_t width_in_px,
     FXL_LOG(INFO) << "SceneManager: treating device as a Google Pixelbook.";
     model->display_info().density_in_px_per_mm = 9.252f;
     model->environment_info().usage = DisplayModel::Usage::kClose;
+  } else {
+    // TODO(MZ-384): Don't lie.
+    FXL_LOG(WARNING) << "SceneManager: unrecognized display.";
+    model->display_info().density_in_px_per_mm = 9.f;
+    model->environment_info().usage = DisplayModel::Usage::kClose;
   }
 }
 
