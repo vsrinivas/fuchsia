@@ -151,9 +151,6 @@ SECTIONS
 
     .bss : ALIGN(4096) {
         PROVIDE_HIDDEN(__bss_start = .);
-        KEEP(*(.bss.prebss.*))
-        . = ALIGN(16);
-        PROVIDE_HIDDEN(__post_prebss_bss_start = .);
         *(.bss*)
         *(.gnu.linkonce.b.*)
         *(COMMON)

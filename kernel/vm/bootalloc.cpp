@@ -23,18 +23,17 @@
 // Pointers are returned from the Big Kernel Map (BKM) which is placed at the base of
 // kernel memory.
 
-extern int _end;
-
 // store the start and current pointer to the boot allocator in physical address
-// put these in the .data section since they're used before bss is zeroed out on arm64
-__SECTION(".data") paddr_t boot_alloc_start;
-__SECTION(".data") paddr_t boot_alloc_end;
+paddr_t boot_alloc_start;
+paddr_t boot_alloc_end;
 
 // run in physical space without the mmu set up, so by computing the address of _end
 // and saving it, we've effectively computed the physical address of the end of the
 // kernel.
 __NO_SAFESTACK
 void boot_alloc_init() {
+    extern int _end;
+
     boot_alloc_start = reinterpret_cast<paddr_t>(&_end);
     boot_alloc_end = reinterpret_cast<paddr_t>(&_end);
 }

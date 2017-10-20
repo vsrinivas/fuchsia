@@ -41,8 +41,7 @@ uint32_t arm64_zva_shift;
 
 // The main translation table.
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
-    __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8)
-    __SECTION(".bss.prebss.translation_table");
+    __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
 
 static zx_status_t arm64_mmu_alloc_asid(uint16_t* asid) {
 

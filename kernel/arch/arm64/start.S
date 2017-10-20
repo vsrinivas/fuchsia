@@ -108,6 +108,19 @@ FUNCTION(arm_reset)
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lmmu_enable_secondary
 
+    /* clear out the kernel's bss using current physical location */
+    /* NOTE: Relies on __bss_start and _end being 16 byte aligned */
+.Ldo_bss:
+    adr_global tmp, __bss_start
+    adr_global tmp2, _end
+    sub     tmp2, tmp2, tmp
+    cbz     tmp2, .Lbss_loop_done
+.Lbss_loop:
+    sub     tmp2, tmp2, #16
+    stp     xzr, xzr, [tmp], #16
+    cbnz    tmp2, .Lbss_loop
+.Lbss_loop_done:
+
     /* set up a functional stack pointer */
     adr_global tmp, boot_cpu_kstack_end
     mov     sp, tmp
@@ -342,19 +355,6 @@ FUNCTION(arm_reset)
     isb
 
     cbnz    cpuid, .Lsecondary_boot
-
-    // Clear out the bss excluding the kernel translation table ("prebss").
-    // NOTE: Relies on __post_prebss_bss_start and _end being 16 byte aligned.
-.L__do_bss:
-    adr_global tmp, __post_prebss_bss_start
-    adr_global tmp2, _end
-    sub     tmp2, tmp2, tmp
-    cbz     tmp2, .L__bss_loop_done
-.L__bss_loop:
-    sub     tmp2, tmp2, #16
-    stp     xzr, xzr, [tmp], #16
-    cbnz    tmp2, .L__bss_loop
-.L__bss_loop_done:
 
     // set up the boot stack for real
     adr_global tmp, boot_cpu_kstack_end
