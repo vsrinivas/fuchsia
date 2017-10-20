@@ -299,6 +299,7 @@ struct ThreadFuncEntry {
   ThreadFunc func;
 };
 
+// clang-format off
 const ThreadFuncEntry thread_funcs[] = {
 #define DEF_FUNC(FUNC) { #FUNC, FUNC },
   DEF_FUNC(BasicChannelTest::ThreadFunc)
@@ -306,6 +307,7 @@ const ThreadFuncEntry thread_funcs[] = {
   DEF_FUNC(PortTest::ThreadFunc)
 #undef DEF_FUNC
 };
+// clang-format on
 
 ThreadFunc GetThreadFunc(const char* name) {
   for (size_t i = 0; i < countof(thread_funcs); ++i) {
