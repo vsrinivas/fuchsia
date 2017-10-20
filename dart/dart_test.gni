@@ -56,7 +56,7 @@ template("dart_test") {
   dot_packages_file = "$target_gen_dir/$package_target_name.packages"
 
   fuchsia_tester_label =
-      "//lib/flutter/packages/flutter_tools:fuchsia_tester($host_toolchain)"
+      "//third_party/dart-pkg/git/flutter/packages/flutter_tools:fuchsia_tester($host_toolchain)"
   fuchsia_tester_out_dir = get_label_info(fuchsia_tester_label, "root_out_dir")
   fuchsia_tester_bin = "$fuchsia_tester_out_dir/dart-tools/fuchsia_tester"
 
