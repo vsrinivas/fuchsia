@@ -122,9 +122,6 @@ struct xhci {
     void* mmio;
     size_t mmio_size;
 
-    // used by the start thread
-    zx_device_t* parent;
-
     // PCI support
     pci_protocol_t pci;
     zx_handle_t cfg_handle;

@@ -253,19 +253,7 @@ static int xhci_start_thread(void* arg) {
         goto error_return;
     }
 
-   device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "xhci",
-        .ctx = xhci,
-        .ops = &xhci_device_proto,
-        .proto_id = ZX_PROTOCOL_USB_HCI,
-        .proto_ops = &xhci_hci_protocol,
-    };
-
-    status = device_add(xhci->parent, &args, &xhci->zxdev);
-    if (status != ZX_OK) {
-        goto error_return;
-    }
+    device_make_visible(xhci->zxdev);
 
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
         thrd_create_with_name(&xhci->completer_threads[i], completer_thread, completers[i],
@@ -276,11 +264,35 @@ static int xhci_start_thread(void* arg) {
     return 0;
 
 error_return:
+    device_remove(xhci->zxdev);
     free(xhci);
     for (uint32_t i = 0; i < num_completers_initialized; i++) {
         free(completers[i]);
     }
     return status;
+}
+
+static zx_status_t xhci_finish_bind(xhci_t* xhci, zx_device_t* parent) {
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "xhci",
+        .ctx = xhci,
+        .ops = &xhci_device_proto,
+        .proto_id = ZX_PROTOCOL_USB_HCI,
+        .proto_ops = &xhci_hci_protocol,
+        .flags = DEVICE_ADD_INVISIBLE
+    };
+
+    zx_status_t status = device_add(parent, &args, &xhci->zxdev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    thrd_t thread;
+    thrd_create_with_name(&thread, xhci_start_thread, xhci, "xhci_start_thread");
+    thrd_detach(thread);
+
+    return ZX_OK;
 }
 
 static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
@@ -342,8 +354,6 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
     }
     xhci->cfg_handle = cfg_handle;
 
-    // stash this here for the startup thread to call device_add() with
-    xhci->parent = parent;
     // used for enabling bus mastering
     memcpy(&xhci->pci, pci, sizeof(pci_protocol_t));
 
@@ -351,10 +361,10 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
     if (status != ZX_OK) {
         goto error_return;
     }
-
-    thrd_t thread;
-    thrd_create_with_name(&thread, xhci_start_thread, xhci, "xhci_start_thread");
-    thrd_detach(thread);
+    status = xhci_finish_bind(xhci, parent);
+    if (status != ZX_OK) {
+        goto error_return;
+    }
 
     return ZX_OK;
 
@@ -398,17 +408,14 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
 
     xhci->irq_handles[0] = irq_handle;
 
-    // stash this here for the startup thread to call device_add() with
-    xhci->parent = parent;
-
     status = xhci_init(xhci, XHCI_PDEV, 1);
     if (status != ZX_OK) {
         goto error_return;
     }
-
-    thrd_t thread;
-    thrd_create_with_name(&thread, xhci_start_thread, xhci, "xhci_start_thread");
-    thrd_detach(thread);
+    status = xhci_finish_bind(xhci, parent);
+    if (status != ZX_OK) {
+        goto error_return;
+    }
 
     return ZX_OK;
 
