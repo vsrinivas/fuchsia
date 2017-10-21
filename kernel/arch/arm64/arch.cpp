@@ -66,6 +66,10 @@ arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
 
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
 
+uint32_t arm64_zva_size;
+uint32_t arm64_icache_size;
+uint32_t arm64_dcache_size;
+
 extern uint64_t arch_boot_el; // Defined in start.S.
 
 uint64_t arm64_get_boot_el(void)
@@ -145,13 +149,13 @@ void arm64_get_cache_info(arm64_cache_info_t* info) {
 void arm64_dump_cache_info(uint32_t cpu) {
 
     arm64_cache_info_t*  info = &(cache_info[cpu]);
-    printf("==== ARM64 CACHE INFO CORE %u====\n",cpu);
+    printf("==== ARM64 CACHE INFO CORE %u ====\n",cpu);
     printf("Inner Boundary = L%u\n",info->inner_boundary);
-    printf("Level of Unification Uinprocessor = L%u\n", info->lou_u);
+    printf("Level of Unification Uniprocessor = L%u\n", info->lou_u);
     printf("Level of Coherence = L%u\n", info->loc);
     printf("Level of Unification Inner Shareable = L%u\n",info->lou_is);
     for (int i = 0; i < 7; i++) {
-        printf("L%d Details:\n",i+1);
+        printf("L%d Details:",i+1);
         if ((info->level_data_type[i].ctype == 0) && (info->level_inst_type[i].ctype == 0)) {
             printf("\tNot Implemented\n");
         } else {
@@ -220,10 +224,19 @@ void arch_early_init(void)
 
     /* read the block size of DC ZVA */
     uint64_t dczid = ARM64_READ_SYSREG(dczid_el0);
+    uint32_t arm64_zva_shift = 0;
     if (BIT(dczid, 4) == 0) {
         arm64_zva_shift = (uint32_t)(ARM64_READ_SYSREG(dczid_el0) & 0xf) + 2;
     }
     ASSERT(arm64_zva_shift != 0); /* for now, fail if DC ZVA is unavailable */
+    arm64_zva_size = (1u << arm64_zva_shift);
+
+    /* read the dcache and icache line size */
+    uint64_t ctr = ARM64_READ_SYSREG(ctr_el0);
+    uint32_t arm64_dcache_shift = (uint32_t)BITS_SHIFT(ctr, 19, 16) + 2;
+    arm64_dcache_size = (1u << arm64_dcache_shift);
+    uint32_t arm64_icache_shift = (uint32_t)BITS(ctr, 3, 0) + 2;
+    arm64_icache_size = (1u << arm64_icache_shift);
 
     platform_init_mmu_mappings();
 }
@@ -274,6 +287,8 @@ void arch_init(void)
 {
     arch_mp_init_percpu();
 
+    dprintf(INFO, "ARM cache line sizes: icache %u dcache %u zva %u\n",
+            arm64_icache_size, arm64_dcache_size, arm64_zva_size);
     print_cpu_info();
 
     uint32_t max_cpus = arch_max_num_cpus();

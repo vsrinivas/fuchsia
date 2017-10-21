@@ -37,8 +37,6 @@ static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 static uint64_t asid_pool[(1 << MMU_ARM64_ASID_BITS) / 64];
 static mutex_t asid_lock = MUTEX_INITIAL_VALUE(asid_lock);
 
-uint32_t arm64_zva_shift;
-
 // The main translation table.
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP]
     __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
@@ -940,11 +938,10 @@ void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace
 }
 
 void arch_zero_page(void* _ptr) {
-    uint8_t* ptr = (uint8_t*)_ptr;
+    uintptr_t ptr = (uintptr_t)_ptr;
 
-    uint zva_size = 1u << arm64_zva_shift;
-
-    uint8_t* end_ptr = ptr + PAGE_SIZE;
+    uint32_t zva_size = arm64_zva_size;
+    uintptr_t end_ptr = ptr + PAGE_SIZE;
     do {
         __asm volatile("dc zva, %0" ::"r"(ptr));
         ptr += zva_size;
