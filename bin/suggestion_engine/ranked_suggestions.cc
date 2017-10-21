@@ -65,6 +65,11 @@ void RankedSuggestions::Rank(const QueryContext& query_context) {
     // zero to guarantee final confidence values stay within the 0-1 range.
     FXL_CHECK(normalization_factor_ > 0.0);
     suggestion->confidence = std::max(confidence, 0.0) / normalization_factor_;
+    FXL_LOG(INFO) << "Proposal "
+                  << suggestion->prototype->proposal->display->headline
+                  << " confidence "
+                  << suggestion->prototype->proposal->confidence << " => "
+                  << suggestion->confidence;
   }
   DoStableSort();
   channel_->DispatchInvalidate();

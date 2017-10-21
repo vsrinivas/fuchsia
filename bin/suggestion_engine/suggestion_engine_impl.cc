@@ -79,13 +79,13 @@ SuggestionEngineImpl::SuggestionEngineImpl()
 
   // Set up the next ranking features
   next_suggestions_->AddRankingFeature(1.0, proposal_hint_feature);
-  next_suggestions_->AddRankingFeature(-0.2, kronk_feature);
+  next_suggestions_->AddRankingFeature(-0.1, kronk_feature);
 
   // Set up the query ranking features
   ask_suggestions_->AddRankingFeature(1.0, proposal_hint_feature);
-  ask_suggestions_->AddRankingFeature(-0.2, kronk_feature);
+  ask_suggestions_->AddRankingFeature(-0.1, kronk_feature);
   ask_suggestions_->AddRankingFeature(
-      1.0, std::make_shared<QueryMatchRankingFeature>());
+      0, std::make_shared<QueryMatchRankingFeature>());
 }
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
