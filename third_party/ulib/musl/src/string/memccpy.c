@@ -14,11 +14,11 @@ void* memccpy(void* restrict dest, const void* restrict src, int c, size_t n) {
     const unsigned char* s = src;
 
     c = (unsigned char)c;
-#if !__has_feature(address_sanitizer)
     // This reads past the end of the string, which is usually OK since
     // it won't cross a page boundary.  But under ASan, even one byte
     // past the actual end is diagnosed.
-    if (((uintptr_t)s & ALIGN) == ((uintptr_t)d & ALIGN)) {
+    if (!__has_feature(address_sanitizer) &&
+        ((uintptr_t)s & ALIGN) == ((uintptr_t)d & ALIGN)) {
         for (; ((uintptr_t)s & ALIGN) && n && (*d = *s) != c; n--, s++, d++)
             ;
         if ((uintptr_t)s & ALIGN)
@@ -31,7 +31,6 @@ void* memccpy(void* restrict dest, const void* restrict src, int c, size_t n) {
         d = (void*)wd;
         s = (const void*)ws;
     }
-#endif
     for (; n && (*d = *s) != c; n--, s++, d++)
         ;
 tail:
