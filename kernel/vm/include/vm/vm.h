@@ -24,7 +24,7 @@ static_assert(KERNEL_ASPACE_BASE + (KERNEL_ASPACE_SIZE - 1) > KERNEL_ASPACE_BASE
 
 static inline bool is_kernel_address(vaddr_t va) {
     return (va >= (vaddr_t)KERNEL_ASPACE_BASE &&
-            va <= ((vaddr_t)KERNEL_ASPACE_BASE + ((vaddr_t)KERNEL_ASPACE_SIZE - 1)));
+            va - (vaddr_t)KERNEL_ASPACE_BASE < (vaddr_t)KERNEL_ASPACE_SIZE);
 }
 
 // user address space, defaults to below kernel space with a 16MB guard gap on either side
