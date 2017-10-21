@@ -8,6 +8,7 @@
 
 #include <inttypes.h>
 #include <vm/vm_address_region.h>
+#include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 #include <object/handle_owner.h>
@@ -24,10 +25,12 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     DEBUG_ASSERT(code_start < size);
     fbl::RefPtr<Dispatcher> dispatcher;
 
+    // create vmo out of ro data mapped in kernel space
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::CreateFromROData(image, size, &vmo);
     ASSERT(status == ZX_OK);
 
+    // build and point a dispatcher at it
     status = VmObjectDispatcher::Create(
         fbl::move(vmo),
         &dispatcher, &vmo_rights_);
@@ -37,6 +40,13 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     ASSERT(status == ZX_OK);
     vmo_ = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
     vmo_rights_ &= ~ZX_RIGHT_WRITE;
+
+    // unmap it from the kernel
+    // NOTE: this means the image can no longer be referenced from original pointer
+    status = VmAspace::kernel_aspace()->arch_aspace().Unmap(
+            reinterpret_cast<vaddr_t>(image),
+            size / PAGE_SIZE, nullptr);
+    ASSERT(status == ZX_OK);
 }
 
 HandleOwner RoDso::vmo_handle() const {

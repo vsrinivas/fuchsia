@@ -207,6 +207,8 @@ zx_status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
 }
 
 zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* obj) {
+    LTRACEF("data %p, size %zu\n", data, size);
+
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
     if (status != ZX_OK)
@@ -246,14 +248,6 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
             auto vmo2 = static_cast<VmObjectPaged*>(vmo.get());
             vmo2->AddPage(page, count * PAGE_SIZE);
         }
-
-        // TODO(mcgrathr): If the last reference to this VMO were released
-        // so the VMO got destroyed, that would attempt to return these
-        // pages to the system.  On arm and arm64, the kernel cannot
-        // tolerate a hole being created in the kernel image mapping, so
-        // bad things happen.  Until that issue is fixed, just leak a
-        // reference here so that the new VMO will never be destroyed.
-        vmo.reset(vmo.leak_ref());
     }
 
     *obj = fbl::move(vmo);
