@@ -39,8 +39,6 @@ def main():
     parser.add_argument("--thinlto-cache-dir", help="ThinLTO cache directory")
     parser.add_argument("--ignore-skia", help="Disable Skia settings - for Skia-less builds",
                         action="store_true", default=False)
-    parser.add_argument("--with-dart-analysis", help="Run Dart analysis as part of the build",
-                        action="store_true", default=False)
     parser.add_argument("--autorun", help="path to autorun script")
     args = parser.parse_args()
 
@@ -68,9 +66,6 @@ def main():
         gn_args += " skia_use_fontconfig=false"
         gn_args += " skia_use_libwebp=false"
         gn_args += " skia_use_sfntly=false"
-
-    if args.with_dart_analysis:
-        print("--with-dart-analysis is deprecated as analysis is now always on.")
 
     gn_args += " fuchsia_packages=\"" + args.packages + "\""
 
