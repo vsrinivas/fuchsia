@@ -144,7 +144,6 @@ bool decode_null_decode_parameters() {
 
     // A null error string pointer is ok, though.
     {
-        message_layout message;
         auto status = fidl_decode(nullptr, nullptr, 0u,
                                   nullptr, 0u, nullptr);
         EXPECT_NE(status, ZX_OK);

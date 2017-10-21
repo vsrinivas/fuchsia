@@ -158,7 +158,6 @@ bool encode_null_encode_parameters() {
 
     // A null error string pointer is ok, though.
     {
-        message_layout message;
         uint32_t actual_handles = 0u;
         auto status = fidl_encode(nullptr, nullptr, 0u,
                                   nullptr, 0u, &actual_handles, nullptr);
