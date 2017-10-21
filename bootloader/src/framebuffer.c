@@ -211,7 +211,7 @@ void draw_text(const char* text, size_t length, fb_font* font, int x, int y) {
     size_t offset = 0;
     size_t scale = 1;
     for (size_t i = 0; i < length; ++i) {
-        char c = text[i];
+        unsigned char c = text[i];
         if (c > 127)
             continue;
         putchar(gop, font, c, x + offset, y, scale, scale, fg_color, &font_black);
