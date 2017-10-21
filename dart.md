@@ -70,8 +70,10 @@ dependencies:
 
 ## Analysis
 
+Analysis is run as part of the Fuchsia build.
+
 For each `dart_package` and `flutter_app` target, an analysis script gets
-generated in the output directory under:
+also generated in the output directory under:
 ```sh
 out/<build-type>/gen/path/to/package/package.analyzer.sh
 ```
@@ -106,9 +108,6 @@ Regular analyzer flags may also be passed:
 scripts/run-dart-action.py analyze --out out/<build-type> --fatal-warnings --lints
 ```
 This holds true for the individual analysis scripts.
-
-Lastly, it is possible to automatically run analysis as part of the build by
-passing the `--with-dart-analysis` flag to the `gen.py` script.
 
 
 ## Testing
