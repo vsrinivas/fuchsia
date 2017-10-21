@@ -155,7 +155,6 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     zx_status_t result = ZX_OK;
 
     list_initialize(&xhci->command_queue);
-    mtx_init(&xhci->usbsts_lock, mtx_plain);
     mtx_init(&xhci->command_ring_lock, mtx_plain);
     mtx_init(&xhci->command_queue_mutex, mtx_plain);
     mtx_init(&xhci->mfindex_mutex, mtx_plain);
@@ -598,7 +597,7 @@ static void xhci_handle_events(xhci_t* xhci, int interrupter) {
             xhci_handle_command_complete_event(xhci, er->current);
             break;
         case TRB_EVENT_PORT_STATUS_CHANGE:
-            // ignore, these are dealt with in xhci_handle_interrupt() below
+            xhci_handle_root_hub_change(xhci);
             break;
         case TRB_EVENT_TRANSFER:
             xhci_handle_transfer_event(xhci, er->current);
@@ -616,41 +615,16 @@ static void xhci_handle_events(xhci_t* xhci, int interrupter) {
             er->current = er->start;
             er->ccs ^= TRB_C;
         }
-        xhci_update_erdp(xhci, interrupter);
     }
+
+    // update event ring dequeue pointer and clear event handler busy flag
+    xhci_update_erdp(xhci, interrupter);
 }
 
 void xhci_handle_interrupt(xhci_t* xhci, uint32_t interrupter) {
-    volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
+    // clear the interrupt pending flag
+    xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
+    XHCI_WRITE32(&intr_regs->iman, IMAN_IE | IMAN_IP);
 
-    mtx_lock(&xhci->usbsts_lock);
-
-    uint32_t status = XHCI_READ32(usbsts);
-    uint32_t clear = status & USBSTS_CLEAR_BITS;
-    // Port Status Change Event TRBs will only appear on the primary interrupter.
-    // See section 4.9.4.3 of the XHCI spec.
-    // We don't want to be handling these on the high priority thread, so
-    // wait until we get the interrupt from interrupter 0.
-    if (interrupter != 0) {
-        clear &= ~USBSTS_PCD;
-    }
-    XHCI_WRITE32(usbsts, clear);
-
-    mtx_unlock(&xhci->usbsts_lock);
-
-    // If we not using MSI interrupts, clear the IP (Interrupt Pending) bit
-    // from the IMAN register of our interrupter.
-    if (xhci->mode != XHCI_PCI_MSI) {
-        xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
-        XHCI_SET32(&intr_regs->iman, IMAN_IP, IMAN_IP);
-    }
-
-    // Different interrupts might happen at the same time, so the USBSTS_EINT
-    // flag might be cleared even though there is an event on the event ring.
     xhci_handle_events(xhci, interrupter);
-
-    if (interrupter == 0 && status & USBSTS_PCD) {
-        // All root hub ports will be scanned to avoid missing superspeed devices.
-        xhci_handle_root_hub_change(xhci);
-    }
 }

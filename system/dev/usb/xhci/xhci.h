@@ -158,9 +158,6 @@ struct xhci {
     // true if controller supports large ESIT payloads
     bool large_esit;
 
-    // For reading and writing to the USBSTS register from completer threads.
-    mtx_t usbsts_lock;
-
     // total number of ports for the root hub
     uint32_t rh_num_ports;
 
