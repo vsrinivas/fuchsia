@@ -53,6 +53,7 @@ class PaperRenderer : public Renderer {
   // per-pixel occlusion, and by DrawLightingPass().
   void DrawDepthPrePass(const ImagePtr& depth_image,
                         const ImagePtr& dummy_color_image,
+                        float scale,
                         const Stage& stage,
                         const Model& model,
                         const Camera& camera);

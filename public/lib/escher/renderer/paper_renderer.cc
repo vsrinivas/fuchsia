@@ -85,6 +85,7 @@ PaperRenderer::~PaperRenderer() {
 
 void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
                                      const ImagePtr& dummy_color_image,
+                                     float scale,
                                      const Stage& stage,
                                      const Model& model,
                                      const Camera& camera) {
@@ -97,10 +98,6 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
       escher(), depth_image->width(), depth_image->height(),
       std::vector<ImagePtr>{dummy_color_image, depth_image},
       model_renderer_->depth_prepass());
-
-  float scale = static_cast<float>(depth_image->width()) / stage.width();
-  FXL_DCHECK(scale ==
-             static_cast<float>(depth_image->height()) / stage.height());
 
   auto display_list_flags =
       ModelDisplayListFlag::kUseDepthPrepass |
@@ -403,11 +400,26 @@ void PaperRenderer::DrawFrame(const Stage& stage,
 
   BeginFrame();
 
-  // Downsized depth-only prepass for SSDO acceleration.
-  FXL_CHECK(width % kSsdoAccelDownsampleFactor == 0);
-  FXL_CHECK(height % kSsdoAccelDownsampleFactor == 0);
   uint32_t ssdo_accel_width = width / kSsdoAccelDownsampleFactor;
   uint32_t ssdo_accel_height = height / kSsdoAccelDownsampleFactor;
+
+  // Downsized depth-only prepass for SSDO acceleration.
+  if (width % kSsdoAccelDownsampleFactor != 0u) {
+    // Round up to the nearest multiple.
+    ssdo_accel_width += 1;
+    FXL_LOG(WARNING) << "Escher: Screen width " << width
+                     << " is not a multiple of " << kSsdoAccelDownsampleFactor
+                     << ", rounding up size of acceleration data buffer.";
+  }
+
+  if (height % kSsdoAccelDownsampleFactor != 0u) {
+    // Round up to the nearest multiple.
+    ssdo_accel_height += 1;
+    FXL_LOG(WARNING) << "Escher: Screen height " << height
+                     << " is not a multiple of " << kSsdoAccelDownsampleFactor
+                     << ", rounding up size of acceleration data buffer.";
+  }
+
   ImagePtr ssdo_accel_depth_image = image_utils::NewDepthImage(
       image_cache_, depth_format_, ssdo_accel_width, ssdo_accel_height,
       vk::ImageUsageFlagBits::eSampled);
@@ -424,8 +436,13 @@ void PaperRenderer::DrawFrame(const Stage& stage,
         {color_image_out->format(), ssdo_accel_width, ssdo_accel_height, 1,
          vk::ImageUsageFlagBits::eColorAttachment});
 
+    // TODO(ES-41): The 1/kSsdoAccelDownsampleFactor is not 100% correct in the
+    // case where we needed to round up the acceleration image width and/or
+    // height.  To correct this, we would change the single scale factor to a
+    // scale_x and scale_y, and adjust each as necessary (i.e. maybe slightly
+    // larger, so that the stage completely fills the depth image).
     DrawDepthPrePass(ssdo_accel_depth_image, ssdo_accel_dummy_color_image,
-                     stage, model, camera);
+                     1.f / kSsdoAccelDownsampleFactor, stage, model, camera);
     SubmitPartialFrame();
 
     AddTimestamp("finished SSDO acceleration depth pre-pass");
@@ -446,7 +463,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     current_frame()->TakeWaitSemaphore(
         color_image_out, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
-    DrawDepthPrePass(depth_image, color_image_out, stage, model, camera);
+    DrawDepthPrePass(depth_image, color_image_out, 1.f, stage, model, camera);
     SubmitPartialFrame();
 
     AddTimestamp("finished depth pre-pass");
