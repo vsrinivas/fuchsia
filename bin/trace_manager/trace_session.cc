@@ -46,13 +46,13 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   tracees_.emplace_back(std::make_unique<Tracee>(bundle));
   if (!tracees_.back()->Start(
           trace_buffer_size_, categories_.Clone(),
+          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ](bool success) {
+            if (weak)
+              weak->CheckAllProvidersStarted();
+          },
           [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
             if (weak)
               weak->FinishProvider(bundle);
-          },
-          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ](bool success) {
-            if (weak)
-              weak->NotifyProviderStarted();
           })) {
     tracees_.pop_back();
   } else {
@@ -103,7 +103,7 @@ void TraceSession::Abort() {
   abort_handler_();
 }
 
-void TraceSession::NotifyProviderStarted() {
+void TraceSession::CheckAllProvidersStarted() {
   bool all_started = std::accumulate(
       tracees_.begin(), tracees_.end(), true,
       [](bool value, const auto& tracee) {
@@ -142,7 +142,7 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
     tracees_.erase(it);
   }
 
-  NotifyProviderStarted();  // may have removed the last straggler
+  CheckAllProvidersStarted();  // may have removed the last straggler
   FinishSessionIfEmpty();
 }
 

@@ -58,8 +58,8 @@ class Tracee : private fsl::MessageLoopHandler {
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(size_t buffer_size,
              fidl::Array<fidl::String> categories,
-             fxl::Closure stop_callback,
-             ProviderStartedCallback provider_started_callback);
+             ProviderStartedCallback provider_started_callback,
+             fxl::Closure stop_callback);
   void Stop();
   TransferStatus TransferRecords(const zx::socket& socket) const;
 
@@ -82,8 +82,8 @@ class Tracee : private fsl::MessageLoopHandler {
   zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;
   zx::eventpair fence_;
-  ProviderStartedCallback start_callback_;
-  fxl::Closure stop_callback_;
+  ProviderStartedCallback started_callback_;
+  fxl::Closure stopped_callback_;
   fsl::MessageLoop::HandlerKey fence_handler_key_{};
 
   fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;

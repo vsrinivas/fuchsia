@@ -68,12 +68,12 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const {
 
 bool Tracee::Start(size_t buffer_size,
                    fidl::Array<fidl::String> categories,
-                   fxl::Closure stop_callback,
-                   ProviderStartedCallback start_callback) {
+                   ProviderStartedCallback started_callback,
+                   fxl::Closure stopped_callback) {
   FXL_DCHECK(state_ == State::kReady);
   FXL_DCHECK(!buffer_vmo_);
-  FXL_DCHECK(stop_callback);
-  FXL_DCHECK(start_callback);
+  FXL_DCHECK(started_callback);
+  FXL_DCHECK(stopped_callback);
 
   zx::vmo buffer_vmo;
   zx_status_t status = zx::vmo::create(buffer_size, 0u, &buffer_vmo);
@@ -115,8 +115,8 @@ bool Tracee::Start(size_t buffer_size,
   buffer_vmo_ = std::move(buffer_vmo);
   buffer_vmo_size_ = buffer_size;
   fence_ = std::move(fence);
-  start_callback_ = std::move(start_callback);
-  stop_callback_ = std::move(stop_callback);
+  started_callback_ = std::move(started_callback);
+  stopped_callback_ = std::move(stopped_callback);
   fence_handler_key_ = fsl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), ZX_EPAIR_PEER_CLOSED);
   TransitionToState(State::kStartPending);
@@ -146,8 +146,8 @@ void Tracee::OnProviderStarted(bool success) {
   // call to Start().
   // TODO(tvoss): Is this situation actually
   // possible?
-  auto start_callback = std::move(start_callback_);
-  start_callback(success);
+  auto started_callback = std::move(started_callback_);
+  started_callback(success);
 }
 
 void Tracee::OnHandleReady(zx_handle_t handle,
@@ -156,13 +156,13 @@ void Tracee::OnHandleReady(zx_handle_t handle,
   FXL_DCHECK(pending & ZX_EPAIR_PEER_CLOSED);
   FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
              state_ == State::kStartAcknowledged || state_ == State::kStopping);
-  FXL_DCHECK(stop_callback_);
+  FXL_DCHECK(stopped_callback_);
 
   fsl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
   fence_handler_key_ = 0u;
 
-  fxl::Closure stop_callback = std::move(stop_callback_);
-  stop_callback();
+  fxl::Closure stopped_callback = std::move(stopped_callback_);
+  stopped_callback();
   TransitionToState(State::kStopped);
 }
 
