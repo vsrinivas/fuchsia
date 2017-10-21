@@ -7,47 +7,49 @@ module modular;
 import "lib/story/fidl/link.fidl";
 import "lib/module/fidl/module_context.fidl";
 
-// This service is implemented by an application that is meant to be
-// run in a ModuleContext (fka Story).
+// This service is implemented by an application that is meant to be run under a
+// ModuleContext in a Story.
 //
-// When ModuleContext.StartModule() is invoked, the Module instance is
-// requested from its application and its dependent services and
-// parameters are passed to it by Initialize().
+// When ModuleContext.StartModule() is invoked, the Module instance is requested
+// from its application and its dependent services and parameters are passed to
+// it by Initialize().
 //
-// When a module application implements the |Lifecycle| interface, it can
-// receive a signal for when it should stop. A module may be stopped for the
-// following reasons:
+// If a module application implements the |Lifecycle| interface, then invocation
+// of the Terminate() method on its |Lifecycle| service is a signal that it
+// should stop. If the module application does not implement the |Lifecycle|
+// interface, the application instance is simply terminated in order to stop it.
 //
-// (1) StoryController.Stop() is called to stop the whole story. A
-//     plausible occasion for this to happen is that the root module
-//     has signalled that it's Done().
+// A module may be stopped for the following reasons:
 //
-// (2) ModuleController.Stop() is called by the caller that started
-//     this Module. A plausible occasion for this to happen is that
-//     the module has signalled before that it's Done().
+// (1) StoryController.Stop() is called to stop the whole story. A plausible
+//     occasion for this to happen is that the root module in the story has
+//     signalled that it's Done(), or that the user logs out.
 //
-// Additionally a Module instance is stopped when Module instance
-// closes its own connection.
+// (2) ModuleController.Stop() is called by the caller that started this
+//     Module. A plausible occasion for this to happen is that the module has
+//     signalled that it's Done().
 //
-// Other connections the Module instance may hold, such as to Link,
-// LinkWatcher, ModuleController of other Module instances, may be
-// closed before Lifecycle.Terminate() is called. (TBD to give more
-// guarantees.)
+// Other connections the Module instance may hold, such as to Link, LinkWatcher,
+// ModuleController of other Module instances, are closed after
+// Lifecycle.Terminate() is called.
 [ServiceName="modular.Module"]  // Created by each module app.
 interface Module {
   // The arguments to Initialize() are the ModuleContext instance that created
   // the Module instance and a Link instance provided by the caller of
   // ModuleContext.StartModule().
   //
-  // The Link instance can be used to exchange data with the calling
-  // module. Additionally, this module may provide its services to the calling
-  // module by implementing its |outgoing_services|, and consume the calling
-  // module's |incoming_services|.
+  // The default Link instance available from ModuleContext.GetLink() with a
+  // null link name is shared with the calling module and can be used to
+  // exchange data.
   //
-  // The ModuleContext instance can be used to start more Module instances,
-  // and to create Link instances to share data with those Module
-  // instances. It can also be used to signal that this module wants
-  // to stop.
+  // Additionally, this module may provide its services to the calling module by
+  // implementing its |outgoing_services|, and consume the calling module's
+  // |incoming_services|.
+  //
+  // The ModuleContext instance can be used to start more Module instances, and
+  // to create Link instances to share data with those Module instances. Calling
+  // ModuleContext.Done() signals this module requests to be stopped.
+  //
   // TODO(vardhan): Move incoming_services/outgoing_services as getters into
   // ModuleContext.
   Initialize(ModuleContext module_context,
