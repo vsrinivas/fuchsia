@@ -102,6 +102,10 @@ void xhci_increment_ring(xhci_transfer_ring_t* ring) {
     if ((control & TRB_TYPE_MASK) == (TRB_LINK << TRB_TYPE_START)) {
         control = (control & ~(TRB_CHAIN | TRB_C)) | chain | ring->pcs;
         XHCI_WRITE32(&trb->control, control);
+#if XHCI_USE_CACHE_OPS
+        io_buffer_cache_op(&ring->buffer, ZX_VMO_OP_CACHE_CLEAN,
+                           (ring->current - ring->start) * sizeof(xhci_trb_t), sizeof(xhci_trb_t));
+#endif
 
         // toggle pcs if necessary
         if (control & TRB_TC) {
