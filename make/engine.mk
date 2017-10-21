@@ -195,26 +195,6 @@ else
 RODSO_LDFLAGS := -T scripts/rodso.ld
 endif
 
-ifeq ($(call TOBOOL,$(USE_LTO)),true)
-ifeq ($(call TOBOOL,$(USE_CLANG)),false)
-$(error USE_LTO requires USE_CLANG)
-endif
-ifeq ($(call TOBOOL,$(USE_LLD)),false)
-$(error USE_LTO requires USE_LLD)
-endif
-# LTO doesn't store -mcmodel=kernel information in the bitcode files as it
-# does for many other codegen options so we have to set it explicitly. This
-# can be removed when https://bugs.llvm.org/show_bug.cgi?id=33306 is fixed.
-KERNEL_LDFLAGS += -mllvm -code-model=kernel
-ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
-GLOBAL_COMPILEFLAGS += -flto=thin
-GLOBAL_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(THINLTO_CACHE_DIR)
-else
-GLOBAL_COMPILEFLAGS += -flto -fwhole-program-vtables
-# Full LTO doesn't require any special ld flags.
-endif
-endif
-
 # Turn on -fasynchronous-unwind-tables to get .eh_frame.
 # This is necessary for unwinding through optimized code.
 # The unwind information is part of the loaded binary. It's not that much space
@@ -440,6 +420,27 @@ include make/sysgen.mk
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += --target=$(CLANG_ARCH)-fuchsia
+endif
+
+ifeq ($(call TOBOOL,$(USE_LTO)),true)
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
+$(error USE_LTO requires USE_CLANG)
+endif
+ifeq ($(call TOBOOL,$(USE_LLD)),false)
+$(error USE_LTO requires USE_LLD)
+endif
+# LTO doesn't store -mcmodel=kernel information in the bitcode files as it
+# does for many other codegen options so we have to set it explicitly. This
+# can be removed when https://bugs.llvm.org/show_bug.cgi?id=33306 is fixed.
+KERNEL_LDFLAGS += $(patsubst -mcmodel=%,-mllvm -code-model=%,\
+			     $(filter -mcmodel=%,$(KERNEL_COMPILEFLAGS)))
+ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
+GLOBAL_COMPILEFLAGS += -flto=thin
+GLOBAL_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(THINLTO_CACHE_DIR)
+else
+GLOBAL_COMPILEFLAGS += -flto -fwhole-program-vtables
+# Full LTO doesn't require any special ld flags.
+endif
 endif
 
 ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
