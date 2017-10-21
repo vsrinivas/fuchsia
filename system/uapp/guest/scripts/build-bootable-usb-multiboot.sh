@@ -10,7 +10,8 @@ set -eu
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCONDIR="${ZIRCON_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
-BUILDDIR="${ZIRCON_BUILD_DIR:-$ZIRCONDIR/build-zircon-pc-x86-64}"
+ZIRCON_SCRIPTS_DIR="${ZIRCONDIR}/scripts"
+BUILDDIR="${ZIRCONDIR}/build-zircon-pc-x86-64"
 
 get_confirmation() {
   echo -n "Press 'y' to confirm: "
@@ -84,6 +85,15 @@ if [[ -n $(df -Hl | grep "$DEVICE") ]]; then
 fi
 echo " SUCCESS"
 
+echo -n "Building zircon..."
+$ZIRCON_SCRIPTS_DIR/build-zircon-x86-64
+ZIRCON_BUILD_DIR=${BUILDDIR} ${GUEST_SCRIPTS_DIR}/mkbootfs.sh
+echo " SUCCESS"
+
+echo -n "Building zircon-guest kernel..."
+$GUEST_SCRIPTS_DIR/mklinux.sh
+echo " SUCCESS"
+
 # Confirm that the user knows what they are doing
 sudo -v -p "[sudo] Enter password to confirm information about device: "
 sudo sgdisk -p "$DEVICE_PATH"
@@ -96,6 +106,7 @@ echo "[format_usb] Deleting all partition info on USB, creating new GPT"
 sudo sgdisk -og "$DEVICE_PATH"
 
 SECTOR_SIZE=`cat "/sys/block/$DEVICE/queue/hw_sector_size"`
+
 echo "[format_usb] Creating 200MB EFI System Partition"
 sudo sgdisk -n 1:0:+200M -c 1:"EFI System Partition" -t 1:ef00 "$DEVICE_PATH"
 EFI_PARTITION_PATH="${DEVICE_PATH}1"
@@ -105,6 +116,11 @@ echo "[format_usb] Creating 5GB Linux Root Partition"
 sudo sgdisk -n 2:0:+5G -c 2:"Root" "$DEVICE_PATH"
 ROOT_PARTITION_PATH="${DEVICE_PATH}2"
 sudo mkfs.ext4 "$ROOT_PARTITION_PATH"
+
+echo "[format_usb] Creating 2GB Linux Home Partition"
+sudo sgdisk -n 3:0:+2G -c 3:"Home" "$DEVICE_PATH"
+HOME_PARTITION_PATH="${DEVICE_PATH}3"
+sudo mkfs.ext4 "$HOME_PARTITION_PATH"
 
 # Function to attempt unmounting a mount point up to three times, sleeping
 # a couple of seconds between attempts.
@@ -124,21 +140,36 @@ function umount_retry() {
 
 MOUNT_PATH=`mktemp -d`
 EFI_MOUNT_PATH="${MOUNT_PATH}/boot"
+HOME_MOUNT_PATH="${MOUNT_PATH}/home"
 sudo mount "${ROOT_PARTITION_PATH}" "${MOUNT_PATH}"
 sudo mkdir -p "${EFI_MOUNT_PATH}"
+sudo mkdir -p "${HOME_MOUNT_PATH}"
+sudo mkdir -p "${MOUNT_PATH}/dev"
+sudo mkdir -p "${MOUNT_PATH}/sys"
+sudo mkdir -p "${MOUNT_PATH}/proc"
+
 sudo mount "${EFI_PARTITION_PATH}" "${EFI_MOUNT_PATH}"
-trap "umount_retry \"${EFI_MOUNT_PATH}\" && umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted successfully\"" INT TERM EXIT
+sudo mount "${HOME_PARTITION_PATH}" "${HOME_MOUNT_PATH}"
+sudo mount --bind /dev "${MOUNT_PATH}/dev"
+sudo mount --bind /sys "${MOUNT_PATH}/sys"
+sudo mount --bind /proc "${MOUNT_PATH}/proc"
+
+unmount_all() {
+    umount_retry "${EFI_MOUNT_PATH}"
+    umount_retry "${HOME_MOUNT_PATH}"
+    umount_retry "${MOUNT_PATH}/dev"
+    umount_retry "${MOUNT_PATH}/sys"
+    umount_retry "${MOUNT_PATH}/proc"
+    umount_retry "${MOUNT_PATH}"
+
+    rm -rf "${MOUNT_PATH}"
+    echo "Unmounted successfully"
+
+}
+trap "unmount_all" INT TERM EXIT
 
 echo -n "Installing Debian base system ..."
 sudo "${GUEST_SCRIPTS_DIR}/bootstrap-debian.sh" "${MOUNT_PATH}"
-echo " SUCCESS"
-
-echo -n "Installing GRUB2..."
-sudo grub-install \
-    --target x86_64-efi \
-    --efi-directory="${EFI_MOUNT_PATH}" \
-    --boot-directory="${EFI_MOUNT_PATH}" \
-    --removable
 echo " SUCCESS"
 
 sudo mkdir -p "${EFI_MOUNT_PATH}/EFI/BOOT"
@@ -148,62 +179,13 @@ echo " SUCCESS"
 
 echo -n "Copying zircon.bin..."
 sudo cp "${BUILDDIR}/zircon.bin" "${EFI_MOUNT_PATH}/zircon.bin"
-sudo cp "${BUILDDIR}/bootdata.bin" "${EFI_MOUNT_PATH}/ramdisk.bin"
-echo " SUCCESS"
-
-echo -n "Copying grub.cfg..."
-# Debian creates symlinks to the kernel/initrd. Read these links to find the
-# specific filenames.
-LINUX_PATH="/$(basename $(readlink ${MOUNT_PATH}/vmlinuz))"
-INITRD_PATH="/$(basename $(readlink ${MOUNT_PATH}/initrd.img))"
-ROOT_UUID=$(sudo blkid -s UUID -o value "${ROOT_PARTITION_PATH}")
-GRUB_CONF=$(mktemp)
-cat > "${GRUB_CONF}" << EOF
-set timeout=5
-
-menuentry "Zircon" {
-  insmod chain
-  echo "Loading gigaboot..."
-  chainloader /EFI/BOOT/gigaboot.efi
-}
-
-function load_video {
-  insmod efi_gop
-  insmod efi_uga
-
-  if loadfont /grub/fonts/unicode.pf2
-  then
-    insmod gfxterm
-    set gfxmode=auto
-    set gfxpayload=keep
-    terminal_output gfxterm
-  fi
-}
-
-menuentry "Debian (KVM Host)" {
-  load_video
-
-  echo "Loading linux..."
-  linux ${LINUX_PATH} root=/dev/disk/by-uuid/${ROOT_UUID} ro rootwait lockfs
-  echo "Loading initrd..."
-  initrd ${INITRD_PATH}
-}
-
-menuentry "Debian (Native)" {
-  load_video
-
-  echo "Loading linux..."
-  linux ${LINUX_PATH} root=/dev/disk/by-uuid/${ROOT_UUID} ro rootwait lockfs maxcpus=1 mem=1G
-  echo "Loading initrd..."
-  initrd ${INITRD_PATH}
-}
-EOF
-sudo cp "${GRUB_CONF}" "${EFI_MOUNT_PATH}/grub/grub.cfg"
-rm "${GRUB_CONF}"
+sudo cp "${BUILDDIR}/bootdata-with-guest.bin" "${EFI_MOUNT_PATH}/ramdisk.bin"
 echo " SUCCESS"
 
 echo -n "Copying fstab..."
+ROOT_UUID=$(sudo blkid -s UUID -o value "${ROOT_PARTITION_PATH}")
 EFI_UUID=$(sudo blkid -s UUID -o value "${EFI_PARTITION_PATH}")
+HOME_UUID=$(sudo blkid -s UUID -o value "${HOME_PARTITION_PATH}")
 FSTAB=$(mktemp)
 echo "" > "${FSTAB}"
 echo "UUID=${EFI_UUID} /boot vfat defaults,iversion,nofail 0 1" > "${FSTAB}"
@@ -212,24 +194,27 @@ rm "${FSTAB}"
 echo "SUCCESS"
 
 echo -n "Copying run-qemu.sh..."
+sudo cp /tmp/linux/arch/x86/boot/bzImage "${MOUNT_PATH}/opt/bzImage"
 RUN_QEMU=$(mktemp)
 cat > "${RUN_QEMU}" << EOF
 #!/bin/sh
 
-qemu-system-x86_64 \
-    -nographic \
-    -drive file=/dev/disk/by-uuid/${ROOT_UUID},readonly=on,format=raw,if=none,id=root \
-    -device virtio-blk-pci,drive=root \
-    -device virtio-serial-pci \
-    -net none \
-    -machine q35 \
-    -m 1G \
-    -smp 1 \
-    -enable-kvm \
-    -cpu host,migratable=no \
-    -initrd /initrd.img \
-    -kernel /vmlinuz \
-    -append "root=/dev/disk/by-uuid/${ROOT_UUID} ro lockfs console=ttyS0"
+qemu-system-x86_64 \\
+    -nographic \\
+    -drive file=/dev/disk/by-uuid/${ROOT_UUID},readonly=on,format=raw,if=none,id=root \\
+    -device virtio-blk-pci,drive=root \\
+    -drive file=/dev/disk/by-uuid/${HOME_UUID},format=raw,if=none,id=home \\
+    -device virtio-blk-pci,drive=home \\
+    -device virtio-serial-pci \\
+    -net none \\
+    -machine q35 \\
+    -m 1G \\
+    -smp 1 \\
+    -enable-kvm \\
+    -cpu host,migratable=no \\
+    -initrd /initrd.img \\
+    -kernel /opt/bzImage \\
+    -append "root=/dev/vda ro lockfs console=ttyS0"
 EOF
 sudo cp "${RUN_QEMU}" "${MOUNT_PATH}/opt/run-qemu.sh"
 sudo chmod +x "${MOUNT_PATH}/opt/run-qemu.sh"

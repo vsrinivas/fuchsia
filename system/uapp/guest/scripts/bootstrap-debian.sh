@@ -10,15 +10,28 @@ set -e
 
 # List of packages to install into the system on top of the minimal base
 # image.
-#
-# Note: debootstrap doesn't resolve virtual packages so the full package
-# version must be listed (ex: perl-modules-X.Y instead of perl-modules). This
-# means this list will need to updated whenever new package versions are
-# published. We may want to move some additional packages into the second-stage
-# if this proves to be a burden.
-#
-# https://bugs.launchpad.net/ubuntu/+source/debootstrap/+bug/86536
 EXTRA_PACKAGES=(
+   # Make ourselves bootable
+   linux-image-amd64
+   grub-efi
+
+   # Misc utilities
+   ca-certificates
+   cpuid
+   curl
+   debootstrap
+   git
+   less
+   sudo
+   tmux
+   unzip
+   vim
+   wget
+
+   # Allows mounting the root fs as RO with a ramdisk overlay for ephemeral
+   # writes.
+   bilibop-lockfs
+
    # Support zircon build deps:
    texinfo
    libglib2.0-dev
@@ -27,34 +40,19 @@ EXTRA_PACKAGES=(
    libsdl1.2-dev
    build-essential
 
-   # Allows mounting the root fs as RO with a ramdisk overlay for ephemeral
-   # writes.
-   bilibop-lockfs
-
    # Unixbench deps:
    libx11-dev
    libgl1-mesa-dev
    libxext-dev
-   perl
-   perl-modules-5.26
    make
+   perl
+   perl-modules
 
    # hdparm benchmark
    hdparm
 
-   # QEMU/KVM
+   # QEMU/KVM guest support.
    qemu-kvm
-
-   # Misc utilities
-   ca-certificates
-   curl
-   git
-   less
-   sudo
-   tmux
-   unzip
-   vim
-   wget
 )
 
 usage() {
@@ -108,19 +106,22 @@ check_mountpoint() {
   usage
 }
 
-bootstrap_stage1() {
-  local sysroot_dir=${1}
-
-  # Turn the array into a comma separated list..
-  local include_packages=$(IFS=,; echo "${EXTRA_PACKAGES[*]}")
-  debootstrap --include=${include_packages} testing ${sysroot_dir} http://deb.debian.org/debian/
-}
-
 # Stage2 is run from within the chroot of the new system so all system commands
 # modify the new system and not the host.
 bootstrap_stage2() {
-    # Setup linux and initrd.
-    apt -y install linux-image-amd64
+    # Install additional packages.
+    DEBIAN_FRONTEND=noninteractive apt-get -y --allow-unauthenticated install ${EXTRA_PACKAGES[*]}
+
+    # Setup grub.
+    grub-install --target x86_64-efi --efi-directory /boot --removable
+    cat >> /etc/grub.d/40_custom << EOF
+menuentry "Zircon" {
+  insmod chain
+  echo "Loading gigaboot..."
+  chainloader /EFI/BOOT/gigaboot.efi
+}
+EOF
+    update-grub
 
     # Create default account.
     local username="bench"
@@ -161,7 +162,7 @@ if [ "${SECOND_STAGE}" != "true" ]; then
 
     check_mountpoint "${1}"
 
-    bootstrap_stage1 "${1}"
+    debootstrap testing "${1}" http://deb.debian.org/debian/
 
     # Copy ourselves into the chroot and run the second stage.
     cp "${BASH_SOURCE[0]}" "${1}/second-stage.sh"
