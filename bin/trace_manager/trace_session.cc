@@ -169,9 +169,28 @@ void TraceSession::FinishSessionDueToTimeout() {
 }
 
 void TraceSession::TransitionToState(State new_state) {
-  FXL_VLOG(2) << "Transitioning from " << static_cast<uint32_t>(state_)
-              << " to " << static_cast<uint32_t>(new_state);
+  FXL_VLOG(2) << "Transitioning from " << state_
+              << " to " << new_state;
   state_ = new_state;
+}
+
+std::ostream& operator<<(std::ostream& out, TraceSession::State state) {
+  switch (state) {
+    case TraceSession::State::kReady:
+      out << "ready";
+      break;
+    case TraceSession::State::kStarted:
+      out << "started";
+      break;
+    case TraceSession::State::kStopping:
+      out << "stopping";
+      break;
+    case TraceSession::State::kStopped:
+      out << "stopped";
+      break;
+  }
+
+  return out;
 }
 
 }  // namespace tracing

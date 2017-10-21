@@ -6,6 +6,7 @@
 #define GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_
 
 #include <functional>
+#include <iosfwd>
 #include <list>
 #include <vector>
 
@@ -63,6 +64,8 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
  private:
   enum class State { kReady, kStarted, kStopping, kStopped };
 
+  friend std::ostream& operator<<(std::ostream& out, TraceSession::State state);
+
   void NotifyStarted();
   void Abort();
   void CheckAllProvidersStarted();
@@ -87,6 +90,8 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   fxl::WeakPtrFactory<TraceSession> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceSession);
 };
+
+std::ostream& operator<<(std::ostream& out, TraceSession::State state);
 
 }  // namespace tracing
 

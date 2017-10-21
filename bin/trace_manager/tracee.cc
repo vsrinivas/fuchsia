@@ -131,7 +131,8 @@ void Tracee::Stop() {
 }
 
 void Tracee::TransitionToState(State new_state) {
-  FXL_VLOG(2) << *bundle_ << ": Transitioning to state: " << new_state;
+  FXL_VLOG(2) << *bundle_ << ": Transitioning from " << state_
+              << " to " << new_state;
   state_ = new_state;
 }
 
