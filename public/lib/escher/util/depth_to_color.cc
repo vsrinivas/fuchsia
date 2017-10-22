@@ -6,10 +6,10 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/renderer/image_factory.h"
-#include "lib/escher/renderer/texture.h"
 #include "lib/escher/renderer/timestamper.h"
 #include "lib/escher/vk/buffer.h"
+#include "lib/escher/vk/image_factory.h"
+#include "lib/escher/vk/texture.h"
 
 namespace {
 constexpr char g_kernel_src[] = R"GLSL(

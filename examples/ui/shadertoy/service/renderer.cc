@@ -9,11 +9,11 @@
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/mesh_manager.h"
-#include "lib/escher/renderer/framebuffer.h"
-#include "lib/escher/renderer/image.h"
-#include "lib/escher/renderer/simple_image_factory.h"
-#include "lib/escher/renderer/texture.h"
 #include "lib/escher/util/image_utils.h"
+#include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/image.h"
+#include "lib/escher/vk/simple_image_factory.h"
+#include "lib/escher/vk/texture.h"
 
 using escher::Escher;
 

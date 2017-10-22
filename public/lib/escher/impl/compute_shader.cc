@@ -10,8 +10,8 @@
 #include "lib/escher/impl/vk/pipeline.h"
 #include "lib/escher/impl/vk/pipeline_spec.h"
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/texture.h"
 #include "lib/escher/vk/buffer.h"
+#include "lib/escher/vk/texture.h"
 #include "lib/escher/vk/vulkan_context.h"
 
 namespace escher {

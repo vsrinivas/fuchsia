@@ -16,12 +16,12 @@
 #include "lib/escher/impl/model_pipeline.h"
 #include "lib/escher/impl/model_pipeline_cache.h"
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/shape.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/util/trace_macros.h"
+#include "lib/escher/vk/image.h"
 
 namespace escher {
 namespace impl {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/renderer/image.h"
+#include "lib/escher/vk/image.h"
 
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_manager.h"

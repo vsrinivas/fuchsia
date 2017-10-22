@@ -10,9 +10,9 @@
 #include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/gpu_allocator.h"
+#include "lib/escher/vk/image.h"
 
 namespace escher {
 namespace impl {

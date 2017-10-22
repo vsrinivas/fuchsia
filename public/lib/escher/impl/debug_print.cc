@@ -10,9 +10,9 @@
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/impl/model_pipeline_spec.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/viewing_volume.h"
+#include "lib/escher/vk/image.h"
 
 namespace escher {
 

@@ -12,11 +12,11 @@
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
-#include "lib/escher/renderer/framebuffer.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/escher/util/trace_macros.h"
+#include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/image.h"
 
 namespace escher {
 

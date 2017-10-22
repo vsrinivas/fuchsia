@@ -7,8 +7,8 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/model_data.h"
 #include "lib/escher/impl/model_display_list_flags.h"
-#include "lib/escher/renderer/texture.h"
 #include "lib/escher/shape/mesh.h"
+#include "lib/escher/vk/texture.h"
 
 namespace escher {
 namespace impl {

@@ -9,11 +9,11 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/forward_declarations.h"
-#include "lib/escher/renderer/image.h"
-#include "lib/escher/renderer/image_factory.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/util/hash.h"
 #include "lib/escher/vk/gpu_mem.h"
+#include "lib/escher/vk/image.h"
+#include "lib/escher/vk/image_factory.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 

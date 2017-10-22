@@ -8,7 +8,7 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/geometry/types.h"
-#include "lib/escher/renderer/texture.h"
+#include "lib/escher/vk/texture.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {

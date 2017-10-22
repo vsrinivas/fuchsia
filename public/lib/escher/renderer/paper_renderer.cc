@@ -17,13 +17,13 @@
 #include "lib/escher/impl/ssdo_accelerator.h"
 #include "lib/escher/impl/ssdo_sampler.h"
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/framebuffer.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/util/depth_to_color.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/util/trace_macros.h"
+#include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/image.h"
 
 // If 1 uses a compute kernel to perform SSDO sampling, otherwise uses a
 // fragment shader.  For not-yet-understood reasons, the compute kernel is

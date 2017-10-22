@@ -8,7 +8,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/forward_declarations.h"
-#include "lib/escher/renderer/image.h"
+#include "lib/escher/vk/image.h"
 
 namespace escher {
 

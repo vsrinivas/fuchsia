@@ -9,9 +9,9 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/gpu_uploader.h"
-#include "lib/escher/renderer/simple_image_factory.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
+#include "lib/escher/vk/simple_image_factory.h"
 
 #include "garnet/bin/ui/scene_manager/displays/display_manager.h"
 #include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"

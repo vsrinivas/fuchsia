@@ -9,7 +9,7 @@
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/impl/descriptor_set_pool.h"
-#include "lib/escher/renderer/texture.h"
+#include "lib/escher/vk/texture.h"
 
 namespace shadertoy {
 

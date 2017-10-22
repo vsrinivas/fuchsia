@@ -5,11 +5,11 @@
 #include "lib/escher/vk/vulkan_swapchain_helper.h"
 
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/framebuffer.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/trace_macros.h"
+#include "lib/escher/vk/framebuffer.h"
 
 namespace escher {
 

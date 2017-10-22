@@ -7,11 +7,11 @@
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/material/material.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/shape/modifier_wobble.h"
 #include "lib/escher/util/stopwatch.h"
+#include "lib/escher/vk/image.h"
 #include "lib/escher/vk/vulkan_context.h"
 
 using escher::MeshAttribute;

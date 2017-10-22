@@ -5,11 +5,11 @@
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/descriptor_set_pool.h"
 #include "lib/escher/impl/mesh_shader_binding.h"
-#include "lib/escher/renderer/framebuffer.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/buffer.h"
+#include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/image.h"
 
 #include "lib/fxl/macros.h"
 

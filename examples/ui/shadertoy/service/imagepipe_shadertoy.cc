@@ -6,9 +6,9 @@
 
 #include "garnet/examples/ui/shadertoy/service/escher_utils.h"
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
-#include "lib/escher/renderer/framebuffer.h"
-#include "lib/escher/renderer/image.h"
-#include "lib/escher/renderer/simple_image_factory.h"
+#include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/image.h"
+#include "lib/escher/vk/simple_image_factory.h"
 
 namespace {
 // TODO: Copied this constant from mozart/src/scene_manager/sync/fence.h.

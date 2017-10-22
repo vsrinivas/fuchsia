@@ -7,11 +7,11 @@
 #include <trace/event.h>
 
 #include "lib/escher/impl/image_cache.h"
-#include "lib/escher/renderer/image.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/semaphore_wait.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
+#include "lib/escher/vk/image.h"
 
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/engine/swapchain.h"

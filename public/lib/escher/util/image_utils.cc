@@ -8,8 +8,8 @@
 
 #include "lib/escher/impl/gpu_uploader.h"
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/image_factory.h"
 #include "lib/escher/vk/gpu_mem.h"
+#include "lib/escher/vk/image_factory.h"
 
 namespace {
 struct RGBA {

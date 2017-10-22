@@ -13,11 +13,11 @@
 #include "lib/escher/impl/vk/pipeline.h"
 #include "lib/escher/impl/vk/pipeline_spec.h"
 #include "lib/escher/impl/vulkan_utils.h"
-#include "lib/escher/renderer/framebuffer.h"
-#include "lib/escher/renderer/image.h"
-#include "lib/escher/renderer/texture.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/mesh.h"
+#include "lib/escher/vk/framebuffer.h"
+#include "lib/escher/vk/image.h"
+#include "lib/escher/vk/texture.h"
 
 namespace escher {
 namespace impl {

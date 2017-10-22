@@ -9,11 +9,11 @@
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/renderer/paper_renderer.h"
-#include "lib/escher/renderer/texture.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_allocator.h"
 #include "lib/escher/vk/naive_gpu_allocator.h"
+#include "lib/escher/vk/texture.h"
 
 namespace escher {
 

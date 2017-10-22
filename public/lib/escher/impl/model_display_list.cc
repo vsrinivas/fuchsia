@@ -4,8 +4,8 @@
 
 #include "lib/escher/impl/model_display_list.h"
 
-#include "lib/escher/renderer/texture.h"
 #include "lib/escher/resources/resource_recycler.h"
+#include "lib/escher/vk/texture.h"
 
 namespace escher {
 namespace impl {
