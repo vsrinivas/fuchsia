@@ -171,6 +171,8 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 zx_status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
     AutoLock al(&ipt_lock);
 
+    DEBUG_ASSERT(mode == IPT_TRACE_CPUS || mode == IPT_TRACE_THREADS);
+
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
     if (active)
