@@ -46,7 +46,8 @@ public:
     zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
 private:
-    zx_status_t HandleRtc(uint8_t rtc_index, uint8_t* value);
+    zx_status_t ReadRtcRegister(uint8_t rtc_index, uint8_t* value);
+    zx_status_t WriteRtcRegister(uint8_t rtc_index, uint8_t value);
     fbl::Mutex mutex_;
     uint8_t index_ TA_GUARDED(mutex_) = 0;
 };

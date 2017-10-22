@@ -30,17 +30,22 @@ constexpr uint16_t kRtcDataPort                 = 1;
 
 /* RTC register addresses. */
 constexpr uint8_t kRtcRegisterSeconds           = 0;
+constexpr uint8_t kRtcRegisterSecondsAlarm      = 1;
 constexpr uint8_t kRtcRegisterMinutes           = 2;
+constexpr uint8_t kRtcRegisterMinutesAlarm      = 3;
 constexpr uint8_t kRtcRegisterHours             = 4;
+constexpr uint8_t kRtcRegisterHoursAlarm        = 5;
 constexpr uint8_t kRtcRegisterDayOfMonth        = 7;
 constexpr uint8_t kRtcRegisterMonth             = 8;
 constexpr uint8_t kRtcRegisterYear              = 9;
 constexpr uint8_t kRtcRegisterA                 = 10;
 constexpr uint8_t kRtcRegisterB                 = 11;
+constexpr uint8_t kRtcRegisterC                 = 12;
 
 /* RTC register B flags. */
 constexpr uint8_t kRtcRegisterBDaylightSavings  = 1 << 0;
 constexpr uint8_t kRtcRegisterBHourFormat       = 1 << 1;
+constexpr uint8_t kRtcRegisterBInterruptMask    = 0x70;
 
 /* RTC relative port mappings. */
 constexpr uint16_t kI8042DataPort               = 0x0;
@@ -149,31 +154,45 @@ zx_status_t RtcHandler::Init(Guest* guest) {
     return guest->CreateMapping(TrapType::PIO_SYNC, RTC_BASE, RTC_SIZE, 0, this);
 }
 
-zx_status_t RtcHandler::Read(uint64_t port, IoValue* value) {
-    if (port == kRtcDataPort) {
+zx_status_t RtcHandler::Read(uint64_t addr, IoValue* value) {
+    switch (addr) {
+    case kRtcDataPort: {
         value->access_size = 1;
         uint8_t rtc_index;
         {
             fbl::AutoLock lock(&mutex_);
             rtc_index = index_;
         }
-        return HandleRtc(rtc_index, &value->u8);
+        return ReadRtcRegister(rtc_index, &value->u8);
     }
-    return ZX_ERR_NOT_SUPPORTED;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 zx_status_t RtcHandler::Write(uint64_t addr, const IoValue& value) {
-    if (addr == kRtcIndexPort) {
+    switch (addr) {
+    case kRtcDataPort: {
+        uint8_t rtc_index;
+        {
+            fbl::AutoLock lock(&mutex_);
+            rtc_index = index_;
+        }
+        return WriteRtcRegister(rtc_index, value.u8);
+    }
+    case kRtcIndexPort: {
         if (value.access_size != 1)
             return ZX_ERR_IO_DATA_INTEGRITY;
         fbl::AutoLock lock(&mutex_);
         index_ = value.u8;
         return ZX_OK;
     }
-    return ZX_ERR_NOT_SUPPORTED;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
-zx_status_t RtcHandler::HandleRtc(uint8_t rtc_index, uint8_t* value) {
+zx_status_t RtcHandler::ReadRtcRegister(uint8_t rtc_index, uint8_t* value) {
     time_t now = time(nullptr);
     struct tm tm;
     if (localtime_r(&now, &tm) == nullptr)
@@ -211,10 +230,33 @@ zx_status_t RtcHandler::HandleRtc(uint8_t rtc_index, uint8_t* value) {
         if (tm.tm_isdst)
             *value |= kRtcRegisterBDaylightSavings;
         break;
+    // Alarms are not implemented but allow reads of the registers.
+    case kRtcRegisterSecondsAlarm:
+    case kRtcRegisterMinutesAlarm:
+    case kRtcRegisterHoursAlarm:
+    case kRtcRegisterC:
+        *value = 0;
+        break;
     default:
+        fprintf(stderr, "Unsupported RTC register read %x\n", rtc_index);
         return ZX_ERR_NOT_SUPPORTED;
     }
     return ZX_OK;
+}
+
+zx_status_t RtcHandler::WriteRtcRegister(uint8_t rtc_index, uint8_t value) {
+    switch (rtc_index) {
+    case kRtcRegisterA:
+        return ZX_OK;
+    case kRtcRegisterB:
+        // No interrupts are implemented.
+        if (value & kRtcRegisterBInterruptMask)
+            return ZX_ERR_NOT_SUPPORTED;
+        return ZX_OK;
+    default:
+        fprintf(stderr, "Unsupported RTC register write %x\n", rtc_index);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 zx_status_t I8042Handler::Init(Guest* guest) {
