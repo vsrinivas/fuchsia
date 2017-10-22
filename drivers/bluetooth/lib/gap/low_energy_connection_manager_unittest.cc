@@ -57,8 +57,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     l2cap_ = std::make_unique<l2cap::ChannelManager>(
         transport(), message_loop()->task_runner());
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(
-        Mode::kLegacy, transport(), dev_cache_.get(), l2cap_.get(),
-        kTestRequestTimeoutMs);
+        Mode::kLegacy, transport(), dev_cache_.get(), l2cap_.get());
 
     test_device()->SetConnectionStateCallback(
         std::bind(&LowEnergyConnectionManagerTest::OnConnectionStateChanged,
@@ -205,6 +204,7 @@ TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
     fsl::MessageLoop::GetCurrent()->QuitNow();
   };
 
+  conn_mgr()->set_request_timeout_for_testing(kTestRequestTimeoutMs);
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
 
   RunMessageLoop();
@@ -447,6 +447,8 @@ TEST_F(LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevices) {
   EXPECT_EQ(1u, connected_devices().count(kAddress1));
 
   ASSERT_EQ(2u, conn_refs.size());
+  ASSERT_TRUE(conn_refs[0]);
+  ASSERT_TRUE(conn_refs[1]);
   EXPECT_EQ(dev0->identifier(), conn_refs[0]->device_identifier());
   EXPECT_EQ(dev1->identifier(), conn_refs[1]->device_identifier());
 

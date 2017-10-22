@@ -70,10 +70,9 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
     Mode /* mode */,
     fxl::RefPtr<hci::Transport> hci,
     RemoteDeviceCache* device_cache,
-    l2cap::ChannelManager* l2cap,
-    int64_t request_timeout_ms)
+    l2cap::ChannelManager* l2cap)
     : hci_(hci),
-      request_timeout_ms_(request_timeout_ms),
+      request_timeout_ms_(kLECreateConnectionTimeoutMs),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       device_cache_(device_cache),
       l2cap_(l2cap),

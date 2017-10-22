@@ -82,12 +82,10 @@ using LowEnergyConnectionRefPtr = std::unique_ptr<LowEnergyConnectionRef>;
 
 class LowEnergyConnectionManager final {
  public:
-  LowEnergyConnectionManager(
-      Mode mode,
-      fxl::RefPtr<hci::Transport> hci,
-      RemoteDeviceCache* device_cache,
-      l2cap::ChannelManager* l2cap,
-      int64_t request_timeout_ms = kLECreateConnectionTimeoutMs);
+  LowEnergyConnectionManager(Mode mode,
+                             fxl::RefPtr<hci::Transport> hci,
+                             RemoteDeviceCache* device_cache,
+                             l2cap::ChannelManager* l2cap);
   ~LowEnergyConnectionManager();
 
   // Allows a caller to claim shared ownership over a connection to the
@@ -140,6 +138,12 @@ class LowEnergyConnectionManager final {
   // instead. DO NOT use outside of tests.
   using DisconnectCallback = std::function<void(hci::ConnectionHandle)>;
   void SetDisconnectCallbackForTesting(const DisconnectCallback& callback);
+
+  // Sets the timeout interval to be used on future connect requests. The
+  // default value is kLECreateConnecionTimeoutMs.
+  void set_request_timeout_for_testing(int64_t value_ms) {
+    request_timeout_ms_ = value_ms;
+  }
 
  private:
   friend class LowEnergyConnectionRef;
