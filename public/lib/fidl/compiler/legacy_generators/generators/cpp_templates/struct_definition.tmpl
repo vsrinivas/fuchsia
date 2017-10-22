@@ -197,7 +197,9 @@ void {{class_name}}::DecodePointersAndHandles(
     return;
 {%-     endif %}
 {%-     if kind|is_union_kind %}
-  {{name}}.DecodePointersAndHandles(handles);
+  if (!{{name}}.is_null()) {
+    {{name}}.DecodePointersAndHandles(handles);
+  }
 {%-     elif kind|is_object_kind %}
   ::fidl::internal::Decode(&this->{{name}}, handles);
 {%-     else %}
