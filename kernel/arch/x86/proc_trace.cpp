@@ -280,8 +280,18 @@ zx_status_t x86_ipt_cpu_mode_start() {
         return ZX_ERR_BAD_STATE;
 
     uint64_t kernel_cr3 = x86_kernel_cr3();
-    TRACEF("Enabling processor trace, kernel cr3: 0x%" PRIxPTR "\n",
+    TRACEF("Starting processor trace, kernel cr3: 0x%" PRIxPTR "\n",
            kernel_cr3);
+
+    if (LOCAL_TRACE) {
+        uint32_t num_cpus = arch_max_num_cpus();
+        for (uint32_t cpu = 0; cpu < num_cpus; ++cpu) {
+            TRACEF("Cpu %u: ctl 0x%" PRIx64 ", status 0x%" PRIx64 ", base 0x%" PRIx64 ", mask 0x%" PRIx64 "\n",
+                   cpu, ipt_cpu_state[cpu].ctl, ipt_cpu_state[cpu].status,
+                   ipt_cpu_state[cpu].output_base,
+                   ipt_cpu_state[cpu].output_mask_ptrs);
+        }
+    }
 
     active = true;
 
@@ -345,11 +355,22 @@ zx_status_t x86_ipt_cpu_mode_stop() {
     if (!ipt_cpu_state)
         return ZX_ERR_BAD_STATE;
 
-    TRACEF("Disabling processor trace\n");
+    TRACEF("Stopping processor trace\n");
 
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_stop_cpu_task, ipt_cpu_state);
     ktrace(TAG_IPT_STOP, 0, 0, 0, 0);
     active = false;
+
+    if (LOCAL_TRACE) {
+        uint32_t num_cpus = arch_max_num_cpus();
+        for (uint32_t cpu = 0; cpu < num_cpus; ++cpu) {
+            TRACEF("Cpu %u: ctl 0x%" PRIx64 ", status 0x%" PRIx64 ", base 0x%" PRIx64 ", mask 0x%" PRIx64 "\n",
+                   cpu, ipt_cpu_state[cpu].ctl, ipt_cpu_state[cpu].status,
+                   ipt_cpu_state[cpu].output_base,
+                   ipt_cpu_state[cpu].output_mask_ptrs);
+        }
+    }
+
     return ZX_OK;
 }
 
