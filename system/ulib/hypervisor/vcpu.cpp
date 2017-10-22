@@ -144,7 +144,7 @@ static zx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_t
     value.access_size = io->access_size;
     zx_status_t status = trap_key_to_mapping(trap_key)->Read(io->port, &value);
     if (status != ZX_OK) {
-        fprintf(stderr, "Unhandled port in %#x: %d\n", io->port, status);
+        fprintf(stderr, "Failed to handle port in %#x: %d\n", io->port, status);
         return status;
     }
 
@@ -169,7 +169,11 @@ static zx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_io_
     IoValue value;
     value.access_size = io->access_size;
     value.u32 = io->u32;
-    return trap_key_to_mapping(trap_key)->Write(io->port, value);
+    zx_status_t status = trap_key_to_mapping(trap_key)->Write(io->port, value);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to handle port out %#x: %d\n", io->port, status);
+    }
+    return status;
 #else  // __x86_64__
     return ZX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
