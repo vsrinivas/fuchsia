@@ -59,6 +59,7 @@ class TrapMap;
 /* Stores VM exit info from VMCS fields. */
 struct ExitInfo {
     ExitReason exit_reason;
+    bool vmentry_failure;
     uint64_t exit_qualification;
     uint32_t instruction_length;
     uint64_t guest_physical_address;

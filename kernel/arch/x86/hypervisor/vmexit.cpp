@@ -51,7 +51,12 @@ constexpr uint64_t kHypVendorEdx = fbl::magic("rcon");
 extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
 
 ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
-    exit_reason = static_cast<ExitReason>(vmcs.Read(VmcsField32::EXIT_REASON));
+    // From Volume 3, Section 26.7.
+    uint32_t full_exit_reason = vmcs.Read(VmcsField32::EXIT_REASON);
+    uint32_t basic_exit_reason = BITS(full_exit_reason, 15, 0);
+    exit_reason = static_cast<ExitReason>(basic_exit_reason);
+    vmentry_failure = BIT(full_exit_reason, 31);
+
     exit_qualification = vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION);
     instruction_length = vmcs.Read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
     guest_physical_address = vmcs.Read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
