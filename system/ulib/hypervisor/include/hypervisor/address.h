@@ -35,18 +35,11 @@
 #define TPM_SIZE                        0x5000
 
 /* UART ports. */
-#define UART_BASE                       0x3f8
+#define UART0_BASE                      0x3f8
+#define UART1_BASE                      0x2f8
+#define UART2_BASE                      0x3e8
+#define UART3_BASE                      0x2e8
 #define UART_SIZE                       0x8
-
-/* Use an async trap for the first port (TX port) only. */
-#define UART_ASYNC_BASE                 UART_BASE
-#define UART_ASYNC_SIZE                 1
-#define UART_ASYNC_OFFSET               0
-
-/* Use an async trap for the first port (TX port) only. */
-#define UART_SYNC_BASE                  (UART_BASE + UART_ASYNC_SIZE)
-#define UART_SYNC_SIZE                  (UART_SIZE - UART_ASYNC_SIZE)
-#define UART_SYNC_OFFSET                UART_ASYNC_SIZE
 
 /* RTC ports. */
 #define RTC_BASE                        0x70

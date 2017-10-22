@@ -293,19 +293,37 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to create TPM\n");
         return status;
     }
+    // Setup UARTs.
+    Uart uart0(&io_apic);
+    status = uart0.Start(&guest, UART0_BASE, stdin, stdout);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create UART0\n");
+        return status;
+    }
+    Uart uart1(&io_apic);
+    status = uart1.Start(&guest, UART1_BASE, nullptr, nullptr);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create UART1\n");
+        return status;
+    }
+    Uart uart2(&io_apic);
+    status = uart2.Start(&guest, UART2_BASE, nullptr, nullptr);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create UART2\n");
+        return status;
+    }
+    Uart uart3(&io_apic);
+    status = uart3.Start(&guest, UART3_BASE, nullptr, nullptr);
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create UART3\n");
+        return status;
+    }
 #endif
     // Setup PCI.
     PciBus bus(&guest, &io_apic);
     status = bus.Init();
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to create PCI bus\n");
-        return status;
-    }
-    // Setup UART.
-    Uart uart(&io_apic);
-    status = uart.Start(&guest);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to create UART\n");
         return status;
     }
 

@@ -184,7 +184,7 @@ zx_status_t Uart::EmptyTx() {
                 cnd_wait(&tx_cnd_, mutex_.GetInternal());
             }
 
-            printf("%.*s", tx_offset_, tx_buffer_);
+            fprintf(output_file_, "%.*s", tx_offset_, tx_buffer_);
             tx_offset_ = 0;
             cnd_signal(&tx_empty_cnd_);
         }
@@ -212,7 +212,7 @@ zx_status_t Uart::FillRx() {
                 cnd_wait(&rx_cnd_, mutex_.GetInternal());
         }
 
-        int pending_char = getchar();
+        int pending_char = fgetc(input_file_);
         if (pending_char == '\b')
             // Replace BS with DEL to make Linux happy.
             // TODO(andymutton): Better input handling / terminal emulation.
@@ -231,40 +231,47 @@ zx_status_t Uart::FillRx() {
     return status;
 }
 
-zx_status_t Uart::Start(Guest* guest) {
+zx_status_t Uart::Start(Guest* guest, uint16_t port, FILE* input, FILE* output) {
+    input_file_ = input;
+    output_file_ = output;
+
     zx_status_t status;
-    status = guest->CreateMapping(TrapType::PIO_ASYNC, UART_ASYNC_BASE, UART_ASYNC_SIZE,
+    status = guest->CreateMapping(TrapType::PIO_ASYNC, port + UART_ASYNC_BASE, UART_ASYNC_SIZE,
                                   UART_ASYNC_OFFSET, this);
     if (status != ZX_OK)
         return status;
-    status = guest->CreateMapping(TrapType::PIO_SYNC, UART_SYNC_BASE, UART_SYNC_SIZE,
+    status = guest->CreateMapping(TrapType::PIO_SYNC, port + UART_SYNC_BASE, UART_SYNC_SIZE,
                                   UART_SYNC_OFFSET, this);
     if (status != ZX_OK)
         return status;
 
-    thrd_t uart_input_thread;
-    int ret = thrd_create(&uart_input_thread, uart_fill_rx, this);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to create UART input thread %d\n", ret);
-        return ZX_ERR_INTERNAL;
-    }
-    ret = thrd_detach(uart_input_thread);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to detach UART input thread %d\n", ret);
-        return ZX_ERR_INTERNAL;
-    }
-
-    thrd_t uart_output_thread;
-    ret = thrd_create(&uart_output_thread, uart_empty_tx, this);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to create UART output thread %d\n", ret);
-        return ZX_ERR_INTERNAL;
+    if (input_file_ != nullptr) {
+        thrd_t uart_input_thread;
+        int ret = thrd_create(&uart_input_thread, uart_fill_rx, this);
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to create UART input thread %d\n", ret);
+            return ZX_ERR_INTERNAL;
+        }
+        ret = thrd_detach(uart_input_thread);
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to detach UART input thread %d\n", ret);
+            return ZX_ERR_INTERNAL;
+        }
     }
 
-    ret = thrd_detach(uart_output_thread);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to detach UART output thread %d\n", ret);
-        return ZX_ERR_INTERNAL;
+    if (output_file_ != nullptr) {
+        thrd_t uart_output_thread;
+        int ret = thrd_create(&uart_output_thread, uart_empty_tx, this);
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to create UART output thread %d\n", ret);
+            return ZX_ERR_INTERNAL;
+        }
+
+        ret = thrd_detach(uart_output_thread);
+        if (ret != thrd_success) {
+            fprintf(stderr, "Failed to detach UART output thread %d\n", ret);
+            return ZX_ERR_INTERNAL;
+        }
     }
 
     return ZX_OK;

@@ -13,6 +13,14 @@
 
 // clang-format off
 
+/* Use an async trap for the first port (TX port) only. */
+#define UART_ASYNC_BASE                 0
+#define UART_ASYNC_SIZE                 1
+#define UART_ASYNC_OFFSET               0
+#define UART_SYNC_BASE                  UART_ASYNC_SIZE
+#define UART_SYNC_SIZE                  (UART_SIZE - UART_ASYNC_SIZE)
+#define UART_SYNC_OFFSET                UART_ASYNC_SIZE
+
 /* UART ports. */
 #define UART_RECEIVE_PORT               0x0
 #define UART_TRANSMIT_PORT              0x0
@@ -58,7 +66,12 @@ public:
 
     zx_status_t Init(zx_handle_t guest);
 
-    zx_status_t Start(Guest* guest);
+    // Starts processing input using the file streams provided. If a UART is
+    // unused then |nullptr| can be provided as the file stream.
+    //
+    // This method is *not* thread safe and must only be called during startup
+    // before VCPU execution begins.
+    zx_status_t Start(Guest* guest, uint16_t port, FILE* input, FILE* output);
 
     // IoHandler interface.
     zx_status_t Read(uint64_t port, IoValue* io) override;
@@ -135,6 +148,9 @@ private:
     uint8_t rx_buffer_ TA_GUARDED(mutex_) = 0;
     // Notify input thread that guest is ready for input.
     cnd_t rx_cnd_;
+
+    FILE* input_file_ = nullptr;
+    FILE* output_file_ = nullptr;
 
     // Interrupt enable register (IER).
     uint8_t interrupt_enable_ TA_GUARDED(mutex_) = UART_INTERRUPT_ENABLE_NONE;
