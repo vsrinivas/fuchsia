@@ -5,6 +5,7 @@
 // See the README.md in this directory for documentation.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
@@ -25,16 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 typedef enum {
     IPT_TRACE_CPUS,
@@ -156,7 +147,7 @@ static void x86_pt_init(void)
 
     max_leaf = __get_cpuid_max(0, NULL);
     if (max_leaf < 0x14) {
-        xprintf("IntelPT: No PT support\n");
+        zxlogf(INFO, "IntelPT: No PT support\n");
         return;
     }
 
@@ -171,7 +162,7 @@ static void x86_pt_init(void)
 
     __cpuid_count(0x07, 0, a, b, c, d);
     if (!BIT(b, 25)) {
-        xprintf("IntelPT: No PT support\n");
+        zxlogf(INFO, "IntelPT: No PT support\n");
         return;
     }
 
@@ -209,12 +200,12 @@ static void x86_pt_init(void)
     ipt_config_output_transport = !!BIT(c, 3);
     ipt_config_lip = !!BIT(c, 31);
 
-    xprintf("Intel Processor Trace configuration for this chipset:\n");
+    zxlogf(INFO, "Intel Processor Trace configuration for this chipset:\n");
     // No need to print everything, but these are useful.
-    xprintf("mtc_freq_mask:   0x%x\n", ipt_config_mtc_freq_mask);
-    xprintf("cyc_thresh_mask: 0x%x\n", ipt_config_cyc_thresh_mask);
-    xprintf("psb_freq_mask:   0x%x\n", ipt_config_psb_freq_mask);
-    xprintf("num addr ranges: %u\n", ipt_config_num_addr_ranges);
+    zxlogf(INFO, "mtc_freq_mask:   0x%x\n", ipt_config_mtc_freq_mask);
+    zxlogf(INFO, "cyc_thresh_mask: 0x%x\n", ipt_config_cyc_thresh_mask);
+    zxlogf(INFO, "psb_freq_mask:   0x%x\n", ipt_config_psb_freq_mask);
+    zxlogf(INFO, "num addr ranges: %u\n", ipt_config_num_addr_ranges);
 }
 
 // Set the tracing mode to one of cpus or threads.
@@ -336,9 +327,9 @@ static uint32_t compute_topa_entry_count(ipt_device_t* ipt_dev, ipt_per_trace_st
         (IPT_TOPA_MAX_TABLE_ENTRIES - 1);
     uint32_t result = num_entries + num_end_entries;
 
-    xprintf("IPT: compute_topa_entry_count: num_entries: %u\n", num_entries);
-    xprintf("IPT: compute_topa_entry_count: num_end_entries: %u\n", num_end_entries);
-    xprintf("IPT: compute_topa_entry_count: total entries: %u\n", result);
+    zxlogf(DEBUG1, "IPT: compute_topa_entry_count: num_entries: %u\n", num_entries);
+    zxlogf(DEBUG1, "IPT: compute_topa_entry_count: num_end_entries: %u\n", num_end_entries);
+    zxlogf(DEBUG1, "IPT: compute_topa_entry_count: total entries: %u\n", result);
 
     return result;
 }
@@ -350,9 +341,9 @@ static size_t compute_capture_size(ipt_device_t* ipt_dev, const ipt_per_trace_st
     uint32_t curr_table_entry_idx = (uint32_t)per_trace->output_mask_ptrs >> 7;
     uint32_t curr_entry_offset = (uint32_t)(per_trace->output_mask_ptrs >> 32);
 
-    xprintf("IPT: compute_capture_size: trace %tu\n", per_trace - ipt_dev->per_trace_state);
-    xprintf("IPT: curr_table_paddr 0x%" PRIx64 ", curr_table_entry_idx %u, curr_entry_offset %u\n",
-            curr_table_paddr, curr_table_entry_idx, curr_entry_offset);
+    zxlogf(DEBUG1, "IPT: compute_capture_size: trace %tu\n", per_trace - ipt_dev->per_trace_state);
+    zxlogf(DEBUG1, "IPT: curr_table_paddr 0x%" PRIx64 ", curr_table_entry_idx %u, curr_entry_offset %u\n",
+           curr_table_paddr, curr_table_entry_idx, curr_entry_offset);
 
     size_t total_size = 0;
     for (uint32_t table = 0; table < per_trace->num_tables; ++table) {
@@ -373,7 +364,7 @@ static size_t compute_capture_size(ipt_device_t* ipt_dev, const ipt_per_trace_st
 
     // Should be unreachable.
     // TODO(dje): Later flag state as broken.
-    xprintf("IPT: unexpectedly exited capture loop\n");
+    zxlogf(ERROR, "IPT: unexpectedly exited capture loop\n");
     return 0;
 }
 
@@ -410,7 +401,7 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
             IPT_TOPA_MAX_TABLE_ENTRIES;
 
     if (entry_count < 2) {
-        xprintf("IPT: INVALID ENTRY COUNT: %u\n", entry_count);
+        zxlogf(INFO, "IPT: INVALID ENTRY COUNT: %u\n", entry_count);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -500,27 +491,27 @@ static zx_status_t x86_pt_alloc_buffer(ipt_device_t* ipt_dev,
                               IPT_CTL_PSB_FREQ_MASK |
                               IPT_CTL_CYC_THRESH_MASK);
     if ((config->ctl & ~settable_ctl_mask) != 0) {
-        xprintf("bad ctl, requested 0x%" PRIx64 ", valid 0x%" PRIx64 "\n",
-                config->ctl, settable_ctl_mask);
+        zxlogf(ERROR, "bad ctl, requested 0x%" PRIx64 ", valid 0x%" PRIx64 "\n",
+               config->ctl, settable_ctl_mask);
         return ZX_ERR_INVALID_ARGS;
     }
 
     uint32_t mtc_freq = (uint32_t) ((config->ctl & IPT_CTL_MTC_FREQ_MASK) >> IPT_CTL_MTC_FREQ_SHIFT);
     if (mtc_freq != 0 && ((1 << mtc_freq) & ipt_config_mtc_freq_mask) == 0) {
-        xprintf("bad mtc_freq value, requested 0x%x, valid mask 0x%x\n",
-                mtc_freq, ipt_config_mtc_freq_mask);
+        zxlogf(ERROR, "bad mtc_freq value, requested 0x%x, valid mask 0x%x\n",
+               mtc_freq, ipt_config_mtc_freq_mask);
         return ZX_ERR_INVALID_ARGS;
     }
     uint32_t cyc_thresh = (uint32_t) ((config->ctl & IPT_CTL_CYC_THRESH_MASK) >> IPT_CTL_CYC_THRESH_SHIFT);
     if (cyc_thresh != 0 && ((1 << cyc_thresh) & ipt_config_cyc_thresh_mask) == 0) {
-        xprintf("bad cyc_thresh value, requested 0x%x, valid mask 0x%x\n",
-                cyc_thresh, ipt_config_cyc_thresh_mask);
+        zxlogf(ERROR, "bad cyc_thresh value, requested 0x%x, valid mask 0x%x\n",
+               cyc_thresh, ipt_config_cyc_thresh_mask);
         return ZX_ERR_INVALID_ARGS;
     }
     uint32_t psb_freq = (uint32_t) ((config->ctl & IPT_CTL_PSB_FREQ_MASK) >> IPT_CTL_PSB_FREQ_SHIFT);
     if (psb_freq != 0 && ((1 << psb_freq) & ipt_config_psb_freq_mask) == 0) {
-        xprintf("bad psb_freq value, requested 0x%x, valid mask 0x%x\n",
-                psb_freq, ipt_config_psb_freq_mask);
+        zxlogf(ERROR, "bad psb_freq value, requested 0x%x, valid mask 0x%x\n",
+               psb_freq, ipt_config_psb_freq_mask);
         return ZX_ERR_INVALID_ARGS;
     }
 
