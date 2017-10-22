@@ -61,15 +61,15 @@ ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
         exit_reason == ExitReason::IO_INSTRUCTION)
         return;
 
-    LTRACEF("exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
-    LTRACEF("exit qualification: %#" PRIx64 "\n", exit_qualification);
-    LTRACEF("instruction length: %#" PRIx32 "\n", instruction_length);
-    LTRACEF("guest physical address: %#" PRIx64 "\n", guest_physical_address);
-    LTRACEF("guest linear address: %#" PRIx64 "\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
-    LTRACEF("guest activity state: %#" PRIx32 "\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
-    LTRACEF("guest interruptibility state: %#" PRIx32 "\n",
+    LTRACEF("exit reason: %#x\n", static_cast<uint32_t>(exit_reason));
+    LTRACEF("exit qualification: %#lx\n", exit_qualification);
+    LTRACEF("instruction length: %#x\n", instruction_length);
+    LTRACEF("guest physical address: %#lx\n", guest_physical_address);
+    LTRACEF("guest linear address: %#lx\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
+    LTRACEF("guest activity state: %#x\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
+    LTRACEF("guest interruptibility state: %#x\n",
             vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
-    LTRACEF("guest rip: %#" PRIx64 "\n", guest_rip);
+    LTRACEF("guest rip: %#lx\n", guest_rip);
 }
 
 ExitInterruptionInformation::ExitInterruptionInformation(const AutoVmcs& vmcs) {

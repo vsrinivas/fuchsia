@@ -99,7 +99,8 @@ zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
 
     // The maximum size for a VMXON or VMCS region is 4096, therefore
     // unconditionally allocating a page is adequate.
-    if (pmm_alloc_page(0, &pa_) == nullptr)
+    vm_page_t* page = pmm_alloc_page(0, &pa_);
+    if (page == nullptr)
         return ZX_ERR_NO_MEMORY;
 
     memset(VirtualAddress(), fill, PAGE_SIZE);
