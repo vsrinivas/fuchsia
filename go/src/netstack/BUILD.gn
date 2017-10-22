@@ -12,6 +12,7 @@ package("netstack") {
     "//garnet/go/src/netstack/getaddrtest",
     "//garnet/go/src/netstack/ifconfig",
     "//garnet/go/src/netstack/ifinfo",
+    "//garnet/go/src/netstack/netstat",
     "//garnet/public/lib/netstack/fidl",
   ]
 
@@ -24,6 +25,9 @@ package("netstack") {
     },
     {
       name = "ifinfo"
+    },
+    {
+      name = "netstat"
     },
     {
       name = "getaddrtest"

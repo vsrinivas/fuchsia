@@ -61,6 +61,13 @@ struct NetInterface {
 // Flags for NetInterface.flags.
 const uint32 NetInterfaceFlagUp = 0x1;  // Set if the interface is up.
 
+struct RouteTableEntry {
+  NetAddress destination;
+  NetAddress netmask;
+  NetAddress gateway;
+  uint32 nicid;
+};
+
 [ServiceName="netstack::Netstack"]
 interface Netstack {
   // Finds the port number from a given service name and protocol. [service] can be a
@@ -78,6 +85,8 @@ interface Netstack {
 
   // Returns the netstack's node name.
   GetNodeName() => (string node_name);
+
+  GetRouteTable() => (array<RouteTableEntry> rt);
 
   // TODO (porce): Separate interfaces.
   GetStats(uint32 nicid) => (NetInterfaceStats stats);

@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"app/context"
 
@@ -119,6 +120,45 @@ func (ni *netstackImpl) GetNodeName() (out string, err error) {
 	nodename := ns.nodename
 	ns.mu.Unlock()
 	return nodename, nil
+}
+
+func (ni *netstackImpl) GetRouteTable() (out []nsfidl.RouteTableEntry, err error) {
+	ns.mu.Lock()
+	table := ns.stack.GetRouteTable()
+	ns.mu.Unlock()
+
+	for _, route := range table {
+		// Ensure that if any of the returned addresss are "empty",
+		// they still have the appropriate NetAddressFamily.
+		l := 0
+		if len(route.Destination) > 0 {
+			l = len(route.Destination)
+		} else if len(route.Mask) > 0 {
+			l = len(route.Destination)
+		} else if len(route.Gateway) > 0 {
+			l = len(route.Gateway)
+		}
+		dest := route.Destination
+		mask := route.Mask
+		gateway := route.Gateway
+		if len(dest) == 0 {
+			dest = tcpip.Address(strings.Repeat("\x00", l))
+		}
+		if len(mask) == 0 {
+			mask = tcpip.Address(strings.Repeat("\x00", l))
+		}
+		if len(gateway) == 0 {
+			gateway = tcpip.Address(strings.Repeat("\x00", l))
+		}
+
+		out = append(out, nsfidl.RouteTableEntry{
+			Destination: toNetAddress(dest),
+			Netmask:     toNetAddress(mask),
+			Gateway:     toNetAddress(gateway),
+			Nicid:       uint32(route.NIC),
+		})
+	}
+	return out, nil
 }
 
 func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, err error) {
