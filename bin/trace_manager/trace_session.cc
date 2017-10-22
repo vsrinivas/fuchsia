@@ -43,6 +43,8 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
 
+  FXL_VLOG(1) << "Adding provider " << *bundle;
+
   tracees_.emplace_back(std::make_unique<Tracee>(bundle));
   if (!tracees_.back()->Start(
           trace_buffer_size_, categories_.Clone(),
@@ -71,6 +73,8 @@ void TraceSession::Stop(fxl::Closure done_callback,
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
 
+  FXL_VLOG(1) << "Stopping trace";
+
   TransitionToState(State::kStopping);
   done_callback_ = std::move(done_callback);
 
@@ -91,6 +95,7 @@ void TraceSession::Stop(fxl::Closure done_callback,
 
 void TraceSession::NotifyStarted() {
   if (start_callback_) {
+    FXL_VLOG(1) << "Marking session as having started";
     session_start_timeout_.Stop();
     auto start_callback = std::move(start_callback_);
     start_callback();
@@ -98,6 +103,7 @@ void TraceSession::NotifyStarted() {
 }
 
 void TraceSession::Abort() {
+  FXL_VLOG(1) << "Marking session as having aborted";
   TransitionToState(State::kStopped);
   tracees_.clear();
   abort_handler_();
@@ -148,6 +154,7 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
 
 void TraceSession::FinishSessionIfEmpty() {
   if (state_ == State::kStopping && tracees_.empty()) {
+    FXL_VLOG(1) << "Marking session as stopped, no more tracees";
     TransitionToState(State::kStopped);
     session_finalize_timeout_.Stop();
     done_callback_();
@@ -158,11 +165,12 @@ void TraceSession::FinishSessionDueToTimeout() {
   // We do not consider pending_start_tracees_ here as we only
   // stop them as a best effort.
   if (state_ == State::kStopping && !tracees_.empty()) {
+    FXL_VLOG(1) << "Marking session as stopped, timed out waiting for tracee(s)";
     TransitionToState(State::kStopped);
     for (auto& tracee : tracees_) {
       if (tracee->state() != Tracee::State::kStopped)
-        FXL_LOG(WARNING) << "Timed out waiting for trace provider '"
-                         << tracee->bundle()->label << "' to finish";
+        FXL_LOG(WARNING) << "Timed out waiting for trace provider "
+                         << *tracee->bundle() << " to finish";
     }
     done_callback_();
   }

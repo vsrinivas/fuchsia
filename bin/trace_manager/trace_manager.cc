@@ -58,7 +58,6 @@ void TraceManager::StartTracing(TraceOptionsPtr options,
       buffer_size_megabytes * 1024 * 1024, [this]() { session_ = nullptr; });
 
   for (auto& bundle : providers_) {
-    FXL_VLOG(1) << "  for provider " << bundle;
     session_->AddProvider(&bundle);
   }
 
@@ -146,6 +145,15 @@ void TraceManager::LaunchConfiguredProviders() {
     // Also keep track of the provider so we can kill it when the trace
     // manager exits or restart it if needed.
     FXL_VLOG(1) << "Starting configured provider: " << pair.first;
+    FXL_VLOG(2) << "URL: " << pair.second->url;
+    if (FXL_VLOG_IS_ON(2)) {
+      std::string args;
+      for (const auto& arg : pair.second->arguments) {
+        args += " ";
+        args += arg;
+      }
+      FXL_VLOG(2) << "Args:" << args;
+    }
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = pair.second->url;
     launch_info->arguments = pair.second->arguments.Clone();
