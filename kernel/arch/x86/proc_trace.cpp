@@ -14,6 +14,17 @@
 // We currently only support Table of Physical Addresses mode:
 // it supports discontiguous buffers and supports stop-on-full behavior
 // in addition to wrap-around.
+//
+// IPT tracing has two "modes":
+// - per-cpu tracing
+// - thread-specific tracing
+// Tracing can only be done in one mode at a time. This is because saving/
+// restoring thread PT state via the xsaves/xrstors instructions is a global
+// flag in the XSS msr.
+// Plus once a trace has been done with IPT_TRACE_THREADS one cannot go back
+// to IPT_TRACE_CPUS: supporting this requires flushing trace state from all
+// threads which is a bit of work. For now it's easy enough to just require
+// the user to reboot. ZX-892
 
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
@@ -130,13 +141,6 @@ void arch_trace_process_create(uint64_t pid, paddr_t pt_phys) {
     ktrace(TAG_IPT_PROCESS_CREATE, (uint32_t)pid, (uint32_t)(pid >> 32),
            (uint32_t)cr3, (uint32_t)(cr3 >> 32));
 }
-
-// IPT tracing has two "modes":
-// - per-cpu tracing
-// - thread-specific tracing
-// Tracing can only be done in one mode at a time. This is because saving/
-// restoring thread PT state via the xsaves/xrstors instructions is a global
-// flag in the XSS msr.
 
 // Worker for x86_ipt_set_mode to be executed on all cpus.
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
