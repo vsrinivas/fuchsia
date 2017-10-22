@@ -395,6 +395,7 @@ struct ExtendedPageTable : PageTableBase<Level> {
      * These are used for page mapping entries in the table.
      */
     static arch_flags_t arch_flags(uint aspace_flags, uint flags) {
+        DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHED) == ARCH_MMU_FLAG_CACHED);
         // Only the write-back memory type is supported.
         arch_flags_t arch_flags = X86_EPT_WB;
 

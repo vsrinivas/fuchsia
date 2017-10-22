@@ -95,7 +95,7 @@ static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
         break;
     default:
         // Invalid user-supplied flag.
-        DEBUG_ASSERT(true);
+        DEBUG_ASSERT(false);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -126,24 +126,9 @@ static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
 }
 
 static pte_t mmu_flags_to_s2_pte_attr(uint flags) {
-    pte_t attr = MMU_PTE_ATTR_AF;
-
-    switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
-    case ARCH_MMU_FLAG_CACHED:
-        attr |= MMU_S2_PTE_ATTR_NORMAL_MEMORY | MMU_PTE_ATTR_SH_INNER_SHAREABLE;
-        break;
-    case ARCH_MMU_FLAG_WRITE_COMBINING:
-    case ARCH_MMU_FLAG_UNCACHED:
-        attr |= MMU_S2_PTE_ATTR_STRONGLY_ORDERED;
-        break;
-    case ARCH_MMU_FLAG_UNCACHED_DEVICE:
-        attr |= MMU_S2_PTE_ATTR_DEVICE;
-        break;
-    default:
-        // Invalid user-supplied flag.
-        DEBUG_ASSERT(true);
-        return ZX_ERR_INVALID_ARGS;
-    }
+    DEBUG_ASSERT((flags & ARCH_MMU_FLAG_CACHED) == ARCH_MMU_FLAG_CACHED);
+    // Only the inner-shareable, normal memory type is supported.
+    pte_t attr = MMU_PTE_ATTR_AF | MMU_PTE_ATTR_SH_INNER_SHAREABLE | MMU_S2_PTE_ATTR_NORMAL_MEMORY;
 
     if (flags & ARCH_MMU_FLAG_PERM_WRITE) {
         attr |= MMU_S2_PTE_ATTR_S2AP_RW;
@@ -518,7 +503,8 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                 pte |= MMU_PTE_L012_DESCRIPTOR_BLOCK;
             else
                 pte |= MMU_PTE_L3_DESCRIPTOR_PAGE;
-            pte |= MMU_PTE_ATTR_NON_GLOBAL;
+            if (!(flags_ & ARCH_ASPACE_FLAG_GUEST))
+                pte |= MMU_PTE_ATTR_NON_GLOBAL;
             LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n",
                     page_table, index, pte);
             page_table[index] = pte;
