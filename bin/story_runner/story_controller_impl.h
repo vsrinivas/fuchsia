@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "lib/app/fidl/application_controller.fidl.h"
+#include "lib/async/cpp/operation.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -38,7 +39,6 @@
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/lib/fidl/context.h"
-#include "lib/async/cpp/operation.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -274,13 +274,14 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   OperationQueue operation_queue_;
 
   // Operations implemented here.
+  class StartModuleCall;
+  class StartModuleInShellCall;
   class AddModuleCall;
   class AddForCreateCall;
-  class StartCall;
-  class StartModuleCall;
   class StopCall;
   class StopModuleCall;
   class DeleteCall;
+  class StartCall;
   class GetImportanceCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);

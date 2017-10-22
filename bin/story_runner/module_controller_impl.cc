@@ -122,12 +122,12 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   // At this point, it's no longer an error if the module closes its
   // connection, or the application exits.
   app_client_.SetAppErrorHandler(nullptr);
+  module_service_.set_connection_error_handler(nullptr);
 
   // If the module was UNLINKED, stop it without a delay. Otherwise
   // call Module.Stop(), but also schedule a timeout in case it
   // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {
-    module_service_.set_connection_error_handler(nullptr);
     fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
   } else {
     app_client_.Teardown(kBasicTimeout, cont);

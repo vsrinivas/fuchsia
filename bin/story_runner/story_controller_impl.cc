@@ -125,6 +125,323 @@ class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
 };
 
+class StoryControllerImpl::StartModuleCall : Operation<> {
+ public:
+  StartModuleCall(
+      OperationContainer* const container,
+      StoryControllerImpl* const story_controller_impl,
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::Array<fidl::String>& module_path,
+      const fidl::String& module_url,
+      const fidl::String& link_name,
+      const ModuleSource module_source,
+      SurfaceRelationPtr surface_relation,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      ResultCall result_call)
+      : Operation("StoryControllerImpl::StartModuleCall",
+                  container,
+                  std::move(result_call),
+                  module_url),
+        story_controller_impl_(story_controller_impl),
+        parent_module_path_(parent_module_path.Clone()),
+        module_path_(module_path.Clone()),
+        module_url_(module_url),
+        link_name_(link_name),
+        module_source_(module_source),
+        surface_relation_(std::move(surface_relation)),
+        outgoing_services_(std::move(outgoing_services)),
+        incoming_services_(std::move(incoming_services)),
+        module_controller_request_(std::move(module_controller_request)),
+        view_owner_request_(std::move(view_owner_request)) {
+    FXL_DCHECK(!parent_module_path_.is_null());
+
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // We currently require a 1:1 relationship between module
+    // application instances and Module service instances, because
+    // flutter only allows one ViewOwner per flutter application,
+    // and we need one ViewOwner instance per Module instance.
+
+    if (link_name_) {
+      link_path_ = LinkPath::New();
+      link_path_->module_path = parent_module_path_.Clone();
+      link_path_->link_name = link_name_;
+      WriteModuleData(flow);
+
+    } else {
+      // If the link name is null, this module receives the default link of its
+      // parent module. We need to retrieve which one it is from story storage.
+      new ReadDataCall<ModuleData>(
+          &operation_queue_, story_controller_impl_->page(),
+          MakeModuleKey(parent_module_path_), false /* not_found_is_ok */,
+          XdrModuleData, [this, flow](ModuleDataPtr module_data) {
+            FXL_DCHECK(module_data);
+            link_path_ = module_data->link_path.Clone();
+            WriteModuleData(flow);
+          });
+    }
+  }
+
+  void WriteModuleData(FlowToken flow) {
+    ModuleDataPtr data = ModuleData::New();
+    data->module_url = module_url_;
+    data->module_path = module_path_.Clone();
+    data->link_path = link_path_.Clone();
+    data->module_source = module_source_;
+    data->surface_relation = surface_relation_.Clone();
+    data->module_stopped = false;
+
+    const std::string key{MakeModuleKey(module_path_)};
+    new WriteDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
+        std::move(data), [this, flow] { Cont(flow); });
+  }
+
+  void Cont(FlowToken flow) {
+    // TODO(mesch): connections_ should be a map<>.
+    auto i = std::find_if(
+        story_controller_impl_->connections_.begin(),
+        story_controller_impl_->connections_.end(),
+        [this](const Connection& c) {
+          return c.module_context_impl->module_path().Equals(module_path_);
+        });
+
+    // We launch the new module if it doesn't run yet.
+    if (i == story_controller_impl_->connections_.end()) {
+      Launch(flow);
+      return;
+    }
+
+    // If the new module is already running, but with a different URL or on a
+    // different link, or if a service exchange is requested, we tear it down
+    // then launch a new module.
+    //
+    // TODO(mesch): If only the link is different, we should just hook the
+    // existing module instance on a new link and notify it about the changed
+    // link value.
+    if (i->module_context_impl->module_url() != module_url_ ||
+        !i->module_context_impl->link_path().Equals(*link_path_) ||
+        outgoing_services_.is_valid() || incoming_services_.is_pending()) {
+      i->module_controller_impl->Teardown([this, flow] {
+        // NOTE(mesch): i is invalid at this point.
+        Launch(flow);
+      });
+      return;
+    }
+
+    // If the module is already running on the same URL and link, we just
+    // connect the module controller request.
+    i->module_controller_impl->Connect(std::move(module_controller_request_));
+  }
+
+  void Launch(FlowToken /*flow*/) {
+    FXL_LOG(INFO) << "StoryControllerImpl::StartModule() " << module_url_;
+    auto module_config = AppConfig::New();
+    module_config->url = module_url_;
+
+    mozart::ViewProviderPtr view_provider;
+    fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request =
+        view_provider.NewRequest();
+    view_provider->CreateView(std::move(view_owner_request_), nullptr);
+
+    app::ServiceProviderPtr provider;
+    auto provider_request = provider.NewRequest();
+    auto module_context = app::ConnectToService<ModuleContext>(provider.get());
+    auto service_list = app::ServiceList::New();
+    service_list->names.push_back(ModuleContext::Name_);
+    service_list->provider = std::move(provider);
+
+    Connection connection;
+    connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
+        story_controller_impl_,
+        story_controller_impl_->story_scope_.GetLauncher(),
+        std::move(module_config), module_path_, std::move(service_list),
+        std::move(module_context), std::move(view_provider_request),
+        std::move(outgoing_services_), std::move(incoming_services_));
+    connection.module_controller_impl->Connect(
+        std::move(module_controller_request_));
+
+    ModuleContextInfo module_context_info = {
+        story_controller_impl_->story_provider_impl_->component_context_info(),
+        story_controller_impl_,
+        story_controller_impl_->story_provider_impl_
+            ->user_intelligence_provider(),
+        story_controller_impl_->story_provider_impl_->module_resolver()};
+
+    module_data_ = ModuleData::New();
+    module_data_->module_url = module_url_;
+    module_data_->module_path = module_path_.Clone();
+    module_data_->link_path = link_path_.Clone();
+    module_data_->surface_relation = surface_relation_.Clone();
+
+    connection.module_context_impl = std::make_unique<ModuleContextImpl>(
+        module_context_info, module_data_.Clone(),
+        connection.module_controller_impl.get(), std::move(provider_request));
+
+    story_controller_impl_->connections_.emplace_back(std::move(connection));
+
+    NotifyWatchers();
+  }
+
+  void NotifyWatchers() {
+    story_controller_impl_->watchers_.ForAllPtrs(
+        [this](StoryWatcher* const watcher) {
+          watcher->OnModuleAdded(module_data_.Clone());
+        });
+
+    story_controller_impl_->modules_watchers_.ForAllPtrs(
+        [this](StoryModulesWatcher* const watcher) {
+          watcher->OnNewModule(module_data_.Clone());
+        });
+  }
+
+  // Passed in:
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  const fidl::Array<fidl::String> parent_module_path_;
+  const fidl::Array<fidl::String> module_path_;
+  const fidl::String module_url_;
+  const fidl::String link_name_;
+  const ModuleSource module_source_;
+  const SurfaceRelationPtr surface_relation_;
+  fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
+  fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
+  fidl::InterfaceRequest<ModuleController> module_controller_request_;
+  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+
+  LinkPathPtr link_path_;
+  ModuleDataPtr module_data_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
+};
+
+class StoryControllerImpl::StartModuleInShellCall : Operation<> {
+ public:
+  StartModuleInShellCall(
+      OperationContainer* const container,
+      StoryControllerImpl* const story_controller_impl,
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::String& module_name,
+      const fidl::String& module_url,
+      const fidl::String& link_name,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      SurfaceRelationPtr surface_relation,
+      const bool focus,
+      ModuleSource module_source,
+      ResultCall result_call)
+      : Operation("StoryControllerImpl::StartModuleCall",
+                  container,
+                  std::move(result_call),
+                  module_url),
+        story_controller_impl_(story_controller_impl),
+        parent_module_path_(parent_module_path.Clone()),
+        module_name_(module_name),
+        module_url_(module_url),
+        link_name_(link_name),
+        outgoing_services_(std::move(outgoing_services)),
+        incoming_services_(std::move(incoming_services)),
+        module_controller_request_(std::move(module_controller_request)),
+        surface_relation_(std::move(surface_relation)),
+        focus_(focus),
+        module_source_(module_source) {
+    module_path_ = parent_module_path_.Clone();
+    module_path_.push_back(module_name_);
+
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    if (module_source_ == ModuleSource::EXTERNAL) {
+      FXL_DCHECK(!module_controller_request_.is_pending());
+      module_controller_request_ = module_controller_.NewRequest();
+    }
+
+    // TODO(mesch): The StartModuleCall may result in just a new
+    // ModuleController connection to an existing
+    // ModuleControllerImpl. In that case, the view owner request is
+    // closed, and the view owner should not be sent to the story
+    // shell.
+
+    new StartModuleCall(
+        &operation_queue_, story_controller_impl_, parent_module_path_,
+        module_path_, module_url_, link_name_, module_source_,
+        surface_relation_.Clone(), std::move(outgoing_services_),
+        std::move(incoming_services_), std::move(module_controller_request_),
+        view_owner_.NewRequest(), [this, flow] { Cont(flow); });
+  }
+
+  void Cont(FlowToken flow) {
+    const fidl::String view_id = PathString(module_path_);
+
+    // If this is called during Stop(), story_shell_ might already have been
+    // reset. TODO(mesch): Then the whole operation should fail.
+    if (story_controller_impl_->story_shell_) {
+      const fidl::String parent_view_id = PathString(parent_module_path_);
+
+      // We only add a module to story shell if its either a root module or its
+      // parent is already known to story shell.
+      if (parent_view_id == "" ||
+          story_controller_impl_->connected_views_.count(parent_view_id)) {
+        story_controller_impl_->story_shell_->ConnectView(
+            std::move(view_owner_), view_id, parent_view_id,
+            std::move(surface_relation_));
+        story_controller_impl_->connected_views_.insert(view_id);
+        story_controller_impl_->ProcessPendingViews();
+        if (focus_) {
+          story_controller_impl_->story_shell_->FocusView(view_id,
+                                                          parent_view_id);
+        }
+      } else {
+        // TODO(alhaad): We need to remove this if the module is stopped while
+        // its view is still on this buffer.
+        story_controller_impl_->pending_views_.emplace(std::make_pair(
+            view_id.get(),
+            ModuleView{parent_view_id.get(), std::move(view_owner_),
+                       std::move(surface_relation_)}));
+      }
+    }
+
+    if (module_source_ == ModuleSource::EXTERNAL) {
+      story_controller_impl_->AddModuleWatcher(std::move(module_controller_),
+                                               module_path_);
+    }
+  }
+
+  StoryControllerImpl* const story_controller_impl_;
+  const fidl::Array<fidl::String> parent_module_path_;
+  const fidl::String module_name_;
+  const fidl::String module_url_;
+  const fidl::String link_name_;
+  fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
+  fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
+  fidl::InterfaceRequest<ModuleController> module_controller_request_;
+  SurfaceRelationPtr surface_relation_;
+  const bool focus_;
+  const ModuleSource module_source_;
+
+  fidl::Array<fidl::String> module_path_;
+  ModuleControllerPtr module_controller_;
+  mozart::ViewOwnerPtr view_owner_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleInShellCall);
+};
+
 class StoryControllerImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
@@ -178,10 +495,11 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
 
   void Cont(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
-      story_controller_impl_->StartModuleInShell(
-          parent_module_path_, module_name_, module_url_, link_name_, nullptr,
-          nullptr, nullptr, std::move(surface_relation_), true,
-          ModuleSource::EXTERNAL);
+      new StartModuleInShellCall(&operation_queue_, story_controller_impl_,
+                                 parent_module_path_, module_name_, module_url_,
+                                 link_name_, nullptr, nullptr, nullptr,
+                                 std::move(surface_relation_), true,
+                                 ModuleSource::EXTERNAL, [flow] {});
     }
   }
 
@@ -261,63 +579,6 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
   OperationCollection operation_collection_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AddForCreateCall);
-};
-
-class StoryControllerImpl::StartCall : Operation<> {
- public:
-  StartCall(OperationContainer* const container,
-            StoryControllerImpl* const story_controller_impl,
-            fidl::InterfaceRequest<mozart::ViewOwner> request)
-      : Operation("StoryControllerImpl::StartCall", container, [] {}),
-        story_controller_impl_(story_controller_impl),
-        request_(std::move(request)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    // If the story is running, we do nothing and close the view owner request.
-    if (story_controller_impl_->IsRunning()) {
-      FXL_LOG(INFO)
-          << "StoryControllerImpl::StartCall() while already running: ignored.";
-      return;
-    }
-
-    story_controller_impl_->StartStoryShell(std::move(request_));
-
-    // Start *all* the root modules, not just the first one, with their
-    // respective links.
-    new ReadAllDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
-        XdrModuleData, [this, flow](fidl::Array<ModuleDataPtr> data) {
-          for (auto& module_data : data) {
-            if (module_data->module_source == ModuleSource::EXTERNAL &&
-                !module_data->module_stopped) {
-              auto parent_path = module_data->module_path.Clone();
-              parent_path.resize(parent_path.size() - 1);
-              story_controller_impl_->StartModuleInShell(
-                  parent_path,
-                  module_data->module_path[module_data->module_path.size() - 1],
-                  module_data->module_url, module_data->link_path->link_name,
-                  nullptr, nullptr, nullptr,
-                  module_data->surface_relation.Clone(), true,
-                  module_data->module_source);
-            }
-          }
-
-          story_controller_impl_->state_ = StoryState::STARTING;
-          story_controller_impl_->NotifyStateChange();
-        });
-  };
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  fidl::InterfaceRequest<mozart::ViewOwner> request_;
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
 class StoryControllerImpl::StopCall : Operation<> {
@@ -448,9 +709,10 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
                  StoryControllerImpl* const story_controller_impl,
                  const fidl::Array<fidl::String>& module_path,
                  const std::function<void()>& done)
-      : Operation("StoryControllerImpl::StopModuleCall", container, done),
+      : Operation("StoryControllerImpl::StopModuleCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
-        module_path_(module_path.Clone()) {
+        module_path_(module_path.Clone()),
+        done_(done) {
     Ready();
   }
 
@@ -523,22 +785,33 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
       FXL_LOG(INFO) << "No ModuleController for Module"
                     << " " << PathString(module_path_) << ". "
                     << "Was ModuleContext.Stop() called twice?";
+      done_();
       return;
     }
 
-    ii->module_controller_impl->Teardown([this, flow] { Cont4(flow); });
+    // done_() must be called BEFORE the Teardown() done callback
+    // returns, because Teardown() then deletes the module controller,
+    // and done_ might be the callback from the Stop() call that was
+    // invoked on the module controller connection.
+    //
+    // Therefore, done_ is NOT the Done() callback of the Operation.
+    ii->module_controller_impl->Teardown([this, flow] {
+      Cont4(flow);
+      done_();
+    });
   }
 
   void Cont4(FlowToken /*flow*/) {
     story_controller_impl_->modules_watchers_.ForAllPtrs(
         [this](StoryModulesWatcher* const watcher) {
-          watcher->OnNewModule(module_data_.Clone());
+          watcher->OnStopModule(module_data_.Clone());
         });
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::Array<fidl::String> module_path_;
   ModuleDataPtr module_data_;
+  std::function<void()> done_;
 
   OperationQueue operation_queue_;
 
@@ -576,38 +849,14 @@ class StoryControllerImpl::DeleteCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
-class StoryControllerImpl::StartModuleCall : Operation<> {
+class StoryControllerImpl::StartCall : Operation<> {
  public:
-  StartModuleCall(
-      OperationContainer* const container,
-      StoryControllerImpl* const story_controller_impl,
-      const fidl::Array<fidl::String>& parent_module_path,
-      const fidl::Array<fidl::String>& module_path,
-      const fidl::String& module_url,
-      const fidl::String& link_name,
-      const ModuleSource module_source,
-      SurfaceRelationPtr surface_relation,
-      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
-      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : Operation("StoryControllerImpl::StartModuleCall",
-                  container,
-                  [] {},
-                  module_url),
+  StartCall(OperationContainer* const container,
+            StoryControllerImpl* const story_controller_impl,
+            fidl::InterfaceRequest<mozart::ViewOwner> request)
+      : Operation("StoryControllerImpl::StartCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
-        parent_module_path_(parent_module_path.Clone()),
-        module_path_(module_path.Clone()),
-        module_url_(module_url),
-        link_name_(link_name),
-        module_source_(module_source),
-        surface_relation_(std::move(surface_relation)),
-        outgoing_services_(std::move(outgoing_services)),
-        incoming_services_(std::move(incoming_services)),
-        module_controller_request_(std::move(module_controller_request)),
-        view_owner_request_(std::move(view_owner_request)) {
-    FXL_DCHECK(!parent_module_path_.is_null());
-
+        request_(std::move(request)) {
     Ready();
   }
 
@@ -615,164 +864,46 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    // We currently require a 1:1 relationship between module
-    // application instances and Module service instances, because
-    // flutter only allows one ViewOwner per flutter application,
-    // and we need one ViewOwner instance per Module instance.
-
-    if (link_name_) {
-      link_path_ = LinkPath::New();
-      link_path_->module_path = parent_module_path_.Clone();
-      link_path_->link_name = link_name_;
-      WriteModuleData(flow);
-
-    } else {
-      // If the link name is null, this module receives the default link of its
-      // parent module. We need to retrieve which one it is from story storage.
-      new ReadDataCall<ModuleData>(
-          &operation_queue_, story_controller_impl_->page(),
-          MakeModuleKey(parent_module_path_), false /* not_found_is_ok */,
-          XdrModuleData, [this, flow](ModuleDataPtr module_data) {
-            FXL_DCHECK(module_data);
-            link_path_ = module_data->link_path.Clone();
-            WriteModuleData(flow);
-          });
-    }
-  }
-
-  void WriteModuleData(FlowToken flow) {
-    ModuleDataPtr data = ModuleData::New();
-    data->module_url = module_url_;
-    data->module_path = module_path_.Clone();
-    data->link_path = link_path_.Clone();
-    data->module_source = module_source_;
-    data->surface_relation = surface_relation_.Clone();
-    data->module_stopped = false;
-
-    const std::string key{MakeModuleKey(module_path_)};
-    new WriteDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        std::move(data), [this, flow] { Cont(flow); });
-  }
-
-  void Cont(FlowToken flow) {
-    // TODO(mesch): connections_ should be a map<>.
-    auto i = std::find_if(
-        story_controller_impl_->connections_.begin(),
-        story_controller_impl_->connections_.end(),
-        [this](const Connection& c) {
-          return c.module_context_impl->module_path().Equals(module_path_);
-        });
-
-    // We launch the new module if it doesn't run yet.
-    if (i == story_controller_impl_->connections_.end()) {
-      Launch(flow);
+    // If the story is running, we do nothing and close the view owner request.
+    if (story_controller_impl_->IsRunning()) {
+      FXL_LOG(INFO)
+          << "StoryControllerImpl::StartCall() while already running: ignored.";
       return;
     }
 
-    // If the new module is already running, but with a different URL or on a
-    // different link, or if a service exchange is requested, we tear it down
-    // then launch a new module.
-    //
-    // TODO(mesch): If only the link is different, we should just hook the
-    // existing module instance on a new link and notify it about the changed
-    // link value.
-    if (i->module_context_impl->module_url() != module_url_ ||
-        !i->module_context_impl->link_path().Equals(*link_path_) ||
-        outgoing_services_.is_valid() || incoming_services_.is_pending()) {
-      i->module_controller_impl->Teardown([this, flow] {
-        // NOTE(mesch): i is invalid at this point.
-        Launch(flow);
-      });
-      return;
-    }
+    story_controller_impl_->StartStoryShell(std::move(request_));
 
-    // If the module is already running on the same URL and link, we just
-    // connect the module controller request.
-    i->module_controller_impl->Connect(std::move(module_controller_request_));
-  }
+    // Start *all* the root modules, not just the first one, with their
+    // respective links.
+    new ReadAllDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
+        XdrModuleData, [this, flow](fidl::Array<ModuleDataPtr> data) {
+          for (auto& module_data : data) {
+            if (module_data->module_source == ModuleSource::EXTERNAL &&
+                !module_data->module_stopped) {
+              auto parent_path = module_data->module_path.Clone();
+              parent_path.resize(parent_path.size() - 1);
+              new StartModuleInShellCall(
+                  &operation_queue_, story_controller_impl_, parent_path,
+                  module_data->module_path[module_data->module_path.size() - 1],
+                  module_data->module_url, module_data->link_path->link_name,
+                  nullptr, nullptr, nullptr,
+                  module_data->surface_relation.Clone(), true,
+                  module_data->module_source, [flow] {});
+            }
+          }
 
-  void Launch(FlowToken /*flow*/) {
-    FXL_LOG(INFO) << "StoryControllerImpl::StartModule() " << module_url_;
-    auto module_config = AppConfig::New();
-    module_config->url = module_url_;
-
-    mozart::ViewProviderPtr view_provider;
-    fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request =
-        view_provider.NewRequest();
-    view_provider->CreateView(std::move(view_owner_request_), nullptr);
-
-    app::ServiceProviderPtr provider;
-    auto provider_request = provider.NewRequest();
-    auto module_context = app::ConnectToService<ModuleContext>(provider.get());
-    auto service_list = app::ServiceList::New();
-    service_list->names.push_back(ModuleContext::Name_);
-    service_list->provider = std::move(provider);
-
-    Connection connection;
-    connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
-        story_controller_impl_,
-        story_controller_impl_->story_scope_.GetLauncher(),
-        std::move(module_config), module_path_,
-        std::move(service_list), std::move(module_context),
-        std::move(view_provider_request), std::move(outgoing_services_),
-        std::move(incoming_services_));
-    connection.module_controller_impl->Connect(
-        std::move(module_controller_request_));
-
-    ModuleContextInfo module_context_info = {
-        story_controller_impl_->story_provider_impl_->component_context_info(),
-        story_controller_impl_,
-        story_controller_impl_->story_provider_impl_
-            ->user_intelligence_provider(),
-        story_controller_impl_->story_provider_impl_->module_resolver()};
-
-    module_data_ = ModuleData::New();
-    module_data_->module_url = module_url_;
-    module_data_->module_path = module_path_.Clone();
-    module_data_->link_path = link_path_.Clone();
-    module_data_->surface_relation = surface_relation_.Clone();
-
-    connection.module_context_impl = std::make_unique<ModuleContextImpl>(
-        module_context_info, module_data_.Clone(),
-        connection.module_controller_impl.get(), std::move(provider_request));
-
-    story_controller_impl_->connections_.emplace_back(std::move(connection));
-
-    NotifyWatchers();
-  }
-
-  void NotifyWatchers() {
-    story_controller_impl_->watchers_.ForAllPtrs(
-        [this](StoryWatcher* const watcher) {
-          watcher->OnModuleAdded(module_data_.Clone());
+          story_controller_impl_->state_ = StoryState::STARTING;
+          story_controller_impl_->NotifyStateChange();
         });
+  };
 
-    story_controller_impl_->modules_watchers_.ForAllPtrs(
-        [this](StoryModulesWatcher* const watcher) {
-          watcher->OnNewModule(module_data_.Clone());
-        });
-  }
-
-  // Passed in:
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> parent_module_path_;
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String module_url_;
-  const fidl::String link_name_;
-  const ModuleSource module_source_;
-  const SurfaceRelationPtr surface_relation_;
-  fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
-  fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
-  fidl::InterfaceRequest<ModuleController> module_controller_request_;
-  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
-
-  LinkPathPtr link_path_;
-  ModuleDataPtr module_data_;
+  fidl::InterfaceRequest<mozart::ViewOwner> request_;
 
   OperationQueue operation_queue_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
 class StoryControllerImpl::GetImportanceCall : Operation<float> {
@@ -1033,11 +1164,12 @@ void StoryControllerImpl::StartModule(
   fidl::Array<fidl::String> module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
 
-  new StartModuleCall(
-      &operation_queue_, this, parent_module_path, module_path, module_url,
-      link_name, module_source, SurfaceRelation::New(),
-      std::move(outgoing_services), std::move(incoming_services),
-      std::move(module_controller_request), std::move(view_owner_request));
+  new StartModuleCall(&operation_queue_, this, parent_module_path, module_path,
+                      module_url, link_name, module_source,
+                      SurfaceRelation::New(), std::move(outgoing_services),
+                      std::move(incoming_services),
+                      std::move(module_controller_request),
+                      std::move(view_owner_request), [] {});
 }
 
 void StoryControllerImpl::StartModuleInShell(
@@ -1051,59 +1183,11 @@ void StoryControllerImpl::StartModuleInShell(
     SurfaceRelationPtr surface_relation,
     const bool focus,
     ModuleSource module_source) {
-  ModuleControllerPtr module_controller;
-  mozart::ViewOwnerPtr view_owner;
-
-  if (module_source == ModuleSource::EXTERNAL) {
-    FXL_DCHECK(!module_controller_request.is_pending());
-    module_controller_request = module_controller.NewRequest();
-  }
-
-  fidl::Array<fidl::String> module_path = parent_module_path.Clone();
-  module_path.push_back(module_name);
-
-  // TODO(mesch): The StartModuleCall may result in just a new ModuleController
-  // connection to an existing ModuleControllerImpl. In that case, the view
-  // owner request is closed, and the view owner should not be sent to the story
-  // shell.
-
-  new StartModuleCall(
-      &operation_queue_, this, parent_module_path, module_path, module_url,
-      link_name, module_source, surface_relation.Clone(),
-      std::move(outgoing_services), std::move(incoming_services),
-      std::move(module_controller_request), view_owner.NewRequest());
-
-  const fidl::String view_id = PathString(module_path);
-
-  // If this is called during Stop(), story_shell_ might already have been
-  // reset. TODO(mesch): Then the whole operation should fail.
-  if (story_shell_) {
-    const fidl::String parent_view_id = PathString(parent_module_path);
-
-    // We only add a module to story shell if its either a root module or its
-    // parent is already known to story shell.
-    if (parent_view_id == "" || connected_views_.count(parent_view_id)) {
-      story_shell_->ConnectView(std::move(view_owner), view_id, parent_view_id,
-                                std::move(surface_relation));
-      connected_views_.insert(view_id);
-      ProcessPendingViews();
-      if (focus) {
-        story_shell_->FocusView(view_id, parent_view_id);
-      }
-    } else {
-      // TODO(alhaad): We need to remove this if the module is stopped while its
-      // view is still on this buffer.
-      pending_views_.emplace(
-          std::make_pair(view_id.get(),
-                         ModuleView{parent_view_id.get(),
-                           std::move(view_owner),
-          std::move(surface_relation)}));
-    }
-  }
-
-  if (module_source == ModuleSource::EXTERNAL) {
-    AddModuleWatcher(std::move(module_controller), module_path);
-  }
+  new StartModuleInShellCall(
+      &operation_queue_, this, parent_module_path, module_name, module_url,
+      link_name, std::move(outgoing_services), std::move(incoming_services),
+      std::move(module_controller_request), std::move(surface_relation), focus,
+      module_source, [] {});
 }
 
 void StoryControllerImpl::ProcessPendingViews() {
@@ -1161,7 +1245,7 @@ void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
         // after the operation following GetInfo()), and (2) |this| may have
         // been deleted when GetStoryInfo returned if there was a Delete
         // operation in the queue before GetStoryInfo().
-        [ state = state_, callback ](modular::StoryInfoPtr story_info) {
+        [state = state_, callback](modular::StoryInfoPtr story_info) {
           callback(std::move(story_info), state);
         });
   });
@@ -1216,21 +1300,22 @@ void StoryControllerImpl::GetActiveModules(
   // We execute this in a SyncCall so that we are sure we don't fall in a crack
   // between a module being created and inserted in the connections collection
   // during some Operation.
-  new SyncCall(&operation_queue_, fxl::MakeCopyable([
-    this, watcher = std::move(watcher), callback
-  ]() mutable {
-    if (watcher) {
-      auto ptr = StoryModulesWatcherPtr::Create(std::move(watcher));
-      modules_watchers_.AddInterfacePtr(std::move(ptr));
-    }
+  new SyncCall(
+      &operation_queue_, fxl::MakeCopyable([this, watcher = std::move(watcher),
+                                            callback]() mutable {
+        if (watcher) {
+          auto ptr = StoryModulesWatcherPtr::Create(std::move(watcher));
+          modules_watchers_.AddInterfacePtr(std::move(ptr));
+        }
 
-    fidl::Array<ModuleDataPtr> result;
-    result.resize(0);
-    for (auto& connection : connections_) {
-      result.push_back(connection.module_context_impl->module_data().Clone());
-    }
-    callback(std::move(result));
-  }));
+        fidl::Array<ModuleDataPtr> result;
+        result.resize(0);
+        for (auto& connection : connections_) {
+          result.push_back(
+              connection.module_context_impl->module_data().Clone());
+        }
+        callback(std::move(result));
+      }));
 }
 
 // |StoryController|
@@ -1243,15 +1328,21 @@ void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
 void StoryControllerImpl::GetModuleController(
     fidl::Array<fidl::String> module_path,
     fidl::InterfaceRequest<ModuleController> request) {
-  for (auto& connection : connections_) {
-    if (module_path.Equals(connection.module_context_impl->module_path())) {
-      connection.module_controller_impl->Connect(std::move(request));
-      return;
-    }
-  }
+  new SyncCall(
+      &operation_queue_,
+      fxl::MakeCopyable([this, module_path = std::move(module_path),
+                         request = std::move(request)]() mutable {
+        for (auto& connection : connections_) {
+          if (module_path.Equals(
+                  connection.module_context_impl->module_path())) {
+            connection.module_controller_impl->Connect(std::move(request));
+            return;
+          }
+        }
 
-  // Trying to get a controller for a module that is not active just drops the
-  // connection request.
+        // Trying to get a controller for a module that is not active just
+        // drops the connection request.
+      }));
 }
 
 // |StoryController|
@@ -1262,25 +1353,26 @@ void StoryControllerImpl::GetActiveLinks(
   // between a link being created and inserted in the links collection during
   // some Operation. (Right now Links are not created in an Operation, but we
   // don't want to rely on it.)
-  new SyncCall(&operation_queue_, fxl::MakeCopyable([
-    this, watcher = std::move(watcher), callback
-  ]() mutable {
-    if (watcher) {
-      auto ptr = StoryLinksWatcherPtr::Create(std::move(watcher));
-      links_watchers_.AddInterfacePtr(std::move(ptr));
-    }
+  new SyncCall(&operation_queue_,
+               fxl::MakeCopyable([this, watcher = std::move(watcher),
+                                  callback]() mutable {
+                 if (watcher) {
+                   auto ptr = StoryLinksWatcherPtr::Create(std::move(watcher));
+                   links_watchers_.AddInterfacePtr(std::move(ptr));
+                 }
 
-    // Only active links, i.e. links currently in use by a module, are
-    // returned here. Eventually we might want to list all links, but this
-    // requires some changes to how links are stored to make it
-    // nice. (Right now we need to parse keys, which we don't want to.)
-    fidl::Array<LinkPathPtr> result;
-    result.resize(0);
-    for (auto& link : links_) {
-      result.push_back(link->link_path().Clone());
-    }
-    callback(std::move(result));
-  }));
+                 // Only active links, i.e. links currently in use by a module,
+                 // are returned here. Eventually we might want to list all
+                 // links, but this requires some changes to how links are
+                 // stored to make it nice. (Right now we need to parse keys,
+                 // which we don't want to.)
+                 fidl::Array<LinkPathPtr> result;
+                 result.resize(0);
+                 for (auto& link : links_) {
+                   result.push_back(link->link_path().Clone());
+                 }
+                 callback(std::move(result));
+               }));
 }
 
 // |StoryController|
