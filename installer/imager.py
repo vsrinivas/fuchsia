@@ -90,31 +90,13 @@ def mkdir_fat(mmd_path, target_disk, remote_path, working_dir):
 
   return True
 
-def build_manifest_lists(dir):
-  sys_manifests = []
-  boot_manifests = []
-
-  gen_dir = os.path.join(dir, "gen", "packages", "gn")
-  pkg_list = os.path.join(gen_dir, "packages")
-  with open(pkg_list) as pkg_list_file:
-    for pkg_name in pkg_list_file:
-      pkg_name = pkg_name.rstrip()
-      pkg_dir = os.path.join(dir, "package", pkg_name)
-
-      pkg_sys_man = os.path.join(pkg_dir, "system_manifest")
-      if is_non_empty_file(pkg_sys_man):
-        sys_manifests.append(pkg_sys_man)
-
-      pkg_boot_man = os.path.join(pkg_dir, "boot_manifest")
-      if is_non_empty_file(pkg_boot_man):
-        boot_manifests.append(pkg_boot_man)
-
-  return sys_manifests, boot_manifests
-
-def mk_bootdata_fs(bin_path, out_path, working_dir, orig_bootdata, aux_manifests):
+def mk_bootdata_fs(bin_path, out_path, working_dir, aux_manifests, orig_bootdata=None):
   if len(aux_manifests) != 0:
-    bootdata_mkfs_cmd = [bin_path, "-c", "--target=boot", "-o", out_path,
-                         orig_bootdata] + aux_manifests
+    bootdata_mkfs_cmd = [bin_path, "-c", "--target=boot", "-o", out_path]
+    if orig_bootdata is not None:
+      bootdata_mkfs_cmd.append(orig_bootdata)
+    for m in aux_manifests:
+      bootdata_mkfs_cmd.append(m)
     subprocess.check_call(bootdata_mkfs_cmd, cwd=working_dir)
     return out_path
   else:
@@ -165,9 +147,6 @@ parser.add_argument('--efi_disk', action='store', required=True,
 parser.add_argument('--arch', action='store', required=False,
                     help="""The CPU architecture of the device, if not supplied
                     x86-64 is assumed""")
-parser.add_argument('--bootdata', action='store', required=False,
-                    help="""The kernel RAM disk file, if not supplied this is
-                    assumed to be relative to --build_dir""")
 parser.add_argument('--kernel_cmdline', action='store', required=False,
                     help="""Path to a file with kernel command line options""")
 parser.add_argument('--disable_thread_exp', action='store_const',
@@ -192,7 +171,6 @@ disk_path_efi = args.efi_disk
 bootloader = args.efi_loader
 kernel = args.kernel
 build_dir_zircon = args.build_dir_zircon
-bootdata = args.bootdata
 kernel_cmdline = args.kernel_cmdline
 enable_thread_exp = not args.disable_thread_exp
 mdir_path = args.mdir_path
@@ -235,29 +213,23 @@ if kernel is None:
     the kernel"""
     sys.exit(-1)
 
-# if the kernel ram disk was not supplied, find it relative to the zircon build
-# dir
-if not bootdata:
-  if build_dir_zircon is not None:
-    bootdata = os.path.join(build_dir_zircon, "bootdata.bin")
-  else:
-    print """You must supply either the zircon build dir or the path
-    to the bootdata.bin"""
-    sys.exit(-1)
-
-runtime_bootdata = bootdata
-
 if zedboot_kernel is None:
   if zedboot_build_dir is None:
     zedboot_kernel = kernel
   else:
     zedboot_kernel = os.path.join(zedboot_build_dir, "zircon.bin")
 
-if zedboot_bootdata is None:
+if not zedboot_bootdata:
   if zedboot_build_dir is None:
-    zedboot_bootdata = bootdata
+    zedboot_bootdata = os.path.join(os.path.dirname(zedboot_kernel), "bootdata.bin")
   else:
     zedboot_bootdata = os.path.join(zedboot_build_dir, "bootdata.bin")
+
+  if not os.path.exists(zedboot_bootdata):
+    print """Could not find the zedboot primary bootfs relative to the zedboot
+    kernel please provide the zedboot bootdata directly or a zedboot build
+    directory which includes the bootdata.bin file."""
+    sys.exit(-1)
 
 if arch == "X64" and not os.path.exists(bootloader):
   print """EFI loader does not exist at path %s, please check the path and try
@@ -287,10 +259,10 @@ build_gen_dir = os.path.join(args.build_dir, "gen", "packages", "gn")
 
 primary_manifest = args.file_manifest
 if primary_manifest is None:
-  primary_manifest = os.path.join(build_gen_dir, "system.bootfs.manifest")
+  primary_manifest = os.path.join(args.build_dir, "system.manifest")
 boot_manifest = args.boot_manifest
 if not boot_manifest:
-  boot_manifest = os.path.join(build_gen_dir, "boot.bootfs.manifest")
+  boot_manifest = os.path.join(args.build_dir, "boot.manifest")
 package_list = os.path.join(build_gen_dir, "packages")
 
 mkbootfs_path = args.mkbootfs
@@ -316,10 +288,8 @@ working_dir = os.getcwd()
 def is_non_empty_file(path):
   return os.path.exists(path) and os.path.getsize(path) > 0
 
-# Take the files referenced by primary_manifest and each package's system
-# manifests and write them into the minfs image at disk_path using the minfs
-# binary pointed to by minfs_bin.
-system_manifests, boot_manifests = build_manifest_lists(args.build_dir)
+system_manifests = []
+boot_manifests = []
 if is_non_empty_file(primary_manifest):
   system_manifests.append(primary_manifest)
 
@@ -347,7 +317,7 @@ if not (mkdir_fat(mmd_path, disk_path_efi, DIR_EFI, working_dir) and
 
 bootdata = mk_bootdata_fs(mkbootfs_path,
                           os.path.join(args.build_dir, "installer.bootdata.bootfs"),
-                          working_dir, bootdata, boot_manifests)
+                          args.build_dir, boot_manifests)
 
 zedboot_path = os.path.join(args.build_dir, FILE_ZEDBOOT)
 try:
@@ -398,17 +368,19 @@ print "Compressing ESP disk image to %s" % compressed_disk_efi
 if not compress_file(lz4_path, sparse_disk, compressed_disk_efi, working_dir):
   sys.exit(-1)
 
-runtime_sys_manifests, runtime_boot_manifests = build_manifest_lists(runtime_dir)
+runtime_sys_manifests = []
+runtime_boot_manifests = []
 gen_dir = os.path.join(runtime_dir, "gen", "packages", "gn")
-runtime_sys_man = os.path.join(gen_dir, "system.bootfs.manifest")
+runtime_sys_man = os.path.join(runtime_dir, "system.manifest")
 if is_non_empty_file(runtime_sys_man):
   runtime_sys_manifests.append(runtime_sys_man)
-runtime_boot_man = os.path.join(gen_dir, "boot.bootfs.manifest")
+runtime_boot_man = os.path.join(runtime_dir, "boot.manifest")
 if is_non_empty_file(runtime_boot_man):
   runtime_boot_manifests.append(runtime_boot_man)
+
 runtime_bootdata = mk_bootdata_fs(mkbootfs_path,
                                   os.path.join(runtime_dir, "installer.bootdata.bootfs"),
-                                  working_dir, runtime_bootdata, runtime_boot_manifests)
+                                  runtime_dir, runtime_boot_manifests)
 
 # write out a manifest file so we include the compressed file system we created
 with open(aux_manifest, "w+") as manifest_file:
@@ -421,7 +393,7 @@ mkfs_cmd = [mkbootfs_path, "-c", "--target=system", "-o", out_file, runtime_boot
 
 print "Creating installer bootfs"
 try:
-  subprocess.check_call(mkfs_cmd, cwd=working_dir)
+  subprocess.check_call(mkfs_cmd, cwd=runtime_dir)
 except (subprocess.CalledProcessError):
   print "Error creating bootfs"
   sys.exit(-1)

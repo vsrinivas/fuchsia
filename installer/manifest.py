@@ -30,6 +30,7 @@ def process_manifest(manifest_path, disk_path, minfs_bin, created_dirs):
 
     file_count = 0
     with open(manifest_path, "r") as manifest_file:
+        working_dir = os.path.dirname(manifest_path)
         for line in manifest_file:
             if "=" not in line:
                 continue
@@ -37,13 +38,15 @@ def process_manifest(manifest_path, disk_path, minfs_bin, created_dirs):
             if line.count("=") != 1:
                 raise Exception("Unexpected format, too many equal signs: %d" %
                                 line.count("="))
-            parts = line.split("=")
-            parts[0] = parts[0].strip()
-            parts[1] = parts[1].strip()
+            targ_path, host_path = line.split("=")
+            targ_path = targ_path.strip()
+            host_path = host_path.strip()
+            if not os.path.isabs(host_path):
+                host_path = os.path.join(working_dir, host_path)
 
             # first figure out if we need to make a directory for this file
             # This should split file name off the past
-            dir_path = os.path.split(parts[0])[0]
+            dir_path = os.path.split(targ_path)[0]
 
             # track the directories we need to make for this file
             dirs_to_make = []
@@ -70,17 +73,16 @@ def process_manifest(manifest_path, disk_path, minfs_bin, created_dirs):
                 # record that we've created this directory
                 created_dirs.add(dir_path)
 
-            targ_path = "::%s" % parts[0]
-
             # some status output
             sys.stdout.write("%s\r" % (" " * 100))
-            sys.stdout.write("Copying '%s' \r" % parts[0])
+            sys.stdout.write("Copying '%s' \r" % targ_path)
             sys.stdout.flush()
-            ls_cmd[3] = targ_path
+            remote_path = "::%s" % targ_path
+            ls_cmd[3] = remote_path
 
             try:
               subprocess.check_call(ls_cmd)
-              print "File '%s' from '%s' is included twice." % (targ_path, parts[1])
+              print "File '%s' from '%s' is included twice." % (targ_path, host_path)
               sys.exit(-1)
             except (subprocess.CalledProcessError):
               pass
@@ -88,12 +90,12 @@ def process_manifest(manifest_path, disk_path, minfs_bin, created_dirs):
               print "Unable to execute minfs"
               sys.exit(-1)
 
-            cp_cmd[3] = parts[1]
-            cp_cmd[4] = targ_path
+            cp_cmd[3] = host_path
+            cp_cmd[4] = remote_path
             try:
                 subprocess.check_call(cp_cmd)
             except (subprocess.CalledProcessError):
-                print "Error copying file %s command %s" % (parts[1], cp_cmd)
+                print "Error copying file %s command %s" % (host_path, cp_cmd)
                 sys.exit(-1)
             except (OSError):
                 print "Unable to execute minfs"
@@ -119,9 +121,12 @@ def build_minfs_image(manifests, minfs_image_path, minfs_bin):
     if not os.path.isfile(minfs_image_path):
         total_sz = 0
         for path in manifests:
+            working_dir = os.path.dirname(path)
             with open(path, "r") as file:
                 for line in file:
                     hostpath = line.split("=")[1].strip()
+                    if not os.path.isabs(hostpath):
+                        hostpath = os.path.join(working_dir, hostpath)
                     total_sz += os.path.getsize(hostpath)
         print "Manifest File Size (summation): %d" % total_sz
 
