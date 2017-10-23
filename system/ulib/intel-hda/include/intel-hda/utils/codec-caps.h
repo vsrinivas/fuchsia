@@ -157,9 +157,10 @@ struct AmpCaps {
     uint32_t num_steps()    const { return ((raw_data_ >>  8) & 0x7f) + 1; }
     uint32_t offset()       const { return ((raw_data_ >>  0) & 0x7f); }
 
-    float    step_size_db() const { return 0.25f * step_size(); }
-    float    min_gain_db()  const { return -step_size_db() * offset(); }
-    float    max_gain_db()  const { return min_gain_db() + (step_size_db() * (num_steps() - 1)); }
+    float    step_size_db() const { return 0.25f * static_cast<float>(step_size()); }
+    float    min_gain_db()  const { return -step_size_db() * static_cast<float>(offset()); }
+    float    max_gain_db()  const { return min_gain_db() + (step_size_db() *
+                                    static_cast<float>((num_steps() - 1))); }
 };
 
 struct PinCaps {

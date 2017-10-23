@@ -4,7 +4,7 @@
 
 #include <zircon/syscalls/object.h>
 
-#include "drivers/audio/intel-hda/utils/utils.h"
+#include <intel-hda/utils/utils.h>
 
 namespace audio {
 namespace intel_hda {
@@ -146,7 +146,7 @@ zx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                 range.min_frames_per_second = min_rate;
                 range.max_frames_per_second = max_rate;
                 range.min_channels = 1;
-                range.max_channels = max_channels;
+                range.max_channels = static_cast<uint8_t>(max_channels);
                 range.flags = family.family_flag;
 
                 if (signed_formats) {

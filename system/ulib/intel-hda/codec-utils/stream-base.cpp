@@ -9,10 +9,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 
-#include "drivers/audio/audio-proto/audio-proto.h"
-#include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
-#include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include <audio-proto/audio-proto.h>
+#include <intel-hda/codec-utils/codec-driver-base.h>
+#include <intel-hda/codec-utils/stream-base.h>
+#include <intel-hda/utils/intel-hda-proto.h>
 
 #include "debug-logging.h"
 
@@ -40,6 +40,7 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
                     },
     .suspend      = nullptr,
     .resume       = nullptr,
+    .rxrpc        = nullptr,
 };
 
 IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input)
@@ -405,15 +406,15 @@ zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(dispatcher::Channel* ch
     resp.format_range_count = static_cast<uint16_t>(supported_formats_.size());
 
     do {
-        uint16_t todo, payload_sz, to_send;
+        size_t todo, payload_sz, __UNUSED to_send;
         zx_status_t res;
 
-        todo = fbl::min<uint16_t>(supported_formats_.size() - formats_sent,
+        todo = fbl::min<size_t>(supported_formats_.size() - formats_sent,
                                    AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
         payload_sz = sizeof(resp.format_ranges[0]) * todo;
         to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
 
-        resp.first_format_range_ndx = formats_sent;
+        resp.first_format_range_ndx = static_cast<uint16_t>(formats_sent);
         ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
 
         res = channel->Write(&resp, sizeof(resp));

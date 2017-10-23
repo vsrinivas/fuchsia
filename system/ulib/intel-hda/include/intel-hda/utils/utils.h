@@ -12,7 +12,7 @@
 #include <fbl/type_support.h>
 #include <fbl/vector.h>
 
-#include "drivers/audio/intel-hda/utils/codec-caps.h"
+#include <intel-hda/utils/codec-caps.h>
 
 namespace audio {
 namespace intel_hda {

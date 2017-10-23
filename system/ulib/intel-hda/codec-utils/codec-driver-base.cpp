@@ -9,10 +9,10 @@
 #include <fbl/limits.h>
 #include <string.h>
 
-#include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
-#include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
-#include "drivers/audio/intel-hda/utils/utils.h"
+#include <intel-hda/codec-utils/codec-driver-base.h>
+#include <intel-hda/codec-utils/stream-base.h>
+#include <intel-hda/utils/intel-hda-proto.h>
+#include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
 
@@ -396,7 +396,7 @@ zx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(uint32_t stream_id, uint8_
 
     --first_set;
 
-    *out_tag = first_set;
+    *out_tag = static_cast<uint8_t>(first_set);
     free_unsol_tags_ &= ~(1ull << first_set);
     unsol_tag_to_stream_id_map_[first_set] = stream_id;
     return ZX_OK;

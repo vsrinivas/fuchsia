@@ -12,7 +12,7 @@ namespace intel_hda {
 // Section 7.3.3.12.  Present only in pin complexes
 struct PinWidgetCtrlState {
     PinWidgetCtrlState() { }
-    explicit PinWidgetCtrlState(uint32_t raw_data) : raw_data_(raw_data) { }
+    explicit PinWidgetCtrlState(uint8_t raw_data) : raw_data_(raw_data) { }
 
     bool   hp_amp_enb()  const { return (raw_data_ & (1u << 7)) != 0; }
     bool   output_enb()  const { return (raw_data_ & (1u << 6)) != 0; }
