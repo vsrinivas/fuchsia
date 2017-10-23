@@ -79,7 +79,7 @@ template("dart_fuchsia_test") {
       deps += invoker.deps
     }
 
-    non_dart_deps = [ ":$generated_test_main_target" ]
+    non_dart_deps = [ ":$generated_test_main_target($target_toolchain)" ]
     if (defined(invoker.non_dart_deps)) {
       non_dart_deps += invoker.non_dart_deps
     }

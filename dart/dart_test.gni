@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_package.gni")
+import("//build/dart/toolchain.gni")
 
 # Defines a Dart test suite
 #
@@ -53,7 +54,8 @@ template("dart_test") {
     source_dir = sources_dir
   }
 
-  dot_packages_file = "$target_gen_dir/$package_target_name.packages"
+  dart_target_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+  dot_packages_file = "$dart_target_gen_dir/$package_target_name.packages"
 
   fuchsia_tester_label =
       "//third_party/dart-pkg/git/flutter/packages/flutter_tools:fuchsia_tester($host_toolchain)"

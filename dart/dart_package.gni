@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/toolchain.gni")
+
 # Defines a Dart package
 #
 # Parameters
@@ -31,6 +33,7 @@
 #     List of labels this package depends on that are not Dart packages. This
 #     includes things like actions that generate Dart code. It typically doesn't
 #     need to be set.
+#     Note that these labels *must* have an explicit toolchain attached.
 #
 #   analysis_options (optional)
 #     By default, a script to run the analyzer on the contents of the package is
@@ -58,6 +61,9 @@
 #       "//foo/bar/owl"
 #     ]
 #   }
+
+if (current_toolchain == dart_toolchain) {
+
 template("dart_package") {
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
@@ -243,4 +249,19 @@ template("dart_package") {
       ]
     }
   }
+}
+
+} else {  # Not the Dart toolchain.
+
+template("dart_package") {
+
+  group(target_name) {
+    not_needed(invoker, "*")
+
+    public_deps = [
+      ":$target_name($dart_toolchain)"
+    ]
+  }
+}
+
 }
