@@ -4,18 +4,23 @@
 
 #pragma once
 
+#include <sync/futex.h>
 #include <zircon/types.h>
 #include <zircon/compiler.h>
 
-#include <stdatomic.h>
-
 __BEGIN_CDECLS;
 
-typedef struct {
-    atomic_int futex;
+typedef struct completion_t {
+    futex_t futex;
+
+#ifdef __cplusplus
+    completion_t() : futex(0) {}
+#endif
 } completion_t;
 
+#if !defined(__cplusplus)
 #define COMPLETION_INIT ((completion_t){0})
+#endif
 
 // Returns ZX_ERR_TIMED_OUT if timeout elapses, and ZX_OK if woken by
 // a call to completion_wake or if the completion has already been
