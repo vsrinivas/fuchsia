@@ -117,8 +117,8 @@ fn main_res() -> Result<(), fidl::Error> {
         body: None,
         response_body_buffer_size: 0,
         auto_follow_redirects: true,
-        cache_mode: netsvc::URLRequestCacheMode_Default,
-        response_body_mode: netsvc::URLRequestResponseBodyMode_Stream,
+        cache_mode: netsvc::URLRequestCacheMode::Default,
+        response_body_mode: netsvc::URLRequestResponseBodyMode::Stream,
     };
     let response_fut = loader_proxy.start(req);
 

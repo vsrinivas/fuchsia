@@ -24,7 +24,7 @@ impl ::fidl::Encodable for {{$union.Name}} {
         ::fidl::Encodable::encode(16u32, buf, start, 0);
         match self {
 {{range $field := $union.Fields}}            {{$union.Name}}::{{$field.Name}}(val) => {
-                ::fidl::Encodable::encode({{$union.TagsEnum.Name}}_{{$field.Name}}, buf, start, 4);
+  ::fidl::Encodable::encode({{$union.TagsEnum.Name}}::{{$field.Name}}, buf, start, 4);
                 ::fidl::{{if $field.IsUnion}}CodableUnion::encode_
                     {{- if $field.IsNullable}}opt_{{end}}as_ptr(val, buf, start + 8)
                     {{- else -}}Encodable::encode(val, buf, start + 8, 0){{end -}}
