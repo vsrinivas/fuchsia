@@ -29,8 +29,8 @@ class ModuleHost {
 };
 
 // ModuleDriver provides a way to write modules and participate in application
-// lifecycle. The |Impl| class supplied to ModuleDriver is instantiated when
-// the Module and ViewProvider services are requested by the framework.
+// lifecycle. The |Impl| class supplied to ModuleDriver is instantiated when the
+// Module and ViewProvider services have both been requested by the framework.
 //
 // Usage:
 //   The |Impl| class must implement:
