@@ -22,8 +22,8 @@ namespace mdns {
 // Sends and receives mDNS messages on any number of interfaces.
 class MdnsTransceiver {
  public:
-  using InboundMessageCallback = std::function<
-      void(std::unique_ptr<DnsMessage>, const SocketAddress&, uint32_t)>;
+  using InboundMessageCallback =
+      std::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
   MdnsTransceiver();
 
@@ -42,12 +42,10 @@ class MdnsTransceiver {
   // Stops the transceiver.
   void Stop();
 
-  // Sends a messaage to the specified address on the specified interface. A
-  // V6 interface will send to |MdnsAddresses::kV6Multicast| if |dest_address|
-  // is |MdnsAddresses::kV4Multicast|.
-  void SendMessage(DnsMessage* message,
-                   const SocketAddress& dest_address,
-                   uint32_t interface_index);
+  // Sends a messaage to the specified address. A V6 interface will send to
+  // |MdnsAddresses::kV6Multicast| if |reply_address.socket_address()| is
+  // |MdnsAddresses::kV4Multicast|.
+  void SendMessage(DnsMessage* message, const ReplyAddress& reply_address);
 
  private:
   static const fxl::TimeDelta kMinAddressRecheckDelay;

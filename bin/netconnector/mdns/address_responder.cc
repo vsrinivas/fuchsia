@@ -17,11 +17,12 @@ AddressResponder::AddressResponder(MdnsAgent::Host* host,
 
 AddressResponder::~AddressResponder() {}
 
-void AddressResponder::ReceiveQuestion(const DnsQuestion& question) {
+void AddressResponder::ReceiveQuestion(const DnsQuestion& question,
+                                       const ReplyAddress& reply_address) {
   if ((question.type_ == DnsType::kA || question.type_ == DnsType::kAaaa ||
        question.type_ == DnsType::kAny) &&
       question.name_.dotted_string_ == host_full_name_) {
-    SendAddresses(MdnsResourceSection::kAnswer);
+    SendAddresses(MdnsResourceSection::kAnswer, reply_address);
   }
 }
 

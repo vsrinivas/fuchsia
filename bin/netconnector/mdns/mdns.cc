@@ -47,17 +47,21 @@ bool Mdns::Start(const std::string& host_name) {
   resource_renewer_ = std::make_shared<ResourceRenewer>(this);
 
   started_ = transceiver_.Start(
-      host_full_name_,
-      [this](std::unique_ptr<DnsMessage> message,
-             const SocketAddress& source_address, uint32_t interface_index) {
+      host_full_name_, [this](std::unique_ptr<DnsMessage> message,
+                              const ReplyAddress& reply_address) {
         if (verbose_) {
-          FXL_LOG(INFO) << "Inbound message from " << source_address
-                        << " through interface " << interface_index << ":"
+          FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
                         << *message;
         }
 
         for (auto& question : message->questions_) {
-          ReceiveQuestion(*question);
+          // We reply to questions using unicast if specifically requested in
+          // the question or if the sender's port isn't 5353.
+          ReceiveQuestion(*question, (question->unicast_response_ ||
+                                      reply_address.socket_address().port() !=
+                                          MdnsAddresses::kMdnsPort)
+                                         ? reply_address
+                                         : MdnsAddresses::kV4MulticastReply);
         }
 
         for (auto& resource : message->answers_) {
@@ -77,7 +81,7 @@ bool Mdns::Start(const std::string& host_name) {
           pair.second->EndOfMessage();
         }
 
-        SendMessage();
+        SendMessages();
       });
 
   if (started_) {
@@ -85,7 +89,7 @@ bool Mdns::Start(const std::string& host_name) {
       pair.second->Start();
     }
 
-    SendMessage();
+    SendMessages();
   }
 
   return started_;
@@ -202,22 +206,27 @@ void Mdns::PostTaskForTime(MdnsAgent* agent,
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
   FXL_DCHECK(question);
-  outbound_message_.questions_.push_back(question);
+  DnsMessage& message =
+      outbound_messages_by_reply_address_[MdnsAddresses::kV4MulticastReply];
+  message.questions_.push_back(question);
 }
 
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
-                        MdnsResourceSection section) {
+                        MdnsResourceSection section,
+                        const ReplyAddress& reply_address) {
   FXL_DCHECK(resource);
+
+  DnsMessage& message = outbound_messages_by_reply_address_[reply_address];
 
   switch (section) {
     case MdnsResourceSection::kAnswer:
-      outbound_message_.answers_.push_back(resource);
+      message.answers_.push_back(resource);
       break;
     case MdnsResourceSection::kAuthority:
-      outbound_message_.authorities_.push_back(resource);
+      message.authorities_.push_back(resource);
       break;
     case MdnsResourceSection::kAdditional:
-      outbound_message_.additionals_.push_back(resource);
+      message.additionals_.push_back(resource);
       break;
     case MdnsResourceSection::kExpired:
       // Expirations are distributed to local agents.
@@ -228,8 +237,9 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
   }
 }
 
-void Mdns::SendAddresses(MdnsResourceSection section) {
-  SendResource(address_placeholder_, section);
+void Mdns::SendAddresses(MdnsResourceSection section,
+                         const ReplyAddress& reply_address) {
+  SendResource(address_placeholder_, section, reply_address);
 }
 
 void Mdns::Renew(const DnsResource& resource) {
@@ -259,7 +269,7 @@ void Mdns::RemoveAgent(const MdnsAgent* agent,
   }
 
   // In case the agent sent an epitaph.
-  SendMessage();
+  SendMessages();
 }
 
 void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
@@ -267,37 +277,42 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
 
   if (started_) {
     agent->Start();
-    SendMessage();
+    SendMessages();
   }
 }
 
-void Mdns::SendMessage() {
-  outbound_message_.UpdateCounts();
+void Mdns::SendMessages() {
+  for (auto& pair : outbound_messages_by_reply_address_) {
+    const ReplyAddress& reply_address = pair.first;
+    DnsMessage& message = pair.second;
 
-  if (outbound_message_.questions_.empty()) {
-    outbound_message_.header_.SetResponse(true);
-    outbound_message_.header_.SetAuthoritativeAnswer(true);
+    message.UpdateCounts();
+
+    if (message.questions_.empty()) {
+      message.header_.SetResponse(true);
+      message.header_.SetAuthoritativeAnswer(true);
+    }
+
+    if (verbose_) {
+      if (reply_address == MdnsAddresses::kV4MulticastReply) {
+        FXL_LOG(INFO) << "Outbound message (multicast): " << message;
+      } else {
+        FXL_LOG(INFO) << "Outbound message to " << reply_address << ":"
+                      << message;
+      }
+    }
+
+    transceiver_.SendMessage(&message, reply_address);
   }
 
-  if (verbose_) {
-    FXL_LOG(INFO) << "Outbound message: " << outbound_message_;
-  }
-
-  transceiver_.SendMessage(&outbound_message_, MdnsAddresses::kV4Multicast, 0);
-
-  // Reset |outbound_message_|.
-  // TODO(dalesat): Replace this awkwardness when unicast reply is implemented.
-  outbound_message_.header_.flags_ = 0;
-  outbound_message_.questions_.clear();
-  outbound_message_.answers_.clear();
-  outbound_message_.authorities_.clear();
-  outbound_message_.additionals_.clear();
+  outbound_messages_by_reply_address_.clear();
 }
 
-void Mdns::ReceiveQuestion(const DnsQuestion& question) {
+void Mdns::ReceiveQuestion(const DnsQuestion& question,
+                           const ReplyAddress& reply_address) {
   // Renewer doesn't need questions.
   for (auto& pair : agents_) {
-    pair.second->ReceiveQuestion(question);
+    pair.second->ReceiveQuestion(question, reply_address);
   }
 }
 
@@ -332,7 +347,7 @@ void Mdns::PostTask() {
           task();
         }
 
-        SendMessage();
+        SendMessages();
 
         posted_task_time_ = fxl::TimePoint::Max();
         if (!task_queue_.empty()) {

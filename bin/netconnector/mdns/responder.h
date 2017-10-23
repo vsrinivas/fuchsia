@@ -42,7 +42,8 @@ class Responder : public MdnsAgent {
   // MdnsAgent overrides.
   void Start() override;
 
-  void ReceiveQuestion(const DnsQuestion& question) override;
+  void ReceiveQuestion(const DnsQuestion& question,
+                       const ReplyAddress& reply_address) override;
 
   void Quit() override;
 
@@ -54,11 +55,16 @@ class Responder : public MdnsAgent {
 
   // Gets an |MdnsPublication| from |responder_| and, if not null, sends it.
   // An empty |subtype| indicates no subtype.
-  void GetAndSendPublication(bool query, const std::string& subtype = "") const;
+  void GetAndSendPublication(bool query,
+                             const std::string& subtype = "",
+                             const ReplyAddress& reply_address =
+                                 MdnsAddresses::kV4MulticastReply) const;
 
   // Sends a publication. An empty |subtype| indicates no subtype.
-  void SendPublication(const std::string& subtype,
-                       const MdnsPublication& publication) const;
+  void SendPublication(const MdnsPublication& publication,
+                       const std::string& subtype = "",
+                       const ReplyAddress& reply_address =
+                           MdnsAddresses::kV4MulticastReply) const;
 
   std::string host_full_name_;
   std::string service_name_;

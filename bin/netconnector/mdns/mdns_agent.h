@@ -35,12 +35,18 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     // Sends a question to the multicast address.
     virtual void SendQuestion(std::shared_ptr<DnsQuestion> question) = 0;
 
-    // Sends a resource to the multicast address.
+    // Sends a resource to the specified address. The default |reply_address|
+    // |kV4MulticastReply| sends the resource to the V4 or V6
+    // multicast address.
     virtual void SendResource(std::shared_ptr<DnsResource> resource,
-                              MdnsResourceSection section) = 0;
+                              MdnsResourceSection section,
+                              const ReplyAddress& reply_address) = 0;
 
-    // Sends address resources to the multicast address.
-    virtual void SendAddresses(MdnsResourceSection section) = 0;
+    // Sends address resources to the specified address. The default
+    // |reply_address| |kV4MulticastReply| sends the addresses to the V4 or V6
+    // multicast address.
+    virtual void SendAddresses(MdnsResourceSection section,
+                               const ReplyAddress& reply_address) = 0;
 
     // Registers the resource for renewal. See |MdnsAgent::Renew|.
     virtual void Renew(const DnsResource& resource) = 0;
@@ -60,7 +66,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   virtual void Start() {}
 
   // Presents a received question.
-  virtual void ReceiveQuestion(const DnsQuestion& question){};
+  virtual void ReceiveQuestion(const DnsQuestion& question,
+                               const ReplyAddress& reply_address){};
 
   // Presents a received resource.
   virtual void ReceiveResource(const DnsResource& resource,
@@ -87,15 +94,23 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     host_->SendQuestion(question);
   }
 
-  // Sends a resource to the multicast address.
+  // Sends a resource to the specified address. The default |reply_address|
+  // |kV4MulticastReply| sends the resource to the V4 or V6
+  // multicast address.
   void SendResource(std::shared_ptr<DnsResource> resource,
-                    MdnsResourceSection section) const {
-    host_->SendResource(resource, section);
+                    MdnsResourceSection section,
+                    const ReplyAddress& reply_address =
+                        MdnsAddresses::kV4MulticastReply) const {
+    host_->SendResource(resource, section, reply_address);
   }
 
-  // Sends address resources to the multicast address.
-  void SendAddresses(MdnsResourceSection section) const {
-    host_->SendAddresses(section);
+  // Sends address resources to the specified address. The default
+  // |reply_address| |kV4MulticastReply| sends the addresses to the V4 or V6
+  // multicast address.
+  void SendAddresses(MdnsResourceSection section,
+                     const ReplyAddress& reply_address =
+                         MdnsAddresses::kV4MulticastReply) const {
+    host_->SendAddresses(section, reply_address);
   }
 
   // Registers the resource for renewal. Before the resource's TTL expires,

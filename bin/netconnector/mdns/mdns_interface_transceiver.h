@@ -9,6 +9,7 @@
 
 #include "garnet/bin/netconnector/ip_address.h"
 #include "garnet/bin/netconnector/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/reply_address.h"
 #include "garnet/bin/netconnector/socket_address.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -26,10 +27,9 @@ namespace mdns {
 // |MdnsInterfaceTransceiverV4| and |MdnsInterfaceTransceiverV6|.
 class MdnsInterfaceTransceiver {
  public:
-  // Callback to deliver inbound messages with source address and interface
-  // index.
-  using InboundMessageCallback = std::function<
-      void(std::unique_ptr<DnsMessage>, const SocketAddress&, uint32_t)>;
+  // Callback to deliver inbound messages with reply address.
+  using InboundMessageCallback =
+      std::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
   // Creates the variant of |MdnsInterfaceTransceiver| appropriate for the
   // address family specified in |if_info|. |index| is the index of the
@@ -56,7 +56,7 @@ class MdnsInterfaceTransceiver {
   void Stop();
 
   // Sends a messaage to the specified address. A V6 interface will send to
-  // |MdnsAddresses::kV6Multicast| if |dest_address| is
+  // |MdnsAddresses::kV6Multicast| if |address| is
   // |MdnsAddresses::kV4Multicast|. This method expects there to be at most two
   // address records per record vector and, if there are two, that they are
   // adjacent. The same constraints will apply when this method returns.

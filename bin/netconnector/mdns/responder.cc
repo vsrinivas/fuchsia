@@ -52,20 +52,21 @@ void Responder::Start() {
   SendAnnouncement();
 }
 
-void Responder::ReceiveQuestion(const DnsQuestion& question) {
+void Responder::ReceiveQuestion(const DnsQuestion& question,
+                                const ReplyAddress& reply_address) {
   std::string name = question.name_.dotted_string_;
   std::string subtype;
 
   switch (question.type_) {
     case DnsType::kPtr:
       if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
-        GetAndSendPublication(true, subtype);
+        GetAndSendPublication(true, subtype, reply_address);
       }
       break;
     case DnsType::kSrv:
     case DnsType::kTxt:
       if (question.name_.dotted_string_ == instance_full_name_) {
-        GetAndSendPublication(true, "");
+        GetAndSendPublication(true, "", reply_address);
       }
       break;
     default:
@@ -80,7 +81,7 @@ void Responder::Quit() {
     publication_->ptr_ttl_seconds = 0;
     publication_->srv_ttl_seconds = 0;
     publication_->txt_ttl_seconds = 0;
-    SendPublication("", *publication_);
+    SendPublication(*publication_);
   }
 
   RemoveSelf(instance_full_name_);
@@ -105,13 +106,15 @@ void Responder::SendAnnouncement() {
 }
 
 void Responder::GetAndSendPublication(bool query,
-                                      const std::string& subtype) const {
+                                      const std::string& subtype,
+                                      const ReplyAddress& reply_address) const {
   if (responder_) {
     responder_->GetPublication(
         query, subtype.empty() ? fidl::String() : fidl::String(subtype),
-        [this, subtype](MdnsPublicationPtr publication) {
+        [ this, subtype,
+          reply_address = reply_address ](MdnsPublicationPtr publication) {
           if (publication) {
-            SendPublication(subtype, *publication);
+            SendPublication(*publication, subtype, reply_address);
           }
         });
 
@@ -120,12 +123,13 @@ void Responder::GetAndSendPublication(bool query,
 
   FXL_DCHECK(publication_);
   if (subtype.empty()) {
-    SendPublication(subtype, *publication_);
+    SendPublication(*publication_, subtype, reply_address);
   }
 }
 
-void Responder::SendPublication(const std::string& subtype,
-                                const MdnsPublication& publication) const {
+void Responder::SendPublication(const MdnsPublication& publication,
+                                const std::string& subtype,
+                                const ReplyAddress& reply_address) const {
   std::string service_full_name =
       subtype.empty()
           ? MdnsNames::LocalServiceFullName(service_name_)
@@ -135,22 +139,22 @@ void Responder::SendPublication(const std::string& subtype,
       std::make_shared<DnsResource>(service_full_name, DnsType::kPtr);
   ptr_resource->time_to_live_ = publication.ptr_ttl_seconds;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
-  SendResource(ptr_resource, MdnsResourceSection::kAnswer);
+  SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 
   auto srv_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
   srv_resource->time_to_live_ = publication.srv_ttl_seconds;
   srv_resource->srv_.port_ = IpPort::From_uint16_t(publication.port);
   srv_resource->srv_.target_ = host_full_name_;
-  SendResource(srv_resource, MdnsResourceSection::kAdditional);
+  SendResource(srv_resource, MdnsResourceSection::kAdditional, reply_address);
 
   auto txt_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
   txt_resource->time_to_live_ = publication.txt_ttl_seconds;
   txt_resource->txt_.strings_ = publication.text.To<std::vector<std::string>>();
-  SendResource(txt_resource, MdnsResourceSection::kAdditional);
+  SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
 
-  SendAddresses(MdnsResourceSection::kAdditional);
+  SendAddresses(MdnsResourceSection::kAdditional, reply_address);
 }
 
 }  // namespace mdns

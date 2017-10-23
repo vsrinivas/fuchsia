@@ -7,16 +7,22 @@
 #include <memory>
 #include <vector>
 
+#include "garnet/bin/netconnector/mdns/reply_address.h"
 #include "garnet/bin/netconnector/socket_address.h"
 
 namespace netconnector {
 namespace mdns {
 
 struct MdnsAddresses {
+  static const IpPort kMdnsPort;
+
   static const SocketAddress kV4Multicast;
   static const SocketAddress kV6Multicast;
   static const SocketAddress kV4Bind;
   static const SocketAddress kV6Bind;
+
+  static const ReplyAddress kV4MulticastReply;
+  static const ReplyAddress kV6MulticastReply;
 };
 
 }  // namespace mdns

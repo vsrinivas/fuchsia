@@ -100,6 +100,22 @@ class Mdns : public MdnsAgent::Host {
     }
   };
 
+  struct ReplyAddressHash {
+    std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
+      size_t hash = reply_address.interface_index();
+
+      const uint8_t* byte_ptr = reinterpret_cast<const uint8_t*>(
+          reply_address.socket_address().as_sockaddr());
+
+      for (socklen_t i = 0; i < reply_address.socket_address().socklen(); ++i) {
+        hash = (hash << 1) ^ *byte_ptr;
+        ++byte_ptr;
+      }
+
+      return hash;
+    }
+  };
+
   // MdnsAgent::Host implementation.
   void PostTaskForTime(MdnsAgent* agent,
                        fxl::Closure task,
@@ -108,25 +124,34 @@ class Mdns : public MdnsAgent::Host {
   void SendQuestion(std::shared_ptr<DnsQuestion> question) override;
 
   void SendResource(std::shared_ptr<DnsResource> resource,
-                    MdnsResourceSection section) override;
+                    MdnsResourceSection section,
+                    const ReplyAddress& reply_address) override;
 
-  void SendAddresses(MdnsResourceSection section) override;
+  void SendAddresses(MdnsResourceSection section,
+                     const ReplyAddress& reply_address) override;
 
   void Renew(const DnsResource& resource) override;
 
   void RemoveAgent(const MdnsAgent* agent,
                    const std::string& published_instance_full_name) override;
 
-  // Misc private.
+  // Adds an agent and, if |started_|, starts it.
   void AddAgent(std::shared_ptr<MdnsAgent> agent);
 
-  void SendMessage();
+  // Sends any messages found in |outbound_messages_by_reply_address_| and
+  // clears |outbound_messages_by_reply_address_|.
+  void SendMessages();
 
-  void ReceiveQuestion(const DnsQuestion& question);
+  // Distributes questions to all the agents except the resource renewer.
+  void ReceiveQuestion(const DnsQuestion& question,
+                       const ReplyAddress& reply_address);
 
+  // Distributes resources to all the agents, starting with the resource
+  // renewer.
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section);
 
+  // Runs tasks in |task_queue_| using |task_runner_|.
   void PostTask();
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
@@ -135,7 +160,8 @@ class Mdns : public MdnsAgent::Host {
   bool started_ = false;
   std::priority_queue<TaskQueueEntry> task_queue_;
   fxl::TimePoint posted_task_time_ = fxl::TimePoint::Max();
-  DnsMessage outbound_message_;
+  std::unordered_map<ReplyAddress, DnsMessage, ReplyAddressHash>
+      outbound_messages_by_reply_address_;
   std::unordered_map<const MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
   std::unordered_map<std::string, std::shared_ptr<Responder>>
       instance_publishers_by_instance_full_name_;

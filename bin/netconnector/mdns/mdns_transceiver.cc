@@ -85,20 +85,20 @@ bool MdnsTransceiver::InterfaceEnabled(const netstack::NetInterface* if_info) {
 }
 
 void MdnsTransceiver::SendMessage(DnsMessage* message,
-                                  const SocketAddress& dest_address,
-                                  uint32_t interface_index) {
+                                  const ReplyAddress& reply_address) {
   FXL_DCHECK(message);
 
-  if (dest_address == MdnsAddresses::kV4Multicast) {
+  if (reply_address.socket_address() == MdnsAddresses::kV4Multicast) {
     for (auto& i : interfaces_) {
-      i->SendMessage(message, dest_address);
+      i->SendMessage(message, reply_address.socket_address());
     }
 
     return;
   }
 
-  FXL_DCHECK(interface_index < interfaces_.size());
-  interfaces_[interface_index]->SendMessage(message, dest_address);
+  FXL_DCHECK(reply_address.interface_index() < interfaces_.size());
+  interfaces_[reply_address.interface_index()]->SendMessage(
+      message, reply_address.socket_address());
 }
 
 bool MdnsTransceiver::FindNewInterfaces() {

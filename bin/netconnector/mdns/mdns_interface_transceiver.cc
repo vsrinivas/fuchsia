@@ -158,7 +158,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
     return;
   }
 
-  SocketAddress source_address(source_address_storage);
+  ReplyAddress reply_address(source_address_storage, index_);
 
   PacketReader reader(inbound_buffer_);
   reader.SetBytesRemaining(static_cast<size_t>(result));
@@ -167,10 +167,10 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
 
   if (reader.complete()) {
     FXL_DCHECK(inbound_message_callback_);
-    inbound_message_callback_(std::move(message), source_address, index_);
+    inbound_message_callback_(std::move(message), reply_address);
   } else {
     inbound_buffer_.resize(result);
-    FXL_LOG(ERROR) << "Couldn't parse message from " << source_address << ", "
+    FXL_LOG(ERROR) << "Couldn't parse message from " << reply_address << ", "
                    << result << " bytes: " << inbound_buffer_;
     inbound_buffer_.resize(kMaxPacketSize);
   }

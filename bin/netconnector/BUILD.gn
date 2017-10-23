@@ -54,6 +54,8 @@ executable("netconnector") {
     "mdns/packet_reader.h",
     "mdns/packet_writer.cc",
     "mdns/packet_writer.h",
+    "mdns/reply_address.cc",
+    "mdns/reply_address.h",
     "mdns/resource_renewer.cc",
     "mdns/resource_renewer.h",
     "mdns/responder.cc",
