@@ -11,11 +11,13 @@
 #include <platform/timer.h>
 #include <vm/pmm.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls/hypervisor.h>
 
 #include "vmexit_priv.h"
 
-static const uint64_t kSpsrEl1h = 0b0101;
-static const uint64_t kSpsrDaif = 0b1111 << 6;
+static const uint32_t kSpsrEl1h = 0b0101;
+static const uint32_t kSpsrDaif = 0b1111 << 6;
+static const uint32_t kSpsrNzcv = 0b1111 << 28;
 
 static uint cpu_of(uint8_t vpid) {
     return vpid % arch_max_num_cpus();
@@ -65,6 +67,30 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
+zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
+    // TODO(abdulla): Check pinned CPU invariant.
+    if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t))
+        return ZX_ERR_INVALID_ARGS;
+
+    auto state = static_cast<zx_vcpu_state_t*>(buffer);
+    memcpy(state->x, el2_state_.guest_state.x, sizeof(uint64_t) * GS_NUM_REGS);
+    state->sp = el2_state_.guest_state.system_state.sp_el1;
+    state->cpsr = el2_state_.guest_state.system_state.spsr_el2 & kSpsrNzcv;
+    return ZX_OK;
+}
+
+zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
+    // TODO(abdulla): Check pinned CPU invariant.
+    if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t))
+        return ZX_ERR_INVALID_ARGS;
+
+    auto state = static_cast<const zx_vcpu_state_t*>(buffer);
+    memcpy(el2_state_.guest_state.x, state->x, sizeof(uint64_t) * GS_NUM_REGS);
+    el2_state_.guest_state.system_state.sp_el1 = state->sp;
+    el2_state_.guest_state.system_state.spsr_el2 |= state->cpsr & kSpsrNzcv;
+    return ZX_OK;
+}
+
 zx_status_t arm_vcpu_create(zx_vaddr_t ip, uint8_t vmid, uint8_t vpid,
                             GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                             fbl::unique_ptr<Vcpu>* out) {
@@ -80,9 +106,9 @@ zx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt) {
 }
 
 zx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return vcpu->ReadState(kind, buffer, len);
 }
 
 zx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return vcpu->WriteState(kind, buffer, len);
 }

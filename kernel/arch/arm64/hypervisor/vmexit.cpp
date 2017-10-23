@@ -69,7 +69,7 @@ zx_status_t vmexit_handler(GuestState* guest_state, GuestPhysicalAddressSpace* g
     LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
     LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);
     LTRACEF("guest elr_el2: %#lx\n", guest_state->system_state.elr_el2);
-    LTRACEF("guest spsr_el2: %#lx\n", guest_state->system_state.spsr_el2);
+    LTRACEF("guest spsr_el2: %#x\n", guest_state->system_state.spsr_el2);
 
     ExceptionSyndrome syndrome(guest_state->esr_el2);
     switch (syndrome.ec) {

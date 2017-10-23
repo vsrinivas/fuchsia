@@ -49,6 +49,8 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
     zx_status_t Resume(zx_port_packet_t* packet);
+    zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
+    zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
 private:
     const uint8_t vmid_;

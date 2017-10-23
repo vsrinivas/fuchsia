@@ -32,17 +32,12 @@ enum {
 };
 
 // Structure to read and write VCPU state.
-//
-// TODO(abdulla): Make this an alias of zx_{arm64,x86_64}_general_regs_t, and
-// reorder the x86 registers in zx_x86_64_general_regs_t to match the
-// instruction encoding order (as below).
 typedef struct zx_vcpu_state {
 #if __aarch64__
-    uint64_t r[30];
-    uint64_t lr;
+    uint64_t x[31];
     uint64_t sp;
-    uint64_t pc;
-    uint64_t cpsr;
+    // Contains only the user-controllable upper 4-bits (NZCV).
+    uint32_t cpsr;
 #elif __x86_64__
     uint64_t rax;
     uint64_t rcx;
@@ -60,7 +55,7 @@ typedef struct zx_vcpu_state {
     uint64_t r13;
     uint64_t r14;
     uint64_t r15;
-    // Contains only the user-controllable lower 32-bits of the flags register.
+    // Contains only the user-controllable lower 32-bits.
     uint64_t rflags;
 #endif
 } zx_vcpu_state_t;

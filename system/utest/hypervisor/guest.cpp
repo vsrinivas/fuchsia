@@ -132,8 +132,19 @@ static bool vcpu_read_write_state(void) {
         .r13 = 14u,
         .r14 = 15u,
         .r15 = 16u,
-        .rflags = 0
-#endif // __x86_64__
+        .rflags = 0,
+#elif __aarch64__
+        // clang-format off
+        .x = {
+             0u,  1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u,
+            10u, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u,
+            20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u,
+            30u,
+        },
+        // clang-format on
+        .sp = 64u,
+        .cpsr = 0,
+#endif
     };
 
     ASSERT_EQ(zx_vcpu_write_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
@@ -164,6 +175,40 @@ static bool vcpu_read_write_state(void) {
     EXPECT_EQ(vcpu_state.r14, 30u);
     EXPECT_EQ(vcpu_state.r15, 32u);
     EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
+#elif __aarch64__
+    EXPECT_EQ(vcpu_state.x[0], EXIT_TEST_ADDR);
+    EXPECT_EQ(vcpu_state.x[1], 2u);
+    EXPECT_EQ(vcpu_state.x[2], 4u);
+    EXPECT_EQ(vcpu_state.x[3], 6u);
+    EXPECT_EQ(vcpu_state.x[4], 8u);
+    EXPECT_EQ(vcpu_state.x[5], 10u);
+    EXPECT_EQ(vcpu_state.x[6], 12u);
+    EXPECT_EQ(vcpu_state.x[7], 14u);
+    EXPECT_EQ(vcpu_state.x[8], 16u);
+    EXPECT_EQ(vcpu_state.x[9], 18u);
+    EXPECT_EQ(vcpu_state.x[10], 20u);
+    EXPECT_EQ(vcpu_state.x[11], 22u);
+    EXPECT_EQ(vcpu_state.x[12], 24u);
+    EXPECT_EQ(vcpu_state.x[13], 26u);
+    EXPECT_EQ(vcpu_state.x[14], 28u);
+    EXPECT_EQ(vcpu_state.x[15], 30u);
+    EXPECT_EQ(vcpu_state.x[16], 32u);
+    EXPECT_EQ(vcpu_state.x[17], 34u);
+    EXPECT_EQ(vcpu_state.x[18], 36u);
+    EXPECT_EQ(vcpu_state.x[19], 38u);
+    EXPECT_EQ(vcpu_state.x[20], 40u);
+    EXPECT_EQ(vcpu_state.x[21], 42u);
+    EXPECT_EQ(vcpu_state.x[22], 44u);
+    EXPECT_EQ(vcpu_state.x[23], 46u);
+    EXPECT_EQ(vcpu_state.x[24], 48u);
+    EXPECT_EQ(vcpu_state.x[25], 50u);
+    EXPECT_EQ(vcpu_state.x[26], 52u);
+    EXPECT_EQ(vcpu_state.x[27], 54u);
+    EXPECT_EQ(vcpu_state.x[28], 56u);
+    EXPECT_EQ(vcpu_state.x[29], 58u);
+    EXPECT_EQ(vcpu_state.x[30], 60u);
+    EXPECT_EQ(vcpu_state.sp, 128u);
+    EXPECT_EQ(vcpu_state.cpsr, 0b0110 << 28);
 #endif // __x86_64__
 
     ASSERT_TRUE(teardown(&test));
@@ -270,9 +315,9 @@ static bool guest_set_trap_with_io(void) {
 
 BEGIN_TEST_CASE(guest)
 RUN_TEST(vcpu_resume)
+RUN_TEST(vcpu_read_write_state)
 #if __x86_64__
 // TODO(abdulla): Enable these tests for arm64.
-RUN_TEST(vcpu_read_write_state)
 RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
 RUN_TEST(guest_set_trap_with_io)

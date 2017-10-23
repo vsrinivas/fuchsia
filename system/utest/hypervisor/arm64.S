@@ -21,12 +21,50 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 .endif
 .endm
 
+// Test vcpu_resume.
 FUNCTION(vcpu_resume_start)
     movlit x0, EXIT_TEST_ADDR
     str xzr, [x0]
 FUNCTION(vcpu_resume_end)
 
+// Test vcpu_read_state and vcpu_write_state.
 FUNCTION(vcpu_read_write_state_start)
+    add x1, x1, #1
+    add x2, x2, #2
+    add x3, x3, #3
+    add x4, x4, #4
+    add x5, x5, #5
+    add x6, x6, #6
+    add x7, x7, #7
+    add x8, x8, #8
+    add x9, x9, #9
+    add x10, x10, #10
+    add x11, x11, #11
+    add x12, x12, #12
+    add x13, x13, #13
+    add x14, x14, #14
+    add x15, x15, #15
+    add x16, x16, #16
+    add x17, x17, #17
+    add x18, x18, #18
+    add x19, x19, #19
+    add x20, x20, #20
+    add x21, x21, #21
+    add x22, x22, #22
+    add x23, x23, #23
+    add x24, x24, #24
+    add x25, x25, #25
+    add x26, x26, #26
+    add x27, x27, #27
+    add x28, x28, #28
+    add x29, x29, #29
+    add x30, x30, #30
+
+    add sp, sp, #64
+    cmp sp, #128 // Set ZC bits of CPSR.
+
+    movlit x0, EXIT_TEST_ADDR
+    str xzr, [x0]
 FUNCTION(vcpu_read_write_state_end)
 
 FUNCTION(guest_set_trap_start)

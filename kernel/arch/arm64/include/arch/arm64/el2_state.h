@@ -64,7 +64,7 @@ struct SystemState {
     uint64_t vbar_el1;
 
     uint64_t elr_el2;
-    uint64_t spsr_el2;
+    algn32_t spsr_el2;
 };
 
 struct HostState {

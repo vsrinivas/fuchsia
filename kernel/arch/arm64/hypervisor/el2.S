@@ -102,21 +102,25 @@
     \inst x2, x3, [x9, #GS_X(2)]
     \inst x4, x5, [x9, #GS_X(4)]
     \inst x6, x7, [x9, #GS_X(6)]
-    \inst x8, xzr, [x9, #GS_X(8)]
-    \inst x11, x12, [x9, #GS_X(11)]
-    \inst x13, x14, [x9, #GS_X(13)]
-    \inst x15, x16, [x9, #GS_X(15)]
-    \inst x17, x18, [x9, #GS_X(17)]
-    \inst x19, x20, [x9, #GS_X(19)]
-    \inst x21, x22, [x9, #GS_X(21)]
-    \inst x23, x24, [x9, #GS_X(23)]
-    \inst x25, x26, [x9, #GS_X(25)]
-    \inst x27, x28, [x9, #GS_X(27)]
-    \inst x29, x30, [x9, #GS_X(29)]
+    \inst x10, x11, [x9, #GS_X(10)]
+    \inst x12, x13, [x9, #GS_X(12)]
+    \inst x14, x15, [x9, #GS_X(14)]
+    \inst x16, x17, [x9, #GS_X(16)]
+    \inst x18, x19, [x9, #GS_X(18)]
+    \inst x20, x21, [x9, #GS_X(20)]
+    \inst x22, x23, [x9, #GS_X(22)]
+    \inst x24, x25, [x9, #GS_X(24)]
+    \inst x26, x27, [x9, #GS_X(26)]
+    \inst x28, x29, [x9, #GS_X(28)]
+.ifc "\inst", "ldp"
+    ldr x30, [x9, #GS_X(30)]
+.else
+    str x30, [x9, #GS_X(30)]
+.endif
 .endm
 
 .macro guest_x9_state inst, reg
-    \inst \reg, [x9, #GS_X(9)]
+    \inst x8, \reg, [x9, #GS_X(8)]
 .endm
 
 .macro guest_exit_state
@@ -385,7 +389,7 @@ FUNCTION_LABEL(el2_hvc_resume)
     system_state str, HS_SYSTEM_STATE
     system_state ldr, GS_SYSTEM_STATE
     guest_state ldp
-    guest_x9_state ldr, x9
+    guest_x9_state ldp, x9
 
     // Return to guest.
     eret
@@ -397,7 +401,7 @@ FUNCTION_LABEL(el2_guest_handler)
     guest_state stp
     // Load X9 from the stack, and save it in GuestState.
     ldr x10, [sp]
-    guest_x9_state str, x10
+    guest_x9_state stp, x10
     system_state str, GS_SYSTEM_STATE
     guest_exit_state
     system_state ldr, HS_SYSTEM_STATE
