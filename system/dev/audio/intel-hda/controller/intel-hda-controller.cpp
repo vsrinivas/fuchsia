@@ -12,9 +12,9 @@
 #include <string.h>
 #include <threads.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include <dispatcher-pool/dispatcher-thread-pool.h>
+#include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/intel-hda-proto.h>
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
@@ -53,6 +53,7 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
                    },
     .suspend      = nullptr,
     .resume       = nullptr,
+    .rxrpc        = nullptr,
 };
 #undef DEV
 

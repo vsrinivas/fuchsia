@@ -11,9 +11,9 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
-#include "drivers/audio/audio-proto/audio-proto.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
+#include <audio-proto/audio-proto.h>
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <intel-hda/utils/intel-hda-registers.h>
 
 #include "thread-annotations.h"
 

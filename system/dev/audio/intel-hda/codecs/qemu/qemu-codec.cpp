@@ -4,7 +4,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
+#include <dispatcher-pool/dispatcher-thread-pool.h>
 
 #include "debug-logging.h"
 #include "qemu-codec.h"

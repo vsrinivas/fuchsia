@@ -14,10 +14,10 @@
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <intel-hda/utils/codec-commands.h>
+#include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/intel-hda-proto.h>
 
 #include "codec-cmd-job.h"
 #include "intel-hda-codec.h"

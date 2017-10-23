@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
+#include <intel-hda/utils/codec-commands.h>
 
 namespace audio {
 namespace intel_hda {

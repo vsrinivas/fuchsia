@@ -8,7 +8,7 @@
 #include <fbl/limits.h>
 #include <stdio.h>
 
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
+#include <intel-hda/utils/codec-commands.h>
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
@@ -67,6 +67,7 @@ zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
                     },
     .suspend      = nullptr,
     .resume       = nullptr,
+    .rxrpc        = nullptr,
 };
 
 ihda_codec_protocol_ops_t IntelHDACodec::CODEC_PROTO_THUNKS = {

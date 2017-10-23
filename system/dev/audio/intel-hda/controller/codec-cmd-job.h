@@ -9,9 +9,9 @@
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
-#include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <intel-hda/utils/codec-commands.h>
+#include <intel-hda/utils/intel-hda-proto.h>
 
 namespace audio {
 namespace intel_hda {

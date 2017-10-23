@@ -8,7 +8,7 @@
 #include <fbl/auto_lock.h>
 #include <string.h>
 
-#include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
+#include <intel-hda/utils/intel-hda-registers.h>
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"

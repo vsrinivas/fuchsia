@@ -4,10 +4,10 @@
 
 #include <fbl/vector.h>
 
-#include "drivers/audio/intel-hda/utils/codec-caps.h"
-#include "drivers/audio/intel-hda/utils/codec-commands.h"
-#include "drivers/audio/intel-hda/utils/codec-state.h"
-#include "drivers/audio/intel-hda/utils/utils.h"
+#include <intel-hda/utils/codec-caps.h>
+#include <intel-hda/utils/codec-commands.h>
+#include <intel-hda/utils/codec-state.h>
+#include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
 #include "realtek-stream.h"
@@ -39,8 +39,8 @@ zx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
 
     ZX_DEBUG_ASSERT(conv_.gain_step > 0);
 
-    uint32_t tmp = ((target_gain - conv_.min_gain) + (conv_.gain_step / 2)) / conv_.gain_step;
-    ZX_DEBUG_ASSERT(tmp <= conv_.amp_caps.num_steps());
+    float tmp = ((target_gain - conv_.min_gain) + (conv_.gain_step / 2)) / conv_.gain_step;
+    ZX_DEBUG_ASSERT(static_cast<uint32_t>(tmp) <= conv_.amp_caps.num_steps());
 
     cur_conv_gain_steps_ = ComputeGainSteps(conv_, target_gain);
     return ZX_OK;
@@ -117,11 +117,11 @@ uint8_t RealtekStream::ComputeGainSteps(const CommonCaps& caps, float target_gai
         return 0;
 
     if (target_gain > caps.max_gain)
-        return caps.amp_caps.num_steps() - 1;
+        return static_cast<uint8_t>(caps.amp_caps.num_steps() - 1);
 
     ZX_DEBUG_ASSERT(caps.gain_step > 0);
-    uint32_t tmp = ((target_gain - caps.min_gain) + (caps.gain_step / 2)) / caps.gain_step;
-    ZX_DEBUG_ASSERT(tmp <= caps.amp_caps.num_steps());
+    float tmp = ((target_gain - caps.min_gain) + (caps.gain_step / 2)) / caps.gain_step;
+    ZX_DEBUG_ASSERT(static_cast<uint32_t>(tmp) <= caps.amp_caps.num_steps());
 
     return static_cast<uint8_t>(tmp);
 }
@@ -217,7 +217,7 @@ zx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
             notif.hdr.cmd = AUDIO_STREAM_PLUG_DETECT_NOTIFY;
             notif.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
             notif.flags = static_cast<audio_pd_notify_flags_t>(
-                    (plug_state_ ? AUDIO_PDNF_PLUGGED : 0) | AUDIO_PDNF_CAN_NOTIFY);
+                    (plug_state_ ? (uint32_t)AUDIO_PDNF_PLUGGED : 0) | AUDIO_PDNF_CAN_NOTIFY);
             notif.plug_state_time = last_plug_time_;
 
             for (auto iter = plug_notify_targets_.begin(); iter != plug_notify_targets_.end(); ) {
@@ -384,8 +384,8 @@ void RealtekStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
         // Report the current plug detection state if the client expects a response.
         if (out_resp) {
             out_resp->flags  = static_cast<audio_pd_notify_flags_t>(
-                               (plug_state_ ? AUDIO_PDNF_PLUGGED : 0) |
-                               (pc_.async_plug_det ? AUDIO_PDNF_CAN_NOTIFY : 0));
+                               (plug_state_ ? (uint32_t)AUDIO_PDNF_PLUGGED : 0) |
+                               (pc_.async_plug_det ? (uint32_t)AUDIO_PDNF_CAN_NOTIFY : 0));
             out_resp->plug_state_time = last_plug_time_;
         }
     } else {

@@ -8,8 +8,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 
-#include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
-#include "drivers/audio/intel-hda/utils/codec-caps.h"
+#include <intel-hda/codec-utils/stream-base.h>
+#include <intel-hda/utils/codec-caps.h>
 
 #include "utils.h"
 

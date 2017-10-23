@@ -10,8 +10,8 @@
 #include <fbl/algorithm.h>
 #include <string.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include "utils.h"
 
 namespace audio {

@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <fbl/ref_ptr.h>
 
-#include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
+#include <intel-hda/codec-utils/codec-driver-base.h>
 
 namespace audio {
 namespace intel_hda {
