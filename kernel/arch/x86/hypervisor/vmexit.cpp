@@ -275,11 +275,20 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X86_CPUID_HYP_VENDOR:
         // This leaf is commonly used to identify a hypervisor via ebx:ecx:edx.
         next_rip(exit_info, vmcs);
+        guest_state->rax = 0;
         guest_state->rbx = kHypVendorEbx;
         guest_state->rcx = kHypVendorEcx;
         guest_state->rdx = kHypVendorEdx;
         return ZX_OK;
+    case X86_CPUID_HYP_VENDOR + 1 ... X86_CPUID_HYP_MAX:
+        next_rip(exit_info, vmcs);
+        guest_state->rax = 0;
+        guest_state->rbx = 0;
+        guest_state->rcx = 0;
+        guest_state->rdx = 0;
+        return ZX_OK;
     default:
+        dprintf(INFO, "Unimplemented cpuid %#lx.%#lx\n", leaf, subleaf);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
