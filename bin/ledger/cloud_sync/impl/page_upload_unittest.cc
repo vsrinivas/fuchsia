@@ -434,7 +434,9 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
 
 // Verifies that commits that are received between the first upload and the
 // retry are not sent.
-TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
+//
+// Disabled as flaky on the bots, see LE-333.
+TEST_F(PageUploadTest, DISABLED_DoNotUploadSyncedCommitsOnRetry) {
   SetOnNewStateCallback([this] {
     if (page_upload_->IsIdle()) {
       message_loop_.PostQuitTask();
