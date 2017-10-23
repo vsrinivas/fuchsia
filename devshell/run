@@ -1,0 +1,16 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx_config_read
+
+qemu_dir="${QEMU_DIR:-$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n ${BUILDTOOLS_QEMU_DIR})/bin}"
+
+"${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
+  -o "${ZIRCON_BUILD_DIR}" \
+  -a "${FUCHSIA_ARCH}" \
+  -q "${qemu_dir}" \
+  -x "${FUCHSIA_BUILD_DIR}/user.bootfs" \
+  "$@"

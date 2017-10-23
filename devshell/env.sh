@@ -11,7 +11,7 @@ fi
 # __patched_path <old-regex> <new-component>
 # Prints a new path value based on the current $PATH, removing path components
 # that match <old-regex> and adding <new-component> to the end.
-function __patched_path() {
+function __patched_path {
     local old_regex="$1"
     local new_component="$2"
     local stripped
@@ -31,14 +31,14 @@ function __patched_path() {
 
 ### zset: set zircon build properties
 
-function zset-usage() {
+function zset-usage {
   cat >&2 <<END
 Usage: zset x86-64|arm64|rpi3|odroidc2|hikey960
 Sets zircon build options.
 END
 }
 
-function zset() {
+function zset {
   if [[ $# -ne 1 ]]; then
     zset-usage
     return 1
@@ -95,7 +95,7 @@ function zset() {
 
 # Add tools to path, removing prior tools directory if any. This also
 # matches the Zircon tools directory added by zset, so add it back too.
-function fupdate-path() {
+function fupdate-path {
   local rust_dir="$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n "${BUILDTOOLS_RUST_DIR}/bin")"
 
   export PATH="$(__patched_path \
