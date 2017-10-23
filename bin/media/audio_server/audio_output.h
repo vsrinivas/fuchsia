@@ -9,6 +9,8 @@
 #include <set>
 #include <thread>
 
+#include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -16,8 +18,6 @@
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include "garnet/drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
-#include "garnet/drivers/audio/dispatcher-pool/dispatcher-wakeup-event.h"
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"

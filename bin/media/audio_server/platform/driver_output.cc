@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/audio_server/platform/driver_output.h"
 
+#include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
@@ -13,7 +14,6 @@
 #include <iomanip>
 
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
-#include "garnet/drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "lib/fxl/logging.h"
 
 static constexpr bool VERBOSE_TIMING_DEBUG = false;

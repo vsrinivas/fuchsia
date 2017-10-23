@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include <dispatcher-pool/dispatcher-timer.h>
+
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
-#include "garnet/drivers/audio/dispatcher-pool/dispatcher-timer.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/media/fidl/media_result.fidl.h"
 #include "lib/media/fidl/media_types.fidl.h"

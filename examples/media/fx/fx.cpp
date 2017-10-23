@@ -15,12 +15,12 @@
 #include <fbl/unique_ptr.h>
 #include <stdio.h>
 
-#include "application/lib/app/application_context.h"
-#include "application/lib/app/connect.h"
-#include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/media/services/audio_server.fidl.h"
-#include "lib/mtl/tasks/fd_waiter.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/connect.h"
+#include "lib/media/timeline/timeline_function.h"
+#include "lib/fsl/tasks/fd_waiter.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 
 using media::TimelineFunction;
 
@@ -96,7 +96,7 @@ private:
     void FuzzEffect(int16_t* src, int16_t* dst, uint32_t frames);
     void MixedFuzzEffect(int16_t* src, int16_t* dst, uint32_t frames);
 
-    mtl::FDWaiter::Callback handle_keystroke_thunk_ =
+    fsl::FDWaiter::Callback handle_keystroke_thunk_ =
         [this](zx_status_t status, uint32_t event) {
             HandleKeystroke(status, event);
         };
@@ -135,7 +135,7 @@ private:
     media::MediaTimelineControlPointPtr output_timeline_cp_;
     media::TimelineConsumerPtr          output_timeline_consumer_;
     media::TimelineFunction             clock_mono_to_input_wr_ptr_;
-    mtl::FDWaiter                       keystroke_waiter_;
+    fsl::FDWaiter                       keystroke_waiter_;
 };
 
 void FxProcessor::Startup() {
@@ -254,10 +254,10 @@ void FxProcessor::Startup() {
     // Compute the time at which the input will have a chunk of data to process,
     // and schedule a DPC for then.
     int64_t first_process_frames = (PROCESS_CHUNK_TIME * input_->frame_rate()) / 1000000000;
-    auto first_process_time = ftl::TimePoint::FromEpochDelta(ftl::TimeDelta::FromNanoseconds(
+    auto first_process_time = fxl::TimePoint::FromEpochDelta(fxl::TimeDelta::FromNanoseconds(
                 clock_mono_to_input_wr_ptr_.ApplyInverse(first_process_frames)));
 
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTaskForTime(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostTaskForTime(
         [this]() { ProcessInput(true); },
         first_process_time);
 
@@ -357,8 +357,7 @@ media::MediaPacketPtr FxProcessor::CreateOutputPacket() {
 
     pkt->pts_rate_ticks = input_->frame_rate();
     pkt->pts_rate_seconds = 1u;
-    pkt->keyframe = true;
-    pkt->end_of_stream = false;
+    pkt->flags = 0u;
     pkt->payload_buffer_id = OUTPUT_BUFFER_ID;
 
     return pkt;
@@ -374,7 +373,7 @@ void FxProcessor::Shutdown(const char* reason) {
     output_media_.reset();
     audio_server_.reset();
     input_.reset();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 void FxProcessor::ProcessInput(bool first_time) {
@@ -411,9 +410,9 @@ void FxProcessor::ProcessInput(bool first_time) {
     }
 
     // Schedule our next processing callback.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() { ProcessInput(false); },
-        ftl::TimeDelta::FromNanoseconds(PROCESS_CHUNK_TIME));
+        fxl::TimeDelta::FromNanoseconds(PROCESS_CHUNK_TIME));
 }
 
 void FxProcessor::ProduceOutputPackets(media::MediaPacketPtr* out_pkt1,
@@ -648,7 +647,7 @@ int main(int argc, char** argv) {
     if (res != ZX_OK)
         return res;
 
-    mtl::MessageLoop loop;
+    fsl::MessageLoop loop;
 
     std::unique_ptr<app::ApplicationContext> application_context =
         app::ApplicationContext::CreateFromStartupInfo();

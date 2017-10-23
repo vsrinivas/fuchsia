@@ -8,10 +8,10 @@ executable("fx") {
   ]
 
   deps = [
-    "//application/lib/app",
-    "//apps/media/lib/timeline",
-    "//apps/media/services",
-    "//lib/mtl",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/bin/media/media_service",
     "//zircon/system/ulib/audio-utils",
   ]
 }

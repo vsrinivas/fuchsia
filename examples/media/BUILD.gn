@@ -10,6 +10,7 @@ package("media") {
   app = true
   deps = [
     "audio_player",
+    "fx",
     "master_gain",
     "media_client_sine",
     "media_player",
@@ -22,6 +23,9 @@ package("media") {
   binaries = [
     {
       name = "audio_player"
+    },
+    {
+      name = "fx"
     },
     {
       name = "master_gain"
