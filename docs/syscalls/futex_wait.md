@@ -9,7 +9,7 @@ futex_wait - Wait on a futex.
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_futex_wait(zx_futex_t* value_ptr, int current_value,
+zx_status_t zx_futex_wait(const zx_futex_t* value_ptr, int current_value,
                           zx_time_t deadline);
 ```
 

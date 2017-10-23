@@ -10,8 +10,8 @@ move more waiters to another wait queue.
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_futex_requeue(zx_futex_t* value_ptr, uint32_t wake_count,
-                             int current_value, zx_futex_t* requeue_ptr,
+zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr, uint32_t wake_count,
+                             int current_value, const zx_futex_t* requeue_ptr,
                              uint32_t requeue_count);
 ```
 

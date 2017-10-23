@@ -29,7 +29,7 @@ FutexContext::~FutexContext() {
     DEBUG_ASSERT(futex_table_.is_empty());
 }
 
-zx_status_t FutexContext::FutexWait(user_inout_ptr<int> value_ptr, int current_value, zx_time_t deadline) {
+zx_status_t FutexContext::FutexWait(user_in_ptr<const int> value_ptr, int current_value, zx_time_t deadline) {
     LTRACE_ENTRY;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
@@ -140,8 +140,8 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const int> value_ptr,
     return ZX_OK;
 }
 
-zx_status_t FutexContext::FutexRequeue(user_inout_ptr<int> wake_ptr, uint32_t wake_count, int current_value,
-                                       user_inout_ptr<int> requeue_ptr, uint32_t requeue_count) {
+zx_status_t FutexContext::FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t wake_count, int current_value,
+                                       user_in_ptr<const int> requeue_ptr, uint32_t requeue_count) {
     LTRACE_ENTRY;
 
     if ((requeue_ptr.get() == nullptr) && requeue_count)

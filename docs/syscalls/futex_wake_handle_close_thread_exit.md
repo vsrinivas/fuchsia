@@ -10,7 +10,7 @@ futex_wake_handle_close_thread_exit - write to futex, wake futex, close handle, 
 #include <zircon/syscalls.h>
 
 _Noreturn void zx_futex_wake_handle_close_thread_exit(
-    zx_futex_t* value_ptr, uint32_t wake_count,
+    const zx_futex_t* value_ptr, uint32_t wake_count,
     int new_value, zx_handle_t close_handle);
 ```
 

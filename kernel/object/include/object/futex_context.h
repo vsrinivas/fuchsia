@@ -33,7 +33,7 @@ public:
     // Otherwise it will block the current thread until the |deadline| passes,
     // or until the thread is woken by a FutexWake or FutexRequeue operation
     // on the same |value_ptr| futex.
-    zx_status_t FutexWait(user_inout_ptr<int> value_ptr, int current_value, zx_time_t deadline);
+    zx_status_t FutexWait(user_in_ptr<const int> value_ptr, int current_value, zx_time_t deadline);
 
     // FutexWake will wake up to |count| number of threads blocked on the |value_ptr| futex.
     zx_status_t FutexWake(user_in_ptr<const int> value_ptr, uint32_t count);
@@ -44,8 +44,8 @@ public:
     // If any other threads remain blocked on on the |wake_ptr| futex, up to |requeue_count|
     // of them will then be requeued to the tail of the list of threads
     // blocked on the |requeue_ptr| futex.
-    zx_status_t FutexRequeue(user_inout_ptr<int> wake_ptr, uint32_t wake_count, int current_value,
-                             user_inout_ptr<int> requeue_ptr, uint32_t requeue_count);
+    zx_status_t FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t wake_count, int current_value,
+                             user_in_ptr<const int> requeue_ptr, uint32_t requeue_count);
 
 private:
     FutexContext(const FutexContext&) = delete;
