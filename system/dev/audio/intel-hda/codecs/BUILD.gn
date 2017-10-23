@@ -1,0 +1,11 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("codecs") {
+  public_deps = [
+    "//drivers/audio/intel-hda/codecs/qemu:qemu-ihda-codec",
+    "//drivers/audio/intel-hda/codecs/realtek:realtek-ihda-codec",
+    "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
+  ]
+}

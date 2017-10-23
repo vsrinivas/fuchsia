@@ -1,0 +1,34 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("ihda_bin") {
+  output_name = "ihda"
+  sources = [
+    "ihda.cpp",
+    "intel_hda_codec.cpp",
+    "intel_hda_controller.cpp",
+    "intel_hda_device.cpp",
+    "zircon_device.cpp",
+    "print_codec_state.cpp",
+  ]
+
+  deps = [
+    "//drivers/audio/intel-hda/utils:ihda-utils",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  cflags = [ "-Wno-address-of-packed-member" ]
+}
+
+package("ihda") {
+  deps = [
+    ":ihda_bin",
+  ]
+  binaries = [ {
+        name = "ihda"
+      } ]
+}
