@@ -99,4 +99,9 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     return ZX_OK;
 }
 
+zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t* mac, uint8_t type) {
+    // TODO
+    return ZX_OK;
+}
+
 }  // namespace ath10k
