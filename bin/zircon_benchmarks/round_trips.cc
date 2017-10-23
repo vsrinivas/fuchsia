@@ -19,6 +19,20 @@
 // This tests the round-trip time of various Zircon kernel IPC primitives.
 // It measures the latency of sending a request to another thread or
 // process and receiving a reply back.
+//
+// These tests generally use the same IPC primitive in both directions
+// (i.e. from client to server and from server to client) for sending and
+// receiving wakeups.  There are a couple of reasons for that:
+//
+//  * This allows us to estimate the one-way latency of the IPC primitive
+//    by dividing the round-trip latency by 2.
+//  * This keeps the number of tests manageable.  If we mixed the
+//    primitives, the number of possible combinations would be O(n^2) in
+//    the number of primitives.  (For example, we could signal using a
+//    channel in one direction and a futex in the other direction.)
+//
+// An exception is zx_channel_call(), which generally can't be used by a
+// server process for receiving requests.
 
 namespace {
 
@@ -133,6 +147,74 @@ class BasicChannelTest {
 
  private:
   zx_handle_t client_;
+  ThreadOrProcess thread_or_process_;
+};
+
+// Test IPC round trips using Zircon channels where the client and server
+// both use Zircon ports to wait, using ZX_WAIT_ASYNC_ONCE.
+class ChannelPortTest {
+ public:
+  ChannelPortTest(MultiProc multiproc) {
+    zx_handle_t server;
+    FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
+    thread_or_process_.Launch("ChannelPortTest::ThreadFunc", &server, 1,
+                              multiproc);
+    FXL_CHECK(zx_port_create(0, &client_port_) == ZX_OK);
+  }
+
+  ~ChannelPortTest() {
+    zx_handle_close(client_);
+    zx_handle_close(client_port_);
+  }
+
+  static bool ChannelPortRead(zx_handle_t channel,
+                              zx_handle_t port,
+                              uint32_t* msg) {
+    FXL_CHECK(zx_object_wait_async(channel, port, 0,
+                                   ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                   ZX_WAIT_ASYNC_ONCE) == ZX_OK);
+
+    zx_port_packet_t packet;
+    FXL_CHECK(zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0) == ZX_OK);
+    if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED)
+      return false;
+
+    uint32_t bytes_read;
+    FXL_CHECK(zx_channel_read(channel, 0, msg, nullptr, sizeof(*msg), 0,
+                              &bytes_read, nullptr) == ZX_OK);
+    FXL_CHECK(bytes_read == sizeof(*msg));
+    return true;
+  }
+
+  static void ThreadFunc(std::vector<zx_handle_t> handles) {
+    FXL_CHECK(handles.size() == 1);
+    zx_handle_t channel = handles[0];
+
+    zx_handle_t port;
+    FXL_CHECK(zx_port_create(0, &port) == ZX_OK);
+
+    for (;;) {
+      uint32_t msg;
+      if (!ChannelPortRead(channel, port, &msg))
+        break;
+      FXL_CHECK(zx_channel_write(channel, 0, &msg, sizeof(msg), nullptr, 0) ==
+                ZX_OK);
+    }
+
+    zx_handle_close(channel);
+    zx_handle_close(port);
+  }
+
+  void Run() {
+    uint32_t msg = 123;
+    FXL_CHECK(zx_channel_write(client_, 0, &msg, sizeof(msg), nullptr, 0) ==
+              ZX_OK);
+    FXL_CHECK(ChannelPortRead(client_, client_port_, &msg));
+  }
+
+ private:
+  zx_handle_t client_;
+  zx_handle_t client_port_;
   ThreadOrProcess thread_or_process_;
 };
 
@@ -303,6 +385,7 @@ struct ThreadFuncEntry {
 const ThreadFuncEntry thread_funcs[] = {
 #define DEF_FUNC(FUNC) { #FUNC, FUNC },
   DEF_FUNC(BasicChannelTest::ThreadFunc)
+  DEF_FUNC(ChannelPortTest::ThreadFunc)
   DEF_FUNC(ChannelCallTest::ThreadFunc)
   DEF_FUNC(PortTest::ThreadFunc)
 #undef DEF_FUNC
@@ -333,6 +416,20 @@ void RoundTrip_BasicChannel_MultiProcess(benchmark::State& state) {
     test.Run();
 }
 BENCHMARK(RoundTrip_BasicChannel_MultiProcess);
+
+void RoundTrip_ChannelPort_SingleProcess(benchmark::State& state) {
+  ChannelPortTest test(SingleProcess);
+  while (state.KeepRunning())
+    test.Run();
+}
+BENCHMARK(RoundTrip_ChannelPort_SingleProcess);
+
+void RoundTrip_ChannelPort_MultiProcess(benchmark::State& state) {
+  ChannelPortTest test(MultiProcess);
+  while (state.KeepRunning())
+    test.Run();
+}
+BENCHMARK(RoundTrip_ChannelPort_MultiProcess);
 
 void RoundTrip_ChannelCall_SingleProcess(benchmark::State& state) {
   ChannelCallTest test(SingleProcess);
