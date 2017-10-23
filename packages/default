@@ -40,6 +40,7 @@
         "garnet/packages/netstack_tests",
         "garnet/packages/network",
         "garnet/packages/network_examples",
+        "garnet/packages/network_tests",
         "garnet/packages/network_time",
         "garnet/packages/openssh",
         "garnet/packages/openssh-keys",
