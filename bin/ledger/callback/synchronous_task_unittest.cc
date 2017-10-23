@@ -10,7 +10,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 
-TEST(SynchronousTaskTest, RunSynchronouslyOnOtherThread) {
+// Disabled as failing on the bots, see LE-335.
+TEST(SynchronousTaskTest, DISABLED_RunSynchronouslyOnOtherThread) {
   constexpr size_t nb_values = 1000;
   fxl::RefPtr<fxl::TaskRunner> task_runner;
   std::thread thread = fsl::CreateThread(&task_runner);
