@@ -169,7 +169,7 @@ tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, 
             resp->block = htons(session->block_number + session->window_index);
         }
         size_t len = MIN(session->file_size - session->offset, session->block_size);
-        xprintf(" -> Copying block #%d (size:%zu/%d) from %zu/%zu [%d/%d]\n",
+        xprintf(" -> Copying block #%" PRIu64 " (size:%zu/%d) from %zu/%zu [%d/%d]\n",
                 session->block_number + session->window_index, len, session->block_size,
                 session->offset, session->file_size, session->window_index, session->window_size);
         void* buf = resp->data;
@@ -588,7 +588,7 @@ static void tftp_prepare_ack(tftp_session* session,
                              tftp_msg* msg,
                              size_t* msg_len) {
     tftp_data_msg* ack_data = (tftp_data_msg*)msg;
-    xprintf(" -> Ack %d\n", session->block_number);
+    xprintf(" -> Ack %" PRIu64 "\n", session->block_number);
     session->window_index = 0;
     OPCODE(session, ack_data, OPCODE_ACK);
     if (session->use_host_block_endianness) {
@@ -626,7 +626,8 @@ tftp_status tftp_handle_data(tftp_session* session,
     // (> 65535 * blocksize bytes), we allow the block number to wrap. We use signed modulo
     // math to determine the relative location of the block to our current position.
     int16_t block_delta = block_num - (uint16_t)session->block_number;
-    xprintf(" <- Block %u (Last = %u, Offset = %d, Size = %ld, Left = %ld)\n",
+    xprintf(" <- Block %" PRIu64 " (Last = %" PRIu64 ", Offset = %" PRIu64
+                ", Size = %zd, Left = %" PRIu64 ")\n",
             session->block_number + block_delta, session->block_number,
             session->block_number * session->block_size, session->file_size,
             session->file_size - session->block_number * session->block_size);
@@ -652,8 +653,8 @@ tftp_status tftp_handle_data(tftp_session* session,
         session->window_index++;
     } else if (block_delta > 1) {
         // Force sending a ACK with the last block_number we received
-        xprintf("Skipped: got %d, expected %d\n", session->block_number + block_delta,
-                session->block_number + 1);
+        xprintf("Skipped: got %" PRIu64 ", expected %" PRIu64 "\n",
+                session->block_number + block_delta, session->block_number + 1);
         session->window_index = session->window_size;
         // It's possible that a previous ACK wasn't received, increment the prefix
         if (session->use_opcode_prefix) {
