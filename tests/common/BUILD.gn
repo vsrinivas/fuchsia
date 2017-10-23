@@ -6,7 +6,25 @@ group("common") {
   testonly = true
 
   public_deps = [
+    ":done_module",
     ":null_module",
+  ]
+}
+
+executable("done_module") {
+  testonly = true
+
+  sources = [
+    "done_module.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/module/fidl",
+    "//peridot/public/lib/story/fidl",
   ]
 }
 

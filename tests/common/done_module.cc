@@ -14,10 +14,10 @@ using modular::testing::TestPoint;
 
 namespace {
 
-// The NullModule just sits there and does nothing until it's terminated.
-class NullModule {
+// The DoneModule immediately is Done().
+class DoneModule {
  public:
-  NullModule(
+  DoneModule(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
@@ -25,6 +25,7 @@ class NullModule {
     modular::testing::Init(module_host_->application_context(), __FILE__);
     module_host_->module_context()->Ready();
     initialized_.Pass();
+    module_host_->module_context()->Done();
   }
 
   // Called by ModuleDriver.
@@ -45,7 +46,7 @@ class NullModule {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<NullModule> driver(app_context.get(),
+  modular::ModuleDriver<DoneModule> driver(app_context.get(),
                                            [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

@@ -186,16 +186,19 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
 
       } else if (module_state == modular::ModuleState::RUNNING) {
         module2_running_.Pass();
+
+        // TODO(mesch): If the module calls Done() on its context (as
+        // done_module, for example, would), it is stopped by the story runner
+        // because it's a top level module. If this happens at the same time as
+        // this call, the callback may never invoked because it's preempted by
+        // the story runner handling the Done() request from the module.
+        // Instead, the controller connection is just closed.
         module2_controller_->Stop([this] {
-          // TODO(mesch): This callback is never invoked because it's preempted
-          // by the story runner handling the Done() request from the module.
-          // Instead, the controller connection is closed.
-          /* GetActiveModules2(); */
+          GetActiveModules2();
         });
 
       } else if (module_state == modular::ModuleState::STOPPED) {
         module2_stopped_.Pass();
-        GetActiveModules2();
       }
     });
   }

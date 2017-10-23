@@ -30,7 +30,7 @@ class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
     first_module = command_line.GetOptionValueWithDefault(
-        "first_module", "file:///system/apps/modular_tests/null_module");
+        "first_module", "file:///system/apps/modular_tests/done_module");
     second_module = command_line.GetOptionValueWithDefault(
         "second_module", "file:///system/apps/modular_tests/null_module");
   }

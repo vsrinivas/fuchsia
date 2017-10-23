@@ -83,6 +83,10 @@ package("modular_tests") {
       dest = "modular_tests/remote_invoker_test"
     },
     {
+      name = "done_module"
+      dest = "modular_tests/done_module"
+    },
+    {
       name = "null_module"
       dest = "modular_tests/null_module"
     },
