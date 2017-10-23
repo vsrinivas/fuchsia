@@ -5,10 +5,12 @@
 #include "lib/escher/impl/model_pipeline_cache.h"
 
 #include "lib/escher/geometry/types.h"
+#include "lib/escher/impl/glsl_compiler.h"
 #include "lib/escher/impl/mesh_shader_binding.h"
 #include "lib/escher/impl/model_data.h"
 #include "lib/escher/impl/model_pipeline.h"
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/trace_macros.h"
 
 namespace escher {
@@ -159,18 +161,24 @@ constexpr char g_fragment_src[] = R"GLSL(
 
 }  // namespace
 
-ModelPipelineCache::ModelPipelineCache(ModelData* model_data,
+ModelPipelineCache::ModelPipelineCache(ResourceRecycler* recycler,
+                                       ModelDataPtr model_data,
                                        vk::RenderPass depth_prepass,
                                        vk::RenderPass lighting_pass)
-    : model_data_(model_data),
+    : Resource(recycler),
+      model_data_(std::move(model_data)),
       depth_prepass_(depth_prepass),
-      lighting_pass_(lighting_pass) {
+      lighting_pass_(lighting_pass),
+      compiler_(std::make_unique<GlslToSpirvCompiler>()) {
   FXL_DCHECK(model_data_);
+  FXL_DCHECK(depth_prepass_);
+  FXL_DCHECK(lighting_pass_);
 }
 
 ModelPipelineCache::~ModelPipelineCache() {
-  model_data_->device().waitIdle();
   pipelines_.clear();
+  device().destroyRenderPass(depth_prepass_);
+  device().destroyRenderPass(lighting_pass_);
 }
 
 ModelPipeline* ModelPipelineCache::GetPipeline(const ModelPipelineSpec& spec) {
@@ -424,12 +432,12 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
 
   if (spec.shape_modifiers & ShapeModifier::kWobble) {
     vertex_spirv_future =
-        compiler_.Compile(vk::ShaderStageFlagBits::eVertex,
-                          {{g_vertex_wobble_src}}, std::string(), "main");
+        compiler_->Compile(vk::ShaderStageFlagBits::eVertex,
+                           {{g_vertex_wobble_src}}, std::string(), "main");
   } else {
     vertex_spirv_future =
-        compiler_.Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
-                          std::string(), "main");
+        compiler_->Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
+                           std::string(), "main");
   }
 
   // The depth-only pre-pass uses a different renderpass and a cheap fragment
@@ -448,8 +456,8 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   } else {
     render_pass = lighting_pass_;
     fragment_spirv_future =
-        compiler_.Compile(vk::ShaderStageFlagBits::eFragment,
-                          {{g_fragment_src}}, std::string(), "main");
+        compiler_->Compile(vk::ShaderStageFlagBits::eFragment,
+                           {{g_fragment_src}}, std::string(), "main");
   }
 
   // Wait for completion of asynchronous shader compilation.
@@ -476,7 +484,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   }
 
   auto pipeline_and_layout = NewPipelineHelper(
-      model_data_, vertex_module, fragment_module, enable_depth_write,
+      model_data_.get(), vertex_module, fragment_module, enable_depth_write,
       enable_blending, depth_compare_op, render_pass,
       {model_data_->per_model_layout(), model_data_->per_object_layout()}, spec,
       SampleCountFlagBitsFromInt(spec.sample_count));

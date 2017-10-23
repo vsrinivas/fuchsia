@@ -106,7 +106,7 @@ Compiler::Compiler(escher::Escher* escher,
                    vk::DescriptorSetLayout descriptor_set_layout)
     : loop_(fsl::MessageLoop::GetCurrent()),
       escher_(escher),
-      model_data_(escher),
+      model_data_(fxl::MakeRefCounted<escher::impl::ModelData>(escher)),
       render_pass_(render_pass),
       descriptor_set_layout_(descriptor_set_layout) {
   FXL_DCHECK(render_pass_);
@@ -278,7 +278,7 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
 
   vk::PipelineVertexInputStateCreateInfo vertex_input_info;
   {
-    auto& mesh_shader_binding = model_data_.GetMeshShaderBinding(mesh_spec);
+    auto& mesh_shader_binding = model_data_->GetMeshShaderBinding(mesh_spec);
     vertex_input_info.vertexBindingDescriptionCount = 1;
     vertex_input_info.pVertexBindingDescriptions =
         mesh_shader_binding.binding();

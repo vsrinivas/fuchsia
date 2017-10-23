@@ -30,7 +30,7 @@ class ModelDisplayListBuilder {
                           const TexturePtr& illumination_texture,
                           ModelData* model_data,
                           ModelRenderer* renderer,
-                          ModelPipelineCache* pipeline_cache,
+                          ModelPipelineCachePtr pipeline_cache,
                           ModelDisplayListFlags flags,
                           uint32_t sample_count);
 
@@ -98,7 +98,7 @@ class ModelDisplayListBuilder {
   UniformBufferPool* const uniform_buffer_pool_;
   DescriptorSetPool* const per_model_descriptor_set_pool_;
   DescriptorSetPool* const per_object_descriptor_set_pool_;
-  ModelPipelineCache* const pipeline_cache_;
+  ModelPipelineCachePtr pipeline_cache_;
 
   DescriptorSetAllocationPtr per_object_descriptor_set_allocation_;
 

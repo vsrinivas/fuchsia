@@ -13,7 +13,7 @@ class DepthToColor;
 
 class PaperRenderer : public Renderer {
  public:
-  explicit PaperRenderer(Escher* escher);
+  static fxl::RefPtr<PaperRenderer> New(Escher* escher);
 
   void DrawFrame(const Stage& stage,
                  const Model& model,
@@ -42,7 +42,10 @@ class PaperRenderer : public Renderer {
   // useful during development.
   void CycleSsdoAccelerationMode();
 
+  const impl::ModelDataPtr& model_data() const { return model_data_; }
+
  private:
+  PaperRenderer(Escher* escher, impl::ModelDataPtr model_data);
   ~PaperRenderer() override;
 
   static constexpr uint32_t kFramebufferColorAttachmentIndex = 0;
@@ -95,8 +98,10 @@ class PaperRenderer : public Renderer {
 
   MeshPtr full_screen_;
   impl::ImageCache* image_cache_;
+  vk::Format depth_pass_color_format_;
+  vk::Format lighting_pass_color_format_;
   vk::Format depth_format_;
-  std::unique_ptr<impl::ModelData> model_data_;
+  impl::ModelDataPtr model_data_;
   std::unique_ptr<impl::ModelRenderer> model_renderer_;
   std::unique_ptr<impl::SsdoSampler> ssdo_;
   std::unique_ptr<impl::SsdoAccelerator> ssdo_accelerator_;
@@ -106,8 +111,11 @@ class PaperRenderer : public Renderer {
   bool enable_lighting_ = true;
   bool sort_by_pipeline_ = true;
 
+  FRIEND_MAKE_REF_COUNTED(PaperRenderer);
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);
   FXL_DISALLOW_COPY_AND_ASSIGN(PaperRenderer);
 };
+
+typedef fxl::RefPtr<PaperRenderer> PaperRendererPtr;
 
 }  // namespace escher

@@ -13,31 +13,10 @@
 namespace escher {
 namespace impl {
 
-namespace {
-
-// Constructor helper.
-std::unique_ptr<MeshManager> NewMeshManager(
-    CommandBufferPool* main_pool,
-    CommandBufferPool* transfer_pool,
-    GpuAllocator* allocator,
-    GpuUploader* uploader,
-    ResourceRecycler* resource_recycler) {
-  return std::make_unique<MeshManager>(
-      transfer_pool ? transfer_pool : main_pool, allocator, uploader,
-      resource_recycler);
-}
-
-}  // namespace
-
 EscherImpl::EscherImpl(Escher* escher, const VulkanContext& context)
     : escher_(escher),
       vulkan_context_(context),
       pipeline_cache_(std::make_unique<PipelineCache>()),
-      mesh_manager_(NewMeshManager(escher->command_buffer_pool(),
-                                   escher->transfer_command_buffer_pool(),
-                                   escher->gpu_allocator(),
-                                   escher->gpu_uploader(),
-                                   escher->resource_recycler())),
       renderer_count_(0) {
   FXL_DCHECK(context.instance);
   FXL_DCHECK(context.physical_device);
@@ -90,7 +69,7 @@ ImageCache* EscherImpl::image_cache() {
 }
 
 MeshManager* EscherImpl::mesh_manager() {
-  return mesh_manager_.get();
+  return escher_->mesh_manager();
 }
 
 GlslToSpirvCompiler* EscherImpl::glsl_compiler() {

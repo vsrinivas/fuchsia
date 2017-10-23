@@ -74,7 +74,9 @@ class Pipeline;
 class SsdoAccelerator;
 class SsdoSampler;
 
+typedef fxl::RefPtr<ModelData> ModelDataPtr;
 typedef fxl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
+typedef fxl::RefPtr<ModelPipelineCache> ModelPipelineCachePtr;
 typedef fxl::RefPtr<Pipeline> PipelinePtr;
 
 }  // namespace impl

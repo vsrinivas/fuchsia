@@ -8,8 +8,8 @@
 #include <unordered_map>
 
 #include "lib/escher/forward_declarations.h"
-#include "lib/escher/impl/glsl_compiler.h"
 #include "lib/escher/impl/model_pipeline_spec.h"
+#include "lib/escher/resources/resource.h"
 #include "lib/escher/util/hash.h"
 #include "lib/fxl/macros.h"
 
@@ -18,14 +18,21 @@ namespace impl {
 
 class ModelPipeline;
 
-// TODO: document.
-class ModelPipelineCache {
+// ModelPipelineCache supports the retrieval of pipelines that match the
+// specified ModelPipelineSpecs, lazily instantiating these pipelines if
+// necessary.  The GLSL code required by these specs is hard-coded into the
+// implementation.
+class ModelPipelineCache : public Resource {
  public:
+  // Ownership of the depth and lighting passes is transferred to the new
+  // ModelPipelineCache, which is responsible for destroying them.
+  //
   // TODO: Vulkan requires an instantiated render-pass and a specific subpass
   // index within it in order to create a pipeline (as opposed to e.g. Metal,
   // which only requires attachment descriptions).  It somehow feels janky to
   // pass these to the ModelPipelineCache constructor, but what else can we do?
-  ModelPipelineCache(ModelData* model_data,
+  ModelPipelineCache(ResourceRecycler* recycler,
+                     ModelDataPtr model_data,
                      vk::RenderPass depth_prepass,
                      vk::RenderPass lighting_pass);
   ~ModelPipelineCache();
@@ -33,19 +40,22 @@ class ModelPipelineCache {
   // Get cached pipeline, or return a newly-created one.
   ModelPipeline* GetPipeline(const ModelPipelineSpec& spec);
 
-  GlslToSpirvCompiler* glsl_compiler() { return &compiler_; }
+  GlslToSpirvCompiler* glsl_compiler() { return compiler_.get(); }
+
+  vk::RenderPass depth_prepass() const { return depth_prepass_; }
+  vk::RenderPass lighting_pass() const { return lighting_pass_; }
 
  private:
   std::unique_ptr<ModelPipeline> NewPipeline(const ModelPipelineSpec& spec);
 
-  ModelData* const model_data_;
+  ModelDataPtr model_data_;
   vk::RenderPass depth_prepass_;
   vk::RenderPass lighting_pass_;
   std::unordered_map<ModelPipelineSpec,
                      std::unique_ptr<ModelPipeline>,
                      Hash<ModelPipelineSpec>>
       pipelines_;
-  GlslToSpirvCompiler compiler_;
+  std::unique_ptr<GlslToSpirvCompiler> compiler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModelPipelineCache);
 };

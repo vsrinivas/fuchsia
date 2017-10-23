@@ -46,7 +46,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     const TexturePtr& illumination_texture,
     ModelData* model_data,
     ModelRenderer* renderer,
-    ModelPipelineCache* pipeline_cache,
+    ModelPipelineCachePtr pipeline_cache,
     ModelDisplayListFlags flags,
     uint32_t sample_count)
     : device_(device),
@@ -63,7 +63,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
           model_data->per_model_descriptor_set_pool()),
       per_object_descriptor_set_pool_(
           model_data->per_object_descriptor_set_pool()),
-      pipeline_cache_(pipeline_cache) {
+      pipeline_cache_(std::move(pipeline_cache)) {
   FXL_DCHECK(white_texture_);
 
   // These fields of the pipeline spec are the same for the entire display list.
@@ -347,6 +347,9 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
     resources_.push_back(std::move(uniform_buffer));
   }
   uniform_buffers_.clear();
+
+  // Keep pipelines alive.
+  resources_.push_back(std::move(pipeline_cache_));
 
   auto display_list = fxl::MakeRefCounted<ModelDisplayList>(
       renderer_->resource_recycler(), per_model_descriptor_set_,

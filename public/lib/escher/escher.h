@@ -42,8 +42,6 @@ class Escher : public MeshBuilderFactory {
   // Returns single-channel luminance image.
   ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
 
-  PaperRendererPtr NewPaperRenderer();
-
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
   // and |use_unnormalized_coordinates| are used to create the VkSampler.
@@ -57,6 +55,9 @@ class Escher : public MeshBuilderFactory {
 
   VulkanDeviceQueues* device() const { return device_.get(); }
   vk::Device vk_device() const { return device_->vk_device(); }
+  vk::PhysicalDevice vk_physical_device() const {
+    return device_->vk_physical_device();
+  }
   const VulkanContext& vulkan_context() const { return vulkan_context_; }
 
   ResourceRecycler* resource_recycler() { return resource_recycler_.get(); }
@@ -67,6 +68,7 @@ class Escher : public MeshBuilderFactory {
   }
   impl::GlslToSpirvCompiler* glsl_compiler() { return glsl_compiler_.get(); }
   impl::ImageCache* image_cache() { return image_cache_.get(); }
+  impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
 
   // Pool for CommandBuffers submitted on the main queue.
   impl::CommandBufferPool* command_buffer_pool() {
@@ -98,6 +100,7 @@ class Escher : public MeshBuilderFactory {
 
   std::unique_ptr<impl::GpuUploader> gpu_uploader_;
   std::unique_ptr<ResourceRecycler> resource_recycler_;
+  std::unique_ptr<impl::MeshManager> mesh_manager_;
 
   std::unique_ptr<impl::EscherImpl> impl_;
 

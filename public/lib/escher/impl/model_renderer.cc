@@ -14,7 +14,6 @@
 #include "lib/escher/impl/model_display_list.h"
 #include "lib/escher/impl/model_display_list_builder.h"
 #include "lib/escher/impl/model_pipeline.h"
-#include "lib/escher/impl/model_pipeline_cache.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/shape.h"
@@ -26,30 +25,17 @@
 namespace escher {
 namespace impl {
 
-ModelRenderer::ModelRenderer(EscherImpl* escher,
-                             ModelData* model_data,
-                             vk::Format pre_pass_color_format,
-                             vk::Format lighting_pass_color_format,
-                             uint32_t lighting_pass_sample_count,
-                             vk::Format depth_format)
-    : device_(escher->vulkan_context().device),
+ModelRenderer::ModelRenderer(Escher* escher, ModelDataPtr model_data)
+    : escher_(escher),
+      device_(escher->vk_device()),
       resource_recycler_(escher->resource_recycler()),
-      mesh_manager_(escher->mesh_manager()),
-      model_data_(model_data) {
+      model_data_(std::move(model_data)) {
   rectangle_ = CreateRectangle();
   circle_ = CreateCircle();
   white_texture_ = CreateWhiteTexture(escher);
-
-  CreateRenderPasses(pre_pass_color_format, lighting_pass_color_format,
-                     lighting_pass_sample_count, depth_format);
-  pipeline_cache_ = std::make_unique<impl::ModelPipelineCache>(
-      model_data_, depth_prepass_, lighting_pass_);
 }
 
-ModelRenderer::~ModelRenderer() {
-  device_.destroyRenderPass(depth_prepass_);
-  device_.destroyRenderPass(lighting_pass_);
-}
+ModelRenderer::~ModelRenderer() {}
 
 ModelDisplayListPtr ModelRenderer::CreateDisplayList(
     const Stage& stage,
@@ -122,7 +108,7 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 
   ModelDisplayListBuilder builder(device_, stage, model, camera, scale,
                                   white_texture_, illumination_texture,
-                                  model_data_, this, pipeline_cache_.get(),
+                                  model_data_.get(), this, pipeline_cache_,
                                   flags, sample_count);
   for (uint32_t object_index : opaque_objects) {
     builder.AddObject(objects[object_index]);
@@ -240,15 +226,15 @@ const MeshPtr& ModelRenderer::GetMeshForShape(const Shape& shape) const {
 }
 
 MeshPtr ModelRenderer::CreateRectangle() {
-  return NewSimpleRectangleMesh(mesh_manager_);
+  return NewSimpleRectangleMesh(escher_->mesh_manager());
 }
 
 MeshPtr ModelRenderer::CreateCircle() {
   MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
-  return NewCircleMesh(mesh_manager_, spec, 4, vec2(0, 0), 1);
+  return NewCircleMesh(escher_->mesh_manager(), spec, 4, vec2(0, 0), 1);
 }
 
-TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
+TexturePtr ModelRenderer::CreateWhiteTexture(Escher* escher) {
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
 
@@ -258,10 +244,36 @@ TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
                                       std::move(image), vk::Filter::eNearest);
 }
 
-void ModelRenderer::CreateRenderPasses(vk::Format pre_pass_color_format,
-                                       vk::Format lighting_pass_color_format,
-                                       uint32_t lighting_pass_sample_count,
-                                       vk::Format depth_format) {
+void ModelRenderer::UpdatePipelineCache(vk::Format pre_pass_color_format,
+                                        vk::Format lighting_pass_color_format,
+                                        uint32_t lighting_pass_sample_count) {
+  if (pre_pass_color_format != pre_pass_color_format_ ||
+      lighting_pass_color_format != lighting_pass_color_format_ ||
+      lighting_pass_sample_count != lighting_pass_sample_count_) {
+    // The render passes have changed; any existing ModelPipelineCache must be
+    // replaced with a new one.
+    FXL_LOG(INFO) << "ModelRenderer: updating pipeline cache.";
+
+    pre_pass_color_format_ = pre_pass_color_format;
+    lighting_pass_color_format_ = lighting_pass_color_format;
+    lighting_pass_sample_count_ = lighting_pass_sample_count;
+    depth_format_ = ESCHER_CHECKED_VK_RESULT(
+        impl::GetSupportedDepthStencilFormat(escher_->vk_physical_device()));
+
+    auto render_passes =
+        CreateRenderPasses(pre_pass_color_format_, lighting_pass_color_format_,
+                           lighting_pass_sample_count_, depth_format_);
+    pipeline_cache_ = fxl::MakeRefCounted<ModelPipelineCache>(
+        resource_recycler(), model_data_, render_passes.first,
+        render_passes.second);
+  }
+}
+
+std::pair<vk::RenderPass, vk::RenderPass> ModelRenderer::CreateRenderPasses(
+    vk::Format pre_pass_color_format,
+    vk::Format lighting_pass_color_format,
+    uint32_t lighting_pass_sample_count,
+    vk::Format depth_format) {
   constexpr uint32_t kAttachmentCount = 2;
   const uint32_t kColorAttachment = 0;
   const uint32_t kDepthAttachment = 1;
@@ -344,7 +356,8 @@ void ModelRenderer::CreateRenderPasses(vk::Format pre_pass_color_format,
   depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
   depth_attachment.finalLayout =
       vk::ImageLayout::eDepthStencilAttachmentOptimal;
-  depth_prepass_ = ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
+  vk::RenderPass depth_prepass =
+      ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
 
   // Create the illumination RenderPass.
   color_attachment.format = lighting_pass_color_format;
@@ -362,7 +375,10 @@ void ModelRenderer::CreateRenderPasses(vk::Format pre_pass_color_format,
   depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
   depth_attachment.finalLayout =
       vk::ImageLayout::eDepthStencilAttachmentOptimal;
-  lighting_pass_ = ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
+  vk::RenderPass lighting_pass =
+      ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
+
+  return std::make_pair(depth_prepass, lighting_pass);
 }
 
 }  // namespace impl

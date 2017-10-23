@@ -13,6 +13,7 @@
 #include "lib/escher/impl/uniform_buffer_pool.h"
 #include "lib/escher/shape/modifier_wobble.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {
@@ -20,7 +21,7 @@ namespace impl {
 class CommandBuffer;
 class ModelUniformWriter;
 
-class ModelData {
+class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
  public:
   // Vertex attribute locations corresponding to the flags in MeshSpec.
   static constexpr uint32_t kPositionAttributeLocation = 0;
@@ -64,10 +65,6 @@ class ModelData {
     ModifierWobble wobble;
   };
 
-  // If no allocator is provided, Escher's default one will be used.
-  explicit ModelData(Escher* escher, GpuAllocator* allocator = nullptr);
-  ~ModelData();
-
   vk::Device device() { return device_; }
 
   UniformBufferPool* uniform_buffer_pool() { return &uniform_buffer_pool_; }
@@ -91,6 +88,11 @@ class ModelData {
   const MeshShaderBinding& GetMeshShaderBinding(MeshSpec spec);
 
  private:
+  // If no allocator is provided, Escher's default one will be used.
+  explicit ModelData(Escher* escher, GpuAllocator* allocator = nullptr);
+
+  ~ModelData();
+
   // Provide access to statically-allocated layout info for per-model and
   // per-object descriptor-sets.
   static const vk::DescriptorSetLayoutCreateInfo&
@@ -108,6 +110,8 @@ class ModelData {
                      MeshSpec::Hash>
       mesh_shader_binding_cache_;
 
+  FRIEND_MAKE_REF_COUNTED(ModelData);
+  FRIEND_REF_COUNTED_THREAD_SAFE(ModelData);
   FXL_DISALLOW_COPY_AND_ASSIGN(ModelData);
 };
 

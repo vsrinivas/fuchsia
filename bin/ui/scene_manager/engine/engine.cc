@@ -23,7 +23,7 @@ namespace scene_manager {
 Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
     : display_manager_(display_manager),
       escher_(escher),
-      paper_renderer_(fxl::MakeRefCounted<escher::PaperRenderer>(escher)),
+      paper_renderer_(escher::PaperRenderer::New(escher)),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
           escher->resource_recycler(),
           escher->gpu_allocator())),

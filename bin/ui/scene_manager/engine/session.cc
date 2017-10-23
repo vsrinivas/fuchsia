@@ -32,7 +32,6 @@
 #include "garnet/bin/ui/scene_manager/util/unwrap.h"
 #include "garnet/bin/ui/scene_manager/util/wrap.h"
 
-#include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 

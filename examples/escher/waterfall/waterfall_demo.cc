@@ -22,7 +22,7 @@ static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
-      renderer_(escher()->NewPaperRenderer()),
+      renderer_(escher::PaperRenderer::New(escher())),
       swapchain_helper_(harness->GetVulkanSwapchain(),
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {

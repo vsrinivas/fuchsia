@@ -8,7 +8,6 @@
 #include "lib/escher/impl/glsl_compiler.h"
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
-#include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_allocator.h"
@@ -50,6 +49,18 @@ std::unique_ptr<impl::GpuUploader> NewGpuUploader(
       escher, transfer_pool ? transfer_pool : main_pool, allocator);
 }
 
+// Constructor helper.
+std::unique_ptr<impl::MeshManager> NewMeshManager(
+    impl::CommandBufferPool* main_pool,
+    impl::CommandBufferPool* transfer_pool,
+    GpuAllocator* allocator,
+    impl::GpuUploader* uploader,
+    ResourceRecycler* resource_recycler) {
+  return std::make_unique<impl::MeshManager>(
+      transfer_pool ? transfer_pool : main_pool, allocator, uploader,
+      resource_recycler);
+}
+
 }  // anonymous namespace
 
 Escher::Escher(VulkanDeviceQueuesPtr device)
@@ -71,6 +82,11 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
                                    transfer_command_buffer_pool(),
                                    gpu_allocator())),
       resource_recycler_(std::make_unique<ResourceRecycler>(this)),
+      mesh_manager_(NewMeshManager(command_buffer_pool(),
+                                   transfer_command_buffer_pool(),
+                                   gpu_allocator(),
+                                   gpu_uploader(),
+                                   resource_recycler())),
       impl_(std::make_unique<impl::EscherImpl>(this, vulkan_context_)) {}
 
 Escher::~Escher() {}
@@ -78,8 +94,8 @@ Escher::~Escher() {}
 MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
                                       size_t max_vertex_count,
                                       size_t max_index_count) {
-  return impl_->mesh_manager()->NewMeshBuilder(spec, max_vertex_count,
-                                               max_index_count);
+  return mesh_manager()->NewMeshBuilder(spec, max_vertex_count,
+                                        max_index_count);
 }
 
 ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {
@@ -100,10 +116,6 @@ ImagePtr Escher::NewGradientImage(uint32_t width, uint32_t height) {
 ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
   return image_utils::NewNoiseImage(image_cache(), gpu_uploader(), width,
                                     height);
-}
-
-PaperRendererPtr Escher::NewPaperRenderer() {
-  return fxl::MakeRefCounted<PaperRenderer>(this);
 }
 
 TexturePtr Escher::NewTexture(ImagePtr image,

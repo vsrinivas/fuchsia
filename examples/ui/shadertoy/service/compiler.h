@@ -73,7 +73,7 @@ class Compiler final {
 
   fsl::MessageLoop* const loop_;
   escher::Escher* const escher_;
-  escher::impl::ModelData model_data_;
+  escher::impl::ModelDataPtr model_data_;
   vk::RenderPass render_pass_;
   vk::DescriptorSetLayout descriptor_set_layout_;
 

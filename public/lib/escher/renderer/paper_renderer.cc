@@ -50,16 +50,21 @@ constexpr uint32_t kLightingPassSampleCount = 1;
 
 }  // namespace
 
-PaperRenderer::PaperRenderer(Escher* escher)
+fxl::RefPtr<PaperRenderer> PaperRenderer::New(Escher* escher) {
+  return fxl::MakeRefCounted<PaperRenderer>(
+      escher, fxl::MakeRefCounted<impl::ModelData>(escher));
+}
+
+PaperRenderer::PaperRenderer(Escher* escher, impl::ModelDataPtr model_data)
     : Renderer(escher),
       full_screen_(NewFullScreenMesh(escher_impl()->mesh_manager())),
       image_cache_(escher->image_cache()),
       // TODO: perhaps cache depth_format_ in EscherImpl.
       depth_format_(ESCHER_CHECKED_VK_RESULT(
           impl::GetSupportedDepthStencilFormat(context_.physical_device))),
-      // TODO: could potentially share ModelData/PipelineCache/ModelRenderer
-      // between multiple PaperRenderers.
-      model_data_(std::make_unique<impl::ModelData>(escher)),
+      model_data_(std::move(model_data)),
+      model_renderer_(
+          std::make_unique<impl::ModelRenderer>(escher, model_data_)),
       ssdo_(std::make_unique<impl::SsdoSampler>(
           escher,
           full_screen_,
@@ -244,16 +249,9 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
 
 void PaperRenderer::UpdateModelRenderer(vk::Format pre_pass_color_format,
                                         vk::Format lighting_pass_color_format) {
-  // TODO: eventually, we should be able to handle it if the client changes the
-  // format of the buffers that we are to render into.  For now, just lazily
-  // create the ModelRenderer, and assume that it doesn't change.
-  if (!model_renderer_) {
-    model_renderer_ = std::make_unique<impl::ModelRenderer>(
-        escher_impl(), model_data_.get(), pre_pass_color_format,
-        lighting_pass_color_format, kLightingPassSampleCount,
-        ESCHER_CHECKED_VK_RESULT(
-            impl::GetSupportedDepthStencilFormat(context_.physical_device)));
-  }
+  model_renderer_->UpdatePipelineCache(pre_pass_color_format,
+                                       lighting_pass_color_format,
+                                       kLightingPassSampleCount);
 }
 
 void PaperRenderer::DrawLightingPass(uint32_t sample_count,

@@ -59,8 +59,6 @@ class EscherImpl {
 
   std::unique_ptr<PipelineCache> pipeline_cache_;
 
-  std::unique_ptr<MeshManager> mesh_manager_;
-
   std::atomic<uint32_t> renderer_count_;
   std::atomic<uint32_t> resource_count_;
 
