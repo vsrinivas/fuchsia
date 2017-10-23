@@ -28,11 +28,6 @@ class LedgerRepositoryForTesting {
 
   ledger::LedgerRepository* ledger_repository();
 
-  // Erases the repository. Must be done before destroying the
-  // LedgerRepositoryForTesting instance, otherwise the repository stays there
-  // and may be reopened on a later run of the test.
-  void Reset(std::function<void()> done);
-
   // Terminates the ledger repository app.
   void Terminate(std::function<void()> done);
 

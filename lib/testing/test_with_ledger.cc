@@ -26,12 +26,6 @@ void TestWithLedger::SetUp() {
 void TestWithLedger::TearDown() {
   ledger_client_.reset();
 
-  bool repo_deleted = false;
-  ledger_app_->Reset([&repo_deleted] { repo_deleted = true; });
-  if (!repo_deleted) {
-    RunLoopUntil([&repo_deleted] { return repo_deleted; });
-  }
-
   bool terminated = false;
   ledger_app_->Terminate([&terminated] { terminated = true; });
   if (!terminated) {

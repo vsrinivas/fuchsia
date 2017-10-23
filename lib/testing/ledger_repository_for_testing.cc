@@ -46,18 +46,6 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
   return ledger_repo_.get();
 }
 
-void LedgerRepositoryForTesting::Reset(std::function<void()> done) {
-  if (ledger_repo_) {
-    ledger_repo_factory_->EraseRepository(tmp_dir_.path(), nullptr,
-                                          [this, done](ledger::Status status) {
-                                            ledger_repo_.reset();
-                                            done();
-                                          });
-  } else {
-    done();
-  }
-}
-
 void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
   if (ledger_app_client_) {
     ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
