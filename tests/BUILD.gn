@@ -13,6 +13,7 @@ package("modular_tests") {
     "common",
     "component_context",
     "context_link",
+    "dev_token_manager",
     "last_focus_time",
     "link_data",
     "link_update",
@@ -21,7 +22,6 @@ package("modular_tests") {
     "remote",
     "story_importance",
     "suggestion",
-    "dev_token_manager",
     "triggers",
     "user_shell",
   ]

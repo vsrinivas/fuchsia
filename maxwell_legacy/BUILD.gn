@@ -102,7 +102,7 @@ package("maxwell_tests") {
     {
       name = "module_manifest_repository_unittest"
       dest = "maxwell/module_manifest_repository_unittest"
-  }
+    },
   ]
 }
 

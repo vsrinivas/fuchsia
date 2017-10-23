@@ -4,8 +4,8 @@
 
 source_set("module_manifest_repository") {
   sources = [
-    "module_manifest_repository.h",
     "module_manifest_repository.cc",
+    "module_manifest_repository.h",
   ]
 
   public_deps = [
