@@ -1,9 +1,0 @@
-#compdef fgen
-
-# complete basic fgen / gen.py arguments
-_arguments '--args[additional args to pass to gn]:args' \
-  '--packages[packages to build]:packages:_packages' \
-  '--release[release build]' \
-  '--outdir[output directory]:directory:_files -/' \
-  '--target_cpu[target cpu architecture]:arch:(x86-64 aarch64)'
-# TODO: more gen.py arguments

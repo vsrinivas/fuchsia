@@ -1,0 +1,31 @@
+# _packages completes a comma separated list of packages
+_packages() {
+  # packages are files without extensions in packages/gn/ and */packages/
+  _values -s , $(cd ${fuchsia_dir} && echo packages/gn/^*.*(.N) */packages/^*.*(.N))
+}
+
+_gn_args() {
+  if [[ -n ${fuchsia_build_dir} ]]; then
+    # complete the list of gn args with an = suffix
+    compadd -S = $(${fuchsia_dir}/buildtools/gn args ${fuchsia_build_dir} --list --short|sed -e 's/ .*//')
+  fi
+}
+
+# list of supported fuchsia architectures
+local -a archs
+archs=(
+  'x86-64:64 bit Intel'
+  'aarch64:64 bit ARM'
+  'rpi3:Raspberry Pi 3 ARM'
+  'odroidc2:ODROID-C2'
+  'hikey960:HiKey 960'
+)
+
+# arguments to fset
+_arguments '1:arch:{_describe "arch" archs}' '--release[release build]' \
+  '--packages[packages to build]:packages:_packages' \
+  '--goma[use goma]' "--no-goma[don't use goma]" \
+  "--no-ensure-goma[don't make sure goma is running]" \
+  "--ccache[use ccache]" "--no-ccache[don't use ccache]" \
+  "--args[arguments for gn gen]:args:{_gn_args}" \
+  '--goma-dir[goma directory to use]:directory:_files -/'

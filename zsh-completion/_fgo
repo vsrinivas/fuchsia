@@ -1,4 +1,0 @@
-#compdef fgo
-
-# complete fgo with directories under ${FUCHSIA_DIR}
-_files -/ -W ${FUCHSIA_DIR}

@@ -1,4 +1,0 @@
-#compdef fbuild fbuild-sync
-
-# complete fbuild by asking ninja for a list of available targets and trimming the target deps off
-_values `"${FUCHSIA_DIR}/buildtools/ninja" -C ${FUCHSIA_BUILD_DIR} -t targets | sed -e 's/: .*//'`

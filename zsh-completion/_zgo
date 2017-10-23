@@ -1,4 +1,0 @@
-#compdef zgo
-
-# complete zgo with directories under ${FUCHSIA_DIR}/zircon
-_files -/ -W ${FUCHSIA_DIR}/zircon zgo

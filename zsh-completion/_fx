@@ -1,0 +1,45 @@
+#compdef fx
+
+_fx() {
+  typeset -A opt_args
+
+  local fuchsia_dir
+  fuchsia_dir="$(pwd)"
+  while [[ ! -f "${fuchsia_dir}/.jiri_manifest" ]]; do
+    fuchsia_dir="$(dirname "${fuchsia_dir}")"
+    if [[ "${fuchsia_dir}" == "/" ]]; then
+      _message -r "Cannot find Fuchsia source tree containing $(pwd)"
+      return
+    fi
+  done
+
+  # list of commands based on //scripts/devshell/
+  local -a commands
+  commands=(${fuchsia_dir}/scripts/devshell/*(.:t))
+
+  _arguments \
+    "--config[config file]:filename:_files" \
+    "1: :{_describe 'command' commands}" \
+    "*:: :->args"
+
+  if [[ $state != "args" ]]; then
+    return
+  fi
+
+  # get the config file location from --config, $FUCHSIA_CONFIG or ${fuchsia_dir}/.config
+  typeset -l fuchsia_config="${opt_args[--config]:-${FUCHSIA_CONFIG:-${fuchsia_dir}/.config}}"
+  # if a config file is found read the build dir into a local variable
+  typeset -l fuchsia_build_dir=
+  if [[ -e ${fuchsia_config} ]]; then
+    fuchsia_build_dir="$(source ${fuchsia_config};echo ${FUCHSIA_BUILD_DIR})"
+  fi
+
+  # look for a completion function
+  local f
+  f=_fx_$words[1]
+  if [[ -e ${fuchsia_dir}/scripts/zsh-completion/$f ]]; then
+    autoload $f; $f
+  fi
+}
+
+_fx
