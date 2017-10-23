@@ -36,6 +36,9 @@
 #define GS_ESR_EL2          (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_ESR_EL2 + 8)
 
+#define HS_X(num)           (HS_X18 + ((num) * 8))
+#define GS_X(num)           (GS_X0 + ((num) * 8))
+
 #ifndef ASSEMBLY
 
 #include <zircon/types.h>
@@ -105,9 +108,11 @@ static_assert(__offsetof(SystemState, elr_el2) == SS_ELR_EL2, "");
 static_assert(__offsetof(SystemState, spsr_el2) == SS_SPSR_EL2, "");
 
 static_assert(__offsetof(El2State, host_state.x) == HS_X18, "");
+static_assert(__offsetof(El2State, host_state.x[12]) == HS_X(12), "");
 static_assert(__offsetof(El2State, host_state.system_state) == HS_SYSTEM_STATE, "");
 
 static_assert(__offsetof(El2State, guest_state.x) == GS_X0, "");
+static_assert(__offsetof(El2State, guest_state.x[30]) == GS_X(30), "");
 static_assert(__offsetof(El2State, guest_state.system_state) == GS_SYSTEM_STATE, "");
 static_assert(__offsetof(El2State, guest_state.esr_el2) == GS_ESR_EL2, "");
 static_assert(__offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2, "");

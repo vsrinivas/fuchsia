@@ -5,12 +5,17 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/hypervisor.h>
+#include <arch/ops.h>
 #include <hypervisor/cpu_state.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <platform/timer.h>
 #include <vm/pmm.h>
 #include <zircon/errors.h>
 
 #include "vmexit_priv.h"
+
+static const uint64_t kSpsrEl1h = 0b0101;
+static const uint64_t kSpsrDaif = 0b1111 << 6;
 
 static uint cpu_of(uint8_t vpid) {
     return vpid % arch_max_num_cpus();
@@ -32,6 +37,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, uint8_t vpid,
         return ZX_ERR_NO_MEMORY;
 
     vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
+    vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrEl1h | kSpsrDaif;
     *out = fbl::move(vcpu);
     return ZX_OK;
 }
@@ -42,14 +48,18 @@ Vcpu::Vcpu(uint8_t vmid, const thread_t* thread, GuestPhysicalAddressSpace* gpas
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
+    // TODO(abdulla): Check pinned CPU invariant.
     zx_paddr_t vttbr = vttbr_of(vmid_, gpas_->table_phys());
     zx_status_t status;
     do {
         status = arm64_el2_resume(vaddr_to_paddr(&el2_state_), vttbr);
-        if (status != ZX_OK) {
-            dprintf(SPEW, "VCPU resume failed: %d\n", status);
-        } else {
+        if (status == ZX_ERR_NEXT) {
+            // We received a physical interrupt, return to the guest.
+            status = ZX_OK;
+        } else if (status == ZX_OK) {
             status = vmexit_handler(&el2_state_.guest_state, gpas_, traps_, packet);
+        } else {
+            dprintf(SPEW, "VCPU resume failed: %d\n", status);
         }
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;

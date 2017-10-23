@@ -6,10 +6,14 @@
 
 #include "vmexit_priv.h"
 
+#include <trace.h>
+
 #include <arch/arm64/el2_state.h>
 #include <hypervisor/trap_map.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
+
+#define LOCAL_TRACE 0
 
 static const uint32_t kEsrEcShift = 26;
 static const uint32_t kEsrIssMask = 0x01ffffff;
@@ -24,7 +28,6 @@ static void next_pc(GuestState* state) {
 }
 
 static zx_status_t handle_instruction_abort(GuestState* guest_state) {
-    dprintf(SPEW, "Instruction abort at %#lx\n", guest_state->hpfar_el2);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -63,14 +66,21 @@ static zx_status_t handle_data_abort(GuestState* guest_state, GuestPhysicalAddre
 
 zx_status_t vmexit_handler(GuestState* guest_state, GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                            zx_port_packet_t* packet) {
+    LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
+    LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);
+    LTRACEF("guest elr_el2: %#lx\n", guest_state->system_state.elr_el2);
+    LTRACEF("guest spsr_el2: %#lx\n", guest_state->system_state.spsr_el2);
+
     ExceptionSyndrome syndrome(guest_state->esr_el2);
     switch (syndrome.ec) {
     case ExceptionClass::INSTRUCTION_ABORT:
+        LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
         return handle_instruction_abort(guest_state);
     case ExceptionClass::DATA_ABORT:
+        LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
         return handle_data_abort(guest_state, gpas, traps, packet);
     default:
-        dprintf(SPEW, "Unhandled exception syndrome, ec %#x iss %#x\n",
+        LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n",
             static_cast<uint32_t>(syndrome.ec), syndrome.iss);
         return ZX_ERR_NOT_SUPPORTED;
     }

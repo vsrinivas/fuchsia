@@ -15,10 +15,18 @@
 #define ESR_EL2_ISS_MASK                0x01ffffff
 
 #define HCR_EL2_VM                      (1 << 0)
+#define HCR_EL2_PTW                     (1 << 2)
+#define HCR_EL2_FMO                     (1 << 3)
+#define HCR_EL2_IMO                     (1 << 4)
+#define HCR_EL2_AMO                     (1 << 5)
+#define HCR_EL2_VF                      (1 << 6)
+#define HCR_EL2_VI                      (1 << 7)
+#define HCR_EL2_VSE                     (1 << 8)
+#define HCR_EL2_DC                      (1 << 12)
 #define HCR_EL2_TWI                     (1 << 13)
 #define HCR_EL2_TWE                     (1 << 14)
 #define HCR_EL2_TSC                     (1 << 19)
-#define HCR_EL2_TGE                     (1 << 27)
+#define HCR_EL2_TVM                     (1 << 26)
 #define HCR_EL2_RW                      (1 << 31)
 
 #define SCTLR_EL2_M                     (1 << 0)
@@ -76,44 +84,54 @@
 .endm
 
 .macro host_state inst
-    \inst x19, x20, [x9, HS_X18]
-    \inst x21, x22, [x9, HS_X18 + 16]
-    \inst x23, x24, [x9, HS_X18 + 32]
-    \inst x25, x26, [x9, HS_X18 + 48]
-    \inst x27, x28, [x9, HS_X18 + 64]
-    \inst x29, x30, [x9, HS_X18 + 80]
 .ifc "\inst", "ldp"
-    ldr x18, [x9, HS_X18 + 96]
+    ldr x18, [x9, #HS_X(0)]
 .else
-    str x18, [x9, HS_X18 + 96]
+    str x18, [x9, #HS_X(0)]
 .endif
+    \inst x19, x20, [x9, #HS_X(1)]
+    \inst x21, x22, [x9, #HS_X(3)]
+    \inst x23, x24, [x9, #HS_X(5)]
+    \inst x25, x26, [x9, #HS_X(7)]
+    \inst x27, x28, [x9, #HS_X(9)]
+    \inst x29, x30, [x9, #HS_X(11)]
 .endm
 
 .macro guest_state inst
-    \inst x0, x1, [x9, GS_X0]
-    \inst x2, x3, [x9, GS_X0 + 16]
-    \inst x4, x5, [x9, GS_X0 + 32]
-    \inst x6, x7, [x9, GS_X0 + 48]
-    \inst x8, x10, [x9, GS_X0 + 64]
-    \inst x11, x12, [x9, GS_X0 + 80]
-    \inst x13, x14, [x9, GS_X0 + 96]
-    \inst x15, x16, [x9, GS_X0 + 112]
-    \inst x17, x18, [x9, GS_X0 + 128]
-    \inst x19, x20, [x9, GS_X0 + 144]
-    \inst x21, x22, [x9, GS_X0 + 160]
-    \inst x23, x24, [x9, GS_X0 + 176]
-    \inst x25, x26, [x9, GS_X0 + 192]
-    \inst x27, x28, [x9, GS_X0 + 208]
-    \inst x29, x30, [x9, GS_X0 + 224]
+    \inst x0, x1, [x9, #GS_X(0)]
+    \inst x2, x3, [x9, #GS_X(2)]
+    \inst x4, x5, [x9, #GS_X(4)]
+    \inst x6, x7, [x9, #GS_X(6)]
+    \inst x8, xzr, [x9, #GS_X(8)]
+    \inst x11, x12, [x9, #GS_X(11)]
+    \inst x13, x14, [x9, #GS_X(13)]
+    \inst x15, x16, [x9, #GS_X(15)]
+    \inst x17, x18, [x9, #GS_X(17)]
+    \inst x19, x20, [x9, #GS_X(19)]
+    \inst x21, x22, [x9, #GS_X(21)]
+    \inst x23, x24, [x9, #GS_X(23)]
+    \inst x25, x26, [x9, #GS_X(25)]
+    \inst x27, x28, [x9, #GS_X(27)]
+    \inst x29, x30, [x9, #GS_X(29)]
+.endm
+
+.macro guest_x9_state inst, reg
+    \inst \reg, [x9, #GS_X(9)]
+.endm
+
+.macro guest_exit_state
+    mrs x10, esr_el2
+    str x10, [x9, #GS_ESR_EL2]
+    mrs x10, hpfar_el2
+    // This is not described well in the manual, but HPFAR_EL2 does not contain
+    // the lower 8 bits of the IPA, so it must be shifted.
+    lsl x10, x10, #8
+    str x10, [x9, #GS_HPFAR_EL2]
 .endm
 
 .macro exception_return literal
     movlit x0, \literal
     eret
-.endm
-
-.macro pop_stack
-    add sp, sp, 16
 .endm
 
 .macro entry_init
@@ -126,7 +144,7 @@
 
     and x10, x9, #ESR_EL2_ISS_MASK
     cmp x10, #HVC_PSCI_INDEX
-    b.eq smc_psci
+    b.eq el2_hvc_psci
     cmp x10, #HVC_ON_INDEX
     b.ne invalid_exception
 
@@ -136,11 +154,19 @@ invalid_exception:
     exception_return ZX_ERR_INVALID_ARGS
 .endm
 
-.macro entry_exec
+.macro pop_stack
+    add sp, sp, #16
+.endm
+
+.macro entry_exec return_code
 .align 7
+    sub sp, sp, #16
+
     // We push X9 onto the stack so we have one scratch register. We only use
     // X9 here, so that we don't accidentally trample the guest state.
-    stp x9, xzr, [sp, #-16]!
+    str x9, [sp]
+    movlit x9, \return_code
+    str x9, [sp, #8]
 
     // Check VTTBR_EL2 to determine whether the exception came from the guest or
     // from the host.
@@ -215,8 +241,8 @@ FUNCTION_LABEL(arm64_el2_exec_table)
     entry_invalid_exception
 
     /* exceptions from lower EL, running arm64 */
-    entry_exec
-    entry_invalid_exception
+    entry_exec ZX_OK
+    entry_exec ZX_ERR_NEXT
     entry_invalid_exception
     entry_invalid_exception
 
@@ -303,8 +329,6 @@ out_of_range:
     exception_return ZX_ERR_OUT_OF_RANGE
 
 FUNCTION_LABEL(el2_hvc_psci)
-    pop_stack
-smc_psci:
     smc #0
     eret
 
@@ -314,6 +338,15 @@ FUNCTION(arm64_el2_off)
     ret
 END_FUNCTION(arm64_el2_off)
 FUNCTION_LABEL(el2_hvc_off)
+    // Disable the MMU, but enable I-cache, D-cache, and all alignment checking.
+    movlit x9, SCTLR_EL2_A | SCTLR_EL2_C | SCTLR_EL2_SA | SCTLR_EL2_I | SCTLR_EL2_RES1
+    msr sctlr_el2, x9
+    isb
+
+    // Invalidate all EL2 TLB entries.
+    tlbi alle2
+    isb
+
     // Setup the init vector table for EL2.
     mrs x9, vbar_el2
     sub x9, x9, #VECTOR_TABLE_SIZE
@@ -334,8 +367,17 @@ FUNCTION_LABEL(el2_hvc_resume)
 
     // Turn on virtualisation translation table to return to guest.
     msr vttbr_el2, x1
+    isb
+
+    // Invalidate all VMID TLB entries.
+    //
+    // TODO(abdulla): Only do this on the first-run.
+    tlbi vmalle1
+    isb
+
     // Enable guest traps, and ensure EL1 is arm64.
-    movlit x10, HCR_EL2_VM | HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TGE | HCR_EL2_RW
+    movlit x10, HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC | \
+                HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW
     msr hcr_el2, x10
     isb
 
@@ -343,6 +385,7 @@ FUNCTION_LABEL(el2_hvc_resume)
     system_state str, HS_SYSTEM_STATE
     system_state ldr, GS_SYSTEM_STATE
     guest_state ldp
+    guest_x9_state ldr, x9
 
     // Return to guest.
     eret
@@ -352,30 +395,24 @@ FUNCTION_LABEL(el2_guest_handler)
     mrs x9, tpidr_el2
 
     guest_state stp
+    // Load X9 from the stack, and save it in GuestState.
+    ldr x10, [sp]
+    guest_x9_state str, x10
     system_state str, GS_SYSTEM_STATE
+    guest_exit_state
     system_state ldr, HS_SYSTEM_STATE
     host_state ldp
-
-    // Save X9 to El2State and pop the stack.
-    ldr x0, [sp]
-    str x0, [x9, GS_X0 + 240]
-    pop_stack
-
-    // Save ESR_EL2 and HPFAR_EL2 to El2State.
-    mrs x10, esr_el2
-    str x10, [x9, GS_ESR_EL2]
-    mrs x10, hpfar_el2
-    // This is not described well in the manual, but HPFAR_EL2 does not contain
-    // the lower 8 bits of the IPA, so it must be shifted.
-    lsl x10, x10, #8
-    str x10, [x9, GS_HPFAR_EL2]
 
     // Disable guest traps, and ensure EL1 is arm64.
     movlit x9, HCR_EL2_RW
     msr hcr_el2, x9
+    isb
+
     // Turn off virtualisation translation table to return to host.
     msr vttbr_el2, xzr
     isb
 
     // Return to host.
-    exception_return ZX_OK
+    ldr x0, [sp, #8]
+    pop_stack
+    eret
