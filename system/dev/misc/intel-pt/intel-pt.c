@@ -584,6 +584,9 @@ static zx_status_t x86_pt_free_buffer(ipt_device_t* ipt_dev, uint32_t index) {
     return ZX_OK;
 }
 
+
+// ioctl handlers
+
 // Allocate space for the trace buffers, for each cpu,
 // and do any other initialization needed prior to starting a trace.
 static zx_status_t x86_pt_cpu_mode_alloc(ipt_device_t* ipt_dev) {
@@ -697,46 +700,6 @@ static zx_status_t x86_pt_cpu_mode_free(ipt_device_t* ipt_dev) {
             x86_pt_free_buffer1(ipt_dev, per_trace);
     }
 
-    return ZX_OK;
-}
-
-
-// The DDK interface
-
-static zx_status_t ipt_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-    // TODO(dje): For now we only support ToPA.
-    if (!ipt_config_output_topa)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    // TODO(dje): What's the best way to allow only one open at a time?
-    // [We could allow multiple, but multiple clients trying to control
-    // tracing is problematic so just punt for now..]
-    ipt_device_t* ipt_dev = ctx;
-    if (ipt_dev->opened)
-        return ZX_ERR_ALREADY_BOUND;
-
-    if (ipt_dev->active)
-        assert(ipt_dev->per_trace_state);
-
-    if (!ipt_dev->per_trace_state) {
-        ipt_dev->num_traces = zx_system_get_num_cpus();
-
-        ipt_dev->per_trace_state = calloc(ipt_dev->num_traces, sizeof(ipt_dev->per_trace_state[0]));
-        if (!ipt_dev->per_trace_state)
-            return ZX_ERR_NO_MEMORY;
-
-        // reset values that have defaults
-        ipt_dev->mode = IPT_TRACE_CPUS;
-    }
-
-    ipt_dev->opened = true;
-    return ZX_OK;
-}
-
-static zx_status_t ipt_close(void* ctx, uint32_t flags) {
-    ipt_device_t* ipt_dev = ctx;
-
-    ipt_dev->opened = false;
     return ZX_OK;
 }
 
@@ -893,6 +856,46 @@ static zx_status_t ipt_free_buffer(ipt_device_t* ipt_dev,
     memcpy(&index, cmd, sizeof(index));
     x86_pt_free_buffer(ipt_dev, index);
     return 0;
+}
+
+
+// The DDK interface
+
+static zx_status_t ipt_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
+    // TODO(dje): For now we only support ToPA.
+    if (!ipt_config_output_topa)
+        return ZX_ERR_NOT_SUPPORTED;
+
+    // TODO(dje): What's the best way to allow only one open at a time?
+    // [We could allow multiple, but multiple clients trying to control
+    // tracing is problematic so just punt for now..]
+    ipt_device_t* ipt_dev = ctx;
+    if (ipt_dev->opened)
+        return ZX_ERR_ALREADY_BOUND;
+
+    if (ipt_dev->active)
+        assert(ipt_dev->per_trace_state);
+
+    if (!ipt_dev->per_trace_state) {
+        ipt_dev->num_traces = zx_system_get_num_cpus();
+
+        ipt_dev->per_trace_state = calloc(ipt_dev->num_traces, sizeof(ipt_dev->per_trace_state[0]));
+        if (!ipt_dev->per_trace_state)
+            return ZX_ERR_NO_MEMORY;
+
+        // reset values that have defaults
+        ipt_dev->mode = IPT_TRACE_CPUS;
+    }
+
+    ipt_dev->opened = true;
+    return ZX_OK;
+}
+
+static zx_status_t ipt_close(void* ctx, uint32_t flags) {
+    ipt_device_t* ipt_dev = ctx;
+
+    ipt_dev->opened = false;
+    return ZX_OK;
 }
 
 static zx_status_t ipt_ioctl1(ipt_device_t* ipt_dev, uint32_t op,
