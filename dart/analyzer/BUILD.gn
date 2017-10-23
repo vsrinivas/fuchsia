@@ -12,9 +12,9 @@ dart_tool("analyzer") {
   disable_analysis = true
 
   deps = [
-    "//third_party/dart/third_party/pkg/intl",
     "//third_party/dart-pkg/pub/analysis_server_lib",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/path",
+    "//third_party/dart/third_party/pkg/intl",
   ]
 }

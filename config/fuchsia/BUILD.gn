@@ -110,7 +110,10 @@ config("compiler_target") {
 config("compiler_cpu") {
   cflags = []
   if (current_cpu == "x64") {
-    cflags += [ "-march=x86-64", "-mcx16" ]
+    cflags += [
+      "-march=x86-64",
+      "-mcx16",
+    ]
   }
   ldflags = cflags
   asmflags = cflags

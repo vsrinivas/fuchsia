@@ -10,7 +10,6 @@ dart_package("analyzer") {
   disable_analysis = true
 
   deps = [
-    "//third_party/dart/pkg/front_end",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/charcode",
     "//third_party/dart-pkg/pub/crypto",
@@ -23,5 +22,6 @@ dart_package("analyzer") {
     "//third_party/dart-pkg/pub/plugin",
     "//third_party/dart-pkg/pub/watcher",
     "//third_party/dart-pkg/pub/yaml",
+    "//third_party/dart/pkg/front_end",
   ]
 }

@@ -98,6 +98,7 @@ if (is_fuchsia) {
     tests = [
       {
         name = "crypto_test"
+
         # This test takes a long time to run, and it is included in every subset
         # of the Fuchsia build.
         # TODO(bgoldman): Find a way to skip this test when runtests is set to

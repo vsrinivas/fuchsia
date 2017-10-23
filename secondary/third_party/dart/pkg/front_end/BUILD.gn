@@ -10,8 +10,8 @@ dart_package("front_end") {
   disable_analysis = true
 
   deps = [
-    "//third_party/dart/pkg/kernel",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/source_span",
+    "//third_party/dart/pkg/kernel",
   ]
 }

@@ -10,12 +10,12 @@ dart_package("linter") {
   disable_analysis = true
 
   deps = [
-    "//third_party/dart/pkg/analyzer",
-    "//third_party/dart-pkg/pub/yaml",
-    "//third_party/dart-pkg/pub/plugin",
-    "//third_party/dart-pkg/pub/source_span",
+    "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/cli_util",
     "//third_party/dart-pkg/pub/glob",
-    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/plugin",
+    "//third_party/dart-pkg/pub/source_span",
+    "//third_party/dart-pkg/pub/yaml",
+    "//third_party/dart/pkg/analyzer",
   ]
 }

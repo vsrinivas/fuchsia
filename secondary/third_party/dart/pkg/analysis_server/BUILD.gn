@@ -11,9 +11,6 @@ dart_package("analysis_server") {
   disable_analysis = true
 
   deps = [
-    "//third_party/dart/pkg/analyzer",
-    "//third_party/dart/pkg/telemetry",
-    "//third_party/dart/third_party/pkg/linter",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/dart_style",
     "//third_party/dart-pkg/pub/intl",
@@ -25,6 +22,9 @@ dart_package("analysis_server") {
     "//third_party/dart-pkg/pub/usage",
     "//third_party/dart-pkg/pub/watcher",
     "//third_party/dart-pkg/pub/yaml",
+    "//third_party/dart/pkg/analyzer",
+    "//third_party/dart/pkg/telemetry",
+    "//third_party/dart/third_party/pkg/linter",
   ]
 }
 
