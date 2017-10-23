@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "ihda": "//garnet/drivers/audio/intel-hda/ihda",
-        "audio": "//garnet/drivers/audio"
-    }
-}

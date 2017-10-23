@@ -6,6 +6,5 @@
         "garnet/packages/runtime",
         "garnet/packages/runtime_config",
         "garnet/packages/sbase",
-        "packages/gn/audio"
     ]
 }
