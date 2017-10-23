@@ -14,7 +14,7 @@
 #include <fbl/limits.h>
 #include <string.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
+#include <dispatcher-pool/dispatcher-thread-pool.h>
 
 #include "debug-logging.h"
 #include "usb-audio.h"
@@ -64,7 +64,7 @@ zx_status_t UsbAudioStream::Create(bool is_input,
         //
         // TODO(johngro) : outright leaking this reference feels wrong.  We
         // should bind this to the devmgr cookie somehow instead.
-        static_cast<void>(stream.leak_ref());
+        __UNUSED auto leak = stream.leak_ref();
     }
 
     return ZX_OK;
@@ -445,15 +445,15 @@ zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channe
     resp.format_range_count = static_cast<uint16_t>(supported_formats_.size());
 
     do {
-        uint16_t todo, payload_sz, to_send;
+        size_t todo, payload_sz, __UNUSED to_send;
         zx_status_t res;
 
-        todo = fbl::min<uint16_t>(supported_formats_.size() - formats_sent,
+        todo = fbl::min<size_t>(supported_formats_.size() - formats_sent,
                                    AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
         payload_sz = sizeof(resp.format_ranges[0]) * todo;
         to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
 
-        resp.first_format_range_ndx = formats_sent;
+        resp.first_format_range_ndx = static_cast<uint16_t>(formats_sent);
         ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
 
         res = channel->Write(&resp, sizeof(resp));
@@ -901,7 +901,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
 
         // Cache the status and length of this usb request.
         zx_status_t req_status = req->response.status;
-        uint32_t req_length = req->header.length;
+        uint32_t req_length = static_cast<uint32_t>(req->header.length);
 
         // Complete the usb request.  This will return the transaction to the free
         // list and (in the case of an input stream) copy the payload to the
@@ -1077,7 +1077,7 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
 
     // If we are an input stream, copy the payload into the ring buffer.
     if (is_input()) {
-        uint32_t todo = req->header.length;
+        uint32_t todo = static_cast<uint32_t>(req->header.length);
 
         uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
         ZX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
@@ -1104,7 +1104,7 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
     }
 
     // Update the ring buffer position.
-    ring_buffer_pos_ += req->header.length;
+    ring_buffer_pos_ += static_cast<uint32_t>(req->header.length);
     if (ring_buffer_pos_ >= ring_buffer_size_) {
         ring_buffer_pos_ -= ring_buffer_size_;
         ZX_DEBUG_ASSERT(ring_buffer_pos_ < ring_buffer_size_);

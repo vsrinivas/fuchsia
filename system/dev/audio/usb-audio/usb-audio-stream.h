@@ -12,9 +12,9 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
-#include "drivers/audio/audio-proto/audio-proto.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include <audio-proto/audio-proto.h>
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-execution-domain.h>
 
 namespace audio {
 namespace usb {
