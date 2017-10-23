@@ -13,6 +13,7 @@
 #include <zircon/syscalls.h>
 #include <zx/channel.h>
 #include <zx/handle.h>
+#include <zx/vmar.h>
 #include <zx/vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -103,6 +104,10 @@ AudioDeviceStream::AudioDeviceStream(bool input, const char* dev_path)
     : input_(input) {
     strncpy(name_, dev_path, sizeof(name_));
     name_[sizeof(name_) - 1] = 0;
+}
+
+AudioDeviceStream::~AudioDeviceStream() {
+    Close();
 }
 
 zx_status_t AudioDeviceStream::Open() {
@@ -526,9 +531,10 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
     uint32_t flags = input_
                    ? ZX_VM_FLAG_PERM_READ
                    : ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    res = zx_vmar_map(zx_vmar_root_self(), 0u,
-                      rb_vmo_.get(), 0u, rb_sz_,
-                      flags, reinterpret_cast<uintptr_t*>(&rb_virt_));
+    res = zx::vmar::root_self().map(0u, rb_vmo_,
+                                    0u, rb_sz_,
+                                    flags, reinterpret_cast<uintptr_t*>(&rb_virt_));
+
     if (res != ZX_OK) {
         printf("Failed to map ring buffer VMO (res %d)\n", res);
         return res;
@@ -577,12 +583,20 @@ zx_status_t AudioDeviceStream::StopRingBuffer() {
 }
 
 void AudioDeviceStream::ResetRingBuffer() {
+    if (rb_virt_ != nullptr) {
+        ZX_DEBUG_ASSERT(rb_sz_ != 0);
+        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(rb_virt_), rb_sz_);
+    }
     rb_ch_.reset();
     rb_vmo_.reset();
     rb_sz_ = 0;
     rb_virt_ = nullptr;
 }
 
+void AudioDeviceStream::Close() {
+    ResetRingBuffer();
+    stream_ch_.reset();
+}
 
 bool AudioDeviceStream::IsChannelConnected(const zx::channel& ch) {
     if (!ch.is_valid())

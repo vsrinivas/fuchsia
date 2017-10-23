@@ -29,6 +29,7 @@ public:
     zx_status_t StartRingBuffer();
     zx_status_t StopRingBuffer();
     void        ResetRingBuffer();
+    void        Close();
 
     zx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state) const {
         return GetPlugState(out_state, false);
@@ -58,7 +59,7 @@ protected:
 
     AudioDeviceStream(bool input, uint32_t dev_id);
     AudioDeviceStream(bool input, const char* dev_path);
-    virtual ~AudioDeviceStream() { }
+    virtual ~AudioDeviceStream();
 
     zx::channel stream_ch_;
     zx::channel rb_ch_;
