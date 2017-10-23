@@ -142,7 +142,7 @@ void arch_trace_process_create(uint64_t pid, paddr_t pt_phys) {
            (uint32_t)cr3, (uint32_t)(cr3 >> 32));
 }
 
-// Worker for x86_ipt_set_mode to be executed on all cpus.
+// Worker for x86_ipt_alloc_trace to be executed on all cpus.
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
 static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(arch_ints_disabled());
@@ -168,7 +168,7 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
     x86_set_extended_register_pt_state(new_mode == IPT_TRACE_THREADS);
 }
 
-zx_status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
+zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode) {
     AutoLock al(&ipt_lock);
 
     DEBUG_ASSERT(mode == IPT_TRACE_CPUS || mode == IPT_TRACE_THREADS);
@@ -179,54 +179,38 @@ zx_status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
         return ZX_ERR_BAD_STATE;
     if (ipt_cpu_state)
         return ZX_ERR_BAD_STATE;
-    // Changing to the same mode is a no-op.
-    // This check is still done after the above checks. E.g., it doesn't make
-    // sense to call this function if tracing is active.
-    if (mode == trace_mode)
-        return ZX_OK;
 
     // ZX-892: We don't support changing the mode from IPT_TRACE_THREADS to
     // IPT_TRACE_CPUS: We can't turn off XSS.PT until we're sure all threads
     // have no PT state, and that's too tricky to do right now. Instead,
-    // require the developer to reboot (the default is IPT_TRACE_CPUS).
+    // require the developer to reboot.
     if (trace_mode == IPT_TRACE_THREADS && mode == IPT_TRACE_CPUS)
         return ZX_ERR_NOT_SUPPORTED;
 
+    if (mode == IPT_TRACE_CPUS) {
+        uint32_t num_cpus = arch_max_num_cpus();
+        ipt_cpu_state =
+            reinterpret_cast<ipt_cpu_state_t*>(calloc(num_cpus,
+                                                      sizeof(*ipt_cpu_state)));
+        if (!ipt_cpu_state)
+            return ZX_ERR_NO_MEMORY;
+    } else {
+        // TODO(dje): support for IPT_TRACE_THREADS
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_set_mode_task,
                  reinterpret_cast<void*>(static_cast<uintptr_t>(mode)));
+
     trace_mode = mode;
-
     return ZX_OK;
 }
 
-// Allocate all needed state for tracing.
-
-zx_status_t x86_ipt_cpu_mode_alloc() {
-    AutoLock al(&ipt_lock);
-
-    if (!supports_pt)
-        return ZX_ERR_NOT_SUPPORTED;
-    if (trace_mode == IPT_TRACE_THREADS)
-        return ZX_ERR_BAD_STATE;
-    if (active)
-        return ZX_ERR_BAD_STATE;
-    if (ipt_cpu_state)
-        return ZX_ERR_BAD_STATE;
-
-    uint32_t num_cpus = arch_max_num_cpus();
-    ipt_cpu_state =
-        reinterpret_cast<ipt_cpu_state_t*>(calloc(num_cpus,
-                                                  sizeof(*ipt_cpu_state)));
-    if (!ipt_cpu_state)
-        return ZX_ERR_NO_MEMORY;
-    return ZX_OK;
-}
-
-// Free resources obtained by x86_ipt_cpu_mode_alloc().
+// Free resources obtained by x86_ipt_alloc_trace().
 // This doesn't care if resources have already been freed to save callers
 // from having to care during any cleanup.
 
-zx_status_t x86_ipt_cpu_mode_free() {
+zx_status_t x86_ipt_free_trace() {
     AutoLock al(&ipt_lock);
 
     if (!supports_pt)

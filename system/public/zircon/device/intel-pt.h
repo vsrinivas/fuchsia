@@ -20,7 +20,7 @@ __BEGIN_CDECLS
 #error "unsupported architecture"
 #endif
 
-#define IPT_API_VERSION 1
+#define IPT_API_VERSION 2
 
 #define IPT_MSR_BITS(len, shift) (((1ULL << (len)) - 1) << (shift))
 
@@ -191,11 +191,29 @@ typedef struct {
 
 // ioctls
 
-// set the trace mode, either cpus or threads
-// Input: one of IPT_MODE_CPUS, IPT_MODE_THREADS
-#define IOCTL_IPT_SET_MODE \
+typedef struct {
+    // One of IPT_MODE_{CPUS,THREADS}.
+    uint32_t mode;
+} ioctl_ipt_trace_config_t;
+
+// must be called prior to START, allocate buffers of the specified size
+// Input: ioctl_ipt_trace_config_t
+// TODO(dje): Later return a trace descriptor.
+#define IOCTL_IPT_ALLOC_TRACE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 0)
-IOCTL_WRAPPER_IN(ioctl_ipt_set_mode, IOCTL_IPT_SET_MODE, uint32_t);
+IOCTL_WRAPPER_IN(ioctl_ipt_alloc_trace, IOCTL_IPT_ALLOC_TRACE, ioctl_ipt_trace_config_t);
+
+// release resources allocated with IOCTL_IPT_ALLOC_TRACE
+// TODO(dje): Later allow allocating multiple traces.
+#define IOCTL_IPT_FREE_TRACE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 1)
+IOCTL_WRAPPER(ioctl_ipt_free_trace, IOCTL_IPT_FREE_TRACE);
+
+// fetch the config of a trace
+// Output: ioctl_ipt_trace_config_t
+#define IOCTL_IPT_GET_TRACE_CONFIG \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 2)
+IOCTL_WRAPPER_OUT(ioctl_ipt_get_trace_config, IOCTL_IPT_GET_TRACE_CONFIG, ioctl_ipt_trace_config_t);
 
 typedef struct {
     // A "buffer" is made up of |num_chunks| chunks with each chunk having size
@@ -217,7 +235,7 @@ typedef struct {
 // When tracing cpus, buffers are auto-assigned to cpus: the resulting trace
 // buffer descriptor is the number of the cpu using the buffer.
 #define IOCTL_IPT_ALLOC_BUFFER \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 1)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 3)
 IOCTL_WRAPPER_INOUT(ioctl_ipt_alloc_buffer, IOCTL_IPT_ALLOC_BUFFER, ioctl_ipt_buffer_config_t, uint32_t);
 
 typedef struct {
@@ -229,7 +247,7 @@ typedef struct {
 // assign a buffer to a thread
 // Input: ioctl_ipt_assign_buffer_thread_t
 #define IOCTL_IPT_ASSIGN_BUFFER_THREAD \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_IPT, 3)
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_IPT, 4)
 IOCTL_WRAPPER_IN(ioctl_ipt_assign_buffer_thread, IOCTL_IPT_ASSIGN_BUFFER_THREAD,
                  ioctl_ipt_assign_buffer_thread_t);
 
@@ -287,26 +305,15 @@ IOCTL_WRAPPER_INOUT(ioctl_ipt_get_chunk_handle, IOCTL_IPT_GET_CHUNK_HANDLE,
 IOCTL_WRAPPER_IN(ioctl_ipt_free_buffer, IOCTL_IPT_FREE_BUFFER,
                  uint32_t);
 
-// must be called prior to START, allocate buffers of the specified size
-#define IOCTL_IPT_CPU_MODE_ALLOC \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 10)
-IOCTL_WRAPPER(ioctl_ipt_cpu_mode_alloc, IOCTL_IPT_CPU_MODE_ALLOC);
-
 // turn on processor tracing
-#define IOCTL_IPT_CPU_MODE_START \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 11)
-IOCTL_WRAPPER(ioctl_ipt_cpu_mode_start, IOCTL_IPT_CPU_MODE_START);
+#define IOCTL_IPT_START \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 10)
+IOCTL_WRAPPER(ioctl_ipt_start, IOCTL_IPT_START);
 
 // turn off processor tracing
-#define IOCTL_IPT_CPU_MODE_STOP \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 12)
-IOCTL_WRAPPER(ioctl_ipt_cpu_mode_stop, IOCTL_IPT_CPU_MODE_STOP);
-
-// release resources allocated with IOCTL_IPT_CPU_MODE_ALLOC
-// must be called prior to reconfiguring buffer sizes
-#define IOCTL_IPT_CPU_MODE_FREE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 13)
-IOCTL_WRAPPER(ioctl_ipt_cpu_mode_free, IOCTL_IPT_CPU_MODE_FREE);
+#define IOCTL_IPT_STOP \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 11)
+IOCTL_WRAPPER(ioctl_ipt_stop, IOCTL_IPT_STOP);
 
 #endif // __Fuchsia__
 

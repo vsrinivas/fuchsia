@@ -20,20 +20,20 @@ __BEGIN_CDECLS
 
 // Actions for perf_control
 
-// Set the trace mode.
-#define MTRACE_IPT_SET_MODE 0
+// Allocate in-kernel resources needed for the trace.
+#define MTRACE_IPT_ALLOC_TRACE 0
+
+// Free everything allocated with MTRACE_IPT_ALLOC_TRACE.
+#define MTRACE_IPT_FREE_TRACE 1
 
 // Stage all trace buffer data for a CPU.
-#define MTRACE_IPT_STAGE_CPU_DATA 1
+#define MTRACE_IPT_STAGE_CPU_DATA 2
 
 // Fetch trace buffer data (MSRs) for a CPU.
-#define MTRACE_IPT_GET_CPU_DATA 2
+#define MTRACE_IPT_GET_CPU_DATA 3
 
-// CPU-based tracing commands
-#define MTRACE_IPT_CPU_MODE_ALLOC 3
 #define MTRACE_IPT_CPU_MODE_START 4
 #define MTRACE_IPT_CPU_MODE_STOP 5
-#define MTRACE_IPT_CPU_MODE_FREE 6
 
 // Encode/decode options values for mtrace_control().
 // At present we just encode the cpu number here.

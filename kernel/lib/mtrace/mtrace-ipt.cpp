@@ -29,7 +29,7 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
            action, options, arg.get(), size);
 
     switch (action) {
-    case MTRACE_IPT_SET_MODE: {
+    case MTRACE_IPT_ALLOC_TRACE: {
         if (options != 0)
             return ZX_ERR_INVALID_ARGS;
         uint32_t mode;
@@ -40,13 +40,18 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         TRACEF("action %u, mode 0x%x\n", action, mode);
         switch (mode) {
         case IPT_MODE_CPUS:
-            return x86_ipt_set_mode(IPT_TRACE_CPUS);
+            return x86_ipt_alloc_trace(IPT_TRACE_CPUS);
         case IPT_MODE_THREADS:
-            return x86_ipt_set_mode(IPT_TRACE_THREADS);
+            return x86_ipt_alloc_trace(IPT_TRACE_THREADS);
         default:
             return ZX_ERR_INVALID_ARGS;
         }
     }
+
+    case MTRACE_IPT_FREE_TRACE:
+        if (options != 0 || size != 0)
+            return ZX_ERR_INVALID_ARGS;
+        return x86_ipt_free_trace();
 
     case MTRACE_IPT_STAGE_CPU_DATA: {
         zx_x86_pt_regs_t regs;
@@ -79,22 +84,15 @@ zx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         return ZX_OK;
     }
 
-    case MTRACE_IPT_CPU_MODE_ALLOC:
-        if (options != 0 || size != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return x86_ipt_cpu_mode_alloc();
     case MTRACE_IPT_CPU_MODE_START:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipt_cpu_mode_start();
+
     case MTRACE_IPT_CPU_MODE_STOP:
         if (options != 0 || size != 0)
             return ZX_ERR_INVALID_ARGS;
         return x86_ipt_cpu_mode_stop();
-    case MTRACE_IPT_CPU_MODE_FREE:
-        if (options != 0 || size != 0)
-            return ZX_ERR_INVALID_ARGS;
-        return x86_ipt_cpu_mode_free();
 
     default:
         return ZX_ERR_INVALID_ARGS;
