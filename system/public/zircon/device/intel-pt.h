@@ -20,7 +20,7 @@ __BEGIN_CDECLS
 #error "unsupported architecture"
 #endif
 
-#define IPT_API_VERSION 0
+#define IPT_API_VERSION 1
 
 #define IPT_MSR_BITS(len, shift) (((1ULL << (len)) - 1) << (shift))
 
@@ -198,9 +198,11 @@ typedef struct {
 IOCTL_WRAPPER_IN(ioctl_ipt_set_mode, IOCTL_IPT_SET_MODE, uint32_t);
 
 typedef struct {
-    uint32_t num_buffers;
+    // A "buffer" is made up of |num_chunks| chunks with each chunk having size
+    // |1<<chunk_order| pages.
+    uint32_t num_chunks;
     // #pages as a power of 2
-    uint32_t buffer_order;
+    uint32_t chunk_order;
     bool is_circular;
     uint64_t ctl;
     uint64_t cr3_match;
@@ -266,17 +268,17 @@ IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_info, IOCTL_IPT_GET_BUFFER_INFO,
 
 typedef struct {
     uint32_t descriptor;
-    uint32_t buffer_num;
-} ioctl_ipt_buffer_handle_req_t;
+    uint32_t chunk_num;
+} ioctl_ipt_chunk_handle_req_t;
 
-// return a handle of a trace buffer
+// return a handle of a chunk of the trace buffer
 // There is no API to get N handles, we have to get them one at a time.
 // [There's no point in trying to micro-optimize this and, say, get 3 at
 // a time.]
-#define IOCTL_IPT_GET_BUFFER_HANDLE \
+#define IOCTL_IPT_GET_CHUNK_HANDLE \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_IPT, 8)
-IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_handle, IOCTL_IPT_GET_BUFFER_HANDLE,
-                    ioctl_ipt_buffer_handle_req_t, zx_handle_t);
+IOCTL_WRAPPER_INOUT(ioctl_ipt_get_chunk_handle, IOCTL_IPT_GET_CHUNK_HANDLE,
+                    ioctl_ipt_chunk_handle_req_t, zx_handle_t);
 
 // free a trace buffer
 // Input: trace buffer descriptor

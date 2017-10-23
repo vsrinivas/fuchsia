@@ -40,10 +40,10 @@ typedef struct ipt_per_trace_state {
         zx_handle_t thread;
     } owner;
 
-    // number of buffers, each 2^|buffer_order| pages in size
-    uint32_t num_buffers;
-    // log2 size of each buffer, in pages
-    uint32_t buffer_order;
+    // number of chunks, each 2^|chunk_order| pages in size
+    uint32_t num_chunks;
+    // log2 size of each chunk, in pages
+    uint32_t chunk_order;
     // if true then the buffer is circular, otherwise tracing stops when the
     // buffer fills
     bool is_circular;
@@ -64,7 +64,8 @@ typedef struct ipt_per_trace_state {
 
     // trace buffers and ToPA tables
     // ToPA: Table of Physical Addresses
-    io_buffer_t* buffers;
+    // A "trace buffer" is a set of N chunks.
+    io_buffer_t* chunks;
     io_buffer_t* topas;
 } ipt_per_trace_state_t;
 
@@ -116,17 +117,17 @@ static bool ipt_config_lip = false;
 
 // maximum space, in bytes, for trace buffers (per cpu)
 // This isn't necessarily
-// MAX_NUM_BUFFERS * (1 << (MAX_BUFFER_ORDER + PAGE_SIZE_SHIFT)).
+// MAX_NUM_CHUNKS * (1 << (MAX_CHUNK_ORDER + PAGE_SIZE_SHIFT)).
 // Buffers have to be naturally aligned contiguous pages, but we can have
 // a lot of them. Supporting large buffers and/or lots of them is for
 // experimentation.
 #define MAX_PER_TRACE_SPACE (256 * 1024 * 1024)
 
 // maximum number of buffers
-#define MAX_NUM_BUFFERS 4096
+#define MAX_NUM_CHUNKS 4096
 
 // maximum size of each buffer, in pages (1MB)
-#define MAX_BUFFER_ORDER 8
+#define MAX_CHUNK_ORDER 8
 
 #if PAGE_SIZE == 4096
 #define PAGE_SIZE_SHIFT 12
@@ -248,7 +249,7 @@ static zx_status_t x86_pt_set_mode(ipt_device_t* ipt_dev, uint32_t mode) {
 // A circular collection of buffers is set up, even if we're going to apply
 // the stop bit to the last entry.
 static void make_topa(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
-    const size_t run_len_log2 = per_trace->buffer_order;
+    const size_t run_len_log2 = per_trace->chunk_order;
     assert(run_len_log2 + PAGE_SIZE_SHIFT <= IPT_TOPA_MAX_SHIFT);
     assert(run_len_log2 + PAGE_SIZE_SHIFT >= IPT_TOPA_MIN_SHIFT);
 
@@ -260,8 +261,8 @@ static void make_topa(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
     // of pages with sufficient alignment. If you find yourself needing this
     // functionality again, see change 9470.
 
-    for (uint32_t i = 0; i < per_trace->num_buffers; ++i) {
-        io_buffer_t* buffer = &per_trace->buffers[i];
+    for (uint32_t i = 0; i < per_trace->num_chunks; ++i) {
+        io_buffer_t* buffer = &per_trace->chunks[i];
         io_buffer_t* topa = &per_trace->topas[curr_table];
         zx_paddr_t pa = io_buffer_phys(buffer);
 
@@ -271,7 +272,7 @@ static void make_topa(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
         table[curr_idx] = val;
         last_entry = &table[curr_idx];
 
-        // Make sure we leave one at the end of the table for the END marker
+        // Make sure we leave one at the end of the table for the END marker.
         if (unlikely(curr_idx >= IPT_TOPA_MAX_TABLE_ENTRIES - 2)) {
             curr_idx = 0;
             curr_table++;
@@ -322,7 +323,7 @@ static void make_topa(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
 // buffers.
 // The output count includes the END entries across all needed tables.
 static uint32_t compute_topa_entry_count(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
-    uint32_t num_entries = per_trace->num_buffers;
+    uint32_t num_entries = per_trace->num_chunks;
     uint32_t num_end_entries = (num_entries + IPT_TOPA_MAX_TABLE_ENTRIES - 2) /
         (IPT_TOPA_MAX_TABLE_ENTRIES - 1);
     uint32_t result = num_entries + num_end_entries;
@@ -371,28 +372,28 @@ static size_t compute_capture_size(ipt_device_t* ipt_dev, const ipt_per_trace_st
 static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace,
                                         uint32_t num, uint32_t order, bool is_circular) {
     zx_status_t status;
-    size_t buffer_pages = 1 << order;
+    size_t chunk_pages = 1 << order;
 
     memset(per_trace, 0, sizeof(*per_trace));
 
-    per_trace->buffers = calloc(num, sizeof(io_buffer_t));
-    if (per_trace->buffers == NULL)
+    per_trace->chunks = calloc(num, sizeof(io_buffer_t));
+    if (per_trace->chunks == NULL)
         return ZX_ERR_NO_MEMORY;
 
     for (uint32_t i = 0; i < num; ++i) {
         // ToPA entries of size N must be aligned to N, too.
         uint32_t alignment_log2 = PAGE_SIZE_SHIFT + order;
-        status = io_buffer_init_aligned(&per_trace->buffers[i], buffer_pages * PAGE_SIZE,
+        status = io_buffer_init_aligned(&per_trace->chunks[i], chunk_pages * PAGE_SIZE,
                                         alignment_log2, IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK)
             return status;
         // Keep track of allocated buffers as we go in case we later fail:
         // we want to be able to free those that got allocated.
-        ++per_trace->num_buffers;
+        ++per_trace->num_chunks;
     }
-    assert(per_trace->num_buffers == num);
+    assert(per_trace->num_chunks == num);
 
-    per_trace->buffer_order = order;
+    per_trace->chunk_order = order;
     per_trace->is_circular = is_circular;
 
     // TODO(dje): No need to allocate the max on the last table.
@@ -433,11 +434,11 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
 }
 
 static void x86_pt_free_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_state_t* per_trace) {
-    for (uint32_t i = 0; i < per_trace->num_buffers; ++i) {
-        io_buffer_release(&per_trace->buffers[i]);
+    for (uint32_t i = 0; i < per_trace->num_chunks; ++i) {
+        io_buffer_release(&per_trace->chunks[i]);
     }
-    free(per_trace->buffers);
-    per_trace->buffers = NULL;
+    free(per_trace->chunks);
+    per_trace->chunks = NULL;
 
     for (uint32_t i = 0; i < per_trace->num_tables; ++i) {
         io_buffer_release(&per_trace->topas[i]);
@@ -451,12 +452,15 @@ static void x86_pt_free_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_state_t* pe
 static zx_status_t x86_pt_alloc_buffer(ipt_device_t* ipt_dev,
                                        const ioctl_ipt_buffer_config_t* config,
                                        uint32_t* out_index) {
-    if (config->num_buffers == 0 || config->num_buffers > MAX_NUM_BUFFERS)
+    zxlogf(DEBUG1, "%s: num_chunks %u, chunk_order %u\n",
+           __func__, config->num_chunks, config->chunk_order);
+
+    if (config->num_chunks == 0 || config->num_chunks > MAX_NUM_CHUNKS)
         return ZX_ERR_INVALID_ARGS;
-    if (config->buffer_order > MAX_BUFFER_ORDER)
+    if (config->chunk_order > MAX_CHUNK_ORDER)
         return ZX_ERR_INVALID_ARGS;
-    size_t buffer_pages = 1 << config->buffer_order;
-    size_t nr_pages = config->num_buffers * buffer_pages;
+    size_t chunk_pages = 1 << config->chunk_order;
+    size_t nr_pages = config->num_chunks * chunk_pages;
     size_t total_per_trace = nr_pages * PAGE_SIZE;
     if (total_per_trace > MAX_PER_TRACE_SPACE)
         return ZX_ERR_INVALID_ARGS;
@@ -526,7 +530,7 @@ static zx_status_t x86_pt_alloc_buffer(ipt_device_t* ipt_dev,
     ipt_per_trace_state_t* per_trace = &ipt_dev->per_trace_state[index];
     memset(per_trace, 0, sizeof(*per_trace));
     zx_status_t status = x86_pt_alloc_buffer1(ipt_dev, per_trace,
-                                              config->num_buffers, config->buffer_order, config->is_circular);
+                                              config->num_chunks, config->chunk_order, config->is_circular);
     if (status != ZX_OK) {
         x86_pt_free_buffer1(ipt_dev, per_trace);
         return status;
@@ -798,8 +802,8 @@ static zx_status_t ipt_get_buffer_config(ipt_device_t* ipt_dev,
     if (!per_trace->allocated)
         return ZX_ERR_INVALID_ARGS;
 
-    config.num_buffers = per_trace->num_buffers;
-    config.buffer_order = per_trace->buffer_order;
+    config.num_chunks = per_trace->num_chunks;
+    config.chunk_order = per_trace->chunk_order;
     config.is_circular = per_trace->is_circular;
     config.ctl = per_trace->ctl;
     config.cr3_match = per_trace->cr3_match;
@@ -838,10 +842,10 @@ static zx_status_t ipt_get_buffer_info(ipt_device_t* ipt_dev,
     return ZX_OK;
 }
 
-static zx_status_t ipt_get_buffer_handle(ipt_device_t* ipt_dev,
-                                     const void* cmd, size_t cmdlen,
-                                     void* reply, size_t max, size_t* out_actual) {
-    ioctl_ipt_buffer_handle_req_t req;
+static zx_status_t ipt_get_chunk_handle(ipt_device_t* ipt_dev,
+                                        const void* cmd, size_t cmdlen,
+                                        void* reply, size_t max, size_t* out_actual) {
+    ioctl_ipt_chunk_handle_req_t req;
     zx_handle_t h;
 
     if (cmdlen != sizeof(req))
@@ -855,9 +859,10 @@ static zx_status_t ipt_get_buffer_handle(ipt_device_t* ipt_dev,
     const ipt_per_trace_state_t* per_trace = &ipt_dev->per_trace_state[req.descriptor];
     if (!per_trace->allocated)
         return ZX_ERR_INVALID_ARGS;
-    if (req.buffer_num >= per_trace->num_buffers)
+    if (req.chunk_num >= per_trace->num_chunks)
         return ZX_ERR_INVALID_ARGS;
-    zx_status_t status = zx_handle_duplicate(per_trace->buffers[req.buffer_num].vmo_handle, ZX_RIGHT_SAME_RIGHTS, &h);
+
+    zx_status_t status = zx_handle_duplicate(per_trace->chunks[req.chunk_num].vmo_handle, ZX_RIGHT_SAME_RIGHTS, &h);
     if (status < 0)
         return status;
     memcpy(reply, &h, sizeof(h));
@@ -896,8 +901,8 @@ static zx_status_t ipt_ioctl1(ipt_device_t* ipt_dev, uint32_t op,
         return ipt_get_buffer_config(ipt_dev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_IPT_GET_BUFFER_INFO:
         return ipt_get_buffer_info(ipt_dev, cmd, cmdlen, reply, max, out_actual);
-    case IOCTL_IPT_GET_BUFFER_HANDLE:
-        return ipt_get_buffer_handle(ipt_dev, cmd, cmdlen, reply, max, out_actual);
+    case IOCTL_IPT_GET_CHUNK_HANDLE:
+        return ipt_get_chunk_handle(ipt_dev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_IPT_FREE_BUFFER:
         return ipt_free_buffer(ipt_dev, cmd, cmdlen, reply, max);
 

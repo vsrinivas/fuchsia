@@ -81,12 +81,12 @@ If using circular buffers then this is where tracing stopped.
 
 Returns *sizeof(\*out_data)* on success or a negative error code.
 
-### *ioctl_ipt_get_buffer_handle*
+### *ioctl_ipt_get_chunk_handle*
 
 ```
-ssize_t ioctl_ipt_get_buffer_handle(int fd,
-                                    const ioctl_ipt_buffer_handle_req_t* req,
-                                    zx_handle_t* out_handle);
+ssize_t ioctl_ipt_get_chunk_handle(int fd,
+                                   const ioctl_ipt_chunk_handle_req_t* req,
+                                   zx_handle_t* out_handle);
 ```
 
 Return the handle of the requested VMO with buffer data.
