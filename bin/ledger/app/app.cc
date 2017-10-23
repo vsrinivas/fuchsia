@@ -22,7 +22,6 @@
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
@@ -64,8 +63,7 @@ fxl::AutoCall<fxl::Closure> SetupCobalt(
 // clients to individual Ledger instances. It should not however hold long-lived
 // objects shared between Ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
-class App : public LedgerController,
-            public LedgerRepositoryFactoryImpl::Delegate {
+class App : public LedgerController {
  public:
   explicit App(AppParams app_params)
       : app_params_(app_params),
@@ -93,7 +91,7 @@ class App : public LedgerController,
     }
 
     factory_impl_ =
-        std::make_unique<LedgerRepositoryFactoryImpl>(this, environment_.get());
+        std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>(
@@ -112,47 +110,9 @@ class App : public LedgerController,
   }
 
  private:
-  // LedgerController implementation.
-  void Terminate() override {
-    // Wait for pending asynchronous operations on the
-    // LedgerRepositoryFactoryImpl, such as erasing a repository, but do not
-    // allow new requests to be started in the meantime.
-    shutdown_in_progress_ = true;
-    factory_bindings_.CloseAllBindings();
-    application_context_->outgoing_services()->Close();
-    factory_impl_.reset();
+  // LedgerController:
+  void Terminate() override { loop_.PostQuitTask(); }
 
-    if (managed_container_.empty()) {
-      // If we still have pending operations, we will post the quit task when
-      // the last one completes.
-      loop_.PostQuitTask();
-    }
-  }
-
-  // LedgerRepositoryFactoryImpl::Delegate:
-  void EraseRepository(
-      EraseRemoteRepositoryOperation erase_remote_repository_operation,
-      std::function<void(bool)> callback) override {
-    auto managed_operation =
-        managed_container_.Manage(std::move(erase_remote_repository_operation));
-    managed_operation->Start(fxl::MakeCopyable(
-        [this, managed_operation = std::move(managed_operation),
-         callback = std::move(callback)](bool succeeded) mutable {
-          callback(succeeded);
-          // This lambda is deleted in |call()|, don't access captured members
-          // afterwards.
-          managed_operation.reset();
-          CheckPendingOperations();
-        }));
-  }
-
-  void CheckPendingOperations() {
-    if (shutdown_in_progress_ && managed_container_.empty()) {
-      loop_.PostQuitTask();
-    }
-  }
-
-  bool shutdown_in_progress_ = false;
   const AppParams app_params_;
   fsl::MessageLoop loop_;
   trace::TraceProvider trace_provider_;
@@ -163,7 +123,6 @@ class App : public LedgerController,
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
-  callback::ManagedContainer managed_container_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

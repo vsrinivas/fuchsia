@@ -13,7 +13,6 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
@@ -42,8 +41,7 @@ class LedgerAppInstanceImpl final
   ~LedgerAppInstanceImpl() override;
 
  private:
-  class LedgerRepositoryFactoryContainer
-      : public ledger::LedgerRepositoryFactoryImpl::Delegate {
+  class LedgerRepositoryFactoryContainer {
    public:
     LedgerRepositoryFactoryContainer(
         fxl::RefPtr<fxl::TaskRunner> task_runner,
@@ -51,20 +49,11 @@ class LedgerAppInstanceImpl final
         fidl::InterfaceRequest<ledger::LedgerRepositoryFactory> request)
         : network_service_(task_runner, std::move(network_factory)),
           environment_(task_runner, &network_service_),
-          factory_impl_(this, &environment_),
+          factory_impl_(&environment_),
           factory_binding_(&factory_impl_, std::move(request)) {}
-    ~LedgerRepositoryFactoryContainer() override {}
+    ~LedgerRepositoryFactoryContainer() {}
 
    private:
-    // LedgerRepositoryFactoryImpl::Delegate:
-    void EraseRepository(
-        ledger::
-            EraseRemoteRepositoryOperation /*erase_remote_repository_operation*/
-        ,
-        std::function<void(bool)> callback) override {
-      FXL_NOTIMPLEMENTED();
-      callback(true);
-    }
     ledger::NetworkServiceImpl network_service_;
     ledger::Environment environment_;
     ledger::LedgerRepositoryFactoryImpl factory_impl_;

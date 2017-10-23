@@ -10,7 +10,6 @@
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
@@ -23,21 +22,7 @@ namespace ledger {
 
 class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
  public:
-  class Delegate {
-   public:
-    Delegate() {}
-    virtual ~Delegate() {}
-
-    virtual void EraseRepository(
-        EraseRemoteRepositoryOperation erase_remote_repository_operation,
-        std::function<void(bool)> callback) = 0;
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
-  };
-
-  LedgerRepositoryFactoryImpl(Delegate* delegate,
-                              ledger::Environment* environment);
+  LedgerRepositoryFactoryImpl(ledger::Environment* environment);
   ~LedgerRepositoryFactoryImpl() override;
 
  private:
@@ -64,7 +49,6 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
   Status DeleteRepositoryDirectory(
       const RepositoryInformation& repository_information);
 
-  Delegate* const delegate_;
   ledger::Environment* const environment_;
 
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>

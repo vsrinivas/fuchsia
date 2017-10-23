@@ -21,10 +21,13 @@
 
 namespace ledger {
 
+namespace {
+
 constexpr fxl::StringView kContentPath = "/content";
 constexpr fxl::StringView kStagingPath = "/staging";
 
-namespace {
+const char kCloudDashboardUrl[] = "https://fuchsia-ledger.firebaseapp.com";
+
 bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
   std::string name_path = repository_path.get() + "/name";
 
@@ -157,9 +160,8 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 };
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    Delegate* delegate,
     ledger::Environment* environment)
-    : delegate_(delegate), environment_(environment) {}
+    : environment_(environment) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -227,51 +229,10 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     const fidl::String& repository_path,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     const EraseRepositoryCallback& callback) {
-  RepositoryInformation repository_information(repository_path);
-  if (!repository_information.Init()) {
-    callback(Status::IO_ERROR);
-    return;
-  }
-
-  auto find_repository = repositories_.find(repository_information.name);
-  if (find_repository != repositories_.end()) {
-    FXL_LOG(WARNING) << "The repository to be erased is running, "
-                     << "shutting it down before erasing.";
-    find_repository->second.Detach();
-  }
-
-  auto final_callback = [this, callback,
-                         repository_name =
-                             repository_information.name](Status status) {
-    auto delete_repository = repositories_.find(repository_name);
-    if (delete_repository != repositories_.end()) {
-      repositories_.erase(delete_repository);
-    }
-    callback(status);
-  };
-
-  Status status = DeleteRepositoryDirectory(repository_information);
-  if (status != Status::OK) {
-    final_callback(status);
-    return;
-  }
-
-  if (!cloud_provider) {
-    // No sync configuration passed, only delete the local state.
-    final_callback(Status::OK);
-    return;
-  }
-
-  auto cloud_provider_ptr =
-      cloud_provider::CloudProviderPtr::Create(std::move(cloud_provider));
-
-  delegate_->EraseRepository(
-      EraseRemoteRepositoryOperation(environment_->main_runner(),
-                                     std::move(cloud_provider_ptr)),
-      fxl::MakeCopyable(
-          [final_callback = std::move(final_callback)](bool succeeded) {
-            final_callback(succeeded ? Status::OK : Status::INTERNAL_ERROR);
-          }));
+  FXL_LOG(ERROR) << "On-device Ledger erase is no longer supported. "
+                 << "In order to erase Ledger state, visit "
+                 << kCloudDashboardUrl;
+  FXL_NOTIMPLEMENTED();
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(

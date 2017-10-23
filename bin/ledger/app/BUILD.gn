@@ -37,8 +37,6 @@ source_set("lib") {
     "constants.h",
     "diff_utils.cc",
     "diff_utils.h",
-    "erase_remote_repository_operation.cc",
-    "erase_remote_repository_operation.h",
     "fidl/serialization_size.cc",
     "fidl/serialization_size.h",
     "ledger_impl.cc",

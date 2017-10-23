@@ -12,7 +12,6 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/app/erase_remote_repository_operation.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"
