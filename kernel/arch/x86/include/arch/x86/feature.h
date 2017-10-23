@@ -117,6 +117,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_RDRAND       X86_CPUID_BIT(0x1, 2, 30)
 #define X86_FEATURE_HYPERVISOR   X86_CPUID_BIT(0x1, 2, 31)
 #define X86_FEATURE_FPU          X86_CPUID_BIT(0x1, 3, 0)
+#define X86_FEATURE_SEP          X86_CPUID_BIT(0x1, 3, 11)
 #define X86_FEATURE_MMX          X86_CPUID_BIT(0x1, 3, 23)
 #define X86_FEATURE_FXSR         X86_CPUID_BIT(0x1, 3, 24)
 #define X86_FEATURE_SSE          X86_CPUID_BIT(0x1, 3, 25)

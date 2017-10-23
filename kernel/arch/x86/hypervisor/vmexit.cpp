@@ -236,6 +236,8 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rcx &= ~(1u << X86_FEATURE_PDCM.bit);
             // Disable the x2APIC bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
+            // Disable the SEP (SYSENTER support).
+            guest_state->rdx &= ~(1u << X86_FEATURE_SEP.bit);
             // Disable the Thermal Monitor bit.
             guest_state->rdx &= ~(1u << X86_FEATURE_TM.bit);
             break;
@@ -423,12 +425,12 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         next_rip(exit_info, vmcs);
         return ZX_OK;
     // Legacy syscall MSRs are unused and we clear them in the VMCS.
-    // Allow guests to clear them too. Anything else is an error.
+    // We clear the SEP bit in CPUID indicating these MSRs are not supported
+    // but Linux likes to program them without checking SEP so we just
+    // ignore the writes.
     case X86_MSR_IA32_SYSENTER_CS:
     case X86_MSR_IA32_SYSENTER_ESP:
     case X86_MSR_IA32_SYSENTER_EIP:
-        if (guest_state->rax != 0 || guest_state->rdx != 0)
-            return ZX_ERR_NOT_SUPPORTED;
         next_rip(exit_info, vmcs);
         return ZX_OK;
     case X86_MSR_IA32_TSC_DEADLINE: {
