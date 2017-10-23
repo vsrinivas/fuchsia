@@ -31,9 +31,7 @@
 #define X86_EFER_NXE                    0x00000800 /* to enable execute disable bit */
 #define X86_MSR_IA32_PLATFORM_ID        0x00000017 /* platform id */
 #define X86_MSR_IA32_APIC_BASE          0x0000001b /* APIC base physical address */
-#define X86_MSR_IA32_SMI_COUNT          0x00000034 /* SMI count */
 #define X86_MSR_IA32_TSC_ADJUST         0x0000003b /* TSC adjust */
-#define X86_MSR_IA32_PPERF              0x0000064e /* productive performance count */
 #define X86_MSR_IA32_BIOS_SIGN_ID       0x0000008b /* BIOS update signature */
 #define X86_MSR_IA32_MTRRCAP            0x000000fe /* MTRR capability */
 #define X86_MSR_IA32_SYSENTER_CS        0x00000174 /* SYSENTER CS */
@@ -42,7 +40,6 @@
 #define X86_MSR_IA32_MCG_CAP            0x00000179 /* global machine check capability */
 #define X86_MSR_IA32_MCG_STATUS         0x0000017a /* global machine check status */
 #define X86_MSR_IA32_MISC_ENABLE        0x000001a0 /* enable/disable misc processor features */
-#define X86_MSR_IA32_TEMPERATURE_TARGET 0x000001a2 /* temperature target and offset */
 #define X86_MSR_IA32_MTRR_PHYSBASE0     0x00000200 /* MTRR PhysBase0 */
 #define X86_MSR_IA32_MTRR_PHYSMASK0     0x00000201 /* MTRR PhysMask0 */
 #define X86_MSR_IA32_MTRR_PHYSMASK9     0x00000213 /* MTRR PhysMask9 */
@@ -53,7 +50,6 @@
 #define X86_MSR_IA32_MTRR_FIX4K_C0000   0x00000268 /* MTRR FIX4K_C0000 */
 #define X86_MSR_IA32_MTRR_FIX4K_F8000   0x0000026f /* MTRR FIX4K_F8000 */
 #define X86_MSR_IA32_PAT                0x00000277 /* PAT */
-#define X86_MSR_IA32_RAPL_POWER_UNIT    0x00000606 /* unit multipliers in RAPL interfaces */
 #define X86_MSR_IA32_TSC_DEADLINE       0x000006e0 /* TSC deadline */
 #define X86_MSR_IA32_EFER               0xc0000080 /* EFER */
 #define X86_MSR_IA32_STAR               0xc0000081 /* system call address */

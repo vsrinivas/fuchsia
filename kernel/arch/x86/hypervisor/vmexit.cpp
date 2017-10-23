@@ -345,15 +345,6 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
 static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                 GuestState* guest_state) {
     switch (guest_state->rcx) {
-    // Guests can't control most perf/power/metrics. We typically disable them through
-    // CPUID leaves, but for these MSRs Linux assumes that they work based on CPU version.
-    // If we fault, Linux will detect it and ignore them.
-    case X86_MSR_IA32_PPERF:
-    case X86_MSR_IA32_RAPL_POWER_UNIT:
-    case X86_MSR_IA32_SMI_COUNT:
-    case X86_MSR_IA32_TEMPERATURE_TARGET:
-        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
-        return ZX_OK;
     case X86_MSR_IA32_APIC_BASE:
         next_rip(exit_info, vmcs);
         guest_state->rax = kLocalApicPhysBase;
@@ -386,7 +377,8 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         guest_state->rdx = 0;
         return ZX_OK;
     default:
-        return ZX_ERR_NOT_SUPPORTED;
+        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
     }
 }
 
@@ -448,7 +440,8 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         return ZX_OK;
     }
     default:
-        return ZX_ERR_NOT_SUPPORTED;
+        vmcs->IssueInterrupt(X86_INT_GP_FAULT);
+        return ZX_OK;
     }
 }
 
