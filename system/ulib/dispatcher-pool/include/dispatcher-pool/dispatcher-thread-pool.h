@@ -17,7 +17,7 @@
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include <dispatcher-pool/dispatcher-execution-domain.h>
 
 namespace audio {
 namespace dispatcher {

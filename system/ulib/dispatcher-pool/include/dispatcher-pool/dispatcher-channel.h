@@ -14,7 +14,7 @@
 #include <fbl/ref_ptr.h>
 #include <unistd.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-event-source.h"
+#include <dispatcher-pool/dispatcher-event-source.h>
 
 namespace audio {
 namespace dispatcher {
