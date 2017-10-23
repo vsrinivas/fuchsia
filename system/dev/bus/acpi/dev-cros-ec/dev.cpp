@@ -38,12 +38,12 @@ zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {
     zx_status_t status = CrOsEc::CommandLpc3(EC_CMD_GET_FEATURES, 0, nullptr, 0,
                                              &dev->features_, sizeof(dev->features_), &actual);
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-cros-ec-core: get features failed: %d\n", status);
+        zxlogf(ERROR, "acpi-cros-ec-core: get features failed: %d\n", status);
         return status;
     }
 
     if (actual != sizeof(dev->features_)) {
-        dprintf(ERROR, "acpi-cros-ec-core: get features bad read: %zu vs %zu\n", actual,
+        zxlogf(ERROR, "acpi-cros-ec-core: get features bad read: %zu vs %zu\n", actual,
                 sizeof(dev->features_));
         return ZX_ERR_IO;
     }
@@ -67,7 +67,7 @@ AcpiCrOsEc::~AcpiCrOsEc() {
 }
 
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-    dprintf(TRACE, "acpi-cros-ec-core: init\n");
+    zxlogf(TRACE, "acpi-cros-ec-core: init\n");
 
     fbl::RefPtr<AcpiCrOsEc> ec;
     zx_status_t status = AcpiCrOsEc::Create(&ec);
@@ -76,7 +76,7 @@ zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     }
 
     if (ec->supports_motion_sense()) {
-        dprintf(TRACE, "acpi-cros-ec-motion: init\n");
+        zxlogf(TRACE, "acpi-cros-ec-motion: init\n");
         // Set up motion device
         fbl::unique_ptr<AcpiCrOsEcMotionDevice> motion_dev;
         status = AcpiCrOsEcMotionDevice::Create(ec, parent, acpi_handle, &motion_dev);
@@ -88,10 +88,10 @@ zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
 
             // devmgr is now in charge of the memory for motion_dev
             motion_dev.release();
-            dprintf(INFO, "acpi-cros-ec-motion: initialized\n");
+            zxlogf(INFO, "acpi-cros-ec-motion: initialized\n");
         }
     }
 
-    dprintf(INFO, "acpi-cros-ec-core: initialized\n");
+    zxlogf(INFO, "acpi-cros-ec-core: initialized\n");
     return ZX_OK;
 }

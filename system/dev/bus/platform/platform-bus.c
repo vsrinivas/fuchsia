@@ -96,14 +96,14 @@ static zx_protocol_device_t sys_device_proto = {
 static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
                                        const char* args, zx_handle_t rpc_channel) {
     if (!args) {
-        dprintf(ERROR, "platform_bus_create: args missing\n");
+        zxlogf(ERROR, "platform_bus_create: args missing\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     uint32_t vid = 0;
     uint32_t pid = 0;
     if (sscanf(args, "vid=%u,pid=%u", &vid, &pid) != 2) {
-        dprintf(ERROR, "platform_bus_create: could not find vid or pid in args\n");
+        zxlogf(ERROR, "platform_bus_create: could not find vid or pid in args\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 

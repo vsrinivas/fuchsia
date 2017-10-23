@@ -167,7 +167,7 @@ zx_status_t a113_config_pinmux(void* ctx, const uint32_t pin, const uint32_t fn)
     ZX_DEBUG_ASSERT(ctx);
 
     if (fn > A113_PINMUX_ALT_FN_MAX) {
-        dprintf(ERROR, "a113_config_pinmux: pin mux alt config out of range"
+        zxlogf(ERROR, "a113_config_pinmux: pin mux alt config out of range"
                 " %u\n", fn);
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -177,7 +177,7 @@ zx_status_t a113_config_pinmux(void* ctx, const uint32_t pin, const uint32_t fn)
     pinmux_block_t* block;
     status = a113_pin_to_block(pin, &block);
     if (status != ZX_OK) {
-        dprintf(ERROR, "a113_config_pinmux: pin not found %u\n", pin);
+        zxlogf(ERROR, "a113_config_pinmux: pin not found %u\n", pin);
         return status;
     }
 
@@ -219,7 +219,7 @@ zx_status_t a113_init_pinmux(a113_bus_t* bus) {
                                      PAGE_SIZE, resource,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        dprintf(ERROR, "a113_init_pinmux: Failed to map io buffer at 0x%08x"
+        zxlogf(ERROR, "a113_init_pinmux: Failed to map io buffer at 0x%08x"
                 ", status = %d\n", GPIO_BASE_PAGE, status);
         return status;
     }
@@ -229,7 +229,7 @@ zx_status_t a113_init_pinmux(a113_bus_t* bus) {
                                      PAGE_SIZE, resource,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        dprintf(ERROR, "a113_init_pinmux: Failed to map io buffer at 0x%08x"
+        zxlogf(ERROR, "a113_init_pinmux: Failed to map io buffer at 0x%08x"
                 ", status = %d\n", GPIOAO_BASE_PAGE, status);
 
         // Failed to initialize completely. Release the IO Buffer we allocated
@@ -254,7 +254,7 @@ zx_status_t a113_init_pinmux(a113_bus_t* bus) {
                     (GPIO_BASE_PHYS - GPIO_BASE_PAGE);
                 break;
             default:
-                dprintf(ERROR, "a113_init_pinmux: unexpected gpio control block"
+                zxlogf(ERROR, "a113_init_pinmux: unexpected gpio control block"
                         " base address at 0x%016lx\n",
                         pinmux_blocks[i].ctrl_block_base_phys);
                 status = ZX_ERR_NOT_SUPPORTED;

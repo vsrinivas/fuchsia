@@ -25,7 +25,7 @@ static zx_protocol_device_t audio_device_proto = {
 };
 
 static zx_status_t gauss_audio_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    dprintf(INFO, "gauss_audio_bind\n");
+    zxlogf(INFO, "gauss_audio_bind\n");
     zx_status_t status;
 
     gauss_audio_t* audio = calloc(1, sizeof(gauss_audio_t));
@@ -59,7 +59,7 @@ static zx_status_t gauss_audio_bind(void* ctx, zx_device_t* parent, void** cooki
     return ZX_OK;
 
 fail:
-    dprintf(ERROR, "gauss_audio_bind failed %d\n", status);
+    zxlogf(ERROR, "gauss_audio_bind failed %d\n", status);
     gauss_audio_release(audio);
     return status;
 }

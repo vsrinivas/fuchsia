@@ -328,7 +328,7 @@ static ssize_t ums_read(ums_block_t* dev, iotxn_t* txn) {
         uint32_t residue;
         status = ums_read_csw(ums, &residue);
         if (status == ZX_OK && residue) {
-            dprintf(ERROR, "unexpected residue in ums_read\n");
+            zxlogf(ERROR, "unexpected residue in ums_read\n");
             status = ZX_ERR_IO;
         }
     }
@@ -399,7 +399,7 @@ static ssize_t ums_write(ums_block_t* dev, iotxn_t* txn) {
         uint32_t residue;
         status = ums_read_csw(ums, &residue);
         if (status == ZX_OK && residue) {
-            dprintf(ERROR, "unexpected residue in ums_write\n");
+            zxlogf(ERROR, "unexpected residue in ums_write\n");
             status = ZX_ERR_IO;
         }
     }
@@ -458,7 +458,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
     scsi_read_capacity_10_t data;
     zx_status_t status = ums_read_capacity10(ums, lun, &data);
     if (status < 0) {
-        dprintf(ERROR, "read_capacity10 failed: %d\n", status);
+        zxlogf(ERROR, "read_capacity10 failed: %d\n", status);
         return status;
     }
 
@@ -469,7 +469,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
         scsi_read_capacity_16_t data;
         status = ums_read_capacity16(ums, lun, &data);
         if (status < 0) {
-            dprintf(ERROR, "read_capacity16 failed: %d\n", status);
+            zxlogf(ERROR, "read_capacity16 failed: %d\n", status);
             return status;
         }
 
@@ -477,7 +477,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
         dev->block_size = betoh32(data.block_length);
     }
     if (dev->block_size == 0) {
-        dprintf(ERROR, "UMS zero block size\n");
+        zxlogf(ERROR, "UMS zero block size\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -488,7 +488,7 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
     scsi_mode_sense_6_data_t ms_data;
     status = ums_mode_sense6(ums, lun, &ms_data);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ums_mode_sense6 failed: %d\n", status);
+        zxlogf(ERROR, "ums_mode_sense6 failed: %d\n", status);
         return status;
     }
 
@@ -533,7 +533,7 @@ static zx_status_t ums_check_luns_ready(ums_t* ums) {
             if (status == ZX_OK) {
                 dev->device_added = true;
             } else {
-                dprintf(ERROR, "UMS: device_add for block device failed %d\n", status);
+                zxlogf(ERROR, "UMS: device_add for block device failed %d\n", status);
             }
         } else if (!ready && dev->device_added) {
             device_remove(dev->zxdev);
@@ -558,7 +558,7 @@ static int ums_worker_thread(void* arg) {
         uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
         status = ums_inquiry(ums, lun, inquiry_data);
         if (status < 0) {
-            dprintf(ERROR, "ums_inquiry failed for lun %d status: %d\n", lun, status);
+            zxlogf(ERROR, "ums_inquiry failed for lun %d status: %d\n", lun, status);
             device_remove(ums->zxdev);
             return status;
         }
@@ -777,7 +777,7 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device, void** cookie) {
     return status;
 
 fail:
-    dprintf(ERROR, "ums_bind failed: %d\n", status);
+    zxlogf(ERROR, "ums_bind failed: %d\n", status);
     ums_release(ums);
     return status;
 }

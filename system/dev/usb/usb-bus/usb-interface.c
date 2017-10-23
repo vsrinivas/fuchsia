@@ -153,7 +153,7 @@ static zx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
     zx_status_t status = usb_hci_enable_endpoint(&intf->hci, intf->device_id, ep, ss_comp_desc,
                                                  enable);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_interface_enable_endpoint failed: %d\n", status);
+        zxlogf(ERROR, "usb_interface_enable_endpoint failed: %d\n", status);
     }
     return status;
 }

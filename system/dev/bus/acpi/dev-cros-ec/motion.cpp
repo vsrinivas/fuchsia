@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This driver uses dprintf level DEBUG1 for logging all report processing actions.
+// This driver uses zxlogf level DEBUG1 for logging all report processing actions.
 // This is an especially verbose datastream.
 //
 // Future work for this driver:
@@ -48,7 +48,7 @@ AcpiCrOsEcMotionDevice::~AcpiCrOsEcMotionDevice() {
 void AcpiCrOsEcMotionDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
     auto dev = reinterpret_cast<AcpiCrOsEcMotionDevice*>(ctx);
 
-    dprintf(DEBUG1, "acpi-cros-ec-motion: got event 0x%x\n", value);
+    zxlogf(DEBUG1, "acpi-cros-ec-motion: got event 0x%x\n", value);
     switch (value) {
     case 0x80:
         fbl::AutoLock guard(&dev->hid_lock_);
@@ -104,7 +104,7 @@ void AcpiCrOsEcMotionDevice::QueueHidReportLocked(const uint8_t* data, size_t le
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
-    dprintf(TRACE, "acpi-cros-ec-motion: hid bus query\n");
+    zxlogf(TRACE, "acpi-cros-ec-motion: hid bus query\n");
 
     info->dev_num = 0;
     info->dev_class = HID_DEV_CLASS_OTHER;
@@ -113,7 +113,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusQuery(uint32_t options, hid_info_t* in
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
-    dprintf(TRACE, "acpi-cros-ec-motion: hid bus start\n");
+    zxlogf(TRACE, "acpi-cros-ec-motion: hid bus start\n");
 
     fbl::AutoLock guard(&hid_lock_);
     if (proxy_.is_valid()) {
@@ -137,12 +137,12 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
 
         status = SetSensorOutputDataRate(i, 10000);
         if (status != ZX_OK) {
-            dprintf(ERROR, "acpi-cros-ec-motion: set sensor %u odr failed: %d\n", i, status);
+            zxlogf(ERROR, "acpi-cros-ec-motion: set sensor %u odr failed: %d\n", i, status);
             continue;
         }
         status = SetEcSamplingRate(i, 100);
         if (status != ZX_OK) {
-            dprintf(ERROR, "acpi-cros-ec-motion: set sensor %u ec sample rate failed: %d\n", i, status);
+            zxlogf(ERROR, "acpi-cros-ec-motion: set sensor %u ec sample rate failed: %d\n", i, status);
             continue;
         }
     }
@@ -157,7 +157,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
 }
 
 void AcpiCrOsEcMotionDevice::HidBusStop() {
-    dprintf(TRACE, "acpi-cros-ec-motion: hid bus stop\n");
+    zxlogf(TRACE, "acpi-cros-ec-motion: hid bus stop\n");
 
     fbl::AutoLock guard(&hid_lock_);
 
@@ -173,20 +173,20 @@ void AcpiCrOsEcMotionDevice::HidBusStop() {
 
         zx_status_t status = SetSensorOutputDataRate(i, 0);
         if (status != ZX_OK) {
-            dprintf(ERROR, "acpi-cros-ec-motion: set sensor %u odr failed: %d\n", i, status);
+            zxlogf(ERROR, "acpi-cros-ec-motion: set sensor %u odr failed: %d\n", i, status);
             continue;
         }
 
         status = SetEcSamplingRate(i, 0);
         if (status != ZX_OK) {
-            dprintf(ERROR, "acpi-cros-ec-motion: set sensor %u ec sample rate failed: %d\n", i, status);
+            zxlogf(ERROR, "acpi-cros-ec-motion: set sensor %u ec sample rate failed: %d\n", i, status);
             continue;
         }
     }
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-    dprintf(TRACE, "acpi-cros-ec-motion: hid bus get descriptor\n");
+    zxlogf(TRACE, "acpi-cros-ec-motion: hid bus get descriptor\n");
 
     if (data == nullptr || len == nullptr) {
         return ZX_ERR_INVALID_ARGS;
@@ -233,12 +233,12 @@ zx_status_t AcpiCrOsEcMotionDevice::HidBusSetProtocol(uint8_t protocol) {
 
 
 void AcpiCrOsEcMotionDevice::DdkRelease() {
-    dprintf(INFO, "acpi-cros-ec-motion: release\n");
+    zxlogf(INFO, "acpi-cros-ec-motion: release\n");
     delete this;
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::QueryNumSensors(uint8_t* count) {
-    dprintf(TRACE, "acpi-cros-ec-motion: QueryNumSensors\n");
+    zxlogf(TRACE, "acpi-cros-ec-motion: QueryNumSensors\n");
     struct ec_params_motion_sense cmd;
     struct ec_response_motion_sense rsp;
     cmd.cmd = MOTIONSENSE_CMD_DUMP;
@@ -259,7 +259,7 @@ zx_status_t AcpiCrOsEcMotionDevice::QueryNumSensors(uint8_t* count) {
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::QuerySensorInfo(uint8_t sensor_num, SensorInfo* info) {
-    dprintf(TRACE, "acpi-cros-ec-motion: QuerySensorInfo %d\n", sensor_num);
+    zxlogf(TRACE, "acpi-cros-ec-motion: QuerySensorInfo %d\n", sensor_num);
 
     struct ec_params_motion_sense cmd;
     struct ec_response_motion_sense rsp;
@@ -289,7 +289,7 @@ zx_status_t AcpiCrOsEcMotionDevice::QuerySensorInfo(uint8_t sensor_num, SensorIn
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::FifoInterruptEnable(bool enable) {
-    dprintf(TRACE, "acpi-cros-ec-motion: FifoInterruptEnable %d\n", enable);
+    zxlogf(TRACE, "acpi-cros-ec-motion: FifoInterruptEnable %d\n", enable);
 
     struct ec_params_motion_sense cmd;
     struct ec_response_motion_sense rsp;
@@ -312,7 +312,7 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoInterruptEnable(bool enable) {
 
 zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
                                                             uint32_t freq_millihertz) {
-    dprintf(TRACE, "acpi-cros-ec-motion: SetSensorOutputDataRate %d %u\n", sensor_num,
+    zxlogf(TRACE, "acpi-cros-ec-motion: SetSensorOutputDataRate %d %u\n", sensor_num,
             freq_millihertz);
 
     struct ec_params_motion_sense cmd;
@@ -337,7 +337,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::SetEcSamplingRate(uint8_t sensor_num, uint32_t milliseconds) {
-    dprintf(TRACE, "acpi-cros-ec-motion: SetEcSamplingRate %d %u\n", sensor_num, milliseconds);
+    zxlogf(TRACE, "acpi-cros-ec-motion: SetEcSamplingRate %d %u\n", sensor_num, milliseconds);
 
     struct ec_params_motion_sense cmd;
     struct ec_response_motion_sense rsp;
@@ -361,7 +361,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetEcSamplingRate(uint8_t sensor_num, uint32
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* range) {
-    dprintf(TRACE, "acpi-cros-ec-motion: GetSensorRange %d\n", sensor_num);
+    zxlogf(TRACE, "acpi-cros-ec-motion: GetSensorRange %d\n", sensor_num);
 
     struct ec_params_motion_sense cmd;
     struct ec_response_motion_sense rsp;
@@ -382,12 +382,12 @@ zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* 
     }
 
     *range = rsp.sensor_range.ret;
-    dprintf(SPEW, "acpi-cros-ec-motion: sensor range %d: %d\n", sensor_num, *range);
+    zxlogf(SPEW, "acpi-cros-ec-motion: sensor range %d: %d\n", sensor_num, *range);
     return ZX_OK;
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_data* data) {
-    dprintf(DEBUG1, "acpi-cros-ec-motion: FifoRead\n");
+    zxlogf(DEBUG1, "acpi-cros-ec-motion: FifoRead\n");
 
     struct ec_params_motion_sense cmd;
     struct __packed {
@@ -407,14 +407,14 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_da
         return ZX_ERR_IO;
     }
     if (rsp.count != 1) {
-        dprintf(DEBUG1, "acpi-cros-ec-motion: FifoRead found no reports\n");
+        zxlogf(DEBUG1, "acpi-cros-ec-motion: FifoRead found no reports\n");
         return ZX_ERR_SHOULD_WAIT;
     }
     if (actual != sizeof(rsp)) {
         return ZX_ERR_IO;
     }
 
-    dprintf(DEBUG1, "acpi-cros-ec-motion: sensor=%u flags=%#x val=(%d, %d, %d)\n",
+    zxlogf(DEBUG1, "acpi-cros-ec-motion: sensor=%u flags=%#x val=(%d, %d, %d)\n",
             rsp.data.sensor_num, rsp.data.flags, rsp.data.data[0], rsp.data.data[1], rsp.data.data[2]);
     memcpy(data, &rsp.data, sizeof(*data));
     return ZX_OK;
@@ -442,7 +442,7 @@ zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device
 
     status = dev->BuildHidDescriptor();
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-cros-ec-motion: failed to construct hid desc: %d\n", status);
+        zxlogf(ERROR, "acpi-cros-ec-motion: failed to construct hid desc: %d\n", status);
         return status;
     }
 
@@ -450,7 +450,7 @@ zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device
     ACPI_STATUS acpi_status = AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY,
                                                        NotifyHandler, dev.get());
     if (acpi_status != AE_OK) {
-        dprintf(ERROR, "acpi-cros-ec-motion: could not install notify handler\n");
+        zxlogf(ERROR, "acpi-cros-ec-motion: could not install notify handler\n");
         return acpi_to_zx_status(acpi_status);
     }
 
@@ -462,10 +462,10 @@ zx_status_t AcpiCrOsEcMotionDevice::ProbeSensors() {
     uint8_t num_sensors;
     zx_status_t status = QueryNumSensors(&num_sensors);
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-cros-ec-motion: num sensors query failed: %d\n", status);
+        zxlogf(ERROR, "acpi-cros-ec-motion: num sensors query failed: %d\n", status);
         return status;
     }
-    dprintf(TRACE, "acpi-cros-ec-motion: found %u sensors\n", num_sensors);
+    zxlogf(TRACE, "acpi-cros-ec-motion: found %u sensors\n", num_sensors);
 
     fbl::AllocChecker ac;
     sensors_.reserve(num_sensors, &ac);
@@ -477,7 +477,7 @@ zx_status_t AcpiCrOsEcMotionDevice::ProbeSensors() {
         SensorInfo info;
         status = QuerySensorInfo(i, &info);
         if (status != ZX_OK) {
-            dprintf(ERROR, "acpi-cros-ec-motion: sensor info query %u failed: %d\n", i, status);
+            zxlogf(ERROR, "acpi-cros-ec-motion: sensor info query %u failed: %d\n", i, status);
             info.valid = false;
             sensors_.push_back(info);
             continue;
@@ -499,13 +499,13 @@ zx_status_t AcpiCrOsEcMotionDevice::ProbeSensors() {
         int32_t range;
         status = GetSensorRange(i, &range);
         if (status != ZX_OK) {
-            dprintf(ERROR, "acpi-cros-ec-motion: sensor range query %u failed: %d\n", i, status);
+            zxlogf(ERROR, "acpi-cros-ec-motion: sensor range query %u failed: %d\n", i, status);
             info.valid = false;
             sensors_.push_back(info);
             continue;
         }
 
-        dprintf(SPEW,
+        zxlogf(SPEW,
                 "acpi-cros-ec-motion: sensor %d: type=%u loc=%u freq=[%u,%u] evt_count=%u\n",
                 i, info.type, info.loc, info.min_sampling_freq, info.max_sampling_freq,
                 info.fifo_max_event_count);

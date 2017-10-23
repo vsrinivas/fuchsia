@@ -65,9 +65,9 @@ __BEGIN_CDECLS
 
 void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 
-// dprintf() provides a path to the kernel debuglog gated by log level flags
+// zxlogf() provides a path to the kernel debuglog gated by log level flags
 //
-// Example:  dprintf(ERROR, "oh no! ...");
+// Example:  zxlogf(ERROR, "oh no! ...");
 //
 // By default drivers have ERROR and INFO debug levels enabled.
 // The kernel commandline option driver.NAME.log may be used to override
@@ -78,7 +78,7 @@ void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 //
 // Example driver.floppydisk.log=-info,+trace,+0x10
 //
-#define dprintf(flag, fmt...) \
+#define zxlogf(flag, fmt...) \
     do { \
         if ((DDK_LOG_##flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) { \
             driver_printf(DDK_LOG_##flag, fmt); \
@@ -92,5 +92,14 @@ static inline void driver_set_log_flags(uint32_t flags) {
 static inline uint32_t driver_get_log_flags(void) {
     return __zircon_driver_rec__.log_flags;
 }
+
+typedef uint32_t DPRINTF_IS_DEPRECATED_USE_ZXLOGF __attribute__((deprecated));
+#define dprintf(flag, fmt...) \
+    do { \
+        if ((DDK_LOG_##flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) { \
+            driver_printf((DPRINTF_IS_DEPRECATED_USE_ZXLOGF)(DDK_LOG_##flag), fmt); \
+        } \
+    } while (0)
+
 
 __END_CDECLS

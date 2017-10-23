@@ -120,22 +120,22 @@ zx_status_t hi3360_add_devices(hi3660_bus_t* bus) {
     zx_status_t status;
 
     if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
-        dprintf(ERROR, "hi3360_add_devices could not add dwc3_dev: %d\n", status);
+        zxlogf(ERROR, "hi3360_add_devices could not add dwc3_dev: %d\n", status);
         return status;
     }
     // xhci_dev is enabled/disabled dynamically, so don't enable it here
     if ((status = pbus_device_add(&bus->pbus, &xhci_dev, PDEV_ADD_DISABLED)) != ZX_OK) {
-        dprintf(ERROR, "hi3360_add_devices could not add xhci_dev: %d\n", status);
+        zxlogf(ERROR, "hi3360_add_devices could not add xhci_dev: %d\n", status);
         return status;
     }
     if ((status = pbus_device_add(&bus->pbus, &mali_dev, 0)) != ZX_OK) {
-        dprintf(ERROR, "hi3360_add_devices could not add mali_dev: %d\n", status);
+        zxlogf(ERROR, "hi3360_add_devices could not add mali_dev: %d\n", status);
         return status;
     }
 
 #if GPIO_TEST
     if ((status = pbus_device_add(&bus->pbus, &gpio_test_dev, 0)) != ZX_OK) {
-        dprintf(ERROR, "hi3360_add_devices could not add gpio_test_dev: %d\n", status);
+        zxlogf(ERROR, "hi3360_add_devices could not add gpio_test_dev: %d\n", status);
         return status;
     }
 #endif

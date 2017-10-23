@@ -340,13 +340,13 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             // If we hit an underflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_rx_under);
-            dprintf(ERROR, "i2c: rx underflow detected!\n");
+            zxlogf(ERROR, "i2c: rx underflow detected!\n");
         }
         if (intr_stat & (1u << INTR_RX_OVER)) {
             // If we hit an overflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_rx_over);
-            dprintf(ERROR, "i2c: rx overflow detected!\n");
+            zxlogf(ERROR, "i2c: rx overflow detected!\n");
         }
         if (intr_stat & (1u << INTR_RX_FULL)) {
             mtx_lock(&dev->irq_mask_mutex);
@@ -358,7 +358,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             // If we hit an overflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_tx_over);
-            dprintf(ERROR, "i2c: tx overflow detected!\n");
+            zxlogf(ERROR, "i2c: tx overflow detected!\n");
         }
         if (intr_stat & (1u << INTR_TX_EMPTY)) {
             mtx_lock(&dev->irq_mask_mutex);
@@ -375,7 +375,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             mtx_lock(&dev->irq_mask_mutex);
             RMWREG32(&dev->regs->intr_mask, INTR_ACTIVITY, 1, 0);
             mtx_unlock(&dev->irq_mask_mutex);
-            dprintf(INFO, "i2c: spurious activity irq\n");
+            zxlogf(INFO, "i2c: spurious activity irq\n");
         }
         if (intr_stat & (1u << INTR_STOP_DETECTION)) {
             zx_object_signal(dev->event_handle, 0, STOP_DETECTED_SIGNAL);
@@ -389,7 +389,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             mtx_lock(&dev->irq_mask_mutex);
             RMWREG32(&dev->regs->intr_mask, INTR_GENERAL_CALL, 1, 0);
             mtx_unlock(&dev->irq_mask_mutex);
-            dprintf(INFO, "i2c: spurious general call irq\n");
+            zxlogf(INFO, "i2c: spurious general call irq\n");
         }
 
         zx_interrupt_complete(dev->irq_handle);

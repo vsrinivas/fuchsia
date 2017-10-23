@@ -24,7 +24,7 @@ static zx_status_t platform_dev_get_mmio(platform_dev_t* dev, uint32_t index,
     zx_status_t status = zx_vmo_create_physical(dev->bus->resource, mmio->base, mmio->length,
                                                 out_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
+        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_create_physical failed %d\n", status);
         return status;
     }
     *out_handle_count = 1;
@@ -39,7 +39,7 @@ static zx_status_t platform_dev_get_interrupt(platform_dev_t* dev, uint32_t inde
     pbus_irq_t* irq = &dev->irqs[index];
     zx_status_t status = zx_interrupt_create(dev->bus->resource, irq->irq, ZX_INTERRUPT_REMAP_IRQ, out_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_get_interrupt: zx_interrupt_create failed %d\n", status);
+        zxlogf(ERROR, "platform_dev_get_interrupt: zx_interrupt_create failed %d\n", status);
         return status;
     }
     *out_handle_count = 1;
@@ -110,10 +110,10 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
 
     zx_status_t status = zx_channel_read(channel, 0, &req, NULL, len, 0, &len, NULL);
     if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
+        zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
         return status;
     } else if (len != sizeof(req)) {
-        dprintf(ERROR, "platform_dev_rxrpc: req length wrong %u\n", len);
+        zxlogf(ERROR, "platform_dev_rxrpc: req length wrong %u\n", len);
         return ZX_ERR_INTERNAL;
     }
 
@@ -144,7 +144,7 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         resp.status = platform_dev_gpio_write(dev, req.index, req.gpio_value);
         break;
     default:
-        dprintf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req.op);
+        zxlogf(ERROR, "platform_dev_rxrpc: unknown op %u\n", req.op);
         return ZX_ERR_INTERNAL;
     }
 
@@ -152,7 +152,7 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     status = zx_channel_write(channel, 0, &resp, sizeof(resp), (handle_count == 1 ? &handle : NULL),
                               handle_count);
     if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);
+        zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);
     }
     return status;
 }

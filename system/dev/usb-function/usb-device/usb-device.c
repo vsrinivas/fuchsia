@@ -177,7 +177,7 @@ static zx_status_t usb_device_function_registered(usb_device_t* dev) {
     mtx_lock(&dev->lock);
 
     if (dev->config_desc) {
-        dprintf(ERROR, "usb_device_function_registered: already have configuration descriptor!\n");
+        zxlogf(ERROR, "usb_device_function_registered: already have configuration descriptor!\n");
         mtx_unlock(&dev->lock);
         return ZX_ERR_BAD_STATE;
     }
@@ -221,7 +221,7 @@ static zx_status_t usb_device_function_registered(usb_device_t* dev) {
     }
     dev->config_desc = config_desc;
 
-    dprintf(TRACE, "usb_device_function_registered functions_registered = true\n");
+    zxlogf(TRACE, "usb_device_function_registered functions_registered = true\n");
     dev->functions_registered = true;
 
     zx_status_t status = usb_dev_state_changed_locked(dev);
@@ -245,7 +245,7 @@ static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interf
     usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t *)descriptors;
     if (intf_desc->bDescriptorType != USB_DT_INTERFACE ||
             intf_desc->bLength != sizeof(usb_interface_descriptor_t)) {
-        dprintf(ERROR, "usb_func_register: first descriptor not an interface descriptor\n");
+        zxlogf(ERROR, "usb_func_register: first descriptor not an interface descriptor\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -257,7 +257,7 @@ static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interf
             usb_interface_descriptor_t* desc = (usb_interface_descriptor_t *)header;
             if (desc->bInterfaceNumber >= countof(dev->interface_map) ||
                 dev->interface_map[desc->bInterfaceNumber] != function) {
-                dprintf(ERROR, "usb_func_register: bInterfaceNumber %u\n",
+                zxlogf(ERROR, "usb_func_register: bInterfaceNumber %u\n",
                        desc->bInterfaceNumber);
                 return ZX_ERR_INVALID_ARGS;
             }
@@ -269,14 +269,14 @@ static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interf
             unsigned index = ep_address_to_index(desc->bEndpointAddress);
             if (index == 0 || index >= countof(dev->endpoint_map) ||
                 endpoint_map[index] != function) {
-                dprintf(ERROR, "usb_func_register: bad endpoint address 0x%X\n",
+                zxlogf(ERROR, "usb_func_register: bad endpoint address 0x%X\n",
                        desc->bEndpointAddress);
                 return ZX_ERR_INVALID_ARGS;
             }
         }
 
         if (header->bLength == 0) {
-            dprintf(ERROR, "usb_func_register: zero length descriptor\n");
+            zxlogf(ERROR, "usb_func_register: zero length descriptor\n");
             return ZX_ERR_INVALID_ARGS;
         }
         header = (void *)header + header->bLength;
@@ -350,7 +350,7 @@ static zx_status_t usb_func_config_ep(void* ctx, usb_endpoint_descriptor_t* ep_d
 }
 
 static zx_status_t usb_func_disable_ep(void* ctx, uint8_t ep_addr) {
-    dprintf(TRACE, "usb_func_disable_ep\n");
+    zxlogf(TRACE, "usb_func_disable_ep\n");
     usb_function_t* function = ctx;
     return usb_dci_disable_ep(&function->dev->usb_dci, ep_addr);
 }
@@ -397,7 +397,7 @@ static zx_status_t usb_dev_get_descriptor(usb_device_t* dev, uint8_t request_typ
         if (desc_type == USB_DT_DEVICE && index == 0) {
             const usb_device_descriptor_t* desc = &dev->device_desc;
             if (desc->bLength == 0) {
-                dprintf(ERROR, "usb_dev_get_descriptor: device descriptor not set\n");
+                zxlogf(ERROR, "usb_dev_get_descriptor: device descriptor not set\n");
                 return ZX_ERR_INTERNAL;
             }
             if (length > sizeof(*desc)) length = sizeof(*desc);
@@ -407,7 +407,7 @@ static zx_status_t usb_dev_get_descriptor(usb_device_t* dev, uint8_t request_typ
         } else if (desc_type == USB_DT_CONFIG && index == 0) {
             const usb_configuration_descriptor_t* desc = dev->config_desc;
             if (!desc) {
-                dprintf(ERROR, "usb_dev_get_descriptor: configuration descriptor not set\n");
+                zxlogf(ERROR, "usb_dev_get_descriptor: configuration descriptor not set\n");
                 return ZX_ERR_INTERNAL;
             }
             uint16_t desc_length = letoh16(desc->wTotalLength);
@@ -454,7 +454,7 @@ static zx_status_t usb_dev_get_descriptor(usb_device_t* dev, uint8_t request_typ
         }
     }
 
-    dprintf(ERROR, "usb_device_get_descriptor unsupported value: %d index: %d\n", value, index);
+    zxlogf(ERROR, "usb_device_get_descriptor unsupported value: %d index: %d\n", value, index);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -500,7 +500,7 @@ static zx_status_t usb_dev_control(void* ctx, const usb_setup_t* setup, void* bu
     uint16_t length = le16toh(setup->wLength);
     if (length > buffer_length) length = buffer_length;
 
-    dprintf(TRACE, "usb_dev_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
+    zxlogf(TRACE, "usb_dev_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
             request_type, request, value, index, length);
 
     switch (request_type & USB_RECIP_MASK) {
@@ -593,7 +593,7 @@ static zx_status_t usb_dev_set_device_desc(usb_device_t* dev, const void* in_buf
         return ZX_ERR_INVALID_ARGS;
     }
     if (desc->bNumConfigurations != 1) {
-        dprintf(ERROR, "usb_device_ioctl: bNumConfigurations: %u, only 1 supported\n",
+        zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations: %u, only 1 supported\n",
                 desc->bNumConfigurations);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -642,7 +642,7 @@ static zx_status_t usb_dev_add_function(usb_device_t* dev, const void* in_buf, s
 }
 
 static void usb_dev_remove_function_devices_locked(usb_device_t* dev) {
-    dprintf(TRACE, "usb_dev_remove_function_devices_locked\n");
+    zxlogf(TRACE, "usb_dev_remove_function_devices_locked\n");
 
     usb_function_t* function;
     list_for_every_entry(&dev->functions, function, usb_function_t, node) {
@@ -661,7 +661,7 @@ static void usb_dev_remove_function_devices_locked(usb_device_t* dev) {
 }
 
 static zx_status_t usb_dev_add_function_devices_locked(usb_device_t* dev) {
-    dprintf(TRACE, "usb_dev_add_function_devices_locked\n");
+    zxlogf(TRACE, "usb_dev_add_function_devices_locked\n");
     if (dev->function_devs_added) {
         return ZX_OK;
     }
@@ -697,7 +697,7 @@ static zx_status_t usb_dev_add_function_devices_locked(usb_device_t* dev) {
 
         zx_status_t status = device_add(dev->zxdev, &args, &function->zxdev);
         if (status != ZX_OK) {
-            dprintf(ERROR, "usb_dev_bind_functions add_device failed %d\n", status);
+            zxlogf(ERROR, "usb_dev_bind_functions add_device failed %d\n", status);
             return status;
         }
 
@@ -709,7 +709,7 @@ static zx_status_t usb_dev_add_function_devices_locked(usb_device_t* dev) {
 }
 
 static zx_status_t usb_dev_state_changed_locked(usb_device_t* dev) {
-    dprintf(TRACE, "usb_dev_state_changed_locked usb_mode: %d dci_usb_mode: %d\n", dev->usb_mode,
+    zxlogf(TRACE, "usb_dev_state_changed_locked usb_mode: %d dci_usb_mode: %d\n", dev->usb_mode,
             dev->dci_usb_mode);
 
     usb_mode_t new_dci_usb_mode = dev->dci_usb_mode;
@@ -738,7 +738,7 @@ static zx_status_t usb_dev_state_changed_locked(usb_device_t* dev) {
     }
 
     if (dev->dci_usb_mode != new_dci_usb_mode) {
-        dprintf(TRACE, "usb_dev_state_changed_locked set DCI mode %d\n", new_dci_usb_mode);
+        zxlogf(TRACE, "usb_dev_state_changed_locked set DCI mode %d\n", new_dci_usb_mode);
         status = usb_mode_switch_set_mode(&dev->usb_mode_switch, new_dci_usb_mode);
         if (status != ZX_OK) {
             usb_mode_switch_set_mode(&dev->usb_mode_switch, USB_MODE_NONE);
@@ -758,24 +758,24 @@ static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
     mtx_lock(&dev->lock);
 
     if (dev->functions_bound) {
-        dprintf(ERROR, "usb_dev_bind_functions: already bound!\n");
+        zxlogf(ERROR, "usb_dev_bind_functions: already bound!\n");
         mtx_unlock(&dev->lock);
         return ZX_ERR_BAD_STATE;
     }
 
     usb_device_descriptor_t* device_desc = &dev->device_desc;
     if (device_desc->bLength == 0) {
-        dprintf(ERROR, "usb_dev_bind_functions: device descriptor not set\n");
+        zxlogf(ERROR, "usb_dev_bind_functions: device descriptor not set\n");
         mtx_unlock(&dev->lock);
         return ZX_ERR_BAD_STATE;
     }
     if (list_is_empty(&dev->functions)) {
-        dprintf(ERROR, "usb_dev_bind_functions: no functions to bind\n");
+        zxlogf(ERROR, "usb_dev_bind_functions: no functions to bind\n");
         mtx_unlock(&dev->lock);
         return ZX_ERR_BAD_STATE;
     }
 
-    dprintf(TRACE, "usb_dev_bind_functions functions_bound = true\n");
+    zxlogf(TRACE, "usb_dev_bind_functions functions_bound = true\n");
     dev->functions_bound = true;
     zx_status_t status = usb_dev_state_changed_locked(dev);
     mtx_unlock(&dev->lock);
@@ -783,7 +783,7 @@ static zx_status_t usb_dev_bind_functions(usb_device_t* dev) {
 }
 
 static zx_status_t usb_dev_clear_functions(usb_device_t* dev) {
-    dprintf(TRACE, "usb_dev_clear_functions\n");
+    zxlogf(TRACE, "usb_dev_clear_functions\n");
     mtx_lock(&dev->lock);
 
     usb_function_t* function;
@@ -837,7 +837,7 @@ static zx_status_t usb_dev_set_mode(usb_device_t* dev, const void* in_buf, size_
 
 static zx_status_t usb_dev_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                  void* out_buf, size_t out_len, size_t* out_actual) {
-    dprintf(TRACE, "usb_dev_ioctl %x\n", op);
+    zxlogf(TRACE, "usb_dev_ioctl %x\n", op);
     usb_device_t* dev = ctx;
 
     switch (op) {
@@ -861,14 +861,14 @@ static zx_status_t usb_dev_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
 }
 
 static void usb_dev_unbind(void* ctx) {
-    dprintf(TRACE, "usb_dev_unbind\n");
+    zxlogf(TRACE, "usb_dev_unbind\n");
     usb_device_t* dev = ctx;
     usb_dev_clear_functions(dev);
     device_remove(dev->zxdev);
 }
 
 static void usb_dev_release(void* ctx) {
-    dprintf(TRACE, "usb_dev_release\n");
+    zxlogf(TRACE, "usb_dev_release\n");
     usb_device_t* dev = ctx;
     free(dev->config_desc);
     for (unsigned i = 0; i < countof(dev->strings); i++) {
@@ -928,7 +928,7 @@ static zx_status_t usb_dev_set_default_config(usb_device_t* dev) {
         function_desc.interface_subclass = USB_SUBCLASS_MSC_SCSI;
         function_desc.interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY;
     } else {
-        dprintf(ERROR, "usb_dev_set_default_config: unknown function %s\n", USB_DEVICE_FUNCTIONS);
+        zxlogf(ERROR, "usb_dev_set_default_config: unknown function %s\n", USB_DEVICE_FUNCTIONS);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -940,7 +940,7 @@ static zx_status_t usb_dev_set_default_config(usb_device_t* dev) {
 #endif // defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
 
 zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    dprintf(INFO, "usb_dev_bind\n");
+    zxlogf(INFO, "usb_dev_bind\n");
 
     usb_device_t* dev = calloc(1, sizeof(usb_device_t));
     if (!dev) {
@@ -983,7 +983,7 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent, void** cookie) {
 
     status = device_add(parent, &args, &dev->zxdev);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_device_bind add_device failed %d\n", status);
+        zxlogf(ERROR, "usb_device_bind add_device failed %d\n", status);
         free(dev);
         return status;
     }

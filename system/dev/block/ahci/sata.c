@@ -52,7 +52,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* control
     iotxn_t* txn;
     zx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 512);
     if (status != ZX_OK) {
-        dprintf(ERROR, "%s: error %d allocating iotxn\n", name, status);
+        zxlogf(ERROR, "%s: error %d allocating iotxn\n", name, status);
         return status;
     }
 
@@ -71,7 +71,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* control
     completion_wait(&completion, ZX_TIME_INFINITE);
 
     if (txn->status != ZX_OK) {
-        dprintf(ERROR, "%s: error %d in device identify\n", name, txn->status);
+        zxlogf(ERROR, "%s: error %d in device identify\n", name, txn->status);
         return txn->status;
     }
     assert(txn->actual == 512);
@@ -83,45 +83,45 @@ static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* control
     iotxn_release(txn);
 
     char str[41]; // model id is 40 chars
-    dprintf(INFO, "%s: dev info\n", name);
+    zxlogf(INFO, "%s: dev info\n", name);
     snprintf(str, SATA_DEVINFO_SERIAL_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_SERIAL));
-    dprintf(INFO, "  serial=%s\n", str);
+    zxlogf(INFO, "  serial=%s\n", str);
     snprintf(str, SATA_DEVINFO_FW_REV_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_FW_REV));
-    dprintf(INFO, "  firmware rev=%s\n", str);
+    zxlogf(INFO, "  firmware rev=%s\n", str);
     snprintf(str, SATA_DEVINFO_MODEL_ID_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_MODEL_ID));
-    dprintf(INFO, "  model id=%s\n", str);
+    zxlogf(INFO, "  model id=%s\n", str);
 
     uint16_t major = *(devinfo + SATA_DEVINFO_MAJOR_VERS);
-    dprintf(INFO, "  major=0x%x ", major);
+    zxlogf(INFO, "  major=0x%x ", major);
     switch (32 - __builtin_clz(major) - 1) {
         case 10:
-            dprintf(INFO, "ACS3");
+            zxlogf(INFO, "ACS3");
             break;
         case 9:
-            dprintf(INFO, "ACS2");
+            zxlogf(INFO, "ACS2");
             break;
         case 8:
-            dprintf(INFO, "ATA8-ACS");
+            zxlogf(INFO, "ATA8-ACS");
             break;
         case 7:
         case 6:
         case 5:
-            dprintf(INFO, "ATA/ATAPI");
+            zxlogf(INFO, "ATA/ATAPI");
             break;
         default:
-            dprintf(INFO, "Obsolete");
+            zxlogf(INFO, "Obsolete");
             break;
     }
 
     uint16_t cap = *(devinfo + SATA_DEVINFO_CAP);
     if (cap & (1 << 8)) {
-        dprintf(INFO, " DMA");
+        zxlogf(INFO, " DMA");
         flags |= SATA_FLAG_DMA;
     } else {
-        dprintf(INFO, " PIO");
+        zxlogf(INFO, " PIO");
     }
     dev->max_cmd = *(devinfo + SATA_DEVINFO_QUEUE_DEPTH);
-    dprintf(INFO, " %d commands\n", dev->max_cmd + 1);
+    zxlogf(INFO, " %d commands\n", dev->max_cmd + 1);
     if (cap & (1 << 9)) {
         dev->sector_sz = 512; // default
         if ((*(devinfo + SATA_DEVINFO_SECTOR_SIZE) & 0xd000) == 0x5000) {
@@ -130,14 +130,14 @@ static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* control
         if (*(devinfo + SATA_DEVINFO_CMD_SET_2) & (1 << 10)) {
             flags |= SATA_FLAG_LBA48;
             dev->capacity = sata_devinfo_u64(devinfo, SATA_DEVINFO_LBA_CAPACITY_2) * dev->sector_sz;
-            dprintf(INFO, "  LBA48");
+            zxlogf(INFO, "  LBA48");
         } else {
             dev->capacity = sata_devinfo_u32(devinfo, SATA_DEVINFO_LBA_CAPACITY) * dev->sector_sz;
-            dprintf(INFO, "  LBA");
+            zxlogf(INFO, "  LBA");
         }
-        dprintf(INFO, " %" PRIu64 " sectors, size=%zu\n", dev->capacity, dev->sector_sz);
+        zxlogf(INFO, " %" PRIu64 " sectors, size=%zu\n", dev->capacity, dev->sector_sz);
     } else {
-        dprintf(INFO, "  CHS unsupported!\n");
+        zxlogf(INFO, "  CHS unsupported!\n");
     }
     dev->flags = flags;
 
@@ -269,7 +269,7 @@ static void sata_block_get_info(void* ctx, block_info_t* info) {
 static void sata_block_complete(iotxn_t* txn, void* cookie) {
     sata_device_t* dev;
     memcpy(&dev, txn->extra, sizeof(sata_device_t*));
-    dprintf(SPEW, "sata: fifo_complete dev %p cookie %p callbacks %p status %d actual 0x%"
+    zxlogf(SPEW, "sata: fifo_complete dev %p cookie %p callbacks %p status %d actual 0x%"
             PRIx64 "\n", dev, cookie, dev->callbacks, txn->status, txn->actual);
     dev->callbacks->complete(cookie, txn->status);
     iotxn_release(txn);
@@ -323,7 +323,7 @@ zx_status_t sata_bind(zx_device_t* dev, int port) {
     // initialize the device
     sata_device_t* device = calloc(1, sizeof(sata_device_t));
     if (!device) {
-        dprintf(ERROR, "sata: out of memory\n");
+        zxlogf(ERROR, "sata: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
     device->parent = dev;

@@ -282,7 +282,7 @@ static void complete_request(
         usb_request_release(req->setup_req);
     }
 
-    dprintf(TRACE, "dwc-usb: complete request. id = %u, status = %d, "
+    zxlogf(TRACE, "dwc-usb: complete request. id = %u, status = %d, "
             "length = %lu\n", req->request_id, status, length);
 
     usb_request_t* usb_req = req->usb_req;
@@ -417,7 +417,7 @@ static void dwc_usb_request_queue_hw(dwc_usb_t* dwc,
     uint8_t ep_address = usb_req->header.ep_address;
 
 
-    dprintf(TRACE, "dwc-usb: queue usb req hw. dev_id = %u, ep = %u, req_id = %u, "
+    zxlogf(TRACE, "dwc-usb: queue usb req hw. dev_id = %u, ep = %u, req_id = %u, "
             "length = 0x%lx\n", device_id, ep_address, req->request_id,
             usb_req->header.length);
 
@@ -527,11 +527,11 @@ static void dwc_request_queue(void* ctx, usb_request_t* usb_req) {
 }
 
 static void dwc_unbind(void* ctx) {
-    dprintf(ERROR, "dwc_usb: dwc_unbind not implemented\n");
+    zxlogf(ERROR, "dwc_usb: dwc_unbind not implemented\n");
 }
 
 static void dwc_release(void* ctx) {
-    dprintf(ERROR, "dwc_usb: dwc_release not implemented\n");
+    zxlogf(ERROR, "dwc_usb: dwc_release not implemented\n");
 }
 
 static zx_protocol_device_t dwc_device_proto = {
@@ -559,7 +559,7 @@ static zx_status_t dwc_enable_ep(void* _ctx, uint32_t device_id,
                                  usb_endpoint_descriptor_t* ep_desc,
                                  usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                  bool enable) {
-    dprintf(TRACE, "dwc_usb: enable_ep. dev_id = %u, ep = %u\n", device_id,
+    zxlogf(TRACE, "dwc_usb: enable_ep. dev_id = %u, ep = %u\n", device_id,
             ep_desc->bEndpointAddress);
 
     dwc_usb_t* dwc = _ctx;
@@ -599,7 +599,7 @@ static zx_status_t dwc_enable_ep(void* _ctx, uint32_t device_id,
 }
 
 static uint64_t dwc_get_frame(void* ctx) {
-    dprintf(ERROR, "dwc_usb: dwc_get_frame not implemented\n");
+    zxlogf(ERROR, "dwc_usb: dwc_get_frame not implemented\n");
     return ZX_OK;
 }
 
@@ -617,7 +617,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
                                  usb_speed_t speed) {
     // Since a new device was just added it has a device address of 0 on the
     // bus until it is enumerated.
-    dprintf(INFO, "dwc_usb: hub device added, hub = %u, port = %d, speed = %d\n",
+    zxlogf(INFO, "dwc_usb: hub device added, hub = %u, port = %d, speed = %d\n",
             hub_address, port, speed);
 
     dwc_usb_t* dwc = _ctx;
@@ -743,7 +743,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     return ZX_OK;
 }
 zx_status_t dwc_hub_device_removed(void* ctx, uint32_t hub_address, int port) {
-    dprintf(ERROR, "dwc_usb: dwc_hub_device_removed not implemented\n");
+    zxlogf(ERROR, "dwc_usb: dwc_hub_device_removed not implemented\n");
     return ZX_OK;
 }
 
@@ -852,14 +852,14 @@ static int dwc_irq_thread(void* arg) {
 
         wait_res = zx_interrupt_wait(dwc->irq_handle);
         if (wait_res != ZX_OK)
-            dprintf(ERROR, "dwc_usb: irq wait failed, retcode = %d\n", wait_res);
+            zxlogf(ERROR, "dwc_usb: irq wait failed, retcode = %d\n", wait_res);
 
         dwc_handle_irq(dwc);
 
         zx_interrupt_complete(dwc->irq_handle);
     }
 
-    dprintf(INFO, "dwc_usb: irq thread finished\n");
+    zxlogf(INFO, "dwc_usb: irq thread finished\n");
     return 0;
 }
 
@@ -1265,7 +1265,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
     req->total_bytes_queued = transfer.size;
     req->packets_queued = transfer.packet_count;
 
-    dprintf(TRACE, "dwc_usb: programming request, req_id = 0x%x, "
+    zxlogf(TRACE, "dwc_usb: programming request, req_id = 0x%x, "
             "channel = %u\n", req->request_id, chan);
 
     chanptr->characteristics = characteristics;
@@ -1356,7 +1356,7 @@ static bool handle_normal_channel_halted(uint channel,
              (bytes_transferred < packets_transferred * max_packet_size))) {
             if (!interrupts.transfer_completed) {
 
-                dprintf(ERROR, "dwc_usb: xfer failed, irq = 0x%x\n",
+                zxlogf(ERROR, "dwc_usb: xfer failed, irq = 0x%x\n",
                         interrupts.val);
 
                 release_channel(channel, dwc);
@@ -1449,7 +1449,7 @@ static bool handle_channel_halted_interrupt(uint channel,
         if (!interrupts.stall_response_received) {
             // It's totally okay for the EP to return stall so don't log it.
 
-            dprintf(ERROR, "dwc_usb: xfer failed, irq = 0x%x\n",
+            zxlogf(ERROR, "dwc_usb: xfer failed, irq = 0x%x\n",
                     interrupts.val);
         }
 
@@ -1465,7 +1465,7 @@ static bool handle_channel_halted_interrupt(uint channel,
             debug_frame_overrun_counter = 0;
 
             // A little coarse since we only log every nth frame overrun.
-            dprintf(INFO, "dwc_usb: requeued %d frame overruns, last one on "
+            zxlogf(INFO, "dwc_usb: requeued %d frame overruns, last one on "
                     "ep = %u, devid = %u\n", FRAME_OVERRUN_THRESHOLD,
                     ep->ep_address, ep->parent->device_id);
         }
@@ -1524,7 +1524,7 @@ static bool handle_channel_halted_interrupt(uint channel,
             zx_nanosleep(zx_deadline_after(62500));
         }
         await_sof_if_necessary(channel, req, ep, dwc);
-        dprintf(TRACE, "dwc_usb: requeue nyet on ep = %u, devid = %u\n",
+        zxlogf(TRACE, "dwc_usb: requeue nyet on ep = %u, devid = %u\n",
                 ep->ep_address, ep->parent->device_id);
 
         dwc_start_transaction(channel, req);
@@ -1554,7 +1554,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
         zx_status_t res =
             completion_wait(&self->request_pending_completion, ZX_TIME_INFINITE);
         if (res != ZX_OK) {
-            dprintf(ERROR, "dwc_usb: completion wait failed, retcode = %d, "
+            zxlogf(ERROR, "dwc_usb: completion wait failed, retcode = %d, "
                     "device_id = %u, ep = %u\n", res, self->parent->device_id,
                     self->ep_address);
             break;
@@ -1609,7 +1609,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
                 break;
             }
         } else if (usb_ep_type(&self->desc) == USB_ENDPOINT_ISOCHRONOUS) {
-            dprintf(ERROR, "dwc_usb: isochronous endpoints not implemented\n");
+            zxlogf(ERROR, "dwc_usb: isochronous endpoints not implemented\n");
             return -1;
         } else if (usb_ep_type(&self->desc) == USB_ENDPOINT_BULK) {
             req->next_data_toggle = next_data_toggle;
@@ -1692,7 +1692,7 @@ static zx_status_t create_default_device(dwc_usb_t* dwc) {
 
 // Bind is the entry point for this driver.
 static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
-    dprintf(TRACE, "usb_dwc: bind dev = %p\n", dev);
+    zxlogf(TRACE, "usb_dwc: bind dev = %p\n", dev);
 
     dwc_usb_t* usb_dwc = NULL;
 
@@ -1705,7 +1705,7 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // Allocate a new device object for the bus.
     usb_dwc = calloc(1, sizeof(*usb_dwc));
     if (!usb_dwc) {
-        dprintf(ERROR, "usb_dwc: bind failed to allocate usb_dwc struct\n");
+        zxlogf(ERROR, "usb_dwc: bind failed to allocate usb_dwc struct\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -1720,14 +1720,14 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     st = pdev_map_mmio(&proto, MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE, (void **)&regs,
                        &mmio_size, &mmio_handle);
     if (st != ZX_OK) {
-        dprintf(ERROR, "usb_dwc: bind failed to pdev_map_mmio.\n");
+        zxlogf(ERROR, "usb_dwc: bind failed to pdev_map_mmio.\n");
         goto error_return;
     }
 
     // Create an IRQ Handle for this device.
     st = pdev_map_interrupt(&proto, IRQ_INDEX, &usb_dwc->irq_handle);
     if (st != ZX_OK) {
-        dprintf(ERROR, "usb_dwc: bind failed to map usb irq.\n");
+        zxlogf(ERROR, "usb_dwc: bind failed to map usb irq.\n");
         goto error_return;
     }
 
@@ -1744,12 +1744,12 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // done here instead.
 
     if ((st = usb_dwc_softreset_core()) != ZX_OK) {
-        dprintf(ERROR, "usb_dwc: failed to reset core.\n");
+        zxlogf(ERROR, "usb_dwc: failed to reset core.\n");
         goto error_return;
     }
 
     if ((st = usb_dwc_setupcontroller()) != ZX_OK) {
-        dprintf(ERROR, "usb_dwc: failed setup controller.\n");
+        zxlogf(ERROR, "usb_dwc: failed setup controller.\n");
         goto error_return;
     }
 
@@ -1763,7 +1763,7 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // Any new device that connects to the bus is assigned this ID until we
     // set its address.
     if ((st = create_default_device(usb_dwc)) != ZX_OK) {
-        dprintf(ERROR, "usb_dwc: failed to create default device. "
+        zxlogf(ERROR, "usb_dwc: failed to create default device. "
                 "retcode = %d\n", st);
         goto error_return;
     }
@@ -1793,7 +1793,7 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev, void** cookie) {
                           "dwc_irq_thread");
     thrd_detach(irq_thread);
 
-    dprintf(TRACE, "usb_dwc: bind success!\n");
+    zxlogf(TRACE, "usb_dwc: bind success!\n");
     return ZX_OK;
 
 error_return:

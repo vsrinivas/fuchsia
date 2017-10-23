@@ -16,7 +16,7 @@
 // This macro allows for per-device tracing rather than enabling tracing for the whole driver
 // TODO(tkilbourn): decide whether this is worth the effort
 #define ethertap_trace(args...) \
-  do { if (unlikely(options_ & ETHERTAP_OPT_TRACE)) dprintf(INFO, "ethertap: " args); } while (0)
+  do { if (unlikely(options_ & ETHERTAP_OPT_TRACE)) zxlogf(INFO, "ethertap: " args); } while (0)
 
 namespace eth {
 
@@ -50,7 +50,7 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
 
         status = tap->DdkAdd(config.name);
         if (status != ZX_OK) {
-            dprintf(ERROR, "tapctl: could not add tap device: %d\n", status);
+            zxlogf(ERROR, "tapctl: could not add tap device: %d\n", status);
         } else {
             // devmgr owns the memory until release is called
             tap.release();
@@ -58,7 +58,7 @@ zx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
             zx_handle_t* out = reinterpret_cast<zx_handle_t*>(out_buf);
             *out = remote.release();
             *out_actual = sizeof(zx_handle_t);
-            dprintf(INFO, "tapctl: created ethertap device '%s'\n", config.name);
+            zxlogf(INFO, "tapctl: created ethertap device '%s'\n", config.name);
         }
         return status;
     }
@@ -139,7 +139,7 @@ zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) 
     }
     zx_status_t status = data_.write(0u, data, length, nullptr);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ethertap: EthmacQueueTx error writing: %d\n", status);
+        zxlogf(ERROR, "ethertap: EthmacQueueTx error writing: %d\n", status);
     }
     // returning ZX_ERR_SHOULD_WAIT indicates that we will call complete_tx(), which we will not
     return status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status;
@@ -183,7 +183,7 @@ int TapDevice::Thread() {
         }
     }
 
-    dprintf(INFO, "ethertap: device '%s' destroyed\n", name());
+    zxlogf(INFO, "ethertap: device '%s' destroyed\n", name());
     data_.reset();
     DdkRemove();
 
@@ -203,7 +203,7 @@ zx_status_t TapDevice::UpdateLinkStatus(zx_signals_t observed) {
     zx_signals_t clear = 0;
 
     if (observed_online(observed) && observed_offline(observed)) {
-        dprintf(ERROR, "ethertap: error asserting both online and offline\n");
+        zxlogf(ERROR, "ethertap: error asserting both online and offline\n");
         return ZX_ERR_BAD_STATE;
     }
 
@@ -228,7 +228,7 @@ zx_status_t TapDevice::UpdateLinkStatus(zx_signals_t observed) {
     if (clear) {
         zx_status_t status = data_.signal(clear, 0);
         if (status != ZX_OK) {
-            dprintf(ERROR, "ethertap: could not clear status signals: %d\n", status);
+            zxlogf(ERROR, "ethertap: could not clear status signals: %d\n", status);
             return status;
         }
     }
@@ -239,7 +239,7 @@ zx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
     size_t actual = 0;
     zx_status_t status = data_.read(0u, buffer, capacity, &actual);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ethertap: error reading data: %d\n", status);
+        zxlogf(ERROR, "ethertap: error reading data: %d\n", status);
         return status;
     }
 
@@ -260,7 +260,7 @@ extern "C" zx_status_t tapctl_bind(void* ctx, zx_device_t* device, void** cookie
     auto dev = fbl::unique_ptr<eth::TapCtl>(new eth::TapCtl(device));
     zx_status_t status = dev->DdkAdd("tapctl");
     if (status != ZX_OK) {
-        dprintf(ERROR, "%s: could not add device: %d\n", __func__, status);
+        zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
     } else {
         // devmgr owns the memory now
         dev.release();

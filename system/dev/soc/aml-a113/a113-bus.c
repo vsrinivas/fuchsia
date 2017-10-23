@@ -97,16 +97,16 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     pbus_set_interface(&bus->pbus, &intf);
 
     if ((status = a113_usb_init(bus)) != ZX_OK) {
-        dprintf(ERROR, "a113_bus_bind failed: %d\n", status);
+        zxlogf(ERROR, "a113_bus_bind failed: %d\n", status);
     }
     if ((status = a113_audio_init(bus)) != ZX_OK) {
-        dprintf(ERROR, "a113_audio_init failed: %d\n", status);
+        zxlogf(ERROR, "a113_audio_init failed: %d\n", status);
     }
 
     // Initialize Pin mux subsystem.
     status = a113_init_pinmux(bus);
     if (status != ZX_OK) {
-        dprintf(ERROR, "a113_bus_bind: failed to initialize pinmux subsystem, "
+        zxlogf(ERROR, "a113_bus_bind: failed to initialize pinmux subsystem, "
                 "rc = %d\n", status);
         // Don't think this is worthy of returning failure in bind.
     }

@@ -42,11 +42,11 @@ static zx_status_t platform_dev_rpc(platform_dev_t* dev, pdev_req_t* req, pdev_r
     if (status != ZX_OK) {
         return status;
     } else if (resp_size != sizeof(*resp)) {
-        dprintf(ERROR, "platform_dev_rpc resp_size %u expected %zu\n", resp_size, sizeof(resp));
+        zxlogf(ERROR, "platform_dev_rpc resp_size %u expected %zu\n", resp_size, sizeof(resp));
         status = ZX_ERR_INTERNAL;
         goto fail;
     } else if (handle_count != out_handle_count) {
-        dprintf(ERROR, "platform_dev_rpc handle count %u expected %u\n", handle_count,
+        zxlogf(ERROR, "platform_dev_rpc handle count %u expected %u\n", handle_count,
                 out_handle_count);
         status = ZX_ERR_INTERNAL;
         goto fail;
@@ -177,13 +177,13 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
     size_t vmo_size;
     status = zx_vmo_get_size(vmo_handle, &vmo_size);
     if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_get_size failed %d\n", status);
+        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_get_size failed %d\n", status);
         goto fail;
     }
 
     status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
     if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
+        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmo_set_cache_policy failed %d\n", status);
         goto fail;
     }
 
@@ -191,7 +191,7 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE,
                          (uintptr_t*)vaddr);
     if (status != ZX_OK) {
-        dprintf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
+        zxlogf(ERROR, "platform_dev_map_mmio: zx_vmar_map failed %d\n", status);
         goto fail;
     }
 

@@ -96,12 +96,12 @@ zx_status_t a113_usb_init(a113_bus_t* bus) {
 
     // add dwc3 device
     if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
-        dprintf(ERROR, "a113_usb_init could not add dwc3_dev: %d\n", status);
+        zxlogf(ERROR, "a113_usb_init could not add dwc3_dev: %d\n", status);
         return status;
     }
     // xhci_dev is enabled/disabled dynamically, so don't enable it here
     if ((status = pbus_device_add(&bus->pbus, &xhci_dev, PDEV_ADD_DISABLED)) != ZX_OK) {
-        dprintf(ERROR, "a113_usb_init could not add xhci_dev: %d\n", status);
+        zxlogf(ERROR, "a113_usb_init could not add xhci_dev: %d\n", status);
         return status;
     }
 

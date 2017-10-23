@@ -131,7 +131,7 @@ static void ums_continue_transfer(usb_ums_t* ums) {
     } else if (ums->data_state == DATA_STATE_WRITE) {
         ums_function_queue_data(ums, req);
     } else {
-        dprintf(ERROR, "ums_continue_transfer: bad data state %d\n", ums->data_state);
+        zxlogf(ERROR, "ums_continue_transfer: bad data state %d\n", ums->data_state);
     }
 }
 
@@ -141,7 +141,7 @@ static void ums_start_transfer(usb_ums_t* ums, ums_data_state_t state, uint64_t 
     size_t length = blocks * BLOCK_SIZE;
 
     if (offset + length > STORAGE_SIZE) {
-        dprintf(ERROR, "ums_start_transfer: transfer out of range state: %d, lba: %zu blocks: %u\n",
+        zxlogf(ERROR, "ums_start_transfer: transfer out of range state: %d, lba: %zu blocks: %u\n",
                state, lba, blocks);
         // TODO(voydanoff) report error to host
         return;
@@ -155,7 +155,7 @@ static void ums_start_transfer(usb_ums_t* ums, ums_data_state_t state, uint64_t 
 }
 
 static void ums_handle_inquiry(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_inquiry\n");
+    zxlogf(TRACE, "ums_handle_inquiry\n");
 
     usb_request_t* req = ums->data_req;
     uint8_t* buffer;
@@ -177,14 +177,14 @@ static void ums_handle_inquiry(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_test_unit_ready(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_test_unit_ready\n");
+    zxlogf(TRACE, "ums_handle_test_unit_ready\n");
 
     // no data phase here. Just return status OK
     ums_queue_csw(ums, CSW_SUCCESS);
 }
 
 static void ums_handle_request_sense(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_request_sense\n");
+    zxlogf(TRACE, "ums_handle_request_sense\n");
 
     usb_request_t* req = ums->data_req;
     uint8_t* buffer;
@@ -203,7 +203,7 @@ static void ums_handle_request_sense(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_read_capacity10(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_read_capacity10\n");
+    zxlogf(TRACE, "ums_handle_read_capacity10\n");
 
     usb_request_t* req = ums->data_req;
     scsi_read_capacity_10_t* data;
@@ -223,7 +223,7 @@ static void ums_handle_read_capacity10(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_read_capacity16(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_read_capacity16\n");
+    zxlogf(TRACE, "ums_handle_read_capacity16\n");
 
     usb_request_t* req = ums->data_req;
     scsi_read_capacity_16_t* data;
@@ -239,7 +239,7 @@ static void ums_handle_read_capacity16(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_mode_sense6(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_mode_sense6\n");
+    zxlogf(TRACE, "ums_handle_mode_sense6\n");
 
     usb_request_t* req = ums->data_req;
     scsi_mode_sense_6_data_t* data;
@@ -254,7 +254,7 @@ static void ums_handle_mode_sense6(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_read10(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_read10\n");
+    zxlogf(TRACE, "ums_handle_read10\n");
 
     scsi_command10_t* command = (scsi_command10_t *)cbw->CBWCB;
     uint32_t lba = be32toh(command->lba);
@@ -263,7 +263,7 @@ static void ums_handle_read10(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_read12(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_read12\n");
+    zxlogf(TRACE, "ums_handle_read12\n");
 
     scsi_command12_t* command = (scsi_command12_t *)cbw->CBWCB;
     uint64_t lba = be32toh(command->lba);
@@ -272,7 +272,7 @@ static void ums_handle_read12(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_read16(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_read16\n");
+    zxlogf(TRACE, "ums_handle_read16\n");
 
     scsi_command16_t* command = (scsi_command16_t *)cbw->CBWCB;
     uint32_t lba = be64toh(command->lba);
@@ -281,7 +281,7 @@ static void ums_handle_read16(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_write10(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_write10\n");
+    zxlogf(TRACE, "ums_handle_write10\n");
 
     scsi_command10_t* command = (scsi_command10_t *)cbw->CBWCB;
     uint32_t lba = be32toh(command->lba);
@@ -290,7 +290,7 @@ static void ums_handle_write10(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_write12(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_write12\n");
+    zxlogf(TRACE, "ums_handle_write12\n");
 
     scsi_command12_t* command = (scsi_command12_t *)cbw->CBWCB;
     uint64_t lba = be32toh(command->lba);
@@ -299,7 +299,7 @@ static void ums_handle_write12(usb_ums_t* ums, ums_cbw_t* cbw) {
 }
 
 static void ums_handle_write16(usb_ums_t* ums, ums_cbw_t* cbw) {
-    dprintf(TRACE, "ums_handle_write16\n");
+    zxlogf(TRACE, "ums_handle_write16\n");
 
     scsi_command16_t* command = (scsi_command16_t *)cbw->CBWCB;
     uint64_t lba = be64toh(command->lba);
@@ -309,7 +309,7 @@ static void ums_handle_write16(usb_ums_t* ums, ums_cbw_t* cbw) {
 
 static void ums_handle_cbw(usb_ums_t* ums, ums_cbw_t* cbw) {
     if (le32toh(cbw->dCBWSignature) != CBW_SIGNATURE) {
-        dprintf(ERROR, "ums_handle_cbw: bad dCBWSignature 0x%x\n", le32toh(cbw->dCBWSignature));
+        zxlogf(ERROR, "ums_handle_cbw: bad dCBWSignature 0x%x\n", le32toh(cbw->dCBWSignature));
         return;
     }
 
@@ -356,7 +356,7 @@ static void ums_handle_cbw(usb_ums_t* ums, ums_cbw_t* cbw) {
         ums_handle_write16(ums, cbw);
         break;
     default:
-        dprintf(TRACE, "ums_handle_cbw: unsupported opcode %d\n", command->opcode);
+        zxlogf(TRACE, "ums_handle_cbw: unsupported opcode %d\n", command->opcode);
         if (cbw->dCBWDataTransferLength) {
             // queue zero length packet to satisfy data phase
             usb_request_t* req = ums->data_req;
@@ -371,7 +371,7 @@ static void ums_handle_cbw(usb_ums_t* ums, ums_cbw_t* cbw) {
 static void ums_cbw_complete(usb_request_t* req, void* cookie) {
     usb_ums_t* ums = cookie;
 
-    dprintf(TRACE, "ums_cbw_complete %d %ld\n", req->response.status, req->response.actual);
+    zxlogf(TRACE, "ums_cbw_complete %d %ld\n", req->response.status, req->response.actual);
 
     if (req->response.status == ZX_OK && req->response.actual == sizeof(ums_cbw_t)) {
         ums_cbw_t* cbw = &ums->current_cbw;
@@ -383,7 +383,7 @@ static void ums_cbw_complete(usb_request_t* req, void* cookie) {
 static void ums_data_complete(usb_request_t* req, void* cookie) {
     usb_ums_t* ums = cookie;
 
-    dprintf(TRACE, "ums_data_complete %d %ld\n", req->response.status, req->response.actual);
+    zxlogf(TRACE, "ums_data_complete %d %ld\n", req->response.status, req->response.actual);
 
     if (ums->data_state == DATA_STATE_WRITE) {
         usb_request_copyfrom(req, ums->storage + ums->data_offset, req->response.actual, 0);
@@ -407,7 +407,7 @@ static void ums_data_complete(usb_request_t* req, void* cookie) {
 }
 
 static void ums_csw_complete(usb_request_t* req, void* cookie) {
-    dprintf(TRACE, "ums_csw_complete %d %ld\n", req->response.status, req->response.actual);
+    zxlogf(TRACE, "ums_csw_complete %d %ld\n", req->response.status, req->response.actual);
 }
 
 static const usb_descriptor_header_t* ums_get_descriptors(void* ctx, size_t* out_length) {
@@ -429,7 +429,7 @@ static zx_status_t ums_control(void* ctx, const usb_setup_t* setup, void* buffer
 }
 
 static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t speed) {
-    dprintf(TRACE, "ums_set_configured %d %d\n", configured, speed);
+    zxlogf(TRACE, "ums_set_configured %d %d\n", configured, speed);
     usb_ums_t* ums = ctx;
     zx_status_t status;
 
@@ -437,12 +437,12 @@ static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t sp
     if (configured) {
         if ((status = usb_function_config_ep(&ums->function, &descriptors.out_ep, NULL)) != ZX_OK ||
             (status = usb_function_config_ep(&ums->function, &descriptors.in_ep, NULL)) != ZX_OK) {
-            dprintf(ERROR, "ums_set_configured: usb_function_config_ep failed\n");
+            zxlogf(ERROR, "ums_set_configured: usb_function_config_ep failed\n");
         }
     } else {
         if ((status = usb_function_disable_ep(&ums->function, ums->bulk_out_addr)) != ZX_OK ||
             (status = usb_function_disable_ep(&ums->function, ums->bulk_in_addr)) != ZX_OK) {
-            dprintf(ERROR, "ums_set_configured: usb_function_disable_ep failed\n");
+            zxlogf(ERROR, "ums_set_configured: usb_function_disable_ep failed\n");
         }
     }
 
@@ -465,13 +465,13 @@ usb_function_interface_ops_t ums_device_ops = {
 };
 
 static void usb_ums_unbind(void* ctx) {
-    dprintf(TRACE, "usb_ums_unbind\n");
+    zxlogf(TRACE, "usb_ums_unbind\n");
     usb_ums_t* ums = ctx;
     device_remove(ums->zxdev);
 }
 
 static void usb_ums_release(void* ctx) {
-    dprintf(TRACE, "usb_ums_release\n");
+    zxlogf(TRACE, "usb_ums_release\n");
     usb_ums_t* ums = ctx;
 
     if (ums->storage) {
@@ -498,7 +498,7 @@ static zx_protocol_device_t usb_ums_proto = {
 };
 
 zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    dprintf(INFO, "usb_ums_bind\n");
+    zxlogf(INFO, "usb_ums_bind\n");
 
     usb_ums_t* ums = calloc(1, sizeof(usb_ums_t));
     if (!ums) {
@@ -513,17 +513,17 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent, void** cookie) {
 
     status = usb_function_alloc_interface(&ums->function, &descriptors.intf.bInterfaceNumber);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_ums_bind: usb_function_alloc_interface failed\n");
+        zxlogf(ERROR, "usb_ums_bind: usb_function_alloc_interface failed\n");
         goto fail;
     }
     status = usb_function_alloc_ep(&ums->function, USB_DIR_OUT, &ums->bulk_out_addr);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_ums_bind: usb_function_alloc_ep failed\n");
+        zxlogf(ERROR, "usb_ums_bind: usb_function_alloc_ep failed\n");
         goto fail;
     }
     status = usb_function_alloc_ep(&ums->function, USB_DIR_IN, &ums->bulk_in_addr);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_ums_bind: usb_function_alloc_ep failed\n");
+        zxlogf(ERROR, "usb_ums_bind: usb_function_alloc_ep failed\n");
         goto fail;
     }
 
@@ -573,7 +573,7 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent, void** cookie) {
 
     status = device_add(parent, &args, &ums->zxdev);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_device_bind add_device failed %d\n", status);
+        zxlogf(ERROR, "usb_device_bind add_device failed %d\n", status);
         goto fail;
     }
 

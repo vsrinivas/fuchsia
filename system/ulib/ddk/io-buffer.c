@@ -20,7 +20,7 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
         // needs to be done before ZX_VMO_OP_LOOKUP for non-contiguous VMOs
         zx_status_t status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_COMMIT, 0, size, NULL, 0);
         if (status != ZX_OK) {
-            dprintf(ERROR, "io_buffer: zx_vmo_op_range(ZX_VMO_OP_COMMIT) failed %d\n", status);
+            zxlogf(ERROR, "io_buffer: zx_vmo_op_range(ZX_VMO_OP_COMMIT) failed %d\n", status);
             zx_handle_close(vmo_handle);
             return status;
         }
@@ -34,7 +34,7 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
 
     zx_status_t status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
     if (status != ZX_OK) {
-        dprintf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
+        zxlogf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(vmo_handle);
         return status;
     }
@@ -43,7 +43,7 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t vmo_ha
     size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
     status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_LOOKUP, 0, lookup_size, &phys, sizeof(phys));
     if (status != ZX_OK) {
-        dprintf(ERROR, "io_buffer: zx_vmo_op_range failed %d size: %zu\n", status, size);
+        zxlogf(ERROR, "io_buffer: zx_vmo_op_range failed %d size: %zu\n", status, size);
         zx_vmar_unmap(zx_vmar_root_self(), virt, size);
         zx_handle_close(vmo_handle);
         return status;
@@ -82,7 +82,7 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
         status = zx_vmo_create(size, 0, &vmo_handle);
     }
     if (status != ZX_OK) {
-        dprintf(ERROR, "io_buffer: zx_vmo_create failed %d\n", status);
+        zxlogf(ERROR, "io_buffer: zx_vmo_create failed %d\n", status);
         return status;
     }
 
@@ -119,13 +119,13 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
     zx_handle_t vmo_handle;
     zx_status_t status = zx_vmo_create_physical(resource, addr, size, &vmo_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "io_buffer: zx_vmo_create_physical failed %d\n", status);
+        zxlogf(ERROR, "io_buffer: zx_vmo_create_physical failed %d\n", status);
         return status;
     }
 
     status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
     if (status != ZX_OK) {
-        dprintf(ERROR, "io_buffer: zx_vmo_set_cache_policy failed %d\n", status);
+        zxlogf(ERROR, "io_buffer: zx_vmo_set_cache_policy failed %d\n", status);
         zx_handle_close(vmo_handle);
         return status;
     }
@@ -134,7 +134,7 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
     zx_vaddr_t virt;
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
     if (status != ZX_OK) {
-        dprintf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
+        zxlogf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
         zx_handle_close(vmo_handle);
         return status;
     }
@@ -183,7 +183,7 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
 
     zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
     if (paddrs == NULL) {
-        dprintf(ERROR, "io_buffer: out of memory\n");
+        zxlogf(ERROR, "io_buffer: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
     zx_status_t status = io_buffer_physmap_range(buffer, page_offset, page_length,

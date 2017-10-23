@@ -39,32 +39,32 @@ void dwc3_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
 void dwc3_print_status(dwc3_t* dwc) {
     volatile void* mmio = dwc3_mmio(dwc);
     uint32_t status = DWC3_READ32(mmio + DSTS);
-    dprintf(TRACE, "DSTS: ");
-    dprintf(TRACE, "USBLNKST: %d ", DSTS_USBLNKST(status));
-    dprintf(TRACE, "SOFFN: %d ", DSTS_SOFFN(status));
-    dprintf(TRACE, "CONNECTSPD: %d ", DSTS_CONNECTSPD(status));
-    if (status & DSTS_DCNRD) dprintf(TRACE, "DCNRD ");
-    if (status & DSTS_SRE) dprintf(TRACE, "SRE ");
-    if (status & DSTS_RSS) dprintf(TRACE, "RSS ");
-    if (status & DSTS_SSS) dprintf(TRACE, "SSS ");
-    if (status & DSTS_COREIDLE) dprintf(TRACE, "COREIDLE ");
-    if (status & DSTS_DEVCTRLHLT) dprintf(TRACE, "DEVCTRLHLT ");
-    if (status & DSTS_RXFIFOEMPTY) dprintf(TRACE, "RXFIFOEMPTY ");
-    dprintf(TRACE, "\n");
+    zxlogf(TRACE, "DSTS: ");
+    zxlogf(TRACE, "USBLNKST: %d ", DSTS_USBLNKST(status));
+    zxlogf(TRACE, "SOFFN: %d ", DSTS_SOFFN(status));
+    zxlogf(TRACE, "CONNECTSPD: %d ", DSTS_CONNECTSPD(status));
+    if (status & DSTS_DCNRD) zxlogf(TRACE, "DCNRD ");
+    if (status & DSTS_SRE) zxlogf(TRACE, "SRE ");
+    if (status & DSTS_RSS) zxlogf(TRACE, "RSS ");
+    if (status & DSTS_SSS) zxlogf(TRACE, "SSS ");
+    if (status & DSTS_COREIDLE) zxlogf(TRACE, "COREIDLE ");
+    if (status & DSTS_DEVCTRLHLT) zxlogf(TRACE, "DEVCTRLHLT ");
+    if (status & DSTS_RXFIFOEMPTY) zxlogf(TRACE, "RXFIFOEMPTY ");
+    zxlogf(TRACE, "\n");
 
     status = DWC3_READ32(mmio + GSTS);
-    dprintf(TRACE, "GSTS: ");
-    dprintf(TRACE, "CBELT: %d ", GSTS_CBELT(status));
-    dprintf(TRACE, "CURMOD: %d ", GSTS_CURMOD(status));
-    if (status & GSTS_SSIC_IP) dprintf(TRACE, "SSIC_IP ");
-    if (status & GSTS_OTG_IP) dprintf(TRACE, "OTG_IP ");
-    if (status & GSTS_BC_IP) dprintf(TRACE, "BC_IP ");
-    if (status & GSTS_ADP_IP) dprintf(TRACE, "ADP_IP ");
-    if (status & GSTS_HOST_IP) dprintf(TRACE, "HOST_IP ");
-    if (status & GSTS_DEVICE_IP) dprintf(TRACE, "DEVICE_IP ");
-    if (status & GSTS_CSR_TIMEOUT) dprintf(TRACE, "CSR_TIMEOUT ");
-    if (status & GSTS_BUSERRADDRVLD) dprintf(TRACE, "BUSERRADDRVLD ");
-    dprintf(TRACE, "\n");
+    zxlogf(TRACE, "GSTS: ");
+    zxlogf(TRACE, "CBELT: %d ", GSTS_CBELT(status));
+    zxlogf(TRACE, "CURMOD: %d ", GSTS_CURMOD(status));
+    if (status & GSTS_SSIC_IP) zxlogf(TRACE, "SSIC_IP ");
+    if (status & GSTS_OTG_IP) zxlogf(TRACE, "OTG_IP ");
+    if (status & GSTS_BC_IP) zxlogf(TRACE, "BC_IP ");
+    if (status & GSTS_ADP_IP) zxlogf(TRACE, "ADP_IP ");
+    if (status & GSTS_HOST_IP) zxlogf(TRACE, "HOST_IP ");
+    if (status & GSTS_DEVICE_IP) zxlogf(TRACE, "DEVICE_IP ");
+    if (status & GSTS_CSR_TIMEOUT) zxlogf(TRACE, "CSR_TIMEOUT ");
+    if (status & GSTS_BUSERRADDRVLD) zxlogf(TRACE, "BUSERRADDRVLD ");
+    zxlogf(TRACE, "\n");
 }
 
 static void dwc3_stop(dwc3_t* dwc) {
@@ -139,7 +139,7 @@ static void dwc3_start_host_mode(dwc3_t* dwc) {
 }
 
 void dwc3_usb_reset(dwc3_t* dwc) {
-    dprintf(INFO, "dwc3_usb_reset\n");
+    zxlogf(INFO, "dwc3_usb_reset\n");
 
     dwc3_ep0_reset(dwc);
 
@@ -154,7 +154,7 @@ void dwc3_usb_reset(dwc3_t* dwc) {
 }
 
 void dwc3_disconnected(dwc3_t* dwc) {
-    dprintf(INFO, "dwc3_disconnected\n");
+    zxlogf(INFO, "dwc3_disconnected\n");
 
     dwc3_cmd_ep_end_transfer(dwc, EP0_OUT);
     dwc->ep0_state = EP0_STATE_NONE;
@@ -192,7 +192,7 @@ void dwc3_connection_done(dwc3_t* dwc) {
         ep0_max_packet = 512;
         break;
     default:
-        dprintf(ERROR, "dwc3_connection_done: unsupported speed %u\n", speed);
+        zxlogf(ERROR, "dwc3_connection_done: unsupported speed %u\n", speed);
         dwc->speed = USB_SPEED_UNDEFINED;
         break;
     }
@@ -235,10 +235,10 @@ void dwc3_reset_configuration(dwc3_t* dwc) {
 static void dwc3_request_queue(void* ctx, usb_request_t* req) {
     dwc3_t* dwc = ctx;
 
-    dprintf(LTRACE, "dwc3_request_queue ep: %u\n", req->header.ep_address);
+    zxlogf(LTRACE, "dwc3_request_queue ep: %u\n", req->header.ep_address);
     unsigned ep_num = dwc3_ep_num(req->header.ep_address);
     if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
-        dprintf(ERROR, "dwc3_request_queue: bad ep address 0x%02X\n", req->header.ep_address);
+        zxlogf(ERROR, "dwc3_request_queue: bad ep address 0x%02X\n", req->header.ep_address);
         usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0);
         return;
     }
@@ -319,7 +319,7 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     if (mode == USB_MODE_DEVICE) {
         status = pdev_map_interrupt(&dwc->pdev, IRQ_USB3, &dwc->irq_handle);
         if (status != ZX_OK) {
-            dprintf(ERROR, "dwc3_set_mode: pdev_map_interrupt failed\n");
+            zxlogf(ERROR, "dwc3_set_mode: pdev_map_interrupt failed\n");
             goto fail;
         }
 
@@ -389,7 +389,7 @@ static zx_protocol_device_t dwc3_device_proto = {
 };
 
 static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
-    dprintf(INFO, "dwc3_bind\n");
+    zxlogf(INFO, "dwc3_bind\n");
 
     dwc3_t* dwc = calloc(1, sizeof(dwc3_t));
     if (!dwc) {
@@ -420,26 +420,26 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
     status = pdev_map_mmio_buffer(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &dwc->mmio);
     if (status != ZX_OK) {
-        dprintf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed\n");
+        zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed\n");
         goto fail;
     }
 
     status = io_buffer_init(&dwc->event_buffer, EVENT_BUFFER_SIZE, IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-        dprintf(ERROR, "dwc3_bind: io_buffer_init failed\n");
+        zxlogf(ERROR, "dwc3_bind: io_buffer_init failed\n");
         goto fail;
     }
     io_buffer_cache_op(&dwc->event_buffer, ZX_VMO_OP_CACHE_CLEAN, 0, EVENT_BUFFER_SIZE);
 
     status = io_buffer_init(&dwc->ep0_buffer, 65536, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-        dprintf(ERROR, "dwc3_bind: io_buffer_init failed\n");
+        zxlogf(ERROR, "dwc3_bind: io_buffer_init failed\n");
         goto fail;
     }
 
     status = dwc3_ep0_init(dwc);
     if (status != ZX_OK) {
-        dprintf(ERROR, "dwc3_bind: dwc3_ep_init failed\n");
+        zxlogf(ERROR, "dwc3_bind: dwc3_ep_init failed\n");
         goto fail;
     }
 
@@ -460,7 +460,7 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent, void** cookie) {
     return ZX_OK;
 
 fail:
-    dprintf(ERROR, "dwc3_bind failed %d\n", status);
+    zxlogf(ERROR, "dwc3_bind failed %d\n", status);
     dwc3_release(dwc);
     return status;
 }

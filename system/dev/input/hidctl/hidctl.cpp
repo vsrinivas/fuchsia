@@ -52,7 +52,7 @@ zx_status_t HidCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
 
         status = hiddev->DdkAdd("hidctl-dev");
         if (status != ZX_OK) {
-            dprintf(ERROR, "hidctl: could not add hid device: %d\n", status);
+            zxlogf(ERROR, "hidctl: could not add hid device: %d\n", status);
             hiddev->Shutdown();
         } else {
             // devmgr owns the memory until release is called
@@ -61,7 +61,7 @@ zx_status_t HidCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
             auto out = static_cast<zx_handle_t*>(out_buf);
             *out = remote.release();
             *out_actual = sizeof(zx_handle_t);
-            dprintf(INFO, "hidctl: created hid device\n");
+            zxlogf(INFO, "hidctl: created hid device\n");
         }
         return status;
     }
@@ -92,20 +92,20 @@ HidDevice::HidDevice(zx_device_t* device, const hid_ioctl_config* config, zx::so
 }
 
 void HidDevice::DdkRelease() {
-    dprintf(TRACE, "hidctl: DdkRelease\n");
+    zxlogf(TRACE, "hidctl: DdkRelease\n");
     // Only the thread will call DdkRemove() when the loop exits. This detachs the thread before it
     // exits, so no need to join.
     delete this;
 }
 
 void HidDevice::DdkUnbind() {
-    dprintf(TRACE, "hidctl: DdkUnbind\n");
+    zxlogf(TRACE, "hidctl: DdkUnbind\n");
     Shutdown();
     // The thread will call DdkRemove when it exits the loop.
 }
 
 zx_status_t HidDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
-    dprintf(TRACE, "hidctl: query\n");
+    zxlogf(TRACE, "hidctl: query\n");
 
     info->dev_num = 0;
     info->dev_class = dev_class_;
@@ -114,7 +114,7 @@ zx_status_t HidDevice::HidBusQuery(uint32_t options, hid_info_t* info) {
 }
 
 zx_status_t HidDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
-    dprintf(TRACE, "hidctl: start\n");
+    zxlogf(TRACE, "hidctl: start\n");
 
     fbl::AutoLock lock(&lock_);
     if (proxy_.is_valid()) {
@@ -125,14 +125,14 @@ zx_status_t HidDevice::HidBusStart(ddk::HidBusIfcProxy proxy) {
 }
 
 void HidDevice::HidBusStop() {
-    dprintf(TRACE, "hidctl: stop\n");
+    zxlogf(TRACE, "hidctl: stop\n");
 
     fbl::AutoLock lock(&lock_);
     proxy_.clear();
 }
 
 zx_status_t HidDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-    dprintf(TRACE, "hidctl: get descriptor %u\n", desc_type);
+    zxlogf(TRACE, "hidctl: get descriptor %u\n", desc_type);
 
     if (data == nullptr || len == nullptr) {
         return ZX_ERR_INVALID_ARGS;
@@ -153,7 +153,7 @@ zx_status_t HidDevice::HidBusGetDescriptor(uint8_t desc_type, void** data, size_
 
 zx_status_t HidDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                             size_t* out_len) {
-    dprintf(TRACE, "hidctl: get report type=%u id=%u\n", rpt_type, rpt_id);
+    zxlogf(TRACE, "hidctl: get report type=%u id=%u\n", rpt_type, rpt_id);
 
     if (out_len == nullptr) {
         return ZX_ERR_INVALID_ARGS;
@@ -164,42 +164,42 @@ zx_status_t HidDevice::HidBusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
 }
 
 zx_status_t HidDevice::HidBusSetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len) {
-    dprintf(TRACE, "hidctl: set report type=%u id=%u\n", rpt_type, rpt_id);
+    zxlogf(TRACE, "hidctl: set report type=%u id=%u\n", rpt_type, rpt_id);
 
     // TODO: send set report message over socket
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t HidDevice::HidBusGetIdle(uint8_t rpt_id, uint8_t* duration) {
-    dprintf(TRACE, "hidctl: get idle\n");
+    zxlogf(TRACE, "hidctl: get idle\n");
 
     // TODO: send get idle message over socket
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t HidDevice::HidBusSetIdle(uint8_t rpt_id, uint8_t duration) {
-    dprintf(TRACE, "hidctl: set idle\n");
+    zxlogf(TRACE, "hidctl: set idle\n");
 
     // TODO: send set idle message over socket
     return ZX_OK;
 }
 
 zx_status_t HidDevice::HidBusGetProtocol(uint8_t* protocol) {
-    dprintf(TRACE, "hidctl: get protocol\n");
+    zxlogf(TRACE, "hidctl: get protocol\n");
 
     // TODO: send get protocol message over socket
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t HidDevice::HidBusSetProtocol(uint8_t protocol) {
-    dprintf(TRACE, "hidctl: set protocol\n");
+    zxlogf(TRACE, "hidctl: set protocol\n");
 
     // TODO: send set protocol message over socket
     return ZX_OK;
 }
 
 int HidDevice::Thread() {
-    dprintf(TRACE, "hidctl: starting main thread\n");
+    zxlogf(TRACE, "hidctl: starting main thread\n");
     zx_signals_t pending;
     fbl::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
 
@@ -208,7 +208,7 @@ int HidDevice::Thread() {
     while (true) {
         status = data_.wait_one(wait, ZX_TIME_INFINITE, &pending);
         if (status != ZX_OK) {
-            dprintf(ERROR, "hidctl: error waiting on data: %d\n", status);
+            zxlogf(ERROR, "hidctl: error waiting on data: %d\n", status);
             break;
         }
 
@@ -219,16 +219,16 @@ int HidDevice::Thread() {
             }
         }
         if (pending & ZX_SOCKET_PEER_CLOSED) {
-            dprintf(TRACE, "hidctl: socket closed (peer)\n");
+            zxlogf(TRACE, "hidctl: socket closed (peer)\n");
             break;
         }
         if (pending & HID_SHUTDOWN) {
-            dprintf(TRACE, "hidctl: socket closed (self)\n");
+            zxlogf(TRACE, "hidctl: socket closed (self)\n");
             break;
         }
     }
 
-    dprintf(INFO, "hidctl: device destroyed\n");
+    zxlogf(INFO, "hidctl: device destroyed\n");
     {
         fbl::AutoLock lock(&lock_);
         data_.reset();
@@ -261,13 +261,13 @@ zx_status_t HidDevice::Recv(uint8_t* buffer, uint32_t capacity) {
             break;
         }
         if (status != ZX_OK) {
-            dprintf(ERROR, "hidctl: error reading data: %d\n", status);
+            zxlogf(ERROR, "hidctl: error reading data: %d\n", status);
             return status;
         }
 
         fbl::AutoLock lock(&lock_);
         if (unlikely(driver_get_log_flags() & DDK_LOG_TRACE)) {
-            dprintf(TRACE, "hidctl: received %zu bytes\n", actual);
+            zxlogf(TRACE, "hidctl: received %zu bytes\n", actual);
             hexdump8_ex(buffer, actual, 0);
         }
         if (proxy_.is_valid()) {
@@ -283,7 +283,7 @@ extern "C" zx_status_t hidctl_bind(void* ctx, zx_device_t* device, void** cookie
     auto dev = fbl::unique_ptr<hidctl::HidCtl>(new hidctl::HidCtl(device));
     zx_status_t status = dev->DdkAdd("hidctl");
     if (status != ZX_OK) {
-        dprintf(ERROR, "%s: could not add device: %d\n", __func__, status);
+        zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
     } else {
         // devmgr owns the memory now
         dev.release();

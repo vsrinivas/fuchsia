@@ -41,27 +41,27 @@ static void dump_buffer(void* buf) {
     uint8_t* p = buf;
     for (int i = 0; i < RNDIS_BUFFER_SIZE; i += 4) {
         if (i != 0 && i % 24 == 0) {
-            dprintf(DEBUG1, "\n");
+            zxlogf(DEBUG1, "\n");
         }
-        dprintf(DEBUG1, "%08x ", p[i] | p[i + 1] << 8 | p[i + 2] << 16 | p[i + 3] << 24);
+        zxlogf(DEBUG1, "%08x ", p[i] | p[i + 1] << 8 | p[i + 2] << 16 | p[i + 3] << 24);
     }
-    dprintf(DEBUG1, "\n");
+    zxlogf(DEBUG1, "\n");
 }
 
 static bool command_succeeded(void* buf, uint32_t type, uint32_t length) {
     rndis_header_complete* header = buf;
     if (header->msg_type != type) {
-        dprintf(DEBUG1, "Bad type: Actual: %x, Expected: %x.\n",
+        zxlogf(DEBUG1, "Bad type: Actual: %x, Expected: %x.\n",
                 header->msg_type, type);
         return false;
     }
     if (header->msg_length != length) {
-        dprintf(DEBUG1, "Bad length: Actual: %d, Expected: %d.\n",
+        zxlogf(DEBUG1, "Bad length: Actual: %d, Expected: %d.\n",
                 header->msg_length, length);
         return false;
     }
     if (header->status != RNDIS_STATUS_SUCCESS) {
-        dprintf(DEBUG1, "Bad status: %x.\n", header->status);
+        zxlogf(DEBUG1, "Bad status: %x.\n", header->status);
         return false;
     }
     return true;
@@ -108,14 +108,14 @@ static int rndis_start_thread(void* arg) {
 
     zx_status_t status = rndis_command(eth, buf);
     if (status < 0) {
-        dprintf(DEBUG1, "rndishost bad status on initial message. %d\n", status);
+        zxlogf(DEBUG1, "rndishost bad status on initial message. %d\n", status);
         goto fail;
     }
 
     // TODO: Save important fields of init_cmplt.
     rndis_init_complete* init_cmplt = buf;
     if (!command_succeeded(buf, RNDIS_INITIALIZE_CMPLT, sizeof(*init_cmplt))) {
-        dprintf(DEBUG1, "rndishost initialization failed.\n");
+        zxlogf(DEBUG1, "rndishost initialization failed.\n");
         status = ZX_ERR_IO;
         goto fail;
     }
@@ -150,20 +150,20 @@ static int rndis_start_thread(void* arg) {
     query->info_buffer_offset = RNDIS_QUERY_BUFFER_OFFSET;
     status = rndis_command(eth, buf);
     if (status < 0) {
-        dprintf(ERROR, "Couldn't get device physical address\n");
+        zxlogf(ERROR, "Couldn't get device physical address\n");
         goto fail;
     }
 
     rndis_query_complete* mac_query_cmplt = buf;
     if (!command_succeeded(buf, RNDIS_QUERY_CMPLT, sizeof(*mac_query_cmplt) + 
                            mac_query_cmplt->info_buffer_length)) {
-        dprintf(DEBUG1, "rndishost MAC query failed.\n");
+        zxlogf(DEBUG1, "rndishost MAC query failed.\n");
         status = ZX_ERR_IO;
         goto fail;
     }
     uint8_t* mac_addr = buf + 8 + mac_query_cmplt->info_buffer_offset;
     memcpy(eth->mac_addr, mac_addr, sizeof(eth->mac_addr));
-    dprintf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+    zxlogf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
             eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
             eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
@@ -246,7 +246,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device, void** cookie)
     usb_desc_iter_release(&iter);
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
-        dprintf(ERROR, "rndishost couldn't find endpoints\n");
+        zxlogf(ERROR, "rndishost couldn't find endpoints\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -275,7 +275,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device, void** cookie)
     return ZX_OK;
 
 fail:
-    dprintf(ERROR, "rndishost_bind failed: %d\n", status);
+    zxlogf(ERROR, "rndishost_bind failed: %d\n", status);
     rndishost_free(eth);
     return status;
 }

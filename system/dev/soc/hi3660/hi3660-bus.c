@@ -32,7 +32,7 @@ static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, uint32_t index) {
             return gpios;
         }
     }
-    dprintf(ERROR, "find_gpio failed for index %u\n", index);
+    zxlogf(ERROR, "find_gpio failed for index %u\n", index);
     return NULL;
 }
 
@@ -184,23 +184,23 @@ static zx_status_t hi3660_bind(void* ctx, zx_device_t* parent, void** cookie) {
     pbus_set_interface(&bus->pbus, &intf);
 
     if ((status = hi3360_add_gpios(bus)) != ZX_OK) {
-        dprintf(ERROR, "hi3660_bind: hi3360_add_gpios failed!\n");;
+        zxlogf(ERROR, "hi3660_bind: hi3360_add_gpios failed!\n");;
     }
 
     if ((status = hi3360_add_devices(bus)) != ZX_OK) {
-        dprintf(ERROR, "hi3660_bind: hi3360_add_devices failed!\n");;
+        zxlogf(ERROR, "hi3660_bind: hi3360_add_devices failed!\n");;
     }
 
     // must be after pbus_set_interface
     if ((status = hi3360_usb_init(bus)) != ZX_OK) {
-        dprintf(ERROR, "hi3660_bind: hi3360_usb_init failed!\n");;
+        zxlogf(ERROR, "hi3660_bind: hi3360_usb_init failed!\n");;
     }
     hi3660_usb_set_mode(bus, USB_MODE_NONE);
 
     return ZX_OK;
 
 fail:
-    dprintf(ERROR, "hi3660_bind failed %d\n", status);
+    zxlogf(ERROR, "hi3660_bind failed %d\n", status);
     hi3660_release(bus);
     return status;
 }

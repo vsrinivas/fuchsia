@@ -127,28 +127,28 @@ static zx_device_t* publish_device(zx_device_t* parent,
         // ACPI names are always 4 characters in a uint32
         char acpi_name[5] = { 0 };
         memcpy(acpi_name, &info->Name, sizeof(acpi_name) - 1);
-        dprintf(SPEW, "acpi-bus: got device %s\n", acpi_name);
+        zxlogf(SPEW, "acpi-bus: got device %s\n", acpi_name);
         if (info->Valid & ACPI_VALID_HID) {
-            dprintf(SPEW, "     HID=%s\n", info->HardwareId.String);
+            zxlogf(SPEW, "     HID=%s\n", info->HardwareId.String);
         } else {
-            dprintf(SPEW, "     HID=invalid\n");
+            zxlogf(SPEW, "     HID=invalid\n");
         }
         if (info->Valid & ACPI_VALID_ADR) {
-            dprintf(SPEW, "     ADR=0x%" PRIx64 "\n", (uint64_t)info->Address);
+            zxlogf(SPEW, "     ADR=0x%" PRIx64 "\n", (uint64_t)info->Address);
         } else {
-            dprintf(SPEW, "     ADR=invalid\n");
+            zxlogf(SPEW, "     ADR=invalid\n");
         }
         if (info->Valid & ACPI_VALID_CID) {
-            dprintf(SPEW, "    CIDS=%d\n", info->CompatibleIdList.Count);
+            zxlogf(SPEW, "    CIDS=%d\n", info->CompatibleIdList.Count);
             for (uint i = 0; i < info->CompatibleIdList.Count; i++) {
-                dprintf(SPEW, "     [%u] %s\n", i, info->CompatibleIdList.Ids[i].String);
+                zxlogf(SPEW, "     [%u] %s\n", i, info->CompatibleIdList.Ids[i].String);
             }
         } else {
-            dprintf(SPEW, "     CID=invalid\n");
+            zxlogf(SPEW, "     CID=invalid\n");
         }
-        dprintf(SPEW, "    devprops:\n");
+        zxlogf(SPEW, "    devprops:\n");
         for (int i = 0; i < propcount; i++) {
-            dprintf(SPEW, "     [%d] id=0x%08x value=0x%08x\n", i, props[i].id, props[i].value);
+            zxlogf(SPEW, "     [%d] id=0x%08x value=0x%08x\n", i, props[i].id, props[i].value);
         }
     }
 
@@ -174,12 +174,12 @@ static zx_device_t* publish_device(zx_device_t* parent,
 
     zx_status_t status;
     if ((status = device_add(parent, &args, &dev->zxdev)) != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: error %d in device_add, parent=%s(%p)\n",
+        zxlogf(ERROR, "acpi-bus: error %d in device_add, parent=%s(%p)\n",
                 status, device_get_name(parent), parent);
         free(dev);
         return NULL;
     } else {
-        dprintf(ERROR, "acpi-bus: published device %s(%p), parent=%s(%p), handle=%p\n",
+        zxlogf(ERROR, "acpi-bus: published device %s(%p), parent=%s(%p), handle=%p\n",
                 name, dev, device_get_name(parent), parent, (void*)dev->ns_node);
         return dev->zxdev;
     }
@@ -199,11 +199,11 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     if (!memcmp(&info->Name, "I2C1", 4)) {
         ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", NULL, NULL);
         if (acpi_status != AE_OK) {
-            dprintf(ERROR, "acpi-bus: acpi error 0x%x in I2C1._PS0\n", acpi_status);
+            zxlogf(ERROR, "acpi-bus: acpi error 0x%x in I2C1._PS0\n", acpi_status);
         }
     }
 
-    dprintf(TRACE, "acpi-bus: handle %p nesting level %d\n", (void*)object, nesting_level);
+    zxlogf(TRACE, "acpi-bus: handle %p nesting level %d\n", (void*)object, nesting_level);
 
     publish_acpi_device_ctx_t* ctx = (publish_acpi_device_ctx_t*)context;
     zx_device_t* parent = ctx->parent;
@@ -260,26 +260,26 @@ static zx_status_t publish_acpi_devices(zx_device_t* parent) {
 static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* name,
                                    const char* _args, zx_handle_t rpc_channel) {
     // ACPI is the root driver for its devhost so run init in the bind thread.
-    dprintf(TRACE, "acpi-bus: bind to %s %p\n", device_get_name(parent), parent);
+    zxlogf(TRACE, "acpi-bus: bind to %s %p\n", device_get_name(parent), parent);
     root_resource_handle = get_root_resource();
 
     if (init() != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: failed to initialize ACPI\n");
+        zxlogf(ERROR, "acpi-bus: failed to initialize ACPI\n");
         return ZX_ERR_INTERNAL;
     }
 
-    dprintf(TRACE, "acpi-bus: initialized\n");
+    zxlogf(TRACE, "acpi-bus: initialized\n");
 
     zx_status_t status = install_powerbtn_handlers();
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: error %d in install_powerbtn_handlers\n", status);
+        zxlogf(ERROR, "acpi-bus: error %d in install_powerbtn_handlers\n", status);
         return status;
     }
 
     // Report current resources to kernel PCI driver
     status = pci_report_current_resources(get_root_resource());
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: WARNING: ACPI failed to report all current resources!\n");
+        zxlogf(ERROR, "acpi-bus: WARNING: ACPI failed to report all current resources!\n");
     }
 
     // Initialize kernel PCI driver
@@ -287,13 +287,13 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     uint32_t arg_size;
     status = get_pci_init_arg(&arg, &arg_size);
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: erorr %d in get_pci_init_arg\n", status);
+        zxlogf(ERROR, "acpi-bus: erorr %d in get_pci_init_arg\n", status);
         return status;
     }
 
     status = zx_pci_init(get_root_resource(), arg, arg_size);
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: error %d in zx_pci_init\n", status);
+        zxlogf(ERROR, "acpi-bus: error %d in zx_pci_init\n", status);
         return status;
     }
 
@@ -310,7 +310,7 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     zx_device_t* sys_root = NULL;
     status = device_add(parent, &args, &sys_root);
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: error %d in device_add(sys)\n", status);
+        zxlogf(ERROR, "acpi-bus: error %d in device_add(sys)\n", status);
         return status;
     }
 
@@ -325,7 +325,7 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     zx_device_t* acpi_root = NULL;
     status = device_add(sys_root, &args2, &acpi_root);
     if (status != ZX_OK) {
-        dprintf(ERROR, "acpi-bus: error %d in device_add(sys/acpi)\n", status);
+        zxlogf(ERROR, "acpi-bus: error %d in device_add(sys/acpi)\n", status);
         device_remove(sys_root);
         return status;
     }

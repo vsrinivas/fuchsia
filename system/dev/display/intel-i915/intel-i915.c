@@ -150,7 +150,7 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
     status = pci_map_resource(&pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &device->regs, &device->regs_size, &device->regs_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "i915: failed to map bar 0: %d\n", status);
+        zxlogf(ERROR, "i915: failed to map bar 0: %d\n", status);
         goto fail;
     }
 
@@ -160,7 +160,7 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
                               &device->framebuffer_size,
                               &device->framebuffer_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "i915: failed to map bar 2: %d\n", status);
+        zxlogf(ERROR, "i915: failed to map bar 2: %d\n", status);
         goto fail;
     }
 
@@ -200,7 +200,7 @@ static zx_status_t intel_i915_bind(void* ctx, zx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    dprintf(SPEW, "i915: reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",
+    zxlogf(SPEW, "i915: reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
     return ZX_OK;

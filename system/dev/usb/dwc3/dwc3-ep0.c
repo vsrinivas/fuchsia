@@ -62,12 +62,12 @@ static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
         // handle some special setup requests in this driver
         switch (setup->bRequest) {
         case USB_REQ_SET_ADDRESS:
-            dprintf(TRACE, "SET_ADDRESS %d\n", setup->wValue);
+            zxlogf(TRACE, "SET_ADDRESS %d\n", setup->wValue);
             dwc3_set_address(dwc, setup->wValue);
             *out_actual = 0;
             return ZX_OK;
         case USB_REQ_SET_CONFIGURATION:
-            dprintf(TRACE, "SET_CONFIGURATION %d\n", setup->wValue);
+            zxlogf(TRACE, "SET_CONFIGURATION %d\n", setup->wValue);
             dwc3_reset_configuration(dwc);
             dwc->configured = false;
             status = usb_dci_control(&dwc->dci_intf, setup, buffer, length, out_actual);
@@ -82,7 +82,7 @@ static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
         }
     } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE) &&
                setup->bRequest == USB_REQ_SET_INTERFACE) {
-        dprintf(TRACE, "SET_INTERFACE %d\n", setup->wValue);
+        zxlogf(TRACE, "SET_INTERFACE %d\n", setup->wValue);
         dwc3_reset_configuration(dwc);
         dwc->configured = false;
         status = usb_dci_control(&dwc->dci_intf, setup, buffer, length, out_actual);
@@ -145,7 +145,7 @@ void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
         }
         break;
     default:
-        dprintf(ERROR, "dwc3_ep0_xfer_not_ready unhandled state %u\n", dwc->ep0_state);
+        zxlogf(ERROR, "dwc3_ep0_xfer_not_ready unhandled state %u\n", dwc->ep0_state);
         break;
     }
 
@@ -162,7 +162,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
         io_buffer_cache_op(&dwc->ep0_buffer, ZX_VMO_OP_CACHE_INVALIDATE, 0, sizeof(*setup));
         memcpy(setup, io_buffer_virt(&dwc->ep0_buffer), sizeof(*setup));
 
-        dprintf(TRACE, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d\n",
+        zxlogf(TRACE, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d\n",
                 setup->bmRequestType, setup->bRequest, setup->wValue, setup->wIndex,
                 setup->wLength);
 
@@ -176,7 +176,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
             size_t actual;
             zx_status_t status = dwc3_handle_setup(dwc, setup, io_buffer_virt(&dwc->ep0_buffer),
                                                    dwc->ep0_buffer.size, &actual);
-            dprintf(TRACE, "dwc3_handle_setup returned %d actual %zu\n", status, actual);
+            zxlogf(TRACE, "dwc3_handle_setup returned %d actual %zu\n", status, actual);
             if (status != ZX_OK) {
                 dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
                 dwc3_queue_setup_locked(dwc);

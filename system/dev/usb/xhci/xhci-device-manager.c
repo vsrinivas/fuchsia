@@ -56,7 +56,7 @@ static uint32_t xhci_get_route_string(xhci_t* xhci, uint32_t hub_address, uint32
 
 static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t hub_address,
                                        uint32_t port, usb_speed_t speed) {
-    dprintf(TRACE, "xhci_address_device slot_id: %d port: %d hub_address: %d speed: %d\n",
+    zxlogf(TRACE, "xhci_address_device slot_id: %d port: %d hub_address: %d speed: %d\n",
             slot_id, port, hub_address, speed);
 
     int rh_index = xhci_get_root_hub_index(xhci, hub_address);
@@ -79,7 +79,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     zx_status_t status = io_buffer_init(&slot->buffer, xhci->context_size * XHCI_NUM_EPS,
                                         IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-        dprintf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
+        zxlogf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
         return status;
     }
     uint8_t* device_context = (uint8_t *)io_buffer_virt(&slot->buffer);
@@ -236,7 +236,7 @@ static int compute_interval(usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
 static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
     xhci_send_command(xhci, TRB_CMD_DISABLE_SLOT, 0, (slot_id << TRB_SLOT_ID_START));
 
-    dprintf(TRACE, "cleaning up slot %d\n", slot_id);
+    zxlogf(TRACE, "cleaning up slot %d\n", slot_id);
     xhci_slot_t* slot = &xhci->slots[slot_id];
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
         xhci_endpoint_t* ep = &slot->eps[i];
@@ -255,7 +255,7 @@ static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
 
 static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
                                                 usb_speed_t speed) {
-    dprintf(TRACE, "xhci_handle_enumerate_device\n");
+    zxlogf(TRACE, "xhci_handle_enumerate_device\n");
     zx_status_t result = ZX_OK;
     uint32_t slot_id = 0;
 
@@ -266,7 +266,7 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     if (cc == TRB_CC_SUCCESS) {
         slot_id = xhci_sync_command_slot_id(&command);
     } else {
-        dprintf(ERROR, "xhci_handle_enumerate_device: unable to get a slot\n");
+        zxlogf(ERROR, "xhci_handle_enumerate_device: unable to get a slot\n");
         return ZX_ERR_NO_RESOURCES;
     }
 
@@ -287,7 +287,7 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
         }
     }
     if (result != 8) {
-        dprintf(ERROR, "xhci_handle_enumerate_device: xhci_get_descriptor failed: %d\n", result);
+        zxlogf(ERROR, "xhci_handle_enumerate_device: xhci_get_descriptor failed: %d\n", result);
         goto disable_slot_exit;
     }
 
@@ -329,7 +329,7 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
                                (slot_id << TRB_SLOT_ID_START));
     mtx_unlock(&xhci->input_context_lock);
     if (result != ZX_OK) {
-        dprintf(ERROR, "xhci_handle_enumerate_device: TRB_CMD_EVAL_CONTEXT failed\n");
+        zxlogf(ERROR, "xhci_handle_enumerate_device: TRB_CMD_EVAL_CONTEXT failed\n");
         goto disable_slot_exit;
     }
 
@@ -338,7 +338,7 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
 
 disable_slot_exit:
     xhci_disable_slot(xhci, slot_id);
-    dprintf(ERROR, "xhci_handle_enumerate_device failed %d\n", result);
+    zxlogf(ERROR, "xhci_handle_enumerate_device failed %d\n", result);
     return result;
 }
 
@@ -369,7 +369,7 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
     if (cc != TRB_CC_SUCCESS && cc != TRB_CC_CONTEXT_STATE_ERROR) {
         // TRB_CC_CONTEXT_STATE_ERROR is normal here in the case of a disconnected device,
         // since by then the endpoint would already be in error state.
-        dprintf(ERROR, "xhci_stop_endpoint: TRB_CMD_STOP_ENDPOINT failed cc: %d\n", cc);
+        zxlogf(ERROR, "xhci_stop_endpoint: TRB_CMD_STOP_ENDPOINT failed cc: %d\n", cc);
         return ZX_ERR_INTERNAL;
     }
 
@@ -390,7 +390,7 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
 }
 
 static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
-    dprintf(TRACE, "xhci_handle_disconnect_device\n");
+    zxlogf(TRACE, "xhci_handle_disconnect_device\n");
     xhci_slot_t* slot = NULL;
     uint32_t slot_id;
 
@@ -410,7 +410,7 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
         }
     }
     if (!slot) {
-        dprintf(ERROR, "slot not found in xhci_handle_disconnect_device\n");
+        zxlogf(ERROR, "slot not found in xhci_handle_disconnect_device\n");
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -420,7 +420,7 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
             zx_status_t status = xhci_stop_endpoint(xhci, slot_id, i, EP_STATE_DEAD,
                                                     ZX_ERR_IO_NOT_PRESENT);
             if (status != ZX_OK) {
-                dprintf(ERROR, "xhci_handle_disconnect_device: xhci_stop_endpoint failed: %d\n",
+                zxlogf(ERROR, "xhci_handle_disconnect_device: xhci_stop_endpoint failed: %d\n",
                         status);
             }
             drop_flags |= XHCI_ICC_EP_FLAG(i);
@@ -444,7 +444,7 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
                                            (slot_id << TRB_SLOT_ID_START));
     mtx_unlock(&xhci->input_context_lock);
     if (status != ZX_OK) {
-        dprintf(ERROR, "xhci_handle_disconnect_device: TRB_CMD_CONFIGURE_EP failed\n");
+        zxlogf(ERROR, "xhci_handle_disconnect_device: TRB_CMD_CONFIGURE_EP failed\n");
     }
 
     xhci_disable_slot(xhci, slot_id);
@@ -456,7 +456,7 @@ static int xhci_device_thread(void* arg) {
     xhci_t* xhci = (xhci_t*)arg;
 
     while (1) {
-        dprintf(TRACE, "xhci_device_thread top of loop\n");
+        zxlogf(TRACE, "xhci_device_thread top of loop\n");
         // wait for a device to enumerate
         completion_wait(&xhci->command_queue_completion, ZX_TIME_INFINITE);
 
@@ -470,7 +470,7 @@ static int xhci_device_thread(void* arg) {
         mtx_unlock(&xhci->command_queue_mutex);
 
         if (!command) {
-            dprintf(ERROR, "xhci_device_thread: command_queue_completion was signaled, "
+            zxlogf(ERROR, "xhci_device_thread: command_queue_completion was signaled, "
                     "but no command was found");
             break;
         }
@@ -527,14 +527,14 @@ zx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t p
 }
 
 zx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
-    dprintf(TRACE, "xhci_device_disconnected %d %d\n", hub_address, port);
+    zxlogf(TRACE, "xhci_device_disconnected %d %d\n", hub_address, port);
     mtx_lock(&xhci->command_queue_mutex);
     // check pending device list first
     xhci_device_command_t* command;
     list_for_every_entry (&xhci->command_queue, command, xhci_device_command_t, node) {
         if (command->command == ENUMERATE_DEVICE && command->hub_address == hub_address &&
             command->port == port) {
-            dprintf(TRACE, "found on pending list\n");
+            zxlogf(TRACE, "found on pending list\n");
             list_delete(&command->node);
             mtx_unlock(&xhci->command_queue_mutex);
             return ZX_OK;
@@ -679,7 +679,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 
 zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
                                usb_hub_descriptor_t* descriptor) {
-    dprintf(TRACE, "xhci_configure_hub slot_id: %d speed: %d\n", slot_id, speed);
+    zxlogf(TRACE, "xhci_configure_hub slot_id: %d speed: %d\n", slot_id, speed);
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs
         return ZX_OK;
@@ -723,7 +723,7 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
     mtx_unlock(&xhci->input_context_lock);
 
     if (status != ZX_OK) {
-        dprintf(ERROR, "xhci_configure_hub: TRB_CMD_EVAL_CONTEXT failed\n");
+        zxlogf(ERROR, "xhci_configure_hub: TRB_CMD_EVAL_CONTEXT failed\n");
         return status;
     }
 
@@ -735,12 +735,12 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
             slot = &xhci->slots[slot->hub_address];
         }
 
-        dprintf(TRACE, "USB_HUB_SET_DEPTH %d\n", depth);
+        zxlogf(TRACE, "USB_HUB_SET_DEPTH %d\n", depth);
         zx_status_t result = xhci_control_request(xhci, slot_id,
                                       USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
                                       USB_HUB_SET_DEPTH, depth, 0, NULL, 0);
         if (result < 0) {
-            dprintf(ERROR, "xhci_configure_hub: USB_HUB_SET_DEPTH failed\n");
+            zxlogf(ERROR, "xhci_configure_hub: USB_HUB_SET_DEPTH failed\n");
         }
     }
 

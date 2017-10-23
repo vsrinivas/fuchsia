@@ -111,7 +111,7 @@ zx_status_t hi3360_add_gpios(hi3660_bus_t* bus) {
         status = io_buffer_init_physical(&gpios->buffer, block->base, block->length,
                                          resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
         if (status != ZX_OK) {
-            dprintf(ERROR, "hi3360_add_gpios: io_buffer_init_physical failed %d\n", status);
+            zxlogf(ERROR, "hi3360_add_gpios: io_buffer_init_physical failed %d\n", status);
             free(gpios);
             return status;
         }

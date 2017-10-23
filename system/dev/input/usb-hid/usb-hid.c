@@ -48,10 +48,10 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
     void* buffer;
     zx_status_t status = usb_request_mmap(req, &buffer);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb-hid: usb_request_mmap failed: %s\n", zx_status_get_string(status));
+        zxlogf(ERROR, "usb-hid: usb_request_mmap failed: %s\n", zx_status_get_string(status));
         return;
     }
-    dprintf(SPEW, "usb-hid: callback request status %d\n", req->response.status);
+    zxlogf(SPEW, "usb-hid: callback request status %d\n", req->response.status);
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         hexdump(buffer, req->response.actual);
     }
@@ -69,7 +69,7 @@ static void usb_interrupt_callback(usb_request_t* req, void* cookie) {
         mtx_unlock(&hid->lock);
         break;
     default:
-        dprintf(ERROR, "usb-hid: unknown interrupt status %d; not requeuing req\n",
+        zxlogf(ERROR, "usb-hid: unknown interrupt status %d; not requeuing req\n",
                 req->response.status);
         requeue = false;
         break;
@@ -141,7 +141,7 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type,
                                      USB_REQ_GET_DESCRIPTOR, desc_type << 8, hid->interface,
                                      desc_buf, desc_len, ZX_TIME_INFINITE, len);
     if (status < 0) {
-        dprintf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
+        zxlogf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
         free(desc_buf);
         return status;
     } else {
@@ -186,7 +186,7 @@ static zx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration)
     if (status == ZX_ERR_IO_REFUSED) {
         // The SET_IDLE command is optional, so this may stall.
         // If that occurs, reset the endpoint and ignore the error
-        dprintf(TRACE, "usb-hid: stall while setting idle. reseting endpoint.\n");
+        zxlogf(TRACE, "usb-hid: stall while setting idle. reseting endpoint.\n");
         status = usb_reset_endpoint(&hid->usb, 0);
     }
     return status;

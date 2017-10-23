@@ -21,7 +21,7 @@ zx_status_t a113_audio_init(a113_bus_t* bus) {
     // Various hardware initialization and configuration will go here
 
     if ((status = pbus_device_add(&bus->pbus, &gauss_audio_dev, 0)) != ZX_OK) {
-        dprintf(ERROR, "a113_audio_init could not add gauss_audio_dev: %d\n", status);
+        zxlogf(ERROR, "a113_audio_init could not add gauss_audio_dev: %d\n", status);
     }
 
     return status;

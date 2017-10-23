@@ -32,10 +32,10 @@
 #define PDEV_IRQ_INDEX   0
 
 zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
-    dprintf(TRACE, "xhci_add_new_device\n");
+    zxlogf(TRACE, "xhci_add_new_device\n");
 
     if (!xhci->bus.ops) {
-        dprintf(ERROR, "no bus device in xhci_add_device\n");
+        zxlogf(ERROR, "no bus device in xhci_add_device\n");
         return ZX_ERR_INTERNAL;
     }
 
@@ -43,10 +43,10 @@ zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
-    dprintf(TRACE, "xhci_remove_device %d\n", slot_id);
+    zxlogf(TRACE, "xhci_remove_device %d\n", slot_id);
 
     if (!xhci->bus.ops) {
-        dprintf(ERROR, "no bus device in xhci_remove_device\n");
+        zxlogf(ERROR, "no bus device in xhci_remove_device\n");
         return;
     }
 
@@ -159,7 +159,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {
 }
 
 static void xhci_unbind(void* ctx) {
-    dprintf(INFO, "xhci_unbind\n");
+    zxlogf(INFO, "xhci_unbind\n");
     xhci_t* xhci = ctx;
 
     // stop the controller and our device thread
@@ -176,7 +176,7 @@ static void xhci_unbind(void* ctx) {
 }
 
 static void xhci_release(void* ctx) {
-    dprintf(INFO, "xhci_release\n");
+    zxlogf(INFO, "xhci_release\n");
     xhci_t* xhci = ctx;
     if (xhci->mmio) {
         zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);
@@ -211,21 +211,21 @@ static int completer_thread(void *arg) {
         zx_status_t wait_res;
         wait_res = zx_interrupt_wait(irq_handle);
         if (wait_res != ZX_OK) {
-            dprintf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
             zx_interrupt_complete(irq_handle);
             break;
         }
         zx_interrupt_complete(irq_handle);
         xhci_handle_interrupt(completer->xhci, completer->interrupter);
     }
-    dprintf(TRACE, "xhci completer %u thread done\n", completer->interrupter);
+    zxlogf(TRACE, "xhci completer %u thread done\n", completer->interrupter);
     free(completer);
     return 0;
 }
 
 static int xhci_start_thread(void* arg) {
     xhci_t* xhci = (xhci_t*)arg;
-    dprintf(TRACE, "xhci_start_thread start\n");
+    zxlogf(TRACE, "xhci_start_thread start\n");
 
     zx_status_t status;
     completer_t* completers[xhci->num_interrupts];
@@ -260,7 +260,7 @@ static int xhci_start_thread(void* arg) {
                               "completer_thread");
     }
 
-    dprintf(TRACE, "xhci_start_thread done\n");
+    zxlogf(TRACE, "xhci_start_thread done\n");
     return 0;
 
 error_return:
@@ -314,7 +314,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
     status = pci_map_resource(pci, PCI_RESOURCE_BAR_0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &xhci->mmio, &xhci->mmio_size, &xhci->mmio_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_xhci_bind could not find bar\n");
+        zxlogf(ERROR, "usb_xhci_bind could not find bar\n");
         status = ZX_ERR_INTERNAL;
          goto error_return;
     }
@@ -322,7 +322,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
     uint32_t irq_cnt = 0;
     status = pci_query_irq_mode_caps(pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
     if (status != ZX_OK) {
-        dprintf(ERROR, "pci_query_irq_mode_caps failed %d\n", status);
+        zxlogf(ERROR, "pci_query_irq_mode_caps failed %d\n", status);
         goto error_return;
     }
 
@@ -333,7 +333,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
         zx_status_t status_legacy = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
 
         if (status_legacy < 0) {
-            dprintf(ERROR, "usb_xhci_bind Failed to set IRQ mode to either MSI "
+            zxlogf(ERROR, "usb_xhci_bind Failed to set IRQ mode to either MSI "
                    "(err = %d) or Legacy (err = %d)\n",
                    status, status_legacy);
             goto error_return;
@@ -347,7 +347,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
         // register for interrupts
         status = pci_map_interrupt(pci, i, &xhci->irq_handles[i]);
         if (status != ZX_OK) {
-            dprintf(ERROR, "usb_xhci_bind map_interrupt failed %d\n", status);
+            zxlogf(ERROR, "usb_xhci_bind map_interrupt failed %d\n", status);
             goto error_return;
         }
         num_irq_handles_initialized++;
@@ -396,13 +396,13 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
     status = pdev_map_mmio(pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                            &xhci->mmio, &xhci->mmio_size, &xhci->mmio_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_xhci_bind_pdev: pdev_map_mmio failed\n");
+        zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_map_mmio failed\n");
         goto error_return;
     }
 
     status = pdev_map_interrupt(pdev, PDEV_IRQ_INDEX, &irq_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "usb_xhci_bind_pdev: pdev_map_interrupt failed\n");
+        zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_map_interrupt failed\n");
         goto error_return;
     }
 

@@ -43,7 +43,7 @@ static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id
 static void bus_remove_device(void* ctx, uint32_t device_id) {
     usb_bus_t* bus = ctx;
     if (device_id >= bus->max_device_count) {
-        dprintf(ERROR, "device_id out of range in usb_bus_remove_device\n");
+        zxlogf(ERROR, "device_id out of range in usb_bus_remove_device\n");
         return;
     }
     usb_device_t* device = bus->devices[device_id];
@@ -93,7 +93,7 @@ static usb_bus_protocol_ops_t _bus_protocol = {
 };
 
 static void usb_bus_unbind(void* ctx) {
-    dprintf(INFO, "usb_bus_unbind\n");
+    zxlogf(INFO, "usb_bus_unbind\n");
     usb_bus_t* bus = ctx;
     usb_hci_set_bus_interface(&bus->hci, NULL);
 
@@ -108,7 +108,7 @@ static void usb_bus_unbind(void* ctx) {
 }
 
 static void usb_bus_release(void* ctx) {
-    dprintf(INFO, "usb_bus_release\n");
+    zxlogf(INFO, "usb_bus_release\n");
     usb_bus_t* bus = ctx;
     free(bus->devices);
     free(bus);
@@ -123,7 +123,7 @@ static zx_protocol_device_t usb_bus_device_proto = {
 static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device, void** cookie) {
     usb_bus_t* bus = calloc(1, sizeof(usb_bus_t));
     if (!bus) {
-        dprintf(ERROR, "Not enough memory for usb_bus_t.\n");
+        zxlogf(ERROR, "Not enough memory for usb_bus_t.\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -136,7 +136,7 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device, void** cookie) {
     bus->max_device_count = usb_hci_get_max_device_count(&bus->hci);
     bus->devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
     if (!bus->devices) {
-        dprintf(ERROR, "Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
+        zxlogf(ERROR, "Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
                bus->max_device_count);
         free(bus);
         return ZX_ERR_NO_MEMORY;

@@ -109,7 +109,7 @@ static void ahci_port_disable(ahci_port_t* port) {
     ahci_write(&port->regs->cmd, cmd);
     zx_status_t status = ahci_wait_for_clear(&port->regs->cmd, AHCI_PORT_CMD_CR, 500 * 1000 * 1000);
     if (status) {
-        dprintf(ERROR, "ahci.%d: port disable timed out\n", port->nr);
+        zxlogf(ERROR, "ahci.%d: port disable timed out\n", port->nr);
     }
 }
 
@@ -117,12 +117,12 @@ static void ahci_port_enable(ahci_port_t* port) {
     uint32_t cmd = ahci_read(&port->regs->cmd);
     if (cmd & AHCI_PORT_CMD_ST) return;
     if (!(cmd & AHCI_PORT_CMD_FRE)) {
-        dprintf(ERROR, "ahci.%d: cannot enable port without FRE enabled\n", port->nr);
+        zxlogf(ERROR, "ahci.%d: cannot enable port without FRE enabled\n", port->nr);
         return;
     }
     zx_status_t status = ahci_wait_for_clear(&port->regs->cmd, AHCI_PORT_CMD_CR, 500 * 1000 * 1000);
     if (status) {
-        dprintf(ERROR, "ahci.%d: dma engine still running when enabling port\n", port->nr);
+        zxlogf(ERROR, "ahci.%d: dma engine still running when enabling port\n", port->nr);
     }
     cmd |= AHCI_PORT_CMD_ST;
     ahci_write(&port->regs->cmd, cmd);
@@ -139,7 +139,7 @@ static void ahci_port_reset(ahci_port_t* port) {
     zx_status_t status = ahci_wait_for_clear(&port->regs->tfd, AHCI_PORT_TFD_BUSY | AHCI_PORT_TFD_DATA_REQUEST, 1000 * 1000 * 1000);
     if (status < 0) {
         // if busy is not cleared, do a full comreset
-        dprintf(SPEW, "ahci.%d: timed out waiting for port idle, resetting\n", port->nr);
+        zxlogf(SPEW, "ahci.%d: timed out waiting for port idle, resetting\n", port->nr);
         // v1.3.1, 10.4.2 port reset
         uint32_t sctl = AHCI_PORT_SCTL_IPM_ACTIVE | AHCI_PORT_SCTL_IPM_PARTIAL | AHCI_PORT_SCTL_DET_INIT;
         ahci_write(&port->regs->sctl, sctl);
@@ -155,7 +155,7 @@ static void ahci_port_reset(ahci_port_t* port) {
     // wait for device detect
     status = ahci_wait_for_set(&port->regs->ssts, AHCI_PORT_SSTS_DET_PRESENT, 1llu * 1000 * 1000 * 1000);
     if ((driver_get_log_flags() & DDK_LOG_SPEW) && (status < 0)) {
-        dprintf(SPEW, "ahci.%d: no device detected\n", port->nr);
+        zxlogf(SPEW, "ahci.%d: no device detected\n", port->nr);
     }
 
     // clear error
@@ -273,13 +273,13 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         if (length == 0) {
             break;
         } else if (length > AHCI_PRD_MAX_SIZE) {
-            dprintf(ERROR, "ahci.%d: chunk size > %zu is unsupported\n", port->nr, length);
+            zxlogf(ERROR, "ahci.%d: chunk size > %zu is unsupported\n", port->nr, length);
             status = ZX_ERR_NOT_SUPPORTED;
             iotxn_complete(txn, status, 0);
             completion_signal(&dev->worker_completion);
             return status;
         } else if (cl->prdtl == AHCI_MAX_PRDS) {
-            dprintf(ERROR, "ahci.%d: txn with more than %d chunks is unsupported\n",
+            zxlogf(ERROR, "ahci.%d: txn with more than %d chunks is unsupported\n",
                     port->nr, cl->prdtl);
             status = ZX_ERR_NOT_SUPPORTED;
             iotxn_complete(txn, status, 0);
@@ -297,13 +297,13 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     port->running |= (1 << slot);
     port->commands[slot] = txn;
 
-    dprintf(SPEW, "ahci.%d: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64
+    zxlogf(SPEW, "ahci.%d: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64
                   " slot %d prdtl %u\n",
             port->nr, txn, cl->w ? 'w' : 'r', txn->offset, txn->length, slot, cl->prdtl);
     prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t));
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         for (uint i = 0; i < cl->prdtl; i++) {
-            dprintf(SPEW, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x\n",
+            zxlogf(SPEW, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x\n",
                     i, prd->dbau, prd->dba, prd->dbc);
             prd += 1;
         }
@@ -325,7 +325,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 static zx_status_t ahci_port_initialize(ahci_port_t* port) {
     uint32_t cmd = ahci_read(&port->regs->cmd);
     if (cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
-        dprintf(ERROR, "ahci.%d: port busy\n", port->nr);
+        zxlogf(ERROR, "ahci.%d: port busy\n", port->nr);
         return ZX_ERR_UNAVAILABLE;
     }
 
@@ -334,7 +334,7 @@ static zx_status_t ahci_port_initialize(ahci_port_t* port) {
                     + (sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS) * AHCI_MAX_COMMANDS;
     zx_status_t status = io_buffer_init(&port->buffer, mem_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status < 0) {
-        dprintf(ERROR, "ahci.%d: error %d allocating dma memory\n", port->nr, status);
+        zxlogf(ERROR, "ahci.%d: error %d allocating dma memory\n", port->nr, status);
         return status;
     }
     zx_paddr_t mem_phys = io_buffer_phys(&port->buffer);
@@ -413,7 +413,7 @@ static void ahci_hba_reset(ahci_device_t* dev) {
     // reset should complete within 1 second
     zx_status_t status = ahci_wait_for_clear(&dev->regs->ghc, AHCI_GHC_HR, 1000 * 1000 * 1000);
     if (status) {
-        dprintf(ERROR, "ahci: hba reset timed out\n");
+        zxlogf(ERROR, "ahci: hba reset timed out\n");
     }
 }
 
@@ -425,7 +425,7 @@ static void ahci_iotxn_queue(void* ctx, iotxn_t* txn) {
     assert(pdata->port < AHCI_MAX_PORTS);
     assert(port->flags & (AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT));
 
-    dprintf(SPEW, "ahci.%d: queue_txn txn %p offset 0x%" PRIx64 " length 0x%" PRIx64 "\n",
+    zxlogf(SPEW, "ahci.%d: queue_txn txn %p offset 0x%" PRIx64 " length 0x%" PRIx64 "\n",
             port->nr, txn, txn->offset, txn->length);
 
     // complete empty txns immediately
@@ -469,11 +469,11 @@ static int ahci_worker_thread(void* arg) {
                 unsigned slot = 32 - __builtin_clz(port->completed) - 1;
                 txn = port->commands[slot];
                 if (txn == NULL) {
-                    dprintf(ERROR, "ahci.%d: illegal state, completing slot %d but txn == NULL\n",
+                    zxlogf(ERROR, "ahci.%d: illegal state, completing slot %d but txn == NULL\n",
                             port->nr, slot);
                 } else {
                     mtx_unlock(&port->lock);
-                    dprintf(SPEW, "ahci.%d: complete txn %p\n", port->nr, txn);
+                    zxlogf(SPEW, "ahci.%d: complete txn %p\n", port->nr, txn);
                     iotxn_complete(txn, ZX_OK, txn->length);
                     mtx_lock(&port->lock);
                 }
@@ -547,12 +547,12 @@ static int ahci_watchdog_thread(void* arg) {
                 unsigned slot = 32 - __builtin_clz(pending) - 1;
                 iotxn_t* txn = port->commands[slot];
                 if (!txn) {
-                    dprintf(ERROR, "ahci: command %u pending but txn is NULL\n", slot);
+                    zxlogf(ERROR, "ahci: command %u pending but txn is NULL\n", slot);
                 } else {
                     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
                     if (pdata->timeout < now) {
                         // time out
-                        dprintf(ERROR, "ahci: txn time out on port %d txn %p\n", port->nr, txn);
+                        zxlogf(ERROR, "ahci: txn time out on port %d txn %p\n", port->nr, txn);
                         port->running &= ~(1 << slot);
                         port->commands[slot] = NULL;
                         mtx_unlock(&port->lock);
@@ -585,7 +585,7 @@ static void ahci_port_irq(ahci_device_t* dev, int nr) {
         ahci_write(&port->regs->serr, serr & ~0x1);
     }
     if (is & AHCI_PORT_INT_ERROR) { // error
-        dprintf(ERROR, "ahci.%d: error is=0x%08x\n", nr, is);
+        zxlogf(ERROR, "ahci.%d: error is=0x%08x\n", nr, is);
         ahci_port_complete_txn(dev, port, ZX_ERR_INTERNAL);
     } else if (is) {
         ahci_port_complete_txn(dev, port, ZX_OK);
@@ -598,7 +598,7 @@ static int ahci_irq_thread(void* arg) {
     for (;;) {
         status = zx_interrupt_wait(dev->irq_handle);
         if (status) {
-            dprintf(ERROR, "ahci: error %d waiting for interrupt\n", status);
+            zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
             continue;
         }
         // mask hba interrupts while interrupts are being handled
@@ -707,7 +707,7 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // map resources and initalize the device
     ahci_device_t* device = calloc(1, sizeof(ahci_device_t));
     if (!device) {
-        dprintf(ERROR, "ahci: out of memory\n");
+        zxlogf(ERROR, "ahci: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -724,7 +724,7 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
                                           &device->regs_size,
                                           &device->regs_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ahci: error %d mapping register window\n", status);
+        zxlogf(ERROR, "ahci: error %d mapping register window\n", status);
         goto fail;
     }
 
@@ -737,13 +737,13 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
                               (void**)&config,
                               &config_size, &config_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ahci: error %d getting pci config\n", status);
+        zxlogf(ERROR, "ahci: error %d getting pci config\n", status);
         goto fail;
     }
 
     if (config->sub_class != 0x06 && config->base_class == 0x01) { // SATA
         status = ZX_ERR_NOT_SUPPORTED;
-        dprintf(ERROR, "ahci: device class 0x%x unsupported!\n", config->sub_class);
+        zxlogf(ERROR, "ahci: device class 0x%x unsupported!\n", config->sub_class);
         zx_handle_close(config_handle);
         goto fail;
     }
@@ -753,28 +753,28 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // ahci controller is bus master
     status = pci_enable_bus_master(&device->pci, true);
     if (status < 0) {
-        dprintf(ERROR, "ahci: error %d in enable bus master\n", status);
+        zxlogf(ERROR, "ahci: error %d in enable bus master\n", status);
         goto fail;
     }
 
     // set msi irq mode
     status = pci_set_irq_mode(&device->pci, ZX_PCIE_IRQ_MODE_MSI, 1);
     if (status < 0) {
-        dprintf(ERROR, "ahci: error %d setting irq mode\n", status);
+        zxlogf(ERROR, "ahci: error %d setting irq mode\n", status);
         goto fail;
     }
 
     // get irq handle
     status = pci_map_interrupt(&device->pci, 0, &device->irq_handle);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ahci: error %d getting irq handle\n", status);
+        zxlogf(ERROR, "ahci: error %d getting irq handle\n", status);
         goto fail;
     }
 
     // start irq thread
     int ret = thrd_create_with_name(&device->irq_thread, ahci_irq_thread, device, "ahci-irq");
     if (ret != thrd_success) {
-        dprintf(ERROR, "ahci: error %d in irq thread create\n", ret);
+        zxlogf(ERROR, "ahci: error %d in irq thread create\n", ret);
         goto fail;
     }
 
@@ -786,7 +786,7 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
     device->worker_completion = COMPLETION_INIT;
     ret = thrd_create_with_name(&device->worker_thread, ahci_worker_thread, device, "ahci-worker");
     if (ret != thrd_success) {
-        dprintf(ERROR, "ahci: error %d in worker thread create\n", ret);
+        zxlogf(ERROR, "ahci: error %d in worker thread create\n", ret);
         goto fail;
     }
 
@@ -801,7 +801,7 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
 
     status = device_add(dev, &args, &device->zxdev);
     if (status != ZX_OK) {
-        dprintf(ERROR, "ahci: error %d in device_add\n", status);
+        zxlogf(ERROR, "ahci: error %d in device_add\n", status);
         goto fail;
     }
 
@@ -809,7 +809,7 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev, void** cookie) {
     thrd_t t;
     ret = thrd_create_with_name(&t, ahci_init_thread, device, "ahci-init");
     if (ret != thrd_success) {
-        dprintf(ERROR, "ahci: error %d in init thread create\n", status);
+        zxlogf(ERROR, "ahci: error %d in init thread create\n", status);
         goto fail;
     }
 

@@ -125,11 +125,11 @@ static void sdmmc_release(void* ctx) {
 }
 
 static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
-    dprintf(SPEW, "sdmmc: iotxn_queue txn %p offset 0x%" PRIx64
+    zxlogf(SPEW, "sdmmc: iotxn_queue txn %p offset 0x%" PRIx64
                    " length 0x%" PRIx64 "\n", txn, txn->offset, txn->length);
 
     if (txn->offset % SDHC_BLOCK_SIZE) {
-        dprintf(ERROR, "sdmmc: iotxn offset not aligned to block boundary, "
+        zxlogf(ERROR, "sdmmc: iotxn offset not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->offset, SDHC_BLOCK_SIZE);
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
@@ -137,7 +137,7 @@ static void sdmmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     }
 
     if (txn->length % SDHC_BLOCK_SIZE) {
-        dprintf(ERROR, "sdmmc: iotxn length not aligned to block boundary, "
+        zxlogf(ERROR, "sdmmc: iotxn length not aligned to block boundary, "
                 "offset =%" PRIu64 ", block size = %d\n",
                 txn->length, SDHC_BLOCK_SIZE);
         iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
@@ -177,7 +177,7 @@ static void sdmmc_block_get_info(void* ctx, block_info_t* info) {
 static void sdmmc_block_complete(iotxn_t* txn, void* cookie) {
     sdmmc_t* dev;
     memcpy(&dev, txn->extra, sizeof(sdmmc_t*));
-    dprintf(SPEW, "sdmmc: block_complete cookie %p status %d\n",
+    zxlogf(SPEW, "sdmmc: block_complete cookie %p status %d\n",
             cookie, txn->status);
     dev->callbacks->complete(cookie, txn->status);
     iotxn_release(txn);
@@ -187,19 +187,19 @@ static void block_do_txn(sdmmc_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_
     block_info_t info;
     sdmmc_get_info(&info, dev);
 
-    dprintf(SPEW, "sdmmc: block_do_txn cookie %p opcode %d length 0x%" PRIx64
+    zxlogf(SPEW, "sdmmc: block_do_txn cookie %p opcode %d length 0x%" PRIx64
             " vmo_offset 0x%" PRIx64 " dev_offset 0x%" PRIx64 "\n",
             cookie, opcode, length, vmo_offset, dev_offset);
 
     if ((dev_offset % info.block_size) || (length % info.block_size)) {
-        dprintf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
+        zxlogf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
                 cookie, ZX_ERR_INVALID_ARGS);
         dev->callbacks->complete(cookie, ZX_ERR_INVALID_ARGS);
         return;
     }
     uint64_t size = info.block_size * info.block_count;
     if ((dev_offset >= size) || (length >= (size - dev_offset))) {
-        dprintf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
+        zxlogf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
                 cookie, ZX_ERR_OUT_OF_RANGE);
         dev->callbacks->complete(cookie, ZX_ERR_OUT_OF_RANGE);
         return;
@@ -208,7 +208,7 @@ static void block_do_txn(sdmmc_t* dev, uint32_t opcode, zx_handle_t vmo, uint64_
     zx_status_t status;
     iotxn_t* txn;
     if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != ZX_OK) {
-        dprintf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
+        zxlogf(SPEW, "sdmmc: block_do_txn complete cookie %p status %d\n",
                 cookie, status);
         dev->callbacks->complete(cookie, status);
         return;
@@ -239,7 +239,7 @@ static block_protocol_ops_t sdmmc_block_ops = {
 };
 
 static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
-    dprintf(SPEW, "sdmmc: do_txn txn %p offset 0x%" PRIx64
+    zxlogf(SPEW, "sdmmc: do_txn txn %p offset 0x%" PRIx64
                    " length 0x%" PRIx64 "\n", txn, txn->offset, txn->length);
 
     zx_device_t* sdmmc_zxdev = sdmmc->host_zxdev;
@@ -263,7 +263,7 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
             break;
         default:
             // Invalid opcode?
-            dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d\n", txn, ZX_ERR_INVALID_ARGS);
+            zxlogf(SPEW, "sdmmc: iotxn_complete txn %p status %d\n", txn, ZX_ERR_INVALID_ARGS);
             iotxn_complete(txn, ZX_ERR_INVALID_ARGS, 0);
             return;
     }
@@ -271,7 +271,7 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
     iotxn_t* clone = NULL;
     zx_status_t st = iotxn_clone(txn, &clone);
     if (st != ZX_OK) {
-        dprintf(ERROR, "sdmmc: err %d cloning iotxn\n", st);
+        zxlogf(ERROR, "sdmmc: err %d cloning iotxn\n", st);
         iotxn_complete(txn, st, 0);
         return;
     }
@@ -288,7 +288,7 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
     for (; attempt <= max_attempts; attempt++) {
         st = sdmmc_do_command(sdmmc_zxdev, SDMMC_SEND_STATUS, sdmmc->rca << 16, clone);
         if (st != ZX_OK) {
-            dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d (SDMMC_SEND_STATUS)\n",
+            zxlogf(SPEW, "sdmmc: iotxn_complete txn %p status %d (SDMMC_SEND_STATUS)\n",
                     txn, st);
             iotxn_complete(txn, st, 0);
             goto out;
@@ -308,7 +308,7 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
 
     if (attempt == max_attempts) {
         // Too many retries, fail.
-        dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d\n", txn, ZX_ERR_BAD_STATE);
+        zxlogf(SPEW, "sdmmc: iotxn_complete txn %p status %d\n", txn, ZX_ERR_BAD_STATE);
         iotxn_complete(txn, ZX_ERR_BAD_STATE, 0);
         goto out;
     }
@@ -321,12 +321,12 @@ static void sdmmc_do_txn(sdmmc_t* sdmmc, iotxn_t* txn) {
 
     st = sdmmc_do_command(sdmmc_zxdev, cmd, blkid, clone);
     if (st != ZX_OK) {
-        dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d (cmd 0x%x)\n", txn, st, cmd);
+        zxlogf(SPEW, "sdmmc: iotxn_complete txn %p status %d (cmd 0x%x)\n", txn, st, cmd);
         iotxn_complete(txn, st, 0);
         goto out;
     }
 
-    dprintf(SPEW, "sdmmc: iotxn_complete txn %p status %d\n", txn, ZX_OK);
+    zxlogf(SPEW, "sdmmc: iotxn_complete txn %p status %d\n", txn, ZX_OK);
     iotxn_complete(txn, ZX_OK, txn->length);
 
 out:
@@ -354,7 +354,7 @@ static int sdmmc_worker_thread(void* arg) {
         zx_status_t st = zx_object_wait_one(sdmmc->worker_event,
                 SDMMC_IOTXN_RECEIVED | SDMMC_SHUTDOWN, ZX_TIME_INFINITE, &pending);
         if (st != ZX_OK) {
-            dprintf(ERROR, "sdmmc: worker thread wait failed, retcode = %d\n", st);
+            zxlogf(ERROR, "sdmmc: worker thread wait failed, retcode = %d\n", st);
             break;
         }
         if (pending & SDMMC_SHUTDOWN) {
@@ -363,7 +363,7 @@ static int sdmmc_worker_thread(void* arg) {
         }
     }
 
-    dprintf(TRACE, "sdmmc: worker thread terminated\n");
+    zxlogf(TRACE, "sdmmc: worker thread terminated\n");
 
     return 0;
 }
@@ -372,7 +372,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // Allocate the device.
     sdmmc_t* sdmmc = calloc(1, sizeof(*sdmmc));
     if (!sdmmc) {
-        dprintf(ERROR, "sdmmc: no memory to allocate sdmmc device!\n");
+        zxlogf(ERROR, "sdmmc: no memory to allocate sdmmc device!\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -384,7 +384,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     iotxn_t* setup_txn = NULL;
     // Allocate a single iotxn that we use to bootstrap the card with.
     if ((st = iotxn_alloc(&setup_txn, IOTXN_ALLOC_CONTIGUOUS, SDHC_BLOCK_SIZE)) != ZX_OK) {
-        dprintf(ERROR, "sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
+        zxlogf(ERROR, "sdmmc: failed to allocate iotxn for setup, rc = %d\n", st);
         free(sdmmc);
         return st;
     }
@@ -395,7 +395,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // No matter what state the card is in, issuing the GO_IDLE_STATE command will
     // put the card into the idle state.
     if ((st = sdmmc_do_command(dev, SDMMC_GO_IDLE_STATE, 0, setup_txn)) != ZX_OK) {
-        dprintf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
+        zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
         iotxn_release(setup_txn);
         free(sdmmc);
         return st;
@@ -404,7 +404,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev, void** cookie) {
     // Probe for SD, then MMC
     if ((st = sdmmc_probe_sd(sdmmc, setup_txn)) != ZX_OK) {
         if ((st = sdmmc_probe_mmc(sdmmc, setup_txn)) != ZX_OK) {
-            dprintf(ERROR, "sdmmc: failed to probe\n");
+            zxlogf(ERROR, "sdmmc: failed to probe\n");
             iotxn_release(setup_txn);
             free(sdmmc);
             return st;
@@ -428,11 +428,11 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* dev, void** cookie) {
         return st;
     }
 
-    dprintf(TRACE, "sdmmc: bind success!\n");
+    zxlogf(TRACE, "sdmmc: bind success!\n");
 
     st = zx_event_create(0, &sdmmc->worker_event);
     if (st != ZX_OK) {
-        dprintf(ERROR, "sdmmc: failed to create event, retcode = %d\n", st);
+        zxlogf(ERROR, "sdmmc: failed to create event, retcode = %d\n", st);
         device_remove(sdmmc->zxdev);
         return st;
     }
