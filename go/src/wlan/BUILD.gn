@@ -84,6 +84,41 @@ go_test("elements_test_bin") {
       } ]
 }
 
+go_test("eapol_handshake_test_bin") {
+  output_name = "eapol_handshake_test"
+  gopackage = "wlan/eapol/handshake"
+  deps = [
+    "//garnet/public/lib/wlan/fidl",
+    "//garnet/public/lib/wlan/fidl:mlme",
+  ]
+  go_dependencies = [
+      {
+        package = "fidl"
+        source = "//garnet/public/lib/fidl/go/src/fidl"
+      },
+      {
+        package = "garnet/public/lib/wlan/fidl"
+        source = "$root_gen_dir/go/src/garnet/public/lib/wlan/fidl"
+      },
+      {
+        package = "wlan/wlan"
+        source = "wlan"
+      },
+      {
+        package = "wlan/eapol"
+        source = "eapol"
+      },
+      {
+        package = "wlan/keywrap"
+        source = "keywrap"
+      },
+      {
+        source = "//third_party/golang/crypto"
+        package = "golang.org/x/crypto"
+      },
+  ]
+}
+
 go_test("eapol_crypto_test_bin") {
   output_name = "eapol_crypto_test"
   gopackage = "wlan/eapol/crypto"
@@ -188,6 +223,7 @@ package("wlantool") {
 package("wlanstack_test") {
   deps = [
     ":eapol_crypto_test_bin",
+    ":eapol_handshake_test_bin",
     ":elements_test_bin",
     ":keywrap_test_bin",
     ":wlanstack_test_bin",
@@ -199,6 +235,9 @@ package("wlanstack_test") {
     },
     {
       name = "eapol_crypto_test"
+    },
+    {
+      name = "eapol_handshake_test"
     },
     {
       name = "wlanstack_test"

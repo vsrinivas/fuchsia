@@ -355,6 +355,10 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 	if isFirstMsg == f.Info.IsSet(eapol.KeyInfo_MIC) {
 		return false, fmt.Errorf("unexpected MIC bit")
 	}
+	// IEEE Std 802.11-2016, 12.7.6.2
+	if isFirstMsg && !isZero(f.MIC[:]) {
+		return false, fmt.Errorf("invalid MIC, must be zero")
+	}
 
 	// IEEE Std 802.11-2016, 12.7.2 b.8) & b.9)
 	// Must never be set from authenticator.
@@ -392,13 +396,21 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 	if isFirstMsg && !isZero(f.RSC[:]) {
 		return false, fmt.Errorf("invalid rsc, must be zero")
 	}
+	// IEEE Std 802.11-2016, 12.7.6.2
+	if isFirstMsg && !isZero(f.IV[:]) {
+		return false, fmt.Errorf("invalid IV, must be zero")
+	}
 
 	// IEEE Std 802.11-2016, 12.7.2, i) & j)
 	// KeyDataLength can be zero in the first message and must not be zero in the third.
 	// Note: If the first message contains data, it must be a PMKID. We should check this once PMKIDs
 	// are supported.
+	// The declared KeyDataLength must match the length of the Data field.
 	if !isFirstMsg && f.DataLength == 0 {
 		return false, fmt.Errorf("expected data, received nothing")
+	}
+	if f.DataLength != uint16(len(f.Data)) {
+		return false, fmt.Errorf("expected DataLength %d to match length of Data %d", f.DataLength, len(f.Data))
 	}
 
 	return true, nil
