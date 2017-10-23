@@ -4,11 +4,11 @@
 
 #include "lib/ui/input/device_state.h"
 
-#include "lib/ui/input/fidl/input_event_constants.fidl.h"
-#include "lib/ui/input/fidl/usages.fidl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
+#include "lib/ui/input/fidl/input_event_constants.fidl.h"
+#include "lib/ui/input/fidl/usages.fidl.h"
 
 namespace {
 int64_t InputEventTimestampNow() {
@@ -171,7 +171,7 @@ void KeyboardState::Repeat(uint64_t sequence) {
 
 void KeyboardState::ScheduleRepeat(uint64_t sequence, fxl::TimeDelta delta) {
   task_runner_->PostDelayedTask(
-      [ weak = weak_ptr_factory_.GetWeakPtr(), sequence ] {
+      [weak = weak_ptr_factory_.GetWeakPtr(), sequence] {
         if (weak)
           weak->Repeat(sequence);
       },
@@ -214,6 +214,8 @@ void MouseState::Update(mozart::InputReportPtr input_report,
   buttons_ = input_report->mouse->pressed_buttons;
 
   // TODO(jpoichet) Update once we have an API to capture mouse.
+  // TODO(MZ-385): Quantize the mouse value to the range [0, display_width -
+  // mouse_resolution]
   position_.x =
       std::max(0.0f, std::min(position_.x + input_report->mouse->rel_x,
                               static_cast<float>(display_size.width)));
@@ -303,16 +305,26 @@ void StylusState::Update(mozart::InputReportPtr input_report,
                                : mozart::PointerEvent::Type::STYLUS,
               stylus_.x, stylus_.y, stylus_.buttons);
   } else {
+    // Quantize the value to [0, 1) based on the resolution.
+    float x_denominator =
+        (1 + static_cast<float>(descriptor->x->range->max -
+                                descriptor->x->range->min) /
+                 static_cast<float>(descriptor->x->resolution)) *
+        static_cast<float>(descriptor->x->resolution);
     float x =
         static_cast<float>(display_size.width * (input_report->stylus->x -
                                                  descriptor->x->range->min)) /
-        static_cast<float>(descriptor->x->range->max -
-                           descriptor->x->range->min);
+        x_denominator;
+
+    float y_denominator =
+        (1 + static_cast<float>(descriptor->y->range->max -
+                                descriptor->y->range->min) /
+                 static_cast<float>(descriptor->y->resolution)) *
+        static_cast<float>(descriptor->y->resolution);
     float y =
         static_cast<float>(display_size.height * (input_report->stylus->y -
                                                   descriptor->y->range->min)) /
-        static_cast<float>(descriptor->y->range->max -
-                           descriptor->y->range->min);
+        y_denominator;
 
     uint32_t buttons = 0;
     if (input_report->stylus->pressed_buttons & kStylusBarrel) {
@@ -357,14 +369,24 @@ void TouchscreenState::Update(mozart::InputReportPtr input_report,
     pt->pointer_id = touch->finger_id;
     pt->type = mozart::PointerEvent::Type::TOUCH;
 
+    // Quantize the value to [0, 1) based on the resolution.
+    float x_denominator =
+        (1 + static_cast<float>(descriptor->x->range->max -
+                                descriptor->x->range->min) /
+                 static_cast<float>(descriptor->x->resolution)) *
+        static_cast<float>(descriptor->x->resolution);
     float x = static_cast<float>(display_size.width *
                                  (touch->x - descriptor->x->range->min)) /
-              static_cast<float>(descriptor->x->range->max -
-                                 descriptor->x->range->min);
+              x_denominator;
+
+    float y_denominator =
+        (1 + static_cast<float>(descriptor->y->range->max -
+                                descriptor->y->range->min) /
+                 static_cast<float>(descriptor->y->resolution)) *
+        static_cast<float>(descriptor->y->resolution);
     float y = static_cast<float>(display_size.height *
                                  (touch->y - descriptor->y->range->min)) /
-              static_cast<float>(descriptor->y->range->max -
-                                 descriptor->y->range->min);
+              y_denominator;
 
     uint32_t width = 2 * touch->width;
     uint32_t height = 2 * touch->height;
