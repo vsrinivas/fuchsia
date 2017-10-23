@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
+MODULE_NAME := qemu-audio
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/qemu-codec.cpp \
