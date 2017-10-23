@@ -47,8 +47,8 @@ static inline zx_status_t usb_control(usb_protocol_t* usb, uint8_t request_type,
 static inline zx_status_t usb_get_descriptor(usb_protocol_t* usb, uint8_t request_type,
                                              uint16_t type, uint16_t index, void* data,
                                              size_t length, zx_time_t timeout, size_t* out_length) {
-    return usb_control(usb, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR, type << 8 | index, 0,
-                       data, length, timeout, out_length);
+    return usb_control(usb, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
+                       (uint16_t)(type << 8 | index), 0, data, length, timeout, out_length);
 }
 
 static inline zx_status_t usb_get_status(usb_protocol_t* usb, uint8_t request_type, uint16_t index,
@@ -58,14 +58,14 @@ static inline zx_status_t usb_get_status(usb_protocol_t* usb, uint8_t request_ty
                        timeout, out_length);
 }
 
-static inline zx_status_t usb_set_feature(usb_protocol_t* usb, uint8_t request_type, int feature,
-                                          int index, zx_time_t timeout) {
+static inline zx_status_t usb_set_feature(usb_protocol_t* usb, uint8_t request_type, uint16_t feature,
+                                          uint16_t index, zx_time_t timeout) {
     return usb_control(usb, request_type, USB_REQ_SET_FEATURE, feature, index, NULL, 0, timeout,
                        NULL);
 }
 
-static inline zx_status_t usb_clear_feature(usb_protocol_t* usb, uint8_t request_type, int feature,
-                                            int index, zx_time_t timeout) {
+static inline zx_status_t usb_clear_feature(usb_protocol_t* usb, uint8_t request_type, uint16_t feature,
+                                            uint16_t index, zx_time_t timeout) {
     return usb_control(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, NULL, 0, timeout,
                        NULL);
 }
@@ -96,7 +96,7 @@ static inline zx_status_t usb_reset_endpoint(usb_protocol_t* usb, uint8_t ep_add
 }
 
 // returns the maximum amount of data that can be transferred on an endpoint in a single transaction.
-static inline zx_status_t usb_get_max_transfer_size(usb_protocol_t* usb, uint8_t ep_address) {
+static inline size_t usb_get_max_transfer_size(usb_protocol_t* usb, uint8_t ep_address) {
     return usb->ops->get_max_transfer_size(usb->ctx, ep_address);
 }
 
