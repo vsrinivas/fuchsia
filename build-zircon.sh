@@ -34,7 +34,7 @@ build() {
   case "${target}" in
     "x86_64"|"x86-64") local zircon_target="zircon-pc-x86-64" ;;
     "aarch64"|"arm64") local zircon_target="zircon-qemu-arm64" ;;
-    "rpi3") local zircon_target="zircon-rpi3-arm64" ;;
+    "gauss") local zircon_target="zircon-gauss-arm64" ;;
     "odroidc2") local zircon_target="zircon-odroidc2-arm64" ;;
     "hikey960") local zircon_target="zircon-hikey960-arm64" ;;
     *) echo "unknown target '${target}'" 1>&2 && exit 1;;
