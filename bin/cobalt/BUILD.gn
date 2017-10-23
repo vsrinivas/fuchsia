@@ -10,23 +10,40 @@ package("cobalt") {
 
   deps = [
     ":bin",
-    ":cobalt_testapp",
-    ":cobalt_testapp_no_network",
   ]
 
   binaries = [
     {
       name = "cobalt"
     },
+  ]
+}
 
+package("cobalt_tests") {
+  testonly = true
+  app = true
+
+  deps = [
+    ":cobalt_testapp",
+    ":cobalt_testapp_no_network",
+    ":cobalt_unittests",
+  ]
+
+  binaries = [
     {
       name = "cobalt_testapp"
     },
   ]
 
-  tests = [ {
-        name = "cobalt_testapp_no_network"
-      } ]
+  tests = [
+    {
+      name = "cobalt_unittests"
+    },
+
+    {
+      name = "cobalt_testapp_no_network"
+    },
+  ]
 }
 
 executable("bin") {
@@ -48,6 +65,14 @@ executable("bin") {
     # TODO(rudominer) Change to protobuf_lite after we have a different way
     # of deserializing a message from a human-readable string.
     "//third_party/protobuf:protobuf_full",
+  ]
+}
+
+executable("cobalt_unittests") {
+  testonly = true
+
+  deps = [
+    "//third_party/cobalt/encoder:unittests",
   ]
 }
 

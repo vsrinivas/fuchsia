@@ -14,6 +14,7 @@
         "garnet/packages/runtime_config"
     ],
     "packages": {
-        "cobalt": "//garnet/bin/cobalt"
+        "cobalt": "//garnet/bin/cobalt:cobalt",
+        "cobalt_tests": "//garnet/bin/cobalt:cobalt_tests"
     }
 }
