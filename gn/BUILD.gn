@@ -3,118 +3,47 @@
 # found in the LICENSE file.
 
 import("//packages/gn/packages.gni")
-import("//build/toolchain/clang_toolchain.gni")
 
 declare_args() {
   # path to autorun script
   autorun = ""
-
-  # Manifest file describing target libraries from the Clang toolchain.
-  toolchain_manifest = "${clang_prefix}/../lib/${clang_target}.manifest"
-
-  # Groups to include from the Zircon /boot manifest into /boot.
-  # This is either "all" or a comma-separated list of one or more of:
-  #   core -- necessary to boot
-  #   misc -- utilities in /bin
-  #   test -- test binaries in /bin and /test
-  # TODO(mcgrathr): Change to default to "core".
-  zircon_boot_groups = "all"
-
-  # Additional bootdata items needed from the Zircon build.  This
-  # build does not use Zircon's bootdata.bin but instead uses Zircon's
-  # bootfs.manifest, so this must list any necessary additional inputs
-  # the Zircon build puts into its bootdata.bin.
-  zircon_additional_bootdata = []
-  if (target_cpu == "arm64") {
-    zircon_additional_bootdata = [
-      "platform-id.bin",
-      "mdi.bin",
-    ]
-  }
 }
-
-declare_args() {
-  # Groups to include from the Zircon /boot manifest into /system
-  # (instead of into /boot like Zircon's own bootdata.bin does).
-  # Should not include any groups that are also in zircon_boot_groups,
-  # which see.  If zircon_boot_groups is "all" then this should be "".
-  zircon_system_groups = ""
-  if (zircon_boot_groups != "all") {
-    # TODO(mcgrathr): Could default to "" for !is_debug, or "production build".
-    zircon_system_groups = "misc,test"
-  }
-}
-
-if (zircon_boot_groups == "all") {
-  assert(zircon_system_groups == "",
-         "zircon_boot_groups already has everything")
-} else {
-  assert(zircon_system_groups != "all" && zircon_system_groups != "core",
-         "zircon_system_groups cannot include core (or all)")
-}
-
-# TODO(TO-471): The toolchain package will provide this file
-# but it doesn't yet, so generate it with this kludge.
-toolchain_manifest = "${root_out_dir}/toolchain.manifest"
-action("generate_toolchain_manifest") {
-  script = "toolchain_manifest.py"
-  outputs = [
-    toolchain_manifest,
-  ]
-  inputs = [
-    "${clang_prefix}/clang",
-  ]
-  args = [
-    "--output",
-    rebase_path(toolchain_manifest),
-    "--prefix=$clang_prefix",
-    "--target=$clang_target",
-    "libc++.so.2",
-    "libc++abi.so.1",
-    "libunwind.so.1",
-    "asan/libc++.so.2",
-    "asan/libc++abi.so.1",
-    "asan/libunwind.so.1",
-    "libclang_rt.asan-${clang_cpu}.so",
-    "libclang_rt.ubsan_standalone-${clang_cpu}.so",
-  ]
-}
-
-# Permit dependencies on testonly targets from packages.
-testonly = true
 
 group("default") {
+  testonly = true
+
   deps = [
     ":mkbootfs",
   ]
 }
 
-zircon_out_dir = "//out/build-zircon/build-${zircon_project}"
-zircon_boot_manifest = "${zircon_out_dir}/bootfs.manifest"
-zircon_ulib_manifest = "${zircon_out_dir}-ulib/bootfs.manifest"
+action("mkbootfs") {
+  testonly = true
 
-final_boot_manifest = "$root_out_dir/boot.manifest"
-final_system_manifest = "$root_out_dir/system.manifest"
+  packages_file = rebase_path("packages", "", target_gen_dir)
 
-action("finalize_manifests") {
-  packages_file = "$target_gen_dir/packages"
-  boot_manifest_file = "$target_gen_dir/boot.bootfs.manifest"
-  system_manifest_file = "$target_gen_dir/system.bootfs.manifest"
+  boot_manifest_file = rebase_path("boot.bootfs.manifest", "", target_gen_dir)
+  system_manifest_file =
+      rebase_path("system.bootfs.manifest", "", target_gen_dir)
+  depfile = "$target_gen_dir/mkbootfs.d"
   component_index = "$root_gen_dir/component_index.json"
-  build_id_file = "$root_out_dir/ids.txt"
 
   deps = exec_script("process_modules.py",
                      [
                        "--packages",
-                       rebase_path(packages_file),
+                       packages_file,
                        "--boot-manifest",
-                       rebase_path(boot_manifest_file),
+                       boot_manifest_file,
                        "--system-manifest",
-                       rebase_path(system_manifest_file),
+                       system_manifest_file,
                        "--modules",
                        fuchsia_packages,
+                       "--autorun",
+                       autorun,
                        "--build-root",
                        rebase_path(root_build_dir),
+                       "--depfile",
+                       rebase_path(depfile),
                        "--component-index",
                        rebase_path(component_index),
                        "--arch",
@@ -122,173 +51,33 @@ action("finalize_manifests") {
                      ],
                      "list lines",
                      rebase_path(packages_imported))
-  package_list = read_file(packages_file, "list lines")
 
-  script = "finalize_manifests.py"
-  inputs = [
-    "elfinfo.py",
-    "manifest.py",
-    "variant.py",
-  ]
-
-  depfile = "$root_out_dir/finalize_manifests.d"
+  script = "make_bootfs.py"
+  system_bootfs = "$root_build_dir/user.bootfs"
+  build_id_file = "$root_build_dir/ids.txt"
   outputs = [
-    final_boot_manifest,
-    final_system_manifest,
+    system_bootfs,
     build_id_file,
+    component_index,
   ]
 
-  sources = []
+  zircon_bootdata = "//out/build-zircon/build-$zircon_project/bootdata.bin"
+
+  inputs = [
+    zircon_bootdata,
+  ]
+
   args = [
-    "--depfile=" + rebase_path(depfile, root_build_dir),
-    "--build-id-file=" + rebase_path(build_id_file, root_build_dir),
+    "--output-file",
+    rebase_path(system_bootfs),
+    "--build-id-map",
+    rebase_path(build_id_file),
+    "--boot-manifest",
+    rebase_path(boot_manifest_file),
+    "--system-manifest",
+    rebase_path(system_manifest_file),
+    "--pre-binaries",
+    rebase_path(zircon_bootdata),
   ]
-
-  # First the toolchain and Zircon "ulib" manifests are pure auxiliaries:
-  # they just supply libraries that might satisfy dependencies.
-
-  # TODO(TO-471): Remove this dep when toolchain_manifest is in the source tree.
-  deps += [ ":generate_toolchain_manifest" ]
-  sources += [ toolchain_manifest ]
-  toolchain_manifest_cwd = get_path_info(rebase_path(toolchain_manifest), "dir")
-  args += [
-    "--cwd=$toolchain_manifest_cwd",
-    "--manifest=" + rebase_path(toolchain_manifest),
-  ]
-
-  sources += [ zircon_ulib_manifest ]
-  zircon_manifest_cwd = rebase_path("//out/build-zircon")
-  args += [
-    "--cwd=$zircon_manifest_cwd",
-    "--manifest=" + rebase_path(zircon_ulib_manifest),
-  ]
-
-  # Next, everything that will go into the final /boot manifest.
-  args += [ "--output=" + rebase_path(final_boot_manifest, root_build_dir) ]
-
-  sources += [ zircon_boot_manifest ]
-  args += [
-    "--cwd=$zircon_manifest_cwd",
-    "--groups=$zircon_boot_groups",
-    "--manifest=" + rebase_path(zircon_boot_manifest),
-
-    # All the manifests generated by this build are relative to root_build_dir.
-    "--cwd=.",
-    "--groups=all",
-  ]
-
-  # TODO(mcgrathr,jamesr): When process_modules.py drops support for
-  # package JSON files adding files directly, this can go away.
-  # GN won't let us make it a source because it's in the build directory
-  # but is written implicitly at gen time rather than by a proper action.
-  # We're relying on the depfile to notice its changes.
-  #sources += [ boot_manifest_file ]
-  args += [ "--manifest=" + rebase_path(boot_manifest_file) ]
-
-  foreach(package, package_list) {
-    package_manifest = "$root_build_dir/package/$package/boot_manifest"
-
-    # GN won't let us make these sources because they're in the build
-    # directory but written implicitly at gen time rather than by a proper
-    # action.  We're relying on the depfile to notice their changes.
-    #sources += [ package_manifest ]
-
-    args += [ "--optional-manifest=" + rebase_path(package_manifest) ]
-  }
-
-  # Finally, everything that will go into the final /system manifest.
-  args += [
-    "--output=" + rebase_path(final_system_manifest, root_build_dir),
-    "--cwd=$zircon_manifest_cwd",
-    "--groups=$zircon_system_groups",
-    "--manifest=" + rebase_path(zircon_boot_manifest),
-
-    # All the manifests generated by this build are relative to root_build_dir.
-    "--cwd=.",
-    "--groups=all",
-  ]
-
-  if (autorun != "") {
-    autorun_manifest = "$target_gen_dir/autorun.manifest"
-    write_file(autorun_manifest, "autorun=$autorun")
-    sources += [ autorun_manifest ]
-    args += [ "--manifest=" + rebase_path(autorun_manifest) ]
-  }
-
-  # TODO(mcgrathr,jamesr): When process_modules.py drops support for
-  # package JSON files adding files directly, this can go away.
-  # GN won't let us make it a source because it's in the build directory
-  # but is written implicitly at gen time rather than by a proper action.
-  # We're relying on the depfile to notice its changes.
-  #sources += [ system_manifest_file ]
-  args += [ "--manifest=" + rebase_path(system_manifest_file) ]
-
-  foreach(package, package_list) {
-    package_manifest = "$root_build_dir/package/$package/system_manifest"
-
-    # GN won't let us make these sources because they're in the build
-    # directory but written implicitly at gen time rather than by a proper
-    # action.  We're relying on the depfile to notice their changes.
-    #sources += [ package_manifest ]
-
-    args += [ "--optional-manifest=" + rebase_path(package_manifest) ]
-  }
-}
-
-# Package Zircon's additional items into one container that's easy for
-# the installer to find.
-if (zircon_additional_bootdata != []) {
-  zircon_additional_bootdata_bin =
-      "$root_out_dir/zircon_additional_bootdata.bin"
-  action("zircon_additional_bootdata") {
-    script = "//out/build-zircon/tools/mkbootfs"
-    outputs = [
-      zircon_additional_bootdata_bin,
-    ]
-    sources = []
-    foreach(item, zircon_additional_bootdata) {
-      sources += [ "$zircon_out_dir/$item" ]
-    }
-    args = [
-             "-o",
-             rebase_path(zircon_additional_bootdata_bin),
-           ] + rebase_path(sources)
-  }
-}
-
-action("mkbootfs") {
-  deps = [
-    ":finalize_manifests",
-  ]
-
-  bootfs = "$root_out_dir/user.bootfs"
-
-  script = "//out/build-zircon/tools/mkbootfs"
-  depfile = "${bootfs}.d"
-  outputs = [
-    bootfs,
-  ]
-  sources = [
-    final_boot_manifest,
-    final_system_manifest,
-  ]
-  args = [
-    "-o",
-    rebase_path(bootfs, root_build_dir),
-    "--depfile",
-    rebase_path(depfile, root_build_dir),
-  ]
-  if (zircon_additional_bootdata != []) {
-    sources += [ zircon_additional_bootdata_bin ]
-    args += [ rebase_path(zircon_additional_bootdata_bin) ]
-    deps += [ ":zircon_additional_bootdata" ]
-  }
-  args += [
-    "--target=boot",
-    rebase_path(final_boot_manifest),
-  ]
-  args += [
-    "--target=system",
-    rebase_path(final_system_manifest),
-  ]
+  args += read_file(packages_file, "list lines")
 }
