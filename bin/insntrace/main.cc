@@ -68,7 +68,7 @@ constexpr char kUsageString[] =
   "  --quiet[=level]    set quietness level (opposite of verbose)\n"
   "  --verbose[=level]  set debug verbosity level\n"
   "\n"
-  "Configuration options:\n"
+  "IPT configuration options:\n"
   "  --chunk-order=N    set chunks size, in pages, as a power of 2\n"
   "                       The default is 2: 16KB chunks.\n"
   "  --circular         use a circular trace buffer\n"
@@ -404,7 +404,7 @@ static bool ControlIpt(const debugserver::IptConfig& config,
 
   for (const std::string& action : cl.positional_args()) {
     if (action == "init") {
-      if (!SetPerfMode(config))
+      if (!AllocTrace(config))
         return false;
       if (!debugserver::InitCpuPerf(config))
         return false;
@@ -423,7 +423,7 @@ static bool ControlIpt(const debugserver::IptConfig& config,
       debugserver::DumpPerf(config);
     } else if (action == "reset") {
       debugserver::ResetCpuPerf(config);
-      debugserver::ResetPerf(config);
+      debugserver::FreeTrace(config);
     } else {
       FXL_LOG(ERROR) << "Unrecognized action: " << action;
       return false;

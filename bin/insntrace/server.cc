@@ -102,16 +102,16 @@ bool IptServer::StartInferior() {
 
   FXL_LOG(INFO) << "Starting program: " << argv[0];
 
-  if (!SetPerfMode(config_))
+  if (!AllocTrace(config_))
     return false;
 
   if (config_.mode == IPT_MODE_CPUS) {
     if (!InitCpuPerf(config_))
-      return false;
+      goto Fail;
   }
 
   if (!InitPerfPreProcess(config_))
-    return false;
+    goto Fail;
 
   // N.B. It's important that the PT device be closed at this point as we
   // don't want the inferior to inherit the open descriptor: the device can
@@ -119,13 +119,13 @@ bool IptServer::StartInferior() {
 
   if (!process->Initialize()) {
     FXL_LOG(ERROR) << "failed to set up inferior";
-    return false;
+    goto Fail;
   }
 
   FXL_DCHECK(!process->IsAttached());
   if (!process->Attach()) {
     FXL_LOG(ERROR) << "failed to attach to process";
-    return false;
+    goto Fail;
   }
   FXL_DCHECK(process->IsAttached());
 
@@ -137,20 +137,24 @@ bool IptServer::StartInferior() {
   // don't include all the initialization. For threads it doesn't matter.
   // TODO(dje): Could even defer until the first thread is started.
   if (config_.mode == IPT_MODE_CPUS) {
-    if (!StartCpuPerf(config_)) {
-      ResetPerf(config_);
-      return false;
-    }
+    if (!StartCpuPerf(config_))
+      goto Fail;
   }
 
   FXL_DCHECK(!process->IsLive());
   if (!process->Start()) {
     FXL_LOG(ERROR) << "failed to start process";
-    return false;
+    if (config_.mode == IPT_MODE_CPUS)
+      StopCpuPerf(config_);
+    goto Fail;
   }
   FXL_DCHECK(process->IsLive());
 
   return true;
+
+Fail:
+  FreeTrace(config_);
+  return false;
 }
 
 bool IptServer::DumpResults() {
@@ -162,7 +166,7 @@ bool IptServer::DumpResults() {
   DumpPerf(config_);
   if (config_.mode == IPT_MODE_CPUS)
     ResetCpuPerf(config_);
-  ResetPerf(config_);
+  FreeTrace(config_);
   return true;
 }
 

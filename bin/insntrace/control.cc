@@ -127,15 +127,16 @@ static bool OpenDevices(fxl::UniqueFD* out_ipt_fd,
   return true;
 }
 
-bool SetPerfMode(const IptConfig& config) {
-  FXL_LOG(INFO) << "SetPerfMode called";
+bool AllocTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "AllocTrace called";
 
   fxl::UniqueFD ipt_fd;
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  uint32_t mode = config.mode;
-  ssize_t ssize = ioctl_ipt_set_mode(ipt_fd.get(), &mode);
+  ioctl_ipt_trace_config_t trace_config;
+  trace_config.mode = config.mode;
+  ssize_t ssize = ioctl_ipt_alloc_trace(ipt_fd.get(), &trace_config);
   if (ssize < 0) {
     FXL_LOG(ERROR) << "set perf mode: " << util::ZxErrorString(ssize);
     goto Fail;
@@ -174,26 +175,18 @@ bool InitCpuPerf(const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  ssize_t ssize;
-
   for (uint32_t cpu = 0; cpu < config.num_cpus; ++cpu) {
     ioctl_ipt_buffer_config_t ipt_config;
     InitIptBufferConfig(&ipt_config, config);
 
     uint32_t descriptor;
-    ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
+    auto ssize = ioctl_ipt_alloc_buffer(ipt_fd.get(), &ipt_config, &descriptor);
     if (ssize < 0) {
       FXL_LOG(ERROR) << "init cpu perf: " << util::ZxErrorString(ssize);
       goto Fail;
     }
     // Buffers are automagically assigned to cpus, descriptor == cpu#,
     // so we can just ignore descriptor here.
-  }
-
-  ssize = ioctl_ipt_cpu_mode_alloc(ipt_fd.get());
-  if (ssize < 0) {
-    FXL_LOG(ERROR) << "init perf: " << util::ZxErrorString(ssize);
-    goto Fail;
   }
 
   return true;
@@ -307,17 +300,13 @@ bool StartCpuPerf(const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return false;
 
-  ssize_t ssize = ioctl_ipt_cpu_mode_start(ipt_fd.get());
+  ssize_t ssize = ioctl_ipt_start(ipt_fd.get());
   if (ssize < 0) {
     FXL_LOG(ERROR) << "start cpu perf: " << util::ZxErrorString(ssize);
-    ioctl_ipt_cpu_mode_free(ipt_fd.get());
-    goto Fail;
+    return false;
   }
 
   return true;
-
- Fail:
-  return false;
 }
 
 bool StartThreadPerf(Thread* thread, const IptConfig& config) {
@@ -368,7 +357,7 @@ void StopCpuPerf(const IptConfig& config) {
   if (!OpenDevices(&ipt_fd, nullptr, nullptr))
     return;
 
-  ssize_t ssize = ioctl_ipt_cpu_mode_stop(ipt_fd.get());
+  ssize_t ssize = ioctl_ipt_stop(ipt_fd.get());
   if (ssize < 0) {
     // TODO(dje): This is really bad, this shouldn't fail.
     FXL_LOG(ERROR) << "stop cpu perf: " << util::ZxErrorString(ssize);
@@ -506,6 +495,9 @@ static zx_status_t WriteBufferData(const IptConfig& config,
     bytes_left = num_chunks * chunk_size;
   else
     bytes_left = info.capture_end;
+
+  FXL_LOG(INFO) << fxl::StringPrintf("Writing %zu bytes to %s",
+                                     bytes_left, c_path);
 
   char buf[4096];
 
@@ -701,22 +693,12 @@ void DumpPerf(const IptConfig& config) {
   }
 }
 
-// Reset perf collection to its original state.
-// This means freeing all PT resources.
-// This assumes tracing has already been stopped.
-
 void ResetCpuPerf(const IptConfig& config) {
   FXL_LOG(INFO) << "ResetCpuPerf called";
   FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
-  fxl::UniqueFD ipt_fd;
-  if (!OpenDevices(&ipt_fd, nullptr, nullptr))
-    return;
-
-  ssize_t ssize = ioctl_ipt_cpu_mode_free(ipt_fd.get());
-  if (ssize < 0) {
-    FXL_LOG(ERROR) << "end perf: " << util::ZxErrorString(ssize);
-  }
+  // TODO(dje): Nothing to do currently. There use to be. So keep this
+  // function around for a bit.
 }
 
 void ResetThreadPerf(Thread* thread, const IptConfig& config) {
@@ -744,24 +726,21 @@ void ResetThreadPerf(Thread* thread, const IptConfig& config) {
   thread->set_ipt_buffer(-1);
 }
 
-// Reset perf collection to its original state.
+// Free all resources associated with the true.
 // This means restoring ktrace to its original state.
 // This assumes tracing has already been stopped.
 
-void ResetPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "ResetPerf called";
+void FreeTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "FreeTrace called";
 
   fxl::UniqueFD ipt_fd;
   zx::handle ktrace_handle;
   if (!OpenDevices(&ipt_fd, nullptr, &ktrace_handle))
     return;
 
-  // FIXME(dje): Workaround to switching from thread mode to cpu mode:
-  // xrstors gets a gpf -> panic.
-  uint32_t mode = IPT_MODE_CPUS;
-  ssize_t ssize = ioctl_ipt_set_mode(ipt_fd.get(), &mode);
+  ssize_t ssize = ioctl_ipt_free_trace(ipt_fd.get());
   if (ssize < 0) {
-    FXL_LOG(ERROR) << "reset perf mode: " << util::ZxErrorString(ssize);
+    FXL_LOG(ERROR) << "ioctl_ipt_free_trace failed: " << util::ZxErrorString(ssize);
   }
 
   // TODO(dje): Resume original ktracing? Need ability to get old value.

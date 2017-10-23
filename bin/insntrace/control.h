@@ -10,7 +10,7 @@
 
 namespace debugserver {
 
-bool SetPerfMode(const IptConfig& config);
+bool AllocTrace(const IptConfig& config);
 
 bool InitCpuPerf(const IptConfig& config);
 
@@ -38,6 +38,6 @@ void ResetCpuPerf(const IptConfig& config);
 
 void ResetThreadPerf(Thread* thread, const IptConfig& config);
 
-void ResetPerf(const IptConfig& config);
+void FreeTrace(const IptConfig& config);
 
 } // debugserver namespace
