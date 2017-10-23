@@ -32,8 +32,8 @@ struct IptConfig {
 
   static constexpr uint32_t kDefaultMode = IPT_MODE_CPUS;
   static constexpr uint32_t kDefaultMaxThreads = 16;
-  static constexpr size_t kDefaultNumBuffers = 16;
-  static constexpr size_t kDefaultBufferOrder = 2;  // 16kb
+  static constexpr size_t kDefaultNumChunks = 16;
+  static constexpr size_t kDefaultChunkOrder = 2;  // 16kb
   static constexpr bool kDefaultIsCircular = false;
   static constexpr char kDefaultOutputPathPrefix[] = "/tmp/ptout";
 
@@ -57,9 +57,9 @@ struct IptConfig {
   uint32_t max_threads;
 
   // Details of the tracing buffer.
-  size_t num_buffers;
-  // The size of each buffer, in pages as a power of 2.
-  size_t buffer_order;
+  size_t num_chunks;
+  // The size of each chunk, in pages as a power of 2.
+  size_t chunk_order;
   bool is_circular;
 
   // The various fields of IA32_RTIT_CTL MSR, and support MSRs.

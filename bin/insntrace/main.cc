@@ -69,15 +69,15 @@ constexpr char kUsageString[] =
   "  --verbose[=level]  set debug verbosity level\n"
   "\n"
   "Configuration options:\n"
-  "  --buffer-order=N   set buffer size, in pages, as a power of 2\n"
-  "                       The default is 2: 16KB buffers.\n"
+  "  --chunk-order=N    set chunks size, in pages, as a power of 2\n"
+  "                       The default is 2: 16KB chunks.\n"
   "  --circular         use a circular trace buffer\n"
   "                       Otherwise tracing stops when the buffer fills.\n"
   "                       The default is non-circular.\n"
   "  --mode=cpu|thread  set the tracing mode\n"
   "                       Must be specified with a program to run.\n"
   "                       The default is cpu.\n"
-  "  --num-buffers=N    set number of buffers\n"
+  "  --num-chunks=N     set number of chunks\n"
   "                       The default is 16.\n"
   "\n"
   "Control configuration options (IA32_RTIT_CTL MSR):\n"
@@ -338,14 +338,14 @@ static debugserver::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
   debugserver::IptConfig config;
   std::string arg;
 
-  if (cl.GetOptionValue("buffer-order", &arg)) {
-    size_t buffer_order;
+  if (cl.GetOptionValue("chunk-order", &arg)) {
+    size_t chunk_order;
     if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg),
-                                              &buffer_order)) {
+                                              &chunk_order)) {
       FXL_LOG(ERROR) << "Not a valid buffer order: " << arg;
       exit(EXIT_FAILURE);
     }
-    config.buffer_order = buffer_order;
+    config.chunk_order = chunk_order;
   }
 
   if (cl.HasOption("circular", nullptr)) {
@@ -365,14 +365,14 @@ static debugserver::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
     config.mode = mode;
   }
 
-  if (cl.GetOptionValue("num-buffers", &arg)) {
-    size_t num_buffers;
+  if (cl.GetOptionValue("num-chunks", &arg)) {
+    size_t num_chunks;
     if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg),
-                                              &num_buffers)) {
+                                              &num_chunks)) {
       FXL_LOG(ERROR) << "Not a valid buffer size: " << arg;
       exit(EXIT_FAILURE);
     }
-    config.num_buffers = num_buffers;
+    config.num_chunks = num_chunks;
   }
 
   // We support multiple --config options, so we can't use GetOptionValue here.

@@ -124,8 +124,13 @@ bool SetPerfMode(const IptConfig& config) {
 static void InitIptBufferConfig(ioctl_ipt_buffer_config_t* ipt_config,
                                 const IptConfig& config) {
   memset(ipt_config, 0, sizeof(*ipt_config));
-  ipt_config->num_buffers = config.num_buffers;
-  ipt_config->buffer_order = config.buffer_order;
+#if IPT_API_VERSION == 0
+  ipt_config->num_buffers = config.num_chunks;
+  ipt_config->buffer_order = config.chunk_order;
+#else
+  ipt_config->num_chunks = config.num_chunks;
+  ipt_config->chunk_order = config.chunk_order;
+#endif
   ipt_config->is_circular = config.is_circular;
   ipt_config->ctl = config.CtlMsr();
   ipt_config->cr3_match = config.cr3_match;
@@ -459,26 +464,45 @@ static zx_status_t WriteBufferData(const IptConfig& config,
   }
 
   // TODO(dje): Fetch from vmo?
-  size_t buffer_size = (1 << buffer_config.buffer_order) * PAGE_SIZE;
+#if IPT_API_VERSION == 0
+  size_t chunk_size = (1 << buffer_config.buffer_order) * PAGE_SIZE;
+  uint32_t num_chunks = buffer_config.num_buffers;
+#else
+  size_t chunk_size = (1 << buffer_config.chunk_order) * PAGE_SIZE;
+  uint32_t num_chunks = buffer_config.num_chunks;
+#endif
 
   // If using a circular buffer there's (currently) no way to know if
   // tracing wrapped, so for now we just punt and always dump the entire
   // buffer. It's highly likely it wrapped anyway.
   size_t bytes_left;
   if (buffer_config.is_circular)
-    bytes_left = buffer_config.num_buffers * buffer_size;
+    bytes_left = num_chunks * chunk_size;
   else
     bytes_left = info.capture_end;
 
   char buf[4096];
 
-  for (uint32_t i = 0; i < buffer_config.num_buffers && bytes_left > 0; ++i) {
+  for (uint32_t i = 0; i < num_chunks && bytes_left > 0; ++i) {
+#if IPT_API_VERSION == 0
     ioctl_ipt_buffer_handle_req_t handle_rqst;
+#else
+    ioctl_ipt_chunk_handle_req_t handle_rqst;
+#endif
     handle_rqst.descriptor = descriptor;
+#if IPT_API_VERSION == 0
     handle_rqst.buffer_num = i;
+#else
+    handle_rqst.chunk_num = i;
+#endif
     zx_handle_t vmo_handle;
+#if IPT_API_VERSION == 0
     ssize = ioctl_ipt_get_buffer_handle(ipt_fd.get(), &handle_rqst,
                                         &vmo_handle);
+#else
+    ssize = ioctl_ipt_get_chunk_handle(ipt_fd.get(), &handle_rqst,
+                                       &vmo_handle);
+#endif
     if (ssize < 0) {
       FXL_LOG(ERROR)
           << fxl::StringPrintf(
@@ -489,7 +513,7 @@ static zx_status_t WriteBufferData(const IptConfig& config,
     }
     zx::vmo vmo(vmo_handle);
 
-    size_t buffer_remaining = buffer_size;
+    size_t buffer_remaining = chunk_size;
     size_t offset = 0;
     while (buffer_remaining && bytes_left) {
       size_t to_write = sizeof(buf);
