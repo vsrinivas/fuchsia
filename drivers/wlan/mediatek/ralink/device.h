@@ -9,16 +9,16 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlan.h>
 #include <driver/usb.h>
+#include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zx/time.h>
-#include <fbl/unique_ptr.h>
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <mutex>
 #include <map>
+#include <mutex>
 #include <vector>
 
 namespace ralink {
@@ -29,7 +29,7 @@ template <uint8_t A> class RfcsrRegister;
 template <uint16_t A> class EepromField;
 
 class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
-  public:
+   public:
     Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
     ~Device();
@@ -48,7 +48,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
     zx_status_t WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type);
 
-  private:
+   private:
     struct TxCalibrationValues {
         uint8_t gain_cal_tx0 = 0;
         uint8_t phase_cal_tx0 = 0;
@@ -58,11 +58,11 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     // wireless channel information
     struct Channel {
-        Channel(int channel, uint32_t N, uint32_t R, uint32_t K) :
-            channel(channel), N(N), R(R), K(K), mod(0) {}
+        Channel(int channel, uint32_t N, uint32_t R, uint32_t K)
+            : channel(channel), N(N), R(R), K(K), mod(0) {}
 
-        Channel(int channel, uint32_t N, uint32_t R, uint32_t K, uint32_t mod) :
-            channel(channel), N(N), R(R), K(K), mod(mod) {}
+        Channel(int channel, uint32_t N, uint32_t R, uint32_t K, uint32_t mod)
+            : channel(channel), N(N), R(R), K(K), mod(mod) {}
 
         int channel;
         uint32_t N;
@@ -149,8 +149,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     zx_status_t ConfigureTxPower(const Channel& channel);
 
     template <typename R, typename Predicate>
-    zx_status_t BusyWait(R* reg, Predicate pred,
-            zx_duration_t delay = kDefaultBusyWait);
+    zx_status_t BusyWait(R* reg, Predicate pred, zx_duration_t delay = kDefaultBusyWait);
 
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);

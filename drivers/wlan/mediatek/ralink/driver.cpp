@@ -6,8 +6,8 @@
 #include <ddk/driver.h>
 #include <driver/usb.h>
 
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <future>
 #include <thread>
 #include <vector>
@@ -20,9 +20,7 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device, void** cookie
 
     usb_protocol_t usb;
     zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
-    if (result != ZX_OK) {
-        return result;
-    }
+    if (result != ZX_OK) { return result; }
 
     usb_desc_iter_t iter;
     result = usb_desc_iter_init(&usb, &iter);
@@ -55,10 +53,8 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device, void** cookie
 
     auto rtdev = new ralink::Device(device, &usb, blkin_endpt, std::move(blkout_endpts));
     auto f = std::async(std::launch::async, [rtdev]() {
-                auto status = rtdev->Bind();
-                if (status != ZX_OK) {
-                    delete rtdev;
-                }
-            });
+        auto status = rtdev->Bind();
+        if (status != ZX_OK) { delete rtdev; }
+    });
     return ZX_OK;
 }

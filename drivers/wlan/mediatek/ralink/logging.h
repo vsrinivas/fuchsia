@@ -16,11 +16,10 @@ constexpr int kLogDebug = 3;
 // Set this to tune log output
 constexpr int kLogLevel = kLogInfo;
 
-#define logf(level, level_prefix, args...) do { \
-    if (kLogLevel >= level) { \
-        std::printf("ralink: " level_prefix args); \
-    } \
-} while (false)
+#define logf(level, level_prefix, args...)                                     \
+    do {                                                                       \
+        if (kLogLevel >= level) { std::printf("ralink: " level_prefix args); } \
+    } while (false)
 
 #define errorf(args...) logf(kLogError, "[E] ", args)
 #define warnf(args...) logf(kLogWarning, "[W] ", args)

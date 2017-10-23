@@ -8,11 +8,11 @@
 
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlan.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zx/vmo.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 
 #include <endian.h>
 #include <inttypes.h>
@@ -23,12 +23,12 @@
 #define RALINK_DUMP_EEPROM 0
 #define RALINK_DUMP_RX 0
 
-#define CHECK_REG(reg, op, status) \
-    do { \
-        if (status != ZX_OK) { \
+#define CHECK_REG(reg, op, status)                                      \
+    do {                                                                \
+        if (status != ZX_OK) {                                          \
             errorf("" #op "Register error for " #reg ": %d\n", status); \
-            return status; \
-        } \
+            return status;                                              \
+        }                                                               \
     } while (0)
 #define CHECK_READ(reg, status) CHECK_REG(reg, Read, status)
 #define CHECK_WRITE(reg, status) CHECK_REG(reg, Write, status)
@@ -49,8 +49,7 @@ constexpr char kFirmwareFile[] = "rt2870.bin";
 constexpr int kMaxBusyReads = 20;
 
 // The <cstdlib> overloads confuse the compiler for <cstdint> types.
-template <typename T>
-constexpr T abs(T t) {
+template <typename T> constexpr T abs(T t) {
     return t < 0 ? -t : t;
 }
 
@@ -69,10 +68,10 @@ constexpr zx_duration_t Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t* usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-  : ddk::Device<Device, ddk::Unbindable>(device),
-    usb_(*usb),
-    rx_endpt_(bulk_in),
-    tx_endpts_(std::move(bulk_out)) {
+    : ddk::Device<Device, ddk::Unbindable>(device),
+      usb_(*usb),
+      rx_endpt_(bulk_in),
+      tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent(), rx_endpt_);
 }
 
@@ -96,9 +95,7 @@ zx_status_t Device::Bind() {
 
     bool autorun = false;
     status = DetectAutoRun(&autorun);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     EfuseCtrl ec;
     status = ReadRegister(&ec);
@@ -121,9 +118,7 @@ zx_status_t Device::Bind() {
     }
 
     status = InitializeChannelInfo();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     int count = 0;
     for (auto& entry : channels_) {
@@ -200,8 +195,8 @@ zx_status_t Device::Bind() {
 }
 
 zx_status_t Device::ReadRegister(uint16_t offset, uint32_t* value) {
-    auto ret = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0,
-            offset, value, sizeof(*value), ZX_TIME_INFINITE, NULL);
+    auto ret = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kMultiRead, 0, offset, value,
+                           sizeof(*value), ZX_TIME_INFINITE, NULL);
     return ret;
 }
 
@@ -210,8 +205,8 @@ template <uint16_t A> zx_status_t Device::ReadRegister(Register<A>* reg) {
 }
 
 zx_status_t Device::WriteRegister(uint16_t offset, uint32_t value) {
-    auto ret = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
-            offset, &value, sizeof(value), ZX_TIME_INFINITE, NULL);
+    auto ret = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, offset, &value,
+                           sizeof(value), ZX_TIME_INFINITE, NULL);
     return ret;
 }
 
@@ -239,9 +234,7 @@ zx_status_t Device::ReadEeprom() {
         // Wait until the registers are ready for reading.
         status = BusyWait(&ec, [&ec]() { return !ec.efsrom_kick(); });
         if (status != ZX_OK) {
-            if (status == ZX_ERR_TIMED_OUT) {
-                errorf("ralink busy wait for EFUSE_CTRL failed\n");
-            }
+            if (status == ZX_ERR_TIMED_OUT) { errorf("ralink busy wait for EFUSE_CTRL failed\n"); }
             return status;
         }
 
@@ -252,33 +245,31 @@ zx_status_t Device::ReadEeprom() {
         status = ReadRegister(&rd0);
         CHECK_READ(EFUSE_DATA0, status);
         eeprom_[i] = htole32(rd0.val()) & 0xffff;
-        eeprom_[i+1] = htole32(rd0.val()) >> 16;
+        eeprom_[i + 1] = htole32(rd0.val()) >> 16;
 
         RfuseData1 rd1;
         status = ReadRegister(&rd1);
         CHECK_READ(EFUSE_DATA1, status);
-        eeprom_[i+2] = htole32(rd1.val()) & 0xffff;
-        eeprom_[i+3] = htole32(rd1.val()) >> 16;
+        eeprom_[i + 2] = htole32(rd1.val()) & 0xffff;
+        eeprom_[i + 3] = htole32(rd1.val()) >> 16;
 
         RfuseData2 rd2;
         status = ReadRegister(&rd2);
         CHECK_READ(EFUSE_DATA2, status);
-        eeprom_[i+4] = htole32(rd2.val()) & 0xffff;
-        eeprom_[i+5] = htole32(rd2.val()) >> 16;
+        eeprom_[i + 4] = htole32(rd2.val()) & 0xffff;
+        eeprom_[i + 5] = htole32(rd2.val()) >> 16;
 
         RfuseData3 rd3;
         status = ReadRegister(&rd3);
         CHECK_READ(EFUSE_DATA3, status);
-        eeprom_[i+6] = htole32(rd3.val()) & 0xffff;
-        eeprom_[i+7] = htole32(rd3.val()) >> 16;
+        eeprom_[i + 6] = htole32(rd3.val()) & 0xffff;
+        eeprom_[i + 7] = htole32(rd3.val()) >> 16;
     }
 
 #if RALINK_DUMP_EEPROM
     std::printf("ralink: eeprom dump");
     for (size_t i = 0; i < eeprom_.size(); i++) {
-        if (i % 8 == 0) {
-            std::printf("\n0x%04zx: ", i);
-        }
+        if (i % 8 == 0) { std::printf("\n0x%04zx: ", i); }
         std::printf("%04x ", eeprom_[i]);
     }
     std::printf("\n");
@@ -288,9 +279,7 @@ zx_status_t Device::ReadEeprom() {
 }
 
 zx_status_t Device::ReadEepromField(uint16_t addr, uint16_t* value) {
-    if (addr >= eeprom_.size()) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    if (addr >= eeprom_.size()) { return ZX_ERR_INVALID_ARGS; }
     *value = letoh16(eeprom_[addr]);
     return ZX_OK;
 }
@@ -299,9 +288,7 @@ zx_status_t Device::ReadEepromByte(uint16_t addr, uint8_t* value) {
     uint16_t word_addr = addr >> 1;
     uint16_t word_val;
     zx_status_t result = ReadEepromField(word_addr, &word_val);
-    if (result != ZX_OK) {
-        return result;
-    }
+    if (result != ZX_OK) { return result; }
     if (addr & 0x1) {
         *value = (word_val >> 8) & 0xff;
     } else {
@@ -315,9 +302,7 @@ template <uint16_t A> zx_status_t Device::ReadEepromField(EepromField<A>* field)
 }
 
 template <uint16_t A> zx_status_t Device::WriteEepromField(const EepromField<A>& field) {
-    if (field.addr() > kEepromSize) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    if (field.addr() > kEepromSize) { return ZX_ERR_INVALID_ARGS; }
     eeprom_[field.addr()] = field.val();
     return ZX_OK;
 }
@@ -326,8 +311,8 @@ zx_status_t Device::ValidateEeprom() {
     debugfn();
     memcpy(mac_addr_, eeprom_.data() + EEPROM_MAC_ADDR_0, sizeof(mac_addr_));
     // TODO(tkilbourn): validate mac address
-    infof("MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-            mac_addr_[0], mac_addr_[1], mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
+    infof("MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr_[0], mac_addr_[1], mac_addr_[2],
+          mac_addr_[3], mac_addr_[4], mac_addr_[5]);
 
     EepromNicConf0 enc0;
     ReadEepromField(&enc0);
@@ -367,24 +352,16 @@ zx_status_t Device::ValidateEeprom() {
 
     EepromRssiBg erbg;
     ReadEepromField(&erbg);
-    if (abs(erbg.offset0()) > 10) {
-        erbg.set_offset0(0);
-    }
-    if (abs(erbg.offset1()) > 10) {
-        erbg.set_offset1(0);
-    }
+    if (abs(erbg.offset0()) > 10) { erbg.set_offset0(0); }
+    if (abs(erbg.offset1()) > 10) { erbg.set_offset1(0); }
     bg_rssi_offset_[0] = erbg.offset0();
     bg_rssi_offset_[1] = erbg.offset1();
     WriteEepromField(erbg);
 
     EepromRssiBg2 erbg2;
     ReadEepromField(&erbg2);
-    if (abs(erbg2.offset2()) > 10) {
-        erbg2.set_offset2(0);
-    }
-    if (erbg2.lna_a1() == 0x00 || erbg2.lna_a1() == 0xff) {
-        erbg2.set_lna_a1(default_lna_gain);
-    }
+    if (abs(erbg2.offset2()) > 10) { erbg2.set_offset2(0); }
+    if (erbg2.lna_a1() == 0x00 || erbg2.lna_a1() == 0xff) { erbg2.set_lna_a1(default_lna_gain); }
     bg_rssi_offset_[2] = erbg2.offset2();
     WriteEepromField(erbg2);
 
@@ -441,15 +418,11 @@ zx_status_t Device::LoadFirmware() {
     debugf("hardware stabilized\n");
 
     status = DisableWpdma();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     bool autorun = false;
     status = DetectAutoRun(&autorun);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
     if (autorun) {
         infof("not loading firmware, NIC is in autorun mode\n");
         return ZX_OK;
@@ -470,8 +443,8 @@ zx_status_t Device::LoadFirmware() {
             return ZX_ERR_BAD_STATE;
         }
         size_t out_length;
-        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
-                             0, addr, buf, to_send, ZX_TIME_INFINITE, &out_length);
+        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, addr, buf,
+                             to_send, ZX_TIME_INFINITE, &out_length);
         if (status != ZX_OK || out_length < to_send) {
             errorf("failed to send firmware\n");
             return ZX_ERR_BAD_STATE;
@@ -493,8 +466,8 @@ zx_status_t Device::LoadFirmware() {
     CHECK_WRITE(H2M_MAILBOX_STATUS, status);
 
     // Tell the device to load the firmware
-    status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
-                         kFirmware, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
+    status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode, kFirmware, 0, NULL, 0,
+                         ZX_TIME_INFINITE, NULL);
     if (status != ZX_OK) {
         errorf("failed to send load firmware command\n");
         return status;
@@ -508,17 +481,13 @@ zx_status_t Device::LoadFirmware() {
     SysCtrl sc;
     status = BusyWait(&sc, [&sc]() { return sc.mcu_ready(); }, ZX_MSEC(1));
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("system MCU not ready\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("system MCU not ready\n"); }
         return status;
     }
 
     // Disable WPDMA again
     status = DisableWpdma();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     // Initialize firmware and boot the MCU
     H2mBbpAgent hba;
@@ -558,9 +527,7 @@ zx_status_t Device::EnableRadio() {
     auto wpdma_pred = [&wgc]() { return !wgc.tx_dma_busy() && !wgc.rx_dma_busy(); };
     status = BusyWait(&wgc, wpdma_pred, ZX_MSEC(10));
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("WPDMA busy\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("WPDMA busy\n"); }
         return status;
     }
 
@@ -584,9 +551,7 @@ zx_status_t Device::EnableRadio() {
     // Wait for WPDMA again
     status = BusyWait(&wgc, wpdma_pred, ZX_MSEC(10));
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("WPDMA busy\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("WPDMA busy\n"); }
         return status;
     }
 
@@ -600,9 +565,7 @@ zx_status_t Device::EnableRadio() {
     MacStatusReg msr;
     status = BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, ZX_MSEC(10));
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("BBP busy\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("BBP busy\n"); }
         return status;
     }
 
@@ -680,9 +643,7 @@ zx_status_t Device::InitRegisters() {
     debugfn();
 
     zx_status_t status = DisableWpdma();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     status = WaitForMacCsr();
     if (status != ZX_OK) {
@@ -707,8 +668,8 @@ zx_status_t Device::InitRegisters() {
     status = WriteRegister(udc);
     CHECK_WRITE(USB_DMA_CFG, status);
 
-    status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode,
-            kReset, 0, NULL, 0, ZX_TIME_INFINITE, NULL);
+    status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kDeviceMode, kReset, 0, NULL, 0,
+                         ZX_TIME_INFINITE, NULL);
     if (status != ZX_OK) {
         errorf("failed reset\n");
         return status;
@@ -751,9 +712,7 @@ zx_status_t Device::InitRegisters() {
     CHECK_WRITE(BCN_TIME_CFG, status);
 
     status = SetRxFilter();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     BkoffSlotCfg bsc;
     status = ReadRegister(&bsc);
@@ -776,7 +735,7 @@ zx_status_t Device::InitRegisters() {
         tswc1.set_dly_pape_dis(0x06);
         tswc1.set_dly_trsw_dis(0x06);
         tswc1.set_dly_rftr_dis(0x08);
-    } // else value will be set to zero
+    }  // else value will be set to zero
     status = WriteRegister(tswc1);
     CHECK_WRITE(TX_SW_CFG1, status);
 
@@ -996,9 +955,7 @@ zx_status_t Device::InitRegisters() {
 
     TxopHldrEt the;
     the.set_tx40m_blk_en(1);
-    if (rt_type_ == RT5592) {
-        the.set_reserved_unk(4);
-    }
+    if (rt_type_ == RT5592) { the.set_reserved_unk(4); }
     status = WriteRegister(the);
     CHECK_WRITE(TXOP_HLDR_ET, status);
 
@@ -1045,8 +1002,8 @@ zx_status_t Device::InitRegisters() {
     for (int i = 0; i < 256; i++) {
         uint16_t addr = RX_WCID_BASE + i * sizeof(rwe);
         size_t out_length;
-        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite,
-                             0, addr, &rwe, sizeof(rwe), ZX_TIME_INFINITE, &out_length);
+        status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0, addr, &rwe,
+                             sizeof(rwe), ZX_TIME_INFINITE, &out_length);
         if (status != ZX_OK || out_length < (ssize_t)sizeof(rwe)) {
             errorf("failed to set RX WCID search entry\n");
             return ZX_ERR_BAD_STATE;
@@ -1168,7 +1125,7 @@ zx_status_t Device::InitRegisters() {
 zx_status_t Device::InitBbp() {
     debugfn();
 
-    switch(rt_type_) {
+    switch (rt_type_) {
     case RT5390:
         return InitBbp5390();
     case RT5592:
@@ -1189,7 +1146,8 @@ zx_status_t Device::InitBbp5390() {
     status = WriteBbp(reg);
     CHECK_WRITE(BBP4, status);
 
-    std::vector<RegInitValue> reg_init_values {
+    std::vector<RegInitValue> reg_init_values{
+        // clang-format off
         RegInitValue(31,  0x08),
         RegInitValue(65,  0x2c),
         RegInitValue(66,  0x38),
@@ -1214,6 +1172,7 @@ zx_status_t Device::InitBbp5390() {
         RegInitValue(105, 0x3c),
         RegInitValue(106, 0x03),
         RegInitValue(128, 0x12),
+// clang-format off
     };
     status = WriteBbpGroup(reg_init_values);
     if (status != ZX_OK) {
@@ -1276,6 +1235,7 @@ zx_status_t Device::InitBbp5390() {
 zx_status_t Device::InitBbp5592() {
     // Initialize first group of BBP registers
     std::vector<RegInitValue> reg_init_values {
+// clang-format off
         RegInitValue(65, 0x2c),
         RegInitValue(66, 0x38),
         RegInitValue(68, 0x0b),
@@ -1292,11 +1252,10 @@ zx_status_t Device::InitBbp5592() {
         RegInitValue(103, 0x00),
         RegInitValue(105, 0x05),
         RegInitValue(106, 0x35),
+        // clang-format on
     };
     zx_status_t status = WriteBbpGroup(reg_init_values);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     // Set MLD (Maximum Likelihood Detection) in BBP location 105
     Bbp105 bbp105;
@@ -1315,7 +1274,8 @@ zx_status_t Device::InitBbp5592() {
     CHECK_WRITE(BBP4, status);
 
     // Initialize second group of BBP registers
-    std::vector<RegInitValue> reg_init_values2 {
+    std::vector<RegInitValue> reg_init_values2{
+        // clang-format off
         RegInitValue(20,  0x06),
         RegInitValue(31,  0x08),
         RegInitValue(65,  0x2c),
@@ -1342,13 +1302,13 @@ zx_status_t Device::InitBbp5592() {
         RegInitValue(134, 0xd0),
         RegInitValue(135, 0xf6),
         RegInitValue(137, 0x0f),
+        // clang-format on
     };
     status = WriteBbpGroup(reg_init_values2);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     // Set GLRT values (Generalized likelihood ratio tests?)
+    // clang-format off
     uint8_t glrt_values[] = { 0xe0, 0x1f, 0x38, 0x32, 0x08, 0x28, 0x19, 0x0a,
                               0xff, 0x00, 0x16, 0x10, 0x10, 0x0b, 0x36, 0x2c,
                               0x26, 0x24, 0x42, 0x36, 0x30, 0x2d, 0x4c, 0x46,
@@ -1360,10 +1320,9 @@ zx_status_t Device::InitBbp5592() {
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                               0x7d, 0x14, 0x32, 0x2c, 0x36, 0x4c, 0x43, 0x2c,
                               0x2e, 0x36, 0x30, 0x6e };
+    // clang-format on
     status = WriteGlrtBlock(glrt_values, sizeof(glrt_values), 0x80);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     // Set MAC_IF_CTRL in BBP location 4
     status = ReadBbp(&bbp4);
@@ -1411,10 +1370,11 @@ zx_status_t Device::InitRfcsr() {
     debugfn();
 
     std::vector<RegInitValue> rfcsr_init_table;
-    switch(rt_type_) {
+    switch (rt_type_) {
     case RT5390:
         if (rt_rev_ >= REV_RT5390F) {
             rfcsr_init_table = {
+                // clang-format off
                 RegInitValue(1,  0x0f),
                 RegInitValue(2,  0x80),
                 RegInitValue(3,  0x88),
@@ -1472,10 +1432,12 @@ zx_status_t Device::InitRfcsr() {
                 RegInitValue(61, 0xd1),
                 RegInitValue(62, 0x00),
                 RegInitValue(63, 0x00),
+                // clang-format on
             };
         } else {
             // RT5390 before rev. F
             rfcsr_init_table = {
+                // clang-format off
                 RegInitValue(1,  0x0f),
                 RegInitValue(2,  0x80),
                 RegInitValue(3,  0x88),
@@ -1533,11 +1495,13 @@ zx_status_t Device::InitRfcsr() {
                 RegInitValue(61, 0xdd),
                 RegInitValue(62, 0x00),
                 RegInitValue(63, 0x00),
+                // clang-format on
             };
         }
         break;
     case RT5592:
         rfcsr_init_table = {
+            // clang-format off
             RegInitValue(1,  0x3f),
             RegInitValue(3,  0x08),
             RegInitValue(5,  0x10),
@@ -1560,6 +1524,7 @@ zx_status_t Device::InitRfcsr() {
             RegInitValue(53, 0x22),
             RegInitValue(63, 0x07),
             RegInitValue(2,  0x80),
+            // clang-format on
         };
         break;
     default:
@@ -1600,9 +1565,7 @@ zx_status_t Device::InitRfcsr() {
     }
 
     status = NormalModeSetup();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     if (rt_type_ == RT5592 && rt_rev_ >= REV_RT5592C) {
         status = WriteBbp(BbpRegister<27>(0x03));
@@ -1617,9 +1580,7 @@ zx_status_t Device::McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uin
     debugf("McuCommand %u\n", command);
     H2mMailboxCsr hmc;
     zx_status_t status = BusyWait(&hmc, [&hmc]() { return !hmc.owner(); });
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     hmc.set_owner(1);
     hmc.set_cmd_token(token);
@@ -1643,9 +1604,7 @@ zx_status_t Device::ReadBbp(uint8_t addr, uint8_t* val) {
 
     zx_status_t status = BusyWait(&bcc, pred);
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("timed out waiting for BBP\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("timed out waiting for BBP\n"); }
         return status;
     }
 
@@ -1678,9 +1637,7 @@ zx_status_t Device::WriteBbp(uint8_t addr, uint8_t val) {
     BbpCsrCfg bcc;
     zx_status_t status = BusyWait(&bcc, [&bcc]() { return !bcc.bbp_csr_kick(); });
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("timed out waiting for BBP\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("timed out waiting for BBP\n"); }
         return status;
     }
 
@@ -1724,9 +1681,7 @@ zx_status_t Device::WaitForBbp() {
     for (unsigned int i = 0; i < kMaxBusyReads; i++) {
         status = ReadBbp(0, &val);
         CHECK_READ(BBP0, status);
-        if ((val != 0xff) && (val != 0x00)) {
-            return ZX_OK;
-        }
+        if ((val != 0xff) && (val != 0x00)) { return ZX_OK; }
         sleep_for(kDefaultBusyWait);
     }
     errorf("timed out waiting for BBP ready\n");
@@ -1768,9 +1723,7 @@ zx_status_t Device::ReadRfcsr(uint8_t addr, uint8_t* val) {
 
     zx_status_t status = BusyWait(&rcc, pred);
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("timed out waiting for RFCSR\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("timed out waiting for RFCSR\n"); }
         return status;
     }
 
@@ -1802,9 +1755,7 @@ zx_status_t Device::WriteRfcsr(uint8_t addr, uint8_t val) {
     RfCsrCfg rcc;
     zx_status_t status = BusyWait(&rcc, [&rcc]() { return !rcc.rf_csr_kick(); });
     if (status != ZX_OK) {
-        if (status == ZX_ERR_TIMED_OUT) {
-            errorf("timed out waiting for RFCSR\n");
-        }
+        if (status == ZX_ERR_TIMED_OUT) { errorf("timed out waiting for RFCSR\n"); }
         return status;
     }
 
@@ -1850,9 +1801,8 @@ zx_status_t Device::DisableWpdma() {
 
 zx_status_t Device::DetectAutoRun(bool* autorun) {
     uint32_t fw_mode = 0;
-    zx_status_t status = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR),
-            kDeviceMode, kAutorun, 0, &fw_mode, sizeof(fw_mode), ZX_TIME_INFINITE,
-            NULL);
+    zx_status_t status = usb_control(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kDeviceMode, kAutorun,
+                                     0, &fw_mode, sizeof(fw_mode), ZX_TIME_INFINITE, NULL);
     if (status < 0) {
         errorf("DeviceMode error: %d\n", status);
         return status;
@@ -1914,9 +1864,7 @@ zx_status_t Device::AdjustFreqOffset() {
 
     if (prev_freq_off != freq_offset) {
         status = McuCommand(MCU_FREQ_OFFSET, 0xff, freq_offset, prev_freq_off);
-        if (status != ZX_OK) {
-            errorf("could not set frequency offset\n");
-        }
+        if (status != ZX_OK) { errorf("could not set frequency offset\n"); }
     }
 
     return status;
@@ -1928,12 +1876,8 @@ zx_status_t Device::NormalModeSetup() {
     Bbp138 bbp138;
     zx_status_t status = ReadBbp(&bbp138);
     CHECK_READ(BBP138, status);
-    if (rx_path_) {
-        bbp138.set_rx_adc1(0);
-    }
-    if (tx_path_) {
-        bbp138.set_tx_dac1(1);
-    }
+    if (rx_path_) { bbp138.set_rx_adc1(0); }
+    if (tx_path_) { bbp138.set_tx_dac1(1); }
     status = WriteBbp(bbp138);
     CHECK_WRITE(BBP138, status);
 
@@ -1980,14 +1924,14 @@ zx_status_t Device::StartQueues() {
     CHECK_WRITE(MAC_SYS_CTRL, status);
 
     // Beacon queue  --  maybe this isn't started here
-    //BcnTimeCfg btc;
-    //status = ReadRegister(&btc);
-    //CHECK_READ(BCN_TIME_CFG, status);
-    //btc.set_tsf_timer_en(1);
-    //btc.set_tbtt_timer_en(1);
-    //btc.set_bcn_tx_en(1);
-    //status = WriteRegister(btc);
-    //CHECK_WRITE(BCN_TIME_CFG, status);
+    // BcnTimeCfg btc;
+    // status = ReadRegister(&btc);
+    // CHECK_READ(BCN_TIME_CFG, status);
+    // btc.set_tsf_timer_en(1);
+    // btc.set_tbtt_timer_en(1);
+    // btc.set_bcn_tx_en(1);
+    // status = WriteRegister(btc);
+    // CHECK_WRITE(BCN_TIME_CFG, status);
 
     // kick the rx queue???
 
@@ -2043,6 +1987,7 @@ zx_status_t Device::SetupInterface() {
 zx_status_t Device::InitializeChannelInfo() {
     if (rt_type_ == RT5390) {
         channels_.insert({
+            // clang-format off
                 // Channel(channel, N, R, K)
                 {1, Channel(1, 241, 2, 2)},
                 {2, Channel(2, 241, 2, 7)},
@@ -2058,6 +2003,7 @@ zx_status_t Device::InitializeChannelInfo() {
                 {12, Channel(12, 246, 2, 7)},
                 {13, Channel(13, 247, 2, 2)},
                 {14, Channel(14, 248, 2, 4)},
+            // clang-format on
         });
     } else if (rt_type_ == RT5592) {
         DebugIndex debug_index;
@@ -2066,6 +2012,7 @@ zx_status_t Device::InitializeChannelInfo() {
         if (debug_index.reserved_xtal()) {
             // 40 MHz xtal
             channels_.insert({
+                // clang-format off
                     // Channel(channel,  N, R, K,  mod)
                     {1,   Channel(1,   241, 3, 2,  10)},
                     {2,   Channel(2,   241, 3, 7,  10)},
@@ -2129,10 +2076,12 @@ zx_status_t Device::InitializeChannelInfo() {
                     {188, Channel(188, 82,  1, 4,  12)},
                     {192, Channel(192, 82,  1, 8,  12)},
                     {196, Channel(196, 83,  1, 0,  12)},
+                // clang-format on
             });
         } else {
             // 20 MHz xtal
             channels_.insert({
+                // clang-format off
                     // Channel(channel,  N, R, K, mod)
                     {1,   Channel(1,   482, 3, 4,  10)},
                     {2,   Channel(2,   483, 3, 4,  10)},
@@ -2196,6 +2145,7 @@ zx_status_t Device::InitializeChannelInfo() {
                     {188, Channel(188, 164, 1, 4,  12)},
                     {192, Channel(192, 165, 1, 8,  12)},
                     {196, Channel(196, 166, 1, 0,  12)},
+                // clang-format on
             });
         }
         // Read all of our Tx calibration values
@@ -2269,28 +2219,26 @@ zx_status_t Device::ConfigureChannel5390(const Channel& channel) {
     CHECK_WRITE(RF1, status);
 
     status = AdjustFreqOffset();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     if (channel.channel <= 14) {
         int hw_index = channel.channel - 1;
         if (rt_rev_ >= REV_RT5390F) {
             static const uint8_t r55[] = {
-                0x23, 0x23, 0x23, 0x23, 0x13, 0x13, 0x03, 0x03,
-                0x03, 0x03, 0x03, 0x03, 0x03, 0x03, };
+                0x23, 0x23, 0x23, 0x23, 0x13, 0x13, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
+            };
             static const uint8_t r59[] = {
-                0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-                0x07, 0x07, 0x06, 0x05, 0x04, 0x04, };
+                0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x06, 0x05, 0x04, 0x04,
+            };
             static_assert(sizeof(r55) == sizeof(r59),
-                    "r55 and r59 should have the same number of entries.");
+                          "r55 and r59 should have the same number of entries.");
             ZX_DEBUG_ASSERT(hw_index < (ssize_t)sizeof(r55));
             WriteRfcsr(RfcsrRegister<55>(r55[hw_index]));
             WriteRfcsr(RfcsrRegister<59>(r59[hw_index]));
         } else {
             static const uint8_t r59[] = {
-                0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8d,
-                0x8a, 0x88, 0x88, 0x87, 0x87, 0x86, };
+                0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8f, 0x8d, 0x8a, 0x88, 0x88, 0x87, 0x87, 0x86,
+            };
             ZX_DEBUG_ASSERT(hw_index < (ssize_t)sizeof(r59));
             WriteRfcsr(RfcsrRegister<59>(r59[hw_index]));
         }
@@ -2353,7 +2301,8 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
     CHECK_WRITE(RF11, status);
 
     if (channel.channel <= 14) {
-        std::vector<RegInitValue> reg_init_values {
+        std::vector<RegInitValue> reg_init_values{
+            // clang-format off
             RegInitValue(10, 0x90),
             RegInitValue(11, 0x4a),
             RegInitValue(12, 0x52),
@@ -2383,11 +2332,10 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
             RegInitValue(60, 0x45),
             RegInitValue(61, 0x91),
             RegInitValue(62, 0x39),
+            // clang-format on
         };
         status = WriteRfcsrGroup(reg_init_values);
-        if (status != ZX_OK) {
-            return status;
-        }
+        if (status != ZX_OK) { return status; }
 
         uint8_t val = (channel.channel <= 10) ? 0x07 : 0x06;
         status = WriteRfcsr(23, val);
@@ -2398,7 +2346,8 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
         status = WriteRfcsr(55, 0x43);
         CHECK_WRITE(RF55, status);
     } else {
-        std::vector<RegInitValue> reg_init_values {
+        std::vector<RegInitValue> reg_init_values{
+            // clang-format off
             RegInitValue(10, 0x97),
             RegInitValue(11, 0x40),
             RegInitValue(25, 0xbf),
@@ -2414,14 +2363,14 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
             RegInitValue(57, 0x77),
             RegInitValue(60, 0x05),
             RegInitValue(61, 0x01),
+            // clang-format on
         };
         status = WriteRfcsrGroup(reg_init_values);
-        if (status != ZX_OK) {
-            return status;
-        }
+        if (status != ZX_OK) { return status; }
 
         if (channel.channel <= 64) {
-            std::vector<RegInitValue> reg_init_values {
+            std::vector<RegInitValue> reg_init_values{
+                // clang-format off
                 RegInitValue(12, 0x2e),
                 RegInitValue(13, 0x22),
                 RegInitValue(22, 0x60),
@@ -2439,13 +2388,13 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
                 RegInitValue(58, 0x15),
                 RegInitValue(59, 0x7f),
                 RegInitValue(62, 0x15),
+                // clang-format on
             };
             status = WriteRfcsrGroup(reg_init_values);
-            if (status != ZX_OK) {
-                return status;
-            }
+            if (status != ZX_OK) { return status; }
         } else if (channel.channel <= 165) {
-            std::vector<RegInitValue> reg_init_values {
+            std::vector<RegInitValue> reg_init_values{
+                // clang-format off
                 RegInitValue(12, 0x0e),
                 RegInitValue(13, 0x42),
                 RegInitValue(22, 0x40),
@@ -2463,19 +2412,16 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
                 RegInitValue(58, channel.channel <= 116 ? 0x1d : 0x15),
                 RegInitValue(59, channel.channel <= 138 ? 0x3f : 0x7c),
                 RegInitValue(62, channel.channel <= 116 ? 0x1d : 0x15),
+                // clang-format on
             };
             status = WriteRfcsrGroup(reg_init_values);
-            if (status != ZX_OK) {
-                return status;
-            }
+            if (status != ZX_OK) { return status; }
         }
     }
 
     uint8_t power_bound = channel.channel <= 14 ? kRfPowerBound2_4Ghz : kRfPowerBound5Ghz;
-    uint8_t power1 = (channel.default_power1 > power_bound) ? power_bound
-                                                              : channel.default_power1;
-    uint8_t power2 = (channel.default_power2 > power_bound) ? power_bound
-                                                              : channel.default_power2;
+    uint8_t power1 = (channel.default_power1 > power_bound) ? power_bound : channel.default_power1;
+    uint8_t power2 = (channel.default_power2 > power_bound) ? power_bound : channel.default_power2;
     Rfcsr49 r49;
     status = ReadRfcsr(&r49);
     CHECK_READ(RF49, status);
@@ -2513,9 +2459,7 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
     CHECK_WRITE(RF32, status);
 
     status = AdjustFreqOffset();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     Rfcsr3 r3;
     status = ReadRfcsr(&r3);
@@ -2524,7 +2468,8 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
     status = WriteRfcsr(r3);
     CHECK_WRITE(RF3, status);
 
-    std::vector<RegInitValue> bbp_init_values {
+    std::vector<RegInitValue> bbp_init_values{
+        // clang-format off
         RegInitValue(62, 0x37 - lna_gain_),
         RegInitValue(63, 0x37 - lna_gain_),
         RegInitValue(64, 0x37 - lna_gain_),
@@ -2532,24 +2477,23 @@ zx_status_t Device::ConfigureChannel5592(const Channel& channel) {
         RegInitValue(80, 0x0e),
         RegInitValue(81, 0x3a),
         RegInitValue(82, 0x62),
+        // clang-format on
     };
     status = WriteBbpGroup(bbp_init_values);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
-    std::vector<RegInitValue> glrt_init_values {
+    std::vector<RegInitValue> glrt_init_values{
+        // clang-format off
         RegInitValue(128, 0xe0),
         RegInitValue(129, 0x1f),
         RegInitValue(130, 0x38),
         RegInitValue(131, 0x32),
         RegInitValue(133, 0x28),
         RegInitValue(124, 0x19),
+        // clang-format on
     };
     status = WriteGlrtGroup(glrt_init_values);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     return ZX_OK;
 }
@@ -2571,9 +2515,7 @@ zx_status_t Device::ConfigureChannel(const Channel& channel) {
         return ZX_ERR_NOT_FOUND;
     }
 
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     WriteBbp(BbpRegister<62>(0x37 - lna_gain_));
     WriteBbp(BbpRegister<63>(0x37 - lna_gain_));
@@ -2822,62 +2764,54 @@ zx_status_t Device::BusyWait(R* reg, Predicate pred, zx_duration_t delay) {
     unsigned int busy;
     for (busy = 0; busy < kMaxBusyReads; busy++) {
         status = ReadRegister(reg);
-        if (status != ZX_OK) {
-            return status;
-        }
-        if (pred()) {
-            break;
-        }
+        if (status != ZX_OK) { return status; }
+        if (pred()) { break; }
         sleep_for(delay);
     }
-    if (busy == kMaxBusyReads) {
-        return ZX_ERR_TIMED_OUT;
-    }
+    if (busy == kMaxBusyReads) { return ZX_ERR_TIMED_OUT; }
     return ZX_OK;
 }
 
-static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc,
-        Rxwi0 rxwi0, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3) {
+static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi0 rxwi0,
+                    Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3) {
 #if RALINK_DUMP_RX
     uint8_t* data;
     usb_request_mmap(request, reinterpret_cast<void**>(&data));
     debugf("dumping received packet\n");
     debugf("rx len=%" PRIu64 "\n", request->response.actual);
     debugf("rxinfo usb_dma_rx_pkt_len=%u\n", rx_info.usb_dma_rx_pkt_len());
-    debugf("rxdesc ba=%u data=%u nulldata=%u frag=%u unicast_to_me=%u multicast=%u\n",
-            rx_desc.ba(), rx_desc.data(), rx_desc.nulldata(), rx_desc.frag(),
-            rx_desc.unicast_to_me(),rx_desc.multicast());
+    debugf("rxdesc ba=%u data=%u nulldata=%u frag=%u unicast_to_me=%u multicast=%u\n", rx_desc.ba(),
+           rx_desc.data(), rx_desc.nulldata(), rx_desc.frag(), rx_desc.unicast_to_me(),
+           rx_desc.multicast());
     debugf("broadcast=%u my_bss=%u crc_error=%u cipher_error=%u amsdu=%u htc=%u rssi=%u\n",
-            rx_desc.broadcast(), rx_desc.my_bss(), rx_desc.crc_error(),
-            rx_desc.cipher_error(), rx_desc.amsdu(), rx_desc.htc(), rx_desc.rssi());
+           rx_desc.broadcast(), rx_desc.my_bss(), rx_desc.crc_error(), rx_desc.cipher_error(),
+           rx_desc.amsdu(), rx_desc.htc(), rx_desc.rssi());
     debugf("l2pad=%u ampdu=%u decrypted=%u plcp_rssi=%u cipher_alg=%u last_amsdu=%u\n",
-            rx_desc.l2pad(), rx_desc.ampdu(), rx_desc.decrypted(), rx_desc.plcp_rssi(),
-            rx_desc.cipher_alg(), rx_desc.last_amsdu());
+           rx_desc.l2pad(), rx_desc.ampdu(), rx_desc.decrypted(), rx_desc.plcp_rssi(),
+           rx_desc.cipher_alg(), rx_desc.last_amsdu());
     debugf("plcp_signal=0x%04x\n", rx_desc.plcp_signal());
 
-    debugf("rxwi0 wcid=0x%02x key_idx=%u bss_idx=%u udf=0x%02x "
-            "mpdu_total_byte_count=%u tid=0x%02x\n", rxwi0.wcid(), rxwi0.key_idx(), rxwi0.bss_idx(),
-            rxwi0.udf(), rxwi0.mpdu_total_byte_count(), rxwi0.tid());
-    debugf("rxwi1 frag=%u seq=%u mcs=0x%02x bw=%u sgi=%u stbc=%u phy_mode=%u\n",
-            rxwi1.frag(), rxwi1.seq(), rxwi1.mcs(), rxwi1.bw(), rxwi1.sgi(), rxwi1.stbc(),
-            rxwi1.phy_mode());
-    debugf("rxwi2 rssi0=%u rssi1=%u rssi2=%u\n",
-            rxwi2.rssi0(), rxwi2.rssi1(), rxwi2.rssi2());
-    debugf("rxwi3 snr0=%u snr1=%u\n",
-            rxwi3.snr0(), rxwi3.snr1());
+    debugf(
+        "rxwi0 wcid=0x%02x key_idx=%u bss_idx=%u udf=0x%02x "
+        "mpdu_total_byte_count=%u tid=0x%02x\n",
+        rxwi0.wcid(), rxwi0.key_idx(), rxwi0.bss_idx(), rxwi0.udf(), rxwi0.mpdu_total_byte_count(),
+        rxwi0.tid());
+    debugf("rxwi1 frag=%u seq=%u mcs=0x%02x bw=%u sgi=%u stbc=%u phy_mode=%u\n", rxwi1.frag(),
+           rxwi1.seq(), rxwi1.mcs(), rxwi1.bw(), rxwi1.sgi(), rxwi1.stbc(), rxwi1.phy_mode());
+    debugf("rxwi2 rssi0=%u rssi1=%u rssi2=%u\n", rxwi2.rssi0(), rxwi2.rssi1(), rxwi2.rssi2());
+    debugf("rxwi3 snr0=%u snr1=%u\n", rxwi3.snr0(), rxwi3.snr1());
 
     size_t i = 0;
     for (; i < request->response.actual; i++) {
         std::printf("0x%02x ", data[i]);
         if (i % 8 == 7) std::printf("\n");
     }
-    if (i % 8) {
-        std::printf("\n");
-    }
+    if (i % 8) { std::printf("\n"); }
 #endif
 }
 
 static const uint8_t kDataRates[4][8] = {
+    // clang-format off
     // Legacy CCK
     { 2, 4, 11, 22, 0, 0, 0, 0, },
     // Legacy OFDM
@@ -2886,6 +2820,7 @@ static const uint8_t kDataRates[4][8] = {
     { 13, 26, 39, 52, 78, 104, 117, 130, },
     // HT Greenfield
     { 13, 26, 39, 52, 78, 104, 117, 130, },
+    // clang-format on
 };
 
 static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3,
@@ -2912,12 +2847,10 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
         break;
     }
 
-    bool ht_phy = rxwi1.phy_mode() == PhyMode::kHtMixMode ||
-        rxwi1.phy_mode() == PhyMode::kHtGreenfield;
+    bool ht_phy =
+        rxwi1.phy_mode() == PhyMode::kHtMixMode || rxwi1.phy_mode() == PhyMode::kHtGreenfield;
     uint8_t mcs = rxwi1.mcs();
-    if (rxwi1.phy_mode() == PhyMode::kLegacyCck && mcs > 8) {
-        mcs -= 8;
-    }
+    if (rxwi1.phy_mode() == PhyMode::kLegacyCck && mcs > 8) { mcs -= 8; }
     if (rxwi1.phy_mode() < fbl::count_of(kDataRates) && mcs < fbl::count_of(kDataRates[0])) {
         uint8_t rate = kDataRates[rxwi1.phy_mode()][mcs];
         if (rate > 0) {
@@ -3038,9 +2971,7 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
 
-    if (wlanmac_proxy_ != nullptr) {
-        return ZX_ERR_ALREADY_BOUND;
-    }
+    if (wlanmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
 
     zx_status_t status = LoadFirmware();
     if (status != ZX_OK) {
@@ -3138,9 +3069,7 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     CHECK_WRITE(BBP66, status);
 
     status = SetRxFilter();
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     wlanmac_proxy_.swap(proxy);
 
@@ -3149,9 +3078,7 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     wlan_channel_t chan;
     chan.channel_num = 1;
     status = WlanmacSetChannel(0, &chan);
-    if (status != ZX_OK) {
-        warnf("could not set channel err=%d\n", status);
-    }
+    if (status != ZX_OK) { warnf("could not set channel err=%d\n", status); }
 
     infof("wlan started\n");
     return ZX_OK;
@@ -3188,9 +3115,7 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
         if (free_write_reqs_.empty()) {
             // No free write requests! Drop the packet.
             static int failed_writes = 0;
-            if (failed_writes++ % 50 == 0) {
-                warnf("dropping tx; no free usb requests\n");
-            }
+            if (failed_writes++ % 50 == 0) { warnf("dropping tx; no free usb requests\n"); }
             return;
         }
         req = free_write_reqs_.back();
@@ -3238,26 +3163,18 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     zx_status_t status;
-    if (options != 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    if (options != 0) { return ZX_ERR_INVALID_ARGS; }
     auto channel = channels_.find(chan->channel_num);
-    if (channel == channels_.end()) {
-        return ZX_ERR_NOT_FOUND;
-    }
+    if (channel == channels_.end()) { return ZX_ERR_NOT_FOUND; }
     status = StopRxQueue();
     if (status != ZX_OK) {
         errorf("could not stop rx queue\n");
         return status;
     }
     status = ConfigureChannel(channel->second);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
     status = ConfigureTxPower(channel->second);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
     status = StartQueues();
     if (status != ZX_OK) {
         errorf("could not start queues\n");
@@ -3268,9 +3185,7 @@ zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
 }
 
 zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
-    if (options != 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    if (options != 0) { return ZX_ERR_INVALID_ARGS; }
 
     MacBssidDw0 bss0;
     MacBssidDw1 bss1;
