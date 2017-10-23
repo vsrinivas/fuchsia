@@ -88,7 +88,9 @@ void ActiveSourceStageImpl::Update() {
     }
   }
 
-  source_->SetDownstreamDemand(demand);
+  if (source_ != nullptr) {
+    source_->SetDownstreamDemand(demand);
+  }
 }
 
 void ActiveSourceStageImpl::FlushInput(size_t index,

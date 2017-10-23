@@ -137,10 +137,7 @@ void MediaServiceImpl::CreateVideoRenderer(
 
 void MediaServiceImpl::CreateAudioCapturer(
     fidl::InterfaceRequest<MediaCapturer> request) {
-  CreateProductOnNewThread<AudioCapturerImpl>(
-      fxl::MakeCopyable([ this, request = std::move(request) ]() mutable {
-        return AudioCapturerImpl::Create(std::move(request), this);
-      }));
+  AddProduct(AudioCapturerImpl::Create(std::move(request), this));
 }
 
 void MediaServiceImpl::CreateTimelineController(

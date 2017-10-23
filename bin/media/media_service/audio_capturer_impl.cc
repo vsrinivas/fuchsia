@@ -94,4 +94,8 @@ void AudioCapturerImpl::Stop() {
   source_->Stop();
 }
 
+void AudioCapturerImpl::Synchronize(const SynchronizeCallback& callback) {
+  callback();
+}
+
 }  // namespace media

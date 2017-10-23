@@ -40,6 +40,8 @@ class AudioCapturerImpl : public MediaServiceImpl::Product<MediaCapturer>,
 
   void Stop() override;
 
+  void Synchronize(const SynchronizeCallback& callback) override;
+
  private:
   AudioCapturerImpl(fidl::InterfaceRequest<MediaCapturer> request,
                     MediaServiceImpl* owner);

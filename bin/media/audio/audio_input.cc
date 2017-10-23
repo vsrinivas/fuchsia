@@ -57,6 +57,7 @@ zx_status_t AudioInput::Initalize() {
 
   fbl::Vector<audio_stream_format_range_t> formats;
   res = audio_input_->GetSupportedFormats(&formats);
+  audio_input_->Close();
   if (res != ZX_OK) {
     return res;
   }
@@ -181,7 +182,14 @@ void AudioInput::Worker() {
   // TODO(dalesat): Report this failure so the capture client can be informed.
 
   auto cleanup =
-      fbl::MakeAutoCall([this]() { audio_input_->ResetRingBuffer(); });
+      fbl::MakeAutoCall([this]() { audio_input_->Close(); });
+
+  // Open the device
+  res = audio_input_->Open();
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed open audio input device (res =" << res << ")";
+    return;
+  }
 
   // Configure the format.
   res =

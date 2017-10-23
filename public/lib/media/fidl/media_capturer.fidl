@@ -23,4 +23,9 @@ interface MediaCapturer {
 
   // Stops capture.
   Stop();
+
+  // A no-op call which immediately calls the user's supplied callback.  May be
+  // used to synchronize with other operations which are in flight on the
+  // channel.
+  Synchronize() => ();
 };
