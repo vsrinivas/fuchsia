@@ -4,4 +4,5 @@
 
 #pragma once
 
+void RegisterRoundTripBenchmarks();
 void RunSubprocess(const char* func_name);

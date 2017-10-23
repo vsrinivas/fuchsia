@@ -13,6 +13,8 @@ DEFINE_uint32(channel_write, 0, "Launch a process to write to a channel");
 DEFINE_string(subprocess, "", "Launch a process to run the named function");
 
 int main(int argc, char** argv) {
+  RegisterRoundTripBenchmarks();
+
   benchmark::Initialize(&argc, argv);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 

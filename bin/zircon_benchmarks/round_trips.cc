@@ -401,72 +401,46 @@ ThreadFunc GetThreadFunc(const char* name) {
   return nullptr;
 }
 
-// Define benchmark entry points.  This involves a bit of code duplication.
-
-void RoundTrip_BasicChannel_SingleProcess(benchmark::State& state) {
-  BasicChannelTest test(SingleProcess);
-  while (state.KeepRunning())
-    test.Run();
+// Register a test that has two variants, single-process and multi-process.
+template <class TestClass>
+void RegisterTestMultiProc(const char* base_name) {
+  benchmark::RegisterBenchmark(
+      (std::string(base_name) + "_SingleProcess").c_str(),
+      [](benchmark::State& state) {
+        TestClass test(SingleProcess);
+        while (state.KeepRunning())
+          test.Run();
+      });
+  benchmark::RegisterBenchmark(
+      (std::string(base_name) + "_MultiProcess").c_str(),
+      [](benchmark::State& state) {
+        TestClass test(MultiProcess);
+        while (state.KeepRunning())
+          test.Run();
+      });
 }
-BENCHMARK(RoundTrip_BasicChannel_SingleProcess);
 
-void RoundTrip_BasicChannel_MultiProcess(benchmark::State& state) {
-  BasicChannelTest test(MultiProcess);
-  while (state.KeepRunning())
-    test.Run();
+// Register a test that has only one variant.
+template <class TestClass>
+void RegisterTestNoArgs(const char* name) {
+  benchmark::RegisterBenchmark(
+      name,
+      [](benchmark::State& state) {
+        TestClass test;
+        while (state.KeepRunning())
+          test.Run();
+      });
 }
-BENCHMARK(RoundTrip_BasicChannel_MultiProcess);
-
-void RoundTrip_ChannelPort_SingleProcess(benchmark::State& state) {
-  ChannelPortTest test(SingleProcess);
-  while (state.KeepRunning())
-    test.Run();
-}
-BENCHMARK(RoundTrip_ChannelPort_SingleProcess);
-
-void RoundTrip_ChannelPort_MultiProcess(benchmark::State& state) {
-  ChannelPortTest test(MultiProcess);
-  while (state.KeepRunning())
-    test.Run();
-}
-BENCHMARK(RoundTrip_ChannelPort_MultiProcess);
-
-void RoundTrip_ChannelCall_SingleProcess(benchmark::State& state) {
-  ChannelCallTest test(SingleProcess);
-  while (state.KeepRunning())
-    test.Run();
-}
-BENCHMARK(RoundTrip_ChannelCall_SingleProcess);
-
-void RoundTrip_ChannelCall_MultiProcess(benchmark::State& state) {
-  ChannelCallTest test(MultiProcess);
-  while (state.KeepRunning())
-    test.Run();
-}
-BENCHMARK(RoundTrip_ChannelCall_MultiProcess);
-
-void RoundTrip_Port_SingleProcess(benchmark::State& state) {
-  PortTest test(SingleProcess);
-  while (state.KeepRunning())
-    test.Run();
-}
-BENCHMARK(RoundTrip_Port_SingleProcess);
-
-void RoundTrip_Port_MultiProcess(benchmark::State& state) {
-  PortTest test(MultiProcess);
-  while (state.KeepRunning())
-    test.Run();
-}
-BENCHMARK(RoundTrip_Port_MultiProcess);
-
-void RoundTrip_Futex_SingleProcess(benchmark::State& state) {
-  FutexTest test;
-  while (state.KeepRunning())
-    test.Run();
-}
-BENCHMARK(RoundTrip_Futex_SingleProcess);
 
 }  // namespace
+
+void RegisterRoundTripBenchmarks() {
+  RegisterTestMultiProc<BasicChannelTest>("RoundTrip_BasicChannel");
+  RegisterTestMultiProc<ChannelPortTest>("RoundTrip_ChannelPort");
+  RegisterTestMultiProc<ChannelCallTest>("RoundTrip_ChannelCall");
+  RegisterTestMultiProc<PortTest>("RoundTrip_Port");
+  RegisterTestNoArgs<FutexTest>("RoundTrip_Futex_SingleProcess");
+}
 
 void RunSubprocess(const char* func_name) {
   auto func = GetThreadFunc(func_name);
