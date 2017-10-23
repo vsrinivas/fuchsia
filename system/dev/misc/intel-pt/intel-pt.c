@@ -390,6 +390,16 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
         // Keep track of allocated buffers as we go in case we later fail:
         // we want to be able to free those that got allocated.
         ++per_trace->num_chunks;
+        // Catch bugs in io_buffer_init_aligned. If it doesn't give us a
+        // properly aligned buffer we'll get an "operational error" later.
+        // See Intel Vol3 36.2.6.2.
+        zx_paddr_t pa = io_buffer_phys(&per_trace->chunks[i]);
+        zx_paddr_t align_mask = (1ull << alignment_log2) - 1;
+        if (pa & align_mask) {
+            zxlogf(ERROR, "%s: WARNING: chunk has bad alignment: alignment %u, got 0x%" PRIx64 "\n",
+                   __func__, alignment_log2, pa);
+            return ZX_ERR_INTERNAL;
+        }
     }
     assert(per_trace->num_chunks == num);
 
