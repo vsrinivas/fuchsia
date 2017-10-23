@@ -260,6 +260,13 @@ void SuggestionEngineImpl::Query(
   }
 }
 
+void SuggestionEngineImpl::PrimeSpeechCapture() {
+  if (media_service_) {
+    media_service_->CreateAudioCapturer(primer_.NewRequest());
+    primer_->GetSupportedMediaTypes([=](auto) { primer_ = nullptr; });
+  }
+}
+
 // |SuggestionProvider|
 void SuggestionEngineImpl::BeginSpeechCapture(
     fidl::InterfaceHandle<TranscriptionListener> transcription_listener) {
@@ -381,6 +388,8 @@ void SuggestionEngineImpl::Initialize(
   context_writer_.Bind(std::move(context_writer));
 
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
+
+  PrimeSpeechCapture();
 }
 
 void SuggestionEngineImpl::SetSpeechToText(

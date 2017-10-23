@@ -147,6 +147,9 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void SetSpeechToText(fidl::InterfaceHandle<SpeechToText> service) override;
 
  private:
+  // TODO(rosswang): move elsewhere, though this should ideally be unnecessary
+  void PrimeSpeechCapture();
+
   // Cleans up all resources associated with a query, including clearing
   // the previous ask suggestions, closing any still open SuggestionListeners,
   // etc.
@@ -268,6 +271,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;
+
+  media::MediaCapturerPtr primer_;
 };
 
 }  // namespace maxwell
