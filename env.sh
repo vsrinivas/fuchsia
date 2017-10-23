@@ -251,7 +251,7 @@ function fset-usage() {
 Usage: fset x86-64|arm64|rpi3|odroidc2|hikey960
                               [--release] [--packages p1,p2...]
                               [--goma|--no-goma] [--no-ensure-goma]
-                              [--goma-dir path]
+                              [--goma-dir path] [--args gn-argument]
                               [--ccache|--no-ccache]
 Sets fuchsia build options.
 END
@@ -321,6 +321,14 @@ function fset() {
           echo -e "GOMA directory does not exist: "${goma_dir}""
           return 1
         fi
+        shift
+        ;;
+      --args)
+        if [[ $# -lt 2 ]]; then
+          fset-usage
+          return 1
+        fi
+        gen_args="${gen_args} --args $2"
         shift
         ;;
       --ccache)

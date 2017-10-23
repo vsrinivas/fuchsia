@@ -20,6 +20,7 @@ _fset() {
     '--goma[use goma]' "--no-goma[don't use goma]" \
     "--no-ensure-goma[don't make sure goma is running]" \
     "--ccache[use ccache]" "--no-ccache[don't use ccache]" \
+    "--args[arguments for gn gen]" \
     '--goma-dir[goma directory to use]:directory:_files -/'
 }
 
