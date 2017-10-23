@@ -10,6 +10,20 @@
 #include <fbl/unique_ptr.h>
 #include <hypervisor/cpu_state.h>
 
+class El2TranslationTable {
+public:
+    El2TranslationTable() = default;
+    ~El2TranslationTable();
+    DISALLOW_COPY_ASSIGN_AND_MOVE(El2TranslationTable);
+
+    zx_status_t Init();
+    zx_paddr_t Base() const;
+
+private:
+    zx_paddr_t l0_pa_ = 0;
+    zx_paddr_t l1_pa_ = 0;
+};
+
 /* Represents a stack for use with EL2. */
 class El2Stack {
 public:
@@ -21,7 +35,7 @@ public:
     zx_paddr_t Top() const;
 
 private:
-    zx_paddr_t stack_paddr_ = 0;
+    zx_paddr_t pa_ = 0;
 };
 
 /* Maintains the EL2 state for each CPU. */
@@ -31,9 +45,12 @@ public:
     ~El2CpuState();
 
 private:
+    El2TranslationTable table_;
     fbl::Array<El2Stack> stacks_;
 
     El2CpuState() = default;
+
+    static zx_status_t OnTask(void* context, uint cpu_num);
 };
 
 zx_status_t alloc_vmid(uint8_t* vmid);

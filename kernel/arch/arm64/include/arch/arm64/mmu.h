@@ -44,7 +44,7 @@
 // See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
 // This size is based on a 4KB granule and a starting level of 1. We chose this
 // size due to the 40-bit physical address range on Cortex-A53.
-#define MMU_GUEST_SIZE_SHIFT 38
+#define MMU_GUEST_SIZE_SHIFT 36
 
 #define MMU_MAX_PAGE_SIZE_SHIFT 48
 
@@ -174,6 +174,8 @@
 #define MMU_TCR_IRGN0(cache_flags)              BM( 8, 2, (cache_flags))
 #define MMU_TCR_EPD0                            BM( 7, 1, 1)
 #define MMU_TCR_T0SZ(size)                      BM( 0, 6, (size))
+
+#define MMU_TCR_EL2_RES1                        (BM(31, 1, 1) | BM(23, 1, 1))
 
 #define MMU_VTCR_EL2_RES1                       BM(31, 1, 1)
 #define MMU_VTCR_EL2_SL0(starting_level)        BM( 6, 2, (starting_level))
@@ -313,6 +315,8 @@
                         MMU_TCR_IRGN0(MMU_RGN_WRITE_BACK_ALLOCATE) | \
                         MMU_TCR_T0SZ(64 - MMU_GUEST_SIZE_SHIFT))
 
+#define MMU_TCR_EL2_FLAGS (MMU_TCR_EL2_RES1 | MMU_TCR_FLAGS0)
+
 // See ARM DDI 0487B.b, Table D4-7 for details on how to configure SL0. We chose
 // a starting level of 1, due to our use of a 4KB granule and a 40-bit PARange.
 #define MMU_VTCR_EL2_SL0_DEFAULT MMU_VTCR_EL2_SL0(1)
@@ -388,7 +392,7 @@ __BEGIN_CDECLS
 #define MMU_ARM64_GLOBAL_ASID (~0U)
 #define MMU_ARM64_USER_ASID (0U)
 
-#define MMU_ARM64_ASID_BITS     (16U)
+#define MMU_ARM64_ASID_BITS (16U)
 
 
 __END_CDECLS

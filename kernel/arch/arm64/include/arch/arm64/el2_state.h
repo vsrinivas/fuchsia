@@ -114,7 +114,7 @@ static_assert(__offsetof(El2State, guest_state.hpfar_el2) == GS_HPFAR_EL2, "");
 
 __BEGIN_CDECLS
 
-extern zx_status_t arm64_el2_on(zx_paddr_t stack_top);
+extern zx_status_t arm64_el2_on(zx_paddr_t stack_top, zx_paddr_t ttbr0);
 extern zx_status_t arm64_el2_off();
 extern zx_status_t arm64_el2_resume(zx_paddr_t el2_state, zx_paddr_t vttbr);
 

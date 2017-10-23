@@ -26,8 +26,9 @@
 #define SCTLR_EL2_C                     (1 << 2)
 #define SCTLR_EL2_SA                    (1 << 3)
 #define SCTLR_EL2_I                     (1 << 12)
+#define SCTLR_EL2_RES1                  0x30c50830
 
-#define VTCR_EL2_PS_SHIFT               16
+#define XTCR_EL2_PS_SHIFT               16
 
 // NOTE(abdulla): This excludes the top bit, as it is too large for VTCR_EL2.PS.
 #define ID_AA64MMFR0_EL1_PARANGE_MASK   0x07
@@ -225,7 +226,7 @@ FUNCTION_LABEL(arm64_el2_exec_table)
     entry_invalid_exception
     entry_invalid_exception
 
-// zx_status_t arm64_el2_on(zx_paddr_t stack_top);
+// zx_status_t arm64_el2_on(zx_paddr_t stack_top, zx_paddr_t ttbr0);
 //
 // |stack_top| must point to the physical address of a contiguous stack.
 FUNCTION(arm64_el2_on)
@@ -233,31 +234,43 @@ FUNCTION(arm64_el2_on)
     ret
 END_FUNCTION(arm64_el2_on)
 FUNCTION_LABEL(el2_hvc_on)
-    mov sp, x0
-
     // Load PARange from ID_AA64MMFR0_EL1.
-    mrs x11, id_aa64mmfr0_el1
-    and x11, x11, #ID_AA64MMFR0_EL1_PARANGE_MASK
+    mrs x10, id_aa64mmfr0_el1
+    and x10, x10, #ID_AA64MMFR0_EL1_PARANGE_MASK
+    lsl x10, x10, #XTCR_EL2_PS_SHIFT
 
     // Setup the virtualisation translation control.
     movlit x9, MMU_VTCR_EL2_FLAGS
-    // Combine MMU_VTCR_EL2_FLAGS with VTCR_EL2.PS.
-    lsl x10, x11, #VTCR_EL2_PS_SHIFT
+    // Combine MMU_VTCR_EL2_FLAGS with xTCR_EL2.PS.
     orr x9, x9, x10
     msr vtcr_el2, x9
 
-    // Disable MMU, but enable I-cache, D-cache, and all alignment checking.
-    mrs x9, sctlr_el2
-    movlit x10, SCTLR_EL2_A | SCTLR_EL2_C | SCTLR_EL2_SA | SCTLR_EL2_I
+    // Setup the EL2 translation control.
+    movlit x9, MMU_TCR_EL2_FLAGS
+    // Combine MMU_TCR_EL2_FLAGS with xTCR_EL2.PS.
     orr x9, x9, x10
-    bic x9, x9, #SCTLR_EL2_M
+    msr tcr_el2, x9
+
+    // Setup the EL2 memory attributes.
+    movlit x9, MMU_MAIR_VAL
+    msr mair_el2, x9
+
+    // Setup the EL2 translation table.
+    msr ttbr0_el2, x1
+    isb
+
+    // Enable the MMU, I-cache, D-cache, and all alignment checking.
+    movlit x9, SCTLR_EL2_M | SCTLR_EL2_A | SCTLR_EL2_C | SCTLR_EL2_SA | SCTLR_EL2_I | \
+               SCTLR_EL2_RES1
     msr sctlr_el2, x9
     isb
 
-    // Invalidate all EL2 TLB entries and synchronize I-cache and D-cache.
+    // Invalidate all EL2 TLB entries.
     tlbi alle2
     isb
-    dsb sy
+
+    // Setup the EL2 stack pointer.
+    mov sp, x0
 
     // Setup the exec vector table for EL2.
     mrs x9, vbar_el2
