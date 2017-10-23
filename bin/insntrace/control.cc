@@ -38,7 +38,7 @@
 
 namespace debugserver {
 
-static constexpr char ipt_device_path[] = "/dev/misc/intel-pt";
+static constexpr char ipt_device_path[] = "/dev/misc/cpu-trace";
 static constexpr char ktrace_device_path[] = "/dev/misc/ktrace";
 
 static constexpr char buffer_output_path_suffix[] = "pt";
