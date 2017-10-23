@@ -110,6 +110,15 @@ zx_status_t Mlme::HandlePacket(const Packet* packet) {
     case Packet::Peer::kWlan: {
         auto fc = packet->field<FrameControl>(0);
         debughdr("FrameControl type: %u subtype: %u\n", fc->type(), fc->subtype());
+
+        // TODO(porce): Handle HTC field.
+        if (fc->HasHtCtrl()) {
+            warnf("WLAN frame (type %u:%u) HTC field is present but not handled. Drop.", fc->type(),
+                  fc->subtype());
+
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
         switch (fc->type()) {
         case FrameType::kManagement:
             status = HandleMgmtPacket(packet);
