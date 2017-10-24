@@ -279,7 +279,12 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Asynchronous operations are sequenced in a queue.
   OperationQueue operation_queue_;
 
+  class Blockable;
+  std::vector<std::pair<ModuleDataPtr, Blockable*>> blocked_operations_;
+
   // Operations implemented here.
+  class LaunchModuleCall;
+  class KillModuleCall;
   class StartModuleCall;
   class StartModuleInShellCall;
   class AddModuleCall;
@@ -289,6 +294,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class DeleteCall;
   class StartCall;
   class GetImportanceCall;
+  class LedgerNotificationCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

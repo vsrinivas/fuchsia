@@ -79,7 +79,57 @@ void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
   xdr->Field("signal", &data->signal);
 }
 
+bool IsEqual(ModuleDataPtr m1, ModuleDataPtr m2) {
+  std::string j1, j2;
+  XdrWrite(&j1, &m1, XdrModuleData);
+  XdrWrite(&j2, &m2, XdrModuleData);
+  return j1 == j2;
+}
+
 }  // namespace
+
+// A base class meant to be used by operations that want to get blocked until
+// an asynchronous event happens outside that operation. The operation would
+// call Block(callback) and yield control back to the message loop. Later an
+// asynchronous event can call operation->Continue() that would run the
+// callback.
+// NOTE(alhaad): FlowTokens are NOT meant to be used with Blockable operations.
+// This is because we'd need to store FlowToken instance in a class member. If
+// we don't delete the class member, the refcount remains non-zero which cause
+// an operation to stall forever. Deleting the flow token causes the operation
+// itself to be deleted and needs to be done very carefully.
+// TODO(alhaad): Consider using FlowTokenHolder.
+class StoryControllerImpl::Blockable {
+ public:
+  Blockable(StoryControllerImpl* const story_controller_impl)
+      : story_controller_impl_(story_controller_impl) {}
+
+  void Continue() {
+    continue_called_ = true;
+    if (continue_) {
+      continue_();
+    }
+  }
+
+ protected:
+  void Block(ModuleDataPtr module_data, std::function<void()> c) {
+    story_controller_impl_->blocked_operations_.push_back(
+        std::make_pair<ModuleDataPtr, Blockable*>(
+            std::move(module_data), this));
+    continue_ = c;
+    if (continue_called_) {
+      continue_();
+    }
+  }
+
+ private:
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+
+  std::function<void()> continue_;
+  bool continue_called_{};
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(Blockable);
+};
 
 class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
  public:
@@ -95,93 +145,38 @@ class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
-class StoryControllerImpl::StartModuleCall : Operation<> {
+class StoryControllerImpl::LaunchModuleCall : Operation<> {
  public:
-  StartModuleCall(
+  LaunchModuleCall(
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
-      const fidl::Array<fidl::String>& parent_module_path,
-      const fidl::Array<fidl::String>& module_path,
-      const fidl::String& module_url,
-      const fidl::String& link_name,
-      const ModuleSource module_source,
-      SurfaceRelationPtr surface_relation,
+      ModuleDataPtr module_data,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ResultCall result_call)
-      : Operation("StoryControllerImpl::StartModuleCall",
+      : Operation("StoryControllerImpl::GetLedgerNotificationCall",
                   container,
-                  std::move(result_call),
-                  module_url),
+                  std::move(result_call)),
         story_controller_impl_(story_controller_impl),
-        parent_module_path_(parent_module_path.Clone()),
-        module_path_(module_path.Clone()),
-        module_url_(module_url),
-        link_name_(link_name),
-        module_source_(module_source),
-        surface_relation_(std::move(surface_relation)),
+        module_data_(std::move(module_data)),
         outgoing_services_(std::move(outgoing_services)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)) {
-    FXL_DCHECK(!parent_module_path_.is_null());
-
     Ready();
   }
 
  private:
   void Run() override {
     FlowToken flow{this};
-
-    // We currently require a 1:1 relationship between module
-    // application instances and Module service instances, because
-    // flutter only allows one ViewOwner per flutter application,
-    // and we need one ViewOwner instance per Module instance.
-
-    if (link_name_) {
-      link_path_ = LinkPath::New();
-      link_path_->module_path = parent_module_path_.Clone();
-      link_path_->link_name = link_name_;
-      WriteModuleData(flow);
-
-    } else {
-      // If the link name is null, this module receives the default link of its
-      // parent module. We need to retrieve which one it is from story storage.
-      new ReadDataCall<ModuleData>(
-          &operation_queue_, story_controller_impl_->page(),
-          MakeModuleKey(parent_module_path_), false /* not_found_is_ok */,
-          XdrModuleData, [this, flow](ModuleDataPtr module_data) {
-            FXL_DCHECK(module_data);
-            link_path_ = module_data->link_path.Clone();
-            WriteModuleData(flow);
-          });
-    }
-  }
-
-  void WriteModuleData(FlowToken flow) {
-    module_data_ = ModuleData::New();
-    module_data_->module_url = module_url_;
-    module_data_->module_path = module_path_.Clone();
-    module_data_->link_path = link_path_.Clone();
-    module_data_->module_source = module_source_;
-    module_data_->surface_relation = surface_relation_.Clone();
-    module_data_->module_stopped = false;
-
-    const std::string key{MakeModuleKey(module_path_)};
-    new WriteDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        module_data_.Clone(), [this, flow] { Cont(flow); });
-  }
-
-  void Cont(FlowToken flow) {
-    auto i = std::find_if(
-        story_controller_impl_->connections_.begin(),
-        story_controller_impl_->connections_.end(),
-        [this](const Connection& c) {
-          return c.module_data->module_path.Equals(module_path_);
-        });
+    auto i = std::find_if(story_controller_impl_->connections_.begin(),
+                          story_controller_impl_->connections_.end(),
+                          [this](const Connection& c) {
+                            return c.module_data->module_path.Equals(
+                                module_data_->module_path);
+                          });
 
     // We launch the new module if it doesn't run yet.
     if (i == story_controller_impl_->connections_.end()) {
@@ -196,8 +191,8 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     // TODO(mesch): If only the link is different, we should just hook the
     // existing module instance on a new link and notify it about the changed
     // link value.
-    if (i->module_data->module_url != module_url_ ||
-        !i->module_data->link_path->Equals(*link_path_) ||
+    if (i->module_data->module_url != module_data_->module_url ||
+        !i->module_data->link_path->Equals(*module_data_->link_path) ||
         outgoing_services_.is_valid() || incoming_services_.is_pending()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
@@ -215,9 +210,10 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
   void Launch(FlowToken /*flow*/) {
-    FXL_LOG(INFO) << "StoryControllerImpl::StartModule() " << module_url_;
+    FXL_LOG(INFO) << "StoryControllerImpl::LaunchModule() "
+                  << module_data_->module_url;
     auto module_config = AppConfig::New();
-    module_config->url = module_url_;
+    module_config->url = module_data_->module_url;
 
     mozart::ViewProviderPtr view_provider;
     fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request =
@@ -272,6 +268,199 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         });
   }
 
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  ModuleDataPtr module_data_;
+  fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
+  fidl::InterfaceRequest<app::ServiceProvider> incoming_services_;
+  fidl::InterfaceRequest<ModuleController> module_controller_request_;
+  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
+};
+
+class StoryControllerImpl::KillModuleCall : Operation<> {
+ public:
+  KillModuleCall(OperationContainer* const container,
+                 StoryControllerImpl* const story_controller_impl,
+                 ModuleDataPtr module_data,
+                 const std::function<void()>& done)
+      : Operation("StoryControllerImpl::KillModuleCall", container, [] {}),
+        story_controller_impl_(story_controller_impl),
+        module_data_(std::move(module_data)),
+        done_(done) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    // If the module is external, we also notify story shell about it going
+    // away. An internal module is stopped by its parent module, and it's up to
+    // the parent module to defocus it first. TODO(mesch): Why not always
+    // defocus?
+    if (story_controller_impl_->story_shell_ &&
+        module_data_->module_source == ModuleSource::EXTERNAL) {
+      story_controller_impl_->story_shell_->DefocusView(
+          PathString(module_data_->module_path), [this, flow] { Cont(flow); });
+    } else {
+      Cont(flow);
+    }
+  }
+
+  void Cont(FlowToken flow) {
+    // Teardown the module, which discards the module controller. A parent
+    // module can call ModuleController.Stop() multiple times before the
+    // ModuleController connection gets disconnected by Teardown(). Therefore,
+    // this StopModuleCall Operation will cause the calls to be queued.
+    // The first Stop() will cause the ModuleController to be closed, and
+    // so subsequent Stop() attempts will not find a controller and will return.
+    auto ii = std::find_if(story_controller_impl_->connections_.begin(),
+                           story_controller_impl_->connections_.end(),
+                           [this](const Connection& c) {
+                             return c.module_data->module_path.Equals(
+                                 module_data_->module_path);
+                           });
+
+    if (ii == story_controller_impl_->connections_.end()) {
+      FXL_LOG(INFO) << "No ModuleController for Module"
+                    << " " << PathString(module_data_->module_path) << ". "
+                    << "Was ModuleContext.Stop() called twice?";
+      done_();
+      return;
+    }
+
+    // done_() must be called BEFORE the Teardown() done callback returns. See
+    // comment in StopModuleCall::Kill() before making changes here. Be aware
+    // that done_ is NOT the Done() callback of the Operation.
+    ii->module_controller_impl->Teardown([this, flow] {
+      Cont1(flow);
+      done_();
+    });
+  }
+
+  void Cont1(FlowToken /*flow*/) {
+    story_controller_impl_->modules_watchers_.ForAllPtrs(
+        [this](StoryModulesWatcher* const watcher) {
+          watcher->OnStopModule(module_data_.Clone());
+        });
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  ModuleDataPtr module_data_;
+  std::function<void()> done_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(KillModuleCall);
+};
+
+class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
+ public:
+  StartModuleCall(
+      OperationContainer* const container,
+      StoryControllerImpl* const story_controller_impl,
+      const fidl::Array<fidl::String>& parent_module_path,
+      const fidl::Array<fidl::String>& module_path,
+      const fidl::String& module_url,
+      const fidl::String& link_name,
+      const ModuleSource module_source,
+      SurfaceRelationPtr surface_relation,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      ResultCall result_call)
+      : Blockable(story_controller_impl),
+        Operation("StoryControllerImpl::StartModuleCall",
+                  container,
+                  std::move(result_call),
+                  module_url),
+        story_controller_impl_(story_controller_impl),
+        parent_module_path_(parent_module_path.Clone()),
+        module_path_(module_path.Clone()),
+        module_url_(module_url),
+        link_name_(link_name),
+        module_source_(module_source),
+        surface_relation_(std::move(surface_relation)),
+        outgoing_services_(std::move(outgoing_services)),
+        incoming_services_(std::move(incoming_services)),
+        module_controller_request_(std::move(module_controller_request)),
+        view_owner_request_(std::move(view_owner_request)) {
+    FXL_DCHECK(!parent_module_path_.is_null());
+
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    // NOTE(alhaad): We don't use flow tokens for blockable operations. See
+    // class comment for |Blockable| to know why.
+
+    // We currently require a 1:1 relationship between module
+    // application instances and Module service instances, because
+    // flutter only allows one ViewOwner per flutter application,
+    // and we need one ViewOwner instance per Module instance.
+
+    if (link_name_) {
+      link_path_ = LinkPath::New();
+      link_path_->module_path = parent_module_path_.Clone();
+      link_path_->link_name = link_name_;
+      Cont1();
+
+    } else {
+      // If the link name is null, this module receives the default link of its
+      // parent module. We need to retrieve which one it is from story storage.
+      new ReadDataCall<ModuleData>(
+          &operation_queue_, story_controller_impl_->page(),
+          MakeModuleKey(parent_module_path_), false /* not_found_is_ok */,
+          XdrModuleData, [this](ModuleDataPtr module_data) {
+            FXL_DCHECK(module_data);
+            link_path_ = module_data->link_path.Clone();
+            Cont1();
+          });
+    }
+  }
+
+  void Cont1() {
+    module_data_ = ModuleData::New();
+    module_data_->module_url = module_url_;
+    module_data_->module_path = module_path_.Clone();
+    module_data_->link_path = link_path_.Clone();
+    module_data_->module_source = module_source_;
+    module_data_->surface_relation = surface_relation_.Clone();
+    module_data_->module_stopped = false;
+
+    // We check if the data in the ledger is already what we want. If so, we do
+    // nothing.
+    // Read the module data.
+    new ReadDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(),
+        MakeModuleKey(module_path_), false /* not_found_is_ok */, XdrModuleData,
+        [this](ModuleDataPtr data) {
+          // If what we're about to write is already present on the ledger, just
+          // launch the module.
+          if (IsEqual(data.Clone(), module_data_.Clone())) {
+            Launch();
+            return;
+          }
+          WriteModuleData();
+        });
+  }
+
+  void WriteModuleData() {
+    const std::string key{MakeModuleKey(module_path_)};
+    new WriteDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
+        module_data_.Clone(), [this] { Block(module_data_.Clone(),
+                                             [this] { Launch(); }); });
+  }
+
+  void Launch() {
+    new LaunchModuleCall(&operation_queue_, story_controller_impl_,
+                         std::move(module_data_), std::move(outgoing_services_),
+                         std::move(incoming_services_),
+                         std::move(module_controller_request_),
+                         std::move(view_owner_request_), [this] { Done(); });
+  }
+
   // Passed in:
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::Array<fidl::String> parent_module_path_;
@@ -309,7 +498,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       const bool focus,
       ModuleSource module_source,
       ResultCall result_call)
-      : Operation("StoryControllerImpl::StartModuleCall",
+      : Operation("StoryControllerImpl::StartModuleInShellCall",
                   container,
                   std::move(result_call),
                   module_url),
@@ -401,7 +590,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleInShellCall);
 };
 
-class StoryControllerImpl::AddModuleCall : Operation<> {
+class StoryControllerImpl::AddModuleCall : Blockable, Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
                 StoryControllerImpl* const story_controller_impl,
@@ -411,7 +600,8 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
                 const fidl::String& link_name,
                 SurfaceRelationPtr surface_relation,
                 const ResultCall& done)
-      : Operation("StoryControllerImpl::AddModuleCall",
+      : Blockable(story_controller_impl),
+        Operation("StoryControllerImpl::AddModuleCall",
                   container,
                   done,
                   module_url),
@@ -426,39 +616,42 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
 
  private:
   void Run() override {
-    FlowToken flow{this};
-
+    // NOTE(alhaad): We don't use flow tokens for blockable operations. See
+    // class comment for |Blockable| to know why.
     module_path_ = parent_module_path_.Clone();
     module_path_.push_back(module_name_);
     link_path_ = LinkPath::New();
     link_path_->module_path = parent_module_path_.Clone();
     link_path_->link_name = link_name_;
 
-    WriteModuleData(flow);
+    WriteModuleData();
   }
 
-  void WriteModuleData(FlowToken flow) {
-    ModuleDataPtr data = ModuleData::New();
-    data->module_url = module_url_;
-    data->module_path = module_path_.Clone();
-    data->link_path = link_path_.Clone();
-    data->module_source = ModuleSource::EXTERNAL;
-    data->surface_relation = surface_relation_.Clone();
-    data->module_stopped = false;
+  void WriteModuleData() {
+    module_data_ = ModuleData::New();
+    module_data_->module_url = module_url_;
+    module_data_->module_path = module_path_.Clone();
+    module_data_->link_path = link_path_.Clone();
+    module_data_->module_source = ModuleSource::EXTERNAL;
+    module_data_->surface_relation = surface_relation_.Clone();
+    module_data_->module_stopped = false;
 
     const std::string key{MakeModuleKey(module_path_)};
     new WriteDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        std::move(data), [this, flow] { Cont(flow); });
+        module_data_.Clone(), [this] { Block(module_data_.Clone(),
+                                             [this] { Cont(); }); });
   }
 
-  void Cont(FlowToken flow) {
+  void Cont() {
     if (story_controller_impl_->IsRunning()) {
       new StartModuleInShellCall(&operation_queue_, story_controller_impl_,
                                  parent_module_path_, module_name_, module_url_,
                                  link_name_, nullptr, nullptr, nullptr,
                                  std::move(surface_relation_), true,
-                                 ModuleSource::EXTERNAL, [flow] {});
+                                 ModuleSource::EXTERNAL, [this] { Done(); });
+    } else {
+      Done();
     }
   }
 
@@ -471,6 +664,8 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
 
   fidl::Array<fidl::String> module_path_;
   LinkPathPtr link_path_;
+
+  ModuleDataPtr module_data_;
 
   OperationQueue operation_queue_;
 
@@ -662,48 +857,41 @@ class StoryControllerImpl::StopCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
-class StoryControllerImpl::StopModuleCall : Operation<> {
+class StoryControllerImpl::StopModuleCall : Blockable, Operation<> {
  public:
   StopModuleCall(OperationContainer* const container,
                  StoryControllerImpl* const story_controller_impl,
                  const fidl::Array<fidl::String>& module_path,
                  const std::function<void()>& done)
-      : Operation("StoryControllerImpl::StopModuleCall", container, [] {}),
+      : Blockable(story_controller_impl),
+        Operation("StoryControllerImpl::StopModuleCall", container, done),
         story_controller_impl_(story_controller_impl),
-        module_path_(module_path.Clone()),
-        done_(done) {
+        module_path_(module_path.Clone()) {
     Ready();
   }
 
  private:
   void Run() override {
-    FlowToken flow{this};
+    // NOTE(alhaad): We don't use flow tokens for blockable operations. See
+    // class comment for |Blockable| to know why.
 
     // Read the module data.
     new ReadDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(),
         MakeModuleKey(module_path_), false /* not_found_is_ok */, XdrModuleData,
-        [this, flow](ModuleDataPtr data) {
+        [this](ModuleDataPtr data) {
           module_data_ = std::move(data);
-          Cont1(flow);
+          Cont1();
         });
   }
 
-  void Cont1(FlowToken flow) {
-    // If the module is external, we also notify story shell about it going
-    // away. An internal module is stopped by its parent module, and it's up to
-    // the parent module to defocus it first. TODO(mesch): Why not always
-    // defocus?
-    if (story_controller_impl_->story_shell_ &&
-        module_data_->module_source == ModuleSource::EXTERNAL) {
-      story_controller_impl_->story_shell_->DefocusView(
-          PathString(module_path_), [this, flow] { Cont2(flow); });
-    } else {
-      Cont2(flow);
+  void Cont1() {
+    // If the module is already marked as stopped, kill module.
+    if (module_data_->module_stopped) {
+      Kill();
+      return;
     }
-  }
 
-  void Cont2(FlowToken flow) {
     // Write the module data back, with module_stopped = true, which is a
     // global state shared between machines to track when the module is
     // explicitly stopped.
@@ -712,54 +900,43 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
     const std::string key{MakeModuleKey(module_data_->module_path)};
     new WriteDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        module_data_->Clone(), [this, flow] { Cont3(flow); });
-  }
-
-  void Cont3(FlowToken flow) {
-    // Teardown the module, which discards the module controller. A parent
-    // module can call ModuleController.Stop() multiple times before the
-    // ModuleController connection gets disconnected by Teardown(). Therefore,
-    // this StopModuleCall Operation will cause the calls to be queued.
-    // The first Stop() will cause the ModuleController to be closed, and
-    // so subsequent Stop() attempts will not find a controller and will return.
-    auto ii = std::find_if(
-        story_controller_impl_->connections_.begin(),
-        story_controller_impl_->connections_.end(),
-        [this](const Connection& c) {
-          return c.module_data->module_path.Equals(module_path_);
+        module_data_->Clone(), [this] {
+          // TODO(alhaad: This Block() call may never continue if the data
+          // we're writing to the ledger is the same as the data already in
+          // there as that will not trigger an OnPageChange().
+          Block(module_data_.Clone(), [this] { Kill(); });
         });
-
-    if (ii == story_controller_impl_->connections_.end()) {
-      FXL_LOG(INFO) << "No ModuleController for Module"
-                    << " " << PathString(module_path_) << ". "
-                    << "Was ModuleContext.Stop() called twice?";
-      done_();
-      return;
-    }
-
-    // done_() must be called BEFORE the Teardown() done callback
-    // returns, because Teardown() then deletes the module controller,
-    // and done_ might be the callback from the Stop() call that was
-    // invoked on the module controller connection.
-    //
-    // Therefore, done_ is NOT the Done() callback of the Operation.
-    ii->module_controller_impl->Teardown([this, flow] {
-      Cont4(flow);
-      done_();
-    });
   }
 
-  void Cont4(FlowToken /*flow*/) {
-    story_controller_impl_->modules_watchers_.ForAllPtrs(
-        [this](StoryModulesWatcher* const watcher) {
-          watcher->OnStopModule(module_data_.Clone());
+  void Kill() {
+    new KillModuleCall(
+        &operation_queue_, story_controller_impl_,
+        std::move(module_data_), [this] {
+          // NOTE(alhaad): An interesting flow of control to keep in mind:
+          // 1. From ModuleController.Stop() which can only be called from FIDL,
+          // we call StoryControllerImpl.StopModule().
+          // 2. StoryControllerImpl.StopModule() pushes StopModuleCall onto the
+          // operation queue.
+          // 3. When operation becomes current, we write to ledger, block and
+          // continue on receiving OnPageChange from ledger.
+          // 4. We then call KillModuleCall on a sub operation queue.
+          // 5. KillModuleCall will call Teardown() on the same
+          // ModuleControllerImpl that had started ModuleController.Stop(). In
+          // the callback from Teardown(), it calls done_() (and NOT Done()).
+          // 6. done_() in KillModuleCall leads to the next line here, which
+          // calls Done() which would call the FIDL callback from
+          // ModuleController.Stop().
+          // 7. Done() on the next line also deletes this which deletes the
+          // still running KillModuleCall, but this is okay because the only
+          // thing that was left to do in KillModuleCall was FlowToken going out
+          // of scope.
+          Done();
         });
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::Array<fidl::String> module_path_;
   ModuleDataPtr module_data_;
-  std::function<void()> done_;
 
   OperationQueue operation_queue_;
 
@@ -928,6 +1105,63 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
   OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
+};
+
+class StoryControllerImpl::LedgerNotificationCall : Operation<> {
+ public:
+  LedgerNotificationCall(OperationContainer* const container,
+                         StoryControllerImpl* const story_controller_impl,
+                         ModuleDataPtr module_data)
+      : Operation("StoryControllerImpl::LedgerNotificationCall",
+                  container,
+                  [] {}),
+        story_controller_impl_(story_controller_impl),
+        module_data_(std::move(module_data)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    if (!story_controller_impl_->IsRunning() ||
+        module_data_->module_source != ModuleSource::EXTERNAL) {
+      return;
+    }
+
+    // Check for existing module at the given path.
+    auto i = std::find_if(story_controller_impl_->connections_.begin(),
+                          story_controller_impl_->connections_.end(),
+                          [this](const Connection& c) {
+                            return c.module_data->module_path.Equals(
+                                module_data_->module_path);
+                          });
+    if (i != story_controller_impl_->connections_.end() &&
+        module_data_->module_stopped) {
+      new KillModuleCall(&operation_queue_, story_controller_impl_,
+                         std::move(module_data_), [flow] {});
+      return;
+    } else if (module_data_->module_stopped) {
+      // There is no module running, and the ledger change is for a stopped
+      // module so do nothing.
+      return;
+    }
+
+    // We reach this point only if we want to start an external module.
+    auto parent_path = module_data_->module_path.Clone();
+    parent_path.resize(parent_path.size() - 1);
+    new StartModuleInShellCall(
+        &operation_queue_, story_controller_impl_, parent_path,
+        module_data_->module_path[module_data_->module_path.size() - 1],
+        module_data_->module_url, module_data_->link_path->link_name, nullptr,
+        nullptr, nullptr, std::move(module_data_->surface_relation), true,
+        module_data_->module_source, [flow] {});
+  }
+
+  OperationQueue operation_queue_;
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  ModuleDataPtr module_data_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerNotificationCall);
 };
 
 StoryControllerImpl::StoryControllerImpl(
@@ -1111,7 +1345,6 @@ void StoryControllerImpl::StartModule(
     const ModuleSource module_source) {
   fidl::Array<fidl::String> module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
-
   new StartModuleCall(&operation_queue_, this, parent_module_path, module_path,
                       module_url, link_name, module_source,
                       SurfaceRelation::New(), std::move(outgoing_services),
@@ -1166,9 +1399,29 @@ void StoryControllerImpl::ProcessPendingViews() {
 
 void StoryControllerImpl::OnPageChange(const std::string& key,
                                        const std::string& value) {
-  // TODO(mesch): Possibly do something real here. This is for module instances
-  // started in the same story on another device.
   FXL_LOG(INFO) << "StoryControllerImpl::OnPageChange " << key << " " << value;
+  auto module_data = ModuleData::New();
+  if (!XdrRead(value, &module_data, XdrModuleData)) {
+    FXL_LOG(ERROR) << "Unable to parse ModuleData " << key << " " << value;
+    return;
+  }
+
+  // Check if we already have a blocked operation for this update.
+  auto i = std::find_if(blocked_operations_.begin(), blocked_operations_.end(),
+                        [&module_data](const auto& p) {
+                          return IsEqual(p.first.Clone(), module_data.Clone());
+                        });
+  if (i != blocked_operations_.end()) {
+    // For an already blocked operation, we simply continue the operation.
+    auto op = i->second;
+    blocked_operations_.erase(i);
+    op->Continue();
+    return;
+  }
+
+  // Control reaching here means that this update probably came from a remote
+  // device.
+  new LedgerNotificationCall(&operation_queue_, this, std::move(module_data));
 }
 
 // |StoryController|
