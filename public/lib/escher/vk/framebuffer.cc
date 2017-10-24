@@ -6,7 +6,6 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/image.h"
@@ -16,17 +15,6 @@ namespace escher {
 const ResourceTypeInfo Framebuffer::kTypeInfo("Framebuffer",
                                               ResourceType::kResource,
                                               ResourceType::kFramebuffer);
-
-Framebuffer::Framebuffer(impl::EscherImpl* escher_impl,
-                         uint32_t width,
-                         uint32_t height,
-                         std::vector<ImagePtr> images,
-                         vk::RenderPass render_pass)
-    : Framebuffer(escher_impl->escher(),
-                  width,
-                  height,
-                  std::move(images),
-                  render_pass) {}
 
 Framebuffer::Framebuffer(Escher* escher,
                          ImagePtr color_image,

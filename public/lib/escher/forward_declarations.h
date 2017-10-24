@@ -41,6 +41,7 @@ struct VulkanContext;
 struct VulkanSwapchain;
 
 typedef fxl::RefPtr<Buffer> BufferPtr;
+typedef fxl::RefPtr<Escher> EscherPtr;
 typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
 typedef fxl::RefPtr<GpuMem> GpuMemPtr;
 typedef fxl::RefPtr<Image> ImagePtr;
@@ -59,7 +60,6 @@ class CommandBuffer;
 class CommandBufferPool;
 class CommandBufferSequencer;
 class ComputeShader;
-class EscherImpl;
 class GlslToSpirvCompiler;
 class GpuUploader;
 class ImageCache;
@@ -71,12 +71,14 @@ class ModelPipeline;
 class ModelPipelineCache;
 class ModelRenderer;
 class Pipeline;
+class PipelineCache;
 class SsdoAccelerator;
 class SsdoSampler;
 
 typedef fxl::RefPtr<ModelData> ModelDataPtr;
 typedef fxl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
 typedef fxl::RefPtr<ModelPipelineCache> ModelPipelineCachePtr;
+typedef fxl::RefPtr<ModelRenderer> ModelRendererPtr;
 typedef fxl::RefPtr<Pipeline> PipelinePtr;
 
 }  // namespace impl

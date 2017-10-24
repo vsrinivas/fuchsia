@@ -8,7 +8,6 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
@@ -20,20 +19,16 @@
 
 namespace escher {
 
-impl::EscherImpl* Renderer::escher_impl() const {
-  return escher_->impl();
-}
-
 Renderer::Renderer(Escher* escher)
     : context_(escher->vulkan_context()),
       escher_(escher),
       pool_(escher->command_buffer_pool()) {
-  escher_impl()->IncrementRendererCount();
+  escher->IncrementRendererCount();
 }
 
 Renderer::~Renderer() {
   FXL_DCHECK(!current_frame_);
-  escher_impl()->DecrementRendererCount();
+  escher()->DecrementRendererCount();
 }
 
 void Renderer::BeginFrame() {
@@ -44,9 +39,9 @@ void Renderer::BeginFrame() {
   current_frame_ = pool_->GetCommandBuffer();
 
   FXL_DCHECK(!profiler_);
-  if (enable_profiling_ && escher_impl()->supports_timer_queries()) {
+  if (enable_profiling_ && escher()->supports_timer_queries()) {
     profiler_ = fxl::MakeRefCounted<TimestampProfiler>(
-        context_.device, escher_impl()->timestamp_period());
+        context_.device, escher()->timestamp_period());
     AddTimestamp("throwaway");  // Intel/Mesa workaround; see EndFrame().
     AddTimestamp("start of frame");
   }
@@ -96,7 +91,7 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
   }
   current_frame_ = nullptr;
 
-  escher_impl()->Cleanup();
+  escher()->Cleanup();
 }
 
 void Renderer::AddTimestamp(const char* name) {

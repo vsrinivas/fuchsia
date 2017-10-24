@@ -37,8 +37,6 @@ class Renderer : public fxl::RefCountedThreadSafe<Renderer>,
   explicit Renderer(Escher* escher);
   virtual ~Renderer();
 
-  impl::EscherImpl* escher_impl() const;
-
   // Obtain a CommandBuffer, to record commands for the current frame.
   void BeginFrame();
   void SubmitPartialFrame();

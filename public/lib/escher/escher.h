@@ -12,7 +12,6 @@
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 
@@ -25,7 +24,7 @@ class Escher : public MeshBuilderFactory {
   // Escher does not take ownership of the objects in the Vulkan context.  It is
   // up to the application to eventually destroy them, and also to ensure that
   // they outlive the Escher instance.
-  Escher(VulkanDeviceQueuesPtr device);
+  explicit Escher(VulkanDeviceQueuesPtr device);
   ~Escher();
 
   // Implement MeshBuilderFactory interface.
@@ -52,6 +51,12 @@ class Escher : public MeshBuilderFactory {
       bool use_unnormalized_coordinates = false);
 
   uint64_t GetNumGpuBytesAllocated();
+
+  // Do periodic housekeeping.  This is called by Renderer::EndFrame(), so you
+  // don't need to call it if your application is constantly renderering.
+  // However, if your app enters a "quiet period" then you might want to
+  // arrange to call Cleanup() after the last frame has finished rendering.
+  void Cleanup();
 
   VulkanDeviceQueues* device() const { return device_.get(); }
   vk::Device vk_device() const { return device_->vk_device(); }
@@ -80,13 +85,15 @@ class Escher : public MeshBuilderFactory {
   }
 
  private:
-  // Friends that need access to impl_.
   friend class Renderer;
-  // friend class ResourceRecycler;
-  friend class impl::GpuUploader;
-  // Provide access to internal Escher functionality.  Don't use this unless
-  // you are on the Escher team: your code will break.
-  impl::EscherImpl* impl() const { return impl_.get(); }
+
+  // Called by Renderer constructor and destructor, respectively.
+  void IncrementRendererCount() { ++renderer_count_; }
+  void DecrementRendererCount() { --renderer_count_; }
+
+  // Called by Renderer to support GPU performance profiling.
+  bool supports_timer_queries() const { return supports_timer_queries_; }
+  float timestamp_period() const { return timestamp_period_; }
 
   VulkanDeviceQueuesPtr device_;
   VulkanContext vulkan_context_;
@@ -102,7 +109,12 @@ class Escher : public MeshBuilderFactory {
   std::unique_ptr<ResourceRecycler> resource_recycler_;
   std::unique_ptr<impl::MeshManager> mesh_manager_;
 
-  std::unique_ptr<impl::EscherImpl> impl_;
+  std::unique_ptr<impl::PipelineCache> pipeline_cache_;
+
+  std::atomic<uint32_t> renderer_count_;
+
+  bool supports_timer_queries_ = false;
+  float timestamp_period_ = 0.f;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Escher);
 };

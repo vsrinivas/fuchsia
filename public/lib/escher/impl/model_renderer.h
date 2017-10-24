@@ -10,6 +10,7 @@
 #include "lib/escher/impl/model_pipeline_cache.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/vk/texture.h"
+#include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {
@@ -17,10 +18,10 @@ namespace impl {
 class ModelData;
 
 // ModelRenderer is a subcomponent used by PaperRenderer.
-class ModelRenderer {
+class ModelRenderer final : public fxl::RefCountedThreadSafe<ModelRenderer> {
  public:
-  ModelRenderer(Escher* escher, ModelDataPtr model_data);
-  ~ModelRenderer();
+  static ModelRendererPtr New(Escher* escher, ModelDataPtr model_data);
+
   void Draw(const Stage& stage,
             const ModelDisplayListPtr& display_list,
             CommandBuffer* command_buffer);
@@ -62,6 +63,9 @@ class ModelRenderer {
                            uint32_t lighting_pass_sample_count);
 
  private:
+  ModelRenderer(Escher* escher, ModelDataPtr model_data);
+  ~ModelRenderer();
+
   std::pair<vk::RenderPass, vk::RenderPass> CreateRenderPasses(
       vk::Format pre_pass_color_format,
       vk::Format lighting_pass_color_format,
@@ -90,6 +94,9 @@ class ModelRenderer {
   MeshPtr circle_;
 
   TexturePtr white_texture_;
+
+  FRIEND_REF_COUNTED_THREAD_SAFE(ModelRenderer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ModelRenderer);
 };
 
 }  // namespace impl

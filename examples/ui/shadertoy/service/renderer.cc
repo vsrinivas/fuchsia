@@ -7,7 +7,6 @@
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/framebuffer.h"
@@ -95,7 +94,7 @@ Renderer::Renderer(Escher* escher, vk::Format framebuffer_format)
       device_(escher->vulkan_context().device),
       framebuffer_format_(framebuffer_format),
       render_pass_(CreateRenderPass(device_, framebuffer_format)),
-      full_screen_(NewFullScreenMesh(escher_impl()->mesh_manager())),
+      full_screen_(NewFullScreenMesh(escher->mesh_manager())),
       white_texture_(CreateWhiteTexture()),
       descriptor_set_pool_(escher,
                            Compiler::GetDescriptorSetLayoutCreateInfo()) {}

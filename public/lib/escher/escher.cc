@@ -4,10 +4,10 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/glsl_compiler.h"
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
+#include "lib/escher/impl/vk/pipeline_cache.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_allocator.h"
@@ -31,12 +31,13 @@ std::unique_ptr<impl::CommandBufferPool> NewCommandBufferPool(
 std::unique_ptr<impl::CommandBufferPool> NewTransferCommandBufferPool(
     const VulkanContext& context,
     impl::CommandBufferSequencer* sequencer) {
-  if (!context.transfer_queue)
+  if (!context.transfer_queue) {
     return nullptr;
-  else
+  } else {
     return std::make_unique<impl::CommandBufferPool>(
         context.device, context.transfer_queue,
         context.transfer_queue_family_index, sequencer, false);
+  }
 }
 
 // Constructor helper.
@@ -87,9 +88,35 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
                                    gpu_allocator(),
                                    gpu_uploader(),
                                    resource_recycler())),
-      impl_(std::make_unique<impl::EscherImpl>(this, vulkan_context_)) {}
+      pipeline_cache_(std::make_unique<impl::PipelineCache>()),
+      renderer_count_(0) {
+  FXL_DCHECK(vulkan_context_.instance);
+  FXL_DCHECK(vulkan_context_.physical_device);
+  FXL_DCHECK(vulkan_context_.device);
+  FXL_DCHECK(vulkan_context_.queue);
+  // TODO: additional validation, e.g. ensure that queue supports both graphics
+  // and compute.
 
-Escher::~Escher() {}
+  auto device_properties = vk_physical_device().getProperties();
+  timestamp_period_ = device_properties.limits.timestampPeriod;
+  auto queue_properties =
+      vk_physical_device()
+          .getQueueFamilyProperties()[vulkan_context_.queue_family_index];
+  supports_timer_queries_ = queue_properties.timestampValidBits > 0;
+}
+
+Escher::~Escher() {
+  FXL_DCHECK(renderer_count_ == 0);
+  vk_device().waitIdle();
+  Cleanup();
+}
+
+void Escher::Cleanup() {
+  command_buffer_pool()->Cleanup();
+  if (auto pool = transfer_command_buffer_pool()) {
+    pool->Cleanup();
+  }
+}
 
 MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
                                       size_t max_vertex_count,

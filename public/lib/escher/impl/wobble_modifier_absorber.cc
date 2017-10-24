@@ -5,7 +5,6 @@
 #include "lib/escher/impl/wobble_modifier_absorber.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/resources/resource_recycler.h"
 
 namespace escher {

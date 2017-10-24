@@ -94,8 +94,6 @@ source_set("escher") {
     "impl/debug_print.cc",
     "impl/descriptor_set_pool.cc",
     "impl/descriptor_set_pool.h",
-    "impl/escher_impl.cc",
-    "impl/escher_impl.h",
     "impl/glsl_compiler.cc",
     "impl/glsl_compiler.h",
     "impl/gpu_mem_slab.cc",

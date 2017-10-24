@@ -7,7 +7,6 @@
 #include <glm/gtx/transform.hpp>
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/impl/command_buffer.h"
-#include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/impl/model_data.h"
@@ -24,6 +23,10 @@
 
 namespace escher {
 namespace impl {
+
+ModelRendererPtr ModelRenderer::New(Escher* escher, ModelDataPtr model_data) {
+  return fxl::AdoptRef(new ModelRenderer(escher, std::move(model_data)));
+}
 
 ModelRenderer::ModelRenderer(Escher* escher, ModelDataPtr model_data)
     : escher_(escher),

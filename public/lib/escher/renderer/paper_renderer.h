@@ -43,6 +43,9 @@ class PaperRenderer : public Renderer {
   void CycleSsdoAccelerationMode();
 
   const impl::ModelDataPtr& model_data() const { return model_data_; }
+  const impl::ModelRendererPtr& model_renderer() const {
+    return model_renderer_;
+  }
 
  private:
   PaperRenderer(Escher* escher, impl::ModelDataPtr model_data);
@@ -102,7 +105,7 @@ class PaperRenderer : public Renderer {
   vk::Format lighting_pass_color_format_;
   vk::Format depth_format_;
   impl::ModelDataPtr model_data_;
-  std::unique_ptr<impl::ModelRenderer> model_renderer_;
+  impl::ModelRendererPtr model_renderer_;
   std::unique_ptr<impl::SsdoSampler> ssdo_;
   std::unique_ptr<impl::SsdoAccelerator> ssdo_accelerator_;
   std::unique_ptr<DepthToColor> depth_to_color_;

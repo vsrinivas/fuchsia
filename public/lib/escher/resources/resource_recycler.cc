@@ -5,7 +5,6 @@
 #include "lib/escher/resources/resource_recycler.h"
 
 #include "lib/escher/escher.h"
-#include "lib/escher/impl/escher_impl.h"
 
 namespace escher {
 

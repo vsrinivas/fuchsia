@@ -7,7 +7,6 @@
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/impl/escher_impl.h"
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/impl/model_data.h"
@@ -57,14 +56,12 @@ fxl::RefPtr<PaperRenderer> PaperRenderer::New(Escher* escher) {
 
 PaperRenderer::PaperRenderer(Escher* escher, impl::ModelDataPtr model_data)
     : Renderer(escher),
-      full_screen_(NewFullScreenMesh(escher_impl()->mesh_manager())),
+      full_screen_(NewFullScreenMesh(escher->mesh_manager())),
       image_cache_(escher->image_cache()),
-      // TODO: perhaps cache depth_format_ in EscherImpl.
       depth_format_(ESCHER_CHECKED_VK_RESULT(
           impl::GetSupportedDepthStencilFormat(context_.physical_device))),
       model_data_(std::move(model_data)),
-      model_renderer_(
-          std::make_unique<impl::ModelRenderer>(escher, model_data_)),
+      model_renderer_(impl::ModelRenderer::New(escher, model_data_)),
       ssdo_(std::make_unique<impl::SsdoSampler>(
           escher,
           full_screen_,
@@ -452,6 +449,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
       image_cache_, depth_format_, width, height,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
   {
+    // TODO(ES-43): this can be deferred until the final lighting pass.
     current_frame()->TakeWaitSemaphore(
         color_image_out, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 

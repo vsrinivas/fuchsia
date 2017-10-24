@@ -21,11 +21,6 @@ class Framebuffer : public Resource {
               uint32_t height,
               std::vector<ImagePtr> images,
               vk::RenderPass render_pass);
-  Framebuffer(impl::EscherImpl* escher_impl,
-              uint32_t width,
-              uint32_t height,
-              std::vector<ImagePtr> images,
-              vk::RenderPass render_pass);
   Framebuffer(Escher* escher, ImagePtr color_image, vk::RenderPass render_pass);
   Framebuffer(Escher* escher,
               ImagePtr color_image,
