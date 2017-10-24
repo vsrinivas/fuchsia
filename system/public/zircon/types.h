@@ -166,6 +166,9 @@ typedef struct {
     uint32_t rd_num_handles;
 } zx_channel_call_args_t;
 
+// Maximum number of wait items allowed for zx_object_wait_many()
+#define ZX_WAIT_MANY_MAX_ITEMS 8
+
 // Structure for zx_object_wait_many():
 typedef struct {
     zx_handle_t handle;

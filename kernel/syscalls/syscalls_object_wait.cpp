@@ -32,9 +32,12 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-constexpr uint32_t kMaxWaitHandleCount = 1024u;
+constexpr uint32_t kMaxWaitHandleCount = 8u;
 
-// Note: This is used for quite a few InlineArrays (simultaneously) in sys_handle_wait_many.
+// ensure public headers agree
+static_assert(ZX_WAIT_MANY_MAX_ITEMS == kMaxWaitHandleCount, "");
+
+// Note: This is used for two InlineArrays in sys_handle_wait_many.
 constexpr size_t kWaitManyInlineCount = 8u;
 
 zx_status_t sys_object_wait_one(zx_handle_t handle_value,
@@ -102,10 +105,8 @@ zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> user_items, uint32_t c
         return ZX_ERR_TIMED_OUT;
     }
 
-    if (!user_items)
-        return ZX_ERR_INVALID_ARGS;
     if (count > kMaxWaitHandleCount)
-        return ZX_ERR_INVALID_ARGS;
+        return ZX_ERR_OUT_OF_RANGE;
 
     fbl::AllocChecker ac;
     fbl::InlineArray<zx_wait_item_t, kWaitManyInlineCount> items(&ac, count);

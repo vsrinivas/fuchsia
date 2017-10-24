@@ -38,6 +38,9 @@ signals if the state of the object was modified by another thread or
 process.  (For example, a Channel ceases asserting **ZX_CHANNEL_READABLE**
 once the last message in its queue is read).
 
+The maximum number of items that may be waited upon is **ZX_WAIT_MANY_MAX_ITEMS**,
+which is 8.  To wait on more things at once use Ports.
+
 ## RETURN VALUE
 
 **object_wait_many**() returns **ZX_OK** if any of *waitfor* signals were
@@ -51,6 +54,8 @@ For any other return value, the *pending* fields of *items* are undefined.
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS**  *items* isn't a valid pointer or if *count* is too large.
+
+**ZX_ERR_OUT_OF_RANGE**  *count* is greater than **ZX_WAIT_MANY_MAX_ITEMS**.
 
 **ZX_ERR_BAD_HANDLE**  one of *items* contains an invalid handle.
 
