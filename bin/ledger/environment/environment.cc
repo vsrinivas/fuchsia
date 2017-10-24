@@ -11,10 +11,8 @@
 namespace ledger {
 
 Environment::Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                         NetworkService* network_service,
                          fxl::RefPtr<fxl::TaskRunner> io_runner)
     : main_runner_(std::move(main_runner)),
-      network_service_(network_service),
       coroutine_service_(std::make_unique<coroutine::CoroutineServiceImpl>()),
       io_runner_(std::move(io_runner)) {
   FXL_DCHECK(main_runner_);

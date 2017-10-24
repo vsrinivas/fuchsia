@@ -21,13 +21,11 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/bin/ledger/network/network_service_impl.h"
 
 namespace ledger {
 
@@ -79,13 +77,7 @@ class App : public LedgerController {
   ~App() override {}
 
   bool Start() {
-    network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
-        loop_.task_runner(), [this] {
-          return application_context_
-              ->ConnectToEnvironmentService<network::NetworkService>();
-        });
-    environment_ = std::make_unique<Environment>(loop_.task_runner(),
-                                                 network_service_.get());
+    environment_ = std::make_unique<Environment>(loop_.task_runner());
     if (app_params_.trigger_cloud_erased_for_testing) {
       environment_->SetTriggerCloudErasedForTesting();
     }
@@ -118,7 +110,6 @@ class App : public LedgerController {
   trace::TraceProvider trace_provider_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
-  std::unique_ptr<NetworkService> network_service_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;

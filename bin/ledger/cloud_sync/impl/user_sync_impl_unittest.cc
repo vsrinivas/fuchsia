@@ -14,7 +14,6 @@
 #include "peridot/bin/ledger/backoff/test/test_backoff.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_cloud_provider.h"
 #include "peridot/bin/ledger/device_set/cloud_device_set.h"
-#include "peridot/bin/ledger/network/fake_network_service.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace cloud_sync {
@@ -32,8 +31,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 class UserSyncImplTest : public ::test::TestWithMessageLoop {
  public:
   UserSyncImplTest()
-      : network_service_(message_loop_.task_runner()),
-        environment_(message_loop_.task_runner(), &network_service_),
+      : environment_(message_loop_.task_runner()),
         cloud_provider_(cloud_provider_ptr_.NewRequest()) {
     UserConfig user_config;
     user_config.user_directory = tmp_dir.path();
@@ -56,7 +54,6 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   }
 
   files::ScopedTempDir tmp_dir;
-  ledger::FakeNetworkService network_service_;
   ledger::Environment environment_;
   cloud_provider::CloudProviderPtr cloud_provider_ptr_;
   test::TestCloudProvider cloud_provider_;

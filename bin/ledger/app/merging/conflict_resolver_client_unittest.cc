@@ -28,9 +28,8 @@ namespace {
 class ConflictResolverClientTest : public test::TestWithPageStorage {
  public:
   ConflictResolverClientTest()
-      : environment_(message_loop_.task_runner(),
-                     nullptr,
-                     message_loop_.task_runner()) {}
+      : environment_(message_loop_.task_runner(), message_loop_.task_runner()) {
+  }
   ~ConflictResolverClientTest() override {}
 
  protected:

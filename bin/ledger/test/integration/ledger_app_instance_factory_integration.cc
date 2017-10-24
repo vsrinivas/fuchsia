@@ -18,9 +18,7 @@
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/glue/socket/socket_writer.h"
-#include "peridot/bin/ledger/network/network_service_impl.h"
 #include "peridot/bin/ledger/test/cloud_provider/fake_cloud_provider.h"
-#include "peridot/bin/ledger/test/cloud_server/fake_cloud_network_service.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
 
 namespace test {
@@ -30,7 +28,6 @@ class LedgerAppInstanceImpl final
  public:
   LedgerAppInstanceImpl(
       fxl::RefPtr<fxl::TaskRunner> services_task_runner,
-      std::function<network::NetworkServicePtr()> network_factory,
       fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
           repository_factory_request,
       fidl::InterfacePtr<ledger::LedgerRepositoryFactory>
@@ -45,16 +42,13 @@ class LedgerAppInstanceImpl final
    public:
     LedgerRepositoryFactoryContainer(
         fxl::RefPtr<fxl::TaskRunner> task_runner,
-        std::function<network::NetworkServicePtr()> network_factory,
         fidl::InterfaceRequest<ledger::LedgerRepositoryFactory> request)
-        : network_service_(task_runner, std::move(network_factory)),
-          environment_(task_runner, &network_service_),
+        : environment_(task_runner),
           factory_impl_(&environment_),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
    private:
-    ledger::NetworkServiceImpl network_service_;
     ledger::Environment environment_;
     ledger::LedgerRepositoryFactoryImpl factory_impl_;
     fidl::Binding<ledger::LedgerRepositoryFactory> factory_binding_;
@@ -75,7 +69,6 @@ class LedgerAppInstanceImpl final
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fxl::RefPtr<fxl::TaskRunner> services_task_runner,
-    std::function<network::NetworkServicePtr()> network_factory,
     fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
         repository_factory_request,
     fidl::InterfacePtr<ledger::LedgerRepositoryFactory> repository_factory_ptr,
@@ -89,10 +82,9 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       cloud_provider_(cloud_provider) {
   thread_ = fsl::CreateThread(&task_runner_);
   task_runner_->PostTask(fxl::MakeCopyable(
-      [this, request = std::move(repository_factory_request),
-       network_factory = std::move(network_factory)]() mutable {
+      [this, request = std::move(repository_factory_request)]() mutable {
         factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            task_runner_, std::move(network_factory), std::move(request));
+            task_runner_, std::move(request));
       }));
 }
 
@@ -124,10 +116,9 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
 
  private:
-  // Thread used to do services.
+  // Thread used to run services.
   std::thread services_thread_;
   fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
-  ledger::FakeCloudNetworkService network_service_;
   std::string server_id_ = "server-id";
   ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                           ledger::FakeCloudProvider>
@@ -150,23 +141,13 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
-  auto network_factory = [this]() {
-    network::NetworkServicePtr result;
-    services_task_runner_->PostTask(
-        fxl::MakeCopyable([this, request = result.NewRequest()]() mutable {
-          network_service_.AddBinding(std::move(request));
-        }));
-    return result;
-  };
-
   ledger::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
       repository_factory_request = repository_factory_ptr.NewRequest();
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      services_task_runner_, std::move(network_factory),
-      std::move(repository_factory_request), std::move(repository_factory_ptr),
-      &cloud_provider_);
+      services_task_runner_, std::move(repository_factory_request),
+      std::move(repository_factory_ptr), &cloud_provider_);
   return result;
 }
 

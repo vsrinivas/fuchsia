@@ -11,7 +11,6 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
-#include "peridot/bin/ledger/network/network_service.h"
 
 namespace ledger {
 
@@ -19,12 +18,11 @@ namespace ledger {
 class Environment {
  public:
   Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
-              NetworkService* network_service,
               fxl::RefPtr<fxl::TaskRunner> io_runner = nullptr);
   ~Environment();
 
   const fxl::RefPtr<fxl::TaskRunner> main_runner() { return main_runner_; }
-  NetworkService* network_service() { return network_service_; }
+
   coroutine::CoroutineService* coroutine_service() {
     return coroutine_service_.get();
   }
@@ -42,7 +40,6 @@ class Environment {
 
  private:
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
-  NetworkService* const network_service_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
 
   std::thread io_thread_;
