@@ -28,12 +28,11 @@ class AudioOutputStream {
   bool Start();
   void Stop();
 
-  bool active() const { return active_; }
-
  private:
   bool AcquireRenderer();
   bool SetMediaType(int num_channels, int sample_rate);
   bool CreateMemoryMapping();
+  bool GetDelays();
 
   void PullFromClientBuffer(float* client_buffer, int num_samples);
   media::MediaPacketPtr CreateMediaPacket(zx_time_t pts,
@@ -49,14 +48,16 @@ class AudioOutputStream {
   zx::vmo vmo_;
   int total_mapping_samples_ = 0;
   int16_t* buffer_ = nullptr;
-  int current_sample_offset_ = 0;
 
   AudioOutputDevice* device_ = nullptr;
   int num_channels_ = 0;
   int sample_rate_ = 0;
+  int64_t delay_nsec_ = 0;
+
+  bool active_ = false;
   bool received_first_frame_ = false;
   zx_time_t start_time_ = 0u;
-  bool active_ = false;
+  int current_sample_offset_ = 0;
 };
 
 }  // namespace media_client

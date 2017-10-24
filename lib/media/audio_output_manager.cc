@@ -24,9 +24,9 @@ AudioOutputManager::~AudioOutputManager() {}
 void AudioOutputManager::EnumerateDevices() {
   for (int device_num = 0; device_num < num_devices_; ++device_num) {
     std::unique_ptr<AudioOutputDevice> device =
-        std::make_unique<AudioOutputDevice>(kStubDevIds, kStubDevNames,
-                                            kStubDevRates, kStubDevNumChans,
-                                            kStubDevBufferSizes);
+        std::make_unique<AudioOutputDevice>(
+            kStubDevId, kStubDevName, kStubPreferredRate,
+            kStubPreferredNumChans, kStubPreferredBufferSize);
     devices_.push_back(std::move(device));
   }
 }

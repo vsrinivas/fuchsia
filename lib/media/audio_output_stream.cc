@@ -54,6 +54,10 @@ bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
     FXL_LOG(ERROR) << "CreateMemoryMapping failed";
     return false;
   }
+  if (!GetDelays()) {
+    FXL_LOG(ERROR) << "GetDelays failed";
+    return false;
+  }
 
   active_ = true;
   return true;
@@ -136,6 +140,16 @@ bool AudioOutputStream::CreateMemoryMapping() {
   return true;
 }
 
+bool AudioOutputStream::GetDelays() {
+  if (!audio_renderer_->GetMinDelay(&delay_nsec_)) {
+    Stop();
+    FXL_LOG(ERROR) << "GetMinDelay failed";
+    return false;
+  }
+
+  return true;
+}
+
 void AudioOutputStream::PullFromClientBuffer(float* client_buffer,
                                              int num_samples) {
   FXL_DCHECK(current_sample_offset_ + num_samples <= total_mapping_samples_);
@@ -187,14 +201,7 @@ int AudioOutputStream::GetMinDelay(zx_duration_t* delay_nsec_out) {
     return ZX_ERR_CONNECTION_ABORTED;
   }
 
-  int64_t delay_ns = 0;
-  if (!audio_renderer_->GetMinDelay(&delay_ns)) {
-    Stop();
-    FXL_LOG(ERROR) << "GetMinDelay failed";
-    return ZX_ERR_CONNECTION_ABORTED;
-  }
-
-  *delay_nsec_out = delay_ns;
+  *delay_nsec_out = delay_nsec_;
   return ZX_OK;
 }
 

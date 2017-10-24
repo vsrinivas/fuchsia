@@ -8,7 +8,7 @@ namespace media_client {
 
 // Soft limits only - can be expanded if needed (except kMinNumChannels).
 constexpr int kMinSampleRate = 8000;
-constexpr int kMaxSampleRate = 96000;
+constexpr int kMaxSampleRate = 48000;
 constexpr int kMinNumChannels = 1;
 constexpr int kMaxNumChannels = 2;
 

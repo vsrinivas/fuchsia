@@ -13,12 +13,10 @@ namespace media_client {
 
 constexpr int kStubNumDevices = 1;
 
-extern const char* const kStubDevIds;
-extern const char* const kStubDevNames;
+extern const char* const kStubDevId;
+extern const char* const kStubDevName;
 
-constexpr int kStubDevRates = 48000;
-constexpr int kStubDevNumChans = 2;
-constexpr int kStubDevBufferSizes = 480;
-constexpr zx_duration_t kStubDevMinDelaysNSec = ZX_MSEC(40);
-
+constexpr int kStubPreferredRate = 48000;
+constexpr int kStubPreferredNumChans = 2;
+constexpr int kStubPreferredBufferSize = 480;
 }  // namespace media_client

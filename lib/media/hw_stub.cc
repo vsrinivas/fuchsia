@@ -6,7 +6,7 @@
 
 namespace media_client {
 
-constexpr const char* kStubDevIds = "aud_out_0";
-constexpr const char* kStubDevNames = "Default Audio Output";
+constexpr const char* kStubDevId = "aud_out_0";
+constexpr const char* kStubDevName = "Default Audio Output";
 
 }  // namespace media_client
