@@ -14,6 +14,7 @@ source_set("cloud_provider") {
     "fake_device_set.h",
     "fake_page_cloud.cc",
     "fake_page_cloud.h",
+    "types.h",
   ]
 
   public_deps = [
@@ -24,6 +25,7 @@ source_set("cloud_provider") {
 
   deps = [
     "//peridot/bin/ledger/convert",
+    "//peridot/bin/ledger/fidl_helpers",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

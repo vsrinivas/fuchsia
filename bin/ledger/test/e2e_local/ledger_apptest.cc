@@ -21,6 +21,7 @@
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/bin/ledger/test/app_test.h"
 #include "peridot/bin/ledger/test/cloud_provider/fake_cloud_provider.h"
+#include "peridot/bin/ledger/test/cloud_provider/types.h"
 
 namespace test {
 namespace e2e_local {
@@ -197,27 +198,90 @@ TEST_F(LedgerAppTest, Terminate) {
   EXPECT_TRUE(called);
 }
 
-// Triggers the cloud erased recovery codepath and verifies that:
-//  - Ledger disconnects the clients
-//  - the repository directory is cleared
-TEST_F(LedgerAppTest, CloudErasedRecovery) {
-  Init({"--trigger_cloud_erased_for_testing"});
+// Verifies the cloud erase recovery in case of a cloud that was erased before
+// startup.
+//
+// Expected behavior: Ledger disconnects the clients and the local state is
+// cleared.
+TEST_F(LedgerAppTest, CloudEraseRecoveryOnInitialCheck) {
+  Init({});
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
   ledger::Status status;
   ledger::LedgerRepositoryPtr ledger_repository;
   files::ScopedTempDir tmp_dir;
-  std::string content_path = tmp_dir.path() + "/content";
-  std::string deletion_sentinel_path = content_path + "/sentinel";
+  const std::string content_path = tmp_dir.path() + "/content";
+  const std::string deletion_sentinel_path = content_path + "/sentinel";
   ASSERT_TRUE(files::CreateDirectory(content_path));
   ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
   ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
 
+  // Write a fingerprint file, so that Ledger will check if it is still in the
+  // cloud device set.
+  const std::string fingerprint_path = content_path + "/fingerprint";
+  const std::string fingerprint = "bazinga";
+  ASSERT_TRUE(files::WriteFile(fingerprint_path, fingerprint.c_str(),
+                               fingerprint.size()));
+
+  // Create a cloud provider configured to trigger the cloude erase recovery on
+  // initial check.
+  ledger::FakeCloudProvider cloud_provider(ledger::CloudEraseOnCheck::YES);
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
+
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), std::move(cloud_provider_ptr),
+      ledger_repository.NewRequest(),
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  bool repo_disconnected = false;
+  ledger_repository.set_connection_error_handler(
+      [&repo_disconnected] { repo_disconnected = true; });
+
+  // Run the message loop until Ledger clears the repo directory and disconnects
+  // the client.
+  bool cleared = RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
+    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+  });
+  EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
+  EXPECT_TRUE(repo_disconnected);
+  EXPECT_TRUE(cleared);
+
+  // Verify that the Ledger app didn't crash.
+  EXPECT_FALSE(ledger_shut_down);
+}
+
+// Verifies the cloud erase recovery in case of a cloud that is erased while
+// Ledger is connected to it.
+//
+// Expected behavior: Ledger disconnects the clients and the local state is
+// cleared.
+TEST_F(LedgerAppTest, CloudEraseRecoveryFromTheWatcher) {
+  Init({});
+  bool ledger_shut_down = false;
+  RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
+
+  ledger::Status status;
+  ledger::LedgerRepositoryPtr ledger_repository;
+  files::ScopedTempDir tmp_dir;
+  const std::string content_path = tmp_dir.path() + "/content";
+  const std::string deletion_sentinel_path = content_path + "/sentinel";
+  ASSERT_TRUE(files::CreateDirectory(content_path));
+  ASSERT_TRUE(files::WriteFile(deletion_sentinel_path, "", 0));
+  ASSERT_TRUE(files::IsFile(deletion_sentinel_path));
+
+  // Create a cloud provider configured to trigger the cloud erase recovery
+  // while Ledger is connected.
+  ledger::FakeCloudProvider cloud_provider(ledger::CloudEraseOnCheck::NO,
+                                           ledger::CloudEraseFromWatcher::YES);
+  cloud_provider::CloudProviderPtr cloud_provider_ptr;
+  fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+      &cloud_provider, cloud_provider_ptr.NewRequest());
+
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),

@@ -37,11 +37,8 @@ constexpr fxl::TimeDelta kMaxPollingDelay = fxl::TimeDelta::FromSeconds(10);
 constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
 constexpr fxl::StringView kNoStatisticsReporting =
     "no_statistics_reporting_for_testing";
-constexpr fxl::StringView kTriggerCloudErasedForTesting =
-    "trigger_cloud_erased_for_testing";
 
 struct AppParams {
-  bool trigger_cloud_erased_for_testing = false;
   bool disable_statistics = false;
 };
 
@@ -78,9 +75,6 @@ class App : public LedgerController {
 
   bool Start() {
     environment_ = std::make_unique<Environment>(loop_.task_runner());
-    if (app_params_.trigger_cloud_erased_for_testing) {
-      environment_->SetTriggerCloudErasedForTesting();
-    }
 
     factory_impl_ =
         std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
@@ -150,8 +144,6 @@ int main(int argc, const char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line);
 
   ledger::AppParams app_params;
-  app_params.trigger_cloud_erased_for_testing =
-      command_line.HasOption(ledger::kTriggerCloudErasedForTesting);
   app_params.disable_statistics =
       command_line.HasOption(ledger::kNoStatisticsReporting);
 

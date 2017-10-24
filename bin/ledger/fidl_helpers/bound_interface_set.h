@@ -30,6 +30,8 @@ class BoundInterfaceSet : public SetBoundable<Interface> {
 
   bool is_bound() { return binding_.is_bound(); }
 
+  size_t size() const { return binding_.size(); }
+
  private:
   Impl impl_;
   fidl::BindingSet<Interface> binding_;

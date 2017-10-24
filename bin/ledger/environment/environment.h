@@ -31,22 +31,12 @@ class Environment {
   // should be used to access the file system.
   const fxl::RefPtr<fxl::TaskRunner> GetIORunner();
 
-  // Flags only for testing.
-  void SetTriggerCloudErasedForTesting();
-
-  bool TriggerCloudErasedForTesting() {
-    return trigger_cloud_erased_for_testing_;
-  }
-
  private:
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
 
   std::thread io_thread_;
   fxl::RefPtr<fxl::TaskRunner> io_runner_;
-
-  // Flags only for testing.
-  bool trigger_cloud_erased_for_testing_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Environment);
 };

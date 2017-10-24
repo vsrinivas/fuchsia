@@ -8,14 +8,17 @@
 
 namespace ledger {
 
-FakeCloudProvider::FakeCloudProvider() {}
+FakeCloudProvider::FakeCloudProvider(
+    CloudEraseOnCheck cloud_erase_on_check,
+    CloudEraseFromWatcher cloud_erase_from_watcher)
+    : device_set_(cloud_erase_on_check, cloud_erase_from_watcher) {}
 
 FakeCloudProvider::~FakeCloudProvider() {}
 
 void FakeCloudProvider::GetDeviceSet(
     fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
-  device_sets_.emplace(std::move(device_set));
+  device_set_.AddBinding(std::move(device_set));
   callback(cloud_provider::Status::OK);
 }
 
@@ -41,7 +44,7 @@ void FakeCloudProvider::GetPageCloud(
 }
 
 void FakeCloudProvider::EraseAllData(const EraseAllDataCallback& callback) {
-  if (device_sets_.empty() && page_clouds_.empty()) {
+  if (device_set_.size() == 0u && page_clouds_.empty()) {
     // If there is nothing to be erased, just report success. This allows the
     // sync tests that want to clean up the cloud before running to work.
     callback(cloud_provider::Status::OK);

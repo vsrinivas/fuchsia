@@ -9,14 +9,19 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
+#include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/test/cloud_provider/fake_device_set.h"
 #include "peridot/bin/ledger/test/cloud_provider/fake_page_cloud.h"
+#include "peridot/bin/ledger/test/cloud_provider/types.h"
 
 namespace ledger {
 
 class FakeCloudProvider : public cloud_provider::CloudProvider {
  public:
-  FakeCloudProvider();
+  FakeCloudProvider(
+      CloudEraseOnCheck cloud_erase_on_check = CloudEraseOnCheck::NO,
+      CloudEraseFromWatcher cloud_erase_from_watcher =
+          CloudEraseFromWatcher::NO);
   ~FakeCloudProvider() override;
 
  private:
@@ -32,7 +37,8 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
 
   void EraseAllData(const EraseAllDataCallback& callback) override;
 
-  callback::AutoCleanableSet<FakeDeviceSet> device_sets_;
+  fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet>
+      device_set_;
 
   callback::AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
 

@@ -10,14 +10,15 @@
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/test/cloud_provider/types.h"
 
 namespace ledger {
 
 class FakeDeviceSet : public cloud_provider::DeviceSet {
  public:
-  FakeDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
+  FakeDeviceSet(CloudEraseOnCheck cloud_erase_on_check,
+                CloudEraseFromWatcher cloud_erase_from_watcher);
   ~FakeDeviceSet() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
@@ -36,7 +37,11 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
 
   void Erase(const EraseCallback& callback) override;
 
-  fidl::Binding<cloud_provider::DeviceSet> binding_;
+  const CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
+
+  const CloudEraseFromWatcher cloud_erase_from_watcher_ =
+      CloudEraseFromWatcher::NO;
+
   fxl::Closure on_empty_;
 
   std::set<std::string> fingerprints_;

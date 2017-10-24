@@ -131,13 +131,6 @@ void UserSyncImpl::CreateFingerprint() {
 }
 
 void UserSyncImpl::HandeDeviceSetResult(cloud_provider::Status status) {
-  // HACK: in order to test this codepath in an e2e test, we expose a hook that
-  // forces the cloud erased recovery closure to run.
-  if (environment_->TriggerCloudErasedForTesting()) {
-    on_version_mismatch_();
-    return;
-  }
-
   switch (status) {
     case cloud_provider::Status::OK:
       backoff_->Reset();

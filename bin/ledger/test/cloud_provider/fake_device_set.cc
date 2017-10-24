@@ -8,22 +8,17 @@
 
 namespace ledger {
 
-FakeDeviceSet::FakeDeviceSet(
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
-    : binding_(this, std::move(request)) {
-  // The class shuts down when the client connection is disconnected.
-  binding_.set_connection_error_handler([this] {
-    if (on_empty_) {
-      on_empty_();
-    }
-  });
-}
+FakeDeviceSet::FakeDeviceSet(CloudEraseOnCheck cloud_erase_on_check,
+                             CloudEraseFromWatcher cloud_erase_from_watcher)
+    : cloud_erase_on_check_(cloud_erase_on_check),
+      cloud_erase_from_watcher_(cloud_erase_from_watcher) {}
 
 FakeDeviceSet::~FakeDeviceSet() {}
 
 void FakeDeviceSet::CheckFingerprint(fidl::Array<uint8_t> fingerprint,
                                      const CheckFingerprintCallback& callback) {
-  if (!fingerprints_.count(convert::ToString(fingerprint))) {
+  if (cloud_erase_on_check_ == CloudEraseOnCheck::YES ||
+      !fingerprints_.count(convert::ToString(fingerprint))) {
     callback(cloud_provider::Status::NOT_FOUND);
     return;
   }
@@ -43,6 +38,10 @@ void FakeDeviceSet::SetWatcher(
     const SetWatcherCallback& callback) {
   watcher_ = cloud_provider::DeviceSetWatcherPtr::Create(std::move(watcher));
   callback(cloud_provider::Status::OK);
+
+  if (cloud_erase_from_watcher_ == CloudEraseFromWatcher::YES) {
+    watcher_->OnCloudErased();
+  }
 }
 
 void FakeDeviceSet::Erase(const EraseCallback& callback) {
