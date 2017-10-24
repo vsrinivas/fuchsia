@@ -67,5 +67,10 @@ FUNCTION(vcpu_read_write_state_start)
     str xzr, [x0]
 FUNCTION(vcpu_read_write_state_end)
 
+// Test guest_set_trap using a memory-based trap.
 FUNCTION(guest_set_trap_start)
+    movlit x0, TRAP_ADDR
+    str xzr, [x0]
+    movlit x0, EXIT_TEST_ADDR
+    str xzr, [x0]
 FUNCTION(guest_set_trap_end)
