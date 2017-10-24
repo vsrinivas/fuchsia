@@ -35,6 +35,7 @@ source_set("impl") {
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/storage/public",
+    "//peridot/public/lib/cloud_provider/fidl",
   ]
 
   deps = [
@@ -62,7 +63,6 @@ source_set("unittests") {
     ":impl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/auth_provider/test",
     "//peridot/bin/ledger/backoff/test",
     "//peridot/bin/ledger/cloud_sync/impl/test",
     "//peridot/bin/ledger/cloud_sync/test",

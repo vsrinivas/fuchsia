@@ -16,7 +16,7 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/auth_provider",
+    "//peridot/bin/cloud_provider_firebase/auth_provider",
   ]
 
   deps = [

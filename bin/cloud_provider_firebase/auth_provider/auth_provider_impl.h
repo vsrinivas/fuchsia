@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_LEDGER_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
 
 #include <functional>
 #include <memory>
@@ -11,7 +11,7 @@
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 
@@ -62,4 +62,4 @@ class AuthProviderImpl : public AuthProvider {
 
 }  // namespace auth_provider
 
-#endif  // PERIDOT_BIN_LEDGER_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_

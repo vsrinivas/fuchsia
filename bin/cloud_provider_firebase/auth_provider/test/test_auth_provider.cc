@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/auth_provider/test/test_auth_provider.h"
 
 #include <utility>
 

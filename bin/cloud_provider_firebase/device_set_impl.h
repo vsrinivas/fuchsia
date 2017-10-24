@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/auth_provider/auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/device_set/cloud_device_set.h"
 

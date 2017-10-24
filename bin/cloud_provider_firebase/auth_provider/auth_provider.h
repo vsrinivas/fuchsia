@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_AUTH_PROVIDER_AUTH_PROVIDER_H_
-#define PERIDOT_BIN_LEDGER_AUTH_PROVIDER_AUTH_PROVIDER_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_H_
 
 #include <functional>
 #include <string>
@@ -44,4 +44,4 @@ class AuthProvider {
 
 }  // namespace auth_provider
 
-#endif  // PERIDOT_BIN_LEDGER_AUTH_PROVIDER_AUTH_PROVIDER_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_AUTH_PROVIDER_AUTH_PROVIDER_H_
