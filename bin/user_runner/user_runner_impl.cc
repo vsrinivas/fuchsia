@@ -17,6 +17,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
+#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
@@ -64,6 +65,9 @@ constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";
 constexpr char kUserShellLinkName[] = "user-shell-link";
+constexpr char kLedgerDashboardUrl[] =
+    "file:///system/apps/ledger_dashboard.dartx";
+constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 
 cloud_provider_firebase::ConfigPtr GetLedgerFirebaseConfig() {
   auto firebase_config = cloud_provider_firebase::Config::New();
@@ -119,6 +123,7 @@ void UserRunnerImpl::Initialize(
   });
 
   SetupLedger();
+  StartLedgerDashboard();
 
   // Show user shell.
   mozart::ViewProviderPtr view_provider;
@@ -352,18 +357,23 @@ void UserRunnerImpl::Terminate() {
             ledger_client_.reset();
             ledger_repository_.reset();
             ledger_repository_factory_.reset();
-            ledger_app_client_->Teardown(kBasicTimeout, [this] {
-              FXL_DLOG(INFO) << "- Ledger down";
-              ledger_app_client_.reset();
+            // As the Ledger Dashboard needs the ledger, so it needs to be
+            // terminated first.
+            ledger_dashboard_client_->Teardown(kBasicTimeout, [this] {
+              ledger_dashboard_client_.reset();
+              ledger_app_client_->Teardown(kBasicTimeout, [this] {
+                FXL_DLOG(INFO) << "- Ledger down";
+                ledger_app_client_.reset();
 
-              user_shell_.reset();
-              user_scope_.reset();
-              account_.reset();
-              user_context_.reset();
-              token_provider_factory_.reset();
+                user_shell_.reset();
+                user_scope_.reset();
+                account_.reset();
+                user_context_.reset();
+                token_provider_factory_.reset();
 
-              FXL_LOG(INFO) << "UserRunner::Terminate(): done";
-              fsl::MessageLoop::GetCurrent()->QuitNow();
+                FXL_LOG(INFO) << "UserRunner::Terminate(): done";
+                fsl::MessageLoop::GetCurrent()->QuitNow();
+              });
             });
           });
         });
@@ -546,6 +556,18 @@ cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
         }
       });
   return cloud_provider;
+}
+
+void UserRunnerImpl::StartLedgerDashboard() {
+  ledger_dashboard_scope_ = std::make_unique<Scope>(
+      user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
+
+  auto ledger_dashboard_config = AppConfig::New();
+  ledger_dashboard_config->url = kLedgerDashboardUrl;
+  ledger_dashboard_client_ = std::make_unique<AppClient<Lifecycle>>(
+      ledger_dashboard_scope_->GetLauncher(),
+      std::move(ledger_dashboard_config));
+  FXL_LOG(INFO) << "Starting Ledger dashboard " << kLedgerDashboardUrl;
 }
 
 }  // namespace modular

@@ -111,6 +111,7 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
   void SetupLedger();
+  void StartLedgerDashboard();
 
   cloud_provider::CloudProviderPtr GetCloudProvider();
 
@@ -151,8 +152,8 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
   std::unique_ptr<fidl::Binding<ComponentContext>>
       maxwell_component_context_binding_;
 
-  // Service provider interfaces for maxwell services. They are created with the
-  // component context above as parameters.
+  // Service provider interfaces for maxwell services. They are created with
+  // the component context above as parameters.
   fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
   fidl::InterfacePtr<maxwell::IntelligenceServices> intelligence_services_;
@@ -161,14 +162,19 @@ class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
 
-  // Component context given to user shell so that it can run agents and create
-  // message queues.
+  // Component context given to user shell so that it can run agents and
+  // create message queues.
   std::unique_ptr<ComponentContextImpl> user_shell_component_context_impl_;
   fidl::BindingSet<ComponentContext> user_shell_component_context_bindings_;
 
-  // Given to the user shell so it can store its own data. These data are shared
-  // between all user shells (so it's not private to the user shell *app*).
+  // Given to the user shell so it can store its own data. These data are
+  // shared between all user shells (so it's not private to the user shell
+  // *app*).
   std::unique_ptr<LinkImpl> user_shell_link_;
+
+  // For the Ledger Debug Dashboard
+  std::unique_ptr<Scope> ledger_dashboard_scope_;
+  std::unique_ptr<AppClient<Lifecycle>> ledger_dashboard_client_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
