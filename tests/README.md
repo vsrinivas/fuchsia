@@ -47,7 +47,7 @@ under fuchsia. In order to start `test_runner`, you can:
   your fuchsia device, do:
 
 ```
-/system/apps/test_runner
+/system/bin/test_runner
 ```
 
 Each subdirectory of `peridot/tests` contains one integration test. They
@@ -55,7 +55,7 @@ are all run together by the test runner as specified by the [modular_tests.json]
 configuration file:
 
 ```
-$FUCHSIA_DIR/apps/test_runner/src/run_test \
+$FUCHSIA_DIR/garnet/bin/test_runner/run_test \
   --test_file=$FUCHSIA_DIR/peridot/tests/modular_tests.json --sync
 ```
 
