@@ -3,10 +3,10 @@
     {
       "name": "cobalt_testapp",
       "exec": "/system/bin/report_result /system/bin/cobalt_testapp --skip_environment_test"
-    }
+    },
     {
       "name": "cobalt_unittests",
       "exec": "/system/test/cobalt_unittests"
-    },
+    }
   ]
 }
