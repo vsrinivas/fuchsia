@@ -94,8 +94,6 @@ package("view_manager") {
 }
 
 package("mozart") {
-  app = true
-
   deps = [
     "input",
     "launch",

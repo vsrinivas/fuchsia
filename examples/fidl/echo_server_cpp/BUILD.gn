@@ -21,8 +21,6 @@ executable("echo_server_cpp_bin") {
 }
 
 package("echo_server_cpp") {
-  app = true
-
   deps = [
     ":echo_server_cpp_bin",
   ]

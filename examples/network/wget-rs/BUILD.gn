@@ -19,8 +19,6 @@ rust_binary("bin") {
 }
 
 package("wget-rs") {
-  app = true
-
   deps = [
     ":bin",
   ]

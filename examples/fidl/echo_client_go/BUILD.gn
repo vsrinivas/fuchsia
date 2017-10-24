@@ -40,8 +40,6 @@ go_binary("echo_client_go_bin") {
 }
 
 package("echo_client_go") {
-  app = true
-
   deps = [
     ":echo_client_go_bin",
   ]

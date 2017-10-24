@@ -7,6 +7,7 @@ import("//packages/package.gni")
 
 rust_binary("echo_server_rust_bin") {
   name = "echo_server_rust"
+
   deps = [
     "//garnet/examples/fidl/services:services_rust_library",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -18,8 +19,6 @@ rust_binary("echo_server_rust_bin") {
 }
 
 package("echo_server_rust") {
-  app = true
-
   deps = [
     ":echo_server_rust_bin",
   ]

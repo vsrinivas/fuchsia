@@ -11,7 +11,7 @@ Escher is a physically based renderer.
 
 ## Building for Fuchsia
 Escher is part of the default Fuchsia build.  The "waterfall" demo is installed
-as `system/apps/waterfall`.
+as `system/bin/waterfall`.
 
 ## Building for Linux
 Escher can also build on Linux.  In order to do so, you need to:

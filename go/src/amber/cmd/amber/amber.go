@@ -169,7 +169,7 @@ func loadKeys(path string) ([]*data.Key, error) {
 
 func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 	files := []string{
-		"/system/apps/amber"}
+		"/system/bin/amber"}
 	reqSet := daemon.NewPackageSet()
 
 	d := sha512.New()

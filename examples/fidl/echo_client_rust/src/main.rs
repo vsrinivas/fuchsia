@@ -33,7 +33,7 @@ fn main_res() -> Result<(), fidl::Error> {
     let launcher = Launcher::new(&app_context, &handle)?;
 
     // Launch the server and connect to the echo service.
-    let echo_url = String::from("file://system/apps/echo_server_rust");
+    let echo_url = String::from("echo_server_rust");
     let app = launcher.launch(echo_url, None, &handle)?;
     let echo = app.connect_to_service::<Echo::Service>(&handle)?;
 

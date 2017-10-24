@@ -39,8 +39,6 @@ go_binary("amber_bin") {
 }
 
 package("amber") {
-  app = true
-
   deps = [
     ":amber_bin",
   ]

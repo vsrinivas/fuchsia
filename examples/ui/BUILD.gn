@@ -20,8 +20,6 @@ group("ui") {
 }
 
 package("hello_scene_manager") {
-  app = true
-
   deps = [
     "hello_scene_manager",
   ]
@@ -71,8 +69,6 @@ package("paint_view") {
 }
 
 package("shadertoy") {
-  app = true
-
   deps = [
     "shadertoy/client",
     "shadertoy/service",

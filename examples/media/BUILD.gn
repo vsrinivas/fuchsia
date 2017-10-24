@@ -7,7 +7,7 @@ import("//packages/package.gni")
 
 package("media") {
   package_name = "media_examples"
-  app = true
+
   deps = [
     "audio_player",
     "fx",

@@ -57,8 +57,6 @@ go_test("pkgfs_test_bin") {
 }
 
 package("pm") {
-  app = true
-
   deps = [
     ":pm_bin",
   ]
@@ -69,8 +67,6 @@ package("pm") {
 }
 
 package("pmd") {
-  app = true
-
   deps = [
     ":pmd_bin",
   ]

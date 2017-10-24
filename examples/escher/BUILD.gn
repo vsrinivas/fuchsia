@@ -5,8 +5,6 @@
 import("//packages/package.gni")
 
 package("escher_examples") {
-  app = true
-
   deps = [
     "sketchy",
     "waterfall",

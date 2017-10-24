@@ -21,8 +21,6 @@ group("tools") {
 }
 
 package("media") {
-  app = true
-
   deps = [
     ":services",
     ":tools",
@@ -56,8 +54,6 @@ package("media") {
 }
 
 package("audio_server") {
-  app = true
-
   deps = [
     "//garnet/bin/media/audio_server",
   ]
