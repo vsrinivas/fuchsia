@@ -61,7 +61,10 @@ pub const ZXRIO_OBJECT_MAXSIZE: usize = ZXRIO_OBJECT_MINSIZE + ZXRIO_OBJECT_EXTR
 #[test]
 fn zxrio_msg_size() {
     assert_eq!(::std::mem::size_of::<zxrio_msg_t>(), ZXRIO_MSG_SZ);
-    assert_eq!(::std::mem::size_of::<zxrio_msg_t>() - FDIO_CHUNK_SIZE as usize, ZXRIO_HDR_SZ);
+    assert_eq!(
+        ::std::mem::size_of::<zxrio_msg_t>() - FDIO_CHUNK_SIZE as usize,
+        ZXRIO_HDR_SZ
+    );
 }
 
 pub const FDIO_MAX_FD: raw::c_uint = 256;
@@ -385,8 +388,9 @@ impl Clone for zxrio_msg {
 }
 pub type zxrio_msg_t = zxrio_msg;
 pub type zxrio_cb_t = ::std::option::Option<
-    unsafe extern "C" fn(msg: *mut zxrio_msg_t, cookie: *mut raw::c_void)
-        -> zx_status_t,
+    unsafe extern "C" fn(msg: *mut zxrio_msg_t,
+                         cookie: *mut raw::c_void)
+                         -> zx_status_t,
 >;
 #[repr(C)]
 #[derive(Debug, Copy)]
@@ -538,10 +542,13 @@ pub struct fdio_dispatcher {
     _unused: [u8; 0],
 }
 pub type fdio_dispatcher_t = fdio_dispatcher;
-pub type fdio_dispatcher_cb_t = ::std::option::Option<
-    unsafe extern "C" fn(h: zx_handle_t, func: *mut raw::c_void, cookie: *mut raw::c_void)
-        -> zx_status_t,
->;
+pub type fdio_dispatcher_cb_t =
+    ::std::option::Option<
+        unsafe extern "C" fn(h: zx_handle_t,
+                             func: *mut raw::c_void,
+                             cookie: *mut raw::c_void)
+                             -> zx_status_t,
+    >;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1442,12 +1449,11 @@ fn bindgen_test_layout_vdirent() {
 }
 pub type vdirent_t = vdirent;
 pub type watchdir_func_t = ::std::option::Option<
-    unsafe extern "C" fn(
-        dirfd: raw::c_int,
-        event: raw::c_int,
-        fn_: *const raw::c_char,
-        cookie: *mut raw::c_void,
-    ) -> zx_status_t,
+    unsafe extern "C" fn(dirfd: raw::c_int,
+                         event: raw::c_int,
+                         fn_: *const raw::c_char,
+                         cookie: *mut raw::c_void)
+                         -> zx_status_t,
 >;
 
 #[link(name = "fdio")]
@@ -1585,8 +1591,10 @@ extern "C" {
     pub fn fdio_logger_create(arg1: zx_handle_t) -> *mut fdio_t;
     pub fn fdio_output_create(
         func: ::std::option::Option<
-            unsafe extern "C" fn(cookie: *mut raw::c_void, data: *const raw::c_void, len: usize)
-                -> isize,
+            unsafe extern "C" fn(cookie: *mut raw::c_void,
+                                 data: *const raw::c_void,
+                                 len: usize)
+                                 -> isize,
         >,
         cookie: *mut raw::c_void,
     ) -> *mut fdio_t;

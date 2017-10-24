@@ -14,7 +14,7 @@ use std::os::unix::io::IntoRawFd;
 use std::os::unix::io::FromRawFd;
 use std::path::Path;
 use std::os::unix::fs::OpenOptionsExt;
-use remoteio::{O_ADMIN, O_NOREMOTE, O_DIRECTORY};
+use fdio::fdio_sys::{O_ADMIN, O_NOREMOTE, O_DIRECTORY};
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -67,9 +67,7 @@ pub fn mount(path: &Path, chan: zircon::Channel) -> Result<Mount, zircon::Status
         .open(&path)
         .unwrap();
 
-    let mount = Mount {
-        mountfd: dir.into_raw_fd(),
-    };
+    let mount = Mount { mountfd: dir.into_raw_fd() };
 
     let h = chan.into_handle().into_raw();
 
@@ -122,8 +120,9 @@ mod test {
 
         assert_eq!(
             zircon::Status::ErrTimedOut,
-            port.wait(zircon::deadline_after(2_000_000))
-                .expect_err("timeout")
+            port.wait(zircon::deadline_after(2_000_000)).expect_err(
+                "timeout",
+            )
         );
 
         std::mem::drop(m);

@@ -126,5 +126,13 @@ pub fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int) -> r
     make_ioctl!(kind, family, number)
 }
 
-pub const IOCTL_VFS_MOUNT_FS: raw::c_int = make_ioctl!(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_VFS, 0);
-pub const IOCTL_VFS_UNMOUNT_NODE: raw::c_int = make_ioctl!(fdio_sys::IOCTL_KIND_GET_HANDLE, fdio_sys::IOCTL_FAMILY_VFS, 2);
+pub const IOCTL_VFS_MOUNT_FS: raw::c_int = make_ioctl!(
+    fdio_sys::IOCTL_KIND_SET_HANDLE,
+    fdio_sys::IOCTL_FAMILY_VFS,
+    0
+);
+pub const IOCTL_VFS_UNMOUNT_NODE: raw::c_int = make_ioctl!(
+    fdio_sys::IOCTL_KIND_GET_HANDLE,
+    fdio_sys::IOCTL_FAMILY_VFS,
+    2
+);

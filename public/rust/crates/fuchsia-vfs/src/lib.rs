@@ -19,9 +19,6 @@ use std::sync::Arc;
 use zircon::AsHandleRef;
 
 mod mount;
-#[macro_use]
-#[allow(dead_code)]
-mod remoteio;
 
 pub mod vfs;
 pub use vfs::*;
@@ -34,7 +31,10 @@ pub fn mount(
 ) -> Result<mount::Mount, zircon::Status> {
     let (c1, c2) = zircon::Channel::create(zircon::ChannelOpts::default())?;
     let m = mount::mount(path, c1)?;
-    c2.signal_handle(zircon::ZX_SIGNAL_NONE, zircon::ZX_USER_SIGNAL_0)?;
+    c2.signal_handle(
+        zircon::ZX_SIGNAL_NONE,
+        zircon::ZX_USER_SIGNAL_0,
+    )?;
     let c = Connection::new(Arc::clone(&vfs), vn, c2, handle)?;
     vfs.register_connection(c, handle);
     Ok(m)
