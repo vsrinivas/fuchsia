@@ -55,8 +55,6 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
 
 // Container for a LedgerRepositoryImpl that keeps track of the in-flight FIDL
 // requests and callbacks and fires them when the repository is available.
-// TODO(ppi): LE-224 extract this into a generic class shared with
-// LedgerManager.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
   explicit LedgerRepositoryContainer() : status_(Status::OK) {}
