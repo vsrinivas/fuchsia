@@ -6,7 +6,7 @@
     },
     {
       "name": "cobalt_unittests",
-      "exec": "/system/test/cobalt_unittests"
+      "exec": "/system/bin/report_result /system/test/cobalt_unittests"
     }
   ]
 }
