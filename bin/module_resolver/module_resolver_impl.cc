@@ -22,7 +22,7 @@ void ModuleResolverImpl::FindModules(
   result->modules.resize(0);
 
   auto print_it = modular::ModuleResolverResult::New();
-  print_it->module_id = "file:///system/bin/print_it_module";
+  print_it->module_id = "resolution_failed";
   print_it->local_name = "doesn't matter";
   print_it->initial_nouns.mark_non_null();
 
