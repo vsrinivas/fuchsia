@@ -407,17 +407,11 @@ void PaperRenderer::DrawFrame(const Stage& stage,
   if (width % kSsdoAccelDownsampleFactor != 0u) {
     // Round up to the nearest multiple.
     ssdo_accel_width += 1;
-    FXL_LOG(WARNING) << "Escher: Screen width " << width
-                     << " is not a multiple of " << kSsdoAccelDownsampleFactor
-                     << ", rounding up size of acceleration data buffer.";
   }
 
   if (height % kSsdoAccelDownsampleFactor != 0u) {
     // Round up to the nearest multiple.
     ssdo_accel_height += 1;
-    FXL_LOG(WARNING) << "Escher: Screen height " << height
-                     << " is not a multiple of " << kSsdoAccelDownsampleFactor
-                     << ", rounding up size of acceleration data buffer.";
   }
 
   ImagePtr ssdo_accel_depth_image = image_utils::NewDepthImage(
