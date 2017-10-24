@@ -14,6 +14,7 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/mxerror"
 	"syscall/zx/mxruntime"
+	"time"
 
 	"app/context"
 
@@ -785,6 +786,22 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
 			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
 		case tcpip.MulticastTTLOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
+			val.optlen = c_socklen(4)
+		case tcpip.KeepaliveEnabledOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
+			val.optlen = c_socklen(4)
+		case tcpip.KeepaliveIdleOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(time.Duration(o).Seconds()))
+			val.optlen = c_socklen(4)
+		case tcpip.KeepaliveIntervalOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(time.Duration(o).Seconds()))
+			val.optlen = c_socklen(4)
+		case tcpip.KeepaliveCountOption:
 			ios.ep.GetSockOpt(&o)
 			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)

@@ -26,6 +26,7 @@ package("netstack_manual_tests") {
   testonly = true
 
   deps = [
+    "//garnet/go/src/netstack/tests/manual:keepalivetest",
     "//garnet/go/src/netstack/tests/manual:closetest",
     "//garnet/go/src/netstack/tests/manual:mctest",
     "//garnet/go/src/netstack/tests/manual:nbiotest",
@@ -40,6 +41,10 @@ package("netstack_manual_tests") {
   binaries = [
     {
       name = "closetest"
+    },
+
+    {
+      name = "keepalivetest"
     },
 
     {

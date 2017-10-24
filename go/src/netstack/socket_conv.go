@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/binary"
 	"log"
+	"time"
 
 	"github.com/google/netstack/tcpip"
 )
@@ -64,6 +65,7 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case SO_REUSEADDR:
 			return tcpip.ReuseAddressOption(v.intValue())
 		case SO_KEEPALIVE:
+			return tcpip.KeepaliveEnabledOption(v.intValue())
 		case SO_BROADCAST:
 		case SO_DEBUG:
 		case SO_SNDBUF:
@@ -108,8 +110,11 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case TCP_MAXSEG:
 		case TCP_CORK:
 		case TCP_KEEPIDLE:
+			return tcpip.KeepaliveIdleOption(time.Duration(v.intValue()) * time.Second)
 		case TCP_KEEPINTVL:
+			return tcpip.KeepaliveIntervalOption(time.Duration(v.intValue()) * time.Second)
 		case TCP_KEEPCNT:
+			return tcpip.KeepaliveCountOption(v.intValue())
 		case TCP_SYNCNT:
 		case TCP_LINGER2:
 		case TCP_DEFER_ACCEPT:
