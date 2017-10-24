@@ -5,8 +5,6 @@
 import("//packages/package.gni")
 
 package("maxwell") {
-  app = true
-
   deps = [
     "//peridot/bin/user:maxwell_main",
   ]
@@ -31,7 +29,6 @@ package("maxwell") {
 # TODO(thatguy): This target is temporary while we tease apart the build
 # artifacts into packages.
 package("maxwell_apps") {
-  app = true
   testonly = true
 
   deps = [

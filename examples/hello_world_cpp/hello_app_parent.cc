@@ -26,7 +26,7 @@ class HelloAppParent {
     auto launch_info = app::ApplicationLaunchInfo::New();
     const std::vector<std::string>& args = command_line.positional_args();
     if (args.empty()) {
-      launch_info->url = "file:///system/apps/hello_app_child";
+      launch_info->url = "hello_app_child";
     } else {
       launch_info->url = args[0];
       for (size_t i = 1; i < args.size(); ++i) {

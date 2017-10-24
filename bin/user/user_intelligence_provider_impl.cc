@@ -40,7 +40,7 @@ modular::AgentControllerPtr StartStoryInfoAgent(
   app::ServiceProviderPtr agent_services;
   modular::AgentControllerPtr controller;
   component_context->ConnectToAgent(
-      "file:///system/apps/acquirers/story_info_main",
+      "acquirers/story_info_main",
       agent_services.NewRequest(), controller.NewRequest());
 
   auto initializer =
@@ -104,8 +104,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   }
 
   if (config.mi_dashboard) {
-    StartAgent(
-        "file:///system/apps/agents/mi_dashboard.dartx",
+    StartAgent("agents/mi_dashboard.dartx",
         [=](const std::string& url, app::ServiceNamespace* agent_host) {
           AddStandardServices(url, agent_host);
           agent_host->AddService<maxwell::ContextDebug>(

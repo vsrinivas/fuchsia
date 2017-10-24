@@ -215,7 +215,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
 
     app::ServiceProviderPtr services_from_module1;
     module_context_->StartModuleInShell(
-        "module1", "file:///system/apps/example_module1", kModule1Link,
+        "module1", "example_module1", kModule1Link,
         std::move(services_for_module1), services_from_module1.NewRequest(),
         module1_.NewRequest(), nullptr, true);
 
@@ -236,7 +236,7 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
         }));
 
     module_context_->StartModuleInShell(
-        "module2", "file:///system/apps/example_module2", kModule2Link, nullptr,
+        "module2", "example_module2", kModule2Link, nullptr,
         nullptr, module2_.NewRequest(), nullptr, true);
 
     connections_.emplace_back(

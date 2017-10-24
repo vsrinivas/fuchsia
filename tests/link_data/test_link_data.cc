@@ -50,7 +50,7 @@ class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
     first_module = command_line.GetOptionValueWithDefault(
-        "first_module", "file:///system/apps/example_recipe");
+        "first_module", "example_recipe");
   }
 
   std::string first_module;

@@ -44,15 +44,15 @@ class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
     device_shell.url = command_line.GetOptionValueWithDefault(
-        "device_shell", "file:///system/apps/userpicker_device_shell");
+        "device_shell", "userpicker_device_shell");
     story_shell.url = command_line.GetOptionValueWithDefault(
-        "story_shell", "file:///system/apps/mondrian");
+        "story_shell", "mondrian");
     user_runner.url = command_line.GetOptionValueWithDefault(
-        "user_runner", "file:///system/apps/user_runner");
+        "user_runner", "user_runner");
     user_shell.url = command_line.GetOptionValueWithDefault(
-        "user_shell", "file:///system/apps/armadillo_user_shell");
+        "user_shell", "armadillo_user_shell");
     account_provider.url = command_line.GetOptionValueWithDefault(
-        "account_provider", "file:///system/apps/oauth_token_manager");
+        "account_provider", "oauth_token_manager");
 
     ignore_monitor = command_line.HasOption("ignore_monitor");
     no_minfs = command_line.HasOption("no_minfs");
@@ -99,19 +99,19 @@ class Settings {
       --test
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
-                Defaults to 'file:///system/apps/userpicker_device_shell'.
+                Defaults to "userpicker_device_shell".
                 For integration testing use "dev_device_shell".
     USER_RUNNER: URL of the user runner to run.
-                Defaults to 'file:///system/apps/user_runner'.
+                Defaults to "user_runner".
     USER_SHELL: URL of the user shell to run.
-                Defaults to 'file:///system/apps/armadillo_user_shell'.
+                Defaults to "armadillo_user_shell".
                 For integration testing use "dev_user_shell".
     STORY_SHELL: URL of the story shell to run.
-                Defaults to 'file:///system/apps/mondrian'.
+                Defaults to "mondrian".
                 For integration testing use "dev_story_shell".
     SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.
     ACCOUNT_PROVIDER: URL of the account provider to use.
-                Defaults to 'file:///system/apps/oauth_token_manager'.
+                Defaults to "oauth_token_manager".
                 For integration tests use ""dev_token_manager".)USAGE";
   }
 

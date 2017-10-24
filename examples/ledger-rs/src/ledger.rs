@@ -30,7 +30,7 @@ impl LedgerInstance {
             handle: &reactor::Handle) -> Box<Future<Item = LedgerInstance, Error = LedgerError>>
     {
         let args = vec![String::from("--no_minfs_wait"), String::from("--no_persisted_config")];
-        let ledger_url = String::from("file:///system/apps/ledger");
+        let ledger_url = String::from("ledger");
         let mut app = try_to_fut!(launcher.launch(ledger_url, Some(args), handle));
 
         let (mut repo_factory, repo_factory_request) = try_to_fut!(LedgerRepositoryFactory::new_pair(handle));

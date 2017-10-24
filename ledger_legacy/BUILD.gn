@@ -5,8 +5,6 @@
 import("//packages/package.gni")
 
 package("ledger") {
-  app = true
-
   deps = [
     "//peridot/bin/cloud_provider_firebase",
     "//peridot/bin/ledger",
@@ -33,7 +31,6 @@ package("ledger") {
 
 package("ledger_tests") {
   testonly = true
-  app = true
 
   deps = [
     "//peridot/bin/cloud_provider_firebase:tests",

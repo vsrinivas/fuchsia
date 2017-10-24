@@ -513,8 +513,8 @@ TEST_F(ResultCountTest, MultiRemove) {
 // only the latest is kept.
 TEST_F(NextTest, Dedup) {
   acquirers::MockGps gps(context_engine());
-  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
-  StartSuggestionAgent("file:///system/apps/agents/ideas");
+  StartContextAgent("agents/carmen_sandiego");
+  StartSuggestionAgent("agents/ideas");
 
   StartListening(10);
   gps.Publish(90, 0);
@@ -535,8 +535,8 @@ TEST_F(NextTest, Dedup) {
 // itself (maxwell_test).
 TEST_F(NextTest, NamespacingPerAgent) {
   acquirers::MockGps gps(context_engine());
-  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
-  StartSuggestionAgent("file:///system/apps/agents/ideas");
+  StartContextAgent("agents/carmen_sandiego");
+  StartSuggestionAgent("agents/ideas");
   Proposinator conflictinator(suggestion_engine());
 
   StartListening(10);

@@ -13,8 +13,7 @@
 
 namespace test {
 namespace {
-constexpr char kCloudProviderFirebaseAppUrl[] =
-    "file:///system/apps/cloud_provider_firebase";
+constexpr char kCloudProviderFirebaseAppUrl[] = "cloud_provider_firebase";
 }  // namespace
 
 CloudProviderFirebaseFactory::CloudProviderFirebaseFactory(

@@ -1,17 +1,17 @@
 {
   "startup_agents": [
-    "file:///system/apps/agents/module_suggester.dartx",
-    "file:///system/apps/concert_agent",
-    "file:///system/apps/music_artist_agent",
-    "file:///system/apps/last_fm_agent",
-    "file:///system/apps/location_agent",
-    "file:///system/apps/agents/eddystone_agent",
-    "file:///system/apps/agents/geoip_agent.dartx",
-    "file:///system/apps/agents/maxwell_btl",
-    "file:///system/apps/agents/maxwell_entity_selector",
-    "file:///system/apps/agents/maxwell_proposal_maker",
-    "file:///system/apps/agents/usage_log.dartx",
-    "file:///system/apps/weather_agent"
+    "agents/module_suggester.dartx",
+    "concert_agent",
+    "music_artist_agent",
+    "last_fm_agent",
+    "location_agent",
+    "agents/eddystone_agent",
+    "agents/geoip_agent.dartx",
+    "agents/maxwell_btl",
+    "agents/maxwell_entity_selector",
+    "agents/maxwell_proposal_maker",
+    "agents/usage_log.dartx",
+    "weather_agent"
   ],
   "kronk": "https://storage.googleapis.com/maxwell-agents/kronk",
   "mi_dashboard": true

@@ -15,7 +15,7 @@ namespace {
 constexpr uint32_t kChildKey = 1;
 constexpr int kSwapSeconds = 5;
 constexpr std::array<const char*, 2> kModuleQueries{
-    {"file:///system/apps/swap_module1", "file:///system/apps/swap_module2"}};
+    {"swap_module1", "swap_module2"}};
 
 class RecipeView : public mozart::BaseView {
  public:

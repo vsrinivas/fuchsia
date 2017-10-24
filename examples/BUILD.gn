@@ -5,8 +5,6 @@
 import("//packages/package.gni")
 
 package("modular_examples") {
-  app = true
-
   deps = [
     "counter_cpp",
     "hello_world_cpp",

@@ -6,10 +6,10 @@ The linter is configured in the [.clang-tidy](../.clang-tidy) file.
 ## How to lint
 
 In order to run the current CL through the linter (assuming the current
-directory is `apps/ledger`), run:
+directory is `peridot/bin/ledger`), run:
 
 ```
-../../scripts/git-file-tidy [--out-dir out/debug-x86-64]
+../../../scripts/git-file-tidy [--out-dir out/debug-x86-64]
 ```
 
 In order to run the entire repository through the linter, add `--all`. You can

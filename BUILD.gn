@@ -12,7 +12,6 @@ config("internal") {
 }
 
 package("modular") {
-  app = true
   testonly = true
 
   deps = [
@@ -33,7 +32,6 @@ package("modular") {
 }
 
 package("modular_dev") {
-  app = true
   testonly = true
 
   deps = [

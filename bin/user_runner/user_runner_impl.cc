@@ -58,8 +58,8 @@ namespace {
 
 constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
-constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
-constexpr char kModuleResolverUrl[] = "file:///system/apps/module_resolver";
+constexpr char kMaxwellUrl[] = "maxwell";
+constexpr char kModuleResolverUrl[] = "module_resolver";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellComponentNamespace[] = "user-shell-namespace";

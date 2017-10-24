@@ -33,7 +33,7 @@ class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
     root_module = command_line.GetOptionValueWithDefault(
-        "root_module", "file:///system/apps/example_recipe");
+        "root_module", "example_recipe");
     root_link = command_line.GetOptionValueWithDefault("root_link", "");
     story_id = command_line.GetOptionValueWithDefault("story_id", "");
   }
