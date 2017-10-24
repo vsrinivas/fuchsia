@@ -8,16 +8,30 @@
 
 #include <zircon/types.h>
 
+// clang-format off
+
+// Exception class of the exception syndrome.
 enum class ExceptionClass : uint8_t {
     INSTRUCTION_ABORT   = 0b100000,
     DATA_ABORT          = 0b100100,
 };
 
+// clang-format on
+
+// Exception syndrome for the VM exit.
 struct ExceptionSyndrome {
     ExceptionClass ec;
     uint32_t iss;
 
     ExceptionSyndrome(uint32_t esr);
+};
+
+// Data abort for the VM exit.
+struct DataAbort {
+    bool valid;
+    bool write;
+
+    DataAbort(uint32_t iss);
 };
 
 typedef struct zx_port_packet zx_port_packet_t;

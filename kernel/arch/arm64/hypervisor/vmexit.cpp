@@ -6,38 +6,61 @@
 
 #include "vmexit_priv.h"
 
+#include <bits.h>
 #include <trace.h>
 
 #include <arch/arm64/el2_state.h>
+#include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
+#include <vm/fault.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 
 #define LOCAL_TRACE 0
 
-static const uint32_t kEsrEcShift = 26;
-static const uint32_t kEsrIssMask = 0x01ffffff;
-
 ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
-    ec = static_cast<ExceptionClass>(esr >> kEsrEcShift);
-    iss = esr & kEsrIssMask;
+    ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
+    iss = BITS(esr, 24, 0);
+}
+
+DataAbort::DataAbort(uint32_t iss) {
+    valid = BIT_SHIFT(iss, 24);
+    write = BIT(iss, 6);
 }
 
 static void next_pc(GuestState* state) {
     state->system_state.elr_el2 += 4;
 }
 
-static zx_status_t handle_instruction_abort(GuestState* guest_state) {
-    return ZX_ERR_NOT_SUPPORTED;
+static zx_status_t handle_page_fault(zx_vaddr_t guest_paddr, GuestPhysicalAddressSpace* gpas,
+                                     uint pf_flags) {
+    pf_flags |= VMM_PF_FLAG_HW_FAULT;
+    return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 
-static zx_status_t handle_data_abort(GuestState* guest_state, GuestPhysicalAddressSpace* gpas,
-                                     TrapMap* traps, zx_port_packet_t* packet) {
+static zx_status_t handle_instruction_abort(uint32_t iss, GuestState* guest_state,
+                                            GuestPhysicalAddressSpace* gpas) {
+    return handle_page_fault(guest_state->hpfar_el2, gpas, VMM_PF_FLAG_INSTRUCTION);
+}
+
+static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
+                                     GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                                     zx_port_packet_t* packet) {
     zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
     Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
-    if (status != ZX_OK)
+    switch (status) {
+    case ZX_ERR_NOT_FOUND: {
+        DataAbort data_abort(iss);
+        if (data_abort.valid)
+            return ZX_ERR_NOT_SUPPORTED;
+        return handle_page_fault(guest_paddr, gpas, data_abort.write ? VMM_PF_FLAG_WRITE : 0);
+    }
+    case ZX_OK:
+        break;
+    default:
         return status;
+    }
     next_pc(guest_state);
 
     switch (trap->kind()) {
@@ -75,10 +98,10 @@ zx_status_t vmexit_handler(GuestState* guest_state, GuestPhysicalAddressSpace* g
     switch (syndrome.ec) {
     case ExceptionClass::INSTRUCTION_ABORT:
         LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
-        return handle_instruction_abort(guest_state);
+        return handle_instruction_abort(syndrome.iss, guest_state, gpas);
     case ExceptionClass::DATA_ABORT:
         LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
-        return handle_data_abort(guest_state, gpas, traps, packet);
+        return handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
     default:
         LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n",
             static_cast<uint32_t>(syndrome.ec), syndrome.iss);

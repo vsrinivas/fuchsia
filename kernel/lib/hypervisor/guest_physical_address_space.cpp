@@ -64,14 +64,6 @@ zx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_m
     if (status != ZX_OK)
         return status;
 
-#if ARCH_ARM64
-    // TODO(abdulla): Remove this temporary hack once ARM page-fault handling
-    // has been written.
-    status = mapping->MapRange(0, guest_phys_mem->size(), true);
-    if (status != ZX_OK)
-        return status;
-#endif
-
     *_gpas = fbl::move(gpas);
     return ZX_OK;
 }
