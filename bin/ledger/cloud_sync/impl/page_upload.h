@@ -10,7 +10,6 @@
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"

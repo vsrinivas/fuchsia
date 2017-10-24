@@ -14,8 +14,6 @@
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
-#include "peridot/bin/ledger/cloud_provider/public/commit_watcher.h"
-#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 #include "peridot/bin/ledger/cloud_sync/impl/page_download.h"

@@ -28,8 +28,6 @@ source_set("impl") {
 
   public_deps = [
     "//peridot/bin/ledger/backoff",
-    "//peridot/bin/ledger/cloud_provider/impl",
-    "//peridot/bin/ledger/cloud_provider/public",
     "//peridot/bin/ledger/cloud_sync/public",
     "//peridot/bin/ledger/device_set",
     "//peridot/bin/ledger/encryption/impl",
@@ -66,7 +64,6 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/auth_provider/test",
     "//peridot/bin/ledger/backoff/test",
-    "//peridot/bin/ledger/cloud_provider/test",
     "//peridot/bin/ledger/cloud_sync/impl/test",
     "//peridot/bin/ledger/cloud_sync/test",
     "//peridot/bin/ledger/device_set",

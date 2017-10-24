@@ -2,37 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//peridot/bin/cloud_provider_firebase/*",
-  "//peridot/bin/ledger/*",
-]
+visibility = [ "//peridot/bin/cloud_provider_firebase/*" ]
 
-source_set("firebase") {
+source_set("impl") {
   sources = [
     "encoding.cc",
     "encoding.h",
-    "event_stream.cc",
-    "event_stream.h",
-    "firebase.h",
-    "firebase_impl.cc",
-    "firebase_impl.h",
-    "status.cc",
-    "status.h",
-    "watch_client.h",
+    "page_cloud_handler_impl.cc",
+    "page_cloud_handler_impl.h",
+    "paths.cc",
+    "paths.h",
+    "timestamp_conversions.cc",
+    "timestamp_conversions.h",
+    "watch_client_impl.cc",
+    "watch_client_impl.h",
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/convert",
-    "//peridot/bin/ledger/network",
+    "//peridot/bin/cloud_provider_firebase/page_handler/public",
     "//third_party/rapidjson",
   ]
 
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/firebase",
+    "//peridot/bin/ledger/gcs",
     "//peridot/bin/ledger/glue/crypto",
-    "//peridot/bin/ledger/glue/socket",
+    "//peridot/bin/ledger/storage/public",  # For serialization version constant.
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]
@@ -43,17 +41,16 @@ source_set("unittests") {
 
   sources = [
     "encoding_unittest.cc",
-    "event_stream_unittest.cc",
-    "firebase_impl_unittest.cc",
+    "page_cloud_handler_impl_unittest.cc",
+    "timestamp_conversions_unittest.cc",
   ]
 
   deps = [
-    ":firebase",
+    ":impl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/convert",
-    "//peridot/bin/ledger/glue/socket",
-    "//peridot/bin/ledger/network:fake",
+    "//peridot/bin/ledger/firebase",
+    "//peridot/bin/ledger/gcs",
     "//peridot/bin/ledger/test:lib",
     "//third_party/gtest",
   ]

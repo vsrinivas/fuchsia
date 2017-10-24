@@ -5,7 +5,7 @@
 #include "peridot/bin/cloud_provider_firebase/device_set_impl.h"
 
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/cloud_provider/impl/paths.h"
+#include "peridot/bin/cloud_provider_firebase/page_handler/impl/paths.h"
 #include "peridot/bin/ledger/convert/convert.h"
 
 namespace cloud_provider_firebase {

@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_CONVERT_STATUS_H_
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "peridot/bin/ledger/cloud_provider/public/types.h"
+#include "peridot/bin/cloud_provider_firebase/page_handler/public/types.h"
 
 namespace cloud_provider_firebase {
 

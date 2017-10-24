@@ -14,8 +14,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/callback/capture.h"
-#include "peridot/bin/ledger/cloud_provider/public/page_cloud_handler.h"
-#include "peridot/bin/ledger/cloud_provider/test/page_cloud_handler_empty_impl.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"

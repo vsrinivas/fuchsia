@@ -15,8 +15,6 @@
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 #include "peridot/bin/ledger/callback/trace_callback.h"
 #include "peridot/bin/ledger/callback/waiter.h"
-#include "peridot/bin/ledger/cloud_provider/public/commit.h"
-#include "peridot/bin/ledger/cloud_provider/public/types.h"
 
 namespace cloud_sync {
 

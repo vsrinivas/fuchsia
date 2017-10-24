@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/bin/ledger/*" ]
+visibility = [
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
+]
 
 source_set("gcs") {
   sources = [

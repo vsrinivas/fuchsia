@@ -2,7 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/bin/ledger/*" ]
+visibility = [
+  # needed to access the serialization version constant
+  # TODO(ppi): extract the serialization version constant to a separate library
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
+]
 
 source_set("public") {
   sources = [

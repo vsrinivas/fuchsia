@@ -7,24 +7,23 @@ visibility = [
   "//peridot/bin/ledger/*",
 ]
 
-source_set("crypto") {
+source_set("test") {
+  testonly = true
+
   sources = [
-    "base64.cc",
-    "base64.h",
-    "hash.cc",
-    "hash.h",
-    "hmac.cc",
-    "hmac.h",
-    "kdf.cc",
-    "kdf.h",
-    "rand.cc",
-    "rand.h",
+    "page_cloud_handler_empty_impl.cc",
+    "page_cloud_handler_empty_impl.h",
+    "test_page_cloud_handler.cc",
+    "test_page_cloud_handler.h",
+  ]
+
+  public_deps = [
+    "//peridot/bin/cloud_provider_firebase/page_handler/public",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/third_party/modp_b64",
-    "//third_party/boringssl",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

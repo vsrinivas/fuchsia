@@ -21,8 +21,6 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/cloud_provider/impl",
-    "//peridot/bin/ledger/cloud_provider/public",
     "//peridot/bin/ledger/cloud_sync/public",
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/storage/public",

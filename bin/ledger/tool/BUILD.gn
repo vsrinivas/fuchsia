@@ -23,7 +23,6 @@ executable("tool") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
     "//peridot/bin/ledger/app:lib",
-    "//peridot/bin/ledger/cloud_provider/impl",
     "//peridot/bin/ledger/cloud_sync/impl",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/firebase",
