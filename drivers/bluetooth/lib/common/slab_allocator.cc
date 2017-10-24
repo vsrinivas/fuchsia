@@ -17,7 +17,7 @@ using LargeBufferTraits =
 using SmallAllocator = fbl::SlabAllocator<SmallBufferTraits>;
 using LargeAllocator = fbl::SlabAllocator<LargeBufferTraits>;
 
-std::unique_ptr<common::MutableByteBuffer> NewSlabBuffer(size_t size) {
+common::MutableByteBufferPtr NewSlabBuffer(size_t size) {
   if (size <= kSmallBufferSize) {
     auto buffer = SmallAllocator::New(size);
     if (buffer)

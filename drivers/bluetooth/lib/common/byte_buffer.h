@@ -83,6 +83,8 @@ class ByteBuffer {
   std::string ToString() const;
 };
 
+using ByteBufferPtr = std::unique_ptr<ByteBuffer>;
+
 // Mutable extension to the ByteBuffer interface. This provides methods that
 // allows durect mutable access to the underlying buffer.
 class MutableByteBuffer : public ByteBuffer {
@@ -121,6 +123,8 @@ class MutableByteBuffer : public ByteBuffer {
   // Fills the contents of the buffer with the given value.
   virtual void Fill(uint8_t value) = 0;
 };
+
+using MutableByteBufferPtr = std::unique_ptr<MutableByteBuffer>;
 
 // A ByteBuffer with static storage duration. Instances of this class are
 // copyable. Due to the static buffer storage duration, move semantics work the

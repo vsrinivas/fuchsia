@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+
 #include "lib/fxl/strings/string_printf.h"
 
 namespace bluetooth {
@@ -44,6 +46,13 @@ bool ContainersEqual(const Container1& c1,
                      const uint8_t* bytes,
                      size_t num_bytes) {
   return ContainersEqual(c1.begin(), c1.end(), bytes, bytes + num_bytes);
+}
+
+// Returns a managed pointer to a heap allocated MutableByteBuffer.
+template <typename... T>
+common::MutableByteBufferPtr NewBuffer(T... bytes) {
+  return std::make_unique<common::StaticByteBuffer<sizeof...(T)>>(
+      std::forward<T>(bytes)...);
 }
 
 }  // namespace common

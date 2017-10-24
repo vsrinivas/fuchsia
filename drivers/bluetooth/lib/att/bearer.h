@@ -114,7 +114,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   using TransactionCallback = std::function<void(const PacketReader& packet)>;
   using ErrorCallback = std::function<
       void(bool timeout, ErrorCode protocol_error, Handle attr_in_error)>;
-  bool StartTransaction(std::unique_ptr<common::ByteBuffer> pdu,
+  bool StartTransaction(common::ByteBufferPtr pdu,
                         const TransactionCallback& callback,
                         const ErrorCallback& error_callback);
 
@@ -123,7 +123,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   //
   // Returns false if the packet is malformed or does not correspond to a
   // command or notification.
-  bool SendWithoutResponse(std::unique_ptr<common::ByteBuffer> pdu);
+  bool SendWithoutResponse(common::ByteBufferPtr pdu);
 
   // A Handler is a function that gets invoked when the Bearer receives a PDU
   // that is not tied to a locally initiated transaction (see
@@ -152,7 +152,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // Ends a currently pending transaction with the given response or
   // confirmation |pdu|. Returns false if |pdu| is malformed or if |id| and
   // |pdu| do not match a pending transaction.
-  bool Reply(TransactionId tid, std::unique_ptr<common::ByteBuffer> pdu);
+  bool Reply(TransactionId tid, common::ByteBufferPtr pdu);
 
   // Ends a request transaction with an error response.
   bool ReplyWithError(TransactionId id, Handle handle, ErrorCode error_code);
@@ -174,7 +174,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     PendingTransaction(OpCode opcode,
                        TransactionCallback callback,
                        ErrorCallback error_callback,
-                       std::unique_ptr<common::ByteBuffer> pdu);
+                       common::ByteBufferPtr pdu);
 
     // Required fields
     OpCode opcode;
@@ -184,7 +184,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     ErrorCallback error_callback;
 
     // Holds the pdu while the transaction is in the send queue.
-    std::unique_ptr<common::ByteBuffer> pdu;
+    common::ByteBufferPtr pdu;
   };
   using PendingTransactionPtr = std::unique_ptr<PendingTransaction>;
 
@@ -236,7 +236,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     std::unique_ptr<async::Task> timeout_task_;
   };
 
-  bool SendInternal(std::unique_ptr<common::ByteBuffer> pdu,
+  bool SendInternal(common::ByteBufferPtr pdu,
                     const TransactionCallback& callback,
                     const ErrorCallback& error_callback);
 

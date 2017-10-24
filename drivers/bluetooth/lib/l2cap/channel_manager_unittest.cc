@@ -22,12 +22,6 @@ namespace {
 constexpr hci::ConnectionHandle kTestHandle1 = 0x0001;
 constexpr hci::ConnectionHandle kTestHandle2 = 0x0002;
 
-template <typename... T>
-std::unique_ptr<common::MutableByteBuffer> NewBuffer(T... bytes) {
-  return std::make_unique<common::StaticByteBuffer<sizeof...(T)>>(
-      std::forward<T>(bytes)...);
-}
-
 using ::bluetooth::testing::TestController;
 
 using TestingBase = ::bluetooth::testing::FakeControllerTest<TestController>;
@@ -425,7 +419,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendOnClosedLink) {
 
   chanmgr()->Unregister(kTestHandle1);
 
-  EXPECT_FALSE(att_chan->Send(NewBuffer('T', 'e', 's', 't')));
+  EXPECT_FALSE(att_chan->Send(common::NewBuffer('T', 'e', 's', 't')));
 }
 
 TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
@@ -441,7 +435,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
-  EXPECT_TRUE(att_chan->Send(NewBuffer('T', 'e', 's', 't')));
+  EXPECT_TRUE(att_chan->Send(common::NewBuffer('T', 'e', 's', 't')));
 
   RunMessageLoop();
   ASSERT_TRUE(received);
@@ -504,11 +498,12 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
 
   // SDU of length 5 corresponds to a 9-octet B-frame which should be sent over
   // 2 fragments.
-  EXPECT_TRUE(att_chan->Send(NewBuffer('H', 'e', 'l', 'l', 'o')));
+  EXPECT_TRUE(att_chan->Send(common::NewBuffer('H', 'e', 'l', 'l', 'o')));
 
   // SDU of length 7 corresponds to a 11-octet B-frame which should be sent over
   // 3 fragments.
-  EXPECT_TRUE(sm_chan->Send(NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
+  EXPECT_TRUE(
+      sm_chan->Send(common::NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
 
   RunMessageLoop();
 
@@ -606,11 +601,12 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
 
   // SDU of length 5 corresponds to a 9-octet B-frame. The LE buffer size is
   // large enough for this to be sent over a single fragment.
-  EXPECT_TRUE(att_chan->Send(NewBuffer('H', 'e', 'l', 'l', 'o')));
+  EXPECT_TRUE(att_chan->Send(common::NewBuffer('H', 'e', 'l', 'l', 'o')));
 
   // SDU of length 7 corresponds to a 11-octet B-frame. Due to the BR/EDR buffer
   // size, this should be sent over 2 fragments.
-  EXPECT_TRUE(sm_chan->Send(NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
+  EXPECT_TRUE(
+      sm_chan->Send(common::NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
 
   RunMessageLoop();
 

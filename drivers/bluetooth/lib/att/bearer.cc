@@ -119,11 +119,10 @@ OpCode MatchingTransactionCode(OpCode transaction_end_code) {
 
 }  // namespace
 
-Bearer::PendingTransaction::PendingTransaction(
-    OpCode opcode,
-    TransactionCallback callback,
-    ErrorCallback error_callback,
-    std::unique_ptr<common::ByteBuffer> pdu)
+Bearer::PendingTransaction::PendingTransaction(OpCode opcode,
+                                               TransactionCallback callback,
+                                               ErrorCallback error_callback,
+                                               common::ByteBufferPtr pdu)
     : opcode(opcode),
       callback(callback),
       error_callback(error_callback),
@@ -274,7 +273,7 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
     closed_cb_();
 }
 
-bool Bearer::StartTransaction(std::unique_ptr<common::ByteBuffer> pdu,
+bool Bearer::StartTransaction(common::ByteBufferPtr pdu,
                               const TransactionCallback& callback,
                               const ErrorCallback& error_callback) {
   FXL_DCHECK(pdu);
@@ -284,12 +283,12 @@ bool Bearer::StartTransaction(std::unique_ptr<common::ByteBuffer> pdu,
   return SendInternal(std::move(pdu), callback, error_callback);
 }
 
-bool Bearer::SendWithoutResponse(std::unique_ptr<common::ByteBuffer> pdu) {
+bool Bearer::SendWithoutResponse(common::ByteBufferPtr pdu) {
   FXL_DCHECK(pdu);
   return SendInternal(std::move(pdu), {}, {});
 }
 
-bool Bearer::SendInternal(std::unique_ptr<common::ByteBuffer> pdu,
+bool Bearer::SendInternal(common::ByteBufferPtr pdu,
                           const TransactionCallback& callback,
                           const ErrorCallback& error_callback) {
   if (!is_open()) {
@@ -380,7 +379,7 @@ void Bearer::UnregisterHandler(HandlerId id) {
   handlers_.erase(opcode);
 }
 
-bool Bearer::Reply(TransactionId tid, std::unique_ptr<common::ByteBuffer> pdu) {
+bool Bearer::Reply(TransactionId tid, common::ByteBufferPtr pdu) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(pdu);
 
