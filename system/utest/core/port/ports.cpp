@@ -300,6 +300,23 @@ static bool async_wait_event_test_repeat(void) {
     END_TEST;
 }
 
+// Check that zx_object_wait_async() returns an error if it is passed an
+// invalid option.
+static bool async_wait_invalid_option() {
+    BEGIN_TEST;
+    zx_handle_t port;
+    ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
+    zx_handle_t event;
+    ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+    const uint64_t kKey = 0;
+    const uint32_t kInvalidOption = ZX_WAIT_ASYNC_REPEATING + 1;
+    EXPECT_EQ(zx_object_wait_async(event, port, kKey, ZX_EVENT_SIGNALED,
+                                   kInvalidOption), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(zx_handle_close(event), ZX_OK);
+    ASSERT_EQ(zx_handle_close(port), ZX_OK);
+    END_TEST;
+}
+
 static bool pre_writes_channel_test(uint32_t mode) {
     BEGIN_TEST;
     zx_status_t status;
@@ -635,6 +652,7 @@ RUN_TEST(queue_and_close_test)
 RUN_TEST(async_wait_channel_test)
 RUN_TEST(async_wait_event_test_single)
 RUN_TEST(async_wait_event_test_repeat)
+RUN_TEST(async_wait_invalid_option)
 RUN_TEST(async_wait_close_order_1)
 RUN_TEST(async_wait_close_order_2)
 RUN_TEST(async_wait_close_order_3)

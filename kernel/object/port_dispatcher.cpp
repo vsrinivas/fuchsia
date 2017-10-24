@@ -303,10 +303,19 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     if (!dispatcher->has_state_tracker())
         return ZX_ERR_NOT_SUPPORTED;
 
-    fbl::AllocChecker ac;
-    auto type = (options == ZX_WAIT_ASYNC_ONCE) ?
-        ZX_PKT_TYPE_SIGNAL_ONE : ZX_PKT_TYPE_SIGNAL_REP;
+    uint32_t type;
+    switch (options) {
+        case ZX_WAIT_ASYNC_ONCE:
+            type = ZX_PKT_TYPE_SIGNAL_ONE;
+            break;
+        case ZX_WAIT_ASYNC_REPEATING:
+            type = ZX_PKT_TYPE_SIGNAL_REP;
+            break;
+        default:
+            return ZX_ERR_INVALID_ARGS;
+    }
 
+    fbl::AllocChecker ac;
     auto observer = new (&ac) PortObserver(type, handle, fbl::RefPtr<PortDispatcher>(this), key,
                                            signals);
     if (!ac.check())
