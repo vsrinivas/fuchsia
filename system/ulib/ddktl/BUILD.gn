@@ -17,6 +17,7 @@ source_set("ddktl") {
     "include/ddktl/protocol/ethernet.h",
     "include/ddktl/protocol/pci.h",
     "include/ddktl/protocol/test.h",
+    "include/ddktl/protocol/tpm.h",
     "include/ddktl/protocol/wlan-internal.h",
     "include/ddktl/protocol/wlan.h",
   ]
