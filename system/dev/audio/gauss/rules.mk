@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/gauss-audio.c \
+    $(LOCAL_DIR)/gauss-pdm-input.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
