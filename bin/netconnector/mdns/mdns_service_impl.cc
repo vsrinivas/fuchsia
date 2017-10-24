@@ -19,8 +19,8 @@ void MdnsServiceImpl::AddBinding(fidl::InterfaceRequest<MdnsService> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-bool MdnsServiceImpl::Start(const std::string& host_name) {
-  return mdns_.Start(host_name);
+void MdnsServiceImpl::Start(const std::string& host_name) {
+  mdns_.Start(host_name);
 }
 
 void MdnsServiceImpl::SubscribeToService(

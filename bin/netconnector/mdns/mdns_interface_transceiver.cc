@@ -50,15 +50,12 @@ MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
-bool MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
-                                     const InboundMessageCallback& callback) {
+bool MdnsInterfaceTransceiver::Start(const InboundMessageCallback& callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
   FXL_LOG(INFO) << "Starting mDNS on interface " << name_ << ", address "
                 << address_;
-
-  address_resource_ = MakeAddressResource(host_full_name, address_);
 
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -82,20 +79,36 @@ bool MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
   return true;
 }
 
+void MdnsInterfaceTransceiver::Stop() {
+  FXL_DCHECK(socket_fd_.is_valid()) << "Stop called when stopped.";
+  fd_waiter_.Cancel();
+  socket_fd_.reset();
+}
+
+void MdnsInterfaceTransceiver::SetHostFullName(
+    const std::string& host_full_name) {
+  FXL_DCHECK(!host_full_name.empty());
+
+  address_resource_ = MakeAddressResource(host_full_name, address_);
+
+  if (alternate_address_) {
+    alternate_address_resource_ =
+        MakeAddressResource(host_full_name, alternate_address_);
+  }
+}
+
 void MdnsInterfaceTransceiver::SetAlternateAddress(
     const std::string& host_full_name,
     const IpAddress& alternate_address) {
   FXL_DCHECK(!alternate_address_resource_);
   FXL_DCHECK(alternate_address.family() != address_.family());
 
-  alternate_address_resource_ =
-      MakeAddressResource(host_full_name, alternate_address);
-}
+  alternate_address_ = alternate_address;
 
-void MdnsInterfaceTransceiver::Stop() {
-  FXL_DCHECK(socket_fd_.is_valid()) << "BeginStop called when stopped.";
-  fd_waiter_.Cancel();
-  socket_fd_.reset();
+  if (!host_full_name.empty()) {
+    alternate_address_resource_ =
+        MakeAddressResource(host_full_name, alternate_address_);
+  }
 }
 
 void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
@@ -198,6 +211,9 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
     std::vector<std::shared_ptr<DnsResource>>* resources) {
   for (auto iter = resources->begin(); iter != resources->end(); ++iter) {
     if ((*iter)->type_ == DnsType::kA || (*iter)->type_ == DnsType::kAaaa) {
+      FXL_DCHECK(address_resource_)
+          << "An A or AAAA record was sent before the host name established.";
+
       **iter = *address_resource_;
 
       auto next_iter = iter;

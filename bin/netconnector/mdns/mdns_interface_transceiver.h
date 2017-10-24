@@ -44,19 +44,23 @@ class MdnsInterfaceTransceiver {
 
   const IpAddress& address() const { return address_; }
 
-  // Sets an alternate address for the interface.
-  void SetAlternateAddress(const std::string& host_full_name,
-                           const IpAddress& alternate_address);
-
   // Starts the interface transceiver.
-  bool Start(const std::string& host_full_name,
-             const InboundMessageCallback& callback);
+  bool Start(const InboundMessageCallback& callback);
 
   // Stops the interface transceiver.
   void Stop();
 
+  // Sets the host full name. This method may be called multiple times if
+  // conflicts are detected.
+  void SetHostFullName(const std::string& host_full_name);
+
+  // Sets an alternate address for the interface. |host_full_name| may be empty,
+  // in which case |SetHostFullName| will be called later.
+  void SetAlternateAddress(const std::string& host_full_name,
+                           const IpAddress& alternate_address);
+
   // Sends a messaage to the specified address. A V6 interface will send to
-  // |MdnsAddresses::kV6Multicast| if |address| is
+  // |MdnsAddresses::kV6Multicast| if |reply_address| is
   // |MdnsAddresses::kV4Multicast|. This method expects there to be at most two
   // address records per record vector and, if there are two, that they are
   // adjacent. The same constraints will apply when this method returns.
@@ -101,6 +105,7 @@ class MdnsInterfaceTransceiver {
   void FixUpAddresses(std::vector<std::shared_ptr<DnsResource>>* resources);
 
   IpAddress address_;
+  IpAddress alternate_address_;
   uint32_t index_;
   std::string name_;
   fxl::UniqueFD socket_fd_;

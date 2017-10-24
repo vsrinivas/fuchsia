@@ -51,8 +51,8 @@ class Mdns : public MdnsAgent::Host {
   // Determines whether message traffic will be logged.
   void SetVerbose(bool verbose);
 
-  // Starts the transceiver. Returns true if successful.
-  bool Start(const std::string& host_name);
+  // Starts the transceiver.
+  void Start(const std::string& host_name);
 
   // Stops the transceiver.
   void Stop();

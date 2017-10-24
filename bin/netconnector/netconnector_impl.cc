@@ -171,7 +171,7 @@ void NetConnectorImpl::AddServiceAgent(
 }
 
 void NetConnectorImpl::StartMdns() {
-  // TODO: Remove this check when NET-79 is fixed.
+  // TODO(NET-79): Remove this check when NET-79 is fixed.
   if (!NetworkIsReady()) {
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() { StartMdns(); }, fxl::TimeDelta::FromSeconds(5));
@@ -180,10 +180,7 @@ void NetConnectorImpl::StartMdns() {
 
   host_name_ = GetHostName();
 
-  if (!mdns_service_impl_.Start(host_name_)) {
-    FXL_LOG(ERROR) << "mDNS failed to start";
-    return;
-  }
+  mdns_service_impl_.Start(host_name_);
 
   FXL_LOG(INFO) << "mDNS started, host name " << host_name_;
 

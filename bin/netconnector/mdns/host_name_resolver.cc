@@ -26,7 +26,10 @@ HostNameResolver::HostNameResolver(
 
 HostNameResolver::~HostNameResolver() {}
 
-void HostNameResolver::Start() {
+void HostNameResolver::Start(const std::string& host_full_name) {
+  // Note that |host_full_name_| is the name we're trying to resolve, not the
+  // name of the local host, which is the (ignored) parameter to this method.
+
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA));
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa));
 

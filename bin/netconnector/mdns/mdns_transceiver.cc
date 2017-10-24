@@ -42,21 +42,28 @@ void MdnsTransceiver::EnableInterface(const std::string& name,
   enabled_interfaces_.emplace_back(name, family);
 }
 
-bool MdnsTransceiver::Start(
-    const std::string& host_full_name,
+void MdnsTransceiver::Start(
     const InboundMessageCallback& inbound_message_callback) {
-  FXL_DCHECK(host_full_name.size() > 0);
   FXL_DCHECK(inbound_message_callback);
 
   inbound_message_callback_ = inbound_message_callback;
-  host_full_name_ = host_full_name;
 
-  return FindNewInterfaces();
+  FindNewInterfaces();
 }
 
 void MdnsTransceiver::Stop() {
   for (auto& interface : interfaces_) {
     interface->Stop();
+  }
+}
+
+void MdnsTransceiver::SetHostFullName(const std::string& host_full_name) {
+  FXL_DCHECK(!host_full_name.empty());
+
+  host_full_name_ = host_full_name;
+
+  for (auto& i : interfaces_) {
+    i->SetHostFullName(host_full_name_);
   }
 }
 
@@ -101,7 +108,7 @@ void MdnsTransceiver::SendMessage(DnsMessage* message,
       message, reply_address.socket_address());
 }
 
-bool MdnsTransceiver::FindNewInterfaces() {
+void MdnsTransceiver::FindNewInterfaces() {
   netstack_->GetInterfaces(
       [this](fidl::Array<netstack::NetInterfacePtr> interfaces) {
         bool recheck_addresses = false;
@@ -129,8 +136,12 @@ bool MdnsTransceiver::FindNewInterfaces() {
                 MdnsInterfaceTransceiver::Create(if_info.get(),
                                                  interfaces_.size());
 
-            if (!interface->Start(host_full_name_, inbound_message_callback_)) {
+            if (!interface->Start(inbound_message_callback_)) {
               continue;
+            }
+
+            if (!host_full_name_.empty()) {
+              interface->SetHostFullName(host_full_name_);
             }
 
             for (auto& i : interfaces_) {
@@ -153,8 +164,6 @@ bool MdnsTransceiver::FindNewInterfaces() {
                        kMaxAddressRecheckDelay);
         }
       });
-
-  return true;
 }
 
 bool MdnsTransceiver::InterfaceAlreadyFound(const IpAddress& address) {

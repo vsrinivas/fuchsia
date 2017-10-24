@@ -31,7 +31,7 @@ InstanceSubscriber::InstanceSubscriber(MdnsAgent::Host* host,
 
 InstanceSubscriber::~InstanceSubscriber() {}
 
-void InstanceSubscriber::Start() {
+void InstanceSubscriber::Start(const std::string& host_full_name) {
   SendQuery();
 }
 

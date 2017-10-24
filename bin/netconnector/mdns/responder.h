@@ -22,7 +22,6 @@ class Responder : public MdnsAgent {
   // initially. The |MdnsResponder| referenced by |responder_handle| is
   // consulted to determine how queries are handled.
   Responder(MdnsAgent::Host* host,
-            const std::string& host_full_name,
             const std::string& service_name,
             const std::string& instance_name,
             const std::vector<std::string>& announced_subtypes,
@@ -32,7 +31,6 @@ class Responder : public MdnsAgent {
   // |service_name| are responded to using the information in |publication|.
   // Queries for subtypes of |service_name| are ignored.
   Responder(MdnsAgent::Host* host,
-            const std::string& host_full_name,
             const std::string& service_name,
             const std::string& instance_name,
             MdnsPublicationPtr publication);
@@ -40,7 +38,7 @@ class Responder : public MdnsAgent {
   ~Responder() override;
 
   // MdnsAgent overrides.
-  void Start() override;
+  void Start(const std::string& host_full_name) override;
 
   void ReceiveQuestion(const DnsQuestion& question,
                        const ReplyAddress& reply_address) override;

@@ -33,7 +33,7 @@ class InstanceSubscriber : public MdnsAgent {
   ~InstanceSubscriber() override;
 
   // MdnsAgent overrides.
-  void Start() override;
+  void Start(const std::string& host_full_name) override;
 
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section) override;

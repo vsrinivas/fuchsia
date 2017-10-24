@@ -34,65 +34,67 @@ void Mdns::SetVerbose(bool verbose) {
   verbose_ = verbose;
 }
 
-bool Mdns::Start(const std::string& host_name) {
+void Mdns::Start(const std::string& host_name) {
   host_full_name_ = MdnsNames::LocalHostFullName(host_name);
 
   address_placeholder_ =
       std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
 
   // Create an address responder agent to respond to simple address queries.
-  AddAgent(std::make_shared<AddressResponder>(this, host_full_name_));
+  AddAgent(std::make_shared<AddressResponder>(this));
 
   // Create a resource renewer agent to keep resources alive.
   resource_renewer_ = std::make_shared<ResourceRenewer>(this);
 
-  started_ = transceiver_.Start(
-      host_full_name_, [this](std::unique_ptr<DnsMessage> message,
-                              const ReplyAddress& reply_address) {
-        if (verbose_) {
-          FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
-                        << *message;
-        }
+  // Create an address responder agent to respond to address queries.
+  AddAgent(std::make_shared<AddressResponder>(this));
 
-        for (auto& question : message->questions_) {
-          // We reply to questions using unicast if specifically requested in
-          // the question or if the sender's port isn't 5353.
-          ReceiveQuestion(*question, (question->unicast_response_ ||
-                                      reply_address.socket_address().port() !=
-                                          MdnsAddresses::kMdnsPort)
-                                         ? reply_address
-                                         : MdnsAddresses::kV4MulticastReply);
-        }
+  transceiver_.Start([this](std::unique_ptr<DnsMessage> message,
+                            const ReplyAddress& reply_address) {
+    if (verbose_) {
+      FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
+                    << *message;
+    }
 
-        for (auto& resource : message->answers_) {
-          ReceiveResource(*resource, MdnsResourceSection::kAnswer);
-        }
+    for (auto& question : message->questions_) {
+      // We reply to questions using unicast if specifically requested in
+      // the question or if the sender's port isn't 5353.
+      ReceiveQuestion(*question, (question->unicast_response_ ||
+                                  reply_address.socket_address().port() !=
+                                      MdnsAddresses::kMdnsPort)
+                                     ? reply_address
+                                     : MdnsAddresses::kV4MulticastReply);
+    }
 
-        for (auto& resource : message->authorities_) {
-          ReceiveResource(*resource, MdnsResourceSection::kAuthority);
-        }
+    for (auto& resource : message->answers_) {
+      ReceiveResource(*resource, MdnsResourceSection::kAnswer);
+    }
 
-        for (auto& resource : message->additionals_) {
-          ReceiveResource(*resource, MdnsResourceSection::kAdditional);
-        }
+    for (auto& resource : message->authorities_) {
+      ReceiveResource(*resource, MdnsResourceSection::kAuthority);
+    }
 
-        resource_renewer_->EndOfMessage();
-        for (auto& pair : agents_) {
-          pair.second->EndOfMessage();
-        }
+    for (auto& resource : message->additionals_) {
+      ReceiveResource(*resource, MdnsResourceSection::kAdditional);
+    }
 
-        SendMessages();
-      });
-
-  if (started_) {
-    for (auto pair : agents_) {
-      pair.second->Start();
+    resource_renewer_->EndOfMessage();
+    for (auto& pair : agents_) {
+      pair.second->EndOfMessage();
     }
 
     SendMessages();
+  });
+
+  transceiver_.SetHostFullName(host_full_name_);
+
+  started_ = true;
+
+  for (auto pair : agents_) {
+    pair.second->Start(host_full_name_);
   }
 
-  return started_;
+  SendMessages();
 }
 
 void Mdns::Stop() {
@@ -116,7 +118,7 @@ std::shared_ptr<MdnsAgent> Mdns::SubscribeToService(
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(callback);
 
-  std::shared_ptr<MdnsAgent> agent =
+  auto agent =
       std::make_shared<InstanceSubscriber>(this, service_name, callback);
 
   AddAgent(agent);
@@ -142,9 +144,8 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
   publication->port = port.as_uint16_t();
   publication->text = fidl::Array<fidl::String>::From(text);
 
-  std::shared_ptr<Responder> agent =
-      std::make_shared<Responder>(this, host_full_name_, service_name,
-                                  instance_name, std::move(publication));
+  std::shared_ptr<Responder> agent = std::make_shared<Responder>(
+      this, service_name, instance_name, std::move(publication));
 
   AddAgent(agent);
   instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
@@ -187,9 +188,9 @@ bool Mdns::AddResponder(const std::string& service_name,
     return false;
   }
 
-  std::shared_ptr<Responder> agent = std::make_shared<Responder>(
-      this, host_full_name_, service_name, instance_name, announced_subtypes,
-      std::move(responder));
+  std::shared_ptr<Responder> agent =
+      std::make_shared<Responder>(this, service_name, instance_name,
+                                  announced_subtypes, std::move(responder));
 
   AddAgent(agent);
   instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
@@ -276,7 +277,7 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   agents_.emplace(agent.get(), agent);
 
   if (started_) {
-    agent->Start();
+    agent->Start(host_full_name_);
     SendMessages();
   }
 }

@@ -13,13 +13,11 @@ namespace netconnector {
 namespace mdns {
 
 Responder::Responder(MdnsAgent::Host* host,
-                     const std::string& host_full_name,
                      const std::string& service_name,
                      const std::string& instance_name,
                      const std::vector<std::string>& announced_subtypes,
                      fidl::InterfaceHandle<MdnsResponder> responder_handle)
     : MdnsAgent(host),
-      host_full_name_(host_full_name),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(
@@ -34,12 +32,10 @@ Responder::Responder(MdnsAgent::Host* host,
 }
 
 Responder::Responder(MdnsAgent::Host* host,
-                     const std::string& host_full_name,
                      const std::string& service_name,
                      const std::string& instance_name,
                      MdnsPublicationPtr publication)
     : MdnsAgent(host),
-      host_full_name_(host_full_name),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(
@@ -48,7 +44,11 @@ Responder::Responder(MdnsAgent::Host* host,
 
 Responder::~Responder() {}
 
-void Responder::Start() {
+void Responder::Start(const std::string& host_full_name) {
+  FXL_DCHECK(!host_full_name.empty());
+
+  host_full_name_ = host_full_name;
+
   SendAnnouncement();
 }
 

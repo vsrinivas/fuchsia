@@ -63,7 +63,7 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
   // Starts the agent. This method is never called before a shared pointer to
   // the agent is created, so |shared_from_this| is safe to call.
-  virtual void Start() {}
+  virtual void Start(const std::string& host_full_name) {}
 
   // Presents a received question.
   virtual void ReceiveQuestion(const DnsQuestion& question,

@@ -35,12 +35,15 @@ class MdnsTransceiver {
   // interfaces that have been enabled.
   void EnableInterface(const std::string& name, sa_family_t family);
 
-  // Starts the transceiver. Returns true if successful.
-  bool Start(const std::string& host_full_name,
-             const InboundMessageCallback& inbound_message_callback);
+  // Starts the transceiver.
+  void Start(const InboundMessageCallback& inbound_message_callback);
 
   // Stops the transceiver.
   void Stop();
+
+  // Sets the host full name. This method may be called multiple times if
+  // conflicts are detected.
+  void SetHostFullName(const std::string& host_full_name);
 
   // Sends a messaage to the specified address. A V6 interface will send to
   // |MdnsAddresses::kV6Multicast| if |reply_address.socket_address()| is
@@ -63,10 +66,10 @@ class MdnsTransceiver {
   // Determines if the interface is enabled.
   bool InterfaceEnabled(const netstack::NetInterface* if_info);
 
-  // Creates a new |MdnsInterfaceTransciver| for each interface that's ready
+  // Creates a new |MdnsInterfaceTransceiver| for each interface that's ready
   // and doesn't already have one. Schedules another call to this method if
   // unready interfaces were found.
-  bool FindNewInterfaces();
+  void FindNewInterfaces();
 
   // Determines if a |MdnsInterfaceTransciver| has already been created for the
   // specified address.

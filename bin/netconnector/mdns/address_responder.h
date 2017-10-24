@@ -18,11 +18,13 @@ namespace mdns {
 class AddressResponder : public MdnsAgent {
  public:
   // Creates an |AddressResponder|.
-  AddressResponder(MdnsAgent::Host* host, const std::string& host_full_name);
+  AddressResponder(MdnsAgent::Host* host);
 
   ~AddressResponder() override;
 
   // MdnsAgent overrides.
+  void Start(const std::string& host_full_name) override;
+
   void ReceiveQuestion(const DnsQuestion& question,
                        const ReplyAddress& reply_address) override;
 

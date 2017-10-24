@@ -11,11 +11,15 @@
 namespace netconnector {
 namespace mdns {
 
-AddressResponder::AddressResponder(MdnsAgent::Host* host,
-                                   const std::string& host_full_name)
-    : MdnsAgent(host), host_full_name_(host_full_name) {}
+AddressResponder::AddressResponder(MdnsAgent::Host* host) : MdnsAgent(host) {}
 
 AddressResponder::~AddressResponder() {}
+
+void AddressResponder::Start(const std::string& host_full_name) {
+  FXL_DCHECK(!host_full_name.empty());
+
+  host_full_name_ = host_full_name;
+}
 
 void AddressResponder::ReceiveQuestion(const DnsQuestion& question,
                                        const ReplyAddress& reply_address) {
