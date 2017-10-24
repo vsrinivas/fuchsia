@@ -69,6 +69,12 @@ void Responder::ReceiveQuestion(const DnsQuestion& question,
         GetAndSendPublication(true, "", reply_address);
       }
       break;
+    case DnsType::kAny:
+      if (question.name_.dotted_string_ == instance_full_name_ ||
+          MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
+        GetAndSendPublication(true, subtype, reply_address);
+      }
+      break;
     default:
       break;
   }
