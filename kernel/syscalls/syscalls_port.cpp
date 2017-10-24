@@ -61,10 +61,10 @@ zx_status_t sys_port_create(uint32_t options, user_ptr<zx_handle_t> out) {
     return ZX_OK;
 }
 
-zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const zx_port_packet_t> packet_in, size_t size) {
+zx_status_t sys_port_queue(zx_handle_t handle, user_ptr<const zx_port_packet_t> packet_in, size_t count) {
     LTRACEF("handle %x\n", handle);
 
-    if (size != 0u)
+    if (count != 0u && count != 1u)
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();

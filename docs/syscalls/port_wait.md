@@ -10,7 +10,7 @@ port_wait - wait for a packet arrival in a port
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-zx_status_t zx_port_wait(zx_handle_t handle, zx_time_t deadline, zx_port_packet_t* packet, size_t size);
+zx_status_t zx_port_wait(zx_handle_t handle, zx_time_t deadline, zx_port_packet_t* packet, size_t count);
 ```
 
 ## DESCRIPTION
@@ -21,7 +21,7 @@ one packet is available.
 Upon return, if successful *packet* will contain the earliest (in FIFO order)
 available packet data.
 
-The **size** argument should be set to zero.
+The **count** argument should be set to one. A value of zero is also accepted as a deprecated feature.
 
 The *deadline* indicates when to stop waiting for a packet (with respect to
 **ZX_CLOCK_MONOTONIC**).  If no packet has arrived by the deadline,
