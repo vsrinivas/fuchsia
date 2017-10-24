@@ -378,7 +378,7 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
     WLAN_BIT_FIELD(reserved2, 12, 4);
 
     enum PcoTransitionTime {
-        PCO_RESERVED = 0,
+        PCO_RESERVED = 0,  // Often translated as "No transition".
         PCO_400_USEC = 1,
         PCO_1500_USEC = 2,
         PCO_5000_USEC = 3,
@@ -452,22 +452,31 @@ class TxBfCapability : public common::BitField<uint32_t> {
         set_csi_antennas(num - 1);
     };
 
-    uint8_t noncomp_feedback_human() { return noncomp_feedback() + 1; }
-    void set_noncomp_feedback_human(uint8_t num) {
+    uint8_t noncomp_steering_ants_human() { return noncomp_steering_ants() + 1; }
+    void set_noncomp_steering_ants_human(uint8_t num) {
         constexpr uint8_t kLowerbound = 1;
         constexpr uint8_t kUpperbound = 4;
         if (num < kLowerbound) num = kLowerbound;
         if (num > kUpperbound) num = kUpperbound;
-        set_noncomp_feedback(num - 1);
+        set_noncomp_steering_ants(num - 1);
     }
 
-    uint8_t comp_feedback_human() { return comp_feedback() + 1; }
-    void set_comp_feedback_human(uint8_t num) {
+    uint8_t comp_steering_ants_human() { return comp_steering_ants() + 1; }
+    void set_comp_steering_ants_human(uint8_t num) {
         constexpr uint8_t kLowerbound = 1;
         constexpr uint8_t kUpperbound = 4;
         if (num < kLowerbound) num = kLowerbound;
         if (num > kUpperbound) num = kUpperbound;
-        set_comp_feedback(num - 1);
+        set_comp_steering_ants(num - 1);
+    }
+
+    uint8_t csi_rows_human() { return csi_rows() + 1; }
+    void set_csi_rows_human(uint8_t num) {
+        constexpr uint8_t kLowerbound = 1;
+        constexpr uint8_t kUpperbound = 4;
+        if (num < kLowerbound) num = kLowerbound;
+        if (num > kUpperbound) num = kUpperbound;
+        set_csi_rows(num - 1);
     }
 
     uint8_t chan_estimation_human() { return chan_estimation() + 1; }
