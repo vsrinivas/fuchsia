@@ -64,7 +64,7 @@ END
 ### envprompt: embed information about the build environment in the shell prompt
 
 function envprompt-info() {
-  if ! [[ -z "${ENVPROMPT_INFO}" ]]; then
+  if [[ -n "${ENVPROMPT_INFO}" ]]; then
     echo "[${ENVPROMPT_INFO}] "
   fi
 }
@@ -284,7 +284,7 @@ function fset() {
   gen_args="${gen_args} --target_cpu ${FUCHSIA_GEN_TARGET}"
   shift
 
-  local goma
+  local use_goma
   local goma_dir
   local ensure_goma=1
   local ccache
@@ -303,10 +303,10 @@ function fset() {
         shift
         ;;
       --goma)
-        goma=1
+        use_goma=1
         ;;
       --no-goma)
-        goma=0
+        use_goma=0
         ;;
       --no-ensure-goma)
         ensure_goma=0
@@ -346,22 +346,19 @@ function fset() {
 
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
   export FUCHSIA_SETTINGS="${settings}"
-  export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
 
   # TODO(abarth): Remove.
   export GOPATH="${FUCHSIA_BUILD_DIR}:${FUCHSIA_DIR}/garnet/go"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
-  if [[ -n "${goma_dir}" ]]; then
-    export FUCHSIA_GOMA_DIR="${goma_dir}"
-  else
-    export FUCHSIA_GOMA_DIR=~/goma
+  if [[ -z "${goma_dir}" ]]; then
+    goma_dir="${HOME}/goma"
   fi
 
   # Automatically detect goma and ccache if not specified explicitly.
-  if [[ -z "${goma}" ]] && [[ -z "${ccache}" ]]; then
-    if [[ -d "${FUCHSIA_GOMA_DIR}" ]]; then
-      goma=1
+  if [[ -z "${use_goma}" ]] && [[ -z "${ccache}" ]]; then
+    if [[ -d "${goma_dir}" ]]; then
+      use_goma=1
     elif [[ -n "${CCACHE_DIR}" ]] && [[ -d "${CCACHE_DIR}" ]]; then
       ccache=1
     fi
@@ -369,8 +366,8 @@ function fset() {
 
   # Add --goma or --ccache as appropriate.
   local builder=
-  if [[ "${goma}" -eq 1 ]]; then
-    gen_args="${gen_args} --goma ${FUCHSIA_GOMA_DIR}"
+  if [[ "${use_goma}" -eq 1 ]]; then
+    gen_args="${gen_args} --goma ${goma_dir}"
     builder="-goma"
   elif [[ "${ccache}" -eq 1 ]]; then
     gen_args="${gen_args} --ccache"
@@ -383,6 +380,12 @@ function fset() {
     "${FUCHSIA_DIR}/packages/gn/gen.py" ${=gen_args} "$@"
   else
     "${FUCHSIA_DIR}/packages/gn/gen.py" ${gen_args} "$@"
+  fi
+
+  if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
+    echo
+    echo "Ensuring goma has started (skip this step by passing --no-ensure-goma)."
+    "${goma_dir}/goma_ctl.py" ensure_start || return $?
   fi
 }
 
@@ -436,17 +439,13 @@ function fbuild() {
   grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"
   local use_goma_result="$?"
 
-  if [[ use_goma_result -eq 0 ]] && [[ "${FUCHSIA_ENSURE_GOMA}" -eq 1 ]]; then
-    "${FUCHSIA_GOMA_DIR}/goma_ctl.py" ensure_start || return $?
-  fi
-
   zbuild || return $?
 
   # macOS needs a lower value of -j parameter, because it has a limit on the
   # number of open file descriptors. Use 4 * cpu_count, which works well in
   # practice.
   local concurrency_args=
-  if [[ use_goma_result  -eq 0 ]]; then
+  if [[ use_goma_result -eq 0 ]]; then
     if [[ "$(uname -s)" = "Darwin" ]]; then
       numjobs=$(( $(sysctl -n hw.ncpu) * 4 ))
       concurrency_args="-j ${numjobs}"
