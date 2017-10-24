@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -17,18 +16,21 @@
 namespace maxwell {
 namespace {
 
+// NOTE: This must match the path specified in
+// build/module_repository/publish.gni
+const char* kModuleRepositoryPath = "/system/data/module_manifest_repository";
+
 class ModuleResolverApp {
  public:
-  ModuleResolverApp(app::ApplicationContext* const context) : context_(context) {
+  ModuleResolverApp(app::ApplicationContext* const context)
+      : context_(context), resolver_impl_(kModuleRepositoryPath) {
     context_->outgoing_services()->AddService<modular::ModuleResolver>(
         [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {
           resolver_impl_.Connect(std::move(request));
         });
   }
 
-  void Terminate(const std::function<void()>& done) {
-    done();
-  }
+  void Terminate(const std::function<void()>& done) { done(); }
 
  private:
   app::ApplicationContext* context_;

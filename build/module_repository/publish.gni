@@ -26,6 +26,9 @@
 
 import("//packages/package.gni")
 
+# NOTE: Using the package rule built below, the fully resolved path will be
+# /system/data/module_manifest_repository
+# This must match that given in bin/module_resolver/module_resolver_main.cc
 _target_directory = "module_manifest_repository"
 
 template("publish_module_manifest") {

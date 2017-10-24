@@ -20,7 +20,7 @@ namespace modular {
 class ModuleManifestRepository {
  public:
   struct Entry;
-  using NewEntryFn = std::function<void(const Entry&)>;
+  using NewEntryFn = std::function<void(Entry)>;
 
   // Watches |repository_dir| for new Module manifest files, parses them and
   // notifies |fn| of each entry in the new files. Requires a MessageLoop

@@ -35,7 +35,7 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
  protected:
   void ResetRepository() {
     repo_.reset(new ModuleManifestRepository(
-        repo_dir_, [this](const ModuleManifestRepository::Entry& entry) {
+        repo_dir_, [this](ModuleManifestRepository::Entry entry) {
           entries_.push_back(entry);
         }));
   }

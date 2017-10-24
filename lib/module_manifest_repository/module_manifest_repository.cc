@@ -166,8 +166,8 @@ void ModuleManifestRepository::OnNewFile(const std::string& name) {
     return;
   }
 
-  for (const auto& entry : entries) {
-    new_entry_fn_(entry);
+  for (auto& entry : entries) {
+    new_entry_fn_(std::move(entry));
   }
 }
 

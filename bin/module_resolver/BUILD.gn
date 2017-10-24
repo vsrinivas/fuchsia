@@ -27,5 +27,24 @@ source_set("module_resolver_impl") {
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module_resolver/fidl",
+    "//peridot/lib/module_manifest_repository",
+  ]
+}
+
+executable("module_resolver_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "module_resolver_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":module_resolver_impl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//peridot/lib/testing:test_with_message_loop",
+    "//peridot/public/lib/module_resolver/cpp:formatting",
+    "//third_party/gtest",
   ]
 }
