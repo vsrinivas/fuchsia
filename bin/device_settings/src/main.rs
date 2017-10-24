@@ -203,14 +203,9 @@ fn main() {
         ) {
             Ok(server) => {
                 handle.spawn(server.map_err(move |e| match e {
-                    fidl::Error::IoError(ie) => {
-                        if ie.kind() != io::ErrorKind::ConnectionAborted {
-                            eprintln!("runtime fidl server error for {:?}: {:?}", path, ie);
-                        }
-                    }
-                    _ => {
-                        eprintln!("runtime fidl server error for {:?}: {:?}", path, e);
-                    }
+                    fidl::Error::IoError(ref ie)
+                        if ie.kind() == io::ErrorKind::ConnectionAborted => {}
+                    e => eprintln!("runtime fidl server error for {:?}: {:?}", path, e),
                 }))
             }
             Err(e) => eprintln!("service spawn for {:?} failed: {:?}", path, e),
