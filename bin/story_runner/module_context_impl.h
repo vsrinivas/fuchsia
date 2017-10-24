@@ -45,21 +45,11 @@ class ModuleContextImpl : ModuleContext {
   // can be used to internally name resources that belong to this module
   // (message queues, Links).
   ModuleContextImpl(const ModuleContextInfo& info,
-                    ModuleDataPtr module_data,
+                    const ModuleData* module_data,
                     ModuleControllerImpl* module_controller_impl,
                     fidl::InterfaceRequest<app::ServiceProvider> service_provider_request);
 
   ~ModuleContextImpl() override;
-
-  const ModuleData& module_data() const { return *module_data_; }
-
-  const fidl::Array<fidl::String>& module_path() const {
-    return module_data_->module_path;
-  }
-
-  const std::string& module_url() const { return module_data_->module_url; }
-
-  const LinkPath& link_path() const { return *module_data_->link_path; }
 
  private:
   // |ModuleContext|
@@ -110,7 +100,7 @@ class ModuleContextImpl : ModuleContext {
 
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.
-  const ModuleDataPtr module_data_;
+  const ModuleData* const module_data_;
 
   // Not owned. The StoryControllerImpl instance this ModuleContextImpl instance
   // connects to.

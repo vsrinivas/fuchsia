@@ -38,7 +38,7 @@ ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
     app::ApplicationLauncher* const application_launcher,
     AppConfigPtr module_config,
-    const fidl::Array<fidl::String>& module_path,
+    const ModuleData* const module_data,
     app::ServiceListPtr service_list,
     fidl::InterfaceHandle<ModuleContext> module_context,
     fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
@@ -50,7 +50,7 @@ ModuleControllerImpl::ModuleControllerImpl(
           module_config.Clone(),
           std::string(kAppStoragePath) + HashModuleUrl(module_config->url),
           std::move(service_list)),
-      module_path_(module_path.Clone()) {
+      module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
 
   ConnectToService(app_client_.services(), module_service_.NewRequest());
@@ -60,6 +60,12 @@ ModuleControllerImpl::ModuleControllerImpl(
                               std::move(incoming_services));
 
   ConnectToService(app_client_.services(), std::move(view_provider_request));
+
+  // Push the initial module state to story controller. TODO(mesch): This is
+  // only needed for the root module to transition the story state to STARTING
+  // and get IsRunning() to true. This could be handled inside
+  // StoryControllerImpl too.
+  story_controller_impl_->OnModuleStateChange(module_data_->module_path, state_);
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}
@@ -87,6 +93,8 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
   state_ = new_state;
   watchers_.ForAllPtrs(
       [this](ModuleWatcher* const watcher) { watcher->OnStateChange(state_); });
+
+  story_controller_impl_->OnModuleStateChange(module_data_->module_path, state_);
 }
 
 void ModuleControllerImpl::Teardown(std::function<void()> done) {
@@ -141,15 +149,15 @@ void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
 }
 
 void ModuleControllerImpl::Focus() {
-  story_controller_impl_->FocusModule(module_path_);
+  story_controller_impl_->FocusModule(module_data_->module_path);
 }
 
 void ModuleControllerImpl::Defocus() {
-  story_controller_impl_->DefocusModule(module_path_);
+  story_controller_impl_->DefocusModule(module_data_->module_path);
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {
-  story_controller_impl_->StopModule(module_path_, done);
+  story_controller_impl_->StopModule(module_data_->module_path, done);
 }
 
 }  // namespace modular

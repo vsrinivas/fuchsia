@@ -112,9 +112,13 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Called by ModuleControllerImpl.
   void DefocusModule(const fidl::Array<fidl::String>& module_path);
 
-  // Called by ModuleControllerImpl and ModuleWatcherImpl.
+  // Called by ModuleControllerImpl.
   void StopModule(const fidl::Array<fidl::String>& module_path,
                   const std::function<void()>& done);
+
+  // Called by ModuleControllerImpl.
+  void OnModuleStateChange(const fidl::Array<fidl::String>& module_path,
+                           ModuleState state);
 
   // Called by ModuleControllerImpl.
   //
@@ -198,6 +202,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void OnRootStateChange(ModuleState state);
   void ProcessPendingViews();
 
+  static bool IsRootModule(const fidl::Array<fidl::String>& module_path);
+  bool IsExternalModule(const fidl::Array<fidl::String>& module_path);
+
   // The ID of the story, its state and the context to obtain it from and
   // persist it to.
   const fidl::String story_id_;
@@ -205,6 +212,11 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // This is the canonical source for state. The value in the ledger is just a
   // write-behind copy of this value.
   StoryState state_{StoryState::INITIAL};
+
+  // Story state is determined by external module state, but only until the
+  // story gets stopped or deleted. This flag blocks processing of state
+  // notifications from modules while the story winds down.
+  bool track_root_module_state_{true};
 
   StoryProviderImpl* const story_provider_impl_;
 
@@ -228,13 +240,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   StoryShellPtr story_shell_;
   fidl::Binding<StoryContext> story_context_binding_;
 
-  // Needed to hold on to a running story. They get reset on Stop().
-  struct ExternalModule {
-    std::unique_ptr<ModuleWatcherImpl> module_watcher_impl;
-    ModuleControllerPtr module_controller;
-  };
-  std::vector<ExternalModule> external_modules_;
-
   // The module instances (identified by their serialized module paths) already
   // known to story shell. Does not include modules whose views are pending and
   // not yet sent to story shell.
@@ -252,6 +257,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.
   struct Connection {
+    ModuleDataPtr module_data;
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };

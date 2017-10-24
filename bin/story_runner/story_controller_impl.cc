@@ -95,36 +95,6 @@ class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
-class StoryControllerImpl::ModuleWatcherImpl : ModuleWatcher {
- public:
-  ModuleWatcherImpl(fidl::InterfaceRequest<ModuleWatcher> request,
-                    StoryControllerImpl* const story_controller_impl,
-                    const fidl::Array<fidl::String>& module_path)
-      : binding_(this, std::move(request)),
-        story_controller_impl_(story_controller_impl),
-        module_path_(module_path.Clone()) {}
-
-  const fidl::Array<fidl::String>& module_path() const { return module_path_; }
-
- private:
-  // |ModuleWatcher|
-  void OnStateChange(ModuleState state) override {
-    if (module_path_.size() == 1 && module_path_[0] == kRootModuleName) {
-      story_controller_impl_->OnRootStateChange(state);
-    }
-
-    if (state == ModuleState::DONE) {
-      story_controller_impl_->StopModule(module_path_, [] {});
-    }
-  }
-
-  fidl::Binding<ModuleWatcher> binding_;
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::Array<fidl::String> module_path_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
-};
-
 class StoryControllerImpl::StartModuleCall : Operation<> {
  public:
   StartModuleCall(
@@ -191,27 +161,26 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
   void WriteModuleData(FlowToken flow) {
-    ModuleDataPtr data = ModuleData::New();
-    data->module_url = module_url_;
-    data->module_path = module_path_.Clone();
-    data->link_path = link_path_.Clone();
-    data->module_source = module_source_;
-    data->surface_relation = surface_relation_.Clone();
-    data->module_stopped = false;
+    module_data_ = ModuleData::New();
+    module_data_->module_url = module_url_;
+    module_data_->module_path = module_path_.Clone();
+    module_data_->link_path = link_path_.Clone();
+    module_data_->module_source = module_source_;
+    module_data_->surface_relation = surface_relation_.Clone();
+    module_data_->module_stopped = false;
 
     const std::string key{MakeModuleKey(module_path_)};
     new WriteDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        std::move(data), [this, flow] { Cont(flow); });
+        module_data_.Clone(), [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
-    // TODO(mesch): connections_ should be a map<>.
     auto i = std::find_if(
         story_controller_impl_->connections_.begin(),
         story_controller_impl_->connections_.end(),
         [this](const Connection& c) {
-          return c.module_context_impl->module_path().Equals(module_path_);
+          return c.module_data->module_path.Equals(module_path_);
         });
 
     // We launch the new module if it doesn't run yet.
@@ -227,8 +196,8 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     // TODO(mesch): If only the link is different, we should just hook the
     // existing module instance on a new link and notify it about the changed
     // link value.
-    if (i->module_context_impl->module_url() != module_url_ ||
-        !i->module_context_impl->link_path().Equals(*link_path_) ||
+    if (i->module_data->module_url != module_url_ ||
+        !i->module_data->link_path->Equals(*link_path_) ||
         outgoing_services_.is_valid() || incoming_services_.is_pending()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
@@ -238,8 +207,11 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     }
 
     // If the module is already running on the same URL and link, we just
-    // connect the module controller request.
-    i->module_controller_impl->Connect(std::move(module_controller_request_));
+    // connect the module controller request, if there is one. Modules started
+    // with StoryController.AddModule() don't have a module controller request.
+    if (module_controller_request_.is_pending()) {
+      i->module_controller_impl->Connect(std::move(module_controller_request_));
+    }
   }
 
   void Launch(FlowToken /*flow*/) {
@@ -260,14 +232,21 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     service_list->provider = std::move(provider);
 
     Connection connection;
+    connection.module_data = module_data_.Clone();
+
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
         story_controller_impl_,
         story_controller_impl_->story_scope_.GetLauncher(),
-        std::move(module_config), module_path_, std::move(service_list),
+        std::move(module_config), connection.module_data.get(), std::move(service_list),
         std::move(module_context), std::move(view_provider_request),
         std::move(outgoing_services_), std::move(incoming_services_));
-    connection.module_controller_impl->Connect(
-        std::move(module_controller_request_));
+
+    // Modules started with StoryController.AddModule() don't have a module
+    // controller request.
+    if (module_controller_request_.is_pending()) {
+      connection.module_controller_impl->Connect(
+          std::move(module_controller_request_));
+    }
 
     ModuleContextInfo module_context_info = {
         story_controller_impl_->story_provider_impl_->component_context_info(),
@@ -276,22 +255,12 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
             ->user_intelligence_provider(),
         story_controller_impl_->story_provider_impl_->module_resolver()};
 
-    module_data_ = ModuleData::New();
-    module_data_->module_url = module_url_;
-    module_data_->module_path = module_path_.Clone();
-    module_data_->link_path = link_path_.Clone();
-    module_data_->surface_relation = surface_relation_.Clone();
-
     connection.module_context_impl = std::make_unique<ModuleContextImpl>(
-        module_context_info, module_data_.Clone(),
+        module_context_info, connection.module_data.get(),
         connection.module_controller_impl.get(), std::move(provider_request));
 
     story_controller_impl_->connections_.emplace_back(std::move(connection));
 
-    NotifyWatchers();
-  }
-
-  void NotifyWatchers() {
     story_controller_impl_->watchers_.ForAllPtrs(
         [this](StoryWatcher* const watcher) {
           watcher->OnModuleAdded(module_data_.Clone());
@@ -365,11 +334,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    if (module_source_ == ModuleSource::EXTERNAL) {
-      FXL_DCHECK(!module_controller_request_.is_pending());
-      module_controller_request_ = module_controller_.NewRequest();
-    }
-
     // TODO(mesch): The StartModuleCall may result in just a new
     // ModuleController connection to an existing
     // ModuleControllerImpl. In that case, the view owner request is
@@ -413,11 +377,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
             ModuleView{parent_view_id.get(), std::move(view_owner_),
                        std::move(surface_relation_)}));
       }
-    }
-
-    if (module_source_ == ModuleSource::EXTERNAL) {
-      story_controller_impl_->AddModuleWatcher(std::move(module_controller_),
-                                               module_path_);
     }
   }
 
@@ -596,10 +555,10 @@ class StoryControllerImpl::StopCall : Operation<> {
  private:
   // StopCall may be run even on a story impl that is not running.
   void Run() override {
-    // At this point, we don't need to monitor the external modules for state
+    // At this point, we don't need to monitor the root modules for state
     // changes anymore, because the next state change of the story is triggered
     // by the Cleanup() call below.
-    story_controller_impl_->external_modules_.clear();
+    story_controller_impl_->track_root_module_state_ = false;
 
     // At this point, we don't need notifications from disconnected
     // Links anymore, as they will all be disposed soon anyway.
@@ -757,17 +716,6 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
   }
 
   void Cont3(FlowToken flow) {
-    // Discard the ModuleWatcher, if there is any (for external modules only).
-    auto i = std::find_if(
-        story_controller_impl_->external_modules_.begin(),
-        story_controller_impl_->external_modules_.end(),
-        [this](const ExternalModule& m) {
-          return m.module_watcher_impl->module_path().Equals(module_path_);
-        });
-    if (i != story_controller_impl_->external_modules_.end()) {
-      story_controller_impl_->external_modules_.erase(i);
-    }
-
     // Teardown the module, which discards the module controller. A parent
     // module can call ModuleController.Stop() multiple times before the
     // ModuleController connection gets disconnected by Teardown(). Therefore,
@@ -778,7 +726,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
         story_controller_impl_->connections_.begin(),
         story_controller_impl_->connections_.end(),
         [this](const Connection& c) {
-          return c.module_context_impl->module_path().Equals(module_path_);
+          return c.module_data->module_path.Equals(module_path_);
         });
 
     if (ii == story_controller_impl_->connections_.end()) {
@@ -1311,8 +1259,7 @@ void StoryControllerImpl::GetActiveModules(
         fidl::Array<ModuleDataPtr> result;
         result.resize(0);
         for (auto& connection : connections_) {
-          result.push_back(
-              connection.module_context_impl->module_data().Clone());
+          result.push_back(connection.module_data.Clone());
         }
         callback(std::move(result));
       }));
@@ -1333,8 +1280,7 @@ void StoryControllerImpl::GetModuleController(
       fxl::MakeCopyable([this, module_path = std::move(module_path),
                          request = std::move(request)]() mutable {
         for (auto& connection : connections_) {
-          if (module_path.Equals(
-                  connection.module_context_impl->module_path())) {
+          if (module_path.Equals(connection.module_data->module_path)) {
             connection.module_controller_impl->Connect(std::move(request));
             return;
           }
@@ -1432,15 +1378,41 @@ void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
   links_.erase(f);
 }
 
-void StoryControllerImpl::AddModuleWatcher(
-    ModuleControllerPtr module_controller,
+bool StoryControllerImpl::IsRootModule(
     const fidl::Array<fidl::String>& module_path) {
-  ModuleWatcherPtr watcher;
-  auto module_watcher_impl = std::make_unique<ModuleWatcherImpl>(
-      watcher.NewRequest(), this, module_path);
-  module_controller->Watch(std::move(watcher));
-  external_modules_.emplace_back(ExternalModule{std::move(module_watcher_impl),
-                                                std::move(module_controller)});
+  return module_path.size() == 1 && module_path[0] == kRootModuleName;
+}
+
+bool StoryControllerImpl::IsExternalModule(
+    const fidl::Array<fidl::String>& module_path) {
+  auto i = std::find_if(
+      connections_.begin(),
+      connections_.end(),
+      [&module_path](const Connection& c) {
+        return c.module_data->module_path.Equals(module_path);
+      });
+
+  if (i == connections_.end()) {
+    return false;
+  }
+
+  return i->module_data->module_source == ModuleSource::EXTERNAL;
+}
+
+void StoryControllerImpl::OnModuleStateChange(
+    const fidl::Array<fidl::String>& module_path,
+    const ModuleState state) {
+  if (!track_root_module_state_) {
+    return;
+  }
+
+  if (IsRootModule(module_path)) {
+    OnRootStateChange(state);
+  }
+
+  if (IsExternalModule(module_path) && state == ModuleState::DONE) {
+    StopModule(module_path, []{});
+  }
 }
 
 void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
@@ -1453,9 +1425,20 @@ void StoryControllerImpl::OnRootStateChange(const ModuleState state) {
       state_ = StoryState::RUNNING;
       break;
     case ModuleState::STOPPED:
+      // TODO(mesch): The story should only be marked STOPPED after
+      // StoryContoller.Stop() is executed, and no modules are left running. In
+      // this state here, there may be modules other than the root module left
+      // running. These modules may even request more modules to start or make
+      // suggestions to start more modules, which would be shown to the
+      // user. However, the calls to run the modules would silently not result
+      // in modules running, just in the modules to be added to the story
+      // record, because actually starting newly added modules is gated by the
+      // story to be running. This makes little sense. FW-334
       state_ = StoryState::STOPPED;
       break;
     case ModuleState::DONE:
+      // TODO(mesch): Same problem for modules remaining running and for newly
+      // added modules as for STOPPED. FW-334
       state_ = StoryState::DONE;
       break;
     case ModuleState::ERROR:

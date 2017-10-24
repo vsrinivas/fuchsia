@@ -87,7 +87,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
                                  });
   }
 
-  TestPoint root_stop_{"Stop Root Module"};
+  TestPoint root_running_{"Root Module RUNNING"};
 
   void GetController(const fidl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
@@ -100,9 +100,12 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     story_controller_->GetModuleController(std::move(module_path),
                                            module0_controller_.NewRequest());
 
-    module0_controller_->Stop([this] {
-      root_stop_.Pass();
-      PipelinedAddGetStop();
+    module0_watcher_.Watch(&module0_controller_);
+    module0_watcher_.Continue([this](modular::ModuleState module_state) {
+      if (module_state == modular::ModuleState::RUNNING) {
+        root_running_.Pass();
+        PipelinedAddGetStop();
+      }
     });
   }
 
@@ -150,7 +153,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   void GetActiveModules1() {
     story_controller_->GetActiveModules(
         nullptr, [this](fidl::Array<modular::ModuleDataPtr> modules) {
-          if (modules.size() == 0) {
+          if (modules.size() == 1) {
             module1_gone_.Pass();
           }
 
@@ -206,7 +209,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   void GetActiveModules2() {
     story_controller_->GetActiveModules(
         nullptr, [this](fidl::Array<modular::ModuleDataPtr> modules) {
-          if (modules.size() == 0) {
+          if (modules.size() == 1) {
             module2_gone_.Pass();
           }
 
@@ -230,6 +233,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   modular::StoryInfoPtr story_info_;
 
   modular::ModuleControllerPtr module0_controller_;
+  ModuleWatcherImpl module0_watcher_;
   modular::ModuleControllerPtr module1_controller_;
   ModuleWatcherImpl module1_watcher_;
   modular::ModuleControllerPtr module2_controller_;

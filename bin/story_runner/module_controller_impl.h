@@ -15,6 +15,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
@@ -33,7 +34,7 @@ class ModuleControllerImpl : ModuleController {
       StoryControllerImpl* story_controller_impl,
       app::ApplicationLauncher* application_launcher,
       AppConfigPtr module_config,
-      const fidl::Array<fidl::String>& module_path,
+      const ModuleData* module_data,
       app::ServiceListPtr service_list,
       fidl::InterfaceHandle<ModuleContext> module_context,
       fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
@@ -70,8 +71,8 @@ class ModuleControllerImpl : ModuleController {
   AppClient<Lifecycle> app_client_;
   ModulePtr module_service_;
 
-  // The Module path
-  const fidl::Array<fidl::String> module_path_;
+  // The Module path and other information about the module instance.
+  const ModuleData* const module_data_;
 
   // The service provided here.
   fidl::BindingSet<ModuleController> bindings_;

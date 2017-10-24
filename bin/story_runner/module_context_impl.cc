@@ -17,10 +17,10 @@ namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
-    ModuleDataPtr module_data,
+    const ModuleData* const module_data,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<app::ServiceProvider> service_provider_request)
-    : module_data_(std::move(module_data)),
+    : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
       module_controller_impl_(module_controller_impl),
       component_context_impl_(info.component_context_info,
