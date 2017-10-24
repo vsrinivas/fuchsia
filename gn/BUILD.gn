@@ -18,8 +18,7 @@ declare_args() {
   #   core -- necessary to boot
   #   misc -- utilities in /bin
   #   test -- test binaries in /bin and /test
-  # TODO(mcgrathr): Change to default to "core".
-  zircon_boot_groups = "all"
+  zircon_boot_groups = "core"
 
   # Additional bootdata items needed from the Zircon build.  This
   # build does not use Zircon's bootdata.bin but instead uses Zircon's
@@ -45,9 +44,13 @@ declare_args() {
   # (instead of into /boot like Zircon's own bootdata.bin does).
   # Should not include any groups that are also in zircon_boot_groups,
   # which see.  If zircon_boot_groups is "all" then this should be "".
-  zircon_system_groups = ""
-  if (zircon_boot_groups != "all") {
-    # TODO(mcgrathr): Could default to "" for !is_debug, or "production build".
+  if (zircon_boot_groups == "all") {
+    zircon_system_groups = ""
+  } else {
+    # TODO(mcgrathr): Could default to "" for !is_debug, or "production
+    # build".  Note including "test" here places all of Zircon's tests
+    # into /system/test, which means that Fuchsia bots run those tests
+    # too.
     zircon_system_groups = "misc,test"
   }
 }
