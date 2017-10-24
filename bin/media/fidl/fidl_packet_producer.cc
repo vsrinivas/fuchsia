@@ -24,6 +24,10 @@ FidlPacketProducer::~FidlPacketProducer() {
 void FidlPacketProducer::Bind(
     fidl::InterfaceRequest<MediaPacketProducer> request) {
   binding_.Bind(std::move(request));
+  binding_.set_connection_error_handler([this]() {
+    binding_.set_connection_error_handler(nullptr);
+    binding_.Close();
+  });
 }
 
 void FidlPacketProducer::SetConnectionStateChangedCallback(
