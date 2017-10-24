@@ -82,7 +82,6 @@ struct EptViolationInfo {
     bool read;
     bool write;
     bool instruction;
-    bool present;
 
     EptViolationInfo(uint64_t qualification);
 };

@@ -102,7 +102,6 @@ EptViolationInfo::EptViolationInfo(uint64_t qualification) {
     read = BIT(qualification, 0);
     write = BIT(qualification, 1);
     instruction = BIT(qualification, 2);
-    present = BITS(qualification, 5, 3);
 }
 
 static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
@@ -513,9 +512,9 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
     return ZX_OK;
 }
 
-static zx_status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vaddr_t guest_paddr,
-                                 GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                                 zx_port_packet_t* packet) {
+static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vaddr_t guest_paddr,
+                               GuestPhysicalAddressSpace* gpas, TrapMap* traps,
+                               zx_port_packet_t* packet) {
     if (exit_info.instruction_length > X86_MAX_INST_LEN)
         return ZX_ERR_INTERNAL;
 
@@ -572,7 +571,7 @@ static zx_status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
     /* fallthrough */
     case ApicAccessType::LINEAR_ACCESS_READ:
         zx_vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
-        return handle_memory(exit_info, vmcs, guest_paddr, gpas, traps, packet);
+        return handle_trap(exit_info, vmcs, guest_paddr, gpas, traps, packet);
     }
 }
 
@@ -580,7 +579,7 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
                                         GuestPhysicalAddressSpace* gpas, TrapMap* traps,
                                         zx_port_packet_t* packet) {
     zx_vaddr_t guest_paddr = exit_info.guest_physical_address;
-    zx_status_t status = handle_memory(exit_info, vmcs, guest_paddr, gpas, traps, packet);
+    zx_status_t status = handle_trap(exit_info, vmcs, guest_paddr, gpas, traps, packet);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
         break;
@@ -589,14 +588,17 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
         return status;
     }
 
+    // If there was no trap associated with this address and it is outside of
+    // guest physical address space, return failure.
+    if (guest_paddr >= gpas->size())
+        return ZX_ERR_OUT_OF_RANGE;
+
     EptViolationInfo ept_violation_info(exit_info.exit_qualification);
     uint pf_flags = VMM_PF_FLAG_HW_FAULT;
     if (ept_violation_info.write)
         pf_flags |= VMM_PF_FLAG_WRITE;
     if (ept_violation_info.instruction)
         pf_flags |= VMM_PF_FLAG_INSTRUCTION;
-    if (!ept_violation_info.present)
-        pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
     return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 
