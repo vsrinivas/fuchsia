@@ -12,16 +12,16 @@ In order to view the recorded data, run:
 ```
 cd garnet/bin/cobalt
 ./download_report_client.py
-./report_client -report_master_uri=35.188.119.76:7001 -project_id=100
+./report_client -project_id=100
 ```
 
 Then, follow `report_client` hints to extract the data. For example, run the
 following to extract Ledger event counters from the last 5 days:
 
 ```
-Command or 'help': run range -4 0 1
+Command or 'help': run range -4 0 2
 ```
 
 [Cobalt]: https://fuchsia.googlesource.com/cobalt
 [/bin/ledger/cobalt]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/cobalt/
-[Cobalt client]: https://fuchsia.googlesource.com/cobalt_client
+[Cobalt client]: https://fuchsia.googlesource.com/garnet/+/master/bin/cobalt/
