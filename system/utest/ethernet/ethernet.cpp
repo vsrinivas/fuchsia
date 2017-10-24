@@ -23,6 +23,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -139,15 +140,15 @@ class EthernetClient {
 
     zx_status_t Register(const char* name, uint32_t nbufs, uint16_t bufsize) {
         ssize_t rc = ioctl_ethernet_set_client_name(fd_, name, strlen(name) + 1);
-        EXPECT_GE(rc, 0);
         if (rc < 0) {
+            fprintf(stderr, "could not set client name to %s: %zd\n", name, rc);
             return static_cast<zx_status_t>(rc);
         }
 
         eth_fifos_t fifos;
         rc = ioctl_ethernet_get_fifos(fd_, &fifos);
-        EXPECT_GE(rc, 0);
         if (rc < 0) {
+            fprintf(stderr, "could not get fifos: %zd\n", rc);
             return static_cast<zx_status_t>(rc);
         }
 
@@ -161,30 +162,31 @@ class EthernetClient {
 
         vmo_size_ = 2 * nbufs_ * bufsize_;
         zx_status_t status = zx::vmo::create(vmo_size_, 0u, &buf_);
-        EXPECT_EQ(ZX_OK, status);
         if (status != ZX_OK) {
+            fprintf(stderr, "could not create a vmo of size %" PRIu64 ": %s\n", vmo_size_,
+                    mxstrerror(status));
             return status;
         }
 
         status = zx::vmar::root_self().map(0, buf_, 0, vmo_size_,
                                            ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                            &mapped_);
-        EXPECT_EQ(ZX_OK, status);
         if (status != ZX_OK) {
+            fprintf(stderr, "failed to map vmo: %s\n", mxstrerror(status));
             return status;
         }
 
         zx::vmo buf_copy;
         status = buf_.duplicate(ZX_RIGHT_SAME_RIGHTS, &buf_copy);
-        EXPECT_EQ(ZX_OK, status);
         if (status != ZX_OK) {
+            fprintf(stderr, "failed to duplicate vmo: %s\n", mxstrerror(status));
             return status;
         }
 
         zx_handle_t bufh = buf_copy.release();
         rc = ioctl_ethernet_set_iobuf(fd_, &bufh);
-        EXPECT_GE(rc, 0);
         if (rc < 0) {
+            fprintf(stderr, "failed to set eth iobuf: %zd\n", rc);
             return static_cast<zx_status_t>(rc);
         }
 
@@ -198,8 +200,8 @@ class EthernetClient {
             };
             uint32_t actual;
             status = rx_.write(&entry, sizeof(entry), &actual);
-            EXPECT_EQ(ZX_OK, status);
             if (status != ZX_OK) {
+                fprintf(stderr, "failed call to write(): %s\n", mxstrerror(status));
                 return status;
             }
         }
