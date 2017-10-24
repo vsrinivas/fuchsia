@@ -6,8 +6,6 @@ import("//packages/package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 package("cobalt") {
-  app = true
-
   deps = [
     ":bin",
   ]
@@ -21,7 +19,6 @@ package("cobalt") {
 
 package("cobalt_tests") {
   testonly = true
-  app = true
 
   deps = [
     ":cobalt_testapp",

@@ -5,8 +5,6 @@
 import("//packages/package.gni")
 
 package("auth") {
-  app = true
-
   deps = [
     "//garnet/bin/auth/store",
     "//garnet/public/lib/auth/fidl",

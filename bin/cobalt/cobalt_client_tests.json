@@ -2,7 +2,7 @@
   "tests": [
     {
       "name": "cobalt_testapp",
-      "exec": "/system/bin/report_result /system/apps/cobalt_testapp --skip_environment_test"
+      "exec": "/system/bin/report_result /system/bin/cobalt_testapp --skip_environment_test"
     }
     {
       "name": "cobalt_unittests",

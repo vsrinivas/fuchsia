@@ -47,8 +47,6 @@ executable("network") {
 package("network_pkg") {
   package_name = "network"
 
-  app = true
-
   deps = [
     ":network",
     "//garnet/bin/application_loader",

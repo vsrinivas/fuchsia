@@ -9,4 +9,4 @@
 
 set -e
 
-/system/apps/cobalt_testapp --no_network_for_testing
+/system/bin/cobalt_testapp --no_network_for_testing

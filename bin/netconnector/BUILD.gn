@@ -95,8 +95,6 @@ group("tools") {
 }
 
 package("package") {
-  app = true
-
   package_name = "netconnector"
 
   deps = [

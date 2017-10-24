@@ -29,8 +29,6 @@ executable("bin") {
 }
 
 package("bootstrap") {
-  app = true
-
   deps = [
     ":bin",
   ]
