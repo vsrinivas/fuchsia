@@ -10,7 +10,7 @@
 
 // clang-format off
 
-/* VM exit reasons. */
+// VM exit reasons.
 enum class ExitReason : uint32_t {
     EXCEPTION                   = 0u,  // NMI is an exception too
     EXTERNAL_INTERRUPT          = 1u,
@@ -28,7 +28,7 @@ enum class ExitReason : uint32_t {
     XSETBV                      = 55u,
 };
 
-/* VM exit interruption type. */
+// VM exit interruption type.
 enum class InterruptionType : uint8_t {
     EXTERNAL_INTERRUPT          = 0u,
     NON_MASKABLE_INTERRUPT      = 2u,
@@ -36,7 +36,7 @@ enum class InterruptionType : uint8_t {
     SOFTWARE_EXCEPTION          = 6u,
 };
 
-/* APIC access types. */
+// APIC access types.
 enum class ApicAccessType : uint8_t {
     LINEAR_ACCESS_READ          = 0u,
     LINEAR_ACCESS_WRITE         = 1u,
@@ -56,7 +56,7 @@ struct GuestState;
 struct LocalApicState;
 class TrapMap;
 
-/* Stores VM exit info from VMCS fields. */
+// Stores VM exit info from VMCS fields.
 struct ExitInfo {
     ExitReason exit_reason;
     bool vmentry_failure;
@@ -68,7 +68,7 @@ struct ExitInfo {
     ExitInfo(const AutoVmcs& vmcs);
 };
 
-/* Sores VM exit interruption information (SDM 24.9.2). */
+// Stores VM exit interruption information. See Volume 3, Section 24.9.2.
 struct ExitInterruptionInformation {
     uint8_t vector;
     InterruptionType interruption_type;
@@ -77,7 +77,7 @@ struct ExitInterruptionInformation {
     ExitInterruptionInformation(const AutoVmcs& vmcs);
 };
 
-/* Stores ept violation info from the VMCS exit qualification field. */
+// Stores EPT violation info from the VMCS exit qualification field.
 struct EptViolationInfo {
     bool read;
     bool write;
@@ -86,7 +86,7 @@ struct EptViolationInfo {
     EptViolationInfo(uint64_t qualification);
 };
 
-/* Stores IO instruction info from the VMCS exit qualification field. */
+// Stores IO instruction info from the VMCS exit qualification field.
 struct IoInfo {
     uint8_t access_size;
     bool input;
@@ -97,7 +97,7 @@ struct IoInfo {
     IoInfo(uint64_t qualification);
 };
 
-/* Stores local APIC access info from the VMCS exit qualification field. */
+// Stores local APIC access info from the VMCS exit qualification field.
 struct ApicAccessInfo {
     uint16_t offset;
     ApicAccessType access_type;

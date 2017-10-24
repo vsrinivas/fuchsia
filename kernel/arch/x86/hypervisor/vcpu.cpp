@@ -183,9 +183,9 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // Reference Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control
-    // can be either 0 or 1 (flexible), and the control is unknown, then refer
-    // to the old MSR to find the default value.
+    // See Volume 3, Section 31.5.1, Algorithm 3, Part C. If the control can be
+    // either 0 or 1 (flexible), and the control is unknown, then refer to the
+    // old MSR to find the default value.
     uint32_t flexible = allowed_0 ^ allowed_1;
     uint32_t unknown = flexible & ~(set | clear);
     uint32_t defaults = unknown & BITS(old_msr, 31, 0);
