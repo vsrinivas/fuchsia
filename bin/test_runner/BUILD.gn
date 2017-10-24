@@ -5,8 +5,6 @@
 import("//packages/package.gni")
 
 package("test_runner") {
-  app = true
-
   deps = [
     "server",
   ]
