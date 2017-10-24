@@ -539,8 +539,10 @@ template("fidl") {
 
     # This target is used to generate Dart package information
     dart_package("${target_name}_dart") {
+      generator_label = ":$generator_target_name($target_toolchain)"
+
       package_label = target_label
-      source_dir = target_gen_dir
+      source_dir = get_label_info(generator_label, "target_gen_dir")
 
       # Disable analysis. FIDL targets in a same build file will share a gen (and
       # therefore source) directory which confuses the analyzer trying to process
@@ -569,8 +571,7 @@ template("fidl") {
 
       non_dart_deps = []
       if (defined(invoker.sources)) {
-        non_dart_deps +=
-            [ get_label_info(":$generator_target_name", "label_no_toolchain") ]
+        non_dart_deps += [ generator_label ]
       }
     }
   }
