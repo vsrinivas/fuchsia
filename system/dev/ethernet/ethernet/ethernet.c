@@ -306,7 +306,6 @@ static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
                 list_add_head(&edev->free_tx_bufs, &tx_info->netbuf.node);
                 mtx_unlock(&edev->lock);
                 tx_fifo_write(edev, e, 1);
-                break;
             }
         }
         count--;
