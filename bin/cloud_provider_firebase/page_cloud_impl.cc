@@ -103,100 +103,104 @@ void PageCloudImpl::SendRemoteCommits() {
 
 void PageCloudImpl::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(fxl::MakeCopyable([
-    this, commits = std::move(commits), callback
-  ](auth_provider::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != auth_provider::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR);
-      return;
-    }
+  auto request = auth_provider_->GetFirebaseToken(
+      fxl::MakeCopyable([this, commits = std::move(commits), callback](
+                            auth_provider::AuthStatus auth_status,
+                            std::string auth_token) mutable {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
 
-    std::vector<Commit> handler_commits;
-    for (auto& commit : commits) {
-      handler_commits.emplace_back(convert::ToString(commit->id),
-                                   convert::ToString(commit->data));
-    }
+        std::vector<Commit> handler_commits;
+        for (auto& commit : commits) {
+          handler_commits.emplace_back(convert::ToString(commit->id),
+                                       convert::ToString(commit->data));
+        }
 
-    handler_->AddCommits(std::move(auth_token), std::move(handler_commits),
-                         [callback = std::move(callback)](Status status) {
-                           callback(ConvertInternalStatus(status));
-                         });
-  }));
+        handler_->AddCommits(std::move(auth_token), std::move(handler_commits),
+                             [callback = std::move(callback)](Status status) {
+                               callback(ConvertInternalStatus(status));
+                             });
+      }));
   auth_token_requests_.emplace(request);
 }
 
 void PageCloudImpl::GetCommits(fidl::Array<uint8_t> min_position_token,
                                const GetCommitsCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(fxl::MakeCopyable([
-    this, min_timestamp = convert::ToString(min_position_token), callback
-  ](auth_provider::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != auth_provider::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR, nullptr, nullptr);
-      return;
-    }
+  auto request = auth_provider_->GetFirebaseToken(fxl::MakeCopyable(
+      [this, min_timestamp = convert::ToString(min_position_token), callback](
+          auth_provider::AuthStatus auth_status,
+          std::string auth_token) mutable {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR, nullptr, nullptr);
+          return;
+        }
 
-    handler_->GetCommits(
-        std::move(auth_token), min_timestamp,
-        [callback = std::move(callback)](Status status,
-                                         std::vector<Record> records) {
-          if (status != Status::OK) {
-            callback(ConvertInternalStatus(status), nullptr, nullptr);
-            return;
-          }
+        handler_->GetCommits(
+            std::move(auth_token), min_timestamp,
+            [callback = std::move(callback)](Status status,
+                                             std::vector<Record> records) {
+              if (status != Status::OK) {
+                callback(ConvertInternalStatus(status), nullptr, nullptr);
+                return;
+              }
 
-          auto commits = fidl::Array<cloud_provider::CommitPtr>::New(0);
-          if (records.empty()) {
-            callback(ConvertInternalStatus(status), std::move(commits),
-                     nullptr);
-            return;
-          }
+              auto commits = fidl::Array<cloud_provider::CommitPtr>::New(0);
+              if (records.empty()) {
+                callback(ConvertInternalStatus(status), std::move(commits),
+                         nullptr);
+                return;
+              }
 
-          fidl::Array<uint8_t> position_token;
-          ConvertRecords(records, &commits, &position_token);
-          callback(ConvertInternalStatus(status), std::move(commits),
-                   std::move(position_token));
-        });
-  }));
+              fidl::Array<uint8_t> position_token;
+              ConvertRecords(records, &commits, &position_token);
+              callback(ConvertInternalStatus(status), std::move(commits),
+                       std::move(position_token));
+            });
+      }));
   auth_token_requests_.emplace(request);
 }
 
 void PageCloudImpl::AddObject(fidl::Array<uint8_t> id,
                               zx::vmo data,
                               const AddObjectCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken(fxl::MakeCopyable([
-    this, id = convert::ToString(id), data = std::move(data), callback
-  ](auth_provider::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != auth_provider::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR);
-      return;
-    }
+  auto request = auth_provider_->GetFirebaseToken(fxl::MakeCopyable(
+      [this, id = convert::ToString(id), data = std::move(data), callback](
+          auth_provider::AuthStatus auth_status,
+          std::string auth_token) mutable {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
 
-    handler_->AddObject(
-        std::move(auth_token), std::move(id),
-        std::move(data), [callback = std::move(callback)](Status status) {
-          callback(ConvertInternalStatus(status));
-        });
-  }));
+        handler_->AddObject(std::move(auth_token), std::move(id),
+                            std::move(data),
+                            [callback = std::move(callback)](Status status) {
+                              callback(ConvertInternalStatus(status));
+                            });
+      }));
   auth_token_requests_.emplace(request);
 }
 
 void PageCloudImpl::GetObject(fidl::Array<uint8_t> id,
                               const GetObjectCallback& callback) {
-  auto request = auth_provider_->GetFirebaseToken([
-    this, id = convert::ToString(id), callback
-  ](auth_provider::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != auth_provider::AuthStatus::OK) {
-      callback(cloud_provider::Status::AUTH_ERROR, 0u, zx::socket());
-      return;
-    }
+  auto request = auth_provider_->GetFirebaseToken(
+      [this, id = convert::ToString(id), callback](
+          auth_provider::AuthStatus auth_status,
+          std::string auth_token) mutable {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          callback(cloud_provider::Status::AUTH_ERROR, 0u, zx::socket());
+          return;
+        }
 
-    handler_->GetObject(std::move(auth_token), std::move(id),
-                        [callback = std::move(callback)](
-                            Status status, uint64_t size, zx::socket data) {
-                          callback(ConvertInternalStatus(status), size,
-                                   std::move(data));
-                        });
-  });
+        handler_->GetObject(std::move(auth_token), std::move(id),
+                            [callback = std::move(callback)](
+                                Status status, uint64_t size, zx::socket data) {
+                              callback(ConvertInternalStatus(status), size,
+                                       std::move(data));
+                            });
+      });
   auth_token_requests_.emplace(request);
 }
 
@@ -211,20 +215,21 @@ void PageCloudImpl::SetWatcher(
     }
     waiting_for_remote_commits_ack_ = false;
   });
-  auto request = auth_provider_->GetFirebaseToken([
-    this, min_timestamp = convert::ToString(min_position_token), callback
-  ](auth_provider::AuthStatus auth_status, std::string auth_token) mutable {
-    if (auth_status != auth_provider::AuthStatus::OK) {
-      watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
-      callback(cloud_provider::Status::AUTH_ERROR);
-      return;
-    }
+  auto request = auth_provider_->GetFirebaseToken(
+      [this, min_timestamp = convert::ToString(min_position_token), callback](
+          auth_provider::AuthStatus auth_status,
+          std::string auth_token) mutable {
+        if (auth_status != auth_provider::AuthStatus::OK) {
+          watcher_->OnError(cloud_provider::Status::AUTH_ERROR);
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
 
-    handler_->WatchCommits(std::move(auth_token), std::move(min_timestamp),
-                           this);
-    handler_watcher_set_ = true;
-    callback(cloud_provider::Status::OK);
-  });
+        handler_->WatchCommits(std::move(auth_token), std::move(min_timestamp),
+                               this);
+        handler_watcher_set_ = true;
+        callback(cloud_provider::Status::OK);
+      });
   auth_token_requests_.emplace(request);
 }
 
