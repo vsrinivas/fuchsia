@@ -23,7 +23,8 @@ interface MdnsService {
   // is published until it is unpublished via |UnpublishServiceInstance|.
   // |service_name| must end in '._tcp.' or '._udp.'. |instance_name| must not
   // end in a '.'. |port| is host-endian. |text| contains metadata strings that
-  // describe the instance.
+  // describe the instance. No subtypes are published unless the |SetSubtypes|
+  // method is called.
   PublishServiceInstance(string service_name,
                          string instance_name,
                          uint16 port,
@@ -36,14 +37,36 @@ interface MdnsService {
   // Publishes a service instance with support for subtypes. |service_name| must
   // end in '._tcp.' or '._udp.'. |instance_name| must not end in a '.'.
   // |responder| is consulted for initial announcements and to answer queries.
-  // The service is published until the |responder| channel closes.
-  // |announced_subtypes| specifies all the subtypes that should be announced
-  // initially. Queries are supported for all possible subtypes regardless of
-  // |announced_subtypes|.
+  // The service is published until the |responder| channel closes. In addition
+  // to announcements and queries for the service type, all queries for subtypes
+  // are answered subject to filtering through the |MdnsResponder|. If subtype
+  // announcement is desired, a call to |SetSubtypes| is required to set the
+  // list of announced subtypes.
   AddResponder(string service_name,
                string instance_name,
-               array<string>? announced_subtypes,
                MdnsResponder responder);
+
+  // Sets the subtypes for a service instance currently being published due to
+  // a call to |PublishServiceInstance| or |AddResponder|.  |service_name| must
+  // end in '._tcp.' or '._udp.'. |instance_name| must not end in a '.'. For an
+  // instance published with |PublishServiceInstance|, the specified subtypes
+  // will be announced, and queries for the subtypes will be answered. For an
+  // instance published with |AddResponder|, the specified subtypes will be
+  // announced subject to filtering through the |MdnsResponder|. All subtype
+  // queries are forwarded to the |MdnsResponder|, so this method has no effect
+  // in that regard.
+  SetSubtypes(string service_name,
+              string instance_name,
+              array<string> subtypes);
+
+  // Initiates announcement of a service instance currently being published due
+  // to a call to |PublishServiceInstance| or |AddResponder|. This is generally
+  // not needed for the |PublishServiceInstance| case. For instances published
+  // with |AddResponder|, this method is typically used when the port or text
+  // associated with the instance changes. All announcements are filtered
+  // through the |MdnsResponder|, which can reply with the new port and text
+  // values.
+  ReannounceInstance(string service_name, string instance_name);
 
   // Specifies whether mDNS traffic should be logged.
   SetVerbose(bool value);

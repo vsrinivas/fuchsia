@@ -4,6 +4,8 @@
 
 #include "garnet/bin/netconnector/mdns/responder.h"
 
+#include <algorithm>
+
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
@@ -15,14 +17,12 @@ namespace mdns {
 Responder::Responder(MdnsAgent::Host* host,
                      const std::string& service_name,
                      const std::string& instance_name,
-                     const std::vector<std::string>& announced_subtypes,
                      fidl::InterfaceHandle<MdnsResponder> responder_handle)
     : MdnsAgent(host),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(
           MdnsNames::LocalInstanceFullName(instance_name, service_name)),
-      announced_subtypes_(announced_subtypes),
       responder_(MdnsResponderPtr::Create(std::move(responder_handle))) {
   responder_.set_connection_error_handler([this]() {
     responder_.set_connection_error_handler(nullptr);
@@ -49,7 +49,7 @@ void Responder::Start(const std::string& host_full_name) {
 
   host_full_name_ = host_full_name;
 
-  SendAnnouncement();
+  Reannounce();
 }
 
 void Responder::ReceiveQuestion(const DnsQuestion& question,
@@ -82,22 +82,43 @@ void Responder::ReceiveQuestion(const DnsQuestion& question,
 
 void Responder::Quit() {
   if (publication_) {
-    // Send epitaph.
-    publication_->text.reset();
-    publication_->ptr_ttl_seconds = 0;
-    publication_->srv_ttl_seconds = 0;
-    publication_->txt_ttl_seconds = 0;
-    SendPublication(*publication_);
+    SendGoodbye(std::move(publication_));
+    RemoveSelf(instance_full_name_);
+    return;
   }
 
-  RemoveSelf(instance_full_name_);
+  should_quit_ = true;
+  GetAndSendPublication(false);
+}
+
+void Responder::SetSubtypes(std::vector<std::string> subtypes) {
+  // Initiate four announcements with intervals of 1, 2 and 4 seconds. If we
+  // were already announcing, the sequence restarts now. The first announcement
+  // contains PTR records for the removed subtypes with TTL of zero.
+  for (const std::string& subtype : subtypes_) {
+    if (std::find(subtypes.begin(), subtypes.end(), subtype) ==
+        subtypes.end()) {
+      SendSubtypePtrRecord(subtype, 0);
+    }
+  }
+
+  subtypes_ = std::move(subtypes);
+
+  Reannounce();
+}
+
+void Responder::Reannounce() {
+  // Initiate four announcements with intervals of 1, 2 and 4 seconds. If we
+  // were already announcing, the sequence restarts now.
+  announcement_interval_ = kInitialAnnouncementInterval;
+  SendAnnouncement();
 }
 
 void Responder::SendAnnouncement() {
   GetAndSendPublication(false);
 
-  for (const std::string& subtype : announced_subtypes_) {
-    GetAndSendPublication(false, subtype);
+  for (const std::string& subtype : subtypes_) {
+    SendSubtypePtrRecord(subtype);
   }
 
   if (announcement_interval_ > kMaxAnnouncementInterval) {
@@ -105,10 +126,9 @@ void Responder::SendAnnouncement() {
   }
 
   PostTaskForTime([this]() { SendAnnouncement(); },
-                  fxl::TimePoint::Now() +
-                      fxl::TimeDelta::FromSeconds(announcement_interval_));
+                  fxl::TimePoint::Now() + announcement_interval_);
 
-  announcement_interval_ *= 2;
+  announcement_interval_ = announcement_interval_ * 2;
 }
 
 void Responder::GetAndSendPublication(bool query,
@@ -119,6 +139,15 @@ void Responder::GetAndSendPublication(bool query,
         query, subtype.empty() ? fidl::String() : fidl::String(subtype),
         [ this, subtype,
           reply_address = reply_address ](MdnsPublicationPtr publication) {
+          if (should_quit_) {
+            if (publication) {
+              SendGoodbye(std::move(publication));
+            }
+
+            RemoveSelf(instance_full_name_);
+            return;
+          }
+
           if (publication) {
             SendPublication(*publication, subtype, reply_address);
           }
@@ -136,13 +165,12 @@ void Responder::GetAndSendPublication(bool query,
 void Responder::SendPublication(const MdnsPublication& publication,
                                 const std::string& subtype,
                                 const ReplyAddress& reply_address) const {
-  std::string service_full_name =
-      subtype.empty()
-          ? MdnsNames::LocalServiceFullName(service_name_)
-          : MdnsNames::LocalServiceSubtypeFullName(service_name_, subtype);
+  if (!subtype.empty()) {
+    SendSubtypePtrRecord(subtype, publication.ptr_ttl_seconds, reply_address);
+  }
 
-  auto ptr_resource =
-      std::make_shared<DnsResource>(service_full_name, DnsType::kPtr);
+  auto ptr_resource = std::make_shared<DnsResource>(
+      MdnsNames::LocalServiceFullName(service_name_), DnsType::kPtr);
   ptr_resource->time_to_live_ = publication.ptr_ttl_seconds;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
@@ -161,6 +189,32 @@ void Responder::SendPublication(const MdnsPublication& publication,
   SendResource(txt_resource, MdnsResourceSection::kAdditional, reply_address);
 
   SendAddresses(MdnsResourceSection::kAdditional, reply_address);
+}
+
+void Responder::SendSubtypePtrRecord(const std::string& subtype,
+                                     uint32_t ttl,
+                                     const ReplyAddress& reply_address) const {
+  FXL_DCHECK(!subtype.empty());
+
+  auto ptr_resource = std::make_shared<DnsResource>(
+      MdnsNames::LocalServiceSubtypeFullName(service_name_, subtype),
+      DnsType::kPtr);
+  ptr_resource->time_to_live_ = ttl;
+  ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
+  SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
+}
+
+void Responder::SendGoodbye(MdnsPublicationPtr publication) const {
+  FXL_DCHECK(publication);
+
+  // TXT will be sent, but with no strings.
+  publication_->text.reset();
+
+  publication_->ptr_ttl_seconds = 0;
+  publication_->srv_ttl_seconds = 0;
+  publication_->txt_ttl_seconds = 0;
+
+  SendPublication(*publication_);
 }
 
 }  // namespace mdns

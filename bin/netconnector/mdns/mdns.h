@@ -83,8 +83,20 @@ class Mdns : public MdnsAgent::Host {
   // published. Returns false if and only if the instance was already published.
   bool AddResponder(const std::string& service_name,
                     const std::string& instance_name,
-                    const std::vector<std::string>& announced_subtypes,
                     fidl::InterfaceHandle<MdnsResponder> responder);
+
+  // Sets subtypes for a service instance currently being published due to a
+  // call to |PublishServiceInstance| or |AddResponder|.  Returns true if and
+  // only if the instance exists.
+  bool SetSubtypes(const std::string& service_name,
+                   const std::string& instance_name,
+                   std::vector<std::string> subtypes);
+
+  // Initiates announcement of a service instance currently being published due
+  // to a call to |PublishServiceInstance| or |AddResponder|. Returns true if
+  // and only if the instance exists.
+  bool ReannounceInstance(const std::string& service_name,
+                          const std::string& instance_name);
 
  private:
   struct TaskQueueEntry {

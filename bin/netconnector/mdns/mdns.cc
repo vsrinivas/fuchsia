@@ -175,7 +175,6 @@ bool Mdns::UnpublishServiceInstance(const std::string& service_name,
 
 bool Mdns::AddResponder(const std::string& service_name,
                         const std::string& instance_name,
-                        const std::vector<std::string>& announced_subtypes,
                         fidl::InterfaceHandle<MdnsResponder> responder) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
@@ -190,13 +189,57 @@ bool Mdns::AddResponder(const std::string& service_name,
 
   std::shared_ptr<Responder> agent =
       std::make_shared<Responder>(this, service_name, instance_name,
-                                  announced_subtypes, std::move(responder));
+                                  std::move(responder));
 
   AddAgent(agent);
   instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
 
   return true;
 }
+
+bool Mdns::SetSubtypes(const std::string& service_name,
+                       const std::string& instance_name,
+                       std::vector<std::string> subtypes) {
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
+
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  auto iter =
+      instance_publishers_by_instance_full_name_.find(instance_full_name);
+
+  if (iter == instance_publishers_by_instance_full_name_.end()) {
+    return false;
+  }
+
+  iter->second->SetSubtypes(std::move(subtypes));
+  SendMessages();
+
+  return true;
+}
+
+bool Mdns::ReannounceInstance(const std::string& service_name,
+                              const std::string& instance_name) {
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
+
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  auto iter =
+      instance_publishers_by_instance_full_name_.find(instance_full_name);
+
+  if (iter == instance_publishers_by_instance_full_name_.end()) {
+    return false;
+  }
+
+  iter->second->Reannounce();
+  SendMessages();
+
+  return true;
+}
+
 
 void Mdns::PostTaskForTime(MdnsAgent* agent,
                            fxl::Closure task,

@@ -52,8 +52,14 @@ class MdnsServiceImpl : public MdnsService {
 
   void AddResponder(const fidl::String& service_name,
                     const fidl::String& instance_name,
-                    fidl::Array<fidl::String> announced_subtypes,
                     fidl::InterfaceHandle<MdnsResponder> responder) override;
+
+  void SetSubtypes(const fidl::String& service_name,
+                   const fidl::String& instance_name,
+                   fidl::Array<fidl::String> subtypes) override;
+
+  void ReannounceInstance(const fidl::String& service_name,
+                          const fidl::String& instance_name) override;
 
   void SetVerbose(bool value) override;
 

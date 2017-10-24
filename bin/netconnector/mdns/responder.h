@@ -10,6 +10,7 @@
 
 #include "garnet/bin/netconnector/ip_port.h"
 #include "garnet/bin/netconnector/mdns/mdns_agent.h"
+#include "lib/fxl/time/time_delta.h"
 #include "lib/netconnector/fidl/mdns.fidl.h"
 
 namespace netconnector {
@@ -24,7 +25,6 @@ class Responder : public MdnsAgent {
   Responder(MdnsAgent::Host* host,
             const std::string& service_name,
             const std::string& instance_name,
-            const std::vector<std::string>& announced_subtypes,
             fidl::InterfaceHandle<MdnsResponder> responder_handle);
 
   // Creates an |Responder|. No subtypes are announced. Queries for
@@ -45,8 +45,17 @@ class Responder : public MdnsAgent {
 
   void Quit() override;
 
+  // Sets the subtypes to publish.
+  void SetSubtypes(std::vector<std::string> subtypes);
+
+  // Reannounces the service instance.
+  void Reannounce();
+
  private:
-  static constexpr uint32_t kMaxAnnouncementInterval = 4;
+  static constexpr fxl::TimeDelta kInitialAnnouncementInterval =
+      fxl::TimeDelta::FromSeconds(1);
+  static constexpr fxl::TimeDelta kMaxAnnouncementInterval =
+      fxl::TimeDelta::FromSeconds(4);
 
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();
@@ -64,14 +73,25 @@ class Responder : public MdnsAgent {
                        const ReplyAddress& reply_address =
                            MdnsAddresses::kV4MulticastReply) const;
 
+  // Sends a subtype PTR record for this instance.
+  void SendSubtypePtrRecord(const std::string& subtype,
+                            uint32_t ttl = DnsResource::kShortTimeToLive,
+                            const ReplyAddress& reply_address =
+                                MdnsAddresses::kV4MulticastReply) const;
+
+  // Turns |publication| into a goodbye by setting the TTLs to zero and sends
+  // it via multicast.
+  void SendGoodbye(MdnsPublicationPtr publication) const;
+
   std::string host_full_name_;
   std::string service_name_;
   std::string instance_name_;
   std::string instance_full_name_;
-  std::vector<std::string> announced_subtypes_;
+  std::vector<std::string> subtypes_;
   MdnsResponderPtr responder_;
   MdnsPublicationPtr publication_;
-  uint32_t announcement_interval_ = 1;
+  fxl::TimeDelta announcement_interval_ = kInitialAnnouncementInterval;
+  bool should_quit_ = false;
 };
 
 }  // namespace mdns

@@ -199,6 +199,7 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
 
 void MdnsImpl::Subscribe(const std::string& service_name) {
   std::cout << "subscribing to service " << service_name << "\n";
+  std::cout << "press escape key to quit\n";
   netconnector::MdnsServiceSubscriptionPtr subscription;
   mdns_service_->SubscribeToService(service_name, subscription_.NewRequest());
   HandleSubscriptionInstances();
@@ -231,6 +232,7 @@ void MdnsImpl::Respond(const std::string& service_name,
                        const std::vector<std::string>& text) {
   std::cout << "responding as instance " << instance_name << " of service "
             << service_name << "\n";
+  std::cout << "press escape key to quit\n";
   fidl::InterfaceHandle<netconnector::MdnsResponder> responder_handle;
 
   binding_.Bind(&responder_handle);
@@ -245,8 +247,12 @@ void MdnsImpl::Respond(const std::string& service_name,
   publication_text_ = text;
 
   mdns_service_->AddResponder(service_name, instance_name,
-                              fidl::Array<fidl::String>::From(announce),
                               std::move(responder_handle));
+
+  if (!announce.empty()) {
+    mdns_service_->SetSubtypes(service_name, instance_name,
+                               fidl::Array<fidl::String>::From(announce));
+  }
 
   WaitForKeystroke();
 }

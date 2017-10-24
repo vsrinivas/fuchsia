@@ -134,7 +134,6 @@ void MdnsServiceImpl::UnpublishServiceInstance(
 void MdnsServiceImpl::AddResponder(
     const fidl::String& service_name,
     const fidl::String& instance_name,
-    fidl::Array<fidl::String> announced_subtypes,
     fidl::InterfaceHandle<MdnsResponder> responder) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
     FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
@@ -148,9 +147,43 @@ void MdnsServiceImpl::AddResponder(
     return;
   }
 
-  mdns_.AddResponder(service_name, instance_name,
-                     announced_subtypes.To<std::vector<std::string>>(),
-                     std::move(responder));
+  mdns_.AddResponder(service_name, instance_name, std::move(responder));
+}
+
+void MdnsServiceImpl::SetSubtypes(const fidl::String& service_name,
+                                  const fidl::String& instance_name,
+                                  fidl::Array<fidl::String> subtypes) {
+  if (!MdnsNames::IsValidServiceName(service_name)) {
+    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
+                   << " in call to AddResponder, ignoring.";
+    return;
+  }
+
+  if (!MdnsNames::IsValidInstanceName(instance_name)) {
+    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
+                   << " in call to AddResponder, ignoring.";
+    return;
+  }
+
+  mdns_.SetSubtypes(service_name, instance_name,
+                    subtypes.To<std::vector<std::string>>());
+}
+
+void MdnsServiceImpl::ReannounceInstance(const fidl::String& service_name,
+                                         const fidl::String& instance_name) {
+  if (!MdnsNames::IsValidServiceName(service_name)) {
+    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
+                   << " in call to AddResponder, ignoring.";
+    return;
+  }
+
+  if (!MdnsNames::IsValidInstanceName(instance_name)) {
+    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
+                   << " in call to AddResponder, ignoring.";
+    return;
+  }
+
+  mdns_.ReannounceInstance(service_name, instance_name);
 }
 
 void MdnsServiceImpl::SetVerbose(bool value) {
