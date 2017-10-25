@@ -273,7 +273,13 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;
 
-  media::MediaCapturerPtr primer_;
+  // Media input pipeline updates don't work quite right and creating new media
+  // capturers is nontrivial, so for now pass a proxy to the speech capture
+  // service to let us know when we need to give it a new one.
+  fxl::TimePoint mc_failures_start_;
+  unsigned int mc_failures_count_;
+  media::MediaCapturerPtr media_capturer_;
+  std::unique_ptr<fidl::Binding<media::MediaCapturer>> media_capturer_binding_;
 };
 
 }  // namespace maxwell

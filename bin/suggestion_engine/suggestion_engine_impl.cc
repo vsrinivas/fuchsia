@@ -33,6 +33,11 @@ namespace {
 constexpr fxl::TimeDelta kAskMediaResponseDelay =
     fxl::TimeDelta::FromMilliseconds(100);
 
+// If media fails more than 5x over one second, stop trying to restart it.
+constexpr fxl::TimeDelta kMediaCriticalFailurePeriod =
+    fxl::TimeDelta::FromSeconds(1);
+constexpr unsigned int kMediaCriticalFailureCount = 5;
+
 bool IsInterruption(const SuggestionPrototype* suggestion) {
   return ((suggestion->proposal->display) &&
           ((suggestion->proposal->display->annoyance ==
@@ -64,6 +69,7 @@ SuggestionEngineImpl::SuggestionEngineImpl()
   media_service_ =
       app_context_->ConnectToEnvironmentService<media::MediaService>();
   media_service_.set_connection_error_handler([this] {
+    FXL_LOG(INFO) << "Media service connection error";
     media_service_ = nullptr;
     media_packet_producer_ = nullptr;
   });
@@ -262,19 +268,49 @@ void SuggestionEngineImpl::Query(
 
 void SuggestionEngineImpl::PrimeSpeechCapture() {
   if (media_service_) {
-    media_service_->CreateAudioCapturer(primer_.NewRequest());
-    primer_->GetSupportedMediaTypes([=](auto) { primer_ = nullptr; });
+    media_service_->CreateAudioCapturer(media_capturer_.NewRequest());
+    media_capturer_->GetSupportedMediaTypes([](auto) {});
+    media_capturer_.set_connection_error_handler([=] {
+      FXL_LOG(INFO) << "Restarting closed media capturer";
+      media_capturer_.reset();
+
+      fxl::TimePoint now = fxl::TimePoint::Now();
+      if (now - mc_failures_start_ >= kMediaCriticalFailurePeriod) {
+        mc_failures_start_ = now;
+        mc_failures_count_ = 1;
+      } else if (mc_failures_count_ > kMediaCriticalFailureCount) {
+        FXL_LOG(WARNING) << "Media input failed more than "
+                         << kMediaCriticalFailureCount << " times in "
+                         << kMediaCriticalFailurePeriod.ToSecondsF()
+                         << " seconds; disabling speech capture.";
+      } else {
+        PrimeSpeechCapture();
+      }
+    });
   }
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::BeginSpeechCapture(
     fidl::InterfaceHandle<TranscriptionListener> transcription_listener) {
-  if (speech_to_text_ && media_service_) {
-    fidl::InterfaceHandle<media::MediaCapturer> media_capturer;
-    media_service_->CreateAudioCapturer(media_capturer.NewRequest());
-    speech_to_text_->BeginCapture(std::move(media_capturer),
-                                  std::move(transcription_listener));
+  if (speech_to_text_ && media_capturer_) {
+    // hack: only serve one media capturer
+    if (!media_capturer_binding_) {
+      media_capturer_binding_ =
+          std::make_unique<fidl::Binding<media::MediaCapturer>>(
+              media_capturer_.get());
+      media_capturer_binding_->set_connection_error_handler([this] {
+        media_capturer_->Stop();
+        media_capturer_binding_ = nullptr;
+      });
+      speech_to_text_->BeginCapture(media_capturer_binding_->NewBinding(),
+                                    std::move(transcription_listener));
+    } else {
+      media::MediaCapturerPtr dummy;
+      dummy.NewRequest();
+      speech_to_text_->BeginCapture(dummy.PassInterfaceHandle(),  // ignored
+                                    std::move(transcription_listener));
+    }
   } else {
     // Requesting speech capture without the requisite services is an immediate
     // error.
