@@ -37,9 +37,6 @@ constexpr uint32_t kMaxWaitHandleCount = 8u;
 // ensure public headers agree
 static_assert(ZX_WAIT_MANY_MAX_ITEMS == kMaxWaitHandleCount, "");
 
-// Note: This is used for two InlineArrays in sys_handle_wait_many.
-constexpr size_t kWaitManyInlineCount = 8u;
-
 zx_status_t sys_object_wait_one(zx_handle_t handle_value,
                                 zx_signals_t signals,
                                 zx_time_t deadline,
@@ -108,17 +105,11 @@ zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> user_items, uint32_t c
     if (count > kMaxWaitHandleCount)
         return ZX_ERR_OUT_OF_RANGE;
 
-    fbl::AllocChecker ac;
-    fbl::InlineArray<zx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
-    if (user_items.copy_array_from_user(items.get(), count) != ZX_OK)
+    zx_wait_item_t items[kMaxWaitHandleCount];
+    if (user_items.copy_array_from_user(items, count) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
-    fbl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
-
+    WaitStateObserver wait_state_observers[kMaxWaitHandleCount];
     Event event;
 
     // We may need to unwind (which can be done outside the lock).
@@ -162,7 +153,7 @@ zx_status_t sys_object_wait_many(user_ptr<zx_wait_item_t> user_items, uint32_t c
         combined |= (items[ix].pending = wait_state_observers[ix].End());
     }
 
-    if (user_items.copy_array_to_user(items.get(), count) != ZX_OK)
+    if (user_items.copy_array_to_user(items, count) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
 
     if (combined & ZX_SIGNAL_HANDLE_CLOSED)
