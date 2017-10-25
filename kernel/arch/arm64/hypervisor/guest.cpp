@@ -28,6 +28,7 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     if (status != ZX_OK)
         return status;
 
+    guest->gpas_->aspace()->arch_aspace().asid_ = vmid;
     *out = fbl::move(guest);
     return ZX_OK;
 }

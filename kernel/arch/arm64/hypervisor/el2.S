@@ -41,10 +41,6 @@
 // NOTE(abdulla): This excludes the top bit, as it is too large for VTCR_EL2.PS.
 #define ID_AA64MMFR0_EL1_PARANGE_MASK   0x07
 
-#define HVC_PSCI_INDEX                  0
-#define HVC_ON_INDEX                    1
-#define HVC_MAX_INDEX                   2
-
 #define VECTOR_TABLE_SIZE               0x0800
 
 .section .text.el2,"ax",@progbits
@@ -138,58 +134,66 @@
     eret
 .endm
 
-.macro entry_init
-.align 7
-    // Check ESR_EL2.EC to determine what caused the exception.
-    mrs x9, esr_el2
-    lsr x10, x9, #ESR_EL2_EC_SHIFT
-    cmp x10, #ESR_EL2_EC_HVC
-    b.ne invalid_exception
-
-    and x10, x9, #ESR_EL2_ISS_MASK
-    cmp x10, #HVC_PSCI_INDEX
-    b.eq el2_hvc_psci
-    cmp x10, #HVC_ON_INDEX
-    b.ne invalid_exception
-
-    b el2_hvc_on
-
-invalid_exception:
-    exception_return ZX_ERR_INVALID_ARGS
-.endm
-
 .macro pop_stack
     add sp, sp, #16
 .endm
 
-.macro entry_exec return_code
-.align 7
-    sub sp, sp, #16
+.macro hvc_jump table size
+    mrs x9, esr_el2
 
+    // Check ESR_EL2.EC to determine what caused the exception.
+    lsr x10, x9, #ESR_EL2_EC_SHIFT
+    cmp x10, #ESR_EL2_EC_HVC
+    b.ne .Linvalid_args_for_\table
+
+    // Check ESR_EL2.ICC to determine whether the HVC index is in range.
+    and x10, x9, #ESR_EL2_ISS_MASK
+    cmp x10, \size
+    b.ge .Linvalid_args_for_\table
+
+    // Branch to the jump table.
+    adr x9, \table
+    add x9, x9, x10, lsl #2
+    br x9
+
+.Linvalid_args_for_\table:
+    exception_return ZX_ERR_INVALID_ARGS
+.endm
+
+.macro entry_init
+.align 7
+    hvc_jump .Linit_table 4
+.Linit_table:
+    b el2_hvc_psci
+    b el2_hvc_on
+    b el2_hvc_tlbi_ipa
+    b el2_hvc_tlbi_vmid
+.endm
+
+.macro entry_exec name return_code
+.align 7
     // We push X9 onto the stack so we have one scratch register. We only use
     // X9 here, so that we don't accidentally trample the guest state.
-    str x9, [sp]
+    str x9, [sp, #-16]!
     movlit x9, \return_code
     str x9, [sp, #8]
 
     // Check VTTBR_EL2 to determine whether the exception came from the guest or
     // from the host.
     mrs x9, vttbr_el2
-    cbnz x9, el2_guest_handler
+    cbnz x9, el2_guest_exit
 
     // The exception came from the host, so there is no guest state to preserve.
     pop_stack
 
-    // Check ESR_EL2.EC to determine what caused the exception.
-    //
-    // NOTE(abdulla): We preserve ESR_EL2 in X9 so that we can reuse it later.
-    mrs x9, esr_el2
-    lsr x10, x9, #ESR_EL2_EC_SHIFT
-    cmp x10, #ESR_EL2_EC_HVC
-    b.eq el2_hvc_handler
-
-    // We are here because the exception class is unhandled, so return failure.
-    exception_return ZX_ERR_INVALID_ARGS
+    // Continue execution through a jump table based on the HVC index.
+    hvc_jump .L\name\()_exec_table 5
+.L\name\()_exec_table:
+    b el2_hvc_psci
+    b el2_hvc_off
+    b el2_hvc_tlbi_ipa
+    b el2_hvc_tlbi_vmid
+    b el2_hvc_resume
 .endm
 
 .macro entry_invalid_exception
@@ -245,8 +249,8 @@ FUNCTION_LABEL(arm64_el2_exec_table)
     entry_invalid_exception
 
     /* exceptions from lower EL, running arm64 */
-    entry_exec ZX_OK
-    entry_exec ZX_ERR_NEXT
+    entry_exec sync, ZX_OK
+    entry_exec irq, ZX_ERR_NEXT
     entry_invalid_exception
     entry_invalid_exception
 
@@ -310,28 +314,6 @@ FUNCTION_LABEL(el2_hvc_on)
 
     exception_return ZX_OK
 
-FUNCTION_LABEL(el2_hvc_handler)
-    // Check ESR_EL2.ICC to determine whether the HVC index is in range.
-    //
-    // NOTE(abdulla): We reuse ESR_EL2 that was preserved in X9.
-    and x10, x9, #ESR_EL2_ISS_MASK
-    cmp x10, #HVC_MAX_INDEX
-    b.gt out_of_range
-
-    // Branch to the jump table.
-    lsl x10, x10, #2
-    adr x9, table
-    add x9, x9, x10
-    br x9
-
-table:
-    b el2_hvc_psci
-    b el2_hvc_off
-    b el2_hvc_resume
-
-out_of_range:
-    exception_return ZX_ERR_OUT_OF_RANGE
-
 FUNCTION_LABEL(el2_hvc_psci)
     smc #0
     eret
@@ -359,9 +341,53 @@ FUNCTION_LABEL(el2_hvc_off)
 
     exception_return ZX_OK
 
+// void arm64_el2_tlbi_ipa(uint8_t vmid, zx_vaddr_t addr);
+FUNCTION(arm64_el2_tlbi_ipa)
+    hvc #2
+    ret
+END_FUNCTION(arm64_el2_tlbi_ipa)
+FUNCTION_LABEL(el2_hvc_tlbi_ipa)
+    // Switch to the guest.
+    msr vttbr_el2, x0
+    isb
+
+    // Invalidate IPA. Based on ARM DEN 0024A, page 12-5.
+    dsb ishst
+    tlbi ipas2e1is, x1
+    dsb ish
+    isb
+
+    // Switch to the host.
+    msr vttbr_el2, xzr
+    isb
+
+    exception_return ZX_OK
+
+// void arm64_el2_tlbi_vmid(uint8_t vmid);
+FUNCTION(arm64_el2_tlbi_vmid)
+    hvc #3
+    ret
+END_FUNCTION(arm64_el2_tlbi_vmid)
+FUNCTION_LABEL(el2_hvc_tlbi_vmid)
+    // Switch to the guest.
+    msr vttbr_el2, x0
+    isb
+
+    // Invalidate VMID. Based on ARM DEN 0024A, page 12-5.
+    dsb ishst
+    tlbi vmalls12e1is
+    dsb ish
+    isb
+
+    // Switch to the host.
+    msr vttbr_el2, xzr
+    isb
+
+    exception_return ZX_OK
+
 // zx_status_t arm64_el2_resume(zx_paddr_t el2_state, zx_paddr_t vttbr);
 FUNCTION(arm64_el2_resume)
-    hvc #2
+    hvc #4
     ret
 END_FUNCTION(arm64_el2_resume)
 FUNCTION_LABEL(el2_hvc_resume)
@@ -394,7 +420,7 @@ FUNCTION_LABEL(el2_hvc_resume)
     // Return to guest.
     eret
 
-FUNCTION_LABEL(el2_guest_handler)
+FUNCTION_LABEL(el2_guest_exit)
     // Load El2State from tpidr_el2.
     mrs x9, tpidr_el2
 

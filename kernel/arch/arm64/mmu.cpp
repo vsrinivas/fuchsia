@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arm64/el2_state.h>
 #include <arch/arm64/mmu.h>
 #include <arch/aspace.h>
 #include <arch/mmu.h>
@@ -420,7 +421,9 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
             fbl::atomic_signal_fence();
             if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-                // TODO(abdulla): Add handling for guest.
+                auto vmid = static_cast<uint8_t>(asid_);
+                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vmid, vaddr >> 12);
+                DEBUG_ASSERT(status == ZX_OK);
             } else if (asid == MMU_ARM64_GLOBAL_ASID) {
                 ARM64_TLBI(vaae1is, vaddr >> 12);
             } else {
@@ -577,7 +580,9 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
 
             fbl::atomic_signal_fence();
             if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-                // TODO(abdulla): Add handling for guest.
+                auto vmid = static_cast<uint8_t>(asid_);
+                __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vmid, vaddr >> 12);
+                DEBUG_ASSERT(status == ZX_OK);
             } else if (asid == MMU_ARM64_GLOBAL_ASID) {
                 ARM64_TLBI(vaae1is, vaddr >> 12);
             } else {
@@ -900,7 +905,9 @@ zx_status_t ArmArchVmAspace::Destroy() {
     pmm_free_page(page);
 
     if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-        // TODO(abdulla): Add handling for guest.
+        auto vmid = static_cast<uint8_t>(asid_);
+        __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vmid);
+        DEBUG_ASSERT(status == ZX_OK);
     } else {
         ARM64_TLBI(ASIDE1IS, asid_);
         arm64_mmu_free_asid(asid_);

@@ -42,6 +42,8 @@ public:
     static void ContextSwitch(ArmArchVmAspace* from, ArmArchVmAspace* to);
 
 private:
+    friend class Guest;
+
     inline bool IsValidVaddr(vaddr_t vaddr) {
         return (vaddr >= base_ && vaddr <= base_ + size_ - 1);
     }
