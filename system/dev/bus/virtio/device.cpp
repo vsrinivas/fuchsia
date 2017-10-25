@@ -329,7 +329,7 @@ zx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) {
             buf[i] = config[i];
         }
     } else {
-        // XXX handle MSI vs noMSI
+        // XXX handle MSI vs no MSI
         size_t offset = VIRTIO_PCI_CONFIG_OFFSET_NOMSI;
 
         uint8_t* buf = (uint8_t*)_buf;
@@ -340,6 +340,21 @@ zx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) {
 
     return ZX_OK;
 }
+
+template <typename T>
+void Device::WriteDeviceConfig(uint16_t offset, T val) {
+    if (mmio_regs_.device_config) {
+        auto config = static_cast<volatile T*>(mmio_regs_.device_config);
+        config[offset] = val;
+    } else {
+        // XXX handle MSI vs no MSI
+        size_t nomsi_offset = VIRTIO_PCI_CONFIG_OFFSET_NOMSI;
+        WriteConfigBar<T>((offset + nomsi_offset) & 0xffff, val);
+    }
+}
+template void Device::WriteDeviceConfig<uint8_t>(uint16_t offset, uint8_t val);
+template void Device::WriteDeviceConfig<uint16_t>(uint16_t offset, uint16_t val);
+template void Device::WriteDeviceConfig<uint32_t>(uint16_t offset, uint32_t val);
 
 uint16_t Device::GetRingSize(uint16_t index) {
     if (!mmio_regs_.common_config) {

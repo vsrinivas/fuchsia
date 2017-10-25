@@ -50,6 +50,13 @@ typedef struct virtio_input_absinfo {
     uint32_t flat;
 } __PACKED virtio_input_absinfo_t;
 
+typedef struct virtio_input_devids {
+    uint16_t bustype;
+    uint16_t vendor;
+    uint16_t product;
+    uint16_t version;
+} __PACKED virtio_input_devids_t;
+
 typedef struct virtio_input_config {
     uint8_t select;
     uint8_t subsel;
@@ -59,6 +66,7 @@ typedef struct virtio_input_config {
         char string[128];
         uint8_t bitmap[128];
         virtio_input_absinfo_t abs;
+        virtio_input_devids_t ids;
     } u;
 
 } __PACKED virtio_input_config_t;

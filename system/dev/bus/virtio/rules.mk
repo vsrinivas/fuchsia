@@ -13,6 +13,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/device.cpp \
     $(LOCAL_DIR)/ethernet.cpp \
     $(LOCAL_DIR)/gpu.cpp \
+    $(LOCAL_DIR)/input.cpp \
     $(LOCAL_DIR)/ring.cpp \
     $(LOCAL_DIR)/rng.cpp \
     $(LOCAL_DIR)/utils.cpp \

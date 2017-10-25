@@ -22,6 +22,7 @@
 #include "rng.h"
 #include "ethernet.h"
 #include "gpu.h"
+#include "input.h"
 #include "trace.h"
 
 #define LOCAL_TRACE 0
@@ -72,6 +73,10 @@ extern "C" zx_status_t virtio_bind(void* ctx, zx_device_t* device, void** cookie
     case 0x1044:
         LTRACEF("found entropy device\n");
         vd.reset(new virtio::RngDevice(device));
+        break;
+    case 0x1052:
+        LTRACEF("found input device\n");
+        vd.reset(new virtio::InputDevice(device));
         break;
     default:
         printf("unhandled device id, how did this happen?\n");

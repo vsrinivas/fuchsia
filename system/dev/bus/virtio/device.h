@@ -44,6 +44,7 @@ protected:
     template <typename T> T ReadConfigBar(uint16_t offset);
     template <typename T> void WriteConfigBar(uint16_t offset, T val);
     zx_status_t CopyDeviceConfig(void* _buf, size_t len);
+    template <typename T> void WriteDeviceConfig(uint16_t offset, T val);
 
     void Reset();
     void StatusAcknowledgeDriver();
