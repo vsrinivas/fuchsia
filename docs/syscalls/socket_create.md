@@ -23,8 +23,13 @@ have a maximum capacity.
 Data written to one handle may be read from the opposite.
 
 The *options* must set either the **ZX_SOCKET_STREAM** or
-**ZX_SOCKET_DATAGRAM** flag. The **ZX_SOCKET_HAS_CONTROL** flag
-can also be set to enable the socket control plane.
+**ZX_SOCKET_DATAGRAM** flag.
+
+The **ZX_SOCKET_HAS_CONTROL** flag may be set to enable the
+socket control plane.
+
+The **ZX_SOCKET_HAS_ACCEPT** flag may be set to enable transfer
+of sockets over this socket via **socket_share**() and **socket_accept**().
 
 ## RETURN VALUE
 
@@ -44,5 +49,7 @@ The maximum capacity is not currently set-able or get-able.
 
 ## SEE ALSO
 
+[socket_accept](socket_accept.md),
 [socket_read](socket_read.md),
+[socket_share](socket_share.md),
 [socket_write](socket_write.md).

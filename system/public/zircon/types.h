@@ -118,6 +118,8 @@ typedef uint32_t zx_signals_t;
 #define ZX_SOCKET_WRITE_DISABLED    __ZX_OBJECT_SIGNAL_5
 #define ZX_SOCKET_CONTROL_READABLE  __ZX_OBJECT_SIGNAL_6
 #define ZX_SOCKET_CONTROL_WRITABLE  __ZX_OBJECT_SIGNAL_7
+#define ZX_SOCKET_ACCEPT            __ZX_OBJECT_SIGNAL_8
+#define ZX_SOCKET_SHARE             __ZX_OBJECT_SIGNAL_9
 
 // Port
 #define ZX_PORT_READABLE            __ZX_OBJECT_READABLE
@@ -263,11 +265,14 @@ typedef uint64_t zx_off_t;
 #define ZX_SOCKET_SHUTDOWN_WRITE            (1u << 0)
 #define ZX_SOCKET_SHUTDOWN_READ             (1u << 1)
 #define ZX_SOCKET_SHUTDOWN_MASK             (ZX_SOCKET_SHUTDOWN_WRITE | ZX_SOCKET_SHUTDOWN_READ)
+
 // These can be passed to zx_socket_create()
 #define ZX_SOCKET_STREAM                    (0u << 0)
 #define ZX_SOCKET_DATAGRAM                  (1u << 0)
 #define ZX_SOCKET_HAS_CONTROL               (1u << 1)
-#define ZX_SOCKET_CREATE_MASK               (ZX_SOCKET_DATAGRAM | ZX_SOCKET_HAS_CONTROL)
+#define ZX_SOCKET_HAS_ACCEPT                (1u << 2)
+#define ZX_SOCKET_CREATE_MASK               (ZX_SOCKET_DATAGRAM | ZX_SOCKET_HAS_CONTROL | ZX_SOCKET_HAS_ACCEPT)
+
 // These can be passed to zx_socket_read() and zx_socket_write().
 #define ZX_SOCKET_CONTROL                   (1u << 2)
 

@@ -719,6 +719,85 @@ static bool socket_control_plane_shutdown(void) {
     END_TEST;
 }
 
+static bool socket_accept(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+
+    zx_handle_t a0, a1;
+    status = zx_socket_create(ZX_SOCKET_HAS_ACCEPT, &a0, &a1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_handle_t b0, b1;
+    status = zx_socket_create(0, &b0, &b1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_handle_t c0, c1;
+    status = zx_socket_create(0, &c0, &c1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_signals_t signals0 = get_satisfied_signals(a0);
+    zx_signals_t signals1 = get_satisfied_signals(a1);
+    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE, "");
+    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE, "");
+
+    // cannot share a HAS_ACCEPT socket
+    status = zx_socket_share(b0, a0);
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE, "");
+
+    // cannot share via a non-HAS_ACCEPT socket
+    status = zx_socket_share(b0, c0);
+    EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED, "");
+
+    // cannot share a socket via itself (either direction)
+    status = zx_socket_share(a0, a0);
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE, "");
+    status = zx_socket_share(a0, a1);
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE, "");
+    status = zx_socket_share(a1, a0);
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE, "");
+    status = zx_socket_share(a1, a1);
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE, "");
+
+    // cannot accept from a non-HAS_ACCEPT socket
+    zx_handle_t h;
+    status = zx_socket_accept(b0, &h);
+    EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED, "");
+
+    status = zx_socket_share(a0, b0);
+    EXPECT_EQ(status, ZX_OK, "");
+
+    signals0 = get_satisfied_signals(a0);
+    signals1 = get_satisfied_signals(a1);
+    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE, "");
+    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE | ZX_SOCKET_ACCEPT, "");
+
+    // queue is only one deep
+    status = zx_socket_share(a0, b1);
+    EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
+
+    status = zx_socket_accept(a1, &h);
+    EXPECT_EQ(status, ZX_OK, "");
+    b0 = h;
+
+    // queue is only one deep
+    status = zx_socket_accept(a0, &h);
+    EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
+
+    signals0 = get_satisfied_signals(a0);
+    signals1 = get_satisfied_signals(a1);
+    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE, "");
+    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE, "");
+
+    zx_handle_close(a0);
+    zx_handle_close(a1);
+    zx_handle_close(b0);
+    zx_handle_close(b1);
+    zx_handle_close(c0);
+    zx_handle_close(c1);
+
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
@@ -734,6 +813,7 @@ RUN_TEST(socket_datagram_no_short_write)
 RUN_TEST(socket_control_plane_absent)
 RUN_TEST(socket_control_plane)
 RUN_TEST(socket_control_plane_shutdown)
+RUN_TEST(socket_accept)
 END_TEST_CASE(socket_tests)
 
 #ifndef BUILD_COMBINED_TESTS

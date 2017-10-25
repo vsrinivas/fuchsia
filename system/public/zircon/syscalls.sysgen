@@ -208,6 +208,14 @@ syscall socket_read
         buffer: any[size] OUT, size: size_t)
     returns (zx_status_t, actual: size_t optional);
 
+syscall socket_share
+    (handle: zx_handle_t, socket_to_share: zx_handle_t)
+    returns (zx_status_t);
+
+syscall socket_accept
+    (handle: zx_handle_t)
+    returns (zx_status_t, out_socket: zx_handle_t);
+
 # Threads
 
 syscall thread_exit noreturn ();

@@ -41,6 +41,10 @@ zx_status_t SocketDispatcher::Create(uint32_t flags,
     fbl::AllocChecker ac;
 
     zx_signals_t starting_signals = ZX_SOCKET_WRITABLE;
+
+    if (flags & ZX_SOCKET_HAS_ACCEPT)
+        starting_signals |= ZX_SOCKET_SHARE;
+
     fbl::unique_ptr<char[]> control0;
     fbl::unique_ptr<char[]> control1;
 
@@ -386,5 +390,75 @@ zx_status_t SocketDispatcher::ReadControl(user_out_ptr<void> dst, size_t len,
         other_->UpdateState(0u, ZX_SOCKET_CONTROL_WRITABLE);
 
     *nread = copy_len;
+    return ZX_OK;
+}
+
+zx_status_t SocketDispatcher::CheckShareable(SocketDispatcher* to_send) {
+    // We disallow sharing of sockets that support sharing themselves
+    // and disallow sharing either end of the socket we're going to
+    // share on, thus preventing loops, etc.
+    AutoLock lock(&lock_);
+    if ((to_send->flags_ & ZX_SOCKET_HAS_ACCEPT) ||
+        (to_send == this) || (to_send == other_.get()))
+        return ZX_ERR_BAD_STATE;
+    return ZX_OK;
+}
+
+zx_status_t SocketDispatcher::Share(Handle* h) {
+    canary_.Assert();
+
+    LTRACE_ENTRY;
+
+    if (!(flags_ & ZX_SOCKET_HAS_ACCEPT))
+        return ZX_ERR_NOT_SUPPORTED;
+
+    fbl::RefPtr<SocketDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (!other_)
+            return ZX_ERR_PEER_CLOSED;
+        other = other_;
+    }
+
+    return other->ShareSelf(h);
+}
+
+zx_status_t SocketDispatcher::ShareSelf(Handle* h) {
+    canary_.Assert();
+
+    fbl::RefPtr<SocketDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (accept_queue_)
+            return ZX_ERR_SHOULD_WAIT;
+
+        accept_queue_.reset(h);
+
+        UpdateState(0, ZX_SOCKET_ACCEPT);
+        other = other_;
+    }
+    if (other)
+        other->UpdateState(ZX_SOCKET_SHARE, 0);
+
+    return ZX_OK;
+}
+
+zx_status_t SocketDispatcher::Accept(Handle** h) {
+    canary_.Assert();
+
+    if (!(flags_ & ZX_SOCKET_HAS_ACCEPT))
+        return ZX_ERR_NOT_SUPPORTED;
+
+    AutoLock lock(&lock_);
+
+    if (!accept_queue_)
+        return ZX_ERR_SHOULD_WAIT;
+
+    *h = accept_queue_.release();
+
+    UpdateState(ZX_SOCKET_ACCEPT, 0);
+    if (other_)
+        other_->UpdateState(0, ZX_SOCKET_SHARE);
+
     return ZX_OK;
 }

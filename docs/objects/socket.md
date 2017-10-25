@@ -46,8 +46,14 @@ socket control plane.
 
 **ZX_SOCKET_CONTROL_WRITABLE** data may be written to the socket control plane.
 
+**ZX_SOCKET_SHARE** a socket may be sent via *zx_socket_share*.
+
+**ZX_SOCKET_ACCEPT** a socket may be received via *zx_shocket_accept**
+
 ## SYSCALLS
 
++ [socket_accept](../syscalls/socket_accept.md) - receive a socket via a socket
 + [socket_create](../syscalls/socket_create.md) - create a new socket
 + [socket_read](../syscalls/socket_read.md) - read data from a socket
++ [socket_share](../syscalls/socket_share.md) - share a socket via a socket
 + [socket_write](../syscalls/socket_write.md) - write data to a socket

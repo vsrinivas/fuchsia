@@ -10,6 +10,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <object/dispatcher.h>
+#include <object/handle_owner.h>
 #include <object/mbuf.h>
 
 #include <zircon/types.h>
@@ -48,7 +49,15 @@ public:
 
     zx_status_t ReadControl(user_out_ptr<void> dst, size_t len, size_t* nread);
 
+    // On success, share takes ownership of h
+    zx_status_t Share(Handle* h);
+
+    // On success, a Handle is returned via h
+    zx_status_t Accept(Handle** h);
+
     void OnPeerZeroHandles();
+
+    zx_status_t CheckShareable(SocketDispatcher* to_send);
 
 private:
     // The control_msg must be either nullptr or an allocation of
@@ -60,6 +69,7 @@ private:
     zx_status_t WriteControlSelf(user_in_ptr<const void> src, size_t len);
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     zx_status_t ShutdownOther(uint32_t how);
+    zx_status_t ShareSelf(Handle* h);
 
     bool is_full() const TA_REQ(lock_) { return data_.is_full(); }
     bool is_empty() const TA_REQ(lock_) { return data_.is_empty(); }
@@ -75,5 +85,6 @@ private:
     fbl::unique_ptr<char[]> control_msg_ TA_GUARDED(lock_);
     size_t control_msg_len_ TA_GUARDED(lock_);
     fbl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
+    HandleOwner accept_queue_ TA_GUARDED(lock_);
     bool read_disabled_ TA_GUARDED(lock_);
 };
