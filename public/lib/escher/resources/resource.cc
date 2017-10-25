@@ -11,7 +11,7 @@ namespace escher {
 
 const ResourceTypeInfo Resource::kTypeInfo("Resource", ResourceType::kResource);
 
-Resource::Resource(ResourceManager* owner) {
+Resource::Resource(ResourceManager* owner) : escher_(owner->escher()) {
   FXL_DCHECK(owner);
   owner->BecomeOwnerOf(this);
 }

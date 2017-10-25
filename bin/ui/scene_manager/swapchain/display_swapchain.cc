@@ -9,9 +9,9 @@
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
 #include "garnet/bin/ui/scene_manager/sync/fence.h"
-#include "garnet/bin/ui/scene_manager/util/escher_utils.h"
 
 #include "lib/escher/escher.h"
+#include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
 
@@ -31,13 +31,6 @@ vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues);
 
 // Determines if the VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION is supported.
 vk::ImageUsageFlags GetFramebufferImageUsage();
-
-// Exports a Semaphore into an event.
-// TODO(ES-40): Factor this into an Escher Fuchsia support library.
-zx::event GetEventForSemaphore(
-    const escher::VulkanDeviceQueues::ProcAddrs& proc_addresses,
-    const vk::Device& device,
-    const escher::SemaphorePtr& semaphore);
 
 }  // namespace
 
@@ -184,8 +177,8 @@ DisplaySwapchain::Semaphore DisplaySwapchain::Export(
     escher::SemaphorePtr escher_semaphore) {
   Semaphore semaphore;
   semaphore.escher_semaphore = escher_semaphore;
-  zx::event fence =
-      GetEventForSemaphore(vulkan_proc_addresses_, device_, escher_semaphore);
+  zx::event fence = GetEventForSemaphore(vulkan_proc_addresses_, device_,
+                                                escher_semaphore);
   FXL_CHECK(fence);
   semaphore.magma_semaphore =
       MagmaSemaphore::NewFromEvent(&magma_connection_, fence);
@@ -326,28 +319,6 @@ vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
   }
   FXL_CHECK(format != vk::Format::eUndefined);
   return format;
-}
-
-zx::event GetEventForSemaphore(
-    const escher::VulkanDeviceQueues::ProcAddrs& proc_addresses,
-    const vk::Device& device,
-    const escher::SemaphorePtr& semaphore) {
-  zx_handle_t semaphore_handle;
-
-  VkSemaphoreGetFuchsiaHandleInfoKHR info = {
-      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
-      .pNext = nullptr,
-      .semaphore = semaphore->vk_semaphore(),
-      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
-  };
-  VkResult result = proc_addresses.GetSemaphoreFuchsiaHandleKHR(
-      device, &info, &semaphore_handle);
-
-  if (result != VK_SUCCESS) {
-    FXL_LOG(WARNING) << "unable to export semaphore";
-    return zx::event();
-  }
-  return zx::event(semaphore_handle);
 }
 
 }  // namespace

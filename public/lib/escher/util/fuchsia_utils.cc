@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/ui/shadertoy/service/escher_utils.h"
+#include "lib/escher/util/fuchsia_utils.h"
 
 #include "lib/escher/vk/gpu_mem.h"
 
-namespace shadertoy {
+namespace escher {
 
 std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
     escher::Escher* escher) {
@@ -44,9 +44,34 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
   return std::make_pair(std::move(sema), std::move(event));
 }
 
-zx::vmo ExportMemoryAsVMO(escher::Escher* escher,
+zx::event GetEventForSemaphore(
+    const escher::VulkanDeviceQueues::ProcAddrs& proc_addresses,
+    const vk::Device& device,
+    const escher::SemaphorePtr& semaphore) {
+  zx_handle_t semaphore_handle;
+
+  vk::SemaphoreGetFuchsiaHandleInfoKHR info(
+      semaphore->vk_semaphore(),
+      vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFuchsiaFence);
+
+  VkResult result = proc_addresses.GetSemaphoreFuchsiaHandleKHR(
+      device,
+      reinterpret_cast<const VkSemaphoreGetFuchsiaHandleInfoKHR*>(&info),
+      &semaphore_handle);
+
+  if (result != VK_SUCCESS) {
+    FXL_LOG(WARNING) << "unable to export semaphore";
+    return zx::event();
+  }
+  return zx::event(semaphore_handle);
+}
+
+zx::vmo ExportMemoryAsVmo(escher::Escher* escher,
                           const escher::GpuMemPtr& mem) {
-  auto result = escher->vulkan_context().device.exportMemoryMAGMA(mem->base());
+  vk::MemoryGetFuchsiaHandleInfoKHR export_memory_info(
+      mem->base(), vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo);
+  auto result = escher->device()->proc_addrs().getMemoryFuchsiaHandleKHR(
+      escher->vulkan_context().device, export_memory_info);
   if (result.result != vk::Result::eSuccess) {
     FXL_LOG(ERROR) << "Failed to export escher::GpuMem as zx::vmo";
     return zx::vmo();
@@ -54,4 +79,4 @@ zx::vmo ExportMemoryAsVMO(escher::Escher* escher,
   return zx::vmo(result.value);
 }
 
-}  // namespace shadertoy
+}  // namespace escher

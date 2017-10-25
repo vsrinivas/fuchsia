@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/sketchy/canvas.h"
-#include "garnet/bin/ui/sketchy/escher_utils.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
 #include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/util/fuchsia_utils.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace sketchy_service {
@@ -47,7 +47,7 @@ void CanvasImpl::Present(uint64_t presentation_time,
     stroke_group->ApplyChanges(command, &buffer_factory_);
   }
 
-  auto pair = NewSemaphoreEventPair(escher_);
+  auto pair = escher::NewSemaphoreEventPair(escher_);
   command->AddSignalSemaphore(std::move(pair.first));
   session_->EnqueueAcquireFence(std::move(pair.second));
 
@@ -62,8 +62,8 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   }
   is_scenic_present_requested_ = true;
 
-  auto session_callback = [this, callbacks = std::move(callbacks_)]
-      (scenic::PresentationInfoPtr info) {
+  auto session_callback = [this, callbacks = std::move(callbacks_)](
+                              scenic::PresentationInfoPtr info) {
     FXL_DCHECK(is_scenic_present_requested_);
     is_scenic_present_requested_ = false;
     for (auto& callback : callbacks) {

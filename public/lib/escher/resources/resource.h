@@ -35,7 +35,8 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
 
   // Return our ResourceManager's VulkanContext.
   const VulkanContext& vulkan_context() const;
-  vk::Device device() const { return vulkan_context().device; }
+  vk::Device vk_device() const { return vulkan_context().device; }
+  Escher* escher() { return escher_; }
 
  protected:
   explicit Resource(ResourceManager* owner);
@@ -50,6 +51,7 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
   friend class impl::CommandBuffer;
 
  private:
+  Escher* const escher_;
   uint64_t sequence_number_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Resource);

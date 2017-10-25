@@ -41,8 +41,23 @@ VulkanDeviceQueues::ProcAddrs::ProcAddrs(
       extension_names.end()) {
     GET_DEVICE_PROC_ADDR(ImportSemaphoreFuchsiaHandleKHR);
     GET_DEVICE_PROC_ADDR(GetSemaphoreFuchsiaHandleKHR);
+    GET_DEVICE_PROC_ADDR(GetMemoryFuchsiaHandleKHR);
   }
 #endif
+}
+
+vk::ResultValueType<uint32_t>::type
+VulkanDeviceQueues::ProcAddrs::getMemoryFuchsiaHandleKHR(
+    const vk::Device& device,
+    const vk::MemoryGetFuchsiaHandleInfoKHR& getFuchsiaHandleInfo) const {
+  uint32_t fuchsiaHandle;
+  vk::Result result = static_cast<vk::Result>(GetMemoryFuchsiaHandleKHR(
+      device,
+      reinterpret_cast<const VkMemoryGetFuchsiaHandleInfoKHR*>(
+          &getFuchsiaHandleInfo),
+      &fuchsiaHandle));
+  return vk::createResultValue(result, fuchsiaHandle,
+                               "vk::Device::getMemoryFuchsiaHandleKHR");
 }
 
 namespace {

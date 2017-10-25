@@ -8,9 +8,9 @@
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
-#include "garnet/bin/ui/scene_manager/util/escher_utils.h"
 
 #include "lib/escher/escher.h"
+#include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
 
 namespace scene_manager {

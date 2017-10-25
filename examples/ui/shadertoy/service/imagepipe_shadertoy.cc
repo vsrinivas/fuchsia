@@ -4,8 +4,8 @@
 
 #include "garnet/examples/ui/shadertoy/service/imagepipe_shadertoy.h"
 
-#include "garnet/examples/ui/shadertoy/service/escher_utils.h"
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
+#include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/simple_image_factory.h"
@@ -63,8 +63,10 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   for (size_t i = 0; i < kNumFramebuffers; ++i) {
     auto& fb = framebuffers_[i];
 
-    auto acquire_semaphore_pair = NewSemaphoreEventPair(escher());
-    auto release_semaphore_pair = NewSemaphoreEventPair(escher());
+    auto acquire_semaphore_pair =
+        escher::NewSemaphoreEventPair(escher());
+    auto release_semaphore_pair =
+        escher::NewSemaphoreEventPair(escher());
     if (!acquire_semaphore_pair.first || !release_semaphore_pair.first) {
       FXL_LOG(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
@@ -77,7 +79,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     release_semaphore_pair.second.signal(0u, kFenceSignalled);
 
     auto image = factory.NewImage(escher_image_info);
-    zx::vmo vmo = ExportMemoryAsVMO(escher(), image->memory());
+    zx::vmo vmo = escher::ExportMemoryAsVmo(escher(), image->memory());
     if (!vmo) {
       FXL_LOG(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();

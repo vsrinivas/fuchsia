@@ -50,6 +50,10 @@ class VulkanDeviceQueues
     PFN_vkImportSemaphoreFuchsiaHandleKHR ImportSemaphoreFuchsiaHandleKHR =
         nullptr;
     PFN_vkGetSemaphoreFuchsiaHandleKHR GetSemaphoreFuchsiaHandleKHR = nullptr;
+    PFN_vkGetMemoryFuchsiaHandleKHR GetMemoryFuchsiaHandleKHR = nullptr;
+    vk::ResultValueType<uint32_t>::type getMemoryFuchsiaHandleKHR(
+        const vk::Device& device,
+        const vk::MemoryGetFuchsiaHandleInfoKHR& getFuchsiaHandleInfo) const;
 #endif
   };
 

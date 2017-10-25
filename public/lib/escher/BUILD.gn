@@ -245,6 +245,10 @@ source_set("escher") {
   if (is_fuchsia) {
     public_deps += [ "//garnet/public/lib/vulkan" ]
     deps += [ "//zircon/system/ulib/trace" ]
+    sources += [
+      "util/fuchsia_utils.cc",
+      "util/fuchsia_utils.h",
+    ]
   }
 
   if (is_linux) {

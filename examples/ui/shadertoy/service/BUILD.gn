@@ -10,8 +10,6 @@ executable("service") {
     "app.h",
     "compiler.cc",
     "compiler.h",
-    "escher_utils.cc",
-    "escher_utils.h",
     "glm_hack.h",
     "imagepipe_shadertoy.cc",
     "imagepipe_shadertoy.h",

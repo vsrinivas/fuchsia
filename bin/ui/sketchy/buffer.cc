@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/sketchy/buffer.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/command_buffer_pool.h"
+#include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
 
 namespace {
@@ -26,10 +27,10 @@ const vk::MemoryPropertyFlags kMemoryPropertyFlags =
 std::unique_ptr<scenic_lib::Buffer> NewScenicBufferFromEscherBuffer(
     const escher::BufferPtr& buffer,
     scenic_lib::Session* session) {
-  auto result = buffer->device().exportMemoryMAGMA(buffer->mem()->base());
-  FXL_CHECK(result.result == vk::Result::eSuccess);
+  zx::vmo vmo =
+      escher::ExportMemoryAsVmo(buffer->escher(), buffer->mem());
 
-  scenic_lib::Memory memory(session, zx::vmo(result.value),
+  scenic_lib::Memory memory(session, std::move(vmo),
                             scenic::MemoryType::VK_DEVICE_MEMORY);
   return std::make_unique<scenic_lib::Buffer>(memory, 0, buffer->size());
 }

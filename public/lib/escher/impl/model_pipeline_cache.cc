@@ -177,8 +177,8 @@ ModelPipelineCache::ModelPipelineCache(ResourceRecycler* recycler,
 
 ModelPipelineCache::~ModelPipelineCache() {
   pipelines_.clear();
-  device().destroyRenderPass(depth_prepass_);
-  device().destroyRenderPass(lighting_pass_);
+  vk_device().destroyRenderPass(depth_prepass_);
+  vk_device().destroyRenderPass(lighting_pass_);
 }
 
 ModelPipeline* ModelPipelineCache::GetPipeline(const ModelPipelineSpec& spec) {
