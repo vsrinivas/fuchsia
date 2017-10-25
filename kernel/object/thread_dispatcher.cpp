@@ -127,6 +127,8 @@ zx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe
                unsafe ? "unsafe" : "safe");
         return status;
     }
+    const char* name = unsafe ? "unsafe-stack" : "safe-stack";
+    stack_vmo->set_name(name, strlen(name));
 
     // create a vmar with enough padding for a page before and after the stack
     const size_t padding_size = PAGE_SIZE;
