@@ -40,6 +40,7 @@ THINLTO_CACHE_DIR ?= $(BUILDDIR)/thinlto-cache
 LKNAME ?= zircon
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
+HOST_USE_ASAN ?= false
 
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),true)
 ENABLE_BUILD_SYSROOT := false
@@ -701,6 +702,10 @@ endif
 
 ifneq ($(HOST_SYSROOT),)
 HOST_COMPILEFLAGS += --sysroot=$(HOST_SYSROOT)
+endif
+
+ifeq ($(call TOBOOL,$(HOST_USE_ASAN)),true)
+HOST_COMPILEFLAGS += -fsanitize=address
 endif
 
 # the logic to compile and link stuff is in here
