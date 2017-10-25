@@ -803,10 +803,7 @@ zx_status_t Station::SendEapolRequest(EapolRequestPtr req) {
     hdr->fc.set_type(kData);
     hdr->fc.set_to_ds(1);
 
-    // TODO(hahnr): Address 1 should be the BSSID as well, however, our setup somehow is not able
-    // to send such packets. Sending 0xFF...FF is just a dirty work around until the actual problem
-    // is fixed.
-    hdr->addr1.Set(kBcastMac);
+    hdr->addr1.Set(req->dst_addr.data());
     hdr->addr2.Set(req->src_addr.data());
     hdr->addr3.Set(req->dst_addr.data());
 
