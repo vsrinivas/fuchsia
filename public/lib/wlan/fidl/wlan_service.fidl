@@ -36,6 +36,7 @@ struct ScanResult {
 
 struct ConnectConfig {
   string ssid;
+  string passPhrase;
   uint8  scanInterval; // seconds
 };
 

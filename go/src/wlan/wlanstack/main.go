@@ -83,6 +83,7 @@ func (ws *Wlanstack) Connect(sc wlan_service.ConnectConfig) (wserr wlan_service.
 	}
 	cfg := wlan.NewConfig()
 	cfg.SSID = sc.Ssid
+	cfg.Password = sc.PassPhrase
 	cfg.ScanInterval = int(sc.ScanInterval)
 	respC := make(chan *wlan.CommandResult, 1)
 	cli.PostCommand(wlan.CmdSetScanConfig, cfg, respC)
