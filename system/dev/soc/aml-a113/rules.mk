@@ -13,8 +13,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/a113-bus.c \
     $(LOCAL_DIR)/a113-gpio.c \
     $(LOCAL_DIR)/a113-usb.c \
+    $(LOCAL_DIR)/aml-i2c.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver \
                system/ulib/c \
