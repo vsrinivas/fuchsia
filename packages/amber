@@ -7,7 +7,6 @@
         "//garnet/go/src/amber:amber-publish(//build/toolchain:host_x64)"
     ],
     "packages": {
-        "amber": "//garnet/go/src/amber",
-        "amber_test" : "//garnet/go/src/amber:amber_test"
+        "amber": "//garnet/go/src/amber"
     }
 }
