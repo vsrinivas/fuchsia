@@ -405,6 +405,7 @@ zx_status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, u
     zx_status_t status = VmObjectPhysical::Create(paddr, size, &vmo);
     if (status != ZX_OK)
         return status;
+    vmo->set_name(name, strlen(name));
 
     // force it to be mapped up front
     // TODO: add new flag to precisely mean pre-map
@@ -438,6 +439,7 @@ zx_status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr,
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
     if (status != ZX_OK)
         return status;
+    vmo->set_name(name, strlen(name));
 
     // always immediately commit memory to the object
     uint64_t committed;
