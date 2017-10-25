@@ -122,8 +122,10 @@ static bool out_of_memory(void* context) {
     EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
 
     // Allocate all of the data objects.
-    void** objs = reinterpret_cast<void**>(malloc(sizeof(void*) * num_slots));
-    void** top = objs;
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<void*[]> objs = fbl::unique_ptr<void*[]>(new (&ac) void*[num_slots]);
+    EXPECT_TRUE(ac.check(), "");
+    void** top = &objs[0];
     for (size_t i = 0; i < num_slots; i++) {
         char msg[32];
         snprintf(msg, sizeof(msg), "[%zu]", i);
@@ -151,11 +153,10 @@ static bool out_of_memory(void* context) {
 
     // Free all objects.
     // Nothing much to check except that it doesn't crash.
-    while (top > objs) {
+    while (top > objs.get()) {
         arena.Free(*--top);
     }
 
-    free(objs);
     END_TEST;
 }
 
@@ -307,8 +308,10 @@ static bool uncommitting_tests(void* context) {
 
     // Allocate all of the data objects. Hold onto the pointers so we can free
     // them.
-    void** objs = reinterpret_cast<void**>(malloc(sizeof(void*) * num_slots));
-    void** top = objs;
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<void*[]> objs = fbl::unique_ptr<void*[]>(new (&ac) void*[num_slots]);
+    EXPECT_TRUE(ac.check(), "");
+    void** top = &objs[0];
     for (size_t i = 0; i < num_slots; i++) {
         char msg[32];
         snprintf(msg, sizeof(msg), "[%zu]", i);
@@ -339,7 +342,7 @@ static bool uncommitting_tests(void* context) {
     EXPECT_GT(uncommitted, 0u, "");
 
     // Free all of the data objects.
-    while (top > objs) {
+    while (top > objs.get()) {
         arena.Free(*--top);
     }
 
@@ -353,7 +356,7 @@ static bool uncommitting_tests(void* context) {
     // Allocate half of the data objects, freeing up half of the free nodes
     // (and thus half of the control slots).
     auto orig_committed = committed;
-    REQUIRE_EQ(top, objs, "");
+    REQUIRE_EQ(top, objs.get(), "");
     for (size_t i = 0; i < num_slots / 2; i++) {
         char msg[32];
         snprintf(msg, sizeof(msg), "[%zu]", i);
@@ -406,7 +409,6 @@ static bool uncommitting_tests(void* context) {
     EXPECT_EQ(committed, orig_committed, "");
     EXPECT_GT(uncommitted, 0u, "");
 
-    free(objs);
     END_TEST;
 }
 
