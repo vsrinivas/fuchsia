@@ -343,7 +343,7 @@ void MsdArmDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, 
     device_request_semaphore_->Signal();
 }
 
-void MsdArmDevice::DumpRegisters(RegisterIo* io, DumpState* dump_state)
+void MsdArmDevice::DumpRegisters(const GpuFeatures& features, RegisterIo* io, DumpState* dump_state)
 {
     static struct {
         const char* name;
@@ -371,21 +371,25 @@ void MsdArmDevice::DumpRegisters(RegisterIo* io, DumpState* dump_state)
     dump_state->gpu_fault_status = registers::GpuFaultStatus::Get().ReadFrom(io).reg_value();
     dump_state->gpu_fault_address = registers::GpuFaultAddress::Get().ReadFrom(io).reg_value();
 
-    for (size_t i = 0; i < arraysize(dump_state->job_slot_status); i++) {
-        dump_state->job_slot_status[i] =
-            registers::JobSlotRegisters(i).Status().ReadFrom(io).reg_value();
+    for (size_t i = 0; i < features.job_slot_count; i++) {
+        dump_state->job_slot_status.push_back(
+            registers::JobSlotRegisters(i).Status().ReadFrom(io).reg_value());
     }
 
-    for (size_t i = 0; i < arraysize(dump_state->address_space_status); i++) {
-        auto* status = &dump_state->address_space_status[i];
+    for (size_t i = 0; i < features.address_space_count; i++) {
+        DumpState::AddressSpaceStatus status;
         auto as_regs = registers::AsRegisters(i);
-        status->status = as_regs.Status().ReadFrom(io).reg_value();
-        status->fault_status = as_regs.FaultStatus().ReadFrom(io).reg_value();
-        status->fault_address = as_regs.FaultAddress().ReadFrom(io).reg_value();
+        status.status = as_regs.Status().ReadFrom(io).reg_value();
+        status.fault_status = as_regs.FaultStatus().ReadFrom(io).reg_value();
+        status.fault_address = as_regs.FaultAddress().ReadFrom(io).reg_value();
+        dump_state->address_space_status.push_back(status);
     }
 }
 
-void MsdArmDevice::Dump(DumpState* dump_state) { DumpRegisters(register_io_.get(), dump_state); }
+void MsdArmDevice::Dump(DumpState* dump_state)
+{
+    DumpRegisters(gpu_features_, register_io_.get(), dump_state);
+}
 
 void MsdArmDevice::DumpToString(std::string& dump_string)
 {
@@ -404,11 +408,11 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
     }
     fxl::StringAppendf(&dump_string, "Gpu fault status 0x%x, address 0x%lx\n",
                        dump_state.gpu_fault_status, dump_state.gpu_fault_address);
-    for (size_t i = 0; i < arraysize(dump_state.job_slot_status); i++) {
+    for (size_t i = 0; i < dump_state.job_slot_status.size(); i++) {
         fxl::StringAppendf(&dump_string, "Job slot %zu status %x\n", i,
                            dump_state.job_slot_status[i]);
     }
-    for (size_t i = 0; i < arraysize(dump_state.address_space_status); i++) {
+    for (size_t i = 0; i < dump_state.address_space_status.size(); i++) {
         auto* status = &dump_state.address_space_status[i];
         fxl::StringAppendf(&dump_string,
                            "AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n", i,

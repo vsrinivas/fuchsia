@@ -59,6 +59,9 @@ struct GpuFeatures {
     uint64_t l2_present;
     uint64_t stack_present;
 
+    uint32_t job_slot_count;
+    uint32_t address_space_count;
+
     void ReadFrom(RegisterIo* io)
     {
         gpu_id = registers::GpuId::Get().ReadFrom(io);
@@ -84,6 +87,11 @@ struct GpuFeatures {
         tiler_present = ReadPair(io, kTilerPresentLowOffset);
         l2_present = ReadPair(io, kL2PresentLowOffset);
         stack_present = ReadPair(io, kStackPresentLowOffset);
+
+        job_slot_count = __builtin_popcount(job_slot_present);
+        address_space_count = __builtin_popcount(address_space_present);
+        DASSERT((1 << job_slot_count) - 1 == job_slot_present);
+        DASSERT((1 << address_space_count) - 1 == address_space_present);
     }
 
 private:

@@ -34,19 +34,21 @@ public:
         EXPECT_EQ(0u, dump_state.gpu_fault_status);
         EXPECT_EQ(0u, dump_state.gpu_fault_address);
 
-        for (size_t i = 0; i < arraysize(dump_state.job_slot_status); i++)
+        EXPECT_EQ(3u, dump_state.job_slot_status.size());
+        for (size_t i = 0; i < dump_state.job_slot_status.size(); i++)
             EXPECT_EQ(0u, dump_state.job_slot_status[i]);
 
-        for (size_t i = 0; i < arraysize(dump_state.address_space_status); i++)
+        EXPECT_EQ(8u, dump_state.address_space_status.size());
+        for (size_t i = 0; i < dump_state.address_space_status.size(); i++)
             EXPECT_EQ(0u, dump_state.address_space_status[i].status);
 
         std::string dump_string;
         device->FormatDump(dump_state, dump_string);
         EXPECT_NE(nullptr,
                   strstr(dump_string.c_str(), "Core type L2 Cache state Present bitmap: 0x1"));
-        EXPECT_NE(nullptr, strstr(dump_string.c_str(), "Job slot 5 status 0"));
+        EXPECT_NE(nullptr, strstr(dump_string.c_str(), "Job slot 2 status 0"));
         EXPECT_NE(nullptr, strstr(dump_string.c_str(),
-                                  "AS 10 status 0x0 fault status 0x0 fault address 0x0"));
+                                  "AS 7 status 0x0 fault status 0x0 fault address 0x0"));
     }
 
     void MockDump()
@@ -68,7 +70,10 @@ public:
         registers::JobSlotRegisters(2).Status().FromValue(10).WriteTo(reg_io.get());
 
         MsdArmDevice::DumpState dump_state;
-        MsdArmDevice::DumpRegisters(reg_io.get(), &dump_state);
+        GpuFeatures features;
+        features.address_space_count = 9;
+        features.job_slot_count = 7;
+        MsdArmDevice::DumpRegisters(features, reg_io.get(), &dump_state);
         bool found = false;
         for (auto& pstate : dump_state.power_states) {
             if (std::string("Shader") == pstate.core_type &&

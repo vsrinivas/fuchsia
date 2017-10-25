@@ -59,15 +59,15 @@ public:
         uint32_t gpu_fault_status;
         uint64_t gpu_fault_address;
 
-        uint32_t job_slot_status[16];
+        std::vector<uint32_t> job_slot_status;
         struct AddressSpaceStatus {
             uint32_t status;
             uint32_t fault_status;
             uint64_t fault_address;
         };
-        AddressSpaceStatus address_space_status[16];
+        std::vector<AddressSpaceStatus> address_space_status;
     };
-    static void DumpRegisters(RegisterIo* io, DumpState* dump_state);
+    static void DumpRegisters(const GpuFeatures& features, RegisterIo* io, DumpState* dump_state);
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
     void FormatDump(DumpState& dump_state, std::string& dump_string);
