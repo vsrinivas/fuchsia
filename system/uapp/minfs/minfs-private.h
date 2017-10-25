@@ -400,8 +400,6 @@ void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino);
 
 int minfs_mkfs(fbl::unique_ptr<Bcache> bc);
 
-#ifdef __Fuchsia__
-
 class MinfsChecker {
 public:
     MinfsChecker();
@@ -448,7 +446,6 @@ private:
 };
 
 zx_status_t minfs_check(fbl::unique_ptr<Bcache> bc);
-#endif
 
 zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* root_out, fbl::unique_ptr<Bcache> bc);
 

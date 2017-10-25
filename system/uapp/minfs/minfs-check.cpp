@@ -20,8 +20,18 @@ zx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, ino_t ino) {
     }
     blk_t bno_of_ino = ino / kMinfsInodesPerBlock;
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
+
+#ifdef __Fuchsia__
     uintptr_t iaddr = reinterpret_cast<uintptr_t>(fs_->inode_table_->GetData()) +
                       bno_of_ino * kMinfsBlockSize + off_of_ino;
+#else
+    char data[kMinfsBlockSize];
+    zx_status_t status;
+    if ((status = fs_->bc_->Readblk(fs_->info_.ino_block + bno_of_ino, data)) != ZX_OK) {
+        return status;
+    }
+    uintptr_t iaddr = reinterpret_cast<uintptr_t>(data + off_of_ino);
+#endif
     memcpy(inode, reinterpret_cast<void*>(iaddr), kMinfsInodeSize);
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
         FS_TRACE_ERROR("check: ino %u has bad magic %#x\n", ino, inode->magic);

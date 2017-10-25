@@ -37,11 +37,7 @@ extern fbl::RefPtr<minfs::VnodeMinfs> fake_root;
 namespace {
 
 int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
-#ifdef __Fuchsia__
     return minfs_check(fbl::move(bc));
-#else
-    return -1;
-#endif
 }
 
 #ifdef __Fuchsia__

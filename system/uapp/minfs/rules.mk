@@ -71,6 +71,7 @@ MODULE_TYPE := hostapp
 MODULE_SRCS := \
     $(MODULE_HOST_SRCS) \
     $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/minfs-check.cpp \
 
 MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
 
