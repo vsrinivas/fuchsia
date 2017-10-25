@@ -8,7 +8,7 @@ rust_library("fidl") {
   deps = [
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/tokio-fuchsia",
-    "//third_party/rust-crates:byteorder-0.5.3",
+    "//third_party/rust-crates:byteorder-1.1.0",
     "//third_party/rust-crates:futures-0.1.16",
     "//third_party/rust-mirrors/mio",
     "//third_party/rust-mirrors/tokio-core",
