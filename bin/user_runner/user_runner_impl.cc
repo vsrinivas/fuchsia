@@ -462,17 +462,6 @@ void UserRunnerImpl::Logout() {
   user_context_->Logout();
 }
 
-void UserRunnerImpl::LogoutAndResetLedgerState() {
-  ledger_repository_factory_->EraseRepository(
-      "/data", GetCloudProvider(), [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << "EraseRepository failed: " << status
-                         << "Logging out.";
-        }
-        user_context_->Logout();
-      });
-}
-
 void UserRunnerImpl::SetupLedger() {
   // Start the ledger.
   AppConfigPtr ledger_config = AppConfig::New();

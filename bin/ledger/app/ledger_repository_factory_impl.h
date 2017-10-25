@@ -35,10 +35,6 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
       fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
-  void EraseRepository(
-      const fidl::String& repository_path,
-      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-      const EraseRepositoryCallback& callback) override;
 
   void CreateRepository(LedgerRepositoryContainer* container,
                         const RepositoryInformation& repository_information,

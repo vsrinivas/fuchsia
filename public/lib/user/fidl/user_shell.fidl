@@ -57,12 +57,4 @@ interface UserShellContext {
   // Requests logout of the user. This causes the device runner to tear down the
   // |UserRunner| instance of the user.
   Logout();
-
-  // For development only.
-  //
-  // Developers need a convenient way to reset the Ledger state to a clean slate
-  // without requiring reauthentication. This method clears the Ledger state
-  // both locally and in the cloud. The user is automatically logged out in the
-  // process.
-  LogoutAndResetLedgerState();
 };

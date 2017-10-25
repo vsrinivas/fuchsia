@@ -24,8 +24,6 @@ namespace {
 constexpr fxl::StringView kContentPath = "/content";
 constexpr fxl::StringView kStagingPath = "/staging";
 
-const char kCloudDashboardUrl[] = "https://fuchsia-ledger.firebaseapp.com";
-
 bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
   std::string name_path = repository_path.get() + "/name";
 
@@ -219,16 +217,6 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   user_config.user_directory = repository_information.content_path;
   user_config.cloud_provider = std::move(cloud_provider_ptr);
   CreateRepository(container, repository_information, std::move(user_config));
-}
-
-void LedgerRepositoryFactoryImpl::EraseRepository(
-    const fidl::String& repository_path,
-    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    const EraseRepositoryCallback& callback) {
-  FXL_LOG(ERROR) << "On-device Ledger erase is no longer supported. "
-                 << "In order to erase Ledger state, visit "
-                 << kCloudDashboardUrl;
-  FXL_NOTIMPLEMENTED();
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(

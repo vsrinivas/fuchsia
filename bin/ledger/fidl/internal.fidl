@@ -28,18 +28,6 @@ interface LedgerRepositoryFactory {
   GetRepository(string repository_path,
                 cloud_provider.CloudProvider? cloud_provider,
                 LedgerRepository& repository) => (Status status);
-
-  // Erases the data stored in the given repository, both locally and in the
-  // cloud.
-  //
-  // Note that there is no undo and no confirmation step on this level - the
-  // caller needs to ensure that this is only called when intended.
-  //
-  // Parameters:
-  // |cloud_provider| is used by the Ledger to synchronize data through the
-  //     cloud, passing null only clears the local state.
-  EraseRepository(string repository_path,
-                  cloud_provider.CloudProvider? cloud_provider) => (Status status);
 };
 
 // Controller interface for the Ledger application lifecycle.

@@ -98,7 +98,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<VisibleStoriesController> request) override;
   void Logout() override;
-  void LogoutAndResetLedgerState() override;
 
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
