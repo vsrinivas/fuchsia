@@ -32,9 +32,9 @@ source "${FUCHSIA_DIR}/scripts/devshell/env.sh"
 function __netaddr() {
   # We want to give the user time to accept Darwin's firewall dialog.
   if [[ "$(uname -s)" = "Darwin" ]]; then
-    netaddr "$@"
+    "${FUCHSIA_OUT_DIR}/build-zircon/tools/netaddr" "$@"
   else
-    netaddr --nowait "$@"
+    "${FUCHSIA_OUT_DIR}/build-zircon/tools/netaddr" --nowait "$@"
   fi
 }
 
@@ -734,14 +734,17 @@ go() {
 }
 
 function fssh() {
+  fcheck || return 1
   SSH_AUTH_SOCK="" ssh -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
 }
 
 function fscp() {
+  fcheck || return 1
   SSH_AUTH_SOCK="" scp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
 }
 
 function fsftp() {
+  fcheck || return 1
   SSH_AUTH_SOCK="" sftp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
 }
 
