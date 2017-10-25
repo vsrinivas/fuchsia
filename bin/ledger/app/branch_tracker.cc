@@ -30,11 +30,13 @@ class BranchTracker::PageWatcherContainer {
         key_prefix_(std::move(key_prefix)),
         manager_(page_manager),
         storage_(storage),
-        interface_(std::move(watcher)) {
+        interface_(std::move(watcher)),
+        weak_factory_(this) {
     interface_.set_connection_error_handler([this] {
       if (handler_) {
         handler_->Continue(true);
       }
+      FXL_DCHECK(!handler_);
       if (on_empty_callback_) {
         on_empty_callback_();
       }
@@ -182,64 +184,70 @@ class BranchTracker::PageWatcherContainer {
     diff_utils::ComputePageChange(
         storage_, *last_commit_, *current_commit_, key_prefix_, key_prefix_,
         diff_utils::PaginationBehavior::NO_PAGINATION,
-        fxl::MakeCopyable([this, new_commit = std::move(current_commit_)](
-                              Status status,
-                              std::pair<PageChangePtr, std::string>
-                                  page_change_ptr) mutable {
-          if (status != Status::OK) {
-            // This change notification is abandonned. At the next commit,
-            // we will try again (but not before). The next notification
-            // will cover both this change and the next.
-            FXL_LOG(ERROR) << "Unable to compute PageChange for Watch update.";
-            change_in_flight_ = false;
-            return;
-          }
+        callback::MakeScoped(
+            weak_factory_.GetWeakPtr(),
+            fxl::MakeCopyable([this, new_commit = std::move(current_commit_)](
+                                  Status status,
+                                  std::pair<PageChangePtr, std::string>
+                                      page_change_ptr) mutable {
+              if (status != Status::OK) {
+                // This change notification is abandonned. At the next commit,
+                // we will try again (but not before). The next notification
+                // will cover both this change and the next.
+                FXL_LOG(ERROR)
+                    << "Unable to compute PageChange for Watch update.";
+                change_in_flight_ = false;
+                return;
+              }
 
-          if (!page_change_ptr.first) {
-            change_in_flight_ = false;
-            last_commit_.swap(new_commit);
-            SendCommit();
-            return;
-          }
-          std::vector<PageChangePtr> paginated_changes =
-              PaginateChanges(std::move(page_change_ptr.first));
-          if (paginated_changes.size() == 1) {
-            SendChange(std::move(paginated_changes[0]), ResultState::COMPLETED,
-                       std::move(new_commit), [] {});
-            return;
-          }
-          coroutine_service_->StartCoroutine(fxl::MakeCopyable(
-              [this, new_commit = std::move(new_commit),
-               paginated_changes = std::move(paginated_changes)](
-                  coroutine::CoroutineHandler* handler) mutable {
-                auto guard = fxl::MakeAutoCall([this] { handler_ = nullptr; });
-                FXL_DCHECK(!handler_);
-                handler_ = handler;
-                for (size_t i = 0; i < paginated_changes.size(); ++i) {
-                  ResultState state;
-                  if (i == 0) {
-                    state = ResultState::PARTIAL_STARTED;
-                  } else if (i == paginated_changes.size() - 1) {
-                    state = ResultState::PARTIAL_COMPLETED;
-                  } else {
-                    state = ResultState::PARTIAL_CONTINUED;
-                  }
-                  if (coroutine::SyncCall(
-                          handler,
-                          fxl::MakeCopyable(
-                              [this, change = std::move(paginated_changes[i]),
-                               state, new_commit = new_commit->Clone()](
-                                  fxl::Closure on_done) mutable {
-                                SendChange(std::move(change), state,
-                                           std::move(new_commit),
-                                           std::move(on_done));
+              if (!page_change_ptr.first) {
+                change_in_flight_ = false;
+                last_commit_.swap(new_commit);
+                SendCommit();
+                return;
+              }
+              std::vector<PageChangePtr> paginated_changes =
+                  PaginateChanges(std::move(page_change_ptr.first));
+              if (paginated_changes.size() == 1) {
+                SendChange(std::move(paginated_changes[0]),
+                           ResultState::COMPLETED, std::move(new_commit),
+                           [] {});
+                return;
+              }
+              coroutine_service_->StartCoroutine(fxl::MakeCopyable(
+                  [this, new_commit = std::move(new_commit),
+                   paginated_changes = std::move(paginated_changes)](
+                      coroutine::CoroutineHandler* handler) mutable {
+                    auto guard =
+                        fxl::MakeAutoCall([this] { handler_ = nullptr; });
+                    FXL_DCHECK(!handler_);
+                    handler_ = handler;
+                    for (size_t i = 0; i < paginated_changes.size(); ++i) {
+                      ResultState state;
+                      if (i == 0) {
+                        state = ResultState::PARTIAL_STARTED;
+                      } else if (i == paginated_changes.size() - 1) {
+                        state = ResultState::PARTIAL_COMPLETED;
+                      } else {
+                        state = ResultState::PARTIAL_CONTINUED;
+                      }
+                      if (coroutine::SyncCall(
+                              handler,
+                              fxl::MakeCopyable(
+                                  [this,
+                                   change = std::move(paginated_changes[i]),
+                                   state, new_commit = new_commit->Clone()](
+                                      fxl::Closure on_done) mutable {
+                                    SendChange(std::move(change), state,
+                                               std::move(new_commit),
+                                               std::move(on_done));
 
-                              }))) {
-                    return;
-                  }
-                }
-              }));
-        }));
+                                  }))) {
+                        return;
+                      }
+                    }
+                  }));
+            })));
   }
 
   fxl::Closure on_drained_ = nullptr;
@@ -253,6 +261,11 @@ class BranchTracker::PageWatcherContainer {
   PageManager* manager_;
   storage::PageStorage* storage_;
   PageWatcherPtr interface_;
+
+  // This must be the last member of the class.
+  fxl::WeakPtrFactory<PageWatcherContainer> weak_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherContainer);
 };
 
 BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
