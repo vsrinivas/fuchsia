@@ -18,6 +18,7 @@
 #include <platform.h>
 #include <mexec.h>
 #include "platform_p.h"
+#include <fbl/alloc_checker.h>
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
@@ -30,7 +31,6 @@
 #include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
-#include <malloc.h>
 #include <string.h>
 #include <assert.h>
 #include <lk/init.h>
@@ -784,21 +784,22 @@ static void platform_init_smp(void)
     }
 
     // allocate 2x the table for temporary work
-    uint32_t *apic_ids = static_cast<uint32_t *>(malloc(sizeof(*apic_ids) * num_cpus * 2));
-    if (!apic_ids) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint32_t[]> apic_ids =
+        fbl::unique_ptr<uint32_t[]>(new (&ac) uint32_t[num_cpus * 2]);
+    if (!ac.check()) {
         TRACEF("failed to allocate apic_ids table, disabling SMP\n");
         return;
     }
 
     // a temporary list used before we filter out hyperthreaded pairs
-    uint32_t *apic_ids_temp = apic_ids + num_cpus;
+    uint32_t *apic_ids_temp = &apic_ids[num_cpus];
 
     // find the list of all cpu apic ids into a temporary list
     uint32_t real_num_cpus;
     status = platform_enumerate_cpus(apic_ids_temp, num_cpus, &real_num_cpus);
     if (status != ZX_OK || num_cpus != real_num_cpus) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
-        free(apic_ids);
         return;
     }
 
@@ -860,19 +861,17 @@ static void platform_init_smp(void)
         ASSERT(found_bp);
     }
 
-    x86_init_smp(apic_ids, num_cpus);
+    x86_init_smp(apic_ids.get(), num_cpus);
 
     // trim the boot cpu out of the apic id list before passing to the AP booting routine
     for (uint i = 0; i < num_cpus - 1; ++i) {
         if (apic_ids[i] == bsp_apic_id) {
-            memmove(&apic_ids[i], &apic_ids[i+1], sizeof(*apic_ids) * (num_cpus - i - 1));
+            memmove(&apic_ids[i], &apic_ids[i+1], sizeof(apic_ids[0]) * (num_cpus - i - 1));
             break;
         }
     }
 
-    x86_bringup_aps(apic_ids, num_cpus - 1);
-
-    free(apic_ids);
+    x86_bringup_aps(apic_ids.get(), num_cpus - 1);
 }
 
 zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id)
