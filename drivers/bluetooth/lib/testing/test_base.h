@@ -27,11 +27,53 @@ class FakeControllerBase;
 
 // GTest Test harness derivative. GTest uses the top-level "testing" namespace
 // while the Bluetooth test utilities are in "bluetooth::testing".
-template <class FakeControllerType>
+// On top of base test, this provides a message loop.
 class TestBase : public ::testing::Test {
  public:
   TestBase() = default;
   virtual ~TestBase() = default;
+
+ protected:
+  // Pure-virtual overrides of ::testing::Test::SetUp() to force subclass
+  // override.
+  void SetUp() override = 0;
+
+  // ::testing::Test override:
+  void TearDown() override  {}
+
+  // Posts a delayed task to quit the message loop after |seconds| have elapsed.
+  void PostDelayedQuitTask(const fxl::TimeDelta time_delta) {
+    message_loop_.task_runner()->PostDelayedTask(
+        [this] { message_loop_.QuitNow(); }, time_delta);
+  }
+
+  // Runs the message loop for the specified amount of time. This is useful for
+  // callback-driven test cases in which the message loop may run forever if the
+  // callback is not run.
+  void RunMessageLoop(int64_t timeout_seconds = 10) {
+    RunMessageLoop(fxl::TimeDelta::FromSeconds(timeout_seconds));
+  }
+
+  void RunMessageLoop(const fxl::TimeDelta& time_delta) {
+    PostDelayedQuitTask(time_delta);
+    message_loop_.Run();
+  }
+
+  // Getters for internal fields frequently used by tests.
+  fsl::MessageLoop* message_loop() { return &message_loop_; }
+ private:
+  fsl::MessageLoop message_loop_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestBase);
+};
+
+// Test harness derivative that provides utilities faking a controller and test
+// devices.
+template <class FakeControllerType>
+class ControllerTest : public TestBase {
+ public:
+  ControllerTest() = default;
+  virtual ~ControllerTest() = default;
 
  protected:
   // Pure-virtual overrides of ::testing::Test::SetUp() to force subclass
@@ -61,36 +103,16 @@ class TestBase : public ::testing::Test {
     return hci_dev;
   }
 
-  // Posts a delayed task to quit the message loop after |seconds| have elapsed.
-  void PostDelayedQuitTask(const fxl::TimeDelta time_delta) {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] { message_loop_.QuitNow(); }, time_delta);
-  }
-
-  // Runs the message loop for the specified amount of time. This is useful for
-  // callback-driven test cases in which the message loop may run forever if the
-  // callback is not run.
-  void RunMessageLoop(int64_t timeout_seconds = 10) {
-    RunMessageLoop(fxl::TimeDelta::FromSeconds(timeout_seconds));
-  }
-
-  void RunMessageLoop(const fxl::TimeDelta& time_delta) {
-    PostDelayedQuitTask(time_delta);
-    message_loop_.Run();
-  }
-
   // Deletes |test_device_| and resets the pointer.
   void DeleteTestDevice() { test_device_ = nullptr; }
 
   // Getters for internal fields frequently used by tests.
   FakeControllerType* test_device() const { return test_device_.get(); }
-  fsl::MessageLoop* message_loop() { return &message_loop_; }
 
  private:
   std::unique_ptr<FakeControllerType> test_device_;
-  fsl::MessageLoop message_loop_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestBase);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ControllerTest);
   static_assert(
       std::is_base_of<FakeControllerBase, FakeControllerType>::value,
       "TestBase must be used with a derivative of FakeControllerBase");
@@ -98,7 +120,7 @@ class TestBase : public ::testing::Test {
 
 // This harness sets up a HCI Transport for transport-level tests.
 template <class FakeControllerType>
-class TransportTest : public TestBase<FakeControllerType> {
+class TransportTest : public ControllerTest<FakeControllerType> {
  public:
   TransportTest() = default;
   virtual ~TransportTest() = default;
@@ -107,13 +129,13 @@ class TransportTest : public TestBase<FakeControllerType> {
   // TestBase overrides:
   void SetUp() override {
     transport_ =
-        hci::Transport::Create(TestBase<FakeControllerType>::SetUpTestDevice());
+        hci::Transport::Create(ControllerTest<FakeControllerType>::SetUpTestDevice());
     transport_->Initialize();
   }
 
   void TearDown() override {
     transport_ = nullptr;
-    TestBase<FakeControllerType>::TearDown();
+    ControllerTest<FakeControllerType>::TearDown();
   }
 
   bool InitializeACLDataChannel(const hci::DataBufferInfo& bredr_buffer_info,
@@ -153,7 +175,7 @@ class TransportTest : public TestBase<FakeControllerType> {
     if (!data_received_callback_)
       return;
 
-    TestBase<FakeControllerType>::message_loop()->task_runner()->PostTask(
+    TestBase::message_loop()->task_runner()->PostTask(
         fxl::MakeCopyable([ this, packet = std::move(data_packet) ]() mutable {
           data_received_callback_(std::move(packet));
         }));

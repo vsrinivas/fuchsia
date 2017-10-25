@@ -20,7 +20,7 @@ namespace {
 
 using ::bluetooth::testing::FakeController;
 
-using TestingBase = ::bluetooth::testing::TestBase<FakeController>;
+using TestingBase = ::bluetooth::testing::ControllerTest<FakeController>;
 
 class AdapterTest : public TestingBase {
  public:
