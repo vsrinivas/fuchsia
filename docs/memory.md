@@ -251,8 +251,7 @@ None of the process-dumping tools account for:
 ### Dump system memory arenas and kernel heap usage
 
 Running `kstats -m` will continuously dump information about physical memory
-usage and availability. **NOTE**: Running `kstats` without the `-m` switch
-will dump CPU stats instead.
+usage and availability.
 
 ```
 $ kstats -m
