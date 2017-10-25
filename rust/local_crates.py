@@ -53,3 +53,20 @@ def get_all_paths(relative=False):
     def extract_paths(crate_data): return map(mapper, crate_data.iteritems())
     return (extract_paths(RUST_CRATES["published"]) +
             extract_paths(RUST_CRATES["mirrors"]))
+
+RUST_LAYERS = ["garnet", "peridot", "topaz", "third_party/rust-mirrors"]
+
+# Find every crate path in the Fuchsia tree, regardless of build speciality
+def get_really_all_paths():
+    crate_dirs = []
+    for layer in RUST_LAYERS:
+        for root, dirs, files in os.walk(os.path.join(ROOT_PATH, layer)):
+            for file in files:
+                if file == "Cargo.toml":
+                    crate_dirs.append(os.path.relpath(root, ROOT_PATH))
+                    break
+    return crate_dirs
+
+if __name__ == "__main__":
+    for path in get_really_all_paths():
+        print(path)
