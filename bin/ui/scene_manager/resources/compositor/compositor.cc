@@ -14,12 +14,12 @@
 #include "lib/escher/vk/image.h"
 
 #include "garnet/bin/ui/scene_manager/engine/session.h"
-#include "garnet/bin/ui/scene_manager/engine/swapchain.h"
 #include "garnet/bin/ui/scene_manager/resources/camera.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/layer_stack.h"
 #include "garnet/bin/ui/scene_manager/resources/dump_visitor.h"
 #include "garnet/bin/ui/scene_manager/resources/renderers/renderer.h"
+#include "garnet/bin/ui/scene_manager/swapchain/swapchain.h"
 
 namespace scene_manager {
 

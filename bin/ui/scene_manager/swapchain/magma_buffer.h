@@ -9,7 +9,7 @@
 #include <zx/event.h>
 #include <zx/vmo.h>
 
-#include "garnet/bin/ui/scene_manager/engine/magma_connection.h"
+#include "garnet/bin/ui/scene_manager/swapchain/magma_connection.h"
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 #include "lib/fxl/macros.h"
 

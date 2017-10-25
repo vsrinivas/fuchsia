@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/engine/magma_connection.h"
+#include "garnet/bin/ui/scene_manager/swapchain/magma_connection.h"
 
 #include <fcntl.h>
 #include <stdio.h>

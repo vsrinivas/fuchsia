@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"
+#include "garnet/bin/ui/scene_manager/swapchain/display_swapchain.h"
 
 #include <trace/event.h>
 

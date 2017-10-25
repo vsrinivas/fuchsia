@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/bin/ui/scene_manager/engine/swapchain.h"
+#include "garnet/bin/ui/scene_manager/swapchain/swapchain.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
 
 namespace escher {

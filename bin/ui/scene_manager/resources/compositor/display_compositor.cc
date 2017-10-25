@@ -5,7 +5,7 @@
 #include "garnet/bin/ui/scene_manager/resources/compositor/display_compositor.h"
 
 #include "garnet/bin/ui/scene_manager/displays/display.h"
-#include "garnet/bin/ui/scene_manager/engine/display_swapchain.h"
+#include "garnet/bin/ui/scene_manager/swapchain/swapchain.h"
 
 namespace scene_manager {
 

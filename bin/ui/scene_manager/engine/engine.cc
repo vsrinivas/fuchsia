@@ -12,9 +12,9 @@
 #include "garnet/bin/ui/scene_manager/engine/frame_timings.h"
 #include "garnet/bin/ui/scene_manager/engine/session.h"
 #include "garnet/bin/ui/scene_manager/engine/session_handler.h"
-#include "garnet/bin/ui/scene_manager/engine/vulkan_display_swapchain.h"
 #include "garnet/bin/ui/scene_manager/resources/compositor/compositor.h"
 #include "garnet/bin/ui/scene_manager/resources/nodes/traversal.h"
+#include "garnet/bin/ui/scene_manager/swapchain/vulkan_display_swapchain.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/fxl/functional/make_copyable.h"
 

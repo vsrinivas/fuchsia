@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/bin/ui/scene_manager/engine/swapchain.h"
+#include "garnet/bin/ui/scene_manager/swapchain/swapchain.h"
 
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/resources/resource_recycler.h"
