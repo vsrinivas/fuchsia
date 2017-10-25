@@ -104,6 +104,9 @@ class SharedBufferSetAllocator : public SharedBufferSet {
 
   ~SharedBufferSetAllocator() override;
 
+  // Resets the object to its initial state.
+  void Reset() override;
+
   // Configures the allocator to use a single buffer of the specified size for
   // all allocations. |AllocateRegion| fails if the requested allocation cannot
   // be accommodated using the single VMO. This method should be called before

@@ -77,7 +77,7 @@ class SharedBufferSet {
   void RemoveBuffer(uint32_t buffer_id);
 
   // Resets the object to its initial state.
-  void Reset();
+  virtual void Reset();
 
   // Validates a locator and size, verifying that the locator's buffer id
   // references an active buffer and that the locator's offset and size

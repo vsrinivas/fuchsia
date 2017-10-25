@@ -12,6 +12,20 @@ SharedBufferSetAllocator::SharedBufferSetAllocator(uint32_t local_map_flags,
 
 SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
 
+void SharedBufferSetAllocator::Reset() {
+  fxl::MutexLocker locker(&mutex_);
+
+  use_fixed_buffer_ = false;
+  buffers_.clear();
+  free_whole_buffer_ids_by_size_.clear();
+  active_sliced_buffer_id_ = kNullBufferId;
+  while (!buffer_updates_.empty()) {
+    buffer_updates_.pop();
+  }
+
+  SharedBufferSet::Reset();
+}
+
 bool SharedBufferSetAllocator::SetFixedBufferSize(uint64_t size) {
   FXL_DCHECK(size != 0);
 
@@ -52,6 +66,11 @@ void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
   FXL_DCHECK(ptr != nullptr);
 
   fxl::MutexLocker locker(&mutex_);
+
+  if (buffers_.empty()) {
+    // Freeing after |Reset|.
+    return;
+  }
 
   Locator locator = LocatorFromPtr(ptr);
   if (!locator) {

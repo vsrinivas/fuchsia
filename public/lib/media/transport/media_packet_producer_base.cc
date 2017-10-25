@@ -36,6 +36,8 @@ void MediaPacketProducerBase::Connect(
 
   FLOG(log_channel_, ConnectedTo(FLOG_PTR_KOID(consumer)));
 
+  allocator_.Reset();
+
   consumer_ = std::move(consumer);
   consumer_.set_connection_error_handler([this]() {
     consumer_.reset();
