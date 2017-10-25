@@ -159,11 +159,11 @@ const map<string, Generator&>& get_type_to_generator() {
     return type_to_generator;
 }
 
-bool SysgenGenerator::AddSyscall(Syscall& syscall) {
+bool SysgenGenerator::AddSyscall(Syscall&& syscall) {
     if (!syscall.validate())
         return false;
     syscall.assign_index(&next_index_);
-    calls_.push_back(syscall);
+    calls_.emplace_back(std::move(syscall));
     return true;
 }
 

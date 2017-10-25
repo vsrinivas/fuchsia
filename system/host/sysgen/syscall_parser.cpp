@@ -86,7 +86,7 @@ bool parse_arrayspec(TokenStream* ts, TypeSpec* type_spec) {
         return false;
     }
 
-    type_spec->arr_spec = new ArraySpec{ArraySpec::IN, count, name};
+    type_spec->arr_spec.reset(new ArraySpec{ArraySpec::IN, count, name});
     return true;
 }
 
@@ -146,7 +146,7 @@ bool parse_argpack(TokenStream* ts, vector<TypeSpec>* v) {
 
         if (!parse_typespec(ts, &type_spec))
             return false;
-        v->emplace_back(type_spec);
+        v->emplace_back(std::move(type_spec));
     }
     return true;
 }
@@ -189,7 +189,8 @@ bool process_syscall(SysgenGenerator* parser, TokenStream& ts) {
         if (syscall.ret_spec.size() > 1) {
             std::for_each(syscall.ret_spec.begin() + 1, syscall.ret_spec.end(),
                           [](TypeSpec& type_spec) {
-                              type_spec.arr_spec = new ArraySpec{ArraySpec::OUT, 1, ""};
+                              type_spec.arr_spec.reset(
+                                  new ArraySpec{ArraySpec::OUT, 1, ""});
                           });
         }
     } else if (return_spec != ";") {
@@ -197,5 +198,5 @@ bool process_syscall(SysgenGenerator* parser, TokenStream& ts) {
         return false;
     }
 
-    return parser->AddSyscall(syscall);
+    return parser->AddSyscall(std::move(syscall));
 }

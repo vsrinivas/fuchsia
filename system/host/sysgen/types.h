@@ -38,7 +38,7 @@ struct TypeSpec {
     std::string name;
     std::string type;
     std::vector<std::string> attributes;
-    ArraySpec* arr_spec = nullptr;
+    std::unique_ptr<ArraySpec> arr_spec;
 
     std::string to_string() const;
     std::string as_cpp_declaration(bool is_wrapped) const;
@@ -47,6 +47,11 @@ struct TypeSpec {
 };
 
 struct Syscall {
+    // Move-only.
+    Syscall(Syscall&&) = default;
+    Syscall(const Syscall&) = delete;
+    Syscall& operator=(const Syscall&) = delete;
+
     FileCtx fc;
     std::string name;
     int index = -1;
