@@ -122,6 +122,43 @@ bool TestRandomize(void) {
     END_TEST;
 }
 
+bool TestIncrement(void) {
+    BEGIN_TEST;
+    Bytes bytes;
+    EXPECT_ZX(bytes.Increment(), ZX_ERR_OUT_OF_RANGE);
+
+    ASSERT_OK(bytes.Resize(1));
+    EXPECT_OK(bytes.Increment());
+    EXPECT_EQ(bytes[0], 1U);
+    bytes[0] = 0xFF;
+    EXPECT_ZX(bytes.Increment(), ZX_ERR_OUT_OF_RANGE);
+
+    ASSERT_OK(bytes.Resize(2));
+    EXPECT_OK(bytes.Increment());
+    EXPECT_EQ(bytes[0], 0U);
+    EXPECT_EQ(bytes[1], 1U);
+    EXPECT_OK(bytes.Increment());
+    EXPECT_EQ(bytes[0], 0U);
+    EXPECT_EQ(bytes[1], 2U);
+    bytes[1] = 0xFF;
+    EXPECT_OK(bytes.Increment());
+    EXPECT_EQ(bytes[0], 1U);
+    EXPECT_EQ(bytes[1], 0U);
+    bytes[0] = 0xFF;
+    bytes[1] = 0xFF;
+    EXPECT_ZX(bytes.Increment(), ZX_ERR_OUT_OF_RANGE);
+
+    ASSERT_OK(bytes.Resize(3));
+    bytes[0] = 0;
+    bytes[1] = 0;
+    bytes[2] = 1;
+    EXPECT_OK(bytes.Increment());
+    EXPECT_EQ(bytes[0], 0U);
+    EXPECT_EQ(bytes[1], 0U);
+    EXPECT_EQ(bytes[2], 2U);
+    END_TEST;
+}
+
 bool TestRelease(void) {
     BEGIN_TEST;
     Bytes bytes;
@@ -199,6 +236,7 @@ RUN_TEST(TestInit)
 RUN_TEST(TestResize)
 RUN_TEST(TestCopy)
 RUN_TEST(TestRandomize)
+RUN_TEST(TestIncrement)
 RUN_TEST(TestRelease)
 RUN_TEST(TestReset)
 RUN_TEST(TestArrayAccess)

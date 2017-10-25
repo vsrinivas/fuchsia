@@ -116,6 +116,21 @@ zx_status_t Bytes::Randomize(size_t size) {
     return ZX_OK;
 }
 
+zx_status_t Bytes::Increment() {
+    bool overflow = true;
+    size_t i = len_;
+    // This is intentionally branchless to be as close to constant time as possible.  Although
+    // unlikely, it's conceivable that differences in timing on incrementing leak information about
+    // the contents.
+    while(i != 0) {
+        --i;
+        uint8_t n = overflow ? 1 : 0;
+        buf_[i] = static_cast<uint8_t>(buf_[i] + n);
+        overflow &= (buf_[i] == 0);
+    }
+    return overflow ? ZX_ERR_OUT_OF_RANGE : ZX_OK;
+}
+
 fbl::unique_ptr<uint8_t[]> Bytes::Release(size_t* len) {
     if (len) {
         *len = len_;
