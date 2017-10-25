@@ -16,7 +16,6 @@
 #include <kernel/thread.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm.h>
-#include <malloc.h>
 #include <string.h>
 #include <zircon/types.h>
 
