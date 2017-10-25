@@ -370,6 +370,7 @@ zx_status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr)
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, &vmo);
     if (status != ZX_OK)
         return status;
+    vmo->set_name(name, strlen(name));
 
     // lookup how it's already mapped
     uint arch_mmu_flags = 0;
