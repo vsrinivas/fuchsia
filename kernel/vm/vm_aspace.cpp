@@ -472,6 +472,7 @@ zx_status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t a
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
     if (status != ZX_OK)
         return status;
+    vmo->set_name(name, strlen(name));
 
     // commit memory up front if requested
     if (vmm_flags & VMM_FLAG_COMMIT) {
