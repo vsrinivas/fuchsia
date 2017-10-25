@@ -35,14 +35,8 @@ import("//build/dart/toolchain.gni")
 #     need to be set.
 #     Note that these labels *must* have an explicit toolchain attached.
 #
-#   analysis_options (optional)
-#     By default, a script to run the analyzer on the contents of the package is
-#     generated in the output directory. This parameter contains the path to an
-#     analysis options file for this target; otherwise a default set of options
-#     is used.
-#
 #   disable_analysis (optional)
-#     Prevents the analysis script from being generated.
+#     Prevents analysis from being run on this target.
 #
 #   extra_analyzer_sources (optional)
 #     Additional source paths to pass to the analyzer.
@@ -74,10 +68,6 @@ template("dart_package") {
   } else {
     assert(false, "Must specify either a package_name or infer_package_name")
   }
-
-  # TODO(pylaligand): remove when the transition to the new analysis method is
-  # over.
-  not_needed(invoker, [ "analysis_options" ])
 
   dart_deps = []
   if (defined(invoker.deps)) {

@@ -17,13 +17,8 @@ import("//topaz/runtime/dart_runner/dart_app.gni")
 #   deps (optional)
 #     List of labels for Dart packages this package depends on.
 #
-#   analysis_options (optional)
-#     By default, a script to run the analyzer on the contents of this target is
-#     generated in the output directory. This parameter contains the path to an
-#     analysis options file for this target.
-#
 #   disable_analysis (optional)
-#     Prevents the analysis script from being generated.
+#     Prevents analysis from being run on this target.
 #
 # Example of usage:
 #
@@ -67,7 +62,6 @@ template("dart_fuchsia_test") {
   dart_jit_app(target_name) {
     forward_variables_from(invoker,
                            [
-                             "analysis_options",
                              "disable_analysis",
                            ])
     source_dir = test_source_dir

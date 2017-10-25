@@ -15,13 +15,8 @@ import("//build/dart/toolchain.gni")
 #   deps (optional)
 #     List of labels for Dart packages this package depends on.
 #
-#   analysis_options (optional)
-#     By default, a script to run the analyzer on the contents of the package is
-#     generated in the output directory. This parameter contains the path to an
-#     analysis options file for this target.
-#
 #   disable_analysis (optional)
-#     Prevents the analysis script from being generated.
+#     Prevents analysis from being run on this target.
 #
 # Example of usage:
 #
@@ -44,7 +39,6 @@ template("dart_test") {
   dart_package(package_target_name) {
     forward_variables_from(invoker,
                            [
-                             "analysis_options",
                              "deps",
                              "disable_analysis",
                            ])
