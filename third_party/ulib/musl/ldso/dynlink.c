@@ -359,10 +359,6 @@ static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab,
     (1 << STT_NOTYPE | 1 << STT_OBJECT | 1 << STT_FUNC | 1 << STT_COMMON | 1 << STT_TLS)
 #define OK_BINDS (1 << STB_GLOBAL | 1 << STB_WEAK | 1 << STB_GNU_UNIQUE)
 
-#ifndef ARCH_SYM_REJECT_UND
-#define ARCH_SYM_REJECT_UND(s) 0
-#endif
-
 __NO_SAFESTACK NO_ASAN
 static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
     uint32_t h = 0, gh, gho, *ght;
@@ -388,7 +384,7 @@ static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
         if (!sym)
             continue;
         if (!sym->st_shndx)
-            if (need_def || (sym->st_info & 0xf) == STT_TLS || ARCH_SYM_REJECT_UND(sym))
+            if (need_def || (sym->st_info & 0xf) == STT_TLS)
                 continue;
         if (!sym->st_value)
             if ((sym->st_info & 0xf) != STT_TLS)
