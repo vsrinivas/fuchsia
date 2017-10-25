@@ -136,7 +136,3 @@ not satisfied or the system is unable to complete the operation in its current s
 **IO\_DATA\_LOSS**
   The data in the operation is currently unavailable and may be permanently lost.
   Example: A disk block is irrecoverably damaged.
-
-## Values
-
-[//]: # "TODO: Document values in various contexts (status_t vs zx_status_t)"
