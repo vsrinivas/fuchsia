@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string>
+#include <vector>
 
 #include "rapidjson/document.h"
 
@@ -17,5 +18,11 @@ rapidjson::Document EntityReferenceToJsonDoc(const std::string& ref);
 bool EntityReferenceFromJson(const std::string& json, std::string* ref);
 // Like above but operates on a rapidjson::Value.
 bool EntityReferenceFromJson(const rapidjson::Value& value, std::string* ref);
+
+// Extracts the values of the JSON object |doc|'s "@type" attribute into
+// |types|. Returns false and leaves |types| untouched if |doc| is not a JSON
+// object or is not structured correctly.
+bool ExtractEntityTypesFromJson(const std::string& json,
+                                std::vector<std::string>* types);
 
 }  // namespace modular

@@ -5,6 +5,7 @@
 #include "peridot/bin/context_engine/context_writer_impl.h"
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "lib/context/cpp/formatting.h"
+#include "lib/entity/cpp/json.h"
 #include "rapidjson/document.h"
 
 namespace maxwell {
@@ -35,8 +36,6 @@ ContextWriterImpl::~ContextWriterImpl() {}
 
 namespace {
 
-const char kEntityTypeProperty[] = "@type";
-
 void MaybeFillEntityMetadata(ContextValuePtr* const value_ptr) {
   ContextValuePtr& value = *value_ptr;  // For sanity.
   if (value->type != ContextValueType::ENTITY)
@@ -44,31 +43,14 @@ void MaybeFillEntityMetadata(ContextValuePtr* const value_ptr) {
 
   // If the content has the @type attribute, take its contents and populate the
   // EntityMetadata appropriately, overriding whatever is there.
-  rapidjson::Document doc;
-  doc.Parse(value->content);
-  if (doc.HasParseError()) {
+  std::vector<std::string> types;
+  if (!modular::ExtractEntityTypesFromJson(value->content, &types)) {
     FXL_LOG(WARNING) << "Invalid JSON in value: " << value;
     return;
   }
-  fidl::Array<fidl::String> new_types;
-  if (doc.IsObject() && doc.HasMember(kEntityTypeProperty)) {
-    const auto& types = doc[kEntityTypeProperty];
-    if (types.IsString()) {
-      new_types = fidl::Array<fidl::String>::New(1);
-      new_types[0] = types.GetString();
-    } else if (types.IsArray()) {
-      new_types = fidl::Array<fidl::String>::New(types.Size());
-      for (uint32_t i = 0; i < types.Size(); ++i) {
-        if (!types[i].IsString())
-          continue;
-        new_types[i] = types[i].GetString();
-      }
-    }
-  }
-  if (!new_types) {
-    return;
-  }
+  if (types.empty()) return;
 
+  auto new_types = fidl::Array<fidl::String>::From(types);
   if (!value->meta) {
     value->meta = ContextMetadata::New();
   }

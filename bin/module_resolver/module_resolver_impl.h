@@ -36,7 +36,10 @@ class ModuleResolverImpl : modular::ModuleResolver {
   uint32_t next_entry_id_;
   std::map<uint32_t, modular::ModuleManifestRepository::Entry> entries_;
 
+  // verb -> key in |entries_|
   std::map<std::string, std::set<uint32_t>> verb_to_entry_;
+  // (type, noun name) -> key in |entries_|
+  std::map<std::pair<std::string, std::string>, std::set<uint32_t>> noun_type_to_entry_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
 

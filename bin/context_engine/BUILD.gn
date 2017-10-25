@@ -103,6 +103,7 @@ source_set("context_writer_impl") {
     "//peridot/public/lib/async/cpp:future_value",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/user_intelligence/fidl:scope",
     "//third_party/rapidjson",
   ]

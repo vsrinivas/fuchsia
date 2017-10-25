@@ -36,6 +36,10 @@ const char* kManifest = R"END(
       {
         "name": "start",
         "types": [ "frob" ]
+      },
+      {
+        "name": "destination",
+        "types": [ "froozle" ]
       }
     ]
   },
@@ -52,6 +56,44 @@ const char* kManifest = R"END(
   }
 ]
 )END";
+
+class DaisyBuilder {
+ public:
+  DaisyBuilder() : daisy(modular::Daisy::New()) {
+    daisy->nouns.mark_non_null();
+  }
+  DaisyBuilder(std::string verb) : daisy(modular::Daisy::New()) {
+    daisy->nouns.mark_non_null();
+    SetVerb(verb);
+  }
+
+  modular::DaisyPtr get() { return std::move(daisy); }
+
+  DaisyBuilder& SetVerb(std::string verb) {
+    daisy->verb = verb;
+    return *this;
+  }
+
+  // Creates a noun that's just Entity types.
+  DaisyBuilder& AddNounTypes(std::string name, std::vector<std::string> types) {
+    auto noun = modular::Noun::New();
+    auto types_array = fidl::Array<fidl::String>::From(types);
+    noun->set_entity_type(std::move(types_array));
+    daisy->nouns.insert(name, std::move(noun));
+    return *this;
+  }
+
+  // Creates a noun that's made of JSON content.
+  DaisyBuilder& AddJsonNoun(std::string name, std::string json) {
+    auto noun = modular::Noun::New();
+    noun->set_json(json);
+    daisy->nouns.insert(name, std::move(noun));
+    return *this;
+  }
+
+ private:
+  modular::DaisyPtr daisy;
+};
 
 class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
  public:
@@ -122,28 +164,66 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   modular::FindModulesResultPtr result_;
 };
 
+#define ASSERT_DEFAULT_RESULT(results) \
+  ASSERT_EQ(1lu, results.size()); \
+  EXPECT_EQ("resolution_failed", results[0]->module_id);
+
 TEST_F(ModuleResolverImplTest, Null) {
-  auto daisy = modular::Daisy::New();
-  daisy->verb = "no matchy!";
-  daisy->nouns.mark_non_null();
+  auto daisy = DaisyBuilder("no matchy!").get();
 
   FindModules(std::move(daisy));
 
   // The Resolver currently always returns a fallback Module.
-  ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("resolution_failed", results()[0]->module_id);
+  ASSERT_DEFAULT_RESULT(results());
 }
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
-  auto daisy = modular::Daisy::New();
-  daisy->verb = "com.google.fuchsia.navigate.v1";
-  daisy->nouns.mark_non_null();
+  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1").get();
 
   FindModules(std::move(daisy));
 
   ASSERT_EQ(2lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);
   EXPECT_EQ("module2", results()[1]->module_id);
+}
+
+TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
+  // Either 'foo' or 'tangoTown' would be acceptible types. Only 'foo' will
+  // actually match.
+  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+                   .AddNounTypes("start", {"foo", "tangoTown"})
+                   .get();
+  FindModules(std::move(daisy));
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results()[0]->module_id);
+
+  // This one will match one of the two noun constraints on module1, but not
+  // both, so no match at all is expected.
+  daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+              .AddNounTypes("start", {"foo", "tangoTown"})
+              .AddNounTypes("destination", {"notbaz"})
+              .get();
+  FindModules(std::move(daisy));
+  ASSERT_DEFAULT_RESULT(results());
+}
+
+TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
+  // Same thing as above, but we'll use JSON with embedded type information and
+  // should see the same exactly results.
+  auto daisy = DaisyBuilder("com.google.fuchsia.navigate.v1")
+                   .AddJsonNoun("start", R"({
+                      "@type": [ "foo", "tangoTown" ],
+                      "thecake": "is a lie"
+                    })")
+                   .AddJsonNoun("destination", R"({
+                      "@type": "baz",
+                      "really": "it is"
+                    })")
+                   .get();
+  FindModules(std::move(daisy));
+  ASSERT_EQ(1lu, results().size());
+  EXPECT_EQ("module1", results()[0]->module_id);
+  // TODO(thatguy): Validate that the initial_nouns content is correct.
 }
 
 }  // namespace

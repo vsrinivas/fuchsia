@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
 #include "peridot/public/lib/entity/cpp/json.h"
@@ -47,6 +49,22 @@ modular::FindModulesResultPtr CreateDefaultResult(
   return result;
 }
 
+std::vector<std::string> GetEntityTypesFromNoun(const modular::NounPtr& noun) {
+  if (noun->is_entity_type()) {
+    return std::vector<std::string>(noun->get_entity_type().begin(),
+                                    noun->get_entity_type().end());
+  } else if (noun->is_json()) {
+    std::vector<std::string> types;
+    if (!modular::ExtractEntityTypesFromJson(noun->get_json(), &types)) {
+      FXL_LOG(WARNING) << "Mal-formed JSON in noun: " << noun->get_json();
+      return {};
+    }
+    return types;
+  }
+  // TODO(thatguy): Add support for other methods of getting Entity types.
+  return {};
+}
+
 }  // namespace
 
 ModuleResolverImpl::ModuleResolverImpl(std::string manifest_repository_path)
@@ -74,14 +92,53 @@ void ModuleResolverImpl::FindModules(
     return;
   }
 
-  auto it = verb_to_entry_.find(daisy->verb);
-  if (it == verb_to_entry_.end()) {
+  auto verb_it = verb_to_entry_.find(daisy->verb);
+  if (verb_it == verb_to_entry_.end()) {
+    done(CreateDefaultResult(daisy));
+    return;
+  }
+
+  std::set<uint32_t> result_entries(verb_it->second);
+
+  // For each noun in the Daisy, try to find Modules that provide the types in
+  // the noun as constraints.
+  for (const auto& noun_entry : daisy->nouns) {
+    const auto& name = noun_entry.GetKey();
+    const auto& noun = noun_entry.GetValue();
+
+    // TODO(thatguy): Once we grab Entity types from an Entity reference, this
+    // will have to be an async call. At this point we'll have to break this
+    // entire operation up into parts.
+    auto types = GetEntityTypesFromNoun(noun);
+
+    // The types list we have is an OR - any Module that can handle any of the
+    // types is valid, So, we union all valid resolutions.
+    std::set<uint32_t> this_noun_entries;
+    for (const auto& type : types) {
+      auto noun_it = noun_type_to_entry_.find(std::make_pair(type, name));
+      if (noun_it == noun_type_to_entry_.end())
+        continue;
+
+      this_noun_entries.insert(noun_it->second.begin(), noun_it->second.end());
+    }
+
+    // The target Module must match the types in every noun specified in the
+    // Daisy, so here we do a set intersection.
+    std::set<uint32_t> new_result_entries;
+    std::set_intersection(
+        result_entries.begin(), result_entries.end(), this_noun_entries.begin(),
+        this_noun_entries.end(),
+        std::inserter(new_result_entries, new_result_entries.begin()));
+    result_entries.swap(new_result_entries);
+  }
+
+  if (result_entries.empty()) {
     done(CreateDefaultResult(daisy));
     return;
   }
 
   auto results = modular::FindModulesResult::New();
-  for (auto id : it->second) {
+  for (auto id : result_entries) {
     auto entry_it = entries_.find(id);
     FXL_CHECK(entry_it != entries_.end()) << id;
     const auto& entry = entry_it->second;
@@ -106,6 +163,12 @@ void ModuleResolverImpl::OnNewManifestEntry(
   const auto& entry = ret.first->second;
 
   verb_to_entry_[entry.verb].insert(id);
+
+  for (const auto& constraint : entry.noun_constraints) {
+    for (const auto& type : constraint.types) {
+      noun_type_to_entry_[std::make_pair(type, constraint.name)].insert(id);
+    }
+  }
 }
 
 }  // namespace maxwell
