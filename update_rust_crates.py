@@ -22,17 +22,21 @@ import local_crates
 
 from check_rust_licenses import check_licenses
 
-
-# Note that crates in //third_party/rust-crates/mirror will be automatically
-# taken into account, as will Fuchsia crates published to crates.io.
-CONFIGS = [
-    "garnet/public/lib/fidl/rust/fidl",
-    "garnet/public/rust/crates/tokio-fuchsia",
-    "third_party/xi-editor/rust/core-lib",
+# The following crates are ignored and their dependencies will not be accounted during vendoring.
+EXCLUDED_CRATES = [
     "topaz/app/xi/modules/xi-core",
+    # llui is disabled because: a) it uses a non-path dependency on fuchsia-zircon, b) it uses a git dependency
+    "garnet/public/rust/crates/fuchsia-llui",
+    # XXX(raggi): rand is disabled from consideration here because it contains a workspace.
+    "third_party/rust-mirrors/rand",
+    "third_party/rust-mirrors/rand/rand-derive",
+    # XXX(raggi): cargo-vendor is excluded because it has a large dependency tree that isn't used/considered at build time.
+    "third_party/rust-mirrors/cargo-vendor",
 ]
 
 NATIVE_LIBS = {
+    # miniz is built inline. the links declaration linsk a lib output by the build.rs. nothing to depend on.
+    "miniz": None,
 }
 
 
@@ -170,7 +174,8 @@ rust_info("%s") {
                 build_file.write("  ]\n")
             if "native_lib" in info:
                 lib = info["native_lib"]
-                build_file.write("""
+                if NATIVE_LIBS[lib] is not None:
+                    build_file.write("""
   native_lib = \"%s\"
 
   non_rust_deps = [
@@ -249,18 +254,19 @@ def main():
     toml_path = os.path.join(base_dir, "Cargo.toml")
     lock_path = os.path.join(base_dir, "Cargo.lock")
 
-    all_configs = CONFIGS + local_crates.get_all_paths(relative=True)
+    all_configs = local_crates.get_really_all_paths()
+    for path in EXCLUDED_CRATES:
+        all_configs.remove(path)
+
 
     try:
         print("Downloading dependencies for:")
         for config in all_configs:
             print(" - %s" % config)
 
-        # Create Cargo.toml.
-        def mapper(p): return os.path.join(paths.FUCHSIA_ROOT, p)
         config = {
             "workspace": {
-                "members": list(map(mapper, all_configs))
+                "members": list(all_configs)
             }
         }
         with open(toml_path, "w") as config_file:
@@ -283,6 +289,8 @@ def main():
             "-x",
             "--sync",
             lock_path,
+            "--frozen",
+            "--locked",
             "vendor",
         ]
         call_or_exit(vendor_args, base_dir)
