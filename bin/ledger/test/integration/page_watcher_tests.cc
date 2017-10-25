@@ -14,6 +14,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
+#include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/convert/convert.h"
 #include "peridot/bin/ledger/test/integration/integration_test.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
@@ -86,6 +87,64 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Alice", ToString(change->changes[0]->value));
+}
+
+TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
+  auto instance = NewLedgerAppInstance();
+  ledger::Status status;
+  ledger::PagePtr page = instance->GetTestPage();
+  ledger::PageWatcherPtr watcher_ptr;
+  auto watcher = std::make_unique<Watcher>(watcher_ptr.NewRequest(), [] {
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
+
+  ledger::PageSnapshotPtr snapshot;
+  page->GetSnapshot(
+      snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  // Make a change on the page and verify that it was received.
+  page->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, watcher->changes_seen);
+
+  // Make another change and disconnect the watcher immediately.
+  page->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+            callback::Capture(MakeQuitTask(), &status));
+  watcher.reset();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(ledger::Status::OK, status);
+}
+
+TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
+  auto instance = NewLedgerAppInstance();
+  ledger::PageWatcherPtr watcher_ptr;
+  Watcher watcher(watcher_ptr.NewRequest(),
+                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+
+  {
+    ledger::PagePtr page = instance->GetTestPage();
+    ledger::PageSnapshotPtr snapshot;
+    page->GetSnapshot(
+        snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
+        [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+    EXPECT_TRUE(page.WaitForIncomingResponse());
+
+    // Queue many put operations on the page.
+    for (int i = 0; i < 1000; i++) {
+      page->Put(
+          convert::ToArray("name"), convert::ToArray(std::to_string(i)),
+          [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
+    }
+  }
+  // Page is out of scope now, but watcher is not. Verify that we don't crash
+  // and a change notification is still delivered.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, watcher.changes_seen);
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {

@@ -360,8 +360,6 @@ void PageDelegate::RunInTransaction(
           storage::Status status, std::unique_ptr<storage::Journal> journal) {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status));
-          storage_->RollbackJournal(std::move(journal),
-                                    [](storage::Status /*rollback_status*/) {});
           branch_tracker_.StopTransaction(nullptr);
           return;
         }
