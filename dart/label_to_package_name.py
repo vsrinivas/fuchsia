@@ -22,7 +22,7 @@ def _remove_sdk_dir(label):
   return label
 
 
-# For target //foo/bar:blah, the package name will be foo.bar..blah.
+# For target //foo/bar:blah, the package name will be foo.bar._blah.
 # For default targets //foo/bar:bar, the package name will be foo.bar.
 def convert(label):
   if not label.startswith("//"):
@@ -38,7 +38,7 @@ def convert(label):
   if path[-1] == name:
       return ".".join(path)
   else:
-      return "%s..%s" % (".".join(path), name)
+      return "%s._%s" % (".".join(path), name)
 
 
 def main():
