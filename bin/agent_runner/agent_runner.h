@@ -24,7 +24,7 @@
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage.h"
-#include "peridot/bin/entity/entity_repository.h"
+#include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace modular {
@@ -47,7 +47,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
               AgentRunnerStorage* agent_runner_storage,
               auth::TokenProviderFactory* token_provider_factory,
               maxwell::UserIntelligenceProvider* user_intelligence_provider,
-              EntityRepository* const entity_repository);
+              EntityProviderRunner* const entity_provider_runner);
   ~AgentRunner() override;
 
   void Connect(fidl::InterfaceRequest<AgentProvider> request);
@@ -56,12 +56,19 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // no new tasks are scheduled to run.
   void Teardown(const std::function<void()>& callback);
 
-  // Connects to an agent (and starts it up if it doesn't exist). Called via
-  // ComponentContext.
+  // Connects to an agent (and starts it up if it doesn't exist) through
+  // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(
       const std::string& requestor_url,
       const std::string& agent_url,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
+
+  // Connects to an agent (and starts it up if it doesn't exist) through its
+  // |EntityProvider| service.
+  void ConnectToEntityProvider(
+      const std::string& agent_url,
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
@@ -132,17 +139,27 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>>
       running_alarms_;
 
-  struct PendingConnectionEntry {
+  // agent URL -> pending agent connections
+  // This map holds connections to an agent that we hold onto while the existing
+  // agent is in a terminating state.
+  struct PendingAgentConnectionEntry {
     const std::string requestor_url;
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
     fidl::InterfaceRequest<AgentController> agent_controller_request;
   };
-
-  // agent URL -> pending connections to an agent
-  // This map holds connections to an agent that we hold onto while the existing
-  // agent is in a terminating state.
-  std::unordered_map<std::string, std::vector<struct PendingConnectionEntry>>
+  std::unordered_map<std::string,
+                     std::vector<struct PendingAgentConnectionEntry>>
       pending_agent_connections_;
+
+  // agent URL -> pending entity provider connection
+  // This map holds connections to an agents' EntityProvider that we hold onto
+  // while the existing agent is in a terminating state.
+  struct PendingEntityProviderConnectionEntry {
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request;
+    fidl::InterfaceRequest<AgentController> agent_controller_request;
+  };
+  std::unordered_map<std::string, struct PendingEntityProviderConnectionEntry>
+      pending_entity_provider_connections_;
 
   // agent URL -> done callbacks to invoke once agent has started.
   // Holds requests to start an agent; in case an agent is already in a
@@ -171,7 +188,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   AgentRunnerStorage* const agent_runner_storage_;
   auth::TokenProviderFactory* const token_provider_factory_;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
-  EntityRepository* const entity_repository_;
+  EntityProviderRunner* const entity_provider_runner_;
 
   fidl::BindingSet<AgentProvider> agent_provider_bindings_;
   fidl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;

@@ -10,6 +10,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/agent_runner/agent_context_impl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -27,14 +28,14 @@ AgentRunner::AgentRunner(
     AgentRunnerStorage* const agent_runner_storage,
     auth::TokenProviderFactory* const token_provider_factory,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider,
-    EntityRepository* const entity_repository)
+    EntityProviderRunner* const entity_provider_runner)
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       agent_runner_storage_(agent_runner_storage),
       token_provider_factory_(token_provider_factory),
       user_intelligence_provider_(user_intelligence_provider),
-      entity_repository_(entity_repository),
+      entity_provider_runner_(entity_provider_runner),
       terminating_(std::make_shared<bool>(false)) {
   agent_runner_storage_->Initialize(this, [] {});
 }
@@ -109,8 +110,9 @@ void AgentRunner::MaybeRunAgent(const std::string& agent_url,
 
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
-  ComponentContextInfo component_info = {
-      message_queue_manager_, this, ledger_repository_, entity_repository_};
+  ComponentContextInfo component_info = {message_queue_manager_, this,
+                                         ledger_repository_,
+                                         entity_provider_runner_};
   AgentContextInfo info = {component_info, application_launcher_,
                            token_provider_factory_,
                            user_intelligence_provider_};
@@ -131,7 +133,6 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   }
 
   UpdateWatchers();
-  ForwardConnectionsToAgent(agent_url);
 }
 
 void AgentRunner::ConnectToAgent(
@@ -152,6 +153,28 @@ void AgentRunner::ConnectToAgent(
     // If the agent was terminating and has restarted, forwarding connections
     // here is redundant, since it was already forwarded earlier.
     ForwardConnectionsToAgent(agent_url);
+  });
+}
+
+void AgentRunner::ConnectToEntityProvider(
+    const std::string& agent_url,
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+  // Drop all new requests if AgentRunner is terminating.
+  if (*terminating_) {
+    return;
+  }
+
+  pending_entity_provider_connections_[agent_url] = {
+      std::move(entity_provider_request), std::move(agent_controller_request)};
+
+  MaybeRunAgent(agent_url, [this, agent_url] {
+    auto it = pending_entity_provider_connections_.find(agent_url);
+    FXL_DCHECK(it != pending_entity_provider_connections_.end());
+    running_agents_[agent_url]->NewEntityProviderConnection(
+        std::move(it->second.entity_provider_request),
+        std::move(it->second.agent_controller_request));
+    pending_entity_provider_connections_.erase(it);
   });
 }
 
@@ -179,7 +202,7 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
   if (found_it != pending_agent_connections_.end()) {
     AgentContextImpl* agent = running_agents_[agent_url].get();
     for (auto& pending_connection : found_it->second) {
-      agent->NewConnection(
+      agent->NewAgentConnection(
           pending_connection.requestor_url,
           std::move(pending_connection.incoming_services_request),
           std::move(pending_connection.agent_controller_request));
@@ -399,10 +422,10 @@ void AgentRunner::UpdateWatchers() {
     return;
   }
 
-  agent_provider_watchers_.ForAllPtrs(
-      [agent_urls = GetAllAgents()](AgentProviderWatcher* watcher) {
-        watcher->OnUpdate(agent_urls.Clone());
-      });
+  agent_provider_watchers_.ForAllPtrs([agent_urls = GetAllAgents()](
+      AgentProviderWatcher* watcher) {
+    watcher->OnUpdate(agent_urls.Clone());
+  });
 }
 
 void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {

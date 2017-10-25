@@ -198,7 +198,8 @@ void UserRunnerImpl::Initialize(
   fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
-  entity_repository_ = std::make_unique<EntityRepository>();
+  entity_provider_runner_ = std::make_unique<EntityProviderRunner>(
+      static_cast<EntityProviderLauncher*>(this));
 
   agent_runner_storage_ = std::make_unique<AgentRunnerStorageImpl>(
       ledger_client_.get(), to_array(kAgentRunnerPageId));
@@ -207,11 +208,11 @@ void UserRunnerImpl::Initialize(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
       token_provider_factory_.get(), user_intelligence_provider_.get(),
-      entity_repository_.get()));
+      entity_provider_runner_.get()));
 
   ComponentContextInfo component_context_info{
       message_queue_manager_.get(), agent_runner_.get(),
-      ledger_repository_.get(), entity_repository_.get()};
+      ledger_repository_.get(), entity_provider_runner_.get()};
 
   maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
@@ -343,7 +344,7 @@ void UserRunnerImpl::Terminate() {
             FXL_DLOG(INFO) << "- AgentRunner down";
             agent_runner_storage_.reset();
 
-            entity_repository_.reset();
+            entity_provider_runner_.reset();
             message_queue_manager_.reset();
             remote_invoker_impl_.reset();
             device_map_impl_.reset();
@@ -460,6 +461,17 @@ void UserRunnerImpl::GetVisibleStoriesController(
 
 void UserRunnerImpl::Logout() {
   user_context_->Logout();
+}
+
+// |EntityProviderLauncher|
+void UserRunnerImpl::ConnectToEntityProvider(
+    const std::string& agent_url,
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+  FXL_DCHECK(agent_runner_.get());
+  agent_runner_->ConnectToEntityProvider(agent_url,
+                                         std::move(entity_provider_request),
+                                         std::move(agent_controller_request));
 }
 
 void UserRunnerImpl::SetupLedger() {

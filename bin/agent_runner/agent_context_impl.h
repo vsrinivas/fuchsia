@@ -57,9 +57,16 @@ class AgentContextImpl : AgentContext, AgentController {
   // Called by AgentRunner when a component wants to connect to this agent.
   // Connections will pend until Agent::Initialize() responds back, at which
   // point all connections will be forwarded to the agent.
-  void NewConnection(
+  void NewAgentConnection(
       const std::string& requestor_url,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
+
+  // Called by AgentRunner when the framework wants to talk to the
+  // |EntityProvider| service from this agent. Similar to NewAgentConnection(),
+  // this operation will pend until the entity provider agent is initialized.
+  void NewEntityProviderConnection(
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Called by AgentRunner when a new task has been scheduled.
@@ -84,6 +91,9 @@ class AgentContextImpl : AgentContext, AgentController {
   // |AgentContext|
   void GetIntelligenceServices(
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+  // |AgentContext|
+  void GetEntityReferenceFactory(
+    fidl::InterfaceRequest<EntityReferenceFactory> request) override;
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
@@ -108,6 +118,7 @@ class AgentContextImpl : AgentContext, AgentController {
   app::ServiceProviderImpl service_provider_impl_;
 
   auth::TokenProviderFactory* const token_provider_factory_;  // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;        // Not owned.
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
 

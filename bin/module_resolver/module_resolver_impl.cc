@@ -20,11 +20,8 @@ void CopyNounsToModuleResolverResult(const modular::DaisyPtr& daisy,
     const auto& noun = entry.GetValue();
 
     if (noun->is_entity_reference()) {
-      // TODO(thatguy): EntityReference, the struct, will go away and be
-      // replaced by a string. We simply use the |internal_value| attribute of
-      // the struct in its place for now.
-      (*result)->initial_nouns[name] = modular::EntityReferenceToJson(
-          noun->get_entity_reference()->internal_value);
+      (*result)->initial_nouns[name] =
+          modular::EntityReferenceToJson(noun->get_entity_reference());
     } else if (noun->is_json()) {
       (*result)->initial_nouns[name] = noun->get_json();
     }

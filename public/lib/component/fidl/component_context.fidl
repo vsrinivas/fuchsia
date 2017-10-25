@@ -9,7 +9,6 @@ import "lib/ledger/fidl/ledger.fidl";
 import "lib/agent/fidl/agent_controller/agent_controller.fidl";
 import "lib/component/fidl/message_queue.fidl";
 import "lib/entity/fidl/entity_resolver.fidl";
-import "lib/entity/fidl/entity_store.fidl";
 
 // Provided to all components in their respective intialization methods by the
 // framework. For example, a Module gets it in Module::Initialize() and an Agent
@@ -29,11 +28,12 @@ interface ComponentContext {
   ObtainMessageQueue(string name, MessageQueue& queue);
   DeleteMessageQueue(string name);
 
-  // Get a MessageSender service that can be used to send a message to a queue
+  // Gets a MessageSender service that can be used to send a message to a queue
   // identified by |queue_token|. Token for a MessageQueue is obtained from its
   // GetToken() method and the token is unique within the scope of the user.
   GetMessageSender(string queue_token, MessageSender& sender);
 
+  // Gets the EntityResolver service, which can be used to resolve an entity
+  // reference to an Entity interface.
   GetEntityResolver(EntityResolver& request);
-  GetEntityStore(EntityStore& request);
 };

@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "lib/app/cpp/connect.h"
+#include "lib/entity/fidl/entity_reference_factory.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/agent_runner/agent_runner.h"
@@ -150,6 +151,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                               url_,
                               url_),
       token_provider_factory_(info.token_provider_factory),
+      entity_provider_runner_(
+          info.component_context_info.entity_provider_runner),
       user_intelligence_provider_(info.user_intelligence_provider) {
   service_provider_impl_.AddService<AgentContext>(
       [this](fidl::InterfaceRequest<AgentContext> request) {
@@ -167,27 +170,40 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
 
 AgentContextImpl::~AgentContextImpl() = default;
 
-void AgentContextImpl::NewConnection(
+void AgentContextImpl::NewAgentConnection(
     const std::string& requestor_url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
-  new SyncCall(
-      &operation_queue_,
-      fxl::MakeCopyable([this, requestor_url,
-                         incoming_services_request =
-                             std::move(incoming_services_request),
-                         agent_controller_request =
-                             std::move(agent_controller_request)]() mutable {
-        FXL_CHECK(state_ == State::RUNNING);
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
+    this, requestor_url,
+    incoming_services_request = std::move(incoming_services_request),
+    agent_controller_request = std::move(agent_controller_request)
+  ]() mutable {
+    FXL_CHECK(state_ == State::RUNNING);
 
-        agent_->Connect(requestor_url, std::move(incoming_services_request));
+    agent_->Connect(requestor_url, std::move(incoming_services_request));
 
-        // Add a binding to the |controller|. When all the bindings go away
-        // we can stop the agent.
-        agent_controller_bindings_.AddBinding(
-            this, std::move(agent_controller_request));
-      }));
+    // Add a binding to the |controller|. When all the bindings go away,
+    // the agent will stop.
+    agent_controller_bindings_.AddBinding(this,
+                                          std::move(agent_controller_request));
+  }));
+}
+
+void AgentContextImpl::NewEntityProviderConnection(
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
+    this, entity_provider_request = std::move(entity_provider_request),
+    agent_controller_request = std::move(agent_controller_request)
+  ]() mutable {
+    FXL_CHECK(state_ == State::RUNNING);
+    ConnectToService(app_client_->services(),
+                     std::move(entity_provider_request));
+    agent_controller_bindings_.AddBinding(this,
+                                          std::move(agent_controller_request));
+  }));
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {
@@ -222,6 +238,12 @@ void AgentContextImpl::GetIntelligenceServices(
   scope->set_agent_scope(std::move(agent_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(scope), std::move(request));
+}
+
+void AgentContextImpl::GetEntityReferenceFactory(
+    fidl::InterfaceRequest<EntityReferenceFactory> request) {
+  entity_provider_runner_->ConnectEntityReferenceFactory(url_,
+                                                         std::move(request));
 }
 
 void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {

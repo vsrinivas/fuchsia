@@ -16,6 +16,7 @@ fidl("fidl") {
     "//peridot/public/lib/agent/fidl/agent_controller",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/user_intelligence/fidl",
   ]
 }

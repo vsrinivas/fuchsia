@@ -4,9 +4,10 @@
 
 module modular;
 
-import "lib/user_intelligence/fidl/intelligence_services.fidl";
 import "lib/auth/fidl/token_provider.fidl";
 import "lib/component/fidl/component_context.fidl";
+import "lib/entity/fidl/entity_reference_factory.fidl";
+import "lib/user_intelligence/fidl/intelligence_services.fidl";
 
 // This interface is exposed to all agents. It allows to schedule tasks to occur
 // in response to triggers which are conditions like a message arriving on a
@@ -21,6 +22,10 @@ interface AgentContext {
 
   // Returns the IntelligenceServices container specific to this Agent.
   GetIntelligenceServices(maxwell.IntelligenceServices& request);
+
+  // Returns an EntityReferenceFactory for making entity references for this
+  // Agent.
+  GetEntityReferenceFactory(EntityReferenceFactory& request);
 
   // Schedules a task described in |task_info|. When this task is scheduled to
   // run, Agent::RunTask() gets called.

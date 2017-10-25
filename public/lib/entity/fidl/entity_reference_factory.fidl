@@ -1,0 +1,28 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains the definition for EntityReference.
+//
+// STATUS: Draft / Heavy WIP: expect significant changes.
+
+module modular;
+
+// Agents use this service to mint a new Entity by creating a reference for
+// it. Agents create entity references must also expose an |EntityProvider|
+// service in their application's outgoing services, so that agents can
+// provide data for |Entity|s that they create.
+[ServiceName="modular.EntityReferenceFactory"]
+interface EntityReferenceFactory {
+  // Agents call this to manufacture a reference for an Entity they will
+  // provide. Returns an opaque, persistable |entity_reference| that components
+  // can resolve into an |Entity| interface using |EntityResolver|. When data is
+  // requested from an |Entity| interface resolved from this |entity_reference|,
+  // the |cookie| associated with this |entity_reference| will be passed back to
+  // the |EntityProvider| of the Agent that originally created this reference.
+  //
+  // |cookie| should uniquely identify the |Entity| within the scope of the
+  // calling entity provider. For example, it may be used as the primary key
+  // value for a database.
+   CreateReference(string cookie) => (string entity_reference);
+};

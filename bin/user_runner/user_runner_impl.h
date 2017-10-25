@@ -30,7 +30,8 @@
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/bin/entity/entity_repository.h"
+#include "peridot/bin/entity/entity_provider_launcher.h"
+#include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -50,7 +51,7 @@ class RemoteInvokerImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
 
-class UserRunnerImpl : UserRunner, UserShellContext {
+class UserRunnerImpl : UserRunner, UserShellContext, EntityProviderLauncher {
  public:
   UserRunnerImpl(std::shared_ptr<app::ApplicationContext> application_context,
                  bool test);
@@ -99,6 +100,13 @@ class UserRunnerImpl : UserRunner, UserShellContext {
       fidl::InterfaceRequest<VisibleStoriesController> request) override;
   void Logout() override;
 
+  // |EntityProviderLauncher|
+  void ConnectToEntityProvider(
+      const std::string& component_id,
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request)
+      override;
+
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
@@ -128,7 +136,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<AppClient<Lifecycle>> module_resolver_;
   std::unique_ptr<AppClient<UserShell>> user_shell_;
 
-  std::unique_ptr<EntityRepository> entity_repository_;
+  std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;

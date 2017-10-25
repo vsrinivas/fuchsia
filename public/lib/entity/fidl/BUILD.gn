@@ -7,8 +7,8 @@ import("//garnet/public/lib/fidl/fidl.gni")
 fidl("fidl") {
   sources = [
     "entity.fidl",
-    "entity_reference.fidl",
+    "entity_provider.fidl",
+    "entity_reference_factory.fidl",
     "entity_resolver.fidl",
-    "entity_store.fidl",
   ]
 }

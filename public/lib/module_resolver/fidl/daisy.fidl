@@ -4,8 +4,6 @@
 
 module modular;
 
-import "../../entity/fidl/entity_reference.fidl";
-
 // The Daisy struct is a runtime descriptor for an abstract action to be initiated
 // in Fuchsia. For details please see docs/daisy.md.
 struct Daisy {
@@ -36,11 +34,10 @@ struct Daisy {
 // derived, to initialize a Module after it has been selected through Module
 // Resolution.
 union Noun {
-  // Set this if you already have an EntityReference at runtime. An
-  // EntityReference can be acquired by calling Entity.getReference().
+  // Set this if you already have an Entity reference at runtime.
   // Entity.getTypes() will be used to set the constraints for this noun during
   // resolution.
-  EntityReference entity_reference;
+  string entity_reference;
 
   // Set this if you have structured JSON data. Values typically are a JSON
   // object with a "@type" attribute and other associated data.  TODO(thatguy):

@@ -19,7 +19,7 @@ std::ostream& operator<<(std::ostream& os, const Noun& noun) {
   if (noun.is_json()) {
     os << noun.get_json();
   } else if (noun.is_entity_reference()) {
-    os << "[ref: " << noun.get_entity_reference()->internal_value << "]";
+    os << "[ref: " << noun.get_entity_reference() << "]";
   } else if (noun.is_entity_type()) {
     for (const auto& type : noun.get_entity_type()) {
       os << type << ", ";

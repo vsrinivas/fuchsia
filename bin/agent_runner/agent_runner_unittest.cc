@@ -15,7 +15,7 @@
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/message_queue_manager.h"
-#include "peridot/bin/entity/entity_repository.h"
+#include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 #include "peridot/lib/testing/mock_base.h"
@@ -61,15 +61,16 @@ class AgentRunnerTest : public TestWithLedger {
 
     mqm_.reset(new MessageQueueManager(
         ledger_client(), to_array("0123456789123456"), "/tmp/test_mq_data"));
-
+    entity_provider_runner_.reset(new EntityProviderRunner(nullptr));
     agent_runner_.reset(
         new AgentRunner(&launcher_, mqm_.get(), ledger_repository(),
                         &agent_runner_storage_, token_provider_factory_.get(),
-                        ui_provider_.get(), &entity_repository_));
+                        ui_provider_.get(), entity_provider_runner_.get()));
   }
 
   void TearDown() override {
     agent_runner_.reset();
+    entity_provider_runner_.reset();
     mqm_.reset();
 
     TestWithLedger::TearDown();
@@ -86,11 +87,11 @@ class AgentRunnerTest : public TestWithLedger {
 
   std::unique_ptr<MessageQueueManager> mqm_;
   FakeAgentRunnerStorage agent_runner_storage_;
+  std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<AgentRunner> agent_runner_;
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   maxwell::UserIntelligenceProviderPtr ui_provider_;
-  EntityRepository entity_repository_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };

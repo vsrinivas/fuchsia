@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/component/message_queue_manager.h"
-#include "peridot/bin/entity/entity_repository.h"
+#include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace modular {
@@ -24,7 +24,7 @@ struct ComponentContextInfo {
   MessageQueueManager* const message_queue_manager;
   AgentRunner* const agent_runner;
   ledger::LedgerRepository* const ledger_repository;
-  EntityRepository* const entity_repository;
+  EntityProviderRunner* const entity_provider_runner;
 };
 
 // Implements the ComponentContext interface, which is provided to
@@ -75,16 +75,13 @@ class ComponentContextImpl : public ComponentContext {
                         fidl::InterfaceRequest<MessageSender> request) override;
 
   // |ComponentContext|
-  void GetEntityStore(fidl::InterfaceRequest<EntityStore> request) override;
-
-  // |ComponentContext|
   void GetEntityResolver(
       fidl::InterfaceRequest<EntityResolver> request) override;
 
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
   ledger::LedgerRepository* const ledger_repository_;
-  EntityRepository* const entity_repository_;
+  EntityProviderRunner* const entity_provider_runner_;
 
   const std::string component_namespace_;
   const std::string component_instance_id_;
