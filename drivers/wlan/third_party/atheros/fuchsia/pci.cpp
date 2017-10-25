@@ -34,8 +34,8 @@ zx_status_t PciBus::Init(HwRev* rev) {
 
     zx_pcie_device_info_t pci_info = {};
     pci_.GetDeviceInfo(&pci_info);
-    dprintf(INFO, "ath10k: VID %04x DID %04x\n", pci_info.vendor_id, pci_info.device_id);
-    dprintf(INFO, "ath10k: base class %02x sub class %02x\n",
+    zxlogf(INFO, "ath10k: VID %04x DID %04x\n", pci_info.vendor_id, pci_info.device_id);
+    zxlogf(INFO, "ath10k: base class %02x sub class %02x\n",
                   pci_info.base_class, pci_info.sub_class);
 
     switch (pci_info.device_id) {

@@ -55,7 +55,7 @@ int Device::Init() {
         return status;
     }
 
-    dprintf(INFO, "ath10k: rev %s\n", HwRevToString(rev_));
+    zxlogf(INFO, "ath10k: rev %s\n", HwRevToString(rev_));
 
     return 0;
 }
