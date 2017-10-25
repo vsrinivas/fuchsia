@@ -209,7 +209,7 @@ magma::Status MsdArmDevice::ProcessGpuInterrupt()
 
     DLOG("Got GPU interrupt status 0x%x\n", irq_status.reg_value());
     if (!irq_status.reg_value())
-        dprintf(ERROR, "Got unexpected GPU IRQ with no flags set\n");
+        magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ with no flags set\n");
 
     if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
         irq_status.power_changed_single().set(0);
@@ -218,7 +218,7 @@ magma::Status MsdArmDevice::ProcessGpuInterrupt()
     }
 
     if (irq_status.reg_value())
-        dprintf(ERROR, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
+        magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
     gpu_interrupt_->Complete();
     return MAGMA_STATUS_OK;
 }
@@ -240,7 +240,7 @@ int MsdArmDevice::JobInterruptThreadLoop()
         auto clear_flags = registers::JobIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
         clear_flags.WriteTo(register_io_.get());
 
-        dprintf(ERROR, "Got unexpected Job IRQ %d\n", irq_status.reg_value());
+        magma::log(magma::LOG_WARNING, "Got unexpected Job IRQ %d\n", irq_status.reg_value());
         job_interrupt_->Complete();
     }
 
@@ -265,7 +265,7 @@ int MsdArmDevice::MmuInterruptThreadLoop()
         auto clear_flags = registers::MmuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
         clear_flags.WriteTo(register_io_.get());
 
-        dprintf(ERROR, "Got unexpected MMU IRQ %d\n", irq_status.reg_value());
+        magma::log(magma::LOG_WARNING, "Got unexpected MMU IRQ %d\n", irq_status.reg_value());
 
         mmu_interrupt_->Complete();
     }
