@@ -11,4 +11,5 @@ rust_library("tokio-fuchsia") {
     "//third_party/rust-mirrors/mio",
     "//third_party/rust-mirrors/tokio-core",
   ]
+  with_tests = true
 }

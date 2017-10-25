@@ -10,6 +10,7 @@ package("rust-crates-tests") {
   deps = [
     "fuchsia-vfs",
     "fuchsia-zircon",
+    "tokio-fuchsia",
   ]
 
   tests = [
@@ -18,6 +19,9 @@ package("rust-crates-tests") {
     },
     {
       name = "fuchsia_zircon-lib-test"
+    },
+    {
+      name = "tokio_fuchsia-lib-test"
     },
   ]
 }

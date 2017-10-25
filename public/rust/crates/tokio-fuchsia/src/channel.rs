@@ -15,6 +15,8 @@ use tokio_core::reactor::{Handle, PollEvented};
 
 use super::would_block;
 
+type ChannelOpts = u32;
+
 /// An I/O object representing a `Channel`.
 pub struct Channel {
     channel: zircon::Channel,
@@ -62,7 +64,7 @@ impl Channel {
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zircon::Status::ErrShouldWait`.
-    pub fn recv_from(&self, opts: u32, buf: &mut MessageBuf) -> io::Result<()> {
+    pub fn recv_from(&self, opts: ChannelOpts, buf: &mut MessageBuf) -> io::Result<()> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
                           zircon::ZX_CHANNEL_READABLE |
                           zircon::ZX_CHANNEL_PEER_CLOSED).into());
@@ -95,16 +97,10 @@ impl Channel {
     ///
     /// The BorrowMut<MessageBuf> means you can pass either a `MessageBuf`
     /// as well as a `&mut MessageBuf`, as well some other things.
-    pub fn recv_msg<T>(self, opts: u32, buf: T) -> RecvMsg<T>
+    pub fn recv_msg<T>(self, opts: ChannelOpts, buf: T) -> RecvMsg<T>
         where T: BorrowMut<MessageBuf>,
     {
-
-        RecvMsg {
-            state: RecvState::Reading {
-                chan: self,
-                buf, opts,
-            },
-        }
+        RecvMsg(Some((self, buf, opts)))
     }
 
     /// Returns a `Future` that continuously reads messages from the channel
@@ -112,7 +108,7 @@ impl Channel {
     /// callback returns a future that serializes the server loop so it won't
     /// read the next message until the future returns and gives it a
     /// channel and buffer back.
-    pub fn chain_server<F,U>(self, opts: u32, callback: F) -> ChainServer<F,U>
+    pub fn chain_server<F,U>(self, opts: ChannelOpts, callback: F) -> ChainServer<F,U>
         where F: FnMut((Channel, MessageBuf)) -> U,
           U: Future<Item = (Channel, MessageBuf), Error = io::Error>,
     {
@@ -124,7 +120,7 @@ impl Channel {
 
     /// Returns a `Future` that continuously reads messages from the channel and
     /// calls the callback with them, re-using the message buffer.
-    pub fn repeat_server<F>(self, opts: u32, callback: F) -> RepeatServer<F>
+    pub fn repeat_server<F>(self, opts: ChannelOpts, callback: F) -> RepeatServer<F>
         where F: FnMut(&Channel, &mut MessageBuf)
     {
         let buf = MessageBuf::new();
@@ -135,7 +131,7 @@ impl Channel {
     pub fn write(&self,
                  bytes: &[u8],
                  handles: &mut Vec<zircon::Handle>,
-                 opts: u32
+                 opts: ChannelOpts
                 ) -> io::Result<()>
     {
         self.channel.write(bytes, handles, opts).map_err(io::Error::from)
@@ -152,18 +148,7 @@ impl fmt::Debug for Channel {
 ///
 /// This is created by the `Channel::recv_msg` method.
 #[must_use]
-pub struct RecvMsg<T> {
-    state: RecvState<T>,
-}
-
-enum RecvState<T> {
-    Reading {
-        chan: Channel,
-        buf: T,
-        opts: u32,
-    },
-    Empty,
-}
+pub struct RecvMsg<T>(Option<(Channel, T, ChannelOpts)>);
 
 impl<T> Future for RecvMsg<T>
     where T: BorrowMut<MessageBuf>,
@@ -172,19 +157,13 @@ impl<T> Future for RecvMsg<T>
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, io::Error> {
-        match self.state {
-            RecvState::Reading { ref chan, ref mut buf, opts } => {
-                try_nb!(chan.recv_from(opts, buf.borrow_mut()));
-            }
-            RecvState::Empty => panic!("poll a RecvMsg after it's done"),
-        };
-
-        match mem::replace(&mut self.state, RecvState::Empty) {
-            RecvState::Reading { chan, buf, opts: _ } => {
-                Ok(Async::Ready((chan, buf)))
-            }
-            RecvState::Empty => panic!(),
+        {
+            let (ref chan, ref mut buf, opts) =
+                *self.0.as_mut().expect("polled a RecvMsg after completion");
+            try_nb!(chan.recv_from(opts, buf.borrow_mut()));
         }
+        let (chan, buf, _opts) = self.0.take().unwrap();
+        Ok(Async::Ready((chan, buf)))
     }
 }
 
@@ -193,7 +172,7 @@ impl<T> Future for RecvMsg<T>
 #[must_use]
 pub struct ChainServer<F,U> {
     callback: F,
-    opts: u32,
+    opts: ChannelOpts,
     state: ServerState<U>,
 }
 
@@ -284,7 +263,7 @@ mod tests {
         let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle).unwrap().map(|()| {
             panic!("did not receive message in time!");
         });
-        let receiver = receiver.select(rcv_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let receiver = receiver.select(rcv_timeout).map(|_| ()).map_err(|(err,_)| err);
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()|{
             let mut handles = Vec::new();
