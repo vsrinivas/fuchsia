@@ -1069,6 +1069,8 @@ zx_status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t l
             const void* ptr = paddr_to_kvaddr(pa);
             const addr_t cache_op_addr = reinterpret_cast<addr_t>(ptr) + page_offset;
 
+            LTRACEF("ptr %p op %d\n", ptr, (int)type);
+
             // Perform the necessary cache op against this page.
             switch (type) {
             case CacheOpType::Invalidate:

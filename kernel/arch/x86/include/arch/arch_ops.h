@@ -61,17 +61,8 @@ static inline void arch_spinloop_signal(void)
 #define mb()        __asm__ volatile ("mfence" ::: "memory")
 #define smp_mb()    mb()
 
-static inline uint32_t arch_dcache_line_size(void) {
-    // TODO(mcgrathr): not needed for anything yet
-    // cpuid can separately report line sizes for L[123]
-    return 0;
-}
-
-static inline uint32_t arch_icache_line_size(void) {
-    // TODO(mcgrathr): not needed for anything yet
-    // cpuid can separately report line sizes for L[123]
-    return 0;
-}
+uint32_t arch_dcache_line_size(void);
+uint32_t arch_icache_line_size(void);
 
 // Log architecture-specific data for process creation.
 // This can only be called after the process has been created and before

@@ -63,12 +63,12 @@ static inline const struct cpuid_leaf *x86_get_cpuid_leaf(enum x86_cpuid_leaf_nu
     extern uint32_t max_ext_cpuid;
 
     if (leaf < X86_CPUID_EXT_BASE) {
-        if (leaf > max_cpuid)
+        if (unlikely(leaf > max_cpuid))
             return NULL;
 
         return &_cpuid[leaf];
     } else {
-        if (leaf > max_ext_cpuid)
+        if (unlikely(leaf > max_ext_cpuid))
             return NULL;
 
         return &_cpuid_ext[(uint32_t)leaf - (uint32_t)X86_CPUID_EXT_BASE];
@@ -118,6 +118,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_HYPERVISOR   X86_CPUID_BIT(0x1, 2, 31)
 #define X86_FEATURE_FPU          X86_CPUID_BIT(0x1, 3, 0)
 #define X86_FEATURE_SEP          X86_CPUID_BIT(0x1, 3, 11)
+#define X86_FEATURE_CLFLUSH      X86_CPUID_BIT(0x1, 3, 19)
 #define X86_FEATURE_MMX          X86_CPUID_BIT(0x1, 3, 23)
 #define X86_FEATURE_FXSR         X86_CPUID_BIT(0x1, 3, 24)
 #define X86_FEATURE_SSE          X86_CPUID_BIT(0x1, 3, 25)
@@ -134,6 +135,8 @@ void x86_feature_debug(void);
 #define X86_FEATURE_ERMS         X86_CPUID_BIT(0x7, 1, 9)
 #define X86_FEATURE_RDSEED       X86_CPUID_BIT(0x7, 1, 18)
 #define X86_FEATURE_SMAP         X86_CPUID_BIT(0x7, 1, 20)
+#define X86_FEATURE_CLFLUSHOPT   X86_CPUID_BIT(0x7, 1, 23)
+#define X86_FEATURE_CLWB         X86_CPUID_BIT(0x7, 1, 24)
 #define X86_FEATURE_PT           X86_CPUID_BIT(0x7, 1, 25)
 #define X86_FEATURE_PKU          X86_CPUID_BIT(0x7, 2, 3)
 #define X86_FEATURE_AMD_TOPO     X86_CPUID_BIT(0x80000001, 2, 22)
@@ -168,6 +171,19 @@ static inline uint8_t x86_physical_address_width(void)
      Bits 07-00: #Physical Address Bits
     */
     return leaf->a & 0xff;
+}
+
+static inline uint32_t x86_get_clflush_line_size(void)
+{
+    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(X86_CPUID_MODEL_FEATURES);
+    if (!leaf)
+        return 0;
+
+    /*
+     Extracting bit 15:8 from ebx register
+     Bits 15-08: #CLFLUSH line size in quadwords
+    */
+    return ((leaf->b >> 8) & 0xff) * 8u;
 }
 
 /* cpu vendors */
