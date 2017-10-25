@@ -22,7 +22,7 @@ typedef struct {
 
 **object_wait_many**() is a blocking syscall which causes the caller to
 wait until at least one of the specified signals is pending on one of
-the specified *items* or *deadline* passes.
+the specified *items*, or until *deadline* passes, whichever comes first.
 
 The caller must provide *count* zx_wait_item_ts in the *items* array,
 containing the handle and signals bitmask to wait for for each item.
@@ -39,7 +39,7 @@ process.  (For example, a Channel ceases asserting **ZX_CHANNEL_READABLE**
 once the last message in its queue is read).
 
 The maximum number of items that may be waited upon is **ZX_WAIT_MANY_MAX_ITEMS**,
-which is 8.  To wait on more things at once use Ports.
+which is 8.  To wait on more things at once use [Ports](../objects/port.md).
 
 ## RETURN VALUE
 
@@ -53,7 +53,7 @@ For any other return value, the *pending* fields of *items* are undefined.
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS**  *items* isn't a valid pointer or if *count* is too large.
+**ZX_ERR_INVALID_ARGS**  *items* isn't a valid pointer.
 
 **ZX_ERR_OUT_OF_RANGE**  *count* is greater than **ZX_WAIT_MANY_MAX_ITEMS**.
 
