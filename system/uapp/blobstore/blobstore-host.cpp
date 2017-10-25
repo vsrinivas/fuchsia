@@ -14,6 +14,7 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/block-txn.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/new.h>
 #include <fbl/unique_ptr.h>
@@ -69,8 +70,8 @@ int load_block_bitmap(int fd, const blobstore_info_t* info, RawBitmap* block_map
 }
 
 int add_blob_commit(int fd, const blobstore_inode_t* inode, size_t ino_bno,
-                    const void* ino_block, const void* merkle_tree, const void*
-                    blob_data, const RawBitmap& block_map, void* info_block) {
+                    const void* ino_block, const void* merkle_tree,
+                    const void* blob_data, const RawBitmap& block_map, void* info_block) {
     blobstore_info_t* info = &reinterpret_cast<blobstore_info_t*>(info_block)[0];
     // Write back merkle tree and data
     for (size_t n = 0; n < MerkleTreeBlocks(*inode); n++) {
@@ -83,6 +84,18 @@ int add_blob_commit(int fd, const blobstore_inode_t* inode, size_t ino_bno,
     for (size_t n = 0; n < BlobDataBlocks(*inode); n++) {
         const void* data = fs::GetBlock<kBlobstoreBlockSize>(blob_data, n);
         uint64_t bno = DataStartBlock(*info) + inode->start_block + MerkleTreeBlocks(*inode) + n;
+
+        // If we try to write a block, will it be reaching beyond the end of the
+        // mapped file?
+        size_t off = n * kBlobstoreBlockSize;
+        uint8_t last_data[kBlobstoreBlockSize];
+        if (inode->blob_size < off + kBlobstoreBlockSize) {
+            // Read the partial block from a block-sized buffer which zero-pads the data.
+            memset(last_data, 0, kBlobstoreBlockSize);
+            memcpy(last_data, data, inode->blob_size - off);
+            data = last_data;
+        }
+
         if (writeblk(fd, bno, data) < 0) {
             return -1;
         }
