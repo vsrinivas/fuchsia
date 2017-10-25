@@ -149,7 +149,7 @@ impl Into<zircon::MessageBuf> for Message {
 
 impl From<zircon::MessageBuf> for Message {
     fn from(mut buf: zircon::MessageBuf) -> Self {
-        buf.ensure_capacity_bytes(ZXRIO_HDR_SZ);
+        buf.ensure_initialized_bytes(ZXRIO_HDR_SZ);
         let msg = buf.bytes().as_ptr() as *const _ as *const zxrio_msg_t;
         Self { buf: buf, msg: msg }
     }

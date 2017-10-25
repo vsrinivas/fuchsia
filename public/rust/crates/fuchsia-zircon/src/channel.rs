@@ -238,6 +238,14 @@ impl MessageBuf {
         ensure_capacity(&mut self.handles, n_handles);
     }
 
+    /// Ensure that at least n_bytes bytes are initialized (0 fill).
+    pub fn ensure_initialized_bytes(&mut self, n_bytes: usize) {
+        if n_bytes <= self.bytes.len() {
+            return;
+        }
+        self.bytes.resize(n_bytes, 0);
+    }
+
     /// Get a reference to the bytes of the message buffer, as a `&[u8]` slice.
     pub fn bytes(&self) -> &[u8] {
         self.bytes.as_slice()
