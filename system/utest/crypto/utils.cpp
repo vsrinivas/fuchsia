@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <string.h>
 
+#include <crypto/aead.h>
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <crypto/digest.h>
@@ -96,6 +97,26 @@ zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Bytes* key, Bytes* iv)
     if (iv) {
         size_t iv_len;
         if ((rc = Cipher::GetIVLen(cipher, &iv_len)) != ZX_OK ||
+            (rc = iv->Randomize(iv_len)) != ZX_OK) {
+            return rc;
+        }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t GenerateKeyMaterial(AEAD::Algorithm cipher, Bytes* key, Bytes* iv) {
+    zx_status_t rc;
+    ZX_DEBUG_ASSERT(key);
+
+    size_t key_len;
+    if ((rc = AEAD::GetKeyLen(cipher, &key_len)) != ZX_OK ||
+        (rc = key->Randomize(key_len)) != ZX_OK) {
+        return rc;
+    }
+    if (iv) {
+        size_t iv_len;
+        if ((rc = AEAD::GetIVLen(cipher, &iv_len)) != ZX_OK ||
             (rc = iv->Randomize(iv_len)) != ZX_OK) {
             return rc;
         }

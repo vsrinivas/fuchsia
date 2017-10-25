@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/aead.cpp \
     $(LOCAL_DIR)/bytes.cpp \
     $(LOCAL_DIR)/cipher.cpp \
     $(LOCAL_DIR)/hkdf.cpp \

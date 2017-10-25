@@ -9,6 +9,7 @@ MODULE_SO_NAME := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/aead.cpp \
     $(LOCAL_DIR)/bytes.cpp \
     $(LOCAL_DIR)/cipher.cpp \
     $(LOCAL_DIR)/digest.cpp \

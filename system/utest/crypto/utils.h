@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <crypto/aead.h>
 #include <crypto/cipher.h>
 #include <crypto/hkdf.h>
 #include <zircon/status.h>
@@ -74,6 +75,10 @@ zx_status_t HexToBytes(const char* hex, Bytes* out);
 // Fills the given |key| and |iv| with as much random data as indicated by |Cipher::GetKeyLen| and
 // |Cipher::GetIVLen| for the given |cipher|. |iv| may be null.
 zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Bytes* key, Bytes* iv);
+
+// Fills the given |key|, |iv| with as much random data as indicated by |AEAD::GetKeyLen| and
+//|AEAD::GetIVLen| for the given |aead|. |iv| may be null.
+zx_status_t GenerateKeyMaterial(AEAD::Algorithm aead, Bytes* key, Bytes* iv);
 
 } // namespace testing
 } // namespace crypto
