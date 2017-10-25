@@ -6,7 +6,6 @@
 
 #include <zircon/process.h>
 
-// TODO: add ATTR_LIBC_VISIBILITY to all 3 exports as soon as Rust no longer depends on these
 zx_handle_t __zircon_process_self;
 zx_handle_t __zircon_vmar_root_self;
 zx_handle_t __zircon_job_default;
