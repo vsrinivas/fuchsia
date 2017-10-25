@@ -92,7 +92,7 @@ See [object_wait_async](object_wait_async.md) for more details.
 **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 
 **ZX_ERR_INVALID_ARGS** *handle* isn't a valid handle or *packet* isn't a valid
-pointer or *size* is an invalid packet size.
+pointer or *count* is an invalid packet size.
 
 **ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_WRITE** and may
 not be waited upon.

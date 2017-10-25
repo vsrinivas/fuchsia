@@ -10,14 +10,16 @@ port_queue - queue a packet to an port
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet, size_t size);
+zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet, size_t count);
 
 ```
 
 ## DESCRIPTION
 
 **port_queue**() queues a *packet* to the port specified
-by *handle*. *size* should be set to zero.
+by *handle*.
+
+The **count** argument should be set to one. A value of zero is also accepted as a deprecated feature.
 
 ```
 typedef struct zx_port_packet {
@@ -54,7 +56,7 @@ typedef union zx_packet_user {
 **ZX_ERR_INVALID_ARGS**  *handle* isn't a valid port handle, or
 *packet* is an invalid pointer.
 
-**ZX_ERR_WRONG_TYPE** *size* is not zero or *handle* is not a port
+**ZX_ERR_WRONG_TYPE** *count* is not zero or one, or *handle* is not a port
 handle.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE**.

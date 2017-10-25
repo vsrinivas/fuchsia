@@ -89,6 +89,56 @@ static bool queue_count_invalid_test() {
     END_TEST;
 }
 
+template <size_t Count>
+static bool wait_count_valid_test() {
+    BEGIN_TEST;
+
+    zx_handle_t port;
+    zx_status_t status = zx_port_create(0u, &port);
+    EXPECT_EQ(status, ZX_OK);
+
+    const zx_port_packet_t in = {
+    };
+    status = zx_port_queue(port, &in, 1u);
+    EXPECT_EQ(status, ZX_OK);
+
+    // This test relies on only 0 or 1 being a valid count. This might
+    // eventually change. For now, we can stack allocate 1 packet and
+    // know it is sufficient for all instantiations of this test.
+    static_assert(Count <= 1, "");
+    zx_port_packet_t out = {
+    };
+    status = zx_port_wait(port, ZX_TIME_INFINITE, &out, Count);
+    EXPECT_EQ(status, ZX_OK);
+
+    EXPECT_EQ(zx_handle_close(port), ZX_OK);
+
+    END_TEST;
+}
+
+template <size_t Count>
+static bool wait_count_invalid_test() {
+    BEGIN_TEST;
+
+    zx_handle_t port;
+    zx_status_t status = zx_port_create(0u, &port);
+    EXPECT_EQ(status, ZX_OK);
+
+    const zx_port_packet_t in = {
+    };
+    status = zx_port_queue(port, &in, 1u);
+    EXPECT_EQ(status, ZX_OK);
+
+    zx_port_packet_t out[Count] = {
+    };
+    status = zx_port_wait(port, ZX_TIME_INFINITE, out, Count);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+
+    EXPECT_EQ(zx_handle_close(port), ZX_OK);
+
+    END_TEST;
+}
+
 static bool queue_and_close_test(void) {
     BEGIN_TEST;
     zx_status_t status;
@@ -692,6 +742,10 @@ RUN_TEST(queue_count_valid_test<0u>)
 RUN_TEST(queue_count_valid_test<1u>)
 RUN_TEST(queue_count_invalid_test<2u>)
 RUN_TEST(queue_count_invalid_test<23u>)
+RUN_TEST(wait_count_valid_test<0u>)
+RUN_TEST(wait_count_valid_test<1u>)
+RUN_TEST(wait_count_invalid_test<2u>)
+RUN_TEST(wait_count_invalid_test<23u>)
 RUN_TEST(queue_and_close_test)
 RUN_TEST(async_wait_channel_test)
 RUN_TEST(async_wait_event_test_single)
