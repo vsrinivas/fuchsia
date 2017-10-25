@@ -306,7 +306,7 @@ MODULE_INSTALL_HEADERS := $(BUILDSYSROOT)/include
 # locate headers from module source public include dir
 MODULE_PUBLIC_HEADERS :=\
 $(shell test -d $(MODULE_SRCDIR)/include &&\
-  find $(MODULE_SRCDIR)/include -name \*\.h -o -name \*\.inc)
+  find $(MODULE_SRCDIR)/include -name \*\.h -o -name \*\.inc -o -name \*\.modulemap )
 
 # translate them to the destination in sysroot
 MODULE_SYSROOT_HEADERS :=\
@@ -315,6 +315,7 @@ $(patsubst $(MODULE_SRCDIR)/include/%,$(MODULE_INSTALL_HEADERS)/%,$(MODULE_PUBLI
 # generate rules to copy them
 $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.h,$(MODULE_SRCDIR)/include/%.h)
 $(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.inc,$(MODULE_SRCDIR)/include/%.inc)
+$(call copy-dst-src,$(MODULE_INSTALL_HEADERS)/%.modulemap,$(MODULE_SRCDIR)/include/%.modulemap)
 
 SYSROOT_DEPS += $(MODULE_SYSROOT_HEADERS)
 GENERATED += $(MODULE_SYSROOT_HEADERS)
