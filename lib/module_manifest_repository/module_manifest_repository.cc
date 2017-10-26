@@ -41,10 +41,19 @@ struct WatcherState {
 bool IsRegularFile(const char* const path) {
   struct stat path_stat;
   if (stat(path, &path_stat) < 0) {
-    FXL_LOG(INFO) << "Couldn't stat file: " << strerror(errno);
+    FXL_LOG(INFO) << "Couldn't stat " << path << ": " << strerror(errno);
     return false;
   }
   return S_ISREG(path_stat.st_mode);
+}
+
+bool IsDirectory(const char* const path) {
+  struct stat path_stat;
+  if (stat(path, &path_stat) < 0) {
+    FXL_LOG(INFO) << "Couldn't stat " << path << ": " << strerror(errno);
+    return false;
+  }
+  return S_ISDIR(path_stat.st_mode);
 }
 
 zx_status_t WatcherHandler(const int dirfd,
@@ -62,14 +71,14 @@ zx_status_t WatcherHandler(const int dirfd,
   const std::string name_str{name};
   switch (event) {
     case WATCH_EVENT_ADD_FILE:
-      state->task_runner->PostTask(
-          [weak_repository = state->weak_repository, state, name_str = std::move(name_str)] {
-            // If the repository has gone out of scope, |state| either already
-            // did, or it will soon.
-            if (!weak_repository)
-              return;
-            state->on_new(name_str);
-          });
+      state->task_runner->PostTask([weak_repository = state->weak_repository,
+                                    state, name_str = std::move(name_str)] {
+        // If the repository has gone out of scope, |state| either already
+        // did, or it will soon.
+        if (!weak_repository)
+          return;
+        state->on_new(name_str);
+      });
       break;
     case WATCH_EVENT_REMOVE_FILE:
       // TODO(thatguy)
@@ -100,37 +109,41 @@ void XdrEntry(modular::XdrContext* const xdr,
 
 }  // namespace
 
-ModuleManifestRepository::ModuleManifestRepository(
-    std::string repository_dir,
-    NewEntryFn fn)
+ModuleManifestRepository::ModuleManifestRepository(std::string repository_dir,
+                                                   NewEntryFn fn)
     : repository_dir_(repository_dir), new_entry_fn_(fn), weak_factory_(this) {
   // fdio_watch_directory() is blocking so we start the watching process in its
   // own thread. We give that thread a pointer to our TaskRunner and a WeakPtr
   // to us in case we are destroyed.
   auto task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
-  auto thread = std::thread([weak_this = weak_factory_.GetWeakPtr(),
-                             task_runner, repository_dir = std::move(repository_dir)] {
-    // In the unlikely event our owner is destroyed before we get here.
-    if (!weak_this)
-      return;
+  auto thread =
+      std::thread([weak_this = weak_factory_.GetWeakPtr(), task_runner,
+                   repository_dir = std::move(repository_dir)] {
+        // In the unlikely event our owner is destroyed before we get here.
+        if (!weak_this)
+          return;
 
-    // Set up the fdio waiter.
-    auto dirfd = open(repository_dir.c_str(), O_DIRECTORY | O_RDONLY);
-    FXL_CHECK(dirfd >= 0) << "Could not open " << repository_dir << ": "
-                          << strerror(errno);
+        if (!IsDirectory(repository_dir.c_str())) {
+          // Short-circuit if the repository dir doesn't exist.
+          return;
+        }
+        // Set up the fdio waiter.
+        auto dirfd = open(repository_dir.c_str(), O_DIRECTORY | O_RDONLY);
+        FXL_CHECK(dirfd >= 0)
+            << "Could not open " << repository_dir << ": " << strerror(errno);
 
-    auto state = new WatcherState();  // Managed by WatcherHandler() above.
-    state->weak_repository = weak_this;
-    state->task_runner = task_runner;
+        auto state = new WatcherState();  // Managed by WatcherHandler() above.
+        state->weak_repository = weak_this;
+        state->task_runner = task_runner;
 
-    state->on_new = [weak_this](const std::string name) {
-      if (!weak_this)
-        return;
-      weak_this->OnNewFile(name);
-    };
-    fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
-                         static_cast<void*>(state));
-  });
+        state->on_new = [weak_this](const std::string name) {
+          if (!weak_this)
+            return;
+          weak_this->OnNewFile(name);
+        };
+        fdio_watch_directory(dirfd, WatcherHandler, ZX_TIME_INFINITE,
+                             static_cast<void*>(state));
+      });
 
   // We rely on the fact that the thread will kill itself eventually if either:
   // a) The owning process is killed.

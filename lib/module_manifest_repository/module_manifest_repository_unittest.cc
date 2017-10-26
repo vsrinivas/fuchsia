@@ -147,5 +147,13 @@ TEST_F(ModuleManifestRepositoryTest, All) {
   EXPECT_EQ("chair", entries()[2].noun_constraints[0].types[0]);
 }
 
+TEST_F(ModuleManifestRepositoryTest, DontCrashOnNoRepoDir) {
+  repo_dir_ = "/doesnt/exist";
+  // TODO(thatguy): Once making ModuleManifestRepository easier to test against
+  // (ie, have a guaranteed initialized state we can synchronize on), do that
+  // here.
+  ResetRepository();
+}
+
 }  // namespace
 }  // namespace modular
