@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/test/cloud_server/server.h"
+#include "peridot/bin/cloud_provider_firebase/test/server/server.h"
 
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"

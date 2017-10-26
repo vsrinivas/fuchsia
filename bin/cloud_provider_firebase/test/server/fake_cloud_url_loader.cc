@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/test/cloud_server/fake_cloud_url_loader.h"
+#include "peridot/bin/cloud_provider_firebase/test/server/fake_cloud_url_loader.h"
 
 #include "lib/fxl/strings/string_view.h"
 #include "lib/url/gurl.h"

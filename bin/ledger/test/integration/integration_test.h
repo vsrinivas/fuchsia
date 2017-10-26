@@ -12,7 +12,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "peridot/bin/ledger/test/cloud_server/fake_cloud_network_service.h"
 #include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/test/cloud_server/firebase_server.h"
+#include "peridot/bin/cloud_provider_firebase/test/server/firebase_server.h"
 
 #include <algorithm>
 #include <deque>

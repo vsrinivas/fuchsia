@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/test/cloud_server/gcs_server.h"
+#include "peridot/bin/cloud_provider_firebase/test/server/gcs_server.h"
 
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"

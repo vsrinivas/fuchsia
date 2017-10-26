@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FIREBASE_SERVER_H_
-#define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FIREBASE_SERVER_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_SERVER_FIREBASE_SERVER_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_SERVER_FIREBASE_SERVER_H_
 
 #include <functional>
 #include <memory>
@@ -12,8 +12,8 @@
 
 #include "lib/network/fidl/network_service.fidl.h"
 #include "lib/url/gurl.h"
+#include "peridot/bin/cloud_provider_firebase/test/server/server.h"
 #include "peridot/bin/ledger/convert/collection_view.h"
-#include "peridot/bin/ledger/test/cloud_server/server.h"
 
 namespace ledger {
 
@@ -65,4 +65,4 @@ class FirebaseServer : public Server {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FIREBASE_SERVER_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_SERVER_FIREBASE_SERVER_H_

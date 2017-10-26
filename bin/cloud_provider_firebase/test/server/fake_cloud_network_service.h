@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
-#define PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/netstack/fidl/net_address.fidl.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/bin/ledger/test/cloud_server/fake_cloud_url_loader.h"
+#include "peridot/bin/cloud_provider_firebase/test/server/fake_cloud_url_loader.h"
 
 namespace ledger {
 
@@ -61,4 +61,4 @@ class FakeCloudNetworkService : public network::NetworkService {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
