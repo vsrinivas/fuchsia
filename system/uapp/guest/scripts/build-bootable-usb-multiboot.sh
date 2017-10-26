@@ -150,14 +150,12 @@ sudo mkdir -p "${MOUNT_PATH}/proc"
 
 sudo mount "${EFI_PARTITION_PATH}" "${EFI_MOUNT_PATH}"
 sudo mount "${HOME_PARTITION_PATH}" "${HOME_MOUNT_PATH}"
-sudo mount --bind /dev "${MOUNT_PATH}/dev"
 sudo mount --bind /sys "${MOUNT_PATH}/sys"
 sudo mount --bind /proc "${MOUNT_PATH}/proc"
 
 unmount_all() {
     umount_retry "${EFI_MOUNT_PATH}"
     umount_retry "${HOME_MOUNT_PATH}"
-    umount_retry "${MOUNT_PATH}/dev"
     umount_retry "${MOUNT_PATH}/sys"
     umount_retry "${MOUNT_PATH}/proc"
     umount_retry "${MOUNT_PATH}"
