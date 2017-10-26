@@ -51,7 +51,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   // fingerprint.
   void CheckCloudNotErased();
   void CreateFingerprint();
-  void HandeDeviceSetResult(cloud_provider::Status status);
+  void HandleDeviceSetResult(cloud_provider::Status status);
 
   // Sets a watcher to detect that the cloud is cleared while sync is running.
   void SetCloudErasedWatcher();

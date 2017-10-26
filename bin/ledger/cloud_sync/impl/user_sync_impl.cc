@@ -103,7 +103,7 @@ void UserSyncImpl::CheckCloudNotErased() {
 
   device_set_->CheckFingerprint(
       convert::ToArray(fingerprint_),
-      [this](cloud_provider::Status status) { HandeDeviceSetResult(status); });
+      [this](cloud_provider::Status status) { HandleDeviceSetResult(status); });
 }
 
 void UserSyncImpl::CreateFingerprint() {
@@ -125,11 +125,11 @@ void UserSyncImpl::CreateFingerprint() {
             return;
           }
         }
-        HandeDeviceSetResult(status);
+        HandleDeviceSetResult(status);
       });
 }
 
-void UserSyncImpl::HandeDeviceSetResult(cloud_provider::Status status) {
+void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
   switch (status) {
     case cloud_provider::Status::OK:
       backoff_->Reset();
