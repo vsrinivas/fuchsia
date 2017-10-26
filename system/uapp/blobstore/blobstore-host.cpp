@@ -201,11 +201,11 @@ zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd) {
     return ZX_OK;
 }
 
-int blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
+zx_status_t blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
                    const fbl::Vector<size_t>& extent_lengths) {
     fbl::RefPtr<Blobstore> blob;
     zx_status_t status;
-    if ((status = blobstore_create_sparse(&blob, fbl::move(fd), start, end, extent_lengths)) 
+    if ((status = blobstore_create_sparse(&blob, fbl::move(fd), start, end, extent_lengths))
         != ZX_OK) {
         return status;
     } else if ((status = blobstore_check(blob)) != ZX_OK) {

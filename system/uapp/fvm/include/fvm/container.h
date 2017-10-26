@@ -8,7 +8,7 @@
 #include <fbl/unique_fd.h>
 #include <fvm/fvm-sparse.h>
 
-#include "../format/format.h"
+#include "format.h"
 
 // A Container represents a method of storing multiple file system partitions in an
 // FVM-recognizable format

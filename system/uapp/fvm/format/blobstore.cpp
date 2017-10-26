@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "format.h"
+#include "fvm/format.h"
 
 static constexpr char kBlobstoreName[] = "blobstore";
 static constexpr uint8_t kBlobstoreType[] = GUID_BLOBFS_VALUE;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "format.h"
+#include "fvm/format.h"
 
 zx_status_t Format::Detect(int fd, off_t offset, disk_format_t* out) {
     uint8_t data[HEADER_SIZE];

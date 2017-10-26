@@ -4,7 +4,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "container.h"
+#include "fvm/container.h"
 
 zx_status_t Container::Create(const char* path, fbl::unique_ptr<Container>* container) {
     fbl::unique_fd fd(open(path, O_RDONLY));

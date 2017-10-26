@@ -10,38 +10,40 @@ MODULE_TYPE := hostapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
-    $(LOCAL_DIR)/container/container.cpp \
-    $(LOCAL_DIR)/container/fvm.cpp \
-    $(LOCAL_DIR)/container/sparse.cpp \
-    $(LOCAL_DIR)/format/blobstore.cpp \
-    $(LOCAL_DIR)/format/format.cpp \
-    $(LOCAL_DIR)/format/minfs.cpp \
-    system/ulib/fs/vfs.cpp \
-    system/ulib/fs/vnode.cpp \
+    system/uapp/fvm/container/container.cpp \
+    system/uapp/fvm/container/fvm.cpp \
+    system/uapp/fvm/container/sparse.cpp \
+    system/uapp/fvm/format/format.cpp \
+    system/uapp/fvm/format/minfs.cpp \
+    system/uapp/fvm/format/blobstore.cpp \
+    system/uapp/blobstore/blobstore-common.cpp \
+
+MODULE_NAME := fvm-host-test
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/uapp/fvm/include \
     -Isystem/ulib/fbl/include \
+    -Isystem/ulib/fvm/include \
     -Isystem/ulib/digest/include \
     -Ithird_party/ulib/cryptolib/include \
     -Isystem/ulib/gpt/include \
-    -Isystem/ulib/fdio/include \
-    -Isystem/ulib/fvm/include \
-    -Isystem/uapp/minfs/include \
-    -Isystem/ulib/bitmap/include \
-    -Isystem/ulib/fs/include \
-    -Isystem/ulib/zircon/include \
-    -Isystem/ulib/fs-management/include \
     -Isystem/uapp/blobstore/include \
-    -Isystem/ulib/fbl/include \
+    -Isystem/ulib/bitmap/include \
+    -Isystem/ulib/fs-management/include \
+    -Isystem/uapp/minfs/include \
+    -Isystem/ulib/unittest/include \
+    -Isystem/ulib/fs/include \
+    -Isystem/ulib/fdio/include \
 
 MODULE_HOST_LIBS := \
+    system/uapp/fvm.hostlib \
+    system/ulib/unittest.hostlib \
+    system/ulib/pretty.hostlib \
     system/uapp/minfs.hostlib \
-    system/uapp/blobstore.hostlib \
-    system/ulib/fvm.hostlib \
     system/ulib/fbl.hostlib \
+    system/uapp/blobstore.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

@@ -5,7 +5,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
-#include "container/container.h"
+#include "fvm/container.h"
 
 int usage(void) {
     fprintf(stderr, "usage: fvm [ output_path ] [ command ] [ <input_paths>* ]\n");
