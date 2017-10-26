@@ -46,12 +46,12 @@ void ExpectEntityEq(Entity* entity,
   // Test that we read the correct content for each type.
   (*pending_expects) += types.size();
   for (size_t i = 0; i < types.size(); i++) {
-    entity->GetContent(types[i], [
-      expected_content = contents[i], pending_expects, &contents
-    ](fidl::Array<uint8_t> result) mutable {
-      --*pending_expects;
-      EXPECT_EQ(expected_content, result.To<std::vector<uint8_t>>());
-    });
+    entity->GetContent(
+        types[i], [expected_content = contents[i], pending_expects,
+                   &contents](fidl::Array<uint8_t> result) mutable {
+          --*pending_expects;
+          EXPECT_EQ(expected_content, result.To<std::vector<uint8_t>>());
+        });
   }
 }
 

@@ -96,7 +96,7 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
   }
 
   for (auto& it : user_controllers_) {
-    auto cont = [ this, ptr = it.first, callback ] {
+    auto cont = [this, ptr = it.first, callback] {
       // This is okay because during teardown, |cont| is never invoked
       // asynchronously.
       user_controllers_.erase(ptr);
@@ -236,7 +236,7 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id,
   FXL_DCHECK(account_provider_);
   account_provider_->RemoveAccount(
       std::move(account), false /* disable single logout*/,
-      [ this, account_id = account_id, callback ](auth::AuthErrPtr auth_err) {
+      [this, account_id = account_id, callback](auth::AuthErrPtr auth_err) {
         if (auth_err->status != auth::Status::OK) {
           callback(auth_err->message);
           return;

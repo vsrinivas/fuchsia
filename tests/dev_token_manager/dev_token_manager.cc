@@ -20,30 +20,30 @@ namespace modular {
 namespace auth {
 
 class AccountProviderImpl : AccountProvider {
-public:
- AccountProviderImpl();
+ public:
+  AccountProviderImpl();
 
-private:
- // |AccountProvider| implementation:
- void Initialize(
-     fidl::InterfaceHandle<AccountProviderContext> provider) override;
- void Terminate() override;
- void AddAccount(IdentityProvider identity_provider,
-                 const AddAccountCallback& callback) override;
- void RemoveAccount(AccountPtr account,
-                    bool revoke_all,
-                    const RemoveAccountCallback& callback) override;
- void GetTokenProviderFactory(
-     const fidl::String& account_id,
-     fidl::InterfaceRequest<TokenProviderFactory> request) override;
+ private:
+  // |AccountProvider| implementation:
+  void Initialize(
+      fidl::InterfaceHandle<AccountProviderContext> provider) override;
+  void Terminate() override;
+  void AddAccount(IdentityProvider identity_provider,
+                  const AddAccountCallback& callback) override;
+  void RemoveAccount(AccountPtr account,
+                     bool revoke_all,
+                     const RemoveAccountCallback& callback) override;
+  void GetTokenProviderFactory(
+      const fidl::String& account_id,
+      fidl::InterfaceRequest<TokenProviderFactory> request) override;
 
- std::string GenerateAccountId();
+  std::string GenerateAccountId();
 
- std::shared_ptr<app::ApplicationContext> application_context_;
- AccountProviderContextPtr account_provider_context_;
- fidl::Binding<AccountProvider> binding_;
+  std::shared_ptr<app::ApplicationContext> application_context_;
+  AccountProviderContextPtr account_provider_context_;
+  fidl::Binding<AccountProvider> binding_;
 
- FXL_DISALLOW_COPY_AND_ASSIGN(AccountProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AccountProviderImpl);
 };
 
 AccountProviderImpl::AccountProviderImpl()
@@ -75,7 +75,7 @@ std::string AccountProviderImpl::GenerateAccountId() {
 }
 
 void AccountProviderImpl::AddAccount(IdentityProvider identity_provider,
-                                      const AddAccountCallback& callback) {
+                                     const AddAccountCallback& callback) {
   auto account = auth::Account::New();
   account->id = GenerateAccountId();
   account->identity_provider = identity_provider;
@@ -92,16 +92,14 @@ void AccountProviderImpl::AddAccount(IdentityProvider identity_provider,
   }
 }
 
-void AccountProviderImpl::RemoveAccount(
-    AccountPtr account,
-    bool revoke_all,
-    const RemoveAccountCallback& callback) {
+void AccountProviderImpl::RemoveAccount(AccountPtr account,
+                                        bool revoke_all,
+                                        const RemoveAccountCallback& callback) {
 }
 
 void AccountProviderImpl::GetTokenProviderFactory(
     const fidl::String& account_id,
-    fidl::InterfaceRequest<TokenProviderFactory> request) {
-}
+    fidl::InterfaceRequest<TokenProviderFactory> request) {}
 
 }  // namespace auth
 }  // namespace modular

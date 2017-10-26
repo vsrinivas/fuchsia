@@ -187,13 +187,13 @@ void ContextValueWriterImpl::CreateChildValue(
     fidl::InterfaceRequest<ContextValueWriter> request,
     ContextValueType type) {
   // We can't create a child value until this value has an ID.
-  value_id_.OnValue(fxl::MakeCopyable([
-    this, request = std::move(request), type
-  ](const ContextRepository::Id& value_id) mutable {
-    auto ptr =
-        new ContextValueWriterImpl(writer_, value_id, type, std::move(request));
-    writer_->AddContextValueWriter(ptr);
-  }));
+  value_id_.OnValue(
+      fxl::MakeCopyable([this, request = std::move(request),
+                         type](const ContextRepository::Id& value_id) mutable {
+        auto ptr = new ContextValueWriterImpl(writer_, value_id, type,
+                                              std::move(request));
+        writer_->AddContextValueWriter(ptr);
+      }));
 }
 
 void ContextValueWriterImpl::Set(const fidl::String& content,

@@ -18,7 +18,7 @@ template <typename T>
 std::function<void()> WeakCallback(
     fxl::WeakPtr<T> weak_ptr,
     const std::function<void()>& unsafe_callback) {
-  return [ weak_ptr = std::move(weak_ptr), unsafe_callback ] {
+  return [weak_ptr = std::move(weak_ptr), unsafe_callback] {
     if (weak_ptr) {
       unsafe_callback();
     }

@@ -4,10 +4,10 @@
 
 #include "peridot/bin/entity/entity_repository.h"
 
+#include "lib/async/cpp/operation.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
 #include "peridot/bin/entity/entity_impl.h"
-#include "lib/async/cpp/operation.h"
 
 namespace modular {
 

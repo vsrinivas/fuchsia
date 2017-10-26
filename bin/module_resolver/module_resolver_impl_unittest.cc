@@ -83,8 +83,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200));
   }
 
-  void WriteManifestFile(const std::string& name,
-                         const char* contents) {
+  void WriteManifestFile(const std::string& name, const char* contents) {
     const auto path = repo_dir_ + '/' + name;
     manifests_written_.push_back(path);
 

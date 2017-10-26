@@ -78,7 +78,8 @@ class AgentContextImpl::InitializeCall : Operation<> {
     // TODO(alhaad): We should have a timer for an agent which does not return
     // its callback within some timeout.
     agent_context_impl_->agent_->Initialize(
-        agent_context_impl_->agent_context_bindings_.AddBinding(agent_context_impl_),
+        agent_context_impl_->agent_context_bindings_.AddBinding(
+            agent_context_impl_),
         [this, flow] { agent_context_impl_->state_ = State::RUNNING; });
   }
 
@@ -124,7 +125,7 @@ class AgentContextImpl::StopCall : Operation<bool> {
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATING;
     agent_context_impl_->app_client_->Teardown(kBasicTimeout,
-                                              [this, flow] { Kill(flow); });
+                                               [this, flow] { Kill(flow); });
   }
 
   void Kill(FlowToken flow) {
@@ -159,7 +160,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
   service_provider_impl_.AddBinding(service_list->provider.NewRequest());
   app_client_ = std::make_unique<AppClient<Lifecycle>>(
       info.app_launcher, std::move(agent_config),
-      std::string(kAppStoragePath) + HashAgentUrl(url_), std::move(service_list));
+      std::string(kAppStoragePath) + HashAgentUrl(url_),
+      std::move(service_list));
   new InitializeCall(&operation_queue_, this);
 }
 
@@ -170,20 +172,22 @@ void AgentContextImpl::NewConnection(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
-  new SyncCall(&operation_queue_, fxl::MakeCopyable([
-    this, requestor_url,
-    incoming_services_request = std::move(incoming_services_request),
-    agent_controller_request = std::move(agent_controller_request)
-  ]() mutable {
-    FXL_CHECK(state_ == State::RUNNING);
+  new SyncCall(
+      &operation_queue_,
+      fxl::MakeCopyable([this, requestor_url,
+                         incoming_services_request =
+                             std::move(incoming_services_request),
+                         agent_controller_request =
+                             std::move(agent_controller_request)]() mutable {
+        FXL_CHECK(state_ == State::RUNNING);
 
-    agent_->Connect(requestor_url, std::move(incoming_services_request));
+        agent_->Connect(requestor_url, std::move(incoming_services_request));
 
-    // Add a binding to the |controller|. When all the bindings go away
-    // we can stop the agent.
-    agent_controller_bindings_.AddBinding(this,
-                                          std::move(agent_controller_request));
-  }));
+        // Add a binding to the |controller|. When all the bindings go away
+        // we can stop the agent.
+        agent_controller_bindings_.AddBinding(
+            this, std::move(agent_controller_request));
+      }));
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {

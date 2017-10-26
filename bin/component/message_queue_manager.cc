@@ -414,13 +414,13 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
     std::string json;
     XdrWrite(&json, &message_queue_info_, XdrMessageQueueInfo);
 
-    page_->Put(
-        to_array(message_queue_key),
-        to_array(json), [key = message_queue_key](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << "Page.Put() " << key << ", status=" << status;
-          }
-        });
+    page_->Put(to_array(message_queue_key), to_array(json),
+               [key = message_queue_key](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FXL_LOG(ERROR)
+                       << "Page.Put() " << key << ", status=" << status;
+                 }
+               });
 
     page_->Commit([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
@@ -506,23 +506,20 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
             }
           });
 
-          page_->Delete(
-              to_array(message_queue_key), [key = message_queue_key](
-                                               ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FXL_LOG(ERROR)
-                      << "Page.Delete() " << key << ", status=" << status;
-                }
-              });
-          page_->Delete(
-              to_array(message_queue_token_key), [key =
-                                                      message_queue_token_key](
-                                                     ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FXL_LOG(ERROR)
-                      << "Page.Delete() " << key << ", status=" << status;
-                }
-              });
+          page_->Delete(to_array(message_queue_key),
+                        [key = message_queue_key](ledger::Status status) {
+                          if (status != ledger::Status::OK) {
+                            FXL_LOG(ERROR) << "Page.Delete() " << key
+                                           << ", status=" << status;
+                          }
+                        });
+          page_->Delete(to_array(message_queue_token_key),
+                        [key = message_queue_token_key](ledger::Status status) {
+                          if (status != ledger::Status::OK) {
+                            FXL_LOG(ERROR) << "Page.Delete() " << key
+                                           << ", status=" << status;
+                          }
+                        });
 
           message_queue_manager_->ClearMessageQueueStorage(message_queue_info_);
 

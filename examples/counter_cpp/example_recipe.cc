@@ -235,9 +235,9 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
           FXL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    module_context_->StartModuleInShell(
-        "module2", "example_module2", kModule2Link, nullptr,
-        nullptr, module2_.NewRequest(), nullptr, true);
+    module_context_->StartModuleInShell("module2", "example_module2",
+                                        kModule2Link, nullptr, nullptr,
+                                        module2_.NewRequest(), nullptr, true);
 
     connections_.emplace_back(
         new LinkForwarder(module1_link_.get(), module2_link_.get()));

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 #define PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 
+#include "lib/async/cpp/operation.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage.h"
-#include "lib/async/cpp/operation.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"

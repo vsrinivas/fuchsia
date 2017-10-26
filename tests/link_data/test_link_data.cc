@@ -49,8 +49,8 @@ bool IsRunning(const modular::StoryState state) {
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
-    first_module = command_line.GetOptionValueWithDefault(
-        "first_module", "example_recipe");
+    first_module = command_line.GetOptionValueWithDefault("first_module",
+                                                          "example_recipe");
   }
 
   std::string first_module;

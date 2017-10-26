@@ -98,12 +98,12 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     agent_impl_.reset();
     if (impl_) {
       impl_->Terminate([this] {
-          // Cf. AppDriver::Terminate().
-          fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
-              impl_.reset();
-              on_terminated_();
-            });
+        // Cf. AppDriver::Terminate().
+        fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
+          impl_.reset();
+          on_terminated_();
         });
+      });
     } else {
       on_terminated_();
     }

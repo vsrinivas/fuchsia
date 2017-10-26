@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -17,7 +18,6 @@
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/bin/story_runner/key_generator.h"
-#include "lib/async/cpp/operation.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"

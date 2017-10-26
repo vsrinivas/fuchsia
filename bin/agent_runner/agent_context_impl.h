@@ -14,6 +14,7 @@
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
+#include "lib/async/cpp/operation.h"
 #include "lib/auth/fidl/account_provider.fidl.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -25,7 +26,6 @@
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
-#include "lib/async/cpp/operation.h"
 
 namespace modular {
 

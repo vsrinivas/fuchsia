@@ -32,8 +32,8 @@ namespace {
 class Settings {
  public:
   explicit Settings(const fxl::CommandLine& command_line) {
-    root_module = command_line.GetOptionValueWithDefault(
-        "root_module", "example_recipe");
+    root_module =
+        command_line.GetOptionValueWithDefault("root_module", "example_recipe");
     root_link = command_line.GetOptionValueWithDefault("root_link", "");
     story_id = command_line.GetOptionValueWithDefault("story_id", "");
   }
@@ -172,8 +172,7 @@ class DevUserShellApp : modular::StoryWatcher,
   // |SuggestionListener|
   void OnProcessingChange(bool processing) override {
     FXL_VLOG(4) << "DevUserShell/SuggestionListener::OnProcessingChange("
-                << processing
-                << ")";
+                << processing << ")";
   }
 
   const Settings settings_;

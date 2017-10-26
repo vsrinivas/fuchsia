@@ -65,7 +65,8 @@ ModuleControllerImpl::ModuleControllerImpl(
   // only needed for the root module to transition the story state to STARTING
   // and get IsRunning() to true. This could be handled inside
   // StoryControllerImpl too.
-  story_controller_impl_->OnModuleStateChange(module_data_->module_path, state_);
+  story_controller_impl_->OnModuleStateChange(module_data_->module_path,
+                                              state_);
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}
@@ -94,7 +95,8 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
   watchers_.ForAllPtrs(
       [this](ModuleWatcher* const watcher) { watcher->OnStateChange(state_); });
 
-  story_controller_impl_->OnModuleStateChange(module_data_->module_path, state_);
+  story_controller_impl_->OnModuleStateChange(module_data_->module_path,
+                                              state_);
 }
 
 void ModuleControllerImpl::Teardown(std::function<void()> done) {

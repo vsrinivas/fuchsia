@@ -44,7 +44,8 @@ void IntelligenceServicesImpl::GetProposalPublisher(
 
   // TODO(thatguy): Change |component_id| to use ComponentScope once it is
   // renamed to something like ComponentInfo.
-  suggestion_engine_->RegisterProposalPublisher(component_id, std::move(request));
+  suggestion_engine_->RegisterProposalPublisher(component_id,
+                                                std::move(request));
 }
 
 void IntelligenceServicesImpl::GetActionLog(
@@ -64,7 +65,7 @@ void IntelligenceServicesImpl::RegisterQueryHandler(
   }
 
   suggestion_engine_->RegisterQueryHandler(component_id,
-      std::move(query_handler));
+                                           std::move(query_handler));
 }
 
 }  // namespace maxwell

@@ -15,8 +15,8 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_data.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
+#include "lib/module/fidl/module_data.fidl.h"
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
 

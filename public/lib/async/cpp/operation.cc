@@ -120,7 +120,7 @@ void OperationBase::Schedule() {
   TraceAsyncBegin();
 
   fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-      [ this, weak = weak_ptr_factory_.GetWeakPtr() ] {
+      [this, weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak) {
           Run();
         }

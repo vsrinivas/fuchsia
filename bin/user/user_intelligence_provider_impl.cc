@@ -39,9 +39,9 @@ modular::AgentControllerPtr StartStoryInfoAgent(
         visible_stories_provider) {
   app::ServiceProviderPtr agent_services;
   modular::AgentControllerPtr controller;
-  component_context->ConnectToAgent(
-      "acquirers/story_info_main",
-      agent_services.NewRequest(), controller.NewRequest());
+  component_context->ConnectToAgent("acquirers/story_info_main",
+                                    agent_services.NewRequest(),
+                                    controller.NewRequest());
 
   auto initializer =
       app::ConnectToService<StoryInfoInitializer>(agent_services.get());
@@ -104,7 +104,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   }
 
   if (config.mi_dashboard) {
-    StartAgent("agents/mi_dashboard.dartx",
+    StartAgent(
+        "agents/mi_dashboard.dartx",
         [=](const std::string& url, app::ServiceNamespace* agent_host) {
           AddStandardServices(url, agent_host);
           agent_host->AddService<maxwell::ContextDebug>(
@@ -189,22 +190,22 @@ void UserIntelligenceProviderImpl::AddStandardServices(
        url](fidl::InterfaceRequest<cobalt::CobaltEncoderFactory> request) {
         app_context_->ConnectToEnvironmentService(std::move(request));
       });
-  agent_host->AddService<maxwell::ContextWriter>(fxl::MakeCopyable([
-    this, client_info = agent_info.Clone(), url
-  ](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
-    context_engine_->GetWriter(client_info.Clone(), std::move(request));
-  }));
-  agent_host->AddService<maxwell::ContextReader>(fxl::MakeCopyable([
-    this, client_info = agent_info.Clone(), url
-  ](fidl::InterfaceRequest<maxwell::ContextReader> request) {
-    context_engine_->GetReader(client_info.Clone(), std::move(request));
-  }));
-  agent_host->AddService<maxwell::IntelligenceServices>(fxl::MakeCopyable([
-    this, client_info = agent_info.Clone(), url
-  ](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
-    this->GetComponentIntelligenceServices(client_info.Clone(),
-                                           std::move(request));
-  }));
+  agent_host->AddService<maxwell::ContextWriter>(fxl::MakeCopyable(
+      [this, client_info = agent_info.Clone(),
+       url](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
+        context_engine_->GetWriter(client_info.Clone(), std::move(request));
+      }));
+  agent_host->AddService<maxwell::ContextReader>(fxl::MakeCopyable(
+      [this, client_info = agent_info.Clone(),
+       url](fidl::InterfaceRequest<maxwell::ContextReader> request) {
+        context_engine_->GetReader(client_info.Clone(), std::move(request));
+      }));
+  agent_host->AddService<maxwell::IntelligenceServices>(fxl::MakeCopyable(
+      [this, client_info = agent_info.Clone(),
+       url](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+        this->GetComponentIntelligenceServices(client_info.Clone(),
+                                               std::move(request));
+      }));
   agent_host->AddService<maxwell::ProposalPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
         suggestion_engine_->RegisterProposalPublisher(url, std::move(request));

@@ -63,25 +63,27 @@ void GetEntries(ledger::PageSnapshotPtr snapshot,
                                    std::vector<ledger::EntryPtr>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
-      nullptr, std::move(token), fxl::MakeCopyable([
-        snapshot = std::move(snapshot), entries = std::move(entries),
-        callback = std::move(callback)
-      ](ledger::Status status, auto new_entries, auto next_token) mutable {
-        if (status != ledger::Status::OK &&
-            status != ledger::Status::PARTIAL_RESULT) {
-          callback(status, {});
-          return;
-        }
-        for (auto& entry : new_entries) {
-          entries.push_back(std::move(entry));
-        }
-        if (status == ledger::Status::OK) {
-          callback(ledger::Status::OK, std::move(entries));
-          return;
-        }
-        GetEntries(std::move(snapshot), std::move(entries),
-                   std::move(next_token), std::move(callback));
-      }));
+      nullptr, std::move(token),
+      fxl::MakeCopyable(
+          [snapshot = std::move(snapshot), entries = std::move(entries),
+           callback = std::move(callback)](ledger::Status status,
+                                           auto new_entries,
+                                           auto next_token) mutable {
+            if (status != ledger::Status::OK &&
+                status != ledger::Status::PARTIAL_RESULT) {
+              callback(status, {});
+              return;
+            }
+            for (auto& entry : new_entries) {
+              entries.push_back(std::move(entry));
+            }
+            if (status == ledger::Status::OK) {
+              callback(ledger::Status::OK, std::move(entries));
+              return;
+            }
+            GetEntries(std::move(snapshot), std::move(entries),
+                       std::move(next_token), std::move(callback));
+          }));
 }
 
 void GetEntries(ledger::PageSnapshotPtr snapshot,
@@ -167,11 +169,12 @@ void TodoApp::GetKeys(std::function<void(fidl::Array<Key>)> callback) {
                      HandleResponse("GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeys(nullptr, nullptr, fxl::MakeCopyable([
-                          snapshot = std::move(snapshot), callback
-                        ](ledger::Status status, auto keys, auto next_token) {
-                          callback(std::move(keys));
-                        }));
+  snapshot_ptr->GetKeys(
+      nullptr, nullptr,
+      fxl::MakeCopyable([snapshot = std::move(snapshot), callback](
+                            ledger::Status status, auto keys, auto next_token) {
+        callback(std::move(keys));
+      }));
 }
 
 void TodoApp::AddNew() {

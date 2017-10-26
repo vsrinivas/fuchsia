@@ -346,8 +346,8 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
     std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
     for (auto& story_id : stories) {
       story_provider_->GetStoryInfo(
-          story_id, [ this, story_id, count,
-                      max = stories.size() ](modular::StoryInfoPtr story_info) {
+          story_id, [this, story_id, count,
+                     max = stories.size()](modular::StoryInfoPtr story_info) {
             ++*count;
 
             if (!story_info.is_null()) {

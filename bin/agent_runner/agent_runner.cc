@@ -399,10 +399,10 @@ void AgentRunner::UpdateWatchers() {
     return;
   }
 
-  agent_provider_watchers_.ForAllPtrs([agent_urls = GetAllAgents()](
-      AgentProviderWatcher * watcher) {
-    watcher->OnUpdate(agent_urls.Clone());
-  });
+  agent_provider_watchers_.ForAllPtrs(
+      [agent_urls = GetAllAgents()](AgentProviderWatcher* watcher) {
+        watcher->OnUpdate(agent_urls.Clone());
+      });
 }
 
 void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {

@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_CONFLICT_RESOLVER_IMPL_H_
 #define PERIDOT_BIN_USER_RUNNER_CONFLICT_RESOLVER_IMPL_H_
 
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "lib/async/cpp/operation.h"
 
 namespace modular {
 

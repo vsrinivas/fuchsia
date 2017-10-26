@@ -45,10 +45,10 @@ class Settings {
   explicit Settings(const fxl::CommandLine& command_line) {
     device_shell.url = command_line.GetOptionValueWithDefault(
         "device_shell", "userpicker_device_shell");
-    story_shell.url = command_line.GetOptionValueWithDefault(
-        "story_shell", "mondrian");
-    user_runner.url = command_line.GetOptionValueWithDefault(
-        "user_runner", "user_runner");
+    story_shell.url =
+        command_line.GetOptionValueWithDefault("story_shell", "mondrian");
+    user_runner.url =
+        command_line.GetOptionValueWithDefault("user_runner", "user_runner");
     user_shell.url = command_line.GetOptionValueWithDefault(
         "user_shell", "armadillo_user_shell");
     account_provider.url = command_line.GetOptionValueWithDefault(

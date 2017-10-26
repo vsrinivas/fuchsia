@@ -9,13 +9,13 @@
 #include <memory>
 #include <vector>
 
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
-#include "lib/async/cpp/operation.h"
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {

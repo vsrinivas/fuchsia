@@ -4,11 +4,11 @@
 
 #include "peridot/bin/story_runner/link_impl.h"
 #include "gtest/gtest.h"
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
-#include "lib/async/cpp/operation.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"

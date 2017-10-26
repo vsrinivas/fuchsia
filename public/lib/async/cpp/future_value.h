@@ -82,7 +82,7 @@ class FutureValue {
  private:
   void Dispatch(UseValueFunction fn) {
     fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [ value = value_, fn = std::move(fn) ] { fn(*value); });
+        [value = value_, fn = std::move(fn)] { fn(*value); });
   }
 
   std::shared_ptr<T> value_;

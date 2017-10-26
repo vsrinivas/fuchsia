@@ -44,10 +44,11 @@ class ModuleContextImpl : ModuleContext {
   // property. The last item in this list is this module's name. |module_path|
   // can be used to internally name resources that belong to this module
   // (message queues, Links).
-  ModuleContextImpl(const ModuleContextInfo& info,
-                    const ModuleData* module_data,
-                    ModuleControllerImpl* module_controller_impl,
-                    fidl::InterfaceRequest<app::ServiceProvider> service_provider_request);
+  ModuleContextImpl(
+      const ModuleContextInfo& info,
+      const ModuleData* module_data,
+      ModuleControllerImpl* module_controller_impl,
+      fidl::InterfaceRequest<app::ServiceProvider> service_provider_request);
 
   ~ModuleContextImpl() override;
 

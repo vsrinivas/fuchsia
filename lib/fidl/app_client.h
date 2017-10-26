@@ -80,7 +80,9 @@ class AppClient : public AppClientBase {
             AppConfigPtr config,
             std::string data_origin = "",
             app::ServiceListPtr additional_services = nullptr)
-      : AppClientBase(launcher, std::move(config), std::move(data_origin),
+      : AppClientBase(launcher,
+                      std::move(config),
+                      std::move(data_origin),
                       std::move(additional_services)) {
     ConnectToService(services(), service_.NewRequest());
   }

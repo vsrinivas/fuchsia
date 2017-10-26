@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 
+#include "lib/async/cpp/operation.h"
 #include "lib/entity/fidl/entity.fidl.h"
 #include "lib/entity/fidl/entity_resolver.fidl.h"
 #include "lib/entity/fidl/entity_store.fidl.h"
@@ -15,7 +16,6 @@
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/entity/entity_impl.h"
-#include "lib/async/cpp/operation.h"
 
 namespace modular {
 

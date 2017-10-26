@@ -33,8 +33,10 @@ void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
   action->component_url = action_data.component_url;
   action->method = action_data.method;
   action->parameters = action_data.params;
-  subscribers_.ForAllPtrs([action = std::move(action)](
-      ActionLogListener * listener) { listener->OnAction(action.Clone()); });
+  subscribers_.ForAllPtrs(
+      [action = std::move(action)](ActionLogListener* listener) {
+        listener->OnAction(action.Clone());
+      });
 }
 
 void UserActionLogImpl::MaybeProposeSharingVideo(

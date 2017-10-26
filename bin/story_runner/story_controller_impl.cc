@@ -107,8 +107,8 @@ class StoryControllerImpl::Blockable {
  protected:
   void Block(ModuleDataPtr module_data, std::function<void()> c) {
     story_controller_impl_->blocked_operations_.push_back(
-        std::make_pair<ModuleDataPtr, Blockable*>(
-            std::move(module_data), this));
+        std::make_pair<ModuleDataPtr, Blockable*>(std::move(module_data),
+                                                  this));
     continue_ = c;
     if (continue_called_) {
       continue_();
@@ -164,12 +164,12 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    auto i = std::find_if(story_controller_impl_->connections_.begin(),
-                          story_controller_impl_->connections_.end(),
-                          [this](const Connection& c) {
-                            return c.module_data->module_path.Equals(
-                                module_data_->module_path);
-                          });
+    auto i = std::find_if(
+        story_controller_impl_->connections_.begin(),
+        story_controller_impl_->connections_.end(),
+        [this](const Connection& c) {
+          return c.module_data->module_path.Equals(module_data_->module_path);
+        });
 
     // We launch the new module if it doesn't run yet.
     if (i == story_controller_impl_->connections_.end()) {
@@ -226,9 +226,10 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
         story_controller_impl_,
         story_controller_impl_->story_scope_.GetLauncher(),
-        std::move(module_config), connection.module_data.get(), std::move(service_list),
-        std::move(module_context), std::move(view_provider_request),
-        std::move(outgoing_services_), std::move(incoming_services_));
+        std::move(module_config), connection.module_data.get(),
+        std::move(service_list), std::move(module_context),
+        std::move(view_provider_request), std::move(outgoing_services_),
+        std::move(incoming_services_));
 
     // Modules started with StoryController.AddModule() don't have a module
     // controller request.
@@ -307,12 +308,12 @@ class StoryControllerImpl::KillModuleCall : Operation<> {
     // this StopModuleCall Operation will cause the calls to be queued.
     // The first Stop() will cause the ModuleController to be closed, and
     // so subsequent Stop() attempts will not find a controller and will return.
-    auto ii = std::find_if(story_controller_impl_->connections_.begin(),
-                           story_controller_impl_->connections_.end(),
-                           [this](const Connection& c) {
-                             return c.module_data->module_path.Equals(
-                                 module_data_->module_path);
-                           });
+    auto ii = std::find_if(
+        story_controller_impl_->connections_.begin(),
+        story_controller_impl_->connections_.end(),
+        [this](const Connection& c) {
+          return c.module_data->module_path.Equals(module_data_->module_path);
+        });
 
     if (ii == story_controller_impl_->connections_.end()) {
       FXL_LOG(INFO) << "No ModuleController for Module"
@@ -442,8 +443,8 @@ class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
     const std::string key{MakeModuleKey(module_path_)};
     new WriteDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        module_data_.Clone(), [this] { Block(module_data_.Clone(),
-                                             [this] { Launch(); }); });
+        module_data_.Clone(),
+        [this] { Block(module_data_.Clone(), [this] { Launch(); }); });
   }
 
   void Launch() {
@@ -632,8 +633,8 @@ class StoryControllerImpl::AddModuleCall : Blockable, Operation<> {
     const std::string key{MakeModuleKey(module_path_)};
     new WriteDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        module_data_.Clone(), [this] { Block(module_data_.Clone(),
-                                             [this] { Cont(); }); });
+        module_data_.Clone(),
+        [this] { Block(module_data_.Clone(), [this] { Cont(); }); });
   }
 
   void Cont() {
@@ -902,29 +903,33 @@ class StoryControllerImpl::StopModuleCall : Blockable, Operation<> {
   }
 
   void Kill() {
-    new KillModuleCall(
-        &operation_queue_, story_controller_impl_,
-        std::move(module_data_), [this] {
-          // NOTE(alhaad): An interesting flow of control to keep in mind:
-          // 1. From ModuleController.Stop() which can only be called from FIDL,
-          // we call StoryControllerImpl.StopModule().
-          // 2. StoryControllerImpl.StopModule() pushes StopModuleCall onto the
-          // operation queue.
-          // 3. When operation becomes current, we write to ledger, block and
-          // continue on receiving OnPageChange from ledger.
-          // 4. We then call KillModuleCall on a sub operation queue.
-          // 5. KillModuleCall will call Teardown() on the same
-          // ModuleControllerImpl that had started ModuleController.Stop(). In
-          // the callback from Teardown(), it calls done_() (and NOT Done()).
-          // 6. done_() in KillModuleCall leads to the next line here, which
-          // calls Done() which would call the FIDL callback from
-          // ModuleController.Stop().
-          // 7. Done() on the next line also deletes this which deletes the
-          // still running KillModuleCall, but this is okay because the only
-          // thing that was left to do in KillModuleCall was FlowToken going out
-          // of scope.
-          Done();
-        });
+    new KillModuleCall(&operation_queue_, story_controller_impl_,
+                       std::move(module_data_), [this] {
+                         // NOTE(alhaad): An interesting flow of control to keep
+                         // in mind:
+                         // 1. From ModuleController.Stop() which can only be
+                         // called from FIDL, we call
+                         // StoryControllerImpl.StopModule().
+                         // 2. StoryControllerImpl.StopModule() pushes
+                         // StopModuleCall onto the operation queue.
+                         // 3. When operation becomes current, we write to
+                         // ledger, block and continue on receiving OnPageChange
+                         // from ledger.
+                         // 4. We then call KillModuleCall on a sub operation
+                         // queue.
+                         // 5. KillModuleCall will call Teardown() on the same
+                         // ModuleControllerImpl that had started
+                         // ModuleController.Stop(). In the callback from
+                         // Teardown(), it calls done_() (and NOT Done()).
+                         // 6. done_() in KillModuleCall leads to the next line
+                         // here, which calls Done() which would call the FIDL
+                         // callback from ModuleController.Stop().
+                         // 7. Done() on the next line also deletes this which
+                         // deletes the still running KillModuleCall, but this
+                         // is okay because the only thing that was left to do
+                         // in KillModuleCall was FlowToken going out of scope.
+                         Done();
+                       });
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1122,12 +1127,12 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     }
 
     // Check for existing module at the given path.
-    auto i = std::find_if(story_controller_impl_->connections_.begin(),
-                          story_controller_impl_->connections_.end(),
-                          [this](const Connection& c) {
-                            return c.module_data->module_path.Equals(
-                                module_data_->module_path);
-                          });
+    auto i = std::find_if(
+        story_controller_impl_->connections_.begin(),
+        story_controller_impl_->connections_.end(),
+        [this](const Connection& c) {
+          return c.module_data->module_path.Equals(module_data_->module_path);
+        });
     if (i != story_controller_impl_->connections_.end() &&
         module_data_->module_stopped) {
       new KillModuleCall(&operation_queue_, story_controller_impl_,
@@ -1630,12 +1635,10 @@ bool StoryControllerImpl::IsRootModule(
 
 bool StoryControllerImpl::IsExternalModule(
     const fidl::Array<fidl::String>& module_path) {
-  auto i = std::find_if(
-      connections_.begin(),
-      connections_.end(),
-      [&module_path](const Connection& c) {
-        return c.module_data->module_path.Equals(module_path);
-      });
+  auto i = std::find_if(connections_.begin(), connections_.end(),
+                        [&module_path](const Connection& c) {
+                          return c.module_data->module_path.Equals(module_path);
+                        });
 
   if (i == connections_.end()) {
     return false;
@@ -1656,7 +1659,7 @@ void StoryControllerImpl::OnModuleStateChange(
   }
 
   if (IsExternalModule(module_path) && state == ModuleState::DONE) {
-    StopModule(module_path, []{});
+    StopModule(module_path, [] {});
   }
 }
 

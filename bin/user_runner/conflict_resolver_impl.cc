@@ -69,10 +69,10 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
           get_left_or_right_diff) {
     get_left_or_right_diff(
         std::move(continuation_token),
-        [
-          this, left_or_right = std::move(left_or_right), get_left_or_right_diff
-        ](ledger::Status status, ledger::PageChangePtr change,
-          fidl::Array<uint8_t> next_token) {
+        [this, left_or_right = std::move(left_or_right),
+         get_left_or_right_diff](ledger::Status status,
+                                 ledger::PageChangePtr change,
+                                 fidl::Array<uint8_t> next_token) {
           if (status != ledger::Status::OK &&
               status != ledger::Status::PARTIAL_RESULT) {
             FXL_LOG(INFO)

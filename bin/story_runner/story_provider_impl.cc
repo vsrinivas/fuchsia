@@ -393,7 +393,7 @@ class StoryProviderImpl::TeardownCall : Operation<> {
       // StopForTeardown(), then the StopCall in StopForTeardown() never
       // executes because the StoryController instance is deleted after the
       // DeleteCall finishes. This will then block unless it runs in a timeout.
-      it.second.impl->StopForTeardown([ this, story_id = it.first, flow ] {
+      it.second.impl->StopForTeardown([this, story_id = it.first, flow] {
         // It is okay to erase story_id because story provider binding has been
         // closed and this callback cannot be invoked synchronously.
         story_provider_impl_->story_controller_impls_.erase(story_id);
@@ -426,7 +426,7 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
     for (auto& story : story_provider_impl_->story_controller_impls_) {
       story.second.impl->GetImportance(
           story_provider_impl_->context_handler_.values(),
-          [ this, id = story.first, flow ](float importance) {
+          [this, id = story.first, flow](float importance) {
             importance_[id] = importance;
           });
     }

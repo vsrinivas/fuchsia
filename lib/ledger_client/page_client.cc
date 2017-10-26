@@ -115,8 +115,9 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
                          std::function<void(ledger::Status)> callback) {
   snapshot->GetEntries(
       nullptr /* key_start */, std::move(next_token),
-      fxl::MakeCopyable([ snapshot, entries, callback = std::move(callback) ](
-          ledger::Status status, auto new_entries, auto next_token) mutable {
+      fxl::MakeCopyable([snapshot, entries, callback = std::move(callback)](
+                            ledger::Status status, auto new_entries,
+                            auto next_token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
           callback(status);

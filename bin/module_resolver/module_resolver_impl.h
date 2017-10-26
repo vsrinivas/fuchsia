@@ -28,8 +28,7 @@ class ModuleResolverImpl : modular::ModuleResolver {
                    const FindModulesCallback& done) override;
 
  private:
-  void OnNewManifestEntry(
-      modular::ModuleManifestRepository::Entry entry);
+  void OnNewManifestEntry(modular::ModuleManifestRepository::Entry entry);
 
   // TODO(thatguy): At some point, factor the index functions out of
   // ModuleResolverImpl so that they can be re-used by the general all-modules

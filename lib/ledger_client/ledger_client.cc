@@ -26,32 +26,32 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       ledger::PageChange* const change_all,
                       LedgerPageKey token,
                       std::function<void(ledger::Status)> callback) {
-  auto cont = fxl::MakeCopyable([
-    result, left, change_all, callback = std::move(callback)
-  ](ledger::Status status, ledger::PageChangePtr change_delta,
-    LedgerPageKey token) {
-    if (status != ledger::Status::OK &&
-        status != ledger::Status::PARTIAL_RESULT) {
-      callback(status);
-      return;
-    }
+  auto cont = fxl::MakeCopyable(
+      [result, left, change_all, callback = std::move(callback)](
+          ledger::Status status, ledger::PageChangePtr change_delta,
+          LedgerPageKey token) {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::PARTIAL_RESULT) {
+          callback(status);
+          return;
+        }
 
-    for (auto& entry : change_delta->changes) {
-      change_all->changes.push_back(std::move(entry));
-    }
+        for (auto& entry : change_delta->changes) {
+          change_all->changes.push_back(std::move(entry));
+        }
 
-    for (auto& deleted : change_delta->deleted_keys) {
-      change_all->deleted_keys.push_back(std::move(deleted));
-    }
+        for (auto& deleted : change_delta->deleted_keys) {
+          change_all->deleted_keys.push_back(std::move(deleted));
+        }
 
-    if (status == ledger::Status::OK) {
-      callback(ledger::Status::OK);
-      return;
-    }
+        if (status == ledger::Status::OK) {
+          callback(ledger::Status::OK);
+          return;
+        }
 
-    GetDiffRecursive(result, left, change_all, std::move(token),
-                     std::move(callback));
-  });
+        GetDiffRecursive(result, left, change_all, std::move(token),
+                         std::move(callback));
+      });
 
   if (left) {
     result->GetLeftDiff(std::move(token), cont);

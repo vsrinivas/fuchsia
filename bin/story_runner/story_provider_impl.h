@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "lib/async/cpp/operation.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -28,7 +29,6 @@
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/story_runner/context_handler.h"
-#include "lib/async/cpp/operation.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -76,9 +76,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   }
 
   // Called by StoryControllerImpl.
-  ModuleResolver* module_resolver() {
-    return module_resolver_;
-  }
+  ModuleResolver* module_resolver() { return module_resolver_; }
 
   // Called by StoryControllerImpl.
   const AppConfig& story_shell() const { return *story_shell_; }

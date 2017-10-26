@@ -7,13 +7,13 @@
 
 #include <map>
 
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/user/fidl/device_map.fidl.h"
-#include "lib/async/cpp/operation.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
