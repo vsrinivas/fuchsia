@@ -10,6 +10,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
+#include "peridot/bin/ledger/app/ledger_repository_debug_impl.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
@@ -49,6 +50,10 @@ class LedgerRepositoryImpl : public LedgerRepository {
       fidl::InterfaceHandle<SyncWatcher> watcher,
       const SetSyncStateWatcherCallback& callback) override;
 
+  void GetLedgerRepositoryDebug(
+      fidl::InterfaceRequest<LedgerRepositoryDebug> request,
+      const GetLedgerRepositoryDebugCallback& callback) override;
+
   void CheckEmpty();
 
   const std::string base_storage_dir_;
@@ -61,6 +66,8 @@ class LedgerRepositoryImpl : public LedgerRepository {
       ledger_managers_;
   fidl::BindingSet<LedgerRepository> bindings_;
   fxl::Closure on_empty_callback_;
+  std::unique_ptr<LedgerRepositoryDebugImpl> ledger_repository_debug_impl_;
+  fidl::BindingSet<LedgerRepositoryDebug> ledger_repository_debug_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

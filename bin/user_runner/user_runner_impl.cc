@@ -29,13 +29,14 @@
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/remote_invoker_impl.h"
-#include "peridot/lib/common/xdr.h"
 #include "peridot/lib/common/teardown.h"
+#include "peridot/lib/common/xdr.h"
 #include "peridot/lib/device_info/device_info.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -398,8 +399,7 @@ void UserRunnerImpl::DumpState(const DumpStateCallback& callback) {
   output << account_json << std::endl;
 
   story_provider_impl_->DumpState(fxl::MakeCopyable(
-      [output = std::move(output), callback] (
-          const std::string& debug) mutable {
+      [output = std::move(output), callback](const std::string& debug) mutable {
         output << debug;
         callback(output.str());
       }));
@@ -586,6 +586,18 @@ cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
 void UserRunnerImpl::StartLedgerDashboard() {
   ledger_dashboard_scope_ = std::make_unique<Scope>(
       user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
+
+  ledger_dashboard_scope_->AddService<ledger::LedgerRepositoryDebug>(
+      [this](fidl::InterfaceRequest<ledger::LedgerRepositoryDebug> request) {
+        ledger_repository_->GetLedgerRepositoryDebug(
+            std::move(request), [](ledger::Status status) {
+              if (status != ledger::Status::OK) {
+                FXL_LOG(ERROR)
+                    << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
+                    << LedgerStatusToString(status);
+              }
+            });
+      });
 
   auto ledger_dashboard_config = AppConfig::New();
   ledger_dashboard_config->url = kLedgerDashboardUrl;

@@ -43,6 +43,8 @@ source_set("lib") {
     "ledger_impl.h",
     "ledger_manager.cc",
     "ledger_manager.h",
+    "ledger_repository_debug_impl.cc",
+    "ledger_repository_debug_impl.h",
     "ledger_repository_factory_impl.cc",
     "ledger_repository_factory_impl.h",
     "ledger_repository_impl.cc",

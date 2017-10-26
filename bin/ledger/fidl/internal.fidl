@@ -7,6 +7,7 @@ module ledger;
 
 import "lib/ledger/fidl/ledger.fidl";
 import "lib/cloud_provider/fidl/cloud_provider.fidl";
+import "peridot/bin/ledger/fidl/debug.fidl";
 
 // Entry interface implemented by the Ledger application, intended to be used by
 // the process setting up the user environment to obtain repositories for
@@ -49,4 +50,7 @@ interface LedgerRepository {
   // current state is immediately sent to the watcher when this method is
   // called.
   SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
+
+  // Returns the debugging interface for this LedgerRepository
+  GetLedgerRepositoryDebug(LedgerRepositoryDebug& ledgerRepositoryDebug) => (Status status);
 };

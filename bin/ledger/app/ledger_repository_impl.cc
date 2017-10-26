@@ -91,6 +91,18 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(
   callback(Status::OK);
 }
 
+void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
+    fidl::InterfaceRequest<LedgerRepositoryDebug> request,
+    const GetLedgerRepositoryDebugCallback& callback) {
+  if (!ledger_repository_debug_impl_)
+    ledger_repository_debug_impl_ =
+        std::make_unique<LedgerRepositoryDebugImpl>();
+
+  ledger_repository_debug_bindings_.AddBinding(
+      ledger_repository_debug_impl_.get(), std::move(request));
+  callback(Status::OK);
+}
+
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!on_empty_callback_)
     return;
