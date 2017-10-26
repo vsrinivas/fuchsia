@@ -72,20 +72,21 @@ impl Socket {
     pub fn read_from(&self, opts: zircon::SocketReadOpts, buf: &mut [u8]) -> io::Result<usize> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
                           zircon::Signals::SOCKET_READABLE |
-                          zircon::Signals::CHANNEL_PEER_CLOSED).into());
+                          zircon::Signals::SOCKET_PEER_CLOSED).into());
 
         match signals {
             Async::NotReady => Err(would_block()),
             Async::Ready(ready) => {
                 let signals = FuchsiaReady::from(ready).into_signals();
-                if zircon::Signals::SOCKET_PEER_CLOSED.intersects(signals) {
-                    Err(io::ErrorKind::ConnectionAborted.into())
-                } else {
+                if zircon::Signals::SOCKET_READABLE.intersects(signals) {
                     let res = self.socket.read(opts, buf);
                     if res == Err(zircon::Status::SHOULD_WAIT) {
                         self.evented.need_read();
                     }
                     res.map_err(io::Error::from)
+                } else {
+                    // Covers the SOCKET_PEER_CLOSED case as well
+                    Err(io::ErrorKind::ConnectionAborted.into())
                 }
             }
         }
