@@ -79,7 +79,7 @@ FvmContainer::~FvmContainer() = default;
 
 zx_status_t FvmContainer::Init() {
     // Superblock
-    fvm::fvm_t* sb = static_cast<fvm::fvm_t*>((void*)metadata_.get());
+    fvm::fvm_t* sb = SuperBlock();
     sb->magic = FVM_MAGIC;
     sb->version = FVM_VERSION;
     sb->pslice_count = (disk_size_ - metadata_size_ * 2) / slice_size_;
@@ -120,21 +120,72 @@ zx_status_t FvmContainer::Verify() const {
         return ZX_ERR_BAD_STATE;
     }
 
-    fvm::fvm_t* sb = static_cast<fvm::fvm_t*>((void*)metadata_.get());
+    fvm::fvm_t* sb = SuperBlock();
 
     printf("Total size is %zu\n", disk_size_);
     printf("Metadata size is %zu\n", metadata_size_);
     printf("Slice size is %" PRIu64 "\n", sb->slice_size);
     printf("Slice count is %" PRIu64 "\n", sb->pslice_count);
 
-    uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
-    uintptr_t offset = static_cast<uintptr_t>(fvm::kVPartTableOffset +
-                                              1 * sizeof(fvm::vpart_entry_t));
+    off_t start = 0;
+    off_t end = metadata_size_ * 2;
+    size_t slice_index = 1;
+    for (size_t vpart_index = 1; vpart_index < FVM_MAX_ENTRIES; ++vpart_index) {
+        fvm::vpart_entry_t* vpart = nullptr;
+        start = end;
 
-    fvm::vpart_entry_t* entry = reinterpret_cast<fvm::vpart_entry_t*>(metadata_start + offset);
+        zx_status_t status;
+        if ((status = GetPartition(vpart_index, &vpart)) != ZX_OK) {
+            return status;
+        }
 
-    //TODO(planders): Report all partitions found
-    printf("Just created entry with slice count %u, name %s\n", entry->slices, entry->name);
+        if (vpart->slices == 0) {
+            break;
+        }
+
+        fbl::Vector<size_t> extent_lengths;
+        size_t last_vslice = 0;
+
+        for (; slice_index <= sb->pslice_count; ++slice_index) {
+            fvm::slice_entry_t* slice = nullptr;
+            if ((status = GetSlice(slice_index, &slice)) != ZX_OK) {
+                return status;
+            }
+
+            if (slice->vpart != vpart_index) {
+                break;
+            }
+
+            end += slice_size_;
+
+            if (slice->vslice == last_vslice + 1) {
+                extent_lengths[extent_lengths.size()-1] += slice_size_;
+            } else {
+                extent_lengths.push_back(slice_size_);
+            }
+
+            last_vslice = slice->vslice;
+        }
+
+        disk_format_t part;
+        if ((status = Format::Detect(fd_.get(), start, &part)) != ZX_OK) {
+            return status;
+        }
+
+        fbl::unique_fd dupfd(dup(fd_.get()));
+        if (!dupfd) {
+            fprintf(stderr, "Failed to duplicate fd\n");
+            return ZX_ERR_INTERNAL;
+        }
+
+        if ((status = Format::Check(fbl::move(dupfd), start, end, extent_lengths, part)) != ZX_OK) {
+            fprintf(stderr, "%s fsck returned an error.\n", vpart->name);
+            return status;
+        }
+
+        printf("Found valid %s partition\n", vpart->name);
+    }
+
     return ZX_OK;
 }
 
@@ -186,6 +237,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     format->Name(name);
     uint32_t vpart_index;
     if ((status = AllocatePartition(type, guid, name, 1, &vpart_index)) != ZX_OK) {
+        fprintf(stderr, "Failed to allocate partition\n");
         return status;
     }
 
@@ -217,16 +269,16 @@ zx_status_t FvmContainer::AllocatePartition(uint8_t* type, uint8_t* guid, const 
                                             uint32_t slices, uint32_t* vpart_index) {
     CheckValid();
     for (unsigned index = vpart_hint_; index < FVM_MAX_ENTRIES; index++) {
-        uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
-        uintptr_t offset = static_cast<uintptr_t>(fvm::kVPartTableOffset +
-                                                  index * sizeof(fvm::vpart_entry_t));
-
-        fvm::vpart_entry_t* entry = reinterpret_cast<fvm::vpart_entry_t*>(metadata_start +
-                                                                          offset);
+        zx_status_t status;
+        fvm::vpart_entry_t* vpart = nullptr;
+        if ((status = GetPartition(index, &vpart)) != ZX_OK) {
+            fprintf(stderr, "Failed to retrieve partition %u\n", index);
+            return status;
+        }
 
         // Make sure this vpartition has not already been allocated
-        if (entry->slices == 0) {
-            entry->init(type, guid, slices, name, 0);
+        if (vpart->slices == 0) {
+            vpart->init(type, guid, slices, name, 0);
             vpart_hint_ = index + 1;
             dirty_ = true;
             *vpart_index = index;
@@ -234,33 +286,64 @@ zx_status_t FvmContainer::AllocatePartition(uint8_t* type, uint8_t* guid, const 
         }
     }
 
+    fprintf(stderr, "Unable to find any free partitions\n");
     return ZX_ERR_INTERNAL;
 }
 
 zx_status_t FvmContainer::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice) {
     CheckValid();
-    fvm::fvm_t* sb = static_cast<fvm::fvm_t*>((void*)metadata_.get());
+    fvm::fvm_t* sb = SuperBlock();
 
     for (uint32_t index = pslice_hint_; index < sb->pslice_count; index++) {
-        uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
-        uintptr_t offset = static_cast<uintptr_t>(fvm::kAllocTableOffset +
-                                                  index * sizeof(fvm::slice_entry_t));
-        fvm::slice_entry_t* entry = reinterpret_cast<fvm::slice_entry_t*>(metadata_start +
-                                                                          offset);
+        zx_status_t status;
+        fvm::slice_entry_t* slice = nullptr;
+        if ((status = GetSlice(index, &slice)) != ZX_OK) {
+            fprintf(stderr, "Failed to retrieve slice %u\n", index);
+            return status;
+        }
 
-        if (entry->vpart != FVM_SLICE_FREE) {
+        if (slice->vpart != FVM_SLICE_FREE) {
             continue;
         }
+
         pslice_hint_ = index + 1;
 
-        entry->vpart = vpart & VPART_MAX;
-        entry->vslice = vslice & VSLICE_MAX;
+        slice->vpart = vpart & VPART_MAX;
+        slice->vslice = vslice & VSLICE_MAX;
         dirty_ = true;
         *pslice = index;
         return ZX_OK;
     }
 
     return ZX_ERR_INTERNAL;
+}
+
+zx_status_t FvmContainer::GetPartition(size_t index, fvm::vpart_entry_t** out) const {
+    CheckValid();
+
+    if (index < 1 || index > FVM_MAX_ENTRIES) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
+    uintptr_t offset = static_cast<uintptr_t>(fvm::kVPartTableOffset +
+                                                  index * sizeof(fvm::vpart_entry_t));
+    *out = reinterpret_cast<fvm::vpart_entry_t*>(metadata_start + offset);
+    return ZX_OK;
+}
+
+zx_status_t FvmContainer::GetSlice(size_t index, fvm::slice_entry_t** out) const {
+    CheckValid();
+
+    if (index < 1 || index > SuperBlock()->pslice_count) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uintptr_t metadata_start = reinterpret_cast<uintptr_t>(metadata_.get());
+    uintptr_t offset = static_cast<uintptr_t>(fvm::kAllocTableOffset +
+                                              index * sizeof(fvm::slice_entry_t));
+    *out = reinterpret_cast<fvm::slice_entry_t*>(metadata_start + offset);
+    return ZX_OK;
 }
 
 zx_status_t FvmContainer::WriteExtent(unsigned vslice_count, Format* format) {
@@ -329,4 +412,8 @@ zx_status_t FvmContainer::WriteData(uint32_t vpart, uint32_t pslice, void* data,
     }
 
     return ZX_OK;
+}
+
+fvm::fvm_t* FvmContainer::SuperBlock() const {
+    return static_cast<fvm::fvm_t*>((void*)metadata_.get());
 }

@@ -72,9 +72,12 @@ private:
     zx_status_t AllocatePartition(uint8_t* type, uint8_t* guid, const char* name, uint32_t slices,
                                   uint32_t* vpart_index);
     zx_status_t AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice);
+    zx_status_t GetPartition(size_t index, fvm::vpart_entry_t** out) const;
+    zx_status_t GetSlice(size_t index, fvm::slice_entry_t** out) const;
     zx_status_t WriteExtent(unsigned vslice_count, Format* format);
     zx_status_t WriteData(uint32_t vpart, uint32_t pslice, void* data, uint32_t block_offset,
                           size_t block_size);
+    fvm::fvm_t* SuperBlock() const;
 };
 
 class SparseContainer final : public Container {
