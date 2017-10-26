@@ -1074,6 +1074,7 @@ class Rxwi1 : public AddressableBitField<uint16_t, uint32_t, 2> {
     WLAN_BIT_FIELD(bw, 23, 1);
     WLAN_BIT_FIELD(sgi, 24, 1);
     WLAN_BIT_FIELD(stbc, 25, 2);
+    // Reserved 3 bits.
     WLAN_BIT_FIELD(phy_mode, 30, 2);
 };
 
@@ -1136,8 +1137,11 @@ class Txwi0 : public BitField<uint32_t> {
     WLAN_BIT_FIELD(sgi, 24, 1);
     WLAN_BIT_FIELD(stbc, 25, 2);
     // Reserved 3 bits.
-    WLAN_BIT_FIELD(ofdm, 30, 1);
-    WLAN_BIT_FIELD(mimo, 31, 1);
+    // Definition based on Rxwi's format.
+    WLAN_BIT_FIELD(phy_mode, 30, 2);
+    // Alternative definition based on Txwi's format.
+    // WLAN_BIT_FIELD(ofdm, 30, 1);
+    // WLAN_BIT_FIELD(mimo, 31, 1);
 
     // Also defined in //garnet/drivers/wlan/wlan/element.h
     enum MinMPDUStartSpacing {  // for mpdu_density

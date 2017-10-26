@@ -3141,11 +3141,37 @@ void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     packet->tx_info.set_wiv(1);
     packet->tx_info.set_qsel(2);
 
-    packet->txwi0.set_ofdm(1);
-    packet->txwi0.set_mcs(7);
+    Txwi0& txwi0 = packet->txwi0;
+    txwi0.set_frag(0);
+    txwi0.set_mmps(0);
+    txwi0.set_cfack(0);
+    txwi0.set_ts(0);  // TODO(porce): Set it 1 for beacon or proberesp.
+    txwi0.set_ampdu(0);
+    txwi0.set_mpdu_density(Txwi0::kNoRestrict);
+    // txwi0.set_mpdu_density(Txwi0::kFourUsec); // Aruba
+    // txwi0.set_mpdu_density(Txwi0::kEightUsec);  // TP-Link
+    txwi0.set_txop(Txwi0::kHtTxop);
+    txwi0.set_mcs(7);
+    txwi0.set_bw(0);  // for 20 Mhz
+    // txwi0.set_bw(1); // for 40 MHz
+    txwi0.set_sgi(1);
+    txwi0.set_stbc(0);  // TODO(porce): Define the value.
+    txwi0.set_phy_mode(PhyMode::kLegacyOfdm);
+    // txwi0.set_phy_mode(PhyMode::kHtMixMode);
 
-    packet->txwi1.set_mpdu_total_byte_count(len);
-    packet->txwi1.set_tx_packet_id(10);
+    Txwi1& txwi1 = packet->txwi1;
+    txwi1.set_ack(0);
+    txwi1.set_nseq(0);
+    txwi1.set_ba_win_size(0);
+    txwi1.set_wcid(0);
+    txwi1.set_mpdu_total_byte_count(len);
+    txwi1.set_tx_packet_id(10);
+
+    Txwi2& txwi2 = packet->txwi2;
+    txwi2.set_iv(0);
+
+    Txwi3& txwi3 = packet->txwi3;
+    txwi3.set_eiv(0);
 
     // A TxPacket is laid out with 4 TXWI headers, so if there are more than that, we have to
     // consider them when determining the start of the payload.
