@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/convert_status.h"
+#include "peridot/bin/cloud_provider_firebase/app/convert_status.h"
 
 namespace cloud_provider_firebase {
 

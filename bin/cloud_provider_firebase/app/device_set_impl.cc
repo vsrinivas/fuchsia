@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/device_set_impl.h"
+#include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 
 #include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/paths.h"

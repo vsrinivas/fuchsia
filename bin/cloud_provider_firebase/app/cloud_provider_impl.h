@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_CLOUD_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_CLOUD_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
 
 #include "lib/auth/fidl/token_provider.fidl.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
@@ -11,12 +11,12 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
+#include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 #include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider_impl.h"
-#include "peridot/bin/cloud_provider_firebase/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase_impl.h"
 #include "peridot/bin/cloud_provider_firebase/network/network_service.h"
-#include "peridot/bin/cloud_provider_firebase/page_cloud_impl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 
@@ -73,4 +73,4 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_CLOUD_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_

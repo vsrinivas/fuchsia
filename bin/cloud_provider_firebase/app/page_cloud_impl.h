@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_PAGE_CLOUD_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_PAGE_CLOUD_IMPL_H_
 
 #include <memory>
 #include <utility>
@@ -86,4 +86,4 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_PAGE_CLOUD_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_PAGE_CLOUD_IMPL_H_

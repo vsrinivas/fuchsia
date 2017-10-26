@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/page_cloud_impl.h"
+#include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/cloud_provider_firebase/convert_status.h"
+#include "peridot/bin/cloud_provider_firebase/app/convert_status.h"
 #include "peridot/bin/ledger/convert/convert.h"
 
 namespace cloud_provider_firebase {

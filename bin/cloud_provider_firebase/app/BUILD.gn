@@ -1,0 +1,80 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/cloud_provider_firebase/*" ]
+
+executable("app") {
+  output_name = "cloud_provider_firebase"
+
+  sources = [
+    "app.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib/lifecycle/fidl",
+    "//zircon/system/ulib/trace-provider",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "cloud_provider_impl.cc",
+    "cloud_provider_impl.h",
+    "convert_status.cc",
+    "convert_status.h",
+    "device_set_impl.cc",
+    "device_set_impl.h",
+    "factory_impl.cc",
+    "factory_impl.h",
+    "page_cloud_impl.cc",
+    "page_cloud_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firebase/auth_provider",
+    "//peridot/bin/cloud_provider_firebase/device_set",
+    "//peridot/bin/cloud_provider_firebase/fidl",
+    "//peridot/bin/cloud_provider_firebase/page_handler",
+    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/cloud_provider/fidl",
+  ]
+
+  deps = [
+    "//peridot/bin/ledger/backoff",
+    "//peridot/bin/ledger/callback",
+    "//peridot/bin/ledger/convert",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "cloud_provider_impl_unittest.cc",
+    "device_set_impl_unittest.cc",
+    "page_cloud_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//peridot/bin/cloud_provider_firebase/auth_provider/test",
+    "//peridot/bin/cloud_provider_firebase/device_set/test",
+    "//peridot/bin/cloud_provider_firebase/fidl",
+    "//peridot/bin/cloud_provider_firebase/network:fake",
+    "//peridot/bin/cloud_provider_firebase/page_handler/test",
+    "//peridot/bin/ledger/test:lib",
+    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/cloud_provider/fidl",
+  ]
+}

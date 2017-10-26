@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/cloud_provider_firebase/cloud_provider_impl.h"
+#include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 
 #include <utility>
 
 #include "lib/fxl/logging.h"
-#include "peridot/bin/cloud_provider_firebase/convert_status.h"
+#include "peridot/bin/cloud_provider_firebase/app/convert_status.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage_impl.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/page_cloud_handler_impl.h"
