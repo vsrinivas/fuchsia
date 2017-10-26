@@ -16,9 +16,11 @@
 #include "lib/escher/impl/model_pipeline_cache.h"
 #include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/model_renderer.h"
+#include "lib/escher/impl/model_shadow_map_lighting_pass.h"
 #include "lib/escher/impl/ssdo_accelerator.h"
 #include "lib/escher/impl/ssdo_sampler.h"
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/shadow_map.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/util/depth_to_color.h"
@@ -79,13 +81,11 @@ PaperRenderer::PaperRenderer(Escher* escher, impl::ModelDataPtr model_data)
       depth_to_color_(std::make_unique<DepthToColor>(escher, image_cache_)),
       clear_values_(
           {vk::ClearColorValue(std::array<float, 4>{{0.f, 0.f, 0.f, 1.f}}),
-           vk::ClearDepthStencilValue(kMaxDepth, 0)}) {}
+           vk::ClearDepthStencilValue(kMaxDepth, 0)}),
+      ambient_light_color_(1.f) {}
 
 PaperRenderer::~PaperRenderer() {
-  escher()->command_buffer_pool()->Cleanup();
-  if (escher()->transfer_command_buffer_pool()) {
-    escher()->transfer_command_buffer_pool()->Cleanup();
-  }
+  escher()->Cleanup();
 }
 
 void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
@@ -111,7 +111,7 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
 
   ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
       stage, model, camera, depth_pass_, display_list_flags, scale,
-      TexturePtr(), command_buffer);
+      TexturePtr(), mat4(1.f), vec3(1.f), vec3(1.f), command_buffer);
 
   command_buffer->KeepAlive(framebuffer);
   command_buffer->KeepAlive(display_list);
@@ -256,22 +256,40 @@ void PaperRenderer::UpdateRenderPasses(vk::Format prepass_color_format,
         depth_format_, 1);
   }
 
-  if (!lighting_pass_ ||
-      lighting_pass_->color_format() != lighting_pass_color_format) {
+  if (!ssdo_lighting_pass_ ||
+      ssdo_lighting_pass_->color_format() != lighting_pass_color_format) {
     FXL_VLOG(1) << "PaperRenderer: updating ModelLightingPass.";
-    lighting_pass_ = fxl::MakeRefCounted<impl::ModelLightingPass>(
+    ssdo_lighting_pass_ = fxl::MakeRefCounted<impl::ModelLightingPass>(
         escher()->resource_recycler(), model_data_, prepass_color_format,
         depth_format_, kLightingPassSampleCount);
+
+    // TODO: use separate pass for no-shadows lighting: don't bother reading
+    // from the lighting texture.
+    no_shadow_lighting_pass_ = ssdo_lighting_pass_;
+  }
+
+  if (!shadow_map_lighting_pass_ ||
+      shadow_map_lighting_pass_->color_format() != lighting_pass_color_format) {
+    FXL_VLOG(1) << "PaperRenderer: updating ModelLightingPass.";
+    shadow_map_lighting_pass_ =
+        fxl::MakeRefCounted<impl::ModelShadowMapLightingPass>(
+            escher()->resource_recycler(), model_data_, prepass_color_format,
+            depth_format_, kLightingPassSampleCount);
   }
 }
 
-void PaperRenderer::DrawLightingPass(uint32_t sample_count,
-                                     const FramebufferPtr& framebuffer,
-                                     const TexturePtr& illumination_texture,
-                                     const Stage& stage,
-                                     const Model& model,
-                                     const Camera& camera,
-                                     const Model* overlay_model) {
+void PaperRenderer::DrawLightingPass(
+    uint32_t sample_count,
+    const FramebufferPtr& framebuffer,
+    const TexturePtr& shadow_texture,
+    const mat4& shadow_matrix,
+    const vec3& ambient_light_color,
+    const vec3& direct_light_color,
+    const impl::ModelRenderPassPtr& render_pass,
+    const Stage& stage,
+    const Model& model,
+    const Camera& camera,
+    const Model* overlay_model) {
   TRACE_DURATION("gfx", "escher::PaperRenderer::DrawLightingPass", "width",
                  framebuffer->width(), "height", framebuffer->height());
 
@@ -283,8 +301,9 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
                          : ModelDisplayListFlag::kNull);
 
   ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
-      stage, model, camera, lighting_pass_, display_list_flags, 1.f,
-      illumination_texture, command_buffer);
+      stage, model, camera, render_pass, display_list_flags, 1.f,
+      shadow_texture, shadow_matrix, ambient_light_color, direct_light_color,
+      command_buffer);
   command_buffer->KeepAlive(display_list);
 
   // Update the clear color from the stage
@@ -301,12 +320,13 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
     display_list_flags = ModelDisplayListFlag::kDisableDepthTest;
 
     overlay_display_list = model_renderer_->CreateDisplayList(
-        overlay_stage, *overlay_model, overlay_camera, lighting_pass_,
-        display_list_flags, 1.f, TexturePtr(), command_buffer);
+        overlay_stage, *overlay_model, overlay_camera, no_shadow_lighting_pass_,
+        display_list_flags, 1.f, TexturePtr(), mat4(1.f), ambient_light_color,
+        direct_light_color, command_buffer);
     command_buffer->KeepAlive(overlay_display_list);
   }
 
-  command_buffer->BeginRenderPass(lighting_pass_, framebuffer, clear_values_);
+  command_buffer->BeginRenderPass(render_pass, framebuffer, clear_values_);
 
   model_renderer_->Draw(stage, display_list, command_buffer);
   if (overlay_display_list) {
@@ -347,17 +367,17 @@ void PaperRenderer::DrawDebugOverlays(const ImagePtr& output,
     // the depth image that was used to generate it.
     src_width = depth->width() / kSsdoAccelDownsampleFactor;
     src_height = depth->height() / kSsdoAccelDownsampleFactor;
-    blit.srcOffsets[1] = vk::Offset3D{src_width, src_height, 1};
     blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+    blit.srcOffsets[1] = vk::Offset3D{src_width, src_height, 1};
 
     // Show the depth texture used as input to the SSDO accelerator.
     blit.dstOffsets[0] = vk::Offset3D{dst_width * 3 / 4, 0, 0};
     blit.dstOffsets[1] = vk::Offset3D{dst_width, dst_height / 4, 1};
-    current_frame()->get().blitImage(ssdo_accel_depth_as_color->image()->get(),
-                                     vk::ImageLayout::eShaderReadOnlyOptimal,
-                                     output->get(),
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     1, &blit, vk::Filter::eNearest);
+    current_frame()->vk().blitImage(ssdo_accel_depth_as_color->vk_image(),
+                                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                                    output->vk(),
+                                    vk::ImageLayout::eColorAttachmentOptimal, 1,
+                                    &blit, vk::Filter::eNearest);
 
     // Show the lookup table generated by the SSDO accelerator.
     TexturePtr unpacked_ssdo_accel = ssdo_accelerator_->UnpackLookupTable(
@@ -370,22 +390,23 @@ void PaperRenderer::DrawDebugOverlays(const ImagePtr& output,
     blit.srcOffsets[1] = vk::Offset3D{src_width, src_height, 1};
     blit.dstOffsets[0] = vk::Offset3D{dst_width * 3 / 4, dst_height * 1 / 4, 0};
     blit.dstOffsets[1] = vk::Offset3D{dst_width, dst_height * 1 / 2, 1};
-    current_frame()->get().blitImage(unpacked_ssdo_accel->image()->get(),
-                                     vk::ImageLayout::eGeneral, output->get(),
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     1, &blit, vk::Filter::eNearest);
+    current_frame()->vk().blitImage(unpacked_ssdo_accel->vk_image(),
+                                    vk::ImageLayout::eGeneral, output->vk(),
+                                    vk::ImageLayout::eColorAttachmentOptimal, 1,
+                                    &blit, vk::Filter::eNearest);
 
     // Show the illumination texture.
     if (illumination) {
       src_width = illumination->width();
       src_height = illumination->height();
+      blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
       blit.srcOffsets[1] = vk::Offset3D{src_width, src_height, 1};
       blit.dstOffsets[0] =
           vk::Offset3D{dst_width * 3 / 4, dst_height * 1 / 2, 0};
       blit.dstOffsets[1] = vk::Offset3D{dst_width, dst_height * 3 / 4, 1};
-      current_frame()->get().blitImage(
-          illumination->get(), vk::ImageLayout::eShaderReadOnlyOptimal,
-          output->get(), vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
+      current_frame()->vk().blitImage(
+          illumination->vk(), vk::ImageLayout::eShaderReadOnlyOptimal,
+          output->vk(), vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
           vk::Filter::eLinear);
     }
 
@@ -397,6 +418,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
                               const Model& model,
                               const Camera& camera,
                               const ImagePtr& color_image_out,
+                              const ShadowMapPtr& shadow_map,
                               const Model* overlay_model,
                               const SemaphorePtr& frame_done,
                               FrameRetiredCallback frame_retired_callback) {
@@ -404,11 +426,112 @@ void PaperRenderer::DrawFrame(const Stage& stage,
 
   UpdateRenderPasses(color_image_out->format(), color_image_out->format());
 
+  BeginFrame();
+
+  switch (shadow_type_) {
+    case PaperRendererShadowType::kNone:
+      DrawFrameWithNoShadows(stage, model, camera, color_image_out,
+                             overlay_model);
+      break;
+    case PaperRendererShadowType::kSsdo:
+      DrawFrameWithSsdoShadows(stage, model, camera, color_image_out,
+                               overlay_model);
+      break;
+    case PaperRendererShadowType::kShadowMap:
+      FXL_DCHECK(shadow_map);
+      DrawFrameWithShadowMapShadows(stage, model, camera, color_image_out,
+                                    shadow_map, overlay_model);
+      break;
+  }
+
+  // ModelRenderer's lighting render-pass leaves the color-attachment format
+  // as eColorAttachmentOptimal, since it's not clear how it will be used
+  // next.
+  // We could push this flexibility farther by letting our client specify the
+  // desired output format, but for now we'll assume that the image is being
+  // presented immediately.
+  current_frame()->TransitionImageLayout(
+      color_image_out, vk::ImageLayout::eColorAttachmentOptimal,
+      vk::ImageLayout::ePresentSrcKHR);
+
+  AddTimestamp("finished transition to presentation layout");
+
+  EndFrame(frame_done, frame_retired_callback);
+}
+
+void PaperRenderer::DrawFrameWithNoShadows(const Stage& stage,
+                                           const Model& model,
+                                           const Camera& camera,
+                                           const ImagePtr& color_image_out,
+                                           const Model* overlay_model) {
   uint32_t width = color_image_out->width();
   uint32_t height = color_image_out->height();
 
-  BeginFrame();
+  current_frame()->TakeWaitSemaphore(
+      color_image_out, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
+  current_frame()->TransitionImageLayout(
+      color_image_out, vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal);
+
+  ImagePtr depth_image = image_utils::NewDepthImage(
+      image_cache_, depth_format_, width, height,
+      vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
+
+  FramebufferPtr framebuffer = fxl::MakeRefCounted<Framebuffer>(
+      escher(), width, height,
+      std::vector<ImagePtr>{color_image_out, depth_image},
+      // TODO: pass escher::RenderPass instead of vk::RenderPass?
+      no_shadow_lighting_pass_->vk());
+
+  DrawLightingPass(kLightingPassSampleCount, framebuffer, TexturePtr(),
+                   mat4(1.f), ambient_light_color_, ambient_light_color_,
+                   no_shadow_lighting_pass_, stage, model, camera,
+                   overlay_model);
+}
+
+void PaperRenderer::DrawFrameWithShadowMapShadows(
+    const Stage& stage,
+    const Model& model,
+    const Camera& camera,
+    const ImagePtr& color_image_out,
+    const ShadowMapPtr& shadow_map,
+    const Model* overlay_model) {
+  FXL_DCHECK(shadow_map);
+
+  uint32_t width = color_image_out->width();
+  uint32_t height = color_image_out->height();
+
+  current_frame()->TakeWaitSemaphore(
+      color_image_out, vk::PipelineStageFlagBits::eColorAttachmentOutput);
+
+  current_frame()->TransitionImageLayout(
+      color_image_out, vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal);
+
+  ImagePtr depth_image = image_utils::NewDepthImage(
+      image_cache_, depth_format_, width, height,
+      vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
+
+  FramebufferPtr framebuffer = fxl::MakeRefCounted<Framebuffer>(
+      escher(), width, height,
+      std::vector<ImagePtr>{color_image_out, depth_image},
+      // TODO: pass escher::RenderPass instead of vk::RenderPass?
+      shadow_map_lighting_pass_->vk());
+
+  DrawLightingPass(kLightingPassSampleCount, framebuffer, shadow_map->texture(),
+                   shadow_map->matrix(), ambient_light_color_,
+                   shadow_map->light_color(), shadow_map_lighting_pass_, stage,
+                   model, camera, overlay_model);
+}
+
+void PaperRenderer::DrawFrameWithSsdoShadows(const Stage& stage,
+                                             const Model& model,
+                                             const Camera& camera,
+                                             const ImagePtr& color_image_out,
+                                             const Model* overlay_model) {
+  uint32_t width = color_image_out->width();
+  uint32_t height = color_image_out->height();
   uint32_t ssdo_accel_width = width / kSsdoAccelDownsampleFactor;
   uint32_t ssdo_accel_height = height / kSsdoAccelDownsampleFactor;
 
@@ -439,7 +562,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
         {color_image_out->format(), ssdo_accel_width, ssdo_accel_height, 1,
          vk::ImageUsageFlagBits::eColorAttachment});
 
-    // TODO(ES-41): The 1/kSsdoAccelDownsampleFactor is not 100% correct in the
+    // TODO(ES-41): The 1/kSsdoAccelDownsampleFactor is not 100% correct in
+    // the
     // case where we needed to round up the acceleration image width and/or
     // height.  To correct this, we would change the single scale factor to a
     // scale_x and scale_y, and adjust each as necessary (i.e. maybe slightly
@@ -474,32 +598,30 @@ void PaperRenderer::DrawFrame(const Stage& stage,
   }
 
   // Compute the illumination and store the result in a texture.
-  TexturePtr illumination_texture;
-  if (enable_lighting_) {
-    ImagePtr illum1 = image_cache_->NewImage(
-        {impl::SsdoSampler::kColorFormat, width, height, 1,
-         vk::ImageUsageFlagBits::eSampled |
-             vk::ImageUsageFlagBits::eColorAttachment |
-             vk::ImageUsageFlagBits::eStorage |
-             vk::ImageUsageFlagBits::eTransferSrc});
+  TexturePtr shadow_texture;
+  ImagePtr illum1 =
+      image_cache_->NewImage({impl::SsdoSampler::kColorFormat, width, height, 1,
+                              vk::ImageUsageFlagBits::eSampled |
+                                  vk::ImageUsageFlagBits::eColorAttachment |
+                                  vk::ImageUsageFlagBits::eStorage |
+                                  vk::ImageUsageFlagBits::eTransferSrc});
 
-    ImagePtr illum2 = image_cache_->NewImage(
-        {impl::SsdoSampler::kColorFormat, width, height, 1,
-         vk::ImageUsageFlagBits::eSampled |
-             vk::ImageUsageFlagBits::eColorAttachment |
-             vk::ImageUsageFlagBits::eStorage |
-             vk::ImageUsageFlagBits::eTransferSrc});
+  ImagePtr illum2 =
+      image_cache_->NewImage({impl::SsdoSampler::kColorFormat, width, height, 1,
+                              vk::ImageUsageFlagBits::eSampled |
+                                  vk::ImageUsageFlagBits::eColorAttachment |
+                                  vk::ImageUsageFlagBits::eStorage |
+                                  vk::ImageUsageFlagBits::eTransferSrc});
 
-    DrawSsdoPasses(depth_image, illum1, illum2, ssdo_accel_texture, stage);
-    SubmitPartialFrame();
+  DrawSsdoPasses(depth_image, illum1, illum2, ssdo_accel_texture, stage);
+  SubmitPartialFrame();
 
-    illumination_texture = fxl::MakeRefCounted<Texture>(
-        escher()->resource_recycler(), illum1, vk::Filter::eNearest);
+  shadow_texture = fxl::MakeRefCounted<Texture>(escher()->resource_recycler(),
+                                                illum1, vk::Filter::eNearest);
 
-    // Done after previous SubmitPartialFrame(), because this is needed by the
-    // final lighting pass.
-    current_frame()->KeepAlive(illumination_texture);
-  }
+  // Done after previous SubmitPartialFrame(), because this is needed by the
+  // final lighting pass.
+  current_frame()->KeepAlive(shadow_texture);
 
   // Use multisampling for final lighting pass, or not.
   if (kLightingPassSampleCount == 1) {
@@ -507,12 +629,14 @@ void PaperRenderer::DrawFrame(const Stage& stage,
         escher(), width, height,
         std::vector<ImagePtr>{color_image_out, depth_image},
         // TODO: pass escher::RenderPass instead of vk::RenderPass?
-        lighting_pass_->vk());
+        ssdo_lighting_pass_->vk());
 
     current_frame()->KeepAlive(lighting_fb);
 
-    DrawLightingPass(kLightingPassSampleCount, lighting_fb,
-                     illumination_texture, stage, model, camera, overlay_model);
+    DrawLightingPass(kLightingPassSampleCount, lighting_fb, shadow_texture,
+                     mat4(1.f), ambient_light_color_,
+                     vec3(1.f) - ambient_light_color_, ssdo_lighting_pass_,
+                     stage, model, camera, overlay_model);
 
     AddTimestamp("finished lighting pass");
   } else {
@@ -536,12 +660,14 @@ void PaperRenderer::DrawFrame(const Stage& stage,
         std::vector<ImagePtr>{color_image_multisampled,
                               depth_image_multisampled},
         // TODO: pass escher::RenderPass instead of vk::RenderPass?
-        lighting_pass_->vk());
+        ssdo_lighting_pass_->vk());
 
     current_frame()->KeepAlive(multisample_fb);
 
-    DrawLightingPass(kLightingPassSampleCount, multisample_fb,
-                     illumination_texture, stage, model, camera, overlay_model);
+    DrawLightingPass(kLightingPassSampleCount, multisample_fb, shadow_texture,
+                     mat4(1.f), ambient_light_color_,
+                     vec3(1.f) - ambient_light_color_, ssdo_lighting_pass_,
+                     stage, model, camera, overlay_model);
 
     AddTimestamp("finished lighting pass");
 
@@ -557,32 +683,17 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     resolve.dstSubresource = layers;
     resolve.dstOffset = vk::Offset3D{0, 0, 0};
     resolve.extent = vk::Extent3D{width, height, 0};
-    current_frame()->get().resolveImage(
-        color_image_multisampled->get(),
-        vk::ImageLayout::eColorAttachmentOptimal, color_image_out->get(),
+    current_frame()->vk().resolveImage(
+        color_image_multisampled->vk(),
+        vk::ImageLayout::eColorAttachmentOptimal, color_image_out->vk(),
         vk::ImageLayout::eColorAttachmentOptimal, resolve);
 
     AddTimestamp("finished multisample resolve");
   }
 
-  DrawDebugOverlays(
-      color_image_out, depth_image,
-      illumination_texture ? illumination_texture->image() : ImagePtr(),
-      ssdo_accel_texture, ssdo_accel_depth_texture);
-
-  // ModelRenderer's lighting render-pass leaves the color-attachment format
-  // as eColorAttachmentOptimal, since it's not clear how it will be used
-  // next.
-  // We could push this flexibility farther by letting our client specify the
-  // desired output format, but for now we'll assume that the image is being
-  // presented immediately.
-  current_frame()->TransitionImageLayout(
-      color_image_out, vk::ImageLayout::eColorAttachmentOptimal,
-      vk::ImageLayout::ePresentSrcKHR);
-
-  AddTimestamp("finished transition to presentation layout");
-
-  EndFrame(frame_done, frame_retired_callback);
+  DrawDebugOverlays(color_image_out, depth_image,
+                    shadow_texture ? shadow_texture->image() : ImagePtr(),
+                    ssdo_accel_texture, ssdo_accel_depth_texture);
 }
 
 void PaperRenderer::set_enable_ssdo_acceleration(bool b) {

@@ -31,6 +31,8 @@ class CommandBuffer {
  public:
   ~CommandBuffer();
 
+  vk::CommandBuffer vk() const { return command_buffer_; }
+  // TODO(ES-44): Deprecated.  Use vk() instead.
   vk::CommandBuffer get() const { return command_buffer_; }
 
   // Return true if successful.  The callback will be invoked after all commands

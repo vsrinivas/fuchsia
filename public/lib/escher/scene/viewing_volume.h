@@ -8,6 +8,8 @@
 
 #include "lib/escher/util/debug_print.h"
 
+#include "lib/escher/geometry/bounding_box.h"
+
 namespace escher {
 
 class ViewingVolume {
@@ -23,6 +25,11 @@ class ViewingVolume {
   float top() const { return top_; }
   float bottom() const { return bottom_; }
   float depth() const { return top_ - bottom_; }
+
+  BoundingBox bounding_box() const {
+    return BoundingBox(glm::vec3(0.f, 0.f, bottom_),
+                       glm::vec3(width_, height_, top_));
+  }
 
  private:
   float width_ = 0.0f;

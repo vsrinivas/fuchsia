@@ -9,9 +9,9 @@
 namespace escher {
 namespace impl {
 
-// ModelLightingPass encapsulates a vk::RenderPass that is configured for the
-// final lighting pass (including shadows, which were computed using SSDO).
-class ModelLightingPass : public ModelRenderPass {
+// ModelShadowMapPass encapsulates a vk::RenderPass that is configured to render
+// a shadow map.
+class ModelShadowMapPass : public ModelRenderPass {
  public:
   // |ModelRenderPass|
   bool UseMaterialTextures() override { return true; }
@@ -23,11 +23,11 @@ class ModelLightingPass : public ModelRenderPass {
   std::string GetFragmentShaderSourceCode(
       const ModelPipelineSpec& spec) override;
 
-  ModelLightingPass(ResourceRecycler* recycler,
-                    ModelDataPtr model_data,
-                    vk::Format color_format,
-                    vk::Format depth_format,
-                    uint32_t sample_count);
+  ModelShadowMapPass(ResourceRecycler* recycler,
+                     ModelDataPtr model_data,
+                     vk::Format color_format,
+                     vk::Format depth_format,
+                     uint32_t sample_count);
 
  protected:
   // |ModelRenderPass|

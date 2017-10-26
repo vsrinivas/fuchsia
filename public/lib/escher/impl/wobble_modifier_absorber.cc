@@ -42,6 +42,8 @@ constexpr char g_compute_wobble_src[] = R"GLSL(
 
     layout(binding = 1) uniform PerModel {
       vec2 frag_coord_to_uv_multiplier;
+      vec3 ambient_light_intensity;
+      vec3 direct_light_intensity;
       float time;
     };
 

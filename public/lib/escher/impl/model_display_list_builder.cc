@@ -10,6 +10,7 @@
 #include "lib/escher/impl/model_pipeline_cache.h"
 #include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/model_renderer.h"
+#include "lib/escher/renderer/shadow_map.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/util/align.h"
 
@@ -44,7 +45,10 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     const Camera& camera,
     float scale,
     const TexturePtr& white_texture,
-    const TexturePtr& illumination_texture,
+    const TexturePtr& shadow_texture,
+    const mat4& shadow_matrix,
+    vec3 ambient_light_intensity,
+    vec3 direct_light_intensity,
     ModelData* model_data,
     ModelRenderer* renderer,
     ModelRenderPassPtr render_pass,
@@ -55,8 +59,8 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
       use_material_textures_(render_pass->UseMaterialTextures()),
       disable_depth_test_(flags & ModelDisplayListFlag::kDisableDepthTest),
       white_texture_(white_texture),
-      illumination_texture_(illumination_texture ? illumination_texture
-                                                 : white_texture),
+      shadow_texture_(shadow_texture ? shadow_texture : white_texture),
+      shadow_matrix_(shadow_matrix),
       renderer_(renderer),
       render_pass_(std::move(render_pass)),
       pipeline_cache_(render_pass_->pipeline_cache()),
@@ -67,12 +71,18 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
           model_data->per_object_descriptor_set_pool()) {
   FXL_DCHECK(white_texture_);
 
+  if (shadow_texture) {
+    textures_.push_back(shadow_texture);
+  }
+
   // Obtain a uniform buffer and write the PerModel data to it.
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel), 0);
   auto per_model =
       reinterpret_cast<ModelData::PerModel*>(uniform_buffer_->ptr());
   per_model->frag_coord_to_uv_multiplier =
       vec2(1.f / volume_.width(), 1.f / volume_.height());
+  per_model->ambient_light_intensity = ambient_light_intensity;
+  per_model->direct_light_intensity = direct_light_intensity;
   per_model->time = model.time();
   uniform_buffer_write_index_ += sizeof(ModelData::PerModel);
 
@@ -110,11 +120,12 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   image_write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
   vk::DescriptorImageInfo image_info;
   image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-  image_info.imageView = illumination_texture_->image_view();
-  image_info.sampler = illumination_texture_->sampler();
+  image_info.imageView = shadow_texture_->vk_image_view();
+  image_info.sampler = shadow_texture_->vk_sampler();
   image_write.pImageInfo = &image_info;
 
-  device_.updateDescriptorSets(2, writes, 0, nullptr);
+  device_.updateDescriptorSets(ModelData::PerModel::kDescriptorCount, writes, 0,
+                               nullptr);
 }
 
 void ModelDisplayListBuilder::AddClipperObject(const Object& object) {
@@ -255,7 +266,8 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
   auto& mat = object.material();
 
   // Push uniforms for scale/translation and color.
-  per_object->transform = camera_transform_ * object.transform();
+  per_object->camera_transform = camera_transform_ * object.transform();
+  per_object->shadow_transform = shadow_matrix_ * object.transform();
   per_object->color = mat ? mat->color() : vec4(1, 1, 1, 1);  // always opaque
 
   // Find the texture to use, either the object's material's texture, or

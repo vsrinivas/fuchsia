@@ -25,9 +25,14 @@ class Pipeline : public fxl::RefCountedThreadSafe<Pipeline> {
            PipelineSpec spec);
   ~Pipeline();
 
-  vk::Pipeline get() const { return pipeline_; }
-  vk::PipelineLayout layout() const { return layout_->get(); }
+  vk::Pipeline vk() const { return pipeline_; }
+  vk::PipelineLayout vk_layout() const { return layout_->vk(); }
   const PipelineSpec& spec() const { return spec_; }
+
+  // TODO(ES-44): Deprecated.  Use vk() instead.
+  vk::Pipeline get() const { return pipeline_; }
+  // TODO(ES-44): Deprecated.  Use vk_layout() instead.
+  vk::PipelineLayout layout() const { return layout_->vk(); }
 
  private:
   vk::Device device_;

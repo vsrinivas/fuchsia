@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/impl/model_lighting_pass.h"
+#include "lib/escher/impl/model_shadow_map_lighting_pass.h"
 
 #include "lib/escher/impl/model_data.h"
 
@@ -11,10 +11,12 @@ namespace impl {
 
 static const char kVertexShaderMainSourceCode[] = R"GLSL(
 layout(location = 0) out vec2 fragUV;
+layout(location = 1) out vec4 shadowPos;
 
 void main() {
   vec4 pos = ComputeVertexPosition();
   gl_Position = camera_transform * pos;
+  shadowPos = light_transform * pos;
   fragUV = inUV;
 }
 )GLSL";
@@ -24,15 +26,16 @@ static const char kFragmentShaderSourceCode[] = R"GLSL(
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec2 inUV;
+layout(location = 1) in vec4 shadowPos;
 
 layout(set = 0, binding = 0) uniform PerModel {
   vec2 frag_coord_to_uv_multiplier;
   float time;
-  vec3 ambient_light_intensity;
-  vec3 direct_light_intensity;
+	vec3 ambient_light_intensity;
+	vec3 direct_light_intensity;
 };
 
-layout(set = 0, binding = 1) uniform sampler2D light_tex;
+layout(set = 0, binding = 1) uniform sampler2D shadow_map_tex;
 
 layout(set = 1, binding = 0) uniform PerObject {
   mat4 camera_transform;
@@ -45,16 +48,24 @@ layout(set = 1, binding = 1) uniform sampler2D material_tex;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-  vec4 light = texture(light_tex, gl_FragCoord.xy * frag_coord_to_uv_multiplier);
-  outColor = light.r * color * texture(material_tex, inUV);
+  vec3 light = ambient_light_intensity;
+
+  vec4 shadowUV = (shadowPos / shadowPos.w);
+  // TODO: do better than 0.0004 fudge factor.
+  if (texture(shadow_map_tex, shadowUV.xy).r >= (shadowUV.z - 0.0004)) {
+    light += direct_light_intensity;
+  }
+
+  outColor = vec4(light, 1.f) * color * texture(material_tex, inUV);
 }
 )GLSL";
 
-ModelLightingPass::ModelLightingPass(ResourceRecycler* recycler,
-                                     ModelDataPtr model_data,
-                                     vk::Format color_format,
-                                     vk::Format depth_format,
-                                     uint32_t sample_count)
+ModelShadowMapLightingPass::ModelShadowMapLightingPass(
+    ResourceRecycler* recycler,
+    ModelDataPtr model_data,
+    vk::Format color_format,
+    vk::Format depth_format,
+    uint32_t sample_count)
     : ModelRenderPass(recycler, color_format, depth_format, sample_count) {
   vk::AttachmentDescription* color_attachment =
       attachment(kColorAttachmentIndex);
@@ -76,12 +87,12 @@ ModelLightingPass::ModelLightingPass(ResourceRecycler* recycler,
   CreateRenderPassAndPipelineCache(std::move(model_data));
 }
 
-std::string ModelLightingPass::GetFragmentShaderSourceCode(
+std::string ModelShadowMapLightingPass::GetFragmentShaderSourceCode(
     const ModelPipelineSpec& spec) {
   return kFragmentShaderSourceCode;
 }
 
-std::string ModelLightingPass::GetVertexShaderMainSourceCode() {
+std::string ModelShadowMapLightingPass::GetVertexShaderMainSourceCode() {
   return kVertexShaderMainSourceCode;
 }
 

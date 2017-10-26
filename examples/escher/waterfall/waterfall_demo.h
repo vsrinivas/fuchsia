@@ -16,6 +16,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/material/color_utils.h"
 #include "lib/escher/renderer/paper_renderer.h"
+#include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/escher/vk/vulkan_swapchain_helper.h"
@@ -25,6 +26,13 @@ class WaterfallDemo : public Demo {
  public:
   static constexpr uint32_t kDemoWidth = 2160;
   static constexpr uint32_t kDemoHeight = 1440;
+
+  enum ShadowMode {
+    kNone,
+    kSsdo,
+    kShadowMap,
+    kNumShadowModes,
+  };
 
   WaterfallDemo(DemoHarness* harness, int argc, char** argv);
   virtual ~WaterfallDemo();
@@ -43,7 +51,8 @@ class WaterfallDemo : public Demo {
 
   // Toggle debug overlays.
   bool show_debug_info_ = false;
-  bool enable_lighting_ = true;
+
+  ShadowMode shadow_mode_ = ShadowMode::kSsdo;
   int current_scene_ = 0;
   // True if the Model objects should be binned by pipeline, false if they
   // should be rendered in their natural order.
@@ -51,8 +60,6 @@ class WaterfallDemo : public Demo {
   // True if SSDO should be accelerated by generating a lookup table each frame.
   bool enable_ssdo_acceleration_ = true;
   bool stop_time_ = false;
-  // True if lighting should be periodically toggled on and off.
-  bool auto_toggle_lighting_ = false;
   // Profile a single frame; print out timestamps about how long each part of
   // the frame took.
   bool profile_one_frame_ = false;
@@ -67,6 +74,7 @@ class WaterfallDemo : public Demo {
 
   std::vector<std::unique_ptr<Scene>> scenes_;
   escher::PaperRendererPtr renderer_;
+  escher::ShadowMapRendererPtr shadow_renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;
   escher::Stage stage_;
 

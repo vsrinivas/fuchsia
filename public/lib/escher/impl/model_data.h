@@ -41,10 +41,16 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
     static constexpr uint32_t kDescriptorSetSamplerBinding = 1;
 
     // Used by the lighting-pass fragment shader to map fragment coordinates to
-    // UV coordinates for the lighting texture.
+    // UV coordinates for the SSDO lighting texture.
     vec2 frag_coord_to_uv_multiplier;
     // Used for animation in vertex shaders.
     float time;
+    float __pad1;  // std140
+
+    // Intensities of direct and ambient light sources.
+    vec3 ambient_light_intensity;
+    float __pad2;  // std140
+    vec3 direct_light_intensity;
   };
 
   // Describes per-object data accessible by shaders.
@@ -58,7 +64,12 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
     // layout(set = 1, binding = 1) sampler2D PerObjectSampler;
     static constexpr uint32_t kDescriptorSetSamplerBinding = 1;
 
-    mat4 transform;
+    // Model-view-projection matrix.
+    mat4 camera_transform;
+    // Model-light matrix for shadow mapping.
+    mat4 shadow_transform;
+    // Color of object.  Applied as filter to object's material, if it has one.
+    // Otherwise, treated as a solid color.
     vec4 color;
     // Temporary hack.  Soon, per-object params for shape-modifiers, etc. will
     // only be provided to the pipelines that need them.

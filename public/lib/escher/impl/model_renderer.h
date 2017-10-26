@@ -37,7 +37,10 @@ class ModelRenderer final : public fxl::RefCountedThreadSafe<ModelRenderer> {
                                         const ModelRenderPassPtr& render_pass,
                                         ModelDisplayListFlags flags,
                                         float scale,
-                                        const TexturePtr& illumination_texture,
+                                        const TexturePtr& shadow_texture,
+                                        const mat4& shadow_matrix,
+                                        vec3 ambient_light_color,
+                                        vec3 direct_light_color,
                                         CommandBuffer* command_buffer);
 
   const MeshPtr& GetMeshForShape(const Shape& shape) const;

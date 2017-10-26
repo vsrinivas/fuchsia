@@ -32,6 +32,14 @@ class ModelRenderPass : public RenderPass {
   // without a fragment shader.
   virtual bool OmitFragmentShader() = 0;
 
+  // Return a pointer to the fragment-shader source code that should be used
+  // for the specified pipeline, or nullptr if the pipeline should not use a
+  // fragment shader.
+  virtual std::string GetFragmentShaderSourceCode(
+      const ModelPipelineSpec& spec) = 0;
+
+  std::string GetVertexShaderSourceCode(const ModelPipelineSpec& spec);
+
   uint32_t sample_count() const { return sample_count_; }
 
   vk::Format color_format() const {
@@ -45,6 +53,8 @@ class ModelRenderPass : public RenderPass {
   ModelPipelineCache* pipeline_cache() const { return pipeline_cache_.get(); }
 
  protected:
+  virtual std::string GetVertexShaderMainSourceCode() = 0;
+
   ModelRenderPass(ResourceRecycler* recycler,
                   vk::Format color_format,
                   vk::Format depth_format,

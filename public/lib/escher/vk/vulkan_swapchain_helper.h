@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "lib/escher/forward_declarations.h"
 #include "lib/escher/vk/vulkan_swapchain.h"
 
 namespace escher {
@@ -23,6 +24,7 @@ class VulkanSwapchainHelper {
                  const Stage& stage,
                  const Model& model,
                  const Camera& camera,
+                 const ShadowMapPtr& shadow_map,
                  const Model* overlay_model = nullptr);
 
   const VulkanSwapchain& swapchain() const { return swapchain_; }

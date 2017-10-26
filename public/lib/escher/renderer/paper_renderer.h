@@ -5,11 +5,18 @@
 #pragma once
 
 #include "lib/escher/forward_declarations.h"
+#include "lib/escher/geometry/types.h"
 #include "lib/escher/renderer/renderer.h"
 
 namespace escher {
 
 class DepthToColor;
+
+enum class PaperRendererShadowType {
+  kNone,
+  kSsdo,
+  kShadowMap,
+};
 
 class PaperRenderer : public Renderer {
  public:
@@ -19,6 +26,7 @@ class PaperRenderer : public Renderer {
                  const Model& model,
                  const Camera& camera,
                  const ImagePtr& color_image_out,
+                 const ShadowMapPtr& shadow_map,
                  const Model* overlay_model,
                  const SemaphorePtr& frame_done,
                  FrameRetiredCallback frame_retired_callback);
@@ -26,8 +34,9 @@ class PaperRenderer : public Renderer {
   // Set whether one or more debug-overlays is to be show.
   void set_show_debug_info(bool b) { show_debug_info_ = b; }
 
-  // Set whether SSDO lighting model is used.
-  void set_enable_lighting(bool b) { enable_lighting_ = b; }
+  void set_shadow_type(PaperRendererShadowType shadow_type) {
+    shadow_type_ = shadow_type;
+  }
 
   // Set whether SSDO computation should be accelerated by generating a lookup
   // table each frame.
@@ -36,6 +45,9 @@ class PaperRenderer : public Renderer {
   // Set whether objects should be sorted by their pipeline, or rendered in the
   // order that they are provided by the caller.
   void set_sort_by_pipeline(bool b) { sort_by_pipeline_ = b; }
+
+  // Set the color of the ambient light.
+  void set_ambient_light_color(vec3 color) { ambient_light_color_ = color; }
 
   // Cycle through the available SSDO acceleration modes.  This is a temporary
   // API: eventually there will only be one mode (the best one!), but this is
@@ -53,6 +65,25 @@ class PaperRenderer : public Renderer {
 
   static constexpr uint32_t kFramebufferColorAttachmentIndex = 0;
   static constexpr uint32_t kFramebufferDepthAttachmentIndex = 1;
+
+  void DrawFrameWithNoShadows(const Stage& stage,
+                              const Model& model,
+                              const Camera& camera,
+                              const ImagePtr& color_image_out,
+                              const Model* overlay_model);
+
+  void DrawFrameWithSsdoShadows(const Stage& stage,
+                                const Model& model,
+                                const Camera& camera,
+                                const ImagePtr& color_image_out,
+                                const Model* overlay_model);
+
+  void DrawFrameWithShadowMapShadows(const Stage& stage,
+                                     const Model& model,
+                                     const Camera& camera,
+                                     const ImagePtr& color_image_out,
+                                     const ShadowMapPtr& shadow_map,
+                                     const Model* overlay_model);
 
   // Render pass that generates a depth buffer, but no color fragments.  The
   // resulting depth buffer is used by DrawSsdoPasses() in order to compute
@@ -83,7 +114,11 @@ class PaperRenderer : public Renderer {
   // after doing performance profiling.
   void DrawLightingPass(uint32_t sample_count,
                         const FramebufferPtr& framebuffer,
-                        const TexturePtr& illumination_texture,
+                        const TexturePtr& shadow_texture,
+                        const mat4& shadow_matrix,
+                        const vec3& ambient_light_color,
+                        const vec3& direct_light_color,
+                        const impl::ModelRenderPassPtr& render_pass,
                         const Stage& stage,
                         const Model& model,
                         const Camera& camera,
@@ -102,7 +137,9 @@ class PaperRenderer : public Renderer {
   MeshPtr full_screen_;
   impl::ImageCache* image_cache_;
   impl::ModelRenderPassPtr depth_pass_;
-  impl::ModelRenderPassPtr lighting_pass_;
+  impl::ModelRenderPassPtr no_shadow_lighting_pass_;
+  impl::ModelRenderPassPtr ssdo_lighting_pass_;
+  impl::ModelRenderPassPtr shadow_map_lighting_pass_;
   vk::Format depth_format_;
   impl::ModelDataPtr model_data_;
   impl::ModelRendererPtr model_renderer_;
@@ -110,9 +147,10 @@ class PaperRenderer : public Renderer {
   std::unique_ptr<impl::SsdoAccelerator> ssdo_accelerator_;
   std::unique_ptr<DepthToColor> depth_to_color_;
   std::vector<vk::ClearValue> clear_values_;
+  vec3 ambient_light_color_;
   bool show_debug_info_ = false;
-  bool enable_lighting_ = true;
   bool sort_by_pipeline_ = true;
+  PaperRendererShadowType shadow_type_ = PaperRendererShadowType::kSsdo;
 
   FRIEND_MAKE_REF_COUNTED(PaperRenderer);
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);

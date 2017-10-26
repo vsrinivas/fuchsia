@@ -13,6 +13,7 @@
 #include "garnet/examples/escher/waterfall/scenes/uber_scene3.h"
 #include "garnet/examples/escher/waterfall/scenes/wobbly_ocean_scene.h"
 #include "garnet/examples/escher/waterfall/scenes/wobbly_rings_scene.h"
+#include "lib/escher/renderer/shadow_map.h"
 #include "lib/escher/scene/camera.h"
 
 // Material design places objects from 0.0f to 24.0f.
@@ -20,9 +21,16 @@ static constexpr float kNear = 100.f;
 static constexpr float kFar = -1.f;
 static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
+// Directional light is 50% intensity; ambient light will adjust automatically.
+static constexpr float kLightIntensity = 0.5f;
+
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness),
       renderer_(escher::PaperRenderer::New(escher())),
+      shadow_renderer_(
+          escher::ShadowMapRenderer::New(escher(),
+                                         renderer_->model_data(),
+                                         renderer_->model_renderer())),
       swapchain_helper_(harness->GetVulkanSwapchain(),
                         escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {
@@ -60,8 +68,6 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
       show_debug_info_ = true;
     } else if (!strcmp("--no-debug", argv[i])) {
       show_debug_info_ = false;
-    } else if (!strcmp("--toggle-lighting", argv[i])) {
-      auto_toggle_lighting_ = true;
     }
   }
 }
@@ -117,7 +123,8 @@ void WaterfallDemo::InitializeDemoScenes() {
 bool WaterfallDemo::HandleKeyPress(std::string key) {
   if (key.size() > 1) {
     if (key == "SPACE") {
-      enable_lighting_ = !enable_lighting_;
+      shadow_mode_ = static_cast<ShadowMode>((shadow_mode_ + 1) %
+                                             ShadowMode::kNumShadowModes);
       return true;
     }
     return Demo::HandleKeyPress(key);
@@ -221,10 +228,24 @@ void WaterfallDemo::DrawFrame() {
       swapchain_helper_.swapchain().height);
 
   renderer_->set_show_debug_info(show_debug_info_);
-  renderer_->set_enable_lighting(enable_lighting_);
   renderer_->set_sort_by_pipeline(sort_by_pipeline_);
   renderer_->set_enable_profiling(profile_one_frame_);
   renderer_->set_enable_ssdo_acceleration(enable_ssdo_acceleration_);
+  switch (shadow_mode_) {
+    case ShadowMode::kNone:
+      renderer_->set_shadow_type(escher::PaperRendererShadowType::kNone);
+      break;
+    case ShadowMode::kSsdo:
+      renderer_->set_shadow_type(escher::PaperRendererShadowType::kSsdo);
+      break;
+    case ShadowMode::kShadowMap:
+      renderer_->set_shadow_type(escher::PaperRendererShadowType::kShadowMap);
+      break;
+    default:
+      FXL_LOG(ERROR) << "Invalid shadow_mode_: " << shadow_mode_;
+      shadow_mode_ = ShadowMode::kNone;
+      renderer_->set_shadow_type(escher::PaperRendererShadowType::kNone);
+  }
   profile_one_frame_ = false;
 
   escher::Camera camera =
@@ -242,7 +263,8 @@ void WaterfallDemo::DrawFrame() {
             const escher::ImagePtr& color_image_out,
             const escher::SemaphorePtr& frame_done_semaphore) {
           renderer_->DrawFrame(stage_, *model, camera, color_image_out,
-                               overlay_model, frame_done_semaphore, nullptr);
+                               escher::ShadowMapPtr(), overlay_model,
+                               frame_done_semaphore, nullptr);
         });
     renderer_->set_show_debug_info(show_debug_info_);
     if (!stop_time_) {
@@ -256,22 +278,22 @@ void WaterfallDemo::DrawFrame() {
     stopwatch_.Start();
   }
 
+  escher::ShadowMapPtr shadow_map;
+  if (shadow_mode_ == kShadowMap) {
+    const vec3 directional_light_color(kLightIntensity);
+    renderer_->set_ambient_light_color(vec3(1.f) - directional_light_color);
+    shadow_map = shadow_renderer_->GenerateDirectionalShadowMap(
+        stage_, *model, vec3(0.3f, 0.3f, -1.f), directional_light_color);
+  }
+
   swapchain_helper_.DrawFrame(renderer_.get(), stage_, *model, camera,
-                              overlay_model);
+                              shadow_map, overlay_model);
 
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
     stopwatch_.Reset();
   } else if (frame_count_ % 200 == 0) {
     profile_one_frame_ = true;
-
-    if (auto_toggle_lighting_) {
-      if (enable_lighting_ && frame_count_ % 600 == 0) {
-        enable_lighting_ = false;
-      } else {
-        enable_lighting_ = true;
-      }
-    }
 
     // Print out FPS stats.  Omit the first frame when computing the
     // average, because it is generating pipelines.

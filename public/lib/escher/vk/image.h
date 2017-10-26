@@ -52,7 +52,7 @@ class Image : public WaitableResource {
   ~Image() override;
 
   const ImageInfo& info() const { return info_; }
-  vk::Image get() const { return image_; }
+  vk::Image vk() const { return image_; }
   vk::Format format() const { return info_.format; }
   uint32_t width() const { return info_.width; }
   uint32_t height() const { return info_.height; }
@@ -62,6 +62,9 @@ class Image : public WaitableResource {
   // Offset of the Image within it's GpuMem + the offset of the GpuMem within
   // its slab.  NOTE: not the same as memory()->offset().
   vk::DeviceSize memory_offset() const;
+
+  // TODO(ES-44): Deprecated.  Use vk() instead.
+  vk::Image get() const { return image_; }
 
  protected:
   // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,

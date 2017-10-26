@@ -6,6 +6,7 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/resources/resource.h"
+#include "lib/escher/vk/image.h"
 
 namespace escher {
 
@@ -34,10 +35,16 @@ class Texture : public Resource {
       bool use_unnormalized_coordinates = false);
 
   const ImagePtr& image() const { return image_; }
-  vk::ImageView image_view() const { return image_view_; }
-  vk::Sampler sampler() const { return sampler_; }
+  vk::Image vk_image() const { return image_->vk(); }
+  vk::ImageView vk_image_view() const { return image_view_; }
+  vk::Sampler vk_sampler() const { return sampler_; }
+
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
+
+  // TODO(ES-44): Deprecated.  Use vk_image_view() and vk_sampler() instead.
+  vk::ImageView image_view() const { return image_view_; }
+  vk::Sampler sampler() const { return sampler_; }
 
  private:
   ImagePtr image_;

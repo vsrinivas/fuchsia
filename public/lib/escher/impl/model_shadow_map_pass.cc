@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/impl/model_depth_pass.h"
+#include "lib/escher/impl/model_shadow_map_pass.h"
 
 #include "lib/escher/impl/model_data.h"
 
@@ -15,24 +15,35 @@ void main() {
 }
 )GLSL";
 
-ModelDepthPass::ModelDepthPass(ResourceRecycler* recycler,
-                               ModelDataPtr model_data,
-                               vk::Format color_format,
-                               vk::Format depth_format,
-                               uint32_t sample_count)
+static const char kFragmentShaderSourceCode[] = R"GLSL(
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+layout(location = 0) out vec4 outColor;
+
+void main() {
+  outColor = vec4(gl_FragCoord.z);
+}
+)GLSL";
+
+ModelShadowMapPass::ModelShadowMapPass(ResourceRecycler* recycler,
+                                       ModelDataPtr model_data,
+                                       vk::Format color_format,
+                                       vk::Format depth_format,
+                                       uint32_t sample_count)
     : ModelRenderPass(recycler, color_format, depth_format, sample_count) {
   vk::AttachmentDescription* color_attachment =
       attachment(kColorAttachmentIndex);
   vk::AttachmentDescription* depth_attachment =
       attachment(kDepthAttachmentIndex);
 
-  // Create the depth-prepass RenderPass.
-  color_attachment->loadOp = vk::AttachmentLoadOp::eDontCare;
-  color_attachment->storeOp = vk::AttachmentStoreOp::eDontCare;
-  color_attachment->initialLayout = vk::ImageLayout::eUndefined;
+  color_attachment->loadOp = vk::AttachmentLoadOp::eClear;
+  // TODO: necessary to store if we resolve as part of the render-pass?
+  color_attachment->storeOp = vk::AttachmentStoreOp::eStore;
+  color_attachment->initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
   color_attachment->finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
   depth_attachment->loadOp = vk::AttachmentLoadOp::eClear;
-  depth_attachment->storeOp = vk::AttachmentStoreOp::eStore;
+  depth_attachment->storeOp = vk::AttachmentStoreOp::eDontCare;
   depth_attachment->initialLayout = vk::ImageLayout::eUndefined;
   depth_attachment->finalLayout =
       vk::ImageLayout::eDepthStencilAttachmentOptimal;
@@ -41,12 +52,12 @@ ModelDepthPass::ModelDepthPass(ResourceRecycler* recycler,
   CreateRenderPassAndPipelineCache(std::move(model_data));
 }
 
-std::string ModelDepthPass::GetFragmentShaderSourceCode(
+std::string ModelShadowMapPass::GetFragmentShaderSourceCode(
     const ModelPipelineSpec& spec) {
-  return "";
+  return kFragmentShaderSourceCode;
 }
 
-std::string ModelDepthPass::GetVertexShaderMainSourceCode() {
+std::string ModelShadowMapPass::GetVertexShaderMainSourceCode() {
   return kVertexShaderMainSourceCode;
 }
 

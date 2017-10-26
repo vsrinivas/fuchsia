@@ -101,5 +101,132 @@ void ModelRenderPass::CreateRenderPassAndPipelineCache(
       static_cast<ResourceRecycler*>(owner()), std::move(model_data), this);
 }
 
+static constexpr char kVertexShaderPreamble[] = R"GLSL(
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+out gl_PerVertex {
+  vec4 gl_Position;
+};
+
+layout(set = 0, binding = 0) uniform PerModel {
+  vec2 frag_coord_to_uv_multiplier;
+  float time;
+  vec3 ambient_light_intensity;
+  vec3 direct_light_intensity;
+};
+
+// Attribute locations must match constants in model_data.h
+)GLSL";
+
+static constexpr char kVertexShaderPosition[] = R"GLSL(
+layout(set = 1, binding = 0) uniform PerObject {
+  mat4 camera_transform;
+  mat4 light_transform;
+  vec4 color;
+};
+
+vec4 ComputeVertexPosition() {
+  return vec4(inPosition, 1);
+}
+)GLSL";
+
+static constexpr char kVertexShaderWobblePosition[] = R"GLSL(
+// TODO: unused.  See discussion in PerObject struct, below.
+struct SineParams {
+  float speed;
+  float amplitude;
+  float frequency;
+};
+const int kNumSineParams = 3;
+float EvalSineParams(SineParams params) {
+  float arg = params.frequency * inPerimeter + params.speed * time;
+  return params.amplitude * sin(arg);
+}
+
+layout(set = 1, binding = 0) uniform PerObject {
+  mat4 camera_transform;
+  mat4 light_transform;
+  vec4 color;
+  // Corresponds to ModifierWobble::SineParams[0].
+  float speed_0;
+  float amplitude_0;
+  float frequency_0;
+  // Corresponds to ModifierWobble::SineParams[1].
+  float speed_1;
+  float amplitude_1;
+  float frequency_1;
+  // Corresponds to ModifierWobble::SineParams[2].
+  float speed_2;
+  float amplitude_2;
+  float frequency_2;
+  // TODO: for some reason, I can't say:
+  //   SineParams sine_params[kNumSineParams];
+  // nor:
+  //   SineParams sine_params_0;
+  //   SineParams sine_params_1;
+  //   SineParams sine_params_2;
+  // ... if I try, the GLSL compiler produces SPIR-V, but the "SC"
+  // validation layer complains when trying to create a vk::ShaderModule
+  // from that SPIR-V.  Note: if we ignore the warning and proceed, nothing
+  // explodes.  Nevertheless, we'll leave it this way for now, to be safe.
+};
+
+// TODO: workaround.  See discussion in PerObject struct, above.
+float EvalSineParams_0() {
+  float arg = frequency_0 * inPerimeter + speed_0 * time;
+  return amplitude_0 * sin(arg);
+}
+float EvalSineParams_1() {
+  float arg = frequency_1 * inPerimeter + speed_1 * time;
+  return amplitude_1 * sin(arg);
+}
+float EvalSineParams_2() {
+  float arg = frequency_2 * inPerimeter + speed_2 * time;
+  return amplitude_2 * sin(arg);
+}
+
+vec4 ComputeVertexPosition() {
+  // TODO: workaround.  See discussion in PerObject struct, above.
+  // float scale = EvalSineParams(sine_params_0) +
+  //               EvalSineParams(sine_params_1) +
+  //               EvalSineParams(sine_params_2);
+  float offset_scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
+  return vec4(inPosition + offset_scale * vec3(inPositionOffset, 0), 1);
+}
+)GLSL";
+
+std::string ModelRenderPass::GetVertexShaderSourceCode(
+    const ModelPipelineSpec& spec) {
+  std::ostringstream src;
+  src << kVertexShaderPreamble;
+  if (spec.mesh_spec.flags & MeshAttribute::kPosition2D ||
+      spec.mesh_spec.flags & MeshAttribute::kPosition3D) {
+    // NOTE: this shader works with both 2D and 3D meshes.  In the former case,
+    // Vulkan fills the Z-coordinate of |inPosition| with the default value: 0.
+    // See section 20.2 of the Vulkan spec (as of Vulkan 1.0.57).
+    src << "layout(location = 0) in vec3 inPosition;\n";
+  }
+
+  if (spec.mesh_spec.flags & MeshAttribute::kPositionOffset) {
+    src << "layout(location = 1) in vec2 inPositionOffset;\n";
+  }
+  if (spec.mesh_spec.flags & MeshAttribute::kUV) {
+    src << "layout(location = 2) in vec2 inUV;\n";
+  }
+  if (spec.mesh_spec.flags & MeshAttribute::kPerimeterPos) {
+    src << "layout(location = 3) in float inPerimeter;\n";
+  }
+
+  if (spec.shape_modifiers & ShapeModifier::kWobble) {
+    src << kVertexShaderWobblePosition;
+  } else {
+    src << kVertexShaderPosition;
+  }
+
+  src << GetVertexShaderMainSourceCode() << std::endl;
+  return src.str();
+}
+
 }  // namespace impl
 }  // namespace escher

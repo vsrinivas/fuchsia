@@ -48,7 +48,10 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
     const ModelRenderPassPtr& render_pass,
     ModelDisplayListFlags flags,
     float scale,
-    const TexturePtr& illumination_texture,
+    const TexturePtr& shadow_texture,
+    const mat4& shadow_matrix,
+    vec3 ambient_light_color,
+    vec3 direct_light_color,
     CommandBuffer* command_buffer) {
   TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList",
                  "object_count", model.objects().size());
@@ -111,7 +114,8 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
   TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList[build]");
 
   ModelDisplayListBuilder builder(device_, stage, model, camera, scale,
-                                  white_texture_, illumination_texture,
+                                  white_texture_, shadow_texture, shadow_matrix,
+                                  ambient_light_color, direct_light_color,
                                   model_data_.get(), this, render_pass, flags);
   for (uint32_t object_index : opaque_objects) {
     builder.AddObject(objects[object_index]);

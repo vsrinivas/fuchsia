@@ -19,6 +19,11 @@ class Camera {
   // projection.
   static Camera NewOrtho(const ViewingVolume& volume);
 
+  // Create an orthographic camera looking at the viewing volume in the
+  // specified direction.
+  static Camera NewForDirectionalShadowMap(const ViewingVolume& volume,
+                                           const glm::vec3& direction);
+
   // Create a camera with a perspective projection.
   static Camera NewPerspective(const ViewingVolume& volume,
                                const mat4& transform,

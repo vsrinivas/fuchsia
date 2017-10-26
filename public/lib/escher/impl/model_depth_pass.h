@@ -19,12 +19,20 @@ class ModelDepthPass : public ModelRenderPass {
   // |ModelRenderPass|
   bool OmitFragmentShader() override { return true; }
 
+  // |ModelRenderPass|
+  std::string GetFragmentShaderSourceCode(
+      const ModelPipelineSpec& spec) override;
+
   // TODO: color_format shouldn't be required for depth-only pass.
   ModelDepthPass(ResourceRecycler* recycler,
                  ModelDataPtr model_data,
                  vk::Format color_format,
                  vk::Format depth_format,
                  uint32_t sample_count);
+
+ protected:
+  // |ModelRenderPass|
+  std::string GetVertexShaderMainSourceCode() override;
 };
 
 }  // namespace impl

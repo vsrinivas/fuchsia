@@ -19,8 +19,7 @@ class WaitableResource : public Resource {
 
   // TODO: eventually make these private, callable only by friends.
   void SetWaitSemaphore(SemaphorePtr semaphore);
-  SemaphorePtr TakeWaitSemaphore();
-
+  SemaphorePtr TakeWaitSemaphore() { return std::move(wait_semaphore_); }
   bool HasWaitSemaphore() const { return !!wait_semaphore_; }
 
  protected:
@@ -36,13 +35,10 @@ class WaitableResource : public Resource {
 
 inline void WaitableResource::SetWaitSemaphore(SemaphorePtr semaphore) {
   // This is not necessarily an error, but the consequences will depend on the
-  // specific usage-pattern that first triggers it; we'll deal with it then.
+  // specific usage-pattern that first triggers it; we'll deal with this
+  // situation when it first arises.
   FXL_CHECK(!wait_semaphore_);
   wait_semaphore_ = std::move(semaphore);
-}
-
-inline SemaphorePtr WaitableResource::TakeWaitSemaphore() {
-  return std::move(wait_semaphore_);
 }
 
 }  // namespace escher

@@ -9,6 +9,7 @@
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/semaphore_wait.h"
+#include "lib/escher/renderer/shadow_map.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/vk/image.h"
@@ -100,7 +101,8 @@ void Compositor::DrawLayer(escher::PaperRenderer* escher_renderer,
   escher::Camera camera =
       renderer->camera()->GetEscherCamera(stage.viewing_volume());
 
-  escher_renderer->DrawFrame(stage, model, camera, output_image, overlay_model,
+  escher_renderer->DrawFrame(stage, model, camera, output_image,
+                             escher::ShadowMapPtr(), overlay_model,
                              frame_done_semaphore, nullptr);
 }
 
@@ -152,11 +154,13 @@ void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
   escher::Model overlay_model(std::move(layer_objects));
 
   swapchain_->DrawAndPresentFrame(
-      frame_timings, [this, escher_renderer, layer = drawable_layers[0],
-                      overlay = &overlay_model](
-                         const escher::ImagePtr& output_image,
-                         const escher::SemaphorePtr& acquire_semaphore,
-                         const escher::SemaphorePtr& frame_done_semaphore) {
+      frame_timings,
+      [
+        this, escher_renderer, layer = drawable_layers[0],
+        overlay = &overlay_model
+      ](const escher::ImagePtr& output_image,
+        const escher::SemaphorePtr& acquire_semaphore,
+        const escher::SemaphorePtr& frame_done_semaphore) {
         output_image->SetWaitSemaphore(acquire_semaphore);
         DrawLayer(escher_renderer, layer, output_image, frame_done_semaphore,
                   overlay);

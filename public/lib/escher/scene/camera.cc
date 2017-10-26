@@ -4,6 +4,7 @@
 
 #include "lib/escher/scene/camera.h"
 
+#include "lib/escher/math/rotations.h"
 #include "lib/escher/scene/viewing_volume.h"
 #include "lib/escher/util/debug_print.h"
 
@@ -82,6 +83,23 @@ Camera Camera::NewOrtho(const ViewingVolume& volume) {
   mat4 projection = glm::ortho(-0.5f * volume.width(), 0.5f * volume.width(),
                                -0.5f * volume.height(), 0.5f * volume.height(),
                                near_and_far.first, near_and_far.second);
+
+  return Camera(transform, projection);
+}
+
+Camera Camera::NewForDirectionalShadowMap(const ViewingVolume& volume,
+                                          const glm::vec3& direction) {
+  glm::mat4 transform;
+  RotationBetweenVectors(direction, glm::vec3(0.f, 0.f, -1.f), &transform);
+  BoundingBox box = transform * volume.bounding_box();
+
+  constexpr float kStageFloorFudgeFactor = 0.0001f;
+  const float range = box.max().z - box.min().z;
+  const float near = -box.max().z - (kStageFloorFudgeFactor * range);
+  const float far = -box.min().z + (kStageFloorFudgeFactor * range);
+
+  glm::mat4 projection =
+      glm::ortho(box.min().x, box.max().x, box.min().y, box.max().y, near, far);
 
   return Camera(transform, projection);
 }

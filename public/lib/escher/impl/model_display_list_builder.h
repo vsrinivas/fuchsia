@@ -19,7 +19,7 @@ namespace impl {
 
 class ModelDisplayListBuilder {
  public:
-  // OK to pass null |illumination_texture|; in that case, |white_texture| will
+  // OK to pass null |shadow_texture|; in that case, |white_texture| will
   // be used instead.
   ModelDisplayListBuilder(vk::Device device,
                           const Stage& stage,
@@ -27,7 +27,10 @@ class ModelDisplayListBuilder {
                           const Camera& camera,
                           float scale,
                           const TexturePtr& white_texture,
-                          const TexturePtr& illumination_texture,
+                          const TexturePtr& shadow_texture,
+                          const mat4& shadow_matrix,
+                          vec3 ambient_light_intensity,
+                          vec3 direct_light_intensity,
                           ModelData* model_data,
                           ModelRenderer* renderer,
                           ModelRenderPassPtr render_pass,
@@ -74,8 +77,14 @@ class ModelDisplayListBuilder {
   // If this is true, entirely disable all depth-testing.
   const bool disable_depth_test_;
 
+  // One-pixel white texture.  Various uses.
   const TexturePtr white_texture_;
-  const TexturePtr illumination_texture_;
+
+  // Shadow texture.  Used differently by different render passes (e.g. as a
+  // shadow map, or to store SSDO occlusion data).
+  const TexturePtr shadow_texture_;
+  // Model-light matrix for shadow mapping.
+  const mat4 shadow_matrix_;
 
   const vk::DescriptorSet per_model_descriptor_set_;
 

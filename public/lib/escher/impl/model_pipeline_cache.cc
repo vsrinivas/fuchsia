@@ -22,151 +22,6 @@ const ResourceTypeInfo ModelPipelineCache::kTypeInfo(
     ResourceType::kResource,
     ResourceType::kImplModelPipelineCache);
 
-namespace {
-
-// Note: this shader works with both 2D and 3D meshes.  In the former case,
-// Vulkan fills the Z-coordinate of |inPosition| with the default value of 0.
-// See section 20.2 of the Vulkan spec (as of Vulkan 1.0.57).
-constexpr char g_vertex_src[] = R"GLSL(
-  #version 450
-  #extension GL_ARB_separate_shader_objects : enable
-
-  // Attribute locations must match constants in model_data.h
-  layout(location = 0) in vec3 inPosition;
-  layout(location = 2) in vec2 inUV;
-
-  layout(location = 0) out vec2 fragUV;
-
-  layout(set = 1, binding = 0) uniform PerObject {
-    mat4 transform;
-    vec4 color;
-  };
-
-  out gl_PerVertex {
-    vec4 gl_Position;
-  };
-
-  void main() {
-    gl_Position = transform * vec4(inPosition, 1);
-    fragUV = inUV;
-  }
-  )GLSL";
-
-constexpr char g_vertex_wobble_src[] = R"GLSL(
-    #version 450
-    #extension GL_ARB_separate_shader_objects : enable
-
-    // Attribute locations must match constants in model_data.h
-    layout(location = 0) in vec2 inPosition;
-    layout(location = 1) in vec2 inPositionOffset;
-    layout(location = 2) in vec2 inUV;
-    layout(location = 3) in float inPerimeter;
-
-    layout(location = 0) out vec2 fragUV;
-
-    layout(set = 0, binding = 0) uniform PerModel {
-      vec2 frag_coord_to_uv_multiplier;
-      float time;
-    };
-
-    out gl_PerVertex {
-      vec4 gl_Position;
-    };
-
-    // TODO: unused.  See discussion in PerObject struct, below.
-    struct SineParams {
-      float speed;
-      float amplitude;
-      float frequency;
-    };
-    const int kNumSineParams = 3;
-    float EvalSineParams(SineParams params) {
-      float arg = params.frequency * inPerimeter + params.speed * time;
-      return params.amplitude * sin(arg);
-    }
-
-    layout(set = 1, binding = 0) uniform PerObject {
-      mat4 transform;
-      vec4 color;
-      // Corresponds to ModifierWobble::SineParams[0].
-      float speed_0;
-      float amplitude_0;
-      float frequency_0;
-      // Corresponds to ModifierWobble::SineParams[1].
-      float speed_1;
-      float amplitude_1;
-      float frequency_1;
-      // Corresponds to ModifierWobble::SineParams[2].
-      float speed_2;
-      float amplitude_2;
-      float frequency_2;
-      // TODO: for some reason, I can't say:
-      //   SineParams sine_params[kNumSineParams];
-      // nor:
-      //   SineParams sine_params_0;
-      //   SineParams sine_params_1;
-      //   SineParams sine_params_2;
-      // ... if I try, the GLSL compiler produces SPIR-V, but the "SC"
-      // validation layer complains when trying to create a vk::ShaderModule
-      // from that SPIR-V.  Note: if we ignore the warning and proceed, nothing
-      // explodes.  Nevertheless, we'll leave it this way for now, to be safe.
-    };
-
-    // TODO: workaround.  See discussion in PerObject struct, above.
-    float EvalSineParams_0() {
-      float arg = frequency_0 * inPerimeter + speed_0 * time;
-      return amplitude_0 * sin(arg);
-    }
-    float EvalSineParams_1() {
-      float arg = frequency_1 * inPerimeter + speed_1 * time;
-      return amplitude_1 * sin(arg);
-    }
-    float EvalSineParams_2() {
-      float arg = frequency_2 * inPerimeter + speed_2 * time;
-      return amplitude_2 * sin(arg);
-    }
-
-    void main() {
-      // TODO: workaround.  See discussion in PerObject struct, above.
-      // float scale = EvalSineParams(sine_params_0) +
-      //               EvalSineParams(sine_params_1) +
-      //               EvalSineParams(sine_params_2);
-      float offset_scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
-      gl_Position = transform * vec4(inPosition + offset_scale * inPositionOffset, 0, 1);
-      fragUV = inUV;
-    }
-    )GLSL";
-
-constexpr char g_fragment_src[] = R"GLSL(
-  #version 450
-  #extension GL_ARB_separate_shader_objects : enable
-
-  layout(location = 0) in vec2 inUV;
-
-  layout(set = 0, binding = 0) uniform PerModel {
-    vec2 frag_coord_to_uv_multiplier;
-    float time;
-  };
-
-  layout(set = 0, binding = 1) uniform sampler2D light_tex;
-
-  layout(set = 1, binding = 0) uniform PerObject {
-    mat4 transform;
-    vec4 color;
-  };
-
-  layout(set = 1, binding = 1) uniform sampler2D material_tex;
-
-  layout(location = 0) out vec4 outColor;
-
-  void main() {
-    vec4 light = texture(light_tex, gl_FragCoord.xy * frag_coord_to_uv_multiplier);
-    outColor = light.r * color * texture(material_tex, inUV);
-  }
-  )GLSL";
-
-}  // namespace
-
 ModelPipelineCache::ModelPipelineCache(ResourceRecycler* recycler,
                                        ModelDataPtr model_data,
                                        ModelRenderPass* render_pass)
@@ -432,15 +287,9 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   std::future<SpirvData> vertex_spirv_future;
   std::future<SpirvData> fragment_spirv_future;
 
-  if (spec.shape_modifiers & ShapeModifier::kWobble) {
-    vertex_spirv_future =
-        compiler_->Compile(vk::ShaderStageFlagBits::eVertex,
-                           {{g_vertex_wobble_src}}, std::string(), "main");
-  } else {
-    vertex_spirv_future =
-        compiler_->Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
-                           std::string(), "main");
-  }
+  vertex_spirv_future = compiler_->Compile(
+      vk::ShaderStageFlagBits::eVertex,
+      {{render_pass_->GetVertexShaderSourceCode(spec)}}, std::string(), "main");
 
   // The depth-only pre-pass uses a different renderpass and a cheap fragment
   // shader.
@@ -454,7 +303,8 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   if (!omit_fragment_shader) {
     fragment_spirv_future =
         compiler_->Compile(vk::ShaderStageFlagBits::eFragment,
-                           {{g_fragment_src}}, std::string(), "main");
+                           {{render_pass_->GetFragmentShaderSourceCode(spec)}},
+                           std::string(), "main");
   }
 
   // Wait for completion of asynchronous shader compilation.
