@@ -8,20 +8,18 @@ package("rust-crates-tests") {
   testonly = true
 
   deps = [
+    "ddk-rs",
+    "fdio",
     "fuchsia-vfs",
     "fuchsia-zircon",
     "tokio-fuchsia",
   ]
 
   tests = [
-    {
-      name = "fuchsia_vfs-lib-test"
-    },
-    {
-      name = "fuchsia_zircon-lib-test"
-    },
-    {
-      name = "tokio_fuchsia-lib-test"
-    },
+    { name = "ddk_rs-lib-test" },
+    { name = "fdio-lib-test" },
+    { name = "fuchsia_vfs-lib-test" },
+    { name = "fuchsia_zircon-lib-test" },
+    { name = "tokio_fuchsia-lib-test" },
   ]
 }

@@ -9,4 +9,6 @@ rust_library("fdio") {
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   ]
+
+  with_tests = true
 }

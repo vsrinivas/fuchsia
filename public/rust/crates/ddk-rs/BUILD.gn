@@ -8,7 +8,7 @@ rust_library("ddk-rs") {
   deps = [
     "//garnet/public/rust/crates/ddk-rs/ddk-sys",
     "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   ]
-
   with_tests = true
 }
