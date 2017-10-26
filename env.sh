@@ -604,7 +604,7 @@ function fsymbolize() {
 
   # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
   "${FUCHSIA_DIR}/zircon/scripts/symbolize" \
-      --build-dir "${ZIRCON_BUILD_DIR}" "${FUCHSIA_BUILD_DIR}" "$@"
+      --build-dir "${FUCHSIA_BUILD_DIR}" -- "$@"
 }
 
 ### freboot: reboot the attached device
