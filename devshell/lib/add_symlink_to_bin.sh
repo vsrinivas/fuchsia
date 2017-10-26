@@ -5,5 +5,5 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/vars.sh
 
-rm "${FUCHSIA_DIR}/.jiri_root/bin/fx"
+rm -f "${FUCHSIA_DIR}/.jiri_root/bin/fx"
 ln -s "../../scripts/fx" "${FUCHSIA_DIR}/.jiri_root/bin/fx"
