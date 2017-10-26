@@ -1,6 +1,6 @@
 module Libc [system] {
   link "c"
-  config_macros _ALL_SOURCE,_BSD_SOURCE,_GNU_SOURCE,_KERNEL,_LARGEFILE64_SOURCE,_POSIX_C_SOURCE,_POSIX_SOURCE,_XOPEN_SOURCE
+  config_macros _ALL_SOURCE,_BSD_SOURCE,_GNU_SOURCE,_KERNEL,,_POSIX_C_SOURCE,_POSIX_SOURCE,_XOPEN_SOURCE
 
   module C [extern_c] {
     textual header "assert.h" // POSIX/C89

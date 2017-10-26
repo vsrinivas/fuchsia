@@ -147,15 +147,6 @@ double strtod_l(const char* __restrict, char** __restrict, struct __locale_struc
 long double strtold_l(const char* __restrict, char** __restrict, struct __locale_struct*);
 #endif
 
-#if defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
-#define mkstemp64 mkstemp
-#define mkostemp64 mkostemp
-#if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
-#define mkstemps64 mkstemps
-#define mkostemps64 mkostemps
-#endif
-#endif
-
 #ifdef __cplusplus
 }
 #endif
