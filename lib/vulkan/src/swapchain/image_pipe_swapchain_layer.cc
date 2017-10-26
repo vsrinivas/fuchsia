@@ -153,7 +153,7 @@ VkResult ImagePipeSwapchain::Initialize(
   if (!external_semaphore_extension_available)
     return VK_ERROR_SURFACE_LOST_KHR;
 
-  bool scanout_tiling_enabled = false;
+  VkFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
   uint32_t instance_extension_count;
   result = vkEnumerateInstanceExtensionProperties(
       nullptr, &instance_extension_count, nullptr);
@@ -169,16 +169,14 @@ VkResult ImagePipeSwapchain::Initialize(
       return result;
 
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-      if (!strcmp(VK_GOOGLE_IMAGE_TILING_SCANOUT_EXTENSION_NAME,
+      if (!strcmp(VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME,
                   instance_extensions[i].extensionName)) {
-        scanout_tiling_enabled = true;
+        // TODO(MA-345) support display tiling on request
+        // usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
         break;
       }
     }
   }
-
-  // TODO(MA-345) support display tiling on request
-  scanout_tiling_enabled = false;
 
   uint32_t num_images = pCreateInfo->minImageCount;
   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
@@ -197,9 +195,8 @@ VkResult ImagePipeSwapchain::Initialize(
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = scanout_tiling_enabled ? VK_IMAGE_TILING_SCANOUT_GOOGLE
-                                         : VK_IMAGE_TILING_OPTIMAL,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = usage,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,
         .pQueueFamilyIndices = nullptr,

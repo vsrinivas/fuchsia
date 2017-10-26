@@ -57,7 +57,7 @@ bool VulkanTest::CheckExtensions()
 
     for (auto& prop : extension_properties) {
         DLOG("extension name %s version %u", prop.extensionName, prop.specVersion);
-        if (strcmp(prop.extensionName, VK_GOOGLE_IMAGE_TILING_SCANOUT_EXTENSION_NAME) == 0)
+        if (strcmp(prop.extensionName, VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME) == 0)
             found_count++;
     }
 
@@ -79,6 +79,7 @@ bool VulkanTest::Initialize()
 
 bool VulkanTest::InitVulkan()
 {
+    std::vector<const char*> enabled_extensions { VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME };
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
@@ -86,8 +87,8 @@ bool VulkanTest::InitVulkan()
         nullptr,                                // const VkApplicationInfo*    pApplicationInfo;
         0,                                      // uint32_t                    enabledLayerCount;
         nullptr,                                // const char* const*          ppEnabledLayerNames;
-        0,       // uint32_t                    enabledExtensionCount;
-        nullptr, // const char* const*          ppEnabledExtensionNames;
+        static_cast<uint32_t>(enabled_extensions.size()),
+        enabled_extensions.data(),
     };
     VkAllocationCallbacks* allocation_callbacks = nullptr;
     VkInstance instance;
@@ -182,29 +183,6 @@ bool VulkanTest::Exec()
 {
     VkResult result;
 
-    VkImageFormatProperties optimal_image_format_properties, scanout_image_format_properties;
-
-    result = vkGetPhysicalDeviceImageFormatProperties(
-        vk_physical_device_, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT, &optimal_image_format_properties);
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkGetPhysicalDeviceImageFormatProperties returned %u\n", result);
-
-    result = vkGetPhysicalDeviceImageFormatProperties(
-        vk_physical_device_, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D,
-        VK_IMAGE_TILING_SCANOUT_GOOGLE,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT, &scanout_image_format_properties);
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkGetPhysicalDeviceImageFormatProperties returned %u\n", result);
-
-    if (memcmp(&optimal_image_format_properties, &scanout_image_format_properties,
-               sizeof(VkImageFormatProperties)) != 0)
-        return DRETF(false, "optimal doesn't match scanout");
-
-    DLOG("image format properties match");
-
     VkImageCreateInfo image_create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = nullptr,
@@ -215,8 +193,8 @@ bool VulkanTest::Exec()
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_SCANOUT_GOOGLE,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,     // not used since not sharing
         .pQueueFamilyIndices = nullptr, // not used since not sharing
@@ -236,7 +214,7 @@ bool VulkanTest::Exec()
     return true;
 }
 
-TEST(VulkanExtension, Tiling)
+TEST(VulkanExtension, Scanout)
 {
     ASSERT_TRUE(VulkanTest::CheckExtensions());
     VulkanTest test;
