@@ -25,6 +25,7 @@ executable("context_engine_test") {
 
   deps = [
     ":context_common",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/context_engine:scope_utils",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
@@ -59,6 +60,7 @@ executable("suggestion_engine_test") {
   deps = [
     ":context_common",
     ":test_suggestion_listener",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/acquirers/mock:gps",
     "//peridot/bin/agents:carmen_sandiego",
     "//peridot/bin/agents:ideas",
@@ -102,6 +104,7 @@ source_set("common") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/user:agent_launcher",
     "//peridot/lib/environment_host",
+    "//peridot/lib/testing:test_with_message_loop",
   ]
 
   public_deps = [

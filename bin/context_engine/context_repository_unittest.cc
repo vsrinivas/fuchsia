@@ -335,8 +335,3 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
 }
 
 }  // namespace maxwell
-
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

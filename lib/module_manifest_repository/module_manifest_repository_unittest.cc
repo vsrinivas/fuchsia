@@ -18,6 +18,8 @@ namespace {
 class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
  public:
   void SetUp() override {
+    testing::TestWithMessageLoop::SetUp();
+
     // Set up a temp dir for the repository.
     char temp_dir[] = "/tmp/module_manifest_repo_XXXXXX";
     FXL_CHECK(mkdtemp(temp_dir)) << strerror(errno);
@@ -30,6 +32,8 @@ class ModuleManifestRepositoryTest : public testing::TestWithMessageLoop {
     }
 
     rmdir(repo_dir_.c_str());
+
+    testing::TestWithMessageLoop::TearDown();
   }
 
  protected:

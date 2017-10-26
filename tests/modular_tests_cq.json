@@ -118,6 +118,26 @@
           "remote_invoker_test"
         ]
       }
+    },
+    {
+      "name":"context_engine",
+      "exec":"/system/test/maxwell/context_engine_test"
+    },
+    {
+      "name":"context_index",
+      "exec":"/system/test/maxwell/context_index_unittest"
+    },
+    {
+      "name":"context_repository",
+      "exec":"/system/test/maxwell/context_repository_unittest"
+    },
+    {
+      "name":"module_manifest_repository",
+      "exec":"/system/test/maxwell/module_manifest_repository_unittest"
+    },
+    {
+      "name":"module_resolver",
+      "exec":"/system/test/maxwell/module_resolver_impl_unittest"
     }
   ]
 }

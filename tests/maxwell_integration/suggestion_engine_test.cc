@@ -989,9 +989,3 @@ TEST_F(InterruptionTest, RemovedInterruption) {
 }
 
 }  // namespace maxwell
-
-int main(int argc, char** argv) {
-  fsl::MessageLoop loop;
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

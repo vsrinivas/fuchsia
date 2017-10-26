@@ -11,6 +11,7 @@
 #include "lib/fxl/time/time_point.h"
 #include "peridot/bin/user/agent_launcher.h"
 #include "peridot/lib/environment_host/application_environment_host_impl.h"
+#include "peridot/lib/testing/test_with_message_loop.h"
 
 // 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
 constexpr auto kSignalDeadline = fxl::TimeDelta::FromSeconds(5);
@@ -89,7 +90,7 @@ void Sleep();
 
 namespace maxwell {
 
-class MaxwellTestBase : public ::testing::Test {
+class MaxwellTestBase : public modular::testing::TestWithMessageLoop {
  protected:
   MaxwellTestBase();
   virtual ~MaxwellTestBase() = default;

@@ -43,7 +43,7 @@ executable("module_resolver_impl_unittest") {
     ":module_resolver_impl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/lib/testing:test_with_message_loop",
     "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/gtest",

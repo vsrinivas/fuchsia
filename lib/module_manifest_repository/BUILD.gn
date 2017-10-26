@@ -28,7 +28,7 @@ executable("module_manifest_repository_unittest") {
     ":module_manifest_repository",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/lib/testing:test_with_message_loop",
     "//third_party/gtest",
   ]

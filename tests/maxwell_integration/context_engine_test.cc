@@ -105,8 +105,10 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   TestListener listener;
   reader_->Subscribe(std::move(query), listener.GetHandle());
-  WAIT_UNTIL(listener.last_update &&
-             listener.last_update->values["a"].size() == 2);
+  RunLoopUntil([&listener] {
+    return listener.last_update &&
+           listener.last_update->values["a"].size() == 2;
+  });
 
   EXPECT_EQ("topic", listener.last_update->values["a"][0]->meta->entity->topic);
   EXPECT_EQ("frob", listener.last_update->values["a"][1]->meta->entity->topic);
@@ -114,7 +116,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   // Update value1 so it no longer matches for the 'someType' query.
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
-  WAIT_UNTIL(listener.last_update);
+  RunLoopUntil([&listener] { return !!listener.last_update; });
 
   EXPECT_EQ(1lu, listener.last_update->values["a"].size());
   EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
@@ -131,7 +133,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   story_value->CreateChildValue(value3.NewRequest(), ContextValueType::ENTITY);
   value3->Set("1", ContextMetadataBuilder().AddEntityType("someType").Build());
 
-  WAIT_UNTIL(listener.last_update);
+  RunLoopUntil([&listener] { return !!listener.last_update; });
   EXPECT_EQ(2lu, listener.last_update->values["a"].size());
   EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
   EXPECT_EQ("1", listener.last_update->values["a"][1]->content);
@@ -144,7 +146,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   // receiving side's error handler to be called immediately, and this
   // condition times out.  However, I can see in the logs that once this times
   // out, the value(s) are correctly deleted.
-  // WAIT_UNTIL(listener.last_update);
+  // RunLoopUntil([&listener] { return !!listener.last_update; });
   // EXPECT_EQ(1lu, listener.last_update->values["a"].size());
   // EXPECT_EQ("frob",
   // listener.last_update->values["a"][0]->meta->entity->topic);
@@ -165,7 +167,7 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
     reader_->Subscribe(query.Clone(), listener1.GetHandle());
     reader_->Subscribe(query.Clone(), listener2.GetHandle());
     InitReader(MakeGlobalScope());
-    WAIT_UNTIL(listener2.last_update);
+    RunLoopUntil([&listener2] { return !!listener2.last_update; });
     listener2.Reset();
   }
 
@@ -175,13 +177,7 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   writer_->CreateValue(value.NewRequest(), ContextValueType::ENTITY);
   value->Set(nullptr /* content */,
              ContextMetadataBuilder().SetEntityTopic("topic").Build());
-  WAIT_UNTIL(listener2.last_update);
+  RunLoopUntil([&listener2] { return !!listener2.last_update; });
 }
 
 }  // namespace maxwell
-
-int main(int argc, char** argv) {
-  fsl::MessageLoop loop;
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
