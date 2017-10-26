@@ -88,9 +88,11 @@ void Mdns::Start(const std::string& host_name) {
         }
 
         resource_renewer_->EndOfMessage();
+		DPROHIBIT_AGENT_REMOVAL();
         for (auto& pair : agents_) {
           pair.second->EndOfMessage();
         }
+		DALLOW_AGENT_REMOVAL();
 
         SendMessages();
       });
@@ -190,9 +192,8 @@ bool Mdns::AddResponder(const std::string& service_name,
     return false;
   }
 
-  std::shared_ptr<Responder> agent =
-      std::make_shared<Responder>(this, service_name, instance_name,
-                                  std::move(responder));
+  std::shared_ptr<Responder> agent = std::make_shared<Responder>(
+      this, service_name, instance_name, std::move(responder));
 
   AddAgent(agent);
   instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
@@ -330,9 +331,11 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
       break;
     case MdnsResourceSection::kExpired:
       // Expirations are distributed to local agents.
+      DPROHIBIT_AGENT_REMOVAL();
       for (auto& pair : agents_) {
         pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
       }
+      DALLOW_AGENT_REMOVAL();
       break;
   }
 }
@@ -348,6 +351,9 @@ void Mdns::Renew(const DnsResource& resource) {
 
 void Mdns::RemoveAgent(const MdnsAgent* agent,
                        const std::string& published_instance_full_name) {
+  FXL_DCHECK(agent);
+  FXL_DCHECK(!prohibit_agent_removal_);
+
   agents_.erase(agent);
 
   // Remove all pending tasks posted by this agent.
@@ -413,18 +419,22 @@ void Mdns::SendMessages() {
 void Mdns::ReceiveQuestion(const DnsQuestion& question,
                            const ReplyAddress& reply_address) {
   // Renewer doesn't need questions.
+  DPROHIBIT_AGENT_REMOVAL();
   for (auto& pair : agents_) {
     pair.second->ReceiveQuestion(question, reply_address);
   }
+  DALLOW_AGENT_REMOVAL();
 }
 
 void Mdns::ReceiveResource(const DnsResource& resource,
                            MdnsResourceSection section) {
   // Renewer is always first.
   resource_renewer_->ReceiveResource(resource, section);
+  DPROHIBIT_AGENT_REMOVAL();
   for (auto& pair : agents_) {
     pair.second->ReceiveResource(resource, section);
   }
+  DALLOW_AGENT_REMOVAL();
 }
 
 void Mdns::PostTask() {

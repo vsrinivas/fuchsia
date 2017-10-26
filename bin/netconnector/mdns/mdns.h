@@ -193,6 +193,15 @@ class Mdns : public MdnsAgent::Host {
   std::shared_ptr<DnsResource> address_placeholder_;
   bool verbose_ = false;
   std::shared_ptr<ResourceRenewer> resource_renewer_;
+  bool prohibit_agent_removal_ = false;
+
+#ifdef NDEBUG
+#define DPROHIBIT_AGENT_REMOVAL() ((void)0)
+#define DALLOW_AGENT_REMOVAL() ((void)0)
+#else
+#define DPROHIBIT_AGENT_REMOVAL() (prohibit_agent_removal_ = true)
+#define DALLOW_AGENT_REMOVAL() (prohibit_agent_removal_ = false)
+#endif  // NDEBUG
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Mdns);
 };

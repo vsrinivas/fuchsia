@@ -63,7 +63,7 @@ void HostNameResolver::EndOfMessage() {
   if (v4_address_ || v6_address_) {
     callback_(host_name_, v4_address_, v6_address_);
     callback_ = nullptr;
-    RemoveSelf();
+    PostTaskForTime([this]() { RemoveSelf(); }, fxl::TimePoint::Now());
   }
 }
 

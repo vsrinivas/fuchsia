@@ -65,15 +65,18 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // the agent is created, so |shared_from_this| is safe to call.
   virtual void Start(const std::string& host_full_name) {}
 
-  // Presents a received question.
+  // Presents a received question. This agent must not call |RemoveSelf| during
+  // a call to this method.
   virtual void ReceiveQuestion(const DnsQuestion& question,
                                const ReplyAddress& reply_address){};
 
-  // Presents a received resource.
+  // Presents a received resource. This agent must not call |RemoveSelf| during
+  // a call to this method.
   virtual void ReceiveResource(const DnsResource& resource,
                                MdnsResourceSection section){};
 
-  // Signals the end of a message.
+  // Signals the end of a message. This agent must not call |RemoveSelf| during
+  // a call to this method.
   virtual void EndOfMessage(){};
 
   // Tells the agent to quit. The agent should call |RemoveSelf| shortly
