@@ -29,8 +29,8 @@ const uint32_t kDesiredSwapchainImageCount = 2;
 // suitable one.
 vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues);
 
-// Determines if the VK_GOOGLE_IMAGE_TILING_SCANOUT_EXTENSION is supported.
-vk::ImageTiling GetFramebufferImageTiling();
+// Determines if the VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION is supported.
+vk::ImageUsageFlags GetFramebufferImageUsage();
 
 // Exports a Semaphore into an event.
 // TODO(ES-40): Factor this into an Escher Fuchsia support library.
@@ -80,7 +80,7 @@ DisplaySwapchain::DisplaySwapchain(Display* display,
 
 bool DisplaySwapchain::InitializeFramebuffers(
     escher::ResourceRecycler* resource_recycler) {
-  vk::ImageTiling image_tiling = GetFramebufferImageTiling();
+  vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
 
   for (uint32_t i = 0; i < kDesiredSwapchainImageCount; i++) {
     // Allocate a framebuffer.
@@ -89,14 +89,13 @@ bool DisplaySwapchain::InitializeFramebuffers(
 
     // Start by creating a VkImage.
     // TODO(ES-42): Create this using Escher APIs.
-    vk::ImageUsageFlags image_usage = vk::ImageUsageFlagBits::eColorAttachment;
     vk::ImageCreateInfo create_info;
     create_info.imageType = vk::ImageType::e2D, create_info.format = format_;
     create_info.extent = vk::Extent3D{width, height, 1};
     create_info.mipLevels = 1;
     create_info.arrayLayers = 1;
     create_info.samples = vk::SampleCountFlagBits::e1;
-    create_info.tiling = image_tiling;
+    create_info.tiling = vk::ImageTiling::eOptimal;
     create_info.usage = image_usage;
     create_info.sharingMode = vk::SharingMode::eExclusive;
     create_info.initialLayout = vk::ImageLayout::eUndefined;
@@ -262,14 +261,14 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
 
 namespace {
 
-vk::ImageTiling GetFramebufferImageTiling() {
+vk::ImageUsageFlags GetFramebufferImageUsage() {
   uint32_t instance_extension_count;
   vk::Result enumerate_result =
       vk::enumerateInstanceLayerProperties(&instance_extension_count, nullptr);
   if (enumerate_result != vk::Result::eSuccess) {
     FXL_DLOG(ERROR) << "vkEnumerateInstanceLayerProperties failed: "
                     << vk::to_string(enumerate_result);
-    return vk::ImageTiling::eOptimal;
+    return vk::ImageUsageFlagBits::eColorAttachment;
   }
 
   if (instance_extension_count > 0) {
@@ -277,18 +276,18 @@ vk::ImageTiling GetFramebufferImageTiling() {
     if (instance_extensions.result != vk::Result::eSuccess) {
       FXL_DLOG(ERROR) << "vkEnumerateInstanceExtensionProperties failed: "
                       << vk::to_string(instance_extensions.result);
-      return vk::ImageTiling::eOptimal;
+      return vk::ImageUsageFlagBits::eColorAttachment;
     }
 
-    const std::string kGoogleImageTilingScanoutExtensionName(
-        VK_GOOGLE_IMAGE_TILING_SCANOUT_EXTENSION_NAME);
+    const std::string kGoogleImageUsageScanoutExtensionName(
+        VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME);
     for (auto& extension : instance_extensions.value) {
-      if (extension.extensionName == kGoogleImageTilingScanoutExtensionName) {
-        return vk::ImageTiling::eScanoutGOOGLE;
+      if (extension.extensionName == kGoogleImageUsageScanoutExtensionName) {
+        return vk::ImageUsageFlagBits::eScanoutGOOGLE;
       }
     }
   }
-  return vk::ImageTiling::eOptimal;
+  return vk::ImageUsageFlagBits::eColorAttachment;
 }
 
 vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
