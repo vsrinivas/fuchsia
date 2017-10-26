@@ -8,9 +8,9 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/auth_provider/test/test_auth_provider.h"
+#include "peridot/bin/cloud_provider_firebase/device_set/test/test_cloud_device_set.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/device_set/test/test_cloud_device_set.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace cloud_provider_firebase {

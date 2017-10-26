@@ -16,7 +16,6 @@
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
 
 namespace cloud_sync {
@@ -56,8 +55,6 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
 
   // Sets a watcher to detect that the cloud is cleared while sync is running.
   void SetCloudErasedWatcher();
-  void HandleWatcherResult(
-      cloud_provider_firebase::CloudDeviceSet::Status status);
 
   // Enables sync upload.
   void EnableUpload();

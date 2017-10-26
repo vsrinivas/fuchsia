@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_DEVICE_SET_TEST_TEST_CLOUD_DEVICE_SET_H_
-#define PERIDOT_BIN_LEDGER_DEVICE_SET_TEST_TEST_CLOUD_DEVICE_SET_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_TEST_TEST_CLOUD_DEVICE_SET_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_TEST_TEST_CLOUD_DEVICE_SET_H_
 
 #include <functional>
 #include <string>
 
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set.h"
+#include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 
 namespace cloud_provider_firebase {
 
@@ -47,4 +47,4 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // PERIDOT_BIN_LEDGER_DEVICE_SET_TEST_TEST_CLOUD_DEVICE_SET_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_TEST_TEST_CLOUD_DEVICE_SET_H_

@@ -16,7 +16,6 @@ source_set("public") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/device_set",
     "//peridot/bin/ledger/encryption/public",
     "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/gcs",

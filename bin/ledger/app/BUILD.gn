@@ -77,7 +77,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/device_set",
     "//peridot/bin/ledger/firebase",
   ]
 

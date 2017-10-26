@@ -9,7 +9,6 @@
 #include <string>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 
 namespace cloud_sync {
 

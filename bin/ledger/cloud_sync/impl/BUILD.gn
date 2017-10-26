@@ -29,7 +29,6 @@ source_set("impl") {
   public_deps = [
     "//peridot/bin/ledger/backoff",
     "//peridot/bin/ledger/cloud_sync/public",
-    "//peridot/bin/ledger/device_set",
     "//peridot/bin/ledger/encryption/impl",
     "//peridot/bin/ledger/encryption/public",
     "//peridot/bin/ledger/environment",
@@ -66,8 +65,6 @@ source_set("unittests") {
     "//peridot/bin/ledger/backoff/test",
     "//peridot/bin/ledger/cloud_sync/impl/test",
     "//peridot/bin/ledger/cloud_sync/test",
-    "//peridot/bin/ledger/device_set",
-    "//peridot/bin/ledger/device_set/test",
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/network:fake",
     "//peridot/bin/ledger/storage/public",

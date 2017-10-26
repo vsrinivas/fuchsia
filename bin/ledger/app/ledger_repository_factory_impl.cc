@@ -16,7 +16,6 @@
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set_impl.h"
 
 namespace ledger {
 

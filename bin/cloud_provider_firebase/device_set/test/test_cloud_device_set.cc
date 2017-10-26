@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/device_set/test/test_cloud_device_set.h"
+#include "peridot/bin/cloud_provider_firebase/device_set/test/test_cloud_device_set.h"
 
 namespace cloud_provider_firebase {
 

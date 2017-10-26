@@ -2,10 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//peridot/bin/cloud_provider_firebase/*",
-  "//peridot/bin/ledger/*",
-]
+visibility = [ "//peridot/bin/cloud_provider_firebase/*" ]
 
 source_set("test") {
   testonly = true
@@ -16,7 +13,7 @@ source_set("test") {
   ]
 
   public_deps = [
-    "//peridot/bin/ledger/device_set",
+    "//peridot/bin/cloud_provider_firebase/device_set",
   ]
 
   deps = [

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
-#define PERIDOT_BIN_LEDGER_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
 
 #include <functional>
 #include <string>
 
+#include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 #include "peridot/bin/ledger/callback/destruction_sentinel.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 #include "peridot/bin/ledger/firebase/firebase.h"
 #include "peridot/bin/ledger/firebase/watch_client.h"
 
@@ -61,4 +61,4 @@ class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
 
 }  // namespace cloud_provider_firebase
 
-#endif  // PERIDOT_BIN_LEDGER_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_DEVICE_SET_CLOUD_DEVICE_SET_IMPL_H_

@@ -12,7 +12,6 @@
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/backoff/test/test_backoff.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_cloud_provider.h"
-#include "peridot/bin/ledger/device_set/cloud_device_set.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace cloud_sync {
