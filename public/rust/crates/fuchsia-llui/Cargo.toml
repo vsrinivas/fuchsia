@@ -6,11 +6,8 @@ authors = ["Rob Tsuk <robtsuk@google.com>"]
 [dependencies]
 fdio = { path = '../fdio' }
 font-rs = { git = "https://github.com/google/font-rs.git" }
-fuchsia-zircon-sys = "0.3.0"
+fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }
 
 [dependencies.error-chain]
 version = "0.11.0"
 default-features = false
-
-[patch.crates-io]
-fuchsia-zircon-sys = { path = "../fuchsia-zircon/fuchsia-zircon-sys" }
