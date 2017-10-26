@@ -416,15 +416,6 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case X86_MSR_IA32_CSTAR:
         next_rip(exit_info, vmcs);
         return ZX_OK;
-    // Legacy syscall MSRs are unused and we clear them in the VMCS.
-    // We clear the SEP bit in CPUID indicating these MSRs are not supported
-    // but Linux likes to program them without checking SEP so we just
-    // ignore the writes.
-    case X86_MSR_IA32_SYSENTER_CS:
-    case X86_MSR_IA32_SYSENTER_ESP:
-    case X86_MSR_IA32_SYSENTER_EIP:
-        next_rip(exit_info, vmcs);
-        return ZX_OK;
     case X86_MSR_IA32_TSC_DEADLINE: {
         uint32_t* reg = apic_reg(local_apic_state, kLocalApicLvtTimer);
         if ((*reg & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
