@@ -271,6 +271,8 @@ vk::ImageUsageFlags GetFramebufferImageUsage() {
     return vk::ImageUsageFlagBits::eColorAttachment;
   }
 
+  const std::string kGoogleImageUsageScanoutExtensionName(
+      VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME);
   if (instance_extension_count > 0) {
     auto instance_extensions = vk::enumerateInstanceExtensionProperties();
     if (instance_extensions.result != vk::Result::eSuccess) {
@@ -279,14 +281,15 @@ vk::ImageUsageFlags GetFramebufferImageUsage() {
       return vk::ImageUsageFlagBits::eColorAttachment;
     }
 
-    const std::string kGoogleImageUsageScanoutExtensionName(
-        VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME);
     for (auto& extension : instance_extensions.value) {
       if (extension.extensionName == kGoogleImageUsageScanoutExtensionName) {
         return vk::ImageUsageFlagBits::eScanoutGOOGLE;
       }
     }
   }
+  FXL_DLOG(ERROR)
+      << "Unable to find optimal framebuffer image usage extension ("
+      << kGoogleImageUsageScanoutExtensionName << ").";
   return vk::ImageUsageFlagBits::eColorAttachment;
 }
 
