@@ -24,7 +24,7 @@ everything fits together.
 - System Design: e.g. network stack, compositor, kernel, assumptions
 - APIs: e.g. FIDL interfaces, library functions, syscalls
 - Protocols: e.g. schemas, encodings, wire formats, configuration files
-- Tools: e.g. `bootserver`, `netcp`, `env.sh`
+- Tools: e.g. `bootserver`, `netcp`, `fx`
 - Workflows: e.g. environment set up, test methodologies, where to find various
   parts, how to get work done
 

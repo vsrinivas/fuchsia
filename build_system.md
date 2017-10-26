@@ -1,10 +1,10 @@
-# Fuchsia Build Notes
+# Fuchsia Build System
 
 These are notes on using the `gen.py` script and `ninja` directly for builds,
 and the `scripts/run-zircon-*` scripts to launch QEMU.
 
-You can alternatively use the [standard build instructions](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Setup-Build-Environment)
-using commands defined in `env.sh` instead.
+You can alternatively use the [standard build instructions](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Setup-Build-Environment),
+which use the `fx` commands instead.
 
 ### Build Zircon and the sysroot
 
@@ -40,7 +40,7 @@ these alternative commands for faster builds:
 
 ```
 ./packages/gn/gen.py --goma
-./buildtools/ninja -j1000 -C out/debug-x86-64
+./buildtools/ninja -j1024 -C out/debug-x86-64
 ```
 
 The gen.py script takes an optional parameter '--target\_cpu' to set the target
@@ -78,8 +78,8 @@ the value of the `-x` parameter in Zircon's start command script, for example:
 ./scripts/run-zircon-arm64 -x out/debug-aarch64/user.bootfs -m 2048
 ```
 
-See the [standard build instructions](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU) for other flags you
-can pass to QEMU.
+See the [standard build instructions](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU)
+for other flags you can pass to QEMU.
 
 [zircon]: https://fuchsia.googlesource.com/zircon/+/HEAD/docs/getting_started.md "Zircon"
 

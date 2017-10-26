@@ -1,5 +1,4 @@
-Fuchsia
-============
+# Fuchsia
 
 Pink + Purple == Fuchsia (a new Operating System)
 
@@ -28,6 +27,7 @@ sudo apt-get install texinfo libglib2.0-dev autoconf libtool libsdl-dev build-es
 ```
 
 ### macOS
+
 Install the Xcode Command Line Tools:
 ```
 xcode-select --install
@@ -56,38 +56,30 @@ port install autoconf automake libtool libpixman pkgconfig glib2
 ## Build Fuchsia
 
 ### Get the source
+
 Follow all steps in this document and then return to this document:
   * [Fuchsia Source](getting_source.md)
 
-### Setup Build Environment
+### Build the system
 
-Source the
-[`env.sh`](https://fuchsia.googlesource.com/scripts/+/master/env.sh)
-script, which provides helpful shell functions for Fuchsia
-development. The following command also changes the command prompt and
-sets up for a x86-64 build.
-
-(If you don't want to change your command prompt, omit `envprompt`.)
+If you added `.jiri_root/bin` to your path as part of getting the source code,
+the `fx` command should already be in your path. If not, the command is also
+available as the `scripts/fx`.
 
 ```
-source scripts/env.sh && envprompt && fset x86-64
+fx set x86-64
+fx full-build
 ```
 
-Alternatively, you may use the [underlying build scripts](build_system.md).
+The first command selects the build configuration you wish to build and
+generates the build system itself in an output directory
+(e.g., `out/debug-x86-64`).
 
-Run `envhelp` to see other useful shell functions, and `envhelp <function>` for
-specific usage information.
+The second command actually executes the build, transforming the source code in
+build products. If you modify the source tree, you can do an incremental build
+by re-running the `fx full-build` command alone.
 
-Optionally, you might find it useful to add a shell function `fuchsia` as a
-shortcut to setup the build environment. For that, add this to your shell startup
-script (e.g. `~/.bashrc`):
-
-```
-export FUCHSIA_DIR=/path/to/my/fuchsia/source
-function fuchsia() {
-  source $FUCHSIA_DIR/scripts/env.sh && envprompt && fgo && fset x86-64 "$@"
-}
-```
+Alternatively, you can use the [underlying build system directly](build_system.md).
 
 #### [optional] Customize Build Environment
 
@@ -106,23 +98,13 @@ by default in preference to `ccache`.  To disable `goma`, specify `--no-goma`.]
 Run `fset-usage` to see a list of build options. Some examples:
 
 ```
-fset x86-64              # x86-64 debug build
-fset arm64               # arm64 debug build
-fset x86-64 --release    # x86-64 release build
-fset x86-64 --ccache     # x86-64 debug build, force use of ccache even if goma is available
-fset x86-64 --no-goma    # x86-64 debug build, disable use of goma
-fset x86-64 --no-ccache  # x86-64 debug build, disable use of ccache
+fx set x86-64              # x86-64 debug build
+fx set arm64               # arm64 debug build
+fx set x86-64 --release    # x86-64 release build
+fx set x86-64 --ccache     # x86-64 debug build, force use of ccache even if goma is available
+fx set x86-64 --no-goma    # x86-64 debug build, disable use of goma
+fx set x86-64 --no-ccache  # x86-64 debug build, disable use of ccache
 ```
-
-### Start the build
-
-Once you have setup your build environment, simply run:
-
-```
-fbuild
-```
-
-This builds Zircon, the sysroot, and the default Fuchsia build.
 
 ## Boot Fuchsia
 
@@ -154,26 +136,26 @@ If you don't have the supported hardware, you can run Fuchsia under emulation
 using [QEMU](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/qemu.md).
 Fuchsia includes prebuilt binaries for QEMU under `buildtools/qemu`.
 
-The `frun` command will launch Zircon within QEMU, using the locally built
+The `fx run` command will launch Zircon within QEMU, using the locally built
 `user.bootfs`:
 
 ```
-frun
+fx run
 ```
 
-There are various flags for `frun` to control QEMU's configuration:
+There are various flags for `fx run` to control QEMU's configuration:
 * `-m` sets QEMU's memory size in MB.
 * `-g` enables graphics (see below).
 * `-N` enables networking (see below).
 
-Use `frun -h` to see all available options.
+Use `fx run -h` to see all available options.
 
 #### Enabling Graphics
 
-To enable graphics under QEMU, add the `-g` flag to `frun`:
+To enable graphics under QEMU, add the `-g` flag to `fx run`:
 
 ```
-frun -g
+fx run -g
 ```
 
 #### Enabling Network
@@ -183,10 +165,10 @@ Note: Networking support within QEMU is only available under x86_64.
 First, [configure](https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only)
 a virtual interface for QEMU's use.
 
-Once this is done you can add the `-N` and `-u` flags to `frun`:
+Once this is done you can add the `-N` and `-u` flags to `fx run`:
 
 ```
-frun -N -u $FUCHSIA_SCRIPTS_DIR/start-dhcp-server.sh
+fx run -N -u $FUCHSIA_SCRIPTS_DIR/start-dhcp-server.sh
 ```
 
 The `-u` flag runs a script that sets up a local DHCP server and NAT to
@@ -241,6 +223,7 @@ you can launch [moterm](https://fuchsia.googlesource.com/moterm/) by selecting t
 box and typing "moterm"
 
 ## Contribute changes
+
 * See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Additional helpful documents
