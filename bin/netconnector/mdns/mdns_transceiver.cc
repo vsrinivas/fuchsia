@@ -43,9 +43,12 @@ void MdnsTransceiver::EnableInterface(const std::string& name,
 }
 
 void MdnsTransceiver::Start(
+    const LinkChangeCallback& link_change_callback,
     const InboundMessageCallback& inbound_message_callback) {
+  FXL_DCHECK(link_change_callback);
   FXL_DCHECK(inbound_message_callback);
 
+  link_change_callback_ = link_change_callback;
   inbound_message_callback_ = inbound_message_callback;
 
   FindNewInterfaces();
@@ -112,6 +115,7 @@ void MdnsTransceiver::FindNewInterfaces() {
   netstack_->GetInterfaces(
       [this](fidl::Array<netstack::NetInterfacePtr> interfaces) {
         bool recheck_addresses = false;
+        bool link_change = false;
 
         if (interfaces.size() == 0) {
           recheck_addresses = true;
@@ -152,6 +156,8 @@ void MdnsTransceiver::FindNewInterfaces() {
             }
 
             interfaces_.push_back(std::move(interface));
+
+            link_change = true;
           }
         }
 
@@ -162,6 +168,11 @@ void MdnsTransceiver::FindNewInterfaces() {
           address_recheck_delay_ =
               std::min(address_recheck_delay_ * kAddressRecheckDelayMultiplier,
                        kMaxAddressRecheckDelay);
+        }
+
+        if (link_change) {
+          FXL_DCHECK(link_change_callback_);
+          link_change_callback_();
         }
       });
 }

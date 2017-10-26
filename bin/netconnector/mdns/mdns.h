@@ -128,6 +128,16 @@ class Mdns : public MdnsAgent::Host {
     }
   };
 
+  // Starts a probe for a conflicting host name. If a conflict is detected, a
+  // new name is generated and this method is called again. If no conflict is
+  // detected, |host_full_name_| gets set and the service is ready to start
+  // other agents.
+  void StartAddressProbe(const std::string& host_name);
+
+  // Determines what host name to try next after a conflict is detected and
+  // calls |StartAddressProbe| with that name.
+  void OnHostNameConflict();
+
   // MdnsAgent::Host implementation.
   void PostTaskForTime(MdnsAgent* agent,
                        fxl::Closure task,
@@ -168,12 +178,15 @@ class Mdns : public MdnsAgent::Host {
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   MdnsTransceiver transceiver_;
+  std::string original_host_name_;
+  uint32_t next_host_name_deduplicator_ = 2;
   std::string host_full_name_;
   bool started_ = false;
   std::priority_queue<TaskQueueEntry> task_queue_;
   fxl::TimePoint posted_task_time_ = fxl::TimePoint::Max();
   std::unordered_map<ReplyAddress, DnsMessage, ReplyAddressHash>
       outbound_messages_by_reply_address_;
+  std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;
   std::unordered_map<const MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
   std::unordered_map<std::string, std::shared_ptr<Responder>>
       instance_publishers_by_instance_full_name_;

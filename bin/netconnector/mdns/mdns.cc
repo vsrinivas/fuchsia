@@ -7,6 +7,7 @@
 
 #include "garnet/bin/netconnector/mdns/mdns.h"
 
+#include "garnet/bin/netconnector/mdns/address_prober.h"
 #include "garnet/bin/netconnector/mdns/address_responder.h"
 #include "garnet/bin/netconnector/mdns/dns_formatting.h"
 #include "garnet/bin/netconnector/mdns/host_name_resolver.h"
@@ -35,13 +36,9 @@ void Mdns::SetVerbose(bool verbose) {
 }
 
 void Mdns::Start(const std::string& host_name) {
-  host_full_name_ = MdnsNames::LocalHostFullName(host_name);
+  FXL_DCHECK(!host_name.empty());
 
-  address_placeholder_ =
-      std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
-
-  // Create an address responder agent to respond to simple address queries.
-  AddAgent(std::make_shared<AddressResponder>(this));
+  original_host_name_ = host_name;
 
   // Create a resource renewer agent to keep resources alive.
   resource_renewer_ = std::make_shared<ResourceRenewer>(this);
@@ -49,52 +46,58 @@ void Mdns::Start(const std::string& host_name) {
   // Create an address responder agent to respond to address queries.
   AddAgent(std::make_shared<AddressResponder>(this));
 
-  transceiver_.Start([this](std::unique_ptr<DnsMessage> message,
-                            const ReplyAddress& reply_address) {
-    if (verbose_) {
-      FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
-                    << *message;
-    }
+  transceiver_.Start(
+      [this]() {
+        // TODO(dalesat): Link changes that create host name conflicts.
+        // Once we have a NIC and we've decided on a unique host name, we
+        // don't do any more address probes. This means that we could have link
+        // changes that cause two hosts with the same name to be on the same
+        // subnet. To improve matters, we need to be prepared to change a host
+        // name we've been using for awhile.
+        if (!started_ && transceiver_.has_interfaces()) {
+          StartAddressProbe(original_host_name_);
+        }
+      },
+      [this](std::unique_ptr<DnsMessage> message,
+             const ReplyAddress& reply_address) {
+        if (verbose_) {
+          FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
+                        << *message;
+        }
 
-    for (auto& question : message->questions_) {
-      // We reply to questions using unicast if specifically requested in
-      // the question or if the sender's port isn't 5353.
-      ReceiveQuestion(*question, (question->unicast_response_ ||
-                                  reply_address.socket_address().port() !=
-                                      MdnsAddresses::kMdnsPort)
-                                     ? reply_address
-                                     : MdnsAddresses::kV4MulticastReply);
-    }
+        for (auto& question : message->questions_) {
+          // We reply to questions using unicast if specifically requested in
+          // the question or if the sender's port isn't 5353.
+          ReceiveQuestion(*question, (question->unicast_response_ ||
+                                      reply_address.socket_address().port() !=
+                                          MdnsAddresses::kMdnsPort)
+                                         ? reply_address
+                                         : MdnsAddresses::kV4MulticastReply);
+        }
 
-    for (auto& resource : message->answers_) {
-      ReceiveResource(*resource, MdnsResourceSection::kAnswer);
-    }
+        for (auto& resource : message->answers_) {
+          ReceiveResource(*resource, MdnsResourceSection::kAnswer);
+        }
 
-    for (auto& resource : message->authorities_) {
-      ReceiveResource(*resource, MdnsResourceSection::kAuthority);
-    }
+        for (auto& resource : message->authorities_) {
+          ReceiveResource(*resource, MdnsResourceSection::kAuthority);
+        }
 
-    for (auto& resource : message->additionals_) {
-      ReceiveResource(*resource, MdnsResourceSection::kAdditional);
-    }
+        for (auto& resource : message->additionals_) {
+          ReceiveResource(*resource, MdnsResourceSection::kAdditional);
+        }
 
-    resource_renewer_->EndOfMessage();
-    for (auto& pair : agents_) {
-      pair.second->EndOfMessage();
-    }
+        resource_renewer_->EndOfMessage();
+        for (auto& pair : agents_) {
+          pair.second->EndOfMessage();
+        }
 
-    SendMessages();
-  });
+        SendMessages();
+      });
 
-  transceiver_.SetHostFullName(host_full_name_);
-
-  started_ = true;
-
-  for (auto pair : agents_) {
-    pair.second->Start(host_full_name_);
+  if (transceiver_.has_interfaces()) {
+    StartAddressProbe(original_host_name_);
   }
-
-  SendMessages();
 }
 
 void Mdns::Stop() {
@@ -240,6 +243,59 @@ bool Mdns::ReannounceInstance(const std::string& service_name,
   return true;
 }
 
+void Mdns::StartAddressProbe(const std::string& host_name) {
+  host_full_name_ = MdnsNames::LocalHostFullName(host_name);
+
+  FXL_LOG(INFO) << "Verifying uniqueness of host name " << host_full_name_;
+
+  transceiver_.SetHostFullName(host_full_name_);
+
+  address_placeholder_ =
+      std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
+
+  // Create an address prober to look for host name conflicts. The address
+  // prober removes itself immediately before it calls the callback.
+  auto address_prober =
+      std::make_shared<AddressProber>(this, [this](bool successful) {
+        FXL_DCHECK(agents_.empty());
+
+        if (!successful) {
+          FXL_LOG(WARNING) << "Another host is using name " << host_full_name_;
+          OnHostNameConflict();
+          return;
+        }
+
+        FXL_LOG(INFO) << "Using unique host name " << host_full_name_;
+
+        // Start all the agents.
+        started_ = true;
+
+        // |resource_renewer_| doesn't need to be started, but we do it
+        // anyway in case that changes.
+        resource_renewer_->Start(host_full_name_);
+
+        for (auto agent : agents_awaiting_start_) {
+          AddAgent(agent);
+        }
+
+        agents_awaiting_start_.clear();
+      });
+
+  // We don't use |AddAgent| here, because agents added that way don't actually
+  // participate until we're done probing for host name conflicts.
+  agents_.emplace(address_prober.get(), address_prober);
+  address_prober->Start(host_full_name_);
+  SendMessages();
+}
+
+void Mdns::OnHostNameConflict() {
+  // TODO(dalesat): Support other renaming strategies?
+  std::ostringstream os;
+  os << original_host_name_ << next_host_name_deduplicator_;
+  ++next_host_name_deduplicator_;
+
+  StartAddressProbe(os.str());
+}
 
 void Mdns::PostTaskForTime(MdnsAgent* agent,
                            fxl::Closure task,
@@ -317,11 +373,13 @@ void Mdns::RemoveAgent(const MdnsAgent* agent,
 }
 
 void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
-  agents_.emplace(agent.get(), agent);
-
   if (started_) {
+    agents_.emplace(agent.get(), agent);
+    FXL_DCHECK(!host_full_name_.empty());
     agent->Start(host_full_name_);
     SendMessages();
+  } else {
+    agents_awaiting_start_.push_back(agent);
   }
 }
 

@@ -22,6 +22,7 @@ namespace mdns {
 // Sends and receives mDNS messages on any number of interfaces.
 class MdnsTransceiver {
  public:
+  using LinkChangeCallback = std::function<void()>;
   using InboundMessageCallback =
       std::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
@@ -36,10 +37,14 @@ class MdnsTransceiver {
   void EnableInterface(const std::string& name, sa_family_t family);
 
   // Starts the transceiver.
-  void Start(const InboundMessageCallback& inbound_message_callback);
+  void Start(const LinkChangeCallback& link_change_callback,
+             const InboundMessageCallback& inbound_message_callback);
 
   // Stops the transceiver.
   void Stop();
+
+  // Determines if this transceiver has interfaces.
+  bool has_interfaces() { return !interfaces_.empty(); }
 
   // Sets the host full name. This method may be called multiple times if
   // conflicts are detected.
@@ -77,6 +82,7 @@ class MdnsTransceiver {
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   std::vector<InterfaceId> enabled_interfaces_;
+  LinkChangeCallback link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   std::string host_full_name_;
   std::vector<std::unique_ptr<MdnsInterfaceTransceiver>> interfaces_;

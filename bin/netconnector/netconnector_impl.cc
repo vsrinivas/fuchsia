@@ -182,8 +182,6 @@ void NetConnectorImpl::StartMdns() {
 
   mdns_service_impl_.Start(host_name_);
 
-  FXL_LOG(INFO) << "mDNS started, host name " << host_name_;
-
   mdns_service_impl_.PublishServiceInstance(kFuchsiaServiceName, host_name_,
                                             kPort, std::vector<std::string>());
 
