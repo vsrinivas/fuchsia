@@ -52,7 +52,7 @@ source_set("lib") {
   ]
 }
 
-executable("cloud_provider_firebase_unittests") {
+source_set("unittests") {
   testonly = true
 
   sources = [
@@ -66,21 +66,29 @@ executable("cloud_provider_firebase_unittests") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//peridot/bin/cloud_provider_firebase/auth_provider:unittests",
     "//peridot/bin/cloud_provider_firebase/auth_provider/test",
-    "//peridot/bin/cloud_provider_firebase/device_set:unittests",
     "//peridot/bin/cloud_provider_firebase/device_set/test",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/bin/cloud_provider_firebase/firebase:unittests",
-    "//peridot/bin/cloud_provider_firebase/gcs:unittests",
     "//peridot/bin/cloud_provider_firebase/network:fake",
-    "//peridot/bin/cloud_provider_firebase/network:unittests",
-    "//peridot/bin/cloud_provider_firebase/page_handler/impl:unittests",
     "//peridot/bin/cloud_provider_firebase/page_handler/test",
-    "//peridot/bin/cloud_provider_firebase/test/token_provider:unittests",
     "//peridot/bin/ledger/test:lib",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
+  ]
+}
+
+executable("cloud_provider_firebase_unittests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+    "//peridot/bin/cloud_provider_firebase/auth_provider:unittests",
+    "//peridot/bin/cloud_provider_firebase/device_set:unittests",
+    "//peridot/bin/cloud_provider_firebase/firebase:unittests",
+    "//peridot/bin/cloud_provider_firebase/gcs:unittests",
+    "//peridot/bin/cloud_provider_firebase/network:unittests",
+    "//peridot/bin/cloud_provider_firebase/page_handler/impl:unittests",
+    "//peridot/bin/cloud_provider_firebase/test/token_provider:unittests",
   ]
 }
 
