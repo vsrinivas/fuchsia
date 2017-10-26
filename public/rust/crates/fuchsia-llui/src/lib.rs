@@ -151,7 +151,7 @@ impl FrameBuffer {
                 get_fb_data.vmo,
                 0,
                 byte_size as usize,
-                map_flags.bits(),
+                map_flags,
                 pixel_buffer_addr_ptr,
             )
         };
