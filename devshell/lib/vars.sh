@@ -27,3 +27,16 @@ function fx_config_read {
 
   export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${FUCHSIA_OUT_DIR}/build-zircon/build-${ZIRCON_PROJECT}}"
 }
+
+function fx_command_run {
+  local -r command_name="$1"
+  local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"
+
+  if [[ ! -f "${command_path}" ]]; then
+    echo >& 2 "error: Unknown command ${command_name}"
+    exit 1
+  fi
+
+  shift
+  "${command_path}" "$@"
+}

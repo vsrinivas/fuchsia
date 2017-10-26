@@ -10,7 +10,6 @@ readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
-
 JOBS=`getconf _NPROCESSORS_ONLN` || {
   Cannot get number of processors
   exit 1
@@ -19,26 +18,17 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf '%s: [-c] [-v] [-V] [-A] [-t target] [-o outdir]\n' "$0"
+  printf '%s: [-c] [-v] [-V] [-A] [-p project] [-t target] [-o outdir]\n' "$0"
   printf 'Note: Passing extra arguments to make is not supported.\n'
 }
 
 build() {
-  local target="$1" outdir="$2" clean="$3" verbose="$4" asan="$5"
+  local project="$1" outdir="$2" clean="$3" verbose="$4" asan="$5"
   local zircon_buildroot="${outdir}/build-zircon"
 
   if [[ "${clean}" = "true" ]]; then
     rm -rf -- "${zircon_buildroot}"
   fi
-
-  case "${target}" in
-    "x86_64"|"x86-64") local zircon_target="zircon-pc-x86-64" ;;
-    "aarch64"|"arm64") local zircon_target="zircon-qemu-arm64" ;;
-    "gauss") local zircon_target="zircon-gauss-arm64" ;;
-    "odroidc2") local zircon_target="zircon-odroidc2-arm64" ;;
-    "hikey960") local zircon_target="zircon-hikey960-arm64" ;;
-    *) echo "unknown target '${target}'" 1>&2 && exit 1;;
-  esac
 
   local asan_zircon asan_ulib
   if [[ "${asan}" = "true" ]]; then
@@ -61,13 +51,13 @@ build() {
     BUILDDIR=${outdir}/build-zircon DEBUG_BUILDROOT=../../zircon tools
   # build zircon (including its portion of the sysroot) for the target architecture
   make -j ${JOBS} V=${V} \
-    ${zircon_build_type_flags:-} ${zircon_target} \
+    ${zircon_build_type_flags:-} ${project} \
     BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
     TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_zircon} \
     BUILDDIR_SUFFIX=
   # Build the alternate shared libraries (ASan).
   make -j ${JOBS} V=${V} \
-    ${zircon_build_type_flags:-} ${zircon_target} \
+    ${zircon_build_type_flags:-} ${project} \
     BUILDROOT=${zircon_buildroot} DEBUG_BUILDROOT=../../zircon \
     TOOLS=${outdir}/build-zircon/tools USE_ASAN=${asan_ulib} \
     ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
@@ -76,23 +66,32 @@ build() {
 
 declare ASAN="${ASAN:-false}"
 declare CLEAN="${CLEAN:-false}"
-declare TARGET="${TARGET:-x86_64}"
+declare PROJECT="${PROJECT:-zircon-pc-x86-64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare VERBOSE="${VERBOSE:-0}"
 
-while getopts "Acht:o:vV" opt; do
+while getopts "Acht:p:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
     h) usage ; exit 0 ;;
     o) OUTDIR="${OPTARG}" ;;
-    t) TARGET="${OPTARG}" ;;
+    t) case "${OPTARG}" in
+          "x86_64"|"x86-64") PROJECT="zircon-pc-x86-64" ;;
+          "aarch64"|"arm64") PROJECT="zircon-qemu-arm64" ;;
+          "gauss") PROJECT="zircon-gauss-arm64" ;;
+          "odroidc2") PROJECT="zircon-odroidc2-arm64" ;;
+          "hikey960") PROJECT="zircon-hikey960-arm64" ;;
+          *) echo "unknown target '${OPTARG}'" 1>&2 && exit 1;;
+        esac
+        ;;
+    p) PROJECT="${OPTARG}" ;;
     v) VERBOSE="1" ;;
     V) VERBOSE="2" ;;
     *) usage 1>&2 ; exit 1 ;;
   esac
 done
 
-readonly ASAN CLEAN TARGET OUTDIR VERBOSE
+readonly ASAN CLEAN PROJECT OUTDIR VERBOSE
 
-build "${TARGET}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}"
+build "${PROJECT}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}"
