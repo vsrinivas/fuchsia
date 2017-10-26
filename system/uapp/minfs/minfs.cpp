@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <sys/stat.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -213,6 +214,31 @@ zx_status_t Minfs::InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inod
 
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) : bc_(fbl::move(bc)) {
     memcpy(&info_, info, sizeof(minfs_info_t));
+
+#ifndef __Fuchsia__
+    if (bc_->extent_lengths_.size() > 0) {
+        ZX_ASSERT(bc_->extent_lengths_.size() == EXTENT_COUNT);
+        ibm_block_count = bc_->extent_lengths_[1] / kMinfsBlockSize;
+        abm_block_count = bc_->extent_lengths_[2] / kMinfsBlockSize;
+        ino_block_count = bc_->extent_lengths_[3] / kMinfsBlockSize;
+        dat_block_count = bc_->extent_lengths_[4] / kMinfsBlockSize;
+
+        ibm_start_block = bc_->extent_lengths_[0] / kMinfsBlockSize;
+        abm_start_block = ibm_start_block + ibm_block_count;
+        ino_start_block = abm_start_block + abm_block_count;
+        dat_start_block = ino_start_block + ino_block_count;
+    } else {
+        ibm_start_block = info_.ibm_block;
+        abm_start_block = info_.abm_block;
+        ino_start_block = info_.ino_block;
+        dat_start_block = info_.dat_block;
+
+        ibm_block_count = abm_start_block - ibm_start_block;
+        abm_block_count = ino_start_block - abm_start_block;
+        ino_block_count = dat_start_block - ino_start_block;
+        dat_block_count = info_.block_count;
+    }
+#endif
 }
 
 Minfs::~Minfs() {
@@ -673,6 +699,12 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
         return status;
     }
 
+#ifndef __Fuchsia__
+    if (bc->extent_lengths_.size() != 0 && bc->extent_lengths_.size() != EXTENT_COUNT) {
+        FS_TRACE_ERROR("minfs: invalid number of extents\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+#endif
     fbl::AllocChecker ac;
     fbl::unique_ptr<Minfs> fs(new (&ac) Minfs(fbl::move(bc), info));
     if (!ac.check()) {
@@ -684,6 +716,7 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
     uint32_t inodes = info->inode_count;
     fs->abmblks_ = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
     fs->ibmblks_ = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    fs->inoblks_ = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
 
     if ((status = fs->block_map_.Reset(fs->abmblks_ * kMinfsBlockBits)) < 0) {
         return status;
@@ -745,13 +778,13 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
 #else
     for (uint32_t n = 0; n < fs->abmblks_; n++) {
         void* bmdata = fs::GetBlock<kMinfsBlockSize>(fs->block_map_.StorageUnsafe()->GetData(), n);
-        if (fs->bc_->Readblk(fs->info_.abm_block + n, bmdata)) {
+        if (fs->ReadAbm(n, bmdata)) {
             FS_TRACE_ERROR("minfs: failed reading alloc bitmap\n");
         }
     }
     for (uint32_t n = 0; n < fs->ibmblks_; n++) {
         void* bmdata = fs::GetBlock<kMinfsBlockSize>(fs->inode_map_.StorageUnsafe()->GetData(), n);
-        if (fs->bc_->Readblk(fs->info_.ibm_block + n, bmdata)) {
+        if (fs->ReadIbm(n, bmdata)) {
             FS_TRACE_ERROR("minfs: failed reading inode bitmap\n");
         }
     }
@@ -1014,5 +1047,86 @@ int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     bc->Writeblk(0, blk);
     return 0;
 }
+
+zx_status_t Minfs::ReadIbm(blk_t bno, void* data) {
+#ifdef __Fuchsia__
+    return bc_->Readblk(info_.ibm_block + bno, data);
+#else
+    return ReadBlk(bno, ibm_start_block, ibm_block_count, ibmblks_, data);
+#endif
+}
+
+zx_status_t Minfs::ReadAbm(blk_t bno, void* data) {
+#ifdef __Fuchsia__
+    return bc_->Readblk(info_.abm_block + bno, data);
+#else
+    return ReadBlk(bno, abm_start_block, abm_block_count, abmblks_, data);
+#endif
+}
+
+zx_status_t Minfs::ReadIno(blk_t bno, void* data) {
+#ifdef __Fuchsia__
+    return bc_->Readblk(info_.ino_block + bno, data);
+#else
+    return ReadBlk(bno, ino_start_block, ino_block_count, inoblks_, data);
+#endif
+}
+
+zx_status_t Minfs::ReadDat(blk_t bno, void* data) {
+#ifdef __Fuchsia__
+    return bc_->Readblk(info_.dat_block + bno, data);
+#else
+    return ReadBlk(bno, dat_start_block, dat_block_count, info_.block_count, data);
+#endif
+}
+
+#ifndef __Fuchsia__
+zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data) {
+    if (bno >= hard_max) {
+        return ZX_ERR_OUT_OF_RANGE;
+    } if (bno >= soft_max) {
+        memset(data, 0, kMinfsBlockSize);
+        return ZX_OK;
+    }
+
+    return bc_->Readblk(start + bno, data);
+}
+
+zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
+                       const fbl::Vector<size_t>& extent_lengths) {
+    if (extent_lengths.size() != EXTENT_COUNT) {
+        fprintf(stderr, "error: invalid number of extents\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    struct stat s;
+    if (fstat(fd.get(), &s) < 0) {
+        fprintf(stderr, "error: minfs could not find end of file/device\n");
+        return ZX_ERR_IO;
+    }
+
+    if (s.st_size < end) {
+        fprintf(stderr, "error: invalid file size\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t size = (end - start) / minfs::kMinfsBlockSize;
+
+    zx_status_t status;
+    fbl::unique_ptr<minfs::Bcache> bc;
+    if ((status = minfs::Bcache::Create(&bc, fbl::move(fd), static_cast<uint32_t>(size)))
+        != ZX_OK) {
+        fprintf(stderr, "error: cannot create block cache\n");
+        return status;
+    }
+
+    if ((status = bc->SetSparse(start, extent_lengths)) != ZX_OK) {
+        fprintf(stderr, "Bcache is already sparse\n");
+        return status;
+    }
+
+    return minfs_check(fbl::move(bc));
+}
+#endif
 
 } // namespace minfs

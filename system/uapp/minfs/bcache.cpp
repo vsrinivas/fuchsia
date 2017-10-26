@@ -24,6 +24,9 @@ zx_status_t Bcache::Readblk(blk_t bno, void* data) {
     off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
+#ifndef __Fuchsia__
+    off += offset_;
+#endif
     if (lseek(fd_.get(), off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
         return ZX_ERR_IO;
@@ -39,6 +42,9 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
     off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
+#ifndef __Fuchsia__
+    off += offset_;
+#endif
     if (lseek(fd_.get(), off, SEEK_SET) < 0) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
         return ZX_ERR_IO;
@@ -115,6 +121,29 @@ Bcache::~Bcache() {
 }
 
 #ifndef __Fuchsia__
+zx_status_t Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths) {
+    if (offset_ > 0 || extent_lengths_.size() > 0) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+
+    ZX_ASSERT(extent_lengths.size() == EXTENT_COUNT);
+
+    fbl::AllocChecker ac;
+    extent_lengths_.reset(new (&ac) size_t[EXTENT_COUNT], EXTENT_COUNT);
+
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    extent_lengths_[0] = extent_lengths[0];
+    extent_lengths_[1] = extent_lengths[1];
+    extent_lengths_[2] = extent_lengths[2];
+    extent_lengths_[3] = extent_lengths[3];
+    extent_lengths_[4] = extent_lengths[4];
+    offset_ = offset;
+    return ZX_OK;
+}
+
 // This is used by the ioctl wrappers in zircon/device/device.h. It's not
 // called by host tools, so just satisfy the linker with a stub.
 ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {

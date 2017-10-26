@@ -28,6 +28,7 @@
 #include <block-client/client.h>
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 #else
+#include <fbl/vector.h>
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
 
@@ -273,6 +274,13 @@ public:
         ioctl_block_free_txn(fd_.get(), &tid);
     }
 
+#else
+    // Lengths of each extent (in bytes)
+    fbl::Array<size_t> extent_lengths_;
+    // Tell the Bcache it is pointing at a sparse file
+    // |offset| indicates where the minfs partition begins within the file
+    // |extent_lengths| contains the length of each extent (in bytes)
+    zx_status_t SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths);
 #endif
 
     int Sync();
@@ -284,6 +292,8 @@ private:
 
 #ifdef __Fuchsia__
     fifo_client_t* fifo_client_{}; // Fast path to interact with block device
+#else
+    off_t offset_{};
 #endif
     fbl::unique_fd fd_{};
     uint32_t blockmax_{};
@@ -292,4 +302,13 @@ private:
 void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
 zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc);
 
+#ifndef __Fuchsia__
+// Run fsck on a sparse minfs partition
+// |start| indicates where the minfs partition starts within the file (in bytes)
+// |end| indicates the end of the minfs partition (in bytes)
+// |extent_lengths| contains the length (in bytes) of each minfs extent: currently this includes
+// the superblock, inode bitmap, block bitmap, inode table, and data blocks.
+zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
+                       const fbl::Vector<size_t>& extent_lengths);
+#endif
 } // namespace minfs

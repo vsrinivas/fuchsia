@@ -27,6 +27,8 @@
 
 #include <minfs/minfs.h>
 
+#define EXTENT_COUNT 5
+
 #define panic(fmt...)         \
     do {                      \
         fprintf(stderr, fmt); \
@@ -112,10 +114,21 @@ public:
     fbl::unique_ptr<Bcache> bc_{};
     minfs_info_t info_{};
 
+    // The following methods are used to read one block from the specified extent,
+    // from relative block |bno|.
+    // |data| is an out parameter that must be a block in size, provided by the caller
+    // These functions are single-block and synchronous. On Fuchsia, using the batched read
+    // functions is preferred.
+    zx_status_t ReadIbm(blk_t bno, void* data);
+    zx_status_t ReadAbm(blk_t bno, void* data);
+    zx_status_t ReadIno(blk_t bno, void* data);
+    zx_status_t ReadDat(blk_t bno, void* data);
+
 private:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
     Minfs(fbl::unique_ptr<Bcache> bc_, const minfs_info_t* info_);
+
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     zx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* ino_out);
 
@@ -128,6 +141,7 @@ private:
 
     uint32_t abmblks_{};
     uint32_t ibmblks_{};
+    uint32_t inoblks_{};
     RawBitmap inode_map_{};
     RawBitmap block_map_{};
 #ifdef __Fuchsia__
@@ -137,6 +151,22 @@ private:
     vmoid_t block_map_vmoid_{};
     vmoid_t inode_table_vmoid_{};
     vmoid_t info_vmoid_{};
+#else
+    zx_status_t ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max, void* data);
+
+    // Store start block + length for all extents. These may differ from info block for
+    // sparse files.
+    blk_t ibm_start_block;
+    blk_t ibm_block_count;
+
+    blk_t abm_start_block;
+    blk_t abm_block_count;
+
+    blk_t ino_start_block;
+    blk_t ino_block_count;
+
+    blk_t dat_start_block;
+    blk_t dat_block_count;
 #endif
 
     // Vnodes exist in the hash table as long as one or more reference exists;

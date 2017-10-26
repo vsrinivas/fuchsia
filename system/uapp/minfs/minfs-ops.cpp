@@ -1140,7 +1140,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
         }
         if (bno != 0) {
             char bdata[kMinfsBlockSize];
-            if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, bdata)) {
+            if (fs_->ReadDat(bno, bdata)) {
                 return ZX_ERR_IO;
             }
             memcpy(data, bdata + adjust, xfer);

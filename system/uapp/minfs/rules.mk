@@ -47,6 +47,7 @@ MODULE_HOST_SRCS := \
     $(LOCAL_DIR)/bcache.cpp \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/minfs-ops.cpp \
+    $(LOCAL_DIR)/minfs-check.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/fs/vnode.cpp \
@@ -71,7 +72,6 @@ MODULE_TYPE := hostapp
 MODULE_SRCS := \
     $(MODULE_HOST_SRCS) \
     $(LOCAL_DIR)/main.cpp \
-    $(LOCAL_DIR)/minfs-check.cpp \
 
 MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
 

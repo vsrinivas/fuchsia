@@ -27,7 +27,8 @@ zx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, ino_t ino) {
 #else
     char data[kMinfsBlockSize];
     zx_status_t status;
-    if ((status = fs_->bc_->Readblk(fs_->info_.ino_block + bno_of_ino, data)) != ZX_OK) {
+
+    if ((status = fs_->ReadIno(bno_of_ino, data)) != ZX_OK) {
         return status;
     }
     uintptr_t iaddr = reinterpret_cast<uintptr_t>(data + off_of_ino);
@@ -67,8 +68,7 @@ zx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
 
         if (cached_indirect_ != ibno) {
             zx_status_t status;
-            if ((status = fs_->bc_->Readblk(ibno + fs_->info_.dat_block,
-                                            indirect_cache_)) != ZX_OK) {
+            if ((status = fs_->ReadDat(ibno, indirect_cache_)) != ZX_OK) {
                 return status;
             }
             cached_indirect_ = ibno;
@@ -97,8 +97,7 @@ zx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
 
         if (cached_doubly_indirect_ != dibno) {
             zx_status_t status;
-            if ((status = fs_->bc_->Readblk(dibno + fs_->info_.dat_block,
-                                            doubly_indirect_cache_)) != ZX_OK) {
+            if ((status = fs_->ReadDat(dibno, doubly_indirect_cache_)) != ZX_OK) {
                 return status;
             }
             cached_doubly_indirect_ = dibno;
@@ -115,8 +114,7 @@ zx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
 
         if (cached_indirect_ != ibno) {
             zx_status_t status;
-            if ((status = fs_->bc_->Readblk(ibno + fs_->info_.dat_block,
-                                            indirect_cache_)) != ZX_OK) {
+            if ((status = fs_->ReadDat(ibno, indirect_cache_)) != ZX_OK) {
                 return status;
             }
             cached_indirect_ = ibno;
@@ -319,8 +317,7 @@ zx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
 
             char data[kMinfsBlockSize];
             zx_status_t status;
-            if ((status = fs_->bc_->Readblk(inode->dinum[n] + fs_->info_.dat_block,
-                                            data)) != ZX_OK) {
+            if ((status = fs_->ReadDat(inode->dinum[n], data)) != ZX_OK) {
                 return status;
             }
             uint32_t* entry = reinterpret_cast<uint32_t*>(data);
