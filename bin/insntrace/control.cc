@@ -49,6 +49,32 @@ static constexpr char pt_list_output_path_suffix[] = "ptlist";
 static constexpr uint32_t kKtraceGroupMask =
   KTRACE_GRP_ARCH | KTRACE_GRP_TASKS;
 
+// Temporary bridge to walk v2 changes through zircon pinning.
+
+#if IPT_API_VERSION >= 2
+
+static ssize_t ioctl_ipt_set_mode(int fd, const uint32_t* mode) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static ssize_t ioctl_ipt_cpu_mode_alloc(int fd) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static ssize_t ioctl_ipt_cpu_mode_start(int fd) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static ssize_t ioctl_ipt_cpu_mode_stop(int fd) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static ssize_t ioctl_ipt_cpu_mode_free(int fd) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+#endif
+
 static bool OpenDevices(fxl::UniqueFD* out_ipt_fd,
                         fxl::UniqueFD* out_ktrace_fd,
                         zx::handle* out_ktrace_handle) {
