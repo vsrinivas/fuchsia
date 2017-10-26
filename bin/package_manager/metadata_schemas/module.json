@@ -7,8 +7,8 @@
       "properties": {
         "binary": { "type": "string" },
         "local_name": { "type": "string" },
-        "verb": { "$ref": "#/definitions/verbId" },
-        "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" },
+        "verb": { "type" : "string" },
+        "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" }
       },
       "required": [ "binary", "local_name", "verb" ],
       "additionalProperties": false
@@ -29,19 +29,9 @@
       "required": [ "name", "types" ],
       "additionalProperties": false
     },
-    "entityOrVerbId": {
-      "type": "object",
-      "properties": {
-        "package": { "type": "string" },
-        "name": { "$ref": "#/definitions/alphaNumString" }
-      },
-      "required": [ "package", "name" ],
-      "additionalProperties": false
-    },
-    "verbId": { "$ref": "#/definitions/entityOrVerbId" },
     "entityTypeIdArray": {
       "type": "array",
-      "items": { "$ref": "#/definitions/entityOrVerbId" },
+      "items": { "type": "string" },
       "additionalItems": false,
       "uniqueItems": true,
       "minItems": 1
