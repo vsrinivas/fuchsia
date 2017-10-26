@@ -8,7 +8,7 @@ fx_config_read
 
 function usage {
   cat <<END
-uUsage: fx reboot [HOST]
+usage: fx reboot [HOST]
 Reboots the attached device.
 END
 }
