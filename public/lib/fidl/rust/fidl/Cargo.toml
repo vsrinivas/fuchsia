@@ -10,5 +10,5 @@ repository = "https://fuchsia.googlesource.com/fidl/"
 byteorder = "1.1.0"
 fuchsia-zircon = { path = "../../../../rust/crates/fuchsia-zircon" }
 futures = "0.1"
-tokio-core = "0.1"
+tokio-core = { path = "../../../../../../third_party/rust-mirrors/tokio-core" }
 tokio-fuchsia = { path = "../../../../rust/crates/tokio-fuchsia" }
