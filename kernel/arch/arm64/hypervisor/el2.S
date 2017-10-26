@@ -399,12 +399,17 @@ FUNCTION_LABEL(el2_hvc_resume)
     msr vttbr_el2, x1
     isb
 
-    // Invalidate all VMID TLB entries.
-    //
-    // TODO(abdulla): Only do this on the first-run.
+    // If the guest is being run for the first time, invalidate all VMID TLB
+    // entries in case the VMID has been used previously.
+    ldr x10, [x9, ES_RESUME]
+    cbnz x10, .Lresume
     tlbi vmalle1
     isb
+    movlit x10, 1
+    str x10, [x9, ES_RESUME]
+    dsb ishst
 
+.Lresume:
     // Enable guest traps, and ensure EL1 is arm64.
     movlit x10, HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC | \
                 HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW

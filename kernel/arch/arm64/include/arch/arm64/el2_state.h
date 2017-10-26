@@ -26,18 +26,19 @@
 #define SS_ELR_EL2          (SS_VBAR_EL1 + 8)
 #define SS_SPSR_EL2         (SS_ELR_EL2 + 8)
 
-#define HS_X18              0
+#define ES_RESUME           0
+
+#define HS_X18              (ES_RESUME + 8)
+#define HS_X(num)           (HS_X18 + ((num) * 8))
 #define HS_NUM_REGS         13
-#define HS_SYSTEM_STATE     (HS_X18 + (HS_NUM_REGS * 8))
+#define HS_SYSTEM_STATE     HS_X(HS_NUM_REGS)
 
 #define GS_X0               (HS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
+#define GS_X(num)           (GS_X0 + ((num) * 8))
 #define GS_NUM_REGS         31
-#define GS_SYSTEM_STATE     (GS_X0 + (GS_NUM_REGS * 8))
+#define GS_SYSTEM_STATE     GS_X(GS_NUM_REGS)
 #define GS_ESR_EL2          (GS_SYSTEM_STATE + SS_SPSR_EL2 + 8)
 #define GS_HPFAR_EL2        (GS_ESR_EL2 + 8)
-
-#define HS_X(num)           (HS_X18 + ((num) * 8))
-#define GS_X(num)           (GS_X0 + ((num) * 8))
 
 #ifndef ASSEMBLY
 
@@ -85,6 +86,7 @@ struct GuestState {
 };
 
 struct El2State {
+    bool resume;
     HostState host_state;
     GuestState guest_state;
 };
@@ -106,6 +108,8 @@ static_assert(__offsetof(SystemState, ttbr1_el1) == SS_TTBR1_EL1, "");
 static_assert(__offsetof(SystemState, vbar_el1) == SS_VBAR_EL1, "");
 static_assert(__offsetof(SystemState, elr_el2) == SS_ELR_EL2, "");
 static_assert(__offsetof(SystemState, spsr_el2) == SS_SPSR_EL2, "");
+
+static_assert(__offsetof(El2State, resume) == ES_RESUME, "");
 
 static_assert(__offsetof(El2State, host_state.x) == HS_X18, "");
 static_assert(__offsetof(El2State, host_state.x[12]) == HS_X(12), "");
