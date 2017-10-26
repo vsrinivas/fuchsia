@@ -357,7 +357,7 @@ impl fidl::FidlService for Service {
 
     #[inline]
     fn new_pair(handle: &reactor::Handle) -> Result<(Self::Proxy, fidl::ServerEnd<Self>), fidl::Error> {
-        let (s1, s2) = zircon::Channel::create(zircon::ChannelOpts::Normal).unwrap();
+        let (s1, s2) = zircon::Channel::create().unwrap();
         let client_end = fidl::ClientEnd::new(s1);
         let server_end = fidl::ServerEnd::new(s2);
         Ok((Self::new_proxy(client_end, handle)?, server_end))

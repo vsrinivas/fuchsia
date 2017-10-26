@@ -196,7 +196,7 @@ pub fn write_object<C: AsRef<zircon::Channel>>(
 
     buf.put_slice(extra);
 
-    chan.as_ref().write(buf.as_ref(), handles, 0)
+    chan.as_ref().write(buf.as_ref(), handles)
 }
 
 #[cfg(test)]
@@ -340,9 +340,9 @@ mod test {
 
     #[test]
     fn test_write_object() {
-        let (tx, rx) = zircon::Channel::create(zircon::ChannelOpts::default()).unwrap();
+        let (tx, rx) = zircon::Channel::create().unwrap();
 
-        let h = zircon::Vmo::create(10, zircon::VmoOpts::default()).unwrap();
+        let h = zircon::Vmo::create(10).unwrap();
 
         write_object(
             &tx,
@@ -354,7 +354,7 @@ mod test {
 
         let mut buf = zircon::MessageBuf::new();
 
-        rx.read(0, &mut buf).unwrap();
+        rx.read(&mut buf).unwrap();
 
         let ptr = buf.bytes().as_ptr();
         assert_eq!(zircon::Status::BAD_PATH, zircon::Status::from_raw(unsafe {

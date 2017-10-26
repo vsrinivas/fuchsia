@@ -28,7 +28,7 @@ pub fn mount(
     vn: Arc<Vnode>,
     handle: &tokio_core::reactor::Handle,
 ) -> Result<mount::Mount, zircon::Status> {
-    let (c1, c2) = zircon::Channel::create(zircon::ChannelOpts::default())?;
+    let (c1, c2) = zircon::Channel::create()?;
     let m = mount::mount(path, c1)?;
     c2.signal_handle(
         zircon::Signals::NONE,

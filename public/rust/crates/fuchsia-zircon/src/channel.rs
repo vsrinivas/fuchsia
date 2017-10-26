@@ -24,11 +24,12 @@ impl Channel {
     /// Wraps the
     /// [zx_channel_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_create.md)
     /// syscall.
-    pub fn create(opts: ChannelOpts) -> Result<(Channel, Channel), Status> {
+    pub fn create() -> Result<(Channel, Channel), Status> {
         unsafe {
             let mut handle0 = 0;
             let mut handle1 = 0;
-            ok(sys::zx_channel_create(opts as u32, &mut handle0, &mut handle1))?;
+            let opts = 0;
+            ok(sys::zx_channel_create(opts, &mut handle0, &mut handle1))?;
             Ok((
                 Self::from(Handle::from_raw(handle0)),
                 Self::from(Handle::from_raw(handle1))
@@ -43,9 +44,10 @@ impl Channel {
     /// If the `MessageBuf` lacks the capacity to hold the pending message,
     /// returns an `Err` with the number of bytes and number of handles needed.
     /// Otherwise returns an `Ok` with the result as usual.
-    pub fn read_raw(&self, opts: u32, buf: &mut MessageBuf)
+    pub fn read_raw(&self, buf: &mut MessageBuf)
         -> Result<Result<(), Status>, (usize, usize)>
     {
+        let opts = 0;
         unsafe {
             buf.clear();
             let raw_handle = self.raw_handle();
@@ -70,9 +72,9 @@ impl Channel {
     /// Note that this method can cause internal reallocations in the `MessageBuf`
     /// if it is lacks capacity to hold the full message. If such reallocations
     /// are not desirable, use `read_raw` instead.
-    pub fn read(&self, opts: u32, buf: &mut MessageBuf) -> Result<(), Status> {
+    pub fn read(&self, buf: &mut MessageBuf) -> Result<(), Status> {
         loop {
-            match self.read_raw(opts, buf) {
+            match self.read_raw(buf) {
                 Ok(result) => return result,
                 Err((num_bytes, num_handles)) => {
                     buf.ensure_capacity_bytes(num_bytes);
@@ -85,9 +87,10 @@ impl Channel {
     /// Write a message to a channel. Wraps the
     /// [zx_channel_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_write.md)
     /// syscall.
-    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
+    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>)
             -> Result<(), Status>
     {
+        let opts = 0;
         let n_bytes = try!(usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE));
         let n_handles = try!(usize_into_u32(handles.len()).map_err(|_| Status::OUT_OF_RANGE));
         unsafe {
@@ -114,7 +117,7 @@ impl Channel {
     /// On failure returns the both the main and read status.
     ///
     /// [read]: struct.Channel.html#method.read
-    pub fn call(&self, options: u32, timeout: Time, bytes: &[u8], handles: &mut Vec<Handle>,
+    pub fn call(&self, timeout: Time, bytes: &[u8], handles: &mut Vec<Handle>,
         buf: &mut MessageBuf) -> Result<(), (Status, Status)>
     {
         let write_num_bytes = try!(usize_into_u32(bytes.len()).map_err(
@@ -137,6 +140,7 @@ impl Channel {
         let mut actual_read_bytes: u32 = 0;
         let mut actual_read_handles: u32 = 0;
         let mut read_status = Status::OK.into_raw();
+        let options = 0;
         let status = unsafe {
             Status::from_raw(
                 sys::zx_channel_call(
@@ -193,20 +197,6 @@ pub fn test_handle_repr() {
 impl AsRef<Channel> for Channel {
     fn as_ref(&self) -> &Self {
         &self
-    }
-}
-
-/// Options for creating a channel.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum ChannelOpts {
-    /// A normal channel.
-    Normal = 0,
-}
-
-impl Default for ChannelOpts {
-    fn default() -> Self {
-        ChannelOpts::Normal
     }
 }
 
@@ -299,30 +289,30 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {DurationNum, Rights, Signals, Vmo, VmoOpts};
+    use {DurationNum, Rights, Signals, Vmo};
     use std::thread;
 
     #[test]
     fn channel_basic() {
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
+        let (p1, p2) = Channel::create().unwrap();
 
         let mut empty = vec![];
-        assert!(p1.write(b"hello", &mut empty, 0).is_ok());
+        assert!(p1.write(b"hello", &mut empty).is_ok());
 
         let mut buf = MessageBuf::new();
-        assert!(p2.read(0, &mut buf).is_ok());
+        assert!(p2.read(&mut buf).is_ok());
         assert_eq!(buf.bytes(), b"hello");
     }
 
     #[test]
     fn channel_read_raw_too_small() {
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
+        let (p1, p2) = Channel::create().unwrap();
 
         let mut empty = vec![];
-        assert!(p1.write(b"hello", &mut empty, 0).is_ok());
+        assert!(p1.write(b"hello", &mut empty).is_ok());
 
         let mut buf = MessageBuf::new();
-        let result = p2.read_raw(0, &mut buf);
+        let result = p2.read_raw(&mut buf);
         assert_eq!(result, Err((5, 0)));
         assert_eq!(buf.bytes(), b"");
     }
@@ -332,19 +322,19 @@ mod tests {
         let hello_length: usize = 5;
 
         // Create a pair of channels and a virtual memory object.
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
-        let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
+        let (p1, p2) = Channel::create().unwrap();
+        let vmo = Vmo::create(hello_length as u64).unwrap();
 
         // Duplicate VMO handle and send it down the channel.
         let duplicate_vmo_handle = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
-        assert!(p1.write(b"", &mut handles_to_send, 0).is_ok());
+        assert!(p1.write(b"", &mut handles_to_send).is_ok());
         // Handle should be removed from vector.
         assert!(handles_to_send.is_empty());
 
         // Read the handle from the receiving channel.
         let mut buf = MessageBuf::new();
-        assert!(p2.read(0, &mut buf).is_ok());
+        assert!(p2.read(&mut buf).is_ok());
         assert_eq!(buf.n_handles(), 1);
         // Take the handle from the buffer.
         let received_handle = buf.take_handle(0).unwrap();
@@ -368,14 +358,14 @@ mod tests {
         let ten_ms = 10.millis();
 
         // Create a pair of channels and a virtual memory object.
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
-        let vmo = Vmo::create(0 as u64, VmoOpts::Default).unwrap();
+        let (p1, p2) = Channel::create().unwrap();
+        let vmo = Vmo::create(0 as u64).unwrap();
 
         // Duplicate VMO handle and send it along with the call.
         let duplicate_vmo_handle = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         let mut buf = MessageBuf::new();
-        assert_eq!(p1.call(0, ten_ms.after_now(), b"call", &mut handles_to_send, &mut buf),
+        assert_eq!(p1.call(ten_ms.after_now(), b"call", &mut handles_to_send, &mut buf),
             Err((Status::TIMED_OUT, Status::OK)));
         // Handle should be removed from vector even though we didn't get a response, as it was
         // still sent over the channel.
@@ -383,7 +373,7 @@ mod tests {
 
         // Should be able to read call even though it timed out waiting for a response.
         let mut buf = MessageBuf::new();
-        assert!(p2.read(0, &mut buf).is_ok());
+        assert!(p2.read(&mut buf).is_ok());
         assert_eq!(buf.bytes(), b"call");
         assert_eq!(buf.n_handles(), 1);
     }
@@ -394,25 +384,25 @@ mod tests {
         let five_hundred_ms = 500.millis();
 
         // Create a pair of channels
-        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
+        let (p1, p2) = Channel::create().unwrap();
 
         // Start a new thread to respond to the call.
         let server = thread::spawn(move || {
             assert_eq!(p2.wait_handle(Signals::CHANNEL_READABLE, five_hundred_ms.after_now()),
                 Ok(Signals::CHANNEL_READABLE | Signals::CHANNEL_WRITABLE));
             let mut buf = MessageBuf::new();
-            assert_eq!(p2.read(0, &mut buf), Ok(()));
+            assert_eq!(p2.read(&mut buf), Ok(()));
             assert_eq!(buf.bytes(), b"txidcall");
             assert_eq!(buf.n_handles(), 0);
             let mut empty = vec![];
-            assert_eq!(p2.write(b"txidresponse", &mut empty, 0), Ok(()));
+            assert_eq!(p2.write(b"txidresponse", &mut empty), Ok(()));
         });
 
         // Make the call.
         let mut empty = vec![];
         let mut buf = MessageBuf::new();
         buf.ensure_capacity_bytes(12);
-        assert_eq!(p1.call(0, five_hundred_ms.after_now(), b"txidcall", &mut empty, &mut buf),
+        assert_eq!(p1.call(five_hundred_ms.after_now(), b"txidcall", &mut empty, &mut buf),
             Ok(()));
         assert_eq!(buf.bytes(), b"txidresponse");
         assert_eq!(buf.n_handles(), 0);

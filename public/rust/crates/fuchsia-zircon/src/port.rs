@@ -118,10 +118,11 @@ impl Port {
     /// Wraps the
     /// [zx_port_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/port_create.md)
     /// syscall.
-    pub fn create(opts: PortOpts) -> Result<Port, Status> {
+    pub fn create() -> Result<Port, Status> {
         unsafe {
             let mut handle = 0;
-            let status = sys::zx_port_create(opts as u32, &mut handle);
+            let opts = 0;
+            let status = sys::zx_port_create(opts, &mut handle);
             ok(status)?;
             Ok(Handle::from_raw(handle).into())
         }
@@ -168,20 +169,6 @@ impl Port {
     }
 }
 
-/// Options for creating a port.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum PortOpts {
-    /// Default options.
-    Default = 0,
-}
-
-impl Default for PortOpts {
-    fn default() -> Self {
-        PortOpts::Default
-    }
-}
-
 /// Options for wait_async.
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -193,13 +180,13 @@ pub enum WaitAsyncOpts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {DurationNum, Event, EventOpts};
+    use {DurationNum, Event};
 
     #[test]
     fn port_basic() {
         let ten_ms = 10.millis();
 
-        let port = Port::create(PortOpts::Default).unwrap();
+        let port = Port::create().unwrap();
 
         // Waiting now should time out.
         assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
@@ -222,8 +209,8 @@ mod tests {
         let ten_ms = 10.millis();
         let key = 42;
 
-        let port = Port::create(PortOpts::Default).unwrap();
-        let event = Event::create(EventOpts::Default).unwrap();
+        let port = Port::create().unwrap();
+        let event = Event::create().unwrap();
 
         assert!(event.wait_async_handle(&port, key, Signals::USER_0 | Signals::USER_1,
             WaitAsyncOpts::Once).is_ok());
@@ -281,8 +268,8 @@ mod tests {
         let ten_ms = 10.millis();
         let key = 42;
 
-        let port = Port::create(PortOpts::Default).unwrap();
-        let event = Event::create(EventOpts::Default).unwrap();
+        let port = Port::create().unwrap();
+        let event = Event::create().unwrap();
 
         assert!(event.wait_async_handle(&port, key, Signals::USER_0 | Signals::USER_1,
             WaitAsyncOpts::Repeating).is_ok());

@@ -99,13 +99,13 @@ mod test {
 
     #[test]
     fn test_mount_unmount() {
-        let (c1, c2) = zircon::Channel::create(zircon::ChannelOpts::default()).unwrap();
+        let (c1, c2) = zircon::Channel::create().unwrap();
 
         // TODO(raggi): where is the appropriate place to put this, it's part of the mount protocol?
         c2.signal_handle(zircon::Signals::NONE, zircon::Signals::USER_0)
             .unwrap();
 
-        let port = zircon::Port::create(zircon::PortOpts::default()).unwrap();
+        let port = zircon::Port::create().unwrap();
 
         c2.wait_async_handle(
             &port,

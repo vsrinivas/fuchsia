@@ -15,8 +15,6 @@ use tokio_core::reactor::{Handle, PollEvented};
 
 use super::would_block;
 
-type ChannelOpts = u32;
-
 /// An I/O object representing a `Channel`.
 pub struct Channel {
     channel: zircon::Channel,
@@ -64,7 +62,7 @@ impl Channel {
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zircon::Status::SHOULD_WAIT`.
-    pub fn recv_from(&self, opts: u32, buf: &mut MessageBuf) -> io::Result<()> {
+    pub fn recv_from(&self, buf: &mut MessageBuf) -> io::Result<()> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
                           zircon::Signals::CHANNEL_READABLE |
                           zircon::Signals::CHANNEL_PEER_CLOSED).into());
@@ -76,7 +74,7 @@ impl Channel {
                 if zircon::Signals::CHANNEL_PEER_CLOSED.intersects(signals) {
                     Err(io::ErrorKind::ConnectionAborted.into())
                 } else {
-                    let res = self.channel.read(opts, buf);
+                    let res = self.channel.read(buf);
                     if res == Err(zircon::Status::SHOULD_WAIT) {
                         self.evented.need_read();
                     }
@@ -97,10 +95,10 @@ impl Channel {
     ///
     /// The BorrowMut<MessageBuf> means you can pass either a `MessageBuf`
     /// as well as a `&mut MessageBuf`, as well some other things.
-    pub fn recv_msg<T>(self, opts: ChannelOpts, buf: T) -> RecvMsg<T>
+    pub fn recv_msg<T>(self, buf: T) -> RecvMsg<T>
         where T: BorrowMut<MessageBuf>,
     {
-        RecvMsg(Some((self, buf, opts)))
+        RecvMsg(Some((self, buf)))
     }
 
     /// Returns a `Future` that continuously reads messages from the channel
@@ -108,33 +106,32 @@ impl Channel {
     /// callback returns a future that serializes the server loop so it won't
     /// read the next message until the future returns and gives it a
     /// channel and buffer back.
-    pub fn chain_server<F,U>(self, opts: ChannelOpts, callback: F) -> ChainServer<F,U>
+    pub fn chain_server<F,U>(self, callback: F) -> ChainServer<F,U>
         where F: FnMut((Channel, MessageBuf)) -> U,
           U: Future<Item = (Channel, MessageBuf), Error = io::Error>,
     {
         let buf = MessageBuf::new();
-        let recv = self.recv_msg(opts, buf);
+        let recv = self.recv_msg(buf);
         let state = ServerState::Waiting(recv);
-        ChainServer { callback, opts, state }
+        ChainServer { callback, state }
     }
 
     /// Returns a `Future` that continuously reads messages from the channel and
     /// calls the callback with them, re-using the message buffer.
-    pub fn repeat_server<F>(self, opts: ChannelOpts, callback: F) -> RepeatServer<F>
+    pub fn repeat_server<F>(self, callback: F) -> RepeatServer<F>
         where F: FnMut(&Channel, &mut MessageBuf)
     {
         let buf = MessageBuf::new();
-        RepeatServer { callback, buf, opts, chan: self }
+        RepeatServer { callback, buf, chan: self }
     }
 
     /// Writes a message into the channel.
     pub fn write(&self,
                  bytes: &[u8],
                  handles: &mut Vec<zircon::Handle>,
-                 opts: ChannelOpts
                 ) -> io::Result<()>
     {
-        self.channel.write(bytes, handles, opts).map_err(io::Error::from)
+        self.channel.write(bytes, handles).map_err(io::Error::from)
     }
 }
 
@@ -148,7 +145,7 @@ impl fmt::Debug for Channel {
 ///
 /// This is created by the `Channel::recv_msg` method.
 #[must_use]
-pub struct RecvMsg<T>(Option<(Channel, T, ChannelOpts)>);
+pub struct RecvMsg<T>(Option<(Channel, T)>);
 
 impl<T> Future for RecvMsg<T>
     where T: BorrowMut<MessageBuf>,
@@ -158,11 +155,11 @@ impl<T> Future for RecvMsg<T>
 
     fn poll(&mut self) -> Poll<Self::Item, io::Error> {
         {
-            let (ref chan, ref mut buf, opts) =
+            let (ref chan, ref mut buf) =
                 *self.0.as_mut().expect("polled a RecvMsg after completion");
-            try_nb!(chan.recv_from(opts, buf.borrow_mut()));
+            try_nb!(chan.recv_from(buf.borrow_mut()));
         }
-        let (chan, buf, _opts) = self.0.take().unwrap();
+        let (chan, buf) = self.0.take().unwrap();
         Ok(Async::Ready((chan, buf)))
     }
 }
@@ -172,7 +169,6 @@ impl<T> Future for RecvMsg<T>
 #[must_use]
 pub struct ChainServer<F,U> {
     callback: F,
-    opts: ChannelOpts,
     state: ServerState<U>,
 }
 
@@ -202,7 +198,7 @@ impl<F,U> Future for ChainServer<F,U>
                 },
                 ServerState::Processing(ref mut fut) => {
                     let (chan, buf) = try_ready!(fut.poll());
-                    let recv = chan.recv_msg(self.opts, buf);
+                    let recv = chan.recv_msg(buf);
                     ServerState::Waiting(recv)
                 }
             };
@@ -217,7 +213,6 @@ pub struct RepeatServer<F> {
     chan: Channel,
     callback: F,
     buf: MessageBuf,
-    opts: u32,
 }
 
 impl<F> Future for RepeatServer<F>
@@ -228,7 +223,7 @@ impl<F> Future for RepeatServer<F>
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
-            try_nb!(self.chan.recv_from(self.opts, &mut self.buf));
+            try_nb!(self.chan.recv_from(&mut self.buf));
 
             // this is needed or else Rust thinks .callback() is a method
             let ref mut callback = self.callback;
@@ -241,7 +236,7 @@ impl<F> Future for RepeatServer<F>
 mod tests {
     use tokio_core::reactor::{Core, Timeout};
     use std::time::Duration;
-    use zircon::{self, MessageBuf, ChannelOpts};
+    use zircon::{self, MessageBuf};
     use super::*;
 
     #[test]
@@ -250,11 +245,11 @@ mod tests {
         let handle = core.handle();
         let bytes = &[0,1,2,3];
 
-        let (tx, rx) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
+        let (tx, rx) = zircon::Channel::create().unwrap();
         let f_rx = Channel::from_channel(rx, &handle).unwrap();
 
         let mut buffer = MessageBuf::new();
-        let receiver = f_rx.recv_msg(0, &mut buffer).map(|(_chan, buf)| {
+        let receiver = f_rx.recv_msg(&mut buffer).map(|(_chan, buf)| {
             println!("{:?}", buf.bytes());
             assert_eq!(bytes, buf.bytes());
         });
@@ -267,7 +262,7 @@ mod tests {
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()|{
             let mut handles = Vec::new();
-            tx.write(bytes, &mut handles, 0).unwrap();
+            tx.write(bytes, &mut handles).unwrap();
         });
 
         let done = receiver.join(sender);
@@ -279,11 +274,11 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (tx, rx) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
+        let (tx, rx) = zircon::Channel::create().unwrap();
         let f_rx = Channel::from_channel(rx, &handle).unwrap();
 
         let mut count = 0;
-        let receiver = f_rx.chain_server(0, |(chan, buf)| {
+        let receiver = f_rx.chain_server(|(chan, buf)| {
             println!("{}: {:?}", count, buf.bytes());
             assert_eq!(1, buf.bytes().len());
             assert_eq!(count, buf.bytes()[0]);
@@ -297,9 +292,9 @@ mod tests {
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()|{
             let mut handles = Vec::new();
-            tx.write(&[0], &mut handles, 0).unwrap();
-            tx.write(&[1], &mut handles, 0).unwrap();
-            tx.write(&[2], &mut handles, 0).unwrap();
+            tx.write(&[0], &mut handles).unwrap();
+            tx.write(&[1], &mut handles).unwrap();
+            tx.write(&[2], &mut handles).unwrap();
         });
 
         let done = receiver.join(sender);
@@ -312,11 +307,11 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (tx, rx) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
+        let (tx, rx) = zircon::Channel::create().unwrap();
         let f_rx = Channel::from_channel(rx, &handle).unwrap();
 
         let mut count = 0;
-        let receiver = f_rx.repeat_server(0, |_chan, buf| {
+        let receiver = f_rx.repeat_server(|_chan, buf| {
             println!("{}: {:?}", count, buf.bytes());
             assert_eq!(1, buf.bytes().len());
             assert_eq!(count, buf.bytes()[0]);
@@ -329,9 +324,9 @@ mod tests {
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()|{
             let mut handles = Vec::new();
-            tx.write(&[0], &mut handles, 0).unwrap();
-            tx.write(&[1], &mut handles, 0).unwrap();
-            tx.write(&[2], &mut handles, 0).unwrap();
+            tx.write(&[0], &mut handles).unwrap();
+            tx.write(&[1], &mut handles).unwrap();
+            tx.write(&[2], &mut handles).unwrap();
         });
 
         let done = receiver.join(sender);

@@ -19,13 +19,14 @@ impl Fifo {
     /// element into the fifo from which the opposing endpoint reads. Wraps the
     /// [zx_fifo_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_create.md)
     /// syscall.
-    pub fn create(elem_count: u32, elem_size: u32, options: FifoOpts)
+    pub fn create(elem_count: u32, elem_size: u32)
         -> Result<(Fifo, Fifo), Status>
     {
         let mut out0 = 0;
         let mut out1 = 0;
+        let options = 0;
         let status = unsafe {
-            sys::zx_fifo_create(elem_count, elem_size, options as u32, &mut out0, &mut out1)
+            sys::zx_fifo_create(elem_count, elem_size, options, &mut out0, &mut out1)
         };
         ok(status)?;
         unsafe { Ok((
@@ -65,27 +66,13 @@ impl Fifo {
     }
 }
 
-/// Options for creating a fifo pair.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum FifoOpts {
-    /// Default options.
-    Default = 0,
-}
-
-impl Default for FifoOpts {
-    fn default() -> Self {
-        FifoOpts::Default
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn fifo_basic() {
-        let (fifo1, fifo2) = Fifo::create(4, 2, FifoOpts::Default).unwrap();
+        let (fifo1, fifo2) = Fifo::create(4, 2).unwrap();
 
         // Trying to write less than one element should fail.
         assert_eq!(fifo1.write(b""), Err(Status::OUT_OF_RANGE));

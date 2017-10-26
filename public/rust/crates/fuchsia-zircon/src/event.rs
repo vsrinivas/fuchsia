@@ -20,26 +20,13 @@ impl Event {
     /// Create an event object, an object which is signalable but nothing else. Wraps the
     /// [zx_event_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/event_create.md)
     /// syscall.
-    pub fn create(options: EventOpts) -> Result<Event, Status> {
+    pub fn create() -> Result<Event, Status> {
         let mut out = 0;
-        let status = unsafe { sys::zx_event_create(options as u32, &mut out) };
+        let opts = 0;
+        let status = unsafe { sys::zx_event_create(opts, &mut out) };
         ok(status)?;
         unsafe {
             Ok(Self::from(Handle::from_raw(out)))
         }
-    }
-}
-
-/// Options for creating an event object.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum EventOpts {
-    /// Default options.
-    Default = 0,
-}
-
-impl Default for EventOpts {
-    fn default() -> Self {
-        EventOpts::Default
     }
 }

@@ -121,7 +121,7 @@ impl ClientInner {
         // is found, or the channel is exhausted.
         loop {
             let mut buf = DecodeBuf::new();
-            match self.channel.recv_from(0, buf.get_mut_buf()) {
+            match self.channel.recv_from(buf.get_mut_buf()) {
                 Ok(()) => {},
                 Err(e) => {
                     if e.kind() == io::ErrorKind::WouldBlock {
@@ -222,7 +222,7 @@ impl Client {
     /// Send a message without expecting a response.
     pub fn send_msg(&self, buf: &mut EncodeBuf) -> Result<(), Error> {
         let (out_buf, handles) = buf.get_mut_content();
-        Ok(self.inner.channel.write(out_buf, handles, 0)?)
+        Ok(self.inner.channel.write(out_buf, handles)?)
     }
 
     /// Send a message and receive a response future.
@@ -232,7 +232,7 @@ impl Client {
         let id = self.inner.register_msg_interest();
         buf.set_message_id(id);
         let (out_buf, handles) = buf.get_mut_content();
-        if let Err(e) = self.inner.channel.write(out_buf, handles, 0) {
+        if let Err(e) = self.inner.channel.write(out_buf, handles) {
             return future::Either::A(future::err(e.into()));
         }
 
@@ -295,7 +295,7 @@ impl Drop for MessageResponse {
 
 #[cfg(test)]
 mod tests {
-    use zircon::{self, MessageBuf, ChannelOpts};
+    use zircon::{self, MessageBuf};
     use std::time::Duration;
     use tokio_fuchsia::Channel;
     use tokio_core::reactor::{Core, Timeout};
@@ -307,13 +307,13 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create().unwrap();
         let client_end = Channel::from_channel(client_end, &handle).unwrap();
         let client = Client::new(client_end, &handle);
 
         let server = Channel::from_channel(server_end, &handle).unwrap();
         let mut buffer = MessageBuf::new();
-        let receiver = server.recv_msg(0, &mut buffer).map(|(_chan, buf)| {
+        let receiver = server.recv_msg(&mut buffer).map(|(_chan, buf)| {
             let bytes = &[16, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0];
             println!("{:?}", buf.bytes());
             assert_eq!(bytes, buf.bytes());
@@ -339,13 +339,13 @@ mod tests {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create().unwrap();
         let client_end = Channel::from_channel(client_end, &handle).unwrap();
         let client = Client::new(client_end, &handle);
 
         let server = Channel::from_channel(server_end, &handle).unwrap();
         let mut buffer = MessageBuf::new();
-        let receiver = server.recv_msg(0, &mut buffer).map(|(chan, buf)| {
+        let receiver = server.recv_msg(&mut buffer).map(|(chan, buf)| {
             let bytes = &[24, 0, 0, 0, 1, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
             println!("{:?}", buf.bytes());
             assert_eq!(bytes, buf.bytes());
@@ -354,7 +354,7 @@ mod tests {
             let mut response = EncodeBuf::new_response(42);
             response.set_message_id(id);
             let (out_buf, handles) = response.get_mut_content();
-            let _ = chan.write(out_buf, handles, 0);
+            let _ = chan.write(out_buf, handles);
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever

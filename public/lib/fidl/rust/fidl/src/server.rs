@@ -106,12 +106,12 @@ impl<S: Stub> Future for Server<S> {
             if let Async::Ready(Some((id, mut encode_buf))) = item {
                 encode_buf.set_message_id(id);
                 let (out_buf, handles) = encode_buf.get_mut_content();
-                self.channel.write(out_buf, handles, 0)?;
+                self.channel.write(out_buf, handles)?;
                 made_progress_this_loop_iter = true;
             }
 
             // Now process incoming requests
-            match self.channel.recv_from(0, self.buf.get_mut_buf()) {
+            match self.channel.recv_from(self.buf.get_mut_buf()) {
                 Ok(()) => {
                     match self.buf.decode_message_header() {
                         Some(MsgType::Request) => {
@@ -143,7 +143,7 @@ impl<S: Stub> Future for Server<S> {
 mod tests {
     use tokio_core::reactor::{Core, Timeout};
     use std::time::Duration;
-    use zircon::{self, MessageBuf, ChannelOpts};
+    use zircon::{self, MessageBuf};
     use tokio_fuchsia::Channel;
     use futures::future;
     use byteorder::{ByteOrder, LittleEndian};
@@ -191,7 +191,7 @@ mod tests {
         let handle = core.handle();
         let req = EncodeBuf::new_request(42);
 
-        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create().unwrap();
         let dispatcher = DummyDispatcher;
         let server = Server::new(dispatcher, server_end, &handle).unwrap();
 
@@ -205,7 +205,7 @@ mod tests {
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()| {
             let mut handles = Vec::new();
-            client_end.write(req.get_bytes(), &mut handles, 0).unwrap();
+            client_end.write(req.get_bytes(), &mut handles).unwrap();
         }).map_err(|err| err.into());
 
         let done = receiver.join(sender);
@@ -218,7 +218,7 @@ mod tests {
         let handle = core.handle();
         let req = EncodeBuf::new_request_expecting_response(43);
 
-        let (client_end, server_end) = zircon::Channel::create(ChannelOpts::Normal).unwrap();
+        let (client_end, server_end) = zircon::Channel::create().unwrap();
         let dispatcher = DummyDispatcher;
         let server = Server::new(dispatcher, server_end, &handle).unwrap();
 
@@ -234,9 +234,9 @@ mod tests {
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().and_then(|()| {
             let mut handles = Vec::new();
-            client_end.write(req.get_bytes(), &mut handles, 0).unwrap();
+            client_end.write(req.get_bytes(), &mut handles).unwrap();
             let buffer = MessageBuf::new();
-            client_end.recv_msg(0, buffer).map(|(_chan, buf)| {
+            client_end.recv_msg(buffer).map(|(_chan, buf)| {
                 let bytes = &[24, 0, 0, 0, 1, 0, 0, 0, 43, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
                 println!("{:?}", buf.bytes());
                 assert_eq!(bytes, buf.bytes());

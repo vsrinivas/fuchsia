@@ -21,10 +21,11 @@ impl EventPair {
     /// Create an event pair, a pair of objects which can signal each other. Wraps the
     /// [zx_eventpair_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/eventpair_create.md)
     /// syscall.
-    pub fn create(options: EventPairOpts) -> Result<(EventPair, EventPair), Status> {
+    pub fn create() -> Result<(EventPair, EventPair), Status> {
         let mut out0 = 0;
         let mut out1 = 0;
-        let status = unsafe { sys::zx_eventpair_create(options as u32, &mut out0, &mut out1) };
+        let options = 0;
+        let status = unsafe { sys::zx_eventpair_create(options, &mut out0, &mut out1) };
         ok(status)?;
         unsafe {
             Ok((
@@ -35,20 +36,6 @@ impl EventPair {
     }
 }
 
-/// Options for creating an event pair.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum EventPairOpts {
-    /// Default options.
-    Default = 0,
-}
-
-impl Default for EventPairOpts {
-    fn default() -> Self {
-        EventPairOpts::Default
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,7 +43,7 @@ mod tests {
 
     #[test]
     fn wait_and_signal_peer() {
-        let (p1, p2) = EventPair::create(EventPairOpts::Default).unwrap();
+        let (p1, p2) = EventPair::create().unwrap();
         let eighty_ms = 80.millis();
 
         // Waiting on one without setting any signal should time out.

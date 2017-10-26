@@ -59,7 +59,7 @@ fn print_body(sock: &zircon::Socket) -> Result<(), zircon::Status> {
     let wait_sigs = zircon::Signals::SOCKET_READABLE | zircon::Signals::SOCKET_PEER_CLOSED;
     let mut buf: [u8; BUFSIZE] = [0; BUFSIZE];
     loop {
-        match sock.read(zircon::SocketReadOpts::Default, &mut buf) {
+        match sock.read(&mut buf) {
             Ok(num_read) => print!("{}", String::from_utf8_lossy(&buf[..num_read])),
             Err(e) => {
                 match e {

@@ -8,7 +8,7 @@ extern crate fuchsia_zircon as zircon;
 extern crate fuchsia_zircon_sys as zircon_sys;
 extern crate mxruntime_sys;
 
-use zircon::{AsHandleRef, Handle, Channel, ChannelOpts, Status};
+use zircon::{AsHandleRef, Handle, Channel, Status};
 
 use zircon_sys::{zx_handle_t, ZX_OK};
 
@@ -45,7 +45,7 @@ pub fn get_startup_handle(htype: HandleType) -> Option<Handle> {
 }
 
 pub fn get_service_root() -> Result<Channel, Status> {
-    let (h1, h2) = Channel::create(ChannelOpts::Normal).unwrap();
+    let (h1, h2) = Channel::create()?;
     let svc = CString::new("/svc/.").unwrap();
     let connect_status = unsafe {
         fdio_service_connect(svc.as_ptr(), h1.raw_handle())
@@ -58,7 +58,7 @@ pub fn get_service_root() -> Result<Channel, Status> {
 }
 
 pub fn connect_to_environment_service(service_root: Channel, path: &str) -> Result<Channel, Status> {
-    let (h1, h2) = Channel::create(ChannelOpts::Normal).unwrap();
+    let (h1, h2) = Channel::create()?;
     let path_str = CString::new(path).unwrap();
     let connect_status = unsafe {
         fdio_service_connect_at(service_root.raw_handle(), path_str.as_ptr(), h1.raw_handle())

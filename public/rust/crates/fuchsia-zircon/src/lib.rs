@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn into_raw() {
-        let vmo = Vmo::create(1, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(1).unwrap();
         let h = vmo.into_raw();
         let vmo2 = Vmo::from(unsafe { Handle::from_raw(h) });
         assert!(vmo2.write(b"1", 0).is_ok());
@@ -224,7 +224,7 @@ mod tests {
         let hello_length: usize = 5;
 
         // Create a VMO and write some data to it.
-        let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(hello_length as u64).unwrap();
         assert!(vmo.write(b"hello", 0).is_ok());
 
         // Replace, reducing rights to read.
@@ -247,7 +247,7 @@ mod tests {
         let hello_length: usize = 5;
 
         // Create a VMO and write some data to it.
-        let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(hello_length as u64).unwrap();
         assert!(vmo.write(b"hello", 0).is_ok());
 
         // Replace, reducing rights to read.
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn wait_and_signal() {
-        let event = Event::create(EventOpts::Default).unwrap();
+        let event = Event::create().unwrap();
         let ten_ms = 10.millis();
 
         // Waiting on it without setting any signal should time out.
@@ -286,8 +286,8 @@ mod tests {
     #[test]
     fn wait_many_and_signal() {
         let ten_ms = 10.millis();
-        let e1 = Event::create(EventOpts::Default).unwrap();
-        let e2 = Event::create(EventOpts::Default).unwrap();
+        let e1 = Event::create().unwrap();
+        let e2 = Event::create().unwrap();
 
         // Waiting on them now should time out.
         let mut items = vec![
@@ -320,8 +320,8 @@ mod tests {
 
     #[test]
     fn cookies() {
-        let event = Event::create(EventOpts::Default).unwrap();
-        let scope = Event::create(EventOpts::Default).unwrap();
+        let event = Event::create().unwrap();
+        let scope = Event::create().unwrap();
 
         // Getting a cookie when none has been set should fail.
         assert_eq!(event.get_cookie(&scope.as_handle_ref()), Err(Status::ACCESS_DENIED));

@@ -159,7 +159,7 @@ fn main() {
             &handle,
         ).unwrap();
 
-    let server = fdio_channel.repeat_server(0, |_chan, ref mut buf| {
+    let server = fdio_channel.repeat_server(|_chan, ref mut buf| {
         let fdio_op = bytes::LittleEndian::read_u32(&buf.bytes()[4..8]);
 
         let path = std::ffi::OsStr::from_bytes(&buf.bytes()[48..]).to_owned();

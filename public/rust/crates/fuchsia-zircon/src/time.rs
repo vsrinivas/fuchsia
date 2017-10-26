@@ -254,9 +254,10 @@ impl Timer {
     /// Wraps the
     /// [zx_timer_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/timer_create.md)
     /// syscall.
-    pub fn create(options: TimerOpts, clock_id: ClockId) -> Result<Timer, Status> {
+    pub fn create(clock_id: ClockId) -> Result<Timer, Status> {
         let mut out = 0;
-        let status = unsafe { sys::zx_timer_create(options as u32, clock_id as u32, &mut out) };
+        let opts = 0;
+        let status = unsafe { sys::zx_timer_create(opts, clock_id as u32, &mut out) };
         ok(status)?;
         unsafe {
             Ok(Self::from(Handle::from_raw(out)))
@@ -282,20 +283,6 @@ impl Timer {
     }
 }
 
-/// Options for creating a timer.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum TimerOpts {
-    /// Default options.
-    Default = 0,
-}
-
-impl Default for TimerOpts {
-    fn default() -> Self {
-        TimerOpts::Default
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,8 +290,8 @@ mod tests {
 
     #[test]
     fn create_timer_invalid_clock() {
-        assert_eq!(Timer::create(TimerOpts::Default, ClockId::UTC).unwrap_err(), Status::INVALID_ARGS);
-        assert_eq!(Timer::create(TimerOpts::Default, ClockId::Thread), Err(Status::INVALID_ARGS));
+        assert_eq!(Timer::create(ClockId::UTC).unwrap_err(), Status::INVALID_ARGS);
+        assert_eq!(Timer::create(ClockId::Thread), Err(Status::INVALID_ARGS));
     }
 
     #[test]
@@ -313,7 +300,7 @@ mod tests {
         let twenty_ms = 20.millis();
 
         // Create a timer
-        let timer = Timer::create(TimerOpts::Default, ClockId::Monotonic).unwrap();
+        let timer = Timer::create(ClockId::Monotonic).unwrap();
 
         // Should not signal yet.
         assert_eq!(timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()), Err(Status::TIMED_OUT));

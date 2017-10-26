@@ -25,9 +25,10 @@ impl Vmo {
     /// syscall. See the
     /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
     /// for more information.
-    pub fn create(size: u64, options: VmoOpts) -> Result<Vmo, Status> {
+    pub fn create(size: u64) -> Result<Vmo, Status> {
         let mut handle = 0;
-        let status = unsafe { sys::zx_vmo_create(size, options as u32, &mut handle) };
+        let opts = 0;
+        let status = unsafe { sys::zx_vmo_create(size, opts, &mut handle) };
         ok(status)?;
         unsafe {
             Ok(Vmo::from(Handle::from_raw(handle)))
@@ -108,40 +109,14 @@ impl Vmo {
     /// Wraps the
     /// [zx_vmo_clone](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/vmo_clone.md)
     /// syscall.
-    pub fn clone(&self, options: VmoCloneOpts, offset: u64, size: u64) -> Result<Vmo, Status> {
+    pub fn clone(&self, offset: u64, size: u64) -> Result<Vmo, Status> {
         let mut out = 0;
+        let opts = sys::ZX_VMO_CLONE_COPY_ON_WRITE;
         let status = unsafe {
-            sys::zx_vmo_clone(self.raw_handle(), options as u32, offset, size, &mut out)
+            sys::zx_vmo_clone(self.raw_handle(), opts, offset, size, &mut out)
         };
         ok(status)?;
         unsafe { Ok(Vmo::from(Handle::from_raw(out))) }
-    }
-}
-
-/// Options for creating virtual memory objects. None supported yet.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum VmoOpts {
-    /// Default options.
-    Default = 0,
-}
-
-impl Default for VmoOpts {
-    fn default() -> Self {
-        VmoOpts::Default
-    }
-}
-
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum VmoCloneOpts {
-    /// Create a copy-on-write clone.
-    CopyOnWrite = sys::ZX_VMO_CLONE_COPY_ON_WRITE,
-}
-
-impl Default for VmoCloneOpts {
-    fn default() -> Self {
-        VmoCloneOpts::CopyOnWrite
     }
 }
 
@@ -178,14 +153,14 @@ mod tests {
     #[test]
     fn vmo_get_size() {
         let size = 16 * 1024 * 1024;
-        let vmo = Vmo::create(size, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(size).unwrap();
         assert_eq!(size, vmo.get_size().unwrap());
     }
 
     #[test]
     fn vmo_set_size() {
         let start_size = 12;
-        let vmo = Vmo::create(start_size, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(start_size).unwrap();
         assert_eq!(start_size, vmo.get_size().unwrap());
 
         // Change the size and make sure the new size is reported
@@ -197,7 +172,7 @@ mod tests {
     #[test]
     fn vmo_read_write() {
         let mut vec1 = vec![0; 16];
-        let vmo = Vmo::create(vec1.len() as u64, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(vec1.len() as u64).unwrap();
         assert_eq!(vmo.write(b"abcdef", 0), Ok(6));
         assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
         assert_eq!(b"abcdef", &vec1[0..6]);
@@ -210,14 +185,14 @@ mod tests {
 
     #[test]
     fn vmo_op_range_unsupported() {
-        let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(12).unwrap();
         assert_eq!(vmo.op_range(VmoOp::LOCK, 0, 1), Err(Status::NOT_SUPPORTED));
         assert_eq!(vmo.op_range(VmoOp::UNLOCK, 0, 1), Err(Status::NOT_SUPPORTED));
     }
 
     #[test]
     fn vmo_lookup() {
-        let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(12).unwrap();
         let mut buffer = vec![0; 2];
 
         // Lookup will fail as it is not committed yet.
@@ -236,7 +211,7 @@ mod tests {
 
     #[test]
     fn vmo_cache() {
-        let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
+        let vmo = Vmo::create(12).unwrap();
 
         // Cache operations should all succeed.
         assert_eq!(vmo.op_range(VmoOp::CACHE_SYNC, 0, 12), Ok(()));
@@ -247,11 +222,11 @@ mod tests {
 
     #[test]
     fn vmo_clone() {
-        let original = Vmo::create(12, VmoOpts::Default).unwrap();
+        let original = Vmo::create(12).unwrap();
         assert_eq!(original.write(b"one", 0), Ok(3));
 
         // Clone the VMO, and make sure it contains what we expect.
-        let clone = original.clone(VmoCloneOpts::CopyOnWrite, 0, 10).unwrap();
+        let clone = original.clone(0, 10).unwrap();
         let mut read_buffer = vec![0; 16];
         assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
         assert_eq!(&read_buffer[0..3], b"one");

@@ -192,7 +192,7 @@ impl Future for Connection {
         let mut buf = zircon::MessageBuf::new();
         buf.ensure_capacity_bytes(fdio::fdio_sys::ZXRIO_MSG_SZ);
         loop {
-            try_nb!(self.chan.recv_from(0, &mut buf));
+            try_nb!(self.chan.recv_from(&mut buf));
             let mut msg = buf.into();
             // Note: ignores errors, as they are sent on the protocol
             let _ = self.dispatch(&mut msg);

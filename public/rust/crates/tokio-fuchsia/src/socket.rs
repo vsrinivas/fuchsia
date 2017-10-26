@@ -69,7 +69,7 @@ impl Socket {
 
     /// Reads a message on the socket and registers this `Socket` as
     /// needing a read on receiving a `zircon::Status::ErrShouldWait`.
-    pub fn read_from(&self, opts: zircon::SocketReadOpts, buf: &mut [u8]) -> io::Result<usize> {
+    pub fn read_from(&self,  buf: &mut [u8]) -> io::Result<usize> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
                           zircon::Signals::SOCKET_READABLE |
                           zircon::Signals::SOCKET_PEER_CLOSED).into());
@@ -79,7 +79,7 @@ impl Socket {
             Async::Ready(ready) => {
                 let signals = FuchsiaReady::from(ready).into_signals();
                 if zircon::Signals::SOCKET_READABLE.intersects(signals) {
-                    let res = self.socket.read(opts, buf);
+                    let res = self.socket.read(buf);
                     if res == Err(zircon::Status::SHOULD_WAIT) {
                         self.evented.need_read();
                     }
@@ -104,15 +104,15 @@ impl Socket {
     ///
     /// The AsMut<[u8]> means you can pass an `&mut [u8]`, `Vec<u8>`, or other
     /// array-like collections of `u8` elements.
-    pub fn read<T>(self, opts: zircon::SocketReadOpts, buf: T) -> ReadFuture<T>
+    pub fn read<T>(self, buf: T) -> ReadFuture<T>
         where T: AsMut<[u8]>
     {
-        ReadFuture(Some((self, buf, opts)))
+        ReadFuture(Some((self, buf)))
     }
 
     /// Writes a message on the socket and registers this `Socket` as
     /// needing a write on receiving a `zircon::Status::ErrShouldWait`.
-    pub fn write_into(&self, opts: zircon::SocketWriteOpts, buf: &[u8]) -> io::Result<usize> {
+    pub fn write_into(&self, buf: &[u8]) -> io::Result<usize> {
         let signals = self.evented.poll_ready(FuchsiaReady::from(
                           zircon::Signals::SOCKET_WRITABLE |
                           zircon::Signals::SOCKET_PEER_CLOSED).into());
@@ -124,7 +124,7 @@ impl Socket {
                 if zircon::Signals::SOCKET_PEER_CLOSED.intersects(signals) {
                     Err(io::ErrorKind::ConnectionAborted.into())
                 } else {
-                    let res = self.socket.write(opts, buf);
+                    let res = self.socket.write(buf);
                     if res == Err(zircon::Status::SHOULD_WAIT) {
                         self.evented.need_write();
                     }
@@ -146,10 +146,10 @@ impl Socket {
     ///
     /// The AsRef<[u8]> means you can pass an `&mut [u8]`, `Vec<u8>`, or other
     /// array-like collections of `u8` elements.
-    pub fn write<T>(self, opts: zircon::SocketWriteOpts, buf: T) -> WriteFuture<T>
+    pub fn write<T>(self, buf: T) -> WriteFuture<T>
         where T: AsRef<[u8]>
     {
-        WriteFuture(Some((self, buf, opts)))
+        WriteFuture(Some((self, buf)))
     }
 }
 
@@ -163,7 +163,7 @@ impl fmt::Debug for Socket {
 ///
 /// This is created by the `Socket::read` method.
 #[must_use = "futures do nothing unless polled"]
-pub struct ReadFuture<T>(Option<(Socket, T, zircon::SocketReadOpts)>);
+pub struct ReadFuture<T>(Option<(Socket, T)>);
 
 impl<T> Future for ReadFuture<T>
     where T: AsMut<[u8]>,
@@ -174,11 +174,11 @@ impl<T> Future for ReadFuture<T>
     fn poll(&mut self) -> Poll<Self::Item, io::Error> {
         let num_read;
         {
-            let (ref socket, ref mut buf, opts) =
+            let (ref socket, ref mut buf) =
                 *self.0.as_mut().expect("polled a ReadFuture after completion");
-            num_read = try_nb!(socket.read_from(opts, buf.as_mut()));
+            num_read = try_nb!(socket.read_from(buf.as_mut()));
         }
-        let (socket, buf, _opts) = self.0.take().unwrap();
+        let (socket, buf) = self.0.take().unwrap();
         Ok(Async::Ready((socket, buf, num_read)))
     }
 }
@@ -187,7 +187,7 @@ impl<T> Future for ReadFuture<T>
 ///
 /// This is created by the `Socket::write` method.
 #[must_use = "futures do nothing unless polled"]
-pub struct WriteFuture<T>(Option<(Socket, T, zircon::SocketWriteOpts)>);
+pub struct WriteFuture<T>(Option<(Socket, T)>);
 
 impl<T> Future for WriteFuture<T>
     where T: AsRef<[u8]>,
@@ -198,11 +198,11 @@ impl<T> Future for WriteFuture<T>
     fn poll(&mut self) -> Poll<Self::Item, io::Error> {
         let num_written;
         {
-            let (ref socket, ref buf, opts) =
+            let (ref socket, ref buf) =
                 *self.0.as_ref().expect("polled a WriteFuture after completion");
-            num_written = try_nb!(socket.write_into(opts, buf.as_ref()));
+            num_written = try_nb!(socket.write_into(buf.as_ref()));
         }
-        let (socket, buf, _opts) = self.0.take().unwrap();
+        let (socket, buf) = self.0.take().unwrap();
         Ok(Async::Ready((socket, buf, num_written)))
     }
 }
@@ -211,7 +211,6 @@ impl<T> Future for WriteFuture<T>
 mod tests {
     use tokio_core::reactor::{Core, Timeout};
     use std::time::Duration;
-    use zircon::{self, MessageBuf, SocketOpts, SocketReadOpts, SocketWriteOpts};
     use super::*;
 
     #[test]
@@ -220,13 +219,13 @@ mod tests {
         let handle = &core.handle();
         let bytes: &'static [u8] = &[0,1,2,3];
 
-        let (tx, rx) = zircon::Socket::create(SocketOpts::Default).unwrap();
+        let (tx, rx) = zircon::Socket::create().unwrap();
         let (tx, rx) = (
             Socket::from_socket(tx, handle).unwrap(),
             Socket::from_socket(rx, handle).unwrap(),
         );
 
-        let receiver = rx.read(SocketReadOpts::Default, [0; 4]).map(|(_socket, buf, num_read)| {
+        let receiver = rx.read([0; 4]).map(|(_socket, buf, num_read)| {
             assert_eq!(num_read, buf.len());
             assert_eq!(buf, bytes);
         });
@@ -238,7 +237,7 @@ mod tests {
         let receiver = receiver.select(rcv_timeout).map(|_| ()).map_err(|(err,_)| err);
 
         let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().and_then(|()|{
-            tx.write(SocketWriteOpts::Default, bytes)
+            tx.write(bytes)
         }).map(|(_socket, _buf, num_written)| {
             assert_eq!(num_written, bytes.len());
         });
