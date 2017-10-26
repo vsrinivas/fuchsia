@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_H_
-#define PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_H_
 
 #include <functional>
 #include <string>
 
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/gcs/status.h"
+#include "peridot/bin/cloud_provider_firebase/gcs/status.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 
@@ -37,4 +37,4 @@ class CloudStorage {
 
 }  // namespace gcs
 
-#endif  // PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_H_

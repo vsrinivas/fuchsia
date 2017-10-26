@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/gcs/cloud_storage_impl.h"
+#include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage_impl.h"
 
 #include <fcntl.h>
 

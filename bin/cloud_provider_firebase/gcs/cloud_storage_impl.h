@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_IMPL_H_
-#define PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_IMPL_H_
 
 #include <functional>
 #include <vector>
 
 #include "lib/fxl/tasks/task_runner.h"
+#include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/gcs/cloud_storage.h"
 #include "peridot/bin/ledger/network/network_service.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
@@ -66,4 +66,4 @@ class CloudStorageImpl : public CloudStorage {
 
 }  // namespace gcs
 
-#endif  // PERIDOT_BIN_LEDGER_GCS_CLOUD_STORAGE_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_GCS_CLOUD_STORAGE_IMPL_H_

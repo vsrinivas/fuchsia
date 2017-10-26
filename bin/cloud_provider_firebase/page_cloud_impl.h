@@ -14,10 +14,10 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/auth_provider/auth_provider.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
+#include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/gcs/cloud_storage.h"
 
 namespace cloud_provider_firebase {
 

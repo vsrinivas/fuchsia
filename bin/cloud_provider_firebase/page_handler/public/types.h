@@ -9,7 +9,7 @@
 
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/status.h"
-#include "peridot/bin/ledger/gcs/status.h"
+#include "peridot/bin/cloud_provider_firebase/gcs/status.h"
 
 namespace cloud_provider_firebase {
 

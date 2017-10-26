@@ -9,10 +9,10 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/cloud_provider_firebase/convert_status.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set_impl.h"
+#include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage_impl.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/page_cloud_handler_impl.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/paths.h"
 #include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/gcs/cloud_storage_impl.h"
 
 namespace cloud_provider_firebase {
 
