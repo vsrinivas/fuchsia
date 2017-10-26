@@ -3,40 +3,21 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(box_patterns)]
 
 extern crate fidl;
 extern crate fuchsia_app;
-extern crate fuchsia_zircon as zircon;
+extern crate futures;
 extern crate garnet_public_lib_network_fidl;
 extern crate tokio_core;
+extern crate tokio_fuchsia;
 
 use fidl::FidlService;
 use fuchsia_app::client::ApplicationContext;
+use futures::{Future};
+use futures::stream::{self, Stream};
 use garnet_public_lib_network_fidl as netsvc;
+use std::io;
 use tokio_core::reactor;
-use zircon::AsHandleRef;
-
-fn print_response(resp: netsvc::URLResponse) -> Result<(), zircon::Status> {
-    if let Some(e) = resp.error {
-        let code = e.code;
-        println!(
-            "Got error: {} ({})",
-            code,
-            e.description.unwrap_or("".into())
-        );
-        return Ok(());
-    }
-
-    print_headers(&resp);
-
-    match resp.body.map(|x| *x) {
-        Some(netsvc::URLBody::Stream(ref s)) => print_body(s)?,
-        Some(_) => println!("Unexpected URLBody type!"),
-        None => (),
-    }
-    Ok(())
-}
 
 fn print_headers(resp: &netsvc::URLResponse) {
     println!(">>> Headers <<<");
@@ -48,36 +29,6 @@ fn print_headers(resp: &netsvc::URLResponse) {
             println!("  {}={}", hdr.name, hdr.value);
         }
     }
-}
-
-fn print_body(sock: &zircon::Socket) -> Result<(), zircon::Status> {
-    println!(">>> Body <<<");
-
-    // TODO(tkilbourn): this is doing blocking work, rather than using the tokio reactor. Once
-    // tokio-fuchsia supports zircon sockets, rewrite this method to use futures instead.
-    const BUFSIZE: usize = 4096;
-    let wait_sigs = zircon::Signals::SOCKET_READABLE | zircon::Signals::SOCKET_PEER_CLOSED;
-    let mut buf: [u8; BUFSIZE] = [0; BUFSIZE];
-    loop {
-        match sock.read(&mut buf) {
-            Ok(num_read) => print!("{}", String::from_utf8_lossy(&buf[..num_read])),
-            Err(e) => {
-                match e {
-                    zircon::Status::SHOULD_WAIT => {
-                        let _ = sock.as_handle_ref().wait(wait_sigs, zircon::Time::INFINITE)?;
-                    }
-                    zircon::Status::PEER_CLOSED => break,  // not an error
-                    _ => {
-                        println!("\nUnexpected error reading response {:?}", e);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    println!("\n>>> EOF <<<");
-    Ok(())
 }
 
 fn main() {
@@ -120,11 +71,48 @@ fn main_res() -> Result<(), fidl::Error> {
         cache_mode: netsvc::URLRequestCacheMode::Default,
         response_body_mode: netsvc::URLRequestResponseBodyMode::Stream,
     };
-    let response_fut = loader_proxy.start(req);
 
-    //// Run `response_fut` to completion and print the response
-    let response = core.run(response_fut)?;
-    print_response(response)?;
+    let fut = loader_proxy.start(req);
 
-    Ok(())
+    //// Run the future to completion
+    let resp = core.run(fut)?;
+    if let Some(e) = resp.error {
+        let code = e.code;
+        println!(
+            "Got error: {} ({})",
+            code,
+            e.description.unwrap_or("".into())
+            );
+        return Ok(());
+    }
+
+    print_headers(&resp);
+    if let Some(netsvc::URLBody::Stream(s)) = resp.body.map(|x| *x) {
+        let sock = tokio_fuchsia::Socket::from_socket(s, &handle).unwrap();
+        let buf = vec![0; 4096];
+        println!(">>> Body <<<");
+        let fut = stream::unfold((sock, buf, 1), |(sock, buf, num_read)| {
+            if num_read == 0 {
+                None
+            } else {
+                Some(sock.read(buf).map(|(s, b, n)| {
+                    ((b,n), (s, vec![0; 4096], n))
+                }))
+            }
+        }).for_each(|(buf, n)| {
+            print!("{}", String::from_utf8_lossy(&buf[..n]));
+            Ok(())
+        });
+
+        core.run(fut).or_else(|e| {
+            if e.kind() == io::ErrorKind::ConnectionAborted {
+                println!("\n>>> EOF <<<");
+                Ok(())
+            } else {
+                Err(fidl::Error::IoError(e))
+            }
+        })
+    } else {
+        Ok(())
+    }
 }
