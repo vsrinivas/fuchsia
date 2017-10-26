@@ -151,7 +151,7 @@ static int equalf(const char *, const char *);
 #ifdef HAVE_FACCESSAT
 static int test_file_access(const char *, int);
 #else
-static int test_st_mode(const struct stat64 *, int);
+static int test_st_mode(const struct stat *, int);
 static int bash_group_member(gid_t);
 #endif
 
@@ -389,9 +389,9 @@ binop(void)
 static int
 filstat(char *nm, enum token mode)
 {
-	struct stat64 s;
+	struct stat s;
 
-	if (mode == FILSYM ? lstat64(nm, &s) : stat64(nm, &s))
+	if (mode == FILSYM ? lstat(nm, &s) : stat(nm, &s))
 		return 0;
 
 	switch (mode) {
@@ -505,9 +505,9 @@ equalf (const char *f1, const char *f2)
 #ifdef HAVE_FACCESSAT
 static int has_exec_bit_set(const char *path)
 {
-	struct stat64 st;
+	struct stat st;
 
-	if (stat64(path, &st))
+	if (stat(path, &st))
 		return 0;
 	return st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH);
 }
@@ -526,7 +526,7 @@ static int test_file_access(const char *path, int mode)
  * Returns non-zero if the file is accessible.
  */
 static int
-test_st_mode(const struct stat64 *st, int mode)
+test_st_mode(const struct stat *st, int mode)
 {
 	int euid = geteuid();
 

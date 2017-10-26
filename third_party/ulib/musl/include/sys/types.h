@@ -68,14 +68,6 @@ typedef unsigned long long u_quad_t;
 #include <sys/select.h>
 #endif
 
-#if defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
-#define blkcnt64_t blkcnt_t
-#define fsblkcnt64_t fsblkcnt_t
-#define fsfilcnt64_t fsfilcnt_t
-#define ino64_t ino_t
-#define off64_t off_t
-#endif
-
 #ifdef __cplusplus
 }
 #endif

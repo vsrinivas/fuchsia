@@ -42,13 +42,6 @@ int fstatvfs(int, struct statvfs*);
 #define ST_NOATIME 1024
 #define ST_NODIRATIME 2048
 
-#if defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
-#define statvfs64 statvfs
-#define fstatvfs64 fstatvfs
-#define fsblkcnt64_t fsblkcnt_t
-#define fsfilcnt64_t fsfilcnt_t
-#endif
-
 #ifdef __cplusplus
 }
 #endif
