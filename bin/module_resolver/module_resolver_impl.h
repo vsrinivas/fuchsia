@@ -21,13 +21,12 @@ class ModuleResolverImpl : modular::ModuleResolver {
 
   void Connect(fidl::InterfaceRequest<modular::ModuleResolver> request);
 
+ private:
   // |ModuleResolver|
-  // This is public because we call it in our unittest.
   void FindModules(modular::DaisyPtr daisy,
                    modular::ResolverScoringInfoPtr scoring_info,
                    const FindModulesCallback& done) override;
 
- private:
   void OnNewManifestEntry(modular::ModuleManifestRepository::Entry entry);
 
   // TODO(thatguy): At some point, factor the index functions out of

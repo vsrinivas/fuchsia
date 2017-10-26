@@ -18,7 +18,8 @@ namespace {
 
 // NOTE: This must match the path specified in
 // build/module_repository/publish.gni
-const char* kModuleRepositoryPath = "/system/data/module_manifest_repository";
+constexpr char kModuleRepositoryPath[] =
+    "/system/data/module_manifest_repository";
 
 class ModuleResolverApp {
  public:

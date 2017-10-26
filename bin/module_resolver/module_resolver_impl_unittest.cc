@@ -64,6 +64,7 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
     WriteManifestFile("manifest", kManifest);
     ResetRepository();
   }
+
   void TearDown() override {
     // Clean up.
     resolver_.reset();
@@ -76,10 +77,14 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
 
  protected:
   void ResetRepository() {
-    resolver_.reset(new ModuleResolverImpl(repo_dir_));
-    // |resolver_| has a thread that posts tasks to our MessageLoop that need
-    // to be processed for initialization. Give them a chance to post and for
-    // |resolver_| to pick them up.
+    impl_.reset(new ModuleResolverImpl(repo_dir_));
+    impl_->Connect(resolver_.NewRequest());
+
+    // |impl_| has a thread that posts tasks to our MessageLoop that need to be
+    // processed for initialization. Give them a chance to post and for |impl_|
+    // to pick them up.
+    // TODO(thatguy): To avoid potential flake: improve internals so that we
+    // can wait on a real initialization condition on |impl|.
     RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200));
   }
 
@@ -93,14 +98,15 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
   void FindModules(modular::DaisyPtr daisy) {
     auto scoring_info = modular::ResolverScoringInfo::New();
 
-    got_response_ = false;
-    resolver_->FindModules(std::move(daisy), nullptr /* scoring_info */,
-                           [this](const modular::FindModulesResultPtr& result) {
-                             got_response_ = true;
-                             result_ = result.Clone();
-                           });
-
-    ASSERT_TRUE(got_response_) << daisy;
+    bool got_response = false;
+    resolver_->FindModules(
+        std::move(daisy), nullptr /* scoring_info */,
+        [this, &got_response](const modular::FindModulesResultPtr& result) {
+          got_response = true;
+          result_ = result.Clone();
+        });
+    RunLoopUntil([&got_response] { return got_response; });
+    ASSERT_TRUE(got_response) << daisy;
   }
 
   const fidl::Array<modular::ModuleResolverResultPtr>& results() const {
@@ -109,15 +115,17 @@ class ModuleResolverImplTest : public modular::testing::TestWithMessageLoop {
 
   std::vector<std::string> manifests_written_;
   std::string repo_dir_;
-  std::unique_ptr<ModuleResolverImpl> resolver_;
+  std::unique_ptr<ModuleResolverImpl> impl_;
 
-  bool got_response_;
+  modular::ModuleResolverPtr resolver_;
+
   modular::FindModulesResultPtr result_;
 };
 
 TEST_F(ModuleResolverImplTest, Null) {
   auto daisy = modular::Daisy::New();
   daisy->verb = "no matchy!";
+  daisy->nouns.mark_non_null();
 
   FindModules(std::move(daisy));
 
@@ -129,6 +137,7 @@ TEST_F(ModuleResolverImplTest, Null) {
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
   auto daisy = modular::Daisy::New();
   daisy->verb = "Navigate";
+  daisy->nouns.mark_non_null();
 
   FindModules(std::move(daisy));
 

@@ -57,7 +57,7 @@ struct ModuleResolverResult {
   // TODO(thatguy): Schema information for the Link. This can be derived by the
   // client by looking at both |package_id| and |local_name|.
 
-  ResolutionDebugInfo debug_info;
+  ResolutionDebugInfo? debug_info;
 };
 
 struct ResolutionDebugInfo {

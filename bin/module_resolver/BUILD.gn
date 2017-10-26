@@ -41,6 +41,7 @@ executable("module_resolver_impl_unittest") {
 
   deps = [
     ":module_resolver_impl",
+    "//garnet/public/lib/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
