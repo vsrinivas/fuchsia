@@ -4,14 +4,21 @@
 
 #![allow(non_camel_case_types)]
 
-#[macro_use]
-extern crate bitflags;
 extern crate fuchsia_zircon as zircon;
 
 use zircon::sys as sys;
 use std::os::raw::c_char;
 
 // References to Zircon DDK's driver.h
+
+// Copied from fuchsia-zircon-sys.
+macro_rules! multiconst {
+    ($typename:ident, [$($rawname:ident = $value:expr;)*]) => {
+        $(
+            pub const $rawname: $typename = $value;
+        )*
+    }
+}
 
 // Opaque structs
 #[repr(u8)]
@@ -122,22 +129,15 @@ pub struct zx_protocol_device_t {
     pub resume: Option<extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
 }
 
-bitflags! {
-    #[repr(C)]
-    pub flags device_add_flags_t: u32 {
-        const DEVICE_ADD_NONE         = 0,
-        const DEVICE_ADD_NON_BINDABLE = 1 << 0,
-        const DEVICE_ADD_INSTANCE     = 1 << 1,
-        const DEVICE_ADD_MUST_ISOLATE = 1 << 2,
-        const DEVICE_ADD_INVISIBLE    = 1 << 3,
-    }
-}
+pub type device_add_flags_t = u32;
 
-impl Default for device_add_flags_t {
-    fn default() -> Self {
-        DEVICE_ADD_NONE
-    }
-}
+multiconst!(device_add_flags_t, [
+    DEVICE_ADD_NONE         = 0;
+    DEVICE_ADD_NON_BINDABLE = 1 << 0;
+    DEVICE_ADD_INSTANCE     = 1 << 1;
+    DEVICE_ADD_MUST_ISOLATE = 1 << 2;
+    DEVICE_ADD_INVISIBLE    = 1 << 3;
+]);
 
 // Device Manager API
 const DEVICE_ADD_ARGS_VERSION: u64 = 0x96a64134d56e88e3;

@@ -7,5 +7,4 @@ description = "Low-level Rust DDK for the Zircon kernel"
 repository = "https://fuchsia.googlesource.com/ddk-rs/"
 
 [dependencies]
-bitflags = "0.7.0"
 fuchsia-zircon = { path = "../../fuchsia-zircon" }
