@@ -1,0 +1,33 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx_config_read
+
+function usage {
+  cat <<END
+usage: fx mkbootloader <root of external drive>
+Builds Fuchsia bootloader and copies it to a drive of your choice.
+END
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+  exit 1
+fi
+
+if [[ ! -d $1 ]]; then
+  echo >&2 "error: Drive at $1 does not appear to be mounted."
+  exit 1
+fi
+
+efi_target_dir=$1/EFI/BOOT
+
+fx_command_run build-zircon
+mkdir -p "${efi_target_dir}"
+cp "${ZIRCON_BUILD_DIR}/bootloader/bootx64.efi" "${efi_target_dir}/BOOTX64.EFI"
+echo "Bootloader loaded to $1"

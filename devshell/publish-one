@@ -1,0 +1,86 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx_config_read
+
+# See usage for publish, this does the same thing, but for an individual
+# package.
+function main {
+  local pkg_name
+  for pkg_name; do : ; done;
+  local build_dir="${FUCHSIA_BUILD_DIR}"
+  local stg_dir
+  local update_repo
+
+  local key_path
+  local gen_key=1
+  while (( "$#" )); do
+    case $1 in
+      "--update-repo")
+        shift
+        update_repo=$1
+        ;;
+      "--far-dir")
+        shift
+        stg_dir=$1
+        ;;
+      "--far-key")
+        shift
+        key_path=$1
+        gen_key=0
+        ;;
+      "--build-dir")
+        shift
+        build_dir=$1
+        ;;
+    esac
+    shift
+  done
+
+  if [[ -z $stg_dir ]]; then
+    stg_dir="${build_dir}/fars/${pkg_name}"
+  fi
+
+  if [[ -z $update_repo ]]; then
+    local update_repo="${build_dir}/amber-files"
+  fi
+
+  local arch_dir="${stg_dir}/archive"
+  if [[ "$key_path" == "" ]]; then
+    key_path="${stg_dir}/key"
+  fi
+
+  rm -r "${stg_dir}"/*  >/dev/null 2>&1
+  mkdir -p "${arch_dir}"
+
+  local pm_cmd="${build_dir}/host_x64/pm"
+  local amber_cmd="${build_dir}/host_x64/amber-publish"
+  local mani_path=""
+  for try_path in ${build_dir}/package/${pkg_name}/{boot,system}_manifest; do
+    if [[ -s  "$try_path" ]]; then
+      mani_path="$try_path"
+    fi
+  done
+
+  if [[ "$mani_path" == "" ]]; then
+    echo "WARNING: manifest not found for ${pkg_name}, no package published."
+    return 0
+  fi
+
+  if [[ "$gen_key" -eq 1 ]]; then
+    "${pm_cmd}" "-o" "${arch_dir}" "-k" "${key_path}" "genkey" || return $?
+  fi
+
+  "${pm_cmd}" "-o" "${arch_dir}" "-n" "${pkg_name}" "init" || return $?
+
+  "${pm_cmd}" "-o" "${arch_dir}" "-k" "${key_path}" "-m" "$mani_path" "build" || return $?
+
+  "${amber_cmd}" "-r" "${update_repo}" "-p" "-f" "${arch_dir}/meta.far" "-n" "${pkg_name}.far" || return $?
+
+  "${amber_cmd}" "-r" "${update_repo}" "-m" "-f" "${mani_path}" >/dev/null || return $?
+}
+
+main "$@"

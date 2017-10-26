@@ -1,0 +1,31 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx_config_read
+
+function usage {
+  cat <<END
+uUsage: fx reboot [HOST]
+Reboots the attached device.
+END
+}
+
+if [[ $# -gt 1 ]]; then
+  usage
+  exit 1
+fi
+
+# Add timeout for OS X users so they can click the network connection warning
+# dialog.
+if [[ "$(uname -s)" = "Darwin" ]]; then
+  timeout_flag="--timeout=3000"
+else
+  timeout_flag="--nowait"
+fi
+
+host=${1:-":"}
+echo "Rebooting system..."
+"${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${host}" "dm reboot"

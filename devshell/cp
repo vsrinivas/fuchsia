@@ -7,7 +7,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 function usage {
   cat <<END
-usage: fx cp src dst
+usage: fx cp SRC DST
 Copies a file from the host to the target device.
 END
 }

@@ -1,0 +1,74 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx_config_read
+
+function usage {
+  cat >&2 <<END
+usage: fx publish [--build-dir <DIR>] [--far-key <key file>] [--far-dir <DIR>] [--update-repo <DIR>] [pkg]
+Publish packages. If no package name is supplied, all packages from the current
+build output will be published.
+  --build-dir
+    Directory containing the build output
+  --far-key
+    Key used to sign the package's meta FAR
+  --far-dir
+    Directory to be used to build the meta FAR
+  --update-repo
+    Directory to be used to publish the meta FAR and associated content blobs
+END
+}
+
+# Create a package manager package and then create update files which are
+# published to the local file system. If no package name is supplied, all
+# built packages are processed.
+function main {
+  local build_dir="${FUCHSIA_BUILD_DIR}"
+  local c=1
+  while ((c<=$#)); do
+    if [[ "${!c}" == "--build-dir" ]]; then
+      c=$((c + 1))
+      build_dir="${!c}"
+      break
+    fi
+    c=$((c + 1))
+  done
+
+  if [[ -z $build_dir ]]; then
+    echo >&2 "error: Build directory is not set!"
+    return -1
+  fi
+
+  # if an even number of args, assume no pkg name provided
+  if [[ "$# % 2" -eq 0 ]]; then
+    local pkgs_file="${build_dir}/gen/packages/gn/packages"
+    local pkg_count=0
+    local pkgs=()
+    while IFS= read -r e || [[ -n "$e" ]]; do
+      pkg_count=$(($pkg_count + 1))
+      pkgs+=($e)
+    done < "$pkgs_file"
+
+    local i=1
+    for e in "${pkgs[@]}"; do
+      echo "Publishing ${i}/${pkg_count}: ${e}"
+      fx_command_run publish-one "${@:1}" "$e"
+      if [[ "$?" -ne 0 ]]; then
+        usage
+        return $?
+      fi
+      i=$(($i + 1))
+    done
+  else
+    fx_command_run publish-one "${@:1}"
+    if [[ "$?" -ne 0 ]]; then
+      usage
+      return $?
+    fi
+  fi
+}
+
+main "$@"

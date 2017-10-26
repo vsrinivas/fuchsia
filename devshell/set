@@ -7,7 +7,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 function usage {
   cat <<END
-Usage: fx set x86-64|aarch64|rpi3|odroidc2|hikey960
+usage: fx set x86-64|aarch64|rpi3|odroidc2|hikey960
               [--release] [--packages p1,p2,...]
               [--goma|--no-goma] [--no-ensure-goma]
               [--goma-dir path]

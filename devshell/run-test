@@ -10,8 +10,8 @@ fx_config_read
 
 function usage {
   cat <<END
-Usage: ftest target <args>
-Builds the specified target (e.g., ftl_unittests), copies it to the target, and
+usage: fx run-test TARGET [ARGS ...]
+Builds the specified target (e.g., fxl_unittests), copies it to the target, and
 executes it. Useful for tight iterations on unittests.
 END
 }
