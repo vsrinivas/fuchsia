@@ -222,8 +222,8 @@ func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFram
 	if gtkKDE == nil {
 		return fmt.Errorf("Message 3 does not hold a GTK")
 	}
-	if bytes.Compare(rsne.Raw, hs.config.AssocRSNE.Bytes()) != 0 {
-		return fmt.Errorf("Message 3 has a different RSNE from association")
+	if bytes.Compare(rsne.Raw, hs.config.BeaconRSNE.Bytes()) != 0 {
+		return fmt.Errorf("Message 3 has a different RSNE from the Beacon one")
 	}
 	if debug {
 		log.Println("GTK: ", hex.EncodeToString(gtkKDE.GTK))
