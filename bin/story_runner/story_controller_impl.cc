@@ -79,13 +79,6 @@ void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
   xdr->Field("signal", &data->signal);
 }
 
-bool IsEqual(ModuleDataPtr m1, ModuleDataPtr m2) {
-  std::string j1, j2;
-  XdrWrite(&j1, &m1, XdrModuleData);
-  XdrWrite(&j2, &m2, XdrModuleData);
-  return j1 == j2;
-}
-
 }  // namespace
 
 // A base class meant to be used by operations that want to get blocked until
@@ -437,7 +430,7 @@ class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
         [this](ModuleDataPtr data) {
           // If what we're about to write is already present on the ledger, just
           // launch the module.
-          if (IsEqual(data.Clone(), module_data_.Clone())) {
+          if (data.Equals(module_data_)) {
             Launch();
             return;
           }
@@ -1409,7 +1402,7 @@ void StoryControllerImpl::OnPageChange(const std::string& key,
   // Check if we already have a blocked operation for this update.
   auto i = std::find_if(blocked_operations_.begin(), blocked_operations_.end(),
                         [&module_data](const auto& p) {
-                          return IsEqual(p.first.Clone(), module_data.Clone());
+                          return p.first.Equals(module_data);
                         });
   if (i != blocked_operations_.end()) {
     // For an already blocked operation, we simply continue the operation.
@@ -1419,8 +1412,7 @@ void StoryControllerImpl::OnPageChange(const std::string& key,
     return;
   }
 
-  // Control reaching here means that this update probably came from a remote
-  // device.
+  // Control reaching here means that this update came from a remote device.
   new LedgerNotificationCall(&operation_queue_, this, std::move(module_data));
 }
 
