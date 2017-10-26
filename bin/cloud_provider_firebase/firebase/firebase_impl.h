@@ -14,10 +14,10 @@
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/status.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/watch_client.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
 #include "peridot/bin/ledger/glue/socket/socket_drainer_client.h"
-#include "peridot/bin/ledger/network/network_service.h"
 
 #include <rapidjson/document.h>
 

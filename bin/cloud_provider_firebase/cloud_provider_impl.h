@@ -15,10 +15,10 @@
 #include "peridot/bin/cloud_provider_firebase/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/firebase/firebase_impl.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 #include "peridot/bin/cloud_provider_firebase/page_cloud_impl.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/network/network_service.h"
 
 namespace cloud_provider_firebase {
 

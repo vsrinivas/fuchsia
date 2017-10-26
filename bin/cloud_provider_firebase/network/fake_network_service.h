@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_NETWORK_FAKE_NETWORK_SERVICE_H_
-#define PERIDOT_BIN_LEDGER_NETWORK_FAKE_NETWORK_SERVICE_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_FAKE_NETWORK_SERVICE_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_FAKE_NETWORK_SERVICE_H_
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/bin/ledger/network/network_service.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 
 namespace ledger {
 
@@ -41,4 +41,4 @@ class FakeNetworkService : public NetworkService {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_NETWORK_FAKE_NETWORK_SERVICE_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_FAKE_NETWORK_SERVICE_H_

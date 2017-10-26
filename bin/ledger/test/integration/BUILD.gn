@@ -32,7 +32,6 @@ executable("integration") {
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/glue/socket",
-    "//peridot/bin/ledger/network:fake",
     "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/test:ledger_instance_factory",

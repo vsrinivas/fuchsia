@@ -22,6 +22,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   deps = [
@@ -43,7 +44,6 @@ executable("ledger_benchmark_put") {
     ":lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//zircon/system/ulib/trace-provider",
   ]
 
   sources = [

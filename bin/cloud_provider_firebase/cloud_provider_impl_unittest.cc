@@ -8,7 +8,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/auth_provider/test/test_auth_provider.h"
-#include "peridot/bin/ledger/network/fake_network_service.h"
+#include "peridot/bin/cloud_provider_firebase/network/fake_network_service.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 

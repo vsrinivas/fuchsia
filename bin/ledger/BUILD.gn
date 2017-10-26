@@ -14,7 +14,6 @@ group("ledger") {
     "//peridot/bin/ledger/encryption",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/glue/crypto",
-    "//peridot/bin/ledger/network",
     "//peridot/bin/ledger/storage",
     "//peridot/bin/ledger/tool",
   ]
@@ -72,12 +71,10 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/encryption/impl:unittests",
     "//peridot/bin/ledger/environment:unittests",
     "//peridot/bin/ledger/glue:unittests",
-    "//peridot/bin/ledger/network:unittests",
     "//peridot/bin/ledger/storage/impl:unittests",
     "//peridot/bin/ledger/storage/impl/btree:unittests",
     "//peridot/bin/ledger/storage/public:unittests",
     "//peridot/bin/ledger/test:unittests",
-    "//peridot/bin/ledger/test/token_provider:unittests",
     "//peridot/bin/ledger/third_party/bup:unittests",
   ]
 

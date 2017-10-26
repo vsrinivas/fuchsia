@@ -14,7 +14,6 @@
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/network/network_service.h"
 
 namespace cloud_sync {
 

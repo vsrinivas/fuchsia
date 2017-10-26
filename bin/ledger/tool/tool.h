@@ -13,7 +13,6 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
-#include "peridot/bin/ledger/network/network_service_impl.h"
 #include "peridot/bin/ledger/tool/command.h"
 
 namespace tool {

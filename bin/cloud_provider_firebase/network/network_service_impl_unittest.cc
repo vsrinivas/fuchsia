@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/network/network_service_impl.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service_impl.h"
 
 #include <memory>
 #include <utility>

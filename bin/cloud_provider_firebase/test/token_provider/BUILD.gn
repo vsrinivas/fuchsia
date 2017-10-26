@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/bin/ledger/*" ]
+visibility = [
+  "//peridot/bin/cloud_provider_firebase/*",
+  "//peridot/bin/ledger/*",
+]
 
 source_set("token_provider") {
   testonly = true
@@ -14,8 +17,8 @@ source_set("token_provider") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firebase/network",
     "//peridot/bin/ledger/callback",
-    "//peridot/bin/ledger/network",
     "//peridot/public/lib/auth/fidl",
   ]
 
@@ -39,7 +42,7 @@ source_set("unittests") {
 
   deps = [
     ":token_provider",
-    "//peridot/bin/ledger/network:fake",
+    "//peridot/bin/cloud_provider_firebase/network:fake",
     "//peridot/bin/ledger/test:lib",
     "//third_party/gtest",
     "//third_party/rapidjson",

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_IMPL_H_
-#define PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_IMPL_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_NETWORK_SERVICE_IMPL_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_NETWORK_SERVICE_IMPL_H_
 
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 #include "peridot/bin/ledger/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/callback/auto_cleanable.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
-#include "peridot/bin/ledger/network/network_service.h"
 
 namespace ledger {
 
@@ -44,4 +44,4 @@ class NetworkServiceImpl : public NetworkService {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_IMPL_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_NETWORK_SERVICE_IMPL_H_

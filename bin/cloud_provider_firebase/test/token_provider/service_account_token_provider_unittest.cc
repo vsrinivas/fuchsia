@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/test/token_provider/service_account_token_provider.h"
+#include "peridot/bin/cloud_provider_firebase/test/token_provider/service_account_token_provider.h"
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -14,8 +14,8 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "peridot/bin/cloud_provider_firebase/network/fake_network_service.h"
 #include "peridot/bin/ledger/callback/capture.h"
-#include "peridot/bin/ledger/network/fake_network_service.h"
 #include "peridot/bin/ledger/test/test_with_message_loop.h"
 
 namespace test {

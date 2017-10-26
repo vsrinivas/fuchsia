@@ -10,8 +10,8 @@
 
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/network/network_service.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 

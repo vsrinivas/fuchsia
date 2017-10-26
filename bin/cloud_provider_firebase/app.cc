@@ -11,7 +11,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/factory_impl.h"
-#include "peridot/bin/ledger/network/network_service_impl.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service_impl.h"
 
 namespace cloud_provider_firebase {
 namespace {

@@ -19,8 +19,8 @@ source_set("firebase") {
   ]
 
   public_deps = [
+    "//peridot/bin/cloud_provider_firebase/network",
     "//peridot/bin/ledger/convert",
-    "//peridot/bin/ledger/network",
     "//third_party/rapidjson",
   ]
 
@@ -48,9 +48,9 @@ source_set("unittests") {
     ":firebase",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firebase/network:fake",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/glue/socket",
-    "//peridot/bin/ledger/network:fake",
     "//peridot/bin/ledger/test:lib",
     "//third_party/gtest",
   ]

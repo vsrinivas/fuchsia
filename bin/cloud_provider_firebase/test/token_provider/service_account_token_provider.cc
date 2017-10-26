@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/test/token_provider/service_account_token_provider.h"
+#include "peridot/bin/cloud_provider_firebase/test/token_provider/service_account_token_provider.h"
 
 #include <openssl/bio.h>
 #include <openssl/digest.h>

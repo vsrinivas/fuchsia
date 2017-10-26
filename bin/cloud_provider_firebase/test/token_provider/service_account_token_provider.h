@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
-#define PERIDOT_BIN_LEDGER_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
 
 #include <map>
 
 #include "lib/auth/fidl/token_provider.fidl.h"
+#include "peridot/bin/cloud_provider_firebase/network/network_service.h"
 #include "peridot/bin/ledger/callback/cancellable.h"
-#include "peridot/bin/ledger/network/network_service.h"
 
 #include "lib/fxl/macros.h"
 
@@ -65,4 +65,4 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
 
 };  // namespace test
 
-#endif  // PERIDOT_BIN_LEDGER_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TEST_TOKEN_PROVIDER_SERVICE_ACCOUNT_TOKEN_PROVIDER_H_

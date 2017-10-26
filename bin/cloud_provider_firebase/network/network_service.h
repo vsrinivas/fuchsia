@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_H_
-#define PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_NETWORK_SERVICE_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_NETWORK_SERVICE_H_
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -32,4 +32,4 @@ class NetworkService {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_NETWORK_NETWORK_SERVICE_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_NETWORK_NETWORK_SERVICE_H_

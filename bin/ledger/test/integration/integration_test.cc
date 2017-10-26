@@ -16,7 +16,6 @@
 #include "peridot/bin/ledger/callback/synchronous_task.h"
 #include "peridot/bin/ledger/glue/socket/socket_pair.h"
 #include "peridot/bin/ledger/glue/socket/socket_writer.h"
-#include "peridot/bin/ledger/network/network_service_impl.h"
 #include "peridot/bin/ledger/test/fake_token_provider.h"
 #include "peridot/bin/ledger/test/integration/test_utils.h"
 
