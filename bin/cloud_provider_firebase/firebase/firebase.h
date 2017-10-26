@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_FIREBASE_FIREBASE_H_
-#define PERIDOT_BIN_LEDGER_FIREBASE_FIREBASE_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_FIREBASE_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_FIREBASE_H_
 
 #include <functional>
 #include <string>
 #include <vector>
 
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/firebase/status.h"
-#include "peridot/bin/ledger/firebase/watch_client.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/status.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/watch_client.h"
 
 #include <rapidjson/document.h>
 
@@ -74,4 +74,4 @@ class Firebase {
 
 }  // namespace firebase
 
-#endif  // PERIDOT_BIN_LEDGER_FIREBASE_FIREBASE_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_FIREBASE_H_

@@ -7,10 +7,10 @@
 
 #include <vector>
 
+#include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/watch_client.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/record.h"
-#include "peridot/bin/ledger/firebase/firebase.h"
-#include "peridot/bin/ledger/firebase/watch_client.h"
 
 #include <rapidjson/document.h>
 

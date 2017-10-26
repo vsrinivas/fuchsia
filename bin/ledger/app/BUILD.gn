@@ -76,10 +76,6 @@ source_set("lib") {
     "sync_watcher_set.h",
   ]
 
-  public_deps = [
-    "//peridot/bin/ledger/firebase",
-  ]
-
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",

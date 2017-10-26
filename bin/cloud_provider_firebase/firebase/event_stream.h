@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_FIREBASE_EVENT_STREAM_H_
-#define PERIDOT_BIN_LEDGER_FIREBASE_EVENT_STREAM_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_EVENT_STREAM_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_EVENT_STREAM_H_
 
 #include <functional>
 #include <memory>
@@ -12,8 +12,8 @@
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/status.h"
 #include "peridot/bin/ledger/callback/destruction_sentinel.h"
-#include "peridot/bin/ledger/firebase/status.h"
 
 namespace firebase {
 
@@ -63,4 +63,4 @@ class EventStream : public fsl::SocketDrainer::Client {
 
 }  // namespace firebase
 
-#endif  // PERIDOT_BIN_LEDGER_FIREBASE_EVENT_STREAM_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_FIREBASE_EVENT_STREAM_H_

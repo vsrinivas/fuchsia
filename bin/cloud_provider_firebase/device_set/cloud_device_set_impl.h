@@ -9,9 +9,9 @@
 #include <string>
 
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/firebase.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/watch_client.h"
 #include "peridot/bin/ledger/callback/destruction_sentinel.h"
-#include "peridot/bin/ledger/firebase/firebase.h"
-#include "peridot/bin/ledger/firebase/watch_client.h"
 
 #include <rapidjson/document.h>
 

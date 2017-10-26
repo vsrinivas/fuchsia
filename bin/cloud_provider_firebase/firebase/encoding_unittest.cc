@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/firebase/encoding.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/encoding.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/utf_codecs.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"

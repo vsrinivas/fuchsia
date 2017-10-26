@@ -25,7 +25,6 @@ executable("tool") {
     "//peridot/bin/ledger/app:lib",
     "//peridot/bin/ledger/cloud_sync/impl",
     "//peridot/bin/ledger/coroutine",
-    "//peridot/bin/ledger/firebase",
     "//peridot/bin/ledger/glue/crypto",
     "//peridot/bin/ledger/storage/impl:lib",
   ]

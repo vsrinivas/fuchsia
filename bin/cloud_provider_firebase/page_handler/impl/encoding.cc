@@ -7,8 +7,8 @@
 #include <algorithm>
 
 #include "lib/fxl/logging.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/encoding.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
-#include "peridot/bin/ledger/firebase/encoding.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>

@@ -10,10 +10,10 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/encoding.h"
+#include "peridot/bin/cloud_provider_firebase/firebase/status.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/encoding.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
-#include "peridot/bin/ledger/firebase/encoding.h"
-#include "peridot/bin/ledger/firebase/status.h"
 
 namespace cloud_provider_firebase {
 namespace {

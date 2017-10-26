@@ -11,7 +11,6 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/convert/convert.h"
-#include "peridot/bin/ledger/firebase/firebase_impl.h"
 #include "peridot/bin/ledger/glue/crypto/rand.h"
 
 namespace cloud_sync {
