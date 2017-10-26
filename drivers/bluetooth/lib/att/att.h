@@ -259,6 +259,9 @@ constexpr OpCode kReadMultipleResponse = 0x0F;
 constexpr OpCode kReadByGroupTypeRequest = 0x10;
 constexpr OpCode kReadByGroupTypeResponse = 0x11;
 
+// (see Vol 3, Part F, 3.4.4.10)
+constexpr uint8_t kMaxReadByGroupTypeValueLength = 251;
+
 // The Read By Group Type and Read By Type requests use identical payloads.
 template <UUIDType Format>
 using ReadByGroupTypeRequestParams = ReadByTypeRequestParams<Format>;

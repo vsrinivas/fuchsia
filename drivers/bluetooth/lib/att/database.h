@@ -65,11 +65,32 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
   // false if no such grouping was found.
   bool RemoveGrouping(Handle start_handle);
 
+  // Finds attribute groupings within the range defined by |start_handle| and
+  // |end_handle| that match |group_type|. This method will include as many
+  // matching groupings as possible in accordance with the Read By Group Type
+  // Request specification (see Vol 3, Part F, 3.4.4.9).
+  //
+  // |max_payload_size| is used to prevent unnecessary traversal by only
+  // including results that can be written in a single ATT packet.
+  //
+  // If |out_results| contains a single attribute and the value is larger than
+  // kMaxReadByGroupTypeValueLength, then the response PDU should contain a
+  // partial value. Otherwise, it can be assumed that all attribute values will
+  // fit within a with the given |max_payload_size|.
+  //
+  // The results are returned in ascending order of handle value.
+  //
+  // The returned error code can be used in an Error Response PDU.
+  ErrorCode ReadByGroupType(Handle start_handle,
+                            Handle end_handle,
+                            const common::UUID& group_type,
+                            uint16_t max_payload_size,
+                            std::list<AttributeGrouping*>* out_results);
+
   const std::list<AttributeGrouping>& groupings() const { return groupings_; }
 
   // TODO(armansito): Add lookup functions:
   //   * FindAttribute(Handle);
-  //   * ReadByGroupType
   //   * ReadByType
   //   * FindByTypeValue
   //   * FindInformation
