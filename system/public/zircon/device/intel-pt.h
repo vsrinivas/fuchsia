@@ -20,6 +20,8 @@ __BEGIN_CDECLS
 #error "unsupported architecture"
 #endif
 
+#define IPT_API_VERSION 0
+
 #define IPT_MSR_BITS(len, shift) (((1ULL << (len)) - 1) << (shift))
 
 // Bits in the IA32_RTIT_CTL MSR.
