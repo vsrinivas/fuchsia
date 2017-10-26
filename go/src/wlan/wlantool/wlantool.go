@@ -5,9 +5,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"app/context"
@@ -72,12 +72,19 @@ func (a *ToolApp) Connect(ssid string, passPhrase string, seconds uint8) {
 	}
 }
 
-func usage(progname string) {
-	fmt.Printf("usage: %v %v [<timeout>]\n", progname, cmdScan)
-	fmt.Printf("       %v %v <ssid> [<passphrase> <scan interval>]\n", progname, cmdConnect)
+var Usage = func() {
+	fmt.Printf("Usage: %v %v [-t <timeout>]\n", os.Args[0], cmdScan)
+	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] ssid\n", os.Args[0], cmdConnect)
 }
 
 func main() {
+	scanFlagSet := flag.NewFlagSet("scan", flag.ExitOnError)
+	scanTimeout := scanFlagSet.Int("t", 0, "scan timeout (1 - 255 seconds)")
+
+	connectFlagSet := flag.NewFlagSet("connect", flag.ExitOnError)
+	connectScanTimeout := connectFlagSet.Int("t", 0, "scan timeout (1 to 255 seconds)")
+	connectPassPhrase := connectFlagSet.String("p", "", "pass-phrase (8 to 63 ASCII characters")
+
 	a := &ToolApp{ctx: context.CreateFromStartupInfo()}
 	r, p := a.wlan.NewRequest(bindings.GetAsyncWaiter())
 	a.wlan = p
@@ -85,69 +92,61 @@ func main() {
 	a.ctx.ConnectToEnvService(r)
 
 	if len(os.Args) < 2 {
-		usage(os.Args[0])
+		Usage()
 		return
 	}
 
 	cmd := os.Args[1]
 	switch cmd {
 	case cmdScan:
-		if len(os.Args) == 3 {
-			i, err := strconv.ParseInt(os.Args[2], 10, 8)
-			if err != nil {
-				fmt.Println("Error:", err)
-			} else {
-				a.Scan(uint8(i))
-			}
-		} else {
-			a.Scan(0)
+		scanFlagSet.Parse(os.Args[2:])
+		if *scanTimeout != 0 && !IsValidTimeout(*scanTimeout) {
+			scanFlagSet.PrintDefaults()
+			return
 		}
+		if scanFlagSet.NArg() != 0 {
+			Usage()
+			return
+		}
+		a.Scan(uint8(*scanTimeout))
 	case cmdConnect:
-		if len(os.Args) < 3 || len(os.Args) > 5 {
-			usage(os.Args[0])
+		connectFlagSet.Parse(os.Args[2:])
+		if *connectScanTimeout != 0 && !IsValidTimeout(*connectScanTimeout) {
+			connectFlagSet.PrintDefaults()
 			return
 		}
-
-		ssid := os.Args[2]
-		passPhrase := ""
-		scanInterval := uint8(0)
-
-		// Read optional arguments. One at a time. If an argument was parsed successfully, proceed in
-		// argument list.
-		nextArgsIdx := 3
-		if len(os.Args) > nextArgsIdx && IsValidPSKPassPhrase(os.Args[nextArgsIdx]) {
-			passPhrase = os.Args[nextArgsIdx]
-			nextArgsIdx++
-		}
-
-		if len(os.Args) > nextArgsIdx {
-			i, err := strconv.ParseInt(os.Args[nextArgsIdx], 10, 8)
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			scanInterval = uint8(i)
-			nextArgsIdx++
-		}
-
-		// If one of the optional arguments was not parsed correctly, show error.
-		if nextArgsIdx != len(os.Args) {
-			usage(os.Args[0])
+		if *connectPassPhrase != "" && !IsValidPSKPassPhrase(*connectPassPhrase) {
+			connectFlagSet.PrintDefaults()
 			return
 		}
-		a.Connect(ssid, passPhrase, scanInterval)
+		if connectFlagSet.NArg() != 1 {
+			Usage()
+			return
+		}
+		ssid := connectFlagSet.Arg(0)
+		a.Connect(ssid, *connectPassPhrase, uint8(*connectScanTimeout))
 	default:
-		usage(os.Args[0])
+		Usage()
 	}
+}
+
+func IsValidTimeout(timeout int) bool {
+	if timeout < 1 || timeout > 255 {
+		fmt.Println("Timeout must be 1 to 255 seconds")
+		return false
+	}
+	return true
 }
 
 func IsValidPSKPassPhrase(passPhrase string) bool {
 	// len(s) can be used because PSK always operates on ASCII characters.
 	if len(passPhrase) < 8 || len(passPhrase) > 63 {
+		fmt.Println("Pass phrase must be 8 to 63 characters")
 		return false
 	}
 	for _, c := range passPhrase {
 		if c < 32 || c > 126 {
+			fmt.Println("Pass phrase must be ASCII characters")
 			return false
 		}
 	}

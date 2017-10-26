@@ -146,7 +146,7 @@ go_binary("wlanstack_bin") {
 }
 
 go_binary("wlantool_bin") {
-  output_name = "wlantool"
+  output_name = "wlan"
   gopackage = "wlantool"
   deps = [
     "//garnet/public/lib/app/fidl",
@@ -216,7 +216,7 @@ package("wlantool") {
   ]
 
   binaries = [ {
-        name = "wlantool"
+        name = "wlan"
       } ]
 }
 
