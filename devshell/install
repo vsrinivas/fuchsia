@@ -10,6 +10,6 @@ fx_config_read
 
 "${FUCHSIA_DIR}/scripts/installer/build-installable-userfs.sh" -b "${FUCHSIA_BUILD_DIR}"
 echo "After netbooting, please run 'install-fuchsia' on the device to complete the installation."
-"${FUCHSIA_OUT_DIR}/build-zircon/tools/bootserver" \
+"${ZIRCON_TOOLS_DIR}/bootserver" \
   "${ZIRCON_BUILD_DIR}/zircon.bin" \
   "${FUCHSIA_BUILD_DIR}/installer.bootfs"

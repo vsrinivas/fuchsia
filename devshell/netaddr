@@ -4,9 +4,10 @@
 # found in the LICENSE file.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
 
-"${ZIRCON_TOOLS_DIR}/bootserver" \
-  "${ZIRCON_BUILD_DIR}/zircon.bin" \
-  "${FUCHSIA_BUILD_DIR}/user.bootfs" \
-  "$@"
+# We want to give the user time to accept Darwin's firewall dialog.
+if [[ "$(uname -s)" = "Darwin" ]]; then
+  "${ZIRCON_TOOLS_DIR}/netaddr" "$@"
+else
+  "${ZIRCON_TOOLS_DIR}/netaddr" --nowait "$@"
+fi

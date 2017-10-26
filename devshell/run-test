@@ -1,0 +1,29 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx_config_read
+
+function usage {
+  cat <<END
+Usage: ftest target <args>
+Builds the specified target (e.g., ftl_unittests), copies it to the target, and
+executes it. Useful for tight iterations on unittests.
+END
+}
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+target="$1"
+
+fx_command_run build "${target}"
+fx_command_run cp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
+shift
+fx_command_run sh "/tmp/${target}" "$@"

@@ -6,4 +6,4 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx_config_read
 
-"${FUCHSIA_OUT_DIR}/build-zircon/tools/loglistener" "$@"
+"${ZIRCON_TOOLS_DIR}/loglistener" "$@"
