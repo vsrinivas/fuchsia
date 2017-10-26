@@ -219,22 +219,18 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
   }
 
   void CollectConflicts(ledger::PageChange* const change, const bool left) {
-    FXL_LOG(INFO) << "Diff " << (left ? "left" : "right");
 
     for (auto& entry : change->changes) {
       const std::string key = to_string(entry->key);
 
-      FXL_LOG(INFO) << " " << key;
 
       if (!entry->value.is_valid()) {
-        FXL_LOG(INFO) << " " << key << " no value";
         // TODO(mesch)
         continue;
       }
 
       std::string value;
       if (!fsl::StringFromVmo(entry->value, &value)) {
-        FXL_LOG(INFO) << " " << key << " error value";
         continue;
       }
 
@@ -243,7 +239,6 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
         conflicts_[key]->key = key;
       }
 
-      FXL_LOG(INFO) << " " << key << " " << value;
 
       if (left) {
         conflicts_[key]->has_left = true;
@@ -257,9 +252,9 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
   void LogEntries(const std::string& headline,
                   const std::vector<ledger::EntryPtr>& entries) {
-    FXL_LOG(INFO) << "Entries " << headline;
+    FXL_VLOG(4) << "Entries " << headline;
     for (const ledger::EntryPtr& entry : entries) {
-      FXL_LOG(INFO) << " - " << to_string(entry->key);
+      FXL_VLOG(4) << " - " << to_string(entry->key);
     }
   }
 
