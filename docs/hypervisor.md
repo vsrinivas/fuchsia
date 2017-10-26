@@ -3,6 +3,10 @@
 The Zircon hypervisor can be used to run a guest operating system. It is a work
 in progress.
 
+These instructions will guide you through creating minimal Zircon and Linux
+guests. For instructions on building a more comprehensive linux guest system
+see [Hypervisor Benchmarking](hypervisor/benchmarking.md).
+
 ## Running a guest
 
 To run a guest using the hypervisor, you must create a bootfs image containing
