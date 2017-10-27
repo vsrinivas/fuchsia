@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 extern crate ddk_rs;
-extern crate fuchsia_zircon_sys;
 extern crate fuchsia_zircon;
 use fuchsia_zircon::Status;
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon::sys as sys;
 use ddk_rs as ddk;
 
 // This is a non-bindable device that can be read from and written to.
@@ -37,7 +36,7 @@ impl ddk::DeviceOps for SimpleDevice {
             return Ok(0);
         }
         if buf.len() < std::mem::size_of_val(&self.val) {
-            return Err(Status::ErrBufferTooSmall);
+            return Err(Status::BUFFER_TOO_SMALL);
         }
         let u64buf: &mut u64 = unsafe { &mut *(buf.as_mut_ptr() as *mut u64) };
         *u64buf = self.val;
@@ -59,6 +58,6 @@ pub extern fn simple_init(mut _out_ctx: *mut *mut u8) -> sys::zx_status_t {
     let simple = Box::new(SimpleDevice::new());
     match ddk::add_device(simple, ddk::DEVICE_ADD_NON_BINDABLE) {
         Ok(device) => { _out_ctx = Box::into_raw(Box::new(Box::new(device))) as *mut *mut u8; sys::ZX_OK }
-        Err(error) => error as sys::zx_status_t
+        Err(error) => error.into_raw()
     }
 }
