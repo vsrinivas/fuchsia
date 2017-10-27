@@ -130,7 +130,7 @@ extern fn ddk_get_protocol(ctx: *mut u8, proto_id: u32, protocol: *mut u8) -> sy
 
 fn open_result(ret: Result<Option<Device>, Status>, dev_out: *mut *mut ddk_sys::zx_device_t) -> sys::zx_status_t {
     match ret {
-      Err(status) => status.into_raw() as sys::zx_status_t,
+      Err(status) => status.into_raw(),
       Ok(None) => sys::ZX_OK,
       Ok(Some(new_device)) => {
         // TODO(qwandor): This assumes that the implementor of DeviceOps.open has already called
