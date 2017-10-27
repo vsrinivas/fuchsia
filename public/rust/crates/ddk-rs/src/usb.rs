@@ -11,7 +11,7 @@ use Device;
 pub struct UsbProtocol(usb_protocol_t);
 
 impl UsbProtocol {
-    pub fn get(device: Device) -> Result<UsbProtocol, Status> {
+    pub fn get(device: &Device) -> Result<UsbProtocol, Status> {
         let mut protocol: usb_protocol_t = Default::default();
         let status = unsafe {
             device_get_protocol(device.device, ddk_sys::ZX_PROTOCOL_USB,
