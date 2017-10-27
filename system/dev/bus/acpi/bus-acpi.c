@@ -161,17 +161,25 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object,
         return AE_CTRL_TERMINATE;
     }
 
-    // get device type (only looking for i2c-hid right now)
-    ACPI_BUFFER buffer = {
-        .Length = ACPI_ALLOCATE_BUFFER,
-    };
-    ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_CID", NULL, &buffer);
+    // get device type (only looking for i2c-hid and tpm right now)
+    ACPI_DEVICE_INFO* info = NULL;
+    ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
     if (acpi_status == AE_OK) {
-        ACPI_OBJECT* obj = buffer.Pointer;
-        if (!memcmp(obj->String.Pointer, I2C_HID_CID_STRING, CID_LENGTH)) {
-            ctx->data->protocol_id = ZX_PROTOCOL_I2C_HID;
+        // These length fields count the trailing NUL.
+        if ((info->Valid & ACPI_VALID_HID) && info->HardwareId.Length <= HID_LENGTH + 1) {
+            if (!strncmp(info->HardwareId.String, GOOGLE_TPM_HID_STRING, HID_LENGTH)) {
+                ctx->data->protocol_id = ZX_PROTOCOL_TPM;
+            }
         }
-        ACPI_FREE(obj);
+        if ((info->Valid & ACPI_VALID_CID) && info->CompatibleIdList.Count > 0) {
+            ACPI_PNP_DEVICE_ID* id = &info->CompatibleIdList.Ids[0];
+            if (id->Length <= CID_LENGTH + 1) {
+                if (!strncmp(id->String, I2C_HID_CID_STRING, CID_LENGTH)) {
+                    ctx->data->protocol_id = ZX_PROTOCOL_I2C_HID;
+                }
+            }
+        }
+        ACPI_FREE(info);
     }
 
     // call _CRS to get i2c info

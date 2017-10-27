@@ -741,19 +741,17 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent,
                child->bus_master, child->ten_bit, child->address, child->bus_speed,
                child->protocol_id);
 
-        if (child->protocol_id == ZX_PROTOCOL_I2C_HID) {
-            if (bus_speed && bus_speed != child->bus_speed) {
-                zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)\n",
-                        bus_speed, child->bus_speed);
-            }
-            if (!bus_speed) {
-                intel_serialio_i2c_set_bus_frequency(parent, child->bus_speed);
-                bus_speed = child->bus_speed;
-            }
-            intel_serialio_i2c_add_slave(parent,
-                    child->ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS,
-                    child->address);
+        if (bus_speed && bus_speed != child->bus_speed) {
+            zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)\n",
+                    bus_speed, child->bus_speed);
         }
+        if (!bus_speed) {
+            intel_serialio_i2c_set_bus_frequency(parent, child->bus_speed);
+            bus_speed = child->bus_speed;
+        }
+        intel_serialio_i2c_add_slave(parent,
+                child->ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS,
+                child->address);
         child += 1;
     }
 }
