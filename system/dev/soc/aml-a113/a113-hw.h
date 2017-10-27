@@ -18,8 +18,18 @@
 #define A113_GPIOZ(n) (A113_GPIOZ_START + n)
 #define A113_GPIOAO(n) (A113_GPIOAO_START + n)
 
+#define GPIO_CTRL_OFFSET   0x0
+#define GPIO_OUTPUT_OFFSET 0x1
+#define GPIO_INPUT_OFFSET  0x2
 
-// Pinmux Control Register Offsets
+#define GPIOAO_INPUT_OFFSET 0x1
+
+#define GPIO_REG0_EN_N 0x0c
+#define GPIO_REG1_EN_N 0x0f
+#define GPIO_REG2_EN_N 0x12
+#define GPIO_REG3_EN_N 0x15
+#define GPIO_REG4_EN_N 0x18
+
 #define PERIPHS_PIN_MUX_0 0x20
 #define PERIPHS_PIN_MUX_1 0x21
 #define PERIPHS_PIN_MUX_2 0x22
@@ -38,5 +48,6 @@
 // GPIO AO registers live in a seperate register bank.
 #define AO_RTI_PIN_MUX_REG0 0x05
 #define AO_RTI_PIN_MUX_REG1 0x06
+#define AO_GPIO_O_EN_N      0x09
 
 #define A113_PINMUX_ALT_FN_MAX 15

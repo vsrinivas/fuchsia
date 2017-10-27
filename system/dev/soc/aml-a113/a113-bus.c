@@ -21,6 +21,7 @@
 #include <zircon/assert.h>
 
 #include "a113-bus.h"
+#include "a113-hw.h"
 #include <hw/reg.h>
 
 static zx_status_t a113_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
@@ -45,6 +46,9 @@ static zx_status_t a113_bus_get_protocol(void* ctx, uint32_t proto_id, void* out
     case ZX_PROTOCOL_USB_MODE_SWITCH:
         memcpy(out, &bus->usb_mode_switch, sizeof(bus->usb_mode_switch));
         return ZX_OK;
+    case ZX_PROTOCOL_GPIO:
+        memcpy(out, &bus->gpio, sizeof(bus->gpio));
+        return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -56,6 +60,9 @@ static pbus_interface_ops_t a113_bus_bus_ops = {
 
 static void a113_bus_release(void* ctx) {
     a113_bus_t* bus = ctx;
+
+    a113_gpio_release(bus);
+
     free(bus);
 }
 
@@ -65,6 +72,8 @@ static zx_protocol_device_t a113_bus_device_protocol = {
 };
 
 static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
+    zx_status_t status;
+
     a113_bus_t* bus = calloc(1, sizeof(a113_bus_t));
     if (!bus) {
         return ZX_ERR_NO_MEMORY;
@@ -73,6 +82,12 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &bus->pbus) != ZX_OK) {
         free(bus);
         return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Note: We need to do this before adding this device because this method
+    //       sets up the GPIO protocol as well.
+    if ((status = a113_gpio_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "a113_gpio_init failed: %d\n", status);
     }
 
     bus->usb_mode_switch.ops = &usb_mode_switch_ops;
@@ -86,7 +101,7 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    zx_status_t status = device_add(parent, &args, NULL);
+    status = device_add(parent, &args, NULL);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -101,14 +116,6 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     }
     if ((status = a113_audio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "a113_audio_init failed: %d\n", status);
-    }
-
-    // Initialize Pin mux subsystem.
-    status = a113_init_pinmux(bus);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "a113_bus_bind: failed to initialize pinmux subsystem, "
-                "rc = %d\n", status);
-        // Don't think this is worthy of returning failure in bind.
     }
 
     return ZX_OK;
