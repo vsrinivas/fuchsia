@@ -70,7 +70,7 @@ static gpio_protocol_ops_t gpio_ops = {
 };
 
 static zx_status_t hi3660_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    *out_mode = USB_MODE_DEVICE;
+    *out_mode = USB_MODE_HOST;
     return ZX_OK;
 }
 
