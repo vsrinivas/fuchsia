@@ -62,19 +62,19 @@ device_runner --device_shell=dev_device_shell --device_shell_args=--user=dummy_u
 ## Module URLs
 
 Applications are generally referenced by URLs. If the application binary is in a
-location where application manager expects it (specifically `/system/apps`)
+location where application manager expects it (e.g., `/system/bin`)
 the URL can be relative. Otherwise, the URL should be relative with an absolute
 path, or absolute altogether. For example
 (from [test runner invocation](tests/parent_child/test.sh)):
 
 ```
-device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_child/parent_module
+device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/parent_child/parent_module
 ```
 
 or even more generally:
 
 ```
-device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:///system/apps/modular_tests/parent_child/parent_module
+device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:///system/test/modular_tests/parent_child/parent_module
 ```
 
 [fuchsia]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/README.md

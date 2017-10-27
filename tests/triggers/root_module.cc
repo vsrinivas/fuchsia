@@ -20,7 +20,7 @@ namespace {
 // down our test.
 constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
-    "file:///system/apps/modular_tests/trigger_test_agent";
+    "file:///system/test/modular_tests/trigger_test_agent";
 
 class ParentApp {
  public:

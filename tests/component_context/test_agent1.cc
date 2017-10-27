@@ -15,7 +15,7 @@ using modular::testing::TestPoint;
 namespace {
 
 constexpr char kTest2Agent[] =
-    "file:///system/apps/modular_tests/component_context_test_agent2";
+    "file:///system/test/modular_tests/component_context_test_agent2";
 
 class TestAgentApp : modular::testing::Agent1Interface {
  public:

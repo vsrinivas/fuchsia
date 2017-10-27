@@ -5,4 +5,4 @@
 
 set -e
 
-/system/test/run_integration_tests --test_file=/system/apps/modular_tests/modular_tests.json "$@"
+/system/test/run_integration_tests --test_file=/system/test/modular_tests/modular_tests.json "$@"

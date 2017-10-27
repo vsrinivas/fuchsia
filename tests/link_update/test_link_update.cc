@@ -78,7 +78,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     story_provider_->CreateStory(
-        "file:///system/apps/modular_tests/null_module",
+        "file:///system/test/modular_tests/null_module",
         [this](const fidl::String& story_id) {
           story_create_.Pass();
           GetController(story_id);

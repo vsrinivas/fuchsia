@@ -20,7 +20,7 @@ namespace {
 // down our test.
 constexpr int kTimeoutMilliseconds = 5000;
 constexpr char kProposalId[] =
-    "file:///system/apps/moudlar_tests/suggestion_proposal_test#proposal";
+    "file:///system/bin/modular_tests/suggestion_proposal_test#proposal";
 
 class SuggestionApp {
  public:

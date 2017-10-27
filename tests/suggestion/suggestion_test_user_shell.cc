@@ -49,7 +49,7 @@ class SuggestionTestUserShellApp
         20 /* arbitrarily chosen */);
 
     story_provider_->CreateStory(
-        "file:///system/apps/modular_tests/suggestion_proposal_test_module",
+        "file:///system/test/modular_tests/suggestion_proposal_test_module",
         [this](const fidl::String& story_id) { StartStoryById(story_id); });
     initialized_.Pass();
   }

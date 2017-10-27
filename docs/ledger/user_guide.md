@@ -91,9 +91,9 @@ displayed in red.
 
 ### Parameters
 
-* **REPOSITORY_PATH**: The Ledger repository path  
+* **REPOSITORY_PATH**: The Ledger repository path
   (e.g. `/data/modular/<USER_ID>/LEDGER/content`)
-* **APP_NAME**: The application name associated with the Ledger instance  
-  (e.g. `modular_user_runner` or `file:///system/apps/<user_app_name>`)
+* **APP_NAME**: The application name associated with the Ledger instance
+  (e.g. `modular_user_runner` or `file:///system/bin/<user_app_name>`)
 * **PAGE_ID**: The page id in hex value
 * **COMMIT_ID**: The commit id in hex value

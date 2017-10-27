@@ -23,7 +23,7 @@
 
 namespace {
 
-const char kNullModuleUrl[] = "file:///system/apps/modular_tests/null_module";
+const char kNullModuleUrl[] = "file:///system/test/modular_tests/null_module";
 
 // A simple module watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.

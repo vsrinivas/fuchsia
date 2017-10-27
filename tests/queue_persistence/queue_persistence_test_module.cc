@@ -19,7 +19,7 @@ namespace {
 // down our test.
 constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
-    "file:///system/apps/modular_tests/queue_persistence_test_agent";
+    "file:///system/test/modular_tests/queue_persistence_test_agent";
 
 class ParentApp {
  public:

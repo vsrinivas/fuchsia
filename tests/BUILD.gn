@@ -6,7 +6,6 @@ import("//packages/package.gni")
 
 package("modular_tests") {
   testonly = true
-  app = true
 
   deps = [
     ":modular_tests.json",
@@ -27,9 +26,34 @@ package("modular_tests") {
     "user_shell",
   ]
 
-  # These should probably be tests, but they were previously in
-  # the "apps" directory rather than the tests directory.
   binaries = [
+    {
+      name = "suggestion_test_user_shell"
+    },
+    {
+      name = "test_last_focus_time"
+    },
+    {
+      name = "test_link_data"
+    },
+    {
+      name = "test_link_update"
+    },
+    {
+      name = "test_story_importance"
+    },
+    {
+      name = "test_story_update"
+    },
+    {
+      name = "dev_token_manager"
+    },
+    {
+      name = "test_user_shell"
+    },
+  ]
+
+  tests = [
     {
       name = "agent_trigger_test"
       dest = "modular_tests/agent_trigger_test"
@@ -93,30 +117,6 @@ package("modular_tests") {
     {
       name = "suggestion_proposal_test_module"
       dest = "modular_tests/suggestion_proposal_test_module"
-    },
-    {
-      name = "suggestion_test_user_shell"
-    },
-    {
-      name = "test_last_focus_time"
-    },
-    {
-      name = "test_link_data"
-    },
-    {
-      name = "test_link_update"
-    },
-    {
-      name = "test_story_importance"
-    },
-    {
-      name = "test_story_update"
-    },
-    {
-      name = "dev_token_manager"
-    },
-    {
-      name = "test_user_shell"
     },
     {
       name = "trigger_test_agent"

@@ -22,7 +22,7 @@
 
 namespace {
 
-constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/null_module";
+constexpr char kModuleUrl[] = "file:///system/test/modular_tests/null_module";
 
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the StoryInfo it receives, and pushes the

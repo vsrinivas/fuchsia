@@ -26,10 +26,10 @@ namespace {
 constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(15);
 
 constexpr char kTest1Agent[] =
-    "file:///system/apps/modular_tests/component_context_test_agent1";
+    "file:///system/test/modular_tests/component_context_test_agent1";
 
 constexpr char kUnstoppableAgent[] =
-    "file:///system/apps/modular_tests/component_context_unstoppable_agent";
+    "file:///system/test/modular_tests/component_context_unstoppable_agent";
 
 constexpr int kTotalSimultaneousTests = 2;
 

@@ -31,7 +31,7 @@
 
 namespace {
 
-constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/null_module";
+constexpr char kModuleUrl[] = "file:///system/test/modular_tests/null_module";
 constexpr char kTopic[] = "location/home_work";
 
 // A simple story watcher implementation that invokes a "continue" callback when
