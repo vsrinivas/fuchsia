@@ -69,7 +69,7 @@ const char* kManifest1 = R"END(
   {
     "binary": "m1_binary1",
     "local_name": "m1_local_name1",
-    "verb": "Navigate",
+    "verb": "com.google.fuchsia.navigate.v1",
     "noun_constraints": [
       {
         "name": "start",
@@ -84,7 +84,7 @@ const char* kManifest1 = R"END(
   {
     "binary": "m1_binary2",
     "local_name": "m1_local_name2",
-    "verb": "Pick",
+    "verb": "com.google.fuchsia.pick.v1",
     "noun_constraints": [
       {
         "name": "thing",
@@ -120,7 +120,7 @@ TEST_F(ModuleManifestRepositoryTest, All) {
   ASSERT_TRUE(RunLoopUntil([this]() { return entries().size() == 2; }));
   EXPECT_EQ("m1_binary1", entries()[0].binary);
   EXPECT_EQ("m1_local_name1", entries()[0].local_name);
-  EXPECT_EQ("Navigate", entries()[0].verb);
+  EXPECT_EQ("com.google.fuchsia.navigate.v1", entries()[0].verb);
   EXPECT_EQ(2lu, entries()[0].noun_constraints.size());
   EXPECT_EQ("start", entries()[0].noun_constraints[0].name);
   EXPECT_EQ(2lu, entries()[0].noun_constraints[0].types.size());
@@ -132,7 +132,7 @@ TEST_F(ModuleManifestRepositoryTest, All) {
 
   EXPECT_EQ("m1_binary2", entries()[1].binary);
   EXPECT_EQ("m1_local_name2", entries()[1].local_name);
-  EXPECT_EQ("Pick", entries()[1].verb);
+  EXPECT_EQ("com.google.fuchsia.pick.v1", entries()[1].verb);
   EXPECT_EQ(1lu, entries()[1].noun_constraints.size());
   EXPECT_EQ("thing", entries()[1].noun_constraints[0].name);
   EXPECT_EQ(1lu, entries()[1].noun_constraints[0].types.size());

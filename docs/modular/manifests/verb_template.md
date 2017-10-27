@@ -56,7 +56,7 @@ single "picked" entity.
 ```javascript
 [
   {
-    "name": "https://fuchsia.io/package/verbs/Preview",
+    "name": "com.google.fuchsia.preview.v1",
     "nouns": [
       {
         "name": "entityToPreview",
@@ -71,7 +71,7 @@ single "picked" entity.
     // larger preview, or launches a new Module / experience.
   },
   {
-    "name": "https://fuchsia.io/package/verbs/Navigate",
+    "name": "com.google.fuchsia.navigate.v1",
     "nouns": [
       {
         "name": "start",
@@ -86,7 +86,7 @@ single "picked" entity.
     "doc": "docs/navigate.md"
   },
   {
-    "name": "https://fuchsia.io/package/verbs/Pick",
+    "name": "com.google.fuchsia.pick.v1",
     "nouns": [
       {
         "name": "source",
@@ -110,7 +110,7 @@ Let's go through the properties that make up a verb template.
 ### verb name
 
 ```javascript
-"name": "https://fuchsia.io/package/verbs/Preview",
+"name": "com.google.fuchsia.preview.v1",
 ```
 > TODO(thatguy): This is a machine-readable name, not a human-readable name. Add
 > something for humans that supports localization.

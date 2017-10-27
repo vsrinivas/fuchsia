@@ -16,7 +16,7 @@ const char* kManifest = R"END(
   {
     "binary": "module1",
     "local_name": "module1",
-    "verb": "Navigate",
+    "verb": "com.google.fuchsia.navigate.v1",
     "noun_constraints": [
       {
         "name": "start",
@@ -31,7 +31,7 @@ const char* kManifest = R"END(
   {
     "binary": "module2",
     "local_name": "module2",
-    "verb": "Navigate",
+    "verb": "com.google.fuchsia.navigate.v1",
     "noun_constraints": [
       {
         "name": "start",
@@ -42,7 +42,7 @@ const char* kManifest = R"END(
   {
     "binary": "module3",
     "local_name": "module3",
-    "verb": "Exist",
+    "verb": "com.google.fuchsia.exist.vinfinity",
     "noun_constraints": [
       {
         "name": "with",
@@ -136,7 +136,7 @@ TEST_F(ModuleResolverImplTest, Null) {
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
   auto daisy = modular::Daisy::New();
-  daisy->verb = "Navigate";
+  daisy->verb = "com.google.fuchsia.navigate.v1";
   daisy->nouns.mark_non_null();
 
   FindModules(std::move(daisy));

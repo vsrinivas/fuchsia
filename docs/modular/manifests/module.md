@@ -23,7 +23,7 @@ of `verb`s.
   {
     "binary": "bin/myPersonPreviewer",
     "local_name": "previewPerson",
-    "verb": "https://fuchsia.io/package/coreVerbs/Preview",
+    "verb": "com.google.fuchsia.preview.v1",
     "noun_constraints": [
       {
         "name": "entityToPreview",
@@ -37,7 +37,7 @@ of `verb`s.
   {
     "binary": "bin/myContactPicker",
     "local_name": "pickContact",
-    "verb": "https://fuchsia.io/package/coreVerbs/Pick",
+    "verb": "com.google.fuchsia.pick.v1",
     "noun_constraints": [
       {
         "name": "source",
@@ -85,7 +85,7 @@ call. (**TODO(thatguy)**: create and document this in FIDL file)
 #### verb
 
 ```javascript
-"verb": "https://fuchsia.io/package/coreVerbs/Preview",
+"verb": "com.google.fuchsia.preview.v1",
 ```
 > NOTE: The exactly format of the verb attribute is likely to evolve.
 
