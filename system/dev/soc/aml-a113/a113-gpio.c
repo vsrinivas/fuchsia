@@ -136,14 +136,14 @@ static pinmux_block_t pinmux_blocks[] = {
         .start_pin = (A113_GPIOAO_START + 0),
         .pin_count = 8,
         .ctrl_block_offset = AO_RTI_PIN_MUX_REG0,
-        .ctrl_block_base_phys = GPIOAO_BASE_PHYS,
+        .ctrl_block_base_phys = GPIOAO_BASE_PAGE,
         .lock = MTX_INIT,
     },
     {
         .start_pin = (A113_GPIOAO_START + 8),
         .pin_count = 6,
         .ctrl_block_offset = AO_RTI_PIN_MUX_REG1,
-        .ctrl_block_base_phys = GPIOAO_BASE_PHYS,
+        .ctrl_block_base_phys = GPIOAO_BASE_PAGE,
         .lock = MTX_INIT,
     },
 };
