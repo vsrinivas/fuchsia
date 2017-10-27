@@ -93,11 +93,18 @@ pub use ddk_sys::{
     DEVICE_ADD_INVISIBLE,
 };
 
-pub fn add_device(device_ops: Box<DeviceOps>, flags: AddDeviceFlags) -> Result<Device, Status> {
+pub fn add_device(device_ops: Box<DeviceOps>, parent: Option<&Device>, flags: AddDeviceFlags)
+    -> Result<Device, Status>
+{
     let device_name = device_ops.name();
     if device_name.len() > ddk_sys::ZX_DEVICE_NAME_MAX {
         return Err(Status::INVALID_ARGS)
     }
+
+    let raw_parent = match parent {
+        None => std::ptr::null_mut(),
+        Some(device) => device.device,
+    };
 
     let mut device_add_args: ddk_sys::device_add_args_t = ddk_sys::device_add_args_t::new();
     // TODO(stange): See if it's necessary to double Box device_ops.
@@ -107,8 +114,7 @@ pub fn add_device(device_ops: Box<DeviceOps>, flags: AddDeviceFlags) -> Result<D
     unsafe {
         device_add_args.ops = &mut DEVICE_OPS;
         let mut ddk_device: *mut ddk_sys::zx_device_t = std::ptr::null_mut();
-        // TODO(stange): Look into passing in parent or getting it from somewhere.
-        let ret = ddk_sys::device_add(std::ptr::null_mut(), &mut device_add_args, &mut ddk_device);
+        let ret = ddk_sys::device_add(raw_parent, &mut device_add_args, &mut ddk_device);
         match ret {
             sys::ZX_OK => Ok(Device::wrap(ddk_device)),
             _ => Err(Status::from_raw(ret)),

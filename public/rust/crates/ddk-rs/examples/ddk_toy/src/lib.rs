@@ -56,7 +56,7 @@ impl ddk::DeviceOps for SimpleDevice {
 #[no_mangle]
 pub extern fn simple_init(mut _out_ctx: *mut *mut u8) -> sys::zx_status_t {
     let simple = Box::new(SimpleDevice::new());
-    match ddk::add_device(simple, ddk::DEVICE_ADD_NON_BINDABLE) {
+    match ddk::add_device(simple, None, ddk::DEVICE_ADD_NON_BINDABLE) {
         Ok(device) => { _out_ctx = Box::into_raw(Box::new(Box::new(device))) as *mut *mut u8; sys::ZX_OK }
         Err(error) => error.into_raw()
     }
