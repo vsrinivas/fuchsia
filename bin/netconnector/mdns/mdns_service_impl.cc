@@ -45,15 +45,14 @@ void MdnsServiceImpl::PublishServiceInstance(
     const std::string& instance_name,
     IpPort port,
     const std::vector<std::string>& text) {
-  mdns_.PublishServiceInstance(service_name, instance_name, port, text);
+  mdns_.PublishServiceInstance(service_name, instance_name, port, text,
+                               [](MdnsResult result) {});
 }
 
 void MdnsServiceImpl::ResolveHostName(const fidl::String& host_name,
                                       uint32_t timeout_ms,
                                       const ResolveHostNameCallback& callback) {
   if (!MdnsNames::IsValidHostName(host_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid host name " << host_name
-                   << " in call to ResolveHostName, returning null result.";
     callback(nullptr, nullptr);
     return;
   }
@@ -73,9 +72,6 @@ void MdnsServiceImpl::SubscribeToService(
     const fidl::String& service_name,
     fidl::InterfaceRequest<MdnsServiceSubscription> subscription_request) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    FXL_LOG(ERROR)
-        << "Client supplied invalid service name " << service_name
-        << " in call to SubscribeToService, resetting subscription request.";
     subscription_request = nullptr;
     return;
   }
@@ -93,39 +89,32 @@ void MdnsServiceImpl::SubscribeToService(
   iter->second->AddBinding(std::move(subscription_request));
 }
 
-void MdnsServiceImpl::PublishServiceInstance(const fidl::String& service_name,
-                                             const fidl::String& instance_name,
-                                             uint16_t port,
-                                             fidl::Array<fidl::String> text) {
+void MdnsServiceImpl::PublishServiceInstance(
+    const fidl::String& service_name,
+    const fidl::String& instance_name,
+    uint16_t port,
+    fidl::Array<fidl::String> text,
+    const PublishServiceInstanceCallback& callback) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
-                   << " in call to PublishServiceInstance, ignoring.";
+    callback(MdnsResult::INVALID_SERVICE_NAME);
     return;
   }
 
   if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
-                   << " in call to PublishServiceInstance, ignoring.";
+    callback(MdnsResult::INVALID_INSTANCE_NAME);
     return;
   }
 
   mdns_.PublishServiceInstance(service_name, instance_name,
                                IpPort::From_uint16_t(port),
-                               text.To<std::vector<std::string>>());
+                               text.To<std::vector<std::string>>(), callback);
 }
 
 void MdnsServiceImpl::UnpublishServiceInstance(
     const fidl::String& service_name,
     const fidl::String& instance_name) {
-  if (!MdnsNames::IsValidServiceName(service_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
-                   << " in call to UnpublishServiceInstance, ignoring.";
-    return;
-  }
-
-  if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
-                   << " in call to UnpublishServiceInstance, ignoring.";
+  if (!MdnsNames::IsValidServiceName(service_name) ||
+      !MdnsNames::IsValidInstanceName(instance_name)) {
     return;
   }
 
@@ -135,34 +124,27 @@ void MdnsServiceImpl::UnpublishServiceInstance(
 void MdnsServiceImpl::AddResponder(
     const fidl::String& service_name,
     const fidl::String& instance_name,
-    fidl::InterfaceHandle<MdnsResponder> responder) {
+    fidl::InterfaceHandle<MdnsResponder> responder_handle) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
-                   << " in call to AddResponder, ignoring.";
+    auto responder = MdnsResponderPtr::Create(std::move(responder_handle));
+    responder->UpdateStatus(MdnsResult::INVALID_SERVICE_NAME);
     return;
   }
 
   if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
-                   << " in call to AddResponder, ignoring.";
+    auto responder = MdnsResponderPtr::Create(std::move(responder_handle));
+    responder->UpdateStatus(MdnsResult::INVALID_INSTANCE_NAME);
     return;
   }
 
-  mdns_.AddResponder(service_name, instance_name, std::move(responder));
+  mdns_.AddResponder(service_name, instance_name, std::move(responder_handle));
 }
 
 void MdnsServiceImpl::SetSubtypes(const fidl::String& service_name,
                                   const fidl::String& instance_name,
                                   fidl::Array<fidl::String> subtypes) {
-  if (!MdnsNames::IsValidServiceName(service_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
-                   << " in call to AddResponder, ignoring.";
-    return;
-  }
-
-  if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
-                   << " in call to AddResponder, ignoring.";
+  if (!MdnsNames::IsValidServiceName(service_name) ||
+      !MdnsNames::IsValidInstanceName(instance_name)) {
     return;
   }
 
@@ -172,15 +154,8 @@ void MdnsServiceImpl::SetSubtypes(const fidl::String& service_name,
 
 void MdnsServiceImpl::ReannounceInstance(const fidl::String& service_name,
                                          const fidl::String& instance_name) {
-  if (!MdnsNames::IsValidServiceName(service_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid service name " << service_name
-                   << " in call to AddResponder, ignoring.";
-    return;
-  }
-
-  if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    FXL_LOG(ERROR) << "Client supplied invalid instance name " << instance_name
-                   << " in call to AddResponder, ignoring.";
+  if (!MdnsNames::IsValidServiceName(service_name) ||
+      !MdnsNames::IsValidInstanceName(instance_name)) {
     return;
   }
 

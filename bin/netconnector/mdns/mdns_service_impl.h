@@ -48,17 +48,20 @@ class MdnsServiceImpl : public MdnsService {
                           fidl::InterfaceRequest<MdnsServiceSubscription>
                               subscription_request) override;
 
-  void PublishServiceInstance(const fidl::String& service_name,
-                              const fidl::String& instance_name,
-                              uint16_t port,
-                              fidl::Array<fidl::String> text) override;
+  void PublishServiceInstance(
+      const fidl::String& service_name,
+      const fidl::String& instance_name,
+      uint16_t port,
+      fidl::Array<fidl::String> text,
+      const PublishServiceInstanceCallback& callback) override;
 
   void UnpublishServiceInstance(const fidl::String& service_name,
                                 const fidl::String& instance_name) override;
 
-  void AddResponder(const fidl::String& service_name,
-                    const fidl::String& instance_name,
-                    fidl::InterfaceHandle<MdnsResponder> responder) override;
+  void AddResponder(
+      const fidl::String& service_name,
+      const fidl::String& instance_name,
+      fidl::InterfaceHandle<MdnsResponder> responder_handle) override;
 
   void SetSubtypes(const fidl::String& service_name,
                    const fidl::String& instance_name,

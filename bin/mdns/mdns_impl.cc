@@ -212,9 +212,12 @@ void MdnsImpl::Publish(const std::string& service_name,
                        const std::vector<std::string>& text) {
   std::cout << "publishing instance " << instance_name << " of service "
             << service_name << "\n";
-  mdns_service_->PublishServiceInstance(service_name, instance_name, port,
-                                        fidl::Array<fidl::String>::From(text));
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  mdns_service_->PublishServiceInstance(
+      service_name, instance_name, port, fidl::Array<fidl::String>::From(text),
+      [this](netconnector::MdnsResult result) {
+        UpdateStatus(result);
+        fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      });
 }
 
 void MdnsImpl::Unpublish(const std::string& service_name,
@@ -271,6 +274,31 @@ void MdnsImpl::HandleSubscriptionInstances(
              fidl::Array<netconnector::MdnsServiceInstancePtr> instances) {
         HandleSubscriptionInstances(version, std::move(instances));
       });
+}
+
+void MdnsImpl::UpdateStatus(netconnector::MdnsResult result) {
+  switch (result) {
+    case netconnector::MdnsResult::OK:
+      std::cout << "instance successfully published\n";
+      return;
+    case netconnector::MdnsResult::INVALID_SERVICE_NAME:
+      std::cout << "ERROR: service name is invalid\n";
+      break;
+    case netconnector::MdnsResult::INVALID_INSTANCE_NAME:
+      std::cout << "ERROR: instance name is invalid\n";
+      break;
+    case netconnector::MdnsResult::ALREADY_PUBLISHED_LOCALLY:
+      std::cout << "ERROR: instance was already published by this host\n";
+      break;
+    case netconnector::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET:
+      std::cout << "ERROR: instance was already published by another "
+                   "host on the subnet\n";
+      break;
+      // The default case has been deliberately omitted here so that this switch
+      // statement will be updated whenever the |MdnsResult| enum is changed.
+  }
+
+  fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 void MdnsImpl::GetPublication(bool query,

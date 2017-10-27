@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "garnet/bin/netconnector/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/instance_prober.h"
 #include "garnet/bin/netconnector/mdns/mdns_agent.h"
 #include "garnet/bin/netconnector/mdns/mdns_transceiver.h"
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
@@ -38,6 +39,7 @@ class Mdns : public MdnsAgent::Host {
                          const SocketAddress& v4_address,
                          const SocketAddress& v6_address,
                          const std::vector<std::string>& text)>;
+  using PublishCallback = std::function<void(MdnsResult result)>;
 
   Mdns();
 
@@ -73,7 +75,8 @@ class Mdns : public MdnsAgent::Host {
   bool PublishServiceInstance(const std::string& service_name,
                               const std::string& instance_name,
                               IpPort port,
-                              const std::vector<std::string>& text);
+                              const std::vector<std::string>& text,
+                              const PublishCallback& callback);
 
   // Stops publishing the indicated service instance. Returns true if and only
   // if the instance existed.
@@ -166,6 +169,12 @@ class Mdns : public MdnsAgent::Host {
   // Adds an agent and, if |started_|, starts it.
   void AddAgent(std::shared_ptr<MdnsAgent> agent);
 
+  // Adds an instance responder.
+  bool ProbeAndAddInstanceResponder(const std::string& service_name,
+                                    const std::string& instance_name,
+                                    IpPort port,
+                                    std::shared_ptr<Responder> agent);
+
   // Sends any messages found in |outbound_messages_by_reply_address_| and
   // clears |outbound_messages_by_reply_address_|.
   void SendMessages();
@@ -196,6 +205,8 @@ class Mdns : public MdnsAgent::Host {
       outbound_messages_by_reply_address_;
   std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;
   std::unordered_map<const MdnsAgent*, std::shared_ptr<MdnsAgent>> agents_;
+  std::unordered_map<std::string, std::shared_ptr<InstanceProber>>
+      instance_probers_by_instance_full_name_;
   std::unordered_map<std::string, std::shared_ptr<Responder>>
       instance_publishers_by_instance_full_name_;
   std::shared_ptr<DnsResource> address_placeholder_;

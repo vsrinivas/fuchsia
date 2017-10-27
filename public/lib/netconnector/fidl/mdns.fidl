@@ -28,7 +28,7 @@ interface MdnsService {
   PublishServiceInstance(string service_name,
                          string instance_name,
                          uint16 port,
-                         array<string>? text);
+                         array<string>? text) => (MdnsResult result);
 
   // Ends publication started with |PublishServiceInstance|. |service_name| must
   // end in '._tcp.' or '._udp.'. |instance_name| must not end in a '.'.
@@ -72,6 +72,15 @@ interface MdnsService {
   SetVerbose(bool value);
 };
 
+// Result values for instance publishing.
+enum MdnsResult {
+  OK = 0,
+  INVALID_SERVICE_NAME = -1,
+  INVALID_INSTANCE_NAME = -2,
+  ALREADY_PUBLISHED_LOCALLY = -3,
+  ALREADY_PUBLISHED_ON_SUBNET = -4
+};
+
 // Represents a subscription.
 interface MdnsServiceSubscription {
   // Special value for GetInstances version_last_seen parameter to get the
@@ -96,6 +105,9 @@ struct MdnsServiceInstance {
 
 // Client-supplied responder interface.
 interface MdnsResponder {
+  // Updates the status of the instance publication.
+  UpdateStatus(MdnsResult result);
+
   // Provides instance information for initial announcements and query responses
   // relating to the service instance specified in |MdnsService.AddResponder|.
   // |query| indicates whether data is requested for an initial announcement

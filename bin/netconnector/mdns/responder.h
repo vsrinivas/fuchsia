@@ -19,6 +19,8 @@ namespace mdns {
 // Dynamically publishes an instance of a service type.
 class Responder : public MdnsAgent {
  public:
+  using PublishCallback = std::function<void(MdnsResult result)>;
+
   // Creates an |Responder|. Subtypes in |announced_subtypes| are announced
   // initially. The |MdnsResponder| referenced by |responder_handle| is
   // consulted to determine how queries are handled.
@@ -33,7 +35,8 @@ class Responder : public MdnsAgent {
   Responder(MdnsAgent::Host* host,
             const std::string& service_name,
             const std::string& instance_name,
-            MdnsPublicationPtr publication);
+            MdnsPublicationPtr publication,
+            const PublishCallback& callback);
 
   ~Responder() override;
 
@@ -44,6 +47,9 @@ class Responder : public MdnsAgent {
                        const ReplyAddress& reply_address) override;
 
   void Quit() override;
+
+  // Updates the status.
+  void UpdateStatus(MdnsResult result);
 
   // Sets the subtypes to publish.
   void SetSubtypes(std::vector<std::string> subtypes);
@@ -90,6 +96,7 @@ class Responder : public MdnsAgent {
   std::vector<std::string> subtypes_;
   MdnsResponderPtr responder_;
   MdnsPublicationPtr publication_;
+  PublishCallback callback_;
   fxl::TimeDelta announcement_interval_ = kInitialAnnouncementInterval;
   bool should_quit_ = false;
 };

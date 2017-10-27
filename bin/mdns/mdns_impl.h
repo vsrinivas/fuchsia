@@ -16,8 +16,7 @@ namespace mdns {
 
 class MdnsImpl : public netconnector::MdnsResponder {
  public:
-  MdnsImpl(app::ApplicationContext* application_context,
-               MdnsParams* params);
+  MdnsImpl(app::ApplicationContext* application_context, MdnsParams* params);
 
   ~MdnsImpl() override;
 
@@ -50,6 +49,8 @@ class MdnsImpl : public netconnector::MdnsResponder {
       fidl::Array<netconnector::MdnsServiceInstancePtr> instances = nullptr);
 
   // MdnsResponder implementation:
+  void UpdateStatus(netconnector::MdnsResult result) override;
+
   void GetPublication(bool query,
                       const fidl::String& subtype,
                       const GetPublicationCallback& callback) override;

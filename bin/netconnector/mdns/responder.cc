@@ -34,13 +34,15 @@ Responder::Responder(MdnsAgent::Host* host,
 Responder::Responder(MdnsAgent::Host* host,
                      const std::string& service_name,
                      const std::string& instance_name,
-                     MdnsPublicationPtr publication)
+                     MdnsPublicationPtr publication,
+                     const PublishCallback& callback)
     : MdnsAgent(host),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(
           MdnsNames::LocalInstanceFullName(instance_name, service_name)),
-      publication_(std::move(publication)) {}
+      publication_(std::move(publication)),
+      callback_(callback) {}
 
 Responder::~Responder() {}
 
@@ -89,6 +91,15 @@ void Responder::Quit() {
 
   should_quit_ = true;
   GetAndSendPublication(false);
+}
+
+void Responder::UpdateStatus(MdnsResult result) {
+  if (responder_) {
+    responder_->UpdateStatus(result);
+  } else if (callback_) {
+    callback_(result);
+    callback_ = nullptr;
+  }
 }
 
 void Responder::SetSubtypes(std::vector<std::string> subtypes) {
