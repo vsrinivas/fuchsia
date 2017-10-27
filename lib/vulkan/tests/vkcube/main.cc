@@ -4,4 +4,6 @@
 
 #include "test_vk_cube.h"
 
-int main(int argc, char** argv) { return test_vk_cube(argc, argv); }
+int main(int argc, char** argv) {
+  return test_vk_cube(argc, argv);
+}
