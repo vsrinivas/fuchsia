@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{io, fmt};
+use std::fmt;
+use std::io::{self, Read, Write};
 
-use futures::{Async, Future, Poll};
-use mio::fuchsia::{EventedHandle, FuchsiaReady};
+use futures::{Async, Poll};
+use mio::fuchsia::EventedHandle;
 use zircon::{self, AsHandleRef};
 
 use tokio_core::reactor::{Handle, PollEvented};
-
-use super::would_block;
+use tokio_io::{AsyncRead, AsyncWrite};
 
 /// An I/O object representing a `Socket`.
 pub struct Socket {
@@ -67,89 +67,30 @@ impl Socket {
         self.evented.poll_write()
     }
 
-    /// Reads a message on the socket and registers this `Socket` as
-    /// needing a read on receiving a `zircon::Status::ErrShouldWait`.
-    pub fn read_from(&self,  buf: &mut [u8]) -> io::Result<usize> {
-        let signals = self.evented.poll_ready(FuchsiaReady::from(
-                          zircon::Signals::SOCKET_READABLE |
-                          zircon::Signals::SOCKET_PEER_CLOSED).into());
-
-        match signals {
-            Async::NotReady => Err(would_block()),
-            Async::Ready(ready) => {
-                let signals = FuchsiaReady::from(ready).into_signals();
-                if zircon::Signals::SOCKET_READABLE.intersects(signals) {
-                    let res = self.socket.read(buf);
-                    if res == Err(zircon::Status::SHOULD_WAIT) {
-                        self.evented.need_read();
-                    }
-                    res.map_err(io::Error::from)
-                } else {
-                    // Covers the SOCKET_PEER_CLOSED case as well
-                    Err(io::ErrorKind::ConnectionAborted.into())
-                }
-            }
+    // Private helper for reading without `&mut` self.
+    // This is used in the impls of `Read` for `Socket` and `&Socket`.
+    fn read_nomut(&self, buf: &mut [u8]) -> io::Result<usize> {
+        if let Async::NotReady = self.poll_read() {
+            return Err(io::ErrorKind::WouldBlock.into());
         }
-    }
-
-    /// Creates a future which, when polled, will attempt to perform a read
-    /// on the socket.
-    ///
-    /// The returned future will complete after a _single_ call to read has
-    /// succeeded.  The future will resolve to the socket, buffer, and the
-    /// number of bytes read.
-    ///
-    /// An error during reading will cause the socket and buffer to get
-    /// destroyed and the status will be returned.
-    ///
-    /// The AsMut<[u8]> means you can pass an `&mut [u8]`, `Vec<u8>`, or other
-    /// array-like collections of `u8` elements.
-    pub fn read<T>(self, buf: T) -> ReadFuture<T>
-        where T: AsMut<[u8]>
-    {
-        ReadFuture(Some((self, buf)))
-    }
-
-    /// Writes a message on the socket and registers this `Socket` as
-    /// needing a write on receiving a `zircon::Status::ErrShouldWait`.
-    pub fn write_into(&self, buf: &[u8]) -> io::Result<usize> {
-        let signals = self.evented.poll_ready(FuchsiaReady::from(
-                          zircon::Signals::SOCKET_WRITABLE |
-                          zircon::Signals::SOCKET_PEER_CLOSED).into());
-
-        match signals {
-            Async::NotReady => Err(would_block()),
-            Async::Ready(ready) => {
-                let signals = FuchsiaReady::from(ready).into_signals();
-                if zircon::Signals::SOCKET_PEER_CLOSED.intersects(signals) {
-                    Err(io::ErrorKind::ConnectionAborted.into())
-                } else {
-                    let res = self.socket.write(buf);
-                    if res == Err(zircon::Status::SHOULD_WAIT) {
-                        self.evented.need_write();
-                    }
-                    res.map_err(io::Error::from)
-                }
-            }
+        let res = self.socket.read(buf);
+        if res == Err(zircon::Status::SHOULD_WAIT) {
+            self.evented.need_read();
         }
+        res.map_err(io::Error::from)
     }
 
-    /// Creates a future which, when polled, will attempt to perform a write
-    /// on the socket.
-    ///
-    /// The returned future will complete after a _single_ call to `write` has
-    /// succeeded.  The future will resolve to the socket, buffer, and the
-    /// number of bytes written.
-    ///
-    /// An error during reading will cause the socket and buffer to get
-    /// destroyed and the status will be returned.
-    ///
-    /// The AsRef<[u8]> means you can pass an `&mut [u8]`, `Vec<u8>`, or other
-    /// array-like collections of `u8` elements.
-    pub fn write<T>(self, buf: T) -> WriteFuture<T>
-        where T: AsRef<[u8]>
-    {
-        WriteFuture(Some((self, buf)))
+    // Private helper for writing without `&mut` self.
+    // This is used in the impls of `Write` for `Socket` and `&Socket`.
+    fn write_nomut(&self, buf: &[u8]) -> io::Result<usize> {
+        if let Async::NotReady = self.poll_write() {
+            return Err(io::ErrorKind::WouldBlock.into());
+        }
+        let res = self.socket.write(buf);
+        if res == Err(zircon::Status::SHOULD_WAIT) {
+            self.evented.need_write();
+        }
+        res.map_err(io::Error::from)
     }
 }
 
@@ -159,57 +100,68 @@ impl fmt::Debug for Socket {
     }
 }
 
-/// A future used to read bytes from a socket.
-///
-/// This is created by the `Socket::read` method.
-#[must_use = "futures do nothing unless polled"]
-pub struct ReadFuture<T>(Option<(Socket, T)>);
-
-impl<T> Future for ReadFuture<T>
-    where T: AsMut<[u8]>,
-{
-    type Item = (Socket, T, usize);
-    type Error = io::Error;
-
-    fn poll(&mut self) -> Poll<Self::Item, io::Error> {
-        let num_read;
-        {
-            let (ref socket, ref mut buf) =
-                *self.0.as_mut().expect("polled a ReadFuture after completion");
-            num_read = try_nb!(socket.read_from(buf.as_mut()));
-        }
-        let (socket, buf) = self.0.take().unwrap();
-        Ok(Async::Ready((socket, buf, num_read)))
+impl Read for Socket {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.read_nomut(buf)
     }
 }
 
-/// A future used to write bytes into a socket.
-///
-/// This is created by the `Socket::write` method.
-#[must_use = "futures do nothing unless polled"]
-pub struct WriteFuture<T>(Option<(Socket, T)>);
+impl Write for Socket {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.write_nomut(buf)
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
 
-impl<T> Future for WriteFuture<T>
-    where T: AsRef<[u8]>,
-{
-    type Item = (Socket, T, usize);
-    type Error = io::Error;
+impl AsyncRead for Socket {
+    // Asserts that `Socket::read` doesn't examine the buffer passed into it.
+    unsafe fn prepare_uninitialized_buffer(&self, _: &mut [u8]) -> bool {
+        false
+    }
+}
 
-    fn poll(&mut self) -> Poll<Self::Item, io::Error> {
-        let num_written;
-        {
-            let (ref socket, ref buf) =
-                *self.0.as_ref().expect("polled a WriteFuture after completion");
-            num_written = try_nb!(socket.write_into(buf.as_ref()));
-        }
-        let (socket, buf) = self.0.take().unwrap();
-        Ok(Async::Ready((socket, buf, num_written)))
+impl AsyncWrite for Socket {
+    fn shutdown(&mut self) -> Poll<(), io::Error> {
+        Ok(().into())
+    }
+}
+
+impl<'a> Read for &'a Socket {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.read_nomut(buf)
+    }
+}
+
+impl<'a> Write for &'a Socket {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.write_nomut(buf)
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a> AsyncRead for &'a Socket {
+    // Asserts that `Socket::read` doesn't examine the buffer passed into it.
+    unsafe fn prepare_uninitialized_buffer(&self, _: &mut [u8]) -> bool {
+        false
+    }
+}
+
+impl<'a> AsyncWrite for &'a Socket {
+    fn shutdown(&mut self) -> Poll<(), io::Error> {
+        Ok(().into())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use Bytes;
+    use futures::{Future, Stream};
     use tokio_core::reactor::{Core, Timeout};
+    use tokio_io::io;
     use std::time::Duration;
     use super::*;
 
@@ -217,7 +169,7 @@ mod tests {
     fn can_read_write() {
         let mut core = Core::new().unwrap();
         let handle = &core.handle();
-        let bytes: &'static [u8] = &[0,1,2,3];
+        let bytes = &[0,1,2,3];
 
         let (tx, rx) = zircon::Socket::create().unwrap();
         let (tx, rx) = (
@@ -225,22 +177,25 @@ mod tests {
             Socket::from_socket(rx, handle).unwrap(),
         );
 
-        let receiver = rx.read([0; 4]).map(|(_socket, buf, num_read)| {
-            assert_eq!(num_read, buf.len());
-            assert_eq!(buf, bytes);
-        });
+        let receive_future = rx.framed(Bytes).into_future().map(|(bytes_mut_opt, _rx)| {
+            let buf = bytes_mut_opt.unwrap();
+            assert_eq!(buf.as_ref(), bytes);
+        }).map_err(|(err, _rx)| err);
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle).unwrap().map(|()| {
             panic!("did not receive message in time!");
         });
-        let receiver = receiver.select(rcv_timeout).map(|_| ()).map_err(|(err,_)| err);
 
-        let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().and_then(|()|{
-            tx.write(bytes)
-        }).map(|(_socket, _buf, num_written)| {
-            assert_eq!(num_written, bytes.len());
-        });
+        let receiver = receive_future
+                            .select(rcv_timeout)
+                            .map(|_| ())
+                            .map_err(|(err, _)| err);
+
+        // Sends a message after the timeout has passed
+        let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap()
+                        .and_then(|()| io::write_all(tx, bytes))
+                        .map(|_tx| ());
 
         let done = receiver.join(sender);
         core.run(done).unwrap();

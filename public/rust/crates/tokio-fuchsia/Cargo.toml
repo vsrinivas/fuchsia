@@ -6,7 +6,9 @@ authors = ["Tristan Hume <trishume@google.com>"]
 repository = "https://fuchsia.googlesource.com/tokio-fuchsia/"
 
 [dependencies]
+bytes = "0.4"
 futures = "0.1"
 mio = { path = "../../../../../third_party/rust-mirrors/mio" }
 tokio-core = { path = "../../../../../third_party/rust-mirrors/tokio-core" }
+tokio-io = "0.1"
 fuchsia-zircon = { path = "../fuchsia-zircon" }
