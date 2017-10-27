@@ -51,17 +51,24 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   size_t vmo_size;
   vmo.get_size(&vmo_size);
 
-  // Import a VkDeviceMemory from the VMO. vkImportDeviceMemoryMAGMA takes
-  // ownership of the VMO handle it is passed.
-  vk::Result err = device.importMemoryMAGMA(vmo.release(), nullptr, &memory);
+  // Import a VkDeviceMemory from the VMO. VkAllocateMemory takes ownership of
+  // the VMO handle it is passed.
+  vk::ImportMemoryFuchsiaHandleInfoKHR memory_import_info(
+      vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo, vmo.release());
+
+  vk::MemoryAllocateInfo memory_allocate_info(vmo_size);
+  memory_allocate_info.setPNext(&memory_import_info);
+
+  vk::Result err =
+      device.allocateMemory(&memory_allocate_info, nullptr, &memory);
   if (err != vk::Result::eSuccess) {
     error_reporter->ERROR() << "scene_manager::Session::CreateMemory(): "
-                               "vkImportDeviceMemoryMAGMA failed.";
+                               "VkAllocateMemory failed.";
     return nullptr;
   }
 
-  // TODO: Need to be able to get the memory type index in
-  // vkImportDeviceMemoryMAGMA.
+  // TODO(MZ-388): Need to be able to get the memory type index using
+  // vkGetMemoryFuchsiaHandlePropertiesKHR.
   uint32_t memory_type_index = 0;
 
   return fxl::MakeRefCounted<GpuMemory>(

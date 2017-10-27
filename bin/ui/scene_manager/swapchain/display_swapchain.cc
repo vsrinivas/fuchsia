@@ -153,10 +153,15 @@ bool DisplaySwapchain::InitializeFramebuffers(
     */
 
     // Export the vkDeviceMemory to a VMO.
-    auto export_result =
-        device_.exportMemoryMAGMA(buffer.device_memory->base());
+    vk::MemoryGetFuchsiaHandleInfoKHR export_memory_info(
+        buffer.device_memory->base(),
+        vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo);
+
+    auto export_result = vulkan_proc_addresses_.getMemoryFuchsiaHandleKHR(
+        device_, export_memory_info);
+
     if (export_result.result != vk::Result::eSuccess) {
-      FXL_DLOG(ERROR) << "vkExportDeviceMemoryMAGMA failed: "
+      FXL_DLOG(ERROR) << "VkGetMemoryFuchsiaHandleKHR failed: "
                       << vk::to_string(export_result.result);
       return false;
     }
