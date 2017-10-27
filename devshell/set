@@ -148,7 +148,9 @@ END
   "${FUCHSIA_DIR}/packages/gn/gen.py" ${gen_args} "$@"
 
   if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
-    "${goma_dir}/goma_ctl.py" ensure_start || return $?
+    if ! [[ $("${goma_dir}/gomacc" port) =~ ^[0-9]+$ ]]; then
+      "${goma_dir}/goma_ctl.py" ensure_start || return $?
+    fi
   fi
 }
 
