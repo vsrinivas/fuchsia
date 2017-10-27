@@ -8,17 +8,14 @@
 
 #include <inet6/inet6.h>
 
-#if 1
-#define BAD(n)                    \
-    do {                          \
-        printf("error: %s\n", n); \
-        return;                   \
-    } while (0)
+#define REPORT_BAD_PACKETS 0
+
+#if REPORT_BAD_PACKETS
+#define BAD_PACKET(reason) report_bad_packet(NULL, reason)
+#define BAD_PACKET_FROM(addr, reason) report_bad_packet(addr, reason)
 #else
-#define BAD(n)  \
-    do {        \
-        return; \
-    } while (0)
+#define BAD_PACKET(reason)
+#define BAD_PACKET_FROM(addr, reason)
 #endif
 
 // useful addresses
@@ -264,27 +261,49 @@ static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t*
     return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
 }
 
+#if REPORT_BAD_PACKETS
+static void report_bad_packet(ip6_addr_t* ip6_addr, const char* msg) {
+    if (ip6_addr == NULL) {
+        printf("inet6: dropping packet: %s\n", msg);
+    } else {
+        char addr_str[IP6TOAMAX];
+        ip6toa(addr_str, ip6_addr);
+        printf("inet6: dropping packet from %s: %s\n", addr_str, msg);
+    }
+}
+#endif
+
 void _udp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     udp_hdr_t* udp = _data;
     uint16_t sum, n;
 
-    if (len < UDP_HDR_LEN)
-        BAD("Bogus Header Len");
-    if (udp->checksum == 0)
-        BAD("Checksum Invalid");
+    if (unlikely(len < UDP_HDR_LEN)) {
+        BAD_PACKET_FROM(&ip->src, "invalid header in UDP packet");
+        return;
+    }
+    if (unlikely(udp->checksum == 0)) {
+        BAD_PACKET_FROM(&ip->src, "missing checksum in UDP packet");
+        return;
+    }
     if (udp->checksum == 0xFFFF)
         udp->checksum = 0;
 
     sum = checksum(&ip->length, 2, htons(HDR_UDP));
     sum = checksum(&ip->src, 32 + len, sum);
-    if (sum != 0xFFFF)
-        BAD("Checksum Incorrect");
+    if (unlikely(sum != 0xFFFF)) {
+        BAD_PACKET_FROM(&ip->src, "incorrect checksum in UDP packet");
+        return;
+    }
 
     n = ntohs(udp->length);
-    if (n < UDP_HDR_LEN)
-        BAD("Bogus Header Len");
-    if (n > len)
-        BAD("Packet Too Short");
+    if (unlikely(n < UDP_HDR_LEN)) {
+        BAD_PACKET_FROM(&ip->src, "UDP length too short");
+        return;
+    }
+    if (unlikely(n > len)) {
+        BAD_PACKET_FROM(&ip->src, "UDP length too long");
+        return;
+    }
     len = n - UDP_HDR_LEN;
 
     udp6_recv((uint8_t*)_data + UDP_HDR_LEN, len,
@@ -296,15 +315,19 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     icmp6_hdr_t* icmp = _data;
     uint16_t sum;
 
-    if (icmp->checksum == 0)
-        BAD("Checksum Invalid");
+    if (unlikely(icmp->checksum == 0)) {
+        BAD_PACKET_FROM(&ip->src, "missing checksum in ICMP packet");
+        return;
+    }
     if (icmp->checksum == 0xFFFF)
         icmp->checksum = 0;
 
     sum = checksum(&ip->length, 2, htons(HDR_ICMP6));
     sum = checksum(&ip->src, 32 + len, sum);
-    if (sum != 0xFFFF)
-        BAD("Checksum Incorrect");
+    if (unlikely(sum != 0xFFFF)) {
+        BAD_PACKET_FROM(&ip->src, "incorrect checksum in ICMP packet");
+        return;
+    }
 
     zx_status_t status;
     if (icmp->type == ICMP6_NDP_N_SOLICIT) {
@@ -314,13 +337,23 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
             uint8_t opt[8];
         } msg;
 
-        if (len < sizeof(ndp_n_hdr_t))
-            BAD("Bogus NDP Message");
-        if (ndp->code != 0)
-            BAD("Bogus NDP Code");
+        if (unlikely(len < sizeof(ndp_n_hdr_t))) {
+            BAD_PACKET_FROM(&ip->src, "bogus NDP message");
+            return;
+        }
+        if (unlikely(ndp->code != 0)) {
+            BAD_PACKET_FROM(&ip->src, "bogus NDP code");
+            return;
+        }
 #if !INET6_COEXIST_WITH_NETSTACK
-        if (!ip6_addr_eq((ip6_addr_t*) ndp->target, &ll_ip6_addr))
-            BAD("NDP Not For Me");
+        if (!ip6_addr_eq((ip6_addr_t*)ndp->target, &ll_ip6_addr)) {
+            char src_addr_str[IP6TOAMAX];
+            char dst_addr_str[IP6TOAMAX];
+            ip6toa(src_addr_str, &ip->src);
+            ip6toa(dst_addr_str, (ip6_addr_t*)ndp->target);
+            printf("inet6: ignoring NDP packet sent from %s to %s\n", src_addr_str, dst_addr_str);
+            return;
+        }
 #endif
 
         msg.hdr.type = ICMP6_NDP_N_ADVERTISE;
@@ -353,8 +386,10 @@ void eth_recv(void* _data, size_t len) {
     ip6_hdr_t* ip;
     uint32_t n;
 
-    if (len < (ETH_HDR_LEN + IP6_HDR_LEN))
-        BAD("Bogus Header Len");
+    if (unlikely(len < (ETH_HDR_LEN + IP6_HDR_LEN))) {
+        BAD_PACKET("bogus header length");
+        return;
+    }
     if (data[12] != (ETH_IP6 >> 8))
         return;
     if (data[13] != (ETH_IP6 & 0xFF))
@@ -365,13 +400,17 @@ void eth_recv(void* _data, size_t len) {
     len -= (ETH_HDR_LEN + IP6_HDR_LEN);
 
     // require v6
-    if ((ip->ver_tc_flow & 0xF0) != 0x60)
-        BAD("Unknown IP6 Version");
+    if (unlikely((ip->ver_tc_flow & 0xF0) != 0x60)) {
+        BAD_PACKET("unknown IP6 version");
+        return;
+    }
 
     // ensure length is sane
     n = ntohs(ip->length);
-    if (n > len)
-        BAD("IP6 Length Mismatch");
+    if (unlikely(n > len)) {
+        BAD_PACKET("IP6 length mismatch");
+        return;
+    }
 
     // ignore any trailing data in the ethernet frame
     len = n;
