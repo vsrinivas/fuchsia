@@ -303,7 +303,8 @@ print "\nCopied %i files" % file_count
 compressed_disk = "%s.lz4" % disk_path
 sparse_disk = "%s.sparse" % disk_path
 
-sparse_cmd = [os.path.join(args.build_dir, "host_x64", "sparser"), "-s", disk_path, sparse_disk]
+sparser_path = os.path.join(build_dir_zircon, "tools", "sparse")
+sparse_cmd = [sparser_path, "-s", disk_path, sparse_disk]
 subprocess.check_call(sparse_cmd, cwd=working_dir)
 
 print "Compressing system disk image to %s" % compressed_disk
@@ -361,7 +362,7 @@ print "Copied command line \"%s\"" % kernel_cmdline
 compressed_disk_efi = "%s.lz4" % disk_path_efi
 sparse_disk = "%s.sparse" % disk_path_efi
 
-sparse_cmd = [os.path.join(args.build_dir, "host_x64", "sparser"), "-s", disk_path_efi, sparse_disk]
+sparse_cmd = [sparser_path, "-s", disk_path_efi, sparse_disk]
 subprocess.check_call(sparse_cmd, cwd=working_dir)
 
 print "Compressing ESP disk image to %s" % compressed_disk_efi
