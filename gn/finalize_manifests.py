@@ -334,7 +334,7 @@ def emit_manifests(outputs, build_id_file, depfile, selected, unselected):
     # Sort so that functionally identical output is textually identical.
     debug_files.sort(key=lambda info: info.build_id)
     update_file(build_id_file, ''.join(
-        info.build_id + ' ' + info.filename + '\n'
+        info.build_id + ' ' + os.path.abspath(info.filename) + '\n'
         for info in debug_files))
 
     # Emit the depfile.

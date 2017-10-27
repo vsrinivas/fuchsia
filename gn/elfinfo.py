@@ -242,12 +242,19 @@ This ensures that the mmap and file objects are closed at the end of the
 'with' statement."""
     fileobj = open(filename, 'rb')
     fd = fileobj.fileno()
-    mmapobj = mmap.mmap(fd, 0, access=mmap.ACCESS_READ)
-    try:
-        yield fd, mmapobj
-    finally:
-        mmapobj.close()
-        fileobj.close()
+    if os.fstat(fd).st_size == 0:
+        # mmap can't handle empty files.
+        try:
+            yield fd, ''
+        finally:
+            fileobj.close()
+    else:
+        mmapobj = mmap.mmap(fd, 0, access=mmap.ACCESS_READ)
+        try:
+            yield fd, mmapobj
+        finally:
+            mmapobj.close()
+            fileobj.close()
 
 
 # elf_info objects are only created by `get_elf_info` or the `copy` or
