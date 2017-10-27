@@ -18,7 +18,19 @@ optional arguments:
   --config              Path to the config file use when running COMMAND.
                         Defaults to FUCHSIA_CONFIG if set in the
                         environment and "${FUCHSIA_DIR}/.config" otherwise.
+                        The config file determines which build directory (and
+                        therefore build configuration) is used by COMMAND.
   -x                    Print commands and their arguments as they are executed.
+
+optional shell extensions:
+  fx-go
+  fx-update-path
+  fx-set-prompt
+
+To use these shell extensions, first source fx-env.sh into your shell:
+
+  $ source scripts/fx-env.sh
+
 END
 }
 

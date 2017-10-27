@@ -27,7 +27,26 @@ export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 
 FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
-source "${FUCHSIA_DIR}/scripts/devshell/lib/env.sh"
+# __patched_path <old-regex> <new-component>
+# Prints a new path value based on the current $PATH, removing path components
+# that match <old-regex> and adding <new-component> to the end.
+function __patched_path {
+    local old_regex="$1"
+    local new_component="$2"
+    local stripped
+    # Put each PATH component on a line, delete any lines that match the regex,
+    # then glue back together with ':' characters.
+    stripped="$(
+        set -o pipefail &&
+        echo "${PATH}" |
+        tr ':' '\n' |
+        grep -v -E "^${old_regex}$" |
+        tr '\n' ':'
+    )"
+    # The trailing newline will have become a colon, so no need to add another
+    # one here.
+    echo "${stripped}${new_component}"
+}
 
 function __netaddr() {
   # We want to give the user time to accept Darwin's firewall dialog.
