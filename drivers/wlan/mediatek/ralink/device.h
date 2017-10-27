@@ -27,8 +27,6 @@ template <uint16_t A> class Register;
 template <uint8_t A> class BbpRegister;
 template <uint8_t A> class RfcsrRegister;
 template <uint16_t A> class EepromField;
-enum KeyMode : uint8_t;
-enum KeyType : uint8_t;
 
 class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacProtocol<Device> {
    public:
@@ -49,7 +47,6 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     void WlanmacTx(uint32_t options, const void* data, size_t len);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
     zx_status_t WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type);
-    zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
 
    private:
     struct TxCalibrationValues {
@@ -125,19 +122,6 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     // send a command to the MCU
     zx_status_t McuCommand(uint8_t command, uint8_t token, uint8_t arg0, uint8_t arg1);
-
-    // hardware encryption
-    uint8_t DeriveSharedKeyIndex(uint8_t bss_idx, uint8_t key_idx);
-    KeyMode GetKeyMode(const uint8_t cipher_oui[3], uint8_t cipher_type);
-    zx_status_t WriteKey(const uint8_t key[], size_t key_len, uint16_t offset);
-    zx_status_t WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len);
-    zx_status_t WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len);
-    zx_status_t WriteSharedKeyMode(uint8_t skey, KeyMode mode);
-    zx_status_t ResetIvEiv(uint8_t wcid);
-    zx_status_t WriteWcid(uint8_t wcid, const uint8_t mac[]);
-    zx_status_t WriteWcidAttribute(uint8_t bss_idx, uint8_t wcid, KeyMode mode, KeyType type);
-    // resets all security aspects for a given WCID and shared key as well as their keys.
-    zx_status_t ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type);
 
     // initialization functions
     zx_status_t LoadFirmware();
