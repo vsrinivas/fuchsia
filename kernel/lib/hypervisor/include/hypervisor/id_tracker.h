@@ -18,6 +18,10 @@ namespace hypervisor {
 template <typename T, T N>
 class IdTracker {
 public:
+    zx_status_t Init() {
+        return id_bitmap_.Reset(N);
+    }
+
     zx_status_t AllocId(T* id) {
         size_t first_unset;
         bool all_set = id_bitmap_.Get(0, N, &first_unset);
@@ -33,11 +37,6 @@ public:
         if (id == 0 || !id_bitmap_.GetOne(id - 1))
             return ZX_ERR_INVALID_ARGS;
         return id_bitmap_.ClearOne(id - 1);
-    }
-
-protected:
-    zx_status_t Init() {
-        return id_bitmap_.Reset(N);
     }
 
 private:

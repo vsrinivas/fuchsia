@@ -53,5 +53,10 @@ private:
     static zx_status_t OnTask(void* context, uint cpu_num);
 };
 
+// Allocate and free virtual machine IDs.
 zx_status_t alloc_vmid(uint8_t* vmid);
 zx_status_t free_vmid(uint8_t vmid);
+
+// Allocate and free virtual processor IDs.
+zx_status_t alloc_vpid(uint8_t* vpid);
+zx_status_t free_vpid(uint8_t vpid);

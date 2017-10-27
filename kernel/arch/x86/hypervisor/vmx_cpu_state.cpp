@@ -17,9 +17,9 @@
 
 #include <fbl/mutex.h>
 
-static fbl::Mutex vmx_mutex;
-static size_t num_vcpus TA_GUARDED(vmx_mutex) = 0;
-static fbl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vmx_mutex);
+static fbl::Mutex vcpu_mutex;
+static size_t num_vcpus TA_GUARDED(vcpu_mutex) = 0;
+static fbl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vcpu_mutex);
 
 static zx_status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -245,7 +245,7 @@ VmxCpuState::~VmxCpuState() {
 }
 
 zx_status_t alloc_vpid(uint16_t* vpid) {
-    fbl::AutoLock lock(&vmx_mutex);
+    fbl::AutoLock lock(&vcpu_mutex);
     if (num_vcpus == 0) {
         zx_status_t status = VmxCpuState::Create(&vmx_cpu_state);
         if (status != ZX_OK)
@@ -256,7 +256,7 @@ zx_status_t alloc_vpid(uint16_t* vpid) {
 }
 
 zx_status_t free_vpid(uint16_t vpid) {
-    fbl::AutoLock lock(&vmx_mutex);
+    fbl::AutoLock lock(&vcpu_mutex);
     zx_status_t status = vmx_cpu_state->FreeId(vpid);
     if (status != ZX_OK)
         return status;

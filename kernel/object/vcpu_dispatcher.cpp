@@ -26,11 +26,7 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
 
     fbl::unique_ptr<Vcpu> vcpu;
 #if ARCH_ARM64
-    uint8_t vpid;
-    zx_status_t status = guest->NextVpid(&vpid);
-    if (status != ZX_OK)
-        return status;
-    status = arm_vcpu_create(ip, guest->Vmid(), vpid, gpas, guest->Traps(), &vcpu);
+    zx_status_t status = arm_vcpu_create(ip, guest->Vmid(), gpas, guest->Traps(), &vcpu);
 #elif ARCH_X86_64
     if (cr3 >= gpas->size() - PAGE_SIZE)
         return ZX_ERR_INVALID_ARGS;

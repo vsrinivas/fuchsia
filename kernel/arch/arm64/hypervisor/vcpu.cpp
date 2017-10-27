@@ -6,6 +6,7 @@
 
 #include <arch/hypervisor.h>
 #include <arch/ops.h>
+#include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <platform/timer.h>
@@ -13,6 +14,7 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "el2_cpu_state_priv.h"
 #include "vmexit_priv.h"
 
 static const uint32_t kSpsrEl1h = 0b0101;
@@ -28,9 +30,14 @@ static zx_paddr_t vttbr_of(uint8_t vmid, zx_paddr_t table) {
 }
 
 // static
-zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, uint8_t vpid,
-                         GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                         fbl::unique_ptr<Vcpu>* out) {
+zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+                         TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
+    uint8_t vpid;
+    zx_status_t status = alloc_vpid(&vpid);
+    if (status != ZX_OK)
+        return status;
+    auto auto_call = fbl::MakeAutoCall([vpid]() { free_vpid(vpid); });
+
     thread_t* thread = pin_thread(cpu_of(vpid));
 
     fbl::AllocChecker ac;
@@ -40,6 +47,8 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, uint8_t vpid,
 
     vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
     vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrEl1h | kSpsrDaif;
+
+    auto_call.cancel();
     *out = fbl::move(vcpu);
     return ZX_OK;
 }
@@ -91,10 +100,9 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     return ZX_OK;
 }
 
-zx_status_t arm_vcpu_create(zx_vaddr_t ip, uint8_t vmid, uint8_t vpid,
-                            GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                            fbl::unique_ptr<Vcpu>* out) {
-    return Vcpu::Create(ip, vmid, vpid, gpas, traps, out);
+zx_status_t arm_vcpu_create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+                            TrapMap* traps, fbl::unique_ptr<Vcpu>* out) {
+    return Vcpu::Create(ip, vmid, gpas, traps, out);
 }
 
 zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {

@@ -62,11 +62,6 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
 }
 
-zx_status_t Guest::NextVpid(uint8_t* vpid) {
-    *vpid = next_vpid_++;
-    return next_vpid_ == 0 ? ZX_ERR_NO_RESOURCES : ZX_OK;
-}
-
 zx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {
     if (arm64_get_boot_el() < 2)
         return ZX_ERR_NOT_SUPPORTED;

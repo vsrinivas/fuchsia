@@ -26,7 +26,6 @@ public:
 
     zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                         fbl::RefPtr<PortDispatcher> port, uint64_t key);
-    zx_status_t NextVpid(uint8_t* vpid);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
     TrapMap* Traps() { return &traps_; }
@@ -36,16 +35,14 @@ private:
     fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     TrapMap traps_;
     const uint8_t vmid_;
-    uint8_t next_vpid_ = 0;
 
     explicit Guest(uint8_t vmid);
 };
 
 class Vcpu {
 public:
-    static zx_status_t Create(zx_vaddr_t ip, uint8_t vmid, uint8_t vpid,
-                              GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                              fbl::unique_ptr<Vcpu>* out);
+    static zx_status_t Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+                              TrapMap* traps, fbl::unique_ptr<Vcpu>* out);
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
     zx_status_t Resume(zx_port_packet_t* packet);
@@ -70,9 +67,8 @@ zx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, zx_vaddr_t addr, si
                                 fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 /* Create a VCPU. */
-zx_status_t arm_vcpu_create(zx_vaddr_t ip, uint8_t vmid, uint8_t vpid,
-                            GuestPhysicalAddressSpace* gpas, TrapMap* traps,
-                            fbl::unique_ptr<Vcpu>* out);
+zx_status_t arm_vcpu_create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
+                            TrapMap* traps, fbl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */
 zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet);
