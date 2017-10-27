@@ -180,10 +180,11 @@ void NetConnectorImpl::StartMdns() {
 
   host_name_ = GetHostName();
 
-  mdns_service_impl_.Start(host_name_);
-
-  mdns_service_impl_.PublishServiceInstance(kFuchsiaServiceName, host_name_,
-                                            kPort, std::vector<std::string>());
+  mdns_service_impl_.Start(host_name_, [this]() {
+    mdns_service_impl_.PublishServiceInstance(
+        kFuchsiaServiceName, mdns_service_impl_.host_name(), kPort,
+        std::vector<std::string>());
+  });
 
   mdns_service_impl_.SubscribeToService(
       kFuchsiaServiceName,

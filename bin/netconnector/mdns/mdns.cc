@@ -35,8 +35,10 @@ void Mdns::SetVerbose(bool verbose) {
   verbose_ = verbose;
 }
 
-void Mdns::Start(const std::string& host_name) {
+void Mdns::Start(const std::string& host_name, const fxl::Closure& callback) {
   FXL_DCHECK(!host_name.empty());
+
+  start_callback_ = callback;
 
   original_host_name_ = host_name;
 
@@ -245,6 +247,7 @@ bool Mdns::ReannounceInstance(const std::string& service_name,
 }
 
 void Mdns::StartAddressProbe(const std::string& host_name) {
+  host_name_ = host_name;
   host_full_name_ = MdnsNames::LocalHostFullName(host_name);
 
   FXL_LOG(INFO) << "Verifying uniqueness of host name " << host_full_name_;
@@ -280,6 +283,11 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
         }
 
         agents_awaiting_start_.clear();
+
+        if (start_callback_) {
+          start_callback_();
+          start_callback_ = nullptr;
+        }
       });
 
   // We don't use |AddAgent| here, because agents added that way don't actually

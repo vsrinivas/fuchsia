@@ -16,6 +16,7 @@
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
 #include "garnet/bin/netconnector/mdns/responder.h"
 #include "garnet/bin/netconnector/socket_address.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_point.h"
@@ -51,11 +52,16 @@ class Mdns : public MdnsAgent::Host {
   // Determines whether message traffic will be logged.
   void SetVerbose(bool verbose);
 
-  // Starts the transceiver.
-  void Start(const std::string& host_name);
+  // Starts the transceiver. |callback| is called when addresss probing is
+  // complete, and a unique host name has been selected.
+  void Start(const std::string& host_name, const fxl::Closure& callback);
 
   // Stops the transceiver.
   void Stop();
+
+  // Returns the host name currently in use. May be different than the host name
+  // passed in to |Start| if address probing detected conflicts.
+  std::string host_name() { return host_name_; }
 
   // Resolves |host_name| to one or two |IpAddress|es.
   void ResolveHostName(const std::string& host_name,
@@ -179,7 +185,9 @@ class Mdns : public MdnsAgent::Host {
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   MdnsTransceiver transceiver_;
   std::string original_host_name_;
+  fxl::Closure start_callback_;
   uint32_t next_host_name_deduplicator_ = 2;
+  std::string host_name_;
   std::string host_full_name_;
   bool started_ = false;
   std::priority_queue<TaskQueueEntry> task_queue_;

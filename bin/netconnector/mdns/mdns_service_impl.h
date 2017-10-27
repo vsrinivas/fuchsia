@@ -21,7 +21,13 @@ class MdnsServiceImpl : public MdnsService {
 
   void AddBinding(fidl::InterfaceRequest<MdnsService> request);
 
-  void Start(const std::string& host_name);
+  // Starts the service. |callback| is called when addresss probing is
+  // complete, and a unique host name has been selected.
+  void Start(const std::string& host_name, const fxl::Closure& callback);
+
+  // Returns the host name currently in use. May be different than the host name
+  // passed in to |Start| if address probing detected conflicts.
+  std::string host_name() { return mdns_.host_name(); }
 
   // Registers interest in the specified service.
   void SubscribeToService(const std::string& service_name,
