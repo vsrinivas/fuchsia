@@ -2,8 +2,7 @@
 
 Pink + Purple == Fuchsia (a new Operating System)
 
-Welcome to Fuchsia! This is a top-level entry point for the project. From here
-we try to link to everything you need to get started, use, and develop for
+Welcome to Fuchsia! This document has everything you need to get started with
 Fuchsia.
 
 *** note
@@ -51,20 +50,19 @@ port install autoconf automake libtool libpixman pkgconfig glib2
 
 ### [Googlers only] Goma
 
-* Ensure `goma` is installed on your machine for faster builds.
+Ensure `goma` is installed on your machine for faster builds.
 
 ## Build Fuchsia
 
 ### Get the source
 
-Follow all steps in this document and then return to this document:
-  * [Fuchsia Source](getting_source.md)
+[Get the Fuchsia source](getting_source.md) and then return to this document.
 
-### Build the system
+### Build
 
 If you added `.jiri_root/bin` to your path as part of getting the source code,
 the `fx` command should already be in your path. If not, the command is also
-available as the `scripts/fx`.
+available as `scripts/fx`.
 
 ```
 fx set x86-64
@@ -86,24 +84,30 @@ Alternatively, you can use the [underlying build system directly](build_system.m
 By default you will get a x86-64 debug build. You can skip this section unless
 you want something else.
 
-`ccache` accelerates builds by caching artifacts from previous builds.
-`ccache` will be enabled automatically by default if the `CCACHE_DIR`
-environment variable is set and refers to a directory that exists.
-To disable `ccache`, specify `--no-ccache`.
-
-[Googlers only: `goma` accelerates builds by distributing compilation
-across many machines.  If you have `goma` installed in `~/goma`, it will used
-by default in preference to `ccache`.  To disable `goma`, specify `--no-goma`.]
-
 Run `fset-usage` to see a list of build options. Some examples:
 
 ```
 fx set x86-64              # x86-64 debug build
 fx set arm64               # arm64 debug build
 fx set x86-64 --release    # x86-64 release build
-fx set x86-64 --ccache     # x86-64 debug build, force use of ccache even if goma is available
-fx set x86-64 --no-goma    # x86-64 debug build, disable use of goma
-fx set x86-64 --no-ccache  # x86-64 debug build, disable use of ccache
+```
+
+#### [optional] Accelerate builds with `ccache` and `goma`
+
+`ccache` accelerates builds by caching artifacts from previous builds. `ccache`
+is enabled automatically if the `CCACHE_DIR` environment variable is set and
+refers to a directory that exists.
+
+[Googlers only: `goma` accelerates builds by distributing compilation across
+many machines.  If you have `goma` installed in `~/goma`, it is used by default.
+It is also used by default in preference to `ccache`.]
+
+To override the default behaviors, pass flags to `fx set`:
+
+```
+--ccache     # force use of ccache even if goma is available
+--no-ccache  # disable use of ccache
+--no-goma    # disable use of goma
 ```
 
 ## Boot Fuchsia
@@ -115,7 +119,7 @@ below), booting from USB (see below), or [installing](https://fuchsia.googlesour
 Fuchsia on internal storage. In all cases you'll need to put some code on the
 target hardware, using a USB drive is a good option for doing this.
 
-If you want to netboot or create a bootable USB drive, but not install Fuchsia
+If you want to netboot or create a bootable USB drive, but not install Fuchsia,
 you can use the [build-bootable-usb-gigaboot.sh script](https://fuchsia.googlesource.com/scripts/+/master/build-bootable-usb-gigaboot.sh).
 If you plan to netboot, pass the `-m` and `-f` options to skip copying over the
 Zircon kernel and Fuchsia system images since the bootserver will supply these.
@@ -128,7 +132,7 @@ with hardware-specific firmware configuration.
 * [Intel NUC](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md)
 * [Raspberry Pi 3](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/rpi3.md)
 
-Once your hardware is configured, you can run `fboot` to start the bootserver.
+Once your hardware is configured, you can run `fx boot` to start the bootserver.
 
 ### Boot from QEMU
 
@@ -198,29 +202,29 @@ Note: to select tabs, you may need to enter "console mode". See the next section
 
 ### Launch a graphical application
 
-(qemu users must enable graphics with -g.)
+QEMU does not support Vulkan and therefore cannot run our graphics stack.
 
 Most graphical applications in Fuchsia use the
-[mozart](https://fuchsia.googlesource.com/mozart) system compositor. You can launch
+[Mozart](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/) system compositor. You can launch
 such applications, commonly found in `/system/apps`, like this:
 
 ```
 launch spinning_square_view
 ```
 
-Source code for mozart example apps is
-[here](https://fuchsia.googlesource.com/mozart/+/HEAD/examples/).
+Source code for Mozart example apps is
+[here](https://fuchsia.googlesource.com/garnet/+/master/examples/ui).
 
-When you launch something that uses mozart, does hardware accelerated graphics, or if you build the
+When you launch something that uses Mozart, uses hardware-accelerated graphics, or if you build
 the [default](https://fuchsia.googlesource.com/packages/+/master/gn/default) package (which will
-boot into the Fuchsia system UI), Fuchsia will enter "graphics mode", which will not display any
+boot into the Fuchsia System UI), Fuchsia will enter "graphics mode", which will not display any
 of the text shells. In order to use the text shell, you will need to enter "console mode" by
 pressing Alt-Escape. In console mode, Alt-Tab will have the behavior described in the previous
 section, and pressing Alt-Escape again will take you back to the graphical shell.
 
 If you would like to use a text shell inside a terminal emulator from within the graphical shell
 you can launch [moterm](https://fuchsia.googlesource.com/moterm/) by selecting the "Ask Anything"
-box and typing "moterm"
+box and typing `moterm`.
 
 ## Contribute changes
 
@@ -231,6 +235,6 @@ box and typing "moterm"
 * Using Zircon - copying files, network booting, log viewing, and more are [here](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Fuchsia documentation](https://fuchsia.googlesource.com/docs) hub
 * Build [Fuchsia's toolchain](toolchain.md)
-* More about the [build commands](build_system.md) called under-the-hood by `fbuild`
+* More about the [build commands](build_system.md) called under-the-hood by `fx full-build`
 * More information on the system bootstrap application is
 [here](https://fuchsia.googlesource.com/application/+/HEAD/src/bootstrap/).
