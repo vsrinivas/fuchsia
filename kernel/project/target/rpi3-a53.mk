@@ -8,7 +8,3 @@
 # main project for qemu-aarch64
 ARCH := arm64
 TARGET := rpi3
-ARM_CPU := cortex-a53
-
-
-

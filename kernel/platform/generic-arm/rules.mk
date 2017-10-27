@@ -12,7 +12,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/platform.cpp \
 
 ARCH := arm64
-ARM_CPU := cortex-a53
 
 MODULE_DEPS += \
 	kernel/lib/cbuf \

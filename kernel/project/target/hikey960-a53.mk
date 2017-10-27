@@ -6,7 +6,3 @@
 
 ARCH := arm64
 TARGET := hikey960
-ARM_CPU := cortex-a53
-
-
-

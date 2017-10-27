@@ -5,4 +5,3 @@
 
 ARCH := arm64
 TARGET := gauss
-ARM_CPU := cortex-a53

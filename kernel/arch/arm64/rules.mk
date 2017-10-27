@@ -9,13 +9,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-# set some options based on the core
-ifeq ($(ARM_CPU),cortex-a53)
-ARCH_COMPILEFLAGS += -mcpu=$(ARM_CPU)
-else
-$(error $(LOCAL_DIR)/rules.mk doesnt have logic for arm core $(ARM_CPU))
-endif
-
 MODULE_SRCS += \
 	$(LOCAL_DIR)/arch.cpp \
 	$(LOCAL_DIR)/asm.S \
@@ -42,7 +35,6 @@ MODULE_DEPS += \
 	third_party/lib/fdt \
 
 KERNEL_DEFINES += \
-	ARM64_CPU_$(ARM_CPU)=1 \
 	ARM_ISA_ARMV8=1 \
 	ARM_ISA_ARMV8A=1
 
@@ -90,6 +82,9 @@ include $(LOCAL_DIR)/toolchain.mk
 TOOLCHAIN_PREFIX := $(ARCH_$(ARCH)_TOOLCHAIN_PREFIX)
 
 ARCH_COMPILEFLAGS += $(ARCH_$(ARCH)_COMPILEFLAGS)
+
+# generate code for the fairly generic cortex-a53
+ARCH_COMPILEFLAGS += -mcpu=cortex-a53
 
 CLANG_ARCH := aarch64
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)

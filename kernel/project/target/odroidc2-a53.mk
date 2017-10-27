@@ -5,4 +5,3 @@
 
 ARCH := arm64
 TARGET := odroidc2
-ARM_CPU := cortex-a53
