@@ -17,7 +17,7 @@ fn main() {
 
     gcc::Build::new()
                  .file("src/binding.c")
-                 // Assumes fuchsia is already built in release mode.
-                 .compiler(String::from(fuchsia_root + "/out/release-x86-64/host_x64/x86_64-unknown-fuchsia-cc"))
+                 .compiler(format!("{}/buildtools/linux-x64/clang/bin/clang", fuchsia_root))
+                 .flag(format!("--sysroot={}/out/build-zircon/build-zircon-pc-x86-64/sysroot", fuchsia_root).as_str())
                  .compile("libbinding.a");
 }
