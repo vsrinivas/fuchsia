@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "installer": "//zircon/system/uapp/installer",
-        "installer_tests": "//zircon/system/uapp/installer:installer_tests"
-    }
-}

@@ -2,7 +2,6 @@
     "imports": [
         "garnet/packages/default",
         "packages/gn/build_info",
-        "packages/gn/install-fuchsia",
         "peridot/packages/default",
         "topaz/packages/default"
     ]
