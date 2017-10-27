@@ -9,20 +9,35 @@ enum Status {
   ERR_NOT_SET,
   ERR_INVALID_SETTING,
   ERR_READ,
-  ERR_INCORRECT_TYPE
+  ERR_INCORRECT_TYPE,
+  ERR_UNKNOWN
+};
+
+enum ValueType {
+  INT,
+  STRING
 };
 
 
 // Manager Interface used to mange settings
 [ServiceName="device_settings::DeviceSettings"]
 interface DeviceSettingsManager {
-  GetInteger(string name) => (int64 val, Status s);
+  GetInteger(string key) => (int64 val, Status s);
 
-  GetString(string name) => (string val, Status s);
-
-  // Return false on database error and true on success.
-  SetInteger(string name, int64 val) => (bool result);
+  GetString(string key) => (string val, Status s);
 
   // Return false on database error and true on success.
-  SetString(string name, string val) => (bool result);
+  SetInteger(string key, int64 val) => (bool result);
+
+  // Return false on database error and true on success.
+  SetString(string key, string val) => (bool result);
+
+  // watcher called when a settings changes
+  // Return Status::OK, Status::ERR_INVALID_SETTING or Status::ERR_UNKNOWN
+  Watch(string key, DeviceSettingsWatcher watcher) => (Status status);
+};
+
+// Watcher on battery status
+interface DeviceSettingsWatcher {
+  OnChangeSettings(ValueType type);
 };

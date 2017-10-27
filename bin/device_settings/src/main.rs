@@ -14,22 +14,28 @@ extern crate tokio_core;
 extern crate tokio_fuchsia;
 
 use bytes::ByteOrder;
+use fidl::{InterfacePtr, ClientEnd};
 use futures::{Future, future};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io;
 use std::os::unix::ffi::OsStrExt;
+use std::rc::Rc;
 use tokio_core::reactor;
 
 // Include the generated FIDL bindings for the `DeviceSetting` service.
 extern crate garnet_public_lib_device_settings_fidl;
-use garnet_public_lib_device_settings_fidl::{DeviceSettingsManager, Status};
+use garnet_public_lib_device_settings_fidl::{DeviceSettingsManager, Status, DeviceSettingsWatcher,
+                                             ValueType};
 
 type FidlImmediate<T> = future::FutureResult<T, fidl::CloseChannel>;
 
 struct DeviceSettingsManagerServer {
     setting_file_map: HashMap<String, String>,
+    watchers: Rc<RefCell<HashMap<String, Vec<DeviceSettingsWatcher::Proxy>>>>,
+    handle: reactor::Handle,
 }
 
 impl DeviceSettingsManagerServer {
@@ -45,6 +51,41 @@ impl DeviceSettingsManagerServer {
                 ),
             );
         }
+    }
+
+    fn run_watchers(&mut self, key: &String, t: ValueType) {
+        let mut map = self.watchers.borrow_mut();
+        if let Some(m) = map.get_mut(key) {
+            m.retain(|w| {
+                if let Err(e) = w.on_change_settings(t) {
+                    match e {
+                        fidl::Error::IoError(ref ie)
+                            if ie.kind() == io::ErrorKind::ConnectionAborted => {
+                            return false;
+                        }
+                        e => {
+                            eprintln!("Error call watcher: {:?}", e);
+                        }
+                    }
+                }
+                return true;
+            });
+        }
+    }
+
+    fn set_key(&mut self, key: &String, buf: &[u8], t: ValueType) -> io::Result<bool> {
+        {
+            let file = if let Some(f) = self.setting_file_map.get(key) {
+                f
+            } else {
+                return Ok(false);
+            };
+            if let Err(e) = write_to_file(file, buf) {
+                return Err(e);
+            }
+        }
+        self.run_watchers(&key, t);
+        Ok(true)
     }
 }
 
@@ -67,8 +108,8 @@ fn read_file(file: &str) -> io::Result<String> {
 impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
     type GetInteger = FidlImmediate<(i64, Status)>;
 
-    fn get_integer(&mut self, name: String) -> Self::GetInteger {
-        let file = if let Some(f) = self.setting_file_map.get(&name) {
+    fn get_integer(&mut self, key: String) -> Self::GetInteger {
+        let file = if let Some(f) = self.setting_file_map.get(&key) {
             f
         } else {
             return future::ok((0, Status::ErrInvalidSetting));
@@ -92,23 +133,20 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
 
     type SetInteger = FidlImmediate<bool>;
 
-    fn set_integer(&mut self, name: String, val: i64) -> Self::SetInteger {
-        let file = if let Some(f) = self.setting_file_map.get(&name) {
-            f
-        } else {
-            return future::ok(false);
-        };
-        if let Err(e) = write_to_file(file, val.to_string().as_bytes()) {
-            eprintln!("DeviceSetting: Error setting integer: {:?}", e);
-            return future::ok(false);
+    fn set_integer(&mut self, key: String, val: i64) -> Self::SetInteger {
+        match self.set_key(&key, val.to_string().as_bytes(), ValueType::Int) {
+            Ok(r) => return future::ok(r),
+            Err(e) => {
+                eprintln!("DeviceSetting: Error setting integer: {:?}", e);
+                return future::ok(false);
+            }
         }
-        future::ok(true)
     }
 
     type GetString = FidlImmediate<(String, Status)>;
 
-    fn get_string(&mut self, name: String) -> Self::GetString {
-        let file = if let Some(f) = self.setting_file_map.get(&name) {
+    fn get_string(&mut self, key: String) -> Self::GetString {
+        let file = if let Some(f) = self.setting_file_map.get(&key) {
             f
         } else {
             return future::ok(("".to_string(), Status::ErrInvalidSetting));
@@ -127,17 +165,39 @@ impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
 
     type SetString = FidlImmediate<bool>;
 
-    fn set_string(&mut self, name: String, val: String) -> Self::SetString {
-        let file = if let Some(f) = self.setting_file_map.get(&name) {
-            f
-        } else {
-            return future::ok(false);
-        };
-        if let Err(e) = write_to_file(file, val.as_bytes()) {
-            eprintln!("DeviceSetting: Error setting string: {:?}", e);
-            return future::ok(false);
+    fn set_string(&mut self, key: String, val: String) -> Self::SetString {
+        match self.set_key(&key, val.as_bytes(), ValueType::String) {
+            Ok(r) => return future::ok(r),
+            Err(e) => {
+                eprintln!("DeviceSetting: Error setting string: {:?}", e);
+                return future::ok(false);
+            }
         }
-        future::ok(true)
+
+    }
+
+    type Watch = FidlImmediate<Status>;
+    fn watch(
+        &mut self,
+        key: String,
+        watcher: InterfacePtr<ClientEnd<DeviceSettingsWatcher::Service>>,
+    ) -> Self::Watch {
+        if !self.setting_file_map.contains_key(&key) {
+            return future::ok(Status::ErrInvalidSetting);
+        }
+        match DeviceSettingsWatcher::new_proxy(watcher.inner, &self.handle) {
+            Err(e) => {
+                eprintln!("DeviceSetting: Error getting watcher proxy: {:?}", e);
+                return future::ok(Status::ErrUnknown);
+            }
+            Ok(w) => {
+                let mut map = self.watchers.borrow_mut();
+                let mv = map.entry(key).or_insert(Vec::new());
+                mv.push(w);
+                future::ok(Status::Ok)
+            }
+        }
+
     }
 }
 
@@ -159,6 +219,7 @@ fn main() {
             &handle,
         ).unwrap();
 
+    let watchers = Rc::new(RefCell::new(HashMap::new()));
     let server = fdio_channel.repeat_server(|_chan, ref mut buf| {
         let fdio_op = bytes::LittleEndian::read_u32(&buf.bytes()[4..8]);
 
@@ -191,7 +252,11 @@ fn main() {
 
         let service_channel = fuchsia_zircon::Channel::from(buf.take_handle(0).unwrap());
 
-        let mut d = DeviceSettingsManagerServer { setting_file_map: HashMap::new() };
+        let mut d = DeviceSettingsManagerServer {
+            setting_file_map: HashMap::new(),
+            watchers: watchers.clone(),
+            handle: handle.clone(),
+        };
         d.initialize_keys(DATA_DIR.to_owned(), &["Timezone"]);
         // Create data directory
         let _ = fs::create_dir_all(DATA_DIR);
@@ -233,7 +298,11 @@ mod tests {
         keys: &[&str],
     ) -> Result<(tokio_core::reactor::Core, DeviceSettingsManagerServer, TempDir), ()> {
         let core = reactor::Core::new().unwrap();
-        let mut device_settings = DeviceSettingsManagerServer { setting_file_map: HashMap::new() };
+        let mut device_settings = DeviceSettingsManagerServer {
+            setting_file_map: HashMap::new(),
+            watchers: Rc::new(RefCell::new(HashMap::new())),
+            handle: core.handle(),
+        };
         let tmp_dir = TempDir::new("ds_test").unwrap();
 
 
