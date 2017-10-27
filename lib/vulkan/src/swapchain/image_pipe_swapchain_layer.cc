@@ -234,10 +234,16 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
             return result;
         }
         uint32_t vmo_handle;
-        result = pDisp->ExportDeviceMemoryMAGMA(device, device_mem, &vmo_handle);
+        // Export the vkDeviceMemory to a VMO.
+        VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
+            VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr,
+            device_mem, VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+
+        result =
+            pDisp->GetMemoryFuchsiaHandleKHR(device, &get_handle_info, &vmo_handle);
         if (result != VK_SUCCESS) {
-            FXL_DLOG(ERROR) << "vkExportDeviceMemoryMAGMA failed: " << result;
-            return result;
+          FXL_DLOG(ERROR) << "vkGetMemoryFuchsiaHandleKHR failed: " << result;
+          return result;
         }
 
         zx::vmo vmo(vmo_handle);
