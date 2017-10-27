@@ -45,6 +45,8 @@ struct ethdev {
     mtx_t send_lock;
 };
 
+#define ETH_MTU 1500
+
 #define ETH_RXBUF_SIZE  2048
 #define ETH_RXBUF_COUNT 32
 

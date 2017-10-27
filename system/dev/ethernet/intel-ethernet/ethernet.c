@@ -10,6 +10,7 @@
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
+#include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -91,7 +92,8 @@ static zx_status_t eth_query(void* ctx, uint32_t options, ethmac_info_t* info) {
     }
 
     memset(info, 0, sizeof(*info));
-    info->mtu = ETH_RXBUF_SIZE; //TODO: not actually the mtu!
+    ZX_DEBUG_ASSERT(ETH_TXBUF_SIZE >= ETH_MTU);
+    info->mtu = ETH_MTU;
     memcpy(info->mac, edev->eth.mac, sizeof(edev->eth.mac));
 
     return ZX_OK;
