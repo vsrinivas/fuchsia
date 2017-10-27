@@ -10,6 +10,9 @@ usage: fx [--config CONFIG] COMMAND [...]
 Run Fuchsia development commands. Must be run with a current working directory
 that is contained in a Fuchsia source tree.
 
+commands:
+$(ls "${fuchsia_dir}/scripts/devshell" | grep -v lib | sed -e 's/^/  /')
+
 optional arguments:
   --config              Path to the config file use when running COMMAND.
                         Defaults to "${FUCHSIA_CONFIG}" if set in the
@@ -25,7 +28,6 @@ fuchsia_dir="$(pwd)"
 while [[ ! -f "${fuchsia_dir}/.jiri_manifest" ]]; do
   fuchsia_dir="$(dirname "${fuchsia_dir}")"
   if [[ "${fuchsia_dir}" == "/" ]]; then
-    usage
     echo >& 2 "error: Cannot find Fuchsia source tree containing $(pwd)"
     exit 1
   fi
@@ -37,9 +39,9 @@ if [[ "$1" == "--config" ]]; then
     echo >& 2 "error: Missing path to config file for --config argument"
     exit 1
   fi
-  shift
+  shift # Removes --config.
   export FUCHSIA_CONFIG="$1"
-  shift
+  shift # Removes the path to the config file.
 fi
 
 if [[ $# -lt 1 ]]; then
@@ -49,6 +51,16 @@ if [[ $# -lt 1 ]]; then
 fi
 
 command_name="$1"
+
+# The "help" command is built-in and just prints the usage.
+#
+# Rather than adding more built-in commands, please add separate scripts in the
+# "devshell" directory.
+if [[ "$command_name" == "help" ]]; then
+  usage
+  exit 0
+fi
+
 command_path="${fuchsia_dir}/scripts/devshell/${command_name}"
 
 if [[ ! -f "${command_path}" ]]; then
@@ -57,5 +69,5 @@ if [[ ! -f "${command_path}" ]]; then
   exit 1
 fi
 
-shift
+shift # Removes the command name.
 "${command_path}" "$@"

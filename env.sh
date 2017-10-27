@@ -27,7 +27,7 @@ export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 
 FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
-source "${FUCHSIA_DIR}/scripts/devshell/env.sh"
+source "${FUCHSIA_DIR}/scripts/devshell/lib/env.sh"
 
 function __netaddr() {
   # We want to give the user time to accept Darwin's firewall dialog.
