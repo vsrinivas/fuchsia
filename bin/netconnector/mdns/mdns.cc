@@ -325,6 +325,19 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
                         const ReplyAddress& reply_address) {
   FXL_DCHECK(resource);
 
+  if (section == MdnsResourceSection::kExpired) {
+    // Expirations are distributed to local agents. We handle this case
+    // separately so we don't create an empty outbound message.
+    prohibit_agent_removal_ = true;
+
+    for (auto& pair : agents_) {
+      pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
+    }
+
+    prohibit_agent_removal_ = false;
+    return;
+  }
+
   DnsMessage& message = outbound_messages_by_reply_address_[reply_address];
 
   switch (section) {
@@ -338,12 +351,7 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
       message.additionals_.push_back(resource);
       break;
     case MdnsResourceSection::kExpired:
-      // Expirations are distributed to local agents.
-      DPROHIBIT_AGENT_REMOVAL();
-      for (auto& pair : agents_) {
-        pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
-      }
-      DALLOW_AGENT_REMOVAL();
+      FXL_DCHECK(false);
       break;
   }
 }
