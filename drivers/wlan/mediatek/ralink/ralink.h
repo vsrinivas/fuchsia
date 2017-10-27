@@ -59,6 +59,12 @@ constexpr uint16_t kEirpMaxPower = 0x50;
 // TX compensation max power
 constexpr uint16_t kTxCompMaxPower = 0x0c;
 
+// Device supports multiple rotating group keys for each BSS.
+constexpr int8_t kGroupKeysPerBss = 4;
+// A shared key mode allows configuring key mode for all the keys of two BSS.
+constexpr int8_t kKeyModesPerSharedKeyMode = kGroupKeysPerBss * 2;
+constexpr int8_t kMaxSharedKeys = 31;
+
 // Entry for pairwise and shared key table.
 struct KeyEntry {
     uint8_t key[16];
@@ -81,6 +87,8 @@ enum KeyMode : uint8_t {
     kCKIP104 = 6,
     kCKIP128 = 7,
     kWAPI = 8,
+
+    kUnsupported = 9,
 } __PACKED;
 
 enum KeyType : uint8_t {
@@ -88,10 +96,10 @@ enum KeyType : uint8_t {
     kPairwiseKey = 1,
 };
 
-class WcidAttr : public BitField<uint32_t> {
+class WcidAttrEntry: public BitField<uint32_t> {
    public:
-    WLAN_BIT_FIELD(keyType, 0, 1);  // KeyType
-    WLAN_BIT_FIELD(keyMode, 1, 3);  // KeyMode
+    WLAN_BIT_FIELD(keyType, 0, 1); // KeyType
+    WLAN_BIT_FIELD(keyMode, 1, 3); // KeyMode
     WLAN_BIT_FIELD(bssIdx, 4, 3);
     WLAN_BIT_FIELD(rxUsrDef, 7, 3);
     WLAN_BIT_FIELD(keyModeExt, 10, 1);
@@ -103,16 +111,18 @@ class WcidAttr : public BitField<uint32_t> {
 };
 
 // Each SharedKeyMode entry allows to set the key mode for 8 shared keys.
-class SharedKeyMode : public BitField<uint32_t> {
+class SharedKeyModeEntry {
    public:
-    WLAN_BIT_FIELD(skey0_mode, 0, 3);  // KeyMode
-    WLAN_BIT_FIELD(skey1_mode, 4, 3);
-    WLAN_BIT_FIELD(skey2_mode, 8, 3);
-    WLAN_BIT_FIELD(skey3_mode, 12, 3);
-    WLAN_BIT_FIELD(skey4_mode, 16, 3);
-    WLAN_BIT_FIELD(skey5_mode, 20, 3);
-    WLAN_BIT_FIELD(skey6_mode, 24, 3);
-    WLAN_BIT_FIELD(skey7_mode, 28, 3);
+    uint32_t value;
+
+    zx_status_t set(uint8_t skey_idx, KeyMode mode) {
+        if (skey_idx >= kKeyModesPerSharedKeyMode) { return ZX_ERR_INVALID_ARGS; }
+
+        uint8_t offset = skey_idx * 4;
+        uint32_t cleared = value & ~(15 << offset);
+        value = cleared | ((mode & 15) << offset);
+        return ZX_OK;
+    }
 };
 
 // Registers
