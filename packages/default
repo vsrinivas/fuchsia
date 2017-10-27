@@ -3,6 +3,7 @@
         "garnet/packages/amber",
         "garnet/packages/asio",
         "garnet/packages/auth",
+        "garnet/packages/benchmark_examples",
         "garnet/packages/bluetooth",
         "garnet/packages/boringssl",
         "garnet/packages/cmdutils",
