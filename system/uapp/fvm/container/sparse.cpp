@@ -74,12 +74,13 @@ zx_status_t SparseContainer::Init() {
     image_.slice_size = slice_size_;
     image_.partition_count = 0;
     image_.header_length = sizeof(fvm::sparse_image_t);
+    partitions_.reset();
     dirty_ = true;
     printf("Initialized new sparse data container.\n");
     return ZX_OK;
 }
 
-zx_status_t SparseContainer::Report() const {
+zx_status_t SparseContainer::Verify() const {
     if (image_.magic != fvm::kSparseFormatMagic) {
         fprintf(stderr, "SparseContainer: Bad magic\n");
         return ZX_ERR_IO;
@@ -88,17 +89,36 @@ zx_status_t SparseContainer::Report() const {
     printf("Slice size is %" PRIu64 "\n", image_.slice_size);
     printf("Found %" PRIu64 " partitions\n", image_.partition_count);
 
-    for (unsigned i = 0; i < image_.partition_count; i++) {
+    off_t start = 0;
+    off_t end = image_.header_length;
 
+    for (unsigned i = 0; i < image_.partition_count; i++) {
+        fbl::Vector<size_t> extent_lengths;
+        start = end;
         printf("Found partition %u with %u extents\n", i,
                partitions_[i].descriptor.extent_count);
 
         for (unsigned j = 0; j < partitions_[i].descriptor.extent_count; j++) {
-            printf("Found partition %u extent %u of length %" PRIu64 " with %"
-                   PRIu64 " slices (from %" PRIu64 ")\n", i, j,
-                   partitions_[i].extents[j].extent_length,
-                   partitions_[i].extents[j].slice_count,
-                   partitions_[i].extents[j].slice_start);
+            extent_lengths.push_back(partitions_[i].extents[j].extent_length);
+            end += partitions_[i].extents[j].extent_length;
+        }
+
+        zx_status_t status;
+        disk_format_t part;
+        if ((status = Format::Detect(fd_.get(), start, &part)) != ZX_OK) {
+            return status;
+        }
+
+        fbl::unique_fd dupfd(dup(fd_.get()));
+        if (!dupfd) {
+            fprintf(stderr, "Failed to duplicate fd\n");
+            return ZX_ERR_INTERNAL;
+        }
+
+        if ((status = Format::Check(fbl::move(dupfd), start, end, extent_lengths, part)) != ZX_OK) {
+            const char* name = reinterpret_cast<const char*>(partitions_[i].descriptor.name);
+            fprintf(stderr, "%s fsck returned an error.\n", name);
+            return status;
         }
     }
     return ZX_OK;

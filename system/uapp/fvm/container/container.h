@@ -27,8 +27,9 @@ public:
     // an existing Container.
     virtual zx_status_t Init() = 0;
 
-    // Reports various information about the Container, e.g. number of partitions
-    virtual zx_status_t Report() const = 0;
+    // Reports various information about the Container, e.g. number of partitions, and runs fsck on
+    // all supported partitions (blobstore, minfs)
+    virtual zx_status_t Verify() const = 0;
 
     // Commits the Container data to disk
     virtual zx_status_t Commit() = 0;
@@ -52,7 +53,7 @@ public:
     FvmContainer(const char* path, size_t slice_size);
     ~FvmContainer();
     zx_status_t Init() final;
-    zx_status_t Report() const final;
+    zx_status_t Verify() const final;
     zx_status_t Commit() final;
     size_t SliceSize() const final;
     zx_status_t AddPartition(const char* path, const char* type_name) final;
@@ -89,7 +90,7 @@ public:
     SparseContainer(const char* path, uint64_t slice_size);
     ~SparseContainer();
     zx_status_t Init() final;
-    zx_status_t Report() const final;
+    zx_status_t Verify() const final;
     zx_status_t Commit() final;
     size_t SliceSize() const final;
     zx_status_t AddPartition(const char* path, const char* type_name) final;

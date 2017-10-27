@@ -110,7 +110,7 @@ zx_status_t FvmContainer::Init() {
     return ZX_OK;
 }
 
-zx_status_t FvmContainer::Report() const {
+zx_status_t FvmContainer::Verify() const {
     CheckValid();
     const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(metadata_.get()) +
                                                  metadata_size_);

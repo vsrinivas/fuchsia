@@ -12,7 +12,7 @@ int usage(void) {
     fprintf(stderr, "fvm performs host-side FVM and sparse file creation\n");
     fprintf(stderr, "Commands:\n");
     fprintf(stderr, " create : Creates an FVM partition\n");
-    fprintf(stderr, " report : Report basic information about sparse/fvm files\n");
+    fprintf(stderr, " verify : Report basic information about sparse/fvm files and run fsck on"                     "contained partitions\n");
     fprintf(stderr, " add : Adds a Minfs or Blobstore partition to an FVM (input path is"
                     " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
@@ -43,13 +43,13 @@ int main(int argc, char** argv) {
         if (fvmContainer.Commit() != ZX_OK) {
             return -1;
         }
-    } else if (!strcmp(command, "report")) {
+    } else if (!strcmp(command, "verify")) {
         fbl::unique_ptr<Container> containerData;
         if (Container::Create(path, &containerData) != ZX_OK) {
             return -1;
         }
 
-        if (containerData->Report() != ZX_OK) {
+        if (containerData->Verify() != ZX_OK) {
             return -1;
         }
     } else if (!strcmp(command, "add")) {

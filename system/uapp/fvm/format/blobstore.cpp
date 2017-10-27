@@ -7,6 +7,7 @@
 static constexpr char kBlobstoreName[] = "blobstore";
 static constexpr uint8_t kBlobstoreType[] = GUID_BLOBFS_VALUE;
 
+
 BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
     : Format(), fd_(fbl::move(fd)) {
     if (!strcmp(type, kBlobstoreName)) {

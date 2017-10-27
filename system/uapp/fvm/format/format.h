@@ -12,6 +12,7 @@
 #include <fs-management/mount.h>
 #include <fvm/fvm.h>
 #include <minfs/minfs.h>
+#include <fbl/vector.h>
 
 typedef struct {
     size_t vslice_start;
@@ -25,9 +26,13 @@ typedef struct {
 // sparse container
 class Format {
 public:
+    // Detect the type of partition starting at |offset| bytes
+    static zx_status_t Detect(int fd, off_t offset, disk_format_t* out);
     // Read file at |path| and generate appropriate Format
     static zx_status_t Create(const char* path, const char* type, fbl::unique_ptr<Format>* out);
-
+    // Fun fsck on partition contained between bytes |start| and |end|
+    static zx_status_t Check(fbl::unique_fd fd, off_t start, off_t end,
+                             const fbl::Vector<size_t>& extent_lengths, disk_format_t part);
     virtual ~Format() {}
     // Update the file system's superblock (e.g. set FVM flag), and any other information required
     // for the partition to be placed in FVM.
