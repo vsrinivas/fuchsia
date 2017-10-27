@@ -170,7 +170,7 @@ public:
             // callback, but many callers will use DownCastDispatcher()
             // which requires a (necessarily non-const) RefPtr<Dispatcher>.
             zx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
-                                 fbl::move(handle.dispatcher()));
+                                 handle.dispatcher());
             if (s != ZX_OK) {
                 return s;
             }

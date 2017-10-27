@@ -25,7 +25,7 @@ void TearDownHandle(Handle* handle);
 class Handle final : public fbl::DoublyLinkedListable<Handle*> {
 public:
     // Returns the Dispatcher to which this instance points.
-    fbl::RefPtr<Dispatcher> dispatcher() const;
+    const fbl::RefPtr<Dispatcher>& dispatcher() const { return dispatcher_; }
 
     // Returns the process that owns this instance. Used to guarantee
     // that one process may not access a handle owned by a different process.

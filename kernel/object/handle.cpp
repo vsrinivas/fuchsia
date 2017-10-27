@@ -22,5 +22,3 @@ Handle::Handle(const Handle* rhs, zx_rights_t rights, uint32_t base_value)
       rights_(rights),
       base_value_(base_value) {
 }
-
-fbl::RefPtr<Dispatcher> Handle::dispatcher() const { return dispatcher_; }
