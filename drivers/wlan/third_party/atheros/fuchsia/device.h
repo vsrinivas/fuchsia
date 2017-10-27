@@ -54,6 +54,7 @@ class Device : public BaseDevice,
     void WlanmacTx(uint32_t options, const void* data, size_t len);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
     zx_status_t WlanmacSetBss(uint32_t options, const uint8_t* mac, uint8_t type);
+    zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* config);
 
   private:
     fbl::unique_ptr<Hif> hif_;
