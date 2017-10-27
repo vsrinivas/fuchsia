@@ -10,5 +10,5 @@
 
 include kernel/project/virtual/test.mk
 include kernel/project/virtual/user.mk
-include kernel/project/target/qemu-virt-a53.mk
+include kernel/project/target/qemu-virt.mk
 

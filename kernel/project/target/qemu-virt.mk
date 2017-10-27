@@ -6,4 +6,5 @@
 # https://opensource.org/licenses/MIT
 
 # main project for qemu-virt
+ARCH := arm64
 TARGET := qemu-virt

@@ -8,5 +8,4 @@
 # top level project rules for the pc-x86 project
 #
 ARCH := x86
-SUBARCH ?= x86-32
 TARGET := pc-x86
