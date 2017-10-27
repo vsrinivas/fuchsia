@@ -35,3 +35,11 @@ will not be able to keep itself up-to-date.
 ```
 cp .jiri_root/bin/jiri ~/bin
 ```
+
+To use the `fx` tool, you can either symlink it into your `~/bin` directory:
+
+```
+ln -s `pwd`/scripts/fx ~/bin
+```
+
+or just run the tool directly as `scripts/fx`.
