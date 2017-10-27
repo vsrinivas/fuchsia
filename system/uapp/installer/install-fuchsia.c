@@ -992,7 +992,7 @@ static zx_status_t make_empty_partition(gpt_device_t *install_dev,
                                         char *device_path, char *dev_dir_path,
                                         uint8_t (*guid)[GPT_GUID_LEN],
                                         uint64_t size_pref, uint64_t size_min,
-                                        disk_format_t disk_format, char *name,
+                                        disk_format_t disk_format, const char *name,
                                         bool reformat) {
   int device_fd = open(device_path, O_RDWR);
   if (device_fd < 0) {

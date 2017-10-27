@@ -13,8 +13,5 @@ static_library("driver-info") {
   public = [
     "include/driver-info/driver-info.h",
   ]
-  deps = [
-    "//zircon/third_party/ulib/cksum",
-  ]
   public_configs = [ ":driver-info_config" ]
 }

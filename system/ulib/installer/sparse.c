@@ -74,7 +74,7 @@ ssize_t unsparse_buf(uint8_t *buf, const size_t len, unsparse_ctx_t *ctx,
       break;
     }
 
-    ssize_t wr_sz = (size_t) ctx->chunk.len > sz ? sz : ctx->chunk.len;
+    ssize_t wr_sz = (size_t) ctx->chunk.len > sz ? sz : (size_t) ctx->chunk.len;
     if (lseek(dst, ctx->chunk.start, SEEK_SET) != ctx->chunk.start) {
       return -1;
     }

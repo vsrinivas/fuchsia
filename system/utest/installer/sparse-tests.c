@@ -57,7 +57,7 @@ bool test_readn(void) {
   ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "Error seeking to front of file");
 
   size_t first_chunk = 11 * 1024;
-  ASSERT_GT(DATA_SZ, first_chunk, "First chunk should be smaller than second.");
+  ASSERT_GT((size_t)DATA_SZ, first_chunk, "First chunk should be smaller than second.");
   size_t second_chunk = DATA_SZ - first_chunk;
   uint8_t *read_data = malloc(second_chunk);
 
@@ -189,7 +189,7 @@ int build_sample_chunk_list(chunk_t *chunks) {
   uint32_t data_space = 0;
   for (int i = -1; ++i < 4; data_space += lengths[i]);
 
-  ASSERT_EQ(DATA_SZ, data_space + blank_space, "Error creating file map.");
+  ASSERT_EQ((size_t)DATA_SZ, data_space + blank_space, "Error creating file map.");
 
   // compose data and hole sizes into a list of chunk_t descriptors
   chunks[0].start = 0;
@@ -225,11 +225,11 @@ bool test_unsparse_no_holes(void) {
   header.start = 0;
   header.len = DATA_SZ;
 
-  ASSERT_EQ(write(src, &header, sizeof(header)), sizeof(header),
+  ASSERT_EQ(write(src, &header, sizeof(header)), (ssize_t)sizeof(header),
             "Couldn't write header to sparsed file");
   ASSERT_EQ(writen(src, file_data, DATA_SZ), DATA_SZ,
             "File output length not correct.");
-  ASSERT_EQ(write(src, &header, sizeof(header)), sizeof(header),
+  ASSERT_EQ(write(src, &header, sizeof(header)), (ssize_t)sizeof(header),
             "Couldn't write end header to sparsed file.");
   ASSERT_EQ(lseek(src, 0, SEEK_SET), 0, "Couldn't seek to beginning of file.");
 
@@ -288,14 +288,14 @@ bool test_unsparse_holes(void) {
   // write chunk descriptors to file and create an in-memory copy of the
   // unsparsed data
   for (int i = 0; i < 4; ++i) {
-    ASSERT_EQ(writen(src, &sects[i], sizeof(chunk_t)), sizeof(chunk_t),
+    ASSERT_EQ(writen(src, &sects[i], sizeof(chunk_t)), (ssize_t)sizeof(chunk_t),
               "Couldn't write chunk data to sparsed file.");
     make_rand_data(file_data + sects[i].start, sects[i].len);
     ASSERT_EQ(writen(src, file_data + sects[i].start, sects[i].len),
               (ssize_t) sects[i].len, "Write to source file failed.");
   }
 
-  ASSERT_EQ(writen(src, &sects[4], sizeof(chunk_t)), sizeof(chunk_t),
+  ASSERT_EQ(writen(src, &sects[4], sizeof(chunk_t)), (ssize_t)sizeof(chunk_t),
             "Write of last chunk to source file failed.");
 
   ASSERT_EQ(lseek(src, 0, SEEK_SET), 0, "Source file rewind failed.");
