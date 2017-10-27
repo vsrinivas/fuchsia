@@ -31,7 +31,7 @@ struct percpu {
 
     /* per cpu idle thread */
     thread_t idle_thread;
-} __CPU_MAX_ALIGN;
+} __CPU_ALIGN;
 
 /* the kernel per-cpu structure */
 extern struct percpu percpu[SMP_MAX_CPUS];

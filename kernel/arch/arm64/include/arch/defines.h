@@ -24,19 +24,8 @@
 #define PAGE_SIZE (1L << PAGE_SIZE_SHIFT)
 #define USER_PAGE_SIZE (1L << USER_PAGE_SIZE_SHIFT)
 
-#if ARM64_CPU_CORTEX_A53
-#define CACHE_LINE 64
-#elif ARM64_CPU_CORTEX_A57
-#define CACHE_LINE 64
-#elif ARM64_CPU_CORTEX_A72
-#define CACHE_LINE 64
-#elif ARM64_CPU_CORTEX_A73
-#define CACHE_LINE 64
-#else
-#error "define CACHE_LINE for the specific core"
-#endif
-
-#define MAX_CACHE_LINE 64
+/* the maximum cache line seen on any known ARM hardware */
+#define MAX_CACHE_LINE 128
 
 #ifndef ASSEMBLY
 #define BM(base, count, val) (((val) & ((1UL << (count)) - 1)) << (base))

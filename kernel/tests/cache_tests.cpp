@@ -22,8 +22,10 @@ static void bench_cache(size_t bufsize, uint8_t* buf) {
     zx_time_t t;
     bool do_free;
 
+    printf("cache line size %zu\n", arch_dcache_line_size());
+
     if (buf == 0) {
-        buf = (uint8_t*)memalign(PAGE_SIZE, bufsize);
+        buf = (uint8_t*)memalign(arch_dcache_line_size(), bufsize);
         do_free = true;
     } else {
         do_free = false;

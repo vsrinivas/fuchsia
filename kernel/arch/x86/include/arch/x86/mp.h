@@ -71,7 +71,7 @@ struct x86_percpu {
 
     /* Reserved space for interrupt stacks */
     uint8_t interrupt_stacks[NUM_ASSIGNED_IST_ENTRIES][PAGE_SIZE] __ALIGNED(16);
-} __CPU_MAX_ALIGN;
+} __CPU_ALIGN;
 
 static_assert(__offsetof(struct x86_percpu, direct) == PERCPU_DIRECT_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_THREAD_OFFSET, "");

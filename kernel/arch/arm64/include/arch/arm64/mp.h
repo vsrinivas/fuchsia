@@ -39,7 +39,7 @@ struct arm64_percpu {
 
     // is the cpu currently inside an interrupt handler
     uint32_t in_irq;
-} __CPU_MAX_ALIGN;
+} __CPU_ALIGN;
 
 void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
 void arm64_init_percpu_early(void);
