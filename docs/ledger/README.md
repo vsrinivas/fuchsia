@@ -20,7 +20,6 @@ Documentation for developing Ledger:
  - [Field Data](field_data.md)
  - [Style Guide](style_guide.md)
  - [Testing](testing.md)
- - [Lint](lint.md)
 
 Design documentation:
 

@@ -6,10 +6,10 @@ The linter is configured in the [.clang-tidy](../.clang-tidy) file.
 ## How to lint
 
 In order to run the current CL through the linter (assuming the current
-directory is `peridot/bin/ledger`), run:
+directory is `//peridot`), run:
 
 ```
-../../../scripts/git-file-tidy [--out-dir out/debug-x86-64]
+../scripts/git-file-tidy [--out-dir out/debug-x86-64]
 ```
 
 In order to run the entire repository through the linter, add `--all`. You can
@@ -45,7 +45,7 @@ This list tracks the reasons for which we disabled particular [checks]:
  - `modernize-use-equals-delete` - flagging all gtest TEST_F
  - `modernize-use-equals-default` - Ledger chose not to impose a preference for
    "= default"
- - `performance-unnecessary-value-param` - it was flagging Ledger view classes
+ - `performance-unnecessary-value-param` - it was flagging view classes
    which we prefer to pass by value
  - `readability-implicit-bool-conversion` - Fuchsia C++ code commonly uses implicit
    bool cast of pointers and numbers

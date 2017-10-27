@@ -1,7 +1,7 @@
 ---
-Checks:          'clang-diagnostic-*,-clang-diagnostic-unused-command-line-argument,clang-analyzer-*,google-*,misc-*,-misc-noexcept*,modernize-*,-modernize-deprecated-headers,-modernize-use-equals-default,performance-*,-performance-unnecessary-value-param,readability-*,-readability-implicit-bool-cast'
+Checks:          'clang-diagnostic-*,-clang-diagnostic-unused-command-line-argument,clang-analyzer-*,-clang-analyzer-core.NullDereference,-clang-analyzer-unix.Malloc,google-*,misc-*,-misc-noexcept*,modernize-*,-modernize-deprecated-headers,-modernize-raw-string-literal,-modernize-return-braced-init-list,-modernize-use-auto,-modernize-use-equals-delete,-modernize-use-equals-default,performance-*,-performance-unnecessary-value-param,readability-*,-readability-implicit-bool-conversion'
 WarningsAsErrors: false
-HeaderFilterRegex: 'peridot/*'
+HeaderFilterRegex: '\.\./peridot/([^t].*|t[^h].*|th[^i].*)'
 AnalyzeTemporaryDtors: false
 FormatStyle:     file
 CheckOptions:
@@ -23,9 +23,10 @@ CheckOptions:
     value:           llvm
   - key:             modernize-replace-auto-ptr.IncludeStyle
     value:           llvm
+  - key:             modernize-use-default-member-init.UseAssignment
+    value:           '1'
   - key:             modernize-use-nullptr.NullMacros
     value:           'NULL'
   - key:             readability-braces-around-statements.ShortStatementLines
     value:           '2'
 ...
-
