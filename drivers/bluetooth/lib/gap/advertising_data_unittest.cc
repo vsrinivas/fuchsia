@@ -9,15 +9,22 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 
+#include "lib/fxl/random/rand.h"
+
 namespace bluetooth {
 namespace gap {
 namespace {
+
+constexpr uint16_t kGattUuid = 0x1801;
+constexpr uint16_t kEddystoneUuid = 0xFEAA;
 
 constexpr uint16_t kId1As16 = 0x0212;
 constexpr char kId1AsString[] = "00000212-0000-1000-8000-00805f9b34fb";
 constexpr uint16_t kId2As16 = 0x1122;
 
 constexpr char kId3AsString[] = "12341234-0000-1000-8000-00805f9b34fb";
+
+constexpr size_t kRandomDataSize = 100;
 
 TEST(AdvertisingDataTest, ReaderEmptyData) {
   common::BufferView empty;
@@ -169,6 +176,102 @@ TEST(AdvertisingDataTest, ServiceData) {
   EXPECT_EQ(13u, data.service_data(eddystone).size());
 
   EXPECT_TRUE(ContainersEqual(bytes.view(8), data.service_data(eddystone)));
+}
+
+TEST(AdvertisingDataTest, Equality) {
+  AdvertisingData one, two;
+
+  common::UUID gatt(kGattUuid);
+  common::UUID eddy(kEddystoneUuid);
+
+  // Service UUIDs
+  EXPECT_EQ(two, one);
+  one.AddServiceUuid(gatt);
+  EXPECT_NE(two, one);
+  two.AddServiceUuid(gatt);
+  EXPECT_EQ(two, one);
+
+  // Even when the bytes are the same but from different places
+  auto bytes = common::CreateStaticByteBuffer(0x01, 0x02, 0x03, 0x04);
+  auto same = common::CreateStaticByteBuffer(0x01, 0x02, 0x03, 0x04);
+  two.SetManufacturerData(0x0123, bytes.view());
+  EXPECT_NE(two, one);
+  one.SetManufacturerData(0x0123, same.view());
+  EXPECT_EQ(two, one);
+
+  // When TX Power is different
+  two.SetTxPower(-34);
+  EXPECT_NE(two, one);
+  one.SetTxPower(-30);
+  EXPECT_NE(two, one);
+  one.SetTxPower(-34);
+  EXPECT_EQ(two, one);
+
+  // Even if the fields were added in different orders
+  AdvertisingData three, four;
+  three.AddServiceUuid(eddy);
+  three.AddServiceUuid(gatt);
+  EXPECT_NE(three, four);
+
+  four.AddServiceUuid(gatt);
+  four.AddServiceUuid(eddy);
+  EXPECT_EQ(three, four);
+}
+
+TEST(AdvertisingDataTest, Copy) {
+  common::UUID gatt(kGattUuid);
+  common::UUID eddy(kEddystoneUuid);
+  auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
+  fxl::RandBytes(rand_data.mutable_data(), kRandomDataSize);
+
+  AdvertisingData source;
+  source.AddURI("http://fuchsia.cl");
+  source.AddURI("https://ru.st");
+  source.SetManufacturerData(0x0123, rand_data.view());
+  source.AddServiceUuid(gatt);
+  source.AddServiceUuid(eddy);
+
+  AdvertisingData dest;
+  source.Copy(&dest);
+
+  EXPECT_EQ(source, dest);
+
+  // Modifying the source shouldn't mess with the copy
+  source.SetLocalName("fuchsia");
+  EXPECT_FALSE(dest.local_name());
+
+  auto bytes = common::CreateStaticByteBuffer(0x01, 0x02, 0x03);
+  source.SetManufacturerData(0x0123, bytes.view());
+  EXPECT_TRUE(
+      common::ContainersEqual(rand_data, dest.manufacturer_data(0x0123)));
+}
+
+TEST(AdvertisingDataTest, Move) {
+  common::UUID gatt(kGattUuid);
+  common::UUID eddy(kEddystoneUuid);
+  auto rand_data = common::DynamicByteBuffer(kRandomDataSize);
+  fxl::RandBytes(rand_data.mutable_data(), kRandomDataSize);
+
+  AdvertisingData source;
+  source.AddURI("http://fuchsia.cl");
+  source.AddURI("https://ru.st");
+  source.SetManufacturerData(0x0123, rand_data.view());
+  source.AddServiceUuid(gatt);
+  source.AddServiceUuid(eddy);
+
+  AdvertisingData dest = std::move(source);
+
+  // source should be empty.
+  EXPECT_EQ(AdvertisingData(), source);
+
+  // Dest should have the data we set.
+  EXPECT_EQ(
+      std::unordered_set<std::string>({"http://fuchsia.cl", "https://ru.st"}),
+      dest.uris());
+  EXPECT_TRUE(ContainersEqual(rand_data, dest.manufacturer_data(0x0123)));
+
+  EXPECT_EQ(std::unordered_set<common::UUID>({gatt, eddy}),
+            dest.service_uuids());
 }
 
 TEST(AdvertisingDataTest, Uris) {

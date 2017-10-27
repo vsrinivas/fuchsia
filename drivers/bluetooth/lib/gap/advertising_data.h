@@ -37,8 +37,13 @@ namespace gap {
 // information.
 class AdvertisingData {
  public:
-  // Create a new empty advertising data.
-  explicit AdvertisingData();
+  // Creates an empty advertising data.
+  AdvertisingData() = default;
+  ~AdvertisingData() = default;
+
+  // Move constructor and assignment operator
+  AdvertisingData(AdvertisingData&& other) = default;
+  AdvertisingData& operator=(AdvertisingData&& other) = default;
 
   // Fill the AdvertisingData |out_ad| from the raw Bluetooth field block
   // |data|. Returns false if |data| is not formatted correctly or on a parsing
@@ -52,6 +57,11 @@ class AdvertisingData {
   // Does not clear |out_ad| first.
   static void FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad,
                        AdvertisingData* out_ad);
+
+  // Copies all of the data in this object to |out|, including making a copy of
+  // any data in manufacturing data or service data.
+  // Overwrites any data which is already in |out|.
+  void Copy(AdvertisingData* out) const;
 
   // Add a UUID to the set of services advertised.
   // These service UUIDs will automatically be compressed to be represented in
@@ -106,7 +116,7 @@ class AdvertisingData {
   void AddURI(const std::string& uri);
 
   // Get the URIs in this advertisement
-  const std::vector<std::string>& uris() const;
+  const std::unordered_set<std::string>& uris() const;
 
   // Sets the appearance
   void SetAppearance(uint16_t appearance);
@@ -126,6 +136,10 @@ class AdvertisingData {
   // Makes a FIDL object that holds the same data
   ::btfidl::low_energy::AdvertisingDataPtr AsLEAdvertisingData() const;
 
+  // Relation operators
+  bool operator==(const AdvertisingData& other) const;
+  bool operator!=(const AdvertisingData& other) const;
+
  private:
   // TODO(armansito): Consider storing the payload in its serialized form and
   // have these point into the structure (see NET-209).
@@ -138,7 +152,9 @@ class AdvertisingData {
   std::unordered_map<uint16_t, common::DynamicByteBuffer> manufacturer_data_;
   std::unordered_map<common::UUID, common::DynamicByteBuffer> service_data_;
 
-  std::vector<std::string> uris_;
+  std::unordered_set<std::string> uris_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(AdvertisingData);
 };
 
 // Convenience classes for reading and writing the contents

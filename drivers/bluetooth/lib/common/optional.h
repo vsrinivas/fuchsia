@@ -71,6 +71,14 @@ class Optional final {
     return *this;
   }
 
+  // (In)equality operators
+  // We are the same as another Optional if both hold no value, or they hold a
+  // value that is equal.
+  bool operator==(const Optional& other) const {
+    return (*this && other && (**this == *other)) || (!*this && !other);
+  }
+  bool operator!=(const Optional& other) const { return !(*this == other); };
+
   // Returns true if this object has a value.
   constexpr bool HasValue() const { return ptr_ != nullptr; }
   constexpr explicit operator bool() const { return HasValue(); }

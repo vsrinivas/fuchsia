@@ -155,8 +155,6 @@ inline size_t BufferWrite(common::MutableByteBuffer* buffer,
 
 }  // namespace
 
-AdvertisingData::AdvertisingData() {}
-
 bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
                                 AdvertisingData* out_ad) {
   FXL_DCHECK(out_ad);
@@ -339,6 +337,27 @@ void AdvertisingData::FromFidl(
   }
 }
 
+void AdvertisingData::Copy(AdvertisingData* out) const {
+  if (local_name_)
+    out->SetLocalName(*local_name_);
+  if (tx_power_)
+    out->SetTxPower(*tx_power_);
+  if (appearance_)
+    out->SetAppearance(*appearance_);
+  for (const auto& it : service_uuids_) {
+    out->AddServiceUuid(it);
+  }
+  for (const auto& it : manufacturer_data_) {
+    out->SetManufacturerData(it.first, it.second.view());
+  }
+  for (const auto& it : service_data_) {
+    out->SetServiceData(it.first, it.second.view());
+  }
+  for (const auto& it : uris_) {
+    out->AddURI(it);
+  }
+}
+
 void AdvertisingData::AddServiceUuid(const common::UUID& uuid) {
   service_uuids_.insert(uuid);
 }
@@ -413,10 +432,10 @@ common::Optional<std::string> AdvertisingData::local_name() const {
 
 void AdvertisingData::AddURI(const std::string& uri) {
   if (!uri.empty())
-    uris_.push_back(uri);
+    uris_.insert(uri);
 }
 
-const std::vector<std::string>& AdvertisingData::uris() const {
+const std::unordered_set<std::string>& AdvertisingData::uris() const {
   return uris_;
 }
 
@@ -570,6 +589,56 @@ bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
   }
 
   return true;
+}
+
+bool AdvertisingData::operator==(const AdvertisingData& other) const {
+  if ((local_name_ != other.local_name_) || (tx_power_ != other.tx_power_) ||
+      (appearance_ != other.appearance_) ||
+      (service_uuids_ != other.service_uuids_) || (uris_ != other.uris_)) {
+    return false;
+  }
+
+  if (manufacturer_data_.size() != other.manufacturer_data_.size()) {
+    return false;
+  }
+
+  for (const auto& it : manufacturer_data_) {
+    auto that = other.manufacturer_data_.find(it.first);
+    if (that == other.manufacturer_data_.end()) {
+      return false;
+    }
+    size_t bytes = it.second.size();
+    if (bytes != that->second.size()) {
+      return false;
+    }
+    if (std::memcmp(it.second.data(), that->second.data(), bytes) != 0) {
+      return false;
+    }
+  }
+
+  if (service_data_.size() != other.service_data_.size()) {
+    return false;
+  }
+
+  for (const auto& it : service_data_) {
+    auto that = other.service_data_.find(it.first);
+    if (that == other.service_data_.end()) {
+      return false;
+    }
+    size_t bytes = it.second.size();
+    if (bytes != that->second.size()) {
+      return false;
+    }
+    if (std::memcmp(it.second.data(), that->second.data(), bytes) != 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool AdvertisingData::operator!=(const AdvertisingData& other) const {
+  return !(*this == other);
 }
 
 AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
