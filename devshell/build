@@ -23,7 +23,10 @@ function main {
     fi
   fi
 
-  env -i PATH="${PATH}" TERM="${TERM}" \
+  # PATH is required to find a number of tools on the host system.
+  # TERM is required by ninja to print status messages on the same line.
+  # TMPDIR is required by goma on Mac OS X.
+  env -i PATH="${PATH}" TERM="${TERM}" TMPDIR="${TMPDIR}" \
     "${FUCHSIA_DIR}/buildtools/ninja" ${concurrency_args} -C "${FUCHSIA_BUILD_DIR}" "$@"
 }
 
