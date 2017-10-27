@@ -23,4 +23,6 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/trace-engine
 
+MODULE_PACKAGE := src
+
 include make/module.mk

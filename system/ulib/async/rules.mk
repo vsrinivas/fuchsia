@@ -28,6 +28,8 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon
 
+MODULE_PACKAGE := src
+
 include make/module.mk
 
 #
@@ -52,6 +54,8 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon
 
+MODULE_PACKAGE := src
+
 include make/module.mk
 
 #
@@ -74,5 +78,7 @@ MODULE_LIBS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl
+
+MODULE_PACKAGE := src
 
 include make/module.mk

@@ -19,6 +19,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/string_printf.cpp \
     $(LOCAL_DIR)/string.cpp \
 
+MODULE_PACKAGE := src
+
 include make/module.mk
 
 #

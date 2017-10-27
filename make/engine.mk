@@ -283,6 +283,9 @@ ALLOBJS :=
 # master source file list
 ALLSRCS :=
 
+# master list of packages for export
+ALLPKGS :=
+
 # anything you add here will be deleted in make clean
 GENERATED :=
 
@@ -546,6 +549,13 @@ else
 # No kernel, but we want the bootdata.bin containing the shared libraries.
 all:: $(USER_BOOTDATA)
 endif
+
+# meta rule for building just packages
+.PHONY: packages
+packages: $(ALLPKGS)
+
+# build depends on all packages
+all:: packages
 
 # add some automatic configuration defines
 KERNEL_DEFINES += \

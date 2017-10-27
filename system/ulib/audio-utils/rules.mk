@@ -18,4 +18,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/fdio \
     system/ulib/fbl
 
+MODULE_PACKAGE := src
+
 include make/module.mk

@@ -29,6 +29,7 @@
 # MODULE_HOST_LIBS: static libraries for a hostapp or hostlib to depend on
 # MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
 # MODULE_GROUP: tag for manifest file entry
+# MODULE_PACKAGE: package type (src, so, a) for module to export to SDK
 
 # the minimum module rules.mk file is as follows:
 #
@@ -266,6 +267,7 @@ MODULE_SO_INSTALL_NAME :=
 MODULE_HOST_LIBS :=
 MODULE_HOST_SYSLIBS :=
 MODULE_GROUP :=
+MODULE_PACKAGE :=
 
 # Save these before the next module.
 SAVED_EXTRA_BUILDDEPS := $(EXTRA_BUILDDEPS)

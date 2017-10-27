@@ -34,5 +34,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/fdio \
 
+MODULE_PACKAGE := src
+
 include make/module.mk
 

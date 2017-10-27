@@ -22,6 +22,8 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/c
 
+MODULE_PACKAGE := src
+
 include make/module.mk
 
 # Host library.

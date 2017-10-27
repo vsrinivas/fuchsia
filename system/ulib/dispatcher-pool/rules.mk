@@ -20,4 +20,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/zx \
 
+MODULE_PACKAGE := src
+
 include make/module.mk

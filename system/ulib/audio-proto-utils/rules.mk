@@ -14,4 +14,6 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/fbl
 
+MODULE_PACKAGE := src
+
 include make/module.mk

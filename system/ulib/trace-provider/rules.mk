@@ -24,4 +24,6 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/trace-engine
 
+MODULE_PACKAGE := src
+
 include make/module.mk

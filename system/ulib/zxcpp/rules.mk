@@ -13,4 +13,6 @@ MODULE_SRCS = \
 
 MODULE_STATIC_LIBS += system/ulib/c
 
+MODULE_PACKAGE := src
+
 include make/module.mk
