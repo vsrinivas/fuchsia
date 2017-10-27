@@ -57,6 +57,14 @@ interface ModuleContext {
               ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
 
+  // Like StartModule(), but instead accepts a Daisy structure. See docs for
+  // StartDaisyInShell().
+  StartDaisy(string name, Daisy daisy, string? link_name,
+             app.ServiceProvider? outgoing_services,
+             app.ServiceProvider&? incoming_services,
+             ModuleController& module_controller,
+             mozart.ViewOwner& view_owner);
+
   // Like StartModule(), but the view of the newly started module is
   // sent to the story shell for display.
   //

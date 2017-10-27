@@ -15,6 +15,24 @@
 
 namespace modular {
 
+namespace {
+
+void CopyResolverNounsToLink(const ModuleResolverResultPtr& module_result,
+    LinkPtr* link_ptr) {
+  auto& link = *link_ptr;
+
+  for (auto entry : module_result->initial_nouns) {
+    const auto& name = entry.GetKey();
+    const auto& value = entry.GetValue();
+
+    auto path = fidl::Array<fidl::String>::New(1);
+    path[0] = name;
+    link->Set(std::move(path), value);
+  }
+}
+
+}  // namespace
+
 ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
     const ModuleData* const module_data,
@@ -68,6 +86,43 @@ void ModuleContextImpl::StartModule(
       ModuleSource::INTERNAL);
 }
 
+void ModuleContextImpl::StartDaisy(
+    const fidl::String& name,
+    DaisyPtr daisy,
+    const fidl::String& link_name,
+    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
+  // TODO(alhaad): This should happen on the story controller operation queue.
+  module_resolver_->FindModules(
+      std::move(daisy), nullptr,
+      fxl::MakeCopyable([this, name, link_name,
+                         outgoing_services = std::move(outgoing_services),
+                         incoming_services = std::move(incoming_services),
+                         module_controller = std::move(module_controller),
+                         view_owner = std::move(view_owner)](
+                            FindModulesResultPtr result) mutable {
+        // We assume that we get atleast one result back and run the first
+        // module in story shell.
+        // TODO(alhaad/thatguy): Revisit the assumption.
+        FXL_CHECK(result->modules.size() > 0);
+        const auto& module_result = result->modules[0];
+        const auto& module_url = module_result->module_id;
+
+        // Copy the initial nouns to the Link.
+        LinkPtr link;
+        GetLink(link_name, link.NewRequest());
+        CopyResolverNounsToLink(module_result, &link);
+
+        story_controller_impl_->StartModule(
+            module_data_->module_path, name, module_url, link_name,
+            std::move(outgoing_services), std::move(incoming_services),
+            std::move(module_controller), std::move(view_owner),
+            ModuleSource::INTERNAL);
+      }));
+}
+
 void ModuleContextImpl::StartModuleInShell(
     const fidl::String& name,
     const fidl::String& query,
@@ -92,6 +147,7 @@ void ModuleContextImpl::StartDaisyInShell(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation) {
+  // TODO(alhaad): This should happen on the story controller operation queue.
   module_resolver_->FindModules(
       std::move(daisy), nullptr,
       fxl::MakeCopyable([this, name, link_name,
@@ -101,12 +157,19 @@ void ModuleContextImpl::StartDaisyInShell(
                          surface_relation = std::move(surface_relation)](
                             FindModulesResultPtr result) mutable {
         // We assume that we get atleast one result back and run the first
-        // moudle in story shell.
+        // module in story shell.
         // TODO(alhaad/thatguy): Revisit the assumption.
         FXL_CHECK(result->modules.size() > 0);
-        auto query = std::move(result->modules[0]->module_id);
+        const auto& module_result = result->modules[0];
+        const auto& module_url = module_result->module_id;
+
+        // Copy the initial nouns to the Link.
+        LinkPtr link;
+        GetLink(link_name, link.NewRequest());
+        CopyResolverNounsToLink(module_result, &link);
+
         story_controller_impl_->StartModuleInShell(
-            module_data_->module_path, name, query, link_name,
+            module_data_->module_path, name, module_url, link_name,
             std::move(outgoing_services), std::move(incoming_services),
             std::move(module_controller), std::move(surface_relation),
             true /* focus */, ModuleSource::INTERNAL);

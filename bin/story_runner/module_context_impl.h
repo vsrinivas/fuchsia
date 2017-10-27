@@ -66,6 +66,15 @@ class ModuleContextImpl : ModuleContext {
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   // |ModuleContext|
+  void StartDaisy(
+      const fidl::String& name,
+      DaisyPtr daisy,
+      const fidl::String& link_name,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+  // |ModuleContext|
   void StartModuleInShell(
       const fidl::String& name,
       const fidl::String& query,
