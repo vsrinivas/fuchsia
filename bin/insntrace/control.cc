@@ -53,23 +53,23 @@ static constexpr uint32_t kKtraceGroupMask =
 
 #if IPT_API_VERSION >= 2
 
-static ssize_t ioctl_ipt_set_mode(int fd, const uint32_t* mode) {
+ssize_t ioctl_ipt_set_mode(int fd, const uint32_t* mode) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static ssize_t ioctl_ipt_cpu_mode_alloc(int fd) {
+ssize_t ioctl_ipt_cpu_mode_alloc(int fd) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static ssize_t ioctl_ipt_cpu_mode_start(int fd) {
+ssize_t ioctl_ipt_cpu_mode_start(int fd) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static ssize_t ioctl_ipt_cpu_mode_stop(int fd) {
+ssize_t ioctl_ipt_cpu_mode_stop(int fd) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static ssize_t ioctl_ipt_cpu_mode_free(int fd) {
+ssize_t ioctl_ipt_cpu_mode_free(int fd) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
