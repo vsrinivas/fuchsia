@@ -23,7 +23,7 @@ source_set("crypto") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/third_party/modp_b64",
+    "//peridot/third_party/modp_b64",
     "//third_party/boringssl",
   ]
 

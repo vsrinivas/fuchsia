@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/glue/crypto/base64.h"
 
 #include "lib/fxl/logging.h"
-#include "peridot/bin/ledger/third_party/modp_b64/modp_b64.h"
+#include "peridot/third_party/modp_b64/modp_b64.h"
 
 namespace glue {
 

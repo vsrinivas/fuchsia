@@ -75,7 +75,7 @@ executable("ledger_unittests") {
     "//peridot/bin/ledger/storage/impl/btree:unittests",
     "//peridot/bin/ledger/storage/public:unittests",
     "//peridot/bin/ledger/test:unittests",
-    "//peridot/bin/ledger/third_party/bup:unittests",
+    "//peridot/third_party/bup:unittests",
   ]
 
   configs += [ ":ledger_config" ]

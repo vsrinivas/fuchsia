@@ -111,7 +111,7 @@ source_set("lib") {
     ":object_identifier_lib",
     "//peridot/bin/ledger/convert",
     "//peridot/bin/ledger/coroutine",
-    "//peridot/bin/ledger/third_party/bup",
+    "//peridot/third_party/bup",
     "//third_party/leveldb",
   ]
 

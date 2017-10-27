@@ -1,6 +1,10 @@
 {
   "tests": [
     {
+      "name": "bup_unittests",
+      "exec": "/system/test/bup_unittests"
+    }
+    {
       "name": "cloud_provider_firebase",
       "exec": "/system/test/cloud_provider_firebase_unittests"
     },

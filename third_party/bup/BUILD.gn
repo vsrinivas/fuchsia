@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//peridot/bin/ledger/*" ]
+visibility = [ "//peridot/*" ]
 
 source_set("bup") {
   sources = [
@@ -15,7 +15,9 @@ source_set("bup") {
   ]
 }
 
-source_set("unittests") {
+executable("unittests") {
+  output_name = "bup_unittests"
+
   testonly = true
 
   sources = [
@@ -24,6 +26,7 @@ source_set("unittests") {
 
   deps = [
     ":bup",
-    "//peridot/bin/ledger/test:lib",
+    "//third_party/gtest",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
 }

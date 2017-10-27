@@ -17,7 +17,7 @@
 #include "peridot/bin/ledger/storage/impl/file_index_generated.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
-#include "peridot/bin/ledger/third_party/bup/bupsplit.h"
+#include "peridot/third_party/bup/bupsplit.h"
 
 namespace storage {
 

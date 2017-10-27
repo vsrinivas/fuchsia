@@ -35,6 +35,7 @@ package("ledger_tests") {
   deps = [
     "//peridot/bin/cloud_provider_firebase:tests",
     "//peridot/bin/ledger:tests",
+    "//peridot/third_party/bup:unittests",
   ]
 
   binaries = [
@@ -55,6 +56,9 @@ package("ledger_tests") {
     },
   ]
   tests = [
+    {
+      name = "bup_unittests"
+    },
     {
       name = "cloud_provider_firebase_unittests"
     },
