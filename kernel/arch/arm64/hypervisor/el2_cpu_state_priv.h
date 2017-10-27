@@ -8,7 +8,7 @@
 
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
-#include <hypervisor/cpu_state.h>
+#include <hypervisor/id_tracker.h>
 
 class El2TranslationTable {
 public:
@@ -39,7 +39,7 @@ private:
 };
 
 /* Maintains the EL2 state for each CPU. */
-class El2CpuState : public hypervisor::CpuState<uint8_t, 64> {
+class El2CpuState : public hypervisor::IdTracker<uint8_t, 64> {
 public:
     static zx_status_t Create(fbl::unique_ptr<El2CpuState>* out);
     ~El2CpuState();

@@ -10,6 +10,7 @@
 #include <arch/arm64/mmu.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <hypervisor/cpu.h>
 #include <kernel/mp.h>
 #include <vm/pmm.h>
 

@@ -6,7 +6,7 @@
 
 #include <arch/ops.h>
 #include <fbl/atomic.h>
-#include <hypervisor/cpu_state.h>
+#include <hypervisor/cpu.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>

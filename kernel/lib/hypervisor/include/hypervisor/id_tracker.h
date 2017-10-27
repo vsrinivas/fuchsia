@@ -8,18 +8,15 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <kernel/cpu.h>
-#include <kernel/thread.h>
 
 namespace hypervisor {
 
-/* Provides a base class for arch-specific CPU state logic.
- *
- * |T| is the type of the ID, and is an integral type.
- * |N| is the maximum value of an ID.
- */
+// Tracks architecture-specific resource IDs.
+//
+// |T| is the type of the ID, and is an integral type.
+// |N| is the maximum value of an ID.
 template <typename T, T N>
-class CpuState {
+class IdTracker {
 public:
     zx_status_t AllocId(T* id) {
         size_t first_unset;
@@ -48,12 +45,3 @@ private:
 };
 
 } // namespace hypervisor
-
-typedef zx_status_t (* percpu_task_t)(void* context, cpu_num_t cpu_num);
-
-/* Executes a task on each online CPU, and returns a CPU mask containing each
- * CPU the task was successfully run on. */
-cpu_mask_t percpu_exec(percpu_task_t task, void* context);
-
-/* Pin the current thread to a CPU, and reschedule it to execute on that CPU. */
-thread_t* pin_thread(cpu_num_t cpu);

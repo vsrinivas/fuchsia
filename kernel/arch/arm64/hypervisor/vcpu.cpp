@@ -6,7 +6,7 @@
 
 #include <arch/hypervisor.h>
 #include <arch/ops.h>
-#include <hypervisor/cpu_state.h>
+#include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <platform/timer.h>
 #include <vm/pmm.h>

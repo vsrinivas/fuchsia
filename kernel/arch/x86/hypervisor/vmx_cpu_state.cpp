@@ -10,6 +10,7 @@
 #include <bits.h>
 #include <string.h>
 
+#include <hypervisor/cpu.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <vm/pmm.h>

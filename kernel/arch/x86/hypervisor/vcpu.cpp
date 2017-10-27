@@ -8,6 +8,7 @@
 
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/mp.h>
 #include <vm/fault.h>
