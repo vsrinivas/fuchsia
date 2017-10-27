@@ -14,7 +14,7 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_free_ptr.h>
 
-#include <hash/hash.h>
+#include <zircon/misc/fnv1hash.h>
 
 #include <zircon/types.h>
 

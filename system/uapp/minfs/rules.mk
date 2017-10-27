@@ -28,7 +28,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async.loop \
     system/ulib/block-client \
-    system/ulib/hash \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
@@ -60,7 +59,6 @@ MODULE_HOST_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
-    -Isystem/ulib/hash/include \
 
 # host minfs tool
 

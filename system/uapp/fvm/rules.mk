@@ -30,7 +30,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fvm/include \
     -Isystem/uapp/minfs/include \
     -Isystem/ulib/bitmap/include \
-    -Isystem/ulib/hash/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/zircon/include \
     -Isystem/ulib/fs-management/include \

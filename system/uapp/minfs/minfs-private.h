@@ -23,7 +23,7 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
-#include <hash/hash.h>
+#include <zircon/misc/fnv1hash.h>
 
 #include <minfs/minfs.h>
 

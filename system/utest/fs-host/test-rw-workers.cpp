@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <hash/hash.h>
+#include <zircon/misc/xorshiftrand.h>
 
 #include "util.h"
 

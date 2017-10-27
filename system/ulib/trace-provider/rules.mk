@@ -17,7 +17,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/zx \
     system/ulib/fbl \
-    system/ulib/hash \
 
 MODULE_LIBS := \
     system/ulib/c \
