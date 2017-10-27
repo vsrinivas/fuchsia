@@ -49,7 +49,7 @@ impl ::fidl::Decodable for {{$union.Name}} {
         if size != 16 { return Err(::fidl::Error::Invalid); }
         let tag: {{$union.TagsEnum.Name}} = ::fidl::Decodable::decode(buf, start, 4).unwrap();
         match tag {
-{{range $field := $union.Fields}}            {{$union.TagsEnum.Name}}_{{$field.Name}} =>
+			  {{range $field := $union.Fields}}            {{$union.TagsEnum.Name}}::{{$field.Name}} =>
                 ::fidl::
                     {{- if $field.IsUnion}}CodableUnion::decode_
                     {{- if $field.IsNullable}}opt_{{end}}as_ptr(buf, start + 8)
