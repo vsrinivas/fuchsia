@@ -16,9 +16,10 @@ def main():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--args", dest="gn_args", help="additional args to pass to gn",
                         action="append")
-    parser.add_argument("--help-args", dest="gn_args_list", default=False,
+    parser.add_argument("--help-args", dest="gn_args_list",
+                        nargs='?', const=True, default=False,
                         help="Show GN build arguments usable in --args",
-                        action="store_true")
+                        metavar="BUILDARG")
     parser.add_argument("--zircon_project", "-z", help="zircon project",
                         default=os.environ.get("ZIRCON_PROJECT"))
     parser.add_argument("--packages", "-p", help="comma separated list of packages",
@@ -51,9 +52,13 @@ def main():
     outdir_path = os.path.join(paths.FUCHSIA_ROOT, args.outdir)
 
     if args.gn_args_list:
-      gn_command = ["args", outdir_path, "--list"]
+        gn_command = ["args", outdir_path]
+        if isinstance(args.gn_args_list, str):
+            gn_command.append("--list=" + args.gn_args_list)
+        else:
+            gn_command.append("--list")
     else:
-      gn_command = ["gen", outdir_path, "--check"]
+        gn_command = ["gen", outdir_path, "--check"]
 
     cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
     gn_args = "--args=target_cpu=\"" + cpu_map[args.target_cpu]  + "\""
