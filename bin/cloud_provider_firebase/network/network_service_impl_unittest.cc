@@ -85,32 +85,6 @@ class FakeNetworkService : public network::NetworkService {
     FXL_DCHECK(false);
   }
   void CreateWebSocket(zx::channel /*socket*/) override { FXL_DCHECK(false); }
-  void CreateTCPBoundSocket(
-      netstack::NetAddressPtr /*local_address*/,
-      zx::channel /*bound_socket*/,
-      const CreateTCPBoundSocketCallback& /*callback*/) override {
-    FXL_DCHECK(false);
-  }
-  void CreateTCPConnectedSocket(
-      netstack::NetAddressPtr /*remote_address*/,
-      zx::socket /*send_stream*/,
-      zx::socket /*receive_stream*/,
-      zx::channel /*client_socket*/,
-      const CreateTCPConnectedSocketCallback& /*callback*/) override {
-    FXL_DCHECK(false);
-  }
-  void CreateUDPSocket(zx::channel /*socket*/) override { FXL_DCHECK(false); }
-  void CreateHttpServer(netstack::NetAddressPtr /*local_address*/,
-                        zx::channel /*delegate*/,
-                        const CreateHttpServerCallback& /*callback*/) override {
-    FXL_DCHECK(false);
-  }
-  void RegisterURLLoaderInterceptor(zx::channel /*factory*/) override {
-    FXL_DCHECK(false);
-  }
-  void CreateHostResolver(zx::channel /*host_resolver*/) override {
-    FXL_DCHECK(false);
-  }
 
  private:
   fidl::Binding<NetworkService> binding_;

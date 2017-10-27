@@ -25,29 +25,6 @@ class FakeCloudNetworkService : public network::NetworkService {
       ::fidl::InterfaceRequest<network::URLLoader> loader) override;
   void GetCookieStore(zx::channel cookie_store) override;
   void CreateWebSocket(zx::channel socket) override;
-  using CreateTCPBoundSocketCallback =
-      std::function<void(network::NetworkErrorPtr, netstack::NetAddressPtr)>;
-  void CreateTCPBoundSocket(
-      netstack::NetAddressPtr local_address,
-      zx::channel bound_socket,
-      const CreateTCPBoundSocketCallback& callback) override;
-  using CreateTCPConnectedSocketCallback =
-      std::function<void(network::NetworkErrorPtr, netstack::NetAddressPtr)>;
-  void CreateTCPConnectedSocket(
-      netstack::NetAddressPtr remote_address,
-      zx::socket send_stream,
-      zx::socket receive_stream,
-      zx::channel client_socket,
-      const CreateTCPConnectedSocketCallback& callback) override;
-  void CreateUDPSocket(zx::channel socket) override;
-  using CreateHttpServerCallback =
-      std::function<void(network::NetworkErrorPtr, netstack::NetAddressPtr)>;
-  void CreateHttpServer(netstack::NetAddressPtr local_address,
-                        zx::channel delegate,
-                        const CreateHttpServerCallback& callback) override;
-  void RegisterURLLoaderInterceptor(zx::channel factory) override;
-  void CreateHostResolver(zx::channel host_resolver) override;
-
   // Bind a new request to this implementation.
   void AddBinding(fidl::InterfaceRequest<network::NetworkService> request);
 
