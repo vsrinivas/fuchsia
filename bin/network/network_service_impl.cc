@@ -185,44 +185,6 @@ void NetworkServiceImpl::CreateWebSocket(zx::channel socket) {
   FXL_NOTIMPLEMENTED();
 }
 
-void NetworkServiceImpl::CreateTCPBoundSocket(
-    netstack::NetAddressPtr local_address,
-    zx::channel bound_socket,
-    const CreateTCPBoundSocketCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
-}
-
-void NetworkServiceImpl::CreateTCPConnectedSocket(
-    netstack::NetAddressPtr remote_address,
-    zx::socket send_stream,
-    zx::socket receive_stream,
-    zx::channel client_socket,
-    const CreateTCPConnectedSocketCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
-}
-
-void NetworkServiceImpl::CreateUDPSocket(zx::channel request) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void NetworkServiceImpl::CreateHttpServer(
-    netstack::NetAddressPtr local_address,
-    zx::channel delegate,
-    const CreateHttpServerCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
-}
-
-void NetworkServiceImpl::RegisterURLLoaderInterceptor(zx::channel factory) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void NetworkServiceImpl::CreateHostResolver(zx::channel host_resolver) {
-  FXL_NOTIMPLEMENTED();
-}
-
 void NetworkServiceImpl::RequestNetworkSlot(
     std::function<void(fxl::Closure)> slot_request) {
   if (available_slots_ == 0) {
