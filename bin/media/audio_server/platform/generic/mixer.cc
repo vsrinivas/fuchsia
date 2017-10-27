@@ -40,7 +40,7 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
   // rate, just use the point sampler.  Otherwise, use the linear re-sampler.
   TimelineRate src_to_dst(src_format->frames_per_second,
                           dst_format->frames_per_second);
-  if (src_to_dst.subject_delta() == 1) {
+  if (src_to_dst.reference_delta() == 1) {
     return mixers::PointSampler::Select(src_format, dst_format);
   } else {
     return mixers::LinearSampler::Select(src_format, dst_format);
