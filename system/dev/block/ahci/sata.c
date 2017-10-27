@@ -47,6 +47,13 @@ static void sata_device_identify_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
+#define QEMU_MODEL_ID    "EQUMH RADDSI K" // "QEMU HARDDISK"
+#define QEMU_SG_MAX      1024             // Linux kernel limit
+
+static bool model_id_is_qemu(char* model_id) {
+    return !memcmp(model_id, QEMU_MODEL_ID, sizeof(QEMU_MODEL_ID)-1);
+}
+
 static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* controller, const char* name) {
     // send IDENTIFY DEVICE
     iotxn_t* txn;
@@ -90,6 +97,8 @@ static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* control
     zxlogf(INFO, "  firmware rev=%s\n", str);
     snprintf(str, SATA_DEVINFO_MODEL_ID_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_MODEL_ID));
     zxlogf(INFO, "  model id=%s\n", str);
+
+    bool is_qemu = model_id_is_qemu((char*)(devinfo + SATA_DEVINFO_MODEL_ID));
 
     uint16_t major = *(devinfo + SATA_DEVINFO_MAJOR_VERS);
     zxlogf(INFO, "  major=0x%x ", major);
@@ -144,8 +153,13 @@ static zx_status_t sata_device_identify(sata_device_t* dev, zx_device_t* control
     memset(&dev->info, 0, sizeof(dev->info));
     dev->info.block_size = dev->sector_sz;
     dev->info.block_count = dev->capacity / dev->sector_sz;
+
+    uint32_t max_sg_size = SATA_MAX_BLOCK_COUNT * dev->sector_sz; // SATA cmd limit
+    if (is_qemu) {
+        max_sg_size = MIN(max_sg_size, QEMU_SG_MAX * dev->sector_sz);
+    }
     dev->info.max_transfer_size = MIN(AHCI_MAX_PRDS * PAGE_SIZE, // fully discontiguous
-                                      SATA_MAX_BLOCK_COUNT * dev->sector_sz); // SATA cmd limit
+                                      max_sg_size);
 
     return ZX_OK;
 }
