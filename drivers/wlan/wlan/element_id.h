@@ -173,7 +173,7 @@ enum ElementId : uint8_t {
     kQloadReport = 186,
     kHccaTxopUpdateCount = 187,
     kHigherLayerStreamId = 188,
-    kGcrGroupAddres = 189,
+    kGcrGroupAddress = 189,
     kAntennaSectorIdPattern = 190,
     kVhtCapabilities = 191,
     kVhtOperation = 192,

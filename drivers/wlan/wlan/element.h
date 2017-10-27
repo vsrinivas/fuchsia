@@ -12,6 +12,7 @@
 #include "element_id.h"
 #include "garnet/drivers/wlan/common/bitfield.h"
 #include "logging.h"
+#include "macaddr.h"
 
 #include <cstdint>
 #include <unordered_map>
@@ -592,6 +593,16 @@ struct HtOperation : public Element<TimElement, element_id::kHtOperation> {
     HtOpInfoHead head;
     HtOpInfoTail tail;
     SupportedMcsSet mcs_set;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.126
+struct GcrGroupAddressElement {
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, const MacAddr& addr);
+    static const size_t kMinLen = kMacAddrLen;
+    static const size_t kMaxLen = kMacAddrLen;
+
+    ElementHeader hdr;
+    MacAddr gcr_group_addr;
 } __PACKED;
 
 }  // namespace wlan

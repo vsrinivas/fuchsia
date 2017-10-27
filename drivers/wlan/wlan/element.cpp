@@ -212,4 +212,15 @@ bool HtOperation::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t prima
     return true;
 }
 
+bool GcrGroupAddressElement::Create(uint8_t* buf, size_t len, size_t* actual, const MacAddr& addr) {
+    size_t elem_size = sizeof(GcrGroupAddressElement);
+    if (elem_size > len) { return false; }
+    auto elem = reinterpret_cast<GcrGroupAddressElement*>(buf);
+    elem->hdr.id = element_id::kGcrGroupAddress;
+    elem->hdr.len = elem_size - sizeof(ElementHeader);
+
+    elem->gcr_group_addr = addr;
+    return true;
+}
+
 }  // namespace wlan
