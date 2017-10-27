@@ -15,8 +15,8 @@ $(ls "${fuchsia_dir}/scripts/devshell" | grep -v lib | sed -e 's/^/  /')
 
 optional arguments:
   --config              Path to the config file use when running COMMAND.
-                        Defaults to "${FUCHSIA_CONFIG}" if set in the
-                        environment and "${FUCHSIA_DIR}/.env" otherwise.
+                        Defaults to FUCHSIA_CONFIG if set in the
+                        environment and "${FUCHSIA_DIR}/.config" otherwise.
 END
 }
 
