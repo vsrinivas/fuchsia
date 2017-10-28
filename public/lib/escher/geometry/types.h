@@ -55,4 +55,7 @@ inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
   return ray4{matrix * ray.origin, matrix * ray.direction};
 }
 
+// Used to compare whether two values are nearly equal.
+constexpr float kEpsilon = 0.0000001f;
+
 }  // namespace escher
