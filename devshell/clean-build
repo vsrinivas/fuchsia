@@ -3,8 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx-config-read
+set -e
 
-echo "Building zircon..."
-"${FUCHSIA_DIR}/scripts/build-zircon.sh" -p "${ZIRCON_PROJECT}" "$@"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+rm -rf -- "${FUCHSIA_DIR}/out"
+fx-command-run set "$@"
+fx-command-run full-build

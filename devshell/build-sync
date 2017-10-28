@@ -6,7 +6,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
+fx-config-read
 
 function __fbuild_make_batch {
   # parse a bootfs manifest, compare inputs to a stamp file and append
@@ -42,7 +42,7 @@ function main {
     touch "${stamp_file}"
   fi
 
-  fx_command_run build "$@"
+  fx-command-run build "$@"
 
   if [[ $? -ne 0 ]]; then
     echo "failed" > "${status_file}"
@@ -62,8 +62,8 @@ function main {
   done < ${FUCHSIA_BUILD_DIR}/gen/packages/gn/packages
 
   echo "Syncing changed system.bootfs files..."
-  host="$(fx_command_run netaddr --fuchsia)"
-  fx_command_run sftp -q -b "${batch_file}" "[${host}]" > /dev/null
+  host="$(fx-command-run netaddr --fuchsia)"
+  fx-command-run sftp -q -b "${batch_file}" "[${host}]" > /dev/null
   if [ $? -ne 0 ]; then
     echo "failed" > "${status_file}"
     return 1

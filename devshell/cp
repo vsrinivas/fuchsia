@@ -19,9 +19,9 @@ fi
 
 src=$1
 dst=$2
-host="$(fx_command_run netaddr --fuchsia)"
+host="$(fx-command-run netaddr --fuchsia)"
 
-fx_command_run sftp -q -b - "[${host}]" > /dev/null << EOF
+fx-command-run sftp -q -b - "[${host}]" > /dev/null << EOF
 - rm ${dst}
 put ${src} ${dst}
 EOF

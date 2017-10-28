@@ -4,6 +4,6 @@
 # found in the LICENSE file.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
+fx-config-read
 
 SSH_AUTH_SOCK="" scp -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$@"

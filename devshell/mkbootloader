@@ -6,7 +6,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
+fx-config-read
 
 function usage {
   cat <<END
@@ -27,7 +27,7 @@ fi
 
 efi_target_dir=$1/EFI/BOOT
 
-fx_command_run build-zircon
+fx-command-run build-zircon
 mkdir -p "${efi_target_dir}"
 cp "${ZIRCON_BUILD_DIR}/bootloader/bootx64.efi" "${efi_target_dir}/BOOTX64.EFI"
 echo "Bootloader loaded to $1"

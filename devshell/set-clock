@@ -12,4 +12,4 @@ else
 fi
 
 echo "Setting device's clock to ${device_date}"
-fx_command_run shell "clock --set ${device_date}"
+fx-command-run shell "clock --set ${device_date}"

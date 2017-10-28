@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
+fx-config-read
 
 function usage {
   cat >&2 <<END
@@ -55,7 +55,7 @@ function main {
     local i=1
     for e in "${pkgs[@]}"; do
       echo "Publishing ${i}/${pkg_count}: ${e}"
-      fx_command_run publish-one "${@:1}" "$e"
+      fx-command-run publish-one "${@:1}" "$e"
       if [[ "$?" -ne 0 ]]; then
         usage
         return $?
@@ -63,7 +63,7 @@ function main {
       i=$(($i + 1))
     done
   else
-    fx_command_run publish-one "${@:1}"
+    fx-command-run publish-one "${@:1}"
     if [[ "$?" -ne 0 ]]; then
       usage
       return $?

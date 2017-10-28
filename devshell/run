@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
+fx-config-read
 
 qemu_dir="${QEMU_DIR:-$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n ${BUILDTOOLS_QEMU_DIR})/bin}"
 

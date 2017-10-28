@@ -6,7 +6,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
+fx-config-read
 
 function usage {
   cat <<END
@@ -23,7 +23,7 @@ fi
 
 target="$1"
 
-fx_command_run build "${target}"
-fx_command_run cp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
+fx-command-run build "${target}"
+fx-command-run cp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
 shift
-fx_command_run shell "/tmp/${target}" "$@"
+fx-command-run shell "/tmp/${target}" "$@"

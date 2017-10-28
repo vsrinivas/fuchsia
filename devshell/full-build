@@ -7,5 +7,5 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
-fx_command_run build-zircon
-fx_command_run build
+fx-command-run build-zircon
+fx-command-run build

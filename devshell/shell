@@ -5,7 +5,7 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
-fx_command_run ssh -q "$(fx_command_run netaddr --fuchsia)" "$@"
+fx-command-run ssh -q "$(fx-command-run netaddr --fuchsia)" "$@"
 result=$?
 if [[ "${result}" -ne 0 ]]; then
   echo "ssh exited with a non-zero status: ${result}."

@@ -4,6 +4,6 @@
 # found in the LICENSE file.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
-fx_config_read
+fx-config-read
 
 "${FUCHSIA_DIR}/scripts/make-fuchsia-vol/sync-fuchsia-vol.sh" "$@"

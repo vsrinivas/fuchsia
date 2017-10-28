@@ -5,7 +5,7 @@
 
 function usage {
   cat <<END
-usage: fx [--config CONFIG] COMMAND [...]
+usage: fx [--config CONFIG] [-x] COMMAND [...]
 
 Run Fuchsia development commands. Must be run with either a current working
 directory that is contained in a Fuchsia source tree or the FUCHSIA_DIR
@@ -18,6 +18,7 @@ optional arguments:
   --config              Path to the config file use when running COMMAND.
                         Defaults to FUCHSIA_CONFIG if set in the
                         environment and "${FUCHSIA_DIR}/.config" otherwise.
+  -x                    Print commands and their arguments as they are executed.
 END
 }
 
@@ -37,16 +38,35 @@ if [[ -z "${fuchsia_dir}" ]]; then
   done
 fi
 
-if [[ "$1" == "--config" ]]; then
-  if [[ $# -lt 2 ]]; then
-    usage
-    echo >& 2 "error: Missing path to config file for --config argument"
-    exit 1
-  fi
-  shift # Removes --config.
-  export FUCHSIA_CONFIG="$1"
-  shift # Removes the path to the config file.
-fi
+while [[ $# -ne 0 ]]; do
+  case $1 in
+    --config)
+      if [[ $# -lt 2 ]]; then
+        usage
+        echo >& 2 "error: Missing path to config file for --config argument"
+        exit 1
+      fi
+      shift # Removes --config.
+      export FUCHSIA_CONFIG="$1"
+      ;;
+    -x)
+      export FUCHSIA_DEVSHELL_VERBOSITY=1
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      usage
+      echo >& 2 "error: Unknown global argument $1"
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
 
 if [[ $# -lt 1 ]]; then
   usage

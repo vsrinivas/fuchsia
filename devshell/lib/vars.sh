@@ -14,7 +14,11 @@ export FUCHSIA_CONFIG="${FUCHSIA_CONFIG:-${FUCHSIA_DIR}/.config}"
 
 ZIRCON_TOOLS_DIR="${FUCHSIA_OUT_DIR}/build-zircon/tools"
 
-function fx_config_read {
+if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
+  set -x
+fi
+
+function fx-config-read {
   if [[ ! -f "${FUCHSIA_CONFIG}" ]]; then
     echo >& 2 "error: Cannot read config from ${FUCHSIA_CONFIG}. Did you run \"fx set\"?"
     exit 1
@@ -30,7 +34,7 @@ function fx_config_read {
   export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${FUCHSIA_OUT_DIR}/build-zircon/build-${ZIRCON_PROJECT}}"
 }
 
-function fx_command_run {
+function fx-command-run {
   local -r command_name="$1"
   local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"
 
