@@ -159,9 +159,11 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping)
         access_flags |= kAccessFlagWrite;
     if (!(mapping->flags() & MAGMA_GPU_MAP_FLAG_EXECUTE))
         access_flags |= kAccessFlagNoExecute;
+    if (mapping->flags() & kMagmaArmMaliGpuMapFlagInnerShareable)
+        access_flags |= kAccessFlagShareInner;
 
-    if (mapping->flags() &
-        ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE))
+    if (mapping->flags() & ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE |
+                             MAGMA_GPU_MAP_FLAG_EXECUTE | kMagmaArmMaliGpuMapFlagInnerShareable))
         return DRETF(false, "Unsupported map flags %lx\n", mapping->flags());
 
     if (!address_space_->Insert(gpu_va, buffer->platform_buffer(), 0, mapping->size(),

@@ -7,6 +7,14 @@
 
 #include <cstdint>
 
+#include "magma_common_defs.h"
+
+// These flags can be specified to magma_map_buffer_gpu.
+enum MagmaArmMaliGpuMapFlags {
+    // Accesses to this data should be GPU-L2 coherent.
+    kMagmaArmMaliGpuMapFlagInnerShareable = (1 << MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT),
+};
+
 enum AtomCoreRequirements {
     kAtomCoreRequirementFragmentShader = (1 << 0),
 

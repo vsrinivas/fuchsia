@@ -45,7 +45,7 @@ public:
 
         // Invalid flags.
         EXPECT_FALSE(connection->AddMapping(std::make_unique<GpuMapping>(
-            1000 * PAGE_SIZE, PAGE_SIZE * 100, (1 << 16), connection.get(), buffer)));
+            1000 * PAGE_SIZE, PAGE_SIZE * 100, (1 << 14), connection.get(), buffer)));
 
         EXPECT_TRUE(connection->AddMapping(std::make_unique<GpuMapping>(
             1000 * PAGE_SIZE, PAGE_SIZE * 100, 0, connection.get(), buffer)));
