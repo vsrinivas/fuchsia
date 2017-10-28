@@ -7,18 +7,25 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-build_dir=$fuchsia_root/out/build-vulkancts
+platform=${1:-pc-x86-64}
+build_dir=$fuchsia_root/out/build-vulkancts-$platform
 cc=$fuchsia_root/`find buildtools -type l -name "clang"`
 cxx=$fuchsia_root/`find buildtools -type l -name "clang++"`
 ranlib=$fuchsia_root/`find buildtools -name "ranlib"`
 strip=$fuchsia_root/`find buildtools -name "strip"`
 ar=$fuchsia_root/`find buildtools -name "llvm-ar"`
 ranlib=$fuchsia_root/`find buildtools -name "llvm-ranlib"`
-sysroot=$fuchsia_root/out/build-zircon/build-zircon-pc-x86-64/sysroot
+sysroot=$fuchsia_root/out/build-zircon/build-zircon-$platform/sysroot
 
 if [ ! -d "$sysroot" ]; then
 	echo "Can't find sysroot: $sysroot"
 	exit 1
+fi
+
+if [[ $platform == *"-arm64" ]]; then
+	extra_args="-DFUCHSIA_SYSTEM_PROCESSOR=aarch64 -DDE_CPU=DE_CPU_ARM_64 -DDE_PTR_SIZE=8"
+else
+	extra_args="-DFUCHSIA_SYSTEM_PROCESSOR=x86_64"
 fi
 
 pushd $fuchsia_root/third_party/vulkan-cts
@@ -33,7 +40,7 @@ popd
 
 mkdir -p $build_dir
 pushd $build_dir
-cmake $fuchsia_root/third_party/vulkan-cts -GNinja  -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=$tools_path/ninja -DFUCHSIA_SYSROOT=$sysroot -DFUCHSIA_SYSTEM_PROCESSOR=x86_64 -DCMAKE_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake -DDE_OS=DE_OS_FUCHSIA -DDEQP_TARGET=fuchsia
+cmake $fuchsia_root/third_party/vulkan-cts -GNinja  -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=$tools_path/ninja -DFUCHSIA_SYSROOT=$sysroot -DCMAKE_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake -DDE_OS=DE_OS_FUCHSIA -DDEQP_TARGET=fuchsia $extra_args
 $tools_path/ninja
 $strip $build_dir/external/vulkancts/modules/vulkan/deqp-vk -o $build_dir/external/vulkancts/modules/vulkan/deqp-vk-stripped
 popd
