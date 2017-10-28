@@ -161,7 +161,7 @@ static zx_status_t intel_common_ioctl(void* ctx, uint32_t op, const void* in_buf
 
     DASSERT(device->magma_system_device);
 
-    ssize_t result = ZX_ERR_NOT_SUPPORTED;
+    zx_status_t result = ZX_ERR_NOT_SUPPORTED;
 
     switch (op) {
         case IOCTL_MAGMA_QUERY: {

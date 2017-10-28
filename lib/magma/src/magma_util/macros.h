@@ -32,8 +32,9 @@ static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
 
 static constexpr bool kMagmaDretEnable = kDebug;
 
-__attribute__((format(printf, 4, 5))) static inline int dret(const char* file, int line, int ret,
-                                                             const char* msg, ...)
+template <typename T>
+__attribute__((format(printf, 4, 5))) static inline T dret(const char* file, int line, T ret,
+                                                           const char* msg, ...)
 {
     printf("%s:%d returning error %d", file, line, ret);
     if (msg) {
@@ -48,12 +49,14 @@ __attribute__((format(printf, 4, 5))) static inline int dret(const char* file, i
 }
 
 #define DRET(ret)                                                                                  \
-    (magma::kMagmaDretEnable ? (ret == 0 ? 0 : magma::dret(__FILE__, __LINE__, ret, nullptr)) : ret)
+    (magma::kMagmaDretEnable ? (ret == 0 ? ret : magma::dret(__FILE__, __LINE__, ret, nullptr))    \
+                             : ret)
 
 // Must provide const char* msg as the 2nd paramter; other parameters optional.
 #define DRET_MSG(ret, ...)                                                                         \
-    (magma::kMagmaDretEnable ? (ret == 0 ? 0 : magma::dret(__FILE__, __LINE__, ret, __VA_ARGS__))  \
-                             : ret)
+    (magma::kMagmaDretEnable                                                                       \
+         ? (ret == 0 ? ret : magma::dret(__FILE__, __LINE__, ret, __VA_ARGS__))                    \
+         : ret)
 
 __attribute__((format(printf, 3, 4))) static inline bool dret_false(const char* file, int line,
                                                                     const char* msg, ...)
