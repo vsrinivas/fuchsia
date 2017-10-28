@@ -84,9 +84,8 @@ namespace {
   fidl_device->appearance = ::btfidl::control::Appearance::UNKNOWN;
 
   if (device.rssi() != ::bluetooth::hci::kRSSIInvalid) {
-    auto fidl_rssi = ::btfidl::Int8::New();
-    fidl_rssi->value = device.rssi();
-    fidl_device->rssi = std::move(fidl_rssi);
+    fidl_device->rssi = ::btfidl::Int8::New();
+    fidl_device->rssi->value = device.rssi();
   }
 
   ::bluetooth::gap::AdvertisingData adv_data;
@@ -133,6 +132,11 @@ namespace {
   fidl_device->identifier = device.identifier();
   fidl_device->connectable = device.connectable();
   fidl_device->advertising_data = ad.AsLEAdvertisingData();
+
+  if (device.rssi() != ::bluetooth::hci::kRSSIInvalid) {
+    fidl_device->rssi = ::btfidl::Int8::New();
+    fidl_device->rssi->value = device.rssi();
+  }
 
   return fidl_device;
 }
