@@ -79,6 +79,8 @@ static const pci_dev_type_lut_entry_t PCI_DEV_TYPE_LUT[] = {
     LUT_ENTRY_ONE_PIF(0x01, 0x06, 0x00, "Serial ATA (Vendor Specific Interface)"),
     LUT_ENTRY_ONE_PIF(0x01, 0x06, 0x01, "Serial ATA (AHCI 1.0)"),
     LUT_ENTRY_ONE_PIF(0x01, 0x07, 0x00, "Serial Attached SCSI (SAS)"),
+    LUT_ENTRY_ONE_PIF(0x01, 0x08, 0x01, "Non-Volatile Memory Controller (NVMHCI)"),
+    LUT_ENTRY_ONE_PIF(0x01, 0x08, 0x02, "Non-Volatile Memory Controller (NVM Express)"),
     LUT_ENTRY_ONE_PIF(0x01, 0x80, 0x00, "Other Mass Storage Controller"),
     LUT_ENTRY_ONE_PIF(0x02, 0x00, 0x00, "Ethernet Controller"),
     LUT_ENTRY_ONE_PIF(0x02, 0x01, 0x00, "Token Ring Controller"),
