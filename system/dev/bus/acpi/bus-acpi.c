@@ -381,20 +381,20 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
     dev->irqs = ctx.irqs;
     dev->irq_count = ctx.irq_count;
 
-    dprintf(TRACE, "acpi-bus[%s]: found %zd resources %zx irqs\n", device_get_name(dev->zxdev),
+    zxlogf(TRACE, "acpi-bus[%s]: found %zd resources %zx irqs\n", device_get_name(dev->zxdev),
             dev->resource_count, dev->irq_count);
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
-        dprintf(SPEW, "resources:\n");
+        zxlogf(SPEW, "resources:\n");
         for (size_t i = 0; i < dev->resource_count; i++) {
-            dprintf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x writeable=%d\n", i,
+            zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x writeable=%d\n", i,
                     dev->resources[i].base_address,
                     dev->resources[i].address_length,
                     dev->resources[i].alignment,
                     dev->resources[i].writeable);
         }
-        dprintf(SPEW, "irqs:\n");
+        zxlogf(SPEW, "irqs:\n");
         for (size_t i = 0; i < dev->irq_count; i++) {
-            dprintf(SPEW, "  %02zd: pin=%u %s %s %s %s\n", i,
+            zxlogf(SPEW, "  %02zd: pin=%u %s %s %s %s\n", i,
                     dev->irqs[i].pin,
                     dev->irqs[i].trigger ? "edge" : "level",
                     (dev->irqs[i].polarity == 2) ? "both" :
@@ -427,7 +427,7 @@ static zx_status_t acpi_op_map_resource(void* ctx, uint32_t res_id, uint32_t cac
     acpi_device_resource_t* res = dev->resources + res_id;
     if (((res->base_address & (PAGE_SIZE - 1)) != 0) ||
         ((res->address_length & (PAGE_SIZE - 1)) != 0)) {
-        dprintf(ERROR, "acpi-bus[%s]: resource id=%d addr=0x%08x len=0x%x is not page aligned\n",
+        zxlogf(ERROR, "acpi-bus[%s]: resource id=%d addr=0x%08x len=0x%x is not page aligned\n",
                 device_get_name(dev->zxdev), res_id, res->base_address, res->address_length);
         st = ZX_ERR_NOT_FOUND;
         goto unlock;
@@ -567,7 +567,7 @@ static zx_device_t* publish_device(zx_device_t* parent,
 
     if (driver_get_log_flags() & DDK_LOG_SPEW) {
         // ACPI names are always 4 characters in a uint32
-        dprintf(SPEW, "acpi-bus: got device %s\n", acpi_name);
+        zxlogf(SPEW, "acpi-bus: got device %s\n", acpi_name);
         if (info->Valid & ACPI_VALID_HID) {
             zxlogf(SPEW, "     HID=%s\n", info->HardwareId.String);
         } else {
