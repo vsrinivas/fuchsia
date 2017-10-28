@@ -7,8 +7,9 @@ function usage {
   cat <<END
 usage: fx [--config CONFIG] COMMAND [...]
 
-Run Fuchsia development commands. Must be run with a current working directory
-that is contained in a Fuchsia source tree.
+Run Fuchsia development commands. Must be run with either a current working
+directory that is contained in a Fuchsia source tree or the FUCHSIA_DIR
+environment variable set to the root of a Fuchsia source tree.
 
 commands:
 $(ls "${fuchsia_dir}/scripts/devshell" | grep -v lib | sed -e 's/^/  /')
@@ -20,18 +21,21 @@ optional arguments:
 END
 }
 
-# We walk the parent directories looking for .jiri_manifest rather than using
-# BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
-# directory instead of the one containing this file in case the user has
-# multiple Fuchsia source trees and is picking up this file from another one.
-fuchsia_dir="$(pwd)"
-while [[ ! -f "${fuchsia_dir}/.jiri_manifest" ]]; do
-  fuchsia_dir="$(dirname "${fuchsia_dir}")"
-  if [[ "${fuchsia_dir}" == "/" ]]; then
-    echo >& 2 "error: Cannot find Fuchsia source tree containing $(pwd)"
-    exit 1
-  fi
-done
+fuchsia_dir="${FUCHSIA_DIR}"
+if [[ -z "${fuchsia_dir}" ]]; then
+  # We walk the parent directories looking for .jiri_manifest rather than using
+  # BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
+  # directory instead of the one containing this file in case the user has
+  # multiple Fuchsia source trees and is picking up this file from another one.
+  fuchsia_dir="$(pwd)"
+  while [[ ! -f "${fuchsia_dir}/.jiri_manifest" ]]; do
+    fuchsia_dir="$(dirname "${fuchsia_dir}")"
+    if [[ "${fuchsia_dir}" == "/" ]]; then
+      echo >& 2 "error: Cannot find Fuchsia source tree containing $(pwd)"
+      exit 1
+    fi
+  done
+fi
 
 if [[ "$1" == "--config" ]]; then
   if [[ $# -lt 2 ]]; then
