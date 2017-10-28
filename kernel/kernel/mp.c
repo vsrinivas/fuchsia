@@ -228,47 +228,40 @@ static void mp_unplug_trampoline(void) {
     arch_flush_state_and_halt(unplug_done);
 }
 
-/* Hotplug the given cpu.  Blocks until the CPU is up, or a failure is
+/* Hotplug the given cpus.  Blocks until the CPUs are up, or a failure is
  * detected.
  *
  * This should be called in a thread context
  */
-zx_status_t mp_hotplug_cpu(uint cpu_id) {
+zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
-    zx_status_t status = ZX_ERR_INTERNAL;
+    zx_status_t status = ZX_OK;
 
     mutex_acquire(&mp.hotplug_lock);
 
-    if (mp_is_cpu_online(cpu_id)) {
+    // Make sure all of the requested CPUs are offline
+    if (cpu_mask & mp_get_online_mask()) {
         status = ZX_ERR_BAD_STATE;
         goto cleanup_mutex;
     }
 
-    status = platform_mp_cpu_hotplug(cpu_id);
+    while (cpu_mask != 0) {
+        cpu_num_t cpu_id = highest_cpu_set(cpu_mask);
+        cpu_mask &= ~cpu_num_to_mask(cpu_id);
+
+        status = platform_mp_cpu_hotplug(cpu_id);
+        if (status != ZX_OK) {
+            break;
+        }
+    }
 cleanup_mutex:
     mutex_release(&mp.hotplug_lock);
     return status;
 }
 
-/* Unplug the given cpu.  Blocks until the CPU is removed.
- *
- * This should be called in a thread context
- */
-zx_status_t mp_unplug_cpu(uint cpu_id) {
-    DEBUG_ASSERT(!arch_ints_disabled());
-
-    thread_t* t = NULL;
-    zx_status_t status = ZX_ERR_INTERNAL;
-
-    mutex_acquire(&mp.hotplug_lock);
-
-    if (!mp_is_cpu_online(cpu_id)) {
-        /* Cannot unplug offline CPU */
-        status = ZX_ERR_BAD_STATE;
-        goto cleanup_mutex;
-    }
-
+// Unplug a single CPU.  Must be called while hodling the hotplug lock
+static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
     /* Create a thread for the unplug.  We will cause the target CPU to
      * context switch to this thread.  After this happens, it should no
      * longer be accessing system state and can be safely shut down.
@@ -280,7 +273,7 @@ zx_status_t mp_unplug_cpu(uint cpu_id) {
      * thread and when the CPU is woken up).
      */
     event_t unplug_done = EVENT_INITIAL_VALUE(unplug_done, false, 0);
-    t = thread_create_etc(
+    thread_t* t = thread_create_etc(
         NULL,
         "unplug_thread",
         NULL,
@@ -289,13 +282,12 @@ zx_status_t mp_unplug_cpu(uint cpu_id) {
         NULL, NULL, 4096,
         mp_unplug_trampoline);
     if (t == NULL) {
-        status = ZX_ERR_NO_MEMORY;
-        goto cleanup_mutex;
+        return ZX_ERR_NO_MEMORY;
     }
 
-    status = platform_mp_prep_cpu_unplug(cpu_id);
+    zx_status_t status = platform_mp_prep_cpu_unplug(cpu_id);
     if (status != ZX_OK) {
-        goto cleanup_thread;
+        return status;
     }
 
     /* Pin to the target CPU */
@@ -321,14 +313,45 @@ zx_status_t mp_unplug_cpu(uint cpu_id) {
         /* Do not cleanup the unplug thread in this case.  We have successfully
          * unplugged the CPU from the scheduler's perspective, but the platform
          * may have failed to shut down the CPU */
-        goto cleanup_mutex;
+        return status;
     }
 
-/* Fall through.  Since the thread is scheduled, it should not be in any
+    /* Fall through.  Since the thread is scheduled, it should not be in any
      * queues.  Since the CPU running this thread is now shutdown, we can just
      * erase the thread's existence. */
 cleanup_thread:
     thread_forget(t);
+    return status;
+}
+
+/* Unplug the given cpus.  Blocks until the CPUs are removed.  Partial
+ * failure may occur (in which some CPUs are removed but not others).
+ *
+ * This should be called in a thread context
+ */
+zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+
+    zx_status_t status = ZX_OK;
+
+    mutex_acquire(&mp.hotplug_lock);
+
+    // Make sure all of the requested CPUs are online
+    if (cpu_mask & ~mp_get_online_mask()) {
+        status = ZX_ERR_BAD_STATE;
+        goto cleanup_mutex;
+    }
+
+    while (cpu_mask != 0) {
+        cpu_num_t cpu_id = highest_cpu_set(cpu_mask);
+        cpu_mask &= ~cpu_num_to_mask(cpu_id);
+
+        status = mp_unplug_cpu_mask_single_locked(cpu_id);
+        if (status != ZX_OK) {
+            break;
+        }
+    }
+
 cleanup_mutex:
     mutex_release(&mp.hotplug_lock);
     return status;

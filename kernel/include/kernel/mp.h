@@ -47,8 +47,14 @@ void mp_init(void);
 void mp_reschedule(mp_ipi_target_t, cpu_mask_t mask, uint flags);
 void mp_sync_exec(mp_ipi_target_t, cpu_mask_t mask, mp_sync_task_t task, void* context);
 
-zx_status_t mp_hotplug_cpu(uint cpu_id);
-zx_status_t mp_unplug_cpu(uint cpu_id);
+zx_status_t mp_hotplug_cpu_mask(cpu_mask_t mask);
+zx_status_t mp_unplug_cpu_mask(cpu_mask_t mask);
+static inline zx_status_t mp_hotplug_cpu(cpu_num_t cpu) {
+    return mp_hotplug_cpu_mask(cpu_num_to_mask(cpu));
+}
+static inline zx_status_t mp_unplug_cpu(cpu_num_t cpu) {
+    return mp_unplug_cpu_mask(cpu_num_to_mask(cpu));
+}
 
 /* called from arch code during reschedule irq */
 enum handler_return mp_mbx_reschedule_irq(void);
