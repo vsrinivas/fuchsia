@@ -104,13 +104,13 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     return ZX_OK;
 }
 
-zx_status_t PseudoDir::RemoveEntry(fbl::String name) {
+zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name) {
     fbl::AutoLock lock(&mutex_);
 
     for (auto& entry : entries_) {
-        if (entry.name() == name) {
+        if (entry.name().ToStringPiece() == name) {
             entries_.erase(entry);
-            Notify(name.ToStringPiece(), VFS_WATCH_EVT_REMOVED);
+            Notify(name, VFS_WATCH_EVT_REMOVED);
             return ZX_OK;
         }
     }

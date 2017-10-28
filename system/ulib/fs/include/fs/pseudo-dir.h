@@ -44,7 +44,7 @@ public:
     //
     // Returns |ZX_OK| on success.
     // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name.
-    zx_status_t RemoveEntry(fbl::String name);
+    zx_status_t RemoveEntry(fbl::StringPiece name);
 
     // Removes all directory entries.
     void RemoveAllEntries();
