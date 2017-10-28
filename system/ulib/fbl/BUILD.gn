@@ -42,6 +42,7 @@ source_set("fbl") {
     "include/fbl/string_buffer.h",
     "include/fbl/string_piece.h",
     "include/fbl/string_printf.h",
+    "include/fbl/string_traits.h",
     "include/fbl/type_support.h",
     "include/fbl/unique_free_ptr.h",
     "include/fbl/unique_ptr.h",

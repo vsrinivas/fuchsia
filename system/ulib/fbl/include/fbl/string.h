@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
 #include <fbl/initializer_list.h>
 #include <fbl/string_piece.h>
+#include <fbl/string_traits.h>
+#include <zircon/compiler.h>
 
 namespace fbl {
 namespace tests {
@@ -92,14 +93,23 @@ public:
 
     // Creates a string from the contents of a string piece.
     // Allocates heap memory only if |piece.length()| is non-zero.
-    explicit String(const StringPiece& piece)
+    String(const StringPiece& piece)
         : String(piece.data(), piece.length()) {}
 
     // Creates a string from the contents of a string piece.
     // Allocates heap memory only if |piece.length()| is non-zero.
     // |ac| must not be null.
-    explicit String(const StringPiece& piece, AllocChecker* ac)
+    String(const StringPiece& piece, AllocChecker* ac)
         : String(piece.data(), piece.length(), ac) {}
+
+    // Creates a string from a string-like object.
+    // Allocates heap memory only if the length of |value| is non-zero.
+    //
+    // Works with various string types including fbl::String, fbl::StringView,
+    // std::string, and std::string_view.
+    template <typename T, typename = typename enable_if<is_string_like<T>::value>::type>
+    constexpr String(const T& value)
+        : String(GetStringData(value), GetStringLength(value)) {}
 
     // Destroys the string.
     ~String() { ReleaseRef(data_); }

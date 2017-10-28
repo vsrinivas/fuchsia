@@ -4,6 +4,7 @@
 
 #include <fbl/string.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
@@ -758,6 +759,44 @@ bool ref_count_test() {
     END_TEST;
 }
 
+constexpr char kFakeStringData[] = "hello";
+constexpr size_t kFakeStringLength = fbl::count_of(kFakeStringData);
+
+struct SimpleFakeString {
+    const char* data() const { return kFakeStringData; }
+    size_t length() const { return kFakeStringLength; }
+};
+
+struct OverloadedFakeString {
+    const char* data() const { return kFakeStringData; }
+    size_t length() const { return kFakeStringLength; }
+
+    // These are decoys to verify that the conversion operator only considers
+    // the const overloads of these members.
+    void data();
+    void length();
+};
+
+bool conversion_from_string_like_object() {
+    BEGIN_TEST;
+
+    {
+        SimpleFakeString str;
+        fbl::String p(str);
+        EXPECT_CSTR_EQ(kFakeStringData, p.data());
+        EXPECT_EQ(kFakeStringLength, p.length());
+    }
+
+    {
+        OverloadedFakeString str;
+        fbl::String p(str);
+        EXPECT_CSTR_EQ(kFakeStringData, p.data());
+        EXPECT_EQ(kFakeStringLength, p.length());
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(string_tests)
@@ -771,4 +810,5 @@ RUN_TEST(alloc_checker_test)
 RUN_TEST(to_string_piece_test)
 RUN_TEST(swap_test)
 RUN_TEST(ref_count_test)
+RUN_TEST(conversion_from_string_like_object)
 END_TEST_CASE(string_tests)

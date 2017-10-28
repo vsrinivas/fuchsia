@@ -313,6 +313,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <fbl/string_traits.h>
 #include <fbl/type_support.h>
 
 namespace trace {
@@ -340,7 +341,7 @@ template <typename T>
 struct ArgumentValueMaker<
     T,
     typename fbl::enable_if<fbl::is_signed_integer<T>::value &&
-                             (sizeof(T) <= sizeof(int32_t))>::type> {
+                            (sizeof(T) <= sizeof(int32_t))>::type> {
     static trace_arg_value_t Make(int32_t value) {
         return trace_make_int32_arg_value(value);
     }
@@ -350,7 +351,7 @@ template <typename T>
 struct ArgumentValueMaker<
     T,
     typename fbl::enable_if<fbl::is_unsigned_integer<T>::value &&
-                             (sizeof(T) <= sizeof(uint32_t))>::type> {
+                            (sizeof(T) <= sizeof(uint32_t))>::type> {
     static trace_arg_value_t Make(uint32_t value) {
         return trace_make_uint32_arg_value(value);
     }
@@ -360,8 +361,8 @@ template <typename T>
 struct ArgumentValueMaker<
     T,
     typename fbl::enable_if<fbl::is_signed_integer<T>::value &&
-                             (sizeof(T) > sizeof(int32_t)) &&
-                             (sizeof(T) <= sizeof(int64_t))>::type> {
+                            (sizeof(T) > sizeof(int32_t)) &&
+                            (sizeof(T) <= sizeof(int64_t))>::type> {
     static trace_arg_value_t Make(int64_t value) {
         return trace_make_int64_arg_value(value);
     }
@@ -371,8 +372,8 @@ template <typename T>
 struct ArgumentValueMaker<
     T,
     typename fbl::enable_if<fbl::is_unsigned_integer<T>::value &&
-                             (sizeof(T) > sizeof(uint32_t)) &&
-                             (sizeof(T) <= sizeof(uint64_t))>::type> {
+                            (sizeof(T) > sizeof(uint32_t)) &&
+                            (sizeof(T) <= sizeof(uint64_t))>::type> {
     static trace_arg_value_t Make(uint64_t value) {
         return trace_make_uint64_arg_value(value);
     }
@@ -411,20 +412,15 @@ struct ArgumentValueMaker<const char*> {
     }
 };
 
-// Works for the following types:
-// - fbl::String
-// - fbl::StringPiece
-// - std::string
-// - std::stringview
-DECLARE_HAS_MEMBER_FN(has_data, data);
-DECLARE_HAS_MEMBER_FN(has_length, length);
+// Works with various string types including fbl::String, fbl::StringView,
+// std::string, and std::string_view.
 template <typename T>
 struct ArgumentValueMaker<T,
-                          typename fbl::enable_if<has_data<T>::value &&
-                                                   has_length<T>::value>::type> {
+                          typename fbl::enable_if<fbl::is_string_like<T>::value>::type> {
     static trace_arg_value_t Make(const T& value) {
         return trace_make_string_arg_value(
-            trace_make_inline_string_ref(value.data(), value.length()));
+            trace_make_inline_string_ref(fbl::GetStringData(value),
+                                         fbl::GetStringLength(value)));
     }
 };
 

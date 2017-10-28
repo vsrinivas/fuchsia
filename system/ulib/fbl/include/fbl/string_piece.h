@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#include <fbl/string_traits.h>
+
 namespace fbl {
 
 constexpr static size_t constexpr_strlen(const char* str) {
@@ -38,6 +40,14 @@ public:
 
     constexpr StringPiece(const StringPiece& other) = default;
     constexpr StringPiece(StringPiece&& other) = default;
+
+    // Creates a string piece from a string-like object.
+    //
+    // Works with various string types including fbl::String, fbl::StringView,
+    // std::string, and std::string_view.
+    template <typename T, typename = typename enable_if<is_string_like<T>::value>::type>
+    constexpr StringPiece(const T& value)
+        : StringPiece(GetStringData(value), GetStringLength(value)) {}
 
     constexpr const char* data() const { return data_; }
 
