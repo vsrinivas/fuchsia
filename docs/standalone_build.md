@@ -5,7 +5,7 @@ To get the source code for the Garnet layer, using the following commands (see [
 information):
 
 ```
-curl -s https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT | base64 --decode | bash -s garnet
+curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s garnet
 cd garnet
 export PATH=`pwd`/.jiri_root/bin:$PATH
 jiri import garnet https://fuchsia.googlesource.com/manifest
