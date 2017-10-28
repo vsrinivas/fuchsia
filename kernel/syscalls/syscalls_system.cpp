@@ -17,8 +17,11 @@
 #include <vm/vm_aspace.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/resource.h>
+#include <zircon/syscalls/system.h>
 #include <zircon/types.h>
 #include <mexec.h>
+#include <object/resources.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform.h>
@@ -377,4 +380,28 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
 
     panic("Execution should never reach here\n");
     return ZX_OK;
+}
+
+zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
+                                user_in_ptr<const zx_system_powerctl_arg_t> arg) {
+
+    zx_status_t status;
+    if ((status = validate_resource(root_rsrc, ZX_RSRC_KIND_ROOT)) < 0) {
+        return status;
+    }
+
+    switch (cmd) {
+        case ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS: {
+            cpu_mask_t all_cpus = ((cpu_mask_t)1u << arch_max_num_cpus()) - 1;
+            return mp_hotplug_cpu_mask(~mp_get_online_mask() & all_cpus);
+        }
+        case ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY: {
+            cpu_mask_t primary = cpu_num_to_mask(0);
+            return mp_unplug_cpu_mask(mp_get_online_mask() & ~primary);
+        }
+        case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE: {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        default: return ZX_ERR_INVALID_ARGS;
+    }
 }
