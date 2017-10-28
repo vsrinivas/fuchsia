@@ -87,8 +87,7 @@ static const PciDevice::Attributes kRootComplexAttributes = {
     .vendor_id = PCI_VENDOR_ID_INTEL,
     .subsystem_id = 0,
     .subsystem_vendor_id = 0,
-    .class_code = PCI_CLASS_BRIDGE_HOST,
-    .revision_id = 0,
+    .device_class = (PCI_CLASS_BRIDGE_HOST << 16),
 };
 
 PciDevice::PciDevice(const Attributes attrs)
@@ -410,7 +409,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
     // |   class_code   |    prog_if   |    revision_id  |
     //  -------------------------------------------------
     case PCI_CONFIG_REVISION_ID:
-        *value = attrs_.class_code << 16 | attrs_.revision_id;
+        *value = attrs_.device_class;
         return ZX_OK;
     //  ---------------------------------------------------------------
     // |   (31..24)  |   (23..16)    |    (15..8)    |      (7..0)     |

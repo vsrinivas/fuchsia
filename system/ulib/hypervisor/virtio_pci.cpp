@@ -9,6 +9,7 @@
 #include <fbl/auto_lock.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/virtio.h>
+#include <virtio/virtio_ids.h>
 
 static uint8_t kPciCapTypeVendorSpecific = 0x9;
 
@@ -392,6 +393,27 @@ static constexpr uint16_t virtio_pci_id(uint16_t virtio_id) {
     return static_cast<uint16_t>(virtio_id + 0x1040u);
 }
 
+static constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
+    // See PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section D.
+    switch (virtio_id) {
+    case VIRTIO_ID_BLOCK:
+        return 0x01800000;
+    case VIRTIO_ID_GPU:
+        return 0x03808000;
+    case VIRTIO_ID_INPUT:
+        return 0x09800000;
+    }
+    return 0;
+}
+
+// Virtio 1.0 Section 4.1.2.1: Non-transitional devices SHOULD have a PCI
+// Revision ID of 1 or higher.
+static constexpr uint32_t kVirtioPciRevisionId = 1;
+
+static constexpr uint32_t virtio_pci_device_class(uint16_t virtio_id) {
+    return virtio_pci_class_code(virtio_id) | kVirtioPciRevisionId;
+}
+
 virtio_queue_t* VirtioPci::selected_queue() {
     fbl::AutoLock lock(&device_->mutex_);
     if (device_->queue_sel_ >= device_->num_queues_)
@@ -405,10 +427,7 @@ VirtioPci::VirtioPci(VirtioDevice* device)
           .vendor_id = kPciVendorIdVirtio,
           .subsystem_id = device->device_id_,
           .subsystem_vendor_id = 0,
-          .class_code = 0,
-          // Virtio 1.0 Section 4.1.2.1: Non-transitional devices SHOULD have a
-          // PCI Revision ID of 1 or higher.
-          .revision_id = 1,
+          .device_class = virtio_pci_device_class(device->device_id_),
       }),
       device_(device) {
 

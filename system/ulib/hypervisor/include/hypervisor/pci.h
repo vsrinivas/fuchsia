@@ -99,10 +99,8 @@ public:
         uint16_t vendor_id;
         uint16_t subsystem_id;
         uint16_t subsystem_vendor_id;
-        // Both class & subclass fields combined.
-        uint16_t class_code;
-        // Revision ID register.
-        uint8_t revision_id;
+        // class, subclass, prog_if, and revision id.
+        uint32_t device_class;
     };
 
     // Read from a region mapped by a BAR register.
