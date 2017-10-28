@@ -189,15 +189,34 @@ zx_status_t PciBus::Connect(PciDevice* device, uint8_t slot) {
     return device->SetupBarTraps(guest_);
 }
 
-static void pci_addr_invalid_read(IoValue* value) {
-    // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
-    //
-    // The host bus to PCI bridge must unambiguously report attempts to read the
-    // Vendor ID of non-existent devices. Since 0 FFFFh is an invalid Vendor ID,
-    // it is adequate for the host bus to PCI bridge to return a value of all
-    // 1's on read accesses to Configuration Space registers of non-existent
-    // devices.
+// PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: All PCI devices must
+// treat Configuration Space write operations to reserved registers as no-ops;
+// that is, the access must be completed normally on the bus and the data
+// discarded.
+static inline zx_status_t pci_write_unimplemented_register() {
+    return ZX_OK;
+}
+
+static inline zx_status_t pci_write_unimplemented_device() {
+    return ZX_OK;
+}
+
+// PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: Read accesses to reserved
+// or unimplemented registers must be completed normally and a data value of 0
+// returned.
+static inline zx_status_t pci_read_unimplemented_register(uint32_t* value) {
+    *value = 0;
+    return ZX_OK;
+}
+
+// PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: The host bus to PCI bridge
+// must unambiguously report attempts to read the Vendor ID of non-existent
+// devices. Since 0 FFFFh is an invalid Vendor ID, it is adequate for the host
+// bus to PCI bridge to return a value of all 1's on read accesses to
+// Configuration Space registers of non-existent devices.
+static inline zx_status_t pci_read_unimplemented_device(IoValue* value) {
     value->u32 = bit_mask<uint32_t>(value->access_size * 8);
+    return ZX_OK;
 }
 
 zx_status_t PciBus::ReadEcam(uint64_t addr, IoValue* value) {
@@ -205,8 +224,7 @@ zx_status_t PciBus::ReadEcam(uint64_t addr, IoValue* value) {
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
     const bool valid = is_addr_valid(PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
     if (!valid) {
-        pci_addr_invalid_read(value);
-        return ZX_OK;
+        return pci_read_unimplemented_device(value);
     }
 
     return device_[device]->ReadConfig(reg, value);
@@ -217,7 +235,7 @@ zx_status_t PciBus::WriteEcam(uint64_t addr, const IoValue& value) {
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
     const bool valid = is_addr_valid(PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
     if (!valid) {
-        return ZX_ERR_OUT_OF_RANGE;
+        return pci_write_unimplemented_device();
     }
 
     return device_[device]->WriteConfig(reg, value);
@@ -242,8 +260,7 @@ zx_status_t PciBus::ReadIoPort(uint64_t port, IoValue* value) {
             addr = config_addr_;
             if (!is_addr_valid(PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr),
                                PCI_TYPE1_FUNCTION(addr))) {
-                pci_addr_invalid_read(value);
-                return ZX_OK;
+                return pci_read_unimplemented_device(value);
             }
         }
 
@@ -283,7 +300,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
             if (!is_addr_valid(PCI_TYPE1_BUS(addr),
                                PCI_TYPE1_DEVICE(addr),
                                PCI_TYPE1_FUNCTION(addr))) {
-                return ZX_ERR_OUT_OF_RANGE;
+                return pci_write_unimplemented_device();
             }
 
             reg = PCI_TYPE1_REGISTER(addr) + port - kPciConfigDataPortBase;
@@ -363,15 +380,6 @@ zx_status_t PciDevice::ReadCapability(uint8_t addr, uint32_t* out) const {
     return ZX_OK;
 }
 
-// PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
-//
-// Read accesses to reserved or unimplemented registers must be completed
-// normally and a data value of 0 returned.
-static zx_status_t pci_device_read_unimplemented(uint32_t* value) {
-    *value = 0;
-    return ZX_OK;
-}
-
 /* Read a 4 byte aligned value from PCI config space. */
 zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
     switch (reg) {
@@ -419,7 +427,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
     case PCI_REGISTER_BAR_5: {
         uint32_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
         if (bar_num >= PCI_MAX_BARS)
-            return pci_device_read_unimplemented(value);
+            return pci_read_unimplemented_register(value);
 
         fbl::AutoLock lock(&mutex_);
         const PciBar* bar = &bar_[bar_num];
@@ -456,14 +464,9 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) {
         if (ReadCapability(reg, value) != ZX_ERR_NOT_FOUND)
             return ZX_OK;
     // Fall-through if the capability is not-implemented.
-    // These are all 32-bit registers.
-    case PCI_CONFIG_CARDBUS_CIS_PTR:
-    case PCI_CONFIG_EXP_ROM_ADDRESS:
-        return pci_device_read_unimplemented(value);
+    default:
+        return pci_read_unimplemented_register(value);
     }
-
-    fprintf(stderr, "Unhandled PCI device read %#x\n", reg);
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) {
@@ -483,26 +486,8 @@ zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) {
     return ZX_OK;
 }
 
-// PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
-//
-// All PCI devices must treat Configuration Space write operations to reserved
-// registers as no-ops; that is, the access must be completed  normally on the
-// bus and the data discarded.
-static inline zx_status_t pci_device_write_unimplemented() {
-    return ZX_OK;
-}
-
 zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
     switch (reg) {
-    case PCI_CONFIG_VENDOR_ID:
-    case PCI_CONFIG_DEVICE_ID:
-    case PCI_CONFIG_REVISION_ID:
-    case PCI_CONFIG_HEADER_TYPE:
-    case PCI_CONFIG_CLASS_CODE:
-    case PCI_CONFIG_CLASS_CODE_SUB:
-    case PCI_CONFIG_CLASS_CODE_BASE:
-        // Read-only registers.
-        return ZX_ERR_NOT_SUPPORTED;
     case PCI_CONFIG_COMMAND: {
         if (value.access_size != 2)
             return ZX_ERR_NOT_SUPPORTED;
@@ -521,7 +506,7 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
 
         uint64_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
         if (bar_num >= PCI_MAX_BARS)
-            return pci_device_write_unimplemented();
+            return pci_write_unimplemented_register();
 
         fbl::AutoLock lock(&mutex_);
         PciBar* bar = &bar_[bar_num];
@@ -531,7 +516,7 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
         return ZX_OK;
     }
     default:
-        return pci_device_write_unimplemented();
+        return pci_write_unimplemented_register();
     }
 }
 
