@@ -5,7 +5,7 @@ To get the source code for the Peridot layer, using the following commands (see 
 information):
 
 ```
-curl -s https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT | base64 --decode | bash -s peridot
+curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s peridot
 cd peridot
 export PATH=`pwd`/.jiri_root/bin:$PATH
 jiri import peridot https://fuchsia.googlesource.com/manifest
