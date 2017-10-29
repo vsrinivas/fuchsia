@@ -62,9 +62,8 @@ def now_str():
 
 def get_log_listener(args):
   # return 'cat /tmp/z' # Unit test
-  listener = 'out/build-zircon/tools/loglistener'
-  fuchsia_dir = os.environ['FUCHSIA_DIR']
-  return '{}/{} {}'.format(fuchsia_dir, listener, ' '.join(x for x in args))
+  listener = 'fx log'
+  return '{} {}'.format(listener, ' '.join(x for x in args))
 
 
 @static_vars(crash_dump=[])
@@ -167,12 +166,7 @@ def hijack_stdout(cmd):
 
 
 def get_decode_cmd():
-  fuchsia_dir = os.environ['FUCHSIA_DIR']
-  zircon_build_dir = os.environ['ZIRCON_BUILD_DIR']
-  fuchsia_build_dir = os.environ['FUCHSIA_BUILD_DIR']
-
-  decode_cmd = '{}/zircon/scripts/symbolize --build-dir {} {}'.format(
-      fuchsia_dir, zircon_build_dir, fuchsia_build_dir)
+  decode_cmd = 'fx symbolize'
   return decode_cmd
 
 
