@@ -56,11 +56,13 @@ list    kernel.arm-gic-v2                 MDI_ARM_GIC_V2                        
 // TODO:(hollande) See note above re: phys/virt
 uint64  kernel.arm-gic-v2.gicd-offset     MDI_ARM_GIC_V2_GICD_OFFSET            1071
 uint64  kernel.arm-gic-v2.gicc-offset     MDI_ARM_GIC_V2_GICC_OFFSET            1072
-uint32  kernel.arm-gic-v2.ipi-base        MDI_ARM_GIC_V2_IPI_BASE               1073
-uint64  kernel.arm-gic-v2.msi-frame-phys  MDI_ARM_GIC_V2_MSI_FRAME_PHYS         1074
-uint64  kernel.arm-gic-v2.msi-frame-virt  MDI_ARM_GIC_V2_MSI_FRAME_VIRT         1075
-boolean kernel.arm-gic-v2.optional        MDI_ARM_GIC_V2_OPTIONAL               1076
-boolean kernel.arm-gic-v2.msi             MDI_ARM_GIC_V2_USE_MSI                1077
+uint64  kernel.arm-gic-v2.gich-offset     MDI_ARM_GIC_V2_GICH_OFFSET            1073
+uint64  kernel.arm-gic-v2.gicv-offset     MDI_ARM_GIC_V2_GICV_OFFSET            1074
+uint32  kernel.arm-gic-v2.ipi-base        MDI_ARM_GIC_V2_IPI_BASE               1075
+uint64  kernel.arm-gic-v2.msi-frame-phys  MDI_ARM_GIC_V2_MSI_FRAME_PHYS         1076
+uint64  kernel.arm-gic-v2.msi-frame-virt  MDI_ARM_GIC_V2_MSI_FRAME_VIRT         1077
+boolean kernel.arm-gic-v2.optional        MDI_ARM_GIC_V2_OPTIONAL               1078
+boolean kernel.arm-gic-v2.msi             MDI_ARM_GIC_V2_USE_MSI                1079
 
 // AmLogic S905
 list    kernel.s905-uart                  MDI_S905_UART                         1090

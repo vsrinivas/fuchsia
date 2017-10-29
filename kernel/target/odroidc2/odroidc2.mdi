@@ -14,12 +14,13 @@ kernel = {
         base-phys = 0xc81004c0
         base-virt = 0xffffffffc81004c0
     }
-
     arm-gic-v2 = {
         base-virt = 0xffffffffc4300000
         base-phys = 0xc4300000
-        gicc-offset = 0x002000
-        gicd-offset = 0x001000
+        gicd-offset = 0x1000
+        gicc-offset = 0x2000
+        gich-offset = 0x4000
+        gicv-offset = 0x6000
         ipi-base = 5
     }
     arm-psci = {

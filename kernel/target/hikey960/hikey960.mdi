@@ -1,6 +1,5 @@
 include "system/public/zircon/mdi/zircon.mdi"
 
-
 cpu-map = {
     clusters = {
         {
@@ -24,15 +23,15 @@ kernel = {
         base-phys = 0xfff32000
         irq = 111
     }
-
     arm-gic-v2 = {
         base-virt = 0xffffffffc01b0000
         base-phys = 0xe82b0000
-        gicc-offset = 0x002000
-        gicd-offset = 0x001000
+        gicd-offset = 0x1000
+        gicc-offset = 0x2000
+        gich-offset = 0x4000
+        gicv-offset = 0x6000
         ipi-base = 13
     }
-
     arm-psci = {
         use-smc = true
     }
