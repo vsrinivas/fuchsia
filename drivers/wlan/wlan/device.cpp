@@ -235,7 +235,10 @@ zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet) {
 // the syscall fails, and we return an error.
 // TODO(tkilbourn): consider refactoring this so we don't have to abandon the safety analysis.
 zx_status_t Device::SendService(fbl::unique_ptr<Packet> packet) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    return channel_.write(0u, packet->data(), packet->len(), nullptr, 0);
+    if (channel_.is_valid()) {
+        return channel_.write(0u, packet->data(), packet->len(), nullptr, 0);
+    }
+    return ZX_OK;
 }
 
 // TODO(tkilbourn): figure out how to make sure we have the lock for accessing mlme_.
