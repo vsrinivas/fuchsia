@@ -22,7 +22,9 @@
 
 #include "a113-bus.h"
 #include "a113-hw.h"
+#include "gauss-hw.h"
 #include <hw/reg.h>
+
 
 static zx_status_t a113_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
     *out_mode = USB_MODE_HOST;
@@ -48,6 +50,9 @@ static zx_status_t a113_bus_get_protocol(void* ctx, uint32_t proto_id, void* out
         return ZX_OK;
     case ZX_PROTOCOL_GPIO:
         memcpy(out, &bus->gpio, sizeof(bus->gpio));
+        return ZX_OK;
+    case ZX_PROTOCOL_I2C:
+        memcpy(out, &bus->i2c, sizeof(bus->i2c));
         return ZX_OK;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -89,6 +94,15 @@ static zx_status_t a113_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     if ((status = a113_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "a113_gpio_init failed: %d\n", status);
     }
+    if ((status = a113_i2c_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "a113_i2c_init failed: %d\n", status);
+    }
+
+    // pinmux for Gauss i2c
+    a113_pinmux_config(bus, I2C_SCK_A, 1);
+    a113_pinmux_config(bus, I2C_SDA_A, 1);
+    a113_pinmux_config(bus, I2C_SCK_B, 1);
+    a113_pinmux_config(bus, I2C_SDA_B, 1);
 
     bus->usb_mode_switch.ops = &usb_mode_switch_ops;
     bus->usb_mode_switch.ctx = bus;

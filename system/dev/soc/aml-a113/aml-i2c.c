@@ -85,15 +85,15 @@ static int aml_i2c_thread(void *arg) {
             mtx_unlock(&dev->txn_mutex);
             aml_i2c_set_slave_addr(dev, txn->conn->slave_addr);
             if (txn->tx_len > 0) {
-                aml_i2c_write(dev,txn->tx_buff,txn->tx_len);
+                aml_i2c_write(dev,txn->tx_buff, txn->tx_len);
                 if ((txn->cb) && (txn->rx_len == 0)) {
-                    txn->cb(txn);
+                    txn->cb(ZX_OK, NULL, txn->rx_len, txn->cookie);
                 }
             }
             if (txn->rx_len > 0) {
-                aml_i2c_read(dev,txn->rx_buff,txn->rx_len);
+                aml_i2c_read(dev, txn->rx_buff, txn->rx_len);
                 if (txn->cb) {
-                    txn->cb(txn);
+                    txn->cb(ZX_OK, txn->rx_buff, txn->rx_len, txn->cookie);
                 }
             }
             memset(txn, 0, sizeof(aml_i2c_txn_t));
@@ -142,30 +142,29 @@ static aml_i2c_txn_t *aml_i2c_get_txn(aml_i2c_connection_t *conn) {
     return txn;
 }
 
-static inline void aml_i2c_queue_txn(aml_i2c_connection_t *conn, aml_i2c_txn_t *txn){
+static inline void aml_i2c_queue_txn(aml_i2c_connection_t *conn, aml_i2c_txn_t *txn) {
     mtx_lock(&conn->dev->txn_mutex);
     list_add_head(&conn->dev->txn_list, &txn->node);
     mtx_unlock(&conn->dev->txn_mutex);
 }
 
-static inline zx_status_t aml_i2c_queue_async(aml_i2c_connection_t *conn,
-                                                            uint8_t *txbuff, uint32_t txlen,
-                                                            uint8_t *rxbuff, uint32_t rxlen,
-                                                            void* cb) {
+static inline zx_status_t aml_i2c_queue_async(aml_i2c_connection_t *conn, const uint8_t *txbuff,
+                                                            uint32_t txlen, uint32_t rxlen,
+                                                            i2c_complete_cb cb, void* cookie) {
     ZX_DEBUG_ASSERT(conn);
-    ZX_DEBUG_ASSERT(txlen <= 8);
-    ZX_DEBUG_ASSERT(rxlen <= 8);
+    ZX_DEBUG_ASSERT(txlen <= AML_I2C_MAX_TRANSFER);
+    ZX_DEBUG_ASSERT(rxlen <= AML_I2C_MAX_TRANSFER);
 
     aml_i2c_txn_t *txn;
 
     txn = aml_i2c_get_txn(conn);
     if (!txn) return ZX_ERR_NO_MEMORY;
 
-    txn->tx_buff = txbuff;
+    memcpy(txn->tx_buff, txbuff, txlen);
     txn->tx_len = txlen;
     txn->rx_len = rxlen;
-    txn->rx_buff = rxbuff;
     txn->cb = cb;
+    txn->cookie = cookie;
     txn->conn = conn;
 
     aml_i2c_queue_txn(conn,txn);
@@ -174,25 +173,25 @@ static inline zx_status_t aml_i2c_queue_async(aml_i2c_connection_t *conn,
     return ZX_OK;
 }
 
-zx_status_t aml_i2c_rd_async(aml_i2c_connection_t *conn, uint8_t *buff, uint32_t len, void* cb) {
+zx_status_t aml_i2c_rd_async(aml_i2c_connection_t *conn, uint32_t len, i2c_complete_cb cb,
+                                                            void* cookie) {
 
-    ZX_DEBUG_ASSERT(buff);
-    return aml_i2c_queue_async(conn, NULL, 0, buff, len, cb);
+    return aml_i2c_queue_async(conn, NULL, 0, len, cb, cookie);
 }
 
-zx_status_t aml_i2c_wr_async(aml_i2c_connection_t *conn, uint8_t *buff, uint32_t len, void* cb) {
+zx_status_t aml_i2c_wr_async(aml_i2c_connection_t *conn, const uint8_t *buff, uint32_t len,
+                                                            i2c_complete_cb cb, void* cookie) {
 
     ZX_DEBUG_ASSERT(buff);
-    return aml_i2c_queue_async(conn, buff, len, NULL, 0, cb);
+    return aml_i2c_queue_async(conn, buff, len, 0, cb, cookie);
 }
 
-zx_status_t aml_i2c_wr_rd_async(aml_i2c_connection_t *conn, uint8_t *txbuff, uint32_t txlen,
-                                                            uint8_t *rxbuff, uint32_t rxlen,
-                                                            void* cb) {
+zx_status_t aml_i2c_wr_rd_async(aml_i2c_connection_t *conn, const uint8_t *txbuff, uint32_t txlen,
+                                                            uint32_t rxlen, i2c_complete_cb cb,
+                                                            void* cookie) {
 
     ZX_DEBUG_ASSERT(txbuff);
-    ZX_DEBUG_ASSERT(rxbuff);
-    return aml_i2c_queue_async(conn, txbuff, txlen, rxbuff, rxlen, cb);
+    return aml_i2c_queue_async(conn, txbuff, txlen, rxlen, cb, cookie);
 }
 
 static zx_status_t aml_i2c_wait_event(aml_i2c_dev_t* dev, uint32_t sig_mask) {
@@ -213,7 +212,8 @@ static zx_status_t aml_i2c_wait_event(aml_i2c_dev_t* dev, uint32_t sig_mask) {
 
 zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
 
-    ZX_DEBUG_ASSERT(len<=8);  //temporary hack, only transactions that can fit in hw buffer
+    //temporary hack, only transactions that can fit in hw buffer
+    ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
 
     uint32_t token_num = 0;
     uint64_t token_reg = 0;
@@ -245,7 +245,8 @@ zx_status_t aml_i2c_write(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
 
 zx_status_t aml_i2c_read(aml_i2c_dev_t *dev, uint8_t *buff, uint32_t len) {
 
-    ZX_DEBUG_ASSERT(len<=8);  //temporary hack, only transactions that can fit in hw buffer
+    //temporary hack, only transactions that can fit in hw buffer
+    ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
 
     uint32_t token_num = 0;
     uint64_t token_reg = 0;
@@ -324,11 +325,17 @@ zx_status_t aml_i2c_connect(aml_i2c_connection_t **connection,
     return ZX_OK;
 }
 
+void aml_i2c_release(aml_i2c_connection_t* conn) {
+    mtx_lock(&conn->dev->conn_mutex);
+    list_delete(&conn->node);
+    mtx_unlock(&conn->dev->conn_mutex);
+    free(conn);
+}
+
 /* create instance of aml_i2c_t and do basic initialization.  There will
 be one of these instances for each of the soc i2c ports.
 */
-zx_status_t aml_i2c_init(aml_i2c_dev_t **device, a113_bus_t *host_bus,
-                                                 aml_i2c_port_t portnum) {
+zx_status_t aml_i2c_init(aml_i2c_dev_t **device, aml_i2c_port_t portnum) {
 
     aml_i2c_dev_desc_t *dev_desc = get_i2c_dev(portnum);
     if (!dev_desc) return ZX_ERR_INVALID_ARGS;
@@ -347,7 +354,6 @@ zx_status_t aml_i2c_init(aml_i2c_dev_t **device, a113_bus_t *host_bus,
 
     (*device)->txn_active =  COMPLETION_INIT;
 
-    (*device)->host_bus = host_bus;  // TODO - might not need this
     (*device)->timeout = ZX_SEC(1);
 
     zx_handle_t resource = get_root_resource();

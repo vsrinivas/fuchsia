@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/a113-audio.c \
     $(LOCAL_DIR)/a113-bus.c \
     $(LOCAL_DIR)/a113-gpio.c \
+    $(LOCAL_DIR)/a113-i2c.c \
     $(LOCAL_DIR)/a113-usb.c \
     $(LOCAL_DIR)/aml-i2c.c \
 
@@ -20,5 +21,20 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 MODULE_LIBS := system/ulib/driver \
                system/ulib/c \
                system/ulib/zircon
+
+include make/module.mk
+
+MODULE := $(LOCAL_DIR).i2c-test
+
+MODULE_NAME := gauss-i2c-test
+
+MODULE_TYPE := driver
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/gauss-i2c-test.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
 include make/module.mk

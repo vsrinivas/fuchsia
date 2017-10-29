@@ -33,5 +33,7 @@ __BEGIN_CDECLS;
 #define PDEV_PID_AMLOGIC_A113       2
 // Device ID for Gauss audio
 #define PDEV_DID_AMLOGIC_GAUSS_AUDIO 1
+// I2C test driver
+#define PDEV_DID_GAUSS_I2C_TEST     2
 
 __END_CDECLS;
