@@ -128,10 +128,10 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     // hardware encryption
     uint8_t DeriveSharedKeyIndex(uint8_t bss_idx, uint8_t key_idx);
-    KeyMode GetKeyMode(const uint8_t cipher_oui[3], uint8_t cipher_type);
-    zx_status_t WriteKey(const uint8_t key[], size_t key_len, uint16_t offset);
-    zx_status_t WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len);
-    zx_status_t WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len);
+    KeyMode MapIeeeCipherSuiteToKeyMode(const uint8_t cipher_oui[3], uint8_t cipher_type);
+    zx_status_t WriteKey(const uint8_t key[], size_t key_len, uint16_t offset, KeyMode mode);
+    zx_status_t WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len, KeyMode mode);
+    zx_status_t WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len, KeyMode mode);
     zx_status_t WriteSharedKeyMode(uint8_t skey, KeyMode mode);
     zx_status_t ResetIvEiv(uint8_t wcid);
     zx_status_t WriteWcid(uint8_t wcid, const uint8_t mac[]);

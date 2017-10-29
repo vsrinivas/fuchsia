@@ -58,6 +58,12 @@ type Header struct {
 	PacketBodyLength uint16
 }
 
+// IEEE Std 802.1X-2010, 11.9, Table 11-5
+const (
+	KeyDescriptorType_RC4         uint8 = 1
+	KeyDescriptorType_IEEE_802_11 uint8 = 2
+)
+
 const HeaderLen = 4
 
 // IEEE Std 802.11-2016, 12.7.2, Figure 12-32

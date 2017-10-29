@@ -232,12 +232,13 @@ func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFram
 	}
 	hs.gtk = gtkKDE.GTK
 	hs.gtkID = gtkKDE.KeyID
+	// TODO(hahnr): Verify GTK length meets expected length (CCMP = 16B, TKIP = 32B).
 	return nil
 }
 
 // IEEE Std 802.11-2016, 12.7.6.5
-// The last message of the Handshake let's the Authenticator know that the GTK was received and the
-// Handshake completed successfully. Once the Handshake completed, the traffic should be protected
+// The last message of the Handshake lets the Authenticator know that the GTK was received and the
+// Handshake completed successfully. Once the Handshake completes, the traffic should be protected
 // with the corresponding keys.
 func (s *fourWayStateWaitingGTK) sendMessage4(hs *FourWay, msg3 *eapol.KeyFrame) error {
 	info := msg3.Info.Update(eapol.KeyInfo_Install|eapol.KeyInfo_ACK|eapol.KeyInfo_Error|eapol.KeyInfo_Request|eapol.KeyInfo_Encrypted_KeyData, eapol.KeyInfo_MIC|eapol.KeyInfo_Secure)
@@ -316,6 +317,12 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 	// This will likely block association with incorrectly implemented APs which don't strictly
 	// follow specifications.
 
+	// IEEE Std 802.1X-2010, 11.9
+	// Use of RC4 is deprecated.
+	if f.DescriptorType != eapol.KeyDescriptorType_IEEE_802_11 {
+		return false, fmt.Errorf("unsupported Key Descriptor Type %d, expected %d", f.DescriptorType, eapol.KeyDescriptorType_IEEE_802_11)
+	}
+
 	// IEEE Std 802.11-2016, 12.7.2 b.1.ii)
 	// TODO(hahnr): Derive this value from the selected AKM.
 	if f.Info.Extract(eapol.KeyInfo_DescriptorVersion) != 2 {
@@ -378,7 +385,7 @@ func (hs *FourWay) isIntegrous(f *eapol.KeyFrame) (bool, error) {
 	// IEEE Std 802.11-2016, 12.7.2 c)
 	// TODO(hahnr): Derive KeyLength from selected AKM.
 	if f.Length != 16 {
-		return false, fmt.Errorf("invalid KeyLength %u but expected %u", f.Length, 16)
+		return false, fmt.Errorf("invalid KeyLength %d but expected %d", f.Length, 16)
 	}
 
 	// IEEE Std 802.11-2016, 12.7.2, e)

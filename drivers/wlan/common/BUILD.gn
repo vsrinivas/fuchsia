@@ -6,5 +6,6 @@ source_set("common") {
   sources = [
     "bitfield.h",
     "moving_average.h",
+    "cipher.h",
   ]
 }

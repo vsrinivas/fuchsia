@@ -212,6 +212,13 @@ func (s *joinState) String() string {
 }
 
 func (s *joinState) run(c *Client) (time.Duration, error) {
+	// Fail with error if network is an unsupported RSN.
+	if c.ap.BSSDesc.Rsn != nil {
+		if supported, err := eapol.IsRSNSupported(*c.ap.BSSDesc.Rsn); !supported {
+			return InfiniteTimeout, err
+		}
+	}
+
 	req := &mlme.JoinRequest{
 		SelectedBss:        *c.ap.BSSDesc,
 		JoinFailureTimeout: 20,
@@ -343,13 +350,19 @@ func (s *assocState) run(c *Client) (time.Duration, error) {
 
 	// If the network is an RSN, announce own cipher and authentication capabilities and configure
 	// EAPOL client to process incoming EAPOL frames.
-	if c.ap.BSSDesc.Rsn != nil {
-		capabilityRSNE := s.createCapabilityRSNElement()
-		rawRSNE := capabilityRSNE.Bytes()
-		req.Rsn = &rawRSNE
+	bcnRawRSNE := c.ap.BSSDesc.Rsn
+	if bcnRawRSNE != nil {
+		bcnRSNE, err := elements.ParseRSN(*bcnRawRSNE)
+		if err != nil {
+			return InfiniteTimeout, fmt.Errorf("Error parsing Beacon RSNE")
+		}
 
-		handshake := s.createHandshake(c, capabilityRSNE)
-		c.eapolC = s.createEAPOLClient(c, capabilityRSNE, handshake)
+		assocRSNE := s.createAssociationRSNE(bcnRSNE)
+		assocRawRSNE := assocRSNE.Bytes()
+		req.Rsn = &assocRawRSNE
+
+		handshake := s.createHandshake(c, bcnRSNE, assocRSNE)
+		c.eapolC = s.createEAPOLClient(c, assocRSNE, handshake)
 	} else {
 		c.eapolC = nil
 	}
@@ -362,12 +375,23 @@ func (s *assocState) run(c *Client) (time.Duration, error) {
 }
 
 // Creates the RSNE used in MLME-Association.request to announce supported ciphers and AKMs to the
-// AP. Currently, only WPA2-PSK-CCMP-128 is supported.
-func (s *assocState) createCapabilityRSNElement() *elements.RSN {
+// Supported Ciphers and AKMs:
+// AKMS: PSK
+// Pairwise: CCMP-128
+// Group: CCMP-128, TKIP
+func (s *assocState) createAssociationRSNE(bcnRSNE *elements.RSN) *elements.RSN {
 	rsne := elements.NewEmptyRSN()
 	rsne.GroupData = &elements.CipherSuite{
 		Type: elements.CipherSuiteType_CCMP128,
 		OUI:  elements.DefaultCipherSuiteOUI,
+	}
+	// If GroupCipher does not support CCMP-128, fallback to TKIP.
+	// Note: IEEE allows the usage of Group Ciphers which are less secure than Pairwise ones. TKIP
+	// is supported for Group Ciphers solely for compatibility reasons. TKIP is considered broken
+	// and will not be supported for pairwise cipher usage, not even to support compatibility with
+	// older devices.
+	if !bcnRSNE.GroupData.IsIn(elements.CipherSuiteType_CCMP128) {
+		rsne.GroupData.Type = elements.CipherSuiteType_TKIP
 	}
 	rsne.PairwiseCiphers = []elements.CipherSuite{
 		{
@@ -386,12 +410,7 @@ func (s *assocState) createCapabilityRSNElement() *elements.RSN {
 	return rsne
 }
 
-func (s *assocState) createHandshake(c *Client, assocRSNE *elements.RSN) eapol.KeyExchange {
-	beaconRSNE, err := elements.ParseRSN(*c.ap.BSSDesc.Rsn)
-	if err != nil {
-		return nil
-	}
-
+func (s *assocState) createHandshake(c *Client, bcnRSNE *elements.RSN, assocRSNE *elements.RSN) eapol.KeyExchange {
 	password := ""
 	if c.cfg != nil {
 		password = c.cfg.Password
@@ -404,7 +423,7 @@ func (s *assocState) createHandshake(c *Client, assocRSNE *elements.RSN) eapol.K
 		PeerAddr:   c.ap.BSSID,
 		StaAddr:    c.staAddr,
 		AssocRSNE:  assocRSNE,
-		BeaconRSNE: beaconRSNE,
+		BeaconRSNE: bcnRSNE,
 	}
 	return handshake.NewFourWay(config)
 }

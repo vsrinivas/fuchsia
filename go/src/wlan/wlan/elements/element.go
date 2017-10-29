@@ -237,3 +237,45 @@ func (r *RSN) Bytes() (result []byte) {
 	binary.Write(&buf, binary.LittleEndian, r.GroupMgmt)
 	return
 }
+
+func (c *AKMSuite) IsIn(types ...AKMSuiteType) bool {
+	if bytes.Compare(c.OUI[:], DefaultCipherSuiteOUI[:]) != 0 {
+		return false
+	}
+	for _, t := range types {
+		if c.Type == t {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *RSN) HasAKM(t AKMSuiteType) bool {
+	for _, e := range r.AKMs {
+		if e.IsIn(t) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *CipherSuite) IsIn(types ...CipherSuiteType) bool {
+	if bytes.Compare(c.OUI[:], DefaultCipherSuiteOUI[:]) != 0 {
+		return false
+	}
+	for _, t := range types {
+		if c.Type == t {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *RSN) HasPairwiseCipher(t CipherSuiteType) bool {
+	for _, e := range r.PairwiseCiphers {
+		if e.IsIn(t) {
+			return true
+		}
+	}
+	return false
+}

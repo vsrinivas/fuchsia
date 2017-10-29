@@ -65,6 +65,8 @@ constexpr int8_t kGroupKeysPerBss = 4;
 constexpr int8_t kKeyModesPerSharedKeyMode = kGroupKeysPerBss * 2;
 constexpr int8_t kMaxSharedKeys = 31;
 
+constexpr int8_t kNoProtectionKeyLen = 0;
+
 // Entry for pairwise and shared key table.
 struct KeyEntry {
     uint8_t key[16];
@@ -77,16 +79,19 @@ struct IvEivEntry {
     uint32_t eiv;
 } __PACKED;
 
+// KeyMode cipher definitions differ from IEEE's cipher suite types.
+// Compare to: IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
+// See also wlan/common/cipher.h
 enum KeyMode : uint8_t {
     kNone = 0,
-    kWEP42 = 1,
-    kWEP104 = 2,
-    kTKIP = 3,
-    kAES = 4,
-    kCKIP42 = 5,
-    kCKIP104 = 6,
-    kCKIP128 = 7,
-    kWAPI = 8,
+    kWep42 = 1,
+    kWep104 = 2,
+    kTkip = 3,
+    kAes = 4,
+    kCkip42 = 5,
+    kCkip104 = 6,
+    kCkip128 = 7,
+    kWapi = 8,
 
     kUnsupported = 9,
 } __PACKED;

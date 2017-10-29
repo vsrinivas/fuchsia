@@ -5,6 +5,9 @@
 package eapol
 
 import (
+	"wlan/wlan/elements"
+
+	"fmt"
 	"log"
 )
 
@@ -64,4 +67,35 @@ func (c *Client) HandleEAPOLFrame(frame []byte) {
 			log.Printf("unknown EAPOL packet type: %d", hdr.PacketType)
 		}
 	}
+}
+
+// Returns 'nil' if the given RSNE is supported by this EAPOL implementation.
+//
+// Supported:
+// AKM: PSK
+// Ciphers:
+// 		Pairwise: CCMP-128
+// 		Group: TKIP, CCMP-128
+func IsRSNSupported(rawRSNE []uint8) (bool, error) {
+	rsne, err := elements.ParseRSN(rawRSNE)
+	if err != nil {
+		return false, fmt.Errorf("error parsing RSNE")
+	}
+
+	// AKM must be PSK.
+	isPSK := rsne.HasAKM(elements.AkmSuiteType_PSK)
+	if rsne.GroupData == nil || !isPSK {
+		return false, fmt.Errorf("network is not using PSK authentication")
+	}
+
+	// Pairwise Cipher must be CCMP.
+	if !rsne.HasPairwiseCipher(elements.CipherSuiteType_CCMP128) {
+		return false, fmt.Errorf("pairwise cipher is not CCMP-128")
+	}
+
+	// Group Cipher must be TKIP or CCMP.
+	if !rsne.GroupData.IsIn(elements.CipherSuiteType_TKIP, elements.CipherSuiteType_CCMP128) {
+		return false, fmt.Errorf("group cipher is neither TKIP nor CCMP-128")
+	}
+	return true, nil
 }

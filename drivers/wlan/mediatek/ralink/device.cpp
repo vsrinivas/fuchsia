@@ -5,6 +5,7 @@
 #include "device.h"
 #include "logging.h"
 #include "ralink.h"
+#include "garnet/drivers/wlan/common/cipher.h"
 
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlan.h>
@@ -47,8 +48,6 @@ constexpr size_t kWriteBufSize = 4096;  // todo: use endpt max size
 constexpr char kFirmwareFile[] = "rt2870.bin";
 
 constexpr int kMaxBusyReads = 20;
-
-const uint8_t std_oui[3] = {0x00, 0x0F, 0xAC};
 
 // The <cstdlib> overloads confuse the compiler for <cstdint> types.
 template <typename T> constexpr T abs(T t) {
@@ -3235,29 +3234,54 @@ zx_status_t Device::WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_
     return ZX_OK;
 }
 
-KeyMode Device::GetKeyMode(const uint8_t cipher_oui[3], uint8_t cipher_type) {
-    if (memcmp(cipher_oui, std_oui, 3)) {
+// Maps IEEE cipher suites to vendor specific cipher representations, called KeyMode.
+// The word 'KeyMode' is intentionally used to prevent mixing this vendor specific cipher
+// representation with IEEE's vendor specific cipher suites as specified in the last row of
+// IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131.
+// The KeyMode identifies a vendor supported cipher by a number and not as IEEE does by a type
+// and OUI.
+KeyMode Device::MapIeeeCipherSuiteToKeyMode(const uint8_t cipher_oui[3], uint8_t cipher_type) {
+    if (memcmp(cipher_oui, wlan::common::cipher::kStandardOui, 3)) {
         return KeyMode::kUnsupported;
     }
 
-    // IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
-    if (cipher_type == 4) {
-        return KeyMode::kAES;
+    switch (cipher_type) {
+    case wlan::common::cipher::kTkip:
+        return KeyMode::kTkip;
+    case wlan::common::cipher::kCcmp128:
+        return KeyMode::kAes;
+    default:
+        return KeyMode::kUnsupported;
     }
-
-    return KeyMode::kUnsupported;
 }
 
 uint8_t Device::DeriveSharedKeyIndex(uint8_t bss_idx, uint8_t key_idx) {
     return bss_idx * kGroupKeysPerBss + key_idx;
 }
 
-zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index) {
+zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index, KeyMode mode) {
     KeyEntry keyEntry = {};
-    if (key_len > sizeof(keyEntry.key)) {
-        return ZX_ERR_IO;
+    switch (mode) {
+    case KeyMode::kNone: {
+        if (key_len != kNoProtectionKeyLen || key != nullptr) { return ZX_ERR_INVALID_ARGS; }
+        // No need for copying the key since the key should be zeroed in this KeyMode.
+        break;
     }
-    memcpy(keyEntry.key, key, key_len);
+    case KeyMode::kTkip: {
+        if (key_len != wlan::common::cipher::kTkipKeyLenBytes) { return ZX_ERR_INVALID_ARGS; }
+
+        memcpy(keyEntry.key, key, wlan::common::cipher::kTkipKeyLenBytes);
+        break;
+    }
+    case KeyMode::kAes: {
+        if (key_len != wlan::common::cipher::kCcmp128KeyLenBytes) { return ZX_ERR_INVALID_ARGS; }
+
+        memcpy(keyEntry.key, key, wlan::common::cipher::kCcmp128KeyLenBytes);
+        break;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     size_t out_len;
     auto status = usb_control(&usb_, (USB_DIR_OUT | USB_TYPE_VENDOR), kMultiWrite, 0,
@@ -3269,16 +3293,18 @@ zx_status_t Device::WriteKey(const uint8_t key[], size_t key_len, uint16_t index
     return ZX_OK;
 }
 
-zx_status_t Device::WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len) {
+zx_status_t
+Device::WritePairwiseKey(uint8_t wcid, const uint8_t key[], size_t key_len, KeyMode mode) {
     uint16_t index = PAIRWISE_KEY_BASE + wcid * sizeof(KeyEntry);
-    return WriteKey(key, key_len, index);
+    return WriteKey(key, key_len, index, mode);
 }
 
-zx_status_t Device::WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len) {
+zx_status_t
+Device::WriteSharedKey(uint8_t skey, const uint8_t key[], size_t key_len, KeyMode mode) {
     if (skey > kMaxSharedKeys) { return ZX_ERR_NOT_SUPPORTED; }
 
     uint16_t index = SHARED_KEY_BASE + skey * sizeof(KeyEntry);
-    return WriteKey(key, key_len, index);
+    return WriteKey(key, key_len, index, mode);
 }
 
 zx_status_t Device::WriteWcid(uint8_t wcid, const uint8_t mac[]) {
@@ -3318,14 +3344,13 @@ zx_status_t Device::ResetWcid(uint8_t wcid, uint8_t skey, uint8_t key_type) {
     WriteWcidAttribute(0, wcid, KeyMode::kNone, KeyType::kSharedKey);
     ResetIvEiv(wcid);
 
-    uint8_t zero_key[16] = {};
     switch (key_type) {
     case WLAN_KEY_TYPE_PAIRWISE: {
-        WritePairwiseKey(wcid, zero_key, sizeof(zero_key));
+        WritePairwiseKey(wcid, nullptr, kNoProtectionKeyLen, KeyMode::kNone);
         break;
     }
     case WLAN_KEY_TYPE_GROUP: {
-        WriteSharedKey(skey, zero_key, sizeof(zero_key));
+        WriteSharedKey(skey, nullptr, kNoProtectionKeyLen, KeyMode::kNone);
         WriteSharedKeyMode(skey, KeyMode::kNone);
         break;
     }
@@ -3375,7 +3400,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
 
     if (options != 0) { return ZX_ERR_INVALID_ARGS; }
 
-    auto keyMode = GetKeyMode(key_config->cipher_oui, key_config->cipher_type);
+    auto keyMode = MapIeeeCipherSuiteToKeyMode(key_config->cipher_oui, key_config->cipher_type);
     if (keyMode == KeyMode::kUnsupported) { return ZX_ERR_NOT_SUPPORTED; }
 
     zx_status_t status = ZX_OK;
@@ -3394,7 +3419,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
         auto status = WriteWcid(wcid, key_config->peer_addr);
         if (status != ZX_OK) { break; }
 
-        status = WritePairwiseKey(wcid, key_config->key, key_config->key_len);
+        status = WritePairwiseKey(wcid, key_config->key, key_config->key_len, keyMode);
         if (status != ZX_OK) { break; }
 
         status = WriteWcidAttribute(bss_idx, wcid, keyMode, KeyType::kPairwiseKey);
@@ -3418,7 +3443,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
           ResetWcid(wcid, skey, WLAN_KEY_TYPE_GROUP);
         });
 
-        auto status = WriteSharedKey(skey, key_config->key, key_config->key_len);
+        auto status = WriteSharedKey(skey, key_config->key, key_config->key_len, keyMode);
         if (status != ZX_OK) { break; }
 
         status = WriteSharedKeyMode(skey, keyMode);
