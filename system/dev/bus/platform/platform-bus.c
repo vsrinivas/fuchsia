@@ -26,6 +26,7 @@ zx_status_t platform_bus_set_interface(void* ctx, pbus_interface_t* interface) {
 
     pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->ums);
     pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_GPIO, &bus->gpio);
+    pbus_interface_get_protocol(&bus->interface, ZX_PROTOCOL_I2C, &bus->i2c);
 
     return ZX_OK;
 }
@@ -66,6 +67,12 @@ static void platform_bus_release(void* ctx) {
     platform_dev_t* dev;
     list_for_every_entry(&bus->devices, dev, platform_dev_t, node) {
         platform_dev_free(dev);
+    }
+
+    i2c_txn_t* txn;
+    i2c_txn_t* temp;
+    list_for_every_entry_safe(&bus->i2c_txns, txn, temp, i2c_txn_t, node) {
+        free(txn);
     }
 
     free(bus);
@@ -141,6 +148,8 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
     bus->vid = vid;
     bus->pid = pid;
     list_initialize(&bus->devices);
+    list_initialize(&bus->i2c_txns);
+    mtx_init(&bus->i2c_txn_lock, mtx_plain);
 
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, bus->vid},
