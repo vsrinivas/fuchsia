@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/netconnector/mdns/responder.h"
+#include "garnet/bin/netconnector/mdns/instance_responder.h"
 
 #include <algorithm>
 
@@ -14,28 +14,29 @@
 namespace netconnector {
 namespace mdns {
 
-Responder::Responder(MdnsAgent::Host* host,
-                     const std::string& service_name,
-                     const std::string& instance_name,
-                     fidl::InterfaceHandle<MdnsResponder> responder_handle)
+InstanceResponder::InstanceResponder(
+    MdnsAgent::Host* host,
+    const std::string& service_name,
+    const std::string& instance_name,
+    fidl::InterfaceHandle<MdnsResponder> responder_handle)
     : MdnsAgent(host),
       service_name_(service_name),
       instance_name_(instance_name),
       instance_full_name_(
           MdnsNames::LocalInstanceFullName(instance_name, service_name)),
-      responder_(MdnsResponderPtr::Create(std::move(responder_handle))) {
-  responder_.set_connection_error_handler([this]() {
-    responder_.set_connection_error_handler(nullptr);
-    responder_.reset();
+      mdns_responder_(MdnsResponderPtr::Create(std::move(responder_handle))) {
+  mdns_responder_.set_connection_error_handler([this]() {
+    mdns_responder_.set_connection_error_handler(nullptr);
+    mdns_responder_.reset();
     RemoveSelf(instance_full_name_);
   });
 }
 
-Responder::Responder(MdnsAgent::Host* host,
-                     const std::string& service_name,
-                     const std::string& instance_name,
-                     MdnsPublicationPtr publication,
-                     const PublishCallback& callback)
+InstanceResponder::InstanceResponder(MdnsAgent::Host* host,
+                                     const std::string& service_name,
+                                     const std::string& instance_name,
+                                     MdnsPublicationPtr publication,
+                                     const PublishCallback& callback)
     : MdnsAgent(host),
       service_name_(service_name),
       instance_name_(instance_name),
@@ -44,9 +45,9 @@ Responder::Responder(MdnsAgent::Host* host,
       publication_(std::move(publication)),
       callback_(callback) {}
 
-Responder::~Responder() {}
+InstanceResponder::~InstanceResponder() {}
 
-void Responder::Start(const std::string& host_full_name) {
+void InstanceResponder::Start(const std::string& host_full_name) {
   FXL_DCHECK(!host_full_name.empty());
 
   host_full_name_ = host_full_name;
@@ -54,8 +55,8 @@ void Responder::Start(const std::string& host_full_name) {
   Reannounce();
 }
 
-void Responder::ReceiveQuestion(const DnsQuestion& question,
-                                const ReplyAddress& reply_address) {
+void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
+                                        const ReplyAddress& reply_address) {
   std::string name = question.name_.dotted_string_;
   std::string subtype;
 
@@ -82,7 +83,7 @@ void Responder::ReceiveQuestion(const DnsQuestion& question,
   }
 }
 
-void Responder::Quit() {
+void InstanceResponder::Quit() {
   if (publication_) {
     SendGoodbye(std::move(publication_));
     RemoveSelf(instance_full_name_);
@@ -93,16 +94,16 @@ void Responder::Quit() {
   GetAndSendPublication(false);
 }
 
-void Responder::UpdateStatus(MdnsResult result) {
-  if (responder_) {
-    responder_->UpdateStatus(result);
+void InstanceResponder::UpdateStatus(MdnsResult result) {
+  if (mdns_responder_) {
+    mdns_responder_->UpdateStatus(result);
   } else if (callback_) {
     callback_(result);
     callback_ = nullptr;
   }
 }
 
-void Responder::SetSubtypes(std::vector<std::string> subtypes) {
+void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {
   // Initiate four announcements with intervals of 1, 2 and 4 seconds. If we
   // were already announcing, the sequence restarts now. The first announcement
   // contains PTR records for the removed subtypes with TTL of zero.
@@ -118,14 +119,14 @@ void Responder::SetSubtypes(std::vector<std::string> subtypes) {
   Reannounce();
 }
 
-void Responder::Reannounce() {
+void InstanceResponder::Reannounce() {
   // Initiate four announcements with intervals of 1, 2 and 4 seconds. If we
   // were already announcing, the sequence restarts now.
   announcement_interval_ = kInitialAnnouncementInterval;
   SendAnnouncement();
 }
 
-void Responder::SendAnnouncement() {
+void InstanceResponder::SendAnnouncement() {
   GetAndSendPublication(false);
 
   for (const std::string& subtype : subtypes_) {
@@ -142,11 +143,12 @@ void Responder::SendAnnouncement() {
   announcement_interval_ = announcement_interval_ * 2;
 }
 
-void Responder::GetAndSendPublication(bool query,
-                                      const std::string& subtype,
-                                      const ReplyAddress& reply_address) const {
-  if (responder_) {
-    responder_->GetPublication(
+void InstanceResponder::GetAndSendPublication(
+    bool query,
+    const std::string& subtype,
+    const ReplyAddress& reply_address) const {
+  if (mdns_responder_) {
+    mdns_responder_->GetPublication(
         query, subtype.empty() ? fidl::String() : fidl::String(subtype),
         [ this, subtype,
           reply_address = reply_address ](MdnsPublicationPtr publication) {
@@ -173,9 +175,10 @@ void Responder::GetAndSendPublication(bool query,
   }
 }
 
-void Responder::SendPublication(const MdnsPublication& publication,
-                                const std::string& subtype,
-                                const ReplyAddress& reply_address) const {
+void InstanceResponder::SendPublication(
+    const MdnsPublication& publication,
+    const std::string& subtype,
+    const ReplyAddress& reply_address) const {
   if (!subtype.empty()) {
     SendSubtypePtrRecord(subtype, publication.ptr_ttl_seconds, reply_address);
   }
@@ -202,9 +205,10 @@ void Responder::SendPublication(const MdnsPublication& publication,
   SendAddresses(MdnsResourceSection::kAdditional, reply_address);
 }
 
-void Responder::SendSubtypePtrRecord(const std::string& subtype,
-                                     uint32_t ttl,
-                                     const ReplyAddress& reply_address) const {
+void InstanceResponder::SendSubtypePtrRecord(
+    const std::string& subtype,
+    uint32_t ttl,
+    const ReplyAddress& reply_address) const {
   FXL_DCHECK(!subtype.empty());
 
   auto ptr_resource = std::make_shared<DnsResource>(
@@ -215,7 +219,7 @@ void Responder::SendSubtypePtrRecord(const std::string& subtype,
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
-void Responder::SendGoodbye(MdnsPublicationPtr publication) const {
+void InstanceResponder::SendGoodbye(MdnsPublicationPtr publication) const {
   FXL_DCHECK(publication);
 
   // TXT will be sent, but with no strings.

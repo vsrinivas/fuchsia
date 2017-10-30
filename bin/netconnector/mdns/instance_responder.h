@@ -17,28 +17,28 @@ namespace netconnector {
 namespace mdns {
 
 // Dynamically publishes an instance of a service type.
-class Responder : public MdnsAgent {
+class InstanceResponder : public MdnsAgent {
  public:
   using PublishCallback = std::function<void(MdnsResult result)>;
 
-  // Creates an |Responder|. Subtypes in |announced_subtypes| are announced
-  // initially. The |MdnsResponder| referenced by |responder_handle| is
-  // consulted to determine how queries are handled.
-  Responder(MdnsAgent::Host* host,
-            const std::string& service_name,
-            const std::string& instance_name,
-            fidl::InterfaceHandle<MdnsResponder> responder_handle);
+  // Creates an |InstanceResponder|. Subtypes in |announced_subtypes| are
+  // announced initially. The |MdnsResponder| referenced by |responder_handle|
+  // is consulted to determine how queries are handled.
+  InstanceResponder(MdnsAgent::Host* host,
+                    const std::string& service_name,
+                    const std::string& instance_name,
+                    fidl::InterfaceHandle<MdnsResponder> responder_handle);
 
-  // Creates an |Responder|. No subtypes are announced. Queries for
+  // Creates an |InstanceResponder|. No subtypes are announced. Queries for
   // |service_name| are responded to using the information in |publication|.
   // Queries for subtypes of |service_name| are ignored.
-  Responder(MdnsAgent::Host* host,
-            const std::string& service_name,
-            const std::string& instance_name,
-            MdnsPublicationPtr publication,
-            const PublishCallback& callback);
+  InstanceResponder(MdnsAgent::Host* host,
+                    const std::string& service_name,
+                    const std::string& instance_name,
+                    MdnsPublicationPtr publication,
+                    const PublishCallback& callback);
 
-  ~Responder() override;
+  ~InstanceResponder() override;
 
   // MdnsAgent overrides.
   void Start(const std::string& host_full_name) override;
@@ -66,8 +66,8 @@ class Responder : public MdnsAgent {
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();
 
-  // Gets an |MdnsPublication| from |responder_| and, if not null, sends it.
-  // An empty |subtype| indicates no subtype.
+  // Gets an |MdnsPublication| from |mdns_responder_| and, if not null, sends
+  // it. An empty |subtype| indicates no subtype.
   void GetAndSendPublication(bool query,
                              const std::string& subtype = "",
                              const ReplyAddress& reply_address =
@@ -94,7 +94,7 @@ class Responder : public MdnsAgent {
   std::string instance_name_;
   std::string instance_full_name_;
   std::vector<std::string> subtypes_;
-  MdnsResponderPtr responder_;
+  MdnsResponderPtr mdns_responder_;
   MdnsPublicationPtr publication_;
   PublishCallback callback_;
   fxl::TimeDelta announcement_interval_ = kInitialAnnouncementInterval;

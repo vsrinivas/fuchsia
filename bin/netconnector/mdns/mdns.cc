@@ -12,11 +12,11 @@
 #include "garnet/bin/netconnector/mdns/dns_formatting.h"
 #include "garnet/bin/netconnector/mdns/host_name_resolver.h"
 #include "garnet/bin/netconnector/mdns/instance_prober.h"
+#include "garnet/bin/netconnector/mdns/instance_responder.h"
 #include "garnet/bin/netconnector/mdns/instance_subscriber.h"
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "garnet/bin/netconnector/mdns/resource_renewer.h"
-#include "garnet/bin/netconnector/mdns/responder.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
@@ -91,11 +91,11 @@ void Mdns::Start(const std::string& host_name, const fxl::Closure& callback) {
         }
 
         resource_renewer_->EndOfMessage();
-		DPROHIBIT_AGENT_REMOVAL();
+        DPROHIBIT_AGENT_REMOVAL();
         for (auto& pair : agents_) {
           pair.second->EndOfMessage();
         }
-		DALLOW_AGENT_REMOVAL();
+        DALLOW_AGENT_REMOVAL();
 
         SendMessages();
       });
@@ -142,8 +142,8 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
   publication->port = port.as_uint16_t();
   publication->text = fidl::Array<fidl::String>::From(text);
 
-  auto agent = std::make_shared<Responder>(this, service_name, instance_name,
-                                           std::move(publication), callback);
+  auto agent = std::make_shared<InstanceResponder>(
+      this, service_name, instance_name, std::move(publication), callback);
 
   return ProbeAndAddInstanceResponder(service_name, instance_name, port, agent);
 }
@@ -171,8 +171,8 @@ bool Mdns::UnpublishServiceInstance(const std::string& service_name,
 bool Mdns::AddResponder(const std::string& service_name,
                         const std::string& instance_name,
                         fidl::InterfaceHandle<MdnsResponder> responder) {
-  auto agent = std::make_shared<Responder>(this, service_name, instance_name,
-                                           std::move(responder));
+  auto agent = std::make_shared<InstanceResponder>(
+      this, service_name, instance_name, std::move(responder));
 
   // We're using a bogus port number here, which is OK, because the 'proposed'
   // resource created from it is only used for collision resolution.
@@ -383,10 +383,11 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   }
 }
 
-bool Mdns::ProbeAndAddInstanceResponder(const std::string& service_name,
-                                        const std::string& instance_name,
-                                        IpPort port,
-                                        std::shared_ptr<Responder> agent) {
+bool Mdns::ProbeAndAddInstanceResponder(
+    const std::string& service_name,
+    const std::string& instance_name,
+    IpPort port,
+    std::shared_ptr<InstanceResponder> agent) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
 
