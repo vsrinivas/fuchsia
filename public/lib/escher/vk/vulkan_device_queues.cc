@@ -46,6 +46,7 @@ VulkanDeviceQueues::ProcAddrs::ProcAddrs(
 #endif
 }
 
+#if defined(OS_FUCHSIA)
 vk::ResultValueType<uint32_t>::type
 VulkanDeviceQueues::ProcAddrs::getMemoryFuchsiaHandleKHR(
     const vk::Device& device,
@@ -59,6 +60,7 @@ VulkanDeviceQueues::ProcAddrs::getMemoryFuchsiaHandleKHR(
   return vk::createResultValue(result, fuchsiaHandle,
                                "vk::Device::getMemoryFuchsiaHandleKHR");
 }
+#endif
 
 namespace {
 
