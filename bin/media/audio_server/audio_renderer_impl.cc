@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
@@ -146,7 +146,7 @@ void AudioRendererImpl::Shutdown() {
 
   FXL_DCHECK(owner_);
   AudioRendererImplPtr thiz = weak_this_.lock();
-  owner_->GetOutputManager().RemoveRenderer(thiz);
+  owner_->GetDeviceManager().RemoveRenderer(thiz);
 }
 
 void AudioRendererImpl::GetSupportedMediaTypes(
@@ -241,7 +241,7 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   AudioRendererImplPtr strong_this(weak_this_.lock());
   FXL_DCHECK(strong_this);
   FXL_DCHECK(owner_);
-  owner_->GetOutputManager().SelectOutputsForRenderer(strong_this);
+  owner_->GetDeviceManager().SelectOutputsForRenderer(strong_this);
 }
 
 void AudioRendererImpl::GetPacketConsumer(

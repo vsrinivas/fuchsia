@@ -17,10 +17,10 @@
 namespace media {
 namespace audio {
 
-class AudioOutputManager {
+class AudioDeviceManager {
  public:
-  explicit AudioOutputManager(AudioServerImpl* server);
-  ~AudioOutputManager();
+  explicit AudioDeviceManager(AudioServerImpl* server);
+  ~AudioDeviceManager();
 
   // Initialize the output manager.  Called from the service implementation,
   // once, at startup time.  Should...

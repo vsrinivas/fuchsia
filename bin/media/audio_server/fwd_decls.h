@@ -11,7 +11,7 @@
 namespace media {
 namespace audio {
 
-class AudioOutputManager;
+class AudioDeviceManager;
 class AudioServerImpl;
 class AudioRendererFormatInfo;
 class AudioRendererImpl;

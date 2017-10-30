@@ -17,8 +17,8 @@
 #include <zircon/device/vfs.h>
 #include <zx/channel.h>
 
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
 #include "garnet/bin/media/audio_server/platform/driver_output.h"
 #include "lib/fxl/files/unique_fd.h"
 
@@ -31,7 +31,7 @@ AudioPlugDetector::~AudioPlugDetector() {
   FXL_DCHECK(manager_ == nullptr);
 }
 
-MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
+MediaResult AudioPlugDetector::Start(AudioDeviceManager* manager) {
   FXL_DCHECK(manager != nullptr);
 
   // If we fail to set up monitoring for any of our target directories,

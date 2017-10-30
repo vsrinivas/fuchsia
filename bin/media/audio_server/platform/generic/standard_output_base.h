@@ -63,7 +63,7 @@ class StandardOutputBase : public AudioOutput {
     void UpdateOutputTrans(const MixJob& job);
   };
 
-  explicit StandardOutputBase(AudioOutputManager* manager);
+  explicit StandardOutputBase(AudioDeviceManager* manager);
 
   MediaResult Init() override;
 

@@ -7,7 +7,7 @@
 #include <list>
 #include <set>
 
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -52,8 +52,8 @@ class AudioServerImpl : public AudioServer {
     task_runner_->PostTask(task);
   }
 
-  // Accessor for our encapsulated output manager.
-  AudioOutputManager& GetOutputManager() { return output_manager_; }
+  // Accessor for our encapsulated device manager.
+  AudioDeviceManager& GetDeviceManager() { return device_manager_; }
 
  private:
   using CleanupQueue =
@@ -70,8 +70,8 @@ class AudioServerImpl : public AudioServer {
   // manager's thread pool.
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
-  // State for dealing with outputs.
-  AudioOutputManager output_manager_;
+  // State for dealing with devices.
+  AudioDeviceManager device_manager_;
 
   // State for dealing with cleanup tasks.
   fxl::Mutex cleanup_queue_mutex_;

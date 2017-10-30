@@ -11,11 +11,11 @@ namespace audio {
 
 class ThrottleOutput : public StandardOutputBase {
  public:
-  static fbl::RefPtr<AudioOutput> Create(AudioOutputManager* manager);
+  static fbl::RefPtr<AudioOutput> Create(AudioDeviceManager* manager);
   ~ThrottleOutput() override;
 
  protected:
-  explicit ThrottleOutput(AudioOutputManager* manager);
+  explicit ThrottleOutput(AudioDeviceManager* manager);
 
   // AudioOutput Implementation
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;

@@ -19,7 +19,7 @@ namespace audio {
 class DriverOutput : public StandardOutputBase {
  public:
   static fbl::RefPtr<AudioOutput> Create(zx::channel channel,
-                                         AudioOutputManager* manager);
+                                         AudioDeviceManager* manager);
   ~DriverOutput();
 
   // AudioOutput implementation
@@ -46,7 +46,7 @@ class DriverOutput : public StandardOutputBase {
     FatalError,
   };
 
-  DriverOutput(AudioOutputManager* manager, zx::channel initial_stream_channel);
+  DriverOutput(AudioDeviceManager* manager, zx::channel initial_stream_channel);
   void ScheduleNextLowWaterWakeup();
 
   // Dispatchers for messages received over stream and ring buffer channels, and

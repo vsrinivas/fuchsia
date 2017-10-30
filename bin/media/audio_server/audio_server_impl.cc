@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/media/flog/flog.h"
@@ -15,7 +15,7 @@ namespace audio {
 AudioServerImpl::AudioServerImpl(
     std::unique_ptr<app::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
-      output_manager_(this),
+      device_manager_(this),
       cleanup_queue_(new CleanupQueue) {
   FXL_DCHECK(application_context_);
 
@@ -46,7 +46,7 @@ AudioServerImpl::AudioServerImpl(
       []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
 
   // Set up our output manager.
-  MediaResult res = output_manager_.Init();
+  MediaResult res = device_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
   FXL_DCHECK(res == MediaResult::OK);
 }
@@ -59,23 +59,23 @@ AudioServerImpl::~AudioServerImpl() {
 
 void AudioServerImpl::Shutdown() {
   shutting_down_ = true;
-  output_manager_.Shutdown();
+  device_manager_.Shutdown();
   DoPacketCleanup();
 }
 
 void AudioServerImpl::CreateRenderer(
     fidl::InterfaceRequest<AudioRenderer> audio_renderer,
     fidl::InterfaceRequest<MediaRenderer> media_renderer) {
-  output_manager_.AddRenderer(AudioRendererImpl::Create(
+  device_manager_.AddRenderer(AudioRendererImpl::Create(
       std::move(audio_renderer), std::move(media_renderer), this));
 }
 
 void AudioServerImpl::SetMasterGain(float db_gain) {
-  output_manager_.SetMasterGain(db_gain);
+  device_manager_.SetMasterGain(db_gain);
 }
 
 void AudioServerImpl::GetMasterGain(const GetMasterGainCallback& cbk) {
-  cbk(output_manager_.master_gain());
+  cbk(device_manager_.master_gain());
 }
 
 void AudioServerImpl::DoPacketCleanup() {

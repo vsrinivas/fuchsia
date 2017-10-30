@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 
 #include <fbl/algorithm.h>
 #include <string>
@@ -16,27 +16,27 @@
 namespace media {
 namespace audio {
 
-AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
+AudioDeviceManager::AudioDeviceManager(AudioServerImpl* server)
     : server_(server) {}
 
-AudioOutputManager::~AudioOutputManager() {
+AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
   FXL_DCHECK(outputs_.is_empty());
 }
 
-MediaResult AudioOutputManager::Init() {
+MediaResult AudioDeviceManager::Init() {
   // Step #1: Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
     FXL_LOG(WARNING)
-        << "AudioOutputManager failed to create default throttle output!";
+        << "AudioDeviceManager failed to create default throttle output!";
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
   MediaResult res = throttle_output->Startup();
   if (res != MediaResult::OK) {
     FXL_LOG(WARNING)
-        << "AudioOutputManager failed to initalize the throttle output (res "
+        << "AudioDeviceManager failed to initalize the throttle output (res "
         << res << ")";
     throttle_output->Shutdown();
   }
@@ -46,7 +46,7 @@ MediaResult AudioOutputManager::Init() {
   // output devices.
   res = plug_detector_.Start(this);
   if (res != MediaResult::OK) {
-    FXL_LOG(WARNING) << "AudioOutputManager failed to start plug detector (res "
+    FXL_LOG(WARNING) << "AudioDeviceManager failed to start plug detector (res "
                      << res << ")";
     return res;
   }
@@ -54,7 +54,7 @@ MediaResult AudioOutputManager::Init() {
   return MediaResult::OK;
 }
 
-void AudioOutputManager::Shutdown() {
+void AudioDeviceManager::Shutdown() {
   // Step #1: Stop monitoringing plug/unplug events.  We are shutting down and
   // no longer care about outputs coming and going.
   plug_detector_.Stop();
@@ -84,7 +84,7 @@ void AudioOutputManager::Shutdown() {
   // TODO(johngro) : shut down the thread pool
 }
 
-MediaResult AudioOutputManager::AddOutput(
+MediaResult AudioDeviceManager::AddOutput(
     const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output != nullptr);
   FXL_DCHECK(output != throttle_output_);
@@ -106,7 +106,7 @@ MediaResult AudioOutputManager::AddOutput(
   return res;
 }
 
-void AudioOutputManager::ShutdownOutput(
+void AudioDeviceManager::ShutdownOutput(
     const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output != nullptr);
   FXL_DCHECK(output != throttle_output_);
@@ -120,7 +120,7 @@ void AudioOutputManager::ShutdownOutput(
   }
 }
 
-void AudioOutputManager::HandlePlugStateChange(
+void AudioDeviceManager::HandlePlugStateChange(
     const fbl::RefPtr<AudioOutput>& output,
     bool plugged,
     zx_time_t plug_time) {
@@ -134,14 +134,14 @@ void AudioOutputManager::HandlePlugStateChange(
   }
 }
 
-void AudioOutputManager::SetMasterGain(float db_gain) {
+void AudioDeviceManager::SetMasterGain(float db_gain) {
   master_gain_ = fbl::clamp(db_gain, AudioRenderer::kMutedGain, 0.0f);
   for (auto& output : outputs_) {
     output.SetGain(master_gain_);
   }
 }
 
-void AudioOutputManager::SelectOutputsForRenderer(
+void AudioDeviceManager::SelectOutputsForRenderer(
     AudioRendererImplPtr renderer) {
   FXL_DCHECK(renderer);
   FXL_DCHECK(renderer->format_info_valid());
@@ -172,7 +172,7 @@ void AudioOutputManager::SelectOutputsForRenderer(
   }
 }
 
-void AudioOutputManager::LinkOutputToRenderer(AudioOutput* output,
+void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
                                               AudioRendererImplPtr renderer) {
   FXL_DCHECK(output);
   FXL_DCHECK(renderer);
@@ -199,12 +199,12 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutput* output,
   }
 }
 
-void AudioOutputManager::ScheduleMessageLoopTask(const fxl::Closure& task) {
+void AudioDeviceManager::ScheduleMessageLoopTask(const fxl::Closure& task) {
   FXL_DCHECK(server_);
   server_->ScheduleMessageLoopTask(task);
 }
 
-fbl::RefPtr<AudioOutput> AudioOutputManager::FindLastPluggedOutput() {
+fbl::RefPtr<AudioOutput> AudioDeviceManager::FindLastPluggedOutput() {
   AudioOutput* best_output = nullptr;
 
   // TODO(johngro) : Consider tracking last plugged time using a fbl::WAVLTree
@@ -221,7 +221,7 @@ fbl::RefPtr<AudioOutput> AudioOutputManager::FindLastPluggedOutput() {
   return fbl::WrapRefPtr(best_output);
 }
 
-void AudioOutputManager::OnOutputUnplugged(
+void AudioDeviceManager::OnOutputUnplugged(
     const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output && !output->plugged() && (output != throttle_output_));
 
@@ -240,7 +240,7 @@ void AudioOutputManager::OnOutputUnplugged(
   }
 }
 
-void AudioOutputManager::OnOutputPlugged(
+void AudioDeviceManager::OnOutputPlugged(
     const fbl::RefPtr<AudioOutput>& output) {
   FXL_DCHECK(output && output->plugged() && (output != throttle_output_));
 

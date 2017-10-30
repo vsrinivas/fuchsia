@@ -5,8 +5,8 @@
 executable("audio_server") {
   sources =
       [
+        "audio_device_manager.cc",
         "audio_output.cc",
-        "audio_output_manager.cc",
         "audio_pipe.cc",
         "audio_plug_detector.cc",
         "audio_renderer_format_info.cc",

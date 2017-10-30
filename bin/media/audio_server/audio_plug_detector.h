@@ -17,20 +17,20 @@
 namespace media {
 namespace audio {
 
-class AudioOutputManager;
+class AudioDeviceManager;
 
 class AudioPlugDetector {
  public:
   AudioPlugDetector() {}
   ~AudioPlugDetector();
 
-  MediaResult Start(AudioOutputManager* manager);
+  MediaResult Start(AudioDeviceManager* manager);
   void Stop();
 
  private:
   void AddAudioDevice(int dir_fd, const std::string& name);
   std::unique_ptr<fsl::DeviceWatcher> watcher_;
-  AudioOutputManager* manager_ = nullptr;
+  AudioDeviceManager* manager_ = nullptr;
 };
 
 }  // namespace audio

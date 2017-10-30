@@ -13,7 +13,7 @@
 #include <zircon/process.h>
 #include <iomanip>
 
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "lib/fxl/logging.h"
 
 static constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -38,7 +38,7 @@ static fbl::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
 
 fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
-                                              AudioOutputManager* manager) {
+                                              AudioDeviceManager* manager) {
   auto output =
       fbl::AdoptRef(new DriverOutput(manager, fbl::move(stream_channel)));
 
@@ -50,7 +50,7 @@ fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
   return fbl::move(output);
 }
 
-DriverOutput::DriverOutput(AudioOutputManager* manager,
+DriverOutput::DriverOutput(AudioDeviceManager* manager,
                            zx::channel initial_stream_channel)
     : StandardOutputBase(manager),
       initial_stream_channel_(fbl::move(initial_stream_channel)) {
@@ -623,7 +623,7 @@ zx_status_t DriverOutput::ProcessPlugStateChange(bool plugged,
     plug_time = zx_time_get(ZX_CLOCK_MONOTONIC);
   }
 
-  // Reflect this message to the AudioOutputManager so it can deal with the plug
+  // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.
   // clang-format off
   manager_->ScheduleMessageLoopTask(

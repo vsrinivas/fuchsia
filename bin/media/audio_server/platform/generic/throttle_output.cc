@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_server/platform/generic/throttle_output.h"
 
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -14,13 +14,13 @@ namespace audio {
 static constexpr fxl::TimeDelta TRIM_PERIOD =
     fxl::TimeDelta::FromMilliseconds(10);
 
-ThrottleOutput::ThrottleOutput(AudioOutputManager* manager)
+ThrottleOutput::ThrottleOutput(AudioDeviceManager* manager)
     : StandardOutputBase(manager) {}
 
 ThrottleOutput::~ThrottleOutput() {}
 
 // static
-fbl::RefPtr<AudioOutput> ThrottleOutput::Create(AudioOutputManager* manager) {
+fbl::RefPtr<AudioOutput> ThrottleOutput::Create(AudioDeviceManager* manager) {
   return fbl::AdoptRef<AudioOutput>(new ThrottleOutput(manager));
 }
 

@@ -25,7 +25,7 @@ constexpr uint32_t StandardOutputBase::MixJob::kInvalidGeneration;
 StandardOutputBase::RendererBookkeeping::RendererBookkeeping() {}
 StandardOutputBase::RendererBookkeeping::~RendererBookkeeping() {}
 
-StandardOutputBase::StandardOutputBase(AudioOutputManager* manager)
+StandardOutputBase::StandardOutputBase(AudioDeviceManager* manager)
     : AudioOutput(manager) {
   next_sched_time_ = fxl::TimePoint::Now();
   next_sched_time_known_ = true;

@@ -75,7 +75,7 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   zx_time_t plug_time() const { return plug_time_; }
 
  protected:
-  explicit AudioOutput(AudioOutputManager* manager);
+  explicit AudioOutput(AudioDeviceManager* manager);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -166,7 +166,7 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   // Right now, we have no priorities, so this is just a set of renderer/output
   // links.
   AudioRendererToOutputLinkSet links_ FXL_GUARDED_BY(mutex_);
-  AudioOutputManager* manager_;
+  AudioDeviceManager* manager_;
   fxl::Mutex mutex_;
 
   // State used to manage asynchronous processing using the dispatcher
@@ -176,9 +176,9 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
 
  private:
   // It's always nice when you manager is also your friend.  Seriously though,
-  // the AudioOutputManager gets to call Init and Shutdown, no one else
+  // the AudioDeviceManager gets to call Init and Shutdown, no one else
   // (including derived classes) should be able to.
-  friend class AudioOutputManager;
+  friend class AudioDeviceManager;
 
   // DeactivateDomain
   //
@@ -186,20 +186,20 @@ class AudioOutput : public fbl::RefCounted<AudioOutput>,
   // operations taking place in the domain.
   void DeactivateDomain() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  // Called from the AudioOutputManager after an output has been created.
+  // Called from the AudioDeviceManager after an output has been created.
   // Gives derived classes a chance to set up hardware, then sets up the
   // machinery needed for scheduling processing tasks and schedules the first
   // processing callback immediately in order to get the process running.
   MediaResult Startup();
 
-  // Called from the AudioOutputManager on the main message loop
+  // Called from the AudioDeviceManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,
   // synchronizes with any processing tasks which were executing at the time,
   // then finishes the shutdown process by unlinking from all renderers and
   // cleaning up all resources.
   void Shutdown();
 
-  // Called from AudioOutputManager (either directly, or indirectly from
+  // Called from AudioDeviceManager (either directly, or indirectly from
   // Shutdown) to unlink from all AudioRenderers currently linked to this
   // output.
   void UnlinkFromRenderers();

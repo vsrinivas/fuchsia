@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_server/audio_output.h"
 
-#include "garnet/bin/media/audio_server/audio_output_manager.h"
+#include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer_to_output_link.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
@@ -14,7 +14,7 @@
 namespace media {
 namespace audio {
 
-AudioOutput::AudioOutput(AudioOutputManager* manager)
+AudioOutput::AudioOutput(AudioDeviceManager* manager)
     : manager_(manager), db_gain_(0.0f) {
   FXL_DCHECK(manager_);
   // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
