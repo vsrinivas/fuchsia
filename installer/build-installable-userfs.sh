@@ -264,11 +264,12 @@ set -e
 echo "Building boot environment for installer"
 gn_gen_path="packages/gn/gen.py"
 ninja_path="buildtools/ninja"
+build_dir_installer_system="out/installer-system-${build_arch}"
 
-"${script_dir}/../../$gn_gen_path" --outdir out/installer-system --target_cpu "$build_arch" --packages packages/gn/installer-system
+"${script_dir}/../../$gn_gen_path" --build-dir "${build_dir_installer_system}" --target_cpu "${build_arch}" --packages packages/gn/installer-system
 
-sys_out="${script_dir}/../../out/installer-system-${build_arch}"
-"${script_dir}/../../${ninja_path}" -C "$sys_out"
+sys_out="${script_dir}/../../out/${build_dir_installer_system}"
+"${script_dir}/../../${ninja_path}" -C "${sys_out}"
 
 # create a suitably large file
 echo "Creating EFI disk image, this may take some time..."
