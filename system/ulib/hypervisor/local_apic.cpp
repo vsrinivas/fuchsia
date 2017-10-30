@@ -37,6 +37,10 @@
 
 // clang-format on
 
+static_assert(__offsetof(LocalApic::Registers, id) == LOCAL_APIC_REGISTER_ID, "");
+static_assert(__offsetof(LocalApic::Registers, ldr) == LOCAL_APIC_REGISTER_LDR, "");
+static_assert(__offsetof(LocalApic::Registers, dfr) == LOCAL_APIC_REGISTER_DFR, "");
+
 zx_status_t LocalApic::Init(Guest* guest) {
     return guest->CreateMapping(TrapType::MMIO_SYNC, LOCAL_APIC_PHYS_BASE, LOCAL_APIC_SIZE, 0,
                                 this);
@@ -72,7 +76,7 @@ zx_status_t LocalApic::Read(uint64_t addr, IoValue* value) {
     case LOCAL_APIC_REGISTER_SVR: {
         fbl::AutoLock lock(&mutex_);
         uintptr_t reg = reinterpret_cast<uintptr_t>(registers_) + addr;
-        value->u32 = *reinterpret_cast<uint32_t*>(reg);
+        value->u32 = *reinterpret_cast<volatile uint32_t*>(reg);
         return ZX_OK;
     }
     case LOCAL_APIC_REGISTER_ESR:
@@ -116,7 +120,7 @@ zx_status_t LocalApic::Write(uint64_t addr, const IoValue& value) {
     case LOCAL_APIC_REGISTER_SVR: {
         fbl::AutoLock lock(&mutex_);
         uintptr_t reg = reinterpret_cast<uintptr_t>(registers_) + addr;
-        *reinterpret_cast<uint32_t*>(reg) = value.u32;
+        *reinterpret_cast<volatile uint32_t*>(reg) = value.u32;
         return ZX_OK;
     }
     case LOCAL_APIC_REGISTER_INITIAL_COUNT:

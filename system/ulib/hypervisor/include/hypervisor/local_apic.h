@@ -10,7 +10,7 @@
 
 class Guest;
 
-/* Stores the local APIC state. */
+// Stores the local APIC state.
 class LocalApic : public IoHandler {
 public:
     // From Intel Volume 3, Section 10.4.1.: All 32-bit registers should be
@@ -19,18 +19,17 @@ public:
     // registers. This is model specific behavior and is not guaranteed to work
     // on all processors.
     union Register {
-        uint32_t data[4];
-        uint32_t u32;
+        volatile uint32_t u32;
     } __PACKED __ALIGNED(16);
 
     // Local APIC register map.
     struct Registers {
-        Register reserved1[2];
+        Register reserved0[2];
 
         Register id;      // Read/Write.
         Register version; // Read Only.
 
-        Register reserved2[4];
+        Register reserved1[4];
 
         Register tpr;       // Read/Write.
         Register apr;       // Read Only.
@@ -44,7 +43,7 @@ public:
         Register irr[8];    // Read Only.
         Register esr;       // Read Only.
 
-        Register reserved3[6];
+        Register reserved2[6];
 
         Register lvt_cmci;  // Read/Write.
     } __PACKED;
