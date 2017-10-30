@@ -60,12 +60,10 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 
     struct x86_ap_bootstrap_data *bootstrap_data = NULL;
     fbl::RefPtr<VmAspace> bootstrap_aspace;
-
-    status = x86_bootstrap16_prep(
-            PHYS_BOOTSTRAP_PAGE,
-            (uintptr_t)_x86_secondary_cpu_long_mode_entry,
-            &bootstrap_aspace,
-            (void **)&bootstrap_data);
+    paddr_t bootstrap_instr_ptr;
+    status = x86_bootstrap16_prep((uintptr_t)_x86_secondary_cpu_long_mode_entry,
+                                  &bootstrap_aspace, (void **)&bootstrap_data,
+                                  &bootstrap_instr_ptr);
     if (status != ZX_OK) {
         return status;
     }
@@ -113,16 +111,16 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     thread_sleep_relative(ZX_MSEC(10));
 
     // Actually send the startups
-    ASSERT(PHYS_BOOTSTRAP_PAGE < 1 * MB);
+    DEBUG_ASSERT(bootstrap_instr_ptr < 1 * MB && IS_PAGE_ALIGNED(bootstrap_instr_ptr));
     uint8_t vec;
-    vec = PHYS_BOOTSTRAP_PAGE >> PAGE_SIZE_SHIFT;
+    vec = static_cast<uint8_t>(bootstrap_instr_ptr >> PAGE_SIZE_SHIFT);
     // Try up to two times per CPU, as Intel 3A recommends.
     for (int tries = 0; tries < 2; ++tries) {
         for (unsigned int i = 0; i < count; ++i) {
             uint32_t apic_id = apic_ids[i];
 
-            // This will cause the APs to begin executing at PHYS_BOOTSTRAP_PAGE in
-            // physical memory.
+            // This will cause the APs to begin executing at
+            // |bootstrap_instr_ptr| in physical memory.
             apic_send_ipi(vec, apic_id, DELIVERY_MODE_STARTUP);
         }
 

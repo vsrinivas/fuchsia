@@ -21,13 +21,22 @@
 #include <zircon/types.h>
 
 extern const int __code_start;
+static paddr_t bootstrap_phys_addr = UINT64_MAX;
 
-zx_status_t x86_bootstrap16_prep(
-        paddr_t bootstrap_phys_addr,
-        uintptr_t entry64,
-        fbl::RefPtr<VmAspace> *temp_aspace,
-        void **bootstrap_aperature)
-{
+void x86_bootstrap16_init(paddr_t bootstrap_base) {
+    DEBUG_ASSERT(!IS_PAGE_ALIGNED(bootstrap_phys_addr));
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(bootstrap_base));
+    DEBUG_ASSERT(bootstrap_base <= (1024 * 1024) - 2 * PAGE_SIZE);
+    bootstrap_phys_addr = bootstrap_base;
+}
+
+zx_status_t x86_bootstrap16_prep(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_aspace,
+                                 void **bootstrap_aperature, paddr_t* instr_ptr) {
+    // Make sure x86_bootstrap16_init has been called, and bail early if not.
+    if (!IS_PAGE_ALIGNED(bootstrap_phys_addr)) {
+        return ZX_ERR_BAD_STATE;
+    }
+
     // Make sure bootstrap region will be entirely in the first 1MB of physical
     // memory
     if (bootstrap_phys_addr > (1 << 20) - 2 * PAGE_SIZE) {
@@ -146,6 +155,7 @@ zx_status_t x86_bootstrap16_prep(
 
     *bootstrap_aperature = (void *)((uintptr_t)bootstrap_virt_addr + 0x1000);
     *temp_aspace = bootstrap_aspace;
+    *instr_ptr = bootstrap_phys_addr;
 
     // cancel the cleanup autocall, since we're returning the new aspace and region
     ac.cancel();

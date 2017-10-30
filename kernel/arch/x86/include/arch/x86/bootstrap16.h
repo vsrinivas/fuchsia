@@ -29,8 +29,6 @@
 
 __BEGIN_CDECLS
 
-#define PHYS_BOOTSTRAP_PAGE 0x9e000
-
 // Markers for the application processor bootstrap code region
 extern void x86_bootstrap16_start(void);
 extern void x86_bootstrap16_end(void);
@@ -82,14 +80,17 @@ struct __PACKED x86_ap_bootstrap_data {
     } per_cpu[SMP_MAX_CPUS - 1];
 };
 
-// Upon success, returns a pointer to the bootstrap aspace and to the
-// virtual address of the bootstrap data.  It is the caller's
+// Initialize the bootstrap16 subsystem by giving it pages to work with.
+// |bootstrap_base| must refer to two consecutive pages of RAM with addresses
+// less than 1M that are available for the OS to use.
+void x86_bootstrap16_init(paddr_t bootstrap_base);
+
+// Upon success, returns a pointer to the bootstrap aspace, a pointer to the
+// virtual address of the bootstrap data, and the physical address of the
+// first instruction that should be executed in 16-bit mode.  It is the caller's
 // responsibility to free the aspace and unmap the aperature.
-zx_status_t x86_bootstrap16_prep(
-        paddr_t bootstrap_phys_addr,
-        uintptr_t entry64,
-        fbl::RefPtr<VmAspace> *temp_aspace,
-        void **bootstrap_aperature);
+zx_status_t x86_bootstrap16_prep(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_aspace,
+                                 void **bootstrap_aperature, paddr_t* instr_ptr);
 
 static_assert(sizeof(struct x86_ap_bootstrap_data) <= PAGE_SIZE, "");
 static_assert(sizeof(struct x86_realmode_entry_data) <= PAGE_SIZE, "");

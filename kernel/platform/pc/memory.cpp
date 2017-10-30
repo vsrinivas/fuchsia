@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/x86/bootstrap16.h>
 #include <arch/x86/mmu.h>
 #include <assert.h>
 #include <efi/boot-services.h>
@@ -497,4 +498,7 @@ void platform_mem_init(void)
     } else {
         TRACEF("ERROR - No e820 range entries found!  This is going to end badly for everyone.\n");
     }
+
+    // TODO(teisenbe): Pick an appropriate value out of the memory map
+    x86_bootstrap16_init(0x9e000);
 }
