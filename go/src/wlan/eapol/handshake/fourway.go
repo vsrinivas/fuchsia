@@ -87,7 +87,7 @@ func NewFourWay(config FourWayConfig) *FourWay {
 	}
 }
 
-func (hs *FourWay) HandleEAPOLKeyFrame(f *eapol.KeyFrame) error {
+func (hs *FourWay) HandleEAPOLKeyFrame(s *Supplicant, f *eapol.KeyFrame) error {
 	// Validate frame's integrity.
 	if integrous, err := hs.isIntegrous(f); !integrous {
 		return err

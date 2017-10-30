@@ -361,8 +361,8 @@ func (s *assocState) run(c *Client) (time.Duration, error) {
 		assocRawRSNE := assocRSNE.Bytes()
 		req.Rsn = &assocRawRSNE
 
-		handshake := s.createHandshake(c, bcnRSNE, assocRSNE)
-		c.eapolC = s.createEAPOLClient(c, assocRSNE, handshake)
+		supplicant := s.createSupplicant(c, bcnRSNE, assocRSNE)
+		c.eapolC = s.createEAPOLClient(c, assocRSNE, supplicant)
 	} else {
 		c.eapolC = nil
 	}
@@ -410,7 +410,7 @@ func (s *assocState) createAssociationRSNE(bcnRSNE *elements.RSN) *elements.RSN 
 	return rsne
 }
 
-func (s *assocState) createHandshake(c *Client, bcnRSNE *elements.RSN, assocRSNE *elements.RSN) eapol.KeyExchange {
+func (s *assocState) createSupplicant(c *Client, bcnRSNE *elements.RSN, assocRSNE *elements.RSN) eapol.KeyExchange {
 	password := ""
 	if c.cfg != nil {
 		password = c.cfg.Password
@@ -425,7 +425,8 @@ func (s *assocState) createHandshake(c *Client, bcnRSNE *elements.RSN, assocRSNE
 		AssocRSNE:  assocRSNE,
 		BeaconRSNE: bcnRSNE,
 	}
-	return handshake.NewFourWay(config)
+	hs := handshake.NewFourWay(config)
+	return handshake.NewSupplicant(hs)
 }
 
 func (s *assocState) createEAPOLClient(c *Client, assocRSNE *elements.RSN, keyExchange eapol.KeyExchange) *eapol.Client {

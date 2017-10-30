@@ -485,7 +485,8 @@ func (env *env) getPTK(sNonce [32]byte) *crypto.PTK {
 }
 
 func (env *env) SendToTestSubject(message *eapol.KeyFrame) error {
-	return env.fourway.HandleEAPOLKeyFrame(message)
+	// TODO(hahnr): Now that there is a Supplicant, use it.
+	return env.fourway.HandleEAPOLKeyFrame(&Supplicant{}, message)
 }
 
 func (env *env) RetrieveTestSubjectResponse() *eapol.KeyFrame {
