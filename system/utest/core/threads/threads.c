@@ -57,6 +57,16 @@ static bool suspend_thread_synchronous(zx_handle_t thread) {
     return true;
 }
 
+// Resume the given thread and block until it reaches the running state.
+static bool resume_thread_synchronous(zx_handle_t thread) {
+    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
+
+    zx_signals_t observed = 0u;
+    ASSERT_EQ(zx_object_wait_one(thread, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, &observed), ZX_OK, "");
+
+    return true;
+}
+
 static bool wait_thread_exiting(zx_handle_t eport) {
     zx_port_packet_t packet;
     while (true) {
@@ -380,7 +390,15 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED, "");
     ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "");
 
-    // Since the thread is suspended the signaling should not take effect.
+    // Resuming the thread should mark the thread as blocked again.
+    ASSERT_TRUE(resume_thread_synchronous(thread_h), "");
+    ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                 &info, sizeof(info), NULL, NULL),
+              ZX_OK, "");
+    ASSERT_TRUE(info.state == ZX_THREAD_STATE_BLOCKED, "");
+
+    // When the thread is suspended the signaling should not take effect.
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
     ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK, "");
     ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_1, zx_deadline_after(ZX_MSEC(100)), NULL), ZX_ERR_TIMED_OUT, "");
 
