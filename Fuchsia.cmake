@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Need support for CMAKE_C_COMPILER_TARGET
+cmake_minimum_required(VERSION 3.0)
+
 set(CMAKE_SYSTEM_NAME Fuchsia)
 
 set(CMAKE_SYSROOT ${FUCHSIA_SYSROOT})
