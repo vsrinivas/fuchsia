@@ -32,6 +32,7 @@
  * SUCH DAMAGE.
  */
 
+#include <zircon/paths.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,8 +70,7 @@ struct localvar_list {
 
 MKINIT struct localvar_list *localvar_stack;
 
-const char defpathvar[] =
-	"PATH=/system/apps:/system/bin:/boot/bin";
+const char defpathvar[] = ZX_SHELL_ENV_PATH;
 #ifdef IFS_BROKEN
 const char defifsvar[] = "IFS= \t\n";
 #else

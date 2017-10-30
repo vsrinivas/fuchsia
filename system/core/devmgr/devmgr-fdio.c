@@ -10,6 +10,7 @@
 #include <fdio/io.h>
 #include <fdio/util.h>
 
+#include <zircon/paths.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
@@ -50,6 +51,7 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
     if (getenv(LDSO_TRACE_CMDLINE)) {
         envp[envn++] = LDSO_TRACE_ENV;
     }
+    envp[envn++] = ZX_SHELL_ENV_PATH;
     while ((_envp && _envp[0]) && (envn < MAX_ENVP)) {
         envp[envn++] = *_envp++;
     }
