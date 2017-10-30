@@ -278,14 +278,17 @@ void SuggestionEngineImpl::PrimeSpeechCapture() {
       if (now - mc_failures_start_ >= kMediaCriticalFailurePeriod) {
         mc_failures_start_ = now;
         mc_failures_count_ = 1;
-      } else if (mc_failures_count_ > kMediaCriticalFailureCount) {
+      } else if (mc_failures_count_ <= kMediaCriticalFailureCount) {
+        ++mc_failures_count_;
+      } else {
         FXL_LOG(WARNING) << "Media input failed more than "
                          << kMediaCriticalFailureCount << " times in "
                          << kMediaCriticalFailurePeriod.ToSecondsF()
                          << " seconds; disabling speech capture.";
-      } else {
-        PrimeSpeechCapture();
+        return;
       }
+
+      PrimeSpeechCapture();
     });
   }
 }
