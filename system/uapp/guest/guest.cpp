@@ -335,6 +335,10 @@ int main(int argc, char** argv) {
         if (status != ZX_OK)
             return status;
 
+        status = block.Start();
+        if (status != ZX_OK)
+            return status;
+
         status = bus.Connect(&virtio_block, PCI_DEVICE_VIRTIO_BLOCK);
         if (status != ZX_OK)
             return status;

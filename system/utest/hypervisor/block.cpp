@@ -18,7 +18,7 @@
 #include "virtio_queue_fake.h"
 
 #define QUEUE_SIZE 8u
-#define DATA_SIZE 128u
+#define DATA_SIZE 512u
 
 class VirtioBlockTest {
 public:
@@ -82,32 +82,6 @@ private:
     VirtioQueueFake queue_;
 };
 
-static bool file_block_device_empty_queue(void) {
-    BEGIN_TEST;
-
-    char path[] = "/tmp/file-block-device-empty-queue.XXXXXX";
-    VirtioBlockTest test;
-    ASSERT_EQ(test.Init(path), ZX_OK);
-
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
-
-    END_TEST;
-}
-
-static bool file_block_device_bad_ring(void) {
-    BEGIN_TEST;
-
-    char path[] = "/tmp/file-block-device-bad-ring.XXXXXX";
-    VirtioBlockTest test;
-    ASSERT_EQ(test.Init(path), ZX_OK);
-
-    test.block().queue().avail->idx = 1;
-    test.block().queue().avail->ring[0] = QUEUE_SIZE;
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
-
-    END_TEST;
-}
-
 static bool file_block_device_bad_header(void) {
     BEGIN_TEST;
 
@@ -115,23 +89,28 @@ static bool file_block_device_bad_header(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t req = {};
+    uint8_t status;
 
     ASSERT_EQ(
         test.queue().BuildDescriptor()
             .AppendReadable(&req, sizeof(req) - 1)
-            .Build(),
+            .AppendWriteable(&status, 1)
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(test.block().queue().used->idx, 0u);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
+    ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
 
     ASSERT_EQ(
         test.queue().BuildDescriptor()
             .AppendReadable(&req, sizeof(req) + 1)
-            .Build(),
+            .AppendWriteable(&status, 1)
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(test.block().queue().used->idx, 0u);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
+    ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
 
     END_TEST;
 }
@@ -142,18 +121,21 @@ static bool file_block_device_bad_payload(void) {
     char path[] = "/tmp/file-block-device-bad-payload.XXXXXX";
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
+
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t req = {};
+    uint8_t status;
 
     ASSERT_EQ(
         test.queue().BuildDescriptor()
             .AppendReadable(&req, sizeof(req))
             .AppendReadable(UINTPTR_MAX, 1)
-            .Build(),
+            .AppendWriteable(&status, 1)
+            .Build(&desc),
         ZX_OK);
 
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_ERR_OUT_OF_RANGE);
-    ASSERT_EQ(test.block().queue().used->idx, 0u);
-
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     END_TEST;
 }
 
@@ -164,20 +146,22 @@ static bool file_block_device_bad_status(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data[DATA_SIZE];
-    uint8_t status = 0;
+    uint8_t status = 0xff;
 
     ASSERT_EQ(
         test.queue().BuildDescriptor()
             .AppendReadable(&header, sizeof(header))
             .AppendReadable(data, DATA_SIZE)
             .AppendReadable(&status, 0)
-            .Build(),
+            .Build(&desc),
         ZX_OK);
 
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(test.block().queue().used->idx, 0u);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
+    ASSERT_EQ(status, 0xff);
 
     END_TEST;
 }
@@ -192,6 +176,8 @@ static bool file_block_device_bad_request(void) {
     // Build a request with an invalid 'type'. The device will handle the
     // request successfully but indicate an error to the driver via the
     // status field in the request.
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data[DATA_SIZE];
     uint8_t status = 0;
@@ -202,14 +188,11 @@ static bool file_block_device_bad_request(void) {
             .AppendReadable(&header, sizeof(header))
             .AppendReadable(data, sizeof(data))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
 
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, 0u);
-    ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
+    ASSERT_EQ(status, VIRTIO_BLK_S_UNSUPP);
 
     END_TEST;
 }
@@ -221,6 +204,8 @@ static bool file_block_device_bad_flush(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t req = {};
     req.type = VIRTIO_BLK_T_FLUSH;
     req.sector = 1;
@@ -230,13 +215,10 @@ static bool file_block_device_bad_flush(void) {
         test.queue().BuildDescriptor()
             .AppendReadable(&req, sizeof(req))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
 
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, 0u);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
 
     END_TEST;
@@ -249,6 +231,8 @@ static bool file_block_device_read(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data[DATA_SIZE];
     uint8_t status = 0;
@@ -260,19 +244,15 @@ static bool file_block_device_read(void) {
             .AppendReadable(&header, sizeof(header))
             .AppendWriteable(data, sizeof(data))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
 
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
 
     uint8_t expected[DATA_SIZE];
+    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
     memset(expected, 0, DATA_SIZE);
     ASSERT_EQ(memcmp(data, expected, DATA_SIZE), 0);
-
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, DATA_SIZE);
-    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
 
     END_TEST;
 }
@@ -284,6 +264,8 @@ static bool file_block_device_read_chain(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data1[DATA_SIZE];
     uint8_t data2[DATA_SIZE];
@@ -298,20 +280,16 @@ static bool file_block_device_read_chain(void) {
             .AppendWriteable(data1, sizeof(data1))
             .AppendWriteable(data2, sizeof(data2))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
 
     uint8_t expected[DATA_SIZE];
     memset(expected, 0, DATA_SIZE);
+    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
     ASSERT_EQ(memcmp(data1, expected, DATA_SIZE), 0);
     ASSERT_EQ(memcmp(data2, expected, DATA_SIZE), 0);
-
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    // TODO: should this have +1 for status?
-    ASSERT_EQ(test.block().queue().used->ring[0].len, sizeof(data1) + sizeof(data2));
-    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
+    ASSERT_EQ(used, sizeof(data1) + sizeof(data2) + sizeof(status));
 
     END_TEST;
 }
@@ -323,6 +301,8 @@ static bool file_block_device_write(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data[DATA_SIZE];
     uint8_t status = 0;
@@ -334,12 +314,13 @@ static bool file_block_device_write(void) {
             .AppendReadable(&header, sizeof(header))
             .AppendReadable(data, sizeof(data))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
 
     int fd = test.fd();
     uint8_t actual[DATA_SIZE];
+    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(read(fd, actual, DATA_SIZE), DATA_SIZE);
 
@@ -347,10 +328,6 @@ static bool file_block_device_write(void) {
     memset(expected, UINT8_MAX, DATA_SIZE);
     ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
 
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, DATA_SIZE);
-    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
 
     END_TEST;
 }
@@ -362,6 +339,8 @@ static bool file_block_device_write_chain(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data1[DATA_SIZE];
     uint8_t data2[DATA_SIZE];
@@ -376,23 +355,20 @@ static bool file_block_device_write_chain(void) {
             .AppendReadable(data1, sizeof(data1))
             .AppendReadable(data2, sizeof(data2))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
 
     int fd = test.fd();
     uint8_t actual[DATA_SIZE];
+    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(read(fd, actual, DATA_SIZE), DATA_SIZE);
 
     uint8_t expected[DATA_SIZE];
     memset(expected, UINT8_MAX, DATA_SIZE);
     ASSERT_EQ(memcmp(actual, expected, DATA_SIZE), 0);
-
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, sizeof(data1) + sizeof(data2));
-    ASSERT_EQ(status, VIRTIO_BLK_S_OK);
+    ASSERT_EQ(used, sizeof(status));
 
     END_TEST;
 }
@@ -404,6 +380,8 @@ static bool file_block_device_flush(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     header.type = VIRTIO_BLK_T_FLUSH;
     uint8_t status = 0;
@@ -412,13 +390,9 @@ static bool file_block_device_flush(void) {
         test.queue().BuildDescriptor()
             .AppendReadable(&header, sizeof(header))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
-
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, 0u);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_OK);
 
     END_TEST;
@@ -431,6 +405,8 @@ static bool file_block_device_flush_data(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data[DATA_SIZE];
     uint8_t status = 0;
@@ -442,19 +418,19 @@ static bool file_block_device_flush_data(void) {
             .AppendReadable(&header, sizeof(header))
             .AppendWriteable(data, sizeof(data))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
 
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
-    ASSERT_EQ(test.block().queue().used->ring[0].id, 0u);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, DATA_SIZE);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
     ASSERT_EQ(status, VIRTIO_BLK_S_OK);
+    ASSERT_EQ(used, sizeof(status));
 
     END_TEST;
 }
 
 struct TestBlockRequest {
+    uint16_t desc;
+    uint32_t used;
     virtio_blk_req_t header;
     uint8_t data[DATA_SIZE];
     uint8_t status;
@@ -473,6 +449,7 @@ static bool file_block_device_multiple_descriptors(void) {
     TestBlockRequest request1;
     const uint8_t request1_bitpattern = 0xaa;
     memset(request1.data, UINT8_MAX, DATA_SIZE);
+    request1.used = 0;
     request1.header.type = VIRTIO_BLK_T_IN;
     request1.header.sector = 0;
     ASSERT_EQ(
@@ -480,13 +457,14 @@ static bool file_block_device_multiple_descriptors(void) {
             .AppendReadable(&request1.header, sizeof(request1.header))
             .AppendWriteable(request1.data, sizeof(request1.data))
             .AppendWriteable(&request1.status, sizeof(request1.status))
-            .Build(),
+            .Build(&request1.desc),
         ZX_OK);
 
     // Request 2 (descriptors 3,4,5).
     TestBlockRequest request2;
     const uint8_t request2_bitpattern = 0xdd;
     memset(request2.data, UINT8_MAX, DATA_SIZE);
+    request2.used = 0;
     request2.header.type = VIRTIO_BLK_T_IN;
     request2.header.sector = 1;
     ASSERT_EQ(
@@ -494,28 +472,31 @@ static bool file_block_device_multiple_descriptors(void) {
             .AppendReadable(&request2.header, sizeof(request2.header))
             .AppendWriteable(request2.data, sizeof(request2.data))
             .AppendWriteable(&request2.status, sizeof(request2.status))
-            .Build(),
+            .Build(&request2.desc),
         ZX_OK);
 
     // Initalize block device. Write unique bit patterns to sector 1 and 2.
     ASSERT_EQ(test.WriteSector(request1_bitpattern, 0, DATA_SIZE), ZX_OK);
     ASSERT_EQ(test.WriteSector(request2_bitpattern, 1, DATA_SIZE), ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
+    ASSERT_EQ(
+        test.block().HandleBlockRequest(&test.block().queue(), request1.desc, &request1.used),
+        ZX_OK);
+    ASSERT_EQ(
+        test.block().HandleBlockRequest(&test.block().queue(), request2.desc, &request2.used),
+        ZX_OK);
 
     // Verify request 1.
     uint8_t expected[DATA_SIZE];
     memset(expected, request1_bitpattern, DATA_SIZE);
     ASSERT_EQ(memcmp(request1.data, expected, DATA_SIZE), 0);
     ASSERT_EQ(request1.status, VIRTIO_BLK_S_OK);
-    ASSERT_EQ(test.block().queue().used->ring[0].len, DATA_SIZE);
+    ASSERT_EQ(request1.used, DATA_SIZE + sizeof(request1.status));
 
     // Verify request 2.
     memset(expected, request2_bitpattern, DATA_SIZE);
     ASSERT_EQ(memcmp(request2.data, expected, DATA_SIZE), 0);
     ASSERT_EQ(request2.status, VIRTIO_BLK_S_OK);
-    ASSERT_EQ(test.block().queue().used->ring[1].len, DATA_SIZE);
-
-    ASSERT_EQ(test.block().queue().used->idx, 2u);
+    ASSERT_EQ(request2.used, DATA_SIZE + sizeof(request2.status));
 
     END_TEST;
 }
@@ -527,6 +508,8 @@ static bool file_block_device_read_only(void) {
     VirtioBlockTest test;
     ASSERT_EQ(test.Init(path), ZX_OK);
 
+    uint16_t desc;
+    uint32_t used = 0;
     virtio_blk_req_t header = {};
     uint8_t data[DATA_SIZE];
     uint8_t status = 0;
@@ -538,16 +521,13 @@ static bool file_block_device_read_only(void) {
             .AppendReadable(&header, sizeof(header))
             .AppendReadable(data, sizeof(data))
             .AppendWriteable(&status, sizeof(status))
-            .Build(),
+            .Build(&desc),
         ZX_OK);
-    ASSERT_EQ(test.block().FileBlockDevice(), ZX_OK);
-
-    // Verify the buffer was returned to the used ring.
-    ASSERT_EQ(test.block().queue().used->idx, 1u);
+    ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used), ZX_OK);
 
     // No bytes written and error status set.
-    ASSERT_EQ(test.block().queue().used->ring[0].len, 0u);
-    ASSERT_EQ(status, VIRTIO_BLK_S_UNSUPP);
+    ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
+    ASSERT_EQ(used, sizeof(status));
 
     // Read back bytes from the file.
     int fd = test.fd();
@@ -565,8 +545,6 @@ static bool file_block_device_read_only(void) {
 }
 
 BEGIN_TEST_CASE(virtio_block)
-RUN_TEST(file_block_device_empty_queue)
-RUN_TEST(file_block_device_bad_ring)
 RUN_TEST(file_block_device_bad_header)
 RUN_TEST(file_block_device_bad_payload)
 RUN_TEST(file_block_device_bad_status)

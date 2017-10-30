@@ -12,11 +12,50 @@
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
 
-zx_status_t VirtioBlock::HandleQueueNotify(uint16_t queue_sel) {
-    if (queue_sel != 0)
-        return ZX_ERR_INVALID_ARGS;
-    return FileBlockDevice();
-}
+// Dispatcher that fulfills block requests using file-descriptor IO
+// (ex: read/write to a file descriptor).
+class FdioBlockDispatcher : public VirtioBlockRequestDispatcher {
+public:
+    FdioBlockDispatcher(int fd): fd_(fd) {}
+
+    zx_status_t Flush() override {
+        fbl::AutoLock lock(&file_mutex_);
+        return fsync(fd_) == 0 ? ZX_OK : ZX_ERR_IO;
+    }
+
+    zx_status_t Read(off_t disk_offset, void* buf, size_t size) override {
+        fbl::AutoLock lock(&file_mutex_);
+        off_t off = lseek(fd_, disk_offset, SEEK_SET);
+        if (off < 0)
+            return ZX_ERR_IO;
+
+        size_t ret = read(fd_, buf, size);
+        if (ret != size)
+            return ZX_ERR_IO;
+        return ZX_OK;
+    }
+
+    zx_status_t Write(off_t disk_offset, const void* buf, size_t size) override {
+        fbl::AutoLock lock(&file_mutex_);
+        off_t off = lseek(fd_, disk_offset, SEEK_SET);
+        if (off < 0)
+            return ZX_ERR_IO;
+
+        size_t ret = write(fd_, buf, size);
+        if (ret != size)
+            return ZX_ERR_IO;
+        return ZX_OK;
+    }
+
+    zx_status_t Submit() override {
+        // No-op, all IO methods are synchronous.
+        return ZX_OK;
+    }
+
+private:
+    fbl::Mutex file_mutex_;
+    int fd_;
+};
 
 VirtioBlock::VirtioBlock(uintptr_t guest_physmem_addr, size_t guest_physmem_size)
     : VirtioDevice(VIRTIO_ID_BLOCK, &config_, sizeof(config_), &queue_, 1,
@@ -29,17 +68,17 @@ VirtioBlock::VirtioBlock(uintptr_t guest_physmem_addr, size_t guest_physmem_size
 }
 
 zx_status_t VirtioBlock::Init(const char* path) {
-    if (fd_ != 0) {
+    if (dispatcher_ != nullptr) {
         fprintf(stderr, "Block device has already been initialized.\n");
         return ZX_ERR_BAD_STATE;
     }
 
     // Open block file. First try to open as read-write but fall back to read
     // only if that fails.
-    fd_ = open(path, O_RDWR);
-    if (fd_ < 0) {
-        fd_ = open(path, O_RDONLY);
-        if (fd_ < 0) {
+    int fd = open(path, O_RDWR);
+    if (fd < 0) {
+        fd = open(path, O_RDONLY);
+        if (fd < 0) {
             fprintf(stderr, "Failed to open block file \"%s\"\n", path);
             return ZX_ERR_IO;
         }
@@ -49,135 +88,131 @@ zx_status_t VirtioBlock::Init(const char* path) {
         set_read_only();
     }
     // Read file size.
-    off_t ret = lseek(fd_, 0, SEEK_END);
+    off_t ret = lseek(fd, 0, SEEK_END);
     if (ret < 0) {
         fprintf(stderr, "Failed to read size of block file \"%s\"\n", path);
         return ZX_ERR_IO;
     }
     size_ = ret;
-
     config_.capacity = size_ / kSectorSize;
 
+    fbl::AllocChecker ac;
+    dispatcher_ = fbl::make_unique_checked<FdioBlockDispatcher>(&ac, fd);
+    if (!ac.check())
+        return ZX_ERR_NO_MEMORY;
+
     return ZX_OK;
 }
 
-// Multiple data buffers can be chained in the payload of block read/write
-// requests. We pass along the offset (from the sector ID defined in the request
-// header) so that subsequent requests can seek to the correct block location.
-typedef struct file_state {
-    VirtioBlock* block;
-    off_t off;
+zx_status_t VirtioBlock::Start() {
+    auto poll_func = +[](virtio_queue_t* queue, uint16_t head, uint32_t* used, void* ctx) {
+        return static_cast<VirtioBlock*>(ctx)->HandleBlockRequest(queue, head, used);
+    };
+    return virtio_queue_poll(&queue_, poll_func, this);
+}
 
-    bool has_payload;
-    virtio_blk_req_t* blk_req;
-    uint8_t status;
-} file_state_t;
+zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue, uint16_t head, uint32_t* used) {
+    uint8_t block_status = VIRTIO_BLK_S_OK;
+    uint8_t* block_status_ptr = nullptr;
+    const virtio_blk_req_t* req = nullptr;
+    off_t offset = 0;
+    virtio_desc_t desc;
 
-zx_status_t VirtioBlock::FileRequest(file_state_t* state, void* addr, uint32_t len) {
-    virtio_blk_req_t* blk_req = state->blk_req;
+    zx_status_t status = virtio_queue_read_desc(queue, head, &desc);
+    if (status != ZX_OK) {
+        desc.addr = nullptr;
+        desc.len = 0;
+        desc.has_next = false;
+    }
 
-    // From VIRTIO Version 1.0: If the VIRTIO_BLK_F_RO feature is set by
-    // the device, any write requests will fail.
-    if (blk_req->type == VIRTIO_BLK_T_OUT && is_read_only())
-        return ZX_ERR_NOT_SUPPORTED;
+    if (desc.len == sizeof(virtio_blk_req_t)) {
+        req = static_cast<const virtio_blk_req_t*>(desc.addr);
+    } else {
+        block_status = VIRTIO_BLK_S_IOERR;
+    }
 
-    // From VIRTIO Version 1.0: A driver MUST set sector to 0 for a
+    // VIRTIO 1.0 Section 5.2.6.2: A device MUST set the status byte to
+    // VIRTIO_BLK_S_IOERR for a write request if the VIRTIO_BLK_F_RO feature
+    // if offered, and MUST NOT write any data.
+    if (req != nullptr && req->type == VIRTIO_BLK_T_OUT && is_read_only()) {
+        block_status = VIRTIO_BLK_S_IOERR;
+    }
+
+    // VIRTIO Version 1.0: A driver MUST set sector to 0 for a
     // VIRTIO_BLK_T_FLUSH request. A driver SHOULD NOT include any data in a
     // VIRTIO_BLK_T_FLUSH request.
-    if (blk_req->type == VIRTIO_BLK_T_FLUSH && blk_req->sector != 0)
-        return ZX_ERR_IO_DATA_INTEGRITY;
-
-    fbl::AutoLock lock(&file_mutex_);
-    off_t ret;
-    if (blk_req->type != VIRTIO_BLK_T_FLUSH) {
-        off_t off = blk_req->sector * kSectorSize + state->off;
-        state->off += len;
-        ret = lseek(fd_, off, SEEK_SET);
-        if (ret < 0) {
-            return ZX_ERR_IO;
-        }
+    if (req != nullptr && req->type == VIRTIO_BLK_T_FLUSH && req->sector != 0) {
+        block_status = VIRTIO_BLK_S_IOERR;
     }
 
-    switch (blk_req->type) {
-    case VIRTIO_BLK_T_IN:
-        ret = read(fd_, addr, len);
-        break;
-    case VIRTIO_BLK_T_OUT:
-        ret = write(fd_, addr, len);
-        break;
-    case VIRTIO_BLK_T_FLUSH:
-        len = 0;
-        ret = fsync(fd_);
-        break;
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return ret != len ? ZX_ERR_IO : ZX_OK;
-}
+    // VIRTIO 1.0 Section 5.2.5.2: If the VIRTIO_BLK_F_BLK_SIZE feature is
+    // negotiated, blk_size can be read to determine the optimal sector size
+    // for the driver to use. This does not affect the units used in the
+    // protocol (always 512 bytes), but awareness of the correct value can
+    // affect performance.
+    if (req != nullptr)
+        offset = req->sector * kSectorSize;
 
-/* Map zx_status_t values to their Virtio counterparts. */
-static uint8_t to_virtio_status(zx_status_t status) {
-    switch (status) {
-    case ZX_OK:
-        return VIRTIO_BLK_S_OK;
-    case ZX_ERR_NOT_SUPPORTED:
-        return VIRTIO_BLK_S_UNSUPP;
-    default:
-        return VIRTIO_BLK_S_IOERR;
-    }
-}
-
-zx_status_t VirtioBlock::QueueHandler(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
-                                      void* context) {
-    file_state_t* file_state = (file_state_t*)context;
-    VirtioBlock* block = file_state->block;
-
-    // Header.
-    if (file_state->blk_req == NULL) {
-        if (len != sizeof(*file_state->blk_req))
-            return ZX_ERR_INVALID_ARGS;
-        file_state->blk_req = static_cast<virtio_blk_req_t*>(addr);
-        return ZX_OK;
-    }
-
-    // Payload.
-    if (flags & VRING_DESC_F_NEXT) {
-        file_state->has_payload = true;
-        zx_status_t status = block->FileRequest(file_state, addr, len);
+    while (desc.has_next) {
+        status = virtio_queue_read_desc(queue, desc.next, &desc);
         if (status != ZX_OK) {
-            file_state->status = to_virtio_status(status);
-        } else {
-            *used += len;
+            block_status = block_status != VIRTIO_BLK_S_OK ? block_status : VIRTIO_BLK_S_IOERR;
+            break;
         }
-        return ZX_OK;
+
+        // Requests should end with a single 1b status byte.
+        if (desc.len == 1 && desc.writable && !desc.has_next) {
+            block_status_ptr = static_cast<uint8_t*>(desc.addr);
+            break;
+        }
+
+        // Skip doing any file ops if we've already encountered an error, but
+        // keep traversing the descriptor chain looking for the status tailer.
+        if (block_status != VIRTIO_BLK_S_OK)
+            continue;
+
+        zx_status_t status;
+        switch (req->type) {
+        case VIRTIO_BLK_T_IN:
+            if (desc.len % kSectorSize != 0) {
+                block_status = VIRTIO_BLK_S_IOERR;
+                continue;
+            }
+            status = dispatcher_->Read(offset, desc.addr, desc.len);
+            *used += desc.len;
+            offset += desc.len;
+            break;
+        case VIRTIO_BLK_T_OUT: {
+            if (desc.len % kSectorSize != 0) {
+                block_status = VIRTIO_BLK_S_IOERR;
+                continue;
+            }
+            status = dispatcher_->Write(offset, desc.addr, desc.len);
+            offset += desc.len;
+            break;
+        }
+        case VIRTIO_BLK_T_FLUSH:
+            status = dispatcher_->Flush();
+            break;
+        default:
+            block_status = VIRTIO_BLK_S_UNSUPP;
+            break;
+        }
+
+        // Report any failures queuing the IO request.
+        if (block_status == VIRTIO_BLK_S_OK && status != ZX_OK)
+            block_status = VIRTIO_BLK_S_IOERR;
     }
 
-    // Status.
-    if (len != sizeof(uint8_t))
-        return ZX_ERR_INVALID_ARGS;
+    // Wait for operations to become consistent.
+    status = dispatcher_->Submit();
+    if (block_status == VIRTIO_BLK_S_OK && status != ZX_OK)
+        block_status = VIRTIO_BLK_S_IOERR;
 
-    // If there was no payload, call the handler function once.
-    if (!file_state->has_payload) {
-        zx_status_t status = block->FileRequest(file_state, addr, len);
-        if (status != ZX_OK)
-            file_state->status = to_virtio_status(status);
+    // Set the output status if we found the byte in the descriptor chain.
+    if (block_status_ptr != nullptr) {
+        *block_status_ptr = block_status;
+        ++*used;
     }
-    uint8_t* status = static_cast<uint8_t*>(addr);
-    *status = file_state->status;
     return ZX_OK;
-}
-
-zx_status_t VirtioBlock::FileBlockDevice() {
-    zx_status_t status;
-    do {
-        file_state_t state = {
-            .block = this,
-            .off = 0,
-            .has_payload = false,
-            .blk_req = NULL,
-            .status = VIRTIO_BLK_S_OK,
-        };
-        status = virtio_queue_handler(&queue_, &VirtioBlock::QueueHandler, &state);
-    } while (status == ZX_ERR_NEXT);
-    return status;
 }
