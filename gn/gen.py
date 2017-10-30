@@ -28,7 +28,6 @@ def main():
                         dest="variant", default="debug", action="store_const", const="debug")
     parser.add_argument("--release", "-r", help="generate release mode build files",
                         dest="variant", action="store_const", const="release")
-    parser.add_argument("--outdir", "-o", help="output directory")
     parser.add_argument("--build-dir", help="the directory (relative to FUCHSIA_DIR) into which to generate the build")
     parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
                         choices=['x86-64', 'aarch64'])
@@ -44,13 +43,9 @@ def main():
     parser.add_argument("--autorun", help="path to autorun script")
     args = parser.parse_args()
 
-    build_dir = args.build_dir
-
-    if not build_dir:
-        build_dir = args.outdir or "out/%s" % args.variant
-        build_dir += "-" + args.target_cpu
-
-    build_dir = os.path.join(paths.FUCHSIA_ROOT, build_dir)
+    build_dir = os.path.join(paths.FUCHSIA_ROOT,
+                             args.build_dir or "out/%s-%s" % (args.variant,
+                                                              args.target_cpu))
 
     if args.gn_args_list:
         gn_command = ["args", build_dir]
