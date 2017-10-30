@@ -3,9 +3,8 @@
         "cpp"
     ],
     "packages": {
-        "maxwell": "//peridot/maxwell_legacy:maxwell",
-        "maxwell_apps": "//peridot/maxwell_legacy:maxwell_apps",
-        "maxwell_tests": "//peridot/maxwell_legacy:maxwell_tests",
-        "maxwell_integration_tests": "//peridot/maxwell_legacy:maxwell_integration_tests"
+        "maxwell": "//peridot:maxwell",
+        "maxwell_agents": "//peridot:maxwell_agents",
+        "maxwell_tests": "//peridot:maxwell_tests"
     }
 }

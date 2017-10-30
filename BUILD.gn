@@ -11,6 +11,123 @@ config("internal") {
   ]
 }
 
+package("maxwell") {
+  deps = [
+    "//peridot/bin/action_log",
+    "//peridot/bin/context_engine",
+    "//peridot/bin/module_resolver",
+    "//peridot/bin/suggestion_engine",
+    "//peridot/bin/user",
+    "//peridot/bin/user:maxwell_main",
+  ]
+
+  binaries = [
+    {
+      name = "action_log"
+    },
+    {
+      name = "context_engine"
+    },
+    {
+      name = "maxwell"
+      source = "maxwell_main"
+    },
+    {
+      name = "module_resolver"
+    },
+    {
+      name = "suggestion_engine"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//peridot/bin/user/resources/default_config.json")
+      dest = "maxwell/default_config.json"
+    },
+    {
+      path = rebase_path("//peridot/bin/user/resources/test_config.json")
+      dest = "maxwell/test_config.json"
+    },
+  ]
+}
+
+package("maxwell_agents") {
+  testonly = true
+
+  deps = [
+    "//peridot/bin/acquirers",
+    "//peridot/bin/agents",
+    "//peridot/bin/agents:carmen_sandiego",
+    "//peridot/bin/agents:ideas",
+  ]
+
+  binaries = [
+    {
+      name = "acquirers/story_info_main"
+    },
+    {
+      name = "agents/carmen_sandiego"
+    },
+    {
+      name = "agents/ideas"
+    },
+    {
+      name = "agents/basic_text_listener"
+      dest = "agents/maxwell_btl"
+    },
+    {
+      name = "agents/maxwell_entity_selector"
+    },
+    {
+      name = "agents/maxwell_proposal_maker"
+    },
+  ]
+}
+
+package("maxwell_tests") {
+  testonly = true
+
+  deps = [
+    "//peridot/bin/context_engine:context_index_unittest",
+    "//peridot/bin/context_engine:context_repository_unittest",
+    "//peridot/lib/module_manifest_repository:module_manifest_repository_unittest",
+    "//peridot/bin/module_resolver:module_resolver_impl_unittest",
+    "//peridot/tests/maxwell_integration",
+  ]
+
+  tests = [
+    {
+      name = "context_index_unittest"
+      dest = "maxwell/context_index_unittest"
+    },
+    {
+      name = "context_repository_unittest"
+      dest = "maxwell/context_repository_unittest"
+    },
+    {
+      name = "module_manifest_repository_unittest"
+      dest = "maxwell/module_manifest_repository_unittest"
+    },
+    {
+      name = "module_resolver_impl_unittest"
+      dest = "maxwell/module_resolver_impl_unittest"
+    },
+    {
+      name = "context_engine_test"
+      dest = "maxwell/context_engine_test"
+    },
+    {
+      name = "suggestion_engine_test"
+      dest = "maxwell/suggestion_engine_test"
+    },
+    {
+      name = "resolver_test"
+      dest = "maxwell/resolver_test"
+    },
+  ]
+}
+
 package("modular") {
   testonly = true
 
