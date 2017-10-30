@@ -20,4 +20,4 @@ use Ledger through Framework Link objects.)
 [Ledger benchmarks]: https://fuchsia.googlesource.com/peridot/+/master/bin/ledger/test/benchmark
 [moterm]: https://fuchsia.googlesource.com/moterm
 [story runner]: https://fuchsia.googlesource.com/peridot/+/master/bin/story_runner/
-[todo list]: https://fuchsia.googlesource.com/modules/prototypes/+/master/modules/todo_list/
+[todo list]: https://fuchsia.googlesource.com/topaz/examples/+/master/ledger/todo_list
