@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
+#define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
@@ -122,3 +123,5 @@ class MaxwellTestBase : public modular::testing::TestWithMessageLoop {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_

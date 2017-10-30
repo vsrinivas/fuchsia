@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_LIB_BOUND_SET_BOUND_SET_H_
+#define PERIDOT_LIB_BOUND_SET_BOUND_SET_H_
 
 #include <vector>
 
@@ -143,3 +144,5 @@ template <typename Interface,
 using BindingSet = BoundNonMovableSet<fidl::Binding<Interface>, T, GetFidlType>;
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_LIB_BOUND_SET_BOUND_SET_H_

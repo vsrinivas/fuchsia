@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_CONTEXT_CPP_FORMATTING_H_
+#define LIB_CONTEXT_CPP_FORMATTING_H_
 
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/fidl/cpp/bindings/formatting.h"
@@ -22,3 +23,5 @@ std::ostream& operator<<(std::ostream& os, const ContextUpdate& update);
 std::ostream& operator<<(std::ostream& os, const ContextQuery& query);
 
 }  // namespace maxwell
+
+#endif  // LIB_CONTEXT_CPP_FORMATTING_H_

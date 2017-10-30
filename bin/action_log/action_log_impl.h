@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_ACTION_LOG_ACTION_LOG_IMPL_H_
+#define PERIDOT_BIN_ACTION_LOG_ACTION_LOG_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -63,3 +64,5 @@ class ComponentActionLogImpl : public ComponentActionLog {
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentActionLogImpl);
 };
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_ACTION_LOG_ACTION_LOG_IMPL_H_

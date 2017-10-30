@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_SPAN_H_
+#define PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_SPAN_H_
 
 #include <string>
 #include <vector>
@@ -58,3 +59,5 @@ class EntitySpan {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_SPAN_H_

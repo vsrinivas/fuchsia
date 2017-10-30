@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_USER_INTELLIGENCE_SERVICES_IMPL_H_
+#define PERIDOT_BIN_USER_INTELLIGENCE_SERVICES_IMPL_H_
 
 #include "lib/action_log/fidl/user.fidl.h"
 #include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
@@ -42,3 +43,5 @@ class IntelligenceServicesImpl : public IntelligenceServices {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_USER_INTELLIGENCE_SERVICES_IMPL_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
-#define LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
+#ifndef LIB_MODULE_CPP_MODULE_IMPL_H_
+#define LIB_MODULE_CPP_MODULE_IMPL_H_
 
 #include <memory>
 
@@ -45,4 +45,4 @@ class ModuleImpl : public Module {
 
 }  // namespace modular
 
-#endif  // LIB_MODULE_DRIVER_CPP_MODULE_IMPL_H_
+#endif  // LIB_MODULE_CPP_MODULE_IMPL_H_

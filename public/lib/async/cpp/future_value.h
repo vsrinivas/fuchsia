@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_CPP_FUTURE_VALUE_H_
+#define LIB_ASYNC_CPP_FUTURE_VALUE_H_
 
 #include <functional>
 #include <list>
@@ -92,3 +93,5 @@ class FutureValue {
 };
 
 }  // namespace maxwell
+
+#endif  // LIB_ASYNC_CPP_FUTURE_VALUE_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_REPOSITORY_H_
+#define PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_REPOSITORY_H_
 
 #include <map>
 #include <set>
@@ -154,3 +155,5 @@ struct ContextRepository::InProgressUpdate {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_REPOSITORY_H_

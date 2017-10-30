@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_LIB_ENVIRONMENT_HOST_APPLICATION_ENVIRONMENT_HOST_IMPL_H_
+#define PERIDOT_LIB_ENVIRONMENT_HOST_APPLICATION_ENVIRONMENT_HOST_IMPL_H_
 
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/app/fidl/application_environment_host.fidl.h"
@@ -21,3 +22,5 @@ class ApplicationEnvironmentHostImpl : public app::ApplicationEnvironmentHost,
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_LIB_ENVIRONMENT_HOST_APPLICATION_ENVIRONMENT_HOST_IMPL_H_

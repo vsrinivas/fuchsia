@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_
+#define PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_
 
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
@@ -46,3 +47,5 @@ class ContextEngineImpl : ContextEngine {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_

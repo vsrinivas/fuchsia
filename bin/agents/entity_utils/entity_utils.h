@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_UTILS_H_
+#define PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_UTILS_H_
 
 #include <string>
 
@@ -24,3 +25,5 @@ const std::string kFocalEntitiesTopic = "inferred/focal_entities";
 const std::string kSelectedEntitiesTopic = "inferred/selected_entities";
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_UTILS_H_

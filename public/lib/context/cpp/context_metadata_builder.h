@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_CONTEXT_CPP_CONTEXT_METADATA_BUILDER_H_
+#define LIB_CONTEXT_CPP_CONTEXT_METADATA_BUILDER_H_
 
 #include "lib/context/fidl/metadata.fidl.h"
 
@@ -36,3 +37,5 @@ class ContextMetadataBuilder {
 };
 
 }  // namespace maxwell
+
+#endif  // LIB_CONTEXT_CPP_CONTEXT_METADATA_BUILDER_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
 #include "lib/action_log/fidl/user.fidl.h"
 #include "lib/app/cpp/application_context.h"
@@ -109,3 +110,5 @@ class UserIntelligenceProviderFactoryImpl
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_

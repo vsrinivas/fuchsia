@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_ACQUIRERS_MOCK_MOCK_GPS_H_
+#define PERIDOT_BIN_ACQUIRERS_MOCK_MOCK_GPS_H_
 
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
@@ -23,3 +24,5 @@ class MockGps : public GpsAcquirer {
 
 }  // namespace acquirers
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_ACQUIRERS_MOCK_MOCK_GPS_H_

@@ -6,7 +6,8 @@
 // It helps answer the question "what objects have metadata that matches
 // these key/value pairs" very efficiently.
 
-#pragma once
+#ifndef PERIDOT_BIN_CONTEXT_ENGINE_INDEX_H_
+#define PERIDOT_BIN_CONTEXT_ENGINE_INDEX_H_
 
 #include <map>
 #include <set>
@@ -47,3 +48,5 @@ class ContextIndex {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_CONTEXT_ENGINE_INDEX_H_

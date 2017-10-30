@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SUGGESTION_CPP_FORMATTING_H_
+#define LIB_SUGGESTION_CPP_FORMATTING_H_
 
 #include "lib/fidl/cpp/bindings/formatting.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
@@ -13,3 +14,5 @@ std::ostream& operator<<(std::ostream& os, const SuggestionDisplay& o);
 std::ostream& operator<<(std::ostream& os, const Suggestion& o);
 
 }  // namespace maxwell
+
+#endif  // LIB_SUGGESTION_CPP_FORMATTING_H_
