@@ -24,17 +24,17 @@
 // - flags (IPM_REG_FLAG_* values) (uint32_t)
 // - description
 
-DEF_ARCH_EVENT(UNHALTED_CORE_CYCLES,        0, 0x3c, 0x00, IPM_REG_FLAG_ARCH, "UnHalted Core Cycles")
-DEF_ARCH_EVENT(INSTRUCTIONS_RETIRED,        1, 0xc0, 0x00, IPM_REG_FLAG_ARCH, "Instructions Retired")
-DEF_ARCH_EVENT(UNHALTED_REFERENCE_CYCLES,   2, 0x3c, 0x01, IPM_REG_FLAG_ARCH, "UnHalted Reference Cycles")
-DEF_ARCH_EVENT(LLC_REFERENCE,               3, 0x2e, 0x4f, IPM_REG_FLAG_ARCH, "LLC Reference")
-DEF_ARCH_EVENT(LLC_MISSES,                  4, 0x2e, 0x41, IPM_REG_FLAG_ARCH, "LLC Misses")
-DEF_ARCH_EVENT(BRANCH_INSTRUCTIONS_RETIRED, 5, 0xc4, 0x00, IPM_REG_FLAG_ARCH, "Branch Instructions Retired")
-DEF_ARCH_EVENT(BRANCH_MISSES_RETIRED,       6, 0xc5, 0x00, IPM_REG_FLAG_ARCH, "Branch Misses Retired")
+DEF_ARCH_EVENT(ARCH_UNHALTED_CORE_CYCLES,        0, 0x3c, 0x00, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED1, "UnHalted Core Cycles")
+DEF_ARCH_EVENT(ARCH_INSTRUCTIONS_RETIRED,        1, 0xc0, 0x00, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED0, "Instructions Retired")
+DEF_ARCH_EVENT(ARCH_UNHALTED_REFERENCE_CYCLES,   2, 0x3c, 0x01, IPM_REG_FLAG_ARCH | IPM_REG_FLAG_FIXED2, "UnHalted Reference Cycles")
+DEF_ARCH_EVENT(ARCH_LLC_REFERENCE,               3, 0x2e, 0x4f, IPM_REG_FLAG_ARCH, "LLC (Last Level Cache) References")
+DEF_ARCH_EVENT(ARCH_LLC_MISSES,                  4, 0x2e, 0x41, IPM_REG_FLAG_ARCH, "LLC (Last Level Cache) Misses")
+DEF_ARCH_EVENT(ARCH_BRANCH_INSTRUCTIONS_RETIRED, 5, 0xc4, 0x00, IPM_REG_FLAG_ARCH, "Branch Instructions Retired")
+DEF_ARCH_EVENT(ARCH_BRANCH_MISSES_RETIRED,       6, 0xc5, 0x00, IPM_REG_FLAG_ARCH, "Branch Misses Retired")
 
 #undef DEF_ARCH_EVENT
 
-// Architectural performance counters
+// Non-architectural performance counters
 // args:
 // - symbol
 // - event (uint32_t)
