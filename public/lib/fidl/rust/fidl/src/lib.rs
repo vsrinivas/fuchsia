@@ -49,6 +49,13 @@ pub trait ServerFuture<Item>: futures::Future<Item = Item, Error = CloseChannel>
 impl<T, Item> ServerFuture<Item> for T
     where T: futures::Future<Item = Item, Error = CloseChannel> {}
 
+/// A specialized `Box<Future<...>>` type for FIDL server implementations.
+/// This is a convenience to avoid writing
+/// `Box<Future<Item = I, Error = CloseChannel>>`.
+/// Errors in this `Future` should require no extra handling, and upon error the type should
+/// be dropped.
+pub type BoxServerFuture<Item> = Box<futures::Future<Item = Item, Error = CloseChannel>>;
+
 /// A specialized `Future<...>` type for FIDL server implementations.
 /// This is a convenience to avoid writing
 /// `future::FutureResult<Item = I, Error = CloseChannel>>`.
