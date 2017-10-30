@@ -6,7 +6,7 @@
 
 #include "device_interface.h"
 #include "macaddr.h"
-#include "mlme.h"
+#include "client_mlme.h"
 #include "packet.h"
 
 #include <ddk/driver.h>
