@@ -14,6 +14,26 @@ usage: fx set x86-64|aarch64|rpi3|odroidc2|hikey960
               [--goma-dir DIR]
               [--ccache|--no-ccache]
 Sets build options.
+
+optional arguments:
+  --release             Build the release variant (e.g., more compiler
+                        optimizations, less debugging information).
+  --packages            Include the listed packages (separated by commas) in the
+                        system build. Defaults to "packages/gn/default".
+  --build-dir           The directory (relative to FUCHSIA_DIR) into which to
+                        generate the build system. Defaults to
+                        "out/<variant>-<arch>".
+  --goma|--no-goma      Whether to use the goma service during the build. Goma
+                        attempts to make builds faster using remote build
+                        servers. Defaults to detecting whether goma is installed
+                        on your machine.
+  --no-ensure-goma      Skip ensuring that goma is started when using goma.
+  --goma-dir            The directory where goma is installed. Defaults to
+                        ~/goma.
+  --ccache|--no-ccache  Whether to use ccache during the build. Ccache attempts
+                        to make builds faster by caching build artifacts.
+                        Defaults to detecting whether the CCACHE_DIR environment
+                        variable is set to a directory.
 END
 }
 
