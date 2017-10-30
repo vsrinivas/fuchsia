@@ -260,16 +260,13 @@ zx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
 
         void* addr = reinterpret_cast<void*>(mem_addr + desc->addr);
         status = handler(addr, desc->len, desc->flags, &used_len, context);
-        if (status != ZX_OK) {
-            fprintf(stderr, "Virtio request (%#lx, %u) failed %d\n", desc->addr, desc->len, status);
+        if (status != ZX_OK)
             return status;
-        }
 
         desc_index = desc->next;
     } while (desc->flags & VRING_DESC_F_NEXT);
 
     virtio_queue_return(queue, head, used_len);
-
     return ring_has_avail(queue) ? ZX_ERR_NEXT : ZX_OK;
 }
 
