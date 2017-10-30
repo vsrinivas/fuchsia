@@ -276,6 +276,12 @@ int service_starter(void* arg) {
                       &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, NULL);
     }
 
+    const char* epoch = getenv("devmgr.epoch");
+    if (epoch) {
+        zx_time_t offset = ZX_SEC(atoi(epoch));
+        zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
+    }
+
     do_autorun("autorun:boot", "zircon.autorun.boot");
     struct stat s;
     if (stat(argv_autorun0[1], &s) == 0) {

@@ -45,6 +45,12 @@ with the "ipt-dump" program. See its docs for more info.
 
 This option is only supported on Intel x86 platforms.
 
+## devmgr\.epoch=\<seconds\>
+
+Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
+This is useful for platforms lacking an RTC, where the UTC offset would
+otherwise remain at 0.
+
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the
