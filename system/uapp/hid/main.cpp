@@ -20,6 +20,8 @@
 #include <zircon/types.h>
 #include <zircon/device/input.h>
 
+#include <fbl/unique_ptr.h>
+
 #include <fdio/watcher.h>
 
 #define DEV_INPUT "/dev/class/input"
@@ -116,13 +118,13 @@ static zx_status_t parse_set_get_report_args(int argc,
         return res;
     }
 
-    *out_id = tmp;
+    *out_id = static_cast<input_report_id_t>(tmp);
 
     return parse_input_report_type(argv[1], out_type);
 }
 
 
-static int get_hid_protocol(int fd, const char* name) {
+static ssize_t get_hid_protocol(int fd, const char* name) {
     int proto;
     ssize_t rc = ioctl_input_get_protocol(fd, &proto);
     if (rc < 0) {
@@ -133,7 +135,7 @@ static int get_hid_protocol(int fd, const char* name) {
     return rc;
 }
 
-static int get_report_desc_len(int fd, const char* name, size_t* report_desc_len) {
+static ssize_t get_report_desc_len(int fd, const char* name, size_t* report_desc_len) {
     ssize_t rc = ioctl_input_get_report_desc_size(fd, report_desc_len);
     if (rc < 0) {
         lprintf("hid: could not get report descriptor length from %s (status=%zd)\n", name, rc);
@@ -143,27 +145,22 @@ static int get_report_desc_len(int fd, const char* name, size_t* report_desc_len
     return rc;
 }
 
-static int get_report_desc(int fd, const char* name, size_t report_desc_len) {
-    uint8_t* buf = malloc(report_desc_len);
-    if (!buf) {
-        lprintf("hid: out of memory\n");
-        return ZX_ERR_NO_MEMORY;
-    }
-    ssize_t rc = ioctl_input_get_report_desc(fd, buf, report_desc_len);
+static ssize_t get_report_desc(int fd, const char* name, size_t report_desc_len) {
+    fbl::unique_ptr<uint8_t[]> buf(new uint8_t[report_desc_len]);
+
+    ssize_t rc = ioctl_input_get_report_desc(fd, buf.get(), report_desc_len);
     if (rc < 0) {
         lprintf("hid: could not get report descriptor from %s (status=%zd)\n", name, rc);
-        free(buf);
         return rc;
     }
     mtx_lock(&print_lock);
     printf("hid: %s report descriptor:\n", name);
-    print_hex(buf, report_desc_len);
+    print_hex(buf.get(), report_desc_len);
     mtx_unlock(&print_lock);
-    free(buf);
     return rc;
 }
 
-static int get_num_reports(int fd, const char* name, size_t* num_reports) {
+static ssize_t get_num_reports(int fd, const char* name, size_t* num_reports) {
     ssize_t rc = ioctl_input_get_num_reports(fd, num_reports);
     if (rc < 0) {
         lprintf("hid: could not get number of reports from %s (status=%zd)\n", name, rc);
@@ -173,17 +170,16 @@ static int get_num_reports(int fd, const char* name, size_t* num_reports) {
     return rc;
 }
 
-static int get_report_ids(int fd, const char* name, size_t num_reports) {
+static ssize_t get_report_ids(int fd, const char* name, size_t num_reports) {
     size_t out_len = num_reports * sizeof(input_report_id_t);
-    input_report_id_t* ids = malloc(out_len);
-    if (!ids) return ZX_ERR_NO_MEMORY;
+    fbl::unique_ptr<input_report_id_t[]> ids(new input_report_id_t[num_reports]);
 
-    ssize_t rc = ioctl_input_get_report_ids(fd, ids, out_len);
+    ssize_t rc = ioctl_input_get_report_ids(fd, ids.get(), out_len);
     if (rc < 0) {
         lprintf("hid: could not get report ids from %s (status=%zd)\n", name, rc);
-        free(ids);
         return rc;
     }
+
     mtx_lock(&print_lock);
     printf("hid: %s report ids...\n", name);
     for (size_t i = 0; i < num_reports; i++) {
@@ -217,11 +213,10 @@ static int get_report_ids(int fd, const char* name, size_t num_reports) {
     }
 
     mtx_unlock(&print_lock);
-    free(ids);
     return rc;
 }
 
-static int get_max_report_len(int fd, const char* name, input_report_size_t* max_report_len) {
+static ssize_t get_max_report_len(int fd, const char* name, input_report_size_t* max_report_len) {
     input_report_size_t tmp;
     if (max_report_len == NULL) {
         max_report_len = &tmp;
@@ -235,22 +230,23 @@ static int get_max_report_len(int fd, const char* name, input_report_size_t* max
     return rc;
 }
 
-#define try(fn) \
-    do { \
-        int rc = fn; \
-        if (rc < 0) return rc; \
+#define TRY(fn)           \
+    do {                  \
+        ssize_t rc = fn;  \
+        if (rc < 0)       \
+            return rc;    \
     } while (0)
 
-static int hid_status(int fd, const char* name, input_report_size_t* max_report_len) {
+static ssize_t hid_status(int fd, const char* name, input_report_size_t* max_report_len) {
     size_t report_desc_len;
     size_t num_reports;
 
-    try(get_hid_protocol(fd, name));
-    try(get_report_desc_len(fd, name, &report_desc_len));
-    try(get_report_desc(fd, name, report_desc_len));
-    try(get_num_reports(fd, name, &num_reports));
-    try(get_report_ids(fd, name, num_reports));
-    try(get_max_report_len(fd, name, max_report_len));
+    TRY(get_hid_protocol(fd, name));
+    TRY(get_report_desc_len(fd, name, &report_desc_len));
+    TRY(get_report_desc(fd, name, report_desc_len));
+    TRY(get_num_reports(fd, name, &num_reports));
+    TRY(get_report_ids(fd, name, num_reports));
+    TRY(get_max_report_len(fd, name, max_report_len));
 
     return ZX_OK;
 }
@@ -260,33 +256,36 @@ static int hid_input_thread(void* arg) {
     lprintf("hid: input thread started for %s\n", args->name);
 
     input_report_size_t max_report_len = 0;
-    try(hid_status(args->fd, args->name, &max_report_len));
+    ssize_t rc = hid_status(args->fd, args->name, &max_report_len);
+    if (rc < 0) {
+        return static_cast<int>(rc);
+    }
 
     // Add 1 to the max report length to make room for a Report ID.
     max_report_len++;
-
-    uint8_t* report = calloc(1, max_report_len);
-    if (!report) return ZX_ERR_NO_MEMORY;
+    fbl::unique_ptr<uint8_t[]> report(new uint8_t[max_report_len]);
 
     for (uint32_t i = 0; i < args->num_reads; i++) {
-        int r = read(args->fd, report, max_report_len);
+        ssize_t r = read(args->fd, report.get(), max_report_len);
         mtx_lock(&print_lock);
-        printf("read returned %d\n", r);
+        printf("read returned %ld\n", r);
         if (r < 0) {
             printf("read errno=%d (%s)\n", errno, strerror(errno));
             mtx_unlock(&print_lock);
             break;
         }
         printf("hid: input from %s\n", args->name);
-        print_hex(report, r);
+        print_hex(report.get(), r);
         mtx_unlock(&print_lock);
     }
-    free(report);
+
     lprintf("hid: closing %s\n", args->name);
     close(args->fd);
-    free(args);
+    delete args;
     return ZX_OK;
 }
+
+#undef TRY
 
 static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -298,7 +297,7 @@ static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
         return ZX_OK;
     }
 
-    input_args_t* args = malloc(sizeof(*args));
+    input_args_t* args = new input_args {};
     args->fd = fd;
     // TODO: support setting num_reads across all devices. requires a way to
     // signal shutdown to all input threads.
@@ -350,7 +349,7 @@ int read_reports(int argc, const char** argv) {
         return -1;
     }
 
-    input_args_t* args = calloc(1, sizeof(*args));
+    input_args_t* args = new input_args_t {};
     args->fd = fd;
     args->num_reads = tmp;
 
@@ -359,7 +358,7 @@ int read_reports(int argc, const char** argv) {
     int ret = thrd_create_with_name(&t, hid_input_thread, (void*)args, args->name);
     if (ret != thrd_success) {
         printf("hid: input thread %s did not start (error=%d)\n", args->name, ret);
-        free(args);
+        delete args;
         close(fd);
         return -1;
     }
@@ -409,7 +408,7 @@ int get_report(int argc, const char** argv) {
     if (rc < 0) {
         printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%zd)\n",
                 size_arg.id, size_arg.type, argv[0], rc);
-        return rc;
+        return static_cast<int>(rc);
     }
     xprintf("hid: report size=%u\n", size);
 
@@ -438,16 +437,15 @@ int get_report(int argc, const char** argv) {
     // buffer to read into, and report the number of bytes which came back along
     // with the expected size of the raw report.
     size_t bufsz = 4u << 10;
-    uint8_t* buf = malloc(bufsz);
-    rc = ioctl_input_get_report(fd, &rpt_arg, buf, bufsz);
+    fbl::unique_ptr<uint8_t[]> buf(new uint8_t[bufsz]);
+    rc = ioctl_input_get_report(fd, &rpt_arg, buf.get(), bufsz);
     if (rc < 0) {
         printf("hid: could not get report: %zd\n", rc);
     } else {
         printf("hid: got %zu bytes (raw report size %u)\n", rc, size);
-        print_hex(buf, rc);
+        print_hex(buf.get(), rc);
     }
-    free(buf);
-    return rc;
+    return static_cast<int>(rc);
 }
 
 int set_report(int argc, const char** argv) {
@@ -475,6 +473,11 @@ int set_report(int argc, const char** argv) {
         return -1;
     }
 
+    // If the set/get report args parsed, then we must have at least 3 arguments.
+    ZX_DEBUG_ASSERT(argc >= 3);
+    input_report_size_t payload_size = static_cast<input_report_size_t>(argc - 3);
+    size_t in_len = sizeof(input_set_report_t) + payload_size;
+
     input_report_size_t size;
     ssize_t rc = ioctl_input_get_report_size(fd, &size_arg, &size);
     if (rc < 0) {
@@ -483,14 +486,9 @@ int set_report(int argc, const char** argv) {
         goto finished;
     }
 
-    // If the set/get report args parsed, then we must have at least 3 arguments.
-    ZX_DEBUG_ASSERT(argc >= 3);
-    input_report_size_t payload_size = argc - 3;
-
     xprintf("hid: report size=%u, tx payload size=%u\n", size, payload_size);
 
-    size_t in_len = sizeof(input_set_report_t) + payload_size;
-    arg = malloc(in_len);
+    arg = reinterpret_cast<input_set_report_t*>(new char[in_len]);
     arg->id = size_arg.id;
     arg->type = size_arg.type;
     for (int i = 0; i < payload_size; i++) {
@@ -502,7 +500,7 @@ int set_report(int argc, const char** argv) {
             goto finished;
         }
 
-        arg->data[i] = tmp;
+        arg->data[i] = static_cast<uint8_t>(tmp);
     }
 
     rc = ioctl_input_set_report(fd, arg, in_len);
@@ -513,9 +511,9 @@ int set_report(int argc, const char** argv) {
     }
 
 finished:
-    if (arg) { free(arg); }
+    delete [] reinterpret_cast<char*>(arg);
     close(fd);
-    return rc;
+    return static_cast<int>(rc);
 }
 
 int main(int argc, const char** argv) {
@@ -537,8 +535,15 @@ int main(int argc, const char** argv) {
             return readall_reports(argc, argv);
         }
     }
-    if (!strcmp("get", argv[0])) return get_report(argc, argv);
-    if (!strcmp("set", argv[0])) return set_report(argc, argv);
+
+    if (!strcmp("get", argv[0])) {
+        return get_report(argc, argv);
+    }
+
+    if (!strcmp("set", argv[0])) {
+        return set_report(argc, argv);
+    }
+
     usage();
     return 0;
 }
