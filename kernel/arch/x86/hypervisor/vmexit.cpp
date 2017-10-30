@@ -43,10 +43,9 @@ static const uint32_t kLastExtendedStateComponent = 9;
 static const uint32_t kXsaveLegacyRegionSize = 512;
 static const uint32_t kXsaveHeaderSize = 64;
 
-// Use hypervisor vendor string "ZirconZircon".
-constexpr uint64_t kHypVendorEbx = fbl::magic("Zirc");
-constexpr uint64_t kHypVendorEcx = fbl::magic("onZi");
-constexpr uint64_t kHypVendorEdx = fbl::magic("rcon");
+static const char kHypVendorId[] = "ZirconZircon";
+static const size_t kHypVendorIdLength = 12;
+static_assert(sizeof(kHypVendorId) - 1 == kHypVendorIdLength, "");
 
 extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
 
@@ -274,14 +273,16 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             break;
         }
         return ZX_OK;
-    case X86_CPUID_HYP_VENDOR:
+    case X86_CPUID_HYP_VENDOR: {
         // This leaf is commonly used to identify a hypervisor via ebx:ecx:edx.
+        static const uint32_t* regs = reinterpret_cast<const uint32_t*>(kHypVendorId);
         next_rip(exit_info, vmcs);
         guest_state->rax = 0;
-        guest_state->rbx = kHypVendorEbx;
-        guest_state->rcx = kHypVendorEcx;
-        guest_state->rdx = kHypVendorEdx;
+        guest_state->rbx = regs[0];
+        guest_state->rcx = regs[1];
+        guest_state->rdx = regs[2];
         return ZX_OK;
+    }
     case X86_CPUID_HYP_VENDOR + 1 ... X86_CPUID_HYP_MAX:
         next_rip(exit_info, vmcs);
         guest_state->rax = 0;
