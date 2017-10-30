@@ -79,13 +79,34 @@ static const char* argv_autorun0[] = { "/boot/bin/sh", "/boot/autorun" };
 static const char* argv_appmgr[] = { "/system/bin/appmgr" };
 
 void do_autorun(const char* name, const char* env) {
-    char* bin = getenv(env);
-    if (bin) {
-        printf("devmgr: %s: starting %s...\n", env, bin);
-        devmgr_launch(svcs_job_handle, name,
-                      1, (const char* const*) &bin,
-                      NULL, -1, NULL, NULL, 0, NULL);
+    char* cmd = getenv(env);
+    if (!cmd) {
+        return;
     }
+
+    // Get the full commandline by splitting on '+'.
+    char* buf = strdup(cmd);
+    if (buf == NULL) {
+        printf("devmgr: %s: Can't parse %s\n", env, cmd);
+        return;
+    }
+    const int MAXARGS = 8;
+    char* argv[MAXARGS];
+    int argc = 0;
+    char* token;
+    char* rest = buf;
+    while (argc < MAXARGS && (token = strtok_r(rest, "+", &rest))) {
+        argv[argc++] = token;
+    }
+    printf("devmgr: %s: starting", env);
+    for (int i = 0; i < argc; i++) {
+        printf(" '%s'", argv[i]);
+    }
+    printf("...\n");
+    devmgr_launch(svcs_job_handle, name,
+                  argc, (const char* const*)argv,
+                  NULL, -1, NULL, NULL, 0, NULL);
+    free(buf);
 }
 
 static zx_handle_t fuchsia_event;

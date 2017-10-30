@@ -219,16 +219,21 @@ This option (disabled by default) turns on dynamic linker trace output.
 The output is in a form that is consumable by clients like Intel
 Processor Trace support.
 
-## zircon.autorun.boot=\<path>\
+## zircon.autorun.boot=\<command>
 
-This option requests that the executable at *path* be launched at boot,
-after devmgr starts up.
+This option requests that *command* be run at boot, after devmgr starts up.
 
-## zircon.autorun.system=\<path>\
+Any `+` characters in *command* are treated as argument separators, allowing
+you to pass arguments to an executable.
 
-This option requests that the executable at *path* be launched once the
-system partition is mounted and *init* is launched.  If there is no system
-bootfs or system partition, it will never be launched.
+## zircon.autorun.system=\<command>
+
+This option requests that *command* be run once the system partition is mounted
+and *init* is launched.  If there is no system bootfs or system partition, it
+will never be launched.
+
+Any `+` characters in *command* are treated as argument separators, allowing
+you to pass arguments to an executable.
 
 ## zircon.system.writable=\<bool>
 
