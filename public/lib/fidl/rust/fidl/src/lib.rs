@@ -49,6 +49,11 @@ pub trait ServerFuture<Item>: futures::Future<Item = Item, Error = CloseChannel>
 impl<T, Item> ServerFuture<Item> for T
     where T: futures::Future<Item = Item, Error = CloseChannel> {}
 
+/// A specialized `Future<...>` type for FIDL server implementations.
+/// This is a convenience to avoid writing
+/// `future::FutureResult<Item = I, Error = CloseChannel>>`.
+pub type ServerImmediate<Item> = futures::future::FutureResult<Item, CloseChannel>;
+
 /// A specialized `Future<...>` type for FIDL.
 /// This is a convenience to avoid writing
 /// `Future<Item = I, Error = fidl::Error> + Send`.

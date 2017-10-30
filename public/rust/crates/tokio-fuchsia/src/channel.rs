@@ -225,9 +225,8 @@ impl<F> Future for RepeatServer<F>
         loop {
             try_nb!(self.chan.recv_from(&mut self.buf));
 
-            // this is needed or else Rust thinks .callback() is a method
-            let ref mut callback = self.callback;
-            callback(&self.chan, &mut self.buf);
+            (self.callback)(&self.chan, &mut self.buf);
+            self.buf.clear();
         }
     }
 }
