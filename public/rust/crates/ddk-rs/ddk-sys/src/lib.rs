@@ -198,22 +198,20 @@ multiconst!(usb_request_type_t, [
     USB_RECIP_MASK      = 0x1f << 0;
 ]);
 
-// USB request values
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum usb_request_value_t {
-    USB_REQ_GET_STATUS        = 0x00,
-    USB_REQ_CLEAR_FEATURE     = 0x01,
-    USB_REQ_SET_FEATURE       = 0x03,
-    USB_REQ_SET_ADDRESS       = 0x05,
-    USB_REQ_GET_DESCRIPTOR    = 0x06,
-    USB_REQ_SET_DESCRIPTOR    = 0x07,
-    USB_REQ_GET_CONFIGURATION = 0x08,
-    USB_REQ_SET_CONFIGURATION = 0x09,
-    USB_REQ_GET_INTERFACE     = 0x0a,
-    USB_REQ_SET_INTERFACE     = 0x0b,
-    USB_REQ_SYNCH_FRAME       = 0x0c,
-}
+// USB standard request values
+multiconst!(u8, [
+    USB_REQ_GET_STATUS        = 0x00;
+    USB_REQ_CLEAR_FEATURE     = 0x01;
+    USB_REQ_SET_FEATURE       = 0x03;
+    USB_REQ_SET_ADDRESS       = 0x05;
+    USB_REQ_GET_DESCRIPTOR    = 0x06;
+    USB_REQ_SET_DESCRIPTOR    = 0x07;
+    USB_REQ_GET_CONFIGURATION = 0x08;
+    USB_REQ_SET_CONFIGURATION = 0x09;
+    USB_REQ_GET_INTERFACE     = 0x0a;
+    USB_REQ_SET_INTERFACE     = 0x0b;
+    USB_REQ_SYNCH_FRAME       = 0x0c;
+]);
 
 // USB device/interface classes
 #[repr(u8)]
@@ -241,6 +239,26 @@ pub enum usb_class_t {
 pub const USB_SUBCLASS_MSC_SCSI: u8      = 0x06;
 pub const USB_PROTOCOL_MSC_BULK_ONLY: u8 = 0x50;
 
+// USB descriptor types
+multiconst!(u8, [
+    USB_DT_DEVICE                = 0x01;
+    USB_DT_CONFIG                = 0x02;
+    USB_DT_STRING                = 0x03;
+    USB_DT_INTERFACE             = 0x04;
+    USB_DT_ENDPOINT              = 0x05;
+    USB_DT_DEVICE_QUALIFIER      = 0x06;
+    USB_DT_OTHER_SPEED_CONFIG    = 0x07;
+    USB_DT_INTERFACE_POWER       = 0x08;
+    USB_DT_INTERFACE_ASSOCIATION = 0x0b;
+    USB_DT_HID                   = 0x21;
+    USB_DT_HIDREPORT             = 0x22;
+    USB_DT_HIDPHYSICAL           = 0x23;
+    USB_DT_CS_INTERFACE          = 0x24;
+    USB_DT_CS_ENDPOINT           = 0x25;
+    USB_DT_SS_EP_COMPANION       = 0x30;
+    USB_DT_SS_ISOCH_EP_COMPANION = 0x31;
+]);
+
 pub const ZX_PROTOCOL_USB: u32 = 0x70555342; // 'pUSB'
 
 #[repr(C)]
@@ -260,23 +278,67 @@ pub enum usb_request_t {
 }
 
 #[repr(C, packed)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct usb_device_descriptor_t {
+    pub bLength: u8,
+    pub bDescriptorType: u8,
+    pub bcdUSB: u16,
+    pub bDeviceClass: u8,
+    pub bDeviceSubClass: u8,
+    pub bDeviceProtocol: u8,
+    pub bMaxPacketSize0: u8,
+    pub idVendor: u16,
+    pub idProduct: u16,
+    pub bcdDevice: u16,
+    pub iManufacturer: u8,
+    pub iProduct: u8,
+    pub iSerialNumber: u8,
+    pub bNumConfigurations: u8,
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct usb_configuration_descriptor_t {
+    pub bLength: u8,
+    pub bDescriptorType: u8,
+    pub wTotalLength: u16,
+    pub bNumInterfaces: u8,
+    pub bConfigurationValue: u8,
+    pub iConfiguration: u8,
+    pub bmAttributes: u8,
+    pub bMaxPower: u8,
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct usb_interface_descriptor_t {
-    bLength: u8,
-    bDescriptorType: u8,
-    bInterfaceNumber: u8,
-    bAlternateSetting: u8,
-    bNumEndpoints: u8,
-    bInterfaceClass: u8,
-    bInterfaceSubClass: u8,
-    bInterfaceProtocol: u8,
-    iInterface: u8,
+    pub bLength: u8,
+    pub bDescriptorType: u8,
+    pub bInterfaceNumber: u8,
+    pub bAlternateSetting: u8,
+    pub bNumEndpoints: u8,
+    pub bInterfaceClass: u8,
+    pub bInterfaceSubClass: u8,
+    pub bInterfaceProtocol: u8,
+    pub iInterface: u8,
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct usb_endpoint_descriptor_t {
+    pub bLength: u8,
+    pub bDescriptorType: u8,
+    pub bEndpointAddress: u8,
+    pub bmAttributes: u8,
+    pub wMaxPacketSize: u16,
+    pub bInterval: u8,
 }
 
 #[repr(C)]
 pub struct usb_protocol_ops_t {
-    pub control: extern "C" fn (ctx: *mut u8, request_type: usb_request_type_t,
-        request: usb_request_value_t, value: u16, index: u16, data: *mut u8, length: usize,
-        timeout: sys::zx_time_t, out_length: *mut usize) -> sys::zx_status_t,
+    pub control: extern "C" fn (ctx: *mut u8, request_type: usb_request_type_t, request: u8,
+        value: u16, index: u16, data: *mut u8, length: usize, timeout: sys::zx_time_t,
+        out_length: *mut usize) -> sys::zx_status_t,
     pub request_queue: extern "C" fn (ctx: *mut u8, usb_request: *mut usb_request_t),
     pub get_speed: extern "C" fn (ctx: *mut u8) -> usb_speed_t,
     pub set_interface: extern "C" fn (ctx: *mut u8, interface_number: i32, alt_setting: i32)
