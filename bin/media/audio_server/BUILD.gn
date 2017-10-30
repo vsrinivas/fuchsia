@@ -8,6 +8,7 @@ executable("audio_server") {
         "audio_device.cc",
         "audio_device_manager.cc",
         "audio_driver.cc",
+        "audio_input.cc",
         "audio_output.cc",
         "audio_pipe.cc",
         "audio_plug_detector.cc",

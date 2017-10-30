@@ -8,6 +8,8 @@
 #include <fbl/ref_ptr.h>
 #include <set>
 
+#include "garnet/bin/media/audio_server/audio_device.h"
+#include "garnet/bin/media/audio_server/audio_input.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
@@ -95,9 +97,24 @@ class AudioDeviceManager {
     LAST_PLUGGED_OUTPUT,
   };
 
-  // Find the last plugged (non-throttle_output) active output in the system, or
-  // nullptr if none of the outputs are currently plugged.
-  fbl::RefPtr<AudioOutput> FindLastPluggedOutput();
+  // Find the last plugged input or output (excluding the throttle_output) in
+  // the system.  If allow_unplugged is true, the most recently unplugged
+  // input/output will be returned if no plugged outputs can be found.
+  // Otherwise, nullptr.
+  fbl::RefPtr<AudioDevice> FindLastPlugged(AudioObject::Type type,
+                                           bool allow_unplugged = false);
+
+  fbl::RefPtr<AudioOutput> FindLastPluggedOutput(bool allow_unplugged = false) {
+    auto dev = FindLastPlugged(AudioObject::Type::Output, allow_unplugged);
+    FXL_DCHECK(!dev || (dev->type() == AudioObject::Type::Output));
+    return fbl::RefPtr<AudioOutput>::Downcast(std::move(dev));
+  }
+
+  fbl::RefPtr<AudioInput> FindLastPluggedInput(bool allow_unplugged = false) {
+    auto dev = FindLastPlugged(AudioObject::Type::Input, allow_unplugged);
+    FXL_DCHECK(!dev || (dev->type() == AudioObject::Type::Input));
+    return fbl::RefPtr<AudioInput>::Downcast(std::move(dev));
+  }
 
   // Methods for dealing with routing policy when a device becomes unplugged or
   // completely removed from the system, or has become plugged/newly added to

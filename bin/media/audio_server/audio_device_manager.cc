@@ -210,8 +210,12 @@ void AudioDeviceManager::ScheduleMessageLoopTask(const fxl::Closure& task) {
   server_->ScheduleMessageLoopTask(task);
 }
 
-fbl::RefPtr<AudioOutput> AudioDeviceManager::FindLastPluggedOutput() {
-  AudioOutput* best_output = nullptr;
+fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
+    AudioObject::Type type,
+    bool allow_unplugged) {
+  FXL_DCHECK((type == AudioObject::Type::Output) ||
+             (type == AudioObject::Type::Input));
+  AudioDevice* best = nullptr;
 
   // TODO(johngro) : Consider tracking last plugged time using a fbl::WAVLTree
   // so that this operation becomes O(1).  N is pretty low right now, so the
@@ -219,13 +223,22 @@ fbl::RefPtr<AudioOutput> AudioDeviceManager::FindLastPluggedOutput() {
   // index.
   for (auto& obj : devices_) {
     auto device = static_cast<AudioDevice*>(&obj);
-    if (device->plugged() && device->is_output() &&
-        (!best_output || (best_output->plug_time() < device->plug_time()))) {
-      best_output = static_cast<AudioOutput*>(device);
+    if (device->type() != type) {
+      continue;
+    }
+
+    if ((best == nullptr) || (!best->plugged() && device->plugged()) ||
+        ((best->plugged() == device->plugged()) &&
+         (best->plug_time() < device->plug_time()))) {
+      best = device;
     }
   }
 
-  return fbl::WrapRefPtr(best_output);
+  FXL_DCHECK((best == nullptr) || (best->type() == type));
+  if (!allow_unplugged && best && !best->plugged())
+    return nullptr;
+
+  return fbl::WrapRefPtr(best);
 }
 
 void AudioDeviceManager::OnDeviceUnplugged(

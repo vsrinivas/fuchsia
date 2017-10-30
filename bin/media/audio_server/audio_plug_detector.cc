@@ -18,6 +18,7 @@
 #include <zx/channel.h>
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
+#include "garnet/bin/media/audio_server/audio_input.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/platform/driver_output.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -25,13 +26,48 @@
 namespace media {
 namespace audio {
 
-static const char* AUDIO_OUTPUT_DEVNODES = "/dev/class/audio-output";
+// TODO(johngro): Remove this as part of the process of resolving MTWN-55
+namespace {
+bool MixerOwnsInputs() {
+  constexpr bool kMixerOwnsInputsDefault = false;
+  if (kMixerOwnsInputsDefault) {
+    FXL_DLOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
+                      "to hardcoded constexpr.";
+    return true;
+  }
+
+  static const char* kMixerOwnsInputsTestFile =
+      "/system/data/media/mixer_owns_audio_input";
+  struct stat junk;
+  if (::stat(kMixerOwnsInputsTestFile, &junk) >= 0) {
+    FXL_DLOG(INFO) << "Audio Mixer taking control of Audio Input drivers due "
+                      "to presence of \""
+                   << kMixerOwnsInputsTestFile << "\".";
+    return true;
+  }
+
+  FXL_DLOG(INFO)
+      << "Audio Mixer does not own inputs.  Constexpr is false and \""
+      << kMixerOwnsInputsTestFile << "\" was not detected.";
+  return false;
+}
+}  // namespace
+// TODO(johngro): End of MTWN-55 TODO
+
+static const struct {
+  const char* path;
+  bool is_input;
+} AUDIO_DEVNODES[] = {
+    {.path = "/dev/class/audio-output", .is_input = false},
+    {.path = "/dev/class/audio-input", .is_input = true},
+};
 
 AudioPlugDetector::~AudioPlugDetector() {
   FXL_DCHECK(manager_ == nullptr);
 }
 
 MediaResult AudioPlugDetector::Start(AudioDeviceManager* manager) {
+  bool mixer_owns_inputs = MixerOwnsInputs();
   FXL_DCHECK(manager != nullptr);
 
   // If we fail to set up monitoring for any of our target directories,
@@ -49,15 +85,27 @@ MediaResult AudioPlugDetector::Start(AudioDeviceManager* manager) {
   // Record our new manager
   manager_ = manager;
 
-  watcher_ = fsl::DeviceWatcher::Create(
-      AUDIO_OUTPUT_DEVNODES, [this](int dir_fd, std::string filename) {
-        AddAudioDevice(dir_fd, filename);
-      });
+  // Create our watchers.
+  for (const auto& devnode : AUDIO_DEVNODES) {
+    // TODO(johngro): Remove this as part of the process of resolving MTWN-55
+    if (!mixer_owns_inputs && devnode.is_input) {
+      continue;
+    }
 
-  if (watcher_ == nullptr) {
-    FXL_LOG(ERROR) << "AudioPlugDetector failed to create DeviceWatcher for \""
-                   << AUDIO_OUTPUT_DEVNODES << "\".";
-    return MediaResult::INSUFFICIENT_RESOURCES;
+    auto watcher = fsl::DeviceWatcher::Create(
+        devnode.path,
+        [this, is_input = devnode.is_input](int dir_fd, std::string filename) {
+          AddAudioDevice(dir_fd, filename, is_input);
+        });
+
+    if (watcher == nullptr) {
+      FXL_LOG(ERROR)
+          << "AudioPlugDetector failed to create DeviceWatcher for \""
+          << devnode.path << "\".";
+      return MediaResult::INSUFFICIENT_RESOURCES;
+    }
+
+    watchers_.emplace_back(std::move(watcher));
   }
 
   error_cleanup.cancel();
@@ -67,10 +115,12 @@ MediaResult AudioPlugDetector::Start(AudioDeviceManager* manager) {
 
 void AudioPlugDetector::Stop() {
   manager_ = nullptr;
-  watcher_.reset();
+  watchers_.clear();
 }
 
-void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
+void AudioPlugDetector::AddAudioDevice(int dir_fd,
+                                       const std::string& name,
+                                       bool is_input) {
   if (manager_ == nullptr)
     return;
 
@@ -83,6 +133,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
     return;
   }
 
+  // Obtain the stream channel
   zx::channel channel;
   ssize_t res;
 
@@ -94,14 +145,21 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
     return;
   }
 
-  fbl::RefPtr<AudioDevice> new_output =
-      DriverOutput::Create(std::move(channel), manager_);
-  if (new_output == nullptr) {
-    FXL_LOG(WARNING) << "Failed to instantiate audio output for \"" << name
-                     << "\"";
-    return;
+  // Hand the stream off to the proper type of class to manage.
+  fbl::RefPtr<AudioDevice> new_device;
+  if (is_input) {
+    new_device = AudioInput::Create(std::move(channel), manager_);
+  } else {
+    new_device = DriverOutput::Create(std::move(channel), manager_);
   }
-  manager_->AddDevice(std::move(new_output));
+
+  if (new_device == nullptr) {
+    FXL_LOG(WARNING) << "Failed to instantiate audio "
+                     << (is_input ? "input" : "output") << " for \"" << name
+                     << "\"";
+  } else {
+    manager_->AddDevice(std::move(new_device));
+  }
 }
 
 }  // namespace audio

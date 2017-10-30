@@ -28,8 +28,8 @@ class AudioPlugDetector {
   void Stop();
 
  private:
-  void AddAudioDevice(int dir_fd, const std::string& name);
-  std::unique_ptr<fsl::DeviceWatcher> watcher_;
+  void AddAudioDevice(int dir_fd, const std::string& name, bool is_input);
+  std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers_;
   AudioDeviceManager* manager_ = nullptr;
 };
 
