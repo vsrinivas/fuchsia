@@ -11,11 +11,6 @@ declare_args() {
 
   magma_python_path = rebase_path("//third_party/mako")
 
-  # A service driver can supply a testing target here.
-  # These tests are run when the test driver is configured to
-  # build and run unit tests.
-  msd_gtest_target = "$msd_intel_gen_build_root:indriver_gtest"
-
   # Enable this to include fuchsia tracing capability
   magma_enable_tracing = false
 

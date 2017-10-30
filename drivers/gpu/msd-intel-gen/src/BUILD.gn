@@ -139,6 +139,7 @@ source_set("test_driver") {
 
   defines = [ "MAGMA_TEST_DRIVER=1" ]
   deps += [
+    "..:indriver_gtest",
     "//garnet/lib/magma/tests/unit_tests:magma_platform_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
     "//third_party/gtest",
