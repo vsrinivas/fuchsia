@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--release", "-r", help="generate release mode build files",
                         dest="variant", action="store_const", const="release")
     parser.add_argument("--outdir", "-o", help="output directory")
+    parser.add_argument("--build-dir", help="the directory (relative to FUCHSIA_DIR) into which to generate the build")
     parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
                         choices=['x86-64', 'aarch64'])
     parser.add_argument("--goma", help="use goma", metavar="GOMADIR",
@@ -43,22 +44,22 @@ def main():
     parser.add_argument("--autorun", help="path to autorun script")
     args = parser.parse_args()
 
-    if not args.outdir:
-        args.outdir = "out/%s" % args.variant
+    build_dir = args.build_dir
 
-    # TODO: Do not clobber user specified output dir
-    args.outdir += "-" + args.target_cpu
+    if not build_dir:
+        build_dir = args.outdir or "out/%s" % args.variant
+        build_dir += "-" + args.target_cpu
 
-    outdir_path = os.path.join(paths.FUCHSIA_ROOT, args.outdir)
+    build_dir = os.path.join(paths.FUCHSIA_ROOT, build_dir)
 
     if args.gn_args_list:
-        gn_command = ["args", outdir_path]
+        gn_command = ["args", build_dir]
         if isinstance(args.gn_args_list, str):
             gn_command.append("--list=" + args.gn_args_list)
         else:
             gn_command.append("--list")
     else:
-        gn_command = ["gen", outdir_path, "--check"]
+        gn_command = ["gen", build_dir, "--check"]
 
     cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
     gn_args = "--args=target_cpu=\"" + cpu_map[args.target_cpu]  + "\""
