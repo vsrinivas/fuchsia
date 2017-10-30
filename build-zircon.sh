@@ -18,12 +18,12 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf '%s: [-c] [-v] [-V] [-A] [-p project] [-t target] [-o outdir]\n' "$0"
+  printf '%s: [-c] [-v] [-V] [-A] [-H] [-p project] [-t target] [-o outdir]\n' "$0"
   printf 'Note: Passing extra arguments to make is not supported.\n'
 }
 
 build() {
-  local project="$1" outdir="$2" clean="$3" verbose="$4" asan="$5"
+  local project="$1" outdir="$2" clean="$3" verbose="$4" asan="$5" host_asan="$6"
   local zircon_buildroot="${outdir}/build-zircon"
 
   if [[ "${clean}" = "true" ]]; then
@@ -48,7 +48,8 @@ build() {
   export QUIET
   # build host tools
   make -j ${JOBS} V=${V} \
-    BUILDDIR=${outdir}/build-zircon DEBUG_BUILDROOT=../../zircon tools
+    BUILDDIR=${outdir}/build-zircon DEBUG_BUILDROOT=../../zircon \
+    HOST_USE_ASAN="${host_asan}" tools
   # build zircon (including its portion of the sysroot) for the target architecture
   make -j ${JOBS} V=${V} \
     ${zircon_build_type_flags:-} ${project} \
@@ -66,14 +67,16 @@ build() {
 
 declare ASAN="${ASAN:-false}"
 declare CLEAN="${CLEAN:-false}"
+declare HOST_ASAN="${HOST_ASAN:-false}"
 declare PROJECT="${PROJECT:-zircon-pc-x86-64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare VERBOSE="${VERBOSE:-0}"
 
-while getopts "Acht:p:o:vV" opt; do
+while getopts "AcHht:p:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
+    H) HOST_ASAN="true" ;;
     h) usage ; exit 0 ;;
     o) OUTDIR="${OPTARG}" ;;
     t) case "${OPTARG}" in
@@ -92,6 +95,6 @@ while getopts "Acht:p:o:vV" opt; do
   esac
 done
 
-readonly ASAN CLEAN PROJECT OUTDIR VERBOSE
+readonly ASAN CLEAN HOST_ASAN PROJECT OUTDIR VERBOSE
 
-build "${PROJECT}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}"
+build "${PROJECT}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}" "${HOST_ASAN}"
