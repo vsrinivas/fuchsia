@@ -475,6 +475,7 @@ void platform_mem_init(void)
     efi_range_seq_t efi_seq;
     e820_range_seq_t e820_seq;
     multiboot_range_seq_t multiboot_seq;
+    bool initialized_bootstrap16 = false;
 
     cached_e820_entry_count = 0;
     if (efi_range_init(&range, &efi_seq) ||
@@ -494,11 +495,30 @@ void platform_mem_init(void)
             entry->size = range.size;
             entry->is_mem = range.is_mem ? true : false;
 
+            const uint64_t alloc_size = 2 * PAGE_SIZE;
+            const uint64_t min_base = 2 * PAGE_SIZE;
+            if (!initialized_bootstrap16 &&
+                entry->base <= 1*MB - alloc_size && entry->size >= alloc_size) {
+
+                uint64_t adj_base = entry->base;
+                if (entry->base < min_base) {
+                    uint64_t size_adj = min_base - entry->base;
+                    if (entry->size < size_adj + alloc_size) {
+                        continue;
+                    }
+                    adj_base = min_base;
+                }
+
+                LTRACEF("Selected %" PRIxPTR " as bootstrap16 region\n", adj_base);
+                x86_bootstrap16_init(adj_base);
+                initialized_bootstrap16 = true;
+            }
         }
     } else {
         TRACEF("ERROR - No e820 range entries found!  This is going to end badly for everyone.\n");
     }
 
-    // TODO(teisenbe): Pick an appropriate value out of the memory map
-    x86_bootstrap16_init(0x9e000);
+    if (!initialized_bootstrap16) {
+        TRACEF("WARNING - Failed to assign bootstrap16 region, SMP won't work\n");
+    }
 }
