@@ -36,6 +36,13 @@ pub enum zx_driver_t {
     variant1,
 }
 
+#[repr(C)]
+pub struct zx_driver_rec_t {
+    pub ops: *const zx_driver_ops_t,
+    pub driver: *mut zx_driver_t,
+    pub log_flags: u32,
+}
+
 pub const ZX_DEVICE_NAME_MAX: usize = 31;
 
 #[repr(C)]
@@ -173,13 +180,6 @@ impl device_add_args_t {
     }
 }
 
-#[repr(C)]
-pub struct zx_driver_rec {
-    pub ops: *const zx_driver_ops_t,
-    pub driver: *mut zx_driver_t,
-    pub log_flags: u32,
-}
-
 // USB request types
 pub type usb_request_type_t = u8;
 
@@ -311,7 +311,8 @@ impl Default for usb_protocol_t {
 
 #[link(name = "ddk")]
 extern "C" {
-    pub fn device_add(parent: *mut zx_device_t, args: *mut device_add_args_t, out: *mut *mut zx_device_t) -> sys::zx_status_t;
+    pub static __zircon_driver_rec__: zx_driver_rec_t;
+
     pub fn device_add_from_driver(driver: *mut zx_driver_t, parent: *mut zx_device_t, args: *mut device_add_args_t, out: *mut *mut zx_device_t) -> sys::zx_status_t;
     pub fn device_remove(device: *mut zx_device_t) -> sys::zx_status_t;
     pub fn device_rebind(device: *mut zx_device_t) -> sys::zx_status_t;

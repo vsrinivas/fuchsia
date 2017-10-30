@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 extern crate ddk_rs;
+extern crate ddk_sys;
 extern crate fuchsia_zircon;
 use fuchsia_zircon::Status;
 use fuchsia_zircon::sys as sys;
@@ -54,10 +55,22 @@ impl ddk::DeviceOps for SimpleDevice {
 // TODO: move this somewhere else to isolate usage of ddk_sys
 //       OR figure out how to provide hooks so that ddk_sys calls like this can be wrapped
 #[no_mangle]
-pub extern fn simple_init(mut _out_ctx: *mut *mut u8) -> sys::zx_status_t {
+pub extern fn simple_bind(mut _ctx: *mut u8, parent: *mut ddk_sys::zx_device_t, mut _out_cookie: *mut *mut u8) -> sys::zx_status_t {
     let simple = Box::new(SimpleDevice::new());
-    match ddk::add_device(simple, None, ddk::DEVICE_ADD_NON_BINDABLE) {
-        Ok(device) => { _out_ctx = Box::into_raw(Box::new(Box::new(device))) as *mut *mut u8; sys::ZX_OK }
+    match ddk::add_device(simple, Some(&ddk::Device::wrap(parent)), ddk::DEVICE_ADD_NON_BINDABLE) {
+        Ok(device) => {
+            _out_cookie = Box::into_raw(Box::new(Box::new(device))) as *mut *mut u8;
+            sys::ZX_OK
+        }
         Err(error) => error.into_raw()
     }
+}
+
+#[no_mangle]
+pub extern fn simple_unbind(_ctx: *mut u8, _parent: *mut ddk_sys::zx_device_t, cookie: *mut u8) {
+    let device: Box<Box<ddk::Device>>;
+    unsafe {
+        device = Box::from_raw(cookie as *mut Box<ddk::Device>);
+    }
+    ddk::remove_device(**device);
 }

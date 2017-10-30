@@ -7,8 +7,13 @@ description = "Sample app for interacting with the Rust DDK for the Zircon kerne
 repository = "https://fuchsia.googlesource.com/ddk-rs/"
 build = "build.rs"
 
+[lib]
+name = "ddk_toy"
+crate-type = ["dylib"]
+
 [dependencies]
 ddk-rs = { path = "../../../ddk-rs" }
+ddk-sys = { path = "../../ddk-sys" }
 fuchsia-zircon = { path = "../../../fuchsia-zircon" }
 
 [build-dependencies]

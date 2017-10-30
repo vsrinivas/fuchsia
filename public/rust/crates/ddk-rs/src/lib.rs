@@ -114,7 +114,7 @@ pub fn add_device(device_ops: Box<DeviceOps>, parent: Option<&Device>, flags: Ad
     unsafe {
         device_add_args.ops = &mut DEVICE_OPS;
         let mut ddk_device: *mut ddk_sys::zx_device_t = std::ptr::null_mut();
-        let ret = ddk_sys::device_add(raw_parent, &mut device_add_args, &mut ddk_device);
+        let ret = ddk_sys::device_add_from_driver(ddk_sys::__zircon_driver_rec__.driver, raw_parent, &mut device_add_args, &mut ddk_device);
         match ret {
             sys::ZX_OK => Ok(Device::wrap(ddk_device)),
             _ => Err(Status::from_raw(ret)),

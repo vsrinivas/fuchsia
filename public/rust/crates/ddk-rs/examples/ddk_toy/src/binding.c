@@ -6,12 +6,15 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
-extern zx_status_t simple_init(void** out_ctx);
+extern zx_status_t simple_bind(void* ctx, zx_device_t* device, void** cookie);
+extern void simple_unbind(void* ctx, zx_device_t* device, void* cookie);
 
 zx_driver_ops_t _driver_ops_ddk_toy = {
     .version = DRIVER_OPS_VERSION,
-    .init = simple_init,
+    .bind = simple_bind,
+    .unbind = simple_unbind,
 };
 
-ZIRCON_DRIVER_BEGIN(_driver_ddk_toy, _driver_ops_ddk_toy, "ddk-toy", "0.1.0", 0)
+ZIRCON_DRIVER_BEGIN(_driver_ddk_toy, _driver_ops_ddk_toy, "ddk-toy", "0.1.0", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
 ZIRCON_DRIVER_END(_driver_ddk_toy)
