@@ -486,6 +486,136 @@ zx_status_t Station::HandleDisassociation(const Packet* packet) {
     return SendDisassociateIndication(disassoc->reason_code);
 }
 
+zx_status_t Station::HandleAction(const Packet* packet) {
+    debugfn();
+    if (state_ != WlanState::kAssociated) {
+        verbosef("got action frame outside association. ignoring\n");
+        return ZX_OK;
+    }
+
+    MacAddr bssid(bss_->bssid.data());
+
+    auto mgmt_hdr = packet->field<MgmtFrameHeader>(0);
+    ZX_DEBUG_ASSERT(mgmt_hdr->fc.subtype() == ManagementSubtype::kAction);
+    ZX_DEBUG_ASSERT(mgmt_hdr->addr3 == bssid);
+    ZX_DEBUG_ASSERT(mgmt_hdr->IsAction());
+
+    auto action = packet->field<ActionFrame>(mgmt_hdr->len());
+    if (action == nullptr) {
+        // This code is reachable only when mgmt_hdr->IsAction() is true;
+        errorf("Attempted to access action frame with frame header type %u subtype %u\n",
+               mgmt_hdr->fc.type(), mgmt_hdr->fc.subtype());
+        return ZX_ERR_IO;
+    }
+
+    switch (action->category) {
+    case action::Category::kBlockAck:
+        HandleBlockAck(packet);
+        break;
+    default:
+        verbosef("Rxed Action frame with category %d. Not handled.\n", action->category);
+        break;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Station::HandleBlockAck(const Packet* packet) {
+    debugfn();
+    auto mgmt_hdr = packet->field<MgmtFrameHeader>(0);
+    auto ba_frame = packet->field<ActionFrameBlockAck>(mgmt_hdr->len());
+    if (ba_frame == nullptr) {
+        // This code is reachable only when mgmt_hdr->IsAction() is true;
+        errorf("Attempted to access blockack action frame with frame header type %u subtype %u\n",
+               mgmt_hdr->fc.type(), mgmt_hdr->fc.subtype());
+        return ZX_ERR_IO;
+    }
+
+    switch (ba_frame->action) {
+    case action::BaAction::kAddBaRequest: {
+        // TODO(porce): Support AddBar. Work with lower mac.
+        RefuseAddBar(packet);  // TODO(porce): Make this conditional.
+                               // depending on the hardware capability.
+        break;
+    }
+    case action::BaAction::kAddBaResponse:
+        // fall-through
+    case action::BaAction::kDelBa:
+        // fall-through
+    default:
+        warnf("BlockAck action frame with action %u not handled.\n", ba_frame->action);
+        break;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Station::RefuseAddBar(const Packet* rx_packet) {
+    debugfn();
+
+    auto mgmt_hdr = rx_packet->field<MgmtFrameHeader>(0);
+
+    auto addbar = rx_packet->field<AddBaRequestFrame>(mgmt_hdr->len());
+    if (addbar == nullptr) {
+        // This code is reachable only when mgmt_hdr->IsAction() is true;
+        errorf("Attempted to access ADDBAR action frame with frame header type %u subtype %u\n",
+               mgmt_hdr->fc.type(), mgmt_hdr->fc.subtype());
+        return ZX_ERR_IO;
+    }
+
+    debugf(
+        "Rxed ADDBAR: token %3u, amsdu %u policy %u tid %u buffer_size %u, timeout %u, "
+        "fragment "
+        "%u starting_seq %u",
+        addbar->dialog_token, addbar->params.amsdu(), addbar->params.policy(), addbar->params.tid(),
+        addbar->params.buffer_size(), addbar->timeout, addbar->seq_ctrl.fragment(),
+        addbar->seq_ctrl.starting_seq());
+
+    // Construct AddBaResponse frame
+    // Here MgmtFrameHeader construction does not use an optional header field.
+    // TODO(porce): Build a robust frame header constructor.
+    size_t frame_len = sizeof(MgmtFrameHeader) + sizeof(AddBaResponseFrame);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(frame_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    const MacAddr& mymac = device_->GetState()->address();
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), frame_len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
+    hdr->fc.set_type(kManagement);
+    hdr->fc.set_subtype(kAction);
+    hdr->addr1 = bssid_;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid_;
+    hdr->sc.set_seq(next_seq());
+    auto resp = packet->mut_field<AddBaResponseFrame>(sizeof(MgmtFrameHeader));
+    resp->category = action::Category::kBlockAck;
+    resp->action = action::BaAction::kAddBaResponse;
+    resp->dialog_token = addbar->dialog_token;
+
+    // TODO(porce): Research this.
+    // Use kSuccess to refuse, instead of kRefused.
+    // Aruba APs are persistent in asking again after refusal.
+    // resp->status_code = status_code::kRefused;
+    resp->status_code = status_code::kSuccess;
+
+    resp->params.set_amsdu(0);
+    resp->params.set_policy(BlockAckParameters::kImmediate);
+    resp->params.set_tid(addbar->params.tid());
+    resp->params.set_buffer_size(addbar->params.buffer_size());
+    resp->params.set_buffer_size(0);
+    resp->timeout = addbar->timeout;
+
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
+        errorf("could not send AddBaResponse: %d\n", status);
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t Station::HandleData(const Packet* packet) {
     if (state_ != WlanState::kAssociated) {
         // Drop packets when not associated
@@ -712,7 +842,7 @@ zx_status_t Station::SendKeepAliveResponse() {
         return ZX_OK;
     }
 
-    const MacAddr &mymac = device_->GetState()->address();
+    const MacAddr& mymac = device_->GetState()->address();
     size_t len = sizeof(DataFrameHeader);
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
@@ -938,10 +1068,8 @@ zx_status_t Station::SetKeys(SetKeysRequestPtr req) {
     debugfn();
 
     ZX_DEBUG_ASSERT(!req.is_null());
-    for (auto &keyPtr: req->keylist){
-        if (keyPtr.is_null() || keyPtr->key.is_null()) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
+    for (auto& keyPtr : req->keylist) {
+        if (keyPtr.is_null() || keyPtr->key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
 
         uint8_t key_type;
         switch (keyPtr->key_type) {
@@ -960,17 +1088,14 @@ zx_status_t Station::SetKeys(SetKeysRequestPtr req) {
         }
 
         auto key_config = reinterpret_cast<wlan_key_config_t*>(malloc(sizeof(wlan_key_config_t)));
-        if (key_config == nullptr) {
-            return ZX_ERR_NO_RESOURCES;
-        }
+        if (key_config == nullptr) { return ZX_ERR_NO_RESOURCES; }
         memcpy(key_config->key, keyPtr->key.data(), keyPtr->length);
         key_config->key_type = key_type;
         key_config->key_len = static_cast<uint8_t>(keyPtr->length);
         key_config->key_idx = keyPtr->key_id;
         key_config->protection = WLAN_PROTECTION_RX_TX;
         key_config->cipher_type = keyPtr->cipher_suite_type;
-        memcpy(key_config->cipher_oui,
-               keyPtr->cipher_suite_oui.data(),
+        memcpy(key_config->cipher_oui, keyPtr->cipher_suite_oui.data(),
                sizeof(key_config->cipher_oui));
         if (!keyPtr->address.is_null()) {
             memcpy(key_config->peer_addr, keyPtr->address.data(), sizeof(key_config->peer_addr));

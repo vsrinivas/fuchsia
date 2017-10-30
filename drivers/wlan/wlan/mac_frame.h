@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "action_frame.h"
 #include "element.h"
 #include "macaddr.h"
 
@@ -362,6 +363,8 @@ struct MgmtFrameHeader {
     bool IsBeacon() const { return fc.subtype() == kBeacon; }
 
     bool IsProbeResponse() const { return fc.subtype() == kProbeResponse; }
+
+    bool IsAction() const { return fc.subtype() == kAction; }
 
    private:
     const uint8_t* raw() const { return reinterpret_cast<const uint8_t*>(this); }

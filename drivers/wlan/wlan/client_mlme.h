@@ -48,6 +48,7 @@ class Mlme {
     zx_status_t HandleDeauthentication(const Packet* packet);
     zx_status_t HandleAssociationResponse(const Packet* packet);
     zx_status_t HandleDisassociation(const Packet* packet);
+    zx_status_t HandleAction(const Packet* packet);
 
     bool IsStaValid() const;
 

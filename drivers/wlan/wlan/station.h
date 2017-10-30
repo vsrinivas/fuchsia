@@ -71,6 +71,9 @@ class Station {
     zx_status_t HandleDeauthentication(const Packet* packet);
     zx_status_t HandleAssociationResponse(const Packet* packet);
     zx_status_t HandleDisassociation(const Packet* packet);
+    zx_status_t HandleAction(const Packet* packet);
+    zx_status_t HandleBlockAck(const Packet* packet);
+    zx_status_t RefuseAddBar(const Packet* packet);
     zx_status_t HandleData(const Packet* packet);
     zx_status_t HandleEth(const Packet* packet);
     zx_status_t HandleTimeout();
