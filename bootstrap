@@ -1,0 +1,51 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+function usage {
+  cat <<END
+usage: bootstrap [zircon|garnet|peridot|topaz]
+
+Bootstrap a Fuchsia development environment for the given layer. Defaults to
+boostraping at the topaz layer. For more information about the Fuchsia layer
+cake, see <https://fuchsia.googlesource.com/docs/+/master/layers.md>.
+END
+}
+
+if [[ $# -gt 1 ]]; then
+  usage
+  exit 1
+fi
+
+layer=${1:-topaz}
+
+if [[ "${layer}" != "zircon" ]] &&
+   [[ "${layer}" != "garnet" ]] &&
+   [[ "${layer}" != "peridot" ]] &&
+   [[ "${layer}" != "topaz" ]]; then
+  usage
+  exit 1
+fi
+
+if [[ "${layer}" == "zircon" ]]; then
+  git clone https://fuchsia.googlesource.com/zircon
+  echo "Done creating ${layer} development environment at \"$(pwd)/zircon\"."
+  exit 0
+fi
+
+curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s "${layer}"
+cd "${layer}"
+
+if [[ "${layer}" == "garnet" ]] || [[ "${layer}" == "peridot" ]]; then
+  .jiri_root/bin/jiri import "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
+else
+  .jiri_root/bin/jiri import fuchsia https://fuchsia.googlesource.com/manifest
+fi
+
+.jiri_root/bin/jiri update
+
+echo "Done creating ${layer} development environment at \"$(pwd)\"."
+echo "Recommended: export PATH=\"$(pwd)/.jiri_root/bin:\$PATH\""
