@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "mlme.h"
 #include <ddk/protocol/wlan.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
@@ -16,31 +17,32 @@ class Packet;
 class Scanner;
 class Station;
 
-// Mlme is the Mac sub-Layer Management Entity for the wlan driver. It is not thread-safe.
-class Mlme {
+// ClientMlme is a MLME which operates in non-AP mode. It is not thread-safe.
+class ClientMlme : Mlme {
    public:
-    explicit Mlme(DeviceInterface* device);
-    ~Mlme();
+    explicit ClientMlme(DeviceInterface* device);
+    ~ClientMlme();
 
-    zx_status_t Init();
+    zx_status_t Init() override;
 
+    // TODO(hahnr): Extract demuxing into new mlme dispatcher layer.
     zx_status_t HandlePacket(const Packet* packet);
     zx_status_t HandlePortPacket(uint64_t key);
 
     // Called before a channel change happens.
-    zx_status_t PreChannelChange(wlan_channel_t chan);
+    zx_status_t PreChannelChange(wlan_channel_t chan) override;
     // Called after a channel change is complete. The DeviceState channel will reflect the channel,
     // whether it changed or not.
-    zx_status_t PostChannelChange();
+    zx_status_t PostChannelChange() override;
+
+    // MAC frame handlers
+    zx_status_t HandleCtrlPacket(const Packet* packet) override;
+    zx_status_t HandleDataPacket(const Packet* packet) override;
+    zx_status_t HandleMgmtPacket(const Packet* packet) override;
+    zx_status_t HandleEthPacket(const Packet* packet) override;
+    zx_status_t HandleSvcPacket(const Packet* packet) override;
 
    private:
-    // MAC frame handlers
-    zx_status_t HandleCtrlPacket(const Packet* packet);
-    zx_status_t HandleDataPacket(const Packet* packet);
-    zx_status_t HandleMgmtPacket(const Packet* packet);
-    zx_status_t HandleEthPacket(const Packet* packet);
-    zx_status_t HandleSvcPacket(const Packet* packet);
-
     // Management frame handlers
     zx_status_t HandleBeacon(const Packet* packet);
     zx_status_t HandleProbeResponse(const Packet* packet);

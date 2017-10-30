@@ -53,13 +53,13 @@ class ObjectId : public common::BitField<uint64_t> {
 };
 }  // namespace
 
-Mlme::Mlme(DeviceInterface* device) : device_(device) {
+ClientMlme::ClientMlme(DeviceInterface* device) : device_(device) {
     debugfn();
 }
 
-Mlme::~Mlme() {}
+ClientMlme::~ClientMlme() {}
 
-zx_status_t Mlme::Init() {
+zx_status_t ClientMlme::Init() {
     debugfn();
 
     fbl::unique_ptr<Timer> timer;
@@ -86,7 +86,7 @@ void DumpPacket(const Packet& packet) {
 }
 }  // namespace
 
-zx_status_t Mlme::HandlePacket(const Packet* packet) {
+zx_status_t ClientMlme::HandlePacket(const Packet* packet) {
     debugfn();
     ZX_DEBUG_ASSERT(packet != nullptr);
     ZX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
@@ -143,7 +143,7 @@ zx_status_t Mlme::HandlePacket(const Packet* packet) {
     return status;
 }
 
-zx_status_t Mlme::HandlePortPacket(uint64_t key) {
+zx_status_t ClientMlme::HandlePortPacket(uint64_t key) {
     debugfn();
     ZX_DEBUG_ASSERT(ToPortKeyType(key) == PortKeyType::kMlme);
 
@@ -175,12 +175,12 @@ zx_status_t Mlme::HandlePortPacket(uint64_t key) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleCtrlPacket(const Packet* packet) {
+zx_status_t ClientMlme::HandleCtrlPacket(const Packet* packet) {
     debugfn();
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleDataPacket(const Packet* packet) {
+zx_status_t ClientMlme::HandleDataPacket(const Packet* packet) {
     debugfn();
     if (IsStaValid()) {
         auto hdr = packet->field<DataFrameHeader>(0);
@@ -194,7 +194,7 @@ zx_status_t Mlme::HandleDataPacket(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
+zx_status_t ClientMlme::HandleMgmtPacket(const Packet* packet) {
     debugfn();
     auto hdr = packet->field<MgmtFrameHeader>(0);
     if (hdr == nullptr) {
@@ -235,12 +235,12 @@ zx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleEthPacket(const Packet* packet) {
+zx_status_t ClientMlme::HandleEthPacket(const Packet* packet) {
     debugfn();
     return IsStaValid() ? sta_->HandleEth(packet) : ZX_OK;
 }
 
-zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
+zx_status_t ClientMlme::HandleSvcPacket(const Packet* packet) {
     debugfn();
     const uint8_t* p = packet->data();
     auto h = FromBytes<ServiceHeader>(p, packet->len());
@@ -351,7 +351,7 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     return status;
 }
 
-zx_status_t Mlme::HandleBeacon(const Packet* packet) {
+zx_status_t ClientMlme::HandleBeacon(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
@@ -364,7 +364,7 @@ zx_status_t Mlme::HandleBeacon(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
+zx_status_t ClientMlme::HandleProbeResponse(const Packet* packet) {
     debugfn();
 
     if (scanner_->IsRunning()) { scanner_->HandleBeaconOrProbeResponse(packet); }
@@ -372,7 +372,7 @@ zx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleAuthentication(const Packet* packet) {
+zx_status_t ClientMlme::HandleAuthentication(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -382,7 +382,7 @@ zx_status_t Mlme::HandleAuthentication(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
+zx_status_t ClientMlme::HandleDeauthentication(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -392,7 +392,7 @@ zx_status_t Mlme::HandleDeauthentication(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
+zx_status_t ClientMlme::HandleAssociationResponse(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -402,7 +402,7 @@ zx_status_t Mlme::HandleAssociationResponse(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleDisassociation(const Packet* packet) {
+zx_status_t ClientMlme::HandleDisassociation(const Packet* packet) {
     debugfn();
 
     if (IsStaValid()) {
@@ -412,7 +412,7 @@ zx_status_t Mlme::HandleDisassociation(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Mlme::HandleAction(const Packet* packet) {
+zx_status_t ClientMlme::HandleAction(const Packet* packet) {
     debugfn();
     if (IsStaValid()) {
         auto hdr = packet->field<MgmtFrameHeader>(0);
@@ -421,18 +421,18 @@ zx_status_t Mlme::HandleAction(const Packet* packet) {
     return ZX_OK;
 }
 
-bool Mlme::IsStaValid() const {
+bool ClientMlme::IsStaValid() const {
     // TODO(porce): Redefine the notion of the station validity.
     return sta_ != nullptr && sta_->bssid() != nullptr;
 }
 
-zx_status_t Mlme::PreChannelChange(wlan_channel_t chan) {
+zx_status_t ClientMlme::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     if (IsStaValid()) { sta_->PreChannelChange(chan); }
     return ZX_OK;
 }
 
-zx_status_t Mlme::PostChannelChange() {
+zx_status_t ClientMlme::PostChannelChange() {
     debugfn();
     if (IsStaValid()) { sta_->PostChannelChange(); }
     return ZX_OK;

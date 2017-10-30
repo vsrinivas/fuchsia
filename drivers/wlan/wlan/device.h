@@ -107,7 +107,8 @@ class Device : public WlanBaseDevice,
     std::thread work_thread_;
     zx::port port_;
 
-    Mlme mlme_ __TA_GUARDED(lock_);
+    // TODO(hahnr): Depend on MLME Dispatcher rather than concrete MLME.
+    ClientMlme mlme_ __TA_GUARDED(lock_);
 
     bool dead_ __TA_GUARDED(lock_) = false;
     zx::channel channel_ __TA_GUARDED(lock_);
