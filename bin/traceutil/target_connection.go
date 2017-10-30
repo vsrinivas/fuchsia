@@ -18,12 +18,7 @@ type TargetConnection struct {
 }
 
 func newSigner() (ssh.Signer, error) {
-	fuchsiaBuildDir := os.Getenv("FUCHSIA_BUILD_DIR")
-	if fuchsiaBuildDir == "" {
-		return nil, fmt.Errorf("FUCHSIA_BUILD_DIR not set.")
-	}
-
-	keyFile := path.Join(fuchsiaBuildDir, "ssh-keys", "id_ed25519")
+	keyFile := path.Join(buildRoot, "ssh-keys", "id_ed25519")
 	key, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		return nil, err
@@ -32,12 +27,7 @@ func newSigner() (ssh.Signer, error) {
 }
 
 func findDefaultTarget() (string, error) {
-	fuchsiaOutDir := os.Getenv("FUCHSIA_OUT_DIR")
-	if fuchsiaOutDir == "" {
-		return "", fmt.Errorf("FUCHSIA_OUT_DIR not set.")
-	}
-
-	netaddr := path.Join(fuchsiaOutDir, "build-zircon", "tools", "netaddr")
+	netaddr := path.Join(fuchsiaRoot, "out", "build-zircon", "tools", "netaddr")
 	output, err := getCommandOutput(netaddr, "--fuchsia")
 	output = strings.TrimSpace(output)
 	if err != nil {

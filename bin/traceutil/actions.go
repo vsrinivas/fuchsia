@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -61,12 +60,8 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection) error {
 }
 
 func convertTrace(inputPath string, outputPath string) error {
-	fuchsiaDir := os.Getenv("FUCHSIA_DIR")
-	if fuchsiaDir == "" {
-		return fmt.Errorf("FUCHSIA_DIR not set.")
-	}
 	fmt.Printf("Converting %s to %s... ", inputPath, outputPath)
-	err := runCommand(path.Join(fuchsiaDir, "third_party", "catapult",
+	err := runCommand(path.Join(fuchsiaRoot, "third_party", "catapult",
 		"tracing", "bin", "trace2html"), "--output", outputPath, inputPath)
 	if err != nil {
 		fmt.Printf("failed: %s\n", err.Error())
