@@ -21,10 +21,6 @@ static const uint32_t kSpsrEl1h = 0b0101;
 static const uint32_t kSpsrDaif = 0b1111 << 6;
 static const uint32_t kSpsrNzcv = 0b1111 << 28;
 
-static uint cpu_of(uint8_t vpid) {
-    return vpid % arch_max_num_cpus();
-}
-
 static zx_paddr_t vttbr_of(uint8_t vmid, zx_paddr_t table) {
     return static_cast<zx_paddr_t>(vmid) << 48 | table;
 }
@@ -38,10 +34,11 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
         return status;
     auto auto_call = fbl::MakeAutoCall([vpid]() { free_vpid(vpid); });
 
-    thread_t* thread = pin_thread(cpu_of(vpid));
+    // For efficiency, we pin the thread to the CPU.
+    thread_t* thread = pin_thread(vpid);
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(vmid, thread, gpas, traps));
+    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(vmid, vpid, thread, gpas, traps));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -53,13 +50,21 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     return ZX_OK;
 }
 
-Vcpu::Vcpu(uint8_t vmid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps)
-    : vmid_(vmid), thread_(thread), gpas_(gpas), traps_(traps), el2_state_(/* zero-init */) {
+Vcpu::Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas,
+           TrapMap* traps)
+    : vmid_(vmid), vpid_(vpid), thread_(thread), gpas_(gpas), traps_(traps),
+    el2_state_(/* zero-init */) {
     (void) thread_;
 }
 
+Vcpu::~Vcpu() {
+    __UNUSED zx_status_t status = free_vpid(vpid_);
+    DEBUG_ASSERT(status == ZX_OK);
+}
+
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-    // TODO(abdulla): Check pinned CPU invariant.
+    if (!check_pinned_cpu_invariant(thread_, vpid_))
+        return ZX_ERR_BAD_STATE;
     zx_paddr_t vttbr = vttbr_of(vmid_, gpas_->table_phys());
     zx_status_t status;
     do {
@@ -77,7 +82,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 }
 
 zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
-    // TODO(abdulla): Check pinned CPU invariant.
+    if (!check_pinned_cpu_invariant(thread_, vpid_))
+        return ZX_ERR_BAD_STATE;
     if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t))
         return ZX_ERR_INVALID_ARGS;
 
@@ -89,7 +95,8 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
 }
 
 zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
-    // TODO(abdulla): Check pinned CPU invariant.
+    if (!check_pinned_cpu_invariant(thread_, vpid_))
+        return ZX_ERR_BAD_STATE;
     if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t))
         return ZX_ERR_INVALID_ARGS;
 

@@ -194,19 +194,8 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
     return ZX_OK;
 }
 
-static cpu_num_t cpu_of(uint16_t vpid) {
-    return vpid % arch_max_num_cpus();
-}
-
-static bool check_pinned_cpu_invariant(const thread_t* thread, uint16_t vpid) {
-    cpu_num_t cpu = cpu_of(vpid);
-    return thread == get_current_thread() &&
-           thread->cpu_affinity & cpu_num_to_mask(cpu) &&
-           arch_curr_cpu_num() == cpu;
-}
-
-AutoPin::AutoPin(cpu_num_t cpu)
-    : prev_cpu_mask_(get_current_thread()->cpu_affinity), thread_(pin_thread(cpu)) {}
+AutoPin::AutoPin(uint16_t vpid)
+    : prev_cpu_mask_(get_current_thread()->cpu_affinity), thread_(pin_thread(vpid)) {}
 
 AutoPin::~AutoPin() {
     thread_set_cpu_affinity(thread_, prev_cpu_mask_);
@@ -564,7 +553,7 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, zx_vaddr_t cr3, fbl::RefPtr<VmObject> ap
     // 2. The state of the VMCS associated with the VCPU is cached within the
     //    CPU. To move to a different CPU, we must perform an explicit migration
     //    which will cost us performance.
-    thread_t* thread = pin_thread(cpu_of(vpid));
+    thread_t* thread = pin_thread(vpid);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, apic_vmo, gpas, traps));
@@ -621,7 +610,7 @@ Vcpu::~Vcpu() {
 
     // The destructor may be called from a different thread, therefore we must
     // pin the current thread to the same CPU as the VCPU.
-    AutoPin pin(cpu_of(vpid_));
+    AutoPin pin(vpid_);
     vmclear(vmcs_page_.PhysicalAddress());
     __UNUSED zx_status_t status = free_vpid(vpid_);
     DEBUG_ASSERT(status == ZX_OK);

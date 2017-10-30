@@ -34,8 +34,19 @@ cpu_mask_t percpu_exec(percpu_task_t task, void* context) {
     return state.cpu_mask.load();
 }
 
-thread_t* pin_thread(cpu_num_t cpu) {
+cpu_num_t cpu_of(uint16_t vpid) {
+    return vpid % arch_max_num_cpus();
+}
+
+thread_t* pin_thread(uint16_t vpid) {
     thread_t* thread = get_current_thread();
-    thread_set_cpu_affinity(thread, cpu_num_to_mask(cpu));
+    thread_set_cpu_affinity(thread, cpu_num_to_mask(cpu_of(vpid)));
     return thread;
+}
+
+bool check_pinned_cpu_invariant(const thread_t* thread, uint16_t vpid) {
+    cpu_num_t cpu = cpu_of(vpid);
+    return thread == get_current_thread() &&
+           thread->cpu_affinity & cpu_num_to_mask(cpu) &&
+           arch_curr_cpu_num() == cpu;
 }

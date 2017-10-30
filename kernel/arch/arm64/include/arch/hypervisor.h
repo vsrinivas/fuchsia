@@ -43,6 +43,7 @@ class Vcpu {
 public:
     static zx_status_t Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace* gpas,
                               TrapMap* traps, fbl::unique_ptr<Vcpu>* out);
+    ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
     zx_status_t Resume(zx_port_packet_t* packet);
@@ -51,12 +52,13 @@ public:
 
 private:
     const uint8_t vmid_;
+    const uint8_t vpid_;
     const thread_t* thread_;
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;
     El2State el2_state_;
 
-    Vcpu(uint8_t vmid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps);
+    Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps);
 };
 
 /* Create a guest. */
