@@ -23,9 +23,13 @@ import argparse
 import collections
 import fileinput
 import os.path
-import paths
 import re
 import sys
+
+FUCHSIA_ROOT = os.path.dirname(  # $root
+    os.path.dirname(             # scripts
+    os.path.dirname(             # style
+    os.path.abspath(__file__))))
 
 LAYERS = [
     'garnet',
@@ -68,8 +72,8 @@ def check_file(path, fix_guards=False):
     if path[-2:] != '.h':
         return True
 
-    assert(path.startswith(paths.FUCHSIA_ROOT))
-    relative_path = path[len(paths.FUCHSIA_ROOT):].strip('/')
+    assert(path.startswith(FUCHSIA_ROOT))
+    relative_path = path[len(FUCHSIA_ROOT):].strip('/')
     upper_path = relative_path.upper()
     header_guard = re.sub(disallowed_header_characters, '_', upper_path) + '_'
     header_guard = adjust_for_layer(header_guard)
@@ -118,7 +122,8 @@ def check_file(path, fix_guards=False):
         if found_ifndef or found_define or found_endif:
             print('%s contains both #pragma once and header guards' % path)
             return False
-        return True
+        if not fix_guards:
+            return True
 
     if found_ifndef and found_define and found_endif:
         return True
@@ -140,6 +145,7 @@ def fix_header_guard(path, header_guard):
     fixed_ifndef = False
     fixed_define = False
     fixed_endif = False
+    fixed_pragma_once = False
 
     for line in fileinput.input(path, inplace=1):
         (new_line, changes) = re.subn(ifndef,
@@ -163,8 +169,19 @@ def fix_header_guard(path, header_guard):
             fixed_endif = True
             sys.stdout.write(new_line)
             continue
+        if pragma_once.match(line):
+            fixed_pragma_once = True
+            sys.stdout.write('#ifndef %s\n' % header_guard)
+            sys.stdout.write('#define %s\n' % header_guard)
+            continue
         sys.stdout.write(line)
-    if fixed_ifndef and fixed_define and fixed_endif:
+
+    if fixed_pragma_once:
+        with open(path, 'a') as file:
+            file.write('\n')
+            file.write('#endif  // %s\n' % header_guard)
+
+    if (fixed_ifndef and fixed_define and fixed_endif) or fixed_pragma_once:
         print('Fixed!')
     else:
         print('Not fixed...')
