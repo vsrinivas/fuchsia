@@ -564,12 +564,6 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
             // This shouldn't really happen unless the system is really loaded.
             // Just flag it and try again. The watchdog will catch failures.
             unittest_printf("%s: timed out???\n", __func__);
-            // Work around zx-1315. The SUSPENDED signal will get dropped if
-            // RUNNING is already queued.
-            zx_signals_t observed;
-            status = zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, 0u, &observed);
-            if (status == ZX_OK)
-                break;
             continue;
         }
         ASSERT_EQ(status, ZX_OK, "");

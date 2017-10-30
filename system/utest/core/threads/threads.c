@@ -630,6 +630,170 @@ static bool test_kill_suspended_thread(void) {
     END_TEST;
 }
 
+static bool port_wait_for_signal_once(zx_handle_t port, zx_handle_t thread,
+                                      zx_time_t deadline, zx_signals_t mask,
+                                      zx_port_packet_t* packet) {
+    ASSERT_EQ(zx_object_wait_async(thread, port, 0u, mask,
+                                   ZX_WAIT_ASYNC_ONCE),
+              ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port, deadline, packet, 1), ZX_OK, "");
+    ASSERT_EQ(packet->type, ZX_PKT_TYPE_SIGNAL_ONE, "");
+    return true;
+}
+
+static bool port_wait_for_signal_repeating(zx_handle_t port,
+                                           zx_time_t deadline,
+                                           zx_port_packet_t* packet) {
+    ASSERT_EQ(zx_port_wait(port, deadline, packet, 1), ZX_OK, "");
+    ASSERT_EQ(packet->type, ZX_PKT_TYPE_SIGNAL_REP, "");
+    return true;
+}
+
+// Test signal delivery of suspended threads via async wait.
+static bool test_suspend_wait_async_signal_delivery_worker(bool use_repeating) {
+    zx_handle_t event;
+    zx_handle_t port;
+    zxr_thread_t thread;
+    zx_handle_t thread_h;
+    const zx_signals_t run_susp_mask = ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
+
+    ASSERT_EQ(zx_event_create(0, &event), ZX_OK, "");
+    ASSERT_TRUE(start_thread(threads_test_wait_fn, &event, &thread, &thread_h), "");
+
+    ASSERT_EQ(zx_port_create(0, &port), ZX_OK, "");
+    if (use_repeating) {
+        ASSERT_EQ(zx_object_wait_async(thread_h, port, 0u, run_susp_mask,
+                                       ZX_WAIT_ASYNC_REPEATING),
+                  ZX_OK, "");
+    }
+
+    zx_port_packet_t packet;
+    // There should be a RUNNING signal packet present and not SUSPENDED.
+    // This is from when the thread first started to run.
+    if (use_repeating) {
+        ASSERT_TRUE(port_wait_for_signal_repeating(port, 0u, &packet), "");
+    } else {
+        ASSERT_TRUE(port_wait_for_signal_once(port, thread_h, 0u, run_susp_mask, &packet), "");
+    }
+    ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_RUNNING, "");
+
+    // Make sure there are no more packets.
+    if (use_repeating) {
+        ASSERT_EQ(zx_port_wait(port, 0u, &packet, 1), ZX_ERR_TIMED_OUT, "");
+    } else {
+        // In the non-repeating case we have to do things differently as one of
+        // RUNNING or SUSPENDED is always asserted.
+        ASSERT_EQ(zx_object_wait_async(thread_h, port, 0u,
+                                       ZX_THREAD_SUSPENDED,
+                                       ZX_WAIT_ASYNC_ONCE),
+                  ZX_OK, "");
+        ASSERT_EQ(zx_port_wait(port, 0u, &packet, 1), ZX_ERR_TIMED_OUT, "");
+        ASSERT_EQ(zx_port_cancel(port, thread_h, 0u), ZX_OK, "");
+    }
+
+    zx_info_thread_t info;
+    ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
+    ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                 &info, sizeof(info), NULL, NULL),
+              ZX_OK, "");
+    ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED, "");
+    ASSERT_TRUE(resume_thread_synchronous(thread_h), "");
+    ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                 &info, sizeof(info), NULL, NULL),
+              ZX_OK, "");
+    // At this point the thread may be running or blocked waiting for an
+    // event. Either one is fine.
+    ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING ||
+                info.state == ZX_THREAD_STATE_BLOCKED, "");
+
+    // For repeating async waits we should see both SUSPENDED and RUNNING on
+    // the port. And we should see them at the same time (and not one followed
+    // by the other).
+    if (use_repeating) {
+        ASSERT_TRUE(port_wait_for_signal_repeating(port,
+                                                   zx_deadline_after(ZX_MSEC(100)),
+                                                   &packet), "");
+        ASSERT_EQ(packet.signal.observed & run_susp_mask, run_susp_mask, "");
+    } else {
+        // For non-repeating async waits we should see just RUNNING,
+        // and it should be immediately present (no deadline).
+        ASSERT_TRUE(port_wait_for_signal_once(port, thread_h, 0u, run_susp_mask,
+                                              &packet), "");
+        ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_RUNNING, "");
+    }
+
+    // The thread should still be blocked on the event when it wakes up.
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, zx_deadline_after(ZX_MSEC(100)),
+                                 NULL), ZX_ERR_TIMED_OUT, "");
+    ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                 &info, sizeof(info), NULL, NULL),
+              ZX_OK, "");
+    ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
+
+    // Check that suspend/resume while blocked in a syscall results in
+    // the expected behavior and is visible via async wait.
+    ASSERT_EQ(zx_task_suspend(thread_h), ZX_OK, "");
+    if (use_repeating) {
+        ASSERT_TRUE(port_wait_for_signal_repeating(port,
+                                                   zx_deadline_after(ZX_MSEC(100)),
+                                                   &packet), "");
+    } else {
+        ASSERT_TRUE(port_wait_for_signal_once(port, thread_h,
+                                              zx_deadline_after(ZX_MSEC(100)),
+                                              ZX_THREAD_SUSPENDED, &packet), "");
+    }
+    ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_SUSPENDED, "");
+    ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                 &info, sizeof(info), NULL, NULL),
+              ZX_OK, "");
+    ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED, "");
+    ASSERT_EQ(zx_task_resume(thread_h, 0), ZX_OK, "");
+    if (use_repeating) {
+        ASSERT_TRUE(port_wait_for_signal_repeating(port,
+                                                   zx_deadline_after(ZX_MSEC(100)),
+                                                   &packet), "");
+    } else {
+        ASSERT_TRUE(port_wait_for_signal_once(port, thread_h,
+                                              zx_deadline_after(ZX_MSEC(100)),
+                                              ZX_THREAD_RUNNING, &packet), "");
+    }
+    ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_RUNNING, "");
+    ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                 &info, sizeof(info), NULL, NULL),
+              ZX_OK, "");
+    // Resumption from being suspended back into a blocking syscall will be
+    // in the RUNNING state and then BLOCKED.
+    ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING ||
+                info.state == ZX_THREAD_STATE_BLOCKED,
+                "");
+
+    ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK, "");
+    ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_1, ZX_TIME_INFINITE, NULL), ZX_OK, "");
+
+    ASSERT_EQ(zx_object_wait_one(
+        thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
+
+    ASSERT_EQ(zx_handle_close(port), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(event), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");
+
+    return true;
+}
+
+// Test signal delivery of suspended threads via single async wait.
+static bool test_suspend_single_wait_async_signal_delivery(void) {
+    BEGIN_TEST;
+    EXPECT_TRUE(test_suspend_wait_async_signal_delivery_worker(false), "");
+    END_TEST;
+}
+
+// Test signal delivery of suspended threads via repeating async wait.
+static bool test_suspend_repeating_wait_async_signal_delivery(void) {
+    BEGIN_TEST;
+    EXPECT_TRUE(test_suspend_wait_async_signal_delivery_worker(true), "");
+    END_TEST;
+}
+
 // This tests the registers reported by zx_thread_read_state() for a
 // suspended thread.  It starts a thread which sets all the registers to
 // known test values.
@@ -878,6 +1042,8 @@ RUN_TEST(test_suspend_channel_call)
 RUN_TEST(test_suspend_port_call)
 RUN_TEST(test_suspend_stops_thread)
 RUN_TEST(test_kill_suspended_thread)
+RUN_TEST(test_suspend_single_wait_async_signal_delivery)
+RUN_TEST(test_suspend_repeating_wait_async_signal_delivery)
 RUN_TEST(test_reading_register_state)
 RUN_TEST(test_writing_register_state)
 RUN_TEST(test_noncanonical_rip_address)
