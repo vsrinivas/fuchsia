@@ -256,16 +256,6 @@ struct StopRequest {
 
 // MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
 
-enum KeyId {
-    WEP = 0,
-    TKIP = 1,
-    CCMP = 2,
-    GCMP = 3,
-    // Specs are unclear about values for 4 & 5.
-    BIP_CMAC = 4,
-    BIP_GMAC = 5
-    // 6 - 4095 Reserved
-};
 
 enum KeyType {
     GROUP,
@@ -278,18 +268,12 @@ struct SetKeyDescriptor {
     // Specs specify a bit string, we use byte array.
     array<uint8> key;
     uint16 length;
-    KeyId key_id;
+    uint16 key_id;
     KeyType key_type;
     array<uint8, 6> address;
     array<uint8, 8> rsc;
     array<uint8, 3> cipher_suite_oui;
     uint8 cipher_suite_type;
-
-    // Non-IEEE specified fields:
-
-    // Support for indexing rotating keys such as the group key. The index must be handed down to
-    // the MLME to correctly setup key rotation.
-    uint8 key_idx;
 };
 
 struct SetKeysRequest {
@@ -299,7 +283,7 @@ struct SetKeysRequest {
 // MLME-DELETEKEYS.request (IEEE Std 802.11-2016 6.3.20.1)
 
 struct DeleteKeyDescriptor {
-  KeyId key_id;
+  uint16 key_id;
   KeyType key_type;
   array<uint8, 6> address;
 };

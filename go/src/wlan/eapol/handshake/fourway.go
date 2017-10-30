@@ -5,16 +5,16 @@
 package handshake
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
+	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	"log"
 	"math/big"
 	"wlan/eapol"
 	"wlan/eapol/crypto"
 	"wlan/keywrap"
 	"wlan/wlan/elements"
-	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
-	"bytes"
-	"log"
-	"encoding/hex"
 )
 
 // This is an implementation of the 4-Way Handshake used to exchange pair-wise and group keys.
@@ -76,7 +76,7 @@ type FourWay struct {
 	sNonce           [32]byte
 	ptk              *crypto.PTK
 	gtk              []byte
-	gtkIdx           uint8
+	gtkID            uint8
 	state            fourWayState
 }
 
@@ -231,7 +231,7 @@ func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFram
 		log.Println("GTK Index: ", gtkKDE.KeyID)
 	}
 	hs.gtk = gtkKDE.GTK
-	hs.gtkIdx = gtkKDE.KeyID
+	hs.gtkID = gtkKDE.KeyID
 	return nil
 }
 
@@ -264,10 +264,9 @@ func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
 			Key:             hs.gtk,
 			Length:          uint16(len(hs.gtk)),
 			KeyType:         mlme.KeyType_Group,
-			KeyId:           toMLMEKeyID(cipher),
+			KeyId:           uint16(hs.gtkID),
 			CipherSuiteOui:  cipher.OUI,
 			CipherSuiteType: uint8(cipher.Type),
-			KeyIdx:					 hs.gtkIdx,
 		})
 	}
 
@@ -284,7 +283,6 @@ func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
 			Key:             hs.ptk.TK,
 			Length:          uint16(len(hs.ptk.TK)),
 			KeyType:         mlme.KeyType_Pairwise,
-			KeyId:           toMLMEKeyID(&cipher),
 			Address:         hs.config.PeerAddr,
 			CipherSuiteOui:  cipher.OUI,
 			CipherSuiteType: uint8(cipher.Type),
@@ -539,11 +537,6 @@ func getMessageNumber(f *eapol.KeyFrame) messageNumber {
 		return Message3
 	}
 	return Message1
-}
-
-func toMLMEKeyID(_ *elements.CipherSuite) mlme.KeyId {
-	// TODO(hahnr): Support additional ciphers.
-	return mlme.KeyId_Ccmp
 }
 
 func isZero(buf []byte) bool {
