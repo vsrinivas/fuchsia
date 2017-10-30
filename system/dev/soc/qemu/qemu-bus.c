@@ -95,6 +95,22 @@ static zx_protocol_device_t qemu_bus_device_protocol = {
     .release = qemu_bus_release,
 };
 
+static const pbus_mmio_t pl031_mmios[] = {
+    {
+        .base = RTC_BASE_PHYS,
+        .length = RTC_SIZE,
+    },
+};
+
+static const pbus_dev_t pl031_dev = {
+    .name = "pl031",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_RTC_PL031,
+    .mmios = pl031_mmios,
+    .mmio_count = countof(pl031_mmios),
+};
+
 static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent, void** cookie) {
     // we don't really need a context struct yet, but lets create one for future expansion.
     qemu_bus_t* bus = calloc(1, sizeof(qemu_bus_t));
@@ -139,6 +155,11 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent, void** cookie) 
     status = pbus_device_add(&bus->pbus, &pci_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "qemu_bus_bind could not add pci_dev: %d\n", status);
+    }
+
+    status = pbus_device_add(&bus->pbus, &pl031_dev, 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "qemu_bus_bind could not add pl031: %d\n", status);
     }
 
     return ZX_OK;

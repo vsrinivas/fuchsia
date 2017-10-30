@@ -55,6 +55,7 @@ static const int a15irqmap[] = {
 #define UART_BASE           (PERIPHERAL_BASE_VIRT + 0x09000000)
 #define UART_SIZE           (0x00001000)
 #define RTC_BASE            (PERIPHERAL_BASE_VIRT + 0x09010000)
+#define RTC_BASE_PHYS       (PERIPHERAL_BASE_PHYS + 0x09010000)
 #define RTC_SIZE            (0x00001000)
 #define FW_CFG_BASE         (PERIPHERAL_BASE_VIRT + 0x09020000)
 #define FW_CFG_SIZE         (0x00001000)
@@ -74,6 +75,7 @@ static const int a15irqmap[] = {
 #define ARM_GENERIC_TIMER_VIRTUAL_INT 27
 #define ARM_GENERIC_TIMER_PHYSICAL_INT 30
 #define UART0_INT       (32 + 1)
+#define RTC_INT         (32 + 2)
 #define PCIE_INT_BASE   (32 + 3)
 #define PCIE_INT_COUNT  (4)
 #define VIRTIO0_INT     (32 + 16)
