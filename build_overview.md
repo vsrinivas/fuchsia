@@ -7,7 +7,7 @@ The Fuchsia build system aims at building complete boot images for various
 devices. To do so, it uses [GN][gn-main], a meta-build system that generates
 build files consumed by [Ninja][ninja-main] to execute the actual build.
 
-The contents of the generated image are controlled by a set of modules defining
+The contents of the generated image are controlled by a set of packages defining
 what should go into the GN build and what should be packaged into the image.
 
 
@@ -52,11 +52,11 @@ $ scripts/build-zircon.sh
 
 ##### B
 
-Then configure the content of the generated image by choosing the modules to
+Then configure the content of the generated image by choosing the packages to
 incorporate:
 ```
 # fuchsia_base is typically "default".
-# my_stuff is a possibly-empty list of extra modules to include.
+# my_stuff is a possibly-empty list of extra packages to include.
 
 $ packages/gn/gen.py --packages packages/gn/fuchsia_base,packages/gn/my_stuff
 ```
@@ -68,34 +68,31 @@ the build.
 
 The final step is to run the actual build with Ninja:
 ```
-$ buildtools/ninja -C out/debug-x86-64 -j64
+$ buildtools/ninja -C out/debug-x86-64 -j 64
 ```
 
 ### Rebuilding
 
-#### After modifying non-module files
+#### After modifying non-Zircon files
 
 In order to rebuild the tree after modifying some sources, just rerun step
 **C**. This holds true even if you modify `BUILD.gn` files as GN adds Ninja
-targets to update Ninja targets if build files are changed!
+targets to update Ninja targets if build files are changed! The same holds true
+for package files used to configure the build.
 
-#### After modifying module files
+#### After modifying Zircon files
 
-If you modified the list of `labels` in a module file you include in your build,
-or if you need to include a new module, you should rerun **B** before running
-**C** again.
+You will want to rerun **A** and **C**.
 
 #### After syncing sources
 
 You’ll most likely need to run **A** once if anything in the Zircon tree was
 changed. After that, run **C** again.
-In the rare case that a module file you depend on was sync’d in the process,
-you’ll also need to run **B** in the usual order.
 
 
 ### Tips and tricks
 
-#### Visualizing the hierarchy of build modules
+#### Visualizing the hierarchy of build packages
 
 ```
 $ scripts/visualize_module_tree.py > tree.dot
@@ -136,6 +133,7 @@ If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 ```
 $ buildtools/ninja -C out/debug-x86-64 -j64 foo/bar/blah:dash
 ```
+Note that this only works for targets in the default toolchain.
 
 #### Exploring Ninja targets
 
@@ -192,8 +190,6 @@ You likely forgot to run **A** before running **B**.
 
 [gn-main]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/README.md
 [ninja-main]: https://ninja-build.org/
-[modules-source]: https://fuchsia.googlesource.com/packages/+/master/gn
 [gn-reference]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/build/+/master/
 [packages-source]: https://fuchsia.googlesource.com/docs/+/master/build_packages.md
-
