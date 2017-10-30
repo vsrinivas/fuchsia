@@ -484,7 +484,7 @@ template("variant_target") {
     # toolchains is actually just this copy rule.  The target is built in
     # the selected variant toolchain, but then copied to its usual name in
     # $root_out_dir so that things can find it there.
-    copy(target_name) {
+    copy_vars = {
       forward_variables_from(target_invoker,
                              [
                                "testonly",
@@ -511,6 +511,37 @@ template("variant_target") {
       outputs = [
         "$root_out_dir/$full_output_name",
       ]
+    }
+
+    # In the host toolchain, make a symlink rather than a hard link
+    # (which is what "copy" rules really do).  Host tools are built with
+    # an embedded shared library lookup path based on $ORIGIN on Linux
+    # (//build/config/linux:compiler) and the equivalent @loader_path on
+    # macOS (//build/config/mac:mac_dynamic_flags).  The dynamic linker
+    # translates this to "the directory containing the executable".
+    # With hard links, this gets the directory used to invoke the
+    # executable, which is host_toolchain's $root_out_dir.  With
+    # symlinks, it instead gets the directory containing the actual
+    # executable file, which is builder_toolchain's $root_out_dir.
+    # Hence the program uses the variant builds of shared libraries that
+    # go with the variant build of the executable, rather using than the
+    # vanilla host_toolchain builds with the variant executable.
+    if (current_toolchain == host_toolchain) {
+      action(target_name) {
+        forward_variables_from(copy_vars, "*")
+        script = "/bin/ln"
+        args = [
+          "-snf",
+          rebase_path(sources[0], root_out_dir),
+          rebase_path(outputs[0]),
+        ]
+      }
+    } else {
+      # For Fuchsia, //packages/gn/variant.py depends on hard links to
+      # identify the variants.
+      copy(target_name) {
+        forward_variables_from(copy_vars, "*")
+      }
     }
   }
 }
