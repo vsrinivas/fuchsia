@@ -16,7 +16,7 @@ group("services") {
 group("tools") {
   public_deps = [
     "//garnet/bin/flog_viewer",
-    "//garnet/bin/vol",
+    "//garnet/bin/media/vol",
   ]
 }
 
