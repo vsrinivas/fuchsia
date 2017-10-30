@@ -33,7 +33,7 @@ void FakeDeviceSet::SetFingerprint(fidl::Array<uint8_t> fingerprint,
 }
 
 void FakeDeviceSet::SetWatcher(
-    fidl::Array<uint8_t> fingerprint,
+    fidl::Array<uint8_t> /*fingerprint*/,
     fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     const SetWatcherCallback& callback) {
   watcher_ = cloud_provider::DeviceSetWatcherPtr::Create(std::move(watcher));

@@ -82,7 +82,7 @@ class TreeNode {
 
  private:
   TreeNode(PageStorage* page_storage,
-           std::string id,
+           std::string digest,
            uint8_t level,
            std::vector<Entry> entries,
            std::vector<ObjectDigest> children);

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
 #include "peridot/bin/ledger/test/ledger_app_instance_factory.h"
 
 #include "gtest/gtest.h"
@@ -50,7 +52,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           std::move(ledger_repository_factory)),
       controller_(std::move(controller)),
       cloud_provider_firebase_factory_(cloud_provider_firebase_factory),
-      server_id_(server_id) {}
+      server_id_(std::move(server_id)) {}
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   return cloud_provider_firebase_factory_->MakeCloudProvider(server_id_,

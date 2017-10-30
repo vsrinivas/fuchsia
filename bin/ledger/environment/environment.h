@@ -17,8 +17,8 @@ namespace ledger {
 // Environment for the ledger application.
 class Environment {
  public:
-  Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
-              fxl::RefPtr<fxl::TaskRunner> io_runner = nullptr);
+  explicit Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
+                       fxl::RefPtr<fxl::TaskRunner> io_runner = nullptr);
   ~Environment();
 
   const fxl::RefPtr<fxl::TaskRunner> main_runner() { return main_runner_; }

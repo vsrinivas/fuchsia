@@ -17,7 +17,7 @@ namespace {
 // calls |ContinueIfNeeded| when the loop exits.
 class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
-  TestCoroutineHandler(coroutine::CoroutineHandler* delegate)
+  explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate)
       : delegate_(delegate) {}
 
   bool Yield() override { return delegate_->Yield(); }

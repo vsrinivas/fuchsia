@@ -17,7 +17,7 @@ namespace encryption {
 
 class EncryptionServiceImpl : public EncryptionService {
  public:
-  EncryptionServiceImpl(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit EncryptionServiceImpl(fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~EncryptionServiceImpl() override;
 
   // EncryptionService:

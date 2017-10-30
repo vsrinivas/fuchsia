@@ -24,7 +24,8 @@ namespace test {
 // the real cloud provider.
 class CloudProviderFirebaseFactory {
  public:
-  CloudProviderFirebaseFactory(app::ApplicationContext* application_context);
+  explicit CloudProviderFirebaseFactory(
+      app::ApplicationContext* application_context);
   ~CloudProviderFirebaseFactory();
 
   void Init();

@@ -96,9 +96,8 @@ bool FakeJournalDelegate::IsRolledBack() const {
 std::vector<CommitIdView> FakeJournalDelegate::GetParentIds() const {
   if (other_id_.empty()) {
     return {parent_id_};
-  } else {
-    return {parent_id_, other_id_};
   }
+  return {parent_id_, other_id_};
 }
 
 bool FakeJournalDelegate::IsPendingCommit() {

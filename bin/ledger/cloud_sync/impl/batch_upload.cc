@@ -114,8 +114,8 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
           convert::ToArray(digest), std::move(data),
           callback::MakeScoped(
               weak_ptr_factory_.GetWeakPtr(),
-              [this,
-               digest = std::move(digest)](cloud_provider::Status status) {
+              [this, digest = std::move(digest)](
+                  cloud_provider::Status status) mutable {
                 FXL_DCHECK(current_uploads_ > 0);
                 current_uploads_--;
 

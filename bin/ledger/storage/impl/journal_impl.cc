@@ -249,7 +249,8 @@ void JournalImpl::GetObjectsToSync(
       id_,
       fxl::MakeCopyable(
           [this, callback = std::move(callback)](
-              Status s, std::unique_ptr<Iterator<const EntryChange>> entries) {
+              Status s,
+              std::unique_ptr<Iterator<const EntryChange>> entries) mutable {
             if (s != Status::OK) {
               callback(s, {});
               return;

@@ -77,7 +77,7 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   GetObjects() const;
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
-  void DeleteObjectFromLocal(const ObjectDigest& object_id);
+  void DeleteObjectFromLocal(const ObjectDigest& object_digest);
   // If set to true, no commit notification is sent to the commit watchers.
   void SetDropCommitNotifications(bool drop);
 

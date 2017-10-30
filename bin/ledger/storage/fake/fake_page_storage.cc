@@ -102,29 +102,28 @@ void FakePageStorage::CommitJournal(
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   static_cast<FakeJournal*>(journal.get())
-      ->Commit(
-          [this, callback = std::move(callback)](
-              Status status, std::unique_ptr<const storage::Commit> commit) {
-            for (storage::CommitIdView parent_id : commit->GetParentIds()) {
-              auto it = heads_.find(parent_id.ToString());
-              if (it != heads_.end()) {
-                heads_.erase(it);
-              }
-            }
-            heads_.emplace(commit->GetId());
-            if (!drop_commit_notifications_) {
-              for (CommitWatcher* watcher : watchers_) {
-                message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
-                    [watcher, commit = commit->Clone()]() mutable {
-                      std::vector<std::unique_ptr<const Commit>> commits;
-                      commits.push_back(std::move(commit));
-                      watcher->OnNewCommits(std::move(commits),
-                                            ChangeSource::LOCAL);
-                    }));
-              }
-            }
-            callback(status, std::move(commit));
-          });
+      ->Commit([this, callback = std::move(callback)](
+                   Status status,
+                   std::unique_ptr<const storage::Commit> commit) {
+        for (const storage::CommitIdView& parent_id : commit->GetParentIds()) {
+          auto it = heads_.find(parent_id.ToString());
+          if (it != heads_.end()) {
+            heads_.erase(it);
+          }
+        }
+        heads_.emplace(commit->GetId());
+        if (!drop_commit_notifications_) {
+          for (CommitWatcher* watcher : watchers_) {
+            message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
+                [watcher, commit = commit->Clone()]() mutable {
+                  std::vector<std::unique_ptr<const Commit>> commits;
+                  commits.push_back(std::move(commit));
+                  watcher->OnNewCommits(commits, ChangeSource::LOCAL);
+                }));
+          }
+        }
+        callback(status, std::move(commit));
+      });
 }
 
 void FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal,

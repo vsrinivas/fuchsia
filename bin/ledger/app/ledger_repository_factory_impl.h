@@ -22,7 +22,7 @@ namespace ledger {
 
 class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
  public:
-  LedgerRepositoryFactoryImpl(ledger::Environment* environment);
+  explicit LedgerRepositoryFactoryImpl(ledger::Environment* environment);
   ~LedgerRepositoryFactoryImpl() override;
 
  private:

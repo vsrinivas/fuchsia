@@ -23,14 +23,14 @@ void TestCloudProvider::GetDeviceSet(
 }
 
 void TestCloudProvider::GetPageCloud(
-    fidl::Array<uint8_t> app_id,
-    fidl::Array<uint8_t> page_id,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-    const GetPageCloudCallback& callback) {
+    fidl::Array<uint8_t> /*app_id*/,
+    fidl::Array<uint8_t> /*page_id*/,
+    fidl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
+    const GetPageCloudCallback& /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestCloudProvider::EraseAllData(const EraseAllDataCallback& callback) {
+void TestCloudProvider::EraseAllData(const EraseAllDataCallback& /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 

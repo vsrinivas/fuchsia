@@ -74,7 +74,7 @@ void FakePageCloud::WatcherContainer::SendCommits(
     fxl::Closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
   FXL_DCHECK(!waiting_for_watcher_ack_);
-  FXL_DCHECK(commits.size() > 0u);
+  FXL_DCHECK(!commits.empty());
 
   waiting_for_watcher_ack_ = true;
   next_commit_index_ = next_commit_index;

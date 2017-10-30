@@ -103,7 +103,7 @@ std::string FakeEncryptionService::EncryptObjectSynchronous(
 }
 
 std::string FakeEncryptionService::DecryptObjectSynchronous(
-    storage::ObjectIdentifier object_identifier,
+    storage::ObjectIdentifier /*object_identifier*/,
     std::string encrypted_data) {
   return Decode(encrypted_data);
 }

@@ -85,7 +85,7 @@ PageStorageImpl::PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                                                    page_dir + kLevelDbDir),
                       std::move(page_id)) {}
 
-PageStorageImpl::PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+PageStorageImpl::PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> /*task_runner*/,
                                  coroutine::CoroutineService* coroutine_service,
                                  std::unique_ptr<PageDb> page_db,
                                  PageId page_id)

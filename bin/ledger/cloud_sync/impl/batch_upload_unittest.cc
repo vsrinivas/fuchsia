@@ -112,9 +112,8 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
              std::move(unsynced_objects_to_return[object_digest.ToString()]));
   }
 
-  virtual void MarkPieceSynced(
-      storage::ObjectDigestView object_digest,
-      std::function<void(storage::Status)> callback) override {
+  void MarkPieceSynced(storage::ObjectDigestView object_digest,
+                       std::function<void(storage::Status)> callback) override {
     objects_marked_as_synced.insert(object_digest.ToString());
     callback(storage::Status::OK);
   }
@@ -152,7 +151,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 // errors.
 class TestPageStorageFailingToMarkPieces : public TestPageStorage {
  public:
-  void MarkPieceSynced(storage::ObjectDigestView object_digest,
+  void MarkPieceSynced(storage::ObjectDigestView /*object_digest*/,
                        std::function<void(storage::Status)> callback) override {
     callback(storage::Status::NOT_IMPLEMENTED);
   }

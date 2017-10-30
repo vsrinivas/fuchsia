@@ -108,7 +108,7 @@ void EncryptionServiceImpl::EncryptObject(
 }
 
 void EncryptionServiceImpl::DecryptObject(
-    storage::ObjectIdentifier object_identifier,
+    storage::ObjectIdentifier /*object_identifier*/,
     std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
   // Ensures the callback is asynchronous.

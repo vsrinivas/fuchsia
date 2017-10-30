@@ -140,8 +140,8 @@ class FakePageDbImpl : public PageDbEmptyImpl {
 
   Status Init() override { return Status::OK; }
   Status CreateJournalId(CoroutineHandler* /*handler*/,
-                         JournalType journal_type,
-                         const CommitId& base,
+                         JournalType /*journal_type*/,
+                         const CommitId& /*base*/,
                          JournalId* journal_id) override {
     *journal_id = RandomString(10);
     return Status::OK;

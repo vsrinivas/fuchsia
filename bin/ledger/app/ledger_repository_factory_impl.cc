@@ -53,7 +53,7 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
 // requests and callbacks and fires them when the repository is available.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  explicit LedgerRepositoryContainer() : status_(Status::OK) {}
+  explicit LedgerRepositoryContainer() {}
   ~LedgerRepositoryContainer() {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
@@ -125,7 +125,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
  private:
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
-  Status status_;
+  Status status_ = Status::OK;
   std::vector<std::pair<fidl::InterfaceRequest<LedgerRepository>,
                         std::function<void(Status)>>>
       requests_;

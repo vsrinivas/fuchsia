@@ -47,7 +47,7 @@ void TestPageCloud::AddCommits(fidl::Array<cloud_provider::CommitPtr> commits,
   callback(commit_status_to_return);
 }
 
-void TestPageCloud::GetCommits(fidl::Array<uint8_t> min_position_token,
+void TestPageCloud::GetCommits(fidl::Array<uint8_t> /*min_position_token*/,
                                const GetCommitsCallback& callback) {
   get_commits_calls++;
   callback(status_to_return, std::move(commits_to_return),

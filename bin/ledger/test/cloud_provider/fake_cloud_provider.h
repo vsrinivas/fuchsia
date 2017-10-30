@@ -18,7 +18,7 @@ namespace ledger {
 
 class FakeCloudProvider : public cloud_provider::CloudProvider {
  public:
-  FakeCloudProvider(
+  explicit FakeCloudProvider(
       CloudEraseOnCheck cloud_erase_on_check = CloudEraseOnCheck::NO,
       CloudEraseFromWatcher cloud_erase_from_watcher =
           CloudEraseFromWatcher::NO);

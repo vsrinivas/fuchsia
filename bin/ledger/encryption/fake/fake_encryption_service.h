@@ -16,7 +16,7 @@ namespace encryption {
 
 class FakeEncryptionService : public EncryptionService {
  public:
-  FakeEncryptionService(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit FakeEncryptionService(fxl::RefPtr<fxl::TaskRunner> task_runner);
   ~FakeEncryptionService() override;
 
   // EncryptionService:
