@@ -194,16 +194,32 @@ void Node::SetTranslation(const float translation[3]) {
   session()->Enqueue(NewSetTranslationOp(id(), translation));
 }
 
+void Node::SetTranslation(uint32_t variable_id) {
+  session()->Enqueue(NewSetTranslationOp(id(), variable_id));
+}
+
 void Node::SetScale(const float scale[3]) {
   session()->Enqueue(NewSetScaleOp(id(), scale));
+}
+
+void Node::SetScale(uint32_t variable_id) {
+  session()->Enqueue(NewSetScaleOp(id(), variable_id));
 }
 
 void Node::SetRotation(const float quaternion[4]) {
   session()->Enqueue(NewSetRotationOp(id(), quaternion));
 }
 
+void Node::SetRotation(uint32_t variable_id) {
+  session()->Enqueue(NewSetRotationOp(id(), variable_id));
+}
+
 void Node::SetAnchor(const float anchor[3]) {
   session()->Enqueue(NewSetAnchorOp(id(), anchor));
+}
+
+void Node::SetAnchor(uint32_t variable_id) {
+  session()->Enqueue(NewSetAnchorOp(id(), variable_id));
 }
 
 void Node::SetTag(uint32_t tag_value) {
@@ -311,6 +327,15 @@ void OpacityNode::SetOpacity(double opacity) {
   }
   // TODO(MZ-139): Opacities are not currently implemented.
 }
+
+Variable::Variable(Session* session, scenic::ValuePtr initial_value)
+    : Resource(session) {
+  session->Enqueue(NewCreateVariableOp(id(), std::move(initial_value)));
+}
+
+Variable::Variable(Variable&& moved) : Resource(std::move(moved)) {}
+
+Variable::~Variable() = default;
 
 Scene::Scene(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateSceneOp(id()));

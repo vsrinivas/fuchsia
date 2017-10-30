@@ -82,7 +82,7 @@ scenic::OpPtr NewCreateMaterialOp(uint32_t id);
 scenic::OpPtr NewCreateClipNodeOp(uint32_t id);
 scenic::OpPtr NewCreateEntityNodeOp(uint32_t id);
 scenic::OpPtr NewCreateShapeNodeOp(uint32_t id);
-scenic::OpPtr NewCreateVariableFloatOp(uint32_t id, float inital_val);
+scenic::OpPtr NewCreateVariableOp(uint32_t id, scenic::ValuePtr value);
 
 scenic::OpPtr NewReleaseResourceOp(uint32_t id);
 
@@ -110,9 +110,13 @@ scenic::OpPtr NewAddPartOp(uint32_t node_id, uint32_t part_id);
 scenic::OpPtr NewDetachOp(uint32_t node_id);
 scenic::OpPtr NewDetachChildrenOp(uint32_t node_id);
 scenic::OpPtr NewSetTranslationOp(uint32_t node_id, const float translation[3]);
+scenic::OpPtr NewSetTranslationOp(uint32_t node_id, uint32_t variable_id);
 scenic::OpPtr NewSetScaleOp(uint32_t node_id, const float scale[3]);
+scenic::OpPtr NewSetScaleOp(uint32_t node_id, uint32_t variable_id);
 scenic::OpPtr NewSetRotationOp(uint32_t node_id, const float quaternion[4]);
+scenic::OpPtr NewSetRotationOp(uint32_t node_id, uint32_t variable_id);
 scenic::OpPtr NewSetAnchorOp(uint32_t node_id, const float anchor[3]);
+scenic::OpPtr NewSetAnchorOp(uint32_t node_id, uint32_t variable_id);
 
 scenic::OpPtr NewSetShapeOp(uint32_t node_id, uint32_t shape_id);
 scenic::OpPtr NewSetMaterialOp(uint32_t node_id, uint32_t material_id);
@@ -178,11 +182,13 @@ scenic::OpPtr NewSetDisableClippingOp(uint32_t resource_id,
                                       bool disable_clipping);
 
 // Basic types.
-
 scenic::FloatValuePtr NewFloatValue(float value);
 scenic::Vector2ValuePtr NewVector2Value(const float value[2]);
+scenic::Vector3ValuePtr NewVector3Value(uint32_t variable_id);
 scenic::Vector3ValuePtr NewVector3Value(const float value[3]);
 scenic::Vector4ValuePtr NewVector4Value(const float value[4]);
+scenic::QuaternionValuePtr NewQuaternionValue(const float value[4]);
+scenic::QuaternionValuePtr NewQuaternionValue(uint32_t variable_id);
 scenic::Matrix4ValuePtr NewMatrix4Value(const float value[16]);
 scenic::ColorRgbaValuePtr NewColorRgbaValue(const uint8_t value[4]);
 scenic::QuaternionValuePtr NewQuaternionValue(const float value[4]);

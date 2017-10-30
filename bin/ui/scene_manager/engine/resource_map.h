@@ -5,6 +5,7 @@
 #pragma once
 
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/variable.h"
 #include "garnet/bin/ui/scene_manager/util/error_reporter.h"
 
 #include <unordered_map>
@@ -51,6 +52,37 @@ class ResourceMap {
           << "Type mismatch for resource ID " << id << ": actual type is "
           << it->second->type_info().name << ", expected a sub-type of "
           << ResourceT::kTypeInfo.name;
+      return fxl::RefPtr<ResourceT>();
+    }
+
+    return fxl::RefPtr<ResourceT>(static_cast<ResourceT*>(resource_ptr));
+  }
+
+  template <class ResourceT>
+  fxl::RefPtr<ResourceT> FindVariableResource(scenic::ResourceId id) {
+    auto it = resources_.find(id);
+
+    if (it == resources_.end()) {
+      error_reporter_->ERROR() << "No resource exists with ID " << id;
+      return fxl::RefPtr<ResourceT>();
+    };
+
+    auto resource_ptr = it->second->GetDelegate(Variable::kTypeInfo);
+
+    if (resource_ptr == nullptr) {
+      error_reporter_->ERROR()
+          << "Type mismatch for resource ID " << id << ": actual type is "
+          << it->second->type_info().name << ", expected a sub-type of "
+          << Variable::kTypeInfo.name;
+      return fxl::RefPtr<ResourceT>();
+    }
+
+    Variable* variable_ptr = static_cast<Variable*>(resource_ptr);
+    if (ResourceT::ValueType() != variable_ptr->value_type()) {
+      error_reporter_->ERROR()
+          << "Type mismatch for Variable resource ID " << id
+          << ": actual type is " << variable_ptr->value_type() << ", expected "
+          << ResourceT::ValueType();
       return fxl::RefPtr<ResourceT>();
     }
 

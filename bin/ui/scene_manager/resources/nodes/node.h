@@ -4,9 +4,12 @@
 
 #pragma once
 
+#include <unordered_map>
 #include <vector>
 
+#include "garnet/bin/ui/scene_manager/resources/nodes/variable_binding.h"
 #include "garnet/bin/ui/scene_manager/resources/resource.h"
+#include "garnet/bin/ui/scene_manager/resources/variable.h"
 #include "lib/escher/geometry/transform.h"
 
 namespace scene_manager {
@@ -31,9 +34,13 @@ class Node : public Resource {
 
   bool SetTransform(const escher::Transform& transform);
   bool SetTranslation(const escher::vec3& translation);
+  bool SetTranslation(Vector3VariablePtr translation);
   bool SetScale(const escher::vec3& scale);
+  bool SetScale(Vector3VariablePtr scale);
   bool SetRotation(const escher::quat& rotation);
+  bool SetRotation(QuaternionVariablePtr rotation);
   bool SetAnchor(const escher::vec3& anchor);
+  bool SetAnchor(Vector3VariablePtr anchor);
   bool SetClipToSelf(bool clip_to_self);
   bool SetHitTestBehavior(scenic::HitTestBehavior behavior);
 
@@ -96,11 +103,17 @@ class Node : public Resource {
   // Describes the manner in which a node is related to its parent.
   enum class ParentRelation { kNone, kChild, kPart, kImportDelegate };
 
+  // Identifies a specific property.
+  enum NodeProperty { kTranslation, kScale, kRotation, kAnchor };
+
   uint32_t tag_value_ = 0u;
   Node* parent_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
   std::vector<NodePtr> children_;
   std::vector<NodePtr> parts_;
+
+  std::unordered_map<NodeProperty, std::unique_ptr<VariableBinding>>
+      bound_variables_;
 
   escher::Transform transform_;
   mutable escher::mat4 global_transform_;

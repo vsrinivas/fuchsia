@@ -181,8 +181,27 @@ bool Node::SetTranslation(const escher::vec3& translation) {
         << " cannot have translation set.";
     return false;
   }
+  bound_variables_.erase(NodeProperty::kTranslation);
+
   transform_.translation = translation;
   InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetTranslation(Vector3VariablePtr translation_variable) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetTranslation(): node of type " << type_name()
+        << " cannot have translation set.";
+    return false;
+  }
+
+  bound_variables_[NodeProperty::kTranslation] =
+      std::make_unique<Vector3VariableBinding>(translation_variable,
+                                               [this](escher::vec3 value) {
+                                                 transform_.translation = value;
+                                                 InvalidateGlobalTransform();
+                                               });
   return true;
 }
 
@@ -193,8 +212,25 @@ bool Node::SetScale(const escher::vec3& scale) {
         << " cannot have scale set.";
     return false;
   }
+  bound_variables_.erase(NodeProperty::kScale);
   transform_.scale = scale;
   InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetScale(Vector3VariablePtr scale_variable) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetScale(): node of type " << type_name()
+        << " cannot have scale set.";
+    return false;
+  }
+  bound_variables_[NodeProperty::kScale] =
+      std::make_unique<Vector3VariableBinding>(scale_variable,
+                                               [this](escher::vec3 value) {
+                                                 transform_.scale = value;
+                                                 InvalidateGlobalTransform();
+                                               });
   return true;
 }
 
@@ -205,8 +241,25 @@ bool Node::SetRotation(const escher::quat& rotation) {
         << " cannot have rotation set.";
     return false;
   }
+  bound_variables_.erase(NodeProperty::kRotation);
   transform_.rotation = rotation;
   InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetRotation(QuaternionVariablePtr rotation_variable) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetRotation(): node of type " << type_name()
+        << " cannot have rotation set.";
+    return false;
+  }
+  bound_variables_[NodeProperty::kRotation] =
+      std::make_unique<QuaternionVariableBinding>(rotation_variable,
+                                                  [this](escher::quat value) {
+                                                    transform_.rotation = value;
+                                                    InvalidateGlobalTransform();
+                                                  });
   return true;
 }
 
@@ -217,8 +270,25 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
         << " cannot have anchor set.";
     return false;
   }
+  bound_variables_.erase(NodeProperty::kAnchor);
   transform_.anchor = anchor;
   InvalidateGlobalTransform();
+  return true;
+}
+
+bool Node::SetAnchor(Vector3VariablePtr anchor_variable) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR()
+        << "scene_manager::Node::SetAnchor(): node of type " << type_name()
+        << " cannot have anchor set.";
+    return false;
+  }
+  bound_variables_[NodeProperty::kAnchor] =
+      std::make_unique<Vector3VariableBinding>(anchor_variable,
+                                               [this](escher::vec3 value) {
+                                                 transform_.anchor = value;
+                                                 InvalidateGlobalTransform();
+                                               });
   return true;
 }
 

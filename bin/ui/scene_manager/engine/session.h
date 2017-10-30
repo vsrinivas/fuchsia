@@ -231,6 +231,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                                      float bottom_left_radius);
   ResourcePtr CreateMesh(scenic::ResourceId id);
   ResourcePtr CreateMaterial(scenic::ResourceId id);
+  ResourcePtr CreateVariable(scenic::ResourceId id,
+                             const scenic::VariablePtr& args);
 
   // Return false and log an error if the value is not of the expected type.
   // NOTE: although failure does not halt execution of the program, it does

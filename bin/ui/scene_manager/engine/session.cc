@@ -28,6 +28,7 @@
 #include "garnet/bin/ui/scene_manager/resources/shapes/mesh_shape.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/rectangle_shape.h"
 #include "garnet/bin/ui/scene_manager/resources/shapes/rounded_rectangle_shape.h"
+#include "garnet/bin/ui/scene_manager/resources/variable.h"
 #include "garnet/bin/ui/scene_manager/util/print_op.h"
 #include "garnet/bin/ui/scene_manager/util/unwrap.h"
 #include "garnet/bin/ui/scene_manager/util/wrap.h"
@@ -277,12 +278,13 @@ bool Session::ApplySetTagOp(const scenic::SetTagOpPtr& op) {
 bool Session::ApplySetTranslationOp(const scenic::SetTranslationOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR()
-          << "scene_manager::Session::ApplySetTranslationOp(): "
-             "unimplemented for variable value.";
-      return false;
+      if (auto variable = resources_.FindVariableResource<Vector3Variable>(
+              op->value->variable_id)) {
+        return node->SetTranslation(variable);
+      }
+    } else {
+      return node->SetTranslation(UnwrapVector3(op->value));
     }
-    return node->SetTranslation(UnwrapVector3(op->value));
   }
   return false;
 }
@@ -290,11 +292,13 @@ bool Session::ApplySetTranslationOp(const scenic::SetTranslationOpPtr& op) {
 bool Session::ApplySetScaleOp(const scenic::SetScaleOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR() << "scene_manager::Session::ApplySetScaleOp(): "
-                                  "unimplemented for variable value.";
-      return false;
+      if (auto variable = resources_.FindVariableResource<Vector3Variable>(
+              op->value->variable_id)) {
+        return node->SetScale(variable);
+      }
+    } else {
+      return node->SetScale(UnwrapVector3(op->value));
     }
-    return node->SetScale(UnwrapVector3(op->value));
   }
   return false;
 }
@@ -302,12 +306,13 @@ bool Session::ApplySetScaleOp(const scenic::SetScaleOpPtr& op) {
 bool Session::ApplySetRotationOp(const scenic::SetRotationOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR()
-          << "scene_manager::Session::ApplySetRotationOp(): "
-             "unimplemented for variable value.";
-      return false;
+      if (auto variable = resources_.FindVariableResource<QuaternionVariable>(
+              op->value->variable_id)) {
+        return node->SetRotation(variable);
+      }
+    } else {
+      return node->SetRotation(UnwrapQuaternion(op->value));
     }
-    return node->SetRotation(UnwrapQuaternion(op->value));
   }
   return false;
 }
@@ -315,9 +320,10 @@ bool Session::ApplySetRotationOp(const scenic::SetRotationOpPtr& op) {
 bool Session::ApplySetAnchorOp(const scenic::SetAnchorOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR() << "scene_manager::Session::ApplySetAnchorOp(): "
-                                  "unimplemented for variable value.";
-      return false;
+      if (auto variable = resources_.FindVariableResource<Vector3Variable>(
+              op->value->variable_id)) {
+        return node->SetAnchor(variable);
+      }
     }
     return node->SetAnchor(UnwrapVector3(op->value));
   }
@@ -748,9 +754,8 @@ bool Session::ApplyCreateLayer(scenic::ResourceId id,
 
 bool Session::ApplyCreateVariable(scenic::ResourceId id,
                                   const scenic::VariablePtr& args) {
-  error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyCreateVariable(): unimplemented";
-  return false;
+  auto variable = CreateVariable(id, args);
+  return variable ? resources_.AddResource(id, std::move(variable)) : false;
 }
 
 ResourcePtr Session::CreateMemory(scenic::ResourceId id,
@@ -869,6 +874,45 @@ ResourcePtr Session::CreateImagePipeCompositor(
 ResourcePtr Session::CreateLayerStack(scenic::ResourceId id,
                                       const scenic::LayerStackPtr& args) {
   return fxl::MakeRefCounted<LayerStack>(this, id);
+}
+
+ResourcePtr Session::CreateVariable(scenic::ResourceId id,
+                                    const scenic::VariablePtr& args) {
+  fxl::RefPtr<Variable> variable;
+  switch (args->type) {
+    case scenic::ValueType::kVector1:
+      variable = fxl::MakeRefCounted<FloatVariable>(this, id);
+      break;
+    case scenic::ValueType::kVector2:
+      variable = fxl::MakeRefCounted<Vector2Variable>(this, id);
+      break;
+    case scenic::ValueType::kVector3:
+      variable = fxl::MakeRefCounted<Vector3Variable>(this, id);
+      break;
+    case scenic::ValueType::kVector4:
+      variable = fxl::MakeRefCounted<Vector4Variable>(this, id);
+      break;
+    case scenic::ValueType::kMatrix4:
+      variable = fxl::MakeRefCounted<Matrix4x4Variable>(this, id);
+      break;
+    case scenic::ValueType::kColorRgba:
+      // not yet supported
+      variable = nullptr;
+      break;
+    case scenic::ValueType::kQuaternion:
+      variable = fxl::MakeRefCounted<QuaternionVariable>(this, id);
+      break;
+    case scenic::ValueType::kTransform:
+      /* variable = fxl::MakeRefCounted<TransformVariable>(this, id); */
+      variable = nullptr;
+      break;
+    case scenic::ValueType::kNone:
+      break;
+  }
+  if (variable && variable->SetValue(args->initial_value)) {
+    return variable;
+  }
+  return nullptr;
 }
 
 ResourcePtr Session::CreateLayer(scenic::ResourceId id,

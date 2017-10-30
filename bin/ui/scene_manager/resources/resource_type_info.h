@@ -49,6 +49,9 @@ enum ResourceType {
   kCamera = 1 << 24,
   kDirectionalLight = 1 << 25,
   kRenderer = 1 << 26,
+
+  // Animation
+  kVariable = 1 << 27,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be
@@ -58,7 +61,7 @@ using ResourceTypeFlags = uint64_t;
 
 // Static metadata about a Resource subclass.
 struct ResourceTypeInfo {
-  ResourceTypeFlags flags;
+  const ResourceTypeFlags flags;
   const char* name;
 
   // Return true if this type is or inherits from |base_type|, and false

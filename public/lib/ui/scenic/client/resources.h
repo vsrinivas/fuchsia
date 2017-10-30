@@ -221,18 +221,22 @@ class Node : public Resource {
     SetTranslation((float[3]){tx, ty, tz});
   }
   void SetTranslation(const float translation[3]);
+  void SetTranslation(uint32_t variable_id);
   void SetScale(float sx, float sy, float sz) {
     SetScale((float[3]){sx, sy, sz});
   }
   void SetScale(const float scale[3]);
+  void SetScale(uint32_t variable_id);
   void SetRotation(float qi, float qj, float qk, float qw) {
     SetRotation((float[4]){qi, qj, qk, qw});
   }
   void SetRotation(const float quaternion[4]);
+  void SetRotation(uint32_t variable_id);
   void SetAnchor(float ax, float ay, float az) {
     SetAnchor((float[3]){ax, ay, az});
   }
   void SetAnchor(const float anchor[3]);
+  void SetAnchor(uint32_t variable_id);
 
   // Sets the node's tag value.
   void SetTag(uint32_t tag_value);
@@ -356,6 +360,17 @@ class OpacityNode final : public ContainerNode {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(OpacityNode);
+};
+
+// A value that can be used in place of a constant value.
+class Variable final : public Resource {
+ public:
+  explicit Variable(Session* session, scenic::ValuePtr initial_value);
+  Variable(Variable&& moved);
+  ~Variable();
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(Variable);
 };
 
 // Represents a scene resource in a session.

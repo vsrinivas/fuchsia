@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "lib/ui/scenic/fidl/types.fidl.h"
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
+#include "lib/escher/geometry/types.h"
+#include "lib/ui/scenic/fidl/types.fidl.h"
 
 namespace scene_manager {
 
@@ -46,6 +47,21 @@ inline bool IsFloat(const scenic::ValuePtr& val) {
   return val->which() == scenic::Value::Tag::VECTOR1;
 }
 
+inline bool IsVector2(const scenic::ValuePtr& val) {
+  // TODO: support variables of type kVector2.
+  return val->which() == scenic::Value::Tag::VECTOR2;
+}
+
+inline bool IsVector3(const scenic::ValuePtr& val) {
+  // TODO: support variables of type kVector3.
+  return val->which() == scenic::Value::Tag::VECTOR3;
+}
+
+inline bool IsVector4(const scenic::ValuePtr& val) {
+  // TODO: support variables of type kVector4.
+  return val->which() == scenic::Value::Tag::VECTOR4;
+}
+
 inline bool IsMatrix4x4(const scenic::ValuePtr& val) {
   // TODO: support variables of type kMatrix4x4.
   return val->which() == scenic::Value::Tag::MATRIX4X4;
@@ -63,10 +79,6 @@ inline bool IsTransform(const scenic::ValuePtr& val) {
 
 inline bool IsVariable(const scenic::ValuePtr& val) {
   return val->which() == scenic::Value::Tag::VARIABLE_ID;
-}
-
-inline bool IsVariable(const scenic::FloatValuePtr& val) {
-  return val->variable_id != 0;
 }
 
 template <typename ValuePtrT>
@@ -109,6 +121,62 @@ inline escher::vec4 UnwrapVector4(const scenic::Vector4ValuePtr& val) {
 inline escher::quat UnwrapQuaternion(const scenic::QuaternionValuePtr& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val->value);
+}
+
+inline bool Unwrap(const scenic::ValuePtr& value, float* out) {
+  if (!IsVariable(value) && IsFloat(value)) {
+    (*out) = value->get_vector1();
+    return true;
+  }
+  return false;
+}
+
+inline bool Unwrap(const scenic::ValuePtr& value, escher::vec2* out) {
+  if (!IsVariable(value) && IsVector2(value)) {
+    (*out) = Unwrap(value->get_vector2());
+    return true;
+  }
+  return false;
+}
+
+inline bool Unwrap(const scenic::ValuePtr& value, escher::vec3* out) {
+  if (!IsVariable(value) && IsVector3(value)) {
+    (*out) = Unwrap(value->get_vector3());
+    return true;
+  }
+  return false;
+}
+
+inline bool Unwrap(const scenic::ValuePtr& value, escher::vec4* out) {
+  if (!IsVariable(value) && IsVector4(value)) {
+    (*out) = Unwrap(value->get_vector4());
+    return true;
+  }
+  return false;
+}
+
+inline bool Unwrap(const scenic::ValuePtr& value, escher::quat* out) {
+  if (!IsVariable(value) && IsQuaternion(value)) {
+    (*out) = Unwrap(value->get_quaternion());
+    return true;
+  }
+  return false;
+}
+
+inline bool Unwrap(const scenic::ValuePtr& value, escher::mat4* out) {
+  if (!IsVariable(value) && IsMatrix4x4(value)) {
+    (*out) = Unwrap(value->get_matrix4x4());
+    return true;
+  }
+  return false;
+}
+
+inline bool Unwrap(const scenic::ValuePtr& value, escher::Transform* out) {
+  if (!IsVariable(value) && IsTransform(value)) {
+    (*out) = Unwrap(value->get_transform());
+    return true;
+  }
+  return false;
 }
 
 }  // namespace scene_manager

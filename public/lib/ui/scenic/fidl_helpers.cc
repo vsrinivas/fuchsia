@@ -4,6 +4,8 @@
 
 #include "lib/ui/scenic/fidl_helpers.h"
 
+#include <array>
+
 #include "lib/fxl/logging.h"
 
 namespace scenic_lib {
@@ -337,12 +339,42 @@ scenic::OpPtr NewCreateShapeNodeOp(uint32_t id) {
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-scenic::OpPtr NewCreateVariableFloatOp(uint32_t id, float initial_value) {
-  auto value = scenic::Value::New();
-  value->set_vector1(initial_value);
-
+scenic::OpPtr NewCreateVariableOp(uint32_t id, scenic::ValuePtr value) {
   auto variable = scenic::Variable::New();
-  variable->type = scenic::ValueType::kVector1;
+  switch (value->which()) {
+    case scenic::Value::Tag::VECTOR1:
+      variable->type = scenic::ValueType::kVector1;
+      break;
+    case scenic::Value::Tag::VECTOR2:
+      variable->type = scenic::ValueType::kVector2;
+      break;
+    case scenic::Value::Tag::VECTOR3:
+      variable->type = scenic::ValueType::kVector3;
+      break;
+    case scenic::Value::Tag::VECTOR4:
+      variable->type = scenic::ValueType::kVector4;
+      break;
+    case scenic::Value::Tag::MATRIX4X4:
+      variable->type = scenic::ValueType::kMatrix4;
+      break;
+    case scenic::Value::Tag::COLOR_RGBA:
+      variable->type = scenic::ValueType::kColorRgba;
+      break;
+    case scenic::Value::Tag::QUATERNION:
+      variable->type = scenic::ValueType::kQuaternion;
+      break;
+    case scenic::Value::Tag::TRANSFORM:
+      variable->type = scenic::ValueType::kTransform;
+      break;
+    case scenic::Value::Tag::DEGREES:
+      variable->type = scenic::ValueType::kVector1;
+      break;
+    case scenic::Value::Tag::VARIABLE_ID:
+      // A variable's initial value cannot be another variable.
+      return nullptr;
+    case scenic::Value::Tag::__UNKNOWN__:
+      return nullptr;
+  }
   variable->initial_value = std::move(value);
 
   auto resource = scenic::Resource::New();
@@ -462,13 +494,18 @@ scenic::OpPtr NewSetTranslationOp(uint32_t node_id,
                                   const float translation[3]) {
   auto set_translation = scenic::SetTranslationOp::New();
   set_translation->id = node_id;
-  set_translation->value = scenic::Vector3Value::New();
-  set_translation->value->value = scenic::vec3::New();
-  auto& value = set_translation->value->value;
-  value->x = translation[0];
-  value->y = translation[1];
-  value->z = translation[2];
-  set_translation->value->variable_id = 0;
+  set_translation->value = NewVector3Value(translation);
+
+  auto op = scenic::Op::New();
+  op->set_set_translation(std::move(set_translation));
+
+  return op;
+}
+
+scenic::OpPtr NewSetTranslationOp(uint32_t node_id, uint32_t variable_id) {
+  auto set_translation = scenic::SetTranslationOp::New();
+  set_translation->id = node_id;
+  set_translation->value = NewVector3Value(variable_id);
 
   auto op = scenic::Op::New();
   op->set_set_translation(std::move(set_translation));
@@ -479,13 +516,18 @@ scenic::OpPtr NewSetTranslationOp(uint32_t node_id,
 scenic::OpPtr NewSetScaleOp(uint32_t node_id, const float scale[3]) {
   auto set_scale = scenic::SetScaleOp::New();
   set_scale->id = node_id;
-  set_scale->value = scenic::Vector3Value::New();
-  set_scale->value->value = scenic::vec3::New();
-  auto& value = set_scale->value->value;
-  value->x = scale[0];
-  value->y = scale[1];
-  value->z = scale[2];
-  set_scale->value->variable_id = 0;
+  set_scale->value = NewVector3Value(scale);
+
+  auto op = scenic::Op::New();
+  op->set_set_scale(std::move(set_scale));
+
+  return op;
+}
+
+scenic::OpPtr NewSetScaleOp(uint32_t node_id, uint32_t variable_id) {
+  auto set_scale = scenic::SetScaleOp::New();
+  set_scale->id = node_id;
+  set_scale->value = NewVector3Value(variable_id);
 
   auto op = scenic::Op::New();
   op->set_set_scale(std::move(set_scale));
@@ -496,14 +538,18 @@ scenic::OpPtr NewSetScaleOp(uint32_t node_id, const float scale[3]) {
 scenic::OpPtr NewSetRotationOp(uint32_t node_id, const float quaternion[4]) {
   auto set_rotation = scenic::SetRotationOp::New();
   set_rotation->id = node_id;
-  set_rotation->value = scenic::QuaternionValue::New();
-  set_rotation->value->value = scenic::Quaternion::New();
-  auto& value = set_rotation->value->value;
-  value->x = quaternion[0];
-  value->y = quaternion[1];
-  value->z = quaternion[2];
-  value->w = quaternion[3];
-  set_rotation->value->variable_id = 0;
+  set_rotation->value = NewQuaternionValue(quaternion);
+
+  auto op = scenic::Op::New();
+  op->set_set_rotation(std::move(set_rotation));
+
+  return op;
+}
+
+scenic::OpPtr NewSetRotationOp(uint32_t node_id, uint32_t variable_id) {
+  auto set_rotation = scenic::SetRotationOp::New();
+  set_rotation->id = node_id;
+  set_rotation->value = NewQuaternionValue(variable_id);
 
   auto op = scenic::Op::New();
   op->set_set_rotation(std::move(set_rotation));
@@ -514,13 +560,18 @@ scenic::OpPtr NewSetRotationOp(uint32_t node_id, const float quaternion[4]) {
 scenic::OpPtr NewSetAnchorOp(uint32_t node_id, const float anchor[3]) {
   auto set_anchor = scenic::SetAnchorOp::New();
   set_anchor->id = node_id;
-  set_anchor->value = scenic::Vector3Value::New();
-  set_anchor->value->value = scenic::vec3::New();
-  auto& value = set_anchor->value->value;
-  value->x = anchor[0];
-  value->y = anchor[1];
-  value->z = anchor[2];
-  set_anchor->value->variable_id = 0;
+  set_anchor->value = NewVector3Value(anchor);
+
+  auto op = scenic::Op::New();
+  op->set_set_anchor(std::move(set_anchor));
+
+  return op;
+}
+
+scenic::OpPtr NewSetAnchorOp(uint32_t node_id, uint32_t variable_id) {
+  auto set_anchor = scenic::SetAnchorOp::New();
+  set_anchor->id = node_id;
+  set_anchor->value = NewVector3Value(variable_id);
 
   auto op = scenic::Op::New();
   op->set_set_anchor(std::move(set_anchor));
@@ -795,41 +846,84 @@ scenic::FloatValuePtr NewFloatValue(float value) {
   return val;
 }
 
+scenic::vec2Ptr NewVector2(const float value[2]) {
+  scenic::vec2Ptr val = scenic::vec2::New();
+  val->x = value[0];
+  val->y = value[1];
+  return val;
+}
+
 scenic::Vector2ValuePtr NewVector2Value(const float value[2]) {
   auto val = scenic::Vector2Value::New();
   val->variable_id = 0;
-  val->value = scenic::vec2::New();
-  val->value->x = value[0];
-  val->value->y = value[1];
+  val->value = NewVector2(value);
+  return val;
+}
+
+scenic::vec3Ptr NewVector3(const float value[3]) {
+  scenic::vec3Ptr val = scenic::vec3::New();
+  val->x = value[0];
+  val->y = value[1];
+  val->z = value[2];
   return val;
 }
 
 scenic::Vector3ValuePtr NewVector3Value(const float value[3]) {
   auto val = scenic::Vector3Value::New();
   val->variable_id = 0;
+  val->value = NewVector3(value);
+  return val;
+}
+
+scenic::Vector3ValuePtr NewVector3Value(uint32_t variable_id) {
+  auto val = scenic::Vector3Value::New();
+  val->variable_id = variable_id;
   val->value = scenic::vec3::New();
-  val->value->x = value[0];
-  val->value->y = value[1];
-  val->value->z = value[2];
+  return val;
+}
+
+scenic::vec4Ptr NewVector4(const float value[4]) {
+  scenic::vec4Ptr val = scenic::vec4::New();
+  val->x = value[0];
+  val->y = value[1];
+  val->z = value[2];
+  val->w = value[3];
   return val;
 }
 
 scenic::Vector4ValuePtr NewVector4Value(const float value[4]) {
   auto val = scenic::Vector4Value::New();
   val->variable_id = 0;
-  val->value = scenic::vec4::New();
-  val->value->x = value[0];
-  val->value->y = value[1];
-  val->value->z = value[2];
-  val->value->w = value[3];
+  val->value = NewVector4(value);
   return val;
 }
 
-scenic::Matrix4ValuePtr NewMatrix4Value(const float matrix[16]) {
-  auto val = scenic::Matrix4Value::New();
+scenic::QuaternionPtr NewQuaternion(const float value[4]) {
+  scenic::QuaternionPtr val = scenic::Quaternion::New();
+  val->x = value[0];
+  val->y = value[1];
+  val->z = value[2];
+  val->w = value[3];
+  return val;
+}
+
+scenic::QuaternionValuePtr NewQuaternionValue(const float value[4]) {
+  auto val = scenic::QuaternionValue::New();
   val->variable_id = 0;
-  val->value = scenic::mat4::New();
-  auto& m = val->value->matrix;
+  val->value = NewQuaternion(value);
+  return val;
+}
+
+scenic::QuaternionValuePtr NewQuaternionValue(uint32_t variable_id) {
+  auto val = scenic::QuaternionValue::New();
+  val->variable_id = variable_id;
+  val->value = nullptr;
+  return val;
+}
+
+scenic::mat4Ptr NewMatrix4(const float matrix[16]) {
+  scenic::mat4Ptr val = scenic::mat4::New();
+  auto& m = val->matrix;
   m[0] = matrix[0];
   m[1] = matrix[1];
   m[2] = matrix[2];
@@ -846,7 +940,13 @@ scenic::Matrix4ValuePtr NewMatrix4Value(const float matrix[16]) {
   m[13] = matrix[13];
   m[14] = matrix[14];
   m[15] = matrix[15];
+  return val;
+}
 
+scenic::Matrix4ValuePtr NewMatrix4Value(const float matrix[16]) {
+  auto val = scenic::Matrix4Value::New();
+  val->variable_id = 0;
+  val->value = NewMatrix4(matrix);
   return val;
 }
 
