@@ -94,7 +94,15 @@ void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
     }
   }
   if (info->focused_story_id) {
-    stories_[info->focused_story_id]->OnFocusChange(true);
+    auto it = stories_.find(info->focused_story_id);
+    if (it == stories_.end()) {
+      FXL_LOG(ERROR)
+          << "RACE CONDITION: I was notified that story "
+          << info->focused_story_id
+          << " was focused before being notified it exists in the first place.";
+      return;
+    }
+    it->second->OnFocusChange(true);
   }
 }
 
