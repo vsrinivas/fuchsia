@@ -36,11 +36,15 @@ RankedSuggestion* RankedSuggestions::GetMatchingSuggestion(
   return nullptr;
 }
 
-void RankedSuggestions::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
-  auto removeIter =
+bool RankedSuggestions::RemoveMatchingSuggestion(MatchPredicate matchFunction) {
+  auto remove_iter =
       std::remove_if(suggestions_.begin(), suggestions_.end(), matchFunction);
-  suggestions_.erase(removeIter, suggestions_.end());
-  channel_->DispatchInvalidate();
+  if (remove_iter == suggestions_.end()) {
+    return false;
+  } else {
+    suggestions_.erase(remove_iter, suggestions_.end());
+    return true;
+  }
 }
 
 void RankedSuggestions::AddRankingFeature(
@@ -81,13 +85,10 @@ void RankedSuggestions::AddSuggestion(SuggestionPrototype* prototype) {
   suggestions_.push_back(std::move(ranked_suggestion));
 }
 
-void RankedSuggestions::RemoveProposal(const std::string& component_url,
+bool RankedSuggestions::RemoveProposal(const std::string& component_url,
                                        const std::string& proposal_id) {
-  RemoveMatchingSuggestion(GetSuggestionMatcher(component_url, proposal_id));
-}
-
-void RankedSuggestions::RemoveSuggestion(const std::string& suggestion_id) {
-  RemoveMatchingSuggestion(GetSuggestionMatcher(suggestion_id));
+  return RemoveMatchingSuggestion(
+      GetSuggestionMatcher(component_url, proposal_id));
 }
 
 RankedSuggestion* RankedSuggestions::GetSuggestion(

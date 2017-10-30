@@ -21,10 +21,12 @@ void ProposalPublisherImpl::AddBinding(
 
 void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
   engine_->AddNextProposal(this, std::move(proposal));
+  engine_->Validate();
 }
 
 void ProposalPublisherImpl::Remove(const fidl::String& proposal_id) {
   engine_->RemoveProposal(component_url_, proposal_id);
+  engine_->Validate();
 }
 
 ProposalPublisherImpl::BindingSet::BindingSet(ProposalPublisherImpl* impl)

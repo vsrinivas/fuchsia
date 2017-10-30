@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTION_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTION_H_
 
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 namespace maxwell {
@@ -16,6 +17,8 @@ struct RankedSuggestion {
   SuggestionPrototype* prototype;
   double confidence;
 };
+
+SuggestionPtr CreateSuggestion(const RankedSuggestion& suggestion_data);
 
 }  // namespace maxwell
 

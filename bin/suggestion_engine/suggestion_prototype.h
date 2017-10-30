@@ -9,6 +9,7 @@
 
 #include "lib/fxl/time/time_point.h"
 #include "lib/suggestion/fidl/proposal.fidl.h"
+#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 
 namespace maxwell {
 
@@ -20,6 +21,9 @@ struct SuggestionPrototype {
 };
 
 std::string short_proposal_str(const SuggestionPrototype& prototype);
+
+// Creates a partial suggestion from a prototype. Confidence will not be set.
+SuggestionPtr CreateSuggestion(const SuggestionPrototype& prototype);
 
 }  // namespace maxwell
 

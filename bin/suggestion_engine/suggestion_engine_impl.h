@@ -13,6 +13,7 @@
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/filter.h"
+#include "peridot/bin/suggestion_engine/interruptions_channel.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
@@ -148,6 +149,9 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // |SuggestionEngine|
   void SetSpeechToText(fidl::InterfaceHandle<SpeechToText> service) override;
 
+  // re-ranks dirty channels and dispatches updates
+  void Validate();
+
  private:
   // TODO(rosswang): move elsewhere, though this should ideally be unnecessary
   void PrimeSpeechCapture();
@@ -166,6 +170,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   SuggestionPrototype* CreateSuggestionPrototype(const std::string& source_url,
                                                  ProposalPtr proposal);
+
   std::string RandomUuid() {
     static uint64_t id = 0;
     // TODO(rosswang): real UUIDs
@@ -211,14 +216,17 @@ class SuggestionEngineImpl : public SuggestionEngine,
            std::unique_ptr<SuggestionPrototype>>
       suggestion_prototypes_;
 
+  // TODO(rosswang): it may be worthwhile to collapse these trios into classes
   // Channels that dispatch outbound suggestions to SuggestionListeners.
   SuggestionChannel ask_channel_;
   RankedSuggestions* ask_suggestions_;
+  bool ask_dirty_;
 
   SuggestionChannel next_channel_;
   RankedSuggestions* next_suggestions_;
+  bool next_dirty_;
 
-  SuggestionChannel interruption_channel_;
+  InterruptionsChannel interruption_channel_;
 
   // The set of all QueryHandlers that have been registered mapped to their
   // URLs (stored as strings).

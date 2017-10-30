@@ -39,14 +39,10 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
   WindowedSuggestionSubscriber(
       const RankedSuggestions* ranked_suggestions,
       fidl::InterfaceHandle<SuggestionListener> listener,
-      int32_t count);
+      size_t max_results);
   virtual ~WindowedSuggestionSubscriber();
 
   void OnSubscribe() override;
-
-  void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) override;
-
-  void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) override;
 
   // Notifies the listener that all elements should be updated.
   void Invalidate() override;
@@ -55,13 +51,9 @@ class WindowedSuggestionSubscriber : public SuggestionSubscriber {
   void OnProcessingChange(bool processing) override;
 
  private:
-  bool IsFull() const;
-
-  bool IncludeSuggestion(const RankedSuggestion& suggestion) const;
-
   // An upper bound on the number of suggestions to offer this subscriber, as
   // given by SetResultCount.
-  int32_t max_results_ = 0;
+  size_t max_results_ = 0;
   const RankedSuggestions* ranked_suggestions_;
 };
 

@@ -22,19 +22,6 @@ void SuggestionChannel::DispatchInvalidate() {
   }
 }
 
-void SuggestionChannel::DispatchOnAddSuggestion(RankedSuggestion* suggestion) {
-  for (const auto& subscriber : subscribers_) {
-    subscriber->OnAddSuggestion(*suggestion);
-  }
-}
-
-void SuggestionChannel::DispatchOnRemoveSuggestion(
-    RankedSuggestion* suggestion) {
-  for (const auto& subscriber : subscribers_) {
-    subscriber->OnRemoveSuggestion(*suggestion);
-  }
-}
-
 void SuggestionChannel::DispatchOnProcessingChange(bool processing) {
   for (const auto& subscriber : subscribers_) {
     subscriber->OnProcessingChange(processing);

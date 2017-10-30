@@ -27,8 +27,8 @@ class RankedSuggestions {
 
   void AddSuggestion(SuggestionPrototype* const prototype);
 
-  void RemoveSuggestion(const std::string& id);
-  void RemoveProposal(const std::string& component_url,
+  // Returns |true| if and only if the suggestion was present and is removed.
+  bool RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 
   void RemoveAllSuggestions();
@@ -44,7 +44,7 @@ class RankedSuggestions {
 
  private:
   RankedSuggestion* GetMatchingSuggestion(MatchPredicate matchFunction) const;
-  void RemoveMatchingSuggestion(MatchPredicate matchFunction);
+  bool RemoveMatchingSuggestion(MatchPredicate matchFunction);
   void DoStableSort();
 
   // The channel to push addition/removal events into.

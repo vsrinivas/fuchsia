@@ -15,8 +15,6 @@ namespace maxwell {
 class SuggestionChannel {
  public:
   void DispatchInvalidate();
-  void DispatchOnAddSuggestion(RankedSuggestion* suggestion);
-  void DispatchOnRemoveSuggestion(RankedSuggestion* suggestion);
   void DispatchOnProcessingChange(bool processing);
   void AddSubscriber(std::unique_ptr<SuggestionSubscriber> subscriber);
   void RemoveAllSubscribers();

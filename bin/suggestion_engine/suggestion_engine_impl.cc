@@ -12,7 +12,6 @@
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
-#include "peridot/bin/suggestion_engine/interruptions_subscriber.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
@@ -37,20 +36,14 @@ constexpr fxl::TimeDelta kAskMediaResponseDelay =
 constexpr modular::RateLimitedRetry::Threshold kMediaRetryLimit = {
     5, fxl::TimeDelta::FromSeconds(1)};
 
-bool IsInterruption(const SuggestionPrototype* suggestion) {
-  return ((suggestion->proposal->display) &&
-          ((suggestion->proposal->display->annoyance ==
-            maxwell::AnnoyanceType::INTERRUPT) ||
-           (suggestion->proposal->display->annoyance ==
-            maxwell::AnnoyanceType::PEEK)));
-}
-
 }  // namespace
 
 SuggestionEngineImpl::SuggestionEngineImpl()
     : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
       ask_suggestions_(new RankedSuggestions(&ask_channel_)),
+      ask_dirty_(false),
       next_suggestions_(new RankedSuggestions(&next_channel_)),
+      next_dirty_(false),
       ask_has_media_response_ptr_factory_(&ask_has_media_response_),
       media_service_retry_(kMediaRetryLimit) {
   app_context_->outgoing_services()->AddService<SuggestionEngine>(
@@ -103,18 +96,13 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
   auto suggestion =
       CreateSuggestionPrototype(source->component_url(), std::move(proposal));
 
-  if (IsInterruption(suggestion)) {
+  if (IsInterruption(*suggestion)) {
     debug_.OnInterrupt(suggestion);
-    // TODO(andrewosh): Subscribers should probably take SuggestionPrototypes.
-    auto ranked_suggestion = new RankedSuggestion();
-    ranked_suggestion->prototype = suggestion;
-    ranked_suggestion->confidence = kMaxConfidence;
-    interruption_channel_.DispatchOnAddSuggestion(ranked_suggestion);
+    interruption_channel_.AddSuggestion(*suggestion);
   }
 
-  next_suggestions_->AddSuggestion(std::move(suggestion));
-  next_suggestions_->Rank();
-  debug_.OnNextUpdate(next_suggestions_);
+  next_suggestions_->AddSuggestion(suggestion);
+  next_dirty_ = true;
 }
 
 void SuggestionEngineImpl::AddAskProposal(const std::string& source_url,
@@ -122,6 +110,7 @@ void SuggestionEngineImpl::AddAskProposal(const std::string& source_url,
   RemoveProposal(source_url, proposal->id);
   auto suggestion = CreateSuggestionPrototype(source_url, std::move(proposal));
   ask_suggestions_->AddSuggestion(std::move(suggestion));
+  ask_dirty_ = true;
 }
 
 void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
@@ -131,12 +120,15 @@ void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
   if (toRemove != suggestion_prototypes_.end()) {
     RankedSuggestion* matchingSuggestion =
         next_suggestions_->GetSuggestion(component_url, proposal_id);
-    if (matchingSuggestion && IsInterruption(matchingSuggestion->prototype)) {
-      interruption_channel_.DispatchOnRemoveSuggestion(matchingSuggestion);
+    if (matchingSuggestion && IsInterruption(*matchingSuggestion->prototype)) {
+      interruption_channel_.RemoveSuggestion(*matchingSuggestion->prototype);
     }
-    ask_suggestions_->RemoveProposal(component_url, proposal_id);
-    next_suggestions_->RemoveProposal(component_url, proposal_id);
-    debug_.OnNextUpdate(next_suggestions_);
+    if (ask_suggestions_->RemoveProposal(component_url, proposal_id)) {
+      ask_dirty_ = true;
+    }
+    if (next_suggestions_->RemoveProposal(component_url, proposal_id)) {
+      next_dirty_ = true;
+    }
     suggestion_prototypes_.erase(toRemove);
   }
 }
@@ -251,6 +243,8 @@ void SuggestionEngineImpl::Query(
           }
           // TODO(jwnichols): Assemble the appropriate QueryContext struct
           ask_suggestions_->Rank({TEXT, query});
+          // Rank includes an invalidate dispatch
+          ask_dirty_ = false;
           (*remainingHandlers)--;
           if ((*remainingHandlers) == 0) {
             debug_.OnAskStart(query, ask_suggestions_);
@@ -263,6 +257,20 @@ void SuggestionEngineImpl::Query(
             }
           }
         });
+  }
+}
+
+void SuggestionEngineImpl::Validate() {
+  if (next_dirty_) {
+    next_suggestions_->Rank();
+    debug_.OnNextUpdate(next_suggestions_);
+    next_dirty_ = false;
+  }
+  if (ask_dirty_) {
+    // The only way ask can be dirty outside of a query is removals, so we don't
+    // need to rerank.
+    ask_channel_.DispatchInvalidate();
+    ask_dirty_ = false;
   }
 }
 
@@ -325,14 +333,7 @@ void SuggestionEngineImpl::BeginSpeechCapture(
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<SuggestionListener> listener) {
-  std::unique_ptr<SuggestionSubscriber> subscriber =
-      std::make_unique<InterruptionsSubscriber>(std::move(listener));
-  // New InterruptionsSubscribers are initially sent the existing set of Next
-  // suggestions. AnnoyanceType filtering happens in the subscriber.
-  for (const auto& suggestion : next_suggestions_->Get()) {
-    subscriber->OnAddSuggestion(*suggestion);
-  }
-  interruption_channel_.AddSubscriber(std::move(subscriber));
+  interruption_channel_.AddSubscriber(std::move(listener), *next_suggestions_);
 }
 
 // |SuggestionProvider|
