@@ -20,9 +20,9 @@
 #
 # import("//peridot/build/module_repository/publish.gni")
 #
-# publish_module_manifest(
-#   sources = [ 'my_module_manifest.json' ]
-# )
+# publish_module_manifest("manifests") {
+#   sources = [ "my_module_manifest.json" ]
+# }
 
 import("//packages/package.gni")
 
