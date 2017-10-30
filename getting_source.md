@@ -12,17 +12,20 @@ doc.
 ## Creating a new checkout
 
 The bootstrap procedure requires that you have Go 1.6 or newer and Git
-installed and on your PATH.  To create a new Fuchsia checkout in a directory
-called `fuchsia` run the following commands. The `fuchsia` directory should
-not exist before running these steps.
+installed and on your PATH.
+
+First, select the [layer](layer.md) of the system you wish to build. (If you're
+unsure, select `topaz`, which contains the lower layers). Then, run the
+following command:
 
 ```
-curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s fuchsia
-cd fuchsia
-export PATH=`pwd`/.jiri_root/bin:$PATH
-jiri import fuchsia https://fuchsia.googlesource.com/manifest
-jiri update
+curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode | bash -s <layer>
 ```
+
+This script will bootstrap a development environment for the given layer in a
+directory named after the layer. Upon success, the script should print a message
+recommending that you add the `.jiri_root/bin` directory to your PATH (which
+you should do).
 
 ### Working without altering your PATH
 
