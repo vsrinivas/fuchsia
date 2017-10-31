@@ -40,13 +40,13 @@ def parse_package_manifest(paths, dst_root):
   for path in paths:
     with open(path) as package_manifest:
       for line in package_manifest:
-          items = line.rstrip().split('=')
-          if len(items) != 2:
-              raise ValueError('Malformed manifest entry: ' + line)
+        items = line.rstrip().split('=')
+        if len(items) != 2:
+          raise ValueError('Malformed manifest entry: ' + line)
 
-          dst = os.path.join(dst_root, items[0].lstrip('/'))
-          src = items[1]
-          data.append([dst, src])
+        dst = os.path.join(dst_root, items[0].lstrip('/'))
+        src = items[1]
+        data.append([dst, src])
   return data
 
 
@@ -79,7 +79,8 @@ def scp_everything(devices, package_data, out_dir, name_filter, verbose):
       dst_path = entry[0]
       src_path = entry[1]
 
-      if name_filter is not None and name_filter not in os.path.basename(dst_path):
+      if name_filter is not None and name_filter not in os.path.basename(
+          dst_path):
         continue
 
       # must "rm" the file first because memfs requires it
@@ -106,10 +107,7 @@ def main():
       nargs='+',
       help='Files containing manifest data. For example, ' \
            '(e.g. out/debug-x86-64/package/modular*/system_manifest)')
-  parser.add_argument(
-      '-d',
-      '--device',
-      default=[':'], help='Device to update')
+  parser.add_argument('-d', '--device', default=[':'], help='Device to update')
   parser.add_argument(
       '-o',
       '--out-dir',
@@ -139,8 +137,8 @@ def main():
 
   package_data = parse_package_manifest(args.package_files, dst_root)
 
-  return scp_everything(args.device, package_data, out_dir,
-                        name_filter, verbose)
+  return scp_everything(args.device, package_data, out_dir, name_filter,
+                        verbose)
 
 
 if __name__ == '__main__':
