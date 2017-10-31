@@ -12,12 +12,14 @@
 extern uint64_t arm_gicv2_gic_base;
 extern uint64_t arm_gicv2_gicd_offset;
 extern uint64_t arm_gicv2_gicc_offset;
+extern uint64_t arm_gicv2_gich_offset;
 
 #define GICREG(gic, reg)    (*REG32(arm_gicv2_gic_base + (reg)))
 #define GICD_OFFSET         arm_gicv2_gicd_offset
 #define GICC_OFFSET         arm_gicv2_gicc_offset
+#define GICH_OFFSET         arm_gicv2_gich_offset
 
-/* main cpu regs */
+// CPU interface registers.
 #define GICC_CTLR               (GICC_OFFSET + 0x0000)
 #define GICC_PMR                (GICC_OFFSET + 0x0004)
 #define GICC_BPR                (GICC_OFFSET + 0x0008)
@@ -34,7 +36,7 @@ extern uint64_t arm_gicv2_gicc_offset;
 #define GICC_IIDR               (GICC_OFFSET + 0x00fc)
 #define GICC_DIR                (GICC_OFFSET + 0x1000)
 
-/* distribution regs */
+// Distributor registers.
 #define GICD_CTLR               (GICD_OFFSET + 0x000)
 #define GICD_TYPER              (GICD_OFFSET + 0x004)
 #define GICD_IIDR               (GICD_OFFSET + 0x008)
@@ -64,6 +66,9 @@ extern uint64_t arm_gicv2_gicc_offset;
 
 /* we might need to check that we're not a gic v3, in which case look for the v3 PIDR2 reg */
 #define GICD_V3_PIDR2           (GICD_OFFSET + 0xffe8)
+
+// Virtual interface control registers.
+#define GICH_ADDRESS            (GICH_OFFSET + arm_gicv2_gic_base)
 
 #define MAX_INT 1024
 #define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))

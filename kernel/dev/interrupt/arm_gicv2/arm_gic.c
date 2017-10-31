@@ -42,6 +42,7 @@ static spin_lock_t gicd_lock;
 uint64_t arm_gicv2_gic_base = 0;
 uint64_t arm_gicv2_gicd_offset = 0;
 uint64_t arm_gicv2_gicc_offset = 0;
+uint64_t arm_gicv2_gich_offset = 0;
 static uint32_t ipi_base = 0;
 
 uint max_irqs = 0;
@@ -373,16 +374,19 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
         case MDI_BASE_VIRT:
-            got_gic_base_virt = !mdi_node_uint64(&child, &gic_base_virt);
+            got_gic_base_virt = mdi_node_uint64(&child, &gic_base_virt) == ZX_OK;
             break;
         case MDI_ARM_GIC_V2_GICD_OFFSET:
-            got_gicd_offset = !mdi_node_uint64(&child, &arm_gicv2_gicd_offset);
+            got_gicd_offset = mdi_node_uint64(&child, &arm_gicv2_gicd_offset) == ZX_OK;
             break;
         case MDI_ARM_GIC_V2_GICC_OFFSET:
-            got_gicc_offset = !mdi_node_uint64(&child, &arm_gicv2_gicc_offset);
+            got_gicc_offset = mdi_node_uint64(&child, &arm_gicv2_gicc_offset) == ZX_OK;
+            break;
+        case MDI_ARM_GIC_V2_GICH_OFFSET:
+            mdi_node_uint64(&child, &arm_gicv2_gich_offset);
             break;
         case MDI_ARM_GIC_V2_IPI_BASE:
-            got_ipi_base = !mdi_node_uint32(&child, &ipi_base);
+            got_ipi_base = mdi_node_uint32(&child, &ipi_base) == ZX_OK;
             break;
         case MDI_ARM_GIC_V2_MSI_FRAME_PHYS:
             mdi_node_uint64(&child, &msi_frame_phys);

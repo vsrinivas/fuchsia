@@ -15,6 +15,7 @@
 class GuestPhysicalAddressSpace;
 class PortDispatcher;
 class VmObject;
+struct GicH;
 
 typedef struct zx_port_packet zx_port_packet_t;
 
@@ -47,6 +48,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
     zx_status_t Resume(zx_port_packet_t* packet);
+    zx_status_t Interrupt(uint32_t interrupt);
     zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
     zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
@@ -54,11 +56,14 @@ private:
     const uint8_t vmid_;
     const uint8_t vpid_;
     const thread_t* thread_;
+    GicH* gich_;
     GuestPhysicalAddressSpace* gpas_;
     TrapMap* traps_;
     El2State el2_state_;
+    fbl::atomic<uint64_t> hcr_;
 
-    Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas, TrapMap* traps);
+    Vcpu(uint8_t vmid, uint8_t vpid, const thread_t* thread, GuestPhysicalAddressSpace* gpas,
+         TrapMap* traps);
 };
 
 /* Create a guest. */

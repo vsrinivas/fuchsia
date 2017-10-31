@@ -6,9 +6,11 @@
 
 #include <arch/hypervisor.h>
 #include <arch/ops.h>
+#include <dev/interrupt/arm_gic_regs.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <kernel/mp.h>
 #include <platform/timer.h>
 #include <vm/pmm.h>
 #include <zircon/errors.h>
@@ -17,9 +19,60 @@
 #include "el2_cpu_state_priv.h"
 #include "vmexit_priv.h"
 
+static const uint64_t kHcrVm = 1u << 0;
+static const uint64_t kHcrPtw = 1u << 2;
+static const uint64_t kHcrFmo = 1u << 3;
+static const uint64_t kHcrImo = 1u << 4;
+static const uint64_t kHcrAmo = 1u << 5;
+static const uint64_t kHcrVi = 1u << 7;
+static const uint64_t kHcrDc = 1u << 12;
+static const uint64_t kHcrTwi = 1u << 13;
+static const uint64_t kHcrTwe = 1u << 14;
+static const uint64_t kHcrTsc = 1u << 19;
+static const uint64_t kHcrTvm = 1u << 26;
+static const uint64_t kHcrRw = 1u << 31;
+
 static const uint32_t kSpsrEl1h = 0b0101;
-static const uint32_t kSpsrDaif = 0b1111 << 6;
 static const uint32_t kSpsrNzcv = 0b1111 << 28;
+
+static const uint32_t kGichHcrEn = 1u << 0;
+static const uint32_t kGichLrPending = 0b01 << 28;
+
+struct GicH {
+    volatile uint32_t hcr;
+    volatile uint32_t vtr;
+    volatile uint32_t vmcr;
+    volatile uint32_t reserved0;
+    volatile uint32_t misr;
+    volatile uint32_t reserved1[3];
+    volatile uint64_t eisr;
+    volatile uint32_t reserved2[2];
+    volatile uint64_t elsr;
+    volatile uint32_t reserved3[46];
+    volatile uint32_t apr;
+    volatile uint32_t reserved4[3];
+    volatile uint32_t lr[64];
+} __PACKED;
+
+static_assert(__offsetof(GicH, hcr) == 0x00, "");
+static_assert(__offsetof(GicH, vtr) == 0x04, "");
+static_assert(__offsetof(GicH, vmcr) == 0x08, "");
+static_assert(__offsetof(GicH, misr) == 0x10, "");
+static_assert(__offsetof(GicH, eisr) == 0x20, "");
+static_assert(__offsetof(GicH, elsr) == 0x30, "");
+static_assert(__offsetof(GicH, apr) == 0xf0, "");
+static_assert(__offsetof(GicH, lr) == 0x100, "");
+
+static zx_status_t gich_of(uint8_t vpid, GicH** gich) {
+    // Check for presence of GICv2 virtualisation extensions.
+    //
+    // TODO(abdulla): Support GICv3 virtualisation.
+    if (GICH_OFFSET == 0)
+        return ZX_ERR_NOT_SUPPORTED;
+
+    *gich = reinterpret_cast<GicH*>(GICH_ADDRESS + 0x1000 + (vpid << 9));
+    return ZX_OK;
+}
 
 static zx_paddr_t vttbr_of(uint8_t vmid, zx_paddr_t table) {
     return static_cast<zx_paddr_t>(vmid) << 48 | table;
@@ -41,11 +94,18 @@ zx_status_t Vcpu::Create(zx_vaddr_t ip, uint8_t vmid, GuestPhysicalAddressSpace*
     fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(vmid, vpid, thread, gpas, traps));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
+    auto_call.cancel();
+
+    status = gich_of(vpid, &vcpu->gich_);
+    if (status != ZX_OK)
+        return status;
 
     vcpu->el2_state_.guest_state.system_state.elr_el2 = ip;
-    vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrEl1h | kSpsrDaif;
+    vcpu->el2_state_.guest_state.system_state.spsr_el2 = kSpsrEl1h;
+    vcpu->hcr_.store(kHcrVm | kHcrPtw | kHcrFmo | kHcrImo | kHcrAmo | kHcrDc | kHcrTwi | kHcrTwe |
+                     kHcrTsc | kHcrTvm | kHcrRw);
+    vcpu->gich_->hcr |= kGichHcrEn;
 
-    auto_call.cancel();
     *out = fbl::move(vcpu);
     return ZX_OK;
 }
@@ -65,10 +125,12 @@ Vcpu::~Vcpu() {
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return ZX_ERR_BAD_STATE;
+    zx_paddr_t state = vaddr_to_paddr(&el2_state_);
     zx_paddr_t vttbr = vttbr_of(vmid_, gpas_->table_phys());
     zx_status_t status;
     do {
-        status = arm64_el2_resume(vaddr_to_paddr(&el2_state_), vttbr);
+        uint64_t hcr = hcr_.fetch_and(~kHcrVi);
+        status = arm64_el2_resume(state, vttbr, hcr);
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt, return to the guest.
             status = ZX_OK;
@@ -79,6 +141,21 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         }
     } while (status == ZX_OK);
     return status == ZX_ERR_NEXT ? ZX_OK : status;
+}
+
+zx_status_t Vcpu::Interrupt(uint32_t interrupt) {
+    // TODO(abdulla): Improve handling of list register exhaustion.
+    uint64_t elsr = gich_->elsr;
+    if (elsr == 0)
+        return ZX_ERR_NO_RESOURCES;
+
+    size_t i = __builtin_ctzl(elsr);
+    gich_->lr[i] = kGichLrPending | interrupt;
+    hcr_.fetch_or(kHcrVi);
+
+    // TODO(abdulla): Handle the case when the VCPU is halted.
+    mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
+    return ZX_OK;
 }
 
 zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
@@ -117,7 +194,7 @@ zx_status_t arch_vcpu_resume(Vcpu* vcpu, zx_port_packet_t* packet) {
 }
 
 zx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return vcpu->Interrupt(interrupt);
 }
 
 zx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {

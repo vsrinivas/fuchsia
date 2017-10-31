@@ -125,7 +125,7 @@ __BEGIN_CDECLS
 
 extern zx_status_t arm64_el2_on(zx_paddr_t stack_top, zx_paddr_t ttbr0);
 extern zx_status_t arm64_el2_off();
-extern zx_status_t arm64_el2_resume(zx_paddr_t el2_state, zx_paddr_t vttbr);
+extern zx_status_t arm64_el2_resume(zx_paddr_t el2_state, zx_paddr_t vttbr, uint64_t hcr);
 extern zx_status_t arm64_el2_tlbi_ipa(uint8_t vmid, zx_vaddr_t addr);
 extern zx_status_t arm64_el2_tlbi_vmid(uint8_t vmid);
 

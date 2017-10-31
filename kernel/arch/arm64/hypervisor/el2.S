@@ -14,19 +14,6 @@
 #define ESR_EL2_EC_SHIFT                26
 #define ESR_EL2_ISS_MASK                0x01ffffff
 
-#define HCR_EL2_VM                      (1 << 0)
-#define HCR_EL2_PTW                     (1 << 2)
-#define HCR_EL2_FMO                     (1 << 3)
-#define HCR_EL2_IMO                     (1 << 4)
-#define HCR_EL2_AMO                     (1 << 5)
-#define HCR_EL2_VF                      (1 << 6)
-#define HCR_EL2_VI                      (1 << 7)
-#define HCR_EL2_VSE                     (1 << 8)
-#define HCR_EL2_DC                      (1 << 12)
-#define HCR_EL2_TWI                     (1 << 13)
-#define HCR_EL2_TWE                     (1 << 14)
-#define HCR_EL2_TSC                     (1 << 19)
-#define HCR_EL2_TVM                     (1 << 26)
 #define HCR_EL2_RW                      (1 << 31)
 
 #define SCTLR_EL2_M                     (1 << 0)
@@ -130,7 +117,7 @@
 .endm
 
 .macro exception_return literal
-    movlit x0, \literal
+    mov x0, \literal
     eret
 .endm
 
@@ -175,7 +162,7 @@
     // We push X9 onto the stack so we have one scratch register. We only use
     // X9 here, so that we don't accidentally trample the guest state.
     str x9, [sp, #-16]!
-    movlit x9, \return_code
+    mov x9, \return_code
     str x9, [sp, #8]
 
     // Check VTTBR_EL2 to determine whether the exception came from the guest or
@@ -385,7 +372,7 @@ FUNCTION_LABEL(el2_hvc_tlbi_vmid)
 
     exception_return ZX_OK
 
-// zx_status_t arm64_el2_resume(zx_paddr_t el2_state, zx_paddr_t vttbr);
+// zx_status_t arm64_el2_resume(zx_paddr_t el2_state, zx_paddr_t vttbr, uint64_t hcr);
 FUNCTION(arm64_el2_resume)
     hvc #4
     ret
@@ -405,15 +392,13 @@ FUNCTION_LABEL(el2_hvc_resume)
     cbnz x10, .Lresume
     tlbi vmalle1
     isb
-    movlit x10, 1
+    mov x10, #1
     str x10, [x9, ES_RESUME]
     dsb ishst
 
 .Lresume:
-    // Enable guest traps, and ensure EL1 is arm64.
-    movlit x10, HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_DC | \
-                HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW
-    msr hcr_el2, x10
+    // Set the hypervisor control register.
+    msr hcr_el2, x2
     isb
 
     host_state stp
@@ -438,8 +423,9 @@ FUNCTION_LABEL(el2_guest_exit)
     system_state ldr, HS_SYSTEM_STATE
     host_state ldp
 
+    // Set the hypervisor control register.
     // Disable guest traps, and ensure EL1 is arm64.
-    movlit x9, HCR_EL2_RW
+    mov x9, #HCR_EL2_RW
     msr hcr_el2, x9
     isb
 
