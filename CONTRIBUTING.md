@@ -72,7 +72,7 @@ time.
 
 When you bootstrapped your development environment (see
 [getting source](getting_source.md)), you selected a layer. Your development
-enviornment views that layer at the latest revision and views the lower layers
+environment views that layer at the latest revision and views the lower layers
 at specific revisions in the past.
 
 If you want to switch to working on a different layer, either to get the source
