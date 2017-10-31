@@ -220,7 +220,7 @@ zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int
     }
 
     char name[ZX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "usb-midi-source-%d\n", index);
+    snprintf(name, sizeof(name), "usb-midi-source-%d", index);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

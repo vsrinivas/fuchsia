@@ -226,7 +226,7 @@ zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int i
     completion_signal(&sink->free_write_completion);
 
     char name[ZX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "usb-midi-sink-%d\n", index);
+    snprintf(name, sizeof(name), "usb-midi-sink-%d", index);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
