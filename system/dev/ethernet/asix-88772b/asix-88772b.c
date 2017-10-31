@@ -8,6 +8,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
+#include <zircon/assert.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 
@@ -26,6 +27,7 @@
 #define USB_BUF_SIZE 2048
 #define INTR_REQ_SIZE 8
 #define ETH_HEADER_SIZE 4
+#define ETH_MTU 1500
 
 typedef struct {
     zx_device_t* device;
@@ -339,7 +341,8 @@ static zx_status_t ax88772b_query(void* ctx, uint32_t options, ethmac_info_t* in
     }
 
     memset(info, 0, sizeof(*info));
-    info->mtu = USB_BUF_SIZE - ETH_HEADER_SIZE;
+    ZX_DEBUG_ASSERT(USB_BUF_SIZE - ETH_HEADER_SIZE >= ETH_MTU);
+    info->mtu = ETH_MTU;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
 
     return ZX_OK;
