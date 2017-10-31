@@ -91,14 +91,16 @@ ErrorCode Database::ReadByGroupType(
     Handle start_handle,
     Handle end_handle,
     const common::UUID& group_type,
-    uint16_t max_payload_size,
+    uint16_t max_data_list_size,
+    uint8_t* out_value_size,
     std::list<AttributeGrouping*>* out_results) {
   FXL_DCHECK(out_results);
+  FXL_DCHECK(out_value_size);
 
   // Should be large enough to accomodate at least one entry with a non-empty
   // value (NOTE: in production this will be at least equal to
   // l2cap::kMinLEMTU). Smaller values are allowed for unit tests.
-  FXL_DCHECK(max_payload_size > sizeof(AttributeGroupDataEntry));
+  FXL_DCHECK(max_data_list_size > sizeof(AttributeGroupDataEntry));
 
   if (start_handle == kInvalidHandle || start_handle > end_handle)
     return ErrorCode::kInvalidHandle;
@@ -115,7 +117,7 @@ ErrorCode Database::ReadByGroupType(
   // attribute values with different lengths, then multiple Read By Group Type
   // Requests must be made." (see Vol 3, Part F, 3.4.4.9).
   //
-  // |value_length| is determined by the first match.
+  // |value_size| is determined by the first match.
   size_t value_size;
   size_t entry_size;
   for (; iter != groupings_.end(); ++iter) {
@@ -138,27 +140,30 @@ ErrorCode Database::ReadByGroupType(
       value_size = iter->decl_value().size();
 
       // The actual size of the attribute group data entry that this attribute
-      // would produce. This is both bounded by |max_payload_size| and the
+      // would produce. This is both bounded by |max_data_list_size| and the
       // maximum value size that a Read By Group Type Response can accomodate.
       entry_size = std::min(
           value_size, static_cast<size_t>(kMaxReadByGroupTypeValueLength));
       entry_size = std::min(entry_size + sizeof(AttributeGroupDataEntry),
-                            static_cast<size_t>(max_payload_size));
+                            static_cast<size_t>(max_data_list_size));
     } else if (iter->decl_value().size() != value_size ||
-               entry_size > max_payload_size) {
+               entry_size > max_data_list_size) {
       // Stop the search if the value size is different or it wouldn't fit
       // inside the PDU.
       break;
     }
 
     results.push_back(&*iter);
-    max_payload_size -= entry_size;
+    max_data_list_size -= entry_size;
   }
 
   if (results.empty())
     return ErrorCode::kAttributeNotFound;
 
+  // Return the potentially truncated value size.
+  *out_value_size = entry_size - sizeof(AttributeGroupDataEntry);
   *out_results = std::move(results);
+
   return ErrorCode::kNoError;
 }
 

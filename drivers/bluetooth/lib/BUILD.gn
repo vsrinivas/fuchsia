@@ -7,6 +7,7 @@ group("lib") {
     "//garnet/drivers/bluetooth/lib/att",
     "//garnet/drivers/bluetooth/lib/common",
     "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/gatt",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap",
   ]
@@ -18,6 +19,7 @@ group("tests") {
     "//garnet/drivers/bluetooth/lib/att:tests",
     "//garnet/drivers/bluetooth/lib/common:tests",
     "//garnet/drivers/bluetooth/lib/gap:tests",
+    "//garnet/drivers/bluetooth/lib/gatt:tests",
     "//garnet/drivers/bluetooth/lib/hci:tests",
     "//garnet/drivers/bluetooth/lib/l2cap:tests",
   ]

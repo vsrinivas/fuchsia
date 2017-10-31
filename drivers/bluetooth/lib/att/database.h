@@ -70,13 +70,19 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
   // matching groupings as possible in accordance with the Read By Group Type
   // Request specification (see Vol 3, Part F, 3.4.4.9).
   //
-  // |max_payload_size| is used to prevent unnecessary traversal by only
-  // including results that can be written in a single ATT packet.
+  // |max_data_list_length| is the maximum size of the "attribute data list"
+  // field of a Read By Group Type response. This is used to prevent unnecessary
+  // traversal by only including results that can be written in a single ATT
+  // packet.
   //
-  // If |out_results| contains a single attribute and the value is larger than
-  // kMaxReadByGroupTypeValueLength, then the response PDU should contain a
-  // partial value. Otherwise, it can be assumed that all attribute values will
-  // fit within a with the given |max_payload_size|.
+  // The size of each attribute value that should be included in a Read By
+  // Group Type response will be returned in |out_value_size|. This value is
+  // calculated based on |max_data_list_length|.
+  //
+  // If |out_results| contains a single entry and its value is larger than
+  // |out_value_size| then the response should contain a partial value.
+  // Otherwise it can be assumed that all included attribute values will fit
+  // within the response.
   //
   // The results are returned in ascending order of handle value.
   //
@@ -84,7 +90,8 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
   ErrorCode ReadByGroupType(Handle start_handle,
                             Handle end_handle,
                             const common::UUID& group_type,
-                            uint16_t max_payload_size,
+                            uint16_t max_data_list_length,
+                            uint8_t* out_value_size,
                             std::list<AttributeGrouping*>* out_results);
 
   const std::list<AttributeGrouping>& groupings() const { return groupings_; }

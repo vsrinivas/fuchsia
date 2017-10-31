@@ -134,30 +134,33 @@ TEST(ATT_DatabaseTest, RemoveWhileEmpty) {
 TEST(ATT_DatabaseTest, ReadByGroupTypeInvalidHandle) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
 
   // Handle is 0.
   EXPECT_EQ(ErrorCode::kInvalidHandle,
             db->ReadByGroupType(kInvalidHandle, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
   EXPECT_EQ(ErrorCode::kInvalidHandle,
             db->ReadByGroupType(kTestRangeStart, kInvalidHandle, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
 
   // end > start
-  EXPECT_EQ(ErrorCode::kInvalidHandle,
-            db->ReadByGroupType(kTestRangeStart + 1, kTestRangeStart,
-                                kTestType1, kDefaultMTU, &results));
+  EXPECT_EQ(
+      ErrorCode::kInvalidHandle,
+      db->ReadByGroupType(kTestRangeStart + 1, kTestRangeStart, kTestType1,
+                          kDefaultMTU, &value_size, &results));
 }
 
 TEST(ATT_DatabaseTest, ReadByGroupTypeEmpty) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
 
   EXPECT_EQ(ErrorCode::kAttributeNotFound,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
 }
 
 TEST(ATT_DatabaseTest, ReadByGroupTypeOutOfRange) {
@@ -168,33 +171,38 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeOutOfRange) {
   auto* grp = db->NewGrouping(kTestType2, 0, kTestValue1);
   grp->set_active(true);
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
 
   // Search before
-  EXPECT_EQ(ErrorCode::kAttributeNotFound,
-            db->ReadByGroupType(kTestRangeStart, grp->start_handle() - 1,
-                                kTestType2, kDefaultMTU, &results));
+  EXPECT_EQ(
+      ErrorCode::kAttributeNotFound,
+      db->ReadByGroupType(kTestRangeStart, grp->start_handle() - 1, kTestType2,
+                          kDefaultMTU, &value_size, &results));
 
   // Search after
-  EXPECT_EQ(ErrorCode::kAttributeNotFound,
-            db->ReadByGroupType(grp->end_handle() + 1, kTestRangeEnd,
-                                kTestType2, kDefaultMTU, &results));
+  EXPECT_EQ(
+      ErrorCode::kAttributeNotFound,
+      db->ReadByGroupType(grp->end_handle() + 1, kTestRangeEnd, kTestType2,
+                          kDefaultMTU, &value_size, &results));
 }
 
 TEST(ATT_DatabaseTest, ReadByGroupTypeIncomplete) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
   db->NewGrouping(kTestType1, 2, kTestValue1);
 
   EXPECT_EQ(ErrorCode::kAttributeNotFound,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
 }
 
 TEST(ATT_DatabaseTest, ReadByGroupTypeInactive) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
 
   // Complete but inactive
@@ -203,12 +211,13 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeInactive) {
 
   EXPECT_EQ(ErrorCode::kAttributeNotFound,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
 }
 
 TEST(ATT_DatabaseTest, ReadByGroupTypeSingle) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
 
   auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
@@ -216,7 +225,9 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeSingle) {
 
   EXPECT_EQ(ErrorCode::kNoError,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
+
+  EXPECT_EQ(kTestValue1.size(), value_size);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(grp->start_handle(), results.front()->start_handle());
   EXPECT_EQ(grp->end_handle(), results.front()->end_handle());
@@ -240,11 +251,13 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeMultipleSameValueBasic) {
   grp->set_active(true);
   Handle match_handle2 = grp->start_handle();
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
   EXPECT_EQ(ErrorCode::kNoError,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
 
+  EXPECT_EQ(kTestValue1.size(), value_size);
   ASSERT_EQ(2u, results.size());
   EXPECT_EQ(match_handle1, results.front()->start_handle());
   EXPECT_EQ(kTestType1, results.front()->group_type());
@@ -269,9 +282,11 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeNarrowerRange) {
   const uint16_t kMTU =
       (kTestValue1.size() + sizeof(AttributeGroupDataEntry)) * kExpectedCount;
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
   EXPECT_EQ(ErrorCode::kNoError,
-            db->ReadByGroupType(kStart, kEnd, kTestType1, kMTU, &results));
+            db->ReadByGroupType(kStart, kEnd, kTestType1, kMTU, &value_size,
+                                &results));
   ASSERT_EQ(kExpectedCount, results.size());
 
   for (Handle h = kStart; h <= kEnd; ++h) {
@@ -283,7 +298,8 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeNarrowerRange) {
   // Search for the last handle only. This should return the last group.
   EXPECT_EQ(ErrorCode::kNoError,
             db->ReadByGroupType(kTestRangeEnd, kTestRangeEnd, kTestType1, kMTU,
-                                &results));
+                                &value_size, &results));
+  EXPECT_EQ(kTestValue1.size(), value_size);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(kTestRangeEnd, results.front()->start_handle());
 }
@@ -291,24 +307,26 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeNarrowerRange) {
 TEST(ATT_DatabaseTest, ReadByGroupTypeVaryingLengths) {
   auto db = Database::Create(kTestRangeStart, kTestRangeEnd);
 
-  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue1);
+  auto* grp = db->NewGrouping(kTestType1, 0, kTestValue2);
   grp->set_active(true);
   Handle match_handle = grp->start_handle();
 
   // Matching type but value of different size. The results will stop here.
-  grp = db->NewGrouping(kTestType1, 0, kTestValue2);
+  grp = db->NewGrouping(kTestType1, 0, kTestValue1);
   grp->set_active(true);
 
   // Matching type and matching value length. This won't be included as the
   // request will terminate at the second attribute.
-  grp = db->NewGrouping(kTestType1, 0, kTestValue1);
+  grp = db->NewGrouping(kTestType1, 0, kTestValue2);
   grp->set_active(true);
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
   EXPECT_EQ(ErrorCode::kNoError,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kDefaultMTU, &results));
+                                kDefaultMTU, &value_size, &results));
 
+  EXPECT_EQ(kTestValue2.size(), value_size);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(match_handle, results.front()->start_handle());
 }
@@ -329,11 +347,13 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeExceedsMTU) {
   const uint16_t kMTU =
       (kTestValue1.size() + sizeof(AttributeGroupDataEntry)) * 2 - 1;
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
   EXPECT_EQ(ErrorCode::kNoError,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kMTU, &results));
+                                kMTU, &value_size, &results));
 
+  EXPECT_EQ(kTestValue1.size(), value_size);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(match_handle, results.front()->start_handle());
 }
@@ -354,11 +374,13 @@ TEST(ATT_DatabaseTest, ReadByGroupTypeFirstValueExceedsMTU) {
   const uint16_t kMTU =
       kTestValue1.size() + sizeof(AttributeGroupDataEntry) - 1;
 
+  uint8_t value_size;
   std::list<AttributeGrouping*> results;
   EXPECT_EQ(ErrorCode::kNoError,
             db->ReadByGroupType(kTestRangeStart, kTestRangeEnd, kTestType1,
-                                kMTU, &results));
+                                kMTU, &value_size, &results));
 
+  EXPECT_EQ(kTestValue1.size() - 1, value_size);
   ASSERT_EQ(1u, results.size());
   EXPECT_EQ(match_handle, results.front()->start_handle());
 }
