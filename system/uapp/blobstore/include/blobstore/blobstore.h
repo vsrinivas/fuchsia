@@ -16,6 +16,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_free_ptr.h>
+#include <fbl/vector.h>
 
 #include <zircon/types.h>
 
@@ -147,4 +148,9 @@ zx_status_t readblk(int fd, uint64_t bno, void* data);
 zx_status_t writeblk(int fd, uint64_t bno, const void* data);
 zx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max);
 zx_status_t blobstore_get_blockcount(int fd, uint64_t* out);
+
+#ifndef __Fuchsia__
+int blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
+                   const fbl::Vector<size_t>& extent_lengths);
+#endif
 } // namespace blobstore

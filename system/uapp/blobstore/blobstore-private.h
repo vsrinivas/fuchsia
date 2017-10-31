@@ -334,7 +334,10 @@ class Blobstore : public fbl::RefCounted<Blobstore> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobstore);
 
-    static zx_status_t Create(fbl::unique_fd blockfd, const info_block_t& info_block,
+    // Creates an instance of Blobstore from the file at |blockfd|.
+    // The blobstore partition is expected to start at |offset| bytes into the file.
+    static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
+                              const fbl::Array<size_t>& extent_lengths,
                               fbl::RefPtr<Blobstore>* out);
 
     ~Blobstore() {}
@@ -358,7 +361,8 @@ private:
 
     friend class BlobstoreChecker;
 
-    Blobstore(fbl::unique_fd fd, const info_block_t& info_block);
+    Blobstore(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
+              const fbl::Array<size_t>& extent_lengths);
     zx_status_t LoadBitmap();
 
     // Access the |index|th inode
@@ -372,10 +376,21 @@ private:
     // Write |data| into block |bno|
     zx_status_t WriteBlock(size_t bno, const void* data);
 
+    zx_status_t ResetCache();
+
     RawBitmap block_map_{};
 
     fbl::unique_fd blockfd_;
     bool dirty_;
+    off_t offset_;
+
+    size_t block_map_start_block_;
+    size_t node_map_start_block_;
+    size_t data_start_block_;
+
+    size_t block_map_block_count_;
+    size_t node_map_block_count_;
+    size_t data_block_count_;
 
     union {
         blobstore_info_t info_;
@@ -407,6 +422,13 @@ int blobstore_mkfs(int fd, uint64_t block_count);
 
 // Exclusively host-side functionality
 #ifndef __Fuchsia__
+// Create a blobstore from a sparse file
+// |start| indicates where the blobstore partition starts within the file (in bytes)
+// |end| indicates the end of the blobstore partition (in bytes)
+// |extent_lengths| contains the length (in bytes) of each blobstore extent: currently this includes
+// the superblock, block bitmap, inode table, and data blocks.
+zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, int fd, off_t start, off_t end,
+                                    const fbl::Vector<size_t>& extent_lengths);
 int blobstore_add_blob(Blobstore* bs, int data_fd);
 #endif
 

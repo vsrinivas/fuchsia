@@ -88,6 +88,8 @@ MODULE_TYPE := hostlib
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/blobstore-common.cpp \
+    $(LOCAL_DIR)/blobstore-check.cpp \
+    $(LOCAL_DIR)/blobstore-host.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
