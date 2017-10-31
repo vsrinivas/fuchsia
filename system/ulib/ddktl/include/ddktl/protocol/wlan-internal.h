@@ -19,8 +19,9 @@ namespace internal {
 
 DECLARE_HAS_MEMBER_FN(has_wlanmac_status, WlanmacStatus);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_recv, WlanmacRecv);
+DECLARE_HAS_MEMBER_FN(has_wlanmac_complete_tx, WlanmacCompleteTx);
 
-template <typename D>
+template <typename D, bool HasCompleteTx>
 constexpr void CheckWlanmacIfc() {
     static_assert(internal::has_wlanmac_status<D>::value,
                   "WlanmacIfc subclasses must implement WlanmacStatus");
@@ -33,21 +34,30 @@ constexpr void CheckWlanmacIfc() {
                   "WlanmacIfc subclasses must implement WlanmacRecv");
     static_assert(fbl::is_same<decltype(&D::WlanmacRecv),
                                 void (D::*)(uint32_t, const void*, size_t, wlan_rx_info_t*)>::value,
-                  "WlanmacQuery must be a non-static member function with signature "
+                  "WlanmacRecv must be a non-static member function with signature "
                   "'void WlanmacRecv(uint32_t, const void*, size_t, wlan_rx_info_t*)', and be "
                   "visible to ddk::WlanmacIfc<D> (either because they are public, or because of "
                   "friendship).");
+    static_assert(!HasCompleteTx || internal::has_wlanmac_complete_tx<D>::value,
+                  "WlanmacIfc subclasses must implement WlanmacCompleteTx");
+    //static_assert(!HasCompleteTx || fbl::is_same<decltype(&D::WlanmacCompleteTx),
+    //                            void (D::*)(wlan_tx_packet_t*, zx_status_t)>::value,
+    //              "WlanmacCompleteTx must be a non-static member function with signature "
+    //              "'void WlanmacCompleteTx(wlan_tx_packet_t*, zx_status_t)', and be "
+    //              "visible to ddk::WlanmacIfc<D> (either because they are public, or because of "
+    //              "friendship).");
 }
 
 DECLARE_HAS_MEMBER_FN(has_wlanmac_query, WlanmacQuery);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_stop, WlanmacStop);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_start, WlanmacStart);
-DECLARE_HAS_MEMBER_FN(has_wlanmac_send, WlanmacTx);
+DECLARE_HAS_MEMBER_FN(has_wlanmac_tx, WlanmacTx);
+DECLARE_HAS_MEMBER_FN(has_wlanmac_queue_tx, WlanmacQueueTx);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_channel, WlanmacSetChannel);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_bss, WlanmacSetBss);
 DECLARE_HAS_MEMBER_FN(has_wlanmac_set_key, WlanmacSetKey);
 
-template <typename D>
+template <typename D, bool HasQueueTx>
 constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_query<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacQuery");
@@ -72,14 +82,22 @@ constexpr void CheckWlanmacProtocolSubclass() {
                   "'zx_status_t WlanmacStart(fbl::unique_ptr<WlanmacIfcProxy>)', and be visible "
                   "to ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
-    static_assert(internal::has_wlanmac_send<D>::value,
+    static_assert(HasQueueTx || internal::has_wlanmac_tx<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacTx");
-    static_assert(fbl::is_same<decltype(&D::WlanmacTx),
-                                void (D::*)(uint32_t, const void*, size_t)>::value,
-                  "WlanmacTx must be a non-static member function with signature "
-                  "'zx_status_t WlanmacTx(uint32_t, const void*, size_t)', and be visible to "
-                  "ddk::WlanmacProtocol<D> (either because they are public, or because of "
-                  "friendship).");
+    //static_assert(HasQueueTx || fbl::is_same<decltype(&D::WlanmacTx),
+    //                            void (D::*)(uint32_t, const void*, size_t)>::value,
+    //              "WlanmacTx must be a non-static member function with signature "
+    //              "'void WlanmacTx(uint32_t, const void*, size_t)', and be "
+    //              "visible to ddk::WlanmacProtocol<D> (either because they are public, or because "
+    //              "of friendship).");
+    static_assert(!HasQueueTx || internal::has_wlanmac_queue_tx<D>::value,
+                  "WlanmacProtocol subclasses must implement WlanmacQueueTx");
+    //static_assert(!HasQueueTx || fbl::is_same<decltype(&D::WlanmacQueueTx),
+    //                            zx_status_t (D::*)(uint32_t, wlan_tx_packet_t*)>::value,
+    //              "WlanmacQueueTx must be a non-static member function with signature "
+    //              "'zx_status_t WlanmacQueueTx(uint32_t, wlan_tx_packet_t*)', and be "
+    //              "visible to ddk::WlanmacProtocol<D> (either because they are public, or because "
+    //              "of friendship).");
     static_assert(internal::has_wlanmac_set_channel<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacSetChannel");
     static_assert(fbl::is_same<decltype(&D::WlanmacSetChannel),

@@ -36,6 +36,60 @@ struct base_protocol {
     base_protocol() = default;
 };
 
+// Deprecation helpers: transition a DDKTL protocol interface when there are implementations outside
+// of zircon without breaking any builds.
+//
+// Example:
+// template <typename D, bool NewFooMethod=false>
+// class MyProtocol : public internal::base_protocol {
+//   public:
+//     MyProtocol() {
+//         internal::CheckMyProtocol<D, NewMethod>();
+//         ops_.foo = Foo;
+//
+//         // Can only inherit from one base_protocol implemenation
+//         ZX_ASSERT(this->ddk_proto_ops_ == nullptr);
+//         ddk_proto_id_ = ZX_PROTOCOL_MY_FOO;
+//         ddk_proto_ops_ = &ops_;
+//     }
+//
+//   private:
+//     DDKTL_DEPRECATED(NewFooMethod)
+//     static Foo(void* ctx, uint32_t options, foo_info_t* info) {
+//         return static_cast<D*>(ctx)->MyFoo(options);
+//     }
+//
+//     DDKTL_NOTREADY(NewFooMethod)
+//     static Foo(void* ctx, uint32_t options, foo_info_t* info) {
+//         return static_cast<D*>(ctx)->MyFoo(options, info);
+//     }
+// };
+//
+// // This class hasn't been updated yet, so it uses the default value for NewFooMethod and has the
+// // old MyFoo method implementation.
+// class MyProtocolImpl : public ddk::Device<MyProtocolImpl, /* other mixins */>,
+//                        public ddk::MyProtocol<MyProtocolImpl> {
+//   public:
+//     zx_status_t MyFoo(uint32_t options);
+// };
+//
+// // The implementation transitions as follows:
+// class MyProtocolImpl : public ddk::Device<MyProtocolImpl, /* other mixins */>,
+//                        public ddk::MyProtocol<MyProtocolImpl, true> {
+//   public:
+//     zx_status_t MyFoo(uint32_t options, foo_info_t* info);
+// };
+//
+// Now the DDKTL_DEPRECATED method can be removed, along with the NewFooMethod template parameter.
+// At no stage should the build be broken. These annotations may also be used to add new methods, by
+// providing a no-op in the DDKTL_DEPRECATED static method.
+#define DDKTL_DEPRECATED(condition) \
+    template <typename T = D, bool En = condition, \
+    typename fbl::enable_if<!fbl::integral_constant<bool, En>::value, int>::type = 0>
+#define DDKTL_NOTREADY(condition) \
+    template <typename T = D, bool En = condition, \
+    typename fbl::enable_if<fbl::integral_constant<bool, En>::value, int>::type = 0>
+
 // Mixin checks: ensure that a type meets the following qualifications:
 //
 // 1) has a method with the correct name (this makes the compiler errors a little more sane),

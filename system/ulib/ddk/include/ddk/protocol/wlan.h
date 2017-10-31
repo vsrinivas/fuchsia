@@ -16,6 +16,16 @@ typedef struct wlan_channel {
 } wlan_channel_t;
 
 enum {
+    WLAN_RX_INFO_VALID_PHY = (1 << 0),
+    WLAN_RX_INFO_VALID_DATA_RATE = (1 << 1),
+    WLAN_RX_INFO_VALID_CHAN_WIDTH = (1 << 2),
+    WLAN_RX_INFO_VALID_MCS = (1 << 3),
+    WLAN_RX_INFO_VALID_RSSI = (1 << 4),
+    WLAN_RX_INFO_VALID_RCPI = (1 << 5),
+    WLAN_RX_INFO_VALID_SNR = (1 << 6),
+    // Bits 7-31 reserved
+
+    // Deprecated enum names
     WLAN_RX_INFO_PHY_PRESENT = (1 << 0),
     WLAN_RX_INFO_DATA_RATE_PRESENT = (1 << 1),
     WLAN_RX_INFO_CHAN_WIDTH_PRESENT = (1 << 2),
@@ -23,35 +33,45 @@ enum {
     WLAN_RX_INFO_RSSI_PRESENT = (1 << 4),
     WLAN_RX_INFO_RCPI_PRESENT = (1 << 5),
     WLAN_RX_INFO_SNR_PRESENT = (1 << 6),
-    // Bits 7-31 reserved
 };
 
 enum {
-    WLAN_PHY_CCK,
-    WLAN_PHY_OFDM,
-    WLAN_PHY_HT_MIXED,
-    WLAN_PHY_HT_GREENFIELD,
-    WLAN_PHY_VHT,
+    WLAN_PHY_CCK = 1,
+    WLAN_PHY_OFDM = 2,
+    WLAN_PHY_HT_MIXED = 3,
+    WLAN_PHY_HT_GREENFIELD = 4,
+    WLAN_PHY_VHT = 5,
 };
 
 enum {
-    WLAN_CHAN_WIDTH_5MHZ,
-    WLAN_CHAN_WIDTH_10MHZ,
-    WLAN_CHAN_WIDTH_20MHZ,
-    WLAN_CHAN_WIDTH_40MHZ,
-    WLAN_CHAN_WIDTH_80MHZ,
-    WLAN_CHAN_WIDTH_160MHZ,
-    WLAN_CHAN_WIDTH_80_80MHZ,
+    WLAN_CHAN_WIDTH_5MHZ = 1,
+    WLAN_CHAN_WIDTH_10MHZ = 2,
+    WLAN_CHAN_WIDTH_20MHZ = 3,
+    WLAN_CHAN_WIDTH_40MHZ = 4,
+    WLAN_CHAN_WIDTH_80MHZ = 5,
+    WLAN_CHAN_WIDTH_160MHZ = 6,
+    WLAN_CHAN_WIDTH_80_80MHZ = 7,
 };
 
 enum {
-    WLAN_BSS_TYPE_INFRASTRUCTURE,
-    WLAN_BSS_TYPE_IBSS,
+    WLAN_BSS_TYPE_INFRASTRUCTURE = 1,
+    WLAN_BSS_TYPE_IBSS = 2,
+};
+
+enum {
+    WLAN_RX_INFO_FLAGS_FCS_INVALID = (1 << 0),
 };
 
 typedef struct wlan_rx_info {
-    // Flags indicating which fields are valid in this struct. Reserved flags must be zero.
+    // Deprecated field; use present_flags instead.
     uint32_t flags;
+    // Receive flags. These represent boolean flags as opposed to enums or value-based info which
+    // are represented below. Values should be taken from the WLAN_RX_INFO_FLAGS_* enum.
+    uint32_t rx_flags;
+
+    // Bitmask indicating which of the following fields are valid in this struct. Reserved flags
+    // must be zero.
+    uint32_t valid_fields;
     // The PHY format of the device at the time of the operation.
     uint16_t phy;
     // The channel width of the device.
@@ -60,8 +80,10 @@ typedef struct wlan_rx_info {
     uint32_t data_rate;
     // The channel of the device at the time of the operation. This field must be included.
     wlan_channel_t chan;
-    // The modulation index of the device at the time of the operation. Depends
+    // The modulation and coding scheme index of the device at the time of the operation. Depends
     // on the PHY format and channel width.
+    uint8_t mcs;
+    // Deprecated field; use mcs instead.
     uint8_t mod;
     // The RSSI measured by the device. No units.
     uint8_t rssi;
@@ -72,9 +94,38 @@ typedef struct wlan_rx_info {
 } wlan_rx_info_t;
 
 enum {
-    WLAN_RX_FLAGS_FCS_INVALID = (1 << 0),
+    WLAN_TX_INFO_FLAGS_PROTECTED = (1 << 0),
 };
 
+enum {
+    WLAN_TX_INFO_VALID_PHY = (1 << 0),
+    WLAN_TX_INFO_VALID_DATA_RATE = (1 << 1),
+    WLAN_TX_INFO_VALID_CHAN_WIDTH = (1 << 2),
+    WLAN_TX_INFO_VALID_MCS = (1 << 3),
+    // Bits 4-31 reserved
+};
+
+typedef struct wlan_tx_info {
+    // Transmit flags. These represent boolean options as opposed to enums or other value-based
+    // info which are represented below. Values should be taken from the WLAN_TX_INFO_FLAGS_* enum.
+    uint32_t tx_flags;
+
+    // Bitmask indicating which of the following fields are valid in this struct. Reserved flags
+    // must be zero. Values for fields not indicated by a flag may be chosen at the discretion of
+    // the wlanmac driver.
+    uint32_t valid_fields;
+    // The PHY format to be used to transmit this packet.
+    uint16_t phy;
+    // The channel width to be used to transmit this packet.
+    uint16_t chan_width;
+    // The data rate to be used to transmit this packet, measured in units of 0.5 Mb/s.
+    uint32_t data_rate;
+    // The modulation and coding scheme index for this packet. Depends on the PHY format and
+    // channel width.
+    uint8_t mcs;
+} wlan_tx_info_t;
+
+// TODO(hahnr): use explicit enum values
 enum {
     WLAN_PROTECTION_NONE,
     WLAN_PROTECTION_RX,
@@ -82,12 +133,12 @@ enum {
     WLAN_PROTECTION_RX_TX,
 };
 
+// TODO(hahnr): use explicit enum values
 enum {
     WLAN_KEY_TYPE_PAIRWISE,
     WLAN_KEY_TYPE_GROUP,
     WLAN_KEY_TYPE_IGTK,
     WLAN_KEY_TYPE_PEER,
-    // TODO(hahnr): Add additional types, e.g., TX/RX MIC for TKIP.
 };
 
 typedef struct wlan_key_config {
@@ -101,6 +152,20 @@ typedef struct wlan_key_config {
     uint8_t key[32];
 } wlan_key_config_t;
 
+typedef struct wlan_tx_packet {
+    // Leading bytes of the packet to transmit. Any 802.11 frame headers must be in the packet_head.
+    ethmac_netbuf_t* packet_head;
+    // Trailing bytes of the packet to transmit. May be NULL if all bytes to be transmitted are in
+    // the packet_head. Typically used to transport ethernet frames from a higher layer.
+    ethmac_netbuf_t* packet_tail;
+    // If packet_tail is not NULL, the offset into the packet tail that should be used before
+    // transmitting. The ethmac_netbuf_t len field will reflect the original packet length without
+    // the offset.
+    uint16_t tail_offset;
+    // Additional data needed to transmit the packet.
+    wlan_tx_info_t info;
+} wlan_tx_packet_t;
+
 typedef struct wlanmac_ifc {
     // Report the status of the wlanmac device.
     void (*status)(void* cookie, uint32_t status);
@@ -108,6 +173,9 @@ typedef struct wlanmac_ifc {
     // Submit received data to the next driver. info must not be NULL.
     void (*recv)(void* cookie, uint32_t flags, const void* data, size_t length,
                  wlan_rx_info_t* info);
+
+    // Complete the tx to return the ownership of the packet buffers to the wlan driver.
+    void (*complete_tx)(void* cookie, wlan_tx_packet_t* packet, zx_status_t status);
 } wlanmac_ifc_t;
 
 typedef struct wlanmac_protocol_ops {
@@ -125,8 +193,21 @@ typedef struct wlanmac_protocol_ops {
     // Safe to call if the wlanmac is already stopped.
     void (*stop)(void* ctx);
 
-    // Queue the data for transmit
+    // Queue the data for transmit (deprecated)
     void (*tx)(void* ctx, uint32_t options, const void* data, size_t length);
+
+    // Queue the data for transmit. Return status indicates disposition:
+    //   ZX_ERR_SHOULD_WAIT: Packet is being transmitted
+    //   ZX_OK: Packet has been transmitted
+    //   Other: Packet could not be transmitted
+    //
+    // In the SHOULD_WAIT case the driver takes ownership of the wlan_tx_packet_t and must call
+    // complete_tx() to return it once the transmission is complete. complete_tx() MUST NOT be
+    // called from within the queue_tx() implementation.
+    //
+    // queue_tx() may be called at any time after start() is called including from multiple threads
+    // simultaneously.
+    zx_status_t (*queue_tx)(void* ctx, uint32_t options, wlan_tx_packet_t* pkt);
 
     // Set the radio channel
     zx_status_t (*set_channel)(void* ctx, uint32_t options, wlan_channel_t* chan);

@@ -18,7 +18,7 @@ namespace {
 #define get_this() reinterpret_cast<uintptr_t>(this)
 
 class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
-                       public ddk::WlanmacIfc<TestWlanmacIfc> {
+                       public ddk::WlanmacIfc<TestWlanmacIfc, true> {
   public:
     TestWlanmacIfc() : ddk::Device<TestWlanmacIfc>(nullptr) {
         this_ = get_this();
@@ -36,12 +36,19 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
         recv_called_ = true;
     }
 
+    void WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
+        complete_tx_this_ = get_this();
+        complete_tx_called_ = true;
+    }
+
     bool VerifyCalls() const {
         BEGIN_HELPER;
         EXPECT_EQ(this_, status_this_, "");
         EXPECT_EQ(this_, recv_this_, "");
+        EXPECT_EQ(this_, complete_tx_this_, "");
         EXPECT_TRUE(status_called_, "");
         EXPECT_TRUE(recv_called_, "");
+        EXPECT_TRUE(complete_tx_called_, "");
         END_HELPER;
     }
 
@@ -53,12 +60,14 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
     uintptr_t this_ = 0u;
     uintptr_t status_this_ = 0u;
     uintptr_t recv_this_ = 0u;
+    uintptr_t complete_tx_this_ = 0u;
     bool status_called_ = false;
     bool recv_called_ = false;
+    bool complete_tx_called_ = false;
 };
 
 class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>,
-                            public ddk::WlanmacProtocol<TestWlanmacProtocol> {
+                            public ddk::WlanmacProtocol<TestWlanmacProtocol, true> {
   public:
     TestWlanmacProtocol()
       : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>(nullptr) {
@@ -93,9 +102,10 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         return ZX_OK;
     }
 
-    void WlanmacTx(uint32_t options, const void* data, size_t length) {
-        tx_this_ = get_this();
-        tx_called_ = true;
+    zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
+        queue_tx_this_ = get_this();
+        queue_tx_called_ = true;
+        return ZX_OK;
     }
 
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
@@ -121,14 +131,14 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         EXPECT_EQ(this_, query_this_, "");
         EXPECT_EQ(this_, start_this_, "");
         EXPECT_EQ(this_, stop_this_, "");
-        EXPECT_EQ(this_, tx_this_, "");
+        EXPECT_EQ(this_, queue_tx_this_, "");
         EXPECT_EQ(this_, set_channel_this_, "");
         EXPECT_EQ(this_, set_bss_this_, "");
         EXPECT_EQ(this_, set_key_this_, "");
         EXPECT_TRUE(query_called_, "");
         EXPECT_TRUE(start_called_, "");
         EXPECT_TRUE(stop_called_, "");
-        EXPECT_TRUE(tx_called_, "");
+        EXPECT_TRUE(queue_tx_called_, "");
         EXPECT_TRUE(set_channel_called_, "");
         EXPECT_TRUE(set_bss_called_, "");
         EXPECT_TRUE(set_key_called_, "");
@@ -140,6 +150,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         // Use the provided proxy to test the ifc proxy.
         proxy_->Status(0);
         proxy_->Recv(0, nullptr, 0, nullptr);
+        proxy_->CompleteTx(nullptr, ZX_OK);
         return true;
     }
 
@@ -148,14 +159,14 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     uintptr_t query_this_ = 0u;
     uintptr_t stop_this_ = 0u;
     uintptr_t start_this_ = 0u;
-    uintptr_t tx_this_ = 0u;
+    uintptr_t queue_tx_this_ = 0u;
     uintptr_t set_channel_this_ = 0u;
     uintptr_t set_bss_this_ = 0u;
     uintptr_t set_key_this_ = 0u;
     bool query_called_ = false;
     bool stop_called_ = false;
     bool start_called_ = false;
-    bool tx_called_ = false;
+    bool queue_tx_called_ = false;
     bool set_channel_called_ = false;
     bool set_bss_called_ = false;
     bool set_key_called_ = false;
@@ -171,6 +182,7 @@ static bool test_wlanmac_ifc() {
     auto ifc = dev.wlanmac_ifc();
     ifc->status(&dev, 0);
     ifc->recv(&dev, 0, nullptr, 0, nullptr);
+    ifc->complete_tx(&dev, nullptr, ZX_OK);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -185,6 +197,7 @@ static bool test_wlanmac_ifc_proxy() {
 
     proxy.Status(0);
     proxy.Recv(0, nullptr, 0, nullptr);
+    proxy.CompleteTx(nullptr, ZX_OK);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -207,7 +220,7 @@ static bool test_wlanmac_protocol() {
     EXPECT_EQ(ZX_OK, proto.ops->query(proto.ctx, 0, nullptr), "");
     proto.ops->stop(proto.ctx);
     EXPECT_EQ(ZX_OK, proto.ops->start(proto.ctx, nullptr, nullptr), "");
-    proto.ops->tx(proto.ctx, 0, nullptr, 0);
+    proto.ops->queue_tx(proto.ctx, 0, nullptr);
     EXPECT_EQ(ZX_OK, proto.ops->set_channel(proto.ctx, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, proto.ops->set_bss(proto.ctx, 0, nullptr, 0), "");
     EXPECT_EQ(ZX_OK, proto.ops->set_key(proto.ctx, 0, nullptr), "");
@@ -236,7 +249,7 @@ static bool test_wlanmac_protocol_proxy() {
     EXPECT_EQ(ZX_OK, proxy.Query(0, nullptr), "");
     proxy.Stop();
     EXPECT_EQ(ZX_OK, proxy.Start(&ifc_dev), "");
-    proxy.Tx(0, nullptr, 0);
+    proxy.QueueTx(0, nullptr);
     proxy.SetChannel(0, nullptr);
     proxy.SetBss(0, nullptr, 0);
     proxy.SetKey(0, nullptr);

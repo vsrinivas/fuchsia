@@ -64,6 +64,10 @@
 //         // Receive data buffer from wlanmac device
 //     }
 //
+//     void WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
+//         // Free packet buffers
+//     }
+//
 //   private:
 //     zx_device_t* parent_;
 //     fbl::unique_ptr<ddk::WlanmacProtocolProxy> proxy_;
@@ -104,13 +108,23 @@
 //         return ZX_OK;
 //     }
 //
-//     void WlanmacTx(uint32_t options, void* data, size_t length) {
+//     zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
 //         // Send the data
 //     }
 //
 //     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
 //         // Set the radio channel
 //         return ZX_OK;
+//     }
+//
+//     zx_status_t WlanmacSetBss(uint32_t options, const uint8_t mac[6], uint8_t type) {
+//         // Set the bss
+//         return ZX_OK;
+//     }
+//
+//     zx_status_t WlnamacSetKey(uint32_t options, wlan_key_config_t* key_config) {
+//         // Set the key and free the memory.
+//         free(key_config);
 //     }
 //
 //   private:
@@ -120,13 +134,14 @@
 
 namespace ddk {
 
-template <typename D>
+template <typename D, bool HasCompleteTx=false>
 class WlanmacIfc {
   public:
     WlanmacIfc() {
-        internal::CheckWlanmacIfc<D>();
+        internal::CheckWlanmacIfc<D, HasCompleteTx>();
         ifc_.status = Status;
         ifc_.recv = Recv;
+        ifc_.complete_tx = CompleteTx;
     }
 
     wlanmac_ifc_t* wlanmac_ifc() { return &ifc_; }
@@ -139,6 +154,16 @@ class WlanmacIfc {
     static void Recv(void* cookie, uint32_t flags, const void* data, size_t length,
                      wlan_rx_info_t* info) {
         static_cast<D*>(cookie)->WlanmacRecv(flags, data, length, info);
+    }
+
+    DDKTL_DEPRECATED(HasCompleteTx)
+    static void CompleteTx(void* cookie, wlan_tx_packet_t* pkt, zx_status_t status) {
+        // no-op
+    }
+
+    DDKTL_NOTREADY(HasCompleteTx)
+    static void CompleteTx(void* cookie, wlan_tx_packet_t* pkt, zx_status_t status) {
+        static_cast<D*>(cookie)->WlanmacCompleteTx(pkt, status);
     }
 
     wlanmac_ifc_t ifc_ = {};
@@ -157,20 +182,25 @@ class WlanmacIfcProxy {
         ifc_->recv(cookie_, flags, data, length, info);
     }
 
+    void CompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
+        ifc_->complete_tx(cookie_, pkt, status);
+    }
+
   private:
     wlanmac_ifc_t* ifc_;
     void* cookie_;
 };
 
-template <typename D>
+template <typename D, bool HasQueueTx=false>
 class WlanmacProtocol : public internal::base_protocol {
   public:
     WlanmacProtocol() {
-        internal::CheckWlanmacProtocolSubclass<D>();
+        internal::CheckWlanmacProtocolSubclass<D, HasQueueTx>();
         ops_.query = Query;
         ops_.stop = Stop;
         ops_.start = Start;
         ops_.tx = Tx;
+        ops_.queue_tx = QueueTx;
         ops_.set_channel = SetChannel;
         ops_.set_bss = SetBss;
         ops_.set_key = SetKey;
@@ -195,8 +225,23 @@ class WlanmacProtocol : public internal::base_protocol {
         return static_cast<D*>(ctx)->WlanmacStart(fbl::move(ifc_proxy));
     }
 
+    DDKTL_DEPRECATED(HasQueueTx)
     static void Tx(void* ctx, uint32_t options, const void* data, size_t length) {
         static_cast<D*>(ctx)->WlanmacTx(options, data, length);
+    }
+
+    DDKTL_NOTREADY(HasQueueTx)
+    static void Tx(void* ctx, uint32_t options, const void* data, size_t length) {
+    }
+
+    DDKTL_DEPRECATED(HasQueueTx)
+    static zx_status_t QueueTx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    DDKTL_NOTREADY(HasQueueTx)
+    static zx_status_t QueueTx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+        return static_cast<D*>(ctx)->WlanmacQueueTx(options, pkt);
     }
 
     static zx_status_t SetChannel(void* ctx, uint32_t options, wlan_channel_t* chan) {
@@ -225,7 +270,8 @@ class WlanmacProtocolProxy {
 
     template <typename D>
     zx_status_t Start(D* ifc) {
-        static_assert(fbl::is_base_of<WlanmacIfc<D>, D>::value,
+        static_assert(fbl::is_base_of<WlanmacIfc<D, true>, D>::value
+                   || fbl::is_base_of<WlanmacIfc<D, false>, D>::value,
                       "Start must be called with a subclass of WlanmacIfc");
         return ops_->start(ctx_, ifc->wlanmac_ifc(), ifc);
     }
@@ -236,6 +282,10 @@ class WlanmacProtocolProxy {
 
     void Tx(uint32_t options, const void* data, size_t length) {
         ops_->tx(ctx_, options, data, length);
+    }
+
+    zx_status_t QueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
+        return ops_->queue_tx(ctx_, options, pkt);
     }
 
     zx_status_t SetChannel(uint32_t options, wlan_channel_t* chan) {
