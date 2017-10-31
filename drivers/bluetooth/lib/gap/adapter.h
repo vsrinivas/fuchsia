@@ -8,6 +8,7 @@
 #include <string>
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
+#include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -29,7 +30,7 @@ class ChannelManager;
 
 namespace gap {
 
-class LowEnergyConnectionManager;
+class LowEnergyAdvertisingManager;
 class LowEnergyDiscoveryManager;
 
 // Represents the host-subsystem state for a Bluetooth controller. All
@@ -104,6 +105,12 @@ class Adapter final {
     return le_connection_manager_.get();
   }
 
+  // Returns this Adapter's LE advertising manager.
+  LowEnergyAdvertisingManager* le_advertising_manager() const {
+    FXL_DCHECK(le_advertising_manager_);
+    return le_advertising_manager_.get();
+  }
+
  private:
   // Second step of the initialization sequence. Called by Initialize() when the
   // first batch of HCI commands have been sent.
@@ -174,6 +181,12 @@ class Adapter final {
   // based on feature support. Contains nullptr if the controller does not
   // support LE connections.
   std::unique_ptr<LowEnergyConnectionManager> le_connection_manager_;
+  LowEnergyConnectionManager::ListenerId incoming_listener_id_;
+
+  // Interface for performing BLE advertisement procedures.  Initialized based
+  // on feature support.  nullptr when a controller does not support
+  // advertising.
+  std::unique_ptr<LowEnergyAdvertisingManager> le_advertising_manager_;
 
   // This must remain the last member to make sure that all weak pointers are
   // invalidating before other members are destroyed.
