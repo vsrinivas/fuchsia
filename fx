@@ -55,9 +55,9 @@ $(commands | sed -e 's/^/  /')
 optional arguments:
   --config              Path to the config file use when running COMMAND.
                         Defaults to FUCHSIA_CONFIG if set in the
-                        environment and "${FUCHSIA_DIR}/.config" otherwise.
-                        The config file determines which build directory (and
-                        therefore build configuration) is used by COMMAND.
+                        environment and //.config otherwise.  The config
+                        file determines which build directory (and therefore
+                        build configuration) is used by COMMAND.
   -x                    Print commands and their arguments as they are executed.
 
 optional shell extensions:
