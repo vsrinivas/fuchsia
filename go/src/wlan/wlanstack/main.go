@@ -95,6 +95,22 @@ func (ws *Wlanstack) Connect(sc wlan_service.ConnectConfig) (wserr wlan_service.
 	return wlan_service.Error{wlan_service.ErrCode_Ok, "OK"}, nil
 }
 
+func (ws *Wlanstack) Disconnect() (wserr wlan_service.Error, err error) {
+	cli := ws.getCurrentClient()
+	if cli == nil {
+		return wlan_service.Error{wlan_service.ErrCode_NotFound, "No wlan interface found"}, nil
+	}
+	respC := make(chan *wlan.CommandResult, 1)
+	var noArgs interface{}
+	cli.PostCommand(wlan.CmdDisconnect, noArgs, respC)
+
+	resp := <-respC
+	if resp.Err != nil {
+		return *resp.Err, nil
+	}
+	return wlan_service.Error{wlan_service.ErrCode_Ok, "OK"}, nil
+}
+
 func (ws *Wlanstack) Bind(r wlan_service.Wlan_Request) {
 	s := r.NewStub(ws, bindings.GetAsyncWaiter())
 	ws.stubs = append(ws.stubs, s)

@@ -32,6 +32,7 @@ type Command int
 const (
 	CmdScan Command = iota
 	CmdSetScanConfig
+	CmdDisconnect
 )
 
 const InfiniteTimeout = 0 * time.Second
@@ -133,6 +134,10 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 			}
 		}
 		cmd.respC <- res
+	default:
+		cmd.respC <- &CommandResult{nil,
+			&wlan_service.Error{wlan_service.ErrCode_NotSupported,
+				"Can't run the command in scanState"}}
 	}
 	return s, nil
 }
@@ -234,7 +239,7 @@ func (s *joinState) commandIsDisabled() bool {
 	return true
 }
 
-func (s *joinState) handleCommand(r *commandRequest, c *Client) (state, error) {
+func (s *joinState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
 	return s, nil
 }
 
@@ -297,7 +302,7 @@ func (s *authState) commandIsDisabled() bool {
 	return true
 }
 
-func (s *authState) handleCommand(r *commandRequest, c *Client) (state, error) {
+func (s *authState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
 	return s, nil
 }
 
@@ -438,7 +443,7 @@ func (s *assocState) commandIsDisabled() bool {
 	return true
 }
 
-func (s *assocState) handleCommand(r *commandRequest, c *Client) (state, error) {
+func (s *assocState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
 	return s, nil
 }
 
@@ -489,16 +494,34 @@ func (s *associatedState) run(c *Client) (time.Duration, error) {
 }
 
 func (s *associatedState) commandIsDisabled() bool {
-	// TODO: disable if Scan request is running
+	// TODO(toshik): disable if Scan request is running
 	return false
 }
 
-func (s *associatedState) handleCommand(r *commandRequest, c *Client) (state, error) {
-	// TODO: handle Scan command
-	r.respC <- &CommandResult{nil,
-		&wlan_service.Error{
-			wlan_service.ErrCode_NotSupported,
-			"Can't run the command in associatedState"}}
+func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
+	// TODO(toshik): handle Scan command
+	switch cmd.id {
+	case CmdDisconnect:
+		req := &mlme.DeauthenticateRequest{
+			PeerStaAddress: c.ap.BSSID,
+			// TODO(hahnr): Map Reason Codes to strings and provide map.
+			ReasonCode: 36, // Requesting STA is leaving the BSS
+		}
+		if debug {
+			log.Printf("deauthenticate req: %v", req)
+		}
+
+		err := c.SendMessage(req, int32(mlme.Method_DeauthenticateRequest))
+		res := &CommandResult{}
+		if err != nil {
+			res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+		}
+		cmd.respC <- res
+	default:
+		cmd.respC <- &CommandResult{nil,
+			&wlan_service.Error{wlan_service.ErrCode_NotSupported,
+				"Can't run the command in associatedState"}}
+	}
 	return s, nil
 }
 
@@ -509,6 +532,14 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 			PrintDisassociateIndication(v)
 		}
 		return newAssocState(), nil
+	case *mlme.DeauthenticateResponse:
+		if debug {
+			PrintDeauthenticateResponse(v)
+		}
+		// This was a user issued deauthentication. Clear config to prevent automatic reconnect, and
+		// enter scan state.
+		c.cfg = nil
+		return newScanState(c), nil
 	case *mlme.DeauthenticateIndication:
 		if debug {
 			PrintDeauthenticateIndication(v)

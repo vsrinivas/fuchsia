@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	cmdScan    = "scan"
-	cmdConnect = "connect"
+	cmdScan       = "scan"
+	cmdConnect    = "connect"
+	cmdDisconnect = "disconnect"
 )
 
 type ToolApp struct {
@@ -72,9 +73,19 @@ func (a *ToolApp) Connect(ssid string, passPhrase string, seconds uint8) {
 	}
 }
 
+func (a *ToolApp) Disconnect() {
+	werr, err := a.wlan.Disconnect()
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else if werr.Code != wlan_service.ErrCode_Ok {
+		fmt.Println("Error:", werr.Description)
+	}
+}
+
 var Usage = func() {
 	fmt.Printf("Usage: %v %v [-t <timeout>]\n", os.Args[0], cmdScan)
 	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] ssid\n", os.Args[0], cmdConnect)
+	fmt.Printf("       %v %v\n", os.Args[0], cmdDisconnect)
 }
 
 func main() {
@@ -125,6 +136,14 @@ func main() {
 		}
 		ssid := connectFlagSet.Arg(0)
 		a.Connect(ssid, *connectPassPhrase, uint8(*connectScanTimeout))
+	case cmdDisconnect:
+		disconnectFlagSet := flag.NewFlagSet("disconnect", flag.ExitOnError)
+		disconnectFlagSet.Parse(os.Args[2:])
+		if disconnectFlagSet.NArg() != 0 {
+			Usage()
+			return
+		}
+		a.Disconnect()
 	default:
 		Usage()
 	}

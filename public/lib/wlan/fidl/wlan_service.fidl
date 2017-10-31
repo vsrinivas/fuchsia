@@ -46,4 +46,5 @@ struct ConnectConfig {
 interface Wlan {
   Scan(ScanRequest request) => (ScanResult result);
   Connect(ConnectConfig request) => (Error error);
+  Disconnect() => (Error error);
 };

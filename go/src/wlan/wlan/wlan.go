@@ -307,6 +307,12 @@ func parseResponse(buf []byte) (interface{}, error) {
 			return nil, fmt.Errorf("could not decode AuthenticateResponse: %v", err)
 		}
 		return &resp, nil
+	case int32(mlme.Method_DeauthenticateConfirm):
+		var resp mlme.DeauthenticateResponse
+		if err := resp.Decode(dec); err != nil {
+			return nil, fmt.Errorf("could not decode DeauthenticateResponse: %v", err)
+		}
+		return &resp, nil
 	case int32(mlme.Method_DeauthenticateIndication):
 		var ind mlme.DeauthenticateIndication
 		if err := ind.Decode(dec); err != nil {
