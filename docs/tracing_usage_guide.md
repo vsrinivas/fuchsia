@@ -83,9 +83,9 @@ The file supports the following top level-parameters:
 
 Performance benchmarks can be defined in the tracing specification file as
 measurements to be performed on the captured trace events.  A example can be
-found in [src/benchmark_example](../src/benchmark_example/).
+found in [examples/benchmark](../examples/benchmark/).
 
-[benchmark_example.json](../src/benchmark_example/benchmark_example.json) can
+[benchmark_example.json](../examples/benchmark/benchmark_example.json) can
 be broken up into three sections.
 
 The first section defines the top level parameters listed above:
