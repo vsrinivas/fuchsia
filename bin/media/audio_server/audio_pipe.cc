@@ -47,8 +47,18 @@ void AudioPipe::ProgramRangeSet(uint64_t program,
                                 int64_t min_pts,
                                 int64_t max_pts) {
   FXL_DCHECK(program == 0) << "Non-zero program not implemented";
-  min_pts_ = min_pts * (owner_->format_info()->frame_to_media_ratio() *
-                        owner_->format_info()->frames_per_ns());
+  UpdateMinPts(min_pts);
+}
+
+void AudioPipe::UpdateMinPts(int64_t min_pts) {
+  if (owner_->format_info_valid()) {
+    min_pts_ = min_pts * (owner_->format_info()->frame_to_media_ratio() *
+                          owner_->format_info()->frames_per_ns());
+    min_pts_dirty_ = false;
+  } else {
+    min_pts_ = min_pts;
+    min_pts_dirty_ = true;
+  }
 }
 
 void AudioPipe::PrimeRequested(
@@ -85,6 +95,11 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
     FXL_LOG(ERROR) << "Packet supplied, but format has not set.";
     Reset();
     return;
+  }
+
+  if (min_pts_dirty_) {
+    UpdateMinPts(min_pts_);
+    FXL_DCHECK(!min_pts_dirty_);
   }
 
   FXL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==

@@ -89,11 +89,14 @@ class AudioPipe : public MediaPacketConsumerBase {
  private:
   static constexpr uint32_t kDemandMinPacketsOutstanding = 4;
 
+  void UpdateMinPts(int64_t min_pts);
+
   AudioRendererImpl* owner_;
   AudioServerImpl* server_;
 
   MediaTimelineControlPoint::PrimeCallback prime_callback_;
   int64_t min_pts_ = kMinTime;
+  bool min_pts_dirty_ = false;
 
   // State used for timestamp interpolation
   bool next_pts_known_ = 0;
