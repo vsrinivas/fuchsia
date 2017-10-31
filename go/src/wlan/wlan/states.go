@@ -37,6 +37,86 @@ const (
 
 const InfiniteTimeout = 0 * time.Second
 
+// Start BSS
+
+const StartBSSTimeout = 30 * time.Second
+
+type startBSSState struct {
+	running bool
+}
+
+func newStartBSSState(c *Client) *startBSSState {
+	return &startBSSState{}
+}
+
+func (s *startBSSState) String() string {
+	return "starting-bss"
+}
+
+func newStartBSSRequest(ssid string, beaconPeriod uint32, dtimPeriod uint32) *mlme.StartRequest {
+	return &mlme.StartRequest{
+		Ssid:         ssid,
+		BeaconPeriod: beaconPeriod,
+		DtimPeriod:   dtimPeriod,
+		BssType:      mlme.BssTypes_Infrastructure,
+	}
+}
+
+func (s *startBSSState) run(c *Client) (time.Duration, error) {
+	req := newStartBSSRequest(c.apCfg.SSID, uint32(c.apCfg.BeaconPeriod), uint32(c.apCfg.DTIMPeriod))
+	timeout := StartBSSTimeout
+	if req != nil {
+		if debug {
+			log.Printf("start bss req: %v timeout: %v", req, timeout)
+		}
+		err := c.SendMessage(req, int32(mlme.Method_StartRequest))
+		if err != nil {
+			return 0, err
+		}
+		s.running = true
+	}
+	return timeout, nil
+}
+
+func (s *startBSSState) commandIsDisabled() bool {
+	return false
+}
+
+func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
+	return s, nil
+}
+
+func (s *startBSSState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
+	switch v := msg.(type) {
+	case *mlme.StartResponse:
+		if debug {
+			// TODO(hahnr): Print response.
+		}
+		s.running = false
+
+		// TODO(hahnr): Evaluate response.
+		return s, nil
+
+	default:
+		return s, fmt.Errorf("unexpected message type: %T", v)
+	}
+}
+
+func (s *startBSSState) handleMLMETimeout(c *Client) (state, error) {
+	if debug {
+		log.Printf("start bss timeout")
+	}
+	return s, nil
+}
+
+func (s *startBSSState) needTimer(c *Client) (bool, time.Duration) {
+	return false, 0
+}
+
+func (s *startBSSState) timerExpired(c *Client) (state, error) {
+	return s, nil
+}
+
 // Scanning
 
 const DefaultScanInterval = 5 * time.Second

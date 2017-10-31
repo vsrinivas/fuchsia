@@ -21,6 +21,7 @@ import (
 
 type Wlanstack struct {
 	cfg   *wlan.Config
+	apCfg *wlan.APConfig
 	stubs []*bindings.Stub
 
 	mu     sync.Mutex
@@ -138,6 +139,7 @@ func main() {
 	ctx.Serve()
 
 	ws.readConfigFile()
+	ws.readAPConfigFile()
 
 	const ethdir = "/dev/class/ethernet"
 	wt, err := watcher.NewWatcher(ethdir)
@@ -171,10 +173,22 @@ func (ws *Wlanstack) readConfigFile() {
 	ws.cfg = cfg
 }
 
+func (ws *Wlanstack) readAPConfigFile() {
+	// TODO(hahnr): Replace once FIDL api is in place
+	const apConfigFile = "/pkg/data/ap_config.json"
+
+	cfg, err := wlan.ReadAPConfigFromFile(apConfigFile)
+	if err != nil {
+		log.Printf("[W] could not open config (%v)", apConfigFile)
+		return
+	}
+	ws.apCfg = cfg
+}
+
 func (ws *Wlanstack) addDevice(path string) error {
 	log.Printf("trying ethernet device %q", path)
 
-	cli, err := wlan.NewClient(path, ws.cfg)
+	cli, err := wlan.NewClient(path, ws.cfg, ws.apCfg)
 	if err != nil {
 		return err
 	}

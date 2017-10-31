@@ -222,10 +222,16 @@ package("wlanstack") {
         dest = "sandbox"
       } ]
 
-  resources = [ {
+  resources = [
+      {
         path = rebase_path("default.json")
         dest = "config.json"
-      } ]
+      },
+      {
+        path = rebase_path("ap.json")
+        dest = "ap_config.json"
+      }
+  ]
 }
 
 package("wlantool") {

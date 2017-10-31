@@ -47,6 +47,7 @@ type Client struct {
 	f        *os.File
 	mlmeChan zx.Channel
 	cfg      *Config
+	apCfg    *APConfig
 	ap       *AP
 	staAddr  [6]byte
 	txid     uint64
@@ -55,7 +56,7 @@ type Client struct {
 	state state
 }
 
-func NewClient(path string, config *Config) (*Client, error) {
+func NewClient(path string, config *Config, apConfig *APConfig) (*Client, error) {
 	success := false
 	f, err := os.Open(path)
 	defer func() {
@@ -91,6 +92,7 @@ func NewClient(path string, config *Config) (*Client, error) {
 		f:        f,
 		mlmeChan: zx.Channel{ch},
 		cfg:      config,
+		apCfg:    apConfig,
 		state:    nil,
 		staAddr:  info.MAC,
 	}
@@ -118,7 +120,13 @@ func (c *Client) Run() {
 	var nextState state
 
 	watchingMLME := false
-	c.state = newScanState(c)
+
+	// Enter AP mode if ap config was supplied and is active. Else fall back to client mode.
+	if c.apCfg != nil && c.apCfg.Active {
+		c.state = newStartBSSState(c)
+	} else {
+		c.state = newScanState(c)
+	}
 
 event_loop:
 	for {

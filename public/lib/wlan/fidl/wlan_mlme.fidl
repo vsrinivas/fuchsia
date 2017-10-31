@@ -371,6 +371,26 @@ enum Method {
     // Args: DisassociateIndication
     DISASSOCIATE_indication,
 
+    // MLME-RESET.request
+    // Args: ResetRequest
+    RESET_request,
+
+    // MLME-START.request
+    // Args: StartRequest
+    START_request,
+
+    // MLME-START.confirm
+    // Args: StartResponse
+    START_confirm,
+
+    // MLME-STOP.request
+    // Args: StopRequest
+    STOP_request,
+
+    // MLME-STOP.confirm
+    // Args: StopResponse
+    STOP_confirm,
+
     // MLME-SETKEYS.request
     // Args: SetKeysRequest
     SETKEYS_request,
