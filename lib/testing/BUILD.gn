@@ -111,6 +111,20 @@ source_set("fake_application_launcher") {
   ]
 }
 
+source_set("fake_agent_runner_storage") {
+  testonly = true
+
+  sources = [
+    "fake_agent_runner_storage.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/agent_runner:public",
+  ]
+}
+
 source_set("ledger_repository_for_testing") {
   testonly = true
 

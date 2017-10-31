@@ -22,3 +22,33 @@ source_set("entity") {
     "//peridot/public/lib/entity/fidl",
   ]
 }
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "entity_provider_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":entity",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/agent_runner",
+    "//peridot/bin/component",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/testing:fake_agent_runner_storage",
+    "//peridot/lib/testing:fake_application_launcher",
+    "//peridot/lib/testing:mock_base",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/agent/cpp",
+    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/entity/fidl",
+    "//peridot/public/lib/user_intelligence/fidl",
+    "//third_party/gtest",
+    "//zircon/system/ulib/trace",
+  ]
+}

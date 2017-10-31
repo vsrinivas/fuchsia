@@ -17,6 +17,7 @@
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/testing/fake_agent_runner_storage.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
@@ -24,33 +25,6 @@
 namespace modular {
 namespace testing {
 namespace {
-
-class FakeAgentRunnerStorage : public AgentRunnerStorage {
- public:
-  FakeAgentRunnerStorage() = default;
-
-  // |AgentRunnerStorage|
-  void Initialize(NotificationDelegate* /*delegate*/,
-                  const fxl::Closure done) override {
-    done();
-  }
-
-  // |AgentRunnerStorage|
-  void WriteTask(const std::string& /*agent_url*/,
-                 TriggerInfo /*info*/,
-                 const std::function<void(bool)> done) override {
-    done(true);
-  }
-
-  // |AgentRunnerStorage|
-  void DeleteTask(const std::string& /*agent_url*/,
-                  const std::string& /*task_id*/,
-                  const std::function<void(bool)> done) override {
-    done(true);
-  }
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeAgentRunnerStorage);
-};
 
 class AgentRunnerTest : public TestWithLedger {
  public:

@@ -338,6 +338,7 @@ executable("modular_unittests_bin") {
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/agent_runner:unittests",
     "//peridot/bin/device_runner:unittests",
+    "//peridot/bin/entity:unittests",
     "//peridot/bin/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",
     "//peridot/lib:unittests",
