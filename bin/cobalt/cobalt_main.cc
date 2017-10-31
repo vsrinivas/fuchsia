@@ -44,6 +44,7 @@ using cobalt::encoder::Encoder;
 using cobalt::encoder::ProjectContext;
 using cobalt::encoder::ShippingManager;
 using cobalt::encoder::ShufflerClient;
+using cobalt::encoder::SystemData;
 using cobalt::encoder::send_retryer::SendRetryer;
 
 // Command-line flags
@@ -305,6 +306,8 @@ class CobaltApp {
  private:
   static ClientSecret getClientSecret();
 
+  SystemData system_data_;
+
   std::unique_ptr<app::ApplicationContext> context_;
 
   ShufflerClient shuffler_client_;
@@ -336,7 +339,8 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                                       kMinEnvelopeSendSize),
           ShippingManager::ScheduleParams(schedule_interval, min_interval),
           // TODO(rudominer): Enable encryption.
-          ShippingManager::EnvelopeMakerParams("",
+          ShippingManager::EnvelopeMakerParams(&system_data_,
+                                               "",
                                                EncryptedMessage::NONE,
                                                "",
                                                EncryptedMessage::NONE),

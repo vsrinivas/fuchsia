@@ -47,7 +47,7 @@
     <project name="cobalt"
              path="third_party/cobalt"
              remote="https://fuchsia.googlesource.com/cobalt"
-             revision="2948ad1c5d94268ac00643002c04ba9728206923"
+             revision="0b3208677728f9b8ac108f0e1bd59a6bf65f93b6"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/expat"
              path="third_party/expat"
