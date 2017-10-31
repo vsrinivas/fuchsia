@@ -45,6 +45,10 @@ typedef struct {
     list_node_t free_write_reqs;
     list_node_t free_intr_reqs;
 
+    // List of netbufs that haven't been copied into a USB transaction yet. Should only contain
+    // entries if free_write_reqs is empty.
+    list_node_t pending_netbufs;
+
     // callback interface to attached ethernet layer
     ethmac_ifc_t* ifc;
     void* cookie;
@@ -168,6 +172,31 @@ static void ax88772b_recv(ax88772b_t* eth, usb_request_t* request) {
     }
 }
 
+// Send a netbuf to the USB interface using the provided request
+static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac_netbuf_t* netbuf) {
+    size_t length = netbuf->len;
+
+    if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
+        printf("ax88772b: unsupported packet length %zu\n", length);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // write 4 byte packet header
+    uint8_t header[ETH_HEADER_SIZE];
+    uint8_t lo = length & 0xFF;
+    uint8_t hi = length >> 8;
+    header[0] = lo;
+    header[1] = hi;
+    header[2] = lo ^ 0xFF;
+    header[3] = hi ^ 0xFF;
+
+    usb_request_copyto(request, header, ETH_HEADER_SIZE, 0);
+    usb_request_copyto(request, netbuf->data, length, ETH_HEADER_SIZE);
+    request->header.length = length + ETH_HEADER_SIZE;
+    usb_request_queue(&eth->usb, request);
+    return ZX_OK;
+}
+
 static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
@@ -198,7 +227,17 @@ static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->mutex);
-    list_add_tail(&eth->free_write_reqs, &request->node);
+    if (!list_is_empty(&eth->pending_netbufs)) {
+        // If we have any netbufs that are waiting to be sent, reuse the request we just got back
+        ethmac_netbuf_t* netbuf = list_remove_head_type(&eth->pending_netbufs, ethmac_netbuf_t,
+                                                        node);
+        zx_status_t send_result = ax88772b_send(eth, request, netbuf);
+        if (eth->ifc) {
+            eth->ifc->complete_tx(eth->cookie, netbuf, send_result);
+        }
+    } else {
+        list_add_tail(&eth->free_write_reqs, &request->node);
+    }
     mtx_unlock(&eth->mutex);
 }
 
@@ -253,7 +292,6 @@ static void ax88772b_interrupt_complete(usb_request_t* request, void* cookie) {
 }
 
 static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) {
-    size_t length = netbuf->len;
     ax88772b_t* eth = ctx;
 
     if (eth->dead) {
@@ -266,31 +304,13 @@ static zx_status_t ax88772b_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
-        //TODO: block
-        status = ZX_ERR_NO_RESOURCES;
+        list_add_tail(&eth->pending_netbufs, &netbuf->node);
+        status = ZX_ERR_SHOULD_WAIT;
         goto out;
     }
     usb_request_t* request = containerof(node, usb_request_t, node);
 
-    if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
-        printf("ax88772b: unsupported packet length %zu\n", length);
-        status = ZX_ERR_INVALID_ARGS;
-        goto out;
-    }
-
-    // write 4 byte packet header
-    uint8_t header[ETH_HEADER_SIZE];
-    uint8_t lo = length & 0xFF;
-    uint8_t hi = length >> 8;
-    header[0] = lo;
-    header[1] = hi;
-    header[2] = lo ^ 0xFF;
-    header[3] = hi ^ 0xFF;
-
-    usb_request_copyto(request, header, ETH_HEADER_SIZE, 0);
-    usb_request_copyto(request, netbuf->data, length, ETH_HEADER_SIZE);
-    request->header.length = length + ETH_HEADER_SIZE;
-    usb_request_queue(&eth->usb, request);
+    status = ax88772b_send(eth, request, netbuf);
 
 out:
     mtx_unlock(&eth->mutex);
@@ -545,6 +565,7 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device, void** cookie) 
     list_initialize(&eth->free_read_reqs);
     list_initialize(&eth->free_write_reqs);
     list_initialize(&eth->free_intr_reqs);
+    list_initialize(&eth->pending_netbufs);
 
     eth->usb_device = device;
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
