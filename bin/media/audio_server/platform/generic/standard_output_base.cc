@@ -211,7 +211,7 @@ void StandardOutputBase::ForeachRenderer(TaskType task_type) {
 
   for (const auto& link : link_refs_) {
     // Quit early if we should be shutting down.
-    if (shutting_down()) {
+    if (is_shutting_down()) {
       return;
     }
 

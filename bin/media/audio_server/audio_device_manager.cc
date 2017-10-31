@@ -21,7 +21,7 @@ AudioDeviceManager::AudioDeviceManager(AudioServerImpl* server)
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
-  FXL_DCHECK(outputs_.is_empty());
+  FXL_DCHECK(devices_.is_empty());
 }
 
 MediaResult AudioDeviceManager::Init() {
@@ -56,7 +56,7 @@ MediaResult AudioDeviceManager::Init() {
 
 void AudioDeviceManager::Shutdown() {
   // Step #1: Stop monitoringing plug/unplug events.  We are shutting down and
-  // no longer care about outputs coming and going.
+  // no longer care about devices coming and going.
   plug_detector_.Stop();
 
   // Step #2: Shutdown all of the active renderers in the system.
@@ -70,74 +70,79 @@ void AudioDeviceManager::Shutdown() {
     FXL_DCHECK(size_after < size_before);
   }
 
-  // Step #3: Shut down each currently active output in the system.  It is
-  // possible for this to take a bit of time as outputs release their hardware,
+  // Step #3: Shut down each currently active device in the system.  It is
+  // possible for this to take a bit of time as devices release their hardware,
   // but it should not take long.
-  for (auto& output_ptr : outputs_) {
-    output_ptr.Shutdown();
+  for (auto& device : devices_) {
+    device.Shutdown();
   }
-  outputs_.clear();
+  devices_.clear();
 
   throttle_output_->Shutdown();
   throttle_output_ = nullptr;
-
-  // TODO(johngro) : shut down the thread pool
 }
 
-MediaResult AudioDeviceManager::AddOutput(
-    const fbl::RefPtr<AudioOutput>& output) {
-  FXL_DCHECK(output != nullptr);
-  FXL_DCHECK(output != throttle_output_);
-  FXL_DCHECK(!output->InContainer());
+MediaResult AudioDeviceManager::AddDevice(
+    const fbl::RefPtr<AudioDevice>& device) {
+  FXL_DCHECK(device != nullptr);
+  FXL_DCHECK(!device->InContainer());
 
-  output->SetGain(master_gain());
-  outputs_.push_back(output);
+  if (device->is_output()) {
+    auto output = static_cast<AudioOutput*>(device.get());
+    FXL_DCHECK(output != throttle_output_.get());
+    static_cast<AudioOutput*>(device.get())->SetGain(master_gain());
+  }
+  devices_.push_back(device);
 
-  MediaResult res = output->Startup();
+  MediaResult res = device->Startup();
   if (res != MediaResult::OK) {
-    outputs_.erase(*output);
-    output->Shutdown();
+    devices_.erase(*device);
+    device->Shutdown();
   }
 
-  if (output->plugged()) {
-    OnOutputPlugged(output);
+  if (device->plugged()) {
+    OnDevicePlugged(device);
   }
 
   return res;
 }
 
-void AudioDeviceManager::ShutdownOutput(
-    const fbl::RefPtr<AudioOutput>& output) {
-  FXL_DCHECK(output != nullptr);
-  FXL_DCHECK(output != throttle_output_);
+void AudioDeviceManager::ShutdownDevice(
+    const fbl::RefPtr<AudioDevice>& device) {
+  FXL_DCHECK(device != nullptr);
+  FXL_DCHECK(device->is_output() || (static_cast<AudioDevice*>(device.get()) !=
+                                     throttle_output_.get()));
 
-  if (output->InContainer()) {
-    if (output->UpdatePlugState(false, output->plug_time())) {
-      OnOutputUnplugged(output);
+  if (device->InContainer()) {
+    if (device->UpdatePlugState(false, device->plug_time())) {
+      OnDeviceUnplugged(device);
     }
-    output->Shutdown();
-    outputs_.erase(*output);
+    device->Shutdown();
+    devices_.erase(*device);
   }
 }
 
 void AudioDeviceManager::HandlePlugStateChange(
-    const fbl::RefPtr<AudioOutput>& output,
+    const fbl::RefPtr<AudioDevice>& device,
     bool plugged,
     zx_time_t plug_time) {
-  FXL_DCHECK(output != nullptr);
-  if (output->UpdatePlugState(plugged, plug_time)) {
+  FXL_DCHECK(device != nullptr);
+  if (device->UpdatePlugState(plugged, plug_time)) {
     if (plugged) {
-      OnOutputPlugged(output);
+      OnDevicePlugged(device);
     } else {
-      OnOutputUnplugged(output);
+      OnDeviceUnplugged(device);
     }
   }
 }
 
 void AudioDeviceManager::SetMasterGain(float db_gain) {
   master_gain_ = fbl::clamp(db_gain, AudioRenderer::kMutedGain, 0.0f);
-  for (auto& output : outputs_) {
-    output.SetGain(master_gain_);
+  for (auto& device : devices_) {
+    if (device.is_input()) {
+      continue;
+    }
+    static_cast<AudioOutput*>(&device)->SetGain(master_gain_);
   }
 }
 
@@ -155,9 +160,10 @@ void AudioDeviceManager::SelectOutputsForRenderer(
 
   switch (routing_policy_) {
     case RoutingPolicy::ALL_PLUGGED_OUTPUTS: {
-      for (auto& output : outputs_) {
-        if (output.plugged()) {
-          LinkOutputToRenderer(&output, renderer);
+      for (auto& device : devices_) {
+        if (device.is_output() && device.plugged()) {
+          auto output = static_cast<AudioOutput*>(&device);
+          LinkOutputToRenderer(output, renderer);
         }
       }
     } break;
@@ -211,26 +217,32 @@ fbl::RefPtr<AudioOutput> AudioDeviceManager::FindLastPluggedOutput() {
   // so that this operation becomes O(1).  N is pretty low right now, so the
   // benefits do not currently outweigh the complexity of maintaining this
   // index.
-  for (auto& output : outputs_) {
-    if (output.plugged() &&
-        (!best_output || (best_output->plug_time() < output.plug_time()))) {
-      best_output = &output;
+  for (auto& obj : devices_) {
+    auto device = static_cast<AudioDevice*>(&obj);
+    if (device->plugged() && device->is_output() &&
+        (!best_output || (best_output->plug_time() < device->plug_time()))) {
+      best_output = static_cast<AudioOutput*>(device);
     }
   }
 
   return fbl::WrapRefPtr(best_output);
 }
 
-void AudioDeviceManager::OnOutputUnplugged(
-    const fbl::RefPtr<AudioOutput>& output) {
-  FXL_DCHECK(output && !output->plugged() && (output != throttle_output_));
+void AudioDeviceManager::OnDeviceUnplugged(
+    const fbl::RefPtr<AudioDevice>& device) {
+  FXL_DCHECK(device && !device->plugged());
 
-  // This output was just unplugged.  Unlink it from all of its currently
-  // linked renderers.  If we are applying 'last plugged' policy, replace it
-  // with the new 'last plugged' output (if any)
-  output->UnlinkFromRenderers();
+  // This device was just unplugged.  Unlink it from everything it is currently
+  // linked to.
+  device->Unlink();
 
-  if (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT) {
+  // If this is an output, and we we are applying 'last plugged output' policy,
+  // replace it with the new 'last plugged' output (if any)
+  if (device->is_output() &&
+      (routing_policy_ == RoutingPolicy::LAST_PLUGGED_OUTPUT)) {
+    FXL_DCHECK(static_cast<AudioOutput*>(device.get()) !=
+               throttle_output_.get());
+
     fbl::RefPtr<AudioOutput> replacement = FindLastPluggedOutput();
     if (replacement) {
       for (auto renderer : renderers_) {
@@ -240,16 +252,23 @@ void AudioDeviceManager::OnOutputUnplugged(
   }
 }
 
-void AudioDeviceManager::OnOutputPlugged(
-    const fbl::RefPtr<AudioOutput>& output) {
-  FXL_DCHECK(output && output->plugged() && (output != throttle_output_));
+void AudioDeviceManager::OnDevicePlugged(
+    const fbl::RefPtr<AudioDevice>& device) {
+  FXL_DCHECK(device && device->plugged());
+
+  // If this is an input, we currently have nothing special to do.
+  if (device->is_input()) {
+    return;
+  }
+
+  auto output = static_cast<AudioOutput*>(device.get());
 
   switch (routing_policy_) {
     case RoutingPolicy::ALL_PLUGGED_OUTPUTS:
       // If we are following the 'all plugged outputs' routing policy, simply
       // add this newly plugged output to all of the active renderers.
       for (auto renderer : renderers_) {
-        LinkOutputToRenderer(output.get(), renderer);
+        LinkOutputToRenderer(output, renderer);
       }
       break;
 
@@ -263,17 +282,17 @@ void AudioDeviceManager::OnOutputPlugged(
       // output.  Because of the parallized nature of plug detection and stream
       // discovery, it is possible that two outputs might be plugged in at
       // similar times, but we handle their plugged status out-of-order.
-      if (FindLastPluggedOutput() != output)
+      if (FindLastPluggedOutput().get() != output)
         return;
 
-      for (auto& unlink_tgt : outputs_) {
-        if (&unlink_tgt != output.get()) {
-          unlink_tgt.UnlinkFromRenderers();
+      for (auto& unlink_tgt : devices_) {
+        if (unlink_tgt.is_output() && (&unlink_tgt != device.get())) {
+          unlink_tgt.Unlink();
         }
       }
 
       for (const auto& renderer : renderers_) {
-        LinkOutputToRenderer(output.get(), renderer);
+        LinkOutputToRenderer(output, renderer);
       }
       break;
   }

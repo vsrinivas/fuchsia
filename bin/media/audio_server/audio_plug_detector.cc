@@ -94,14 +94,14 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
     return;
   }
 
-  auto new_output = DriverOutput::Create(std::move(channel), manager_);
+  fbl::RefPtr<AudioDevice> new_output =
+      DriverOutput::Create(std::move(channel), manager_);
   if (new_output == nullptr) {
     FXL_LOG(WARNING) << "Failed to instantiate audio output for \"" << name
                      << "\"";
     return;
   }
-
-  manager_->AddOutput(std::move(new_output));
+  manager_->AddDevice(std::move(new_output));
 }
 
 }  // namespace audio

@@ -66,14 +66,14 @@ class AudioDeviceManager {
   void ScheduleMessageLoopTask(const fxl::Closure& task);
 
   // Attempt to initialize an output and add it to the set of active outputs.
-  MediaResult AddOutput(const fbl::RefPtr<AudioOutput>& output);
+  MediaResult AddDevice(const fbl::RefPtr<AudioDevice>& device);
 
-  // Shutdown the specified audio output and remove it from the set of active
-  // outputs.
-  void ShutdownOutput(const fbl::RefPtr<AudioOutput>& output);
+  // Shutdown the specified audio device and remove it from the appropriate set
+  // of active devices.
+  void ShutdownDevice(const fbl::RefPtr<AudioDevice>& device);
 
-  // Handles a plugged/unplugged state change for the supplied audio output.
-  void HandlePlugStateChange(const fbl::RefPtr<AudioOutput>& output,
+  // Handles a plugged/unplugged state change for the supplied audio device.
+  void HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device,
                              bool plugged,
                              zx_time_t plug_time);
 
@@ -99,21 +99,21 @@ class AudioDeviceManager {
   // nullptr if none of the outputs are currently plugged.
   fbl::RefPtr<AudioOutput> FindLastPluggedOutput();
 
-  // Methods for dealing with routing policy when an output becomes unplugged or
+  // Methods for dealing with routing policy when a device becomes unplugged or
   // completely removed from the system, or has become plugged/newly added to
   // the system.
-  void OnOutputUnplugged(const fbl::RefPtr<AudioOutput>& output);
-  void OnOutputPlugged(const fbl::RefPtr<AudioOutput>& output);
+  void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device);
+  void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device);
 
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.
   AudioServerImpl* server_;
 
-  // Our sets of currently active audio outputs and renderers.
+  // Our sets of currently active audio devices and renderers.
   //
   // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioOutput>> outputs_;
+  fbl::DoublyLinkedList<fbl::RefPtr<AudioDevice>> devices_;
   AudioRendererImplSet renderers_;
 
   // The special throttle output.  This output always exists, and is always used
