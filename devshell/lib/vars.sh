@@ -26,7 +26,13 @@ function fx-config-read {
 
   source "${FUCHSIA_CONFIG}"
 
-  export FUCHSIA_BUILD_DIR="${FUCHSIA_BUILD_DIR}"
+  # Paths are relative to FUCHSIA_DIR unless they're absolute paths.
+  if [[ "${FUCHSIA_BUILD_DIR:0:1}" == "/" ]]; then
+    export FUCHSIA_BUILD_DIR="${FUCHSIA_BUILD_DIR}"
+  else
+    export FUCHSIA_BUILD_DIR="${FUCHSIA_DIR}/${FUCHSIA_BUILD_DIR}"
+  fi
+
   export FUCHSIA_VARIANT="${FUCHSIA_VARIANT}"
   export FUCHSIA_ARCH="${FUCHSIA_ARCH}"
   export ZIRCON_PROJECT="${ZIRCON_PROJECT}"
