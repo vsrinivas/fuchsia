@@ -100,8 +100,6 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   StartActionLog(suggestion_engine_.get());
 
-  resolver_services_ = StartTrustedApp("resolver");
-
   for (const auto& agent : config.startup_agents) {
     StartAgent(agent);
   }
@@ -153,7 +151,8 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
 
 void UserIntelligenceProviderImpl::GetResolver(
     fidl::InterfaceRequest<resolver::Resolver> request) {
-  app::ConnectToService(resolver_services_.get(), std::move(request));
+  // TODO(thatguy): Remove this once the last instances of this are gone from
+  // topaz.
 }
 
 app::ServiceProviderPtr UserIntelligenceProviderImpl::StartTrustedApp(

@@ -69,7 +69,6 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   app::ServiceProviderPtr suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;
   UserActionLogPtr user_action_log_;
-  app::ServiceProviderPtr resolver_services_;
 
   std::string kronk_url_;
   modular::RateLimitedRetry kronk_restart_;
