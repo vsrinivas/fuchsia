@@ -151,6 +151,59 @@ zx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     return status;
 }
 
+zx_status_t Station::Deauthenticate(DeauthenticateRequestPtr req) {
+    debugfn();
+
+    if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
+        errorf("not associated or authenticated; ignoring deauthenticate request\n");
+        return ZX_OK;
+    }
+
+    if (bss_.is_null()) { return ZX_ERR_BAD_STATE; }
+
+    // Check whether the request wants to deauthenticate from this STA's BSS.
+    ZX_DEBUG_ASSERT(!req.is_null());
+    ZX_DEBUG_ASSERT(!req->peer_sta_address.is_null());
+    MacAddr peer_sta_addr(req->peer_sta_address.data());
+    if (bssid_ != peer_sta_addr) { return ZX_OK; }
+
+    size_t deauth_len = sizeof(MgmtFrameHeader) + sizeof(Deauthentication);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(deauth_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), deauth_len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<MgmtFrameHeader>(0);
+    hdr->fc.set_type(kManagement);
+    hdr->fc.set_subtype(kDeauthentication);
+
+    const MacAddr& mymac = device_->GetState()->address();
+    hdr->addr1 = bssid_;
+    hdr->addr2 = mymac;
+    hdr->addr3 = bssid_;
+    hdr->sc.set_seq(next_seq());
+
+    auto deauth = packet->mut_field<Deauthentication>(sizeof(MgmtFrameHeader));
+    deauth->reason_code = req->reason_code;
+
+    zx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != ZX_OK) {
+        errorf("could not send deauth packet: %d\n", status);
+        // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
+    }
+
+    infof("deauthenticating from %s, reason=%u\n", bss_->ssid.data(), req->reason_code);
+
+    // TODO(hahnr): Refactor once we have the new state machine.
+    state_ = WlanState::kUnauthenticated;
+    device_->SetStatus(0);
+    controlled_port_ = PortState::kBlocked;
+    SendDeauthResponse(peer_sta_addr);
+
+    return ZX_OK;
+}
+
 zx_status_t Station::Associate(AssociateRequestPtr req) {
     debugfn();
 
@@ -392,7 +445,7 @@ zx_status_t Station::HandleDeauthentication(const Packet* packet) {
     }
     infof("deauthenticating from %s, reason=%u\n", bss_->ssid.data(), deauth->reason_code);
 
-    state_ = WlanState::kAuthenticated;
+    state_ = WlanState::kUnauthenticated;
     device_->SetStatus(0);
     controlled_port_ = PortState::kBlocked;
 
@@ -829,6 +882,29 @@ zx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     zx_status_t status = SerializeServiceMsg(packet.get(), Method::AUTHENTICATE_confirm, resp);
     if (status != ZX_OK) {
         errorf("could not serialize AuthenticateResponse: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
+
+    return status;
+}
+
+zx_status_t Station::SendDeauthResponse(const MacAddr& peer_sta_addr) {
+    debugfn();
+
+    auto resp = DeauthenticateResponse::New();
+    resp->peer_sta_address = fidl::Array<uint8_t>::New(kMacAddrLen);
+    peer_sta_addr.CopyTo(resp->peer_sta_address.data());
+
+    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::DEAUTHENTICATE_confirm, resp);
+    if (status != ZX_OK) {
+        errorf("could not serialize DeauthenticateResponse: %d\n", status);
     } else {
         status = device_->SendService(std::move(packet));
     }

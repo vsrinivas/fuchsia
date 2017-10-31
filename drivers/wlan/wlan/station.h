@@ -64,6 +64,7 @@ class Station {
 
     zx_status_t Join(JoinRequestPtr req);
     zx_status_t Authenticate(AuthenticateRequestPtr req);
+    zx_status_t Deauthenticate(DeauthenticateRequestPtr req);
     zx_status_t Associate(AssociateRequestPtr req);
 
     zx_status_t HandleBeacon(const Packet* packet);
@@ -89,6 +90,7 @@ class Station {
    private:
     zx_status_t SendJoinResponse();
     zx_status_t SendAuthResponse(AuthenticateResultCodes code);
+    zx_status_t SendDeauthResponse(const MacAddr& peer_sta_addr);
     zx_status_t SendDeauthIndication(uint16_t code);
     zx_status_t SendAssocResponse(AssociateResultCodes code);
     zx_status_t SendDisassociateIndication(uint16_t code);

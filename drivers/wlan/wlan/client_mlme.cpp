@@ -298,6 +298,17 @@ zx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         if (IsStaValid()) { status = sta_->Authenticate(std::move(req)); }
         break;
     }
+    case Method::DEAUTHENTICATE_request: {
+        DeauthenticateRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::DEAUTHENTICATE_request, &req);
+        if (status != ZX_OK) {
+            errorf("could not deserialize DeauthenticateRequest: %d\n", status);
+            break;
+        }
+
+        if (IsStaValid()) { status = sta_->Deauthenticate(std::move(req)); }
+        break;
+    }
     case Method::ASSOCIATE_request: {
         // TODO(tkilbourn): send error response back to service is !IsStaValid
         AssociateRequestPtr req;
