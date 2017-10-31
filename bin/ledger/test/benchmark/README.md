@@ -15,6 +15,7 @@ Benchmarks can also be traced directly, as any other app would be. For example:
 ```
 trace record --categories=benchmark,ledger ledger_benchmark_put \
   --entry-count=10 --transaction-size=1 --key-size=100 --value-size=100
+  --refs=auto
 ```
 
 Some benchmarks exercise sync. To run these, pass the ID of a correctly
@@ -25,7 +26,7 @@ trace record --spec-file=/system/data/ledger/benchmark/sync.tspec \
   --append-args=--server-id=<my instance>
 ```
 
-The set of benchmarks under [perf](perf) run the Put benchmark multiple times,
+The set of benchmarks under [put](put) run the Put benchmark multiple times,
 to evaluate Ledger's performance over changes in different parameters:
 - `entry_count`: evaluates the insertion performance over different values of
 number of inserted entries.
