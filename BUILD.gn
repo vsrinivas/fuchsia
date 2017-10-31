@@ -265,9 +265,23 @@ package("ledger_tests") {
   ]
 }
 
-package("modular") {
+# This target allows building just the Modular files. It's intended to be
+# used as the build target before calling push-package.py to perform an
+# incremental update on the device. See
+# https://fuchsia.googlesource.com/scripts/+/HEAD/README.md for instructions.
+group("modular_all") {
   testonly = true
 
+  deps = [
+    ":modular",
+    ":modular_dev",
+    ":modular_unittests_bin",
+    "examples:modular_examples",
+    "tests:modular_tests",
+  ]
+}
+
+package("modular") {
   deps = [
     "bin",
   ]

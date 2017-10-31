@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 group("bin") {
-  testonly = true
-
   public_deps = [
     "device_runner:all",
     "entity",
