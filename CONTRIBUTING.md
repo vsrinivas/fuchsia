@@ -68,6 +68,24 @@ branch.
 *Note*: Fuchsia's issue tracker is not open to external contributors at this
 time.
 
+## Switching between layers
+
+When you bootstrapped your development environment (see
+[getting source](getting_source.md)), you selected a layer. Your development
+enviornment views that layer at the latest revision and views the lower layers
+at specific revisions in the past.
+
+If you want to switch to working on a different layer, either to get the source
+code for higher layers in your source tree or to see lower layers at more recent
+revisions, you have two choices:
+
+1. You can bootstrap a new development environment for that layer using
+   [the same instructions you used originally](getting_source.md).
+2. You can modify your existing development environment using the
+   `fx set-layer <layer>` command. This command edits the `jiri` metadata for
+   your source tree to refer to the new layer and prints instructions for how to
+   actually get the source and build the newly configured layer.
+
 ## Changes that span layers
 
 Fuchsia is divided into a number of [layers](layers.md). Each layer views the
