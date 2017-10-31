@@ -10,8 +10,11 @@
 #include "lib/escher/impl/image_cache.h"
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/impl/model_data.h"
+#include "lib/escher/impl/model_depth_pass.h"
 #include "lib/escher/impl/model_display_list.h"
+#include "lib/escher/impl/model_lighting_pass.h"
 #include "lib/escher/impl/model_pipeline_cache.h"
+#include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/model_renderer.h"
 #include "lib/escher/impl/ssdo_accelerator.h"
 #include "lib/escher/impl/ssdo_sampler.h"
@@ -99,20 +102,20 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
   FramebufferPtr framebuffer = fxl::MakeRefCounted<Framebuffer>(
       escher(), depth_image->width(), depth_image->height(),
       std::vector<ImagePtr>{dummy_color_image, depth_image},
-      model_renderer_->depth_prepass());
+      // TODO: pass escher::RenderPass instead of vk::RenderPass?
+      depth_pass_->vk());
 
   auto display_list_flags =
-      ModelDisplayListFlag::kUseDepthPrepass |
       (sort_by_pipeline_ ? ModelDisplayListFlag::kSortByPipeline
                          : ModelDisplayListFlag::kNull);
+
   ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
-      stage, model, camera, display_list_flags, scale, 1, TexturePtr(),
-      command_buffer);
+      stage, model, camera, depth_pass_, display_list_flags, scale,
+      TexturePtr(), command_buffer);
 
   command_buffer->KeepAlive(framebuffer);
   command_buffer->KeepAlive(display_list);
-  command_buffer->BeginRenderPass(model_renderer_->depth_prepass(), framebuffer,
-                                  clear_values_);
+  command_buffer->BeginRenderPass(depth_pass_, framebuffer, clear_values_);
   model_renderer_->Draw(stage, display_list, command_buffer);
   command_buffer->EndRenderPass();
 }
@@ -244,11 +247,22 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
   }
 }
 
-void PaperRenderer::UpdateModelRenderer(vk::Format pre_pass_color_format,
-                                        vk::Format lighting_pass_color_format) {
-  model_renderer_->UpdatePipelineCache(pre_pass_color_format,
-                                       lighting_pass_color_format,
-                                       kLightingPassSampleCount);
+void PaperRenderer::UpdateRenderPasses(vk::Format prepass_color_format,
+                                       vk::Format lighting_pass_color_format) {
+  if (!depth_pass_ || depth_pass_->color_format() != prepass_color_format) {
+    FXL_VLOG(1) << "PaperRenderer: updating ModelDepthPass.";
+    depth_pass_ = fxl::MakeRefCounted<impl::ModelDepthPass>(
+        escher()->resource_recycler(), model_data_, prepass_color_format,
+        depth_format_, 1);
+  }
+
+  if (!lighting_pass_ ||
+      lighting_pass_->color_format() != lighting_pass_color_format) {
+    FXL_VLOG(1) << "PaperRenderer: updating ModelLightingPass.";
+    lighting_pass_ = fxl::MakeRefCounted<impl::ModelLightingPass>(
+        escher()->resource_recycler(), model_data_, prepass_color_format,
+        depth_format_, kLightingPassSampleCount);
+  }
 }
 
 void PaperRenderer::DrawLightingPass(uint32_t sample_count,
@@ -269,7 +283,7 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
                          : ModelDisplayListFlag::kNull);
 
   ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
-      stage, model, camera, display_list_flags, 1.f, sample_count,
+      stage, model, camera, lighting_pass_, display_list_flags, 1.f,
       illumination_texture, command_buffer);
   command_buffer->KeepAlive(display_list);
 
@@ -285,14 +299,14 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
   impl::ModelDisplayListPtr overlay_display_list;
   if (overlay_model && !overlay_model->objects().empty()) {
     display_list_flags = ModelDisplayListFlag::kDisableDepthTest;
+
     overlay_display_list = model_renderer_->CreateDisplayList(
-        overlay_stage, *overlay_model, overlay_camera, display_list_flags, 1.f,
-        sample_count, TexturePtr(), command_buffer);
+        overlay_stage, *overlay_model, overlay_camera, lighting_pass_,
+        display_list_flags, 1.f, TexturePtr(), command_buffer);
     command_buffer->KeepAlive(overlay_display_list);
   }
 
-  command_buffer->BeginRenderPass(model_renderer_->lighting_pass(), framebuffer,
-                                  clear_values_);
+  command_buffer->BeginRenderPass(lighting_pass_, framebuffer, clear_values_);
 
   model_renderer_->Draw(stage, display_list, command_buffer);
   if (overlay_display_list) {
@@ -388,7 +402,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
                               FrameRetiredCallback frame_retired_callback) {
   TRACE_DURATION("gfx", "escher::PaperRenderer::DrawFrame");
 
-  UpdateModelRenderer(color_image_out->format(), color_image_out->format());
+  UpdateRenderPasses(color_image_out->format(), color_image_out->format());
 
   uint32_t width = color_image_out->width();
   uint32_t height = color_image_out->height();
@@ -492,7 +506,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     FramebufferPtr lighting_fb = fxl::MakeRefCounted<Framebuffer>(
         escher(), width, height,
         std::vector<ImagePtr>{color_image_out, depth_image},
-        model_renderer_->lighting_pass());
+        // TODO: pass escher::RenderPass instead of vk::RenderPass?
+        lighting_pass_->vk());
 
     current_frame()->KeepAlive(lighting_fb);
 
@@ -520,7 +535,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
         escher(), width, height,
         std::vector<ImagePtr>{color_image_multisampled,
                               depth_image_multisampled},
-        model_renderer_->lighting_pass());
+        // TODO: pass escher::RenderPass instead of vk::RenderPass?
+        lighting_pass_->vk());
 
     current_frame()->KeepAlive(multisample_fb);
 

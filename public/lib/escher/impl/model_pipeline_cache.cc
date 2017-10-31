@@ -9,12 +9,18 @@
 #include "lib/escher/impl/mesh_shader_binding.h"
 #include "lib/escher/impl/model_data.h"
 #include "lib/escher/impl/model_pipeline.h"
+#include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/trace_macros.h"
 
 namespace escher {
 namespace impl {
+
+const ResourceTypeInfo ModelPipelineCache::kTypeInfo(
+    "ModelPipelineCache",
+    ResourceType::kResource,
+    ResourceType::kImplModelPipelineCache);
 
 namespace {
 
@@ -163,22 +169,17 @@ constexpr char g_fragment_src[] = R"GLSL(
 
 ModelPipelineCache::ModelPipelineCache(ResourceRecycler* recycler,
                                        ModelDataPtr model_data,
-                                       vk::RenderPass depth_prepass,
-                                       vk::RenderPass lighting_pass)
+                                       ModelRenderPass* render_pass)
     : Resource(recycler),
       model_data_(std::move(model_data)),
-      depth_prepass_(depth_prepass),
-      lighting_pass_(lighting_pass),
+      render_pass_(render_pass),
       compiler_(std::make_unique<GlslToSpirvCompiler>()) {
   FXL_DCHECK(model_data_);
-  FXL_DCHECK(depth_prepass_);
-  FXL_DCHECK(lighting_pass_);
+  FXL_DCHECK(render_pass_);
 }
 
 ModelPipelineCache::~ModelPipelineCache() {
   pipelines_.clear();
-  vk_device().destroyRenderPass(depth_prepass_);
-  vk_device().destroyRenderPass(lighting_pass_);
 }
 
 ModelPipeline* ModelPipelineCache::GetPipeline(const ModelPipelineSpec& spec) {
@@ -199,6 +200,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
     ModelData* model_data,
     vk::ShaderModule vertex_module,
     vk::ShaderModule fragment_module,
+    bool enable_depth_test,
     bool enable_depth_write,
     bool enable_blending,
     vk::CompareOp depth_compare_op,
@@ -244,7 +246,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   input_assembly_info.primitiveRestartEnable = false;
 
   vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-  depth_stencil_info.depthTestEnable = !spec.disable_depth_test;
+  depth_stencil_info.depthTestEnable = enable_depth_test;
   depth_stencil_info.depthWriteEnable = enable_depth_write;
   depth_stencil_info.depthCompareOp = depth_compare_op;
   depth_stencil_info.depthBoundsTestEnable = false;
@@ -442,19 +444,14 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
 
   // The depth-only pre-pass uses a different renderpass and a cheap fragment
   // shader.
-  vk::RenderPass render_pass = depth_prepass_;
   const bool enable_depth_write = spec.has_material && !spec.disable_depth_test;
+  const bool enable_depth_test = !spec.disable_depth_test;
   const bool omit_fragment_shader =
-      spec.use_depth_prepass || !spec.has_material;
+      render_pass_->OmitFragmentShader() || !spec.has_material;
   const bool enable_blending = !spec.is_opaque && !omit_fragment_shader;
   const vk::CompareOp depth_compare_op = vk::CompareOp::eLess;
-  if (omit_fragment_shader) {
-    // Omit fragment shader.
-    if (!spec.use_depth_prepass) {
-      render_pass = lighting_pass_;
-    }
-  } else {
-    render_pass = lighting_pass_;
+
+  if (!omit_fragment_shader) {
     fragment_spirv_future =
         compiler_->Compile(vk::ShaderStageFlagBits::eFragment,
                            {{g_fragment_src}}, std::string(), "main");
@@ -484,10 +481,10 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   }
 
   auto pipeline_and_layout = NewPipelineHelper(
-      model_data_.get(), vertex_module, fragment_module, enable_depth_write,
-      enable_blending, depth_compare_op, render_pass,
+      model_data_.get(), vertex_module, fragment_module, enable_depth_test,
+      enable_depth_write, enable_blending, depth_compare_op, render_pass_->vk(),
       {model_data_->per_model_layout(), model_data_->per_object_layout()}, spec,
-      SampleCountFlagBitsFromInt(spec.sample_count));
+      SampleCountFlagBitsFromInt(render_pass_->sample_count()));
 
   device.destroyShaderModule(vertex_module);
   if (fragment_module) {

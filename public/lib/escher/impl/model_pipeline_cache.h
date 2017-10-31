@@ -24,6 +24,9 @@ class ModelPipeline;
 // implementation.
 class ModelPipelineCache : public Resource {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   // Ownership of the depth and lighting passes is transferred to the new
   // ModelPipelineCache, which is responsible for destroying them.
   //
@@ -33,24 +36,17 @@ class ModelPipelineCache : public Resource {
   // pass these to the ModelPipelineCache constructor, but what else can we do?
   ModelPipelineCache(ResourceRecycler* recycler,
                      ModelDataPtr model_data,
-                     vk::RenderPass depth_prepass,
-                     vk::RenderPass lighting_pass);
+                     ModelRenderPass* render_pass);
   ~ModelPipelineCache();
 
   // Get cached pipeline, or return a newly-created one.
   ModelPipeline* GetPipeline(const ModelPipelineSpec& spec);
 
-  GlslToSpirvCompiler* glsl_compiler() { return compiler_.get(); }
-
-  vk::RenderPass depth_prepass() const { return depth_prepass_; }
-  vk::RenderPass lighting_pass() const { return lighting_pass_; }
-
  private:
   std::unique_ptr<ModelPipeline> NewPipeline(const ModelPipelineSpec& spec);
 
   ModelDataPtr model_data_;
-  vk::RenderPass depth_prepass_;
-  vk::RenderPass lighting_pass_;
+  ModelRenderPass* const render_pass_;
   std::unordered_map<ModelPipelineSpec,
                      std::unique_ptr<ModelPipeline>,
                      Hash<ModelPipelineSpec>>

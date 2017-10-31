@@ -10,7 +10,7 @@
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/image.h"
-
+#include "lib/escher/vk/render_pass.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {
@@ -158,6 +158,8 @@ void CommandBuffer::CopyBuffer(const BufferPtr& src,
 void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
                                           vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {
+  KeepAlive(image);
+
   vk::PipelineStageFlags src_stage_mask;
   vk::PipelineStageFlags dst_stage_mask;
 
@@ -281,8 +283,15 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
   command_buffer_.pipelineBarrier(src_stage_mask, dst_stage_mask,
                                   vk::DependencyFlagBits::eByRegion, 0, nullptr,
                                   0, nullptr, 1, &barrier);
+}
 
-  KeepAlive(image);
+void CommandBuffer::BeginRenderPass(
+    const RenderPassPtr& render_pass,
+    const FramebufferPtr& framebuffer,
+    const std::vector<vk::ClearValue>& clear_values) {
+  KeepAlive(render_pass);
+  BeginRenderPass(render_pass->vk(), framebuffer, clear_values.data(),
+                  clear_values.size());
 }
 
 void CommandBuffer::BeginRenderPass(
@@ -298,6 +307,8 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
                                     const vk::ClearValue* clear_values,
                                     size_t clear_value_count) {
   FXL_DCHECK(is_active_);
+  KeepAlive(framebuffer);
+
   uint32_t width = framebuffer->width();
   uint32_t height = framebuffer->height();
 
@@ -327,8 +338,10 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
   scissor.offset.x = 0;
   scissor.offset.y = 0;
   command_buffer_.setScissor(0, 1, &scissor);
+}
 
-  // TODO: should we retain the framebuffer?
+void CommandBuffer::EndRenderPass() {
+  command_buffer_.endRenderPass();
 }
 
 bool CommandBuffer::Retire() {

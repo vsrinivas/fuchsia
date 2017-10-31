@@ -13,6 +13,7 @@
 #include "lib/escher/impl/model_display_list.h"
 #include "lib/escher/impl/model_display_list_builder.h"
 #include "lib/escher/impl/model_pipeline.h"
+#include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/shape.h"
@@ -44,9 +45,9 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
     const Stage& stage,
     const Model& model,
     const Camera& camera,
+    const ModelRenderPassPtr& render_pass,
     ModelDisplayListFlags flags,
     float scale,
-    uint32_t sample_count,
     const TexturePtr& illumination_texture,
     CommandBuffer* command_buffer) {
   TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList",
@@ -111,8 +112,7 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 
   ModelDisplayListBuilder builder(device_, stage, model, camera, scale,
                                   white_texture_, illumination_texture,
-                                  model_data_.get(), this, pipeline_cache_,
-                                  flags, sample_count);
+                                  model_data_.get(), this, render_pass, flags);
   for (uint32_t object_index : opaque_objects) {
     builder.AddObject(objects[object_index]);
   }
@@ -245,143 +245,6 @@ TexturePtr ModelRenderer::CreateWhiteTexture(Escher* escher) {
       escher->image_cache(), escher->gpu_uploader(), 1, 1, channels);
   return fxl::MakeRefCounted<Texture>(escher->resource_recycler(),
                                       std::move(image), vk::Filter::eNearest);
-}
-
-void ModelRenderer::UpdatePipelineCache(vk::Format pre_pass_color_format,
-                                        vk::Format lighting_pass_color_format,
-                                        uint32_t lighting_pass_sample_count) {
-  if (pre_pass_color_format != pre_pass_color_format_ ||
-      lighting_pass_color_format != lighting_pass_color_format_ ||
-      lighting_pass_sample_count != lighting_pass_sample_count_) {
-    // The render passes have changed; any existing ModelPipelineCache must be
-    // replaced with a new one.
-    FXL_VLOG(1) << "ModelRenderer: updating pipeline cache.";
-
-    pre_pass_color_format_ = pre_pass_color_format;
-    lighting_pass_color_format_ = lighting_pass_color_format;
-    lighting_pass_sample_count_ = lighting_pass_sample_count;
-    depth_format_ = ESCHER_CHECKED_VK_RESULT(
-        impl::GetSupportedDepthStencilFormat(escher_->vk_physical_device()));
-
-    auto render_passes =
-        CreateRenderPasses(pre_pass_color_format_, lighting_pass_color_format_,
-                           lighting_pass_sample_count_, depth_format_);
-    pipeline_cache_ = fxl::MakeRefCounted<ModelPipelineCache>(
-        resource_recycler(), model_data_, render_passes.first,
-        render_passes.second);
-  }
-}
-
-std::pair<vk::RenderPass, vk::RenderPass> ModelRenderer::CreateRenderPasses(
-    vk::Format pre_pass_color_format,
-    vk::Format lighting_pass_color_format,
-    uint32_t lighting_pass_sample_count,
-    vk::Format depth_format) {
-  constexpr uint32_t kAttachmentCount = 2;
-  const uint32_t kColorAttachment = 0;
-  const uint32_t kDepthAttachment = 1;
-  vk::AttachmentDescription attachments[kAttachmentCount];
-  auto& color_attachment = attachments[kColorAttachment];
-  auto& depth_attachment = attachments[kDepthAttachment];
-
-  // Load/store ops and image layouts differ between passes; see below.
-  depth_attachment.format = depth_format;
-  depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eClear;
-  depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-
-  vk::AttachmentReference color_reference;
-  color_reference.attachment = kColorAttachment;
-  color_reference.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-  vk::AttachmentReference depth_reference;
-  depth_reference.attachment = kDepthAttachment;
-  depth_reference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-  // Every vk::RenderPass needs at least one subpass.
-  vk::SubpassDescription subpass;
-  subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachments = &color_reference;
-  subpass.pDepthStencilAttachment = &depth_reference;
-  subpass.inputAttachmentCount = 0;  // no other subpasses to sample from
-
-  // Even though we have a single subpass, we need to declare dependencies to
-  // support the layout transitions specified by the attachment references.
-  constexpr uint32_t kDependencyCount = 2;
-  vk::SubpassDependency dependencies[kDependencyCount];
-  auto& input_dependency = dependencies[0];
-  auto& output_dependency = dependencies[1];
-
-  // The first dependency transitions from the final layout from the previous
-  // render pass, to the initial layout of this one.
-  input_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;  // not in vulkan.hpp ?!?
-  input_dependency.dstSubpass = 0;
-  input_dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-  input_dependency.dstStageMask =
-      vk::PipelineStageFlagBits::eColorAttachmentOutput;
-  input_dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
-  input_dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
-                                   vk::AccessFlagBits::eColorAttachmentWrite;
-  input_dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-
-  // The second dependency describes the transition from the initial to final
-  // layout.
-  output_dependency.srcSubpass = 0;  // our sole subpass
-  output_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-  output_dependency.srcStageMask =
-      vk::PipelineStageFlagBits::eColorAttachmentOutput;
-  output_dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-  output_dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
-                                    vk::AccessFlagBits::eColorAttachmentWrite;
-  output_dependency.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
-  output_dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-
-  // We're almost ready to create the render-passes... we just need to fill in
-  // some final values that differ between the passes.
-  vk::RenderPassCreateInfo info;
-  info.attachmentCount = kAttachmentCount;
-  info.pAttachments = attachments;
-  info.subpassCount = 1;
-  info.pSubpasses = &subpass;
-  info.dependencyCount = kDependencyCount;
-  info.pDependencies = dependencies;
-
-  // Create the depth-prepass RenderPass.
-  color_attachment.format = pre_pass_color_format;
-  color_attachment.samples = vk::SampleCountFlagBits::e1;
-  color_attachment.loadOp = vk::AttachmentLoadOp::eDontCare;
-  color_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-  color_attachment.initialLayout = vk::ImageLayout::eUndefined;
-  color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-  depth_attachment.samples = vk::SampleCountFlagBits::e1;
-  depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-  depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-  depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-  depth_attachment.finalLayout =
-      vk::ImageLayout::eDepthStencilAttachmentOptimal;
-  vk::RenderPass depth_prepass =
-      ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
-
-  // Create the illumination RenderPass.
-  color_attachment.format = lighting_pass_color_format;
-  color_attachment.samples =
-      SampleCountFlagBitsFromInt(lighting_pass_sample_count);
-  color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-  // TODO: necessary to store if we resolve as part of the render-pass?
-  color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-  color_attachment.initialLayout = vk::ImageLayout::eUndefined;
-  color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-  depth_attachment.samples =
-      SampleCountFlagBitsFromInt(lighting_pass_sample_count);
-  depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-  depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-  depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-  depth_attachment.finalLayout =
-      vk::ImageLayout::eDepthStencilAttachmentOptimal;
-  vk::RenderPass lighting_pass =
-      ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
-
-  return std::make_pair(depth_prepass, lighting_pass);
 }
 
 }  // namespace impl

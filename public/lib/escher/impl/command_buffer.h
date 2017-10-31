@@ -88,16 +88,19 @@ class CommandBuffer {
 
   // Convenient way to begin a render-pass that renders to the whole framebuffer
   // (i.e. width/height of viewport and scissors are obtained from framebuffer).
-  void BeginRenderPass(vk::RenderPass,
+  void BeginRenderPass(const RenderPassPtr& render_pass,
                        const FramebufferPtr& framebuffer,
                        const std::vector<vk::ClearValue>& clear_values);
-  void BeginRenderPass(vk::RenderPass,
+  void BeginRenderPass(vk::RenderPass render_pass,
+                       const FramebufferPtr& framebuffer,
+                       const std::vector<vk::ClearValue>& clear_values);
+  void BeginRenderPass(vk::RenderPass render_pass,
                        const FramebufferPtr& framebuffer,
                        const vk::ClearValue* clear_values,
                        size_t clear_value_count);
 
   // Simple wrapper around endRenderPass().
-  void EndRenderPass() { command_buffer_.endRenderPass(); }
+  void EndRenderPass();
 
   // Block until the command-buffer is no longer pending, or the specified
   // number of nanoseconds has elapsed.  Return vk::Result::eSuccess in the

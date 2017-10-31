@@ -15,9 +15,8 @@ namespace impl {
 enum class ModelDisplayListFlag {
   kNull = 0,
   kSortByPipeline = 1 << 0,
-  kUseDepthPrepass = 1 << 1,
-  kDisableDepthTest = 1 << 2,
-  kShareDescriptorSetsBetweenObjects = 1 << 3
+  kDisableDepthTest = 1 << 1,
+  kShareDescriptorSetsBetweenObjects = 1 << 2
 };
 
 using ModelDisplayListFlags = vk::Flags<ModelDisplayListFlag>;
@@ -45,7 +44,6 @@ template <>
 struct FlagTraits<escher::impl::ModelDisplayListFlag> {
   enum {
     allFlags = VkFlags(escher::impl::ModelDisplayListFlag::kSortByPipeline) |
-               VkFlags(escher::impl::ModelDisplayListFlag::kUseDepthPrepass) |
                VkFlags(escher::impl::ModelDisplayListFlag::kDisableDepthTest) |
                VkFlags(escher::impl::ModelDisplayListFlag::
                            kShareDescriptorSetsBetweenObjects)

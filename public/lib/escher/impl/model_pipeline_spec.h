@@ -27,11 +27,8 @@ struct ModelPipelineSpec {
   ShapeModifiers shape_modifiers;
   // TODO: For now, there is only 1 material, so the ModelPipelineSpec doesn't
   // bother to mention anything about it.
-  uint32_t sample_count = 1;
   ClipperState clipper_state = ClipperState::kNoClipChildren;
   bool is_clippee = false;
-  // TODO: this is a hack.
-  bool use_depth_prepass = true;
   // Set to true if an object has a material.
   bool has_material = false;
   // Set to true if the object has an opaque material, and false if it has no
@@ -48,10 +45,8 @@ inline bool operator==(const ModelPipelineSpec& spec1,
                        const ModelPipelineSpec& spec2) {
   return spec1.mesh_spec == spec2.mesh_spec &&
          spec1.shape_modifiers == spec2.shape_modifiers &&
-         spec1.sample_count == spec2.sample_count &&
          spec1.clipper_state == spec2.clipper_state &&
          spec1.is_clippee == spec2.is_clippee &&
-         spec1.use_depth_prepass == spec2.use_depth_prepass &&
          spec1.has_material == spec2.has_material &&
          spec1.is_opaque == spec2.is_opaque;
 }

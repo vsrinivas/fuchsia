@@ -30,9 +30,8 @@ class ModelDisplayListBuilder {
                           const TexturePtr& illumination_texture,
                           ModelData* model_data,
                           ModelRenderer* renderer,
-                          ModelPipelineCachePtr pipeline_cache,
-                          ModelDisplayListFlags flags,
-                          uint32_t sample_count);
+                          ModelRenderPassPtr render_pass,
+                          ModelDisplayListFlags flags);
 
   ~ModelDisplayListBuilder();
 
@@ -95,10 +94,12 @@ class ModelDisplayListBuilder {
   std::vector<ResourcePtr> resources_;
 
   ModelRenderer* const renderer_;
+  ModelRenderPassPtr render_pass_;
+  ModelPipelineCache* const pipeline_cache_;
+
   UniformBufferPool* const uniform_buffer_pool_;
   DescriptorSetPool* const per_model_descriptor_set_pool_;
   DescriptorSetPool* const per_object_descriptor_set_pool_;
-  ModelPipelineCachePtr pipeline_cache_;
 
   DescriptorSetAllocationPtr per_object_descriptor_set_allocation_;
 

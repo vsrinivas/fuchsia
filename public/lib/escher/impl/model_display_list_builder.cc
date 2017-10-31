@@ -8,6 +8,7 @@
 
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/model_pipeline_cache.h"
+#include "lib/escher/impl/model_render_pass.h"
 #include "lib/escher/impl/model_renderer.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/util/align.h"
@@ -46,30 +47,25 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     const TexturePtr& illumination_texture,
     ModelData* model_data,
     ModelRenderer* renderer,
-    ModelPipelineCachePtr pipeline_cache,
-    ModelDisplayListFlags flags,
-    uint32_t sample_count)
+    ModelRenderPassPtr render_pass,
+    ModelDisplayListFlags flags)
     : device_(device),
       volume_(stage.viewing_volume()),
       camera_transform_(AdjustCameraTransform(stage, camera, scale)),
-      use_material_textures_(!(flags & ModelDisplayListFlag::kUseDepthPrepass)),
+      use_material_textures_(render_pass->UseMaterialTextures()),
       disable_depth_test_(flags & ModelDisplayListFlag::kDisableDepthTest),
       white_texture_(white_texture),
       illumination_texture_(illumination_texture ? illumination_texture
                                                  : white_texture),
       renderer_(renderer),
+      render_pass_(std::move(render_pass)),
+      pipeline_cache_(render_pass_->pipeline_cache()),
       uniform_buffer_pool_(model_data->uniform_buffer_pool()),
       per_model_descriptor_set_pool_(
           model_data->per_model_descriptor_set_pool()),
       per_object_descriptor_set_pool_(
-          model_data->per_object_descriptor_set_pool()),
-      pipeline_cache_(std::move(pipeline_cache)) {
+          model_data->per_object_descriptor_set_pool()) {
   FXL_DCHECK(white_texture_);
-
-  // These fields of the pipeline spec are the same for the entire display list.
-  pipeline_spec_.sample_count = sample_count;
-  pipeline_spec_.use_depth_prepass =
-      bool(flags & ModelDisplayListFlag::kUseDepthPrepass);
 
   // Obtain a uniform buffer and write the PerModel data to it.
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel), 0);
@@ -347,9 +343,6 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
     resources_.push_back(std::move(uniform_buffer));
   }
   uniform_buffers_.clear();
-
-  // Keep pipelines alive.
-  resources_.push_back(std::move(pipeline_cache_));
 
   auto display_list = fxl::MakeRefCounted<ModelDisplayList>(
       renderer_->resource_recycler(), per_model_descriptor_set_,

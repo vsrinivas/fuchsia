@@ -130,10 +130,8 @@ std::ostream& operator<<(
 std::ostream& operator<<(std::ostream& str,
                          const impl::ModelPipelineSpec& spec) {
   str << "ModelPipelineSpec[" << spec.mesh_spec << ", " << spec.shape_modifiers
-      << ", sample_count: " << spec.sample_count
       << ", clipper_state: " << spec.clipper_state
       << ", is_clippee: " << spec.is_clippee
-      << ", depth_prepass: " << spec.use_depth_prepass
       << ", has_material: " << spec.has_material
       << ", is_opaque: " << spec.is_opaque << "]";
   return str;

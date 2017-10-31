@@ -96,13 +96,13 @@ class PaperRenderer : public Renderer {
                          const TexturePtr& ssdo_accel_depth);
 
   // Configure the renderer to use the specified output formats.
-  void UpdateModelRenderer(vk::Format pre_pass_color_format,
-                           vk::Format lighting_pass_color_format);
+  void UpdateRenderPasses(vk::Format pre_pass_color_format,
+                          vk::Format lighting_pass_color_format);
 
   MeshPtr full_screen_;
   impl::ImageCache* image_cache_;
-  vk::Format depth_pass_color_format_;
-  vk::Format lighting_pass_color_format_;
+  impl::ModelRenderPassPtr depth_pass_;
+  impl::ModelRenderPassPtr lighting_pass_;
   vk::Format depth_format_;
   impl::ModelDataPtr model_data_;
   impl::ModelRendererPtr model_renderer_;
