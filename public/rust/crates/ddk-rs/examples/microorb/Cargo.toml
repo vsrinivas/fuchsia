@@ -1,0 +1,20 @@
+[package]
+name = "microorb"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Andrew Walbran <qwandor@google.com>"]
+description = "Driver for USB microorb"
+repository = "https://fuchsia.googlesource.com/garnet/"
+build = "build.rs"
+
+[lib]
+name = "microorb"
+crate-type = ["dylib"]
+
+[dependencies]
+ddk-rs = { path = "../../../ddk-rs" }
+ddk-sys = { path = "../../ddk-sys" }
+fuchsia-zircon = { path = "../../../fuchsia-zircon" }
+
+[build-dependencies]
+gcc = "0.3"
