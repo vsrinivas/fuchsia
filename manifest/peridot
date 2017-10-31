@@ -5,7 +5,7 @@
     <import remote="https://fuchsia.googlesource.com/garnet"
             manifest="manifest/garnet"
             name="garnet"
-            revision="cf0af9456103bcd1414cdd00891902c15b72d16f"/>
+            revision="770fb738b5b1e6453022b9cd877767ea97236b1f"/>
   </imports>
   <projects>
 
