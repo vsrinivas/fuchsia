@@ -9,16 +9,16 @@
 #include <string>
 #include <vector>
 
-#include "lib/app/fidl/application_controller.fidl.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "garnet/lib/measure/duration.h"
-#include "garnet/lib/measure/measurements.h"
-#include "garnet/lib/measure/time_between.h"
-#include "garnet/lib/trace_converters/chromium_exporter.h"
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/results_upload.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
+#include "garnet/lib/measure/duration.h"
+#include "garnet/lib/measure/measurements.h"
+#include "garnet/lib/measure/time_between.h"
+#include "garnet/lib/trace_converters/chromium_exporter.h"
+#include "lib/app/fidl/application_controller.fidl.h"
+#include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 

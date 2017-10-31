@@ -10,8 +10,8 @@
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 using namespace tracing::internal;
 
@@ -105,7 +105,7 @@ void Tracer::DrainSocket() {
     FXL_DCHECK(bytes_available > 0);
 
     trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
-                        trace::BytesToWords(bytes_available));
+                       trace::BytesToWords(bytes_available));
     if (!reader_->ReadRecords(chunk)) {
       FXL_LOG(ERROR) << "Trace stream is corrupted";
       Done();

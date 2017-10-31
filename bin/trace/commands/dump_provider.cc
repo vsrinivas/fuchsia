@@ -9,9 +9,9 @@
 
 #include "garnet/bin/trace/commands/dump_provider.h"
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 namespace {

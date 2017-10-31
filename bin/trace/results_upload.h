@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "lib/network/fidl/network_service.fidl.h"
-#include "garnet/lib/measure/results.h"
 #include "garnet/bin/trace/spec.h"
+#include "garnet/lib/measure/results.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace tracing {
 

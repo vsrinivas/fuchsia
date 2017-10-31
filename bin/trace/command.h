@@ -12,9 +12,9 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/tracing/fidl/trace_controller.fidl.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
+#include "lib/tracing/fidl/trace_controller.fidl.h"
 
 namespace tracing {
 

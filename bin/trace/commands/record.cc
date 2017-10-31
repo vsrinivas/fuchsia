@@ -6,15 +6,15 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "lib/network/fidl/network_service.fidl.h"
 #include "garnet/bin/trace/commands/record.h"
 #include "garnet/bin/trace/results_output.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/network/fidl/network_service.fidl.h"
 
 namespace tracing {
 
@@ -311,11 +311,10 @@ void Record::StopTrace() {
 
 void Record::ProcessMeasurements(fxl::Closure on_done) {
   if (!events_.empty()) {
-    std::sort(
-        std::begin(events_), std::end(events_),
-        [](const trace::Record& e1, const trace::Record& e2) {
-          return e1.GetEvent().timestamp < e2.GetEvent().timestamp;
-        });
+    std::sort(std::begin(events_), std::end(events_),
+              [](const trace::Record& e1, const trace::Record& e2) {
+                return e1.GetEvent().timestamp < e2.GetEvent().timestamp;
+              });
   }
 
   for (const auto& event : events_) {
@@ -363,8 +362,8 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
     network::NetworkServicePtr network_service =
         context()->ConnectToEnvironmentService<network::NetworkService>();
     UploadResults(out(), err(), std::move(network_service),
-                  options_.upload_metadata,
-                  results, [on_done = std::move(on_done)](bool succeeded) {
+                  options_.upload_metadata, results,
+                  [on_done = std::move(on_done)](bool succeeded) {
                     if (!succeeded) {
                       err() << "dashboard upload failed" << std::endl;
                       exit(1);

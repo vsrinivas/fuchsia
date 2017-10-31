@@ -13,11 +13,11 @@
 
 #include <trace-reader/reader.h>
 
-#include "lib/tracing/fidl/trace_controller.fidl.h"
-#include "lib/fxl/functional/closure.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/tasks/message_loop_handler.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/macros.h"
+#include "lib/tracing/fidl/trace_controller.fidl.h"
 
 namespace tracing {
 

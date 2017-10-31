@@ -8,8 +8,8 @@
 #include <ostream>
 #include <vector>
 
-#include "garnet/lib/measure/results.h"
 #include "garnet/bin/trace/spec.h"
+#include "garnet/lib/measure/results.h"
 
 namespace tracing {
 
