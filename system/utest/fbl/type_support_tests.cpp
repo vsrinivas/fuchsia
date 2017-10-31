@@ -397,3 +397,71 @@ static_assert(fbl::is_same<fbl::conditional<true, int, bool>::type, int>::value,
 static_assert(fbl::is_same<fbl::conditional<false, int, bool>::type, bool>::value, "wrong type");
 
 }  // namespace conditional_tests
+
+namespace has_member_fn_tests {
+
+struct A {
+  void simple();
+  void overloaded();
+  int overloaded(int);
+  int overloaded(int) const;
+};
+
+struct B {
+  int simple();
+  int overloaded(int) const;
+};
+
+struct C {};
+
+DECLARE_HAS_MEMBER_FN(has_simple, simple);
+DECLARE_HAS_MEMBER_FN(has_overloaded, overloaded);
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_simple_void, simple, void (C::*)());
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_simple_int, simple, int (C::*)());
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_overloaded_void, overloaded, void (C::*)());
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_overloaded_int, overloaded, int (C::*)(int));
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_overloaded_int_const, overloaded, int (C::*)(int) const);
+
+static_assert(has_simple<A>::value, "");
+static_assert(has_simple<B>::value, "");
+static_assert(!has_simple<C>::value, "");
+static_assert(!has_simple<int>::value, "");
+static_assert(!has_simple<decltype(nullptr)>::value, "");
+
+static_assert(!has_overloaded<A>::value, "fails due to ambiguity");
+static_assert(has_overloaded<B>::value, "unambiguous");
+static_assert(!has_overloaded<C>::value, "");
+static_assert(!has_overloaded<int>::value, "");
+static_assert(!has_overloaded<decltype(nullptr)>::value, "");
+
+static_assert(has_simple_void<A>::value, "");
+static_assert(!has_simple_void<B>::value, "");
+static_assert(!has_simple_void<C>::value, "");
+static_assert(!has_simple_void<int>::value, "");
+static_assert(!has_simple_void<decltype(nullptr)>::value, "");
+
+static_assert(!has_simple_int<A>::value, "");
+static_assert(has_simple_int<B>::value, "");
+static_assert(!has_simple_int<C>::value, "");
+static_assert(!has_simple_int<int>::value, "");
+static_assert(!has_simple_int<decltype(nullptr)>::value, "");
+
+static_assert(has_overloaded_void<A>::value, "");
+static_assert(!has_overloaded_void<B>::value, "");
+static_assert(!has_overloaded_void<C>::value, "");
+static_assert(!has_overloaded_void<int>::value, "");
+static_assert(!has_overloaded_void<decltype(nullptr)>::value, "");
+
+static_assert(has_overloaded_int<A>::value, "");
+static_assert(!has_overloaded_int<B>::value, "");
+static_assert(!has_overloaded_int<C>::value, "");
+static_assert(!has_overloaded_int<int>::value, "");
+static_assert(!has_overloaded_int<decltype(nullptr)>::value, "");
+
+static_assert(has_overloaded_int_const<A>::value, "");
+static_assert(has_overloaded_int_const<B>::value, "");
+static_assert(!has_overloaded_int_const<C>::value, "");
+static_assert(!has_overloaded_int_const<int>::value, "");
+static_assert(!has_overloaded_int_const<decltype(nullptr)>::value, "");
+
+} // namespace has_member_fn_tests
