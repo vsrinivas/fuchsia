@@ -38,6 +38,7 @@ GLOBAL_DEFINES += \
 	USER_ASPACE_SIZE=$(USER_ASPACE_SIZE)
 
 MODULE_SRCS += \
+	$(LOCAL_DIR)/acpi.S \
 	$(LOCAL_DIR)/arch.cpp \
 	$(LOCAL_DIR)/asm.S \
 	$(LOCAL_DIR)/bp_percpu.c \
