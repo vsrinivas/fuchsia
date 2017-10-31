@@ -2,36 +2,10 @@
 <manifest>
   <imports>
     <localimport file="minimal"/>
+    <localimport file="third_party"/>
     <import remote="https://fuchsia.googlesource.com/garnet"
             manifest="manifest/garnet"
             name="garnet"
             revision="42a887b60b6e967be2d7b85aa43b7fce1c406c77"/>
   </imports>
-  <projects>
-
-    <project name="peridot"
-             path="peridot"
-             remote="https://fuchsia.googlesource.com/peridot"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
-
-    <!-- Third Party -->
-
-    <project name="third_party/leveldb"
-             path="third_party/leveldb"
-             remote="https://fuchsia.googlesource.com/third_party/leveldb"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
-    <project name="third_party/murmurhash"
-             path="third_party/murmurhash"
-             remote="https://fuchsia.googlesource.com/third_party/murmurhash.c"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
-    <project name="third_party/re2"
-             path="third_party/re2"
-             remote="https://fuchsia.googlesource.com/third_party/re2"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
-    <project name="third_party/snappy"
-             path="third_party/snappy"
-             remote="https://fuchsia.googlesource.com/third_party/snappy"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
-
-  </projects>
 </manifest>
