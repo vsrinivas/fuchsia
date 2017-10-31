@@ -19,6 +19,7 @@
 #include "peridot/bin/suggestion_engine/timeline_stories_filter.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
+#include "peridot/lib/util/rate_limited_retry.h"
 
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
@@ -261,6 +262,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // while its request is in flight.
   bool ask_has_media_response_;
 
+  modular::RateLimitedRetry media_service_retry_;
   media::MediaServicePtr media_service_;
   media::MediaSinkPtr media_sink_;
   media::MediaPacketProducerPtr media_packet_producer_;
@@ -276,8 +278,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // Media input pipeline updates don't work quite right and creating new media
   // capturers is nontrivial, so for now pass a proxy to the speech capture
   // service to let us know when we need to give it a new one.
-  fxl::TimePoint mc_failures_start_;
-  unsigned int mc_failures_count_;
   media::MediaCapturerPtr media_capturer_;
   std::unique_ptr<fidl::Binding<media::MediaCapturer>> media_capturer_binding_;
 };

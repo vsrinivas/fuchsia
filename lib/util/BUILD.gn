@@ -20,6 +20,17 @@ source_set("filesystem") {
   ]
 }
 
+source_set("rate_limited_retry") {
+  sources = [
+    "rate_limited_retry.cc",
+    "rate_limited_retry.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
 source_set("util") {
   sources = [
     "string_escape.cc",

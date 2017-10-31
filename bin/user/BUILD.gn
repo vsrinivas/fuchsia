@@ -58,6 +58,7 @@ source_set("user_intelligence_provider") {
     "//garnet/public/lib/cobalt/fidl",
     "//garnet/public/lib/network/fidl",
     "//peridot/bin/acquirers/story_info:initializer",
+    "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/lib/action_log/fidl",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/resolver/fidl",

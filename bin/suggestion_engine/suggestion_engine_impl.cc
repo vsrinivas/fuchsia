@@ -34,9 +34,8 @@ constexpr fxl::TimeDelta kAskMediaResponseDelay =
     fxl::TimeDelta::FromMilliseconds(100);
 
 // If media fails more than 5x over one second, stop trying to restart it.
-constexpr fxl::TimeDelta kMediaCriticalFailurePeriod =
-    fxl::TimeDelta::FromSeconds(1);
-constexpr unsigned int kMediaCriticalFailureCount = 5;
+constexpr modular::RateLimitedRetry::Threshold kMediaRetryLimit = {
+    5, fxl::TimeDelta::FromSeconds(1)};
 
 bool IsInterruption(const SuggestionPrototype* suggestion) {
   return ((suggestion->proposal->display) &&
@@ -52,7 +51,8 @@ SuggestionEngineImpl::SuggestionEngineImpl()
     : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
       ask_suggestions_(new RankedSuggestions(&ask_channel_)),
       next_suggestions_(new RankedSuggestions(&next_channel_)),
-      ask_has_media_response_ptr_factory_(&ask_has_media_response_) {
+      ask_has_media_response_ptr_factory_(&ask_has_media_response_),
+      media_service_retry_(kMediaRetryLimit) {
   app_context_->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -271,24 +271,17 @@ void SuggestionEngineImpl::PrimeSpeechCapture() {
     media_service_->CreateAudioCapturer(media_capturer_.NewRequest());
     media_capturer_->GetSupportedMediaTypes([](auto) {});
     media_capturer_.set_connection_error_handler([=] {
-      FXL_LOG(INFO) << "Restarting closed media capturer";
       media_capturer_.reset();
 
-      fxl::TimePoint now = fxl::TimePoint::Now();
-      if (now - mc_failures_start_ >= kMediaCriticalFailurePeriod) {
-        mc_failures_start_ = now;
-        mc_failures_count_ = 1;
-      } else if (mc_failures_count_ <= kMediaCriticalFailureCount) {
-        ++mc_failures_count_;
+      if (media_service_retry_.ShouldRetry()) {
+        FXL_LOG(INFO) << "Restarting closed media capturer";
+        PrimeSpeechCapture();
       } else {
         FXL_LOG(WARNING) << "Media input failed more than "
-                         << kMediaCriticalFailureCount << " times in "
-                         << kMediaCriticalFailurePeriod.ToSecondsF()
+                         << kMediaRetryLimit.count << " times in "
+                         << kMediaRetryLimit.period.ToSecondsF()
                          << " seconds; disabling speech capture.";
-        return;
       }
-
-      PrimeSpeechCapture();
     });
   }
 }

@@ -14,6 +14,7 @@
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/user/agent_launcher.h"
 #include "peridot/bin/user/config.h"
+#include "peridot/lib/util/rate_limited_retry.h"
 
 namespace maxwell {
 
@@ -59,6 +60,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   app::ServiceProviderPtr StartAgent(const std::string& url,
                                      ServiceProviderInitializer services);
   void StartActionLog(SuggestionEngine* suggestion_engine);
+  void StartKronk();
 
   app::ApplicationContext* app_context_;  // Not owned.
 
@@ -68,6 +70,10 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   SuggestionEnginePtr suggestion_engine_;
   UserActionLogPtr user_action_log_;
   app::ServiceProviderPtr resolver_services_;
+
+  std::string kronk_url_;
+  modular::RateLimitedRetry kronk_restart_;
+  app::ServiceProviderPtr kronk_services_;
 
   AgentLauncher agent_launcher_;
 

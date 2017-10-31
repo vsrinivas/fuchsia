@@ -26,6 +26,7 @@ executable("suggestion_engine") {
     "//garnet/public/lib/media/timeline",
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",

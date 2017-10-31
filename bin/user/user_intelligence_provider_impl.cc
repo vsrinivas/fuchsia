@@ -22,6 +22,9 @@ namespace maxwell {
 
 namespace {
 
+constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
+    3, fxl::TimeDelta::FromSeconds(8)};
+
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
 // InterfaceHandle<>.
 template <class T>
@@ -62,6 +65,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fidl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider_handle)
     : app_context_(app_context),
+      kronk_restart_(kKronkRetryLimit),
       agent_launcher_(app_context_->environment().get()) {
   component_context_.Bind(std::move(component_context_handle));
   auto story_provider =
@@ -90,9 +94,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
                                  std::move(context_writer));
 
   if (!config.kronk.empty()) {
-    app::ServiceProviderPtr kronk_services = StartAgent(config.kronk);
-    auto kronk_stt = app::ConnectToService<SpeechToText>(kronk_services.get());
-    suggestion_engine_->SetSpeechToText(kronk_stt.PassInterfaceHandle());
+    kronk_url_ = config.kronk;
+    StartKronk();
   }
 
   StartActionLog(suggestion_engine_.get());
@@ -175,6 +178,22 @@ void UserIntelligenceProviderImpl::StartActionLog(
       url, fidl::GetProxy(&proposal_publisher));
   action_log_factory->GetUserActionLog(std::move(proposal_publisher),
                                        fidl::GetProxy(&user_action_log_));
+}
+
+void UserIntelligenceProviderImpl::StartKronk() {
+  kronk_services_ = StartAgent(kronk_url_);
+  auto kronk_stt = app::ConnectToService<SpeechToText>(kronk_services_.get());
+  suggestion_engine_->SetSpeechToText(kronk_stt.PassInterfaceHandle());
+  kronk_services_.set_connection_error_handler([=] {
+    if (kronk_restart_.ShouldRetry()) {
+      FXL_LOG(INFO) << "Restarting Kronk...";
+      StartKronk();
+    } else {
+      FXL_LOG(WARNING) << "Kronk crashed more than " << kKronkRetryLimit.count
+                       << " times in " << kKronkRetryLimit.period.ToSecondsF()
+                       << " seconds. Speech capture disabled.";
+    }
+  });
 }
 
 void UserIntelligenceProviderImpl::AddStandardServices(
