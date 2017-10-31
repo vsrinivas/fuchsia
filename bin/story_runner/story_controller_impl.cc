@@ -81,49 +81,6 @@ void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
 
 }  // namespace
 
-// A base class meant to be used by operations that want to get blocked until
-// an asynchronous event happens outside that operation. The operation would
-// call Block(callback) and yield control back to the message loop. Later an
-// asynchronous event can call operation->Continue() that would run the
-// callback.
-// NOTE(alhaad): FlowTokens are NOT meant to be used with Blockable operations.
-// This is because we'd need to store FlowToken instance in a class member. If
-// we don't delete the class member, the refcount remains non-zero which cause
-// an operation to stall forever. Deleting the flow token causes the operation
-// itself to be deleted and needs to be done very carefully.
-// TODO(alhaad): Consider using FlowTokenHolder.
-class StoryControllerImpl::Blockable {
- public:
-  Blockable(StoryControllerImpl* const story_controller_impl)
-      : story_controller_impl_(story_controller_impl) {}
-
-  void Continue() {
-    continue_called_ = true;
-    if (continue_) {
-      continue_();
-    }
-  }
-
- protected:
-  void Block(ModuleDataPtr module_data, std::function<void()> c) {
-    story_controller_impl_->blocked_operations_.push_back(
-        std::make_pair<ModuleDataPtr, Blockable*>(std::move(module_data),
-                                                  this));
-    continue_ = c;
-    if (continue_called_) {
-      continue_();
-    }
-  }
-
- private:
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-
-  std::function<void()> continue_;
-  bool continue_called_{};
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Blockable);
-};
-
 class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
  public:
   StoryMarkerImpl() = default;
@@ -136,6 +93,64 @@ class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
  private:
   fidl::BindingSet<StoryMarker> bindings_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
+};
+
+class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
+ public:
+  BlockingModuleDataWriteCall(OperationContainer* const container,
+                              StoryControllerImpl* const story_controller_impl,
+                              std::string key,
+                              ModuleDataPtr module_data,
+                              ResultCall result_call)
+  : Operation("StoryControllerImpl::BlockingModuleDataWriteCall",
+              container,
+              std::move(result_call)),
+    story_controller_impl_(story_controller_impl),
+    key_(std::move(key)),
+    module_data_(std::move(module_data)) {
+      story_controller_impl_->blocked_operations_.push_back(
+          std::make_pair<ModuleDataPtr, BlockingModuleDataWriteCall*>(
+              module_data_.Clone(), this));
+      Ready();
+  }
+
+  void Continue() {
+    fn_called_ = true;
+    if (fn_) {
+      fn_();
+    }
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    new WriteDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(), key_, XdrModuleData,
+        std::move(module_data_), [this, flow] {
+          FlowTokenHolder hold{flow};
+          fn_ = [hold] {
+            std::unique_ptr<FlowToken> flow = hold.Continue();
+            FXL_CHECK(flow) << "Called BlockingModuleDataWriteCall::Continue() "
+                            << "twice. Please file a bug.";
+          };
+
+          if (fn_called_) {
+            fn_();
+          }
+        });
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  const std::string key_;
+  ModuleDataPtr module_data_;
+
+  std::function<void()> fn_;
+  bool fn_called_{};
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(BlockingModuleDataWriteCall);
 };
 
 class StoryControllerImpl::LaunchModuleCall : Operation<> {
@@ -346,7 +361,7 @@ class StoryControllerImpl::KillModuleCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(KillModuleCall);
 };
 
-class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
+class StoryControllerImpl::StartModuleCall : Operation<> {
  public:
   StartModuleCall(
       OperationContainer* const container,
@@ -362,8 +377,7 @@ class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ResultCall result_call)
-      : Blockable(story_controller_impl),
-        Operation("StoryControllerImpl::StartModuleCall",
+      : Operation("StoryControllerImpl::StartModuleCall",
                   container,
                   std::move(result_call),
                   module_url),
@@ -385,8 +399,7 @@ class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
 
  private:
   void Run() override {
-    // NOTE(alhaad): We don't use flow tokens for blockable operations. See
-    // class comment for |Blockable| to know why.
+    FlowToken flow{this};
 
     // We currently require a 1:1 relationship between module
     // application instances and Module service instances, because
@@ -397,7 +410,7 @@ class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
       link_path_ = LinkPath::New();
       link_path_->module_path = parent_module_path_.Clone();
       link_path_->link_name = link_name_;
-      Cont1();
+      Cont1(flow);
 
     } else {
       // If the link name is null, this module receives the default link of its
@@ -405,15 +418,15 @@ class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
       new ReadDataCall<ModuleData>(
           &operation_queue_, story_controller_impl_->page(),
           MakeModuleKey(parent_module_path_), false /* not_found_is_ok */,
-          XdrModuleData, [this](ModuleDataPtr module_data) {
+          XdrModuleData, [this, flow](ModuleDataPtr module_data) {
             FXL_DCHECK(module_data);
             link_path_ = module_data->link_path.Clone();
-            Cont1();
+            Cont1(flow);
           });
     }
   }
 
-  void Cont1() {
+  void Cont1(FlowToken flow) {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
@@ -428,31 +441,30 @@ class StoryControllerImpl::StartModuleCall : Blockable, Operation<> {
     new ReadDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(),
         MakeModuleKey(module_path_), false /* not_found_is_ok */, XdrModuleData,
-        [this](ModuleDataPtr data) {
+        [this, flow](ModuleDataPtr data) {
           // If what we're about to write is already present on the ledger, just
           // launch the module.
           if (data.Equals(module_data_)) {
-            Launch();
+            Launch(flow);
             return;
           }
-          WriteModuleData();
+          WriteModuleData(flow);
         });
   }
 
-  void WriteModuleData() {
-    const std::string key{MakeModuleKey(module_path_)};
-    new WriteDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        module_data_.Clone(),
-        [this] { Block(module_data_.Clone(), [this] { Launch(); }); });
+  void WriteModuleData(FlowToken flow) {
+    std::string key{MakeModuleKey(module_path_)};
+    new BlockingModuleDataWriteCall(
+         &operation_queue_, story_controller_impl_, std::move(key),
+         module_data_.Clone(), [this, flow] { Launch(flow); });
   }
 
-  void Launch() {
+  void Launch(FlowToken flow) {
     new LaunchModuleCall(&operation_queue_, story_controller_impl_,
                          std::move(module_data_), std::move(outgoing_services_),
                          std::move(incoming_services_),
                          std::move(module_controller_request_),
-                         std::move(view_owner_request_), [this] { Done(); });
+                         std::move(view_owner_request_), [flow] { });
   }
 
   // Passed in:
@@ -584,7 +596,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleInShellCall);
 };
 
-class StoryControllerImpl::AddModuleCall : Blockable, Operation<> {
+class StoryControllerImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
                 StoryControllerImpl* const story_controller_impl,
@@ -594,8 +606,7 @@ class StoryControllerImpl::AddModuleCall : Blockable, Operation<> {
                 const fidl::String& link_name,
                 SurfaceRelationPtr surface_relation,
                 const ResultCall& done)
-      : Blockable(story_controller_impl),
-        Operation("StoryControllerImpl::AddModuleCall",
+      : Operation("StoryControllerImpl::AddModuleCall",
                   container,
                   done,
                   module_url),
@@ -610,18 +621,17 @@ class StoryControllerImpl::AddModuleCall : Blockable, Operation<> {
 
  private:
   void Run() override {
-    // NOTE(alhaad): We don't use flow tokens for blockable operations. See
-    // class comment for |Blockable| to know why.
+    FlowToken flow{this};
     module_path_ = parent_module_path_.Clone();
     module_path_.push_back(module_name_);
     link_path_ = LinkPath::New();
     link_path_->module_path = parent_module_path_.Clone();
     link_path_->link_name = link_name_;
 
-    WriteModuleData();
+    WriteModuleData(flow);
   }
 
-  void WriteModuleData() {
+  void WriteModuleData(FlowToken flow) {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
@@ -630,22 +640,19 @@ class StoryControllerImpl::AddModuleCall : Blockable, Operation<> {
     module_data_->surface_relation = surface_relation_.Clone();
     module_data_->module_stopped = false;
 
-    const std::string key{MakeModuleKey(module_path_)};
-    new WriteDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        module_data_.Clone(),
-        [this] { Block(module_data_.Clone(), [this] { Cont(); }); });
+    std::string key{MakeModuleKey(module_path_)};
+    new BlockingModuleDataWriteCall(
+        &operation_queue_, story_controller_impl_, std::move(key),
+        module_data_.Clone(), [this, flow] { Cont(flow); });
   }
 
-  void Cont() {
+  void Cont(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
       new StartModuleInShellCall(&operation_queue_, story_controller_impl_,
                                  parent_module_path_, module_name_, module_url_,
                                  link_name_, nullptr, nullptr, nullptr,
                                  std::move(surface_relation_), true,
-                                 ModuleSource::EXTERNAL, [this] { Done(); });
-    } else {
-      Done();
+                                 ModuleSource::EXTERNAL, [flow] {});
     }
   }
 
@@ -851,14 +858,13 @@ class StoryControllerImpl::StopCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
-class StoryControllerImpl::StopModuleCall : Blockable, Operation<> {
+class StoryControllerImpl::StopModuleCall : Operation<> {
  public:
   StopModuleCall(OperationContainer* const container,
                  StoryControllerImpl* const story_controller_impl,
                  const fidl::Array<fidl::String>& module_path,
                  const std::function<void()>& done)
-      : Blockable(story_controller_impl),
-        Operation("StoryControllerImpl::StopModuleCall", container, done),
+      : Operation("StoryControllerImpl::StopModuleCall", container, done),
         story_controller_impl_(story_controller_impl),
         module_path_(module_path.Clone()) {
     Ready();
@@ -866,8 +872,8 @@ class StoryControllerImpl::StopModuleCall : Blockable, Operation<> {
 
  private:
   void Run() override {
-    // NOTE(alhaad): We don't use flow tokens for blockable operations. See
-    // class comment for |Blockable| to know why.
+    // NOTE(alhaad): We don't use flow tokens here. See NOTE in Kill() to know
+    // why.
 
     // Read the module data.
     new ReadDataCall<ModuleData>(
@@ -891,15 +897,13 @@ class StoryControllerImpl::StopModuleCall : Blockable, Operation<> {
     // explicitly stopped.
     module_data_->module_stopped = true;
 
-    const std::string key{MakeModuleKey(module_data_->module_path)};
-    new WriteDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), key, XdrModuleData,
-        module_data_->Clone(), [this] {
-          // TODO(alhaad: This Block() call may never continue if the data
-          // we're writing to the ledger is the same as the data already in
-          // there as that will not trigger an OnPageChange().
-          Block(module_data_.Clone(), [this] { Kill(); });
-        });
+    std::string key{MakeModuleKey(module_data_->module_path)};
+    // TODO(alhaad: This call may never continue if the data we're writing to
+    // the ledger is the same as the data already in there as that will not
+    // trigger an OnPageChange().
+    new BlockingModuleDataWriteCall(
+        &operation_queue_, story_controller_impl_, std::move(key),
+        module_data_->Clone(), [this] { Kill(); });
   }
 
   void Kill() {
