@@ -4,7 +4,8 @@
     <localimport file="minimal"/>
     <import remote="https://fuchsia.googlesource.com/garnet"
             manifest="manifest/garnet"
-            name="garnet"/>
+            name="garnet"
+            revision="cf0af9456103bcd1414cdd00891902c15b72d16f"/>
   </imports>
   <projects>
 
