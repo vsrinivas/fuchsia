@@ -138,14 +138,16 @@ interface Central {
 };
 
 interface PeripheralDelegate {
-  // Used when a remote central device has connected to a connectable advertisement.
+  // Called when a remote central device has connected to a connectable advertisement.
   // Provides a GATT client handle which can be used to interact with GATT service
   // on the central device.
   //
-  // Centrals can connect to the local device and interact with the GATT server from an
-  // application without Peripheral.StartAdvertising() being called.
-  // This will be called if StartAdvertising was previously called with ConnectionCallbacks
-  // set.
+  // When this is called, the Advertisement will have stopped, and StartAdvertising
+  // should be called again to re-start advertising when the peripheral can accept
+  // another connection.
+  //
+  // Note: Centrals can connect to the local device and interact with the GATT server
+  // from an application without Peripheral.StartAdvertising() being called.
   // TODO(jamuraa): send a gatt Client handle here
   OnCentralConnected(string advertisement_id, RemoteDevice central);
 
