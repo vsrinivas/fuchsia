@@ -1,0 +1,63 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+function usage {
+  cat <<END
+usage: fx set-layer garnet|peridot|topaz
+Configures jiri to fetch the source code for the given layer and its
+dependencies.
+END
+}
+
+if [[ "$#" -ne 1 ]]; then
+  usage
+fi
+
+layer="$1"
+
+if [[ "${layer}" == "zircon" ]]; then
+  usage
+  echo >&2 "error: Switching to the Zircon layer is not supported."
+  exit 1
+fi
+
+if [[ "${layer}" != "garnet" ]] &&
+   [[ "${layer}" != "peridot" ]] &&
+   [[ "${layer}" != "topaz" ]]; then
+  usage
+  exit 1
+fi
+
+cd "${FUCHSIA_DIR}"
+
+function remove-import {
+  local -r name=$1
+  local -r manifest=$2
+  .jiri_root/bin/jiri -q import -delete=true -name="${name}" "${manifest}"
+}
+
+remove-import zircon manifest
+remove-import garnet manifest/garnet
+remove-import peridot manifest/peridot
+remove-import manifest fuchsia
+
+if [[ "${layer}" == "garnet" ]] || [[ "${layer}" == "peridot" ]]; then
+  .jiri_root/bin/jiri import -name="${layer}" "manifest/${layer}" "https://fuchsia.googlesource.com/${layer}"
+else
+  .jiri_root/bin/jiri import fuchsia https://fuchsia.googlesource.com/manifest
+fi
+
+  cat <<END
+Configured jiri for ${layer}. Run these commands to update your build:
+
+ * jiri update -gc     # Updates your source tree to contain ${layer} and to
+                       # remove unneeded repositories.
+ * fx set x86-64       # Updates your build directory to build ${layer}.
+ * fx full-build       # Actually builds ${layer}.
+END
