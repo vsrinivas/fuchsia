@@ -4,8 +4,9 @@
 
 #include "uuid.h"
 
-#include <endian.h>
 #include <cinttypes>
+
+#include <endian.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fxl/logging.h"
@@ -15,17 +16,6 @@
 namespace bluetooth {
 namespace common {
 namespace {
-
-// The Bluetooth Base UUID defines the first value in the range UUIDs reserved
-// by the Bluetooth SIG for often-used and officially registered UUIDs. This
-// UUID is defined as
-//
-//    "00000000-0000-1000-8000-00805F9B34FB"
-//
-// (see Core Spec v5.0, Vol 3, Part B, Section 2.5.1)
-constexpr UInt128 kBaseUuid = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80,
-                                0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00}};
 
 // Format string that can be passed to sscanf. This allows sscanf to convert
 // each octet into a uint8_t.
@@ -39,17 +29,6 @@ constexpr char kScanUuidFormatString[] =
     "%2" SCNx8 "%2" SCNx8
     "-"
     "%2" SCNx8 "%2" SCNx8 "%2" SCNx8 "%2" SCNx8 "%2" SCNx8 "%2" SCNx8;
-
-// A 16-bit or 32-bit UUID can be converted to a 128-bit UUID using the
-// following formula:
-//
-//   16-/32-bit value * 2^96 + Bluetooth_Base_UUID
-//
-// This is the equivalent of modifying the higher order bytes of the base UUID
-// starting at octet 12 (96 bits = 12 bytes).
-//
-// (see Core Spec v5.0, Vol 3, Part B, Section 2.5.1)
-constexpr size_t kBaseOffset = 12;
 
 // Size in bytes of the three valid lengths of UUIDs
 constexpr size_t k16BitSize = 2;
@@ -82,6 +61,12 @@ bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
 
 }  // namespace
 
+// These constexpr static members need to be declared here for linkage as they
+// get used in non-constexpr contexts as well:
+// static
+constexpr UInt128 UUID::kBaseUuid;
+constexpr size_t UUID::kBaseOffset;
+
 // static
 bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
   switch (bytes.size()) {
@@ -99,32 +84,6 @@ bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
   }
 
   return false;
-}
-
-UUID::UUID(const UInt128& uuid128) : type_(Type::k128Bit), value_(uuid128) {
-  if (std::equal(value_.begin(), value_.begin() + kBaseOffset,
-                 kBaseUuid.begin())) {
-    // If value is compressible, store so we can quickly compare.
-    uint32_t val = le32toh(
-        *reinterpret_cast<const uint32_t*>(value_.data() + kBaseOffset));
-    type_ = val > std::numeric_limits<uint16_t>::max() ? Type::k32Bit
-                                                       : Type::k16Bit;
-  }
-}
-
-UUID::UUID(uint16_t uuid16) : type_(Type::k16Bit), value_(kBaseUuid) {
-  uint16_t* bytes = reinterpret_cast<uint16_t*>(value_.data() + kBaseOffset);
-  *bytes = htole16(uuid16);
-}
-
-UUID::UUID(uint32_t uuid32)
-    // If the value of |uuid32| looks like 0x0000xxxx, then store this as a
-    // 16-bit UUID.
-    : type_(uuid32 > std::numeric_limits<uint16_t>::max() ? Type::k32Bit
-                                                          : Type::k16Bit),
-      value_(kBaseUuid) {
-  uint32_t* bytes = reinterpret_cast<uint32_t*>(value_.data() + kBaseOffset);
-  *bytes = htole32(uuid32);
 }
 
 UUID::UUID() : type_(Type::k128Bit) {

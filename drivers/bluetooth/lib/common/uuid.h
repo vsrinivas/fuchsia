@@ -25,9 +25,24 @@ class UUID final {
   // an unsupported size.
   static bool FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid);
 
-  explicit UUID(const UInt128& uuid128);
-  explicit UUID(uint16_t uuid16);
-  explicit UUID(uint32_t uuid32);
+  constexpr explicit UUID(const UInt128& uuid128)
+      : type_(Type::k128Bit), value_(uuid128) {
+    if (!IsValueCompressable())
+      return;
+
+    if (value_[kBaseOffset + 2] == 0 && value_[kBaseOffset + 3] == 0)
+      type_ = Type::k16Bit;
+    else
+      type_ = Type::k32Bit;
+  }
+
+  constexpr explicit UUID(const uint16_t uuid16)
+      : type_(Type::k16Bit), value_(BuildSIGUUID(uuid16)) {}
+
+  constexpr explicit UUID(const uint32_t uuid32)
+      : type_(uuid32 > std::numeric_limits<uint16_t>::max() ? Type::k32Bit
+                                                            : Type::k16Bit),
+        value_(BuildSIGUUID(uuid32)) {}
 
   // The default constructor initializes all values to zero.
   UUID();
@@ -72,6 +87,66 @@ class UUID final {
   std::size_t Hash() const;
 
  private:
+  // The Bluetooth Base UUID defines the first value in the range reserved
+  // by the Bluetooth SIG for often-used and officially registered UUIDs. This
+  // UUID is defined as
+  //
+  //    "00000000-0000-1000-8000-00805F9B34FB"
+  //
+  // (see Core Spec v5.0, Vol 3, Part B, Section 2.5.1)
+  static constexpr UInt128 kBaseUuid = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00,
+                                         0x00, 0x80, 0x00, 0x10, 0x00, 0x00,
+                                         0x00, 0x00, 0x00, 0x00}};
+
+  // A 16-bit or 32-bit UUID can be converted to a 128-bit UUID using the
+  // following formula:
+  //
+  //   16-/32-bit value * 2^96 + Bluetooth_Base_UUID
+  //
+  // This is the equivalent of modifying the higher order bytes of the base UUID
+  // starting at octet 12 (96 bits = 12 bytes).
+  //
+  // (see Core Spec v5.0, Vol 3, Part B, Section 2.5.1)
+  static constexpr size_t kBaseOffset = 12;
+
+  // Returns a 128-bit SIG UUID from the given 16-bit value.
+  static constexpr const UInt128 BuildSIGUUID(const uint16_t uuid16) {
+    return BuildSIGUUID(static_cast<uint32_t>(uuid16));
+  }
+
+  // Returns a 128-bit SIG UUID from the given 32-bit value.
+  static constexpr const UInt128 BuildSIGUUID(const uint32_t uuid32) {
+    UInt128 result(kBaseUuid);
+
+    // HACK(armansito): std::array (see uint128.h) is more constexpr friendly
+    // after C++17, where its non-const operator[] overload can be called in a
+    // constexpr context. However this is not the case in C++14, so we employ an
+    // ugly hack by const_cast'ing the result of the "const" operator[] which is
+    // constexpr friendly. Don't do this in C++17.
+    const auto& const_result = result;
+    const_cast<uint8_t&>(const_result[kBaseOffset]) =
+        static_cast<uint8_t>(uuid32);
+    const_cast<uint8_t&>(const_result[kBaseOffset + 1]) =
+        static_cast<uint8_t>(uuid32 >> 8);
+    const_cast<uint8_t&>(const_result[kBaseOffset + 2]) =
+        static_cast<uint8_t>(uuid32 >> 16);
+    const_cast<uint8_t&>(const_result[kBaseOffset + 3]) =
+        static_cast<uint8_t>(uuid32 >> 24);
+
+    return result;
+  }
+
+  // Returns true if the contents of |value_| represents a UUID in the SIG
+  // reserved range.
+  constexpr bool IsValueCompressable() const {
+    // C++14 allows for-loops in constexpr functions.
+    for (size_t i = 0; i < kBaseOffset; i++) {
+      if (kBaseUuid[i] != value_[i])
+        return false;
+    }
+    return true;
+  }
+
   // We store the type that this was initialized with to allow quick comparison
   // with short Bluetooth SIG UUIDs.
   enum class Type : uint8_t {

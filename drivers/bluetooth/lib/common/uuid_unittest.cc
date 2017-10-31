@@ -39,7 +39,7 @@ constexpr UInt128 kId3As128 = {
 constexpr char kId3AsString[] = "0000180d-0b0a-0908-0706-050403020100";
 
 TEST(UUIDTest, 16Bit) {
-  UUID uuid(kId1As16);
+  constexpr UUID uuid(kId1As16);
 
   // We perform each comparison twice, swapping the lhs and rhs, to test the
   // top-level equality operators.
@@ -71,7 +71,7 @@ TEST(UUIDTest, 16Bit) {
 }
 
 TEST(UUIDTest, 32Bit) {
-  UUID uuid(kId2As32);
+  constexpr UUID uuid(kId2As32);
 
   // Direct comparison with uint32_t.
   EXPECT_EQ(uuid, kId2As32);
@@ -92,7 +92,7 @@ TEST(UUIDTest, 32Bit) {
 }
 
 TEST(UUIDTest, 128Bit) {
-  UUID uuid(kId3As128);
+  constexpr UUID uuid(kId3As128);
 
   EXPECT_EQ(kId3As128, uuid);
 
@@ -112,7 +112,7 @@ TEST(UUIDTest, CompareBytes) {
       0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00,
       0x0d, 0x18, 0x00, 0x00);
 
-  UUID uuid(kId1As16);
+  constexpr UUID uuid(kId1As16);
   EXPECT_TRUE(uuid.CompareBytes(kUuid16Bytes));
   EXPECT_TRUE(uuid.CompareBytes(kUuid32Bytes));
   EXPECT_TRUE(uuid.CompareBytes(kUuid128Bytes));
@@ -238,8 +238,8 @@ TEST(UUIDTest, ToBytes) {
 }
 
 TEST(UUIDTest, Hash) {
-  UUID uuid1(kId3As128);
-  UUID uuid2(kId3As128);
+  constexpr UUID uuid1(kId3As128);
+  constexpr UUID uuid2(kId3As128);
 
   EXPECT_EQ(uuid1, uuid2);
   EXPECT_EQ(uuid1.Hash(), uuid2.Hash());
