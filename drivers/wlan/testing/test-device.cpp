@@ -64,7 +64,9 @@ zx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     return ZX_OK;
 }
 
-void Device::WlanmacTx(uint32_t options, const void* data, size_t length) {}
+zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
+    return ZX_OK;
+}
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     std::printf("wlan::testing::Device::WlanmacSetChannel()  chan=%u\n", chan->channel_num);
