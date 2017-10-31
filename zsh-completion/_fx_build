@@ -1,2 +1,2 @@
-# complete fbuild by asking ninja for a list of available targets and trimming the target deps off
+# complete build by asking ninja for a list of available targets and trimming the target deps off
 _values `"${fuchsia_dir}/buildtools/ninja" -C ${fuchsia_build_dir} -t targets | sed -e 's/: .*//'`

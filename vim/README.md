@@ -10,12 +10,12 @@
 
 1. Update your login script
 
-   Steps #2 and #3 depend on variables set in `env.sh` and by the `fset`
-   command. Add these lines to your startup script (typically `~/.bashrc`).
+   Steps #2 and #3 depend on configuration set by the `fx set` command. Add
+   these lines to your startup script (typically `~/.bashrc`).
 
    ```
-   source /path-to-fuchsia-dir/scripts/env.sh
-   fset x86-64
+   export FUCHSIA_DIR=/path/to/fuchsia-dir
+   fx set x86-64
    ```
 
 1. Update your vim startup file

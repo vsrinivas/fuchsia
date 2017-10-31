@@ -4,8 +4,7 @@ The scripts in this directory are convenience wrappers around primarily two
 tools: `make-fuchsia-vol` that is a host tool in the build, and `gcloud` which
 is the command like client for Google Cloud.
 
-The scripts are usable via `gce` when you have sourced `env.sh`, and via
-`//scripts/gce/gce` as an executable bash script.
+The scripts are usable via `//scripts/gce/gce` as an executable bash script.
 
 ## Prerequisites
 
@@ -26,9 +25,8 @@ Fuchsia instance:
 
 ```
 cd $FUCHSIA_ROOT
-source scripts/env.sh
-fset x86-64 --release
-fbuild
+fx set x86-64 --release
+fx full-build
 gce create-grub-image
 gce create-fuchsia-image
 gce create-instance

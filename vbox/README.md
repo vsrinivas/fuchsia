@@ -10,11 +10,11 @@ multi-core and non-KVM platforms.
 ## Common usage
 
 ```
-fbuild
-fbox build-disk
-fbox create
-fbox start
-fbox console
+fx full-build
+fx box build-disk
+fx box create
+fx box start
+fx box console
 ```
 
 After running the above commands You now have Fuchsia running in a virtualbox

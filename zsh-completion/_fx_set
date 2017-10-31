@@ -21,7 +21,7 @@ archs=(
   'hikey960:HiKey 960'
 )
 
-# arguments to fset
+# arguments to fx set
 _arguments '1:arch:{_describe "arch" archs}' '--release[release build]' \
   '--packages[packages to build]:packages:_packages' \
   '--goma[use goma]' "--no-goma[don't use goma]" \

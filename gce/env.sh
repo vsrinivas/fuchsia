@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 if [[ -z $FUCHSIA_DIR ]]; then
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/../env.sh
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/../devshell/lib/vars.sh
 fi
 
 get-gcloud-config() {

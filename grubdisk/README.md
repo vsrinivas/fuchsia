@@ -8,8 +8,7 @@ systems, while still using a GPT layouts.
 ## Quick & Easy
 
 ```
-source scripts/env.sh
-fbuild
+fx full-build
 ./scripts/grubdisk/build-all.sh
 ```
 
@@ -25,8 +24,7 @@ it.
 In your Fuchsia checkout:
 
 ```
-source scripts/env.sh
-fbuild
+fx full-build
 ./third_party/grubdisk/build-grub.sh
 ```
 
