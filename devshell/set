@@ -19,7 +19,11 @@ optional arguments:
   --release             Build the release variant (e.g., more compiler
                         optimizations, less debugging information).
   --packages            Include the listed packages (separated by commas) in the
-                        system build. Defaults to "packages/gn/default".
+                        system build. Defaults to the default set of packages
+                        for the current layer (e.g., "garnet/packages/default"
+                        for the Garnet layer). If the --package argument is
+                        given multiple times, all the specified packages are
+                        included in the build.
   --build-dir           The directory (relative to FUCHSIA_DIR) into which to
                         generate the build system. Defaults to
                         "out/<variant>-<arch>".
@@ -75,6 +79,7 @@ function main {
   shift
 
   local variant=debug
+  local packages=
   local build_dir=
   local use_goma
   local goma_dir
@@ -91,7 +96,11 @@ function main {
           usage
           return 1
         fi
-        gen_args="${gen_args} --packages $2"
+        if [[ -z "${packages}" ]]; then
+          packages="$2"
+        else
+          packages="${packages},$2"
+        fi
         shift
         ;;
       --build-dir)
@@ -143,6 +152,27 @@ function main {
     esac
     shift
   done
+
+  if [[ -n "${packages}" ]]; then
+    gen_args="${gen_args} --packages ${packages}"
+  else
+    # TODO(abarth): We might want to make this logic more sophistocated once we
+    # have a mechanism for switching between layers or for selecting which
+    # layers to build from source.
+
+    # If both of the cases below trigger, gen.py will error out because gen.py
+    # doesn't support multiple --packages arguments. However, we shouldn't get
+    # into this situation because jiri would have already errored out due to the
+    # conflicting version requirements of importing both garnet and peridot.
+
+    if grep -q "manifest/garnet" "${FUCHSIA_DIR}/.jiri_manifest"; then
+      gen_args="${gen_args} --packages garnet/packages/default"
+    fi
+
+    if grep -q "manifest/peridot" "${FUCHSIA_DIR}/.jiri_manifest"; then
+      gen_args="${gen_args} --packages peridot/packages/default"
+    fi
+  fi
 
   if [[ -n "${build_dir}" ]]; then
     gen_args="${gen_args} --build-dir ${build_dir}"
