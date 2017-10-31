@@ -54,6 +54,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->main_runner(), page_storage,
       result->encryption_service.get(), std::move(page_cloud),
+      std::make_unique<backoff::ExponentialBackoff>(),
       std::make_unique<backoff::ExponentialBackoff>(), error_callback,
       aggregator_.GetNewStateWatcher());
   if (upload_enabled_) {

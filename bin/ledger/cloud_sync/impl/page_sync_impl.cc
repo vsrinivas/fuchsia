@@ -21,13 +21,13 @@ PageSyncImpl::PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                            storage::PageStorage* storage,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr page_cloud,
-                           std::unique_ptr<backoff::Backoff> backoff,
+                           std::unique_ptr<backoff::Backoff> download_backoff,
+                           std::unique_ptr<backoff::Backoff> upload_backoff,
                            fxl::Closure on_error,
                            std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : storage_(storage),
       encryption_service_(encryption_service),
       page_cloud_(std::move(page_cloud)),
-      backoff_(std::move(backoff)),
       on_error_(std::move(on_error)),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       ledger_watcher_(std::move(ledger_watcher)),
@@ -37,9 +37,11 @@ PageSyncImpl::PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
   // We need to initialize page_download_ after task_runner_, but task_runner_
   // must be the last field.
   page_download_ = std::make_unique<PageDownload>(
-      &task_runner_, storage_, encryption_service_, &page_cloud_, this);
-  page_upload_ = std::make_unique<PageUpload>(storage_, encryption_service_,
-                                              &page_cloud_, this);
+      &task_runner_, storage_, encryption_service_, &page_cloud_, this,
+      std::move(download_backoff));
+  page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_,
+                                              encryption_service_, &page_cloud_,
+                                              this, std::move(upload_backoff));
   page_cloud_.set_connection_error_handler([] {
     FXL_LOG(ERROR) << "Page cloud disconnected unexpectedly.";
     // TODO(ppi): we should probably shut down page download and upload.
@@ -99,15 +101,14 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 }
 
 void PageSyncImpl::HandleError() {
-  if (errored_) {
-    // Already errored, exit.
+  if (error_callback_already_called_) {
     return;
   }
 
   if (on_error_) {
+    error_callback_already_called_ = true;
     on_error_();
   }
-  errored_ = true;
 }
 
 void PageSyncImpl::CheckIdle() {
@@ -116,20 +117,6 @@ void PageSyncImpl::CheckIdle() {
       on_idle_();
     }
   }
-}
-
-void PageSyncImpl::Retry(fxl::Closure callable) {
-  task_runner_.PostDelayedTask(
-      [this, callable = std::move(callable)]() {
-        if (!errored_) {
-          callable();
-        }
-      },
-      backoff_->GetNext());
-}
-
-void PageSyncImpl::Success() {
-  backoff_->Reset();
 }
 
 void PageSyncImpl::NotifyStateWatcher() {

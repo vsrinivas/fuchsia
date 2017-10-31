@@ -72,7 +72,8 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
     page_sync_ = std::make_unique<PageSyncImpl>(
         message_loop_.task_runner(), &storage_, &encryption_service_,
         std::move(page_cloud_ptr_),
-        std::make_unique<TestBackoff>(&backoff_get_next_calls_),
+        std::make_unique<TestBackoff>(&download_backoff_get_next_calls_),
+        std::make_unique<TestBackoff>(&upload_backoff_get_next_calls_),
         [this] {
           error_callback_calls_++;
           message_loop_.PostQuitTask();
@@ -97,7 +98,8 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
   encryption::FakeEncryptionService encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   test::TestPageCloud page_cloud_;
-  int backoff_get_next_calls_ = 0;
+  int download_backoff_get_next_calls_ = 0;
+  int upload_backoff_get_next_calls_ = 0;
   TestSyncStateWatcher* state_watcher_;
   std::unique_ptr<PageSyncImpl> page_sync_;
   int error_callback_calls_ = 0;
@@ -398,12 +400,12 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
     return page_cloud_.add_commits_calls == 1u &&
            // We need to wait for the callback to be executed on the PageSync
            // side.
-           backoff_get_next_calls_ == 1;
+           upload_backoff_get_next_calls_ == 1;
   }));
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
-  EXPECT_EQ(1, backoff_get_next_calls_);
+  EXPECT_EQ(1, upload_backoff_get_next_calls_);
 
   // Let's receive the same commit from the remote side.
   fidl::Array<cloud_provider::CommitPtr> commits;

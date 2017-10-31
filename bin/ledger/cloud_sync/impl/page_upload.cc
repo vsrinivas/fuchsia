@@ -8,16 +8,20 @@
 #include "peridot/bin/ledger/callback/scoped_callback.h"
 
 namespace cloud_sync {
-PageUpload::PageUpload(storage::PageStorage* storage,
+PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,
+                       storage::PageStorage* storage,
                        encryption::EncryptionService* encryption_service,
                        cloud_provider::PageCloudPtr* page_cloud,
-                       Delegate* delegate)
-    : storage_(storage),
+                       Delegate* delegate,
+                       std::unique_ptr<backoff::Backoff> backoff)
+    : task_runner_(task_runner),
+      storage_(storage),
       encryption_service_(encryption_service),
       page_cloud_(page_cloud),
       delegate_(delegate),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) +
                   " upload sync: "),
+      backoff_(std::move(backoff)),
       weak_ptr_factory_(this) {}
 
 PageUpload::~PageUpload() {}
@@ -140,7 +144,7 @@ void PageUpload::HandleUnsyncedCommits(
       storage_, encryption_service_, page_cloud_, std::move(commits),
       [this] {
         // Upload succeeded, reset the backoff delay.
-        delegate_->Success();
+        backoff_->Reset();
         batch_upload_.reset();
         UploadUnsyncedCommits();
       },
@@ -152,7 +156,7 @@ void PageUpload::HandleUnsyncedCommits(
                 << "commit upload failed due to a connection error, retrying.";
             SetState(UPLOAD_TEMPORARY_ERROR);
             batch_upload_.reset();
-            delegate_->Retry([this] { UploadUnsyncedCommits(); });
+            RetryWithBackoff([this] { UploadUnsyncedCommits(); });
           } break;
           case BatchUpload::ErrorType::PERMANENT: {
             FXL_LOG(WARNING) << log_prefix_
@@ -170,6 +174,16 @@ void PageUpload::HandleError(const char error_description[]) {
     storage_->RemoveCommitWatcher(this);
   }
   SetState(UPLOAD_PERMANENT_ERROR);
+}
+
+void PageUpload::RetryWithBackoff(fxl::Closure callable) {
+  task_runner_->PostDelayedTask(
+      [this, callable = std::move(callable)]() {
+        if (this->state_ != UPLOAD_PERMANENT_ERROR) {
+          callable();
+        }
+      },
+      backoff_->GetNext());
 }
 
 void PageUpload::SetState(UploadSyncState new_state) {

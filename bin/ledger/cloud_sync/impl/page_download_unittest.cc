@@ -14,6 +14,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/backoff/test/test_backoff.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
@@ -37,7 +38,8 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(message_loop_.task_runner()) {
     page_download_ = std::make_unique<PageDownload>(
-        &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this);
+        &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this,
+        std::make_unique<backoff::test::TestBackoff>());
   }
   ~PageDownloadTest() override {}
 
@@ -56,14 +58,6 @@ class PageDownloadTest : public ::test::TestWithMessageLoop,
   int error_callback_calls_ = 0;
 
  private:
-  // PageDownload::Delegate:
-  void Retry(fxl::Closure callable) override {
-    message_loop_.task_runner()->PostDelayedTask(
-        std::move(callable), fxl::TimeDelta::FromMilliseconds(50));
-  }
-
-  void Success() override {}
-
   void SetDownloadState(DownloadSyncState sync_state) override {
     if (!states_.empty() && sync_state == states_.back()) {
       // Skip identical states.

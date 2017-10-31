@@ -13,7 +13,6 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
 #include "peridot/bin/ledger/callback/scoped_task_runner.h"
-#include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
@@ -27,7 +26,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
  public:
   // Delegate ensuring coordination between PageDownload and the class that owns
   // it.
-  class Delegate : public BaseCoordinatorDelegate {
+  class Delegate {
    public:
     // Report that the download state changed.
     virtual void SetDownloadState(DownloadSyncState sync_state) = 0;
@@ -37,7 +36,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
                storage::PageStorage* storage,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr* page_cloud,
-               Delegate* delegate);
+               Delegate* delegate,
+               std::unique_ptr<backoff::Backoff> backoff);
 
   ~PageDownload() override;
 
@@ -81,8 +81,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
   // Sets the state for commit download.
   void SetCommitState(DownloadSyncState new_state);
-  // Notifies the delegate of a new state.
-  void NotifyDelegate();
+
+  void RetryWithBackoff(fxl::Closure callable);
 
   // Owned by whoever owns this class.
   callback::ScopedTaskRunner* const task_runner_;
@@ -90,6 +90,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr* const page_cloud_;
   Delegate* const delegate_;
+
+  std::unique_ptr<backoff::Backoff> backoff_;
 
   const std::string log_prefix_;
 

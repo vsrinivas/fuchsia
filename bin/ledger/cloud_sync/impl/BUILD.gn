@@ -8,7 +8,6 @@ source_set("impl") {
   sources = [
     "aggregator.cc",
     "aggregator.h",
-    "base_coordinator_delegate.h",
     "batch_download.cc",
     "batch_download.h",
     "batch_upload.cc",

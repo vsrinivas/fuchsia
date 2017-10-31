@@ -22,12 +22,14 @@ PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner,
                            storage::PageStorage* storage,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr* page_cloud,
-                           Delegate* delegate)
+                           Delegate* delegate,
+                           std::unique_ptr<backoff::Backoff> backoff)
     : task_runner_(task_runner),
       storage_(storage),
       encryption_service_(encryption_service),
       page_cloud_(page_cloud),
       delegate_(delegate),
+      backoff_(std::move(backoff)),
       log_prefix_(fxl::Concatenate(
           {"Page ", convert::ToHex(storage->GetId()), " download sync: "})),
       watcher_binding_(this) {}
@@ -83,10 +85,10 @@ void PageDownload::StartDownload() {
                         << "connection error, status: " << cloud_status
                         << ", retrying.";
                     SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
-                    delegate_->Retry([this] { StartDownload(); });
+                    RetryWithBackoff([this] { StartDownload(); });
                     return;
                   }
-                  delegate_->Success();
+                  backoff_->Reset();
 
                   if (commits.empty()) {
                     // If there is no remote commits to add, announce that
@@ -199,7 +201,7 @@ void PageDownload::OnError(cloud_provider::Status status) {
     FXL_LOG(WARNING)
         << log_prefix_
         << "Connection error in the remote commit watcher, retrying.";
-    delegate_->Retry([this] { SetRemoteWatcher(true); });
+    RetryWithBackoff([this] { SetRemoteWatcher(true); });
     return;
   }
 
@@ -260,15 +262,14 @@ void PageDownload::GetObject(
                                << "GetObject() failed due to a connection "
                                   "error or stale auth token, retrying.";
               current_get_object_calls_--;
-              delegate_->Retry([this,
-                                object_digest = std::move(object_digest_str),
-                                callback = std::move(callback)] {
-                GetObject(object_digest, callback);
-              });
+              RetryWithBackoff([
+                this, object_digest = std::move(object_digest_str),
+                callback = std::move(callback)
+              ] { GetObject(object_digest, callback); });
               return;
             }
 
-            delegate_->Success();
+            backoff_->Reset();
             if (status != cloud_provider::Status::OK) {
               FXL_LOG(WARNING)
                   << log_prefix_
@@ -304,6 +305,16 @@ void PageDownload::SetCommitState(DownloadSyncState new_state) {
     delegate_->SetDownloadState(
         GetMergedState(commit_state_, current_get_object_calls_));
   }
+}
+
+void PageDownload::RetryWithBackoff(fxl::Closure callable) {
+  task_runner_->PostDelayedTask(
+      [this, callable = std::move(callable)]() {
+        if (this->commit_state_ != DOWNLOAD_PERMANENT_ERROR) {
+          callable();
+        }
+      },
+      backoff_->GetNext());
 }
 
 bool PageDownload::IsIdle() {

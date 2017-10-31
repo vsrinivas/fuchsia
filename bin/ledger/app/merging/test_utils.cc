@@ -19,6 +19,7 @@ TestBackoff::TestBackoff(int* get_next_count)
 TestBackoff::~TestBackoff() {}
 
 fxl::TimeDelta TestBackoff::GetNext() {
+  FXL_DCHECK(get_next_count_);
   (*get_next_count_)++;
   return fxl::TimeDelta::FromSeconds(0);
 }

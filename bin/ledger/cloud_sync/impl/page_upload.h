@@ -10,7 +10,8 @@
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/ledger/cloud_sync/impl/base_coordinator_delegate.h"
+#include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/callback/scoped_task_runner.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
@@ -24,7 +25,7 @@ class PageUpload : public storage::CommitWatcher {
  public:
   // Delegate ensuring coordination between PageUpload and the class that owns
   // it.
-  class Delegate : public BaseCoordinatorDelegate {
+  class Delegate {
    public:
     // Reports that the upload state changed.
     virtual void SetUploadState(UploadSyncState sync_state) = 0;
@@ -33,10 +34,12 @@ class PageUpload : public storage::CommitWatcher {
     virtual bool IsDownloadIdle() = 0;
   };
 
-  PageUpload(storage::PageStorage* storage,
+  PageUpload(callback::ScopedTaskRunner* task_runner,
+             storage::PageStorage* storage,
              encryption::EncryptionService* encryption_service,
              cloud_provider::PageCloudPtr* page_cloud,
-             Delegate* delegate);
+             Delegate* delegate,
+             std::unique_ptr<backoff::Backoff> backoff);
 
   ~PageUpload() override;
 
@@ -64,11 +67,17 @@ class PageUpload : public storage::CommitWatcher {
 
   void HandleError(const char error_description[]);
 
+  void RetryWithBackoff(fxl::Closure callable);
+
+  // Owned by whoever owns this class.
+  callback::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr* const page_cloud_;
   Delegate* const delegate_;
   const std::string log_prefix_;
+
+  std::unique_ptr<backoff::Backoff> backoff_;
 
   // Work queue:
   // Current batch of local commits being uploaded.

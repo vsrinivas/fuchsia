@@ -59,7 +59,8 @@ class PageSyncImpl : public PageSync,
                storage::PageStorage* storage,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr page_cloud,
-               std::unique_ptr<backoff::Backoff> backoff,
+               std::unique_ptr<backoff::Backoff> download_backoff,
+               std::unique_ptr<backoff::Backoff> upload_backoff,
                fxl::Closure on_error,
                std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
   ~PageSyncImpl() override;
@@ -89,11 +90,6 @@ class PageSyncImpl : public PageSync,
 
   void CheckIdle();
 
-  // Schedules the given closure to execute after the delay determined by
-  // |backoff_|, but only if |this| still is valid and |errored_| is not set.
-  void Retry(fxl::Closure callable) override;
-  void Success() override;
-
   // Notify the state watcher of a change of synchronization state.
   void SetDownloadState(DownloadSyncState next_download_state) override;
   void SetUploadState(UploadSyncState next_upload_state) override;
@@ -104,7 +100,6 @@ class PageSyncImpl : public PageSync,
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_;
-  const std::unique_ptr<backoff::Backoff> backoff_;
   const fxl::Closure on_error_;
   const std::string log_prefix_;
 
@@ -117,7 +112,7 @@ class PageSyncImpl : public PageSync,
   bool started_ = false;
   // Set to true on unrecoverable error. This indicates that PageSyncImpl is in
   // broken state.
-  bool errored_ = false;
+  bool error_callback_already_called_ = false;
   // Blocks the start of the upload process until we get an explicit signal.
   bool enable_upload_ = false;
 

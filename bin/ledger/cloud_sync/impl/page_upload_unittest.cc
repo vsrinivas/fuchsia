@@ -14,6 +14,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/backoff/backoff.h"
+#include "peridot/bin/ledger/backoff/test/test_backoff.h"
 #include "peridot/bin/ledger/callback/capture.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/test/test_page_cloud.h"
@@ -34,9 +35,13 @@ class PageUploadTest : public ::test::TestWithMessageLoop,
   PageUploadTest()
       : storage_(&message_loop_),
         encryption_service_(message_loop_.task_runner()),
-        page_cloud_(page_cloud_ptr_.NewRequest()) {
-    page_upload_ = std::make_unique<PageUpload>(&storage_, &encryption_service_,
-                                                &page_cloud_ptr_, this);
+        page_cloud_(page_cloud_ptr_.NewRequest()),
+        task_runner_(message_loop_.task_runner()) {
+    auto test_backoff = std::make_unique<backoff::test::TestBackoff>();
+    backoff_ = test_backoff.get();
+    page_upload_ = std::make_unique<PageUpload>(
+        &task_runner_, &storage_, &encryption_service_, &page_cloud_ptr_, this,
+        std::move(test_backoff));
   }
   ~PageUploadTest() override {}
 
@@ -44,14 +49,6 @@ class PageUploadTest : public ::test::TestWithMessageLoop,
   void SetOnNewStateCallback(fxl::Closure callback) {
     new_state_callback_ = std::move(callback);
   }
-
-  // PageUpload::Delegate:
-  void Retry(fxl::Closure callable) override {
-    retry_calls_++;
-    message_loop_.task_runner()->PostTask(std::move(callable));
-  }
-
-  void Success() override {}
 
   void SetUploadState(UploadSyncState sync_state) override {
     states_.push_back(sync_state);
@@ -68,12 +65,12 @@ class PageUploadTest : public ::test::TestWithMessageLoop,
   test::TestPageCloud page_cloud_;
   std::vector<UploadSyncState> states_;
   std::unique_ptr<PageUpload> page_upload_;
-  int retry_calls_ = 0;
+  backoff::test::TestBackoff* backoff_;
   bool is_download_idle_ = true;
 
  private:
   fxl::Closure new_state_callback_;
-
+  callback::ScopedTaskRunner task_runner_;
   FXL_DISALLOW_COPY_AND_ASSIGN(PageUploadTest);
 };
 
@@ -347,12 +344,12 @@ TEST_F(PageUploadTest, RetryUpload) {
     return page_cloud_.add_commits_calls >= 5u &&
            // We need to wait for the callback to be executed on the PageSync
            // side.
-           retry_calls_ >= 5;
+           backoff_->get_next_count >= 5;
   }));
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
-  EXPECT_GE(retry_calls_, 5);
+  EXPECT_GE(backoff_->get_next_count, 5);
 }
 
 // Verifies that the idle status is returned when there is no pending upload
