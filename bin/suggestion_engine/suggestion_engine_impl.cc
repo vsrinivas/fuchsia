@@ -298,6 +298,13 @@ void SuggestionEngineImpl::BeginSpeechCapture(
       media_capturer_binding_->set_connection_error_handler([this] {
         media_capturer_->Stop();
         media_capturer_binding_ = nullptr;
+
+        // With the hacks in place right now, this tends to mean that Kronk
+        // hasn't received any new packets from the media capturer. That or
+        // Kronk crashed.
+        media_capturer_.reset();
+        FXL_LOG(INFO) << "Restarting possible dead media capturer";
+        PrimeSpeechCapture();
       });
       speech_to_text_->BeginCapture(media_capturer_binding_->NewBinding(),
                                     std::move(transcription_listener));
