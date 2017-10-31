@@ -20,8 +20,4 @@ trace [options] command [command-specific options]
     --duration=[10s]: Trace will be active for this long after the session has been started
     --output-file=[/data/trace.json]: Trace data is stored in this file
     --spec-file=[none]: Tracing specification file
-    --upload-bot=[none]: Buildbot builder name
-    --upload-master=[none]: Name of the buildbot master
-    --upload-point-id=[none]: Integer identifier of the sample
-    --upload-server-url=[none]: Url of the Catapult dashboard server
 ```

@@ -32,8 +32,6 @@ source_set("trace_app") {
     "commands/record.h",
     "results_output.cc",
     "results_output.h",
-    "results_upload.cc",
-    "results_upload.h",
     "spec.cc",
     "spec.h",
     "tracer.cc",

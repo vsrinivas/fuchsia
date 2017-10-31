@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "garnet/bin/trace/command.h"
-#include "garnet/bin/trace/results_upload.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
 #include "garnet/lib/measure/duration.h"
@@ -38,8 +37,6 @@ class Record : public CommandWithTraceController {
     uint32_t buffer_size_megabytes_hint = 4;
     std::string output_file_name = "/data/trace.json";
     measure::Measurements measurements;
-    bool upload_results = false;
-    UploadMetadata upload_metadata;
   };
 
   static Info Describe();

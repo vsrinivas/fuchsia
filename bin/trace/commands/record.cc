@@ -29,28 +29,13 @@ const char kDuration[] = "duration";
 const char kDetach[] = "detach";
 const char kDecouple[] = "decouple";
 const char kBufferSize[] = "buffer-size";
-const char kUploadServerUrl[] = "upload-server-url";
-const char kUploadMaster[] = "upload-master";
-const char kUploadBot[] = "upload-bot";
-const char kUploadPointId[] = "upload-point-id";
-
-bool EnsureNonEmpty(std::ostream& err,
-                    const fxl::CommandLine& command_line,
-                    size_t index) {
-  if (command_line.options()[index].value.empty()) {
-    err << "--" << command_line.options()[index].name << " can't be empty";
-    return false;
-  }
-  return true;
-}
 
 }  // namespace
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
-      kSpecFile,        kCategories,   kAppendArgs, kOutputFile,
-      kDuration,        kDetach,       kDecouple,   kBufferSize,
-      kUploadServerUrl, kUploadMaster, kUploadBot,  kUploadPointId};
+      kSpecFile, kCategories, kAppendArgs, kOutputFile,
+      kDuration, kDetach,     kDecouple,   kBufferSize};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -86,7 +71,6 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     categories = std::move(spec.categories);
     duration = std::move(spec.duration);
     measurements = std::move(spec.measurements);
-    upload_metadata.test_suite_name = std::move(spec.test_suite_name);
   }
 
   // --categories=<cat1>,<cat2>,...
@@ -140,66 +124,6 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     buffer_size_megabytes_hint = megabytes;
   }
 
-  int upload_param_count = 0;
-  upload_param_count += command_line.HasOption(kUploadServerUrl);
-  upload_param_count += command_line.HasOption(kUploadMaster);
-  upload_param_count += command_line.HasOption(kUploadBot);
-  upload_param_count += command_line.HasOption(kUploadPointId);
-  if (upload_param_count != 0 && upload_param_count != 4) {
-    err() << "All of " << kUploadServerUrl << ", " << kUploadMaster << ", "
-          << kUploadBot << ", " << kUploadPointId
-          << " are required for results upload" << std::endl;
-    return false;
-  }
-  if (upload_param_count > 0) {
-    upload_results = true;
-    if (upload_metadata.test_suite_name.empty()) {
-      err() << "To upload results, the spec file must specify its "
-            << "`test_suite_name`" << std::endl;
-      return false;
-    }
-  }
-
-  // --upload-server-url
-  if (command_line.HasOption(kUploadServerUrl, &index)) {
-    if (!EnsureNonEmpty(err(), command_line, index)) {
-      return false;
-    }
-    upload_metadata.server_url = command_line.options()[index].value;
-  }
-
-  // --upload-master
-  if (command_line.HasOption(kUploadMaster, &index)) {
-    if (!EnsureNonEmpty(err(), command_line, index)) {
-      return false;
-    }
-    upload_metadata.master = command_line.options()[index].value;
-  }
-
-  // --upload-bot
-  if (command_line.HasOption(kUploadBot, &index)) {
-    if (!EnsureNonEmpty(err(), command_line, index)) {
-      return false;
-    }
-    upload_metadata.bot = command_line.options()[index].value;
-  }
-
-  // --upload-point-id=<integer>
-  if (command_line.HasOption(kUploadPointId, &index)) {
-    if (!EnsureNonEmpty(err(), command_line, index)) {
-      return false;
-    }
-    uint64_t point_id;
-    if (!fxl::StringToNumberWithError(command_line.options()[index].value,
-                                      &point_id)) {
-      err() << "Failed to parse command-line option upload-point-id: "
-            << command_line.options()[index].value;
-      return false;
-    }
-    upload_results = true;
-    upload_metadata.point_id = point_id;
-  }
-
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
@@ -236,10 +160,6 @@ Command::Info Record::Describe() {
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
-       {"upload-server-url=[none]", "Url of the Catapult dashboard server"},
-       {"upload-master=[none]", "Name of the buildbot master"},
-       {"upload-bot=[none]", "Buildbot builder name"},
-       {"upload-point-id=[none]", "Integer identifier of the sample"},
        {"[command args]",
         "Run program before starting trace. The program is terminated when "
         "tracing ends unless --detach is specified"}}};
@@ -358,21 +278,7 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
     exit(1);
   }
 
-  if (options_.upload_results) {
-    network::NetworkServicePtr network_service =
-        context()->ConnectToEnvironmentService<network::NetworkService>();
-    UploadResults(out(), err(), std::move(network_service),
-                  options_.upload_metadata, results,
-                  [on_done = std::move(on_done)](bool succeeded) {
-                    if (!succeeded) {
-                      err() << "dashboard upload failed" << std::endl;
-                      exit(1);
-                    }
-                    on_done();
-                  });
-  } else {
-    on_done();
-  }
+  on_done();
 }
 
 void Record::DoneTrace() {
