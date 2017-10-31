@@ -41,10 +41,12 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/block-client \
     system/ulib/ddk \
     system/ulib/fbl \
     system/ulib/fdio \
     system/ulib/hid \
+    system/ulib/sync \
     system/ulib/virtio \
     system/ulib/zx \
     system/ulib/zxcpp \

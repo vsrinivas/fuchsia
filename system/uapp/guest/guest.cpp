@@ -331,7 +331,7 @@ int main(int argc, char** argv) {
     VirtioBlock block(physmem_addr, physmem_size);
     PciDevice& virtio_block = block.pci_device();
     if (block_path != NULL) {
-        status = block.Init(block_path);
+        status = block.Init(block_path, guest.phys_mem());
         if (status != ZX_OK)
             return status;
 

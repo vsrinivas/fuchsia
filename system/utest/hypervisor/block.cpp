@@ -34,7 +34,8 @@ public:
         if (fd_ < 0)
             return ZX_ERR_IO;
 
-        zx_status_t status = block_.Init(block_path);
+        PhysMem phys_mem;
+        zx_status_t status = block_.Init(block_path, phys_mem);
         if (status != ZX_OK)
             return status;
 

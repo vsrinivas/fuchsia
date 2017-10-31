@@ -8,15 +8,30 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <block-client/client.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
+#include <zircon/device/block.h>
 
 // Dispatcher that fulfills block requests using file-descriptor IO
 // (ex: read/write to a file descriptor).
 class FdioBlockDispatcher : public VirtioBlockRequestDispatcher {
 public:
-    FdioBlockDispatcher(int fd): fd_(fd) {}
+    static zx_status_t Create(int fd, fbl::unique_ptr<VirtioBlockRequestDispatcher>* out) {
+        fbl::AllocChecker ac;
+        auto dispatcher = fbl::make_unique_checked<FdioBlockDispatcher>(&ac, fd);
+        if (!ac.check())
+            return ZX_ERR_NO_MEMORY;
+
+        *out = fbl::move(dispatcher);
+        return ZX_OK;
+    }
+
+    FdioBlockDispatcher(int fd)
+        : fd_(fd) {}
 
     zx_status_t Flush() override {
         fbl::AutoLock lock(&file_mutex_);
@@ -57,6 +72,131 @@ private:
     int fd_;
 };
 
+class FifoBlockDispatcher : public VirtioBlockRequestDispatcher {
+public:
+    static zx_status_t Create(int fd, const PhysMem& phys_mem,
+                              fbl::unique_ptr<VirtioBlockRequestDispatcher>* out) {
+        zx_handle_t fifo;
+        ssize_t result = ioctl_block_get_fifos(fd, &fifo);
+        if (result != sizeof(fifo))
+            return ZX_ERR_IO;
+        auto close_fifo = fbl::MakeAutoCall([fifo]() { zx_handle_close(fifo); });
+
+        txnid_t txnid = TXNID_INVALID;
+        result = ioctl_block_alloc_txn(fd, &txnid);
+        if (result != sizeof(txnid_))
+            return ZX_ERR_IO;
+        auto free_txn = fbl::MakeAutoCall([fd, txnid]() { ioctl_block_free_txn(fd, &txnid); });
+
+        zx_handle_t vmo_dup;
+        zx_status_t status = zx_handle_duplicate(phys_mem.vmo(), ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+        if (status != ZX_OK)
+            return ZX_ERR_IO;
+
+        // TODO(ZX-1333): Limit how much of they guest physical address space
+        // is exposed to the block server.
+        vmoid_t vmoid;
+        result = ioctl_block_attach_vmo(fd, &vmo_dup, &vmoid);
+        if (result != sizeof(vmoid_)) {
+            zx_handle_close(vmo_dup);
+            return ZX_ERR_IO;
+        }
+
+        fifo_client_t* fifo_client = nullptr;
+        status = block_fifo_create_client(fifo, &fifo_client);
+        if (status != ZX_OK)
+            return ZX_ERR_IO;
+
+        // The fifo handle is now owned by the block client.
+        fifo = ZX_HANDLE_INVALID;
+        auto free_fifo_client = fbl::MakeAutoCall(
+            [fifo_client]() { block_fifo_release_client(fifo_client); });
+
+        fbl::AllocChecker ac;
+        auto dispatcher = fbl::make_unique_checked<FifoBlockDispatcher>(&ac, fd, txnid, vmoid,
+                                                                        fifo_client,
+                                                                        phys_mem.addr());
+        if (!ac.check())
+            return ZX_ERR_NO_MEMORY;
+
+        close_fifo.cancel();
+        free_txn.cancel();
+        free_fifo_client.cancel();
+        *out = fbl::move(dispatcher);
+        return ZX_OK;
+    }
+
+    FifoBlockDispatcher(int fd, txnid_t txnid, vmoid_t vmoid, fifo_client_t* fifo_client,
+                        size_t guest_vmo_addr)
+        : fd_(fd), txnid_(txnid), vmoid_(vmoid), fifo_client_(fifo_client),
+          guest_vmo_addr_(guest_vmo_addr) {}
+
+    ~FifoBlockDispatcher() {
+        if (txnid_ != TXNID_INVALID) {
+            ioctl_block_free_txn(fd_, &txnid_);
+        }
+        if (fifo_client_ != nullptr) {
+            block_fifo_release_client(fifo_client_);
+        }
+    }
+
+    zx_status_t Flush() override {
+        return ZX_OK;
+    }
+
+    zx_status_t Read(off_t disk_offset, void* buf, size_t size) override {
+        fbl::AutoLock lock(&fifo_mutex_);
+        return EnqueueBlockRequestLocked(BLOCKIO_READ, disk_offset, buf, size);
+    }
+
+    zx_status_t Write(off_t disk_offset, const void* buf, size_t size) override {
+        fbl::AutoLock lock(&fifo_mutex_);
+        return EnqueueBlockRequestLocked(BLOCKIO_WRITE, disk_offset, buf, size);
+    }
+
+    zx_status_t Submit() override {
+        fbl::AutoLock lock(&fifo_mutex_);
+        return SubmitTransactionsLocked();
+    }
+
+private:
+    zx_status_t EnqueueBlockRequestLocked(uint16_t opcode, off_t disk_offset, const void* buf,
+                                          size_t size) TA_REQ(fifo_mutex_) {
+        if (request_index_ >= kNumRequests) {
+            zx_status_t status = SubmitTransactionsLocked();
+            if (status != ZX_OK)
+                return status;
+        }
+
+        block_fifo_request_t* request = &requests_[request_index_++];
+        request->txnid = txnid_;
+        request->vmoid = vmoid_;
+        request->opcode = opcode;
+        request->length = size;
+        request->vmo_offset = reinterpret_cast<uint64_t>(buf) - guest_vmo_addr_;
+        request->dev_offset = disk_offset;
+        return ZX_OK;
+    }
+
+    zx_status_t SubmitTransactionsLocked() TA_REQ(fifo_mutex_) {
+        zx_status_t status = block_fifo_txn(fifo_client_, requests_, request_index_);
+        request_index_ = 0;
+        return status;
+    }
+
+    // Block server access.
+    int fd_;
+    txnid_t txnid_ = TXNID_INVALID;
+    vmoid_t vmoid_;
+    fifo_client_t* fifo_client_ = nullptr;
+
+    size_t guest_vmo_addr_;
+    size_t request_index_ TA_GUARDED(fifo_mutex_) = 0;
+    static constexpr size_t kNumRequests = MAX_TXN_MESSAGES;
+    block_fifo_request_t requests_[kNumRequests] TA_GUARDED(fifo_mutex_);
+    fbl::Mutex fifo_mutex_;
+};
+
 VirtioBlock::VirtioBlock(uintptr_t guest_physmem_addr, size_t guest_physmem_size)
     : VirtioDevice(VIRTIO_ID_BLOCK, &config_, sizeof(config_), &queue_, 1,
                    guest_physmem_addr, guest_physmem_size) {
@@ -67,7 +207,7 @@ VirtioBlock::VirtioBlock(uintptr_t guest_physmem_addr, size_t guest_physmem_size
                         | VIRTIO_BLK_F_BLK_SIZE);
 }
 
-zx_status_t VirtioBlock::Init(const char* path) {
+zx_status_t VirtioBlock::Init(const char* path, const PhysMem& phys_mem) {
     if (dispatcher_ != nullptr) {
         fprintf(stderr, "Block device has already been initialized.\n");
         return ZX_ERR_BAD_STATE;
@@ -96,10 +236,19 @@ zx_status_t VirtioBlock::Init(const char* path) {
     size_ = ret;
     config_.capacity = size_ / kSectorSize;
 
-    fbl::AllocChecker ac;
-    dispatcher_ = fbl::make_unique_checked<FdioBlockDispatcher>(&ac, fd);
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
+    // Prefer using the faster FIFO-based IO. If the file is not a block device
+    // file then fall back to using posix IO.
+    fbl::unique_ptr<VirtioBlockRequestDispatcher> dispatcher;
+    zx_status_t status = FifoBlockDispatcher::Create(fd, phys_mem, &dispatcher);
+    if (status == ZX_OK) {
+        printf("virtio-block: Using FIFO IO for block device '%s'.\n", path);
+    } else {
+        status = FdioBlockDispatcher::Create(fd, &dispatcher);
+        if (status != ZX_OK)
+            return status;
+        printf("virtio-block: Using posix IO for block device '%s'.\n", path);
+    }
+    dispatcher_ = fbl::move(dispatcher);
 
     return ZX_OK;
 }

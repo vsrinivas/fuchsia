@@ -34,7 +34,7 @@ public:
     //
     // Default to opening the file as read-write, but fall back to read-only
     // if that is not possible.
-    zx_status_t Init(const char* path);
+    zx_status_t Init(const char* path, const PhysMem& phys_mem);
 
     // Starts a thread to monitor the queue for incomming block requests.
     zx_status_t Start();
