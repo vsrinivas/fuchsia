@@ -246,6 +246,18 @@ you to pass arguments to an executable.
 This option requests that if a minfs partition with the system type GUID is
 found, it is to be mounted read-write rather than read-only.
 
+## zircon.system.volume=\<arg>
+
+This option specifies where to find the "/system" volume.
+
+It may be set to:
+"any", in which case the first volume of the appropriate type will be used.
+"local" in which the first volume that's non-removable of the appropriate type
+  will be used.
+"none" (default) which avoids mounting anything.
+
+A "/system" ramdisk provided by bootdata always supercedes this option.
+
 ## netsvc.netboot=\<bool>
 
 If true, zircon will attempt to netboot into another instance of zircon upon

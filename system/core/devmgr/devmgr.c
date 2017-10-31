@@ -632,8 +632,20 @@ void fshost_start(void) {
     const char* argv[] = { "/boot/bin/fshost", "--no-disk" };
     int argc = getenv_bool("netsvc.netboot", false) ? 2 : 1;
 
+    // Pass zircon.system.* options to the fshost as environment variables
+    const char* envp[16];
+    unsigned envc = 0;
+    char** e = environ;
+    while (*e && (envc < countof(envp))) {
+        if (!strncmp(*e, "zircon.system", strlen("zircon.system"))) {
+            envp[envc++] = *e;
+        }
+        e++;
+    }
+    envp[envc] = NULL;
+
     devmgr_launch(svcs_job_handle, "fshost", argc, argv,
-                  NULL, -1, handles, types, n, NULL);
+                  envp, -1, handles, types, n, NULL);
 
     // switch to system loader service provided by fshost
     zx_handle_close(dl_set_loader_service(svc));

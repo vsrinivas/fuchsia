@@ -59,6 +59,20 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             if (secondary_bootfs_ready()) {
                 return ZX_ERR_ALREADY_BOUND;
             }
+            const char* volume = getenv("zircon.system.volume");
+            if (volume != NULL && !strcmp(volume, "any")) {
+                // Fall-through; we'll take anything.
+            } else if (volume != NULL && !strcmp(volume, "local")) {
+                // Fall-through only if we can guarantee the partition
+                // is not removable.
+                block_info_t info;
+                if ((ioctl_block_get_info(fd, &info) < 0) ||
+                    (info.flags & BLOCK_FLAG_REMOVABLE)) {
+                    return ZX_ERR_BAD_STATE;
+                }
+            } else {
+                return ZX_ERR_BAD_STATE;
+            }
 
             // TODO(ZX-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
             options->readonly = getenv("zircon.system.writable") == NULL;
