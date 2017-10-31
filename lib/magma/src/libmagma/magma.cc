@@ -203,11 +203,13 @@ magma_status_t magma_unmap(magma_connection_t* connection, magma_buffer_t buffer
 }
 
 void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
-                          uint64_t gpu_va, uint64_t map_flags)
+                          uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
+                          uint64_t map_flags)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
     uint64_t buffer_id = platform_buffer->id();
-    magma::PlatformIpcConnection::cast(connection)->MapBufferGpu(buffer_id, gpu_va, map_flags);
+    magma::PlatformIpcConnection::cast(connection)
+        ->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, map_flags);
 }
 
 void magma_unmap_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,

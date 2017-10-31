@@ -128,7 +128,8 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
 }
 
 void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
-                                   uint64_t gpu_va, uint64_t flags)
+                                   uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
+                                   uint64_t flags)
 {
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
     std::shared_ptr<MsdArmBuffer> buffer = MsdArmAbiBuffer::cast(abi_buffer)->ptr();

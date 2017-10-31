@@ -116,7 +116,7 @@ public:
         EXPECT_EQ(magma_create_buffer(connection_, size, &actual_size, &id), 0);
         EXPECT_NE(id, 0u);
 
-        magma_map_buffer_gpu(connection_, id, 1024, MAGMA_GPU_MAP_FLAG_READ);
+        magma_map_buffer_gpu(connection_, id, 1024, 0, size / PAGE_SIZE, MAGMA_GPU_MAP_FLAG_READ);
         magma_unmap_buffer_gpu(connection_, id, 2048);
         magma_commit_buffer(connection_, id, 100, 100);
 

@@ -210,3 +210,9 @@ magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t s
     exported_semaphores.erase(semaphore_handle);
     return MAGMA_STATUS_OK;
 }
+
+void magma_map_buffer_gpu(struct magma_connection_t* connection, magma_buffer_t buffer,
+                          uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
+                          uint64_t map_flags)
+{
+}

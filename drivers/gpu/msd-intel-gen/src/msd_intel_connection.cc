@@ -65,7 +65,8 @@ magma_status_t msd_connection_wait_rendering(msd_connection_t* abi_connection, m
 }
 
 void msd_connection_map_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,
-                                   uint64_t gpu_va, uint64_t flags)
+                                   uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
+                                   uint64_t flags)
 {
 }
 

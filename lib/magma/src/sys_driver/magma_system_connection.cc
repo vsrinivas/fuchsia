@@ -164,12 +164,14 @@ bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
     return true;
 }
 
-bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t flags)
+bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t page_offset,
+                                         uint64_t page_count, uint64_t flags)
 {
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to gpu map invalid buffer id");
-    msd_connection_map_buffer_gpu(msd_connection(), iter->second->msd_buf(), gpu_va, flags);
+    msd_connection_map_buffer_gpu(msd_connection(), iter->second->msd_buf(), gpu_va, page_offset,
+                                  page_count, flags);
 
     return true;
 }

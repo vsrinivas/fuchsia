@@ -54,7 +54,8 @@ public:
                           uint32_t signal_semaphore_count, const uint64_t* semaphore_ids,
                           uint32_t buffer_presented_handle) = 0;
 
-    virtual magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t flags) = 0;
+    virtual magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                                        uint64_t page_count, uint64_t flags) = 0;
 
     virtual magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
 
@@ -98,7 +99,8 @@ public:
                  uint64_t* semaphore_ids,
                  std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) = 0;
 
-        virtual bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t flags) = 0;
+        virtual bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                                  uint64_t page_count, uint64_t flags) = 0;
         virtual bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
         virtual bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
                                   uint64_t page_count) = 0;

@@ -111,7 +111,7 @@ public:
         auto buf = magma::PlatformBuffer::Create(1, "test");
         test_buffer_id = buf->id();
         EXPECT_EQ(ipc_connection_->ImportBuffer(buf.get()), 0);
-        EXPECT_EQ(ipc_connection_->MapBufferGpu(buf->id(), PAGE_SIZE * 1000, 5), 0);
+        EXPECT_EQ(ipc_connection_->MapBufferGpu(buf->id(), PAGE_SIZE * 1000, 1u, 2u, 5), 0);
         EXPECT_EQ(ipc_connection_->UnmapBufferGpu(buf->id(), PAGE_SIZE * 1000), 0);
         EXPECT_EQ(ipc_connection_->CommitBuffer(buf->id(), 1000, 2000), 0);
         EXPECT_EQ(ipc_connection_->GetError(), 0);
@@ -216,10 +216,13 @@ public:
         return MAGMA_STATUS_OK;
     }
 
-    bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t flags) override
+    bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                      uint64_t page_count, uint64_t flags) override
     {
         EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
         EXPECT_EQ(PAGE_SIZE * 1000lu, gpu_va);
+        EXPECT_EQ(1u, page_offset);
+        EXPECT_EQ(2u, page_count);
         EXPECT_EQ(5u, flags);
         return true;
     }

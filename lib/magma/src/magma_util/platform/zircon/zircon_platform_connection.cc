@@ -103,6 +103,8 @@ struct MapBufferGpuOp {
     static constexpr uint32_t kNumHandles = 0;
     uint64_t buffer_id;
     uint64_t gpu_va;
+    uint64_t page_offset;
+    uint64_t page_count;
     uint64_t flags;
 } __attribute__((packed));
 
@@ -405,7 +407,8 @@ private:
         DLOG("Operation: MapBufferGpu");
         if (!op)
             return DRETF(false, "malformed message");
-        if (!delegate_->MapBufferGpu(op->buffer_id, op->gpu_va, op->flags))
+        if (!delegate_->MapBufferGpu(op->buffer_id, op->gpu_va, op->page_offset, op->page_count,
+                                     op->flags))
             SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
     }
@@ -616,11 +619,14 @@ public:
         return error;
     }
 
-    magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t flags) override
+    magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
+                                uint64_t page_count, uint64_t flags) override
     {
         MapBufferGpuOp op;
         op.buffer_id = buffer_id;
         op.gpu_va = gpu_va;
+        op.page_offset = page_offset;
+        op.page_count = page_count;
         op.flags = flags;
         magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
         if (result != MAGMA_STATUS_OK)
