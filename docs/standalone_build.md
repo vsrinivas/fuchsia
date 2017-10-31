@@ -1,33 +1,25 @@
-Garnet Standalone Build
-=======================
+# Garnet Standalone Build
 
-To get the source code for the Garnet layer, using the following commands (see [Getting Source](https://fuchsia.googlesource.com/docs/+/master/getting_source.md) for more
-information):
-
-```
-curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?format=TEXT" | base64 --decode | bash -s garnet
-cd garnet
-export PATH=`pwd`/.jiri_root/bin:$PATH
-jiri import garnet https://fuchsia.googlesource.com/manifest
-jiri update
-```
-
-To build the default set of packages for the Garnet layer for x86-64, use the following
-commands:
+To get the source code for the Garnet layer, using the following commands
+(see [Getting Source](https://fuchsia.googlesource.com/docs/+/master/getting_source.md)
+for more information):
 
 ```
-scripts/build-zircon.sh -t x86_64
-packages/gn/gen.py --debug -p garnet/packages/default
-buildtools/ninja -C out/debug-x86-64
+curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode | bash -s garnet
 ```
 
-For 64bit ARM (aarch64):
+To build the Garnet layer, use the following commands:
+
+## x86-64
 
 ```
-scripts/build-zircon.sh -t aarch64
-packages/gn/gen.py -t aarch64 --debug -p garnet/packages/default
-buildtools/ninja -C out/debug-aarch64
+fx set x86-64
+fx full-build
 ```
 
-If you're using `env.sh`, you can specify `garnet/packages/default` using
-`fset` (see [Getting Started](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#setup-build-environment) for more information).
+## aarch64 (64 bit ARM)
+
+```
+fx set aarch64
+fx full-build
+```
