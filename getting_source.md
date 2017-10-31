@@ -14,7 +14,7 @@ doc.
 The bootstrap procedure requires that you have Go 1.6 or newer and Git
 installed and on your PATH.
 
-First, select the [layer](layer.md) of the system you wish to build. (If you're
+First, select the [layer](layers.md) of the system you wish to build. (If you're
 unsure, select `topaz`, which contains the lower layers). Then, run the
 following command:
 
