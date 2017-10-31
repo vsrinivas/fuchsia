@@ -61,9 +61,9 @@ zx_status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     struct x86_ap_bootstrap_data *bootstrap_data = NULL;
     fbl::RefPtr<VmAspace> bootstrap_aspace;
     paddr_t bootstrap_instr_ptr;
-    status = x86_bootstrap16_prep((uintptr_t)_x86_secondary_cpu_long_mode_entry,
-                                  &bootstrap_aspace, (void **)&bootstrap_data,
-                                  &bootstrap_instr_ptr);
+    status = x86_bootstrap16_acquire((uintptr_t)_x86_secondary_cpu_long_mode_entry,
+                                     &bootstrap_aspace, (void **)&bootstrap_data,
+                                     &bootstrap_instr_ptr);
     if (status != ZX_OK) {
         return status;
     }
@@ -186,7 +186,7 @@ cleanup_allocations:
     }
 cleanup_aspace:
     bootstrap_aspace->Destroy();
-    VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(bootstrap_data));
+    x86_bootstrap16_release(bootstrap_data);
 finish:
     return status;
 }

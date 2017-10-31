@@ -16,12 +16,15 @@
 #include <vm/pmm.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/mutex.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 extern const int __code_start;
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
+static fbl::Mutex bootstrap_lock;
 
 void x86_bootstrap16_init(paddr_t bootstrap_base) {
     DEBUG_ASSERT(!IS_PAGE_ALIGNED(bootstrap_phys_addr));
@@ -30,17 +33,12 @@ void x86_bootstrap16_init(paddr_t bootstrap_base) {
     bootstrap_phys_addr = bootstrap_base;
 }
 
-zx_status_t x86_bootstrap16_prep(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_aspace,
-                                 void **bootstrap_aperature, paddr_t* instr_ptr) {
+zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_aspace,
+                                    void **bootstrap_aperature, paddr_t* instr_ptr)
+                                    TA_NO_THREAD_SAFETY_ANALYSIS {
     // Make sure x86_bootstrap16_init has been called, and bail early if not.
     if (!IS_PAGE_ALIGNED(bootstrap_phys_addr)) {
         return ZX_ERR_BAD_STATE;
-    }
-
-    // Make sure bootstrap region will be entirely in the first 1MB of physical
-    // memory
-    if (bootstrap_phys_addr > (1 << 20) - 2 * PAGE_SIZE) {
-        return ZX_ERR_INVALID_ARGS;
     }
 
     // Make sure the entrypoint code is in the bootstrap code that will be
@@ -58,12 +56,16 @@ zx_status_t x86_bootstrap16_prep(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_
     }
     void *bootstrap_virt_addr = NULL;
 
+    // Ensure only one caller is using the bootstrap region
+    bootstrap_lock.Acquire();
+
     // add an auto caller to clean up the address space on the way out
-    auto ac = fbl::MakeAutoCall([&]() {
+    auto ac = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
         bootstrap_aspace->Destroy();
         if (bootstrap_virt_addr) {
             kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(bootstrap_virt_addr));
         }
+        bootstrap_lock.Release();
     });
 
     // Actual GDT address.
@@ -157,8 +159,21 @@ zx_status_t x86_bootstrap16_prep(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_
     *temp_aspace = bootstrap_aspace;
     *instr_ptr = bootstrap_phys_addr;
 
-    // cancel the cleanup autocall, since we're returning the new aspace and region
+    // Cancel the cleanup autocall, since we're returning the new aspace and region
+    // NOTE: Since we cancel the autocall, we are not releasing
+    // |bootstrap_lock|.  This is released in x86_bootstrap16_release() when the
+    // caller is done with the bootstrap region.
     ac.cancel();
 
     return ZX_OK;
+}
+
+void x86_bootstrap16_release(void* bootstrap_aperature) TA_NO_THREAD_SAFETY_ANALYSIS {
+    DEBUG_ASSERT(bootstrap_aperature);
+    DEBUG_ASSERT(bootstrap_lock.IsHeld());
+    VmAspace *kernel_aspace = VmAspace::kernel_aspace();
+    uintptr_t addr = reinterpret_cast<uintptr_t>(bootstrap_aperature) - 0x1000;
+    kernel_aspace->FreeRegion(addr);
+
+    bootstrap_lock.Release();
 }

@@ -88,9 +88,15 @@ void x86_bootstrap16_init(paddr_t bootstrap_base);
 // Upon success, returns a pointer to the bootstrap aspace, a pointer to the
 // virtual address of the bootstrap data, and the physical address of the
 // first instruction that should be executed in 16-bit mode.  It is the caller's
-// responsibility to free the aspace and unmap the aperature.
-zx_status_t x86_bootstrap16_prep(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_aspace,
-                                 void **bootstrap_aperature, paddr_t* instr_ptr);
+// responsibility to free the aspace once it is no longer needed.
+//
+// If this function returns success, x86_bootstrap16_release() must be called
+// later, to allow the bootstrap16 module to be reused.
+zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace> *temp_aspace,
+                                    void **bootstrap_aperature, paddr_t* instr_ptr);
+
+// To be called once the caller is done using the bootstrap16 module
+void x86_bootstrap16_release(void* bootstrap_aperature);
 
 static_assert(sizeof(struct x86_ap_bootstrap_data) <= PAGE_SIZE, "");
 static_assert(sizeof(struct x86_realmode_entry_data) <= PAGE_SIZE, "");
