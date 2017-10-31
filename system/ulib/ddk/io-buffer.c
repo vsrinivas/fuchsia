@@ -178,7 +178,8 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
     // ZX_VMO_OP_LOOKUP returns whole pages, so take into account unaligned vmo
     // offset and length when calculating the amount of pages returned
     uint64_t page_offset = ROUNDDOWN(buffer->offset, PAGE_SIZE);
-    uint64_t page_length = buffer->size + (buffer->offset - page_offset);
+    // The buffer size is the vmo size from offset 0.
+    uint64_t page_length = buffer->size - page_offset;
     uint64_t pages = ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
 
     zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
