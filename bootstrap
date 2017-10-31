@@ -32,7 +32,11 @@ fi
 
 if [[ "${layer}" == "zircon" ]]; then
   git clone https://fuchsia.googlesource.com/zircon
-  echo "Done creating ${layer} development environment at \"$(pwd)/zircon\"."
+  cat <<END
+Cloned ${layer} repository at "$(pwd)/zircon".
+See <https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md>
+for the remaining steps to create a functioning development environment.
+END
   exit 0
 fi
 
