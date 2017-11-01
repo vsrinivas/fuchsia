@@ -367,6 +367,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             mtx_unlock(&dev->irq_mask_mutex);
         }
         if (intr_stat & (1u << INTR_TX_ABORT)) {
+            zxlogf(ERROR, "i2c: tx abort detected: 0x%08x\n", *REG32(&dev->regs->tx_abrt_source));
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
             *REG32(&dev->regs->clr_tx_abort);
         }
