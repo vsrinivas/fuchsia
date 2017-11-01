@@ -138,6 +138,10 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += -no-canonical-prefixes
 GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
 GLOBAL_COMPILEFLAGS += -Wthread-safety
+# TODO(phosek): We need to disable this warning type because the current
+# implementation is too aggressive and is reporting cases that are generally
+# safe. Remove this once https://reviews.llvm.org/D39462 lands.
+GLOBAL_COMPILEFLAGS += -Wno-tautological-constant-compare
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 endif
