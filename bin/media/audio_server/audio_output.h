@@ -10,11 +10,14 @@
 #include <thread>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
+#include "garnet/bin/media/audio_server/audio_driver.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
 namespace audio {
+
+class DriverRingBuffer;
 
 class AudioOutput : public AudioDevice {
  public:

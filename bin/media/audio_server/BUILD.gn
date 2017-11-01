@@ -7,6 +7,7 @@ executable("audio_server") {
       [
         "audio_device.cc",
         "audio_device_manager.cc",
+        "audio_driver.cc",
         "audio_output.cc",
         "audio_pipe.cc",
         "audio_plug_detector.cc",
@@ -34,6 +35,7 @@ executable("audio_server") {
 
       deps = [
         "//garnet/bin/media/audio",
+        "//garnet/bin/media/fidl",
         "//garnet/bin/media/util",
         "//garnet/public/lib/app/cpp",
         "//garnet/public/lib/fsl",
@@ -41,6 +43,7 @@ executable("audio_server") {
         "//garnet/public/lib/media/fidl",
         "//garnet/public/lib/media/timeline",
         "//garnet/public/lib/media/transport",
+        "//zircon/system/ulib/audio-proto-utils",
         "//zircon/system/ulib/dispatcher-pool",
         "//zircon/system/ulib/fbl",
         "//zircon/system/ulib/zx",

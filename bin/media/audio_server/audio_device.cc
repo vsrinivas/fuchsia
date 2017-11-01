@@ -15,7 +15,7 @@ namespace media {
 namespace audio {
 
 AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
-    : AudioObject(type), manager_(manager) {
+    : AudioObject(type), manager_(manager), driver_(new AudioDriver(this)) {
   FXL_DCHECK(manager_);
   FXL_DCHECK((type == Type::Input) || (type == Type::Output));
 }
@@ -130,6 +130,15 @@ bool AudioDevice::UpdatePlugState(bool plugged, zx_time_t plug_time) {
 
   return false;
 }
+
+const fbl::RefPtr<DriverRingBuffer>& AudioDevice::driver_ring_buffer() const {
+  return driver_->ring_buffer();
+};
+
+const TimelineFunction& AudioDevice::driver_clock_mono_to_ring_pos_bytes()
+    const {
+  return driver_->clock_mono_to_ring_pos_bytes();
+};
 
 }  // namespace audio
 }  // namespace media

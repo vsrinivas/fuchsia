@@ -27,6 +27,9 @@
 namespace media {
 namespace audio {
 
+class AudioDriver;
+class DriverRingBuffer;
+
 class AudioDevice : public AudioObject,
                     public fbl::DoublyLinkedListable<fbl::RefPtr<AudioDevice>> {
  public:
@@ -128,6 +131,27 @@ class AudioDevice : public AudioObject,
 
   //////////////////////////////////////////////////////////////////////////////
   //
+  // AudioDriver hooks.
+  //
+  // Hooks used by encapsulated AudioDriver instances to notify AudioDevices
+  // about internal state machine changes.
+  virtual void OnDriverGetFormatsComplete()
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+
+  virtual void OnDriverConfigComplete()
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+
+  virtual void OnDriverStartComplete()
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+
+  virtual void OnDriverStopComplete()
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+
+  virtual void OnDriverPlugStateChange(bool plugged, zx_time_t plug_time)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()){};
+
+  //////////////////////////////////////////////////////////////////////////////
+  //
   // Other methods.
   //
 
@@ -142,6 +166,13 @@ class AudioDevice : public AudioObject,
   // Returns true if the plug state has changed, or false otherwise.
   bool UpdatePlugState(bool plugged, zx_time_t plug_time);
 
+  // AudioDriver accessors.
+  const fbl::RefPtr<DriverRingBuffer>& driver_ring_buffer() const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+
+  const TimelineFunction& driver_clock_mono_to_ring_pos_bytes() const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+
   AudioDeviceManager* manager_;
   fxl::Mutex mutex_;
 
@@ -150,11 +181,16 @@ class AudioDevice : public AudioObject,
   fbl::RefPtr<::audio::dispatcher::ExecutionDomain> mix_domain_;
   fbl::RefPtr<::audio::dispatcher::WakeupEvent> mix_wakeup_;
 
+  // Driver object which will manage most interactions with the low level driver
+  // for us.
+  std::unique_ptr<AudioDriver> driver_;
+
  private:
   // It's always nice when you manager is also your friend.  Seriously though,
   // the AudioDeviceManager gets to call Startup and Shutdown, no one else
   // (including derived classes) should be able to.
   friend class AudioDeviceManager;
+  friend class AudioDriver;
 
   // DeactivateDomain
   //

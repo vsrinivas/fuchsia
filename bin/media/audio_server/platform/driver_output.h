@@ -11,6 +11,7 @@
 
 #include <dispatcher-pool/dispatcher-channel.h>
 
+#include "garnet/bin/media/audio_server/audio_driver.h"
 #include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
 
 namespace media {
@@ -37,81 +38,40 @@ class DriverOutput : public StandardOutputBase {
  private:
   enum class State {
     Uninitialized,
-    WaitingToSetup,
-    WaitingForSetFormatResponse,
-    WaitingForRingBufferFifoDepth,
-    WaitingForRingBufferVmo,
+    FormatsUnknown,
+    FetchingFormats,
+    Configuring,
     Starting,
     Started,
-    FatalError,
+    Shutdown,
   };
 
   DriverOutput(AudioDeviceManager* manager, zx::channel initial_stream_channel);
   void ScheduleNextLowWaterWakeup();
 
-  // Dispatchers for messages received over stream and ring buffer channels, and
-  // the channel closure handler.
-  zx_status_t ReadMessage(
-      const fbl::RefPtr<::audio::dispatcher::Channel>& channel,
-      void* buf,
-      uint32_t buf_size,
-      uint32_t* bytes_read_out,
-      zx::handle* handle_out)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  zx_status_t ProcessStreamChannelMessage()
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  zx_status_t ProcessRingBufferChannelMessage()
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  void ProcessChannelClosed()
+  // Callbacks triggered by our driver object as it completes various
+  // asynchronous tasks.
+  void OnDriverGetFormatsComplete() override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  // Stream channel message handlers.
-  zx_status_t ProcessSetFormatResponse(
-      const audio_stream_cmd_set_format_resp_t& resp,
-      zx::channel rb_channel)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  zx_status_t ProcessPlugStateChange(bool plugged, zx_time_t plug_time)
+  void OnDriverConfigComplete() override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  // Ring buffer message handlers.
-  zx_status_t ProcessGetFifoDepthResponse(
-      const audio_rb_cmd_get_fifo_depth_resp_t& resp)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  zx_status_t ProcessGetBufferResponse(
-      const audio_rb_cmd_get_buffer_resp_t& resp,
-      zx::vmo rb_vmo) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  zx_status_t ProcessStartResponse(const audio_rb_cmd_start_resp_t& resp)
+  void OnDriverStartComplete() override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  // State machine timeout handler.
-  zx_status_t OnCommandTimeout()
+  void OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   State state_ = State::Uninitialized;
-  fbl::RefPtr<::audio::dispatcher::Channel> stream_channel_;
-  fbl::RefPtr<::audio::dispatcher::Channel> rb_channel_;
-  fbl::RefPtr<::audio::dispatcher::Timer> cmd_timeout_;
   zx::channel initial_stream_channel_;
-  zx::vmo rb_vmo_;
-  uint64_t rb_size_ = 0;
-  uint32_t rb_frames_ = 0;
-  uint64_t rb_fifo_depth_ = 0;
-  void* rb_virt_ = nullptr;
-
-  uint32_t frames_per_sec_;
-  uint16_t channel_count_;
-  audio_sample_format_t sample_format_;
-  uint32_t bytes_per_frame_;
-  uint64_t start_ticks_;
 
   int64_t frames_sent_ = 0;
   uint32_t frames_to_mix_ = 0;
-  int64_t fifo_frames_ = 0;
   int64_t low_water_frames_ = 0;
+  TimelineFunction clock_mono_to_ring_buf_pos_frames_;
   zx_time_t underflow_start_time_ = 0;
   zx_time_t underflow_cooldown_deadline_ = 0;
-  TimelineRate local_to_frames_;
-  TimelineFunction local_to_output_;
 };
 
 }  // namespace audio
