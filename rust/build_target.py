@@ -246,6 +246,7 @@ def main():
         env["CARGO_TARGET_%s_RUSTFLAGS" % args.target_triple.replace("-", "_").upper()] = "-Clink-arg=--target=" + args.target_triple + " -Clink-arg=--sysroot=" + args.sysroot
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["RUSTC"] = args.rustc
+    env["RUST_BACKTRACE"] = "1"
     env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
 
     # Generate Cargo.toml.
