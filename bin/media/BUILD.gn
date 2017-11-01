@@ -21,6 +21,8 @@ group("tools") {
 }
 
 package("media") {
+  system_image = true
+
   deps = [
     ":services",
     ":tools",
@@ -54,6 +56,8 @@ package("media") {
 }
 
 package("audio_server") {
+  system_image = true
+
   deps = [
     "//garnet/bin/media/audio_server",
   ]
@@ -64,6 +68,8 @@ package("audio_server") {
 }
 
 package("media_client") {
+  system_image = true
+
   deps = [
     "//garnet/public/lib/media/c",
   ]
@@ -75,6 +81,7 @@ package("media_client") {
 
 package("tests") {
   testonly = true
+  system_image = true
 
   package_name = "media_tests"
 

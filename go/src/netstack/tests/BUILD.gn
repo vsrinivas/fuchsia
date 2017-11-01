@@ -6,6 +6,7 @@ import("//packages/package.gni")
 
 package("netstack_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
@@ -24,6 +25,7 @@ package("netstack_tests") {
 
 package("netstack_manual_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     "//garnet/go/src/netstack/tests/manual:keepalivetest",

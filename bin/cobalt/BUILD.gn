@@ -6,6 +6,8 @@ import("//packages/package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 package("cobalt") {
+  system_image = true
+
   deps = [
     ":bin",
   ]
@@ -19,6 +21,8 @@ package("cobalt") {
 
 package("cobalt_tests") {
   testonly = true
+  system_image = true
+
 
   deps = [
     ":cobalt_testapp",

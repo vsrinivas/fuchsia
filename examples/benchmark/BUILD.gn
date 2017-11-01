@@ -17,6 +17,8 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
+  system_image = true
+
   deps = [
     ":benchmark_example",
   ]

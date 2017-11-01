@@ -7,6 +7,8 @@ import("//build/go/go_test.gni")
 import("//packages/package.gni")
 
 package("netstack") {
+  system_image = true
+
   deps = [
     ":netstack_bin",
     "//garnet/go/src/netstack/ifconfig",
@@ -37,6 +39,7 @@ package("netstack") {
 
 package("netstack_gotests") {
   testonly = true
+  system_image = true
 
   deps = [
     ":netstack_netiface_test",

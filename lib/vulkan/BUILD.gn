@@ -6,6 +6,8 @@ import("//packages/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("image-pipe-swapchain") {
+  system_image = true
+
   if (target_cpu == "x64") {
     deps = [
       "src/swapchain",
@@ -22,6 +24,7 @@ package("image-pipe-swapchain") {
 
 package("image-pipe-swapchain-tests") {
   testonly = true
+  system_image = true
 
   if (target_cpu == "x64") {
     deps = [

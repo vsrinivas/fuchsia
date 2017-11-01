@@ -77,6 +77,8 @@ go_test("power_manager_test") {
 }
 
 package("power_manager") {
+  system_image = true
+
   deps = [
     ":power_manager_bin",
   ]
@@ -88,6 +90,8 @@ package("power_manager") {
 
 package("power_manager_gotests") {
   testonly = true
+  system_image = true
+
   deps = [
     ":power_manager_test",
   ]

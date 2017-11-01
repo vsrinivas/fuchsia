@@ -41,6 +41,8 @@ copy("ralink-firmware") {
 }
 
 package("ralink") {
+  system_image = true
+
   deps = [
     ":ralink_driver",
 

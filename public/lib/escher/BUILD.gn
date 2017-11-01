@@ -6,6 +6,7 @@ import("//packages/package.gni")
 
 package("escher_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     "test:escher_unittests",

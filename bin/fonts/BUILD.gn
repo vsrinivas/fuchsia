@@ -29,10 +29,7 @@ package("fonts") {
     ":font_server",
   ]
 
-  binaries = [ {
-        name = "font_server"
-        dest = "app"
-      } ]
+  binary = "font_server"
 
   resources = [
     {

@@ -83,6 +83,7 @@ executable("common_tests") {
 
 package("wlan_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     ":tests",

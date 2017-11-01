@@ -6,6 +6,7 @@ import("//packages/package.gni")
 
 package("rust-crates-tests") {
   testonly = true
+  system_image = true
 
   deps = [
     "ddk-rs",

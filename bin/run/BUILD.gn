@@ -16,9 +16,12 @@ executable("run_bin") {
 }
 
 package("run") {
+  system_image = true
+
   deps = [
     ":run_bin",
   ]
+
   binaries = [ {
         name = "run"
       } ]

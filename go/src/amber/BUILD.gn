@@ -40,6 +40,8 @@ go_binary("amber_bin") {
 }
 
 package("amber") {
+  system_image = true
+
   deps = [
     ":amber_bin",
   ]
@@ -122,6 +124,8 @@ go_test("amber_daemon_test") {
 
 package("amber_test") {
   testonly = true
+  system_image = true
+
   deps = [ ":amber_daemon_test" ]
 
   tests = [ { name = "amber_daemon_test" } ]

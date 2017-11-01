@@ -13,9 +13,12 @@ executable("fortune_bin") {
 }
 
 package("fortune") {
+  system_image = true
+
   deps = [
     ":fortune_bin",
   ]
+
   binaries = [ {
         name = "fortune"
       } ]

@@ -75,6 +75,8 @@ executable("debugserver-unittests") {
 }
 
 package("debugserver") {
+  system_image = true
+
   deps = [
     ":bin",
   ]
@@ -86,6 +88,7 @@ package("debugserver") {
 
 package("debugserver_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     ":tests",

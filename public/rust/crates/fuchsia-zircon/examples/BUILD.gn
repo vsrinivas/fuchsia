@@ -5,6 +5,8 @@
 import("//packages/package.gni")
 
 package("zircon_rust_examples") {
+  system_image = true
+
   deps = [
     "zx_toy",
   ]

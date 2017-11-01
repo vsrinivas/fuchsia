@@ -5,6 +5,8 @@
 import("//packages/package.gni")
 
 package("auth") {
+  system_image = true
+
   deps = [
     "//garnet/public/lib/auth/fidl",
     "//garnet/bin/auth/cache",
@@ -14,6 +16,7 @@ package("auth") {
 
 package("tests") {
   testonly = true
+  system_image = true
 
   package_name = "auth_tests"
 

@@ -18,6 +18,8 @@ rust_binary("echo_client_rust_bin") {
 }
 
 package("echo_client_rust") {
+  system_image = true
+
   deps = [
     ":echo_client_rust_bin",
   ]

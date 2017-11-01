@@ -5,6 +5,8 @@
 import("//packages/package.gni")
 
 package("test_runner") {
+  system_image = true
+
   deps = [
     "server",
   ]
@@ -15,6 +17,8 @@ package("test_runner") {
 }
 
 package("run_integration_tests") {
+  system_image = true
+
   deps = [
     "report_result",
     "run_integration_tests",
@@ -32,6 +36,7 @@ package("run_integration_tests") {
 
 package("test_runner_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     "test",

@@ -22,6 +22,8 @@ executable("bin") {
 }
 
 package("listen") {
+  system_image = true
+
   deps = [
     ":bin",
   ]

@@ -18,9 +18,12 @@ executable("bin") {
 }
 
 package("far") {
+  system_image = true
+
   deps = [
     ":bin",
   ]
+
   binaries = [ {
         name = "far"
       } ]

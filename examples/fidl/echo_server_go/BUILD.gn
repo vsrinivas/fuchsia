@@ -40,6 +40,8 @@ go_binary("echo_server_go_bin") {
 }
 
 package("echo_server_go") {
+  system_image = true
+
   deps = [
     ":echo_server_go_bin",
   ]

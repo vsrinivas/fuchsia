@@ -34,6 +34,8 @@ executable("bin") {
 }
 
 package("bluetooth") {
+  system_image = true
+
   deps = [
     ":bin",
     "//garnet/bin/bluetooth_tools",
@@ -74,6 +76,8 @@ executable("bluetooth_unittests") {
 
 package("bluetooth_tests") {
   testonly = true
+  system_image = true
+
   package_name = "bluetooth_tests"
 
   deps = [

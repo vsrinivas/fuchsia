@@ -21,6 +21,8 @@ executable("bin") {
 }
 
 package("postfile") {
+  system_image = true
+
   deps = [
     ":bin",
   ]

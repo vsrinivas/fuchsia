@@ -25,6 +25,8 @@ group("platform_driver_nodeps") {
 }
 
 package("magma") {
+  system_image = true
+
   deps = []
   if (build_libvulkan_arm_mali || build_intel_gen) {
     deps += [
@@ -75,6 +77,8 @@ package("magma") {
 
 package("magma-dev") {
   testonly = true
+  system_image = true
+
   deps = []
 
   if (build_libvulkan_arm_mali || build_intel_gen) {
@@ -125,6 +129,8 @@ package("magma-dev") {
 }
 
 package("magma-tools") {
+  system_image = true
+
   deps = [
     ":tools",
   ]
@@ -135,6 +141,8 @@ package("magma-tools") {
 }
 
 package("vkcube") {
+  system_image = true
+
   if (target_cpu == "x64") {
     deps = [
       "//garnet/lib/magma/tests/vkcube",
@@ -147,6 +155,8 @@ package("vkcube") {
 }
 
 package("display-pipe") {
+  system_image = true
+
   if (target_cpu == "x64") {
     deps = [
       "//garnet/lib/magma/src/display_pipe:display_pipe_service",

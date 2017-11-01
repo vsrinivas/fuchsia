@@ -71,6 +71,8 @@ source_set("unittests") {
 }
 
 package("trace") {
+  system_image = true
+
   deps = [
     ":bin",
   ]
@@ -100,6 +102,7 @@ executable("trace_tests_bin") {
 
 package("trace_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     ":trace_tests_bin",

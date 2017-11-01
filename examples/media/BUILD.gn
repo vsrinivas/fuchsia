@@ -6,6 +6,7 @@ import("//garnet/public/lib/fidl/fidl.gni")
 import("//packages/package.gni")
 
 package("media") {
+  system_image = true
   package_name = "media_examples"
 
   deps = [

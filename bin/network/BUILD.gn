@@ -45,6 +45,8 @@ executable("network") {
 # other targets depend on that so the name of the executable target can be a detail internal to the
 # package target.
 package("network_pkg") {
+  system_image = true
+
   package_name = "network"
 
   deps = [

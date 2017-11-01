@@ -39,10 +39,7 @@ package("trace_manager") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "trace_manager"
-        dest = "app"
-      } ]
+  binary = "trace_manager"
 
   resources = [ {
         path = rebase_path("tracing.config")

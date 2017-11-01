@@ -31,10 +31,8 @@ package("icu_data") {
     ":icu_data_provider",
   ]
 
-  binaries = [ {
-        name = "icu_data_provider"
-        dest = "app"
-      } ]
+  binary = "icu_data_provider"
+
   resources = [ {
         path = rebase_path("//third_party/icu/common/icudtl.dat")
         dest = "icudtl.dat"

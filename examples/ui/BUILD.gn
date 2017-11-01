@@ -20,6 +20,8 @@ group("ui") {
 }
 
 package("hello_scene_manager") {
+  system_image = true
+
   deps = [
     "hello_scene_manager",
   ]
@@ -36,10 +38,7 @@ package("jank_view") {
     "jank",
   ]
 
-  binaries = [ {
-        name = "jank_view"
-        dest = "app"
-      } ]
+  binary = "jank_view"
 }
 
 package("noodles_view") {
@@ -49,10 +48,7 @@ package("noodles_view") {
     "noodles",
   ]
 
-  binaries = [ {
-        name = "noodles_view"
-        dest = "app"
-      } ]
+  binary = "noodles_view"
 }
 
 package("paint_view") {
@@ -62,13 +58,12 @@ package("paint_view") {
     "//garnet/examples/ui/paint",
   ]
 
-  binaries = [ {
-        name = "paint_view"
-        dest = "app"
-      } ]
+  binary = "paint_view"
 }
 
 package("shadertoy") {
+  system_image = true
+
   deps = [
     "shadertoy/client",
     "shadertoy/service",
@@ -91,13 +86,12 @@ package("shapes_view") {
     "shapes",
   ]
 
-  binaries = [ {
-        name = "shapes_view"
-        dest = "app"
-      } ]
+  binary = "shapes_view"
 }
 
 package("sketchy") {
+  system_image = true
+
   deps = [
     "sketchy",
     "//garnet/bin/ui/sketchy",
@@ -120,10 +114,7 @@ package("spinning_square_view") {
     "spinning_square",
   ]
 
-  binaries = [ {
-        name = "spinning_square_view"
-        dest = "app"
-      } ]
+  binary = "spinning_square_view"
 }
 
 package("tile_view") {
@@ -133,8 +124,5 @@ package("tile_view") {
     "tile",
   ]
 
-  binaries = [ {
-        name = "tile_view"
-        dest = "app"
-      } ]
+  binary = "tile_view"
 }

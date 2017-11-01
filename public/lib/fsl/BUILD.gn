@@ -56,6 +56,7 @@ executable("fsl_unittests") {
 
 package("package") {
   testonly = true
+  system_image = true
 
   package_name = "fsl"
 

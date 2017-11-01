@@ -57,6 +57,8 @@ go_test("pkgfs_test_bin") {
 }
 
 package("pm") {
+  system_image = true
+
   deps = [
     ":pm_bin",
   ]
@@ -67,6 +69,8 @@ package("pm") {
 }
 
 package("pmd") {
+  system_image = true
+
   deps = [
     ":pmd_bin",
   ]
@@ -77,6 +81,8 @@ package("pmd") {
 }
 
 package("pkgfs_test") {
+  system_image = true
+
   deps = [
     ":pkgfs_test_bin",
   ]

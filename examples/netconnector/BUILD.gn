@@ -6,6 +6,7 @@ import("//garnet/public/lib/fidl/fidl.gni")
 import("//packages/package.gni")
 
 package("netconnector") {
+  system_image = true
   package_name = "netconnector_examples"
 
   deps = [

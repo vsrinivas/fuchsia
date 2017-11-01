@@ -21,6 +21,8 @@ rust_binary("bin") {
 }
 
 package("wget-rs") {
+  system_image = true
+
   deps = [
     ":bin",
   ]

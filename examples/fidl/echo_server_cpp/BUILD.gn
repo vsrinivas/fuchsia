@@ -21,6 +21,8 @@ executable("echo_server_cpp_bin") {
 }
 
 package("echo_server_cpp") {
+  system_image = true
+
   deps = [
     ":echo_server_cpp_bin",
   ]

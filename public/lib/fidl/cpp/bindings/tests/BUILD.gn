@@ -170,6 +170,7 @@ source_set("test_sources") {
 
 package("fidl_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     ":lib_fidl_cpp_tests",

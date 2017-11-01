@@ -103,6 +103,8 @@ group("tools") {
 }
 
 package("package") {
+  system_image = true
+
   package_name = "netconnector"
 
   deps = [

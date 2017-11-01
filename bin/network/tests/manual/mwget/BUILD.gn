@@ -21,6 +21,8 @@ executable("bin") {
 }
 
 package("mwget") {
+  system_image = true
+
   deps = [
     ":bin",
   ]

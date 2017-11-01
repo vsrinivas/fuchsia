@@ -5,6 +5,8 @@
 import("//packages/package.gni")
 
 package("network_time") {
+  system_image = true
+
   deps = [
     ":network_time_bin",
   ]
@@ -20,6 +22,8 @@ package("network_time") {
 
 package("network_time_tests") {
   testonly = true
+  system_image = true
+
   deps = [
     ":tests",
   ]

@@ -13,6 +13,7 @@ config("vulkan_config") {
 
 package("mozart_tests") {
   testonly = true
+  system_image = true
 
   deps = [
     "ime/tests",
@@ -51,10 +52,7 @@ package("root_presenter") {
     "root_presenter",
   ]
 
-  binaries = [ {
-        name = "root_presenter"
-        dest = "app"
-      } ]
+  binary = "root_presenter"
 
   resources = [ {
         path = rebase_path("root_presenter/resources/cursor32.png")
@@ -74,10 +72,7 @@ package("ime_service") {
     "ime",
   ]
 
-  binaries = [ {
-        name = "ime_service"
-        dest = "app"
-      } ]
+  binary = "ime_service"
 }
 
 package("view_manager") {
@@ -87,13 +82,12 @@ package("view_manager") {
     "view_manager",
   ]
 
-  binaries = [ {
-        name = "view_manager"
-        dest = "app"
-      } ]
+  binary = "view_manager"
 }
 
 package("mozart") {
+  system_image = true
+
   deps = [
     "input",
     "launch",

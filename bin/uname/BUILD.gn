@@ -13,6 +13,8 @@ executable("uname") {
 }
 
 package("package") {
+  system_image = true
+
   deps = [
     ":uname",
   ]

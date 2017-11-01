@@ -25,6 +25,8 @@ rust_binary("device_settings_manager_bin") {
 }
 
 package("device_settings_manager") {
+  system_image = true
+
   deps = [
     ":device_settings_manager_bin",
   ]

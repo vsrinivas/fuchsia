@@ -36,10 +36,7 @@ package("ktrace_provider") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "ktrace_provider"
-        dest = "app"
-      } ]
+  binary = "ktrace_provider"
 
   meta = [ {
         path = rebase_path("meta/sandbox")

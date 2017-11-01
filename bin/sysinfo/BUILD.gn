@@ -18,6 +18,8 @@ executable("sysinfo") {
 }
 
 package("package") {
+  system_image = true
+
   deps = [
     ":sysinfo",
   ]

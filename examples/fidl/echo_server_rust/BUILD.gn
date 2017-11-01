@@ -19,6 +19,8 @@ rust_binary("echo_server_rust_bin") {
 }
 
 package("echo_server_rust") {
+  system_image = true
+
   deps = [
     ":echo_server_rust_bin",
   ]

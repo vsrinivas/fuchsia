@@ -46,6 +46,8 @@ driver_module("ath10k_driver") {
 # TODO(tkilbourn): copy firmware
 
 package("ath10k") {
+  system_image = true
+
   deps = [
     ":ath10k_driver",
   ]

@@ -196,6 +196,8 @@ go_test("wlanstack_test_bin") {
 }
 
 package("wlanstack") {
+  system_image = true
+
   deps = [
     ":wlanstack_bin",
   ]
@@ -211,6 +213,8 @@ package("wlanstack") {
 }
 
 package("wlantool") {
+  system_image = true
+
   deps = [
     ":wlantool_bin",
   ]
@@ -221,6 +225,8 @@ package("wlantool") {
 }
 
 package("wlanstack_test") {
+  system_image = true
+
   deps = [
     ":eapol_crypto_test_bin",
     ":eapol_handshake_test_bin",

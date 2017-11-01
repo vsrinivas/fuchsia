@@ -7,7 +7,10 @@ import("//packages/package.gni")
 
 package("magma-test-build-only") {
   testonly = true
+  system_image = true
+
   deps = []
+
   if (build_libvulkan_arm_mali || build_intel_gen) {
     deps += [ ":tests" ]
     if (build_intel_gen) {
@@ -25,8 +28,11 @@ package("magma-test-build-only") {
 
 package("magma-test") {
   testonly = true
+  system_image = true
+
   deps = []
   tests = []
+
   if (build_libvulkan_arm_mali || build_intel_gen) {
     deps += [
       ":autorun",

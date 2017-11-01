@@ -274,6 +274,7 @@ executable("fxl_unittests") {
 
 if (is_fuchsia) {
   package("package") {
+    system_image = true
     package_name = "fxl"
 
     deps = [
@@ -286,7 +287,9 @@ if (is_fuchsia) {
   }
 
   package("logging_package") {
+    system_image = true
     package_name = "fxl_logging"
+
     deps = [
       ":fxl_logging",
     ]
@@ -296,9 +299,10 @@ if (is_fuchsia) {
   }
 
   package("unittests_package") {
-    package_name = "fxl_unittests"
-
     testonly = true
+    system_image = true
+
+    package_name = "fxl_unittests"
 
     deps = [
       ":fxl_unittests",

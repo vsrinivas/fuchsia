@@ -15,11 +15,13 @@ executable("time") {
 }
 
 package("package") {
+  system_image = true
+
+  package_name = "time"
+
   deps = [
     ":time",
   ]
-
-  package_name = "time"
 
   binaries = [ {
         name = "time"

@@ -29,6 +29,8 @@ executable("bin") {
 }
 
 package("bootstrap") {
+  system_image = true
+
   deps = [
     ":bin",
   ]

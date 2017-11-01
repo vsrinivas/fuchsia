@@ -35,6 +35,7 @@ executable("bin") {
 
 package("zircon_benchmarks") {
   testonly = true
+  system_image = true
 
   deps = [
     ":bin",
