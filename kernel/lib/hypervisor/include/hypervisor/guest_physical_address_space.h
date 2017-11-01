@@ -18,7 +18,7 @@ public:
     ~GuestPhysicalAddressSpace();
 
     size_t size() const { return paspace_->size(); }
-    fbl::RefPtr<VmAspace> aspace() const { return paspace_; }
+    const fbl::RefPtr<VmAspace>& aspace() const { return paspace_; }
     // TODO(abdulla): Remove this function.
     zx_paddr_t table_phys() { return paspace_->arch_aspace().arch_table_phys(); }
 

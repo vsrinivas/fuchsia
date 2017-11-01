@@ -12,7 +12,7 @@
 // An RoDso object describes one DSO image built with the rodso.ld layout.
 class RoDso {
 public:
-    fbl::RefPtr<VmObjectDispatcher> vmo() const {
+    const fbl::RefPtr<VmObjectDispatcher>& vmo() const {
         return vmo_;
     }
     HandleOwner vmo_handle() const;

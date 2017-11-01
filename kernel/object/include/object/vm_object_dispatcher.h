@@ -37,10 +37,13 @@ public:
     zx_status_t GetSize(uint64_t* size);
     zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_inout_ptr<void> buffer,
                         size_t buffer_size);
-    zx_status_t Clone(uint32_t options, uint64_t offset, uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* clone_vmo);
+    zx_status_t Clone(
+        uint32_t options, uint64_t offset, uint64_t size, bool copy_name,
+        fbl::RefPtr<VmObject>* clone_vmo);
+
     zx_status_t SetMappingCachePolicy(uint32_t cache_policy);
 
-    fbl::RefPtr<VmObject> vmo() const { return vmo_; }
+    const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
 
 private:
     explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo);

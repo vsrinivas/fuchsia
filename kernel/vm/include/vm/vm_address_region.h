@@ -408,7 +408,7 @@ public:
     // Accessors for VMO-mapping state
     uint arch_mmu_flags() const { return arch_mmu_flags_; }
     uint64_t object_offset() const { return object_offset_; }
-    fbl::RefPtr<VmObject> vmo() const { return object_; };
+    const fbl::RefPtr<VmObject>& vmo() const { return object_; }
 
     // Convenience wrapper for vmo()->DecommitRange() with the necessary
     // offset modification and locking.
