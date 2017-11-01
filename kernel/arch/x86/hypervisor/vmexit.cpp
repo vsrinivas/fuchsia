@@ -591,10 +591,10 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
 
     EptViolationInfo ept_violation_info(exit_info.exit_qualification);
     uint pf_flags = VMM_PF_FLAG_HW_FAULT;
-    if (ept_violation_info.write)
-        pf_flags |= VMM_PF_FLAG_WRITE;
-    if (ept_violation_info.instruction)
-        pf_flags |= VMM_PF_FLAG_INSTRUCTION;
+    // TODO(ZX-981): Once EPT TLB invalidation is implemented, make these
+    // conditional upon the EPT violation type.
+    pf_flags |= VMM_PF_FLAG_WRITE;
+    pf_flags |= VMM_PF_FLAG_INSTRUCTION;
     return vmm_guest_page_fault_handler(guest_paddr, pf_flags, gpas->aspace());
 }
 

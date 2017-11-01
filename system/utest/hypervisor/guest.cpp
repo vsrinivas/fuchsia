@@ -64,6 +64,7 @@ static bool setup(test_t* test, const char* start, const char* end) {
     uintptr_t guest_ip = 0;
 #if __x86_64__
     ASSERT_EQ(test->guest.CreatePageTable(&guest_ip), ZX_OK);
+    ASSERT_EQ(guest_ip, GUEST_IP);
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), ZX_OK);
 #endif // __x86_64__
     memcpy((void*)(test->guest.phys_mem().addr() + guest_ip), start, end - start);
@@ -120,7 +121,7 @@ static bool vcpu_interrupt(void) {
     int ret = thrd_create(&thread, [](void* ctx) -> int {
         test_t* test = static_cast<test_t*>(ctx);
         zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-        return zx_vcpu_interrupt(test->vcpu, 128);
+        return zx_vcpu_interrupt(test->vcpu, 0);
     }, &test);
     ASSERT_EQ(ret, thrd_success);
 
@@ -346,9 +347,7 @@ static bool guest_set_trap_with_io(void) {
 BEGIN_TEST_CASE(guest)
 RUN_TEST(vcpu_resume)
 RUN_TEST(vcpu_read_write_state)
-#ifdef __aarch64__
 RUN_TEST(vcpu_interrupt)
-#endif
 RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
 #if __x86_64__

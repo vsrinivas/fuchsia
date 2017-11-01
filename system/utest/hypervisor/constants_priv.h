@@ -13,4 +13,8 @@
 #define TRAP_ADDR       (VMO_SIZE - PAGE_SIZE * 2)
 #define EXIT_TEST_ADDR  (VMO_SIZE - PAGE_SIZE)
 
+#if __x86_64__
+#define GUEST_IP        0x3000
+#endif
+
 #define FUNCTION(x)     .global x; .type x,STT_FUNC; x:

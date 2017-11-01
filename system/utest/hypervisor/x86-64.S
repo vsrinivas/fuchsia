@@ -6,7 +6,9 @@
 
 #include "constants_priv.h"
 
-#define IA32_GS_BASE    0xc0000101
+#define IA32_GS_BASE        0xc0000101
+#define INTERRUPT_ADDR(x)   (x - vcpu_interrupt_start + GUEST_IP)
+#define CODE_64_SELECTOR    0x8
 
 .text
 
@@ -28,6 +30,41 @@ FUNCTION(vcpu_resume_start)
 
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION(vcpu_resume_end)
+
+// Test vcpu_interrupt.
+FUNCTION(vcpu_interrupt_start)
+    lgdt INTERRUPT_ADDR(gdtr)
+    lidt INTERRUPT_ADDR(idtr)
+    mov $GUEST_IP + 0x1000, %rsp
+    sti
+    jmp .
+int0:
+    movq $0, (EXIT_TEST_ADDR)
+gdt:
+    // Null entry.
+    .8byte 0
+    // CODE_64_SELECTOR
+    .2byte 0xffff               // Limit 15:00
+    .2byte 0x0000               // Base 15:00
+    .byte  0x00                 // Base 23:16
+    .byte  0b10011010           // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
+    .byte  0b10101111           // G(1) D(0) L(1) AVL(0) Limit 19:16
+    .byte  0x0                  // Base 31:24
+gdtr:
+    .2byte gdtr - gdt - 1
+    .8byte INTERRUPT_ADDR(gdt)
+idt:
+    .2byte INTERRUPT_ADDR(int0) // Offset 15:00
+    .2byte CODE_64_SELECTOR     // Segment selector
+    .byte  0                    // IST(000)
+    .byte  0b10001110           // P(1) DPL(00) 0 Type(1110)
+    .2byte 0                    // Offset 31:16
+    .4byte 0                    // Offset 63:32
+    .4byte 0                    // Reserved
+idtr:
+    .2byte idtr - idt - 1       // Limit
+    .8byte INTERRUPT_ADDR(idt)  // Address
+FUNCTION(vcpu_interrupt_end)
 
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION(vcpu_read_write_state_start)
